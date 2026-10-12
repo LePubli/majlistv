@@ -350,3 +350,23 @@ python3 api/tests/test_archive.py
 - Accueil : nouveau bandeau (« Le savoir, à la demande. »), bouton d'essai et mention « N jours offerts ». N vient du réglage `trial_days`, désormais exposé par `GET /config` ; sans essai, la mention disparaît.
 - Prix : toujours lus dans Stripe (6,99 €/mois, 69,99 €/an). « 2 mois offerts » est calculé automatiquement.
 - Les e-mails avaient déjà la charte (étape 9).
+
+## Étape 10.2 — Studio : « Mes conférences »
+
+Nouvel espace de gestion pour les organisateurs et l'administrateur (web uniquement, **aucun changement API ni base**).
+
+### Ce qui change
+- **Menu latéral** commun au Studio et à l'Administration (sur mobile : barre en haut qui défile).
+  - Studio : *Mes conférences* (`/studio`), *Nouvelle conférence* (`/studio/new`).
+  - Administration (admin seulement) : Tableau de bord, Utilisateurs, Paramètres, Pages légales (`/admin?tab=…`).
+- **Mes conférences** : 3 chiffres clés (en ligne / en traitement / à corriger), recherche par titre ou intervenant, filtres, tableau avec miniature, état, 4 pastilles de traitement **V** vidéo · **T** transcription · **S** sous-titres traduits · **R** résumé et chapitres, accès, date. Rafraîchissement automatique toutes les 6 s tant qu'un traitement est en cours.
+- **Fiche d'une conférence** (`/studio/<id>`) : état des 4 étapes, relancer la transcription, ajouter / retirer / relancer une langue, régénérer le résumé, supprimer.
+- `/organizer` redirige vers `/studio` (anciens liens conservés).
+
+### Déploiement
+1. `git add -A && git commit -m "Étape 10.2 : studio" && git push`
+2. DockPanel → redéployer **web** uniquement.
+3. `/root/apply-limits.sh`
+
+### Vérification
+Connecté en admin : `/studio` affiche la liste ; `/organizer` redirige ; `/admin?tab=settings` s'ouvre avec le menu latéral.

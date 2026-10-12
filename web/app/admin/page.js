@@ -2,7 +2,7 @@
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', admin: 'Administrateur' };
@@ -31,7 +31,6 @@ function Dashboard() {
   const line = (m) => (m && Object.keys(m).length ? Object.entries(m).map(([k, v]) => `${v} ${k}`).join(' · ') : 'aucun');
   return (
     <section>
-      <h2>Tableau de bord</h2>
       {!st ? <p className="meta">Chargement…</p> : (
         <div className="admin-cards">
           <div className="admin-card"><strong>{users ?? '…'}</strong><span>utilisateurs</span></div>
@@ -134,7 +133,6 @@ function Settings() {
   const fieldsOf = (g) => data.fields.filter((f) => f.group === g);
   return (
     <section>
-      <h2>Paramètres</h2>
       {!data.encryption && <p className="error">SETTINGS_KEY n'est pas définie sur l'API : les clés ne peuvent pas être enregistrées. Ajoute cette variable (voir README) puis redéploie l'API.</p>}
       <p className="meta">Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
       {data.groups.map((g) => (
@@ -299,7 +297,7 @@ function Users({ me }) {
   return (
     <section>
       <div className="adm-row adm-between">
-        <h2>Utilisateurs <small>({data.total})</small></h2>
+        <p className="meta">{data.total} utilisateur(s)</p>
         <button className="btn" onClick={() => setForm(null)}>+ Ajouter</button>
       </div>
       <div className="adm-row">
@@ -362,7 +360,6 @@ function LegalPages() {
   const todo = cur ? (cur.body.match(/\[[^\]]{2,80}\]/g) || []).length : 0;
   return (
     <section>
-      <h2>Pages légales</h2>
       <p className="meta">Modèles à compléter (passages entre crochets) puis à faire relire par un professionnel. Mise en forme : une ligne « ## Titre », une ligne « - élément » pour une liste, une ligne vide entre deux paragraphes.</p>
       <div className="adm-row">
         {list.map((p) => <button key={p.slug} className={cur?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
@@ -386,19 +383,15 @@ function LegalPages() {
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
   const { user, ready } = useApp();
-  const router = useRouter();
-  const [tab, setTab] = useState('dashboard');
-  useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
+  const params = useSearchParams();
+  const tab = params.get('tab') || 'dashboard';
   if (!ready || !user) return null;
-  if (user.role !== 'admin') return <main className="card"><p>Cette page est réservée aux administrateurs.</p></main>;
+  if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
+  // Les sections se choisissent dans le menu latéral (Administration).
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales' };
   return (
-    <main className="admin">
-      <h1>Administration</h1>
-      <div className="adm-tabs" role="tablist">
-        {[['dashboard', 'Tableau de bord'], ['users', 'Utilisateurs'], ['settings', 'Paramètres'], ['legal', 'Pages légales']].map(([k, v]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{v}</button>
-        ))}
-      </div>
+    <main className="admin studio-page">
+      <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'users' && <Users me={user.id} />}
       {tab === 'settings' && <Settings />}

@@ -13,6 +13,8 @@ export default function Header() {
     document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`;
     router.refresh();
   };
+  // Studio et administration ont leur propre menu (components/StudioShell.js).
+  if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
   const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) ? 'page' : undefined);
   return (
     <header className="header">
@@ -25,7 +27,7 @@ export default function Header() {
         <Link href="/pricing" aria-current={cur('/pricing')}>{t('pricing')}</Link>
         {ready && (user ? (
           <>
-            {['organizer', 'admin'].includes(user.role) && <Link href="/organizer" aria-current={cur('/organizer')}>{t('myTalks')}</Link>}
+            {['organizer', 'admin'].includes(user.role) && <Link href="/studio">{t('studioNav')}</Link>}
             <Link href="/library" aria-current={cur('/library')}>{t('library')}</Link>
             {user.role === 'admin' && <Link href="/admin" aria-current={cur('/admin')}>{t('adminNav')}</Link>}
             <Link href="/account" aria-current={cur('/account')}>{t('account')}</Link>

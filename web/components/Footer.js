@@ -1,10 +1,13 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 
 // Pied de page : marque et liens légaux obligatoires, présents sur toutes les pages.
 export default function Footer() {
   const { t, appName } = useApp();
+  const path = usePathname();
+  if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
   return (
     <footer className="site-footer">
       <span className="footer-brand">
