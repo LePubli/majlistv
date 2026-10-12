@@ -2,7 +2,9 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { presignGet, deleteObject, deletePrefix } from '../storage.js';
-import { makePlaybackToken } from '../playback.js';
+import { makePlaybackToken, makePreviewToken } from '../playback.js';
+import { hasActiveSubscription } from '../access.js';
+import { config } from '../config.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube ou Vimeo.
@@ -107,9 +109,17 @@ export default async function talksRoutes(app) {
       try { viewer = await req.jwtVerify(); } catch { /* visiteur anonyme */ }
       const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
       const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
-      const allowed = talk.access === 'free' || isOwner;
-      if (!allowed) talk.locked = true;
-      else {
+      const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
+      if (!allowed) {
+        // Premium sans abonnement : aperçu gratuit du début de la vidéo, jamais le fichier complet.
+        talk.locked = true;
+        if (talk.status === 'ready') {
+          talk.playbackToken = makePreviewToken(id);
+          talk.preview = true;
+          talk.previewSeconds = config.previewSeconds;
+          talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+        }
+      } else {
         // Jeton de lecture : flux HLS, transcription et sous-titres.
         talk.playbackToken = makePlaybackToken(id);
         const langs = await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]);

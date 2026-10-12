@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
@@ -42,10 +43,10 @@ export default function TalkPage() {
   let player;
   if (talk.source !== 'upload') {
     player = <div className="player"><iframe src={embed} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={talk.title} /></div>;
-  } else if (talk.locked) {
-    player = <p className="soon">{t('locked')}</p>;
   } else if (talk.hlsPath) {
     player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} /></div>;
+  } else if (talk.locked) {
+    player = <p className="soon">{t('premiumOnly')}</p>;
   } else if (talk.status === 'failed') {
     player = <p className="soon">{t('convFailed')}</p>;
   } else if (talk.videoUrl) {
@@ -61,10 +62,16 @@ export default function TalkPage() {
   }
 
   const showTranscript = talk.hlsPath && tracks.length > 0;
-  const transcribing = talk.hlsPath && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
+  const transcribing = talk.hlsPath && !talk.locked && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
   return (
     <main className="page watch">
       {player}
+      {talk.locked && (
+        <div className="paywall">
+          <p>{talk.preview ? t('previewOnly').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60))) : t('premiumOnly')}</p>
+          <Link className="btn" href="/pricing">{t('subscribe')}</Link>
+        </div>
+      )}
       <h1>{talk.title}</h1>
       <p className="meta">{talk.speaker} · {talk.language}{talk.category ? ` · ${talk.category}` : ''} · {t(talk.access)}
         {talk.durationSeconds ? ` · ${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
@@ -72,7 +79,7 @@ export default function TalkPage() {
       {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
       {talk.hlsPath && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
       {talk.hlsPath && talk.playbackToken && (
-        <Insights key={`${talk.tracks.join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t} />
+        <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t} />
       )}
       {showTranscript && (
         <Transcript key={talk.tracks.join()} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />

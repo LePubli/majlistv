@@ -184,3 +184,20 @@ Nouveautés : migration `007_insights.sql` (table `talk_insights`) ; le service 
 
 Déploiement : mettre à jour GitHub, puis Deploy de l'API (log « Migration appliquée : 007_insights.sql »), du web, et du traducteur (aucune variable à ajouter si `DEEPSEEK_API_KEY` est déjà définie ; sinon `ANTHROPIC_API_KEY`). Relancer `/root/apply-limits.sh` après chaque deploy et vérifier le port du vhost de l'API (7000).
 
+## Étape 4 : abonnements Stripe (conférences premium)
+Nouveautés : migration `008_subscriptions.sql` (tables `subscriptions`, `stripe_events`, colonne `users.stripe_customer_id`) ; paiement par Stripe Checkout (essai gratuit de 7 jours une seule fois par compte, formules mensuelle et annuelle) ; gestion par le portail client Stripe (changer de carte, résilier, factures) ; webhook signé qui tient l'état des abonnements à jour ; une conférence premium n'est lisible en entier que pour un abonné (essai, actif ou paiement en retard), le propriétaire et les admins ; sinon un **aperçu gratuit de 2 minutes** (playlist coupée côté serveur) et le résumé sont proposés avec un bouton « S'abonner ». Pages : `/pricing` (formules, prix lus chez Stripe) et bloc « Abonnement » dans `/account`. Routes : `GET /billing/plans`, `GET /billing/status`, `POST /billing/checkout` (`{ "interval": "month" | "year" }`), `POST /billing/portal`, `POST /billing/webhook`.
+
+Limite à connaître : le verrouillage premium protège les vidéos **envoyées** (fichiers). Une conférence YouTube/Vimeo reste lisible par quiconque connaît le lien de la vidéo.
+
+### Mise en route Stripe (en mode test d'abord)
+1. Compte Stripe → activer le **mode test** (interrupteur en haut du tableau de bord).
+2. **Catalogue de produits** → Ajouter un produit « Abonnement Majlis TV » avec deux prix récurrents en EUR : un **mensuel** et un **annuel**. Copier l'identifiant de chaque prix (`price_…`).
+3. **Développeurs → Clés API** : copier la **clé secrète** (`sk_test_…`).
+4. **Développeurs → Webhooks → Ajouter un point de terminaison** : URL `https://api-majlisstv.le-publicitaire.fr/billing/webhook` ; événements : `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`. Copier le **secret de signature** (`whsec_…`).
+5. **Paramètres → Facturation → Portail client** : activer, autoriser « annuler l'abonnement » et « mettre à jour le moyen de paiement » (et, si voulu, le changement mensuel/annuel).
+6. Dans DockPanel, variables du déploiement de l'**API** (jamais dans Git ni dans un chat) : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `WEB_URL` (adresse publique du site). Optionnel : `TRIAL_DAYS` (défaut 7), `PREVIEW_SECONDS` (défaut 120). Save puis Deploy.
+7. Test : créer un compte, ouvrir une conférence premium (aperçu de 2 minutes), cliquer « S'abonner », payer avec la carte de test `4242 4242 4242 4242` (date future, CVC quelconque). Après le paiement, `/account` affiche « Essai gratuit jusqu'au … » et la conférence se lit en entier.
+8. **Passage en production** : répéter les étapes 2 à 5 en mode production (nouveaux `price_`, clé `sk_live_…`, nouveau webhook et son `whsec_…`), remplacer les 4 variables et redéployer l'API.
+
+Debug : Stripe → Développeurs → Webhooks → l'endpoint → liste des envois (code de réponse attendu : 200). `docker logs` de l'API pour les erreurs ; en base : `SELECT user_id, status, current_period_end FROM subscriptions;`. Tests locaux sans compte Stripe : `api/tests/mock_stripe.py` (faux serveur) avec `STRIPE_API_BASE=http://127.0.0.1:12111`.
+

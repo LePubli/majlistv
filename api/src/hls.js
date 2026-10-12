@@ -19,3 +19,26 @@ export async function rewriteVariant(text, signUrl) {
   }
   return out.join('\n');
 }
+
+// Aperçu : ne garde que les segments qui commencent avant `seconds`, puis termine la playlist.
+export function truncateVariant(text, seconds) {
+  const out = [];
+  let elapsed = 0;
+  let pendingInf = null;
+  for (const l of text.split('\n')) {
+    if (l.startsWith('#EXT-X-ENDLIST')) continue;
+    if (l.startsWith('#EXTINF:')) { pendingInf = l; continue; }
+    if (pendingInf !== null && l && !l.startsWith('#')) {
+      if (elapsed >= seconds) break;
+      out.push(pendingInf, l);
+      elapsed += parseFloat(pendingInf.slice(8)) || 0;
+      pendingInf = null;
+      continue;
+    }
+    if (pendingInf !== null) { out.push(pendingInf); pendingInf = null; }
+    out.push(l);
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  out.push('#EXT-X-ENDLIST', '');
+  return out.join('\n');
+}

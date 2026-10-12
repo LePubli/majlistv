@@ -1,7 +1,7 @@
 // Transcription et sous-titres : protégés par le même jeton de lecture que le flux HLS.
 import { z } from 'zod';
 import { pool } from '../db.js';
-import { checkPlaybackToken } from '../playback.js';
+import { checkPlaybackToken, playbackLevel } from '../playback.js';
 import { toVtt } from '../vtt.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -48,7 +48,8 @@ export default async function transcriptRoutes(app) {
   app.get('/talks/:id/insights', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { lang, t } = z.object({ lang: z.string().regex(langRe).optional(), t: z.string().optional() }).parse(req.query);
-    if (!checkPlaybackToken(id, t)) return reply.code(403).send({ error: 'Accès refusé' });
+    const level = playbackLevel(id, t);
+    if (!level) return reply.code(403).send({ error: 'Accès refusé' });
     const { rows } = await pool.query(
       "SELECT lang, summary, key_points, chapters FROM talk_insights WHERE talk_id = $1 AND status = 'ready' ORDER BY lang", [id]
     );
@@ -60,7 +61,9 @@ export default async function transcriptRoutes(app) {
       languages: rows.map((r) => r.lang),
       summary: row.summary,
       keyPoints: row.key_points,
-      chapters: row.chapters.map((c) => ({ s: c.ms, t: c.title })),
+      // Aperçu gratuit : résumé seulement (les chapitres pointent vers la partie réservée aux abonnés).
+      chapters: level === 'full' ? row.chapters.map((c) => ({ s: c.ms, t: c.title })) : [],
+      preview: level === 'preview',
     };
   });
 }

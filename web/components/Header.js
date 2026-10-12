@@ -18,6 +18,7 @@ export default function Header() {
         <select value={locale} onChange={setLocale} aria-label="Language">
           {Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        <Link href="/pricing">{t('pricing')}</Link>
         {ready && (user ? (
           <>
             {['organizer', 'admin'].includes(user.role) && <Link href="/organizer">{t('myTalks')}</Link>}
