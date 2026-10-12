@@ -4,6 +4,8 @@ import { pool } from '../db.js';
 import { BY_KEY, describeSettings, getSetting, saveSettings, isOn } from '../settings.js';
 import { makeStripe, stripeContext } from './billing.js';
 import { INDEX, meili, meiliConf, resetIndex, searchStatus } from '../search.js';
+import { sendNow, baseVars } from '../mailer.js';
+import { renderEmail } from '../emails.js';
 
 // Mode (test/live) et compte d'une clé Stripe : sert à détecter un changement de compte.
 const stripeMode = (key) => (/^(sk|rk)_live_/.test(key) ? 'live' : 'test');
@@ -64,6 +66,13 @@ const TESTS = {
     try { docs = (await meili(c, 'GET', `/indexes/${INDEX}/stats`, undefined, 5000)).numberOfDocuments; } catch (err) { if (err.status !== 404) throw err; }
     return { ok: true, message: `Meilisearch ${v.pkgVersion} joignable, clé acceptée. ${docs} conférence(s) dans l'index.` };
   },
+  async smtp(req) {
+    const { rows } = await pool.query('SELECT email, name, locale FROM users WHERE id = $1', [req.user.sub]);
+    const base = await baseVars();
+    const mail = renderEmail('test', rows[0].locale, { ...base, name: rows[0].name, url: base.webUrl || undefined });
+    const info = await sendNow({ to: rows[0].email, ...mail });
+    return { ok: true, message: `E-mail de test envoyé à ${rows[0].email} (réponse du serveur : ${String(info.response || 'OK').slice(0, 80)}). Vérifiez aussi le dossier indésirables.` };
+  },
   async claude() {
     const key = await getSetting('anthropic_key');
     if (!key) return { ok: false, message: 'Clé Claude non renseignée.' };
@@ -120,9 +129,9 @@ export default async function settingsRoutes(app) {
   });
 
   app.post('/admin/settings/test', { preHandler: app.requireRole('admin'), config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude', 'meili']) }).parse(req.body);
+    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude', 'meili', 'smtp']) }).parse(req.body);
     try {
-      return await TESTS[target]();
+      return await TESTS[target](req);
     } catch (err) {
       req.log.warn(err);
       return { ok: false, message: `Échec du test : ${err.message}` };
@@ -139,11 +148,12 @@ export default async function settingsRoutes(app) {
       q("SELECT status, count(*)::int AS n FROM subscriptions GROUP BY status"),
     ]);
     const toMap = (rows) => Object.fromEntries(rows.map((r) => [r.status, r.n]));
+    const emails = toMap(await q("SELECT status, count(*)::int AS n FROM email_outbox WHERE created_at > now() - interval '30 days' GROUP BY status"));
     const searchOn = Boolean(await meiliConf());
     const [{ n: ready }] = await q("SELECT count(*)::int AS n FROM talks WHERE video_status = 'ready'");
     const [{ n: indexed }] = await q('SELECT count(*)::int AS n FROM search_state');
     return { translations: toMap(tr), insights: toMap(ins), transcripts: toMap(tx), subscriptions: toMap(subs), insightsEnabled: isOn(await getSetting('insights_enabled')),
-      search: { enabled: searchOn, ready, indexed, ...searchStatus() } };
+      search: { enabled: searchOn, ready, indexed, ...searchStatus() }, emails };
   });
 
   // Recherche : vide l'index Meilisearch ; la synchronisation le reconstruit en quelques minutes.

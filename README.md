@@ -244,3 +244,26 @@ Sur le site : la barre de recherche de l'accueil affiche des résultats avec **e
 
 Mise en service : voir la réponse de livraison ou `search/README.md` (nouveau déploiement `majlistv-search`, port hôte 7060, variable `MEILI_MASTER_KEY`, puis Admin → Paramètres → Recherche).
 
+## Étape 9 : paiement conforme, e-mails, pages légales, mot de passe oublié
+Nouveautés : migration `012_compliance.sql` (tables `consents`, `legal_pages`, `email_outbox`, `password_resets`, colonne `users.sessions_valid_after`), dépendance `nodemailer` 10.0.12.
+
+- **Renonciation au droit de rétractation** : sur la page Abonnement, les boutons restent grisés tant que la case n'est pas cochée. Chaque acceptation est enregistrée : texte exact, version, date, adresse IP, navigateur. Elle est visible par l'admin (`GET /admin/users/:id/consents`). Le serveur refuse tout paiement sans cette case.
+- **TVA** : réglage « TVA automatique (Stripe Tax) » dans Admin → Paramètres → Paiement. Une fois activé, Stripe calcule la TVA selon l'adresse du client, demande l'adresse de facturation et accepte un numéro de TVA (clients professionnels).
+- **Codes promo** : déjà acceptés au paiement. On les crée dans Stripe → Catalogue de produits → Coupons → Codes promotionnels.
+- **Formule annuelle** : le badge « N mois offerts » est calculé à partir des prix Stripe (6,99 € × 12 = 83,88 € contre 69,99 € → « 2 mois offerts »).
+- **E-mails**, dans la langue du compte (fr, en, ar) : bienvenue, mot de passe oublié, rappel 3 jours avant la fin de l'essai (événement Stripe), paiement reçu (avec lien vers la facture), échec de paiement, résiliation enregistrée, fin d'abonnement.
+  - Ils passent par une file d'attente : jamais deux fois le même envoi ; jusqu'à 5 essais espacés si le serveur d'envoi ne répond pas ; abandon après 48 h si l'envoi n'est pas configuré.
+  - Réglages dans Admin → Paramètres → E-mails, avec un bouton « Tester la connexion » qui vous envoie un e-mail.
+- **Mot de passe oublié** : lien sous le formulaire de connexion. Le lien est valable 1 heure et ne sert qu'une fois ; seule son empreinte est stockée. Changer de mot de passe déconnecte les sessions ouvertes. Même chose quand un admin réinitialise un mot de passe.
+- **Pages légales** : mentions légales, CGV/CGU, confidentialité. Ce sont des modèles à compléter (passages entre crochets) dans Admin → Pages légales, puis à faire relire. Elles sont liées en pied de page de tout le site, à l'inscription et sur la page Abonnement.
+
+### Réglages Stripe à faire (mode test d'abord)
+1. **Prix** : Catalogue de produits → votre produit → ajouter un prix récurrent de 6,99 € par mois et un de 69,99 € par an, avec le comportement fiscal « TVA incluse ». Copiez les deux `price_…` dans Admin → Paramètres → Paiement.
+2. **Webhook** : Développeurs → Webhooks → votre point de terminaison. Ajoutez les événements `customer.subscription.trial_will_end`, `invoice.paid` et `invoice.payment_failed`, en plus des quatre existants.
+3. **TVA**, à faire valider par votre comptable : Stripe → Taxes. Renseignez l'adresse de l'entreprise, ajoutez l'immatriculation France (et le guichet unique OSS si besoin), puis activez « TVA automatique » dans le back-office.
+
+### E-mails
+Choisissez un service d'envoi qui fournit un accès SMTP (par exemple Brevo, Mailgun ou celui de votre hébergeur de messagerie). Validez votre domaine chez lui (enregistrements DNS SPF et DKIM qu'il vous donne). Saisissez ensuite serveur, port, identifiant, clé et expéditeur dans Admin → Paramètres → E-mails, puis cliquez sur « Tester la connexion ».
+
+Tests locaux : `api/tests/smtp_sink.py` (faux serveur SMTP qui enregistre les e-mails en fichiers) et `api/tests/mock_stripe.py`.
+

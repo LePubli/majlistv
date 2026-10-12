@@ -166,3 +166,17 @@ mark { background: rgba(56, 189, 248, .25); color: var(--text); border-radius: 3
 .moments a:hover { color: var(--text); }
 .moments .ts { color: var(--accent); font-variant-numeric: tabular-nums; margin-inline-end: 6px; }
 @media (max-width: 600px) { .hit { flex-direction: column; } .hit-thumb { flex: none; width: 100%; } }
+
+/* Paiement conforme, pages légales, pied de page (étape 9) */
+.small { font-size: .85rem; }
+.waiver { display: flex; gap: 10px; align-items: flex-start; max-width: 640px; margin: 20px 0 8px; padding: 14px 16px; background: var(--surface); border-radius: 8px; line-height: 1.5; cursor: pointer; }
+.waiver input { width: 20px; height: 20px; flex: none; margin-top: 2px; accent-color: var(--accent); }
+.legal h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+.legal p, .legal li { line-height: 1.65; color: var(--text); }
+.legal ul { padding-inline-start: 22px; }
+.site-footer { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; padding: 24px 4vw; margin-top: 48px; border-top: 1px solid var(--surface); color: var(--muted); font-size: .9rem; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.site-footer a { color: var(--muted); }
+.site-footer a:hover { color: var(--text); }
+.site-footer a { display: inline-block; }
+.site-footer a::first-letter { text-transform: uppercase; }

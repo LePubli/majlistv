@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import './globals.css';
 import Providers from '../components/Providers';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import { DICT, DIR, getLocale } from '../lib/i18n';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function RootLayout({ children }) {
         <Providers locale={locale} dict={DICT[locale]} appName={appName}>
           <Header />
           {children}
+          <Footer />
         </Providers>
       </body>
     </html>

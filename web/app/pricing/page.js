@@ -13,6 +13,7 @@ export default function Pricing() {
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [waiver, setWaiver] = useState(false);
   const canceled = useSearchParams().get('canceled');
 
   useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [] })); }, [call]);
@@ -30,6 +31,8 @@ export default function Pricing() {
   const month = info.plans.find((p) => p.interval === 'month');
   const year = info.plans.find((p) => p.interval === 'year');
   const saving = month && year ? Math.round(100 - (year.amount / (month.amount * 12)) * 100) : 0;
+  // Mois offerts par la formule annuelle (ex. 6,99 € × 12 = 83,88 € contre 69,99 € → 2 mois).
+  const freeMonths = month && year ? Math.floor((month.amount * 12 - year.amount) / month.amount + 0.05) : 0;
   const active = status?.active;
 
   return (
@@ -45,11 +48,12 @@ export default function Pricing() {
             <section key={interval} className={`plan ${interval === 'year' ? 'best' : ''}`}>
               <h2>{t(interval === 'year' ? 'yearly' : 'monthly')}</h2>
               <p className="price">{money(p)} <span>{t(interval === 'year' ? 'perYear' : 'perMonth')}</span></p>
-              {interval === 'year' && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
+              {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(t('freeMonths'), freeMonths)}</p>}
+              {interval === 'year' && freeMonths < 1 && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
               {active ? (
                 <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{t('manageSub')}</button>
               ) : user ? (
-                <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/checkout', { interval }, interval)}>
+                <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, waiver: true }, interval)}>
                   {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
                 </button>
               ) : (
@@ -59,6 +63,13 @@ export default function Pricing() {
           ))}
         </div>
       )}
+      {info.enabled && user && !active && (
+        <label className="waiver">
+          <input type="checkbox" checked={waiver} onChange={(e) => setWaiver(e.target.checked)} />
+          <span>{t('waiverText')} <Link href="/legal/cgv" target="_blank">{t('legalTerms')}</Link></span>
+        </label>
+      )}
+      {info.enabled && <p className="meta small">{t('pricingFooter')}</p>}
     </main>
   );
 }

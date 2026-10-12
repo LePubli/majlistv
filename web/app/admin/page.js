@@ -39,6 +39,7 @@ function Dashboard() {
           <div className="admin-card"><strong>{line(st.transcripts)}</strong><span>transcriptions</span></div>
           <div className="admin-card"><strong>{line(st.translations)}</strong><span>traductions de sous-titres</span></div>
           <div className="admin-card"><strong>{st.insightsEnabled ? line(st.insights) : 'désactivés'}</strong><span>résumés et chapitres</span></div>
+          <div className="admin-card"><strong>{line(st.emails)}</strong><span>e-mails (30 derniers jours)</span>{st.emails?.failed > 0 && <span className="error">Échecs : vérifier Paramètres → E-mails</span>}</div>
           <div className="admin-card">
             <strong>{st.search.enabled ? `${st.search.indexed} / ${st.search.ready} indexées` : 'recherche simple'}</strong>
             <span>recherche {st.search.enabled ? 'Meilisearch' : '(Meilisearch non configuré)'}</span>
@@ -339,6 +340,49 @@ function Users({ me }) {
   );
 }
 
+/* ---------------------------------------------------------------- Pages légales */
+function LegalPages() {
+  const { call } = useApp();
+  const [list, setList] = useState([]);
+  const [cur, setCur] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { call('/legal', {}, null).then((r) => r.ok && setList(r.data)); }, [call]);
+  const open = async (slug) => {
+    setMsg(null);
+    const r = await call('/legal/' + slug, {}, null);
+    if (r.ok) setCur(r.data);
+  };
+  const save = async () => {
+    setBusy(true); setMsg(null);
+    const r = await call('/admin/legal/' + cur.slug, { method: 'PUT', body: JSON.stringify({ title: cur.title, body: cur.body }) });
+    setBusy(false);
+    setMsg(r.ok ? { ok: true, text: 'Enregistré. La page publique est à jour.' } : { ok: false, text: r.data.error || 'Erreur' });
+  };
+  const todo = cur ? (cur.body.match(/\[[^\]]{2,80}\]/g) || []).length : 0;
+  return (
+    <section>
+      <h2>Pages légales</h2>
+      <p className="meta">Modèles à compléter (passages entre crochets) puis à faire relire par un professionnel. Mise en forme : une ligne « ## Titre », une ligne « - élément » pour une liste, une ligne vide entre deux paragraphes.</p>
+      <div className="adm-row">
+        {list.map((p) => <button key={p.slug} className={cur?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
+      </div>
+      {cur && (
+        <div className="adm-form">
+          <label>Titre<input value={cur.title} onChange={(e) => setCur({ ...cur, title: e.target.value })} maxLength={120} /></label>
+          <label>Texte<textarea rows={22} value={cur.body} onChange={(e) => setCur({ ...cur, body: e.target.value })} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14 }} /></label>
+          {todo > 0 && <p className="error">{todo} passage(s) entre crochets restent à compléter.</p>}
+          <div className="adm-row">
+            <button className="btn" disabled={busy} onClick={save}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+            <a className="btn ghost" href={'/legal/' + cur.slug} target="_blank" rel="noreferrer">Voir la page</a>
+            {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
   const { user, ready } = useApp();
@@ -351,13 +395,14 @@ export default function Admin() {
     <main className="admin">
       <h1>Administration</h1>
       <div className="adm-tabs" role="tablist">
-        {[['dashboard', 'Tableau de bord'], ['users', 'Utilisateurs'], ['settings', 'Paramètres']].map(([k, v]) => (
+        {[['dashboard', 'Tableau de bord'], ['users', 'Utilisateurs'], ['settings', 'Paramètres'], ['legal', 'Pages légales']].map(([k, v]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{v}</button>
         ))}
       </div>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'users' && <Users me={user.id} />}
       {tab === 'settings' && <Settings />}
+      {tab === 'legal' && <LegalPages />}
     </main>
   );
 }

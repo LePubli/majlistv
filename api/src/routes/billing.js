@@ -4,7 +4,23 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { pool } from '../db.js';
-import { getSetting, getNumber } from '../settings.js';
+import { getSetting, getNumber, isOn } from '../settings.js';
+import { enqueueForUser } from '../mailer.js';
+import { fmtDate, fmtMoney } from '../emails.js';
+
+// Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
+export const WAIVER_VERSION = '2026-10-12';
+export const WAIVER_TEXT = {
+  fr: "Je demande l'accès immédiat aux conférences et je reconnais perdre mon droit de rétractation de 14 jours dès le début de l'accès (article L221-28 du Code de la consommation). J'accepte les conditions générales de vente.",
+  en: 'I request immediate access to the conferences and acknowledge that I lose my 14-day right of withdrawal once access begins. I accept the terms of sale.',
+  ar: 'أطلب الوصول الفوري إلى المحاضرات وأقرّ بفقدان حقي في التراجع خلال 14 يومًا بمجرد بدء الوصول. أوافق على شروط البيع.',
+};
+const SUBMIT_TEXT = {
+  fr: "Sans résiliation, l'abonnement se renouvelle automatiquement. Résiliable à tout moment depuis Mon compte.",
+  en: 'Unless cancelled, the subscription renews automatically. Cancel any time from My account.',
+  ar: 'يتجدد الاشتراك تلقائيًا ما لم يُلغَ. يمكن الإلغاء في أي وقت من صفحة حسابي.',
+};
+const lang2 = (l) => (['fr', 'en', 'ar'].includes(String(l || '').slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
 
 const toDate = (sec) => (sec ? new Date(sec * 1000) : null);
 
@@ -95,7 +111,9 @@ export default async function billingRoutes(app) {
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
     const ctx = await stripeContext();
     if (!ctx) return off(reply);
-    const { interval } = z.object({ interval: z.enum(['month', 'year']) }).parse(req.body);
+    const { interval, waiver } = z.object({ interval: z.enum(['month', 'year']), waiver: z.boolean().optional() }).parse(req.body);
+    // Renonciation expresse au droit de rétractation, exigée avant tout paiement (contenu numérique).
+    if (waiver !== true) return reply.code(400).send({ error: 'Merci de cocher la case de renonciation au droit de rétractation.', code: 'waiver_required' });
     const live = await pool.query(
       "SELECT 1 FROM subscriptions WHERE user_id = $1 AND status IN ('trialing', 'active', 'past_due') LIMIT 1", [req.user.sub]);
     if (live.rowCount) return reply.code(409).send({ error: 'Abonnement déjà actif : utilise « Gérer mon abonnement »' });
@@ -106,16 +124,35 @@ export default async function billingRoutes(app) {
     const webUrl = await getSetting('web_url');
     const subscription_data = { metadata: { user_id: req.user.sub } };
     if (trialDays > 0 && !before.rowCount) subscription_data.trial_period_days = trialDays;
-    const session = await ctx.stripe.checkout.sessions.create({
+    const { rows: me } = await pool.query('SELECT email, locale FROM users WHERE id = $1', [req.user.sub]);
+    const l = lang2(me[0].locale);
+    // Preuve horodatée du consentement (texte exact, version, adresse IP, navigateur).
+    await pool.query(
+      `INSERT INTO consents(user_id, email, kind, version, text, context, ip, user_agent) VALUES ($1, $2, 'withdrawal_waiver', $3, $4, $5, $6, $7)`,
+      [req.user.sub, me[0].email, WAIVER_VERSION, WAIVER_TEXT[l], `checkout:${interval}`, req.ip, String(req.headers['user-agent'] || '').slice(0, 300)]
+    );
+    const params = {
       mode: 'subscription',
       customer,
       client_reference_id: req.user.sub,
       line_items: [{ price: ctx.prices[interval], quantity: 1 }],
       subscription_data,
-      allow_promotion_codes: true,
+      allow_promotion_codes: true, // codes promo créés dans Stripe → Produits → Coupons
+      custom_text: { submit: { message: SUBMIT_TEXT[l] } },
+      locale: l === 'ar' ? 'auto' : l,
       success_url: `${webUrl}/account?billing=success`,
       cancel_url: `${webUrl}/pricing?canceled=1`,
-    });
+    };
+    if (isOn(await getSetting('stripe_automatic_tax'))) {
+      // TVA calculée par Stripe Tax selon l'adresse du client (prix « taxes incluses » recommandés).
+      Object.assign(params, {
+        automatic_tax: { enabled: true },
+        billing_address_collection: 'required',
+        customer_update: { address: 'auto', name: 'auto' },
+        tax_id_collection: { enabled: true },
+      });
+    }
+    const session = await ctx.stripe.checkout.sessions.create(params);
     return { url: session.url };
   });
 
@@ -163,6 +200,48 @@ export default async function billingRoutes(app) {
       return true;
     }
 
+    // Utilisateur lié à un client Stripe (ou à l'abonnement via ses métadonnées).
+    async function userFor(client, obj) {
+      const customerId = typeof obj.customer === 'string' ? obj.customer : obj.customer?.id;
+      if (customerId) {
+        const u = await client.query('SELECT id, locale FROM users WHERE stripe_customer_id = $1', [customerId]);
+        if (u.rows[0]) return u.rows[0];
+      }
+      const meta = obj.metadata?.user_id || obj.subscription_details?.metadata?.user_id;
+      if (meta) {
+        const u = await client.query('SELECT id, locale FROM users WHERE id = $1', [meta]);
+        if (u.rows[0]) return u.rows[0];
+      }
+      return null;
+    }
+
+    // E-mails liés au paiement. Chaque envoi a une clé unique : un événement rejoué n'envoie rien en double.
+    async function notify(client, event) {
+      const obj = event.data.object;
+      const user = await userFor(client, obj);
+      if (!user) return;
+      const loc = user.locale;
+      if (event.type === 'customer.subscription.trial_will_end' && obj.trial_end) {
+        const price = obj.items?.data?.[0]?.price;
+        await enqueueForUser(client, user.id, 'trial_ending', {
+          date: fmtDate(obj.trial_end * 1000, loc), amount: price ? fmtMoney(price.unit_amount, price.currency, loc) : '',
+          interval: price?.recurring?.interval, path: '/account',
+        }, `trial_end:${obj.id}:${obj.trial_end}`);
+      } else if (event.type === 'customer.subscription.updated' && obj.cancel_at_period_end && event.data.previous_attributes
+        && event.data.previous_attributes.cancel_at_period_end === false) {
+        const end = obj.cancel_at || obj.current_period_end || obj.items?.data?.[0]?.current_period_end;
+        await enqueueForUser(client, user.id, 'subscription_canceled', { date: end ? fmtDate(end * 1000, loc) : '', path: '/account' }, `cancel:${obj.id}:${end}`);
+      } else if (event.type === 'customer.subscription.deleted') {
+        await enqueueForUser(client, user.id, 'subscription_ended', { path: '/pricing' }, `ended:${obj.id}`);
+      } else if (event.type === 'invoice.paid' && obj.amount_paid > 0) {
+        await enqueueForUser(client, user.id, 'payment_succeeded', {
+          amount: fmtMoney(obj.amount_paid, obj.currency, loc), url: obj.hosted_invoice_url || undefined, path: obj.hosted_invoice_url ? undefined : '/account',
+        }, `paid:${obj.id}`);
+      } else if (event.type === 'invoice.payment_failed') {
+        await enqueueForUser(client, user.id, 'payment_failed', { amount: fmtMoney(obj.amount_due, obj.currency, loc), path: '/account' }, `failed:${obj.id}:${obj.attempt_count || 1}`);
+      }
+    }
+
     hook.post('/billing/webhook', { config: { rateLimit: { max: 300, timeWindow: '1 minute' } } }, async (req, reply) => {
       const ctx = await stripeContext();
       const whSecret = await getSetting('stripe_webhook_secret');
@@ -181,6 +260,9 @@ export default async function billingRoutes(app) {
           const obj = event.data.object;
           if (event.type.startsWith('customer.subscription.')) {
             await applySubscription(client, obj, event.created);
+            await notify(client, event);
+          } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+            await notify(client, event);
           } else if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) {
             // Filet de sécurité si l'événement d'abonnement arrive plus tard : on récupère l'état actuel chez Stripe.
             const sub = await ctx.stripe.subscriptions.retrieve(obj.subscription);

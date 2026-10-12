@@ -16,7 +16,7 @@ Protection premium : une conférence premium apparaît dans les résultats, mais
 - Name : `majlistv-search`
 - Dépôt / branche : les mêmes que l'API
 - Dockerfile Path : `search/Dockerfile` ; Build Context : `.`
-- Container Port : `7700` ; **aucun domaine** (service interne)
+- Container Port : `3000` (Meilisearch écoute sur 3000 comme les autres services) ; **aucun domaine** (service interne)
 - Persistent Volume : `/meili_data` (sinon l'index est perdu à chaque redéploiement ; il se reconstruirait tout seul, mais inutilement)
 - Variable : `MEILI_MASTER_KEY` = résultat de `openssl rand -hex 32` (à saisir uniquement dans DockPanel, jamais dans un chat ni dans Git)
 
@@ -26,17 +26,22 @@ Port hôte : imposer **7060** (même méthode que pour le translator en 7050), v
 | Variable | Où | Rôle |
 |---|---|---|
 | `MEILI_MASTER_KEY` | service `majlistv-search` (DockPanel) | clé maître, 16 caractères minimum (32+ recommandé) |
-| Adresse + clé | **Admin → Paramètres → Recherche (Meilisearch)** | `http://172.17.0.1:7060` et la même clé maître |
+| Adresse + clé | **Admin → Paramètres → Recherche (Meilisearch)** | `http://IP_DU_CONTENEUR:3000` (ex. `http://172.17.0.9:3000`) et la même clé maître |
 
 Variables fixées dans le Dockerfile : `MEILI_ENV=production`, `MEILI_NO_ANALYTICS=true`, `MEILI_MAX_INDEXING_MEMORY=300Mb`, `MEILI_MAX_INDEXING_THREADS=1` (laisse le CPU à Whisper).
 
-`172.17.0.1` est l'adresse de l'hôte vue depuis les conteneurs Docker (réseau `bridge` par défaut). Si le test échoue, voir Debug.
+DockPanel place les conteneurs sur le réseau Docker `bridge` par défaut, où les noms ne sont pas résolus : l'API joint Meilisearch par l'**adresse IP du conteneur** (même principe que `DATABASE_URL`). Le port hôte 7060 n'est ouvert que sur 127.0.0.1 (tests depuis le VPS). Obtenir l'IP :
+```bash
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' dockpanel-git-majlistv-search
+```
+Après un redémarrage du VPS ou un redéploiement de `majlistv-search`, l'IP peut changer : le Tableau de bord affiche alors une erreur sous la carte Recherche (la recherche simple prend le relais) ; reprendre l'IP et la mettre à jour dans Admin → Paramètres. Si le test échoue, voir Debug.
 
 ## Lancement et vérification
 ```bash
 docker logs --tail 20 dockpanel-git-majlistv-search
 curl -s http://127.0.0.1:7060/health; echo
-docker exec dockpanel-git-majlistv-api node -e "fetch('http://172.17.0.1:7060/health').then(r=>r.text()).then(console.log).catch(e=>console.log('ERREUR',e.message))"
+IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' dockpanel-git-majlistv-search); echo "IP : $IP"
+docker exec dockpanel-git-majlistv-api node -e "fetch('http://$IP:3000/health').then(r=>r.text()).then(console.log).catch(e=>console.log('ERREUR',e.message))"
 ```
 Attendu : `{"status":"available"}` sur les deux dernières commandes. Ensuite : Admin → Paramètres → Recherche → saisir adresse + clé → Enregistrer → **Tester la connexion** ; le Tableau de bord affiche « N / N indexées » après une à deux minutes.
 
@@ -48,16 +53,12 @@ Attendu : `{"status":"available"}` sur les deux dernières commandes. Ensuite : 
 ## Debug
 - Tableau de bord « recherche simple » : adresse ou clé non renseignée dans Admin → Paramètres.
 - Message d'erreur sous la carte Recherche : le texte vient de Meilisearch (ex. `HTTP 403` = clé différente de `MEILI_MASTER_KEY` ; `fetch failed` = adresse injoignable).
-- `fetch failed` depuis l'API : vérifier le port hôte (`docker ps --format '{{.Names}}\t{{.Ports}}' | grep search`) ; si l'API n'est pas sur le réseau `bridge`, trouver l'adresse de passerelle avec `docker inspect dockpanel-git-majlistv-api --format '{{range .NetworkSettings.Networks}}{{.Gateway}} {{end}}'` et l'utiliser à la place de 172.17.0.1.
+- `fetch failed` depuis l'API : l'IP du conteneur a changé (redéploiement, redémarrage du VPS). La reprendre avec la commande `docker inspect` ci-dessus et la mettre à jour dans Admin → Paramètres.
 - Résultats incomplets ou étranges : Admin → Tableau de bord → **Réindexer tout** (la recherche simple prend le relais pendant la reconstruction).
 - Conteneur tué (mémoire) : augmenter la limite dans `/root/apply-limits.sh` (règle `majlistv-search`).
 
 ## Sécurité
-Docker publie le port 7060 sur toutes les interfaces ; la clé maître protège l'accès. Pour bloquer en plus tout accès depuis Internet (l'API passe par l'interface Docker, pas par la carte réseau publique) :
-```bash
-IF=$(ip route show default | awk '{print $5}'); iptables -I DOCKER-USER -i "$IF" -p tcp --dport 7700 -j DROP && echo "7700 bloqué depuis $IF"
-```
-(règle perdue au redémarrage du VPS sauf avec `iptables-persistent`).
+DockPanel publie le port hôte sur `127.0.0.1` uniquement : Meilisearch n'est pas joignable depuis Internet. La clé maître protège en plus chaque requête.
 
 ## Déploiement d'une nouvelle version de Meilisearch
 Changer la version dans `search/Dockerfile`, Deploy, puis Admin → **Réindexer tout** (une version majeure peut refuser l'ancien index : supprimer alors le contenu du volume, l'index se reconstruit seul).

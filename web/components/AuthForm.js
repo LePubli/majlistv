@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 
@@ -32,7 +33,9 @@ export default function AuthForm({ mode }) {
         <label>{t('email')}<input type="email" required value={f.email} onChange={set('email')} /></label>
         <label>{t('password')}<input type="password" required minLength={8} value={f.password} onChange={set('password')} /></label>
         {err && <p className="error">{err}</p>}
+        {isReg && <p className="meta small">{t('registerLegal')} <Link href="/legal/cgv">{t('legalTerms')}</Link> · <Link href="/legal/confidentialite">{t('legalPrivacy')}</Link></p>}
         <button className="btn" disabled={busy}>{t('submit')}</button>
+        {!isReg && <Link href="/forgot" className="small">{t('forgotLink')}</Link>}
       </form>
     </main>
   );

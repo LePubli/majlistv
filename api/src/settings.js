@@ -7,6 +7,7 @@ import { TRANSLATION_LANGS } from './langs.js';
 export const GROUPS = [
   { id: 'general', label: 'Général' },
   { id: 'payment', label: 'Paiement (Stripe)' },
+  { id: 'email', label: 'E-mails' },
   { id: 'translation', label: 'Traduction des sous-titres' },
   { id: 'insights', label: 'Résumés et chapitres' },
   { id: 'transcription', label: 'Transcription (Whisper)' },
@@ -27,6 +28,20 @@ export const FIELDS = [
   { key: 'stripe_price_monthly', group: 'payment', type: 'text', label: 'Identifiant du prix mensuel', env: 'STRIPE_PRICE_MONTHLY', help: 'price_…' },
   { key: 'stripe_price_yearly', group: 'payment', type: 'text', label: 'Identifiant du prix annuel', env: 'STRIPE_PRICE_YEARLY', help: 'price_…' },
   { key: 'trial_days', group: 'payment', type: 'number', label: "Essai gratuit (jours, 0 = aucun)", env: 'TRIAL_DAYS', def: '7', min: 0, max: 90 },
+
+  { key: 'stripe_automatic_tax', group: 'payment', type: 'bool', label: 'TVA automatique (Stripe Tax)', env: 'STRIPE_AUTOMATIC_TAX', def: 'false',
+    help: 'Activer seulement après avoir configuré Stripe Tax (Stripe → Taxes) et défini vos prix « taxes incluses ». L\'adresse de facturation est alors demandée au paiement.' },
+
+  { key: 'smtp_host', group: 'email', type: 'text', label: 'Serveur SMTP', env: 'SMTP_HOST', help: 'Ex. smtp-relay.brevo.com, smtp.mailgun.org, ssl0.ovh.net. Vide = aucun e-mail envoyé.' },
+  { key: 'smtp_port', group: 'email', type: 'number', label: 'Port', env: 'SMTP_PORT', def: '587', min: 1, max: 65535 },
+  { key: 'smtp_security', group: 'email', type: 'select', options: ['starttls', 'ssl', 'none'], label: 'Sécurité', env: 'SMTP_SECURITY', def: 'starttls',
+    help: 'starttls pour le port 587 (le plus courant), ssl pour le port 465.' },
+  { key: 'smtp_user', group: 'email', type: 'text', label: 'Identifiant SMTP', env: 'SMTP_USER' },
+  { key: 'smtp_password', group: 'email', type: 'secret', label: 'Mot de passe ou clé SMTP', env: 'SMTP_PASSWORD', test: 'smtp',
+    help: 'Le test envoie un e-mail à votre propre adresse.' },
+  { key: 'mail_from', group: 'email', type: 'text', label: 'Expéditeur', env: 'MAIL_FROM',
+    help: 'Ex. Mejliss TV <noreply@votre-domaine.fr>. Le domaine doit être autorisé chez votre fournisseur (SPF/DKIM), sinon les e-mails finissent en indésirables.' },
+  { key: 'mail_reply_to', group: 'email', type: 'text', label: 'Adresse de réponse (facultatif)', env: 'MAIL_REPLY_TO', help: 'Ex. contact@votre-domaine.fr' },
 
   { key: 'translate_provider', group: 'translation', type: 'select', options: PROVIDERS, label: 'Moteur par défaut', env: 'TRANSLATE_PROVIDER', def: 'claude',
     help: 'claude : meilleure qualité · azure : gratuit jusqu\'à 2 M caractères/mois · deepseek : très économique.' },
@@ -56,7 +71,7 @@ export const FIELDS = [
   { key: 'whisper_beam', group: 'transcription', type: 'number', label: 'Précision de recherche (beam)', env: 'WHISPER_BEAM', def: '3', min: 1, max: 10 },
 
   { key: 'meili_url', group: 'search', type: 'url', label: 'Adresse du serveur Meilisearch', env: 'MEILI_URL',
-    help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://172.17.0.1:7060 (port hôte du service majlistv-search).' },
+    help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://IP_DU_CONTENEUR:3000 (docker inspect du service majlistv-search, comme pour la base de données).' },
   { key: 'meili_key', group: 'search', type: 'secret', label: 'Clé maître Meilisearch', env: 'MEILI_KEY', test: 'meili',
     help: 'La même valeur que la variable MEILI_MASTER_KEY du service majlistv-search. L\'index se remplit tout seul en quelques minutes.' },
 ];

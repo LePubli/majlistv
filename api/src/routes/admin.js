@@ -127,7 +127,8 @@ export default async function adminRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const { password } = z.object({ password: z.string().min(8).max(72).optional() }).parse(req.body ?? {});
     const pwd = password || tempPassword();
-    const { rowCount } = await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(pwd, 12), id]);
+    const { rowCount } = await pool.query('UPDATE users SET password_hash = $1, sessions_valid_after = now() WHERE id = $2', [await bcrypt.hash(pwd, 12), id]);
+    forgetUser(id);
     if (!rowCount) return reply.code(404).send({ error: 'Utilisateur introuvable' });
     return { temporaryPassword: password ? null : pwd };
   });

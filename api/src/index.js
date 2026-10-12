@@ -19,6 +19,8 @@ import { currentUser } from './userstate.js';
 import settingsRoutes from './routes/settings.js';
 import libraryRoutes from './routes/library.js';
 import searchRoutes from './routes/search.js';
+import legalRoutes from './routes/legal.js';
+import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
 const app = Fastify({ logger: true, trustProxy: true });
@@ -35,7 +37,7 @@ app.decorate('authenticate', async (req, reply) => {
   } catch {
     return reply.code(401).send({ error: 'Non authentifié' });
   }
-  const user = await currentUser(req.user.sub);
+  const user = await currentUser(req.user.sub, req.user.iat);
   if (!user) return reply.code(401).send({ error: 'Compte indisponible' });
   req.user.role = user.role;
 });
@@ -43,7 +45,7 @@ app.decorate('authenticate', async (req, reply) => {
 // Utilisateur connecté s'il y en a un (sinon null) : pages publiques qui varient selon l'abonné.
 app.decorate('optionalUser', async (req) => {
   try { await req.jwtVerify(); } catch { return null; }
-  return currentUser(req.user.sub);
+  return currentUser(req.user.sub, req.user.iat);
 });
 
 // Vérifie le token puis le rôle (ex. app.requireRole('admin')).
@@ -82,9 +84,11 @@ await app.register(billingRoutes);
 await app.register(settingsRoutes);
 await app.register(libraryRoutes);
 await app.register(searchRoutes);
+await app.register(legalRoutes);
 
 await migrate();
 await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
-startSearchSync(app.log); // index Meilisearch tenu à jour en arrière-plan (inactif tant qu'il n'est pas configuré)
+startSearchSync(app.log);
+startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré) // index Meilisearch tenu à jour en arrière-plan (inactif tant qu'il n'est pas configuré)
