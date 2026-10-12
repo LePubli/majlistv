@@ -103,10 +103,15 @@ export default async function talksRoutes(app) {
     const { rows } = await pool.query(`${SELECT} WHERE t.id = $1`, [id]);
     const talk = rows[0];
     if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
+    const viewer = await app.optionalUser(req); // visiteur anonyme : null
+    if (viewer) {
+      // Favori et position de reprise de l'utilisateur connecté (étape 6).
+      talk.favorite = (await pool.query('SELECT 1 FROM favorites WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rowCount > 0;
+      const prog = (await pool.query('SELECT position_ms, completed FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rows[0];
+      talk.resumeMs = prog && !prog.completed && prog.position_ms >= 5000 ? prog.position_ms : 0;
+    }
     if (talk.source === 'upload') {
-      // Premium : réservé au propriétaire et aux admins jusqu'à l'étape abonnement.
-      let viewer = null;
-      viewer = await app.optionalUser(req); // visiteur anonyme : null
+      // Premium : réservé au propriétaire, aux admins et aux abonnés ; les autres ont l'aperçu.
       const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
       const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
       const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));

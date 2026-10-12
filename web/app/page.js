@@ -10,8 +10,11 @@ export default function Home() {
   const [cats, setCats] = useState([]);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
+  const [cont, setCont] = useState([]);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+
+  useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call]);
 
   // Recherche avec un léger délai pendant la frappe.
   useEffect(() => {
@@ -31,6 +34,12 @@ export default function Home() {
         <p>{t('tagline')}</p>
         {!user && <Link href="/register" className="btn">{t('register')}</Link>}
       </section>
+      {cont.length > 0 && !q && !cat && (
+        <section className="continue">
+          <h2>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></h2>
+          <div className="grid">{cont.slice(0, 4).map((x) => <TalkCard key={x.id} talk={x} t={t} progress={x.durationMs ? x.positionMs / x.durationMs : 0} />)}</div>
+        </section>
+      )}
       <div className="filters">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} />
         <select value={cat} onChange={(e) => setCat(e.target.value)}>

@@ -17,6 +17,7 @@ import { ensureCors } from './storage.js';
 import { getSetting } from './settings.js';
 import { currentUser } from './userstate.js';
 import settingsRoutes from './routes/settings.js';
+import libraryRoutes from './routes/library.js';
 
 const app = Fastify({ logger: true, trustProxy: true });
 
@@ -77,6 +78,7 @@ await app.register(hlsRoutes);
 await app.register(transcriptRoutes);
 await app.register(billingRoutes);
 await app.register(settingsRoutes);
+await app.register(libraryRoutes);
 
 await migrate();
 await ensureAdmin();

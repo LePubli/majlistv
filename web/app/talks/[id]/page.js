@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
@@ -9,12 +9,79 @@ import Insights from '../../../components/Insights';
 
 export default function TalkPage() {
   const { id } = useParams();
-  const { call, t, locale } = useApp();
+  const { call, t, locale, user } = useApp();
+  const router = useRouter();
   const [talk, setTalk] = useState(undefined);
+  const [fav, setFav] = useState(false);
+  const [resumeMs, setResumeMs] = useState(0);
   const videoRef = useRef(null);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
-  useEffect(() => { call('/talks/' + id).then((r) => setTalk(r.ok ? r.data : null)); }, [id, call]);
+  useEffect(() => {
+    call('/talks/' + id).then((r) => {
+      setTalk(r.ok ? r.data : null);
+      if (r.ok) { setFav(Boolean(r.data.favorite)); setResumeMs(r.data.resumeMs || 0); }
+    });
+  }, [id, call]);
+
+  // Favori : mise à jour immédiate, annulée si le serveur refuse.
+  const toggleFav = async () => {
+    if (!user) { router.push('/login'); return; }
+    const next = !fav;
+    setFav(next);
+    const r = await call(`/me/favorites/${id}`, { method: next ? 'PUT' : 'DELETE' });
+    if (!r.ok) setFav(!next);
+  };
+
+  // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
+  const trackable = Boolean(user && talk && talk.source === 'upload' && talk.hlsPath && !talk.locked);
+  const startMs = useRef(0);
+  useEffect(() => { if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs]);
+  useEffect(() => {
+    if (!trackable) return undefined;
+    const video = videoRef.current;
+    if (!video) return undefined;
+    let seeked = false;
+    const seek = () => {
+      if (seeked || !startMs.current) return;
+      const dur = video.duration;
+      if (Number.isFinite(dur) && startMs.current / 1000 < dur - 10) { video.currentTime = startMs.current / 1000; seeked = true; }
+    };
+    const save = () => {
+      const pos = Math.round(video.currentTime * 1000);
+      // Rien avant d'avoir rejoint la position de reprise (évite d'écraser l'ancienne par 0).
+      if (pos < 5000 && !seeked && startMs.current) return;
+      if (pos < 5000 && !startMs.current) return;
+      const dur = Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0;
+      call(`/me/progress/${id}`, { method: 'PUT', body: JSON.stringify({ positionMs: pos, durationMs: dur }), keepalive: true });
+    };
+    const timer = setInterval(() => { if (!video.paused && !video.ended) save(); }, 10000);
+    const onHide = () => { if (document.visibilityState === 'hidden') save(); };
+    video.addEventListener('loadedmetadata', seek);
+    video.addEventListener('canplay', seek);
+    video.addEventListener('pause', save);
+    video.addEventListener('ended', save);
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', save);
+    seek();
+    return () => {
+      clearInterval(timer);
+      save();
+      video.removeEventListener('loadedmetadata', seek);
+      video.removeEventListener('canplay', seek);
+      video.removeEventListener('pause', save);
+      video.removeEventListener('ended', save);
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', save);
+    };
+  }, [trackable, id, call]);
+
+  const fromStart = () => {
+    startMs.current = 0;
+    setResumeMs(0);
+    if (videoRef.current) videoRef.current.currentTime = 0;
+  };
+  const clock = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
   // Pendant la conversion ou la transcription, la page se met à jour toute seule.
   const waiting = talk && talk.source === 'upload' && !talk.locked
@@ -44,7 +111,7 @@ export default function TalkPage() {
   if (talk.source !== 'upload') {
     player = <div className="player"><iframe src={embed} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={talk.title} /></div>;
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} /></div>;
+    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={resumeMs / 1000} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
   } else if (talk.status === 'failed') {
@@ -72,7 +139,15 @@ export default function TalkPage() {
           <Link className="btn" href="/pricing">{t('subscribe')}</Link>
         </div>
       )}
-      <h1>{talk.title}</h1>
+      {trackable && resumeMs > 0 && (
+        <p className="meta resume">{t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></p>
+      )}
+      <div className="title-row">
+        <h1>{talk.title}</h1>
+        <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
+          <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
+        </button>
+      </div>
       <p className="meta">{talk.speaker} · {talk.language}{talk.category ? ` · ${talk.category}` : ''} · {t(talk.access)}
         {talk.durationSeconds ? ` · ${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
       <p>{talk.description}</p>

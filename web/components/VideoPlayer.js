@@ -1,9 +1,10 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Lecteur vidéo : HLS via hls.js (qualité adaptative), lecture native sinon (Safari / iOS).
-// videoRef : ref du parent pour piloter la lecture (transcription cliquable). tracks : [{ lang, label, src, isDefault }].
-export default function VideoPlayer({ src, poster, tracks = [], videoRef }) {
+// startSeconds : reprise de lecture (hls.js startPosition). videoRef : ref du parent pour piloter la lecture (transcription cliquable). tracks : [{ lang, label, src, isDefault }].
+export default function VideoPlayer({ src, poster, tracks = [], videoRef, startSeconds = 0 }) {
+  const start = useRef(startSeconds); // position de reprise : lue une seule fois, au montage
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
@@ -12,7 +13,7 @@ export default function VideoPlayer({ src, poster, tracks = [], videoRef }) {
     import('hls.js').then(({ default: Hls }) => {
       if (cancelled) return;
       if (Hls.isSupported()) {
-        hls = new Hls();
+        hls = new Hls(start.current > 0 ? { startPosition: start.current } : {});
         hls.loadSource(src);
         hls.attachMedia(video);
       } else {

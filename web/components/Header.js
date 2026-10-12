@@ -22,6 +22,7 @@ export default function Header() {
         {ready && (user ? (
           <>
             {['organizer', 'admin'].includes(user.role) && <Link href="/organizer">{t('myTalks')}</Link>}
+            <Link href="/library">{t('library')}</Link>
             {user.role === 'admin' && <Link href="/admin">Admin</Link>}
             <Link href="/account">{t('account')}</Link>
             <button className="link" onClick={() => { logout(); router.push('/'); }}>{t('logout')}</button>

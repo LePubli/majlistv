@@ -227,3 +227,13 @@ Tout se règle désormais dans le site, sans toucher aux variables DockPanel ni 
 Routes API (admin) : `GET/POST /admin/users`, `PATCH/DELETE /admin/users/:id`, `POST /admin/users/:id/password`, `GET/PUT /admin/settings`, `POST /admin/settings/test` (`{ "target": "stripe|azure|deepseek|claude" }`), `GET /admin/status`.
 
 Debug : « SETTINGS_KEY manquante » dans les logs du translator/transcriber = variable absente de ce déploiement ; « Clé X non renseignée » = la saisir dans Admin → Paramètres puis « Relancer » la traduction concernée ; clé illisible après changement de `SETTINGS_KEY` = la ressaisir.
+
+## Étape 6 : favoris et reprise de lecture
+Nouveautés : migration `010_library.sql` (tables `favorites` et `watch_progress`, supprimées automatiquement avec l'utilisateur ou la conférence) ; bouton **♡ Ajouter aux favoris** sur chaque conférence (y compris YouTube/Vimeo) ; **reprise de lecture** des vidéos envoyées : la position est enregistrée toutes les 10 s, à la pause, à la fin et quand on quitte la page, et la lecture repart de là au retour (message « Reprise à 12:34 · Depuis le début ») ; page **Ma bibliothèque** (`/library`, lien dans l'en-tête) avec « Continuer à regarder » (barre de progression, bouton × pour retirer) et « Mes favoris » ; rangée « Continuer à regarder » en haut de l'accueil pour les utilisateurs connectés.
+
+Règles : une conférence est « terminée » quand il reste moins de 5 % (ou 30 s) à lire, elle quitte alors « Continuer à regarder » ; revoir le début la fait réapparaître ; en dessous de 5 s de lecture rien n'est enregistré ; l'aperçu gratuit d'une conférence premium n'enregistre pas de position. Limite : les conférences YouTube/Vimeo (lecteur intégré) peuvent être mises en favoris mais n'ont pas de reprise de lecture.
+
+Routes (connexion requise) : `GET /me/favorites`, `PUT|DELETE /me/favorites/:id`, `GET /me/continue`, `PUT /me/progress/:id` (`{ "positionMs": 120000, "durationMs": 600000 }`), `DELETE /me/progress/:id`. `GET /talks/:id` renvoie en plus `favorite` et `resumeMs` pour un utilisateur connecté.
+
+Mise en service : pousser sur GitHub, Deploy de l'**API** (log attendu : `Migration appliquée : 010_library.sql`) puis du **web**, relancer `/root/apply-limits.sh` et vérifier le port nginx de l'API (7000). Aucune variable à ajouter ; translator et transcriber ne changent pas.
+
