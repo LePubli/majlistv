@@ -104,6 +104,16 @@ export default async function studioContentRoutes(app) {
     }
   });
 
+  // ------------------------------------------------------------------ Chronologie du traitement (fiche de suivi)
+  app.get('/talks/:id/studio/timeline', organizer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const t = await owned(req, reply, id);
+    if (!t) return;
+    const { rows } = await pool.query(
+      `SELECT id, at, kind, lang, status, message FROM talk_events WHERE talk_id = $1 ORDER BY at DESC, id DESC LIMIT 300`, [id]);
+    return { events: rows };
+  });
+
   // ------------------------------------------------------------------ Résumé, points clés, chapitres
   app.get('/talks/:id/studio/insights', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);

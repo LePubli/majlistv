@@ -8,6 +8,7 @@ import { useApp } from '../../../components/Providers';
 import { langName } from '../../../components/Transcript';
 import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/talkState';
 import TalkEditor from '../../../components/TalkEditor';
+import Timeline from '../../../components/Timeline';
 
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 const base = (c) => String(c || '').split('-')[0].toLowerCase();
@@ -41,6 +42,8 @@ export default function ManageTalk() {
     act(`/talks/${id}/transcribe`, { method: 'POST', body: JSON.stringify({ rightsConfirmed: x.source !== 'upload' }) });
   };
   const addTr = (lang) => lang && act(`/talks/${id}/translations`, { method: 'POST', body: JSON.stringify({ lang }) });
+  const redoTr = (lang) => act(`/talks/${id}/translations`, { method: 'POST', body: JSON.stringify({ lang, force: true }) }, t('trRestarted'));
+  const reconvert = () => act(`/talks/${id}/reconvert`, { method: 'POST' }, t('convRestarted'));
   const removeTr = (lang) => act(`/talks/${id}/translations/${lang}`, { method: 'DELETE' });
   const regen = () => act(`/talks/${id}/insights/regenerate`, { method: 'POST' }, t('regenStarted'));
   const remove = async () => {
@@ -91,7 +94,7 @@ export default function ManageTalk() {
         <Row letter="V" state={steps.video} title={t('stepVideo')}>
           <p className="meta small">
             {external ? t('videoExternal').replace('{s}', sourceLabel(x.source))
-              : steps.video === 'err' ? t('convFailed')
+              : steps.video === 'err' ? <>{t('convFailed')}{x.videoError ? ` : ${x.videoError}` : ''} <button className="link u" onClick={reconvert}>{t('retryConv')}</button></>
               : steps.video === 'run' ? `${t('converting')}${steps.videoPct != null ? ` ${steps.videoPct} %` : ''}` : t('videoReady')}
           </p>
         </Row>
@@ -115,6 +118,8 @@ export default function ManageTalk() {
                 <span key={tr.lang} className={`chip ${tr.status}`}>
                   {langName(tr.lang, locale)} · {trLabel(tr)}
                   {tr.status === 'failed' && <button className="link" onClick={() => addTr(tr.lang)}>{t('retryTr')}</button>}
+                  {tr.status === 'failed' && tr.error && <span className="chip-err" title={tr.error}>{tr.error}</span>}
+                  {tr.status === 'ready' && <button className="link" aria-label={t('redoTr')} title={t('redoTr')} onClick={() => redoTr(tr.lang)}>↻</button>}
                   {['ready', 'failed'].includes(tr.status) && <button className="link" aria-label={t('removeTr')} title={t('removeTr')} onClick={() => removeTr(tr.lang)}>×</button>}
                 </span>
               ))}
@@ -136,6 +141,9 @@ export default function ManageTalk() {
           </p>
         </Row>
       </ol>
+
+      <Timeline talkId={x.id} t={t} call={call} locale={locale}
+        signature={[x.status, x.transcriptStatus, x.publication, (x.translations || []).map((tr) => tr.lang + tr.status).join(), (x.insights || []).map((i) => i.lang + i.status).join()].join('|')} />
 
       <div className="danger-zone">
         <button className="btn danger" onClick={remove}>{t('delete')}</button>

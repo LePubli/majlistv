@@ -31,7 +31,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 
 ### Phase B — Nouveau design (d'après les maquettes validées)
 
-**10. Studio de publication** — en cours : 10.1 apparence ✅, 10.2 Mes conférences ✅, 10.3 ajout en 2 étapes ✅, 10.4 modifier / brouillons / programmation / miniature ✅ (en ligne), 10.5 correction transcription-résumé-chapitres ✅ livré ; reste 10.6 fiche de suivi. Ajouté à la demande : gestion des catégories (ajouter, renommer, supprimer) ✅ livré
+**10. Studio de publication** — ✅ livré (10.1 apparence, 10.2 Mes conférences, 10.3 ajout en 2 étapes, 10.4 modifier / brouillons / programmation / miniature, 10.5 correction du contenu, 10.6 fiche de suivi ; + gestion des catégories). 10.1 à 10.4 en ligne, 10.5 et 10.6 à déployer.
 - Renommage complet en **Mejliss TV** (logo, couleurs, polices Montserrat et DM Sans).
 - Espace de gestion avec menu latéral (Studio et Administration selon le rôle).
 - Mes conférences : filtres (En ligne, En traitement, À corriger, Brouillons), recherche, avancement des 4 étapes.

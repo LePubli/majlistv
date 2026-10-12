@@ -531,3 +531,16 @@ fieldset.panel { min-width: 0; }
 @media (max-width: 700px) { .ct-replace { grid-template-columns: 1fr; } .seg { grid-template-columns: 1fr auto; } .seg-time { grid-column: 1 / -1; padding-top: 0; } }
 .savebar .check { display: flex; align-items: center; gap: 8px; }
 .savebar .check input { width: 18px; height: 18px; flex: none; margin: 0; accent-color: var(--accent); }
+
+/* 10.6 : chronologie */
+.timeline { margin-top: 24px; }
+.tl { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.tl li { display: grid; grid-template-columns: 18px 1fr; gap: 12px; padding-bottom: 14px; position: relative; }
+.tl li::before { content: ''; position: absolute; inset-inline-start: 4px; top: 14px; bottom: -2px; width: 1px; background: var(--line); }
+.tl li:last-child::before { display: none; }
+.tl i { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; background: var(--muted); }
+.tone-ok i { background: #7FD99A; } .tone-err i { background: #FF9C8C; } .tone-run i { background: #9FD3F5; } .tone-gold i { background: var(--accent); }
+.tl .tl-text { display: block; color: var(--text); }
+.tl .tl-msg { display: block; color: #FF9C8C; font-size: 13px; margin-top: 2px; word-break: break-word; }
+.tl time { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.chip-err { color: #FF9C8C; font-size: 12px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

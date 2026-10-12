@@ -440,3 +440,27 @@ Ajouter, renommer, supprimer. Le nombre de conférences par catégorie est affic
 git add -A && git commit -m "Étape 10.5 : correction du contenu, catégories" && git push
 ```
 DockPanel : redéployer **api** puis **web** (la migration 017 s'applique au démarrage de l'API), puis `/root/apply-limits.sh` et vérifier le port nginx de l'API.
+
+## Étape 10.6 — Fiche de suivi : chronologie et relances
+
+Touche **l'API** (migration `018_timeline.sql`) et **le web**. Les services worker, transcriber et translator ne changent pas.
+
+### Chronologie
+Sur la fiche d'une conférence (`/studio/<id>`), section **Chronologie** : ajout de la conférence, conversion de la vidéo (en attente, démarrée, terminée, échouée), transcription, sous-titres de chaque langue, résumé de chaque langue, corrections manuelles, changements de publication. Les échecs affichent leur message. La fiche se met à jour toute seule pendant le traitement.
+- Elle est alimentée par des **déclencheurs PostgreSQL** (table `talk_events`) : aucun service n'a besoin d'être modifié ni redéployé. La progression en pourcentage ne crée pas d'évènement.
+- Pour les conférences déjà existantes, l'historique est reconstitué avec les dates connues (ajout, traductions et résumés terminés ou échoués) ; la conversion et la transcription passées n'ont pas de date.
+
+### Relances et langues
+- **Relancer la conversion** d'une vidéo envoyée dont la conversion a échoué (`POST /talks/:id/reconvert`).
+- **Refaire cette traduction** (↻) sur une langue déjà prête (`POST /talks/:id/translations` avec `force: true` ; une traduction en cours n'est jamais interrompue).
+- Relancer une traduction échouée, ajouter ou retirer une langue : comme avant, avec le message d'erreur affiché à côté de la langue concernée.
+- Le message d'erreur de la conversion est affiché dans l'étape Vidéo.
+
+### Test
+`python3 api/tests/test_timeline.py` (26 vérifications). Prérequis : API 3055 et PG de test 5544. Laisser une minute entre deux jeux de tests (limite de débit de l'API : 100 requêtes par minute).
+
+### Déploiement
+```bash
+git add -A && git commit -m "Étape 10.6 : fiche de suivi" && git push
+```
+DockPanel : redéployer **api** puis **web**, puis `/root/apply-limits.sh` et vérifier le port nginx de l'API.

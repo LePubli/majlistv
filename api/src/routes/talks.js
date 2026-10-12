@@ -233,8 +233,8 @@ export default async function talksRoutes(app) {
 
   app.get('/me/talks', { preHandler: app.authenticate }, async (req) => {
     const { rows } = await pool.query(
-      `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage", t.transcript_error AS "transcriptError", t.transcript_method AS "transcriptMethod", t.poster_candidates,
-         (SELECT COALESCE(json_agg(json_build_object('lang', tr.lang, 'status', tr.status, 'progress', tr.progress) ORDER BY tr.lang), '[]'::json)
+      `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage", t.transcript_error AS "transcriptError", t.transcript_method AS "transcriptMethod", t.poster_candidates, t.video_error AS "videoError",
+         (SELECT COALESCE(json_agg(json_build_object('lang', tr.lang, 'status', tr.status, 'progress', tr.progress, 'error', tr.error) ORDER BY tr.lang), '[]'::json)
             FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations,
          (SELECT COALESCE(json_agg(json_build_object('lang', i.lang, 'status', i.status, 'error', i.error) ORDER BY i.lang), '[]'::json)
             FROM talk_insights i WHERE i.talk_id = t.id) AS insights
@@ -405,7 +405,7 @@ export default async function talksRoutes(app) {
 
   app.post('/talks/:id/translations', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { lang } = z.object({ lang: z.enum(TRANSLATION_LANGS) }).parse(req.body);
+    const { lang, force } = z.object({ lang: z.enum(TRANSLATION_LANGS), force: z.boolean().default(false) }).parse(req.body);
     const talk = await ownedUpload(req, reply, id);
     if (!talk) return;
     if (lang === baseLang(talk.transcript_language || talk.language)) {
@@ -415,10 +415,22 @@ export default async function talksRoutes(app) {
       `INSERT INTO transcript_translations(talk_id, lang) VALUES ($1, $2)
        ON CONFLICT (talk_id, lang) DO UPDATE
          SET status = 'pending', progress = 0, error = NULL, attempts = 0, updated_at = now()
-         WHERE transcript_translations.status = 'failed'`,
-      [id, lang]
+         WHERE transcript_translations.status = 'failed' OR ($3 AND transcript_translations.status = 'ready')`,
+      [id, lang, force]
     );
     return reply.code(202).send({ lang, status: 'pending' });
+  });
+
+  // Relance la conversion d'une vidéo envoyée dont la conversion a échoué.
+  app.post('/talks/:id/reconvert', organizer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { rows } = await pool.query('SELECT organizer_id, source, video_status FROM talks WHERE id = $1', [id]);
+    const talk = rows[0];
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (talk.source !== 'upload') return reply.code(400).send({ error: 'Cette vidéo est lue depuis sa plateforme : rien à convertir' });
+    if (talk.video_status !== 'failed') return reply.code(409).send({ error: 'La conversion n\'a pas échoué' });
+    await pool.query("UPDATE talks SET video_status = 'pending', video_progress = 0, video_error = NULL, transcode_attempts = 0 WHERE id = $1", [id]);
+    return reply.code(202).send({ status: 'pending' });
   });
 
   // Supprime une traduction (jamais la langue d'origine).
