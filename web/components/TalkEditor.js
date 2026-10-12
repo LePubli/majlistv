@@ -13,7 +13,7 @@ const toLocalInput = (iso) => {
 const initial = (x) => ({
   title: x.title || '', speaker: x.speaker || '', description: x.description || '',
   categoryId: x.category_id ? String(x.category_id) : '', access: x.access,
-  publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt),
+  publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt), featured: Boolean(x.featured),
 });
 
 // Réduit l'image choisie à 1280×720 (recadrage centré) et la renvoie en data-URL JPEG.
@@ -35,7 +35,7 @@ function resizeImage(file) {
   });
 }
 
-export default function TalkEditor({ x, reload, t, call }) {
+export default function TalkEditor({ x, reload, t, call, isAdmin }) {
   const [f, setF] = useState(() => initial(x));
   const [cats, setCats] = useState([]);
   const [msg, setMsg] = useState(null);
@@ -59,6 +59,7 @@ export default function TalkEditor({ x, reload, t, call }) {
       title: f.title, speaker: f.speaker, description: f.description, access: f.access,
       categoryId: f.categoryId ? Number(f.categoryId) : null,
       publication: f.publication, publishAt: sched ? new Date(f.publishAt).toISOString() : null,
+      ...(isAdmin ? { featured: f.featured } : {}),
     };
     const r = await call(`/talks/${x.id}`, { method: 'PATCH', body: JSON.stringify(body) });
     setSaving(false);
@@ -110,6 +111,17 @@ export default function TalkEditor({ x, reload, t, call }) {
               <input type="datetime-local" required value={f.publishAt} onChange={(e) => patch({ publishAt: e.target.value })} /></label>
           )}
         </div>
+
+        {isAdmin && (
+          <div className="fld" role="group" aria-label={t('featLabel')}>
+            <span>{t('featLabel')}</span>
+            <div className="pills">
+              {pill(f.featured, t('featOn'), () => patch({ featured: true }))}
+              {pill(!f.featured, t('featOff'), () => patch({ featured: false }))}
+            </div>
+            <span className="meta small">{t('featHelp')} {f.featured && (f.publication !== 'published' || x.status !== 'ready') ? t('featNeedsLive') : ''}</span>
+          </div>
+        )}
 
         <h2 className="panel-title">{t('sectInfo')}</h2>
         <label className="fld"><span>{t('talkTitle')}</span>

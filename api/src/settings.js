@@ -6,6 +6,7 @@ import { TRANSLATION_LANGS } from './langs.js';
 
 export const GROUPS = [
   { id: 'general', label: 'Général' },
+  { id: 'home', label: "Page d'accueil" },
   { id: 'payment', label: 'Paiement (Stripe)' },
   { id: 'email', label: 'E-mails' },
   { id: 'translation', label: 'Traduction des sous-titres' },
@@ -22,6 +23,19 @@ export const FIELDS = [
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',
     help: 'Utilisée pour le retour après paiement (ex. https://majlisstv.le-publicitaire.fr).' },
   { key: 'preview_seconds', group: 'general', type: 'number', label: "Aperçu gratuit des conférences premium (secondes)", env: 'PREVIEW_SECONDS', def: '120', min: 0, max: 1800 },
+
+  { key: 'home_hero_mode', group: 'home', type: 'select', options: ['featured', 'custom', 'text'], label: 'Bannière du haut de page', env: 'HOME_HERO_MODE', def: 'featured',
+    help: 'featured : les conférences mises en avant défilent en bannière · custom : ta propre bannière (image, texte, bouton) · text : simple titre sans image.' },
+  { key: 'home_hero_title', group: 'home', type: 'text', label: 'Bannière personnalisée : titre', env: 'HOME_HERO_TITLE', help: 'Vide = titre par défaut du site.' },
+  { key: 'home_hero_subtitle', group: 'home', type: 'text', label: 'Bannière personnalisée : texte', env: 'HOME_HERO_SUBTITLE' },
+  { key: 'home_hero_cta_label', group: 'home', type: 'text', label: 'Bannière personnalisée : texte du bouton', env: 'HOME_HERO_CTA_LABEL', help: 'Vide = pas de bouton.' },
+  { key: 'home_hero_cta_url', group: 'home', type: 'text', label: 'Bannière personnalisée : lien du bouton', env: 'HOME_HERO_CTA_URL', help: 'Ex. /pricing, /register ou https://…' },
+  { key: 'home_hero_video_url', group: 'home', type: 'url', label: 'Bannière personnalisée : vidéo d\'ambiance (facultatif)', env: 'HOME_HERO_VIDEO_URL',
+    help: 'Adresse d\'un fichier .mp4 / .webm (court, léger, sans son). Jouée en boucle par-dessus l\'image, sauf si le visiteur a demandé de limiter les animations.' },
+  { key: 'home_hero_image_key', group: 'home', type: 'text', hidden: true, label: 'Image de bannière (interne)' },
+  { key: 'home_row_new', group: 'home', type: 'bool', label: 'Afficher la rangée « Nouveautés »', env: 'HOME_ROW_NEW', def: 'true' },
+  { key: 'home_rows_categories', group: 'home', type: 'bool', label: 'Afficher une rangée par catégorie', env: 'HOME_ROWS_CATEGORIES', def: 'true' },
+  { key: 'home_row_size', group: 'home', type: 'number', label: 'Nombre de conférences par rangée', env: 'HOME_ROW_SIZE', def: '16', min: 4, max: 40 },
 
   { key: 'stripe_secret_key', group: 'payment', type: 'secret', label: 'Clé secrète Stripe', env: 'STRIPE_SECRET_KEY', test: 'stripe',
     help: 'sk_test_… pour tester, sk_live_… en production. Changer de compte ou de mode remet les abonnements à zéro (confirmation demandée).' },
@@ -132,7 +146,7 @@ export async function describeSettings() {
   for (const f of FIELDS) {
     const r = await resolve(f.key);
     const item = { key: f.key, group: f.group, type: f.type, label: f.label, help: f.help || '', options: f.options || null,
-      test: f.test || null, min: f.min ?? null, max: f.max ?? null, source: r.source };
+      test: f.test || null, hidden: Boolean(f.hidden), min: f.min ?? null, max: f.max ?? null, source: r.source };
     if (isSecretType(f.type)) {
       item.isSet = r.value !== '';
       item.hint = !r.value ? '' : f.type === 'secret_text' ? `(${r.value.split('\n').length} lignes)` : `••••${r.value.slice(-4)}`;

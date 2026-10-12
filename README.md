@@ -518,3 +518,24 @@ DockPanel : redéployer **api** puis **web**, puis `/root/apply-limits.sh` et v�
 **API** : inchangée (`/admin/settings`, `/admin/settings/test`). **Tests** : `python3 api/tests/test_settings_engines.py`.
 
 **Déploiement** : web seul suffit (aucune migration, API inchangée par rapport à 11.2) puis `/root/apply-limits.sh` et vérification nginx.
+
+
+## Étape 12.1 — Accueil vitrine : bannière et rangées
+
+**Ce que voit le visiteur** (`/`) : une grande bannière en haut, puis des rangées horizontales façon plateforme de streaming : « Continuer à regarder » (si connecté), « Nouveautés », puis une rangée par catégorie (les plus fournies d'abord, bouton « Tout voir »). Défilement tactile, flèches au survol sur ordinateur, droite-à-gauche géré en arabe. La recherche et le filtre par catégorie restent au-dessus des rangées ; dès qu'on cherche ou filtre, on retrouve la liste de résultats habituelle.
+
+**Bannière — trois modes** (Back-office → Paramètres → *Page d'accueil* → « Bannière du haut de page ») :
+- `featured` (défaut) : les conférences **mises en avant** défilent (5 au maximum, la plus récemment mise en avant en premier, change toutes les 8 s, pause au survol/clavier, points pour choisir). Image = miniature de la conférence, titre, intervenant, durée, résumé, boutons « Regarder » / « Plus d'infos ». Sans conférence mise en avant, on retombe sur la bannière texte.
+- `custom` : ta propre bannière — image (téléversée dans la même page, recadrée à 1920×820 et réduite automatiquement), titre, texte, bouton (texte + lien `/pricing` ou `https://…`), et vidéo d'ambiance facultative (adresse d'un `.mp4`/`.webm` https, muette, en boucle).
+- `text` : titre et texte seuls (comme avant).
+Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement automatique ni vidéo.
+
+**Mettre une conférence en avant** : Studio → fiche de la conférence → « Mise en avant » (administrateurs seulement). Elle n'apparaît en bannière que si elle est publiée et prête.
+
+**Autres réglages** : afficher ou non « Nouveautés » et les rangées par catégorie ; nombre de conférences par rangée (4 à 40).
+
+**API** : `GET /home` (public) ; `POST|GET|DELETE /admin/home/hero-image` ; `PATCH /talks/:id` accepte `featured` (admin). **Migration** : `019_home.sql` (colonnes `featured`, `featured_at`, appliquée au démarrage de l'API).
+
+**Tests** : `python3 api/tests/test_home.py` (31 vérifications).
+
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx. Après déploiement : mets 3 à 5 conférences en avant depuis le Studio.

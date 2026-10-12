@@ -69,6 +69,7 @@ const patchSchema = z.object({
   publishAt: z.string().datetime({ offset: true }).nullable(),
   // 0..2 : une des 3 images tirées de la vidéo ; -1 : miniature de la plateforme d'origine (YouTube, Vimeo, archive.org).
   posterChoice: z.number().int().min(-1).max(2),
+  featured: z.boolean(), // mise en avant sur l'accueil : réservé aux administrateurs
 }).partial().strict();
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
@@ -77,7 +78,7 @@ const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.s
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
-  t.publication, t.publish_at AS "publishAt", ${visibleSql('t')} AS visible`;
+  t.publication, t.publish_at AS "publishAt", t.featured, ${visibleSql('t')} AS visible`;
 const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
 
@@ -318,6 +319,11 @@ export default async function talksRoutes(app) {
     if (b.speaker !== undefined) set('speaker', b.speaker);
     if (b.categoryId !== undefined) set('category_id', b.categoryId);
     if (b.access !== undefined) set('access', b.access);
+    if (b.featured !== undefined) {
+      if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une conférence en avant sur l'accueil" });
+      set('featured', b.featured);
+      sets.push(b.featured ? 'featured_at = now()' : 'featured_at = NULL');
+    }
 
     if (b.publication !== undefined || b.publishAt !== undefined) {
       const pub = checkPublication(b.publication ?? cur.publication, b.publishAt !== undefined ? b.publishAt : cur.publish_at?.toISOString());

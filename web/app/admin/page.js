@@ -1,7 +1,7 @@
 'use client';
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
@@ -164,6 +164,7 @@ function Field({ f, value, onChange, onClear, langs, dirty, onTest, testing }) {
 }
 
 const SECTION_HELP = {
+  home: "Bannière du haut de page et rangées de l'accueil. Les conférences à afficher en bannière se choisissent dans leur fiche du Studio (« Mise en avant »).",
   general: "Nom du site, adresse publique et durée de l'aperçu gratuit des conférences premium.",
   payment: 'Abonnements via Stripe : clé, webhook, prix et essai gratuit.',
   email: 'Envoi des e-mails (bienvenue, mot de passe oublié, rappels d\'essai…).',
@@ -246,6 +247,63 @@ function EngineTable({ data, val, set, setVal }) {
   );
 }
 
+
+// Image de la bannière personnalisée : réduite à 1920×820 dans le navigateur puis envoyée (JPEG).
+function resizeBanner(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const W = 1920; const H = 820;
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const k = Math.max(W / img.width, H / img.height);
+      const w = img.width * k; const h = img.height * k;
+      c.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad')); };
+    img.src = url;
+  });
+}
+
+function HeroImage() {
+  const { call } = useApp();
+  const [url, setUrl] = useState(undefined);
+  const [msg, setMsg] = useState(null);
+  const input = useRef(null);
+  useEffect(() => { call('/admin/home/hero-image').then((r) => setUrl(r.ok ? r.data.imageUrl : null)); }, [call]);
+  const pick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setMsg({ ok: false, text: 'Image JPEG, PNG ou WebP attendue' }); return; }
+    setMsg(null);
+    try {
+      const image = await resizeBanner(file);
+      const r = await call('/admin/home/hero-image', { method: 'POST', body: JSON.stringify({ image }) });
+      if (r.ok) { setUrl(r.data.imageUrl); setMsg({ ok: true, text: 'Image enregistrée' }); } else setMsg({ ok: false, text: r.data.error || 'Erreur' });
+    } catch { setMsg({ ok: false, text: 'Image illisible' }); }
+  };
+  const remove = async () => {
+    const r = await call('/admin/home/hero-image', { method: 'DELETE' });
+    if (r.ok) { setUrl(null); setMsg({ ok: true, text: 'Image retirée' }); }
+  };
+  return (
+    <div className="hero-image">
+      <h4 className="adm-sub">Image de la bannière personnalisée</h4>
+      <p className="meta">Utilisée quand « Bannière du haut de page » est sur <b>custom</b>. Format large conseillé (par exemple 1920 × 820) ; elle est recadrée au centre et réduite automatiquement. Elle s'enregistre tout de suite, sans le bouton « Enregistrer ».</p>
+      <div className="hero-image-prev" style={url ? { backgroundImage: `url(${url})` } : undefined}>{url === null && <span className="meta">Aucune image</span>}</div>
+      <div className="adm-row">
+        <button type="button" className="btn ghost" onClick={() => input.current?.click()}>{url ? "Remplacer l'image" : 'Choisir une image'}</button>
+        {url && <button type="button" className="link" onClick={remove}>Retirer</button>}
+        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pick} />
+      </div>
+      {msg && <p className={msg.ok ? 'adm-ok' : 'error'} role="status">{msg.text}</p>}
+    </div>
+  );
+}
+
 function Settings() {
   const { call } = useApp();
   const router = useRouter();
@@ -299,7 +357,7 @@ function Settings() {
     setTests((t) => ({ ...t, [target]: r.ok ? r.data : { ok: false, message: r.data.error || 'Erreur' } }));
   };
 
-  const fields = data.fields.filter((f) => f.group === section && !(section === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
+  const fields = data.fields.filter((f) => f.group === section && !f.hidden && !(section === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
   const g = data.groups.find((x) => x.id === section);
   const changedIn = (id) => data.fields.some((f) => f.group === id && f.key in draft);
   return (
@@ -319,6 +377,7 @@ function Settings() {
       <div className="set-main">
         <h3 className="set-title">{g.label}</h3>
         <p className="meta">{SECTION_HELP[section]} Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
+        {section === 'home' && <HeroImage />}
         {section === 'translation' && <EngineTable data={data} val={val} set={set} setVal={setVal} />}
         <div className="adm-group-body set-fields">
           {fields.map((f) => (

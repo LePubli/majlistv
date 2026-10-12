@@ -21,6 +21,7 @@ import libraryRoutes from './routes/library.js';
 import searchRoutes from './routes/search.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
+import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
 import { startMailer } from './mailer.js';
@@ -91,6 +92,7 @@ await app.register(legalRoutes);
 await app.register(importRoutes);
 await app.register(studioContentRoutes);
 await app.register(dashboardRoutes);
+await app.register(homeRoutes);
 
 await migrate();
 await ensureAdmin();

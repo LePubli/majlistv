@@ -619,3 +619,40 @@ a.admin-card.kpi:hover { border-color: var(--gold, #E6A739); }
   .set-tab { flex: none; padding: 8px 12px; border-color: var(--line-soft); }
   .set-tab-main small { display: none; }
 }
+
+/* ---- Accueil vitrine (12.1) : bannière et rangées ---- */
+.banner { position: relative; overflow: hidden; min-height: clamp(380px, 62vh, 640px); display: flex; align-items: flex-end; padding: 0; background: var(--bg) center / cover no-repeat; }
+.banner-bg { position: absolute; inset: 0; background: var(--surface) center / cover no-repeat; opacity: 0; transition: opacity .9s ease; }
+.banner-bg.on { opacity: 1; }
+.banner-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.banner-shade { position: absolute; inset: 0; background: linear-gradient(to top, var(--bg) 2%, rgba(11,9,6,.55) 38%, rgba(11,9,6,.15) 70%), linear-gradient(to right, rgba(11,9,6,.85) 0%, rgba(11,9,6,.35) 55%, transparent 80%); }
+[dir="rtl"] .banner-shade { background: linear-gradient(to top, var(--bg) 2%, rgba(11,9,6,.55) 38%, rgba(11,9,6,.15) 70%), linear-gradient(to left, rgba(11,9,6,.85) 0%, rgba(11,9,6,.35) 55%, transparent 80%); }
+.banner-body { position: relative; padding: 0 var(--gutter) clamp(36px, 7vh, 72px); max-width: 760px; }
+.banner:not(.has-image) { background: radial-gradient(ellipse at 85% 10%, rgba(230,167,57,.16), transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(189,126,42,.10), transparent 50%); }
+.banner h1 { font-size: clamp(2rem, 5.5vw, 3.6rem); font-weight: 800; line-height: 1.08; margin: 8px 0 10px; max-width: 18ch; text-wrap: balance; }
+.banner-meta { color: var(--text) !important; font-weight: 600; margin: 0 0 8px !important; }
+.banner-summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 60ch; }
+.badge-inline { display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(11,9,6,.7); color: var(--text); letter-spacing: .08em; font-size: 12px; }
+.badge-inline.premium { background: var(--accent); color: var(--on-accent); }
+.banner-dots { position: absolute; inset-block-end: 16px; inset-inline-end: var(--gutter); display: flex; gap: 8px; }
+.dot { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; position: relative; }
+.dot::after { content: ''; position: absolute; inset: 11px 3px; border-radius: 3px; background: rgba(252,247,240,.4); transition: background .2s; }
+.dot.on::after { background: var(--accent); }
+.row { padding: 6px 0 14px; }
+.row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 var(--gutter); }
+.row-head h2 { font-size: 1.15rem; margin: 18px 0 10px; }
+.row-wrap { position: relative; }
+.row-rail { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter); padding: 4px var(--gutter) 10px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.row-rail::-webkit-scrollbar { display: none; }
+.row-item { flex: 0 0 clamp(200px, 22vw, 280px); scroll-snap-align: start; }
+.row-arrow { position: absolute; top: 4px; bottom: 34px; width: 48px; z-index: 3; border: 0; color: var(--text); font-size: 2rem; cursor: pointer; opacity: 0; transition: opacity .2s; display: none; }
+.row-arrow.prev { inset-inline-start: 0; background: linear-gradient(to right, rgba(11,9,6,.85), transparent); }
+.row-arrow.next { inset-inline-end: 0; background: linear-gradient(to left, rgba(11,9,6,.85), transparent); }
+[dir="rtl"] .row-arrow.prev { background: linear-gradient(to left, rgba(11,9,6,.85), transparent); }
+[dir="rtl"] .row-arrow.next { background: linear-gradient(to right, rgba(11,9,6,.85), transparent); }
+[dir="rtl"] .row-arrow { transform: none; }
+.row-arrow:disabled { visibility: hidden; }
+@media (hover: hover) and (pointer: fine) { .row-arrow { display: block; } .row-wrap:hover .row-arrow, .row-arrow:focus-visible { opacity: 1; } }
+@media (max-width: 600px) { .banner { min-height: 420px; } .banner-body { padding-bottom: 52px; } .banner-dots { inset-inline-end: 50%; transform: translateX(50%); } [dir="rtl"] .banner-dots { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .banner-bg { transition: none; } }
+.hero-image-prev { width: 100%; max-width: 560px; aspect-ratio: 1920 / 820; border: 1px dashed var(--line); border-radius: 10px; background: var(--surface) center / cover no-repeat; display: grid; place-items: center; margin: 8px 0; }

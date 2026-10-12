@@ -15,7 +15,7 @@ const base = (c) => String(c || '').split('-')[0].toLowerCase();
 
 export default function ManageTalk() {
   const { id } = useParams();
-  const { t, call, locale } = useApp();
+  const { t, call, locale, user } = useApp();
   const router = useRouter();
   const [x, setX] = useState(undefined);
   const [msg, setMsg] = useState(null);
@@ -87,7 +87,7 @@ export default function ManageTalk() {
       </div>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
 
-      <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} />
+      <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} />
 
       <h2 className="panel-title outside">{t('sectProcessing')}</h2>
       <ol className="tracks">
