@@ -98,7 +98,7 @@ def query(sql, params=None, fetch=False):
 
 
 settings = Settings(query, lambda *a: log(*a))
-apply_settings()
+MODEL_NAME, THREADS, BEAM, LANG_MODE = "small", 4, 3, "declared"  # remplacés par apply_settings() au démarrage
 
 
 def claim():
