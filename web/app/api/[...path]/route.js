@@ -20,4 +20,4 @@ async function handler(req, { params }) {
     return Response.json({ error: 'API indisponible' }, { status: 502 });
   }
 }
-export { handler as GET, handler as POST, handler as PATCH, handler as DELETE };
+export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE };

@@ -40,13 +40,14 @@ export default async function authRoutes(app) {
   app.post('/auth/login', strictLimit, async (req, reply) => {
     const { email, password } = loginSchema.parse(req.body);
     const { rows } = await pool.query(
-      'SELECT id, email, name, role, locale, password_hash FROM users WHERE email = $1',
+      'SELECT id, email, name, role, locale, password_hash, disabled_at FROM users WHERE email = $1',
       [email]
     );
     const found = rows[0];
     const ok = found && (await bcrypt.compare(password, found.password_hash));
     if (!ok) return reply.code(401).send({ error: 'Identifiants invalides' });
-    const { password_hash, ...user } = found;
+    if (found.disabled_at) return reply.code(403).send({ error: 'Compte suspendu' });
+    const { password_hash, disabled_at, ...user } = found;
     return { token: sign(user), user };
   });
 

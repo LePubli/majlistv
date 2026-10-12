@@ -20,6 +20,8 @@ import psycopg2
 import psycopg2.extras
 from botocore.config import Config
 
+from settings import Settings
+
 
 def env(key, default=None, required=False):
     value = os.environ.get(key, default)
@@ -31,10 +33,11 @@ def env(key, default=None, required=False):
 
 DATABASE_URL = env("DATABASE_URL", required=True)
 BUCKET = env("S3_BUCKET", "majlis-videos")
-MODEL_NAME = env("WHISPER_MODEL", "small")  # small | medium | large-v3-turbo | large-v3
-THREADS = int(env("WHISPER_THREADS", "4"))  # laisse des cœurs au reste du serveur
-BEAM = int(env("WHISPER_BEAM", "3"))
-LANG_MODE = env("WHISPER_LANGUAGE_MODE", "declared")  # declared = langue de la conférence ; auto = détection
+# Réglages modifiables depuis le back-office (Admin → Paramètres → Transcription), relus avant chaque conférence.
+MODEL_NAME = "small"  # small | medium | large-v3-turbo | large-v3
+THREADS = 4  # laisse des cœurs au reste du serveur
+BEAM = 3
+LANG_MODE = "declared"  # declared = langue de la conférence ; auto = détection
 POLL = int(env("POLL_SECONDS", "10"))
 WORK_DIR = env("WORK_DIR", "/work")
 MAX_ATTEMPTS = 3
@@ -51,6 +54,8 @@ stopping = False
 current = None  # id de la conférence en cours
 last_ok = None
 _model = None
+_model_key = None
+settings = None
 
 
 def log(*args):
@@ -90,6 +95,10 @@ def query(sql, params=None, fetch=False):
             _conn = None
             if attempt == 2:
                 raise
+
+
+settings = Settings(query, lambda *a: log(*a))
+apply_settings()
 
 
 def claim():
@@ -146,9 +155,20 @@ def audio_duration(wav):
     return float(out.strip() or 0)
 
 
+def apply_settings():
+    """Relit les paramètres (base de données puis variables d'environnement)."""
+    global MODEL_NAME, THREADS, BEAM, LANG_MODE
+    settings.refresh()
+    MODEL_NAME = settings.get("whisper_model", "WHISPER_MODEL", "small")
+    THREADS = max(1, settings.get_int("whisper_threads", "WHISPER_THREADS", 4))
+    BEAM = max(1, settings.get_int("whisper_beam", "WHISPER_BEAM", 3))
+    LANG_MODE = settings.get("whisper_language_mode", "WHISPER_LANGUAGE_MODE", "declared")
+
+
 def get_model():
-    global _model
-    if _model is None:
+    global _model, _model_key
+    if _model is None or _model_key != (MODEL_NAME, THREADS):  # modèle ou nombre de cœurs changé dans le back-office
+        _model = None
         from faster_whisper import WhisperModel
 
         root = env("MODELS_DIR", "/models")
@@ -157,6 +177,7 @@ def get_model():
             root = "/tmp/models"
         log(f"Chargement du modèle Whisper « {MODEL_NAME} » (premier lancement : téléchargement)")
         _model = WhisperModel(MODEL_NAME, device="cpu", compute_type="int8", cpu_threads=THREADS, download_root=root)
+        _model_key = (MODEL_NAME, THREADS)
         log("Modèle prêt.")
     return _model
 
@@ -284,11 +305,13 @@ def main():
         except Exception as err:  # noqa: BLE001
             log("Base pas prête (migration 005 appliquée ?) :", err)
             time.sleep(POLL)
+    apply_settings()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 
     while not stopping:
         job = None
         try:
+            apply_settings()
             job = claim()
         except Exception as err:  # noqa: BLE001
             log("Erreur base :", err)

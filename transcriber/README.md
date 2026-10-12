@@ -25,6 +25,8 @@ Cycle de vie : `pending` → `processing` (progression en %) → `ready` ; `fail
 
 Ces vitesses sont des ordres de grandeur, pas des mesures sur ton VPS : après chaque transcription, les logs affichent la vitesse réelle (« 1.8x temps réel » = 1 h de conférence transcrite en environ 33 min). Mesure avec `small`, puis avec `large-v3-turbo`, et choisis selon le résultat. Changer de modèle = modifier la variable puis Deploy Now ; pour retranscrire des conférences déjà traitées, voir Debug.
 
+> **Réglages dans le site (étape 5)** : toutes les variables de moteurs, clés et modèles ci-dessous se règlent désormais dans **Admin → Paramètres** (prise en compte en moins de 10 s, sans redéploiement). Seule `SETTINGS_KEY` (identique à l'API) et `DATABASE_URL` restent obligatoires ici. Les variables listées servent de valeur de secours.
+
 ## Installation (DockPanel Git Deploy)
 Nouveau déploiement :
 - Nom : `majlistv-transcriber` (minuscules)

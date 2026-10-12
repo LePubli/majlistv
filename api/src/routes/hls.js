@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { config } from '../config.js';
+import { getNumber } from '../settings.js';
 import { storage, presignGet } from '../storage.js';
 import { playbackLevel } from '../playback.js';
 import { HLS_PATH, rewriteMaster, rewriteVariant, truncateVariant } from '../hls.js';
@@ -25,7 +26,7 @@ export default async function hlsRoutes(app) {
     const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
     const body = path === 'master.m3u8'
       ? rewriteMaster(text, token)
-      : await rewriteVariant(level === 'preview' ? truncateVariant(text, config.previewSeconds) : text, (rel) => presignGet(`hls/${id}/${dir}${rel}`));
+      : await rewriteVariant(level === 'preview' ? truncateVariant(text, await getNumber('preview_seconds')) : text, (rel) => presignGet(`hls/${id}/${dir}${rel}`));
     return reply.header('content-type', 'application/vnd.apple.mpegurl').header('cache-control', 'private, no-store').send(body);
   });
 }

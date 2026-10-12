@@ -195,9 +195,35 @@ Limite à connaître : le verrouillage premium protège les vidéos **envoyées*
 3. **Développeurs → Clés API** : copier la **clé secrète** (`sk_test_…`).
 4. **Développeurs → Webhooks → Ajouter un point de terminaison** : URL `https://api-majlisstv.le-publicitaire.fr/billing/webhook` ; événements : `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`. Copier le **secret de signature** (`whsec_…`).
 5. **Paramètres → Facturation → Portail client** : activer, autoriser « annuler l'abonnement » et « mettre à jour le moyen de paiement » (et, si voulu, le changement mensuel/annuel).
-6. Dans DockPanel, variables du déploiement de l'**API** (jamais dans Git ni dans un chat) : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `WEB_URL` (adresse publique du site). Optionnel : `TRIAL_DAYS` (défaut 7), `PREVIEW_SECONDS` (défaut 120). Save puis Deploy.
+6. Dans le site : **Admin → Paramètres → Paiement (Stripe)** : colle la clé secrète, le secret du webhook, les deux identifiants de prix et l'adresse publique du site, puis **Enregistrer** et **Tester la connexion** (étape 5 du back-office ci-dessous). Plus de variable DockPanel ni de redéploiement.
 7. Test : créer un compte, ouvrir une conférence premium (aperçu de 2 minutes), cliquer « S'abonner », payer avec la carte de test `4242 4242 4242 4242` (date future, CVC quelconque). Après le paiement, `/account` affiche « Essai gratuit jusqu'au … » et la conférence se lit en entier.
-8. **Passage en production** : répéter les étapes 2 à 5 en mode production (nouveaux `price_`, clé `sk_live_…`, nouveau webhook et son `whsec_…`), remplacer les 4 variables et redéployer l'API.
+8. **Passage en production** : répéter les étapes 2 à 5 en mode production (nouveaux `price_`, clé `sk_live_…`, nouveau webhook et son `whsec_…`), puis les saisir dans Admin → Paramètres. Un changement de compte ou de mode Stripe demande une confirmation : les abonnements de test sont remis à zéro.
 
 Debug : Stripe → Développeurs → Webhooks → l'endpoint → liste des envois (code de réponse attendu : 200). `docker logs` de l'API pour les erreurs ; en base : `SELECT user_id, status, current_period_end FROM subscriptions;`. Tests locaux sans compte Stripe : `api/tests/mock_stripe.py` (faux serveur) avec `STRIPE_API_BASE=http://127.0.0.1:12111`.
 
+## Étape 5 : back-office d'administration (`/admin`)
+Tout se règle désormais dans le site, sans toucher aux variables DockPanel ni redéployer : lien **Admin** dans l'en-tête (visible uniquement par les administrateurs).
+
+**Onglets**
+- **Tableau de bord** : nombre d'utilisateurs, d'abonnements, état des transcriptions, traductions, résumés.
+- **Utilisateurs** : recherche, filtre par rôle, **ajout** (mot de passe provisoire généré et affiché une seule fois), **modification** (nom, email, rôle, langue), **suspension / réactivation**, **accès premium offert jusqu'à une date**, **réinitialisation du mot de passe**, **suppression** (refusée si abonnement Stripe actif ; si l'utilisateur possède des conférences, tu choisis à qui les transférer). Les changements de rôle ou de suspension s'appliquent en quelques secondes, sans reconnexion. Protections : on ne peut pas se retirer soi-même l'accès admin, se suspendre ou se supprimer, et il reste toujours au moins un admin actif.
+- **Paramètres** : nom du site, Stripe (clés, prix, essai, aperçu), moteurs de traduction (Claude / Azure / DeepSeek, langues forcées par moteur, clés, modèles), résumés et chapitres, Whisper (modèle, threads, mode de langue). Boutons **Tester la connexion** (une toute petite requête réelle avec les valeurs enregistrées).
+
+**Comment ça marche**
+- Les valeurs sont stockées dans la table `app_settings` (migration `009_admin.sql`). Les **clés secrètes sont chiffrées** (AES-256-GCM) avec `SETTINGS_KEY` et ne sont jamais renvoyées au navigateur (seulement `••••` + 4 derniers caractères).
+- Ordre de priorité d'une valeur : **back-office → variable d'environnement → valeur par défaut**. Les anciennes variables continuent donc de fonctionner en secours ; vider un champ dans le back-office revient à elles.
+- Le traducteur, le transcripteur et les résumés relisent les réglages toutes les 10 secondes : un changement de clé ou de moteur est pris en compte sans redéploiement (un job déjà en cours termine avec l'ancien réglage).
+
+**Variables d'environnement qui restent** : `DATABASE_URL`, `JWT_SECRET`, `SETTINGS_KEY`, clés S3/Garage, `ADMIN_EMAIL` / `ADMIN_PASSWORD` (1er démarrage), `CORS_ORIGIN`, `PORT`, `API_URL` (web).
+
+**`SETTINGS_KEY` (à faire une seule fois)** : générer avec `openssl rand -hex 32`, puis mettre **exactement la même valeur** dans les variables de l'**API**, du **translator** et du **transcriber** (DockPanel). Ne jamais la changer ensuite : les clés enregistrées deviendraient illisibles (il suffirait de les ressaisir). Si elle manque côté API, l'onglet Paramètres l'indique et refuse d'enregistrer des clés.
+
+**Mise en service**
+1. Ajouter `SETTINGS_KEY` aux 3 déploiements, pousser le code sur GitHub, redéployer API (log attendu : `Migration appliquée : 009_admin.sql`), web, translator, transcriber.
+2. Relancer `/root/apply-limits.sh` et vérifier le port nginx de l'API (7000).
+3. Se connecter en admin → **Admin → Paramètres** : saisir les clés, Enregistrer, Tester.
+4. Quand tout fonctionne, supprimer de DockPanel les anciennes variables de clés (`ANTHROPIC_API_KEY`, `AZURE_TRANSLATOR_KEY`, `DEEPSEEK_API_KEY`, `STRIPE_*`…), qui ne servent plus que de secours.
+
+Routes API (admin) : `GET/POST /admin/users`, `PATCH/DELETE /admin/users/:id`, `POST /admin/users/:id/password`, `GET/PUT /admin/settings`, `POST /admin/settings/test` (`{ "target": "stripe|azure|deepseek|claude" }`), `GET /admin/status`.
+
+Debug : « SETTINGS_KEY manquante » dans les logs du translator/transcriber = variable absente de ce déploiement ; « Clé X non renseignée » = la saisir dans Admin → Paramètres puis « Relancer » la traduction concernée ; clé illisible après changement de `SETTINGS_KEY` = la ressaisir.

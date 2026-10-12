@@ -32,7 +32,7 @@ function Billing() {
   };
   if (!st || !st.enabled) return null;
   const sub = st.subscription;
-  let line = t('subNone');
+  let line = st.complimentaryUntil ? `${t('subEnds')} ${date(st.complimentaryUntil, locale)} (offert)` : t('subNone');
   if (st.active && sub) {
     if (sub.status === 'trialing' && sub.trialEnd) line = `${t('subTrial')} ${date(sub.trialEnd, locale)}`;
     else if (sub.cancelAtPeriodEnd && sub.currentPeriodEnd) line = `${t('subEnds')} ${date(sub.currentPeriodEnd, locale)}`;

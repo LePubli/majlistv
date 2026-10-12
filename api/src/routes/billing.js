@@ -1,46 +1,56 @@
 // Abonnements Stripe : formules, paiement (Checkout), gestion (portail client) et webhook.
+// Clés, prix et durée d'essai sont lus dans les paramètres du back-office (pas besoin de redéployer pour les changer).
 import Stripe from 'stripe';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { pool } from '../db.js';
-
-const sc = config.stripe;
-const enabled = Boolean(sc.secretKey && sc.priceMonthly && sc.priceYearly);
-
-function makeStripe() {
-  const opts = { maxNetworkRetries: 2, timeout: 20000 };
-  if (sc.apiBase) {
-    const u = new URL(sc.apiBase);
-    Object.assign(opts, { host: u.hostname, port: u.port, protocol: u.protocol.replace(':', '') });
-  }
-  return new Stripe(sc.secretKey, opts);
-}
+import { getSetting, getNumber } from '../settings.js';
 
 const toDate = (sec) => (sec ? new Date(sec * 1000) : null);
 
+export function makeStripe(secretKey) {
+  const opts = { maxNetworkRetries: 2, timeout: 20000 };
+  if (config.stripe.apiBase) { // réservé aux tests (faux serveur Stripe)
+    const u = new URL(config.stripe.apiBase);
+    Object.assign(opts, { host: u.hostname, port: u.port, protocol: u.protocol.replace(':', '') });
+  }
+  return new Stripe(secretKey, opts);
+}
+
+let clientCache = { key: null, client: null };
+
+// Configuration Stripe actuelle, ou null si le paiement n'est pas configuré.
+export async function stripeContext() {
+  const [secret, monthly, yearly] = await Promise.all([getSetting('stripe_secret_key'), getSetting('stripe_price_monthly'), getSetting('stripe_price_yearly')]);
+  if (!secret || !monthly || !yearly) return null;
+  if (clientCache.key !== secret) clientCache = { key: secret, client: makeStripe(secret) };
+  return { stripe: clientCache.client, prices: { month: monthly, year: yearly } };
+}
+
 export default async function billingRoutes(app) {
-  const stripe = enabled ? makeStripe() : null;
   const off = (reply) => reply.code(503).send({ error: "Le paiement n'est pas configuré" });
-  const PRICES = { month: sc.priceMonthly, year: sc.priceYearly };
 
   // --- Formules (public) : montants lus chez Stripe, donc modifiables sans toucher au code ---
-  let plansCache = { at: 0, data: null };
+  let plansCache = { sig: '', at: 0, data: null };
   app.get('/billing/plans', async (req, reply) => {
-    if (!enabled) return { enabled: false, plans: [], trialDays: 0 };
-    if (!plansCache.data || Date.now() - plansCache.at > 10 * 60 * 1000) {
+    const ctx = await stripeContext();
+    if (!ctx) return { enabled: false, plans: [], trialDays: 0 };
+    const trialDays = await getNumber('trial_days');
+    const sig = `${clientCache.key}|${ctx.prices.month}|${ctx.prices.year}`;
+    if (!plansCache.data || plansCache.sig !== sig || Date.now() - plansCache.at > 10 * 60 * 1000) {
       try {
         const plans = [];
-        for (const [interval, id] of Object.entries(PRICES)) {
-          const p = await stripe.prices.retrieve(id);
+        for (const [interval, id] of Object.entries(ctx.prices)) {
+          const p = await ctx.stripe.prices.retrieve(id);
           plans.push({ interval, amount: p.unit_amount, currency: p.currency });
         }
-        plansCache = { at: Date.now(), data: plans };
+        plansCache = { sig, at: Date.now(), data: plans };
       } catch (err) {
         req.log.error(err);
         return reply.code(502).send({ error: 'Tarifs indisponibles' });
       }
     }
-    return { enabled: true, plans: plansCache.data, trialDays: sc.trialDays };
+    return { enabled: true, plans: plansCache.data, trialDays };
   });
 
   // --- Mon abonnement ---
@@ -53,61 +63,70 @@ export default async function billingRoutes(app) {
       [req.user.sub]
     );
     const sub = rows[0] || null;
-    const active = Boolean(sub) && ['trialing', 'active', 'past_due'].includes(sub.status)
+    const { rows: u } = await pool.query('SELECT premium_until FROM users WHERE id = $1', [req.user.sub]);
+    const complimentaryUntil = u[0]?.premium_until && new Date(u[0].premium_until) > new Date() ? u[0].premium_until : null;
+    const paid = Boolean(sub) && ['trialing', 'active', 'past_due'].includes(sub.status)
       && (!sub.currentPeriodEnd || new Date(sub.currentPeriodEnd) > new Date(Date.now() - 2 * 86400000));
-    return { enabled, active, subscription: sub };
+    return { enabled: Boolean(await stripeContext()), active: paid || Boolean(complimentaryUntil), subscription: sub, complimentaryUntil };
   });
 
-  // Client Stripe de l'utilisateur (créé à la première souscription).
-  async function customerFor(userId) {
+  // Client Stripe de l'utilisateur (créé à la première souscription, recréé si le compte Stripe a changé).
+  async function customerFor(stripe, userId) {
     const { rows } = await pool.query('SELECT id, email, name, stripe_customer_id FROM users WHERE id = $1', [userId]);
     const user = rows[0];
-    if (user.stripe_customer_id) return user.stripe_customer_id;
+    if (user.stripe_customer_id) {
+      try {
+        const c = await stripe.customers.retrieve(user.stripe_customer_id);
+        if (!c.deleted) return user.stripe_customer_id;
+      } catch (err) {
+        if (err.code !== 'resource_missing') throw err;
+      }
+    }
     const customer = await stripe.customers.create(
       { email: user.email, name: user.name, metadata: { user_id: user.id } },
-      { idempotencyKey: `customer-${user.id}` }
+      { idempotencyKey: `customer-${user.id}-${Date.now() - (Date.now() % 60000)}` }
     );
-    // Deux requêtes simultanées : la première enregistrée gagne.
-    const res = await pool.query(
-      'UPDATE users SET stripe_customer_id = COALESCE(stripe_customer_id, $2) WHERE id = $1 RETURNING stripe_customer_id',
-      [userId, customer.id]
-    );
+    const res = await pool.query('UPDATE users SET stripe_customer_id = $2 WHERE id = $1 RETURNING stripe_customer_id', [userId, customer.id]);
     return res.rows[0].stripe_customer_id;
   }
 
   const strict = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
 
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
-    if (!enabled) return off(reply);
+    const ctx = await stripeContext();
+    if (!ctx) return off(reply);
     const { interval } = z.object({ interval: z.enum(['month', 'year']) }).parse(req.body);
     const live = await pool.query(
       "SELECT 1 FROM subscriptions WHERE user_id = $1 AND status IN ('trialing', 'active', 'past_due') LIMIT 1", [req.user.sub]);
     if (live.rowCount) return reply.code(409).send({ error: 'Abonnement déjà actif : utilise « Gérer mon abonnement »' });
     // L'essai gratuit n'est offert qu'une fois par compte.
     const before = await pool.query('SELECT 1 FROM subscriptions WHERE user_id = $1 LIMIT 1', [req.user.sub]);
-    const customer = await customerFor(req.user.sub);
+    const customer = await customerFor(ctx.stripe, req.user.sub);
+    const trialDays = await getNumber('trial_days');
+    const webUrl = await getSetting('web_url');
     const subscription_data = { metadata: { user_id: req.user.sub } };
-    if (sc.trialDays > 0 && !before.rowCount) subscription_data.trial_period_days = sc.trialDays;
-    const session = await stripe.checkout.sessions.create({
+    if (trialDays > 0 && !before.rowCount) subscription_data.trial_period_days = trialDays;
+    const session = await ctx.stripe.checkout.sessions.create({
       mode: 'subscription',
       customer,
       client_reference_id: req.user.sub,
-      line_items: [{ price: PRICES[interval], quantity: 1 }],
+      line_items: [{ price: ctx.prices[interval], quantity: 1 }],
       subscription_data,
       allow_promotion_codes: true,
-      success_url: `${config.webUrl}/account?billing=success`,
-      cancel_url: `${config.webUrl}/pricing?canceled=1`,
+      success_url: `${webUrl}/account?billing=success`,
+      cancel_url: `${webUrl}/pricing?canceled=1`,
     });
     return { url: session.url };
   });
 
   app.post('/billing/portal', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
-    if (!enabled) return off(reply);
+    const ctx = await stripeContext();
+    if (!ctx) return off(reply);
     const { rows } = await pool.query('SELECT stripe_customer_id FROM users WHERE id = $1', [req.user.sub]);
     if (!rows[0]?.stripe_customer_id) return reply.code(404).send({ error: "Aucun abonnement pour l'instant" });
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await ctx.stripe.billingPortal.sessions.create({
       customer: rows[0].stripe_customer_id,
-      return_url: `${config.webUrl}/account`,
+      return_url: `${await getSetting('web_url')}/account`,
     });
     return { url: session.url };
   });
@@ -145,10 +164,12 @@ export default async function billingRoutes(app) {
     }
 
     hook.post('/billing/webhook', { config: { rateLimit: { max: 300, timeWindow: '1 minute' } } }, async (req, reply) => {
-      if (!enabled || !sc.webhookSecret) return off(reply);
+      const ctx = await stripeContext();
+      const whSecret = await getSetting('stripe_webhook_secret');
+      if (!ctx || !whSecret) return off(reply);
       let event;
       try {
-        event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], sc.webhookSecret);
+        event = ctx.stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], whSecret);
       } catch {
         return reply.code(400).send({ error: 'Signature invalide' });
       }
@@ -162,7 +183,7 @@ export default async function billingRoutes(app) {
             await applySubscription(client, obj, event.created);
           } else if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) {
             // Filet de sécurité si l'événement d'abonnement arrive plus tard : on récupère l'état actuel chez Stripe.
-            const sub = await stripe.subscriptions.retrieve(obj.subscription);
+            const sub = await ctx.stripe.subscriptions.retrieve(obj.subscription);
             await applySubscription(client, sub, event.created);
           }
         }

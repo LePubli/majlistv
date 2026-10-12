@@ -39,6 +39,8 @@ Limites de ressources conseillées (à rejouer après chaque redéploiement) :
 docker update --cpus 0.5 --memory 256m --memory-swap 256m $(docker ps -aq --filter name=translator)
 ```
 
+> **Réglages dans le site (étape 5)** : toutes les variables de moteurs, clés et modèles ci-dessous se règlent désormais dans **Admin → Paramètres** (prise en compte en moins de 10 s, sans redéploiement). Seule `SETTINGS_KEY` (identique à l'API) et `DATABASE_URL` restent obligatoires ici. Les variables listées servent de valeur de secours.
+
 ## Configuration (.env)
 | Variable | Défaut | Rôle |
 |---|---|---|

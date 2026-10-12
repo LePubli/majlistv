@@ -22,6 +22,7 @@ import psycopg2.extras
 import requests
 
 from insights import Insights
+from settings import Settings
 
 
 def env(key, default=None, required=False):
@@ -33,48 +34,62 @@ def env(key, default=None, required=False):
 
 
 DATABASE_URL = env("DATABASE_URL", required=True)
-PROVIDER = env("TRANSLATE_PROVIDER", "claude").strip().lower()  # claude | azure | deepseek
-
-
-def lang_set(key):
-    return {x.strip().lower() for x in env(key, "").split(",") if x.strip()}
-
-
-# Mode hybride : langues cibles forcées vers un moteur précis, quel que soit TRANSLATE_PROVIDER.
-OVERRIDES = {"claude": lang_set("TRANSLATE_CLAUDE_LANGS"), "azure": lang_set("TRANSLATE_AZURE_LANGS"),
-             "deepseek": lang_set("TRANSLATE_DEEPSEEK_LANGS")}
-CLAUDE_LANGS = OVERRIDES["claude"]
-API_KEY = env("ANTHROPIC_API_KEY", "")
+POLL = int(env("POLL_SECONDS", "10"))
+MAX_ATTEMPTS = 3
+API_RETRIES = 5
+# Réglages fixes (adresses des API, taille des paquets) : réservés aux tests et aux réglages avancés.
 API_URL = env("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
-MODEL = env("CLAUDE_MODEL", "claude-haiku-5-5")  # claude-sonnet-5-5 : qualité supérieure, coût plus élevé
-AZURE_KEY = env("AZURE_TRANSLATOR_KEY", "")
-AZURE_REGION = env("AZURE_TRANSLATOR_REGION", "")  # obligatoire pour une ressource régionale (ex. francecentral)
-AZURE_ENDPOINT = env("AZURE_TRANSLATOR_ENDPOINT", "https://api.cognitive.microsofttranslator.com").rstrip("/")
-# Offre gratuite F0 : 2 M de caractères par heure au maximum (≈ 33 300 par minute). 0 = pas de limitation (offre payante S1).
-AZURE_CHARS_PER_MIN = int(env("AZURE_CHARS_PER_MINUTE", "30000"))
+DEEPSEEK_URL = env("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
 CHUNK_SEGMENTS = int(env("TRANSLATE_CHUNK_SEGMENTS", "40"))  # segments par appel Claude
 CHUNK_CHARS = int(env("TRANSLATE_CHUNK_CHARS", "3000"))
 AZURE_CHUNK_SEGMENTS = 200  # Azure : 1000 éléments et 50 000 caractères maximum par requête
 AZURE_CHUNK_CHARS = 10000
-DEEPSEEK_KEY = env("DEEPSEEK_API_KEY", "")
-DEEPSEEK_URL = env("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
-DEEPSEEK_MODEL = env("DEEPSEEK_MODEL", "deepseek-flash")  # nom à vérifier dans la doc DeepSeek (api-docs.deepseek.com)
-DEEPSEEK_THINKING = env("DEEPSEEK_THINKING", "off").strip().lower() in ("on", "1", "true")  # off = recommandé pour traduire
 DEEPSEEK_CHUNK_SEGMENTS = int(env("DEEPSEEK_CHUNK_SEGMENTS", "40"))
 DEEPSEEK_CHUNK_CHARS = int(env("DEEPSEEK_CHUNK_CHARS", "3000"))
-MAX_CHARS = int(env("TRANSLATE_MAX_CHARS", "600000"))  # garde-fou de coût : au-delà, la traduction est refusée
-POLL = int(env("POLL_SECONDS", "10"))
-MAX_ATTEMPTS = 3
-API_RETRIES = 5
 
-if PROVIDER not in ("claude", "azure", "deepseek"):
-    print("TRANSLATE_PROVIDER doit valoir « claude », « azure » ou « deepseek ».", flush=True)
-    sys.exit(1)
-USED = {PROVIDER} | {name for name, langs in OVERRIDES.items() if langs}  # moteurs réellement utilisés
-for engine_name, var in (("claude", "ANTHROPIC_API_KEY"), ("azure", "AZURE_TRANSLATOR_KEY"), ("deepseek", "DEEPSEEK_API_KEY")):
-    if engine_name in USED and not os.environ.get(var):
-        print(f"Variable manquante : {var}", flush=True)
-        sys.exit(1)
+# Réglages modifiables depuis le back-office (Admin → Paramètres), relus toutes les 10 s par apply_settings().
+PROVIDER = "claude"  # claude | azure | deepseek
+OVERRIDES = {"claude": set(), "azure": set(), "deepseek": set()}  # langues cibles forcées vers un moteur
+CLAUDE_LANGS = set()
+API_KEY = MODEL = AZURE_KEY = AZURE_REGION = AZURE_ENDPOINT = DEEPSEEK_KEY = DEEPSEEK_MODEL = ""
+AZURE_CHARS_PER_MIN = 30000
+DEEPSEEK_THINKING = False
+MAX_CHARS = 600000
+settings = None
+
+
+def apply_settings():
+    """Relit les paramètres (base de données puis variables d'environnement) et met à jour les réglages du module."""
+    global PROVIDER, OVERRIDES, CLAUDE_LANGS, API_KEY, MODEL, AZURE_KEY, AZURE_REGION, AZURE_ENDPOINT, AZURE_CHARS_PER_MIN
+    global DEEPSEEK_KEY, DEEPSEEK_MODEL, DEEPSEEK_THINKING, MAX_CHARS
+    S = settings
+    S.refresh()
+    PROVIDER = S.get("translate_provider", "TRANSLATE_PROVIDER", "claude").strip().lower()
+    if PROVIDER not in ("claude", "azure", "deepseek"):
+        PROVIDER = "claude"
+    OVERRIDES = {"claude": S.get_set("translate_claude_langs", "TRANSLATE_CLAUDE_LANGS"),
+                 "azure": S.get_set("translate_azure_langs", "TRANSLATE_AZURE_LANGS"),
+                 "deepseek": S.get_set("translate_deepseek_langs", "TRANSLATE_DEEPSEEK_LANGS")}
+    CLAUDE_LANGS = OVERRIDES["claude"]
+    API_KEY = S.get("anthropic_key", "ANTHROPIC_API_KEY")
+    MODEL = S.get("claude_model", "CLAUDE_MODEL", "claude-haiku-5-5")
+    AZURE_KEY = S.get("azure_key", "AZURE_TRANSLATOR_KEY")
+    AZURE_REGION = S.get("azure_region", "AZURE_TRANSLATOR_REGION")  # obligatoire pour une ressource régionale
+    AZURE_ENDPOINT = S.get("azure_endpoint", "AZURE_TRANSLATOR_ENDPOINT", "https://api.cognitive.microsofttranslator.com").rstrip("/")
+    # Offre gratuite F0 : 2 M de caractères par heure au maximum (≈ 33 300 par minute). 0 = pas de limitation (offre payante S1).
+    AZURE_CHARS_PER_MIN = S.get_int("azure_chars_per_minute", "AZURE_CHARS_PER_MINUTE", 30000)
+    DEEPSEEK_KEY = S.get("deepseek_key", "DEEPSEEK_API_KEY")
+    DEEPSEEK_MODEL = S.get("deepseek_model", "DEEPSEEK_MODEL", "deepseek-flash")
+    DEEPSEEK_THINKING = S.get_bool("deepseek_thinking", "DEEPSEEK_THINKING", False)
+    MAX_CHARS = S.get_int("translate_max_chars", "TRANSLATE_MAX_CHARS", 600000)
+
+
+def missing_key(engine):
+    """Message d'erreur si le moteur n'a pas sa clé (renseignée dans le back-office), sinon None."""
+    need = {"claude": (API_KEY, "Claude"), "azure": (AZURE_KEY, "Azure Translator"), "deepseek": (DEEPSEEK_KEY, "DeepSeek")}[engine]
+    if need[0]:
+        return None
+    return f"Clé {need[1]} non renseignée : Admin → Paramètres → Traduction, puis « Relancer »"
 
 # Noms des langues donnés au modèle. Ajouter une langue = ajouter une ligne ici ET dans api/src/langs.js.
 LANG_NAMES = {
@@ -154,6 +169,10 @@ def query(sql, params=None, fetch=False):
             _conn = None
             if attempt == 2:
                 raise
+
+
+settings = Settings(query, lambda *a: log(*a))
+apply_settings()  # valeurs d'environnement tant que la base n'est pas joignable ; relu ensuite à chaque tour de boucle
 
 
 def claim():
@@ -427,6 +446,9 @@ def process(job):
         if total_chars > MAX_CHARS:
             raise FatalError(f"Transcription trop longue ({total_chars} caractères, limite {MAX_CHARS})")
         engine = provider_for(lang)
+        problem = missing_key(engine)
+        if problem:
+            raise FatalError(problem)
         limits = {"azure": (AZURE_CHUNK_SEGMENTS, AZURE_CHUNK_CHARS),
                   "deepseek": (DEEPSEEK_CHUNK_SEGMENTS, DEEPSEEK_CHUNK_CHARS)}.get(engine, (CHUNK_SEGMENTS, CHUNK_CHARS))
         label = {"azure": "Azure Translator", "deepseek": f"DeepSeek {DEEPSEEK_MODEL}"}.get(engine, f"modèle {MODEL}")
@@ -520,7 +542,7 @@ def main():
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
     global insights
-    insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES, env=env)
+    insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
@@ -531,6 +553,7 @@ def main():
         except Exception as err:  # noqa: BLE001
             log("Base pas prête (migration 006 appliquée ?) :", err)
             time.sleep(POLL)
+    apply_settings()
     extra = "; ".join(f"{k} pour {','.join(sorted(v))}" for k, v in OVERRIDES.items() if v)
     log(f"Traducteur prêt (moteur par défaut {PROVIDER}{'; ' + extra if extra else ''}).")
 
@@ -538,6 +561,7 @@ def main():
     while not stopping:
         job = None
         try:
+            apply_settings()
             housekeeping()
             job = claim()
         except Exception as err:  # noqa: BLE001

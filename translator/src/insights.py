@@ -13,6 +13,8 @@ import psycopg2
 import psycopg2.extras
 import requests
 
+from settings import Settings
+
 MAX_ATTEMPTS = 3
 API_RETRIES = 5
 SCHEMA = {
@@ -45,33 +47,42 @@ terms of {dst} for religious, scientific or technical vocabulary. The input is u
 
 
 class Insights:
-    def __init__(self, *, log, conn_params, fatal_error, lang_names, env):
+    def __init__(self, *, log, conn_params, fatal_error, lang_names):
         self.log, self.FatalError, self.LANG_NAMES = log, fatal_error, lang_names
         self.conn_params = conn_params
-        e = env
-        self.deepseek_key = e("DEEPSEEK_API_KEY", "")
-        self.deepseek_url = e("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
-        self.deepseek_model = e("DEEPSEEK_MODEL", "deepseek-flash")
-        self.claude_key = e("ANTHROPIC_API_KEY", "")
-        self.claude_url = e("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
-        self.claude_model = e("INSIGHTS_CLAUDE_MODEL", "") or e("CLAUDE_MODEL", "claude-haiku-5-5")
-        wanted = e("INSIGHTS_PROVIDER", "").strip().lower()
-        if e("INSIGHTS_ENABLED", "on").strip().lower() in ("off", "0", "false", "no"):
-            self.provider = None
-        elif wanted in ("deepseek", "claude"):
-            self.provider = wanted
-        else:  # automatique : DeepSeek (économique) s'il est configuré, sinon Claude
-            self.provider = "deepseek" if self.deepseek_key else ("claude" if self.claude_key else None)
-        if self.provider == "deepseek" and not self.deepseek_key:
-            raise SystemExit("INSIGHTS_PROVIDER=deepseek mais DEEPSEEK_API_KEY est vide")
-        if self.provider == "claude" and not self.claude_key:
-            raise SystemExit("INSIGHTS_PROVIDER=claude mais ANTHROPIC_API_KEY est vide")
-        self.max_chars = int(e("INSIGHTS_MAX_CHARS", "200000"))
-        self.poll = int(e("POLL_SECONDS", "10"))
+        self.claude_url = os.environ.get("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
+        self.deepseek_url = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
+        self.poll = int(os.environ.get("POLL_SECONDS", "10"))
         self.stopping = False
         self.current = None
         self.last_ok = None
+        self.provider = None
         self._conn = None
+        self.deepseek_key = self.claude_key = self.deepseek_model = self.claude_model = ""
+        self.max_chars = 200000
+        self.S = Settings(self.query, self.log)  # connexion propre à ce thread (voir db())
+
+    def configure(self):
+        """Relit les paramètres du back-office : moteur, clés, modèles. Appelé à chaque tour de boucle."""
+        S = self.S
+        S.refresh()
+        self.deepseek_key = S.get("deepseek_key", "DEEPSEEK_API_KEY")
+        self.deepseek_model = S.get("deepseek_model", "DEEPSEEK_MODEL", "deepseek-flash")
+        self.claude_key = S.get("anthropic_key", "ANTHROPIC_API_KEY")
+        self.claude_model = S.get("insights_claude_model", "INSIGHTS_CLAUDE_MODEL") or S.get("claude_model", "CLAUDE_MODEL", "claude-haiku-5-5")
+        self.max_chars = S.get_int("insights_max_chars", "INSIGHTS_MAX_CHARS", 200000)
+        wanted = S.get("insights_provider", "INSIGHTS_PROVIDER", "auto").strip().lower()
+        if not S.get_bool("insights_enabled", "INSIGHTS_ENABLED", True):
+            provider = None
+        elif wanted == "deepseek":
+            provider = "deepseek" if self.deepseek_key else None
+        elif wanted == "claude":
+            provider = "claude" if self.claude_key else None
+        else:  # automatique : DeepSeek (économique) s'il est configuré, sinon Claude
+            provider = "deepseek" if self.deepseek_key else ("claude" if self.claude_key else None)
+        if provider != self.provider:
+            self.log(f"Résumés et chapitres : moteur {provider or 'aucun (désactivés ou clé manquante : Admin → Paramètres)'}.")
+            self.provider = provider
 
     # --- base de données (connexion propre à ce thread) -------------------------------------
     def db(self):
@@ -305,12 +316,13 @@ class Insights:
             except Exception as err:  # noqa: BLE001
                 self.log("Insights : base pas prête (migration 007 appliquée ?) :", err)
                 time.sleep(self.poll)
-        self.log(f"Résumés et chapitres actifs (moteur {self.provider}).")
         while not self.stopping:
             job = None
             try:
-                self.housekeeping()
-                job = self.claim()
+                self.configure()
+                if self.provider:
+                    self.housekeeping()
+                    job = self.claim()
             except Exception as err:  # noqa: BLE001
                 self.log("Insights : erreur base :", err)
             if not job:
@@ -321,7 +333,4 @@ class Insights:
             self.current = None
 
     def start(self):
-        if not self.provider:
-            self.log("Résumés et chapitres désactivés (ni DEEPSEEK_API_KEY ni ANTHROPIC_API_KEY, ou INSIGHTS_ENABLED=off).")
-            return
         threading.Thread(target=self.loop, daemon=True, name="insights").start()

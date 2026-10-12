@@ -13,6 +13,10 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/_log": return self._send(LOG)
+        if path == "/v1/account":
+            return self._send({"id": "acct_" + ("B" if self.headers.get("authorization", "").endswith("other") else "A"), "object": "account"})
+        if path.startswith("/v1/customers/"):
+            return self._send({"id": path.rsplit("/", 1)[1], "object": "customer"})
         if path.startswith("/v1/prices/"):
             p = PRICES.get(path.rsplit("/", 1)[1]); return self._send(p) if p else self._send({"error": {"message": "no such price"}}, 404)
         if path.startswith("/v1/subscriptions/"):

@@ -4,7 +4,7 @@ import { pool } from '../db.js';
 import { presignGet, deleteObject, deletePrefix } from '../storage.js';
 import { makePlaybackToken, makePreviewToken } from '../playback.js';
 import { hasActiveSubscription } from '../access.js';
-import { config } from '../config.js';
+import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube ou Vimeo.
@@ -106,7 +106,7 @@ export default async function talksRoutes(app) {
     if (talk.source === 'upload') {
       // Premium : réservé au propriétaire et aux admins jusqu'à l'étape abonnement.
       let viewer = null;
-      try { viewer = await req.jwtVerify(); } catch { /* visiteur anonyme */ }
+      viewer = await app.optionalUser(req); // visiteur anonyme : null
       const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
       const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
       const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
@@ -116,7 +116,7 @@ export default async function talksRoutes(app) {
         if (talk.status === 'ready') {
           talk.playbackToken = makePreviewToken(id);
           talk.preview = true;
-          talk.previewSeconds = config.previewSeconds;
+          talk.previewSeconds = await getNumber('preview_seconds');
           talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
         }
       } else {

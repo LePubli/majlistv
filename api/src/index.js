@@ -14,6 +14,9 @@ import hlsRoutes from './routes/hls.js';
 import transcriptRoutes from './routes/transcripts.js';
 import billingRoutes from './routes/billing.js';
 import { ensureCors } from './storage.js';
+import { getSetting } from './settings.js';
+import { currentUser } from './userstate.js';
+import settingsRoutes from './routes/settings.js';
 
 const app = Fastify({ logger: true, trustProxy: true });
 
@@ -22,13 +25,22 @@ await app.register(cors, { origin: config.corsOrigin.split(','), credentials: tr
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 await app.register(jwt, { secret: config.jwtSecret, sign: { expiresIn: config.jwtExpires } });
 
-// Vérifie le token JWT.
+// Vérifie le token JWT, puis que le compte existe toujours, n'est pas suspendu, et applique son rôle actuel.
 app.decorate('authenticate', async (req, reply) => {
   try {
     await req.jwtVerify();
   } catch {
     return reply.code(401).send({ error: 'Non authentifié' });
   }
+  const user = await currentUser(req.user.sub);
+  if (!user) return reply.code(401).send({ error: 'Compte indisponible' });
+  req.user.role = user.role;
+});
+
+// Utilisateur connecté s'il y en a un (sinon null) : pages publiques qui varient selon l'abonné.
+app.decorate('optionalUser', async (req) => {
+  try { await req.jwtVerify(); } catch { return null; }
+  return currentUser(req.user.sub);
 });
 
 // Vérifie le token puis le rôle (ex. app.requireRole('admin')).
@@ -55,7 +67,7 @@ app.get('/health', async () => {
 });
 
 // Configuration publique (nom de l'application) utilisée par les front-ends.
-app.get('/config', async () => ({ appName: config.appName }));
+app.get('/config', async () => ({ appName: await getSetting('app_name') }));
 
 await app.register(authRoutes);
 await app.register(adminRoutes);
@@ -64,6 +76,7 @@ await app.register(uploadRoutes);
 await app.register(hlsRoutes);
 await app.register(transcriptRoutes);
 await app.register(billingRoutes);
+await app.register(settingsRoutes);
 
 await migrate();
 await ensureAdmin();

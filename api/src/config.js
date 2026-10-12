@@ -23,18 +23,8 @@ export const config = {
     secretKey: process.env.S3_SECRET_KEY,
   },
   maxUploadBytes: Number(process.env.MAX_UPLOAD_GB || 10) * 1024 ** 3,
-  // Paiement Stripe (facultatif : sans clé, le contenu premium reste réservé au propriétaire et aux admins).
-  stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    priceMonthly: process.env.STRIPE_PRICE_MONTHLY,
-    priceYearly: process.env.STRIPE_PRICE_YEARLY,
-    trialDays: Number(process.env.TRIAL_DAYS ?? 7),
-    // Réservé aux tests : adresse d'un faux serveur Stripe (ex. http://127.0.0.1:12111).
-    apiBase: process.env.STRIPE_API_BASE,
-  },
-  webUrl: (process.env.WEB_URL || (process.env.CORS_ORIGIN || 'http://localhost:3001').split(',')[0]).replace(/\/$/, ''),
-  previewSeconds: Number(process.env.PREVIEW_SECONDS ?? 120), // aperçu gratuit d'une conférence premium
+  // Réservé aux tests : adresse d'un faux serveur Stripe (ex. http://127.0.0.1:12111).
+  stripe: { apiBase: process.env.STRIPE_API_BASE },
   adminEmail: process.env.ADMIN_EMAIL,
   adminPassword: process.env.ADMIN_PASSWORD,
 };
