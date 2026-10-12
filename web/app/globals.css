@@ -544,3 +544,26 @@ fieldset.panel { min-width: 0; }
 .tl .tl-msg { display: block; color: #FF9C8C; font-size: 13px; margin-top: 2px; word-break: break-word; }
 .tl time { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .chip-err { color: #FF9C8C; font-size: 12px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Back-office : tableau de bord (11.1) ---- */
+.dash-h { margin: 22px 0 6px; font-size: 1rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.admin-card.kpi strong { font-size: 1.6rem; line-height: 1.1; }
+a.admin-card.kpi { text-decoration: none; color: inherit; }
+a.admin-card.kpi:hover { border-color: var(--gold, #E6A739); }
+.dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 800px) { .dash-cols { grid-template-columns: 1fr; gap: 0; } }
+.dash-ok { color: #6fcf8a; margin: 8px 0; }
+.dash-todo, .dash-list, .dash-health { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dash-todo li { padding: 10px 12px; border: 1px solid var(--line-soft); border-left-width: 4px; border-radius: 8px; background: var(--surface); }
+.dash-todo li.sev-error { border-left-color: #e5645a; }
+.dash-todo li.sev-warn { border-left-color: var(--gold, #E6A739); }
+.dash-todo a { color: inherit; text-decoration: none; display: block; }
+.dash-list li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .9rem; }
+.dash-health li { display: grid; grid-template-columns: 18px minmax(120px, auto) 1fr; gap: 8px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.hs-ok .hs-dot { color: #6fcf8a; } .hs-warn .hs-dot { color: var(--gold, #E6A739); } .hs-error .hs-dot { color: #e5645a; } .hs-off .hs-dot { color: var(--muted); }
+.hs-name { font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.admin-table th, .admin-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.admin-table th { color: var(--muted); font-weight: 600; }
+@media (max-width: 600px) { .dash .admin-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; } .admin-card.kpi { padding: 12px; } .admin-card.kpi strong { font-size: 1.35rem; } }

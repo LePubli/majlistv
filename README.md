@@ -464,3 +464,21 @@ Sur la fiche d'une conférence (`/studio/<id>`), section **Chronologie** : ajout
 git add -A && git commit -m "Étape 10.6 : fiche de suivi" && git push
 ```
 DockPanel : redéployer **api** puis **web**, puis `/root/apply-limits.sh` et vérifier le port nginx de l'API.
+
+
+## Étape 11.1 — Back-office : tableau de bord
+
+**Où** : `/admin?tab=dashboard` (administrateurs). Se rafraîchit seul toutes les 30 s.
+
+**Contenu**
+- *Abonnés* : payants (actifs + paiement en retard), essais, **revenu mensuel estimé** (abonnements payants ; annuel ÷ 12 ; montants lus chez Stripe, « — » si Stripe n'est pas configuré), résiliations programmées, comptes (+7 j / +30 j), accès offerts, comptes suspendus.
+- *Conférences* : en ligne, en traitement, en échec, brouillons/planifiées (chaque carte ouvre le Studio filtré : `/studio?filter=err|run|live|draft`).
+- *À traiter* : conversions / transcriptions / traductions / résumés en échec ou **bloqués** (en cours depuis plus de 2–3 h), paiements en retard, e-mails en échec (30 j), erreur de recherche — chaque ligne est un lien. Liste des conférences en échec.
+- *État des services* : base, stockage vidéo (test réel du bucket), worker, transcription, traduction, résumés, recherche, Stripe, SMTP. Worker/transcription/traduction sont jugés d'après leurs files d'attente (une tâche bloquée = service à vérifier) : aucune adresse interne à configurer.
+- *Dernières inscriptions* (8).
+
+**API** : `GET /admin/dashboard` (admin). Aucun changement de base : pas de migration.
+
+**Tests** : `python3 api/tests/test_dashboard.py` (37 vérifications).
+
+**Déploiement** : api puis web (pas de migration), puis `/root/apply-limits.sh` et vérification des ports nginx.

@@ -2,6 +2,7 @@
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 
@@ -11,43 +12,109 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—');
 const LANG_NAMES = { fr: 'Français', en: 'Anglais', ar: 'Arabe', es: 'Espagnol', de: 'Allemand', it: 'Italien', pt: 'Portugais', tr: 'Turc', ur: 'Ourdou', id: 'Indonésien', ru: 'Russe', nl: 'Néerlandais', zh: 'Chinois', ja: 'Japonais', ko: 'Coréen', hi: 'Hindi', fa: 'Persan', bn: 'Bengali', ms: 'Malais', sw: 'Swahili' };
 
 /* ---------------------------------------------------------------- Tableau de bord */
+const money = (c, cur) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: (cur || 'eur').toUpperCase() }).format(c / 100);
+const HEALTH_ICON = { ok: '●', warn: '▲', error: '✕', off: '○' };
+
+function Kpi({ value, label, hint, href }) {
+  const body = (<><strong>{value}</strong><span>{label}</span>{hint && <small className="meta">{hint}</small>}</>);
+  return href ? <Link className="admin-card kpi" href={href}>{body}</Link> : <div className="admin-card kpi">{body}</div>;
+}
+
 function Dashboard() {
   const { call } = useApp();
-  const [st, setSt] = useState(null);
-  const [users, setUsers] = useState(null);
+  const [d, setD] = useState(null);
+  const [err, setErr] = useState(false);
   const [busy, setBusy] = useState(false);
-  const reload = () => call('/admin/status').then((r) => r.ok && setSt(r.data));
+  const load = useCallback(() => call('/admin/dashboard').then((r) => (r.ok ? (setD(r.data), setErr(false)) : setErr(true))), [call]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 30000); // rafraîchi toutes les 30 s tant que l'onglet est ouvert
+    return () => clearInterval(id);
+  }, [load]);
   const reindex = async () => {
     if (!window.confirm("Vider l'index de recherche et le reconstruire ? (quelques minutes, la recherche simple prend le relais pendant ce temps)")) return;
     setBusy(true);
     await call('/admin/search/reindex', { method: 'POST' });
     setBusy(false);
-    setTimeout(reload, 4000);
+    setTimeout(load, 4000);
   };
-  useEffect(() => {
-    call('/admin/status').then((r) => r.ok && setSt(r.data));
-    call('/admin/users?limit=1').then((r) => r.ok && setUsers(r.data.total));
-  }, [call]);
-  const line = (m) => (m && Object.keys(m).length ? Object.entries(m).map(([k, v]) => `${v} ${k}`).join(' · ') : 'aucun');
+  if (err && !d) return <p className="error">Impossible de charger le tableau de bord.</p>;
+  if (!d) return <p className="meta">Chargement…</p>;
+  const { users, talks, subscribers: sb, todo, health, signups, failedTalks } = d;
+  const searchOn = health.find((h) => h.key === 'search')?.state !== 'off';
   return (
-    <section>
-      {!st ? <p className="meta">Chargement…</p> : (
-        <div className="admin-cards">
-          <div className="admin-card"><strong>{users ?? '…'}</strong><span>utilisateurs</span></div>
-          <div className="admin-card"><strong>{line(st.subscriptions)}</strong><span>abonnements</span></div>
-          <div className="admin-card"><strong>{line(st.transcripts)}</strong><span>transcriptions</span></div>
-          <div className="admin-card"><strong>{line(st.translations)}</strong><span>traductions de sous-titres</span></div>
-          <div className="admin-card"><strong>{st.insightsEnabled ? line(st.insights) : 'désactivés'}</strong><span>résumés et chapitres</span></div>
-          <div className="admin-card"><strong>{line(st.emails)}</strong><span>e-mails (30 derniers jours)</span>{st.emails?.failed > 0 && <span className="error">Échecs : vérifier Paramètres → E-mails</span>}</div>
-          <div className="admin-card">
-            <strong>{st.search.enabled ? `${st.search.indexed} / ${st.search.ready} indexées` : 'recherche simple'}</strong>
-            <span>recherche {st.search.enabled ? 'Meilisearch' : '(Meilisearch non configuré)'}</span>
-            {st.search.lastError && <span className="error">{st.search.lastError}</span>}
-            {st.search.enabled && <button className="btn ghost" disabled={busy} onClick={reindex}>Réindexer tout</button>}
-          </div>
+    <section className="dash">
+      <h3 className="dash-h">Abonnés</h3>
+      <div className="admin-cards">
+        <Kpi value={sb.paying} label="abonnés payants" hint={sb.pastDue ? `dont ${sb.pastDue} en retard de paiement` : null} href="/admin?tab=users" />
+        <Kpi value={sb.trialing} label="en période d'essai" />
+        <Kpi value={sb.mrr ? money(sb.mrr.amount, sb.mrr.currency) : '—'} label="revenu mensuel estimé" hint={sb.mrr ? 'abonnements payants, annuels ramenés au mois (hors essais)' : 'Stripe non configuré'} />
+        <Kpi value={sb.cancelling} label="résiliations programmées" hint="actifs qui s'arrêtent à la fin de la période" />
+        <Kpi value={users.total} label="comptes" hint={`+${users.week} cette semaine · +${users.month} ce mois`} href="/admin?tab=users" />
+        <Kpi value={users.complimentary} label="accès offerts en cours" hint={users.suspended ? `${users.suspended} compte(s) suspendu(s)` : null} />
+      </div>
+
+      <h3 className="dash-h">Conférences</h3>
+      <div className="admin-cards">
+        <Kpi value={talks.live} label="en ligne" href="/studio?filter=live" />
+        <Kpi value={talks.processing} label="en traitement" href="/studio?filter=run" />
+        <Kpi value={talks.failed} label="en échec" href="/studio?filter=err" />
+        <Kpi value={talks.draft + talks.scheduled} label="brouillons / planifiées" hint={talks.scheduled ? `dont ${talks.scheduled} planifiée(s)` : null} href="/studio?filter=draft" />
+      </div>
+
+      <div className="dash-cols">
+        <div>
+          <h3 className="dash-h">À traiter</h3>
+          {todo.length === 0 ? <p className="dash-ok">✓ Rien à signaler, tout fonctionne.</p> : (
+            <ul className="dash-todo">
+              {todo.map((t) => (
+                <li key={t.key} className={`sev-${t.severity}`}>
+                  <Link href={t.link}><b>{t.count}</b> {t.label}</Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {failedTalks.length > 0 && (
+            <ul className="dash-list">
+              {failedTalks.map((t) => (
+                <li key={t.id}><Link href={`/studio/${t.id}`}>{t.title}</Link><small className="meta">{t.videoStatus === 'failed' ? 'conversion en échec' : 'transcription en échec'} · {fmt(t.createdAt)}</small></li>
+              ))}
+            </ul>
+          )}
         </div>
-      )}
-      <p className="meta">Les statuts « failed » se relancent depuis la page de la conférence (bouton « Relancer »). Les clés et moteurs se règlent dans l'onglet Paramètres, sans redéploiement.</p>
+        <div>
+          <h3 className="dash-h">État des services</h3>
+          <ul className="dash-health">
+            {health.map((h) => (
+              <li key={h.key} className={`hs-${h.state}`}>
+                <span className="hs-dot" aria-hidden="true">{HEALTH_ICON[h.state]}</span>
+                <span className="hs-name">{h.label}</span>
+                <small className="meta">{h.message}</small>
+              </li>
+            ))}
+          </ul>
+          {searchOn && <button className="btn ghost" disabled={busy} onClick={reindex}>Réindexer la recherche</button>}
+        </div>
+      </div>
+
+      <h3 className="dash-h">Dernières inscriptions</h3>
+      <div className="table-wrap">
+        <table className="admin-table">
+          <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Abonnement</th><th>Inscrit le</th></tr></thead>
+          <tbody>
+            {signups.map((u) => (
+              <tr key={u.id}>
+                <td>{u.name}{u.disabledAt && <em className="adm-src"> (suspendu)</em>}</td>
+                <td>{u.email}</td>
+                <td>{ROLE_LABEL[u.role] || u.role}</td>
+                <td>{u.subscription ? SUB_LABEL[u.subscription] || u.subscription : '—'}</td>
+                <td>{fmt(u.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="meta">Le tableau se met à jour tout seul toutes les 30 secondes. Les clés et moteurs se règlent dans l'onglet Paramètres, sans redéploiement.</p>
     </section>
   );
 }

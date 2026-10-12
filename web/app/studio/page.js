@@ -27,6 +27,8 @@ export default function StudioTalks() {
   const [mine, setMine] = useState(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  // Lien depuis le tableau de bord : /studio?filter=err ouvre directement le bon filtre.
+  useEffect(() => { const f = new URLSearchParams(window.location.search).get('filter'); if (FILTERS.includes(f)) setFilter(f); }, []);
   const load = useCallback(() => call('/me/talks').then((r) => r.ok && setMine(r.data)), [call]);
   useEffect(() => { load(); }, [load]);
 

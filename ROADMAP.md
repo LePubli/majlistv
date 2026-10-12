@@ -46,7 +46,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - Fiche de suivi : chronologie du traitement, langues à ajouter, retirer ou relancer.
 
 **11. Back-office**
-- Tableau de bord : abonnés, essais, revenu estimé, conférences, « À traiter », état des services, dernières inscriptions.
+- ✅ (11.1 livré) Tableau de bord : abonnés, essais, revenu estimé, conférences, « À traiter », état des services, dernières inscriptions.
 - Utilisateurs : tableau avec fiche latérale (rôle expliqué, abonnement, accès offert, mot de passe, suspension, suppression).
 - Paramètres par section, avec un tableau « quel moteur pour quelle langue » pour la traduction et des boutons Tester.
 - Catégories : ajouter, renommer, ordonner, choisir l'icône.
@@ -107,6 +107,8 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 ## Idées mises de côté (à étudier plus tard, pas planifiées)
 - **Quiz sur la vidéo** : questions à choix multiples générées à partir de la transcription (relues et corrigées par l'organisateur dans le Studio), proposées après la lecture.
 - **Section « Cours » en quiz, par niveau** : parcours de quiz classés par niveau (débutant, intermédiaire, avancé), avec progression du visiteur.
+- **Vignettes interactives style plateforme de streaming** (inspiration : captures de Prime Video fournies par Epok) : au survol, la carte grossit ; si la souris reste dessus, un **aperçu vidéo** démarre dans la carte, avec les infos (titre, intervenant, durée, catégorie, langue, accès, note…). **Toutes les informations affichées sur la carte sont paramétrables** (Administration → Paramètres : choisir lesquelles apparaissent, délai avant l'aperçu, aperçu activé ou non). À prévoir : sur mobile (pas de survol), un appui long ou un bouton ; respect de « réduire les animations » ; pas d'aperçu pour les conférences premium non accessibles au visiteur sans l'accord prévu. À rapprocher de l'étape 12 (accueil vitrine).
+- **Haut du site avec bannière photo / vidéo** : grande bannière en tête d'accueil (conférence vedette en image ou en vidéo muette, titre, boutons « Regarder » et « Plus d'infos », points de navigation entre plusieurs vedettes), choisie et programmable depuis le Studio. À rapprocher de l'étape 12 (accueil vitrine).
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.
