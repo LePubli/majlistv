@@ -482,3 +482,24 @@ DockPanel : redéployer **api** puis **web**, puis `/root/apply-limits.sh` et v�
 **Tests** : `python3 api/tests/test_dashboard.py` (37 vérifications).
 
 **Déploiement** : api puis web (pas de migration), puis `/root/apply-limits.sh` et vérification des ports nginx.
+
+
+## Étape 11.2 — Back-office : utilisateurs et fiche latérale
+
+**Où** : `/admin?tab=users`. Cliquer sur une ligne ouvre la **fiche latérale** (l'adresse contient `&user=<id>` : rechargeable et partageable entre admins ; `Échap` ou clic dehors pour fermer).
+
+**Liste** : pastilles de filtre avec compteurs (Tous, Abonnés, Essais, Accès offerts, Sans abonnement, Suspendus), recherche nom/e-mail, filtre par rôle, tri (récents, anciens, nom, dernière lecture), colonne « dernière lecture ».
+
+**Fiche** (chaque bloc s'enregistre seul) :
+- *Identité* : nom, e-mail, langue.
+- *Rôle* : trois cartes qui expliquent ce que chaque rôle peut faire (Utilisateur / Organisateur / Administrateur). Garde-fous : on ne peut pas changer son propre rôle, ni retirer le dernier administrateur actif.
+- *Abonnement et accès* : abonnements Stripe (statut, essai, fin de période, résiliation programmée) ; **accès premium offert** en un clic (+1 mois, +3 mois, +1 an, date précise, retirer).
+- *Activité* : favoris, conférences commencées/terminées, dernière lecture, derniers e-mails, conférences du compte (liens vers le Studio).
+- *Sécurité* : **lien de réinitialisation envoyé par e-mail** (valable 1 h, l'admin ne voit jamais le mot de passe), ou mot de passe provisoire affiché une seule fois (ferme les sessions ouvertes) ; suspension / réactivation (connexion refusée immédiatement).
+- *Zone dangereuse* : suppression. Refusée si abonnement Stripe actif ; si le compte possède des conférences, proposition de les transférer à un organisateur/admin avant suppression.
+
+**API ajoutée** : `GET /admin/users?status=&sort=`, `GET /admin/users-counts`, `GET /admin/users/:id` (fiche), `POST /admin/users/:id/reset-link`. Pas de migration.
+
+**Tests** : `python3 api/tests/test_users_admin.py` (30 vérifications).
+
+**Déploiement** : api puis web (pas de migration), `/root/apply-limits.sh`, vérification des ports nginx.

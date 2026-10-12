@@ -4,12 +4,16 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { forgetUser } from '../userstate.js';
+import { enqueueEmail } from '../mailer.js';
+import { createHash } from 'node:crypto';
 
 const ROLES = ['user', 'organizer', 'admin'];
 const idSchema = z.object({ id: z.string().uuid() });
 const listSchema = z.object({
   q: z.string().trim().max(100).optional(),
   role: z.enum(ROLES).optional(),
+  status: z.enum(['suspended', 'paying', 'trialing', 'offered', 'none']).optional(),
+  sort: z.enum(['recent', 'oldest', 'name', 'activity']).default('recent'),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -36,7 +40,19 @@ const tempPassword = () => randomBytes(9).toString('base64url');
 const USER_COLS = `u.id, u.email, u.name, u.role, u.locale, u.created_at AS "createdAt", u.disabled_at AS "disabledAt",
   u.premium_until AS "premiumUntil",
   (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY (s.status IN ('trialing','active','past_due')) DESC, s.updated_at DESC LIMIT 1) AS "subscriptionStatus",
-  (SELECT count(*) FROM talks t WHERE t.organizer_id = u.id)::int AS "talksCount"`;
+  (SELECT count(*) FROM talks t WHERE t.organizer_id = u.id)::int AS "talksCount",
+  (SELECT max(updated_at) FROM watch_progress w WHERE w.user_id = u.id) AS "lastWatchAt"`;
+
+// Filtres « statut » (abonnement) de la liste.
+const LIVE_SUB = (st) => `EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = u.id AND s.status IN (${st}))`;
+const STATUS_SQL = {
+  suspended: 'u.disabled_at IS NOT NULL',
+  paying: LIVE_SUB("'active', 'past_due'"),
+  trialing: LIVE_SUB("'trialing'"),
+  offered: 'u.premium_until > now()',
+  none: `NOT ${LIVE_SUB("'trialing', 'active', 'past_due'")} AND (u.premium_until IS NULL OR u.premium_until <= now())`,
+};
+const SORT_SQL = { recent: 'u.created_at DESC', oldest: 'u.created_at ASC', name: 'lower(u.name) ASC', activity: '"lastWatchAt" DESC NULLS LAST, u.created_at DESC' };
 
 export default async function adminRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
@@ -45,18 +61,61 @@ export default async function adminRoutes(app) {
     (await pool.query("SELECT count(*)::int AS n FROM users WHERE role = 'admin' AND disabled_at IS NULL AND id <> $1", [excludeId])).rows[0].n;
 
   app.get('/admin/users', adminOnly, async (req) => {
-    const { q, role, limit, offset } = listSchema.parse(req.query);
+    const { q, role, status, sort, limit, offset } = listSchema.parse(req.query);
     const where = [];
     const params = [];
     if (q) { params.push(`%${q.replace(/[%_]/g, '\\$&')}%`); where.push(`(u.email ILIKE $${params.length} OR u.name ILIKE $${params.length})`); }
     if (role) { params.push(role); where.push(`u.role = $${params.length}`); }
+    if (status) where.push(STATUS_SQL[status]);
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = (await pool.query(`SELECT count(*)::int AS n FROM users u ${clause}`, params)).rows[0].n;
     const { rows } = await pool.query(
-      `SELECT ${USER_COLS} FROM users u ${clause} ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      `SELECT ${USER_COLS} FROM users u ${clause} ORDER BY ${SORT_SQL[sort]} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
     return { total, users: rows };
+  });
+
+  // Compteurs des filtres (pastilles au-dessus du tableau).
+  app.get('/admin/users-counts', adminOnly, async () => (await pool.query(
+    `SELECT count(*)::int AS all,
+            count(*) FILTER (WHERE ${STATUS_SQL.suspended})::int AS suspended,
+            count(*) FILTER (WHERE ${STATUS_SQL.paying})::int AS paying,
+            count(*) FILTER (WHERE ${STATUS_SQL.trialing})::int AS trialing,
+            count(*) FILTER (WHERE ${STATUS_SQL.offered})::int AS offered,
+            count(*) FILTER (WHERE ${STATUS_SQL.none})::int AS none
+       FROM users u`)).rows[0]);
+
+  // Fiche complète d'un utilisateur (panneau latéral).
+  app.get('/admin/users/:id', adminOnly, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const user = (await pool.query(`SELECT ${USER_COLS}, u.stripe_customer_id AS "stripeCustomerId" FROM users u WHERE u.id = $1`, [id])).rows[0];
+    if (!user) return reply.code(404).send({ error: 'Utilisateur introuvable' });
+    const [subs, stats, talks, mails] = await Promise.all([
+      pool.query(`SELECT id, status, billing_interval AS interval, current_period_end AS "currentPeriodEnd", trial_end AS "trialEnd",
+                         cancel_at_period_end AS "cancelAtPeriodEnd", created_at AS "createdAt"
+                    FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10`, [id]),
+      pool.query(`SELECT (SELECT count(*)::int FROM favorites WHERE user_id = $1) AS favorites,
+                         (SELECT count(*)::int FROM watch_progress WHERE user_id = $1) AS watched,
+                         (SELECT count(*)::int FROM watch_progress WHERE user_id = $1 AND completed) AS completed,
+                         (SELECT max(updated_at) FROM watch_progress WHERE user_id = $1) AS "lastWatchAt"`, [id]),
+      pool.query(`SELECT id, title, publication, video_status AS "videoStatus" FROM talks WHERE organizer_id = $1 ORDER BY created_at DESC LIMIT 10`, [id]),
+      pool.query(`SELECT kind, status, created_at AS "createdAt" FROM email_outbox WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`, [id]),
+    ]);
+    return { user, subscriptions: subs.rows, stats: stats.rows[0], talks: talks.rows, emails: mails.rows };
+  });
+
+  // Envoie à l'utilisateur un lien pour choisir son mot de passe (valable 1 h) : l'admin ne voit jamais le mot de passe.
+  app.post('/admin/users/:id/reset-link', adminOnly, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const u = (await pool.query('SELECT id, email, name, locale, disabled_at FROM users WHERE id = $1', [id])).rows[0];
+    if (!u) return reply.code(404).send({ error: 'Utilisateur introuvable' });
+    if (u.disabled_at) return reply.code(400).send({ error: 'Compte suspendu : réactive-le d\'abord' });
+    const token = randomBytes(32).toString('base64url');
+    const hash = createHash('sha256').update(token).digest('hex');
+    await pool.query("INSERT INTO password_resets(token_hash, user_id, expires_at) VALUES ($1, $2, now() + interval '1 hour')", [hash, id]);
+    await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind: 'password_reset', vars: { name: u.name, path: `/reset?token=${token}` }, dedupeKey: `reset:${hash}` });
+    return { ok: true, email: u.email };
   });
 
   app.post('/admin/users', adminOnly, async (req, reply) => {

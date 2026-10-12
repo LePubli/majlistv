@@ -47,7 +47,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 
 **11. Back-office**
 - ✅ (11.1 livré) Tableau de bord : abonnés, essais, revenu estimé, conférences, « À traiter », état des services, dernières inscriptions.
-- Utilisateurs : tableau avec fiche latérale (rôle expliqué, abonnement, accès offert, mot de passe, suspension, suppression).
+- ✅ (11.2 livré) Utilisateurs : tableau avec fiche latérale (rôle expliqué, abonnement, accès offert, mot de passe, suspension, suppression).
 - Paramètres par section, avec un tableau « quel moteur pour quelle langue » pour la traduction et des boutons Tester.
 - Catégories : ajouter, renommer, ordonner, choisir l'icône.
 

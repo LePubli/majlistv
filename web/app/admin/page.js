@@ -3,7 +3,7 @@
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', admin: 'Administrateur' };
@@ -233,160 +233,321 @@ function Settings() {
 }
 
 /* ---------------------------------------------------------------- Utilisateurs */
-function UserForm({ initial, onClose, onSaved, me }) {
-  const { call } = useApp();
-  const isNew = !initial;
-  const [f, setF] = useState(initial ? {
-    name: initial.name, email: initial.email, role: initial.role, locale: initial.locale || 'fr',
-    premiumUntil: initial.premiumUntil ? initial.premiumUntil.slice(0, 10) : '', password: '',
-  } : { name: '', email: '', role: 'user', locale: 'fr', premiumUntil: '', password: '' });
-  const [err, setErr] = useState('');
-  const [secret, setSecret] = useState(null); // mot de passe provisoire, affiché une seule fois
-  const [del, setDel] = useState(null);       // { code, error, candidates }
-  const [transferTo, setTransferTo] = useState('');
-  const [busy, setBusy] = useState(false);
-  const self = initial && initial.id === me;
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+const ROLE_HELP = {
+  user: 'Regarde les conférences, garde ses favoris et sa progression. Les conférences premium demandent un abonnement ou un accès offert.',
+  organizer: "Comme un utilisateur, et accède au Studio : ajoute, modifie et publie ses propres conférences. Ne voit pas le back-office.",
+  admin: 'Accès total : back-office (utilisateurs, paramètres, catégories, pages légales) et toutes les conférences du Studio.',
+};
+const FILTERS = [['all', 'Tous'], ['paying', 'Abonnés'], ['trialing', 'Essais'], ['offered', 'Accès offerts'], ['none', 'Sans abonnement'], ['suspended', 'Suspendus']];
+const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString(); };
+const fmtDT = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
+// Création : petite fenêtre (le mot de passe provisoire est affiché une seule fois).
+function NewUser({ onClose, onDone }) {
+  const { call } = useApp();
+  const [f, setF] = useState({ name: '', email: '', role: 'user', locale: 'fr', password: '' });
+  const [err, setErr] = useState('');
+  const [secret, setSecret] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault(); setBusy(true); setErr('');
-    let r;
-    if (isNew) {
-      r = await call('/admin/users', { method: 'POST', body: JSON.stringify({ name: f.name, email: f.email, role: f.role, locale: f.locale, ...(f.password ? { password: f.password } : {}) }) });
-    } else {
-      r = await call(`/admin/users/${initial.id}`, { method: 'PATCH', body: JSON.stringify({
-        name: f.name, email: f.email, role: f.role, locale: f.locale,
-        premiumUntil: f.premiumUntil ? new Date(f.premiumUntil + 'T23:59:59').toISOString() : null }) });
-    }
+    const r = await call('/admin/users', { method: 'POST', body: JSON.stringify({ name: f.name, email: f.email, role: f.role, locale: f.locale, ...(f.password ? { password: f.password } : {}) }) });
     setBusy(false);
     if (!r.ok) { setErr(r.data.error || 'Erreur'); return; }
-    if (isNew && r.data.temporaryPassword) { setSecret(r.data.temporaryPassword); onSaved(false); } else onSaved(true);
+    if (r.data.temporaryPassword) setSecret(r.data); else onDone(r.data.user);
   };
-  const toggleDisabled = async () => {
-    setBusy(true); setErr('');
-    const r = await call(`/admin/users/${initial.id}`, { method: 'PATCH', body: JSON.stringify({ disabled: !initial.disabledAt }) });
-    setBusy(false);
-    if (!r.ok) setErr(r.data.error || 'Erreur'); else onSaved(true);
-  };
-  const resetPwd = async () => {
-    if (!window.confirm('Générer un nouveau mot de passe provisoire pour ce compte ?')) return;
-    const r = await call(`/admin/users/${initial.id}/password`, { method: 'POST', body: JSON.stringify({}) });
-    if (r.ok) setSecret(r.data.temporaryPassword); else setErr(r.data.error || 'Erreur');
-  };
-  const remove = async (to) => {
-    if (!to && !window.confirm(`Supprimer définitivement ${initial.email} ?`)) return;
-    setBusy(true); setErr('');
-    const r = await call(`/admin/users/${initial.id}${to ? `?transferTo=${to}` : ''}`, { method: 'DELETE' });
-    setBusy(false);
-    if (r.ok) { onSaved(true); return; }
-    if (r.status === 409 && r.data.code === 'has_talks') {
-      const c = await call('/admin/users?role=organizer&limit=100');
-      const a = await call('/admin/users?role=admin&limit=100');
-      const list = [...(c.data.users || []), ...(a.data.users || [])].filter((u) => u.id !== initial.id && !u.disabledAt);
-      setDel({ ...r.data, candidates: list }); setTransferTo(list[0]?.id || '');
-    } else setErr(r.data.error || 'Erreur');
-  };
-
   if (secret) {
     return (
       <div className="adm-modal"><div className="adm-dialog">
-        <h3>Mot de passe provisoire</h3>
-        <p>Note-le maintenant : il ne sera plus affiché. Transmets-le à l'utilisateur, qui pourra le garder ou le faire changer.</p>
-        <p><code className="adm-secret">{secret}</code></p>
-        <div className="adm-row"><button className="btn ghost" onClick={() => navigator.clipboard?.writeText(secret)}>Copier</button><button className="btn" onClick={() => onSaved(true)}>Fermer</button></div>
+        <h3>Compte créé</h3>
+        <p>Mot de passe provisoire (affiché une seule fois) : transmets-le à l'utilisateur.</p>
+        <p><code className="adm-secret">{secret.temporaryPassword}</code></p>
+        <div className="adm-row"><button className="btn ghost" onClick={() => navigator.clipboard?.writeText(secret.temporaryPassword)}>Copier</button><button className="btn" onClick={() => onDone(secret.user)}>Ouvrir la fiche</button></div>
       </div></div>
     );
   }
   return (
     <div className="adm-modal"><div className="adm-dialog">
-      <h3>{isNew ? 'Nouvel utilisateur' : 'Modifier l\'utilisateur'}</h3>
+      <h3>Nouvel utilisateur</h3>
       <form onSubmit={save} className="adm-form">
         <label>Nom<input required value={f.name} onChange={set('name')} maxLength={100} /></label>
-        <label>Email<input required type="email" value={f.email} onChange={set('email')} /></label>
-        <label>Rôle
-          <select value={f.role} onChange={set('role')} disabled={self}>{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-        </label>
-        <label>Langue
-          <select value={f.locale} onChange={set('locale')}><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option></select>
-        </label>
-        {isNew
-          ? <label>Mot de passe (vide = généré automatiquement)<input type="text" minLength={8} maxLength={72} value={f.password} onChange={set('password')} autoComplete="off" /></label>
-          : <label>Accès premium offert jusqu'au (vide = aucun)<input type="date" value={f.premiumUntil} onChange={set('premiumUntil')} /></label>}
+        <label>E-mail<input required type="email" value={f.email} onChange={set('email')} /></label>
+        <label>Rôle<select value={f.role} onChange={set('role')}>{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <p className="meta">{ROLE_HELP[f.role]}</p>
+        <label>Langue<select value={f.locale} onChange={set('locale')}><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option></select></label>
+        <label>Mot de passe (vide = généré automatiquement)<input type="text" minLength={8} maxLength={72} value={f.password} onChange={set('password')} autoComplete="off" /></label>
         {err && <p className="error">{err}</p>}
-        <div className="adm-row">
-          <button className="btn" disabled={busy}>{isNew ? 'Créer' : 'Enregistrer'}</button>
-          <button type="button" className="btn ghost" onClick={onClose}>Fermer</button>
-        </div>
+        <div className="adm-row"><button className="btn" disabled={busy}>Créer</button><button type="button" className="btn ghost" onClick={onClose}>Fermer</button></div>
       </form>
-      {!isNew && (
-        <div className="adm-danger">
-          <div className="adm-row">
-            <button type="button" className="btn ghost" onClick={resetPwd}>Réinitialiser le mot de passe</button>
-            {!self && <button type="button" className="btn ghost" disabled={busy} onClick={toggleDisabled}>{initial.disabledAt ? 'Réactiver le compte' : 'Suspendre le compte'}</button>}
-          </div>
-          {!self && !del && <button type="button" className="btn danger" disabled={busy} onClick={() => remove()}>Supprimer l'utilisateur</button>}
-          {del && (
-            <div>
-              <p className="error">{del.error}</p>
-              {del.candidates.length ? (
-                <div className="adm-row">
-                  <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>{del.candidates.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}</select>
-                  <button type="button" className="btn danger" disabled={busy || !transferTo} onClick={() => remove(transferTo)}>Transférer puis supprimer</button>
-                </div>
-              ) : <p className="meta">Aucun organisateur ou admin disponible pour reprendre les conférences : crée-en un d'abord.</p>}
-            </div>
-          )}
-        </div>
-      )}
     </div></div>
+  );
+}
+
+// Fiche latérale d'un utilisateur : tout se règle ici, chaque bloc s'enregistre seul.
+function UserSheet({ id, me, onClose, onChanged }) {
+  const { call } = useApp();
+  const [d, setD] = useState(null);
+  const [id_, setId_] = useState({ name: '', email: '', locale: 'fr' });
+  const [until, setUntil] = useState('');
+  const [msg, setMsg] = useState(null);       // { ok, text }
+  const [secret, setSecret] = useState(null);
+  const [del, setDel] = useState(null);
+  const [transferTo, setTransferTo] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await call(`/admin/users/${id}`);
+    if (!r.ok) { setMsg({ ok: false, text: r.data.error || 'Introuvable' }); return; }
+    setD(r.data);
+    const u = r.data.user;
+    setId_({ name: u.name, email: u.email, locale: u.locale || 'fr' });
+    setUntil(u.premiumUntil ? u.premiumUntil.slice(0, 10) : '');
+  }, [call, id]);
+  useEffect(() => { setD(null); setMsg(null); setSecret(null); setDel(null); load(); }, [load]);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const patch = async (body, okText) => {
+    setBusy(true); setMsg(null);
+    const r = await call(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+    setBusy(false);
+    if (!r.ok) { setMsg({ ok: false, text: r.data.error || 'Erreur' }); return false; }
+    setMsg({ ok: true, text: okText || 'Enregistré' });
+    await load(); onChanged();
+    return true;
+  };
+  const toEnd = (day) => new Date(day + 'T23:59:59').toISOString();
+  const setRole = (role) => {
+    if (role === d.user.role) return;
+    if (role === 'admin' && !window.confirm('Donner un accès administrateur complet à ce compte ?')) return;
+    patch({ role }, 'Rôle modifié');
+  };
+  const resetLink = async () => {
+    if (!window.confirm(`Envoyer un lien de réinitialisation à ${d.user.email} ?`)) return;
+    setBusy(true);
+    const r = await call(`/admin/users/${id}/reset-link`, { method: 'POST' });
+    setBusy(false);
+    setMsg(r.ok ? { ok: true, text: `Lien envoyé à ${r.data.email} (valable 1 h)` } : { ok: false, text: r.data.error || 'Erreur' });
+    if (r.ok) load();
+  };
+  const tempPwd = async () => {
+    if (!window.confirm('Générer un mot de passe provisoire ? Les sessions ouvertes de ce compte seront fermées.')) return;
+    const r = await call(`/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({}) });
+    if (r.ok) setSecret(r.data.temporaryPassword); else setMsg({ ok: false, text: r.data.error || 'Erreur' });
+  };
+  const remove = async (to) => {
+    if (!to && !window.confirm(`Supprimer définitivement ${d.user.email} ? Ses favoris et sa progression seront effacés.`)) return;
+    setBusy(true); setMsg(null);
+    const r = await call(`/admin/users/${id}${to ? `?transferTo=${to}` : ''}`, { method: 'DELETE' });
+    setBusy(false);
+    if (r.ok) { onChanged(); onClose(); return; }
+    if (r.status === 409 && r.data.code === 'has_talks') {
+      const [c, a] = await Promise.all([call('/admin/users?role=organizer&limit=100'), call('/admin/users?role=admin&limit=100')]);
+      const list = [...(c.data.users || []), ...(a.data.users || [])].filter((u) => u.id !== id && !u.disabledAt);
+      setDel({ ...r.data, candidates: list }); setTransferTo(list[0]?.id || '');
+    } else setMsg({ ok: false, text: r.data.error || 'Erreur' });
+  };
+
+  const u = d?.user;
+  const self = u && u.id === me;
+  const offered = u?.premiumUntil && new Date(u.premiumUntil) > new Date();
+  const dirty = u && (id_.name !== u.name || id_.email !== u.email || id_.locale !== (u.locale || 'fr'));
+  return (
+    <div className="sheet-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <aside className="sheet" role="dialog" aria-label="Fiche utilisateur">
+        <header className="sheet-head">
+          <div>
+            <h3>{u ? u.name : '…'}</h3>
+            {u && <small className="meta">{u.email} · inscrit le {fmt(u.createdAt)}</small>}
+          </div>
+          <button className="link" onClick={onClose} aria-label="Fermer">✕</button>
+        </header>
+        {!u ? <p className="meta">{msg ? msg.text : 'Chargement…'}</p> : (
+          <div className="sheet-body">
+            {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+            {u.disabledAt && <p className="sheet-warn">Compte suspendu depuis le {fmt(u.disabledAt)} : connexion impossible.</p>}
+
+            <section className="sheet-sec">
+              <h4>Identité</h4>
+              <form className="adm-form" onSubmit={(e) => { e.preventDefault(); patch(id_, 'Identité enregistrée'); }}>
+                <label>Nom<input required value={id_.name} maxLength={100} onChange={(e) => setId_({ ...id_, name: e.target.value })} /></label>
+                <label>E-mail<input required type="email" value={id_.email} onChange={(e) => setId_({ ...id_, email: e.target.value })} /></label>
+                <label>Langue<select value={id_.locale} onChange={(e) => setId_({ ...id_, locale: e.target.value })}><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option></select></label>
+                <div><button className="btn" disabled={busy || !dirty}>Enregistrer</button></div>
+              </form>
+            </section>
+
+            <section className="sheet-sec">
+              <h4>Rôle</h4>
+              <div className="role-cards">
+                {Object.entries(ROLE_LABEL).map(([k, v]) => (
+                  <button key={k} type="button" disabled={busy || (self && k !== 'admin')} aria-pressed={u.role === k} className={u.role === k ? 'role-card on' : 'role-card'} onClick={() => setRole(k)}>
+                    <strong>{v}</strong><small>{ROLE_HELP[k]}</small>
+                  </button>
+                ))}
+              </div>
+              {self && <p className="meta">Tu ne peux pas modifier ton propre rôle.</p>}
+            </section>
+
+            <section className="sheet-sec">
+              <h4>Abonnement et accès</h4>
+              {d.subscriptions.length === 0 ? <p className="meta">Aucun abonnement Stripe.</p> : (
+                <ul className="sheet-list">
+                  {d.subscriptions.map((s) => (
+                    <li key={s.id}>
+                      <b>{SUB_LABEL[s.status] || s.status}</b> {s.interval === 'year' ? 'annuel' : s.interval === 'month' ? 'mensuel' : ''}
+                      <small className="meta">
+                        {s.trialEnd && s.status === 'trialing' ? ` · essai jusqu'au ${fmt(s.trialEnd)}` : ''}
+                        {s.currentPeriodEnd ? ` · période jusqu'au ${fmt(s.currentPeriodEnd)}` : ''}
+                        {s.cancelAtPeriodEnd ? ' · résiliation programmée' : ''}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="meta">Les paiements, remboursements et résiliations se gèrent dans Stripe{u.stripeCustomerId ? ' (client lié)' : ''}.</p>
+              <div className="gift">
+                <b>Accès premium offert</b>
+                <p className="meta">{offered ? `Actif jusqu'au ${fmt(u.premiumUntil)}.` : 'Aucun accès offert en cours.'} Donne l'accès aux conférences premium sans abonnement.</p>
+                <div className="adm-row">
+                  <button type="button" className="btn ghost" disabled={busy} onClick={() => patch({ premiumUntil: addDays(30) }, 'Accès offert : 1 mois')}>+1 mois</button>
+                  <button type="button" className="btn ghost" disabled={busy} onClick={() => patch({ premiumUntil: addDays(90) }, 'Accès offert : 3 mois')}>+3 mois</button>
+                  <button type="button" className="btn ghost" disabled={busy} onClick={() => patch({ premiumUntil: addDays(365) }, 'Accès offert : 1 an')}>+1 an</button>
+                  {u.premiumUntil && <button type="button" className="link" disabled={busy} onClick={() => patch({ premiumUntil: null }, 'Accès offert retiré')}>Retirer</button>}
+                </div>
+                <div className="adm-row">
+                  <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="Date de fin de l'accès offert" />
+                  <button type="button" className="btn ghost" disabled={busy || !until} onClick={() => patch({ premiumUntil: toEnd(until) }, 'Date enregistrée')}>Fixer la date</button>
+                </div>
+              </div>
+            </section>
+
+            <section className="sheet-sec">
+              <h4>Activité</h4>
+              <div className="sheet-stats">
+                <div><strong>{d.stats.favorites}</strong><small>favoris</small></div>
+                <div><strong>{d.stats.watched}</strong><small>conférences commencées</small></div>
+                <div><strong>{d.stats.completed}</strong><small>terminées</small></div>
+              </div>
+              <p className="meta">Dernière lecture : {fmtDT(d.stats.lastWatchAt)}</p>
+              {d.emails.length > 0 && <p className="meta">Derniers e-mails : {d.emails.map((m) => `${m.kind} (${m.status})`).join(', ')}</p>}
+              {d.talks.length > 0 && (
+                <>
+                  <p className="meta">Conférences de ce compte ({u.talksCount}) :</p>
+                  <ul className="sheet-list">{d.talks.map((t) => <li key={t.id}><Link href={`/studio/${t.id}`}>{t.title}</Link><small className="meta">{t.publication === 'published' ? 'publiée' : t.publication === 'scheduled' ? 'planifiée' : 'brouillon'}</small></li>)}</ul>
+                </>
+              )}
+            </section>
+
+            <section className="sheet-sec">
+              <h4>Sécurité</h4>
+              <div className="adm-row">
+                <button type="button" className="btn ghost" disabled={busy || Boolean(u.disabledAt)} onClick={resetLink}>Envoyer un lien de réinitialisation</button>
+                <button type="button" className="btn ghost" disabled={busy} onClick={tempPwd}>Mot de passe provisoire</button>
+              </div>
+              {secret && (
+                <p><code className="adm-secret">{secret}</code> <button type="button" className="link" onClick={() => navigator.clipboard?.writeText(secret)}>Copier</button><br /><small className="meta">Affiché une seule fois. Les sessions ouvertes de ce compte ont été fermées.</small></p>
+              )}
+              {!self && (
+                <div className="adm-row">
+                  <button type="button" className="btn ghost" disabled={busy} onClick={() => (u.disabledAt || window.confirm(`Suspendre ${u.email} ? La connexion sera immédiatement refusée.`)) && patch({ disabled: !u.disabledAt }, u.disabledAt ? 'Compte réactivé' : 'Compte suspendu')}>{u.disabledAt ? 'Réactiver le compte' : 'Suspendre le compte'}</button>
+                </div>
+              )}
+            </section>
+
+            {!self && (
+              <section className="sheet-sec adm-danger">
+                <h4>Zone dangereuse</h4>
+                {!del && <button type="button" className="btn danger" disabled={busy} onClick={() => remove()}>Supprimer l'utilisateur</button>}
+                {del && (
+                  <div>
+                    <p className="error">{del.error}</p>
+                    {del.candidates.length ? (
+                      <div className="adm-row">
+                        <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>{del.candidates.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.email})</option>)}</select>
+                        <button type="button" className="btn danger" disabled={busy || !transferTo} onClick={() => remove(transferTo)}>Transférer puis supprimer</button>
+                      </div>
+                    ) : <p className="meta">Aucun organisateur ou admin disponible pour reprendre les conférences : crée-en un d'abord.</p>}
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>
   );
 }
 
 function Users({ me }) {
   const { call } = useApp();
+  const router = useRouter();
+  const sp = useSearchParams();
   const [q, setQ] = useState('');
   const [role, setRole] = useState('');
+  const [status, setStatus] = useState('');
+  const [sort, setSort] = useState('recent');
   const [page, setPage] = useState(0);
   const [data, setData] = useState({ total: 0, users: [] });
-  const [form, setForm] = useState(undefined); // undefined = fermé, null = création, objet = édition
+  const [counts, setCounts] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const open = sp.get('user');            // fiche ouverte (dans l'adresse : on peut la partager / recharger)
   const LIMIT = 25;
+  const openSheet = (uid) => router.replace(uid ? `/admin?tab=users&user=${uid}` : '/admin?tab=users', { scroll: false });
 
   const load = useCallback(async () => {
-    const p = new URLSearchParams({ limit: String(LIMIT), offset: String(page * LIMIT) });
+    const p = new URLSearchParams({ limit: String(LIMIT), offset: String(page * LIMIT), sort });
     if (q) p.set('q', q);
     if (role) p.set('role', role);
-    const r = await call('/admin/users?' + p);
+    if (status && status !== 'all') p.set('status', status);
+    const [r, c] = await Promise.all([call('/admin/users?' + p), call('/admin/users-counts')]);
     if (r.ok) setData(r.data);
-  }, [call, q, role, page]);
+    if (c.ok) setCounts(c.data);
+  }, [call, q, role, status, sort, page]);
   useEffect(() => { const id = setTimeout(load, 250); return () => clearTimeout(id); }, [load]);
 
   const pages = Math.max(1, Math.ceil(data.total / LIMIT));
+  const subLabel = (u) => (u.premiumUntil && new Date(u.premiumUntil) > new Date() ? `Offert → ${fmt(u.premiumUntil)}` : (SUB_LABEL[u.subscriptionStatus] || '—'));
   return (
     <section>
       <div className="adm-row adm-between">
-        <p className="meta">{data.total} utilisateur(s)</p>
-        <button className="btn" onClick={() => setForm(null)}>+ Ajouter</button>
+        <div className="pills" role="group" aria-label="Filtrer par statut">
+          {FILTERS.map(([k, label]) => (
+            <button key={k} type="button" className={(status || 'all') === k ? 'pill on' : 'pill'} aria-pressed={(status || 'all') === k} onClick={() => { setStatus(k === 'all' ? '' : k); setPage(0); }}>
+              {label}{counts ? ` (${counts[k]})` : ''}
+            </button>
+          ))}
+        </div>
+        <button className="btn" onClick={() => setCreating(true)}>+ Ajouter</button>
       </div>
-      <div className="adm-row">
-        <input type="search" placeholder="Rechercher (nom, email)…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
-        <select value={role} onChange={(e) => { setRole(e.target.value); setPage(0); }}>
+      <div className="adm-row users-bar">
+        <input type="search" placeholder="Rechercher (nom, e-mail)…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+        <select value={role} onChange={(e) => { setRole(e.target.value); setPage(0); }} aria-label="Rôle">
           <option value="">Tous les rôles</option>
           {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(0); }} aria-label="Tri">
+          <option value="recent">Plus récents</option><option value="oldest">Plus anciens</option><option value="name">Nom (A → Z)</option><option value="activity">Dernière lecture</option>
+        </select>
       </div>
+      <p className="meta">{data.total} utilisateur(s) — clique sur une ligne pour ouvrir la fiche.</p>
       <div className="adm-table-wrap">
-        <table className="adm-table">
-          <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Abonnement</th><th>Conf.</th><th>Inscrit</th><th /></tr></thead>
+        <table className="adm-table users-table">
+          <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Abonnement</th><th>Conf.</th><th>Dernière lecture</th><th>Inscrit</th></tr></thead>
           <tbody>
             {data.users.map((u) => (
-              <tr key={u.id} className={u.disabledAt ? 'adm-off' : ''}>
+              <tr key={u.id} className={`${u.disabledAt ? 'adm-off ' : ''}row-click${open === u.id ? ' sel' : ''}`} tabIndex={0} onClick={() => openSheet(u.id)} onKeyDown={(e) => e.key === 'Enter' && openSheet(u.id)}>
                 <td>{u.name}{u.disabledAt && <span className="chip failed"> suspendu</span>}</td>
                 <td>{u.email}</td>
                 <td>{ROLE_LABEL[u.role]}</td>
-                <td>{u.premiumUntil && new Date(u.premiumUntil) > new Date() ? `Offert → ${fmt(u.premiumUntil)}` : (SUB_LABEL[u.subscriptionStatus] || '—')}</td>
+                <td>{subLabel(u)}</td>
                 <td>{u.talksCount}</td>
+                <td>{fmt(u.lastWatchAt)}</td>
                 <td>{fmt(u.createdAt)}</td>
-                <td><button className="link" onClick={() => setForm(u)}>Modifier</button></td>
               </tr>
             ))}
             {!data.users.length && <tr><td colSpan={7} className="meta">Aucun résultat.</td></tr>}
@@ -400,7 +561,8 @@ function Users({ me }) {
           <button className="btn ghost" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>→</button>
         </div>
       )}
-      {form !== undefined && <UserForm initial={form} me={me} onClose={() => setForm(undefined)} onSaved={(close) => { if (close) setForm(undefined); load(); }} />}
+      {creating && <NewUser onClose={() => setCreating(false)} onDone={(user) => { setCreating(false); load(); openSheet(user.id); }} />}
+      {open && <UserSheet id={open} me={me} onClose={() => openSheet(null)} onChanged={load} />}
     </section>
   );
 }
