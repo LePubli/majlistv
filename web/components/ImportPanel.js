@@ -64,7 +64,7 @@ export default function ImportPanel({ cats, onImported }) {
       <h2>{t('importTitle')}</h2>
       <p className="meta">{t('importHelp')}</p>
       <form onSubmit={analyse} className="import-row">
-        <input type="url" required placeholder="https://www.youtube.com/@chaine ou /playlist?list=…" value={url} onChange={(e) => setUrl(e.target.value)} aria-label={t('importUrl')} />
+        <input type="url" required placeholder="youtube.com/@chaine, /playlist?list=…, vimeo.com/album/…, archive.org/details/…" value={url} onChange={(e) => setUrl(e.target.value)} aria-label={t('importUrl')} />
         <button className="btn" disabled={busy}>{t('importAnalyse')}</button>
       </form>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}

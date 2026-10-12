@@ -71,7 +71,7 @@ export default function Organizer() {
         body.uploadId = await uploadFile(file, call, setProgress);
       }
       const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
-      if (r.ok) { setF(empty); setFile(null); load(); } else setErr(r.status === 409 ? t('errDuplicate') : t('errVideo'));
+      if (r.ok) { setF(empty); setFile(null); load(); } else setErr(r.status === 409 ? t('errDuplicate') : r.data?.code === 'archive' ? r.data.error : t('errVideo'));
     } catch (e2) {
       setErr(e2.message === 'tooBig' ? t('errTooBig') : t('errUpload'));
     }

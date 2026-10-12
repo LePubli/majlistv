@@ -110,9 +110,9 @@ def claim():
                   transcript_attempts = transcript_attempts + 1
            WHERE id = (SELECT id FROM talks
                        WHERE transcript_status = 'pending'
-                         AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo') AND rights_confirmed))
+                         AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'archive') AND rights_confirmed))
                        ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-           RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, transcript_attempts""",
+           RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts""",
         fetch=True,
     )
     return rows[0] if rows else None
@@ -289,7 +289,7 @@ def process_external(job, talk_id, work):
         """UPDATE talks SET duration_seconds = COALESCE(duration_seconds, %s), external_thumb = COALESCE(external_thumb, %s),
                   description = CASE WHEN description = '' THEN %s ELSE description END WHERE id = %s""",
         (int(info["duration"]) if info.get("duration") else None, external.best_thumbnail(info),
-         (info.get("description") or "")[:5000], talk_id),
+         external.clean_description(info.get("description") or "")[:5000], talk_id),
     )
 
     def from_subtitles(kind_wanted):
@@ -337,6 +337,34 @@ def process_external(job, talk_id, work):
                            "(Admin → Paramètres → Vidéos YouTube et Vimeo).")
 
 
+def process_archive(job, talk_id, work):
+    """archive.org : ffmpeg lit seulement la piste audio depuis l'adresse du fichier, puis Whisper."""
+    ident = job["video_ref"]
+    name = job.get("external_file")
+    if not name:
+        log(f"[{talk_id}] lecture des informations archive.org {ident}")
+        item = external.archive_item(ident)
+        name = item["file"]
+        query(
+            """UPDATE talks SET external_file = %s, duration_seconds = COALESCE(duration_seconds, %s), external_thumb = COALESCE(external_thumb, %s),
+                      description = CASE WHEN description = '' THEN %s ELSE description END WHERE id = %s""",
+            (name, item["duration"], item["thumb"], item["description"], talk_id),
+        )
+    url = external.archive_file_url(ident, name)
+    log(f"[{talk_id}] extraction de l'audio depuis archive.org ({name})")
+    if not has_audio(url):
+        query("UPDATE talks SET transcript_status = 'unavailable' WHERE id = %s", (talk_id,))
+        log(f"[{talk_id}] aucune piste audio : transcription ignorée")
+        return
+    wav = os.path.join(work, "audio.wav")
+    extract_audio(url, wav)
+    declared = (job["language"] or "").split("-")[0].lower()
+    rows, lang = transcribe_wav(talk_id, wav, declared)
+    if not rows:
+        return no_speech(talk_id)
+    store(talk_id, rows, lang, "whisper")
+
+
 def process(job):
     talk_id = str(job["id"])
     work = os.path.join(WORK_DIR, talk_id)
@@ -345,6 +373,8 @@ def process(job):
         os.makedirs(work)
         if job["source"] == "upload":
             process_upload(job, talk_id, work)
+        elif job["source"] == "archive":
+            process_archive(job, talk_id, work)
         else:
             process_external(job, talk_id, work)
     except Stop:

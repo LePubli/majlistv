@@ -40,6 +40,8 @@ export default function TalkPage() {
 
   // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
   const external = Boolean(talk && talk.source !== 'upload');
+  // archive.org : fichier vidéo lu avec le lecteur Mejliss TV (pas de lecteur ni de publicité de la plateforme).
+  const embed = Boolean(talk && ['youtube', 'vimeo'].includes(talk.source));
   const trackable = Boolean(user && talk && (talk.hlsPath || external) && !talk.locked);
   const startMs = useRef(0);
   useEffect(() => { if (jumpMs) startMs.current = jumpMs; else if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs, jumpMs]);
@@ -111,7 +113,16 @@ export default function TalkPage() {
   }));
 
   let player;
-  if (external) {
+  if (talk.source === 'archive') {
+    player = talk.fileUrl
+      ? (
+        <div className="player">
+          <VideoPlayer src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000}
+            previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} />
+        </div>
+      )
+      : <p className="soon">{talk.playerError || t('playerUnavailable')}</p>;
+  } else if (embed) {
     // YouTube / Vimeo : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
     player = (
       <div className="player">

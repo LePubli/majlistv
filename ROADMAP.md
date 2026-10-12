@@ -13,8 +13,9 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 | 6 | Favoris, reprise de lecture, Ma bibliothèque | ✅ livré |
 | 7 | Recherche Meilisearch (fautes tolérées, extraits, passages horodatés) | ✅ en ligne |
 | — | Maquettes : parcours visiteur → abonné, studio et back-office | ✅ validées |
-| 9 bis | Vidéos YouTube/Vimeo transcrites, traduites, indexées ; import de playlists et de chaînes | 🚚 livré, à déployer |
-| 9 | Paiement conforme (renonciation, TVA Stripe Tax, codes promo), e-mails, pages légales, mot de passe oublié | 🚚 livré, à déployer |
+| 9 | Paiement conforme (renonciation, TVA Stripe Tax, codes promo), e-mails, pages légales, mot de passe oublié | ✅ en ligne |
+| 9 bis | Vidéos YouTube/Vimeo transcrites, traduites, indexées ; import de playlists et de chaînes | ✅ en ligne |
+| 9 ter | Vidéos archive.org (lecteur Mejliss TV, import de collections) ; résumé toujours en français | 🚚 livré, à déployer |
 
 ## À venir
 

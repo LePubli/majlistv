@@ -14,6 +14,10 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
   const [lang, setLang] = useState(preferredLang);
   const [data, setData] = useState(null);
   const [active, setActive] = useState(-1);
+  const [tick, setTick] = useState(0);
+
+  // La langue suit celle du site (changement de langue dans le menu).
+  useEffect(() => { setLang(preferredLang); }, [preferredLang]);
 
   useEffect(() => {
     let off = false;
@@ -22,7 +26,15 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
       .then((d) => { if (!off) setData(d); })
       .catch(() => {});
     return () => { off = true; };
-  }, [talkId, token, lang]);
+  }, [talkId, token, lang, tick]);
+
+  // Résumé de la langue demandée encore en préparation : on réinterroge toutes les 15 secondes.
+  const waiting = Boolean(data && data.lang !== lang && (data.pending || []).includes(lang));
+  useEffect(() => {
+    if (!waiting && !(data && !data.lang && (data.pending || []).length)) return undefined;
+    const id = setTimeout(() => setTick((n) => n + 1), 15000);
+    return () => clearTimeout(id);
+  }, [waiting, data]);
 
   // Chapitre en cours : le dernier commencé.
   useEffect(() => {
@@ -56,6 +68,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
           </select>
         )}
       </div>
+      {waiting && <p className="meta">{t('summaryTranslating')}</p>}
       <p>{data.summary}</p>
       {data.keyPoints.length > 0 && (
         <>

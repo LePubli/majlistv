@@ -60,6 +60,7 @@ class Insights:
         self._conn = None
         self.deepseek_key = self.claude_key = self.deepseek_model = self.claude_model = ""
         self.max_chars = 200000
+        self.always_langs = ["fr"]
         self.S = Settings(self.query, self.log)  # connexion propre à ce thread (voir db())
 
     def configure(self):
@@ -71,6 +72,9 @@ class Insights:
         self.claude_key = S.get("anthropic_key", "ANTHROPIC_API_KEY")
         self.claude_model = S.get("insights_claude_model", "INSIGHTS_CLAUDE_MODEL") or S.get("claude_model", "CLAUDE_MODEL", "claude-haiku-5-5")
         self.max_chars = S.get_int("insights_max_chars", "INSIGHTS_MAX_CHARS", 200000)
+        # Langues dans lesquelles le résumé est toujours produit, même sans sous-titres traduits dans cette langue.
+        raw = S.get("insights_langs", "INSIGHTS_LANGS", "fr")
+        self.always_langs = sorted({x.strip().lower() for x in raw.split(",") if x.strip() and x.strip().isalpha()})
         wanted = S.get("insights_provider", "INSIGHTS_PROVIDER", "auto").strip().lower()
         if not S.get_bool("insights_enabled", "INSIGHTS_ENABLED", True):
             provider = None
@@ -111,11 +115,15 @@ class Insights:
                UNION
                SELECT tr.talk_id, tr.lang FROM transcript_translations tr JOIN talks t ON t.id = tr.talk_id
                 WHERE tr.status = 'ready' AND t.transcript_status = 'ready'
-               ON CONFLICT DO NOTHING""")
+               UNION
+               SELECT t.id, l.lang FROM talks t CROSS JOIN unnest(%s::text[]) AS l(lang)
+                WHERE t.transcript_status = 'ready' AND t.transcript_language IS NOT NULL
+                  AND l.lang <> split_part(t.transcript_language, '-', 1)
+               ON CONFLICT DO NOTHING""", (self.always_langs,))
         self.query(
             """DELETE FROM talk_insights i USING talks t
-                WHERE t.id = i.talk_id AND i.lang <> t.transcript_language
-                  AND NOT EXISTS (SELECT 1 FROM transcript_translations tr WHERE tr.talk_id = i.talk_id AND tr.lang = i.lang AND tr.status = 'ready')""")
+                WHERE t.id = i.talk_id AND i.lang <> t.transcript_language AND NOT (i.lang = ANY(%s::text[]))
+                  AND NOT EXISTS (SELECT 1 FROM transcript_translations tr WHERE tr.talk_id = i.talk_id AND tr.lang = i.lang AND tr.status = 'ready')""", (self.always_langs,))
         self.query(
             """UPDATE talk_insights i SET status = 'failed', error = 'Résumé de la langue d''origine indisponible', updated_at = now()
                  FROM talks t WHERE t.id = i.talk_id AND i.status = 'pending' AND i.lang <> t.transcript_language

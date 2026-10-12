@@ -308,3 +308,36 @@ Tests :
 - `python transcriber/tests/test_external.py` (hors ligne) ;
 - `api/tests/test_external_api.py` avec `transcriber/tests/run_transcriber_fake.py` (transcripteur réel, faux yt-dlp et faux Whisper).
 
+
+## Étape 9 ter : vidéos archive.org (Internet Archive) et résumé toujours en français
+Nouveautés : migration `014_archive.sql` (source `archive`, colonne `talks.external_file`), module `api/src/archive.js`, fonctions archive.org dans `transcriber/src/external.py`, réglage « Résumé toujours produit dans ces langues ».
+
+### Résumé dans la langue du visiteur
+Avant, le résumé n'était traduit que dans les langues de sous-titres cochées : une conférence en arabe sans sous-titres français avait un résumé en arabe uniquement.
+- Le résumé et les chapitres sont maintenant **toujours** traduits dans les langues de Admin → Paramètres → Résumés et chapitres → « Résumé toujours produit dans ces langues » (français par défaut). Les conférences déjà transcrites sont rattrapées automatiquement en quelques minutes, sans rien relancer.
+- Le site affiche le résumé dans la langue de l'interface. S'il est encore en préparation, le site l'indique et l'affiche dès qu'il est prêt. À défaut, il affiche le français, puis l'anglais, puis la langue d'origine.
+
+### archive.org
+**Ajout par lien** (Mes conférences → Lien YouTube / Vimeo / archive.org) :
+- `https://archive.org/details/<élément>` : le meilleur fichier vidéo est choisi automatiquement. Ordre de préférence : MP4 H.264, puis autres MP4, puis 512Kb MPEG4, puis WebM / Ogg, en 1080p maximum.
+- `https://archive.org/download/<élément>/<fichier>.mp4` : ce fichier précis est utilisé.
+- Titre, durée, miniature et description (si elle est vide) sont repris. Le HTML et les liens vers la plateforme sont retirés de la description.
+- Refusés avec un message clair : éléments en accès restreint (prêt uniquement), éléments sans vidéo, collections (à importer, voir plus bas).
+
+**Lecture** : archive.org fournit directement le fichier vidéo. Il est lu avec le **lecteur Mejliss TV**, sans lecteur, logo ni publicité d'archive.org. Lecture par plages, sans téléchargement complet. Les sous-titres traduits s'affichent normalement, et la reprise de lecture, les favoris et les chapitres fonctionnent. Pour une conférence premium et un visiteur non abonné, la lecture s'arrête à la fin de l'aperçu. Le fichier reste public sur archive.org : cette limite protège l'expérience, pas le fichier.
+
+**Transcription** (avec l'accord de l'auteur, comme YouTube et Vimeo) : ffmpeg lit seulement la piste audio depuis l'adresse du fichier, puis Whisper transcrit. Ensuite viennent les traductions, le résumé et la recherche, comme pour les autres vidéos.
+
+**Import** (Mes conférences → « Importer une playlist ou une chaîne ») :
+- une collection : `https://archive.org/details/<collection>` (par exemple `https://archive.org/details/movies`) ;
+- une recherche : `https://archive.org/search?query=conférence islam`.
+Seules les vidéos sont listées, les plus consultées d'abord, dans la limite du réglage « Nombre maximum de vidéos par import » (200). Le fichier de chaque vidéo importée est choisi à son premier affichage ou à sa transcription.
+
+Variable facultative pour les tests : `ARCHIVE_BASE_URL` (API et transcripteur ; par défaut `https://archive.org`).
+
+Tests (hors ligne, faux archive.org) :
+```bash
+python3 api/tests/fake_archive.py 5600 chemin/vers/video.mp4 &
+# API et transcripteur factice lancés avec ARCHIVE_BASE_URL=http://127.0.0.1:5600
+python3 api/tests/test_archive.py
+```

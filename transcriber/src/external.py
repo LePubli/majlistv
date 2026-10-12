@@ -9,6 +9,8 @@ import os
 import re
 
 YOUTUBE_ID = re.compile(r"^[\w-]{11}$")
+ARCHIVE_ID = re.compile(r"^[A-Za-z0-9][\w.-]{0,99}$")
+ARCHIVE_BASE = os.environ.get("ARCHIVE_BASE_URL", "https://archive.org").rstrip("/")
 
 
 class Blocked(Exception):
@@ -16,6 +18,8 @@ class Blocked(Exception):
 
 
 def video_url(source, ref):
+    if source == "archive":
+        return f"{ARCHIVE_BASE}/details/{ref}"
     return f"https://www.youtube.com/watch?v={ref}" if source == "youtube" else f"https://vimeo.com/{ref}"
 
 
@@ -73,6 +77,20 @@ def best_thumbnail(info):
     thumbs.sort(key=lambda t: (t.get("width") or 0) * (t.get("height") or 0) or t.get("preference") or 0)
     good = [t for t in thumbs if (t.get("width") or 0) <= 1280]
     return (good or thumbs)[-1]["url"]
+
+
+_PLATFORM_URL = re.compile(r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be|vimeo\.com|archive\.org)/\S*", re.I)
+
+
+def clean_description(text):
+    """Description reprise de la plateforme : retire les liens YouTube / Vimeo (le site ne renvoie jamais vers la plateforme)."""
+    lines = []
+    for line in (text or "").splitlines():
+        stripped = re.sub(r"[ \t]{2,}", " ", _PLATFORM_URL.sub("", line)).rstrip(" :-–—|•")
+        if line.strip() and not stripped.strip():
+            continue  # ligne qui ne contenait qu'un lien
+        lines.append(stripped)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
 # --- Sous-titres ---------------------------------------------------------------------------------
@@ -229,6 +247,137 @@ def download_audio(url, opts):
     return path
 
 
+# --- Internet Archive (archive.org) ------------------------------------------------------------
+# Pas de yt-dlp : l'API publique d'archive.org donne directement les fichiers. ffmpeg lit l'audio par plages
+# depuis l'adresse du fichier (la vidéo complète n'est jamais téléchargée).
+_VIDEO_EXT = re.compile(r"\.(mp4|m4v|webm|ogv)$", re.I)
+
+
+def _archive_get(path, params=None):
+    import requests
+
+    try:
+        r = requests.get(ARCHIVE_BASE + path, params=params, timeout=30, headers={"User-Agent": "MejlissTV/1.0"})
+    except requests.RequestException as err:
+        raise RuntimeError(f"archive.org ne répond pas : {err}") from err
+    if r.status_code != 200:
+        raise RuntimeError(f"archive.org a répondu {r.status_code}")
+    return r.json()
+
+
+def _length(v):
+    if v in (None, ""):
+        return None
+    v = str(v)
+    try:
+        if ":" in v:
+            total = 0.0
+            for part in v.split(":"):
+                total = total * 60 + float(part)
+            return int(round(total))
+        return int(round(float(v)))
+    except ValueError:
+        return None
+
+
+def _score(f):
+    name = f.get("name") or ""
+    fmt = str(f.get("format") or "").lower()
+    if not _VIDEO_EXT.search(name):
+        return -1
+    s = 100 if re.search(r"\.(mp4|m4v)$", name, re.I) else 0
+    if fmt.startswith("h.264"):
+        s += 50
+    elif "mpeg4" in fmt and not fmt.startswith("512kb"):
+        s += 30
+    elif fmt.startswith("512kb"):
+        s += 10
+    try:
+        h = int(f.get("height") or 0)
+    except ValueError:
+        h = 0
+    if 0 < h <= 1080:
+        s += h / 100
+    return s
+
+
+def archive_item(identifier, wanted=None):
+    """Métadonnées d'un élément archive.org -> {file, duration, thumb, description, title}."""
+    if not ARCHIVE_ID.match(identifier or ""):
+        raise Blocked("Identifiant archive.org invalide.")
+    data = _archive_get(f"/metadata/{identifier}")
+    md = data.get("metadata") or {}
+    if not md:
+        raise Blocked("Élément introuvable sur archive.org.")
+    if str(md.get("access-restricted-item")) == "true" or data.get("is_dark"):
+        raise Blocked("Vidéo en accès restreint sur archive.org (prêt uniquement).")
+    files = [f for f in data.get("files") or [] if f.get("name")]
+    chosen = next((f for f in files if f["name"] == wanted and _score(f) >= 0), None) if wanted else None
+    if not chosen:
+        ok = sorted((f for f in files if _score(f) >= 0), key=_score, reverse=True)
+        chosen = ok[0] if ok else None
+    if not chosen:
+        raise Blocked("Aucun fichier vidéo lisible dans cet élément archive.org.")
+    desc = md.get("description") or ""
+    if isinstance(desc, list):
+        desc = "\n".join(desc)
+    desc = html.unescape(re.sub(r"<[^>]+>", "", re.sub(r"<br\s*/?>|</?p[^>]*>", "\n", desc, flags=re.I))).strip()
+    return {"file": chosen["name"], "duration": _length(chosen.get("length")) or _length(md.get("runtime")),
+            "thumb": f"{ARCHIVE_BASE}/services/img/{identifier}", "description": clean_description(desc)[:5000],
+            "title": str(md.get("title") or "")[:200]}
+
+
+def archive_file_url(identifier, name):
+    from urllib.parse import quote
+
+    return f"{ARCHIVE_BASE}/download/{quote(identifier)}/{quote(name)}"
+
+
+def is_archive_url(url):
+    return bool(re.match(r"^https?://(www\.)?archive\.org/", url.strip(), re.I))
+
+
+def list_archive(url, limit):
+    """Collection (archive.org/details/<collection>), recherche (archive.org/search?query=…) ou élément seul.
+    Seules les vidéos (mediatype movies) sont listées, les plus consultées d'abord."""
+    from urllib.parse import parse_qs, urlsplit
+
+    parts = urlsplit(url.strip())
+    query = parse_qs(parts.query)
+    m = re.match(r"^/details/([^/]+)/?", parts.path)
+    title = ""
+    if m and ARCHIVE_ID.match(m.group(1)):
+        ident = m.group(1)
+        md = (_archive_get(f"/metadata/{ident}").get("metadata") or {})
+        if md.get("mediatype") != "collection":
+            item = archive_item(ident)
+            return (item["title"], [{"id": ident, "source": "archive", "title": item["title"] or ident,
+                                     "duration": item["duration"], "thumb": item["thumb"]}])
+        q = f"collection:({ident}) AND mediatype:(movies)"
+        title = str(md.get("title") or ident)
+    elif parts.path.startswith("/search") and (query.get("query") or query.get("q")):
+        text = (query.get("query") or query.get("q"))[0]
+        q = f"({text}) AND mediatype:(movies)"
+        title = f"Recherche archive.org : {text}"
+    else:
+        raise Blocked("Adresse archive.org non reconnue : collection (archive.org/details/…) ou recherche (archive.org/search?query=…).")
+    data = _archive_get("/advancedsearch.php", params=[("q", q), ("fl[]", "identifier"), ("fl[]", "title"), ("fl[]", "runtime"),
+                                                       ("sort[]", "downloads desc"), ("rows", str(limit)), ("page", "1"), ("output", "json")])
+    entries = []
+    for d in (data.get("response") or {}).get("docs") or []:
+        ident = str(d.get("identifier") or "")
+        if not ARCHIVE_ID.match(ident) or any(e["id"] == ident for e in entries):
+            continue
+        t = d.get("title") or ident
+        if isinstance(t, list):
+            t = t[0] if t else ident
+        entries.append({"id": ident, "source": "archive", "title": str(t).strip()[:200] or ident,
+                        "duration": _length(d.get("runtime")), "thumb": f"{ARCHIVE_BASE}/services/img/{ident}"})
+        if len(entries) >= limit:
+            break
+    return (title, entries)
+
+
 # --- Playlists et chaînes ------------------------------------------------------------------------
 CHANNEL_ROOT = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(@[\w.-]+|channel/[\w-]+|c/[\w.-]+|user/[\w.-]+)/?$", re.I)
 
@@ -269,6 +418,8 @@ def _entry(e):
 def list_videos(url, opts, limit):
     """Liste les vidéos d'une playlist, d'une chaîne ou d'un album, sans rien télécharger.
     Renvoie (titre, [entrées])."""
+    if is_archive_url(url):
+        return list_archive(url, limit)
     o = dict(opts, extract_flat="in_playlist", noplaylist=False, playlistend=limit, lazy_playlist=False)
     info = fetch_info(normalize_list_url(url), o)
     if info.get("_type") not in ("playlist", "multi_video"):

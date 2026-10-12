@@ -6,9 +6,12 @@ import { makePlaybackToken, makePreviewToken } from '../playback.js';
 import { hasActiveSubscription } from '../access.js';
 import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
+import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
 
-// Extrait la plateforme et l'identifiant d'une URL YouTube ou Vimeo.
+// Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo ou archive.org.
 export function parseVideoUrl(raw) {
+  const ia = parseArchiveUrl(raw);
+  if (ia) return ia;
   let u;
   try { u = new URL(raw); } catch { return null; }
   const host = u.hostname.replace(/^(www|m)\./, '');
@@ -55,7 +58,7 @@ const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.s
   t.video_ref, t.category_id, c.name AS category, t.created_at,
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
-  t.external_thumb, t.rights_confirmed AS "rightsConfirmed"`;
+  t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file`;
 const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
 
@@ -65,6 +68,7 @@ async function withPosters(rows) {
     r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
     delete r.poster_key;
     delete r.external_thumb;
+    delete r.external_file;
     if (r.source === 'upload') delete r.video_ref; // clé de stockage interne
   }
   return rows;
@@ -117,6 +121,24 @@ export default async function talksRoutes(app) {
     // Premium : réservé au propriétaire, aux admins et aux abonnés ; les autres ont l'aperçu (2 min) et le résumé.
     // Même règle pour les vidéos YouTube / Vimeo : transcription, sous-titres traduits et chapitres suivent l'accès.
     const external = talk.source !== 'upload';
+    let archiveUrl = null;
+    if (talk.source === 'archive') {
+      if (!talk.external_file) {
+        // Import de collection : le fichier est choisi au premier affichage.
+        try {
+          const m = await resolveArchive(talk.video_ref);
+          await pool.query(
+            `UPDATE talks SET external_file = $2, duration_seconds = COALESCE(duration_seconds, $3), external_thumb = COALESCE(external_thumb, $4),
+                    description = CASE WHEN description = '' THEN $5 ELSE description END WHERE id = $1`,
+            [id, m.file, m.duration, m.thumb, m.description]);
+          talk.external_file = m.file;
+        } catch (err) {
+          if (!(err instanceof ArchiveError)) throw err;
+          talk.playerError = err.message;
+        }
+      }
+      if (talk.external_file) archiveUrl = archiveFileUrl(talk.video_ref, talk.external_file);
+    }
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
     const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
     const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
@@ -126,6 +148,7 @@ export default async function talksRoutes(app) {
         talk.playbackToken = makePreviewToken(id);
         talk.preview = true;
         talk.previewSeconds = await getNumber('preview_seconds');
+        if (archiveUrl) talk.fileUrl = archiveUrl; // fichier public sur archive.org : l'aperçu est limité par le lecteur
         if (!external) talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
       }
     } else {
@@ -139,6 +162,7 @@ export default async function talksRoutes(app) {
       talk.insightsPending = (await pool.query(
         "SELECT EXISTS (SELECT 1 FROM talk_insights WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
       )).rows[0].x;
+      if (archiveUrl) talk.fileUrl = archiveUrl;
       if (!external) {
         if (talk.status === 'ready') talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
         else if (isOwner) talk.videoUrl = await presignGet(talk.video_ref); // aperçu du fichier d'origine pendant la conversion
@@ -176,17 +200,29 @@ export default async function talksRoutes(app) {
       video = { source: 'upload', ref: up.rows[0].object_key };
     } else {
       video = b.videoUrl ? parseVideoUrl(b.videoUrl) : null;
-      if (!video) return reply.code(400).send({ error: 'Lien YouTube ou Vimeo non reconnu' });
+      if (!video) return reply.code(400).send({ error: 'Lien YouTube, Vimeo ou archive.org non reconnu' });
       const dup = await pool.query('SELECT id FROM talks WHERE source = $1 AND video_ref = $2 LIMIT 1', [video.source, video.ref]);
       if (dup.rows[0]) return reply.code(409).send({ error: 'Cette vidéo est déjà dans le catalogue', code: 'duplicate', id: dup.rows[0].id });
+      if (video.source === 'archive') {
+        // archive.org : on vérifie tout de suite qu'un fichier vidéo lisible existe (titre, durée, miniature récupérés au passage).
+        try {
+          video.meta = await resolveArchive(video.ref, video.file);
+        } catch (err) {
+          if (err instanceof ArchiveError) return reply.code(400).send({ error: err.message, code: 'archive' });
+          throw err;
+        }
+      }
     }
     const transcribable = video.source === 'upload' || b.rightsConfirmed;
     try {
+      const m = video.meta || {};
       const { rows } = await pool.query(
-        `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-        [req.user.sub, b.title, b.description, b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
-          video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed]
+        `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed,
+                           external_file, external_thumb, duration_seconds)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+        [req.user.sub, b.title, b.description || m.description || '', b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
+          video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
+          m.file ?? null, m.thumb ?? null, m.duration ?? null]
       );
       if (transcribable && b.translateTo.length) {
         const langs = [...new Set(b.translateTo)].filter((l) => l !== baseLang(b.language));

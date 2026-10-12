@@ -205,3 +205,10 @@ mark { background: rgba(56, 189, 248, .25); color: var(--text); border-radius: 3
 .ok-msg { color: #4ade80; }
 .form label.check.rights, .import label.check.rights { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; text-align: start; }
 .form label.check.rights input, .import label.check.rights input { width: 20px; height: 20px; flex: none; margin: 2px 0 0; accent-color: var(--accent); }
+
+/* Tableau de bord du back-office : cartes en grille (refonte complète prévue à l'étape 11). */
+.admin-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 12px 0 16px; }
+.admin-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid #2a2a2a; border-radius: 10px; background: #1b1b1b; }
+.admin-card strong { font-size: 1.05rem; }
+.admin-card span { color: #a8a8a8; font-size: .9rem; }
+.admin-card .btn { align-self: flex-start; margin-top: 4px; }

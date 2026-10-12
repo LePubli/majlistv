@@ -61,6 +61,8 @@ export const FIELDS = [
 
   { key: 'insights_enabled', group: 'insights', type: 'bool', label: 'Générer résumé et chapitres', env: 'INSIGHTS_ENABLED', def: 'true' },
   { key: 'insights_provider', group: 'insights', type: 'select', options: ['auto', 'deepseek', 'claude'], label: 'Moteur', env: 'INSIGHTS_PROVIDER', def: 'auto', help: 'auto : DeepSeek s\'il a une clé, sinon Claude.' },
+  { key: 'insights_langs', group: 'insights', type: 'langs', label: 'Résumé toujours produit dans ces langues', env: 'INSIGHTS_LANGS', def: 'fr',
+    help: 'Le résumé et les chapitres sont traduits dans ces langues pour toutes les conférences, même sans sous-titres dans cette langue. Le site affiche celui de la langue du visiteur.' },
   { key: 'insights_claude_model', group: 'insights', type: 'text', label: 'Modèle Claude pour les résumés (vide = modèle de traduction)', env: 'INSIGHTS_CLAUDE_MODEL' },
   { key: 'insights_max_chars', group: 'insights', type: 'number', label: 'Garde-fou : longueur maximale (caractères)', env: 'INSIGHTS_MAX_CHARS', def: '200000', min: 1000, max: 5000000 },
 

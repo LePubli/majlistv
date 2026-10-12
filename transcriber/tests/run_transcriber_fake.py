@@ -1,7 +1,7 @@
 """Lance le vrai transcripteur avec un faux yt-dlp et un faux Whisper (aucun accès réseau)."""
 import json, os, subprocess, sys, types
 sys.path.insert(0, "/home/claude/majlis-tv/transcriber/src")
-os.environ.update({"DATABASE_URL": "postgres://majlis:pw@127.0.0.1:5544/majlis", "S3_ENDPOINT": "http://127.0.0.1:1", "S3_ACCESS_KEY": "x",
+os.environ.update({"DATABASE_URL": "postgres://majlis:pw@127.0.0.1:5544/majlis", "S3_ENDPOINT": os.environ.get("TEST_S3", "http://127.0.0.1:1"), "S3_REGION": "us-east-1", "S3_ACCESS_KEY": "x",
                    "S3_SECRET_KEY": "x", "WORK_DIR": "/tmp/claude-0/work", "POLL_SECONDS": "1", "PORT": "3089", "YTDLP_AUTO_UPDATE": "0",
                    "SETTINGS_KEY": "test-settings-key-0123456789", "MODELS_DIR": "/tmp/claude-0/models"})
 os.makedirs("/tmp/claude-0/work", exist_ok=True)

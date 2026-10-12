@@ -6,14 +6,14 @@ import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
-const ALLOWED_HOSTS = /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com)$/i;
+const ALLOWED_HOSTS = /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com|archive\.org)$/i;
 
 const urlSchema = z.string().trim().url().max(500).refine((u) => {
   try { return ALLOWED_HOSTS.test(new URL(u).hostname); } catch { return false; }
-}, 'Adresse YouTube ou Vimeo attendue');
+}, 'Adresse YouTube, Vimeo ou archive.org attendue');
 
 const confirmSchema = z.object({
-  ids: z.array(z.string().regex(/^[\w-]{1,20}$/)).min(1).max(2000),
+  ids: z.array(z.string().regex(/^[\w.-]{1,100}$/)).min(1).max(2000), // identifiants archive.org : jusqu'à 100 caractères
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().nullable().optional(),
   access: z.enum(['free', 'premium']).default('free'),

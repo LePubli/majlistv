@@ -53,11 +53,18 @@ export default async function transcriptRoutes(app) {
     const { rows } = await pool.query(
       "SELECT lang, summary, key_points, chapters FROM talk_insights WHERE talk_id = $1 AND status = 'ready' ORDER BY lang", [id]
     );
-    if (!rows.length) return { lang: null, languages: [], summary: '', keyPoints: [], chapters: [] };
-    // Langue demandée, sinon la première disponible (la langue d'origine arrive toujours en premier dans la file).
-    const row = rows.find((r) => r.lang === lang) || rows[0];
+    // Langues encore en préparation : le site attend celle du visiteur au lieu d'afficher définitivement une autre langue.
+    const pending = (await pool.query(
+      "SELECT lang FROM talk_insights WHERE talk_id = $1 AND status IN ('pending', 'processing') ORDER BY lang", [id]
+    )).rows.map((r) => r.lang);
+    if (!rows.length) return { lang: null, languages: [], pending, summary: '', keyPoints: [], chapters: [] };
+    // Langue demandée ; sinon le français, puis l'anglais, puis la langue d'origine.
+    const base = (lang || '').split('-')[0];
+    const row = rows.find((r) => r.lang === lang) || rows.find((r) => r.lang === base)
+      || rows.find((r) => r.lang === 'fr') || rows.find((r) => r.lang === 'en') || rows[0];
     return {
       lang: row.lang,
+      pending,
       languages: rows.map((r) => r.lang),
       summary: row.summary,
       keyPoints: row.key_points,
