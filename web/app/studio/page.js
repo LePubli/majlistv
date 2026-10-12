@@ -13,7 +13,9 @@ const clock = (s) => {
   const sec = String(Math.floor(s % 60)).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
-const FILTERS = ['all', 'live', 'run', 'err'];
+const FILTERS = ['all', 'live', 'run', 'err', 'draft'];
+// Le filtre « Brouillons » regroupe les brouillons et les conférences programmées.
+const inFilter = (kind, f) => f === 'all' || kind === f || (f === 'draft' && kind === 'sched');
 
 function Step({ letter, state, label, t }) {
   const mark = { ok: ' ✓', run: ' …', err: ' !', wait: '', none: '' }[state];
@@ -41,10 +43,11 @@ export default function StudioTalks() {
     return () => clearInterval(id);
   }, [running, load]);
 
-  const count = (k) => rows.filter((r) => r.kind === k).length;
+  const count = (k) => rows.filter((r) => inFilter(r.kind, k)).length;
   const needle = q.trim().toLowerCase();
-  const shown = rows.filter((r) => (filter === 'all' || r.kind === filter)
+  const shown = rows.filter((r) => inFilter(r.kind, filter)
     && (!needle || `${r.title} ${r.speaker}`.toLowerCase().includes(needle)));
+  const dateTime = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
@@ -55,7 +58,7 @@ export default function StudioTalks() {
       </div>
 
       <div className="studio-stats">
-        {[['live', t('kind_live')], ['run', t('kind_run')], ['err', t('kind_err')]].map(([k, label]) => (
+        {[['live', t('kind_live')], ['run', t('kind_run')], ['err', t('kind_err')], ['draft', t('kind_draft')]].map(([k, label]) => (
           <button key={k} type="button" className={`stat stat-${k}`} onClick={() => setFilter(k)}>
             <strong>{mine ? count(k) : '…'}</strong><span>{label}</span>
           </button>
@@ -112,6 +115,7 @@ export default function StudioTalks() {
                     <span className={`state state-${r.kind}`}>
                       <i aria-hidden="true" />{t('state_' + r.kind)}{r.kind === 'run' && r.pct != null ? ` ${r.pct} %` : ''}
                     </span>
+                    {r.kind === 'sched' && <small className="muted sched-date">{t('scheduledFor').replace('{d}', dateTime(r.publishAt))}</small>}
                   </td>
                   <td>
                     <span className="steps" aria-label={t('colSteps')}>

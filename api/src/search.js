@@ -2,6 +2,7 @@
 // L'API alimente l'index toute seule (boucle de synchronisation) ; sans Meilisearch configuré,
 // la recherche retombe sur la recherche SQL simple.
 import { createHash } from 'node:crypto';
+import { visibleSql } from './visibility.js';
 import { pool } from './db.js';
 import { getSetting } from './settings.js';
 
@@ -92,7 +93,7 @@ export async function syncOnce(log) {
   for (;;) {
     const { rows } = await pool.query(
       `SELECT x.id, x.sig, x.ready FROM (
-         SELECT t.id, ${SIG} AS sig, t.video_status = 'ready' AS ready, s.signature AS old
+         SELECT t.id, ${SIG} AS sig, (t.video_status = 'ready' AND ${visibleSql('t')}) AS ready, s.signature AS old
          FROM talks t LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN search_state s ON s.talk_id = t.id
        ) x WHERE (x.ready AND x.old IS DISTINCT FROM x.sig) OR (NOT x.ready AND x.old IS NOT NULL) LIMIT 25`
     );

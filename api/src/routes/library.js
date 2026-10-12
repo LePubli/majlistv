@@ -1,5 +1,6 @@
 // Bibliothèque personnelle : favoris et reprise de lecture ("Continuer à regarder").
 import { z } from 'zod';
+import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 
@@ -35,7 +36,7 @@ export default async function libraryRoutes(app) {
     const { rows } = await pool.query(
       `SELECT ${CARD}, f.created_at AS "favoritedAt"
        FROM favorites f JOIN talks t ON t.id = f.talk_id LEFT JOIN categories c ON c.id = t.category_id
-       WHERE f.user_id = $1 AND t.video_status = 'ready' ORDER BY f.created_at DESC LIMIT 200`,
+       WHERE f.user_id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} ORDER BY f.created_at DESC LIMIT 200`,
       [req.user.sub]
     );
     return cards(rows);
@@ -86,7 +87,7 @@ export default async function libraryRoutes(app) {
     const { rows } = await pool.query(
       `SELECT ${CARD}, p.position_ms AS "positionMs", p.duration_ms AS "durationMs", p.updated_at AS "watchedAt"
        FROM watch_progress p JOIN talks t ON t.id = p.talk_id LEFT JOIN categories c ON c.id = t.category_id
-       WHERE p.user_id = $1 AND NOT p.completed AND p.position_ms >= $2 AND t.video_status = 'ready'
+       WHERE p.user_id = $1 AND NOT p.completed AND p.position_ms >= $2 AND t.video_status = 'ready' AND ${visibleSql('t')}
        ORDER BY p.updated_at DESC LIMIT 12`,
       [req.user.sub, MIN_RESUME_MS]
     );

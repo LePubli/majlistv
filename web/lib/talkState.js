@@ -46,10 +46,14 @@ export function talkSteps(x) {
   return { video, videoPct, transcript, transcriptPct, subs, summary };
 }
 
-// Catégorie de la conférence pour les filtres : live (en ligne), run (en traitement), err (à corriger).
+// Catégorie de la conférence pour les filtres :
+//   err (à corriger), run (en traitement), draft (brouillon), sched (programmée, pas encore visible), live (en ligne).
 export function talkKind(x, steps = talkSteps(x)) {
   const all = [steps.video, steps.transcript, steps.subs, steps.summary];
   if (all.includes('err')) return 'err';
+  // Un brouillon ou une conférence programmée garde son statut même pendant le traitement (la progression reste visible dans les pastilles).
+  if (x.publication === 'draft') return 'draft';
+  if (x.publication === 'scheduled' && x.visible === false) return 'sched';
   if (steps.video !== 'ok') return 'run';
   if (all.includes('run')) return 'run';
   return 'live';

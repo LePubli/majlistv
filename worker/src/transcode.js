@@ -83,6 +83,12 @@ export async function transcode({ input, outDir, info, threads, onProgress }) {
   await run('ffmpeg', ['-y', '-nostdin', '-v', 'error', '-ss', String(Math.floor(info.duration * 0.1)), '-i', input,
     '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '4', path.join(outDir, 'poster.jpg')]);
 
+  // 3 images au choix pour la miniature (à 20 %, 50 % et 80 %) : c1.jpg, c2.jpg, c3.jpg.
+  for (const [i, at] of [0.2, 0.5, 0.8].entries()) {
+    await run('ffmpeg', ['-y', '-nostdin', '-v', 'error', '-ss', String(Math.floor(info.duration * at)), '-i', input,
+      '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '4', path.join(outDir, `c${i + 1}.jpg`)]).catch(() => {});
+  }
+
   await run('nice', ['-n', '10', 'ffmpeg', ...args], {
     onLine: (line) => {
       const m = line.match(/^out_time_(?:us|ms)=(\d+)/);

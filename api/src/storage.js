@@ -1,6 +1,6 @@
 // Client S3 (Garage) : liens temporaires, suppression, CORS du bucket.
 import {
-  S3Client, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command, PutBucketCorsCommand,
+  S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command, PutBucketCorsCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from './config.js';
@@ -21,6 +21,9 @@ export const storage = endpoint && accessKey && secretKey
 
 export const presignGet = (key) =>
   getSignedUrl(storage, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: 4 * 3600 });
+
+export const putObject = (key, body, contentType) =>
+  storage.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType, ContentLength: body.length }));
 
 export const deleteObject = (key) => storage.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 

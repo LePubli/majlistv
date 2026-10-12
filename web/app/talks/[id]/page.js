@@ -163,6 +163,13 @@ export default function TalkPage() {
       {trackable && resumeMs > 0 && !jumpMs && (
         <p className="meta resume">{t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></p>
       )}
+      {talk.visible === false && (
+        <p className="notice" role="status">
+          {talk.publication === 'scheduled' && talk.publishAt
+            ? t('schedBanner').replace('{d}', new Date(talk.publishAt).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' }))
+            : t('draftBanner')}
+        </p>
+      )}
       <div className="title-row">
         <h1>{talk.title}</h1>
         <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>

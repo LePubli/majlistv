@@ -2,6 +2,7 @@
 // sinon recherche SQL simple. Les extraits de transcription d'une conférence premium ne sont montrés qu'aux
 // personnes qui y ont accès (abonné, propriétaire, admin).
 import { z } from 'zod';
+import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
@@ -59,11 +60,11 @@ export default async function searchRoutes(app) {
     let rows;
     if (ids) {
       const res = await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id
-        WHERE t.id = ANY($1) AND t.video_status = 'ready'`, [ids]);
+        WHERE t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')}`, [ids]);
       const byId = new Map(res.rows.map((r) => [r.id, r]));
       rows = ids.map((id) => byId.get(id)).filter(Boolean);
     } else {
-      const where = `t.video_status = 'ready'
+      const where = `t.video_status = 'ready' AND ${visibleSql('t')}
         AND (t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%' OR t.description ILIKE '%' || $1 || '%'
              OR t.transcript_text ILIKE '%' || $1 || '%')
         AND ($2::int IS NULL OR t.category_id = $2)`;

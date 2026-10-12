@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import { langName } from '../../../components/Transcript';
 import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/talkState';
+import TalkEditor from '../../../components/TalkEditor';
 
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 const base = (c) => String(c || '').split('-')[0].toLowerCase();
@@ -75,6 +76,7 @@ export default function ManageTalk() {
           <h1 className="studio-title">{x.title}</h1>
           <p className="meta">{[x.speaker, langName(base(x.language), locale), t(x.access), external ? sourceLabel(x.source) : ''].filter(Boolean).join(' · ')}</p>
           <span className={`state state-${kind}`}><i aria-hidden="true" />{t('state_' + kind)}{kind === 'run' && pct != null ? ` ${pct} %` : ''}</span>
+          {kind === 'sched' && <span className="meta small"> {t('scheduledFor').replace('{d}', new Date(x.publishAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }))}</span>}
         </div>
         <div className="manage-actions">
           <Link href={`/talks/${x.id}`} className="btn ghost">{t('viewPage')}</Link>
@@ -82,6 +84,9 @@ export default function ManageTalk() {
       </div>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
 
+      <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} />
+
+      <h2 className="panel-title outside">{t('sectProcessing')}</h2>
       <ol className="tracks">
         <Row letter="V" state={steps.video} title={t('stepVideo')}>
           <p className="meta small">

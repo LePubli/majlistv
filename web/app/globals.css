@@ -472,3 +472,28 @@ mark { background: rgba(230, 167, 57, .28); color: var(--text); border-radius: 3
   .wiz-preview { position: static; order: -1; max-width: 300px; }
   .linkrow { flex-direction: column; }
 }
+
+/* 10.4 : fiche d'une conférence (modification, publication, miniature) */
+.state-draft { color: var(--text-2); } .state-sched { color: var(--accent-hover); }
+.stat-draft strong { color: var(--accent-hover); }
+.sched-date { display: block; margin-top: 2px; font-size: 12px; }
+.panel { display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px; margin-block: 18px; }
+.panel-title { margin: 0; font-size: 17px; font-family: var(--font-title); }
+.panel-title.outside { margin: 28px 0 10px; }
+.panel .fld input:not([type=checkbox]), .panel .fld textarea { background: var(--bg); }
+.panel-actions { display: flex; justify-content: flex-end; }
+.thumbs { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 22px; align-items: start; }
+.thumb-cur { margin: 0; display: grid; gap: 6px; }
+.thumb-cur .studio-thumb.big { width: 100%; max-width: none; aspect-ratio: 16 / 9; height: auto; }
+.thumb-opts { display: grid; gap: 12px; }
+.thumb-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.thumb-opt { width: 150px; aspect-ratio: 16 / 9; border-radius: 8px; border: 2px solid var(--line); background: var(--bg) center / cover; cursor: pointer; padding: 0; }
+.thumb-opt:hover { border-color: var(--line-strong); }
+.thumb-opt.on { border-color: var(--accent); box-shadow: 0 0 0 2px #E6A73933; }
+.thumb-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 800px) { .thumbs { grid-template-columns: 1fr; } .thumb-cur { max-width: 320px; } }
+@media (max-width: 480px) { .studio-stats { grid-template-columns: repeat(2, 1fr) !important; } }
+.wiz-right { display: flex; gap: 10px; flex-wrap: wrap; }
+.notice { background: #2A1F10; border: 1px solid var(--line-strong); color: var(--accent-hover); padding: 10px 14px; border-radius: 10px; margin: 12px 0; font-size: 14px; }
+.btn:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+.thumb-cur .studio-thumb.big { display: block; }

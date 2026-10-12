@@ -104,11 +104,11 @@ export default function NewTalk() {
   const toggleLang = (code) => patch({ translateTo: f.translateTo.includes(code) ? f.translateTo.filter((c) => c !== code) : [...f.translateTo, code] });
   const canTranslate = mode === 'file' || f.rightsConfirmed;
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const submit = async (e, publication = 'published') => {
+    e?.preventDefault();
     if (saving || (mode === 'file' && up.state !== 'done')) return;
     setErr(''); setSaving(true);
-    const body = { ...f, categoryId: f.categoryId ? Number(f.categoryId) : undefined };
+    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
     if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else body.videoUrl = link.trim();
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
@@ -231,9 +231,12 @@ export default function NewTalk() {
             {err && <p className="error">{err}</p>}
             <div className="wiz-actions">
               <button type="button" className="btn ghost" onClick={back}>← {t('nwBack')}</button>
-              <button className="btn" disabled={saving || (mode === 'file' && up.state !== 'done')}>
-                {mode === 'file' && up.state === 'sending' ? t('nwWaitUpload') : t('publish')}
-              </button>
+              <span className="wiz-right">
+                <button type="button" className="btn ghost" disabled={saving || !f.title.trim() || (mode === 'file' && up.state !== 'done')} onClick={() => submit(null, 'draft')}>{t('nwSaveDraft')}</button>
+                <button className="btn" disabled={saving || (mode === 'file' && up.state !== 'done')}>
+                  {mode === 'file' && up.state === 'sending' ? t('nwWaitUpload') : t('publish')}
+                </button>
+              </span>
             </div>
           </div>
 

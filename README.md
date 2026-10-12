@@ -382,3 +382,29 @@ Après publication, redirection vers la fiche de la conférence (`/studio/<id>`)
 
 ### Déploiement
 `git add -A && git commit -m "Étape 10.3 : ajout en 2 étapes" && git push`, redéployer **web** seul, puis `/root/apply-limits.sh`.
+
+## Étape 10.4 — Modifier une conférence, brouillons, publication programmée, miniature
+
+Touche **l'API** (migration `016_publication.sql`, appliquée au démarrage), **le worker** et **le web**.
+
+### Fonctionnalités
+- **Fiche d'une conférence** (`/studio/<id>`) : on modifie le titre, l'intervenant, la description, la catégorie et l'accès, puis « Enregistrer ».
+- **Publication** : *Publiée* (visible de tous), *Brouillon* (visible seulement du propriétaire et des admins) ou *Programmée* (publiée automatiquement à la date choisie, sans tâche planifiée : la condition est évaluée à chaque requête et à chaque synchronisation de la recherche). Un brouillon / une programmée à venir est absente du catalogue, de la recherche, des favoris et de « Continuer à regarder », et sa page répond 404 au public. À la création : bouton « Enregistrer en brouillon ».
+- **Miniature** : choix parmi 3 images tirées de la vidéo (vidéos envoyées converties après cette mise à jour), envoi de sa propre image (réduite à 1280×720 dans le navigateur, JPEG/PNG/WebP, 2,5 Mo max), ou retour à la miniature de la plateforme (YouTube, Vimeo, archive.org).
+- Les vidéos converties **avant** cette étape n'ont pas les 3 images : elles gardent leur image automatique, et on peut envoyer la sienne.
+
+### API
+| Méthode | Route | Rôle |
+|---|---|---|
+| PATCH | `/talks/:id` | `title, description, speaker, categoryId (null), access, publication, publishAt, posterChoice (-1..2)` |
+| POST | `/talks/:id/poster` | `{ image: "data:image/…;base64,…" }` |
+| POST | `/talks` | accepte aussi `publication` et `publishAt` |
+
+### Tests
+`python3 api/tests/test_publication.py` (API 3055, PG de test 5544, S3 factice) : 43 vérifications.
+
+### Déploiement
+```bash
+git add -A && git commit -m "Étape 10.4 : édition, brouillons, programmation, miniature" && git push
+```
+DockPanel : redéployer **api**, **worker** et **web** (l'API en premier, pour la migration), puis `/root/apply-limits.sh` et vérifier le port 7000 dans nginx pour l'API.

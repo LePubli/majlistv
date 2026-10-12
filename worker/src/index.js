@@ -122,8 +122,9 @@ async function processJob(job) {
     const n = await uploadDir(out, prefix);
     const res = await pool.query(
       `UPDATE talks SET video_status = 'ready', video_progress = 100, video_error = NULL,
-              duration_seconds = $2, poster_key = $3 WHERE id = $1`,
-      [job.id, Math.round(info.duration), `${prefix}poster.jpg`]
+              duration_seconds = $2, poster_key = $3, poster_candidates = $4 WHERE id = $1`,
+      [job.id, Math.round(info.duration), `${prefix}poster.jpg`,
+        [1, 2, 3].map((i) => `${prefix}c${i}.jpg`).filter((k) => fs.existsSync(path.join(out, k.slice(prefix.length))))]
     );
     if (!res.rowCount) { await deletePrefix(prefix); log(`[${job.id}] conférence supprimée entre-temps, nettoyé`); }
     else log(`[${job.id}] terminé (${n} fichiers)`);
