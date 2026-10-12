@@ -370,3 +370,15 @@ Nouvel espace de gestion pour les organisateurs et l'administrateur (web uniquem
 
 ### Vérification
 Connecté en admin : `/studio` affiche la liste ; `/organizer` redirige ; `/admin?tab=settings` s'ouvre avec le menu latéral.
+
+## Étape 10.3 — Studio : ajouter une conférence en 2 étapes
+
+Web uniquement (aucun changement API ni base).
+
+1. **Vidéo** : glisser-déposer un fichier (ou « Parcourir mes fichiers »). **L'envoi démarre tout de suite** (par morceaux, avec reprise), ou coller un lien YouTube / Vimeo / archive.org. Le lien est vérifié avant de continuer. L'import de playlist reste en bas de la page.
+2. **Informations** : titre (pré-rempli avec le nom du fichier), intervenant, description, langue parlée (français / arabe / anglais en un clic, « Autre… » pour les autres), catégorie et accès (puces cliquables), sous-titres traduits, et **aperçu de la carte** telle qu'elle apparaîtra dans le catalogue (image du fichier ou miniature YouTube). On remplit les infos pendant l'envoi ; « Publier » s'active à la fin de l'envoi.
+
+Après publication, redirection vers la fiche de la conférence (`/studio/<id>`).
+
+### Déploiement
+`git add -A && git commit -m "Étape 10.3 : ajout en 2 étapes" && git push`, redéployer **web** seul, puis `/root/apply-limits.sh`.
