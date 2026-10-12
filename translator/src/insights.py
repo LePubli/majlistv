@@ -107,7 +107,7 @@ class Insights:
         self.query(
             """INSERT INTO talk_insights (talk_id, lang)
                SELECT t.id, t.transcript_language FROM talks t
-                WHERE t.source = 'upload' AND t.transcript_status = 'ready' AND t.transcript_language IS NOT NULL
+                WHERE t.transcript_status = 'ready' AND t.transcript_language IS NOT NULL
                UNION
                SELECT tr.talk_id, tr.lang FROM transcript_translations tr JOIN talks t ON t.id = tr.talk_id
                 WHERE tr.status = 'ready' AND t.transcript_status = 'ready'

@@ -84,3 +84,14 @@ FROM talks WHERE source='upload';
 cd transcriber && pip install -r requirements.txt   # ffmpeg et ffprobe requis
 DATABASE_URL=... S3_ENDPOINT=... S3_ACCESS_KEY=... S3_SECRET_KEY=... WORK_DIR=/tmp/work MODELS_DIR=/tmp/models python src/main.py
 ```
+
+## Vidéos YouTube et Vimeo (étape 9 bis)
+Le service traite aussi les conférences YouTube et Vimeo dont l'organisateur a confirmé l'accord de l'auteur. Il essaie d'abord les sous-titres de l'auteur, puis l'audio avec Whisper, puis les sous-titres automatiques. Il liste aussi les vidéos des playlists et chaînes à importer. Réglages : Admin → Paramètres → Vidéos YouTube et Vimeo (méthode, cookies, proxy, maximum par import). Outils embarqués : `yt-dlp[default]` (mis à jour au démarrage, `YTDLP_AUTO_UPDATE=0` pour figer la version) et `deno` (moteur JavaScript exigé par yt-dlp pour YouTube).
+
+Vérifications :
+```bash
+docker exec dockpanel-git-majlistv-transcriber deno --version
+docker exec dockpanel-git-majlistv-transcriber python -m yt_dlp --version
+docker exec dockpanel-git-majlistv-transcriber python -m yt_dlp --skip-download --list-subs "https://www.youtube.com/watch?v=IDENTIFIANT"
+```
+

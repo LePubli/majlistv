@@ -11,6 +11,7 @@ export const GROUPS = [
   { id: 'translation', label: 'Traduction des sous-titres' },
   { id: 'insights', label: 'Résumés et chapitres' },
   { id: 'transcription', label: 'Transcription (Whisper)' },
+  { id: 'external', label: 'Vidéos YouTube et Vimeo' },
   { id: 'search', label: 'Recherche (Meilisearch)' },
 ];
 
@@ -70,12 +71,23 @@ export const FIELDS = [
   { key: 'whisper_threads', group: 'transcription', type: 'number', label: 'Cœurs CPU utilisés', env: 'WHISPER_THREADS', def: '4', min: 1, max: 32 },
   { key: 'whisper_beam', group: 'transcription', type: 'number', label: 'Précision de recherche (beam)', env: 'WHISPER_BEAM', def: '3', min: 1, max: 10 },
 
+  { key: 'external_mode', group: 'external', type: 'select', options: ['subtitles_then_audio', 'audio_only', 'subtitles_only'], label: 'Méthode de transcription',
+    env: 'EXTERNAL_MODE', def: 'subtitles_then_audio',
+    help: 'subtitles_then_audio : sous-titres publiés par l\'auteur s\'ils existent, sinon téléchargement de l\'audio et Whisper (recommandé) · audio_only : toujours Whisper · subtitles_only : jamais de téléchargement.' },
+  { key: 'external_auto_captions', group: 'external', type: 'bool', label: 'Utiliser les sous-titres automatiques de YouTube en dernier recours', env: 'EXTERNAL_AUTO_CAPTIONS', def: 'true',
+    help: 'Moins bonne qualité (pas de ponctuation), utilisés seulement si l\'audio ne peut pas être récupéré.' },
+  { key: 'ytdlp_cookies', group: 'external', type: 'secret_text', label: 'Cookies YouTube (si YouTube bloque le serveur)', env: 'YTDLP_COOKIES',
+    help: 'Contenu d\'un fichier cookies.txt (format Netscape) exporté depuis un navigateur connecté à un compte Google dédié. Laisser vide si tout fonctionne.' },
+  { key: 'ytdlp_proxy', group: 'external', type: 'secret', label: 'Proxy de sortie (facultatif)', env: 'YTDLP_PROXY', help: 'Ex. http://utilisateur:motdepasse@proxy:port. Pour contourner un blocage par adresse IP.' },
+  { key: 'import_max_videos', group: 'external', type: 'number', label: 'Nombre maximum de vidéos par import de playlist ou de chaîne', env: 'IMPORT_MAX_VIDEOS', def: '200', min: 1, max: 2000 },
+
   { key: 'meili_url', group: 'search', type: 'url', label: 'Adresse du serveur Meilisearch', env: 'MEILI_URL',
     help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://IP_DU_CONTENEUR:3000 (docker inspect du service majlistv-search, comme pour la base de données).' },
   { key: 'meili_key', group: 'search', type: 'secret', label: 'Clé maître Meilisearch', env: 'MEILI_KEY', test: 'meili',
     help: 'La même valeur que la variable MEILI_MASTER_KEY du service majlistv-search. L\'index se remplit tout seul en quelques minutes.' },
 ];
 export const BY_KEY = Object.fromEntries(FIELDS.map((f) => [f.key, f]));
+export const isSecretType = (t) => t === 'secret' || t === 'secret_text';
 
 let cache = { at: 0, rows: new Map() };
 async function rows() {
@@ -119,9 +131,9 @@ export async function describeSettings() {
     const r = await resolve(f.key);
     const item = { key: f.key, group: f.group, type: f.type, label: f.label, help: f.help || '', options: f.options || null,
       test: f.test || null, min: f.min ?? null, max: f.max ?? null, source: r.source };
-    if (f.type === 'secret') {
+    if (isSecretType(f.type)) {
       item.isSet = r.value !== '';
-      item.hint = r.value ? `••••${r.value.slice(-4)}` : '';
+      item.hint = !r.value ? '' : f.type === 'secret_text' ? `(${r.value.split('\n').length} lignes)` : `••••${r.value.slice(-4)}`;
     } else {
       item.value = f.type === 'bool' ? String(isOn(r.value)) : r.value;
       item.default = f.def ?? '';
@@ -134,8 +146,10 @@ export async function describeSettings() {
 // Contrôle d'une valeur reçue ; renvoie la valeur normalisée ou lève une Error lisible.
 export function validateValue(f, raw) {
   const v = String(raw ?? '').trim();
-  if (v.length > 500) throw new Error(`${f.label} : valeur trop longue`);
+  if (v.length > (f.type === 'secret_text' ? 200000 : 500)) throw new Error(`${f.label} : valeur trop longue`);
   switch (f.type) {
+    case 'secret_text': // texte secret sur plusieurs lignes (ex. fichier de cookies)
+      return v.replace(/\r\n/g, '\n');
     case 'secret':
       if (/\s/.test(v)) throw new Error(`${f.label} : la clé ne doit pas contenir d'espace`);
       return v;
@@ -172,11 +186,11 @@ export async function saveSettings(values, userId) {
     if (v === '') {
       await pool.query('DELETE FROM app_settings WHERE key = $1', [key]);
     } else {
-      if (f.type === 'secret' && !cryptoReady) throw new Error('La variable SETTINGS_KEY (16 caractères minimum) doit être définie sur l\'API, le traducteur et le transcripteur avant d\'enregistrer une clé.');
+      if (isSecretType(f.type) && !cryptoReady) throw new Error('La variable SETTINGS_KEY (16 caractères minimum) doit être définie sur l\'API, le traducteur et le transcripteur avant d\'enregistrer une clé.');
       await pool.query(
         `INSERT INTO app_settings (key, value, is_secret, updated_by) VALUES ($1, $2, $3, $4)
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, is_secret = EXCLUDED.is_secret, updated_at = now(), updated_by = EXCLUDED.updated_by`,
-        [key, f.type === 'secret' ? encrypt(v) : v, f.type === 'secret', userId]
+        [key, isSecretType(f.type) ? encrypt(v) : v, isSecretType(f.type), userId]
       );
     }
   }

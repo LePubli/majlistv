@@ -15,7 +15,7 @@ const schema = z.object({
 });
 
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category,
-  t.duration_seconds AS "durationSeconds", t.poster_key, t.description`;
+  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description`;
 const PRE = '⟦';
 const POST = '⟧';
 
@@ -82,7 +82,7 @@ export default async function searchRoutes(app) {
       }
     }
     const words = [...new Set([...queryWords(p.q), ...queryWords(found.join(' '))])].slice(0, 10);
-    const momentIds = rows.filter((r) => r.source === 'upload' && canSee(r)).map((r) => r.id);
+    const momentIds = rows.filter((r) => canSee(r)).map((r) => r.id); // toutes sources : YouTube / Vimeo transcrits aussi
     const moments = new Map();
     if (words.length && momentIds.length) {
       const pats = words.map((w) => `%${w.replace(/[%_\\]/g, '\\$&')}%`);
@@ -106,7 +106,7 @@ export default async function searchRoutes(app) {
       hits.push({
         id: r.id, title: r.title, speaker: r.speaker, language: r.language, access: r.access, source: r.source,
         video_ref: r.source === 'upload' ? undefined : r.video_ref, category: r.category, durationSeconds: r.durationSeconds,
-        posterUrl: r.poster_key ? await presignGet(r.poster_key) : null,
+        posterUrl: r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null),
         snippet: snip ? snip.text : null,
         snippetFrom: snip ? snip.field : null,
         moments: moments.get(r.id) || [],

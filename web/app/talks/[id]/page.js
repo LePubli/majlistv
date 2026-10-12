@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
+import ExternalPlayer from '../../../components/ExternalPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
 import Insights from '../../../components/Insights';
 
@@ -14,6 +15,7 @@ export default function TalkPage() {
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
   const [resumeMs, setResumeMs] = useState(0);
+  const [previewEnded, setPreviewEnded] = useState(false);
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
   const tParam = Number(useSearchParams().get('t'));
   const jumpMs = Number.isFinite(tParam) && tParam > 0 ? Math.floor(tParam * 1000) : 0;
@@ -37,7 +39,8 @@ export default function TalkPage() {
   };
 
   // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
-  const trackable = Boolean(user && talk && talk.source === 'upload' && talk.hlsPath && !talk.locked);
+  const external = Boolean(talk && talk.source !== 'upload');
+  const trackable = Boolean(user && talk && (talk.hlsPath || external) && !talk.locked);
   const startMs = useRef(0);
   useEffect(() => { if (jumpMs) startMs.current = jumpMs; else if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs, jumpMs]);
   useEffect(() => {
@@ -87,22 +90,19 @@ export default function TalkPage() {
   const clock = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
   // Pendant la conversion ou la transcription, la page se met à jour toute seule.
-  const waiting = talk && talk.source === 'upload' && !talk.locked
-    && (['pending', 'processing'].includes(talk.status) || ['pending', 'processing'].includes(talk.transcriptStatus) || talk.translating || talk.insightsPending);
+  const waiting = talk && !talk.locked
+    && ((talk.source === 'upload' && ['pending', 'processing'].includes(talk.status)) || ['pending', 'processing'].includes(talk.transcriptStatus) || talk.translating || talk.insightsPending);
   useEffect(() => {
     if (!waiting) return;
     const timer = setInterval(() => call('/talks/' + id).then((r) => {
       // Ne remplace pas la vidéo en cours de lecture : met à jour seulement les infos de transcription.
-      if (r.ok) setTalk((old) => (old && old.hlsPath && r.data.hlsPath ? { ...old, tracks: r.data.tracks, transcriptStatus: r.data.transcriptStatus, translating: r.data.translating, insightsPending: r.data.insightsPending } : r.data));
+      if (r.ok) setTalk((old) => (old && ((old.hlsPath && r.data.hlsPath) || old.source !== 'upload') ? { ...old, tracks: r.data.tracks, transcriptStatus: r.data.transcriptStatus, translating: r.data.translating, insightsPending: r.data.insightsPending } : r.data));
     }), 8000);
     return () => clearInterval(timer);
   }, [waiting, id, call]);
 
   if (talk === undefined) return null;
   if (talk === null) return <main className="page"><p>{t('noTalks')}</p></main>;
-  const embed = talk.source === 'youtube'
-    ? `https://www.youtube-nocookie.com/embed/${talk.video_ref}`
-    : `https://player.vimeo.com/video/${talk.video_ref}`;
   const audioLang = String(talk.language || '').split('-')[0].toLowerCase();
   // Sous-titres affichés d'office : la langue de l'interface si elle existe et n'est pas celle de la parole.
   const subLang = (talk.tracks || []).includes(locale) && locale !== audioLang ? locale : null;
@@ -111,8 +111,14 @@ export default function TalkPage() {
   }));
 
   let player;
-  if (talk.source !== 'upload') {
-    player = <div className="player"><iframe src={embed} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={talk.title} /></div>;
+  if (external) {
+    // YouTube / Vimeo : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
+    player = (
+      <div className="player">
+        <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000}
+          previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} tracks={tracks} videoRef={videoRef} t={t} />
+      </div>
+    );
   } else if (talk.hlsPath) {
     player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} /></div>;
   } else if (talk.locked) {
@@ -131,14 +137,15 @@ export default function TalkPage() {
     player = <p className="soon">{t('processingMsg')}</p>;
   }
 
-  const showTranscript = talk.hlsPath && tracks.length > 0;
-  const transcribing = talk.hlsPath && !talk.locked && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
+  const hasPlayer = Boolean(talk.hlsPath || external);
+  const showTranscript = hasPlayer && tracks.length > 0;
+  const transcribing = hasPlayer && !talk.locked && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
   return (
     <main className="page watch">
       {player}
       {talk.locked && (
         <div className="paywall">
-          <p>{talk.preview ? t('previewOnly').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60))) : t('premiumOnly')}</p>
+          <p>{previewEnded ? t('previewEnded') + ' ' : ''}{talk.preview ? t('previewOnly').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60))) : t('premiumOnly')}</p>
           <Link className="btn" href="/pricing">{t('subscribe')}</Link>
         </div>
       )}
@@ -155,8 +162,8 @@ export default function TalkPage() {
         {talk.durationSeconds ? ` · ${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
       <p>{talk.description}</p>
       {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
-      {talk.hlsPath && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
-      {talk.hlsPath && talk.playbackToken && (
+      {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
+      {hasPlayer && talk.playbackToken && (
         <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t} />
       )}
       {showTranscript && (

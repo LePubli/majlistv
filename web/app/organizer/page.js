@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { uploadFile } from '../../lib/upload';
 import { langName } from '../../components/Transcript';
+import ImportPanel from '../../components/ImportPanel';
 
 // Langues de sous-titres proposées (doit correspondre à api/src/langs.js).
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 
-const empty = { title: '', description: '', speaker: '', language: 'fr', categoryId: '', access: 'free', videoUrl: '', translateTo: [] };
+const empty = { title: '', description: '', speaker: '', language: 'fr', categoryId: '', access: 'free', videoUrl: '', translateTo: [], rightsConfirmed: false };
 
 // Espace organisateur : ajout (lien YouTube/Vimeo ou fichier vidéo) et suppression de ses conférences.
 export default function Organizer() {
@@ -57,7 +58,10 @@ export default function Organizer() {
     e.preventDefault();
     setErr('');
     const body = { ...f, categoryId: f.categoryId ? Number(f.categoryId) : undefined };
-    if (mode !== 'file') delete body.translateTo;
+    if (mode !== 'file') {
+      // Lien YouTube / Vimeo : transcription et traductions seulement avec l'accord de l'auteur.
+      body.translateTo = f.rightsConfirmed ? f.translateTo.filter((c) => c !== srcLang(f.language)) : [];
+    } else delete body.rightsConfirmed;
     try {
       if (mode === 'file') {
         if (!file) return;
@@ -67,7 +71,7 @@ export default function Organizer() {
         body.uploadId = await uploadFile(file, call, setProgress);
       }
       const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
-      if (r.ok) { setF(empty); setFile(null); load(); } else setErr(t('errVideo'));
+      if (r.ok) { setF(empty); setFile(null); load(); } else setErr(r.status === 409 ? t('errDuplicate') : t('errVideo'));
     } catch (e2) {
       setErr(e2.message === 'tooBig' ? t('errTooBig') : t('errUpload'));
     }
@@ -76,6 +80,12 @@ export default function Organizer() {
   const remove = async (id) => { await call('/talks/' + id, { method: 'DELETE' }); load(); };
   const addTr = async (id, lang) => { if (lang) { await call(`/talks/${id}/translations`, { method: 'POST', body: JSON.stringify({ lang }) }); load(); } };
   const removeTr = async (id, lang) => { await call(`/talks/${id}/translations/${lang}`, { method: 'DELETE' }); load(); };
+  // YouTube / Vimeo déjà ajoutée : activer (ou relancer) la transcription, avec l'accord de l'auteur.
+  const transcribe = async (x) => {
+    if (x.source !== 'upload' && !x.rightsConfirmed && !window.confirm(t('rightsConfirm'))) return;
+    await call(`/talks/${x.id}/transcribe`, { method: 'POST', body: JSON.stringify({ rightsConfirmed: x.source !== 'upload' }) });
+    load();
+  };
   const regenInsights = async (id) => { await call(`/talks/${id}/insights/regenerate`, { method: 'POST' }); load(); };
   const insState = (x) => { const l = x.insights || []; return l.some((i) => i.status === 'failed') ? 'failed' : l.some((i) => ['pending', 'processing'].includes(i.status)) ? 'processing' : l.length ? 'ready' : 'pending'; };
   const trState = (tr) => (tr.status === 'ready' ? '✓' : tr.status === 'processing' ? `${tr.progress} %` : tr.status === 'failed' ? '⚠' : t('trWaiting'));
@@ -113,7 +123,10 @@ export default function Organizer() {
             <option value="premium">{t('premium')}</option>
           </select>
         </label>
-        {mode === 'file' && (
+        {mode === 'link' && (
+          <label className="check rights"><input type="checkbox" checked={f.rightsConfirmed} onChange={(e) => setF({ ...f, rightsConfirmed: e.target.checked })} /> {t('rightsConfirm')}</label>
+        )}
+        {(mode === 'file' || f.rightsConfirmed) && (
           <fieldset className="langs">
             <legend>{t('translateTo')}</legend>
             {TR_LANGS.filter((c) => c !== srcLang(f.language)).map((c) => (
@@ -126,6 +139,7 @@ export default function Organizer() {
         {err && <p className="error">{err}</p>}
         <button className="btn" disabled={busy}>{t('publish')}</button>
       </form>
+      <ImportPanel cats={cats} onImported={load} />
       {mine.length === 0 && <p className="soon">{t('noTalks')}</p>}
       <ul className="mine">
         {mine.map((x) => (
@@ -133,7 +147,11 @@ export default function Organizer() {
             <div className="mine-main">
               <Link href={`/talks/${x.id}`}>{x.title}</Link>
               {statusLabel(x) && <span className={`status ${x.status === 'failed' || x.transcriptStatus === 'failed' ? 'failed' : ''}`}>{statusLabel(x)}</span>}
-              {x.source === 'upload' && x.status === 'ready' && x.transcriptStatus !== 'unavailable' && x.transcriptStatus !== 'failed' && (
+              {x.transcriptStatus === 'failed' && x.transcriptError && <p className="meta small error">{x.transcriptError} <button className="link" onClick={() => transcribe(x)}>{t('retryTr')}</button></p>}
+              {x.source !== 'upload' && !x.rightsConfirmed && (
+                <p className="meta small">{t('externalNoTranscript')} <button className="link" onClick={() => transcribe(x)}>{t('enableTranscript')}</button></p>
+              )}
+              {(x.source === 'upload' ? x.status === 'ready' : x.rightsConfirmed) && x.transcriptStatus !== 'unavailable' && x.transcriptStatus !== 'failed' && (
                 <div className="chips">
                   {(x.translations || []).map((tr) => (
                     <span key={tr.lang} className={`chip ${tr.status}`}>

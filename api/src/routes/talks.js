@@ -47,20 +47,24 @@ const talkSchema = z.object({
   uploadId: z.string().uuid().optional(),
   // Langues des sous-titres à générer automatiquement (vidéos envoyées uniquement).
   translateTo: z.array(z.enum(TRANSLATION_LANGS)).max(TRANSLATION_LANGS.length).default([]),
+  // YouTube / Vimeo : l'organisateur déclare avoir l'accord de l'auteur -> transcription, traductions, résumé, recherche.
+  rightsConfirmed: z.boolean().default(false),
 });
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
   t.video_ref, t.category_id, c.name AS category, t.created_at,
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
-  t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress"`;
+  t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
+  t.external_thumb, t.rights_confirmed AS "rightsConfirmed"`;
 const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
 
 // Remplace poster_key par un lien de miniature temporaire.
 async function withPosters(rows) {
   for (const r of rows) {
-    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : null;
+    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
     delete r.poster_key;
+    delete r.external_thumb;
     if (r.source === 'upload') delete r.video_ref; // clé de stockage interne
   }
   return rows;
@@ -110,43 +114,44 @@ export default async function talksRoutes(app) {
       const prog = (await pool.query('SELECT position_ms, completed FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rows[0];
       talk.resumeMs = prog && !prog.completed && prog.position_ms >= 5000 ? prog.position_ms : 0;
     }
-    if (talk.source === 'upload') {
-      // Premium : réservé au propriétaire, aux admins et aux abonnés ; les autres ont l'aperçu.
-      const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
-      const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
-      const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
-      if (!allowed) {
-        // Premium sans abonnement : aperçu gratuit du début de la vidéo, jamais le fichier complet.
-        talk.locked = true;
-        if (talk.status === 'ready') {
-          talk.playbackToken = makePreviewToken(id);
-          talk.preview = true;
-          talk.previewSeconds = await getNumber('preview_seconds');
-          talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
-        }
-      } else {
-        // Jeton de lecture : flux HLS, transcription et sous-titres.
-        talk.playbackToken = makePlaybackToken(id);
-        const langs = await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]);
-        talk.tracks = langs.rows.map((r) => r.lang);
-        talk.translating = (await pool.query(
-          "SELECT EXISTS (SELECT 1 FROM transcript_translations WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
-        )).rows[0].x;
-        talk.insightsPending = (await pool.query(
-          "SELECT EXISTS (SELECT 1 FROM talk_insights WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
-        )).rows[0].x;
+    // Premium : réservé au propriétaire, aux admins et aux abonnés ; les autres ont l'aperçu (2 min) et le résumé.
+    // Même règle pour les vidéos YouTube / Vimeo : transcription, sous-titres traduits et chapitres suivent l'accès.
+    const external = talk.source !== 'upload';
+    const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
+    const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
+    const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
+    if (!allowed) {
+      talk.locked = true;
+      if (external || talk.status === 'ready') {
+        talk.playbackToken = makePreviewToken(id);
+        talk.preview = true;
+        talk.previewSeconds = await getNumber('preview_seconds');
+        if (!external) talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+      }
+    } else {
+      // Jeton de lecture : flux HLS (vidéo envoyée), transcription et sous-titres (toutes les sources).
+      talk.playbackToken = makePlaybackToken(id);
+      const langs = await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]);
+      talk.tracks = langs.rows.map((r) => r.lang);
+      talk.translating = (await pool.query(
+        "SELECT EXISTS (SELECT 1 FROM transcript_translations WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
+      )).rows[0].x;
+      talk.insightsPending = (await pool.query(
+        "SELECT EXISTS (SELECT 1 FROM talk_insights WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
+      )).rows[0].x;
+      if (!external) {
         if (talk.status === 'ready') talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
         else if (isOwner) talk.videoUrl = await presignGet(talk.video_ref); // aperçu du fichier d'origine pendant la conversion
       }
-      delete talk.video_ref;
     }
+    if (!external) delete talk.video_ref;
     await withPosters([talk]);
     return talk;
   });
 
   app.get('/me/talks', { preHandler: app.authenticate }, async (req) => {
     const { rows } = await pool.query(
-      `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage",
+      `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage", t.transcript_error AS "transcriptError", t.transcript_method AS "transcriptMethod",
          (SELECT COALESCE(json_agg(json_build_object('lang', tr.lang, 'status', tr.status, 'progress', tr.progress) ORDER BY tr.lang), '[]'::json)
             FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations,
          (SELECT COALESCE(json_agg(json_build_object('lang', i.lang, 'status', i.status, 'error', i.error) ORDER BY i.lang), '[]'::json)
@@ -172,15 +177,18 @@ export default async function talksRoutes(app) {
     } else {
       video = b.videoUrl ? parseVideoUrl(b.videoUrl) : null;
       if (!video) return reply.code(400).send({ error: 'Lien YouTube ou Vimeo non reconnu' });
+      const dup = await pool.query('SELECT id FROM talks WHERE source = $1 AND video_ref = $2 LIMIT 1', [video.source, video.ref]);
+      if (dup.rows[0]) return reply.code(409).send({ error: 'Cette vidéo est déjà dans le catalogue', code: 'duplicate', id: dup.rows[0].id });
     }
+    const transcribable = video.source === 'upload' || b.rightsConfirmed;
     try {
       const { rows } = await pool.query(
-        `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
         [req.user.sub, b.title, b.description, b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
-          video.source === 'upload' ? 'pending' : 'ready', video.source === 'upload' ? 'pending' : 'unavailable']
+          video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed]
       );
-      if (video.source === 'upload' && b.translateTo.length) {
+      if (transcribable && b.translateTo.length) {
         const langs = [...new Set(b.translateTo)].filter((l) => l !== baseLang(b.language));
         if (langs.length) {
           await pool.query('INSERT INTO transcript_translations(talk_id, lang) SELECT $1, unnest($2::text[])', [rows[0].id, langs]);
@@ -196,18 +204,37 @@ export default async function talksRoutes(app) {
   // Ajoute une langue de sous-titres à une conférence (ou relance une traduction échouée).
   const trParams = z.object({ id: z.string().uuid(), lang: z.enum(TRANSLATION_LANGS) });
   async function ownedUpload(req, reply, id) {
-    const { rows } = await pool.query('SELECT organizer_id, source, language, transcript_language FROM talks WHERE id = $1', [id]);
+    const { rows } = await pool.query('SELECT organizer_id, source, language, transcript_language, rights_confirmed FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
     if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) {
       reply.code(404).send({ error: 'Conférence introuvable' });
       return null;
     }
-    if (talk.source !== 'upload') {
-      reply.code(400).send({ error: 'Les traductions concernent seulement les vidéos envoyées' });
+    if (talk.source !== 'upload' && !talk.rights_confirmed) {
+      reply.code(400).send({ error: "Activez d'abord la transcription de cette vidéo (accord de l'auteur)", code: 'rights_required' });
       return null;
     }
     return talk;
   }
+
+  // Active (ou relance) la transcription d'une conférence. YouTube / Vimeo : accord de l'auteur obligatoire.
+  app.post('/talks/:id/transcribe', organizer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { rightsConfirmed } = z.object({ rightsConfirmed: z.boolean().optional() }).parse(req.body ?? {});
+    const { rows } = await pool.query('SELECT organizer_id, source, transcript_status FROM talks WHERE id = $1', [id]);
+    const talk = rows[0];
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (talk.source !== 'upload' && rightsConfirmed !== true) {
+      return reply.code(400).send({ error: "Confirmez avoir l'accord de l'auteur pour transcrire cette vidéo", code: 'rights_required' });
+    }
+    if (['processing', 'ready'].includes(talk.transcript_status)) return reply.code(409).send({ error: 'Transcription déjà faite ou en cours' });
+    await pool.query(
+      `UPDATE talks SET transcript_status = 'pending', transcript_error = NULL, transcript_attempts = 0, transcript_progress = 0,
+              rights_confirmed = rights_confirmed OR $2 WHERE id = $1`,
+      [id, talk.source !== 'upload']
+    );
+    return reply.code(202).send({ status: 'pending' });
+  });
 
   app.post('/talks/:id/translations', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);

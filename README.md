@@ -267,3 +267,44 @@ Choisissez un service d'envoi qui fournit un accès SMTP (par exemple Brevo, Mai
 
 Tests locaux : `api/tests/smtp_sink.py` (faux serveur SMTP qui enregistre les e-mails en fichiers) et `api/tests/mock_stripe.py`.
 
+## Étape 9 bis : vidéos YouTube et Vimeo traitées comme les vidéos hébergées, import de playlists et de chaînes
+Nouveautés : migration `013_external.sql` (colonnes `talks.rights_confirmed`, `external_thumb`, `transcript_method`, table `import_jobs`). Le transcripteur embarque yt-dlp et Deno, le moteur JavaScript que yt-dlp exige désormais pour YouTube.
+
+**Accord de l'auteur obligatoire.** Une vidéo YouTube ou Vimeo n'est transcrite que si l'organisateur coche « J'ai l'accord de l'auteur… », à l'ajout, à l'import ou plus tard avec « Transcrire et traduire ». Sans cette case, la vidéo est seulement intégrée, comme avant.
+
+**Récupération du texte** (réglable dans Admin → Paramètres → Vidéos YouTube et Vimeo) :
+1. Sous-titres publiés par l'auteur dans la langue de la conférence : rapide, rien n'est téléchargé.
+2. Sinon, seulement la piste audio, transcrite par Whisper puis supprimée.
+3. En dernier recours (audio bloqué), sous-titres automatiques de YouTube, regroupés en phrases.
+
+Ensuite tout est identique à une vidéo envoyée : sous-titres traduits, résumé et chapitres, recherche avec passages horodatés, reprise de lecture, favoris. La durée, la miniature et la description (si elle est vide) sont récupérées sur la plateforme.
+
+**Lecteur piloté.** Le lecteur YouTube ou Vimeo est commandé par le site :
+- un clic dans la transcription, un chapitre ou un résultat de recherche fait sauter la vidéo au bon moment ;
+- les sous-titres traduits s'affichent par-dessus la vidéo (menu en haut à droite du lecteur) ;
+- conférence premium et visiteur non abonné : la lecture s'arrête à la fin de l'aperçu (2 min) et l'invitation à l'essai s'affiche ; la transcription et les sous-titres restent réservés aux abonnés.
+
+**Import de playlists et de chaînes** (Mes conférences → « Importer une playlist ou une chaîne ») :
+1. Coller l'adresse d'une playlist, d'une chaîne (`https://www.youtube.com/@nom`, onglet Vidéos) ou d'un album ou d'une chaîne Vimeo, puis cliquer sur « Analyser ». La liste arrive en quelques secondes ; rien n'est téléchargé.
+2. Cocher les vidéos. Celles déjà au catalogue sont signalées et ignorées.
+3. Choisir les réglages communs : langue, intervenant, catégorie, accès, accord de l'auteur, langues de sous-titres.
+4. Cliquer sur « Importer ». Les conférences sont créées et traitées une par une.
+
+Le maximum est de 200 vidéos par import ; c'est réglable dans le back-office. Les imports échoués peuvent être relancés.
+
+**Si YouTube bloque le serveur** (message « YouTube bloque l'accès depuis le serveur ») :
+1. Utilisez un compte Google dédié, pas votre compte principal.
+2. Dans un navigateur connecté à ce compte, exportez les cookies de youtube.com au format « Netscape » (cookies.txt), par exemple avec une extension d'export de cookies.
+3. Collez le contenu dans Admin → Paramètres → Vidéos YouTube et Vimeo → Cookies YouTube. Il est chiffré et jamais réaffiché.
+4. Relancez la vidéo avec « Relancer ».
+
+Un proxy de sortie peut aussi être indiqué. yt-dlp se met à jour automatiquement à chaque démarrage du transcripteur pour suivre les changements de YouTube ; `YTDLP_AUTO_UPDATE=0` désactive cette mise à jour.
+
+**Droits** : les conditions de YouTube interdisent de télécharger une vidéo sans autorisation. N'activez la transcription que pour des vidéos dont vous avez l'accord de l'auteur.
+
+Routes : `POST /talks` (champ `rightsConfirmed`), `POST /talks/:id/transcribe` (`{ "rightsConfirmed": true }`), `POST /imports` (`{ "url": … }`), `GET /imports`, `GET /imports/:id`, `POST /imports/:id/confirm` (`{ ids, language, categoryId, access, speaker, translateTo, rightsConfirmed }`), `POST /imports/:id/retry`, `DELETE /imports/:id`.
+
+Tests :
+- `python transcriber/tests/test_external.py` (hors ligne) ;
+- `api/tests/test_external_api.py` avec `transcriber/tests/run_transcriber_fake.py` (transcripteur réel, faux yt-dlp et faux Whisper).
+

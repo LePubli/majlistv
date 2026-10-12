@@ -20,6 +20,7 @@ import settingsRoutes from './routes/settings.js';
 import libraryRoutes from './routes/library.js';
 import searchRoutes from './routes/search.js';
 import legalRoutes from './routes/legal.js';
+import importRoutes from './routes/imports.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -85,6 +86,7 @@ await app.register(settingsRoutes);
 await app.register(libraryRoutes);
 await app.register(searchRoutes);
 await app.register(legalRoutes);
+await app.register(importRoutes);
 
 await migrate();
 await ensureAdmin();

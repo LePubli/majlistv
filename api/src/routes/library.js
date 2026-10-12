@@ -15,12 +15,13 @@ const isCompleted = (pos, dur) => dur > 0 && pos >= Math.min(dur * 0.95, dur - 3
 const MIN_RESUME_MS = 5000;
 
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category,
-  t.duration_seconds AS "durationSeconds", t.poster_key`;
+  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb`;
 
 async function cards(rows) {
   for (const r of rows) {
-    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : null;
+    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
     delete r.poster_key;
+    delete r.external_thumb;
     if (r.source === 'upload') delete r.video_ref; // clé de stockage interne
   }
   return rows;
@@ -59,7 +60,7 @@ export default async function libraryRoutes(app) {
   app.put('/me/progress/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { positionMs, durationMs } = progressSchema.parse(req.body);
-    const talk = await pool.query("SELECT duration_seconds FROM talks WHERE id = $1 AND source = 'upload'", [id]);
+    const talk = await pool.query('SELECT duration_seconds FROM talks WHERE id = $1', [id]);
     if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
     // La durée connue du serveur fait foi (le navigateur peut envoyer 0 pendant le chargement).
     const dur = durationMs || Math.round((talk.rows[0].duration_seconds || 0) * 1000);

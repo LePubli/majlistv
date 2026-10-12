@@ -144,7 +144,7 @@ export default async function settingsRoutes(app) {
     const [tr, ins, tx, subs] = await Promise.all([
       q("SELECT status, count(*)::int AS n FROM transcript_translations GROUP BY status"),
       q("SELECT status, count(*)::int AS n FROM talk_insights GROUP BY status"),
-      q("SELECT transcript_status AS status, count(*)::int AS n FROM talks WHERE source = 'upload' GROUP BY transcript_status"),
+      q("SELECT transcript_status AS status, count(*)::int AS n FROM talks WHERE source = 'upload' OR rights_confirmed GROUP BY transcript_status"),
       q("SELECT status, count(*)::int AS n FROM subscriptions GROUP BY status"),
     ]);
     const toMap = (rows) => Object.fromEntries(rows.map((r) => [r.status, r.n]));
