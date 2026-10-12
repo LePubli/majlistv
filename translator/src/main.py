@@ -3,6 +3,9 @@
 Prend les demandes de traduction (table transcript_translations, statut 'pending') des conférences
 dont la transcription est prête, traduit les segments par paquets avec l'API Claude et enregistre le
 résultat dans transcript_segments (lang = langue cible, mêmes horodatages que l'original).
+Deux moteurs au choix (TRANSLATE_PROVIDER) : « claude » (API Claude, meilleure qualité) ou « azure »
+(Azure AI Translator, offre gratuite de 2 millions de caractères par mois). TRANSLATE_CLAUDE_LANGS permet de
+garder Claude pour certaines langues cibles même quand Azure est le moteur par défaut.
 Le lecteur et le panneau de transcription affichent ensuite la nouvelle langue sans autre changement.
 """
 import json
@@ -28,15 +31,47 @@ def env(key, default=None, required=False):
 
 
 DATABASE_URL = env("DATABASE_URL", required=True)
-API_KEY = env("ANTHROPIC_API_KEY", required=True)
+PROVIDER = env("TRANSLATE_PROVIDER", "claude").strip().lower()  # claude | azure | deepseek
+
+
+def lang_set(key):
+    return {x.strip().lower() for x in env(key, "").split(",") if x.strip()}
+
+
+# Mode hybride : langues cibles forcées vers un moteur précis, quel que soit TRANSLATE_PROVIDER.
+OVERRIDES = {"claude": lang_set("TRANSLATE_CLAUDE_LANGS"), "azure": lang_set("TRANSLATE_AZURE_LANGS"),
+             "deepseek": lang_set("TRANSLATE_DEEPSEEK_LANGS")}
+CLAUDE_LANGS = OVERRIDES["claude"]
+API_KEY = env("ANTHROPIC_API_KEY", "")
 API_URL = env("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
 MODEL = env("CLAUDE_MODEL", "claude-haiku-5-5")  # claude-sonnet-5-5 : qualité supérieure, coût plus élevé
-CHUNK_SEGMENTS = int(env("TRANSLATE_CHUNK_SEGMENTS", "40"))  # segments par appel
+AZURE_KEY = env("AZURE_TRANSLATOR_KEY", "")
+AZURE_REGION = env("AZURE_TRANSLATOR_REGION", "")  # obligatoire pour une ressource régionale (ex. francecentral)
+AZURE_ENDPOINT = env("AZURE_TRANSLATOR_ENDPOINT", "https://api.cognitive.microsofttranslator.com").rstrip("/")
+# Offre gratuite F0 : 2 M de caractères par heure au maximum (≈ 33 300 par minute). 0 = pas de limitation (offre payante S1).
+AZURE_CHARS_PER_MIN = int(env("AZURE_CHARS_PER_MINUTE", "30000"))
+CHUNK_SEGMENTS = int(env("TRANSLATE_CHUNK_SEGMENTS", "40"))  # segments par appel Claude
 CHUNK_CHARS = int(env("TRANSLATE_CHUNK_CHARS", "3000"))
+AZURE_CHUNK_SEGMENTS = 200  # Azure : 1000 éléments et 50 000 caractères maximum par requête
+AZURE_CHUNK_CHARS = 10000
+DEEPSEEK_KEY = env("DEEPSEEK_API_KEY", "")
+DEEPSEEK_URL = env("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
+DEEPSEEK_MODEL = env("DEEPSEEK_MODEL", "deepseek-flash")  # nom à vérifier dans la doc DeepSeek (api-docs.deepseek.com)
+DEEPSEEK_CHUNK_SEGMENTS = int(env("DEEPSEEK_CHUNK_SEGMENTS", "40"))
+DEEPSEEK_CHUNK_CHARS = int(env("DEEPSEEK_CHUNK_CHARS", "3000"))
 MAX_CHARS = int(env("TRANSLATE_MAX_CHARS", "600000"))  # garde-fou de coût : au-delà, la traduction est refusée
 POLL = int(env("POLL_SECONDS", "10"))
 MAX_ATTEMPTS = 3
 API_RETRIES = 5
+
+if PROVIDER not in ("claude", "azure", "deepseek"):
+    print("TRANSLATE_PROVIDER doit valoir « claude », « azure » ou « deepseek ».", flush=True)
+    sys.exit(1)
+USED = {PROVIDER} | {name for name, langs in OVERRIDES.items() if langs}  # moteurs réellement utilisés
+for engine_name, var in (("claude", "ANTHROPIC_API_KEY"), ("azure", "AZURE_TRANSLATOR_KEY"), ("deepseek", "DEEPSEEK_API_KEY")):
+    if engine_name in USED and not os.environ.get(var):
+        print(f"Variable manquante : {var}", flush=True)
+        sys.exit(1)
 
 # Noms des langues donnés au modèle. Ajouter une langue = ajouter une ligne ici ET dans api/src/langs.js.
 LANG_NAMES = {
@@ -200,21 +235,150 @@ def call_claude(src_name, dst_name, segments, context):
     raise RuntimeError(f"API Claude indisponible : {last}")
 
 
-def translate_chunk(src_name, dst_name, texts, context):
-    """Traduit un paquet ; revérifie le résultat (nombre de lignes, aucune ligne vide)."""
+def call_deepseek(src_name, dst_name, segments, context):
+    """Un appel DeepSeek (API compatible OpenAI, sortie JSON) : renvoie la liste des traductions."""
+    system = SYSTEM.format(src=src_name, dst=dst_name).replace(
+        "Output only through the submit_translations tool.",
+        'Output only a json object: {"translations": ["...", "..."]} with exactly one string per input segment.')
+    body = {
+        "model": DEEPSEEK_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": json.dumps(
+                {"source_language": src_name, "target_language": dst_name, "context": context, "segments": segments},
+                ensure_ascii=False)},
+        ],
+        "response_format": {"type": "json_object"},
+        "max_tokens": 8192,
+        "temperature": 0.2,
+        "stream": False,
+    }
+    headers = {"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"}
+    last = ""
+    for attempt in range(1, API_RETRIES + 1):
+        try:
+            r = requests.post(DEEPSEEK_URL, headers=headers, json=body, timeout=180)
+        except requests.RequestException as err:
+            last = f"réseau : {err}"
+        else:
+            if r.status_code == 200:
+                try:
+                    choice = r.json()["choices"][0]
+                    if choice.get("finish_reason") == "length":
+                        raise RuntimeError("Réponse tronquée : réduire DEEPSEEK_CHUNK_SEGMENTS")
+                    content = (choice["message"].get("content") or "").strip()
+                    if not content:  # DeepSeek renvoie parfois un contenu vide en mode JSON : on réessaie
+                        last = "réponse vide"
+                    else:
+                        out = json.loads(content).get("translations")
+                        if isinstance(out, list):
+                            return out
+                        last = "JSON sans champ translations"
+                except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+                    last = "réponse illisible"
+            else:
+                detail = ""
+                try:
+                    detail = r.json().get("error", {}).get("message", "")
+                except ValueError:
+                    pass
+                if r.status_code in (400, 401, 402, 403, 404, 422):
+                    hint = " (solde épuisé ?)" if r.status_code == 402 else ""
+                    raise FatalError(f"DeepSeek : HTTP {r.status_code}{hint} {detail}"[:300])
+                last = f"HTTP {r.status_code} {detail}"[:200]
+                if r.status_code in (429, 500, 502, 503, 504):
+                    retry_after = r.headers.get("retry-after")
+                    wait = float(retry_after) if retry_after and retry_after.replace(".", "", 1).isdigit() else 2 ** attempt * 2
+                    log(f"DeepSeek : {last}, nouvel essai dans {wait:.0f} s ({attempt}/{API_RETRIES})")
+                    time.sleep(min(wait, 120))
+                    continue
+                raise RuntimeError(f"DeepSeek : {last}")
+        log(f"DeepSeek : {last}, nouvel essai ({attempt}/{API_RETRIES})")
+        time.sleep(min(2 ** attempt, 30))
+    raise RuntimeError(f"DeepSeek indisponible : {last}")
+
+
+def pace(started, chars):
+    """Respecte le débit de l'offre gratuite Azure en espaçant les appels."""
+    if AZURE_CHARS_PER_MIN > 0 and chars:
+        wait = chars * 60 / AZURE_CHARS_PER_MIN - (time.time() - started)
+        if wait > 0:
+            time.sleep(wait)
+
+
+def call_azure(src, dst, texts):
+    """Un appel Azure AI Translator (v3) : une traduction par texte, même ordre."""
+    params = {"api-version": "3.0", "to": dst, "textType": "plain"}
+    if src:
+        params["from"] = src
+    headers = {"Ocp-Apim-Subscription-Key": AZURE_KEY, "Content-Type": "application/json; charset=UTF-8"}
+    if AZURE_REGION:
+        headers["Ocp-Apim-Subscription-Region"] = AZURE_REGION
+    body = [{"Text": t} for t in texts]
+    last = ""
+    for attempt in range(1, API_RETRIES + 1):
+        try:
+            r = requests.post(f"{AZURE_ENDPOINT}/translate", params=params, headers=headers, json=body, timeout=120)
+        except requests.RequestException as err:
+            last = f"réseau : {err}"
+        else:
+            if r.status_code == 200:
+                try:
+                    return [item["translations"][0]["text"] for item in r.json()]
+                except (ValueError, KeyError, IndexError, TypeError):
+                    raise RuntimeError("Réponse Azure illisible")
+            detail = ""
+            try:
+                detail = r.json().get("error", {}).get("message", "")
+            except ValueError:
+                pass
+            if r.status_code in (400, 401, 403, 404):
+                hint = " (quota gratuit épuisé ?)" if r.status_code == 403 else ""
+                raise FatalError(f"Azure Translator : HTTP {r.status_code}{hint} {detail}"[:300])
+            last = f"HTTP {r.status_code} {detail}"[:200]
+            if r.status_code in (408, 429, 500, 502, 503, 504):
+                retry_after = r.headers.get("retry-after")
+                wait = float(retry_after) if retry_after and retry_after.replace(".", "", 1).isdigit() else min(2 ** attempt * 5, 60)
+                log(f"Azure Translator : {last}, nouvel essai dans {wait:.0f} s ({attempt}/{API_RETRIES})")
+                time.sleep(min(wait, 120))
+                continue
+            raise RuntimeError(f"Azure Translator : {last}")
+        log(f"Azure Translator : {last}, nouvel essai ({attempt}/{API_RETRIES})")
+        time.sleep(2 ** attempt)
+    raise RuntimeError(f"Azure Translator indisponible : {last}")
+
+
+def translate_chunk_azure(src, dst, texts):
+    out = call_azure(src, dst, texts)
+    if len(out) != len(texts) or not all(isinstance(x, str) and x.strip() for x in out):
+        raise RuntimeError(f"Azure a renvoyé {len(out)} traductions pour {len(texts)} segments (ou des lignes vides)")
+    return [x.strip() for x in out]
+
+
+def provider_for(lang):
+    """Moteur utilisé pour une langue cible."""
+    for name, langs in OVERRIDES.items():
+        if lang in langs:
+            return name
+    return PROVIDER
+
+
+def translate_chunk(src_name, dst_name, texts, context, engine="claude"):
+    """Traduit un paquet (Claude ou DeepSeek) ; revérifie le résultat (nombre de lignes, aucune ligne vide)."""
+    call = call_deepseek if engine == "deepseek" else call_claude
     for attempt in range(1, 4):
-        out = call_claude(src_name, dst_name, texts, context)
+        out = call(src_name, dst_name, texts, context)
         if len(out) == len(texts) and all(isinstance(x, str) and x.strip() for x in out):
             return [x.strip() for x in out]
         log(f"Réponse incohérente ({len(out)} lignes pour {len(texts)}), nouvel essai ({attempt}/3)")
     raise RuntimeError("Le modèle n'a pas renvoyé autant de traductions que de segments")
 
 
-def chunks(rows):
+def chunks(rows, max_segments, max_chars):
     """Découpe les segments en paquets limités en nombre et en caractères."""
     batch, size = [], 0
     for row in rows:
-        if batch and (len(batch) >= CHUNK_SEGMENTS or size + len(row["text"]) > CHUNK_CHARS):
+        if batch and (len(batch) >= max_segments or size + len(row["text"]) > max_chars):
             yield batch
             batch, size = [], 0
         batch.append(row)
@@ -255,15 +419,25 @@ def process(job):
         total_chars = sum(len(s["text"]) for s in segs)
         if total_chars > MAX_CHARS:
             raise FatalError(f"Transcription trop longue ({total_chars} caractères, limite {MAX_CHARS})")
-        log(f"{tag} début : {len(segs)} segments, {total_chars} caractères ({src_name} → {dst_name}, modèle {MODEL})")
+        engine = provider_for(lang)
+        limits = {"azure": (AZURE_CHUNK_SEGMENTS, AZURE_CHUNK_CHARS),
+                  "deepseek": (DEEPSEEK_CHUNK_SEGMENTS, DEEPSEEK_CHUNK_CHARS)}.get(engine, (CHUNK_SEGMENTS, CHUNK_CHARS))
+        label = {"azure": "Azure Translator", "deepseek": f"DeepSeek {DEEPSEEK_MODEL}"}.get(engine, f"modèle {MODEL}")
+        log(f"{tag} début : {len(segs)} segments, {total_chars} caractères ({src_name} → {dst_name}, {label})")
 
         started, done, out_rows, context = time.time(), 0, [], []
-        for batch in chunks(segs):
+        for batch in chunks(segs, *limits):
             if stopping:
                 raise Cancelled()
             if not still_wanted(talk_id, lang):
                 raise Cancelled()
-            translated = translate_chunk(src_name, dst_name, [s["text"] for s in batch], context)
+            texts = [s["text"] for s in batch]
+            if engine == "azure":
+                call_started = time.time()
+                translated = translate_chunk_azure(source or None, lang, texts)
+                pace(call_started, sum(len(x) for x in texts))
+            else:
+                translated = translate_chunk(src_name, dst_name, texts, context, engine)
             for seg, text in zip(batch, translated):
                 out_rows.append((talk_id, lang, seg["idx"], seg["start_ms"], seg["end_ms"], text))
             context = [{"source": s["text"], "translation": t} for s, t in zip(batch[-3:], translated[-3:])]
@@ -311,7 +485,7 @@ def process(job):
 # --- Santé, arrêt propre, boucle principale ------------------------------------------------------
 class Health(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
-        body = json.dumps({"status": "ok", "model": MODEL, "current": current, "lastOk": last_ok}).encode()
+        body = json.dumps({"status": "ok", "provider": PROVIDER, "overrides": {k: sorted(v) for k, v in OVERRIDES.items() if v}, "model": MODEL, "current": current, "lastOk": last_ok}).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
         self.end_headers()
@@ -347,7 +521,8 @@ def main():
         except Exception as err:  # noqa: BLE001
             log("Base pas prête (migration 006 appliquée ?) :", err)
             time.sleep(POLL)
-    log(f"Traducteur prêt (modèle {MODEL}).")
+    extra = "; ".join(f"{k} pour {','.join(sorted(v))}" for k, v in OVERRIDES.items() if v)
+    log(f"Traducteur prêt (moteur par défaut {PROVIDER}{'; ' + extra if extra else ''}).")
 
     while not stopping:
         job = None

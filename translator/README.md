@@ -43,15 +43,42 @@ docker update --cpus 0.5 --memory 256m --memory-swap 256m $(docker ps -aq --filt
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `DATABASE_URL` | obligatoire | même base que l'API (mot de passe avec `@` : écrire `%40`) |
-| `ANTHROPIC_API_KEY` | obligatoire | clé API Anthropic. **Jamais dans Git, jamais dans un chat** |
+| `TRANSLATE_PROVIDER` | `claude` | moteur par défaut : `claude`, `azure` ou `deepseek` |
+| `ANTHROPIC_API_KEY` | si moteur `claude` ou langues forcées | clé API Anthropic. **Jamais dans Git, jamais dans un chat** |
 | `CLAUDE_MODEL` | `claude-haiku-5-5` | modèle de traduction. `claude-sonnet-5-5` : meilleure qualité (arabe, vocabulaire spécialisé), plus cher |
 | `TRANSLATE_CHUNK_SEGMENTS` | `40` | segments traduits par appel (baisser si « réponse tronquée ») |
 | `TRANSLATE_CHUNK_CHARS` | `3000` | caractères maximum par appel |
 | `TRANSLATE_MAX_CHARS` | `600000` | **garde-fou de coût** : une transcription plus longue est refusée |
+| `AZURE_TRANSLATOR_KEY` | si moteur `azure` | clé 1 ou 2 de la ressource Azure |
+| `AZURE_TRANSLATOR_REGION` | — | région de la ressource (ex. `francecentral`) ; obligatoire pour une ressource régionale |
+| `AZURE_TRANSLATOR_ENDPOINT` | endpoint global | ne changer que pour un endpoint dédié |
+| `DEEPSEEK_API_KEY` | si moteur `deepseek` | clé API DeepSeek (platform.deepseek.com) |
+| `DEEPSEEK_MODEL` | `deepseek-flash` | nom du modèle ; à vérifier dans api-docs.deepseek.com si DeepSeek renomme ses modèles |
+| `DEEPSEEK_CHUNK_SEGMENTS` / `DEEPSEEK_CHUNK_CHARS` | `40` / `3000` | taille des paquets (baisser si « réponse tronquée ») |
+| `TRANSLATE_CLAUDE_LANGS` / `TRANSLATE_AZURE_LANGS` / `TRANSLATE_DEEPSEEK_LANGS` | vide | mode hybride : langues cibles forcées vers ce moteur (ex. `TRANSLATE_CLAUDE_LANGS=ar,ur`). Les clés des moteurs utilisés doivent exister |
+| `AZURE_CHARS_PER_MINUTE` | `30000` | débit max vers Azure (limite F0 ≈ 33 300/min), `0` = aucune limite |
 | `POLL_SECONDS` | `10` | fréquence de recherche de nouvelles demandes |
 | `ANTHROPIC_API_URL` | API officielle | pour les tests locaux avec la fausse API |
 
 Changer de modèle = modifier la variable puis Deploy Now. Les traductions déjà faites ne sont pas refaites (voir Debug pour les relancer).
+
+## Moteur Azure AI Translator (gratuit jusqu'à 2 M caractères/mois)
+1. Portail Azure → Créer une ressource → **Translator** → niveau tarifaire **Free F0** (une seule F0 par abonnement) → créer.
+2. Ressource → *Clés et point de terminaison* : copier **Clé 1** et la **Région**.
+3. Dans DockPanel, variables de `majlistv-translator` : `TRANSLATE_PROVIDER=azure`, `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION`. Save puis Deploy.
+4. **Hybride recommandé** : ajouter `TRANSLATE_CLAUDE_LANGS=ar` et `ANTHROPIC_API_KEY` ; l'arabe (où la qualité compte le plus) passe par Claude, le reste par Azure.
+
+Bon à savoir : Azure traduit segment par segment sans contexte, donc qualité inférieure à Claude (surtout arabe, vocabulaire religieux/spécialisé). Environ 50 000 caractères par heure de conférence et par langue : ~40 heures-langues/mois gratuites. Quota épuisé = erreur HTTP 403 (« quota gratuit épuisé ? ») : la traduction passe en `failed`, relançable depuis l'interface le mois suivant ou en repassant sur Claude. Si Azure ne supprime pas de blocage, repasser `TRANSLATE_PROVIDER=claude` suffit (aucune perte de données).
+
+## Moteur DeepSeek (API payante, très économique)
+1. Créer un compte sur platform.deepseek.com, recharger un petit solde, créer une clé API.
+2. DockPanel, variables de `majlistv-translator` : `TRANSLATE_PROVIDER=deepseek` et `DEEPSEEK_API_KEY` (clé uniquement dans DockPanel). Save puis Deploy.
+3. Qualité : modèle de langage avec contexte, donc meilleur qu'Azure, probablement un peu en dessous de Claude en arabe (à tester).
+4. Confidentialité : les textes sont envoyés à des serveurs en Chine. Conférences publiques : acceptable ; contenus privés : à éviter.
+5. Erreur HTTP 402 = solde épuisé (traduction `failed`, relançable après recharge). Un contenu vide occasionnel de l'API en mode JSON est réessayé automatiquement.
+
+### Combiner les moteurs
+Exemples (dans DockPanel) : `TRANSLATE_PROVIDER=azure` + `TRANSLATE_CLAUDE_LANGS=ar` (arabe par Claude, reste gratuit par Azure) ; ou `TRANSLATE_PROVIDER=deepseek` + `TRANSLATE_CLAUDE_LANGS=ar`. Changer de moteur n'efface rien : seules les nouvelles traductions utilisent le nouveau moteur.
 
 ## Lancement et vérification
 ```bash
