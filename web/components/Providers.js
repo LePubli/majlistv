@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-export default function Providers({ locale, dict, appName, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -35,5 +35,5 @@ export default function Providers({ locale, dict, appName, children }) {
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); };
 
-  return <Ctx.Provider value={{ locale, t, appName, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t, appName, trialDays, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
 }

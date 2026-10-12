@@ -169,8 +169,8 @@ export default function TalkPage() {
           <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
         </button>
       </div>
-      <p className="meta">{talk.speaker} · {talk.language}{talk.category ? ` · ${talk.category}` : ''} · {t(talk.access)}
-        {talk.durationSeconds ? ` · ${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
+      <p className="meta">{[talk.speaker, talk.language, talk.category, t(talk.access),
+        talk.durationSeconds ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''].filter(Boolean).join(' · ')}</p>
       <p>{talk.description}</p>
       {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
       {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}

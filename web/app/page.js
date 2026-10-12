@@ -6,7 +6,7 @@ import TalkCard from '../components/TalkCard';
 import SearchHit from '../components/SearchHit';
 
 export default function Home() {
-  const { t, appName, user, call } = useApp();
+  const { t, trialDays, user, call } = useApp();
   const [talks, setTalks] = useState(null);
   const [res, setRes] = useState(null); // résultats de recherche (avec extraits et passages)
   const [cats, setCats] = useState([]);
@@ -37,9 +37,14 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <h1>{appName}</h1>
-        <p>{t('tagline')}</p>
-        {!user && <Link href="/register" className="btn">{t('register')}</Link>}
+        <p className="eyebrow">{t('heroEyebrow')}</p>
+        <h1>{t('heroTitle')}</h1>
+        <p>{t('heroText')}</p>
+        <div className="hero-cta">
+          {!user && <Link href="/register" className="btn btn-lg">{trialDays > 0 ? t('heroCta') : t('register')}</Link>}
+          <Link href="/pricing" className="btn ghost btn-lg">{t('pricing')}</Link>
+        </div>
+        {!user && trialDays > 0 && <p className="hero-note">{t('heroNote').replace('{n}', trialDays)}</p>}
       </section>
       {cont.length > 0 && !q && !cat && (
         <section className="continue">

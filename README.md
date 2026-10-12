@@ -1,6 +1,6 @@
-# Majlis TV — Étape 1A : socle (API + authentification)
+# Mejliss TV
 
-Nom provisoire : « Majlis TV » (modifiable via `APP_NAME`).
+Nom : « Mejliss TV » (modifiable dans Admin → Paramètres → Général).
 
 ## Description
 Plateforme de conférences vidéo à la demande. Cette étape fournit une API Node.js (Fastify) + PostgreSQL :
@@ -341,3 +341,12 @@ python3 api/tests/fake_archive.py 5600 chemin/vers/video.mp4 &
 # API et transcripteur factice lancés avec ARCHIVE_BASE_URL=http://127.0.0.1:5600
 python3 api/tests/test_archive.py
 ```
+
+## Étape 10.1 : nouvelle apparence Mejliss TV
+- Nom définitif **Mejliss TV**. La migration `015_brand.sql` remplace l'ancien nom « Majlis TV » enregistré dans le back-office. Un nom personnalisé différent est conservé. Le nom reste modifiable dans Admin → Paramètres → Général.
+- Couleurs du logo : fond `#0B0906`, or `#E6A739` / `#F7C863`, bronze `#BD7E2A`, crème `#FCF7F0`. Toutes les couleurs sont des variables CSS en tête de `web/app/globals.css`.
+- Polices **auto-hébergées** : Montserrat (titres), DM Sans (texte), Noto Kufi Arabic et Noto Sans Arabic (arabe). Paquets `@fontsource-variable/*` en versions fixes. Aucun appel à Google Fonts, donc rien à déclarer pour le RGPD.
+- En-tête collant avec emblème et logotype, navigation qui défile sur mobile, sélecteur de langue. Pied de page avec la marque. Favicon et icône iPhone tirés de l'emblème (`public/favicon.png`, `public/apple-touch-icon.png`).
+- Accueil : nouveau bandeau (« Le savoir, à la demande. »), bouton d'essai et mention « N jours offerts ». N vient du réglage `trial_days`, désormais exposé par `GET /config` ; sans essai, la mention disparaît.
+- Prix : toujours lus dans Stripe (6,99 €/mois, 69,99 €/an). « 2 mois offerts » est calculé automatiquement.
+- Les e-mails avaient déjà la charte (étape 9).

@@ -9,7 +9,7 @@ const required = (key) => {
 };
 
 export const config = {
-  appName: process.env.APP_NAME || 'Majlis TV', // nom provisoire, modifiable dans .env
+  appName: process.env.APP_NAME || 'Mejliss TV', // modifiable dans Admin → Paramètres
   port: Number(process.env.PORT || 3000),
   databaseUrl: required('DATABASE_URL'),
   jwtSecret: required('JWT_SECRET'),

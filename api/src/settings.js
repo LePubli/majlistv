@@ -18,7 +18,7 @@ export const GROUPS = [
 const PROVIDERS = ['claude', 'azure', 'deepseek'];
 // type : text | secret | number | bool | select | langs | url
 export const FIELDS = [
-  { key: 'app_name', group: 'general', type: 'text', label: 'Nom du site', env: 'APP_NAME', def: 'Majlis TV' },
+  { key: 'app_name', group: 'general', type: 'text', label: 'Nom du site', env: 'APP_NAME', def: 'Mejliss TV' },
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',
     help: 'Utilisée pour le retour après paiement (ex. https://majlisstv.le-publicitaire.fr).' },
   { key: 'preview_seconds', group: 'general', type: 'number', label: "Aperçu gratuit des conférences premium (secondes)", env: 'PREVIEW_SECONDS', def: '120', min: 0, max: 1800 },

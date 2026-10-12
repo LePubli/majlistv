@@ -1,4 +1,9 @@
 import { cookies } from 'next/headers';
+// Polices auto-hébergées (fichiers servis par le site, aucun appel à Google Fonts : conforme RGPD).
+import '@fontsource-variable/montserrat';
+import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/noto-kufi-arabic';
+import '@fontsource-variable/noto-sans-arabic';
 import './globals.css';
 import Providers from '../components/Providers';
 import Header from '../components/Header';
@@ -6,24 +11,28 @@ import Footer from '../components/Footer';
 import { DICT, DIR, getLocale } from '../lib/i18n';
 
 export const dynamic = 'force-dynamic';
-// Nom du site : réglé dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
-async function siteName() {
+// Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
+async function siteConfig() {
   try {
     const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
     const c = await res.json();
-    if (c.appName) return c.appName;
-  } catch { /* API injoignable : valeur de secours */ }
-  return process.env.APP_NAME || 'Majlis TV';
+    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0 };
+  } catch { /* API injoignable : valeurs de secours */ }
+  return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
-export const generateMetadata = async () => ({ title: await siteName(), icons: { icon: '/favicon.svg' } });
+export const generateMetadata = async () => ({
+  title: (await siteConfig()).appName,
+  icons: { icon: [{ url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' },
+});
+export const viewport = { themeColor: '#0B0906', width: 'device-width', initialScale: 1 };
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const appName = await siteName();
+  const { appName, trialDays } = await siteConfig();
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
-        <Providers locale={locale} dict={DICT[locale]} appName={appName}>
+        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays}>
           <Header />
           {children}
           <Footer />

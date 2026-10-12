@@ -2,7 +2,19 @@
   "name": "majlis-tv-web",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "next dev -p 3001", "build": "next build", "start": "next start" },
-  "dependencies": { "hls.js": "1.5.20",
-    "next": "14.2.35", "react": "18.3.1", "react-dom": "18.3.1" }
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/montserrat": "5.3.0",
+    "@fontsource-variable/noto-kufi-arabic": "5.3.0",
+    "@fontsource-variable/noto-sans-arabic": "5.3.0",
+    "hls.js": "1.5.20",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
 }

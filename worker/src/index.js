@@ -1,4 +1,4 @@
-// Worker Majlis TV : convertit les vidéos envoyées (talks.video_status = 'pending') en HLS.
+// Worker Mejliss TV : convertit les vidéos envoyées (talks.video_status = 'pending') en HLS.
 import http from 'node:http';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';

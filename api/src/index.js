@@ -1,4 +1,4 @@
-// Point d'entrée de l'API Majlis TV.
+// Point d'entrée de l'API Mejliss TV.
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -73,7 +73,7 @@ app.get('/health', async () => {
 });
 
 // Configuration publique (nom de l'application) utilisée par les front-ends.
-app.get('/config', async () => ({ appName: await getSetting('app_name') }));
+app.get('/config', async () => ({ appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0 }));
 
 await app.register(authRoutes);
 await app.register(adminRoutes);
