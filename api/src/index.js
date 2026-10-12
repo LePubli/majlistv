@@ -21,6 +21,7 @@ import libraryRoutes from './routes/library.js';
 import searchRoutes from './routes/search.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
+import studioContentRoutes from './routes/studio_content.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -87,6 +88,7 @@ await app.register(libraryRoutes);
 await app.register(searchRoutes);
 await app.register(legalRoutes);
 await app.register(importRoutes);
+await app.register(studioContentRoutes);
 
 await migrate();
 await ensureAdmin();

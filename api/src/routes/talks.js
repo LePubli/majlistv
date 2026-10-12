@@ -109,12 +109,41 @@ export default async function talksRoutes(app) {
   app.post('/categories', { preHandler: app.requireRole('admin') }, async (req, reply) => {
     const { name } = z.object({ name: z.string().trim().min(1).max(60) }).parse(req.body);
     try {
+      if ((await pool.query('SELECT 1 FROM categories WHERE lower(name) = lower($1)', [name])).rowCount) return reply.code(409).send({ error: 'Catégorie déjà existante' });
       const { rows } = await pool.query('INSERT INTO categories(name) VALUES ($1) RETURNING id, name', [name]);
       return reply.code(201).send(rows[0]);
     } catch (err) {
       if (err.code === '23505') return reply.code(409).send({ error: 'Catégorie déjà existante' });
       throw err;
     }
+  });
+
+  // Gestion des catégories (admin) : liste avec nombre de conférences, renommer, supprimer.
+  const admin = { preHandler: app.requireRole('admin') };
+  const catId = z.object({ id: z.coerce.number().int().positive() });
+  const catName = z.object({ name: z.string().trim().min(1).max(60) });
+
+  app.get('/categories/stats', admin, async () => (await pool.query(
+    `SELECT c.id, c.name, count(t.id)::int AS count FROM categories c LEFT JOIN talks t ON t.category_id = c.id
+     GROUP BY c.id ORDER BY c.name`)).rows);
+
+  app.patch('/categories/:id', admin, async (req, reply) => {
+    const { id } = catId.parse(req.params);
+    const { name } = catName.parse(req.body);
+    const dup = await pool.query('SELECT 1 FROM categories WHERE lower(name) = lower($1) AND id <> $2', [name, id]);
+    if (dup.rowCount) return reply.code(409).send({ error: 'Une catégorie porte déjà ce nom' });
+    const { rows } = await pool.query('UPDATE categories SET name = $2 WHERE id = $1 RETURNING id, name', [id, name]);
+    if (!rows[0]) return reply.code(404).send({ error: 'Catégorie introuvable' });
+    return rows[0]; // la recherche se met à jour seule (la signature d'indexation contient le nom)
+  });
+
+  // Les conférences de la catégorie supprimée restent en ligne, simplement sans catégorie.
+  app.delete('/categories/:id', admin, async (req, reply) => {
+    const { id } = catId.parse(req.params);
+    const n = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE category_id = $1', [id])).rows[0].n;
+    const res = await pool.query('DELETE FROM categories WHERE id = $1', [id]);
+    if (!res.rowCount) return reply.code(404).send({ error: 'Catégorie introuvable' });
+    return { deleted: id, talksUncategorized: n };
   });
 
   // Catalogue public avec recherche par mot-clé et filtre par catégorie.

@@ -31,7 +31,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 
 ### Phase B — Nouveau design (d'après les maquettes validées)
 
-**10. Studio de publication**
+**10. Studio de publication** — en cours : 10.1 apparence ✅, 10.2 Mes conférences ✅, 10.3 ajout en 2 étapes ✅, 10.4 modifier / brouillons / programmation / miniature ✅ (en ligne), 10.5 correction transcription-résumé-chapitres ✅ livré ; reste 10.6 fiche de suivi. Ajouté à la demande : gestion des catégories (ajouter, renommer, supprimer) ✅ livré
 - Renommage complet en **Mejliss TV** (logo, couleurs, polices Montserrat et DM Sans).
 - Espace de gestion avec menu latéral (Studio et Administration selon le rôle).
 - Mes conférences : filtres (En ligne, En traitement, À corriger, Brouillons), recherche, avancement des 4 étapes.
@@ -103,6 +103,10 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - Surveillance avec Uptime Kuma : alerte (e-mail ou téléphone) si un service tombe, si un conteneur redémarre en boucle ou si le disque dépasse 80 %.
 - Réseau Docker dédié `mejliss` entre l'API, Meilisearch et les services : plus de dépendance à une adresse IP qui change.
 - Rotation des secrets : mot de passe de la base (apparu dans une capture) et `GARAGE_RPC_SECRET`.
+
+## Idées mises de côté (à étudier plus tard, pas planifiées)
+- **Quiz sur la vidéo** : questions à choix multiples générées à partir de la transcription (relues et corrigées par l'organisateur dans le Studio), proposées après la lecture.
+- **Section « Cours » en quiz, par niveau** : parcours de quiz classés par niveau (débutant, intermédiaire, avancé), avec progression du visiteur.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

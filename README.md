@@ -408,3 +408,35 @@ Touche **l'API** (migration `016_publication.sql`, appliquée au démarrage), **
 git add -A && git commit -m "Étape 10.4 : édition, brouillons, programmation, miniature" && git push
 ```
 DockPanel : redéployer **api**, **worker** et **web** (l'API en premier, pour la migration), puis `/root/apply-limits.sh` et vérifier le port 7000 dans nginx pour l'API.
+
+## Étape 10.5 — Corriger la transcription, le résumé et les chapitres (+ gestion des catégories)
+
+Touche **l'API** (migration `017_content_edit.sql`) et **le web**. Le worker et les services transcriber / translator ne changent pas.
+
+### Corriger le contenu (`/studio/<id>/content`)
+Depuis la fiche d'une conférence : « Corriger la transcription » et « Corriger le résumé et les chapitres ».
+- **Transcription** : texte de chaque segment modifiable (horodatages inchangés), dans la langue d'origine **ou** dans une traduction. Recherche dans le texte, « Tout remplacer » (ex. un nom propre mal reconnu), annulation par segment, pagination par 100. Enregistrement en une fois ; on est averti si l'on quitte avec des modifications non enregistrées.
+- Après correction de la **langue d'origine**, deux cases (cochées par défaut) : *Refaire les sous-titres traduits* et *Régénérer le résumé et les chapitres*. Elles remettent ces éléments « en attente » : le service translator les refait tout seul à partir du texte corrigé (ce qui remplace leurs éventuelles modifications manuelles).
+- Les sous-titres WebVTT, la transcription affichée sous la vidéo et la recherche utilisent aussitôt le texte corrigé (la recherche se réindexe seule en moins de 15 s).
+- **Résumé et chapitres** : résumé, points clés, chapitres (heure `12:30` ou `1:02:30` + titre), par langue. Une case permet de retraduire le résumé corrigé dans les autres langues. Un résumé modifié à la main est marqué « modifié à la main ». Si la génération automatique a échoué, on peut écrire le résumé soi-même.
+
+### Catégories (Administration → Catégories)
+Ajouter, renommer, supprimer. Le nombre de conférences par catégorie est affiché. Supprimer une catégorie **ne supprime aucune conférence** : elles restent en ligne, sans catégorie. Un renommage met la recherche à jour automatiquement. Réservé aux administrateurs.
+
+### API
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET / PUT | `/talks/:id/studio/transcript` | lire / corriger les segments (`lang`, `changes[{idx,text}]`, `retranslate`, `regenerateInsights`) |
+| GET | `/talks/:id/studio/insights` | résumés de toutes les langues |
+| PUT | `/talks/:id/studio/insights/:lang` | `summary, keyPoints[], chapters[{ms,title}], translateOthers` |
+| GET | `/categories/stats` | catégories avec nombre de conférences (admin) |
+| PATCH / DELETE | `/categories/:id` | renommer / supprimer (admin) |
+
+### Tests
+`python3 api/tests/test_content_edit.py` (40 vérifications), `python3 api/tests/test_categories.py` (18), `python3 api/tests/test_publication.py` (43). Prérequis : API 3055 et PG de test 5544.
+
+### Déploiement
+```bash
+git add -A && git commit -m "Étape 10.5 : correction du contenu, catégories" && git push
+```
+DockPanel : redéployer **api** puis **web** (la migration 017 s'applique au démarrage de l'API), puis `/root/apply-limits.sh` et vérifier le port nginx de l'API.

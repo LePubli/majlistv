@@ -14,6 +14,7 @@ const ICONS = {
   users: 'M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19 12h2M3 12h2M12 3v2M12 19v2M17 7l1.4-1.4M5.6 18.4 7 17M17 17l1.4 1.4M5.6 5.6 7 7',
   doc: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+  tag: 'M3 12V4h8l9 9-8 8zM7.5 8.5h.01',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
   out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11',
 };
@@ -44,7 +45,7 @@ export default function StudioShell({ children }) {
     { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus]] },
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
-      ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
+      ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };

@@ -101,7 +101,7 @@ export default function ManageTalk() {
           ) : (
             <p className="meta small">
               {steps.transcript === 'run' && `${t('transcribing')}${steps.transcriptPct ? ` ${steps.transcriptPct} %` : ''}`}
-              {steps.transcript === 'ok' && `${langName(base(x.transcriptLanguage), locale)}${x.transcriptMethod ? ` · ${t('method_' + x.transcriptMethod)}` : ''}`}
+              {steps.transcript === 'ok' && <>{`${langName(base(x.transcriptLanguage), locale)}${x.transcriptMethod ? ` · ${t('method_' + x.transcriptMethod)}` : ''}`} <Link className="link u" href={`/studio/${x.id}/content?tab=transcript`}>{t('ctFixTranscript')}</Link></>}
               {steps.transcript === 'err' && <>{x.transcriptError || t('transcriptFailed')} <button className="link u" onClick={transcribe}>{t('retryTr')}</button></>}
               {steps.transcript === 'wait' && t('waitVideo')}
               {steps.transcript === 'none' && t('noSpeech')}
@@ -132,6 +132,7 @@ export default function ManageTalk() {
             {insErr && <span className="error"> {insErr}</span>}
             {!(x.insights || []).length && t('summaryAfter')}
             {['ok', 'err'].includes(steps.summary) && <> <button className="link u" onClick={regen}>{t('regenInsights')}</button></>}
+            {x.transcriptStatus === 'ready' && <> <Link className="link u" href={`/studio/${x.id}/content?tab=summary`}>{t('ctFixSummary')}</Link></>}
           </p>
         </Row>
       </ol>

@@ -380,6 +380,73 @@ function LegalPages() {
   );
 }
 
+/* ---------------------------------------------------------------- Catégories */
+function Categories() {
+  const { call } = useApp();
+  const [cats, setCats] = useState(null);
+  const [name, setName] = useState('');
+  const [editing, setEditing] = useState(null); // { id, name }
+  const [msg, setMsg] = useState(null);
+  const load = useCallback(() => call('/categories/stats').then((r) => r.ok && setCats(r.data)), [call]);
+  useEffect(() => { load(); }, [load]);
+
+  const done = (ok, text) => setMsg({ ok, text });
+  const add = async (e) => {
+    e.preventDefault();
+    const r = await call('/categories', { method: 'POST', body: JSON.stringify({ name }) });
+    if (r.ok) { setName(''); done(true, `Catégorie « ${r.data.name} » ajoutée.`); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+  const rename = async (e) => {
+    e.preventDefault();
+    const r = await call(`/categories/${editing.id}`, { method: 'PATCH', body: JSON.stringify({ name: editing.name }) });
+    if (r.ok) { setEditing(null); done(true, 'Catégorie renommée.'); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+  const remove = async (c) => {
+    const warn = c.count > 0
+      ? `Supprimer « ${c.name} » ? Ses ${c.count} conférence(s) resteront en ligne, mais sans catégorie.`
+      : `Supprimer la catégorie « ${c.name} » ?`;
+    if (!window.confirm(warn)) return;
+    const r = await call(`/categories/${c.id}`, { method: 'DELETE' });
+    if (r.ok) { done(true, `Catégorie « ${c.name} » supprimée.`); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+
+  return (
+    <section className="panel">
+      <p className="meta">Les catégories classent les conférences dans le catalogue, la recherche et le Studio. Supprimer une catégorie ne supprime jamais de conférence.</p>
+      <form className="cat-add" onSubmit={add}>
+        <input required maxLength={60} placeholder="Nouvelle catégorie (ex. Jurisprudence)" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom de la nouvelle catégorie" />
+        <button className="btn">+ Ajouter</button>
+      </form>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      {cats === null && <p className="meta">…</p>}
+      {cats && cats.length === 0 && <p className="meta">Aucune catégorie pour l'instant.</p>}
+      {cats && cats.length > 0 && (
+        <ul className="cat-list">
+          {cats.map((c) => (
+            <li key={c.id}>
+              {editing?.id === c.id ? (
+                <form className="cat-edit" onSubmit={rename}>
+                  <input autoFocus required maxLength={60} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Nouveau nom" />
+                  <button className="btn">Enregistrer</button>
+                  <button type="button" className="btn ghost" onClick={() => setEditing(null)}>Annuler</button>
+                </form>
+              ) : (
+                <>
+                  <span className="cat-name"><b>{c.name}</b><small className="meta">{c.count} conférence{c.count > 1 ? 's' : ''}</small></span>
+                  <span className="cat-actions">
+                    <button type="button" className="link u" onClick={() => { setMsg(null); setEditing({ id: c.id, name: c.name }); }}>Renommer</button>
+                    <button type="button" className="link u danger-link" onClick={() => remove(c)}>Supprimer</button>
+                  </span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
   const { user, ready } = useApp();
@@ -388,7 +455,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales', categories: 'Catégories' };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
@@ -396,6 +463,7 @@ export default function Admin() {
       {tab === 'users' && <Users me={user.id} />}
       {tab === 'settings' && <Settings />}
       {tab === 'legal' && <LegalPages />}
+      {tab === 'categories' && <Categories />}
     </main>
   );
 }

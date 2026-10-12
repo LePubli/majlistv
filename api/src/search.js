@@ -65,7 +65,7 @@ async function ensureIndex(c) {
 
 // Signature du contenu indexable : si elle change, la conférence est réindexée.
 const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t.access, t.category_id, c.name,
-  length(coalesce(t.transcript_text, '')),
+  length(coalesce(t.transcript_text, '')), extract(epoch FROM t.transcript_edited_at)::bigint,
   (SELECT count(*) FROM transcript_segments s WHERE s.talk_id = t.id),
   (SELECT string_agg(tr.lang || ':' || tr.status || ':' || extract(epoch FROM tr.updated_at)::bigint, ',' ORDER BY tr.lang)
      FROM transcript_translations tr WHERE tr.talk_id = t.id)))`;
