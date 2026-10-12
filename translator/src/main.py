@@ -57,6 +57,7 @@ AZURE_CHUNK_CHARS = 10000
 DEEPSEEK_KEY = env("DEEPSEEK_API_KEY", "")
 DEEPSEEK_URL = env("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
 DEEPSEEK_MODEL = env("DEEPSEEK_MODEL", "deepseek-flash")  # nom à vérifier dans la doc DeepSeek (api-docs.deepseek.com)
+DEEPSEEK_THINKING = env("DEEPSEEK_THINKING", "off").strip().lower() in ("on", "1", "true")  # off = recommandé pour traduire
 DEEPSEEK_CHUNK_SEGMENTS = int(env("DEEPSEEK_CHUNK_SEGMENTS", "40"))
 DEEPSEEK_CHUNK_CHARS = int(env("DEEPSEEK_CHUNK_CHARS", "3000"))
 MAX_CHARS = int(env("TRANSLATE_MAX_CHARS", "600000"))  # garde-fou de coût : au-delà, la traduction est refusée
@@ -253,6 +254,9 @@ def call_deepseek(src_name, dst_name, segments, context):
         "temperature": 0.2,
         "stream": False,
     }
+    if not DEEPSEEK_THINKING:
+        # deepseek-flash raisonne par défaut : sans cela, les jetons de réflexion consomment la réponse (contenu vide).
+        body["thinking"] = {"type": "disabled"}
     headers = {"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"}
     last = ""
     for attempt in range(1, API_RETRIES + 1):
