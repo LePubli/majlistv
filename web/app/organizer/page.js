@@ -29,7 +29,8 @@ export default function Organizer() {
   const load = useCallback(() => call('/me/talks').then((r) => r.ok && setMine(r.data)), [call]);
 
   // Rafraîchit la liste tant qu'une conversion est en cours.
-  const busyTr = (x) => (x.translations || []).some((tr) => ['pending', 'processing'].includes(tr.status));
+  const busyTr = (x) => (x.translations || []).some((tr) => ['pending', 'processing'].includes(tr.status))
+    || (x.insights || []).some((i) => ['pending', 'processing'].includes(i.status));
   const converting = mine.some((x) => ['pending', 'processing'].includes(x.status)
     || (x.status === 'ready' && ['pending', 'processing'].includes(x.transcriptStatus))
     || (x.transcriptStatus === 'ready' && busyTr(x)));
@@ -75,6 +76,8 @@ export default function Organizer() {
   const remove = async (id) => { await call('/talks/' + id, { method: 'DELETE' }); load(); };
   const addTr = async (id, lang) => { if (lang) { await call(`/talks/${id}/translations`, { method: 'POST', body: JSON.stringify({ lang }) }); load(); } };
   const removeTr = async (id, lang) => { await call(`/talks/${id}/translations/${lang}`, { method: 'DELETE' }); load(); };
+  const regenInsights = async (id) => { await call(`/talks/${id}/insights/regenerate`, { method: 'POST' }); load(); };
+  const insState = (x) => { const l = x.insights || []; return l.some((i) => i.status === 'failed') ? 'failed' : l.some((i) => ['pending', 'processing'].includes(i.status)) ? 'processing' : l.length ? 'ready' : 'pending'; };
   const trState = (tr) => (tr.status === 'ready' ? '✓' : tr.status === 'processing' ? `${tr.progress} %` : tr.status === 'failed' ? '⚠' : t('trWaiting'));
 
   if (!user) return null;
@@ -139,6 +142,10 @@ export default function Organizer() {
                       {['ready', 'failed'].includes(tr.status) && <button className="link" aria-label={t('removeTr')} title={t('removeTr')} onClick={() => removeTr(x.id, tr.lang)}>×</button>}
                     </span>
                   ))}
+                  <span className={`chip ${insState(x)}`} title={(x.insights || []).map((i) => i.error).filter(Boolean).join(' / ') || undefined}>
+                    {t('insightsLabel')} · {{ ready: '✓', failed: '⚠', processing: '…', pending: t('trWaiting') }[insState(x)]}
+                    {['ready', 'failed'].includes(insState(x)) && <button className="link" onClick={() => regenInsights(x.id)}>{t('regenInsights')}</button>}
+                  </span>
                   <select value="" onChange={(e) => addTr(x.id, e.target.value)} aria-label={t('addLang')}>
                     <option value="">{t('addLang')}</option>
                     {TR_LANGS.filter((c) => c !== srcLang(x.transcriptLanguage || x.language) && !(x.translations || []).some((tr) => tr.lang === c))

@@ -43,4 +43,24 @@ export default async function transcriptRoutes(app) {
     if (!data || !data.segments.length) return reply.code(404).send({ error: 'Introuvable' });
     return reply.header('content-type', 'text/vtt; charset=utf-8').header('cache-control', 'private, max-age=300').send(toVtt(data.segments));
   });
+
+  // Résumé, points clés et chapitres (même jeton de lecture que la transcription).
+  app.get('/talks/:id/insights', async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { lang, t } = z.object({ lang: z.string().regex(langRe).optional(), t: z.string().optional() }).parse(req.query);
+    if (!checkPlaybackToken(id, t)) return reply.code(403).send({ error: 'Accès refusé' });
+    const { rows } = await pool.query(
+      "SELECT lang, summary, key_points, chapters FROM talk_insights WHERE talk_id = $1 AND status = 'ready' ORDER BY lang", [id]
+    );
+    if (!rows.length) return { lang: null, languages: [], summary: '', keyPoints: [], chapters: [] };
+    // Langue demandée, sinon la première disponible (la langue d'origine arrive toujours en premier dans la file).
+    const row = rows.find((r) => r.lang === lang) || rows[0];
+    return {
+      lang: row.lang,
+      languages: rows.map((r) => r.lang),
+      summary: row.summary,
+      keyPoints: row.key_points,
+      chapters: row.chapters.map((c) => ({ s: c.ms, t: c.title })),
+    };
+  });
 }

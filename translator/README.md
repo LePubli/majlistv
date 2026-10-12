@@ -54,6 +54,7 @@ docker update --cpus 0.5 --memory 256m --memory-swap 256m $(docker ps -aq --filt
 | `AZURE_TRANSLATOR_ENDPOINT` | endpoint global | ne changer que pour un endpoint dédié |
 | `DEEPSEEK_API_KEY` | si moteur `deepseek` | clé API DeepSeek (platform.deepseek.com) |
 | `DEEPSEEK_MODEL` | `deepseek-flash` | nom du modèle ; à vérifier dans api-docs.deepseek.com si DeepSeek renomme ses modèles |
+| `DEEPSEEK_THINKING` | `off` | `off` désactive le mode « réflexion » de DeepSeek (indispensable : sinon réponses vides ou trop lentes/chères) |
 | `DEEPSEEK_CHUNK_SEGMENTS` / `DEEPSEEK_CHUNK_CHARS` | `40` / `3000` | taille des paquets (baisser si « réponse tronquée ») |
 | `TRANSLATE_CLAUDE_LANGS` / `TRANSLATE_AZURE_LANGS` / `TRANSLATE_DEEPSEEK_LANGS` | vide | mode hybride : langues cibles forcées vers ce moteur (ex. `TRANSLATE_CLAUDE_LANGS=ar,ur`). Les clés des moteurs utilisés doivent exister |
 | `AZURE_CHARS_PER_MINUTE` | `30000` | débit max vers Azure (limite F0 ≈ 33 300/min), `0` = aucune limite |
@@ -79,6 +80,23 @@ Bon à savoir : Azure traduit segment par segment sans contexte, donc qualité i
 
 ### Combiner les moteurs
 Exemples (dans DockPanel) : `TRANSLATE_PROVIDER=azure` + `TRANSLATE_CLAUDE_LANGS=ar` (arabe par Claude, reste gratuit par Azure) ; ou `TRANSLATE_PROVIDER=deepseek` + `TRANSLATE_CLAUDE_LANGS=ar`. Changer de moteur n'efface rien : seules les nouvelles traductions utilisent le nouveau moteur.
+
+## Résumé, points clés et chapitres (étape 3D)
+Le même conteneur génère, pour chaque conférence dont la transcription est prête :
+- un **résumé** (3 à 6 phrases), 4 à 8 **points clés** et des **chapitres** horodatés (un tous les 4 à 10 minutes) dans la langue d'origine, en un seul appel IA qui lit toute la transcription ;
+- puis, pour chaque langue de sous-titres prête, une **traduction** de ce résumé (mêmes chapitres, mêmes instants).
+
+Moteur : `INSIGHTS_PROVIDER` = `deepseek` ou `claude` (Azure Translator ne sait pas résumer). Sans cette variable : DeepSeek si `DEEPSEEK_API_KEY` existe, sinon Claude si `ANTHROPIC_API_KEY` existe, sinon la fonction est désactivée (message au démarrage). `INSIGHTS_ENABLED=off` la coupe. Prérequis : migration `007_insights.sql` (appliquée par l'API au déploiement).
+
+Coût : un appel par conférence (≈ 15 000 jetons pour une heure) + des petits appels de traduction ; quelques centimes avec DeepSeek. Garde-fou : transcription de plus de `INSIGHTS_MAX_CHARS` (200 000) caractères refusée.
+
+Debug :
+```sql
+SELECT talk_id, lang, status, error, jsonb_array_length(chapters) AS chapitres FROM talk_insights ORDER BY updated_at DESC LIMIT 20;
+-- Refaire un résumé (ou bouton « Régénérer le résumé » dans Mes conférences) :
+UPDATE talk_insights SET status = 'pending', attempts = 0, error = NULL WHERE talk_id = '…';
+```
+`curl -s http://127.0.0.1:7050/health` affiche aussi `insights` (moteur et dernier succès).
 
 ## Lancement et vérification
 ```bash

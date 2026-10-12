@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
+import Insights from '../../../components/Insights';
 
 export default function TalkPage() {
   const { id } = useParams();
@@ -16,12 +17,12 @@ export default function TalkPage() {
 
   // Pendant la conversion ou la transcription, la page se met à jour toute seule.
   const waiting = talk && talk.source === 'upload' && !talk.locked
-    && (['pending', 'processing'].includes(talk.status) || ['pending', 'processing'].includes(talk.transcriptStatus) || talk.translating);
+    && (['pending', 'processing'].includes(talk.status) || ['pending', 'processing'].includes(talk.transcriptStatus) || talk.translating || talk.insightsPending);
   useEffect(() => {
     if (!waiting) return;
     const timer = setInterval(() => call('/talks/' + id).then((r) => {
       // Ne remplace pas la vidéo en cours de lecture : met à jour seulement les infos de transcription.
-      if (r.ok) setTalk((old) => (old && old.hlsPath && r.data.hlsPath ? { ...old, tracks: r.data.tracks, transcriptStatus: r.data.transcriptStatus, translating: r.data.translating } : r.data));
+      if (r.ok) setTalk((old) => (old && old.hlsPath && r.data.hlsPath ? { ...old, tracks: r.data.tracks, transcriptStatus: r.data.transcriptStatus, translating: r.data.translating, insightsPending: r.data.insightsPending } : r.data));
     }), 8000);
     return () => clearInterval(timer);
   }, [waiting, id, call]);
@@ -69,6 +70,10 @@ export default function TalkPage() {
         {talk.durationSeconds ? ` · ${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
       <p>{talk.description}</p>
       {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
+      {talk.hlsPath && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
+      {talk.hlsPath && talk.playbackToken && (
+        <Insights key={`${talk.tracks.join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t} />
+      )}
       {showTranscript && (
         <Transcript key={talk.tracks.join()} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
       )}

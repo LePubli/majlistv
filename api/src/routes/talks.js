@@ -117,6 +117,9 @@ export default async function talksRoutes(app) {
         talk.translating = (await pool.query(
           "SELECT EXISTS (SELECT 1 FROM transcript_translations WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
         )).rows[0].x;
+        talk.insightsPending = (await pool.query(
+          "SELECT EXISTS (SELECT 1 FROM talk_insights WHERE talk_id = $1 AND status IN ('pending', 'processing')) AS x", [id]
+        )).rows[0].x;
         if (talk.status === 'ready') talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
         else if (isOwner) talk.videoUrl = await presignGet(talk.video_ref); // aperçu du fichier d'origine pendant la conversion
       }
@@ -130,7 +133,9 @@ export default async function talksRoutes(app) {
     const { rows } = await pool.query(
       `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage",
          (SELECT COALESCE(json_agg(json_build_object('lang', tr.lang, 'status', tr.status, 'progress', tr.progress) ORDER BY tr.lang), '[]'::json)
-            FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations
+            FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations,
+         (SELECT COALESCE(json_agg(json_build_object('lang', i.lang, 'status', i.status, 'error', i.error) ORDER BY i.lang), '[]'::json)
+            FROM talk_insights i WHERE i.talk_id = t.id) AS insights
        ${FROM} WHERE t.organizer_id = $1 ORDER BY t.created_at DESC`,
       [req.user.sub]
     );
@@ -218,6 +223,18 @@ export default async function talksRoutes(app) {
     await pool.query('DELETE FROM transcript_translations WHERE talk_id = $1 AND lang = $2', [id, lang]);
     await pool.query('DELETE FROM transcript_segments WHERE talk_id = $1 AND lang = $2', [id, lang]);
     return reply.code(204).send();
+  });
+
+  // Relance la génération du résumé et des chapitres (langue d'origine puis traductions).
+  app.post('/talks/:id/insights/regenerate', organizer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const talk = await ownedUpload(req, reply, id);
+    if (!talk) return;
+    await pool.query(
+      "UPDATE talk_insights SET status = 'pending', error = NULL, attempts = 0, updated_at = now() WHERE talk_id = $1 AND status IN ('ready', 'failed')",
+      [id]
+    );
+    return reply.code(202).send({ status: 'pending' });
   });
 
   // Un organisateur supprime ses conférences ; un admin peut supprimer toutes les conférences.

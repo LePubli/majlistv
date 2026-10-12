@@ -73,3 +73,10 @@ progress { width: 100%; accent-color: var(--accent); }
 .langs legend { padding: 0 6px; color: var(--muted); }
 .langs .check { display: flex; align-items: center; gap: 6px; }
 .langs .meta { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; }
+
+/* Résumé et chapitres (étape 3D) */
+.insights { margin-top: 24px; background: var(--surface); border-radius: 8px; padding: 16px; }
+.insights h2 { margin: 0; font-size: 1.1rem; }
+.insights h3 { margin: 16px 0 6px; font-size: .95rem; color: var(--muted); }
+.insights ul { margin: 0; padding-inline-start: 20px; line-height: 1.6; }
+.chapters { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; }

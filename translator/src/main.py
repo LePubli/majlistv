@@ -21,6 +21,8 @@ import psycopg2
 import psycopg2.extras
 import requests
 
+from insights import Insights
+
 
 def env(key, default=None, required=False):
     value = os.environ.get(key, default)
@@ -105,6 +107,7 @@ Output only through the submit_translations tool."""
 stopping = False
 current = None  # (talk_id, lang) en cours
 last_ok = None
+insights = None
 
 
 def log(*args):
@@ -489,7 +492,8 @@ def process(job):
 # --- Santé, arrêt propre, boucle principale ------------------------------------------------------
 class Health(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
-        body = json.dumps({"status": "ok", "provider": PROVIDER, "overrides": {k: sorted(v) for k, v in OVERRIDES.items() if v}, "model": MODEL, "current": current, "lastOk": last_ok}).encode()
+        body = json.dumps({"status": "ok", "provider": PROVIDER, "overrides": {k: sorted(v) for k, v in OVERRIDES.items() if v}, "model": MODEL, "current": current, "lastOk": last_ok,
+                           "insights": {"provider": insights.provider, "lastOk": insights.last_ok} if insights else None}).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
         self.end_headers()
@@ -515,6 +519,8 @@ def main():
     global current
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
+    global insights
+    insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES, env=env)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
@@ -528,6 +534,7 @@ def main():
     extra = "; ".join(f"{k} pour {','.join(sorted(v))}" for k, v in OVERRIDES.items() if v)
     log(f"Traducteur prêt (moteur par défaut {PROVIDER}{'; ' + extra if extra else ''}).")
 
+    insights.start()
     while not stopping:
         job = None
         try:

@@ -178,3 +178,9 @@ Ordre de déploiement :
 Test : envoyer une courte vidéo parlée en cochant une ou deux langues ; « Mes conférences » affiche d'abord la conversion, la transcription, puis les pastilles de langue passent de « en attente » à « XX % » puis « ✓ ». Sur la page de la conférence, le bouton de sous-titres du lecteur et le menu de langue de la transcription proposent les nouvelles langues. Vérifier l'arabe (écriture de droite à gauche) et la cohérence des noms propres.
 
 Limites : traduction de la transcription seulement (pas du titre ni de la description) ; pas de correction manuelle du texte traduit ; chapitres automatiques et résumé : étape 3D.
+
+## Étape 3D : résumé, points clés et chapitres automatiques
+Nouveautés : migration `007_insights.sql` (table `talk_insights`) ; le service `translator/` génère, une fois la transcription prête, un résumé, des points clés et des chapitres horodatés dans la langue d'origine puis les traduit dans chaque langue de sous-titres prête (moteur DeepSeek ou Claude, voir `translator/README.md`) ; page de la conférence : bloc « Résumé » avec chapitres cliquables (saut dans la vidéo, chapitre en cours surligné) et sélecteur de langue ; « Mes conférences » : pastille « Résumé » avec bouton « Régénérer le résumé ». Nouvelles routes : `GET /talks/:id/insights?lang=&t=` (jeton de lecture) et `POST /talks/:id/insights/regenerate`.
+
+Déploiement : mettre à jour GitHub, puis Deploy de l'API (log « Migration appliquée : 007_insights.sql »), du web, et du traducteur (aucune variable à ajouter si `DEEPSEEK_API_KEY` est déjà définie ; sinon `ANTHROPIC_API_KEY`). Relancer `/root/apply-limits.sh` après chaque deploy et vérifier le port du vhost de l'API (7000).
+

@@ -18,7 +18,27 @@ class H(BaseHTTPRequestHandler):
                 return ds(402, {"error": {"message": "Insufficient Balance"}})
             if MODE == "flaky" and calls["n"] % 2 == 1:  # 1er appel : contenu vide, comme DeepSeek en mode JSON
                 return ds(200, {"choices": [{"finish_reason": "stop", "message": {"content": ""}}]})
-            assert body["response_format"] == {"type": "json_object"}
+            assert body["response_format"] == {"type": "json_object"} and body["thinking"] == {"type": "disabled"}
+            system = body["messages"][0]["content"]
+            if system.startswith("You analyse"):  # résumé + chapitres (étape 3D)
+                if MODE == "flaky" and calls["n"] % 4 == 1:
+                    return ds(200, {"choices": [{"finish_reason": "stop", "message": {"content": ""}}]})
+                assert "[00:00:00]" in body["messages"][1]["content"]
+                out = {"summary": "Résumé de test.", "key_points": ["a", "b", "c", "d"],
+                       "chapters": [{"start_seconds": 3, "title": "Intro."}, {"start_seconds": 133, "title": "Milieu"},
+                                    {"start_seconds": 140, "title": "Trop proche"}, {"start_seconds": 400, "title": "Fin"},
+                                    {"start_seconds": 99999, "title": "Hors durée"}]}
+                sys.stderr.write("mock insights: generation\n")
+                return ds(200, {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(out)}}]})
+            if system.startswith("You translate navigation"):
+                p = json.loads(body["messages"][1]["content"])
+                dst = system.split(" to ")[1].split(".")[0][:2].lower()
+                out = {"summary": f"[{dst}] " + p["summary"], "key_points": [f"[{dst}] " + x for x in p["key_points"]],
+                       "chapters": [{"start_seconds": c["start_seconds"], "title": f"[{dst}] " + c["title"]} for c in p["chapters"]]}
+                if MODE == "badlen" and calls["n"] % 2 == 0:
+                    out["chapters"] = out["chapters"][:-1]
+                sys.stderr.write(f"mock insights: translation to {dst}\n")
+                return ds(200, {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(out)}}]})
             payload = json.loads(body["messages"][1]["content"])
             out = [f"[ds-{payload['target_language'][:2].lower()}] {x}" for x in payload["segments"]]
             sys.stderr.write(f"mock deepseek call {calls['n']}: {len(out)} segs\n")
