@@ -503,3 +503,18 @@ DockPanel : redéployer **api** puis **web**, puis `/root/apply-limits.sh` et v�
 **Tests** : `python3 api/tests/test_users_admin.py` (30 vérifications).
 
 **Déploiement** : api puis web (pas de migration), `/root/apply-limits.sh`, vérification des ports nginx.
+
+
+## Étape 11.3 — Back-office : paramètres par section
+
+**Où** : `/admin?tab=settings` (la section ouverte est dans l'adresse : `&section=email`, `translation`, `payment`…).
+
+- **Navigation par section** (colonne à gauche, pastilles défilantes sur mobile) avec un état : ● prête, ▲ à compléter (ex. « Clé manquante : Azure », « 2/4 champs » pour Stripe, « Aucune clé IA »), ○ non utilisée (« Aucun e-mail envoyé », « Recherche simple »). Un point • signale une section modifiée non enregistrée.
+- **Traduction → tableau « Quel moteur pour quelle langue ? »** : une ligne par langue, un menu (Par défaut / Claude / Azure / DeepSeek) et l'état du moteur (clé présente ou manquante). Une langue n'a qu'un seul moteur ; le tableau écrit les listes `translate_*_langs` (aucun changement côté traducteur : même précédence qu'avant).
+- **Boutons « Tester la connexion »** conservés sous chaque clé (Stripe, Claude, Azure, DeepSeek, Meilisearch, SMTP) ; ils demandent d'enregistrer d'abord, pour tester ce qui sera réellement utilisé.
+- Garde-fou : avertissement du navigateur si on quitte la page avec des modifications non enregistrées, et confirmation avant de changer de section.
+- Les réglages sont toujours pris en compte par les services en moins de 10 s, sans redéploiement.
+
+**API** : inchangée (`/admin/settings`, `/admin/settings/test`). **Tests** : `python3 api/tests/test_settings_engines.py`.
+
+**Déploiement** : web seul suffit (aucune migration, API inchangée par rapport à 11.2) puis `/root/apply-limits.sh` et vérification nginx.

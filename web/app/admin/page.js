@@ -163,19 +163,122 @@ function Field({ f, value, onChange, onClear, langs, dirty, onTest, testing }) {
   );
 }
 
+const SECTION_HELP = {
+  general: "Nom du site, adresse publique et durée de l'aperçu gratuit des conférences premium.",
+  payment: 'Abonnements via Stripe : clé, webhook, prix et essai gratuit.',
+  email: 'Envoi des e-mails (bienvenue, mot de passe oublié, rappels d\'essai…).',
+  translation: 'Sous-titres traduits : choisis le moteur par défaut et, langue par langue, celui qui convient le mieux.',
+  insights: 'Résumé et chapitres de chaque conférence.',
+  transcription: 'Transcription automatique des vidéos envoyées (Whisper, sur ton serveur).',
+  external: 'Conférences YouTube / Vimeo : comment récupérer le texte, imports en masse.',
+  search: 'Recherche rapide avec tolérance aux fautes (Meilisearch).',
+};
+const ENGINES = [['claude', 'Claude'], ['azure', 'Azure'], ['deepseek', 'DeepSeek']];
+const ENGINE_KEY = { claude: 'anthropic_key', azure: 'azure_key', deepseek: 'deepseek_key' };
+const ENGINE_NOTE = { claude: 'meilleure qualité', azure: 'gratuit jusqu\'à 2 M caractères/mois', deepseek: 'très économique' };
+const LANG_KEYS = { claude: 'translate_claude_langs', azure: 'translate_azure_langs', deepseek: 'translate_deepseek_langs' };
+
+// État de chaque section : ok (prête), warn (à compléter), off (non utilisée / non configurée).
+function sectionStatus(id, val, set) {
+  const has = (k) => set(k);
+  switch (id) {
+    case 'payment': {
+      const n = ['stripe_secret_key', 'stripe_webhook_secret', 'stripe_price_monthly', 'stripe_price_yearly'].filter(has).length;
+      return n === 4 ? ['ok', 'Prêt'] : n === 0 ? ['off', 'Non configuré'] : ['warn', `${n}/4 champs`];
+    }
+    case 'email': return has('smtp_host') && has('mail_from') ? ['ok', 'Prêt'] : has('smtp_host') ? ['warn', 'Expéditeur manquant'] : ['off', 'Aucun e-mail envoyé'];
+    case 'translation': {
+      const def = val('translate_provider');
+      const used = new Set([def]);
+      ENGINES.forEach(([e]) => { if (val(LANG_KEYS[e])) used.add(e); });
+      const missing = [...used].filter((e) => !has(ENGINE_KEY[e]));
+      return missing.length ? ['warn', `Clé manquante : ${missing.map((e) => ENGINES.find(([k]) => k === e)[1]).join(', ')}`] : ['ok', 'Prêt'];
+    }
+    case 'insights':
+      if (val('insights_enabled') === 'false') return ['off', 'Désactivés'];
+      return has('anthropic_key') || has('deepseek_key') ? ['ok', 'Prêt'] : ['warn', 'Aucune clé IA'];
+    case 'search': return has('meili_url') && has('meili_key') ? ['ok', 'Meilisearch actif'] : ['off', 'Recherche simple'];
+    default: return ['ok', ''];
+  }
+}
+
+// Tableau « quel moteur pour quelle langue » : écrit les trois listes de langues (une langue = un seul moteur).
+function EngineTable({ data, val, set, setVal }) {
+  const def = val('translate_provider');
+  const listOf = (e) => new Set((val(LANG_KEYS[e]) || '').split(',').filter(Boolean));
+  const engineOf = (l) => ENGINES.find(([e]) => listOf(e).has(l))?.[0] || '';
+  const change = (lang, engine) => {
+    ENGINES.forEach(([e]) => {
+      const cur = listOf(e); const had = cur.has(lang);
+      if (e === engine) cur.add(lang); else cur.delete(lang);
+      if (had !== cur.has(lang)) setVal(LANG_KEYS[e], [...cur].join(','));
+    });
+  };
+  const name = (e) => ENGINES.find(([k]) => k === e)[1];
+  return (
+    <div className="engine-table">
+      <h4 className="adm-sub">Quel moteur pour quelle langue ?</h4>
+      <p className="meta">« Par défaut » utilise le moteur par défaut ({name(def)}). Choisis un autre moteur pour une langue qu'il traduit mieux ou moins cher.
+        {' '}{ENGINES.map(([e, l]) => `${l} : ${ENGINE_NOTE[e]}`).join(' · ')}.</p>
+      <div className="adm-table-wrap">
+        <table className="adm-table">
+          <thead><tr><th>Langue</th><th>Moteur</th><th>État</th></tr></thead>
+          <tbody>
+            {data.langs.map((l) => {
+              const forced = engineOf(l); const eff = forced || def; const ok = set(ENGINE_KEY[eff]);
+              return (
+                <tr key={l}>
+                  <td>{LANG_NAMES[l] || l} <small className="meta">({l})</small></td>
+                  <td>
+                    <select value={forced} aria-label={`Moteur pour ${LANG_NAMES[l] || l}`} onChange={(e) => change(l, e.target.value)}>
+                      <option value="">Par défaut ({name(def)})</option>
+                      {ENGINES.map(([e, lab]) => <option key={e} value={e}>{lab}</option>)}
+                    </select>
+                  </td>
+                  <td className={ok ? 'adm-ok' : 'error'}>{ok ? `${name(eff)} prêt` : `Clé ${name(eff)} manquante`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function Settings() {
   const { call } = useApp();
+  const router = useRouter();
+  const sp = useSearchParams();
   const [data, setData] = useState(null);
   const [draft, setDraft] = useState({});
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const [tests, setTests] = useState({});
-  const [open, setOpen] = useState('general');
 
   useEffect(() => { call('/admin/settings').then((r) => r.ok && setData(r.data)); }, [call]);
+  const dirty = Object.keys(draft).length > 0;
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   if (!data) return <p className="meta">Chargement…</p>;
 
-  const dirty = Object.keys(draft).length > 0;
+  const section = data.groups.some((g) => g.id === sp.get('section')) ? sp.get('section') : 'general';
+  const goto = (id) => {
+    if (dirty && !window.confirm('Des modifications ne sont pas enregistrées. Changer de section quand même ? (elles sont conservées tant que tu restes sur cette page)')) return;
+    router.replace(`/admin?tab=settings&section=${id}`, { scroll: false });
+  };
+  const byKey = Object.fromEntries(data.fields.map((f) => [f.key, f]));
+  // Valeur courante (brouillon sinon valeur enregistrée) ; « set » = une valeur existe (ou une clé est déjà enregistrée).
+  const val = (k) => (k in draft ? (draft[k] === null ? '' : draft[k]) : byKey[k].type === 'secret' || byKey[k].type === 'secret_text' ? '' : byKey[k].value);
+  const set = (k) => {
+    const f = byKey[k];
+    if (f.type === 'secret' || f.type === 'secret_text') return k in draft ? Boolean(draft[k]) : f.isSet;
+    return Boolean(val(k));
+  };
   const setVal = (k, v) => { setMsg(null); setDraft((d) => ({ ...d, [k]: v })); };
   const secretVal = (k) => (k in draft ? (draft[k] === null ? '' : draft[k]) : '');
 
@@ -190,43 +293,50 @@ function Settings() {
     }
     setMsg({ ok: false, text: r.data.error || 'Échec de l\'enregistrement' });
   };
-
   const test = async (target) => {
     setTests((t) => ({ ...t, [target]: { loading: true } }));
     const r = await call('/admin/settings/test', { method: 'POST', body: JSON.stringify({ target }) });
     setTests((t) => ({ ...t, [target]: r.ok ? r.data : { ok: false, message: r.data.error || 'Erreur' } }));
   };
 
-  const fieldsOf = (g) => data.fields.filter((f) => f.group === g);
+  const fields = data.fields.filter((f) => f.group === section && !(section === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
+  const g = data.groups.find((x) => x.id === section);
+  const changedIn = (id) => data.fields.some((f) => f.group === id && f.key in draft);
   return (
-    <section>
+    <section className="set-layout">
       {!data.encryption && <p className="error">SETTINGS_KEY n'est pas définie sur l'API : les clés ne peuvent pas être enregistrées. Ajoute cette variable (voir README) puis redéploie l'API.</p>}
-      <p className="meta">Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
-      {data.groups.map((g) => (
-        <div key={g.id} className="adm-group">
-          <button type="button" className="adm-group-head" onClick={() => setOpen(open === g.id ? null : g.id)} aria-expanded={open === g.id}>
-            <span>{g.label}</span><span>{open === g.id ? '−' : '+'}</span>
-          </button>
-          {open === g.id && (
-            <div className="adm-group-body">
-              {fieldsOf(g.id).map((f) => (
-                <div key={f.key}>
-                  <Field f={f} langs={data.langs} dirty={dirty}
-                    value={f.type === 'secret' ? secretVal(f.key) : draft[f.key]}
-                    onChange={(v) => setVal(f.key, v)}
-                    onClear={() => setVal(f.key, null)}
-                    onTest={test} testing={Boolean(f.test && tests[f.test]?.loading)} />
-                  {f.test && tests[f.test] && !tests[f.test].loading && <p className={tests[f.test].ok ? 'adm-ok' : 'error'}>{tests[f.test].message}</p>}
-                </div>
-              ))}
+      <nav className="set-nav" aria-label="Sections des paramètres">
+        {data.groups.map((x) => {
+          const [state, label] = sectionStatus(x.id, val, set);
+          return (
+            <button key={x.id} type="button" className={x.id === section ? 'set-tab on' : 'set-tab'} aria-current={x.id === section ? 'page' : undefined} onClick={() => goto(x.id)}>
+              <span className={`set-dot hs-${state}`} aria-hidden="true">{HEALTH_ICON[state]}</span>
+              <span className="set-tab-main"><b>{x.label}{changedIn(x.id) ? ' •' : ''}</b>{label && <small>{label}</small>}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <div className="set-main">
+        <h3 className="set-title">{g.label}</h3>
+        <p className="meta">{SECTION_HELP[section]} Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
+        {section === 'translation' && <EngineTable data={data} val={val} set={set} setVal={setVal} />}
+        <div className="adm-group-body set-fields">
+          {fields.map((f) => (
+            <div key={f.key}>
+              <Field f={f} langs={data.langs} dirty={dirty}
+                value={f.type === 'secret' ? secretVal(f.key) : draft[f.key]}
+                onChange={(v) => setVal(f.key, v)}
+                onClear={() => setVal(f.key, null)}
+                onTest={test} testing={Boolean(f.test && tests[f.test]?.loading)} />
+              {f.test && tests[f.test] && !tests[f.test].loading && <p className={tests[f.test].ok ? 'adm-ok' : 'error'}>{tests[f.test].message}</p>}
             </div>
-          )}
+          ))}
         </div>
-      ))}
-      <div className="adm-savebar">
-        <button className="btn" disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-        {dirty && <button className="btn ghost" onClick={() => { setDraft({}); setMsg(null); }}>Annuler les modifications</button>}
-        {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
+        <div className="adm-savebar">
+          <button className="btn" disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+          {dirty && <button className="btn ghost" onClick={() => { setDraft({}); setMsg(null); }}>Annuler les modifications</button>}
+          {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
+        </div>
       </div>
     </section>
   );

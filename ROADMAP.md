@@ -45,10 +45,10 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
   - **import de plusieurs vidéos**, y compris depuis une playlist YouTube.
 - Fiche de suivi : chronologie du traitement, langues à ajouter, retirer ou relancer.
 
-**11. Back-office**
+**11. Back-office — ✅ terminé (11.1 tableau de bord, 11.2 utilisateurs, 11.3 paramètres)**
 - ✅ (11.1 livré) Tableau de bord : abonnés, essais, revenu estimé, conférences, « À traiter », état des services, dernières inscriptions.
 - ✅ (11.2 livré) Utilisateurs : tableau avec fiche latérale (rôle expliqué, abonnement, accès offert, mot de passe, suspension, suppression).
-- Paramètres par section, avec un tableau « quel moteur pour quelle langue » pour la traduction et des boutons Tester.
+- ✅ (11.3 livré) Paramètres par section, avec un tableau « quel moteur pour quelle langue » pour la traduction et des boutons Tester.
 - Catégories : ajouter, renommer, ordonner, choisir l'icône.
 
 **12. Parcours visiteur → abonné**
