@@ -15,6 +15,15 @@ function Dashboard() {
   const { call } = useApp();
   const [st, setSt] = useState(null);
   const [users, setUsers] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const reload = () => call('/admin/status').then((r) => r.ok && setSt(r.data));
+  const reindex = async () => {
+    if (!window.confirm("Vider l'index de recherche et le reconstruire ? (quelques minutes, la recherche simple prend le relais pendant ce temps)")) return;
+    setBusy(true);
+    await call('/admin/search/reindex', { method: 'POST' });
+    setBusy(false);
+    setTimeout(reload, 4000);
+  };
   useEffect(() => {
     call('/admin/status').then((r) => r.ok && setSt(r.data));
     call('/admin/users?limit=1').then((r) => r.ok && setUsers(r.data.total));
@@ -30,6 +39,12 @@ function Dashboard() {
           <div className="admin-card"><strong>{line(st.transcripts)}</strong><span>transcriptions</span></div>
           <div className="admin-card"><strong>{line(st.translations)}</strong><span>traductions de sous-titres</span></div>
           <div className="admin-card"><strong>{st.insightsEnabled ? line(st.insights) : 'désactivés'}</strong><span>résumés et chapitres</span></div>
+          <div className="admin-card">
+            <strong>{st.search.enabled ? `${st.search.indexed} / ${st.search.ready} indexées` : 'recherche simple'}</strong>
+            <span>recherche {st.search.enabled ? 'Meilisearch' : '(Meilisearch non configuré)'}</span>
+            {st.search.lastError && <span className="error">{st.search.lastError}</span>}
+            {st.search.enabled && <button className="btn ghost" disabled={busy} onClick={reindex}>Réindexer tout</button>}
+          </div>
         </div>
       )}
       <p className="meta">Les statuts « failed » se relancent depuis la page de la conférence (bouton « Relancer »). Les clés et moteurs se règlent dans l'onglet Paramètres, sans redéploiement.</p>

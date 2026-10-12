@@ -44,5 +44,19 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"
 
+  # Recherche (étape 7). Dans Admin → Paramètres → Recherche : adresse http://search:7700 et la clé ci-dessous.
+  search:
+    build:
+      context: ..
+      dockerfile: search/Dockerfile
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev-local-meili-key-change-me-0123456789}
+    volumes:
+      - meili_data:/meili_data
+    ports:
+      - "127.0.0.1:7700:7700"
+
 volumes:
   db_data:
+  meili_data:

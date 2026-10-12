@@ -237,3 +237,10 @@ Routes (connexion requise) : `GET /me/favorites`, `PUT|DELETE /me/favorites/:id`
 
 Mise en service : pousser sur GitHub, Deploy de l'**API** (log attendu : `Migration appliquée : 010_library.sql`) puis du **web**, relancer `/root/apply-limits.sh` et vérifier le port nginx de l'API (7000). Aucune variable à ajouter ; translator et transcriber ne changent pas.
 
+## Étape 7 : recherche Meilisearch (fautes tolérées, extraits, passages horodatés)
+Nouveau service `search/` (Meilisearch 1.55, voir `search/README.md`), migration `011_search.sql` (table `search_state`), route publique `GET /search`, synchronisation automatique de l'index par l'API (toutes les 15 s : ajouts, modifications, traductions, suppressions), réglages dans **Admin → Paramètres → Recherche**, carte « Recherche » et bouton **Réindexer tout** dans le Tableau de bord.
+
+Sur le site : la barre de recherche de l'accueil affiche des résultats avec **extrait surligné** (transcription, sous-titres traduits ou description) et jusqu'à 3 **passages horodatés** par conférence ; un clic ouvre la vidéo au passage (`/talks/:id?t=SECONDES`). Les fautes de frappe sont tolérées et l'arabe est géré. Extraits et passages d'une conférence premium : réservés aux abonnés, à l'organisateur et aux admins. Sans Meilisearch (pas configuré ou arrêté), la recherche SQL d'avant prend le relais automatiquement.
+
+Mise en service : voir la réponse de livraison ou `search/README.md` (nouveau déploiement `majlistv-search`, port hôte 7060, variable `MEILI_MASTER_KEY`, puis Admin → Paramètres → Recherche).
+

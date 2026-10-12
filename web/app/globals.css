@@ -150,3 +150,19 @@ progress { width: 100%; accent-color: var(--accent); }
 .continue h2 { font-size: 1.1rem; margin: 20px 0 8px; }
 .page h2 { font-size: 1.1rem; margin: 24px 0 8px; }
 .page .grid { padding-inline: 0; }
+
+/* Recherche (étape 7) */
+.results { padding: 0 4vw 6vh; display: flex; flex-direction: column; gap: 18px; max-width: 1000px; }
+.hit { display: flex; gap: 16px; align-items: flex-start; }
+.hit-thumb { position: relative; flex: 0 0 220px; aspect-ratio: 16 / 9; border-radius: 6px; background: var(--surface) center / cover no-repeat; }
+.hit-body { flex: 1; min-width: 0; }
+.hit-body h3 { margin: 0 0 2px; font-size: 1.05rem; }
+.hit-body h3 a { color: var(--text); text-decoration: none; }
+.hit-body .meta { margin: 0 0 6px; }
+.hit-snippet { margin: 0 0 6px; color: var(--muted); font-size: .92rem; line-height: 1.5; }
+mark { background: rgba(56, 189, 248, .25); color: var(--text); border-radius: 3px; padding: 0 2px; }
+.moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.moments a { color: var(--muted); text-decoration: none; font-size: .88rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moments a:hover { color: var(--text); }
+.moments .ts { color: var(--accent); font-variant-numeric: tabular-nums; margin-inline-end: 6px; }
+@media (max-width: 600px) { .hit { flex-direction: column; } .hit-thumb { flex: none; width: 100%; } }

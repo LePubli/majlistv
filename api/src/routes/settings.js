@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { BY_KEY, describeSettings, getSetting, saveSettings, isOn } from '../settings.js';
 import { makeStripe, stripeContext } from './billing.js';
+import { INDEX, meili, meiliConf, resetIndex, searchStatus } from '../search.js';
 
 // Mode (test/live) et compte d'une clé Stripe : sert à détecter un changement de compte.
 const stripeMode = (key) => (/^(sk|rk)_live_/.test(key) ? 'live' : 'test');
@@ -54,6 +55,14 @@ const TESTS = {
       { model, max_tokens: 20, thinking: { type: 'disabled' }, messages: [{ role: 'user', content: 'Réponds par un seul mot : bonjour' }] });
     if (r.status === 200) return { ok: true, message: `DeepSeek (${model}) répond : « ${(r.json?.choices?.[0]?.message?.content || '').trim()} ».` };
     return { ok: false, message: `DeepSeek : HTTP ${r.status} ${r.json?.error?.message || ''}${r.status === 402 ? ' (solde épuisé ?)' : ''}` };
+  },
+  async meili() {
+    const c = await meiliConf();
+    if (!c) return { ok: false, message: 'Adresse et clé Meilisearch à renseigner (et enregistrer) avant le test.' };
+    const v = await meili(c, 'GET', '/version', undefined, 5000);
+    let docs = 0;
+    try { docs = (await meili(c, 'GET', `/indexes/${INDEX}/stats`, undefined, 5000)).numberOfDocuments; } catch (err) { if (err.status !== 404) throw err; }
+    return { ok: true, message: `Meilisearch ${v.pkgVersion} joignable, clé acceptée. ${docs} conférence(s) dans l'index.` };
   },
   async claude() {
     const key = await getSetting('anthropic_key');
@@ -111,7 +120,7 @@ export default async function settingsRoutes(app) {
   });
 
   app.post('/admin/settings/test', { preHandler: app.requireRole('admin'), config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude']) }).parse(req.body);
+    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude', 'meili']) }).parse(req.body);
     try {
       return await TESTS[target]();
     } catch (err) {
@@ -130,6 +139,20 @@ export default async function settingsRoutes(app) {
       q("SELECT status, count(*)::int AS n FROM subscriptions GROUP BY status"),
     ]);
     const toMap = (rows) => Object.fromEntries(rows.map((r) => [r.status, r.n]));
-    return { translations: toMap(tr), insights: toMap(ins), transcripts: toMap(tx), subscriptions: toMap(subs), insightsEnabled: isOn(await getSetting('insights_enabled')) };
+    const searchOn = Boolean(await meiliConf());
+    const [{ n: ready }] = await q("SELECT count(*)::int AS n FROM talks WHERE video_status = 'ready'");
+    const [{ n: indexed }] = await q('SELECT count(*)::int AS n FROM search_state');
+    return { translations: toMap(tr), insights: toMap(ins), transcripts: toMap(tx), subscriptions: toMap(subs), insightsEnabled: isOn(await getSetting('insights_enabled')),
+      search: { enabled: searchOn, ready, indexed, ...searchStatus() } };
+  });
+
+  // Recherche : vide l'index Meilisearch ; la synchronisation le reconstruit en quelques minutes.
+  app.post('/admin/search/reindex', adminOnly, async (req, reply) => {
+    try {
+      await resetIndex();
+    } catch (err) {
+      return reply.code(400).send({ error: err.message });
+    }
+    return { ok: true };
   });
 }

@@ -10,6 +10,7 @@ export const GROUPS = [
   { id: 'translation', label: 'Traduction des sous-titres' },
   { id: 'insights', label: 'Résumés et chapitres' },
   { id: 'transcription', label: 'Transcription (Whisper)' },
+  { id: 'search', label: 'Recherche (Meilisearch)' },
 ];
 
 const PROVIDERS = ['claude', 'azure', 'deepseek'];
@@ -53,6 +54,11 @@ export const FIELDS = [
     help: 'Plus gros = plus précis mais plus lent. Un nouveau modèle est téléchargé au premier usage.' },
   { key: 'whisper_threads', group: 'transcription', type: 'number', label: 'Cœurs CPU utilisés', env: 'WHISPER_THREADS', def: '4', min: 1, max: 32 },
   { key: 'whisper_beam', group: 'transcription', type: 'number', label: 'Précision de recherche (beam)', env: 'WHISPER_BEAM', def: '3', min: 1, max: 10 },
+
+  { key: 'meili_url', group: 'search', type: 'url', label: 'Adresse du serveur Meilisearch', env: 'MEILI_URL',
+    help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://172.17.0.1:7060 (port hôte du service majlistv-search).' },
+  { key: 'meili_key', group: 'search', type: 'secret', label: 'Clé maître Meilisearch', env: 'MEILI_KEY', test: 'meili',
+    help: 'La même valeur que la variable MEILI_MASTER_KEY du service majlistv-search. L\'index se remplit tout seul en quelques minutes.' },
 ];
 export const BY_KEY = Object.fromEntries(FIELDS.map((f) => [f.key, f]));
 

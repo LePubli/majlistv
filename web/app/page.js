@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../components/Providers';
 import TalkCard from '../components/TalkCard';
+import SearchHit from '../components/SearchHit';
 
 export default function Home() {
   const { t, appName, user, call } = useApp();
   const [talks, setTalks] = useState(null);
+  const [res, setRes] = useState(null); // résultats de recherche (avec extraits et passages)
   const [cats, setCats] = useState([]);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
@@ -16,13 +18,18 @@ export default function Home() {
 
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call]);
 
-  // Recherche avec un léger délai pendant la frappe.
+  // Catalogue sans mot-clé ; avec mot-clé, recherche plein texte (/search) avec un léger délai pendant la frappe.
   useEffect(() => {
     const timer = setTimeout(() => {
       const p = new URLSearchParams();
-      if (q) p.set('q', q);
       if (cat) p.set('category', cat);
-      call('/talks?' + p, {}, null).then((r) => setTalks(r.ok ? r.data : []));
+      if (q.trim()) {
+        p.set('q', q.trim());
+        call('/search?' + p).then((r) => setRes(r.ok ? r.data : { hits: [], total: 0 }));
+      } else {
+        setRes(null);
+        call('/talks?' + p, {}, null).then((r) => setTalks(r.ok ? r.data : []));
+      }
     }, 250);
     return () => clearTimeout(timer);
   }, [q, cat, call]);
@@ -47,8 +54,17 @@ export default function Home() {
           {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      {talks && talks.length === 0 && <p className="soon">{t('noTalks')}</p>}
-      <div className="grid">{(talks || []).map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
+      {res ? (
+        <section className="results">
+          <p className="meta">{res.total ? t('nResults').replace('{n}', res.total) : t('noResults')}</p>
+          {res.hits.map((h) => <SearchHit key={h.id} hit={h} t={t} markers={res.markers} />)}
+        </section>
+      ) : (
+        <>
+          {talks && talks.length === 0 && <p className="soon">{t('noTalks')}</p>}
+          <div className="grid">{(talks || []).map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
+        </>
+      )}
     </>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
@@ -14,6 +14,9 @@ export default function TalkPage() {
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
   const [resumeMs, setResumeMs] = useState(0);
+  // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
+  const tParam = Number(useSearchParams().get('t'));
+  const jumpMs = Number.isFinite(tParam) && tParam > 0 ? Math.floor(tParam * 1000) : 0;
   const videoRef = useRef(null);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
@@ -36,7 +39,7 @@ export default function TalkPage() {
   // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
   const trackable = Boolean(user && talk && talk.source === 'upload' && talk.hlsPath && !talk.locked);
   const startMs = useRef(0);
-  useEffect(() => { if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs]);
+  useEffect(() => { if (jumpMs) startMs.current = jumpMs; else if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs, jumpMs]);
   useEffect(() => {
     if (!trackable) return undefined;
     const video = videoRef.current;
@@ -111,7 +114,7 @@ export default function TalkPage() {
   if (talk.source !== 'upload') {
     player = <div className="player"><iframe src={embed} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={talk.title} /></div>;
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={resumeMs / 1000} /></div>;
+    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
   } else if (talk.status === 'failed') {
@@ -139,7 +142,7 @@ export default function TalkPage() {
           <Link className="btn" href="/pricing">{t('subscribe')}</Link>
         </div>
       )}
-      {trackable && resumeMs > 0 && (
+      {trackable && resumeMs > 0 && !jumpMs && (
         <p className="meta resume">{t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></p>
       )}
       <div className="title-row">

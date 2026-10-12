@@ -18,6 +18,8 @@ import { getSetting } from './settings.js';
 import { currentUser } from './userstate.js';
 import settingsRoutes from './routes/settings.js';
 import libraryRoutes from './routes/library.js';
+import searchRoutes from './routes/search.js';
+import { startSearchSync } from './search.js';
 
 const app = Fastify({ logger: true, trustProxy: true });
 
@@ -79,8 +81,10 @@ await app.register(transcriptRoutes);
 await app.register(billingRoutes);
 await app.register(settingsRoutes);
 await app.register(libraryRoutes);
+await app.register(searchRoutes);
 
 await migrate();
 await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
+startSearchSync(app.log); // index Meilisearch tenu à jour en arrière-plan (inactif tant qu'il n'est pas configuré)
