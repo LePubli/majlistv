@@ -6,7 +6,7 @@ import { LOCALES } from '../lib/i18n';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 export default function Header() {
-  const { appName, t, locale, user, ready, logout } = useApp();
+  const { appName, t, locale, user, ready, logout, hasSeries } = useApp();
   const router = useRouter();
   const path = usePathname();
   const setLocale = (e) => {
@@ -24,6 +24,7 @@ export default function Header() {
       </Link>
       <nav aria-label={t('mainNav')}>
         <Link href="/" aria-current={cur('/')}>{t('home')}</Link>
+        {hasSeries && <Link href="/series" aria-current={cur('/series')}>{t('seriesNav')}</Link>}
         <Link href="/pricing" aria-current={cur('/pricing')}>{t('pricing')}</Link>
         {ready && (user ? (
           <>

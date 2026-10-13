@@ -25,7 +25,7 @@ import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
-import seriesRoutes from './routes/series.js';
+import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -82,8 +82,10 @@ app.get('/config', async () => {
   const on = async (k) => isOn(await getSetting(k));
   const show = {};
   for (const k of ['access', 'duration', 'speaker', 'category', 'language', 'description', 'favorite', 'progress']) show[k] = await on(`card_show_${k}`);
+  // Le menu « Séries » n'apparaît que s'il y a au moins une série à montrer.
+  const hasSeries = (await listSeries({ limit: 1 })).length > 0;
   return {
-    appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    hasSeries, appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };

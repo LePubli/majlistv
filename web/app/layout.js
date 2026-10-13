@@ -16,7 +16,7 @@ async function siteConfig() {
   try {
     const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
     const c = await res.json();
-    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, cards: c.cards || null };
+    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, cards: c.cards || null, hasSeries: Boolean(c.hasSeries) };
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
@@ -28,11 +28,11 @@ export const viewport = { themeColor: '#0B0906', width: 'device-width', initialS
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const { appName, trialDays, cards } = await siteConfig();
+  const { appName, trialDays, cards, hasSeries } = await siteConfig();
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
-        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards}>
+        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)}>
           <Header />
           {children}
           <Footer />

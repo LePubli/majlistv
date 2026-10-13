@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import TalkCard from './TalkCard';
 
-export default function Row({ title, talks, t, onSeeAll, progressOf, id, badge }) {
+export default function Row({ title, talks, t, onSeeAll, progressOf, id, badge, renderItem }) {
   const ref = useRef(null);
   const [edge, setEdge] = useState({ start: true, end: false });
   const measure = useCallback(() => {
@@ -33,7 +33,7 @@ export default function Row({ title, talks, t, onSeeAll, progressOf, id, badge }
       <div className="row-wrap">
         <button type="button" className="row-arrow prev" onClick={() => go(-1)} disabled={edge.start} aria-label={t('rowPrev')}>‹</button>
         <div className="row-rail" ref={ref} onScroll={measure}>
-          {talks.map((x) => <div className="row-item" key={x.id}><TalkCard talk={x} t={t} progress={progressOf ? progressOf(x) : 0} /></div>)}
+          {talks.map((x) => <div className="row-item" key={x.id}>{renderItem ? renderItem(x) : <TalkCard talk={x} t={t} progress={progressOf ? progressOf(x) : 0} />}</div>)}
         </div>
         <button type="button" className="row-arrow next" onClick={() => go(1)} disabled={edge.end} aria-label={t('rowNext')}>›</button>
       </div>

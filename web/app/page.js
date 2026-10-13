@@ -6,6 +6,7 @@ import TalkCard from '../components/TalkCard';
 import SearchHit from '../components/SearchHit';
 import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
+import SeriesCard from '../components/SeriesCard';
 
 export default function Home() {
   const { t, trialDays, user, ready, call } = useApp();
@@ -66,10 +67,12 @@ export default function Home() {
         <>
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
-          {rows.map((r) => (
+          {rows.map((r) => (r.key === 'series' ? (
+            <Row key="series" id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
+          ) : (
             <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} title={r.key === 'new' ? t('rowNew') : r.title} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
               onSeeAll={r.categoryId && r.total > r.talks.length ? () => { setCat(String(r.categoryId)); window.scrollTo({ top: 0 }); } : undefined} />
-          ))}
+          )))}
         </>
       )}
     </>

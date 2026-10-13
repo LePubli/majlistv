@@ -648,3 +648,17 @@ Changer l'accès d'une conférence dans sa propre fiche (Studio) fait de même u
 
 **API** : `POST|DELETE /series/:id/poster` (nouveau). **Tests** : `python3 api/tests/test_series.py` (52 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+
+## Étape 14.3 — Page série publique et accueil
+
+**Pour le visiteur**
+- **Page d'une série** (`/series/<id>`) : bannière (image de la série, sinon fond uni), titre, intervenant, nombre de saisons / épisodes, accès (gratuit, premium, ou « gratuit et premium »), présentation ; bouton **« Regarder l'épisode 1 »** ou **« Reprendre l'épisode N »** (pour un compte connecté : l'épisode commencé, sinon le premier non terminé) ; **sélecteur de saison** ; liste des épisodes avec miniature, résumé, durée, badge d'accès, **barre d'avancement** et « ✓ Vu » ;
+- **Accueil** : rangée **« Séries »** juste après « Nouveautés » (vignettes en pile avec « 2 saisons · 12 épisodes ») ;
+- **Page « Séries »** (`/series`) : toutes les séries publiées ; le lien **Séries** du menu n'apparaît que s'il y en a au moins une ;
+- Une série brouillon n'est visible que de son propriétaire et des admins (bandeau « Brouillon »).
+
+**Réglage** : Administration → Paramètres → Accueil → **« Afficher la rangée Séries »** (activée par défaut).
+**API** : `GET /home` renvoie une rangée `{ key: 'series', series: [...] }` ; `GET /config` renvoie `hasSeries`. Pas de migration.
+**Tests** : `python3 api/tests/test_series.py` (54 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

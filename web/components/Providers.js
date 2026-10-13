@@ -9,7 +9,7 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -61,5 +61,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); };
 
-  return <Ctx.Provider value={{ locale, t, appName, trialDays, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t, appName, trialDays, hasSeries, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
 }

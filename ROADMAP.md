@@ -68,7 +68,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 **14. Séries et saisons** (les deux structures au choix par série) — découpé en 5 pièces
 - ✅ 14.1 Données et API : séries, saisons, épisodes, règle d'accès (série + épisode), contexte pour la fiche conférence.
 - ✅ 14.2 Studio : créer et modifier une série, saisons, ajouter / ordonner les épisodes (glisser-déposer), accès par épisode, image de la série.
-- 14.3 Page série publique et accueil : bannière, sélecteur de saison, liste d'épisodes, « Regarder / Reprendre », rangée « Séries ».
+- ✅ 14.3 Page série publique et accueil : bannière, sélecteur de saison, liste d'épisodes, « Regarder / Reprendre », rangée « Séries ».
 - 14.4 Page conférence : colonne latérale = épisodes de la série, « épisode suivant » à la fin de la lecture, badge « Saison 1 · Épisode 3 ».
 - 14.5 Recherche, bibliothèque et « Continuer » : séries trouvables, reprise à l'épisode en cours.
 - Modèle : **Série > Saisons > Épisodes** ou **Série > Épisodes** (sans saisons) ; une conférence peut rester isolée ou devenir un épisode (dans une seule série).

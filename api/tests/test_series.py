@@ -64,6 +64,10 @@ ok(requests.get(f"{B}/series/{sid}", headers=adm).status_code == 200, "non publi
 requests.patch(f"{B}/series/{sid}", headers=adm, json={"published": True})
 lst = [x for x in requests.get(f"{B}/series").json() if x["id"] == sid]
 ok(len(lst) == 1 and lst[0]["episodeCount"] == 4 and lst[0]["seasonCount"] == 2 and lst[0]["access"] == "mixed", "liste publique : 4 épisodes prêts (brouillon exclu), 2 saisons, accès mixte")
+hm = requests.get(f"{B}/home").json()["rows"]
+srow = next((r for r in hm if r["key"] == "series"), None)
+ok(srow is not None and sid in [x["id"] for x in srow["series"]] and hm[1]["key"] == "series", "accueil : rangée « Séries » juste après les nouveautés")
+ok(requests.get(f"{B}/config").json()["hasSeries"] is True, "config : le menu Séries est proposé")
 d = requests.get(f"{B}/series/{sid}").json()
 ok([len(z["episodes"]) for z in d["seasons"]] == [2, 2] and [e["number"] for e in d["seasons"][1]["episodes"]] == [1, 2], "page série : épisodes numérotés dans chaque saison")
 ok(d["resume"]["talkId"] == t1 and d["resume"]["started"] is False and d["episodeCount"] == 4, "« Regarder » : premier épisode")

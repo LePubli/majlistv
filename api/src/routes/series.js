@@ -40,6 +40,34 @@ export async function syncAccess(db, seriesId) {
       WHERE e.talk_id = t.id AND e.series_id = $1 AND t.access <> COALESCE(e.access_override, s.access)`, [seriesId]);
 }
 
+// Séries publiées avec au moins un épisode en ligne (utilisé par GET /series et par l'accueil).
+export async function listSeries({ limit = 40, category = null } = {}) {
+  const { rows } = await pool.query(
+    `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key,
+            count(t.id)::int AS "episodeCount",
+            (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount",
+            bool_and(t.access = 'free') AS "allFree", bool_and(t.access = 'premium') AS "allPremium",
+            (array_agg(t.poster_key ORDER BY e.position) FILTER (WHERE t.poster_key IS NOT NULL))[1] AS first_poster,
+            (array_agg(t.external_thumb ORDER BY e.position) FILTER (WHERE t.external_thumb IS NOT NULL))[1] AS first_thumb
+       FROM series s
+       JOIN series_episodes e ON e.series_id = s.id
+       JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
+       LEFT JOIN categories c ON c.id = s.category_id
+      WHERE s.published ${category ? 'AND s.category_id = $2' : ''}
+      GROUP BY s.id, c.name ORDER BY max(COALESCE(t.publish_at, t.created_at)) DESC LIMIT $1`, category ? [limit, category] : [limit]);
+  const out = [];
+  for (const r of rows) {
+    const poster = r.poster_key || r.first_poster;
+    out.push({
+      id: r.id, title: r.title, speaker: r.speaker, summary: clip(r.description, 170), hasSeasons: r.hasSeasons, categoryId: r.categoryId, category: r.category,
+      episodeCount: r.episodeCount, seasonCount: r.hasSeasons ? r.seasonCount : 0,
+      access: r.allFree ? 'free' : r.allPremium ? 'premium' : 'mixed',
+      posterUrl: poster ? await presignGet(poster) : (r.first_thumb || null),
+    });
+  }
+  return out;
+}
+
 export default async function seriesRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
   const isAdmin = (req) => req.user.role === 'admin';
@@ -100,31 +128,7 @@ export default async function seriesRoutes(app) {
   // ---------- Public ----------
   app.get('/series', async (req) => {
     const q = z.object({ category: z.coerce.number().int().optional(), limit: z.coerce.number().int().min(1).max(100).default(40) }).parse(req.query);
-    const { rows } = await pool.query(
-      `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key,
-              count(t.id)::int AS "episodeCount",
-              (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount",
-              bool_and(t.access = 'free') AS "allFree", bool_and(t.access = 'premium') AS "allPremium",
-              (array_agg(t.poster_key ORDER BY e.position) FILTER (WHERE t.poster_key IS NOT NULL))[1] AS first_poster,
-              (array_agg(t.external_thumb ORDER BY e.position) FILTER (WHERE t.external_thumb IS NOT NULL))[1] AS first_thumb,
-              max(COALESCE(t.publish_at, t.created_at)) AS "lastAt"
-         FROM series s
-         JOIN series_episodes e ON e.series_id = s.id
-         JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
-         LEFT JOIN categories c ON c.id = s.category_id
-        WHERE s.published ${q.category ? 'AND s.category_id = $2' : ''}
-        GROUP BY s.id, c.name ORDER BY max(COALESCE(t.publish_at, t.created_at)) DESC LIMIT $1`, q.category ? [q.limit, q.category] : [q.limit]);
-    const out = [];
-    for (const r of rows) {
-      const poster = r.poster_key || r.first_poster;
-      out.push({
-        id: r.id, title: r.title, speaker: r.speaker, summary: clip(r.description, 170), hasSeasons: r.hasSeasons, categoryId: r.categoryId, category: r.category,
-        episodeCount: r.episodeCount, seasonCount: r.hasSeasons ? r.seasonCount : 0,
-        access: r.allFree ? 'free' : r.allPremium ? 'premium' : 'mixed',
-        posterUrl: poster ? await presignGet(poster) : (r.first_thumb || null),
-      });
-    }
-    return out;
+    return listSeries({ limit: q.limit, category: q.category || null });
   });
 
   app.get('/series/:id', async (req, reply) => {
