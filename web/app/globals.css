@@ -701,3 +701,25 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .similar .row-head, .similar .row-rail { padding-inline: 0; }
 .similar .row-rail { scroll-padding-inline: 0; }
 @media (max-width: 600px) { .preview-end { position: static; border-radius: 8px; margin-top: 8px; } }
+
+/* 12.4 — parcours d'inscription : bandeau d'étapes, bienvenue, préférences */
+.steps { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 0 0 22px; flex-wrap: wrap; }
+.step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.step + .step::before { content: ''; width: 22px; height: 1px; background: var(--line-soft); margin-inline-end: 2px; }
+.step-dot { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; border: 1px solid var(--line-soft); background: var(--surface-2); }
+.step.now { color: var(--text); font-weight: 600; }
+.step.now .step-dot { background: var(--accent); border-color: var(--accent); color: #1a1205; }
+.step.done .step-dot { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 480px) { .step-label { display: none; } .step.now .step-label { display: inline; } }
+.welcome { max-width: 520px; }
+.welcome select { width: 100%; }
+.pick { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.pick legend { padding: 0; margin-bottom: 8px; }
+.pick-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick-chip { cursor: pointer; font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface-2); color: var(--text); }
+.pick-chip:hover { border-color: var(--accent); }
+.pick-chip.on { background: rgba(230,167,57,.16); border-color: var(--accent); color: var(--accent); }
+.row-badge { margin-inline-start: 10px; font-size: 12px; font-weight: 600; color: var(--accent); vertical-align: middle; }
+.back { display: inline-block; margin-bottom: 14px; color: var(--muted); }
+.resume { margin: 8px 0 14px; }
+.pricing .steps { justify-content: flex-start; }

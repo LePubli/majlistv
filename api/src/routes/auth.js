@@ -5,11 +5,12 @@ import { createHash, randomBytes } from 'node:crypto';
 import { pool } from '../db.js';
 import { enqueueEmail } from '../mailer.js';
 import { forgetUser } from '../userstate.js';
+import { TRANSLATION_LANGS } from '../langs.js';
 
 const registerSchema = z.object({
   email: z.string().email().max(254).transform((s) => s.toLowerCase()),
   password: z.string().min(8).max(72), // 72 = limite de bcrypt
-  name: z.string().trim().min(1).max(100),
+  name: z.string().trim().max(100).optional(), // facultatif : inscription courte, le prénom se précise ensuite
   locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
 });
 
@@ -26,12 +27,13 @@ export default async function authRoutes(app) {
   app.post('/auth/register', strictLimit, async (req, reply) => {
     const body = registerSchema.parse(req.body);
     const hash = await bcrypt.hash(body.password, 12);
+    const name = body.name || body.email.split('@')[0].slice(0, 100);
     try {
       const { rows } = await pool.query(
         `INSERT INTO users(email, password_hash, name, locale)
          VALUES ($1, $2, $3, $4)
          RETURNING id, email, name, role, locale`,
-        [body.email, hash, body.name, body.locale]
+        [body.email, hash, name, body.locale]
       );
       // E-mail de bienvenue (envoyé seulement si l'envoi est configuré dans le back-office).
       await enqueueEmail(pool, { userId: rows[0].id, to: rows[0].email, locale: rows[0].locale, kind: 'welcome',
@@ -64,6 +66,33 @@ export default async function authRoutes(app) {
     );
     if (!rows[0]) return reply.code(404).send({ error: 'Utilisateur introuvable' });
     return rows[0];
+  });
+
+  // --- Préférences (page de bienvenue) : prénom, langue des sous-titres, thèmes préférés ---
+  const prefsSchema = z.object({
+    name: z.string().trim().min(1).max(100).optional(),
+    subLang: z.enum(TRANSLATION_LANGS).nullable().optional(),
+    categories: z.array(z.number().int().positive()).max(12).optional(),
+  }).strict();
+  const readPrefs = async (id) => {
+    const { rows } = await pool.query('SELECT name, preferred_sub_lang AS "subLang", favorite_categories AS categories, onboarded_at IS NOT NULL AS onboarded FROM users WHERE id = $1', [id]);
+    return rows[0];
+  };
+  app.get('/me/preferences', { preHandler: app.authenticate }, async (req, reply) => (await readPrefs(req.user.sub)) || reply.code(404).send({ error: 'Utilisateur introuvable' }));
+  app.put('/me/preferences', { preHandler: app.authenticate }, async (req) => {
+    const b = prefsSchema.parse(req.body ?? {});
+    const sets = ['onboarded_at = COALESCE(onboarded_at, now())'];
+    const vals = [req.user.sub];
+    const add = (col, v) => { vals.push(v); sets.push(`${col} = $${vals.length}`); };
+    if (b.name !== undefined) add('name', b.name);
+    if (b.subLang !== undefined) add('preferred_sub_lang', b.subLang);
+    if (b.categories !== undefined) {
+      // On ne garde que des catégories qui existent (une catégorie supprimée ne bloque rien).
+      const ok = await pool.query('SELECT id FROM categories WHERE id = ANY($1::int[])', [b.categories]);
+      add('favorite_categories', ok.rows.map((r) => r.id));
+    }
+    await pool.query(`UPDATE users SET ${sets.join(', ')} WHERE id = $1`, vals);
+    return readPrefs(req.user.sub);
   });
 
   // --- Mot de passe oublié ---

@@ -28,7 +28,8 @@ const safeLink = (u) => (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u) ? u : '')
 export default async function homeRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
 
-  app.get('/home', async () => {
+  app.get('/home', async (req) => {
+    const viewer = await app.optionalUser(req); // connecté : ses thèmes préférés passent en premier
     const mode = await getSetting('home_hero_mode');
     const size = await getNumber('home_row_size');
     const vis = visibleSql('t');
@@ -61,6 +62,15 @@ export default async function homeRoutes(app) {
       for (const c of cats) {
         const r = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.category_id = $1 AND t.video_status = 'ready' AND ${vis} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $2`, [c.id, size]);
         rows.push({ key: `cat:${c.id}`, title: c.name, categoryId: c.id, total: c.n, talks: await Promise.all(r.rows.map((x) => card(x))) });
+      }
+    }
+    // Thèmes préférés du visiteur : leurs rangées viennent d'abord (après « Nouveautés »), marquées forYou.
+    if (viewer) {
+      const fav = (await pool.query('SELECT favorite_categories AS c FROM users WHERE id = $1', [viewer.sub])).rows[0]?.c || [];
+      if (fav.length) {
+        for (const r of rows) r.forYou = r.categoryId != null && fav.includes(r.categoryId);
+        const head = rows.filter((r) => r.key === 'new'); const mine = rows.filter((r) => r.forYou); const rest = rows.filter((r) => r.key !== 'new' && !r.forYou);
+        rows.splice(0, rows.length, ...head, ...mine, ...rest);
       }
     }
     return { hero, rows };

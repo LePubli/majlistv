@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import TalkCard from './TalkCard';
 
-export default function Row({ title, talks, t, onSeeAll, progressOf, id }) {
+export default function Row({ title, talks, t, onSeeAll, progressOf, id, badge }) {
   const ref = useRef(null);
   const [edge, setEdge] = useState({ start: true, end: false });
   const measure = useCallback(() => {
@@ -27,7 +27,7 @@ export default function Row({ title, talks, t, onSeeAll, progressOf, id }) {
   return (
     <section className="row" aria-labelledby={id}>
       <div className="row-head">
-        <h2 id={id}>{title}</h2>
+        <h2 id={id}>{title}{badge && <span className="row-badge">{badge}</span>}</h2>
         {onSeeAll && <button type="button" className="link" onClick={onSeeAll}>{t('rowSeeAll')} ›</button>}
       </div>
       <div className="row-wrap">

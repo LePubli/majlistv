@@ -575,3 +575,18 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **API** : `GET /talks/:id/similar`. Pas de migration.
 **Tests** : `python3 api/tests/test_similar.py` (9 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+
+## Étape 12.4 — Inscription courte, formule, bienvenue
+
+**Parcours** : conférence verrouillée → *Créer un compte* (e-mail + mot de passe seulement) → **page de bienvenue** → **choix de la formule** (essai gratuit) → paiement Stripe → retour sur le compte avec le bouton « Reprendre la conférence ». Un bandeau « 1 Créer un compte · 2 Choisir la formule · 3 Profiter » accompagne le visiteur.
+
+- **Inscription courte** : le prénom n'est plus demandé (par défaut : début de l'adresse e-mail, modifiable ensuite). Lien « J'ai déjà un compte » conservé.
+- **Page de bienvenue** (`/welcome`) : prénom, **langue des sous-titres** et **thèmes préférés** (jusqu'à 12). Tout est facultatif (« Passer cette étape »). Modifiable à tout moment : *Mon compte → Mes préférences* (`/welcome?edit=1`).
+- **Effets des préférences** : la langue choisie devient la langue de sous-titres par défaut sur les fiches (si la conférence l'a, et si ce n'est pas la langue parlée) ; sur l'accueil, les rangées des thèmes préférés passent juste après « Nouveautés » avec la mention « ★ Pour vous ».
+- **Page des formules** : bouton « Essayer gratuitement N jours » pour un visiteur (→ inscription, puis retour aux formules), lien « ← Retour » vers la conférence d'origine (`/pricing?from=/talks/<id>`), et le paiement renvoie ensuite à cette conférence (`returnTo` accepté seulement s'il s'agit d'un chemin du site).
+
+**API** : `GET/PUT /me/preferences` (`name`, `subLang`, `categories` ; schéma strict, catégories inconnues ignorées) ; `POST /auth/register` : `name` facultatif ; `GET /home` : `forYou` + ordre pour un compte connecté ; `POST /billing/checkout` : `returnTo`.
+**Migration** : `020_onboarding.sql` (appliquée au démarrage de l'API).
+**Tests** : `python3 api/tests/test_onboarding.py` (20 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

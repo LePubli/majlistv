@@ -3,6 +3,8 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
+import Steps from '../../components/Steps';
+import { safePath } from '../../lib/nav';
 
 const date = (d, locale) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -10,7 +12,9 @@ function Billing() {
   const { t, locale, call } = useApp();
   const [st, setSt] = useState(null);
   const [busy, setBusy] = useState(false);
-  const justPaid = useSearchParams().get('billing') === 'success';
+  const qs = useSearchParams();
+  const justPaid = qs.get('billing') === 'success';
+  const back = safePath(qs.get('next')); // conférence qui a donné envie de s'abonner
 
   // Après le paiement, l'activation arrive par webhook : on interroge quelques secondes.
   useEffect(() => {
@@ -42,7 +46,9 @@ function Billing() {
   return (
     <section className="billing">
       <h2>{t('subscription')}</h2>
+      {justPaid && <Steps current={st.active ? 4 : 3} t={t} />}
       {justPaid && !st.active && <p className="meta">{t('billingSuccess')}</p>}
+      {justPaid && back && <Link className="btn btn-lg resume" href={back}>▶ {t('resumeTalk')}</Link>}
       <p><strong>{line}</strong></p>
       {sub ? <button className="btn" disabled={busy} onClick={portal}>{t('manageSub')}</button>
         : <Link className="btn" href="/pricing">{t('subscribe')}</Link>}
@@ -60,6 +66,7 @@ export default function Account() {
       <h1>{t('hello')} {user.name}</h1>
       <p>{user.email}</p>
       <p>{t('role')} : <strong>{user.role}</strong></p>
+      <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
       <Suspense fallback={null}><Billing /></Suspense>
     </main>
   );

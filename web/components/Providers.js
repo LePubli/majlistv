@@ -13,6 +13,7 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
   const t = (key) => dict[key] || key;
 
@@ -45,6 +46,11 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
       .then((rows) => setFavs(new Set(rows.map((x) => x.id))))
       .catch(() => {});
   }, [token]);
+  useEffect(() => {
+    if (!token) { setPrefs(null); return; }
+    fetch('/api/me/preferences', { headers: { Authorization: 'Bearer ' + token } })
+      .then((r) => (r.ok ? r.json() : null)).then((p) => p && setPrefs(p)).catch(() => {});
+  }, [token]);
   const toggleFav = useCallback(async (id) => {
     const on = favs.has(id);
     setFavs((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
@@ -55,5 +61,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); };
 
-  return <Ctx.Provider value={{ locale, t, appName, trialDays, cards: cards || DEFAULT_CARDS, favs, toggleFav, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t, appName, trialDays, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
 }

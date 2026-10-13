@@ -111,7 +111,9 @@ export default async function billingRoutes(app) {
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
     const ctx = await stripeContext();
     if (!ctx) return off(reply);
-    const { interval, waiver } = z.object({ interval: z.enum(['month', 'year']), waiver: z.boolean().optional() }).parse(req.body);
+    const { interval, waiver, returnTo } = z.object({ interval: z.enum(['month', 'year']), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional() }).parse(req.body);
+    // Page à retrouver après le paiement (ex. la conférence qui a donné envie de s'abonner) : chemin du site uniquement.
+    const back = returnTo && /^\/(?![\/\\])/.test(returnTo) ? returnTo : '';
     // Renonciation expresse au droit de rétractation, exigée avant tout paiement (contenu numérique).
     if (waiver !== true) return reply.code(400).send({ error: 'Merci de cocher la case de renonciation au droit de rétractation.', code: 'waiver_required' });
     const live = await pool.query(
@@ -140,8 +142,8 @@ export default async function billingRoutes(app) {
       allow_promotion_codes: true, // codes promo créés dans Stripe → Produits → Coupons
       custom_text: { submit: { message: SUBMIT_TEXT[l] } },
       locale: l === 'ar' ? 'auto' : l,
-      success_url: `${webUrl}/account?billing=success`,
-      cancel_url: `${webUrl}/pricing?canceled=1`,
+      success_url: `${webUrl}/account?billing=success${back ? `&next=${encodeURIComponent(back)}` : ''}`,
+      cancel_url: `${webUrl}/pricing?canceled=1${back ? `&from=${encodeURIComponent(back)}` : ''}`,
     };
     if (isOn(await getSetting('stripe_automatic_tax'))) {
       // TVA calculée par Stripe Tax selon l'adresse du client (prix « taxes incluses » recommandés).

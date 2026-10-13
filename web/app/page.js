@@ -8,7 +8,7 @@ import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 
 export default function Home() {
-  const { t, trialDays, user, call } = useApp();
+  const { t, trialDays, user, ready, call } = useApp();
   const [home, setHome] = useState(null);   // { hero, rows } : accueil vitrine
   const [talks, setTalks] = useState(null); // grille quand une catégorie est choisie
   const [res, setRes] = useState(null);     // résultats de recherche (avec extraits et passages)
@@ -18,7 +18,8 @@ export default function Home() {
   const [cont, setCont] = useState([]);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
-  useEffect(() => { call('/home', {}, null).then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call]);
+  // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
+  useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call]);
 
   // Mot-clé : recherche plein texte (/search) ; catégorie seule : grille filtrée ; sinon rangées de l'accueil.
@@ -66,7 +67,7 @@ export default function Home() {
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r) => (
-            <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} title={r.key === 'new' ? t('rowNew') : r.title} talks={r.talks} t={t}
+            <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} title={r.key === 'new' ? t('rowNew') : r.title} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
               onSeeAll={r.categoryId && r.total > r.talks.length ? () => { setCat(String(r.categoryId)); window.scrollTo({ top: 0 }); } : undefined} />
           ))}
         </>

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
+import Steps from '../../components/Steps';
+import { safePath, pricingPath, authPath } from '../../lib/nav';
 
 const fill = (text, n) => text.replace('{n}', n);
 
@@ -14,7 +16,9 @@ export default function Pricing() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [waiver, setWaiver] = useState(false);
-  const canceled = useSearchParams().get('canceled');
+  const qs = useSearchParams();
+  const canceled = qs.get('canceled');
+  const from = safePath(qs.get('from')); // page d'origine (ex. la conférence verrouillée)
 
   useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [] })); }, [call]);
   useEffect(() => { if (user) call('/billing/status').then((r) => r.ok && setStatus(r.data)); }, [user, call]);
@@ -37,6 +41,8 @@ export default function Pricing() {
 
   return (
     <main className="page pricing">
+      {from && <Link className="link small back" href={from}>← {t('backTo')}</Link>}
+      {!active && <Steps current={user ? 2 : 1} t={t} />}
       <h1>{t('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
       {!info.enabled && <p className="soon">{t('billingUnavailable')}</p>}
@@ -53,11 +59,11 @@ export default function Pricing() {
               {active ? (
                 <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{t('manageSub')}</button>
               ) : user ? (
-                <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, waiver: true }, interval)}>
+                <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, waiver: true, ...(from ? { returnTo: from } : {}) }, interval)}>
                   {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
                 </button>
               ) : (
-                <Link className="btn" href="/login">{t('loginToSubscribe')}</Link>
+                <Link className="btn" href={authPath('register', pricingPath(from))}>{info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('register')}</Link>
               )}
             </section>
           ))}
@@ -69,6 +75,7 @@ export default function Pricing() {
           <span>{t('waiverText')} <Link href="/legal/cgv" target="_blank">{t('legalTerms')}</Link></span>
         </label>
       )}
+      {info.enabled && !user && <p className="meta small"><Link className="link u" href={authPath('login', pricingPath(from))}>{t('haveAccount')}</Link></p>}
       {info.enabled && <p className="meta small">{t('pricingFooter')}</p>}
     </main>
   );

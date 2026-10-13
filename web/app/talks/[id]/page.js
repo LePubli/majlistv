@@ -8,10 +8,11 @@ import ExternalPlayer from '../../../components/ExternalPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
 import Insights from '../../../components/Insights';
 import Row from '../../../components/Row';
+import { pricingPath } from '../../../lib/nav';
 
 export default function TalkPage() {
   const { id } = useParams();
-  const { call, t, locale, user, trialDays } = useApp();
+  const { call, t, locale, user, trialDays, prefs } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
@@ -111,7 +112,9 @@ export default function TalkPage() {
   if (talk === null) return <main className="page"><p>{t('noTalks')}</p></main>;
   const audioLang = String(talk.language || '').split('-')[0].toLowerCase();
   // Sous-titres affichés d'office : la langue de l'interface si elle existe et n'est pas celle de la parole.
-  const subLang = (talk.tracks || []).includes(locale) && locale !== audioLang ? locale : null;
+  // Langue des sous-titres : celle choisie dans « Mes préférences », sinon celle du site (si elle existe et diffère de la langue parlée).
+  const wanted = [prefs?.subLang, locale].find((l) => l && (talk.tracks || []).includes(l) && l !== audioLang);
+  const subLang = wanted || null;
   const tracks = (talk.tracks || []).map((lang) => ({
     lang, isDefault: lang === subLang, label: langName(lang, locale), src: `/api/talks/${id}/subs/${lang}.vtt?t=${encodeURIComponent(talk.playbackToken)}`,
   }));
@@ -161,14 +164,14 @@ export default function TalkPage() {
       {talk.preview && <ul className="lock-list"><li>{t('lkB1')}</li><li>{t('lkB2')}</li><li>{t('lkB3')}</li></ul>}
       <div className="lock-cta">
         {user
-          ? <Link className="btn btn-lg" href="/pricing">{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('subscribe')}</Link>
+          ? <Link className="btn btn-lg" href={pricingPath('/talks/' + id)}>{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('subscribe')}</Link>
           : (
             <>
-              <Link className="btn btn-lg" href="/register?next=/pricing">{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('register')}</Link>
+              <Link className="btn btn-lg" href={`/register?next=${encodeURIComponent(pricingPath('/talks/' + id))}`}>{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('register')}</Link>
               <Link className="btn ghost btn-lg" href={`/login?next=${encodeURIComponent('/talks/' + id)}`}>{t('lkHave')}</Link>
             </>
           )}
-        {user && <Link className="link" href="/pricing">{t('lkPlans')}</Link>}
+        {user && <Link className="link" href={pricingPath('/talks/' + id)}>{t('lkPlans')}</Link>}
       </div>
       <p className="meta small">{trialDays > 0 ? `${t('lkCancel')}` : ''}</p>
     </div>
