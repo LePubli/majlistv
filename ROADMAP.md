@@ -149,6 +149,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - ✅ **26.3 Contrôle parental** : durée quotidienne par enfant (le serveur mesure le temps lui-même), catalogue « tout sauf ce que je bloque » ou « seulement ma sélection », rapport de progression par enfant (7 ou 30 jours) et e-mail hebdomadaire au parent ; aucun classement ni comparaison entre enfants.
 - ✅ **26.4 Identité visuelle Kids et bande d'accueil** : thème « nuit étoilée » coloré (lettres Kids multicolores, quatre étapes numérotées Je regarde / Je fais le quiz / Je progresse / Je retiens durablement, cadres de couleur), bandeau sur la page des parents et sur l'accueil de l'enfant, et bande « Espace Kids » avec les dernières vidéos sur la page d'accueil du site.
 - ✅ **26.5 Classement** : sous-catégories (Coran › Lecture…), catégorie principale + 2 autres, plusieurs tranches d'âge Kids par conférence, option « visible dans le catalogue des adultes ».
+- ✅ **26.6 Refonte de l'interface** : en-tête allégé et menu du compte (Gestion séparée), menu latéral mobile, recherche en panneau central (loupe), bande Kids fine sous les nouveautés, citation compacte, en-tête et bannière Kids colorés, « Salam 'Aleykoum ».
 
 
 ### Phase C2 — Faire venir et garder les abonnés

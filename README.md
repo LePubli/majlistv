@@ -1083,3 +1083,14 @@ nginx -t && systemctl reload nginx
 
 **Debug** : `docker logs <conteneur api>` ; une catégorie qui a des sous-catégories ne peut pas être supprimée (409) : supprimez ou déplacez d'abord les sous-catégories. Tests : `api/tests/test_taxonomy.py`.
 
+## Étape 26.6 — Refonte de l'en-tête, du menu mobile, de la recherche, de l'accueil et de Kids
+
+**Ce qui change (web uniquement, l'API ne bouge pas)**
+- **En-tête** : Accueil, Séries, Ouvrages, Apprentissage, Ma bibliothèque + bouton coloré « Kids », puis la loupe et le compte. Studio et Administration passent dans le menu de l'avatar, sous le titre « Gestion ». Visiteur non connecté : langue, Connexion et « S'abonner ».
+- **Téléphone** : ☰ ouvre un menu latéral (Découvrir / Kids / Gestion, puis compte, abonnement, déconnexion, langue).
+- **Recherche** : la barre de l'accueil est supprimée. La loupe ouvre un panneau au centre (le site s'assombrit) avec résultats en direct, filtres catégorie et niveau ; Échap ou clic à côté pour fermer. Le bouton « Tout voir » d'une rangée affiche toujours la grille de la catégorie, avec un bouton « ← Accueil ».
+- **Accueil** : la bande Kids passe sous la première rangée (Nouveautés), plus fine et à la largeur du contenu ; la citation du jour tient sur une ligne, l'arabe s'ouvre à la demande.
+- **Kids** : en-tête violet-rose entièrement coloré, bannière explicative réduite à une ligne de 4 pastilles (bouton « Masquer », mémorisé dans le navigateur), titres de sections en couleurs, message « Salam 'Aleykoum <prénom> ! ».
+
+**Déploiement** : copier le contenu de `majlis-tv/` dans `C:\Users\agenc\Documents\GitHub\majlistv`, commit + push, redéployer `majlistv-web` (l'API n'a pas changé). Ensuite sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+

@@ -1,6 +1,7 @@
 'use client';
 // Identité visuelle Mejliss TV Kids : nuit étoilée, lettres colorées, étapes numérotées (je regarde → je fais le quiz → je progresse → je retiens).
 // Illustration facultative : déposez votre image (PNG transparent) dans web/public/kids/hero.png, elle s'affiche à droite du bandeau.
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import { agesLabel } from '../lib/kids';
@@ -10,34 +11,39 @@ export function KidsWord({ className = '' }) {
   return <span className={`kd-word ${className}`} role="img" aria-label="Kids">{['K', 'i', 'd', 's'].map((c, i) => <span key={i} className={`kd-l kd-l${i}`} aria-hidden="true">{c}</span>)}</span>;
 }
 
-const STEPS = [['1', '👀'], ['2', '🎯'], ['3', '📈'], ['4', '🧠']];
+const STEPS = [['1'], ['2'], ['3'], ['4']];
 const PERKS = ['🧒', '📖', '📊', '🛡️'];
 
-// variant « full » : bandeau + 4 étapes + 4 engagements (page des parents). « compact » : bandeau seul (accueil de l'enfant).
+// variant « full » : bandeau fin (marque + 4 étapes en pastilles + engagements), masquable (page des parents).
+// « compact » : bandeau seul (accueil de l'enfant).
 export default function KidsBanner({ variant = 'full' }) {
   const { t, appName } = useApp();
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => { try { setHidden(localStorage.getItem('kd-banner-hidden') === '1'); } catch { /* stockage indisponible */ } }, []);
+  const toggle = (v) => { setHidden(v); try { localStorage.setItem('kd-banner-hidden', v ? '1' : '0'); } catch { /* stockage indisponible */ } };
+  if (variant === 'full' && hidden) {
+    return <p className="kd-howto"><button type="button" className="link u small" onClick={() => toggle(false)}>{t('kdHow')}</button></p>;
+  }
   return (
     <section className={`kd-banner ${variant}`} aria-label={t('kdTitle')}>
       <div className="kd-banner-top">
         <div className="kd-banner-brand">
-          <img className="kd-banner-emblem" src="/brand/emblem.png" alt="" width="56" height="60" />
-          <div>
+          <img className="kd-banner-emblem" src="/brand/emblem.png" alt="" width="40" height="43" />
+          <div className="kd-banner-id">
             <p className="kd-banner-name">{appName}</p>
             <KidsWord className="big" />
           </div>
         </div>
         <p className="kd-tagline">{t('kdTagline')}</p>
-        <p className="kd-art" aria-hidden="true"><span>🌙</span><span>⭐</span><span>📚</span><span>🕌</span></p>
+        {variant === 'full' && <button type="button" className="link u small kd-hide" onClick={() => toggle(true)}>{t('kdHide')}</button>}
       </div>
       {variant === 'full' && (
         <>
           <ol className="kd-steps">
-            {STEPS.map(([n, e]) => (
-              <li key={n} className={`kd-step s${n}`}>
+            {STEPS.map(([n]) => (
+              <li key={n} className={`kd-step s${n}`} title={t(`kdS${n}D`)}>
                 <span className="kd-num" aria-hidden="true">{n}</span>
                 <b className="kd-step-title">{t(`kdS${n}T`)}</b>
-                <span className="kd-step-text">{t(`kdS${n}D`)}</span>
-                <span className="kd-step-emoji" aria-hidden="true">{e}</span>
               </li>
             ))}
           </ol>
