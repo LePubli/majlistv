@@ -10,7 +10,9 @@ const clock = (ms) => {
 };
 
 // Résumé, points clés et chapitres cliquables (générés par IA). N'affiche rien tant que rien n'est prêt.
-export default function Insights({ talkId, token, preferredLang, videoRef, locale, t }) {
+// `tab` ('summary' | 'chapters') choisit le bloc visible (les deux restent montés : une seule requête, chapitre en cours suivi).
+// `onData` informe la page de ce qui existe (résumé, chapitres) pour n'afficher que les onglets utiles.
+export default function Insights({ talkId, token, preferredLang, videoRef, locale, t, tab = 'all', onData }) {
   const [lang, setLang] = useState(preferredLang);
   const [data, setData] = useState(null);
   const [active, setActive] = useState(-1);
@@ -50,6 +52,9 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
     return () => video.removeEventListener('timeupdate', onTime);
   }, [data, videoRef]);
 
+  const hasSummary = Boolean(data && data.lang && (data.summary || data.keyPoints.length));
+  const hasChapters = Boolean(data && data.lang && data.chapters.length);
+  useEffect(() => { if (onData) onData({ summary: hasSummary, chapters: hasChapters }); }, [hasSummary, hasChapters]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!data || !data.lang) return null;
   const jump = (ms) => {
     const video = videoRef.current;
@@ -60,6 +65,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
   const rtl = ['ar', 'he', 'fa', 'ur'].includes(data.lang);
   return (
     <section className="insights" dir={rtl ? 'rtl' : 'ltr'}>
+      <div hidden={tab !== 'all' && tab !== 'summary'}>
       <div className="transcript-head">
         <h2>{t('summary')}</h2>
         {data.languages.length > 1 && (
@@ -76,8 +82,9 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
           <ul>{data.keyPoints.map((p, i) => <li key={i}>{p}</li>)}</ul>
         </>
       )}
+      </div>
       {data.chapters.length > 0 && (
-        <>
+        <div hidden={tab !== 'all' && tab !== 'chapters'}>
           <h3>{t('chapters')}</h3>
           <ol className="chapters">
             {data.chapters.map((c, i) => (
@@ -88,7 +95,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
               </li>
             ))}
           </ol>
-        </>
+        </div>
       )}
       <p className="meta">{t('aiNote')}</p>
     </section>

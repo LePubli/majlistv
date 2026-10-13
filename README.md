@@ -599,3 +599,19 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **Correctif** : sur mobile, le menu du haut défilait horizontalement avec une barre invisible, donc « Connexion », « Créer un compte », « Déconnexion » et le sélecteur de langue étaient hors écran. Le menu passe maintenant sur deux lignes (`web/app/globals.css`, bloc `@media (max-width: 720px)`).
 
 **Pas d'API ni de migration.** Déploiement : web seulement, puis `/root/apply-limits.sh` et vérification nginx.
+
+
+## Étape 13 — Nouvelle page conférence (structure A)
+
+**Agencement** (`web/app/talks/[id]/page.js`) : grand lecteur à gauche, **colonne « À suivre »** à droite (sous la page sur tablette et mobile), puis sous le lecteur : catégorie, titre, ligne d'infos, boutons **Favoris** et **Partager**, et des **onglets** :
+- **À propos** : description (retours à la ligne conservés) et fiche (langue parlée, durée, accès, sous-titres disponibles) ;
+- **Chapitres**, **Transcription**, **Résumé** : n'apparaissent que si le contenu existe ; la navigation au clavier (flèches, Début, Fin) respecte le sens droite-à-gauche.
+- Arrivée depuis un résultat de recherche (`?t=`) : l'onglet **Transcription** s'ouvre directement sur le passage.
+
+**Partager** : copie (ou ouvre le partage du téléphone) le lien de la conférence **à la minute en cours** si la lecture a dépassé 5 s (`/talks/<id>?t=<secondes>`).
+
+**Colonne « À suivre »** : pour l'instant les conférences proches (même intervenant, même catégorie) ; l'étape 14 y affichera les épisodes de la série quand la conférence en fait partie.
+
+**Pas encore là** : « Mes notes » et « Mode audio » (étape 17).
+
+**Pas d'API ni de migration.** Déploiement : web seulement, puis `/root/apply-limits.sh` et vérification nginx.

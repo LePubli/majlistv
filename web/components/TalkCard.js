@@ -13,7 +13,7 @@ import { langName } from './Transcript';
 
 const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par conférence
 
-const thumbOf = (talk) => talk.posterUrl || (talk.source === 'youtube' ? `https://i.ytimg.com/vi/${talk.video_ref}/hqdefault.jpg` : null);
+export const thumbOf = (talk) => talk.posterUrl || (talk.source === 'youtube' ? `https://i.ytimg.com/vi/${talk.video_ref}/hqdefault.jpg` : null);
 const minutesOf = (talk, t) => (talk.durationSeconds > 0 ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : '');
 
 // Extrait vidéo muet en boucle (vidéo envoyée : HLS ; YouTube / Vimeo gratuits : lecteur intégré).

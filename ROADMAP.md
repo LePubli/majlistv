@@ -58,44 +58,62 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - ✅ 12.4 Inscription courte, choix de la formule, page de bienvenue (langue des sous-titres, thèmes préférés).
 - ✅ 12.5 Passage en revue mobile et arabe (de droite à gauche) sur tous les écrans visiteur.
 
+### Phase B2 — Page conférence, séries et paiements (décidé le 13/10)
+
+**13. Nouvelle page conférence** — ✅ livré (structure A : lecteur + colonne latérale)
+- Lecteur large, titre, intervenant, actions (favoris, partage à la minute, sous-titres, mode audio), onglets **À propos · Chapitres · Transcription · Résumé · Mes notes**.
+- Colonne « épisodes de la série / à suivre » (structure A) ou onglet Épisodes (structure B), « épisode suivant » automatique en fin de lecture.
+- Version mobile en une colonne, droite-à-gauche inclus.
+
+**14. Séries et saisons** (les deux structures au choix par série)
+- Modèle : **Série > Saisons > Épisodes** ou **Série > Épisodes** (sans saisons) ; une conférence peut rester isolée ou devenir un épisode ; ordre modifiable par glisser-déposer dans le Studio.
+- Page série : bannière, présentation, sélecteur de saison, liste des épisodes (miniature, résumé, durée, accès, avancement), bouton « Regarder / Reprendre », « Suivre la série ».
+- **Accès au choix, sur les deux niveaux** : réglage par série (toute la série gratuite ou premium) **et** par épisode (ex. épisode 1 gratuit, la suite premium) ; le réglage de l'épisode l'emporte.
+- Accueil : rangée « Séries », vignette série ; recherche et bibliothèque comprennent les séries.
+
+**15. Paiements : carte bancaire et PayPal**
+- Carte bancaire : déjà incluse dans le paiement Stripe actuel (Visa, Mastercard, CB, Apple Pay / Google Pay selon l'appareil).
+- **PayPal** : via Stripe (compte français pris en charge, abonnements possibles, **peut nécessiter une validation de Stripe/PayPal** pour les paiements récurrents). À activer dans Stripe → Paramètres → Moyens de paiement, puis tester l'essai gratuit et le renouvellement avec PayPal.
+- Côté site : mention des moyens de paiement sur la page des formules, vérification du webhook et de l'essai gratuit avec PayPal. Peu de code : l'essentiel est l'activation et les tests.
+
 ### Phase C — Faire venir et garder les abonnés
 
-**13. Référencement Google**
+**16. Référencement Google**
 - Une page publique par conférence, rendue côté serveur : titre, résumé, chapitres, extrait de la transcription, données structurées `VideoObject`, balises de partage.
 - Une page par intervenant : présentation, toutes ses conférences, bouton **Suivre**.
 - Sitemap automatique, URL lisibles (`/conferences/la-patience-dans-l-epreuve`), versions linguistiques (`hreflang`).
 - Partage d'un passage précis : lien vers la conférence à la minute choisie.
 
-**14. Confort de lecture**
+**17. Confort de lecture**
 - **Mode audio** : écoute écran éteint, comme un podcast.
 - Vitesse de lecture (1×, 1,25×, 1,5×, 2×).
 - Marque-pages et notes personnelles sur un passage de la transcription, retrouvés dans Ma bibliothèque.
 
-**15. Mesure d'audience et statistiques**
+**18. Mesure d'audience et statistiques**
 - Umami hébergé sur le VPS (sans cookie publicitaire).
 - Statistiques internes : vues, temps de visionnage, taux de fin, conférences et intervenants les plus regardés, conversion de l'aperçu vers l'essai.
 - Tableau de bord admin et statistiques par organisateur dans le Studio.
 
-**16. Playlists et séries**
+**19. Collections et listes** (les séries sont dans l'étape 14)
 - Collections éditoriales (par l'équipe) : cycles, séries d'un même intervenant, thèmes du moment.
 - Listes personnelles des abonnés, partageables.
 
-**17. Modération**
+**20. Modération**
 - Rôle **relecteur** : les conférences des organisateurs externes sont validées avant d'être en ligne.
 - Signalement d'un contenu par les spectateurs, avec une file de traitement dans le back-office.
 - Journal des actions des admins (qui a modifié quoi).
 
-**18. Notifications et cadeaux**
+**21. Notifications et cadeaux**
 - E-mails : nouvelles conférences des intervenants suivis, sélection de la semaine, avec désinscription en un clic.
 - **Abonnement à offrir** : carte cadeau (1, 3 ou 12 mois) payée par Stripe, code à activer.
 
 ### Phase D — Au-delà du site
 
-**19. Applications**
+**22. Applications**
 - Android (Kotlin) : catalogue, lecture, mode audio, **téléchargement hors ligne**, reprise synchronisée, notifications.
 - Android TV : navigation à la télécommande, lecture, reprise.
 
-**20. Diffusion à grande échelle** (déclencheur : bande passante du VPS proche de la limite)
+**23. Diffusion à grande échelle** (déclencheur : bande passante du VPS proche de la limite)
 - CDN pour les vidéos (par exemple Bunny), avec les jetons d'accès premium conservés.
 - Si besoin, conversion et transcription sur une machine séparée.
 
@@ -112,6 +130,16 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - **Section « Cours » en quiz, par niveau** : parcours de quiz classés par niveau (débutant, intermédiaire, avancé), avec progression du visiteur.
 - **Vignettes interactives style plateforme de streaming** (inspiration : captures de Prime Video fournies par Epok) : au survol, la carte grossit ; si la souris reste dessus, un **aperçu vidéo** démarre dans la carte, avec les infos (titre, intervenant, durée, catégorie, langue, accès, note…). **Toutes les informations affichées sur la carte sont paramétrables** (Administration → Paramètres : choisir lesquelles apparaissent, délai avant l'aperçu, aperçu activé ou non). À prévoir : sur mobile (pas de survol), un appui long ou un bouton ; respect de « réduire les animations » ; pas d'aperçu pour les conférences premium non accessibles au visiteur sans l'accord prévu. À rapprocher de l'étape 12 (accueil vitrine).
 - **Haut du site avec bannière photo / vidéo** : grande bannière en tête d'accueil (conférence vedette en image ou en vidéo muette, titre, boutons « Regarder » et « Plus d'infos », points de navigation entre plusieurs vedettes), choisie et programmable depuis le Studio. À rapprocher de l'étape 12 (accueil vitrine).
+
+## Suggestions ajoutées (à valider, non planifiées)
+- **Page intervenant** (déjà dans « Référencement ») avec ses séries, à rapprocher de l'étape 14.
+- **Reprise automatique** : « Continuer » mène à la bonne minute et au bon épisode.
+- **Cercle de sous-titres** : traduction à la demande d'une langue manquante par un abonné (file d'attente côté Studio).
+- **Liste de lecture « À regarder plus tard »** distincte des favoris.
+- **Certificat / suivi de progression** d'une série terminée (lié aux idées quiz).
+- **Essai sans carte** (option Stripe) pour réduire la friction à l'inscription.
+- **Paiement local** : Apple Pay / Google Pay (inclus avec la carte), virement SEPA, ou autres moyens selon ta clientèle.
+- **Pays et langues** : page d'accueil et e-mails traduits (déjà fr/en/ar) ; ajout du turc, de l'indonésien ou de l'ourdou si la clientèle le justifie.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.
