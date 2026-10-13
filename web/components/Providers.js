@@ -1,8 +1,11 @@
 'use client';
 // Contexte global : textes (i18n), session utilisateur (token en localStorage) et appels API.
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 const Ctx = createContext(null);
+// Un jeton « espace enfant » (Mejliss Kids) porte l'identifiant du profil ; le serveur le refuse hors de l'espace enfant.
+const kidIdOf = (tk) => { try { return JSON.parse(atob(tk.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).kid || null; } catch { return null; } };
 export const useApp = () => useContext(Ctx);
 
 // Réglages d'affichage des vignettes si l'API ne les fournit pas (valeurs par défaut).
@@ -13,6 +16,9 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [kid, setKid] = useState(null); // profil enfant actif (espace Kids) : { id, name, avatar, band }
+  const router = useRouter();
+  const path = usePathname();
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
   const t = (key) => dict[key] || key;
@@ -31,6 +37,13 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   useEffect(() => {
     const tk = localStorage.getItem('token');
     if (!tk) { setReady(true); return; }
+    if (kidIdOf(tk)) { // session enfant : on ne charge que le profil
+      fetch('/api/kids/me', { headers: { Authorization: 'Bearer ' + tk } })
+        .then((r) => { if (r.ok) return r.json(); if (r.status === 401 || r.status === 403) localStorage.removeItem('token'); return null; }) // erreur passagère : on garde le jeton
+        .then((p) => { if (p) { setToken(tk); setKid(p); } })
+        .catch(() => {}).finally(() => setReady(true));
+      return;
+    }
     fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + tk } })
       .then((r) => (r.ok ? r.json() : null))
       .then((u) => { if (u) { setToken(tk); setUser(u); } else localStorage.removeItem('token'); })
@@ -40,17 +53,20 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
 
   // Favoris de l'utilisateur connecté (cœur sur les vignettes).
   useEffect(() => {
-    if (!token) { setFavs(new Set()); return; }
+    if (!token || kid) { setFavs(new Set()); return; }
     fetch('/api/me/favorites', { headers: { Authorization: 'Bearer ' + token } })
       .then((r) => (r.ok ? r.json() : []))
       .then((rows) => setFavs(new Set(rows.map((x) => x.id))))
       .catch(() => {});
-  }, [token]);
+  }, [token, kid]);
   useEffect(() => {
-    if (!token) { setPrefs(null); return; }
+    if (!token || kid) { setPrefs(null); return; }
     fetch('/api/me/preferences', { headers: { Authorization: 'Bearer ' + token } })
       .then((r) => (r.ok ? r.json() : null)).then((p) => p && setPrefs(p)).catch(() => {});
-  }, [token]);
+  }, [token, kid]);
+  // Enfant : il ne quitte jamais l'espace Kids. Le verrou se base sur le jeton lui-même, pour tenir même si l'API répond mal.
+  const kidMode = Boolean(kid) || Boolean(token && kidIdOf(token));
+  useEffect(() => { if (kidMode && !path.startsWith('/kids')) router.replace('/kids'); }, [kidMode, path, router]);
   const toggleFav = useCallback(async (id) => {
     const on = favs.has(id);
     setFavs((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
@@ -58,8 +74,10 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
     if (!r.ok) setFavs((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); // échec : on annule
   }, [favs, call]);
 
-  const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); };
-  const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); };
+  const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); setKid(null); };
+  const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); setKid(null); };
+  // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
+  const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ locale, t, appName, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t, appName, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout, kid, kidMode, enterKid }}>{children}</Ctx.Provider>;
 }

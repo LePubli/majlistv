@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
+import { BANDS, bandLabel } from '../lib/kids';
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
 const toLocalInput = (iso) => {
@@ -13,7 +14,7 @@ const toLocalInput = (iso) => {
 };
 const initial = (x) => ({
   title: x.title || '', speaker: x.speaker || '', description: x.description || '',
-  categoryId: x.category_id ? String(x.category_id) : '', access: x.access, level: x.level || '',
+  categoryId: x.category_id ? String(x.category_id) : '', access: x.access, level: x.level || '', kidsBand: x.kidsBand || '',
   publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt), featured: Boolean(x.featured),
 });
 
@@ -57,7 +58,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
     if (sched && new Date(f.publishAt).getTime() <= Date.now() + 30000) { setMsg({ ok: false, text: t('errPastDate') }); return; }
     setSaving(true); setMsg(null);
     const body = {
-      title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null,
+      title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null, kidsBand: f.kidsBand || null,
       categoryId: f.categoryId ? Number(f.categoryId) : null,
       publication: f.publication, publishAt: sched ? new Date(f.publishAt).toISOString() : null,
       ...(isAdmin ? { featured: f.featured } : {}),
@@ -153,6 +154,14 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
             {LEVELS.map((l) => pill(f.level === l, levelLabel(l, t), () => patch({ level: l })))}
           </div>
           <span className="meta small">{t('lvHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('kdStudioBand')}>
+          <span>{t('kdStudioBand')}</span>
+          <div className="pills">
+            {pill(!f.kidsBand, t('kdStudioNone'), () => patch({ kidsBand: '' }))}
+            {BANDS.map((b) => pill(f.kidsBand === b, bandLabel(b, t), () => patch({ kidsBand: b })))}
+          </div>
+          <span className="meta small">{t('kdStudioHelp')}</span>
         </div>
 
         {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}

@@ -29,6 +29,7 @@ import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
+import kidsRoutes from './routes/kids.js';
 import citationRoutes, { autoTopUp } from './routes/citations.js';
 import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
@@ -54,12 +55,25 @@ app.decorate('authenticate', async (req, reply) => {
   const user = await currentUser(req.user.sub, req.user.iat);
   if (!user) return reply.code(401).send({ error: 'Compte indisponible' });
   req.user.role = user.role;
+  // Jeton « espace enfant » : il ne sert qu'aux routes marquées config.kidOk (étape 26.1) ; partout ailleurs il est refusé.
+  if (req.user.kid && !req.routeOptions?.config?.kidOk) return reply.code(403).send({ error: 'Espace enfant : action réservée au parent', code: 'kid_mode' });
 });
 
 // Utilisateur connecté s'il y en a un (sinon null) : pages publiques qui varient selon l'abonné.
 app.decorate('optionalUser', async (req) => {
   try { await req.jwtVerify(); } catch { return null; }
+  if (req.user.kid) return null; // un jeton enfant est traité comme un visiteur anonyme, sauf là où l'espace enfant est prévu (kidContext)
   return currentUser(req.user.sub, req.user.iat);
+});
+
+// Contexte « espace enfant » : { profile, parent } si le jeton est un jeton enfant valide, sinon null.
+app.decorate('kidContext', async (req) => {
+  try { await req.jwtVerify(); } catch { return null; }
+  if (!req.user.kid) return null;
+  const parent = await currentUser(req.user.sub, req.user.iat);
+  if (!parent) return null;
+  const { rows } = await pool.query('SELECT * FROM kid_profiles WHERE id = $1 AND user_id = $2', [req.user.kid, req.user.sub]);
+  return rows[0] ? { profile: rows[0], parent } : null;
 });
 
 // Vérifie le token puis le rôle (ex. app.requireRole('admin')).
@@ -118,6 +132,7 @@ await app.register(quizRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
 await app.register(citationRoutes);
+await app.register(kidsRoutes);
 await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);

@@ -143,12 +143,11 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - Téléchargement réservé au palier Apprentissage, **filigrane portant l'adresse e-mail de l'abonné et la date**, lien de téléchargement à durée limitée.
 - Rattachement à une conférence et/ou à une série ; bloc « L'ouvrage étudié » sur la page conférence ; page « Ouvrages » publique (bonne pour Google).
 
-**26. Mejliss TV Kids**
-- **Profils enfants sous le compte du parent** (prénom, avatar, tranche d'âge **3-6, 7-10, 11-14**), sans adresse e-mail propre : en France, en dessous de 15 ans, c'est le parent qui consent.
-- Sélecteur de profil, code parental pour revenir au profil adulte.
-- Catalogue et design Kids séparés : chaque conférence et chaque série porte son public (adultes ou enfants).
-- Quiz, score, badges et courbe adaptés à la tranche d'âge (score affiché, formulation encourageante, pas de classement entre enfants).
-- Contrôle parental : durée quotidienne, catalogue autorisé, rapport de progression envoyé au parent.
+**26. Mejliss TV Kids** — découpé en trois parties
+- ✅ **26.1 Profils enfants et espace verrouillé** : profils sous le compte du parent (prénom, avatar, tranche d'âge **3-6, 7-10, 11-14**) sans adresse e-mail propre ; sélecteur « Qui regarde ? » ; code parental (haché, blocage après 5 erreurs) pour sortir ; jeton « enfant » refusé partout ailleurs par l'API ; catalogue Kids par tranche d'âge marqué dans le Studio ; reprise de lecture propre à chaque enfant.
+- **26.2 Quiz, étoiles et badges enfants** (formulation encourageante, pas de classement entre enfants).
+- **26.3 Contrôle parental** : durée quotidienne, catalogue autorisé, rapport de progression envoyé au parent.
+
 
 ### Phase C2 — Faire venir et garder les abonnés
 

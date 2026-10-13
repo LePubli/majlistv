@@ -5,9 +5,9 @@ import { useApp } from './Providers';
 
 // Pied de page : marque et liens légaux obligatoires, présents sur toutes les pages.
 export default function Footer() {
-  const { t, appName } = useApp();
+  const { t, appName, kid } = useApp();
   const path = usePathname();
-  if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
+  if (kid || path.startsWith('/studio') || path.startsWith('/admin')) return null; // espace enfant : pas de liens hors de Kids
   return (
     <footer className="site-footer">
       <span className="footer-brand">

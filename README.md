@@ -925,3 +925,47 @@ grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
 nginx -t && systemctl reload nginx
 ```
 
+
+## Étape 26.1 — Mejliss TV Kids : profils enfants, code parental, espace enfant
+
+Première partie de l'étape 26. Les quiz, étoiles et badges pour enfants (26.2) et la limite quotidienne avec le rapport parent (26.3) viennent ensuite.
+
+**Ce que c'est** : sous le compte du parent, des **profils enfants** (prénom, avatar, tranche d'âge). L'enfant entre dans un espace à lui, avec de grandes vignettes et des mots simples, et il n'en sort qu'avec le **code parental**.
+
+**Côté parent** (menu **Kids**, page `/kids`)
+1. **Code parental** : 4 à 6 chiffres, enregistré haché. Il faut le définir avant d'entrer dans l'espace enfant, car lui seul permet d'en sortir. Le changer exige l'ancien. **5 erreurs de suite** bloquent la saisie pendant 10 minutes (même le bon code est refusé pendant ce temps).
+2. **Profils** : prénom ou surnom, avatar, tranche d'âge **3-6**, **7-10** ou **11-14**. Rien d'autre n'est demandé sur l'enfant : ni date de naissance, ni e-mail, ni photo.
+3. **Nombre de profils** : 1 avec *Mejliss*, 5 avec *Mejliss Apprentissage* (réglable dans Admin → Paramètres → Mejliss Kids). Les administrateurs ont l'accès comme pour le reste.
+4. « Qui regarde ? » : un clic sur un profil ouvre l'espace enfant.
+
+**Côté enfant** (espace verrouillé)
+- Il voit **les conférences marquées Kids de sa tranche d'âge et des tranches plus jeunes**, sa tranche en premier. Rien d'autre du catalogue n'apparaît.
+- **Reprise de lecture propre à chaque enfant** : elle ne touche pas celle du parent, et deux enfants du même compte ne partagent pas leur avancement.
+- En-tête réduit (prénom, avatar, « Quitter l'espace enfant »), pas de pied de page, pas de liens vers le reste du site. Toute tentative d'aller ailleurs ramène à l'espace Kids.
+- Si l'abonnement du parent s'arrête, il ne reste que les conférences gratuites.
+
+**Comment l'espace est verrouillé (le détail qui compte)**
+- Entrer dans un profil délivre un **jeton « enfant »** (12 h) qui porte l'identifiant du profil.
+- Ce jeton est **refusé par l'API partout** sauf sur les quelques routes de l'espace enfant : ni compte, ni favoris, ni bibliothèque, ni Studio, ni administration — même si le parent est administrateur.
+- Sur une fiche de conférence, le jeton enfant ne donne accès qu'aux conférences Kids de sa tranche ; les autres répondent « introuvable ».
+- La sortie passe par `POST /kids/exit` avec le code parental, qui rend un jeton parent normal.
+
+**Studio** : chaque conférence a un réglage **« Mejliss Kids : tranche d'âge »** (Pas pour les enfants / 3-6 / 7-10 / 11-14), à côté du niveau. Une conférence non marquée n'apparaît jamais dans l'espace enfant.
+
+**Réglages** (Admin → Paramètres → Mejliss Kids) : espace Kids activé, profils autorisés avec *Mejliss*, profils autorisés avec *Mejliss Apprentissage*.
+
+**API** : parent `GET /me/kids`, `PUT /me/kids/pin`, `POST|PATCH|DELETE /me/kids/profiles[/:id]`, `POST /me/kids/profiles/:id/enter` ; enfant `GET /kids/me`, `GET /kids/talks`, `PUT /kids/progress/:id`, `POST /kids/exit`.
+**Migration** : `029_kids.sql` (`kid_profiles`, `kid_progress`, `talks.kids_band`, code parental sur `users`).
+**Tests** : `python3 api/tests/test_kids.py` (≈ 60 vérifications : droits, limites, code parental, verrouillage du jeton enfant, tranches d'âge, progression).
+
+**Déploiement** (api et web ; le translator ne change pas) :
+```bash
+cd /chemin/du/projet && git add -A && git commit -m "26.1 Mejliss Kids profils enfants" && git push
+# DockPanel : redéployer api puis web
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+**À faire par toi** : marquer dans le Studio les conférences adaptées aux enfants (sans cela, l'espace Kids reste vide), et prévoir une ligne sur les profils enfants dans ta politique de confidentialité (seul un prénom est stocké).
+

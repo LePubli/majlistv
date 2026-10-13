@@ -1,5 +1,6 @@
 // Catalogue public + gestion des conférences par les organisateurs.
 import { quizInfo } from './quiz.js';
+import { kidCanSee } from './kids.js';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js';
@@ -70,6 +71,7 @@ const patchSchema = z.object({
   categoryId: z.number().int().positive().nullable(),
   access: z.enum(['free', 'premium']),
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
+  kidsBand: z.enum(['3-6', '7-10', '11-14']).nullable(), // Mejliss Kids : tranche d'âge visée (null = pas pour les enfants)
   publication: z.enum(['draft', 'scheduled', 'published']),
   publishAt: z.string().datetime({ offset: true }).nullable(),
   // 0..2 : une des 3 images tirées de la vidéo ; -1 : miniature de la plateforme d'origine (YouTube, Vimeo, archive.org).
@@ -79,7 +81,7 @@ const patchSchema = z.object({
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
-  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level,
+  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level, t.kids_band AS "kidsBand",
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
@@ -175,12 +177,18 @@ export default async function talksRoutes(app) {
     const { rows } = await pool.query(`${SELECT} WHERE t.id = $1`, [id]);
     const talk = rows[0];
     if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
-    const viewer = await app.optionalUser(req); // visiteur anonyme : null
+    // Espace enfant : le jeton enfant ne donne accès qu'aux conférences Kids de sa tranche d'âge ; les droits sont ceux du parent.
+    const kv = await app.kidContext(req);
+    if (kv && !(await kidCanSee(kv.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
     const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
     // Brouillon ou publication programmée à venir : invisible pour tout le monde sauf le propriétaire et les admins.
     if (!talk.visible && !isOwner) return reply.code(404).send({ error: 'Conférence introuvable' });
-    if (viewer) {
+    if (kv) {
+      const kp = (await pool.query('SELECT position_ms, completed FROM kid_progress WHERE profile_id = $1 AND talk_id = $2', [kv.profile.id, id])).rows[0];
+      talk.resumeMs = kp && !kp.completed && kp.position_ms >= 5000 ? kp.position_ms : 0;
+    } else if (viewer) {
       // Favori et position de reprise de l'utilisateur connecté (étape 6).
       talk.favorite = (await pool.query('SELECT 1 FROM favorites WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rowCount > 0;
       const prog = (await pool.query('SELECT position_ms, completed FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rows[0];
@@ -328,6 +336,7 @@ export default async function talksRoutes(app) {
     if (b.categoryId !== undefined) set('category_id', b.categoryId);
     if (b.access !== undefined) set('access', b.access);
     if (b.level !== undefined) set('level', b.level);
+    if (b.kidsBand !== undefined) set('kids_band', b.kidsBand);
     if (b.featured !== undefined) {
       if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une conférence en avant sur l'accueil" });
       set('featured', b.featured);
