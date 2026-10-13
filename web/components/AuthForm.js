@@ -1,13 +1,16 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 
 // Formulaire partagé : mode = 'login' ou 'register'.
 export default function AuthForm({ mode }) {
   const { t, locale, call, login } = useApp();
   const router = useRouter();
+  // ?next=/chemin : retour à la page d'où l'on vient (chemin du site uniquement, jamais un lien externe).
+  const rawNext = useSearchParams().get('next') || '';
+  const next = /^\/(?![\/\\])/.test(rawNext) ? rawNext : '/account';
   const [f, setF] = useState({ name: '', email: '', password: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -21,7 +24,7 @@ export default function AuthForm({ mode }) {
     const body = isReg ? { ...f, locale } : { email: f.email, password: f.password };
     const r = await call(isReg ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(body) }, null);
     setBusy(false);
-    if (r.ok) { login(r.data.token, r.data.user); router.push('/account'); return; }
+    if (r.ok) { login(r.data.token, r.data.user); router.push(next); return; }
     setErr(r.status === 401 ? t('errInvalid') : r.status === 409 ? t('errExists') : t('errGeneric'));
   };
 

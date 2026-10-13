@@ -36,7 +36,12 @@ export default function VideoPlayer({ src, poster, tracks = [], videoRef, startS
   // Aperçu : la lecture s'arrête à la limite (et on ne peut pas sauter au-delà).
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !previewSeconds || isHls) return undefined;
+    if (!video || !previewSeconds) return undefined;
+    if (isHls) { // flux HLS : le serveur coupe déjà l'aperçu ; on prévient simplement quand il se termine
+      const done = () => onPreviewEnd && onPreviewEnd();
+      video.addEventListener('ended', done);
+      return () => video.removeEventListener('ended', done);
+    }
     const guard = () => {
       if (video.currentTime >= previewSeconds) {
         video.pause();

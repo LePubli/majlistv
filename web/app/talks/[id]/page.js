@@ -7,15 +7,17 @@ import VideoPlayer from '../../../components/VideoPlayer';
 import ExternalPlayer from '../../../components/ExternalPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
 import Insights from '../../../components/Insights';
+import Row from '../../../components/Row';
 
 export default function TalkPage() {
   const { id } = useParams();
-  const { call, t, locale, user } = useApp();
+  const { call, t, locale, user, trialDays } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
   const [resumeMs, setResumeMs] = useState(0);
   const [previewEnded, setPreviewEnded] = useState(false);
+  const [similar, setSimilar] = useState([]);
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
   const tParam = Number(useSearchParams().get('t'));
   const jumpMs = Number.isFinite(tParam) && tParam > 0 ? Math.floor(tParam * 1000) : 0;
@@ -28,6 +30,8 @@ export default function TalkPage() {
       if (r.ok) { setFav(Boolean(r.data.favorite)); setResumeMs(r.data.resumeMs || 0); }
     });
   }, [id, call]);
+
+  useEffect(() => { setSimilar([]); call(`/talks/${id}/similar`, {}, null).then((r) => r.ok && setSimilar(r.data)); }, [id, call]);
 
   // Favori : mise à jour immédiate, annulée si le serveur refuse.
   const toggleFav = async () => {
@@ -131,7 +135,8 @@ export default function TalkPage() {
       </div>
     );
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} /></div>;
+    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000}
+      previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
   } else if (talk.status === 'failed') {
@@ -148,18 +153,38 @@ export default function TalkPage() {
     player = <p className="soon">{t('processingMsg')}</p>;
   }
 
+  // Invitation à s'abonner : visiteur → essai gratuit (inscription puis formules) ; connecté sans abonnement → formules.
+  const lock = talk.locked ? (
+    <div className="lock">
+      <h2>{t('lkTitle')}</h2>
+      <p>{talk.preview ? t('lkIntro') : t('premiumOnly')}</p>
+      {talk.preview && <ul className="lock-list"><li>{t('lkB1')}</li><li>{t('lkB2')}</li><li>{t('lkB3')}</li></ul>}
+      <div className="lock-cta">
+        {user
+          ? <Link className="btn btn-lg" href="/pricing">{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('subscribe')}</Link>
+          : (
+            <>
+              <Link className="btn btn-lg" href="/register?next=/pricing">{trialDays > 0 ? t('lkTrial').replace('{n}', trialDays) : t('register')}</Link>
+              <Link className="btn ghost btn-lg" href={`/login?next=${encodeURIComponent('/talks/' + id)}`}>{t('lkHave')}</Link>
+            </>
+          )}
+        {user && <Link className="link" href="/pricing">{t('lkPlans')}</Link>}
+      </div>
+      <p className="meta small">{trialDays > 0 ? `${t('lkCancel')}` : ''}</p>
+    </div>
+  ) : null;
+
   const hasPlayer = Boolean(talk.hlsPath || external);
   const showTranscript = hasPlayer && tracks.length > 0;
   const transcribing = hasPlayer && !talk.locked && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
   return (
     <main className="page watch">
-      {player}
-      {talk.locked && (
-        <div className="paywall">
-          <p>{previewEnded ? t('previewEnded') + ' ' : ''}{talk.preview ? t('previewOnly').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60))) : t('premiumOnly')}</p>
-          <Link className="btn" href="/pricing">{t('subscribe')}</Link>
-        </div>
-      )}
+      <div className="player-wrap">
+        {player}
+        {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
+        {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
+      </div>
+      {!previewEnded && lock}
       {trackable && resumeMs > 0 && !jumpMs && (
         <p className="meta resume">{t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></p>
       )}
@@ -187,6 +212,7 @@ export default function TalkPage() {
       {showTranscript && (
         <Transcript key={talk.tracks.join()} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
       )}
+      {similar.length > 0 && <div className="similar"><Row id="row-similar" title={t('similarTitle')} talks={similar} t={t} /></div>}
     </main>
   );
 }

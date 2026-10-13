@@ -66,6 +66,20 @@ export default async function homeRoutes(app) {
     return { hero, rows };
   });
 
+  // « Dans la même veine » (fiche conférence) : même intervenant d'abord, puis même catégorie, puis les plus récentes pour compléter.
+  app.get('/talks/:id/similar', async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const vis = visibleSql('t');
+    const cur = (await pool.query('SELECT speaker, category_id FROM talks WHERE id = $1', [id])).rows[0];
+    if (!cur) return reply.code(404).send({ error: 'Conférence introuvable' });
+    const size = Math.min(await getNumber('home_row_size'), 12);
+    const { rows } = await pool.query(
+      `SELECT ${CARD}, (CASE WHEN $2 <> '' AND lower(t.speaker) = lower($2) THEN 2 ELSE 0 END + CASE WHEN $3::int IS NOT NULL AND t.category_id = $3 THEN 1 ELSE 0 END) AS score
+         ${FROM} WHERE t.id <> $1 AND t.video_status = 'ready' AND ${vis}
+        ORDER BY score DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT $4`, [id, cur.speaker || '', cur.category_id, size]);
+    return Promise.all(rows.map((r) => { const { score, ...x } = r; return card(x); }));
+  });
+
   // Image de la bannière personnalisée (JPEG / PNG / WebP en data-URL, 2,5 Mo max).
   app.post('/admin/home/hero-image', { ...adminOnly, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
     const { image } = z.object({ image: z.string().max(3_500_000) }).parse(req.body ?? {});

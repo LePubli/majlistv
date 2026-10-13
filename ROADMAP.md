@@ -54,7 +54,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 **12. Parcours visiteur → abonné** (découpé en 5 pièces)
 - ✅ 12.1 Accueil vitrine : bannière (conférences mises en avant / bannière personnalisée / texte), rangées Nouveautés et par catégorie, « Continuer à regarder ».
 - ✅ 12.2 Vignettes interactives (style Prime Video) : la carte grossit au survol, aperçu vidéo après un court délai, informations affichées réglables depuis le back-office.
-- 12.3 Fiche conférence : aperçu gratuit de 2 min, invitation à l'essai, conférences similaires.
+- ✅ 12.3 Fiche conférence : aperçu gratuit de 2 min, invitation à l'essai, conférences similaires.
 - 12.4 Inscription courte, choix de la formule, page de bienvenue (langue des sous-titres, thèmes préférés).
 - 12.5 Passage en revue mobile et arabe (de droite à gauche) sur tous les écrans visiteur.
 

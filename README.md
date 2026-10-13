@@ -558,3 +558,20 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **API** : `/config` expose `cards` ; les listes (`/talks`, `/home`, favoris, reprise) ajoutent `summary` (extrait de 170 caractères). Pas de migration.
 **Tests** : `python3 api/tests/test_cards.py` (18 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+
+## Étape 12.3 — Fiche conférence : aperçu, invitation à l'essai, similaires
+
+**Invitation à s'abonner** (conférence premium, visiteur sans abonnement) :
+- un badge « Aperçu gratuit · 2 min » sur la vidéo ;
+- sous la vidéo, une carte « Cette conférence est réservée aux abonnés » avec ce qu'apporte l'abonnement (transcription cliquable, sous-titres traduits, reprise de lecture et favoris) ;
+- quand l'aperçu se termine (vidéo envoyée, YouTube, Vimeo, archive.org), un voile « L'aperçu est terminé » s'affiche **sur la vidéo** avec les mêmes boutons ;
+- boutons : visiteur → « Essayer gratuitement N jours » (inscription puis choix de la formule) et « J'ai déjà un compte » (connexion puis retour sur la conférence) ; connecté sans abonnement → « Essayer gratuitement N jours » ou « Voir les formules » vers la page des formules. Le nombre de jours vient du réglage « Essai gratuit » (Paramètres → Paiement) ; à 0, le bouton devient « S'abonner ».
+
+**Retour après connexion / inscription** : `/login?next=/chemin` et `/register?next=/chemin` ramènent sur la page d'origine (chemins du site uniquement ; un lien externe est ignoré).
+
+**Conférences similaires** : rangée « Dans la même veine » en bas de la fiche (`GET /talks/:id/similar`, public) : même intervenant d'abord, puis même catégorie, puis les plus récentes pour compléter ; 12 au maximum ; jamais la conférence elle-même, ni brouillon, ni conversion en cours.
+
+**API** : `GET /talks/:id/similar`. Pas de migration.
+**Tests** : `python3 api/tests/test_similar.py` (9 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
