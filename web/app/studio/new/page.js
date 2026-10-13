@@ -120,7 +120,7 @@ export default function NewTalk() {
 
   // Aperçu de la carte (même rendu que le catalogue).
   const thumb = mode === 'file' ? frame : parsed?.source === 'youtube' ? `https://i.ytimg.com/vi/${parsed.ref}/hqdefault.jpg` : null;
-  const catName = cats.find((c) => String(c.id) === String(f.categoryId))?.name;
+  const catName = cats.find((c) => String(c.id) === String(f.categoryId))?.fullName;
   const sendingLabel = t('nwSending').replace('{n}', Math.round(up.pct * 100));
 
   return (
@@ -201,7 +201,7 @@ export default function NewTalk() {
               <div className="pills">
                 <button type="button" aria-pressed={!f.categoryId} className={!f.categoryId ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: '' })}>{t('nwNoCat')}</button>
                 {cats.map((c) => (
-                  <button key={c.id} type="button" aria-pressed={String(f.categoryId) === String(c.id)} className={String(f.categoryId) === String(c.id) ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: String(c.id) })}>{c.name}</button>
+                  <button key={c.id} type="button" aria-pressed={String(f.categoryId) === String(c.id)} className={String(f.categoryId) === String(c.id) ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: String(c.id) })}>{c.fullName || c.name}</button>
                 ))}
               </div>
             </div>

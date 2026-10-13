@@ -95,7 +95,7 @@ export default function ImportPanel({ cats, onImported }) {
             <label>{t('category')}
               <select value={o.categoryId} onChange={(e) => setO({ ...o, categoryId: e.target.value })}>
                 <option value="">—</option>
-                {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
               </select>
             </label>
             <label>{t('access')}

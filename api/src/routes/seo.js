@@ -28,7 +28,7 @@ export default async function seoRoutes(app) {
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.description, t.speaker, t.language, t.access, t.source, t.video_ref, t.duration_seconds AS "durationSeconds",
               c.name AS category, COALESCE(t.publish_at, t.created_at) AS "publishedAt", (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS "hasPoster"
-         FROM talks t LEFT JOIN categories c ON c.id = t.category_id
+         FROM talks t LEFT JOIN category_names c ON c.id = t.category_id
         WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')}`, [id]);
     const t = rows[0];
     if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
@@ -47,7 +47,7 @@ export default async function seoRoutes(app) {
     const { id } = idParam.parse(req.params);
     const s = (await pool.query(
       `SELECT s.id, s.title, s.description, s.speaker, s.has_seasons AS "hasSeasons", s.updated_at AS "updatedAt", s.poster_key, c.name AS category
-         FROM series s LEFT JOIN categories c ON c.id = s.category_id WHERE s.id = $1 AND s.published`, [id])).rows[0];
+         FROM series s LEFT JOIN category_names c ON c.id = s.category_id WHERE s.id = $1 AND s.published`, [id])).rows[0];
     if (!s) return reply.code(404).send({ error: 'Série introuvable' });
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.duration_seconds AS "durationSeconds", (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS "hasPoster"

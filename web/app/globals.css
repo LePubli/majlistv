@@ -506,6 +506,7 @@ mark { background: rgba(230, 167, 57, .28); color: var(--text); border-radius: 3
 .cat-add input, .cat-edit input { flex: 1; min-width: 200px; background: var(--bg); }
 .cat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .cat-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--bg); border: 1px solid var(--line-soft); border-radius: 10px; padding: 10px 14px; min-height: 52px; }
+.cat-list li.cat-sub { margin-inline-start: 28px; background: transparent; }
 .cat-name { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .cat-actions { display: flex; gap: 16px; }
 .danger-link { color: #FF9C8C; }

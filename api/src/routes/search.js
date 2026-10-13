@@ -1,6 +1,7 @@
 // Recherche dans le catalogue : Meilisearch si configuré (fautes de frappe tolérées, extraits, passages horodatés),
 // sinon recherche SQL simple. Les extraits de transcription d'une conférence premium ne sont montrés qu'aux
 // personnes qui y ont accès (abonné, propriétaire, admin).
+import { inCategorySql, adultSql } from '../taxonomy.js';
 import { z } from 'zod';
 import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
@@ -45,7 +46,7 @@ export default async function searchRoutes(app) {
       try {
         const r = await meili(c, 'POST', `/indexes/${INDEX}/search`, {
           q: p.q, limit: p.limit, offset: p.offset,
-          filter: p.category ? `categoryId = ${p.category}` : undefined,
+          filter: p.category ? ['showAdults != false', `categoryIds = ${p.category}`] : ['showAdults != false'],
           attributesToRetrieve: ['id'],
           attributesToCrop: ['transcript', 'transcriptOther', 'description'], cropLength: 24, cropMarker: '…',
           attributesToHighlight: ['transcript', 'transcriptOther', 'description'], highlightPreTag: PRE, highlightPostTag: POST,
@@ -61,8 +62,8 @@ export default async function searchRoutes(app) {
 
     let rows;
     if (ids) {
-      const res = await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id
-        WHERE t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')}`, [ids]);
+      const res = await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id
+        WHERE t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}`, [ids]);
       const byId = new Map(res.rows.map((r) => [r.id, r]));
       rows = ids.map((id) => byId.get(id)).filter(Boolean);
       if (p.level) { rows = rows.filter((r) => r.level === p.level); total = rows.length; }
@@ -70,11 +71,12 @@ export default async function searchRoutes(app) {
       const where = `t.video_status = 'ready' AND ${visibleSql('t')}
         AND (t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%' OR t.description ILIKE '%' || $1 || '%'
              OR t.transcript_text ILIKE '%' || $1 || '%')
-        AND ($2::int IS NULL OR t.category_id = $2)
+        AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
+        AND ${adultSql('t')}
         AND (${p.level ? `t.level = '${p.level}'` : 'TRUE'})`;
       const q = p.q.replace(/[%_\\]/g, '\\$&');
       total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${where}`, [q, p.category ?? null])).rows[0].n;
-      rows = (await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE ${where}
+      rows = (await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE ${where}
         ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, [q, p.category ?? null, p.limit, p.offset])).rows;
     }
 

@@ -44,9 +44,12 @@ def subscribe(uid, tier):
     cur.execute("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values (%s,%s,'active','p','month',now()+interval '20 days',1,%s)", ("sub_" + uuid.uuid4().hex[:12], uid, tier))
 
 
+UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
+
+
 def talk(title, band, access="free", status="ready", pub="published", owner=None):
-    cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_band) "
-                "values (%s,'d','Cheikh','youtube',%s,%s,%s,%s,%s,600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], owner or aid, pub, status, access, band))
+    cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_bands) "
+                "values (%s,'d','Cheikh','youtube',%s,%s,%s,%s,%s,600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], owner or aid, pub, status, access, UP[band]))
     return str(cur.fetchone()[0])
 
 
@@ -59,11 +62,11 @@ TDRAFT = talk("Brouillon kids", "3-6", pub="draft"); TPROC = talk("En conversion
 
 # --- fiche conférence : tranche d'âge -----------------------------------------------------------
 cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access) values ('Mienne','d','x','youtube','vabcdefghij',%s,'published','ready','free') returning id", (uorg,)); mine = str(cur.fetchone()[0])
-ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBand": "7-10"}).status_code == 200, "l'organisateur marque sa conférence « Kids 7-10 »")
-ok(rq("GET", f"/talks/{mine}").json()["kidsBand"] == "7-10", "tranche d'âge exposée")
-ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBand": "20-30"}).status_code == 400, "tranche inconnue refusée")
-ok(rq("PATCH", f"/talks/{T36}", headers=ORG, json={"kidsBand": None}).status_code == 404, "pas la conférence d'un autre")
-ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBand": None}).status_code == 200 and rq("GET", f"/talks/{mine}").json()["kidsBand"] is None, "retrait de l'étiquette")
+ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": ["7-10", "11-14"]}).status_code == 200, "l'organisateur marque sa conférence « Kids 7-10 »")
+ok(rq("GET", f"/talks/{mine}").json()["kidsBands"] == ["7-10", "11-14"], "tranches d'âge exposées")
+ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": ["20-30"]}).status_code == 400, "tranche inconnue refusée")
+ok(rq("PATCH", f"/talks/{T36}", headers=ORG, json={"kidsBands": []}).status_code == 404, "pas la conférence d'un autre")
+ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": []}).status_code == 200 and rq("GET", f"/talks/{mine}").json()["kidsBands"] == [], "retrait de l'étiquette")
 
 # --- parent sans abonnement ---------------------------------------------------------------------
 P0, u0 = member()
@@ -106,7 +109,7 @@ for path in ("/auth/me", "/me/kids", "/me/favorites", "/me/continue", "/me/revis
     x = rq("GET", path, headers=K1); ok(x.status_code == 403 and x.json().get("code") == "kid_mode", f"jeton enfant refusé sur {path}")
 ok(rq("PUT", "/me/kids/pin", headers=K1, json={"code": "0000", "current": "1357"}).status_code == 403, "l'enfant ne peut pas changer le code")
 ok(rq("POST", "/me/kids/profiles", headers=K1, json={"name": "Z", "band": "3-6"}).status_code == 403, "ni créer un profil")
-ok(rq("PATCH", f"/talks/{T36}", headers=K1, json={"kidsBand": None}).status_code == 403, "ni modifier une conférence")
+ok(rq("PATCH", f"/talks/{T36}", headers=K1, json={"kidsBands": []}).status_code == 403, "ni modifier une conférence")
 KA = None
 x = rq("POST", f"/me/kids/profiles", headers=ADM, json={"name": "Admin kid", "band": "3-6"}); 
 if x.status_code == 201:

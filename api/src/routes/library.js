@@ -39,7 +39,7 @@ export default async function libraryRoutes(app) {
   app.get('/me/favorites', auth, async (req) => {
     const { rows } = await pool.query(
       `SELECT ${CARD}, f.created_at AS "favoritedAt"
-       FROM favorites f JOIN talks t ON t.id = f.talk_id LEFT JOIN categories c ON c.id = t.category_id
+       FROM favorites f JOIN talks t ON t.id = f.talk_id LEFT JOIN category_names c ON c.id = t.category_id
        WHERE f.user_id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} ORDER BY f.created_at DESC LIMIT 200`,
       [req.user.sub]
     );
@@ -91,7 +91,7 @@ export default async function libraryRoutes(app) {
   app.get('/me/continue', auth, async (req) => {
     const { rows } = await pool.query(
       `SELECT ${CARD}, p.position_ms AS "positionMs", p.duration_ms AS "durationMs", p.updated_at AS "watchedAt"
-       FROM watch_progress p JOIN talks t ON t.id = p.talk_id LEFT JOIN categories c ON c.id = t.category_id
+       FROM watch_progress p JOIN talks t ON t.id = p.talk_id LEFT JOIN category_names c ON c.id = t.category_id
        WHERE p.user_id = $1 AND NOT p.completed AND p.position_ms >= $2 AND t.video_status = 'ready' AND ${visibleSql('t')}
        ORDER BY p.updated_at DESC LIMIT 12`,
       [req.user.sub, MIN_RESUME_MS]
@@ -101,7 +101,7 @@ export default async function libraryRoutes(app) {
       const have = new Set(rows.map((r) => r.id));
       const ids = nexts.map((n) => n.talkId).filter((id) => !have.has(id));
       const more = ids.length ? (await pool.query(
-        `SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ANY($1)`, [ids])).rows : [];
+        `SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE t.id = ANY($1)`, [ids])).rows : [];
       const when = new Map(nexts.map((n) => [n.talkId, n.watchedAt]));
       for (const m of more) rows.push({ ...m, positionMs: 0, durationMs: 0, watchedAt: when.get(m.id), nextUp: true });
       rows.sort((x, y) => new Date(y.watchedAt) - new Date(x.watchedAt));
@@ -122,7 +122,7 @@ export default async function libraryRoutes(app) {
               EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id) AS attempted,
               GREATEST((SELECT max(a.created_at) FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id),
                        (SELECT p.updated_at FROM watch_progress p WHERE p.user_id = $1 AND p.talk_id = t.id)) AS "since"
-         FROM talks t LEFT JOIN categories c ON c.id = t.category_id
+         FROM talks t LEFT JOIN category_names c ON c.id = t.category_id
         WHERE t.video_status = 'ready' AND ${visibleSql('t')}
           AND COALESCE(t.quiz_enabled, $2::boolean)
           AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $3
@@ -143,7 +143,7 @@ export default async function libraryRoutes(app) {
     let rows = [];
     if (items.length) {
       rows = (await pool.query(
-        `SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ANY($1::uuid[])`, [items.map((x) => x.id)])).rows;
+        `SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE t.id = ANY($1::uuid[])`, [items.map((x) => x.id)])).rows;
       await cards(rows);
       const labels = await episodeLabels(rows.map((r) => r.id));
       const by = new Map(items.map((x) => [x.id, x]));

@@ -64,7 +64,7 @@ function Welcome() {
             <div className="pick-chips">
               {cats.map((c) => (
                 <button type="button" key={c.id} className={`pick-chip ${f.categories.includes(c.id) ? 'on' : ''}`} aria-pressed={f.categories.includes(c.id)} onClick={() => toggle(c.id)}>
-                  {f.categories.includes(c.id) ? '✓ ' : ''}{c.name}
+                  {f.categories.includes(c.id) ? '✓ ' : ''}{c.fullName || c.name}
                 </button>
               ))}
             </div>

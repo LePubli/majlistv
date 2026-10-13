@@ -48,9 +48,12 @@ tag = uuid.uuid4().hex[:6]
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 
 
+UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
+
+
 def talk(title, band="3-6", nq=0):
-    cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_band) "
-                "values (%s,'d','Cheikh','youtube',%s,%s,'published','ready','free',600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], aid, band))
+    cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_bands) "
+                "values (%s,'d','Cheikh','youtube',%s,%s,'published','ready','free',600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], aid, UP[band]))
     tid = str(cur.fetchone()[0])
     for i in range(nq):
         cur.execute("insert into quiz_questions(talk_id,lang,question,options,correct_index,explanation,evidence_ms,origin,status) values (%s,'fr',%s,'[\"A\",\"B\",\"C\"]',1,'Parce que B.',%s,'manual','approved')", (tid, f"Question {i} ?", i * 1000))

@@ -63,7 +63,7 @@ export default function Home() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} aria-label={t('search')} />
         <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label={t('allCategories')}>
           <option value="">{t('allCategories')}</option>
-          {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
         </select>
         <select value={level} onChange={(e) => setLevel(e.target.value)} aria-label={t('lvAll')}>
           <option value="">{t('lvAll')}</option>

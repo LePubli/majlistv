@@ -1,6 +1,7 @@
 // Recherche plein texte avec Meilisearch (tolérance aux fautes, arabe, transcriptions et traductions).
 // L'API alimente l'index toute seule (boucle de synchronisation) ; sans Meilisearch configuré,
 // la recherche retombe sur la recherche SQL simple.
+import { categoryIdsSql } from './taxonomy.js';
 import { createHash } from 'node:crypto';
 import { visibleSql } from './visibility.js';
 import { pool } from './db.js';
@@ -40,7 +41,7 @@ export async function meili(c, method, path, body, timeout = 10000) {
 
 const SETTINGS = {
   searchableAttributes: ['title', 'speaker', 'category', 'description', 'transcript', 'transcriptOther'],
-  filterableAttributes: ['categoryId', 'access', 'language', 'source'],
+  filterableAttributes: ['categoryId', 'categoryIds', 'showAdults', 'access', 'language', 'source'],
   sortableAttributes: ['createdAt'],
   typoTolerance: { minWordSizeForTypos: { oneTypo: 4, twoTypos: 8 } },
   pagination: { maxTotalHits: 1000 },
@@ -64,7 +65,7 @@ async function ensureIndex(c) {
 }
 
 // Signature du contenu indexable : si elle change, la conférence est réindexée.
-const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t.access, t.category_id, c.name,
+const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t.access, t.category_id, c.name, t.show_adults, array_to_string(${categoryIdsSql('t')}, ','),
   length(coalesce(t.transcript_text, '')), extract(epoch FROM t.transcript_edited_at)::bigint,
   (SELECT count(*) FROM transcript_segments s WHERE s.talk_id = t.id),
   (SELECT string_agg(tr.lang || ':' || tr.status || ':' || extract(epoch FROM tr.updated_at)::bigint, ',' ORDER BY tr.lang)
@@ -72,12 +73,12 @@ const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t
 
 async function buildDocs(ids) {
   const { rows } = await pool.query(
-    `SELECT t.id, t.title, t.speaker, t.description, t.language, t.access, t.source, t.category_id AS "categoryId",
+    `SELECT t.id, t.title, t.speaker, t.description, t.language, t.access, t.source, t.category_id AS "categoryId", ${categoryIdsSql('t')} AS "categoryIds", t.show_adults AS "showAdults",
             c.name AS category, extract(epoch FROM t.created_at)::bigint AS "createdAt",
             left(coalesce(t.transcript_text, ''), $2) AS transcript,
             left(coalesce((SELECT string_agg(s.text, ' ' ORDER BY s.lang, s.idx) FROM transcript_segments s
                             WHERE s.talk_id = t.id AND s.lang <> coalesce(t.transcript_language, '')), ''), $2) AS "transcriptOther"
-     FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ANY($1)`,
+     FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE t.id = ANY($1)`,
     [ids, MAX_TRANSCRIPT]
   );
   return rows.map((r) => ({ ...r, createdAt: Number(r.createdAt) }));
@@ -94,7 +95,7 @@ export async function syncOnce(log) {
     const { rows } = await pool.query(
       `SELECT x.id, x.sig, x.ready FROM (
          SELECT t.id, ${SIG} AS sig, (t.video_status = 'ready' AND ${visibleSql('t')}) AS ready, s.signature AS old
-         FROM talks t LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN search_state s ON s.talk_id = t.id
+         FROM talks t LEFT JOIN category_names c ON c.id = t.category_id LEFT JOIN search_state s ON s.talk_id = t.id
        ) x WHERE (x.ready AND x.old IS DISTINCT FROM x.sig) OR (NOT x.ready AND x.old IS NOT NULL) LIMIT 25`
     );
     if (!rows.length) break;

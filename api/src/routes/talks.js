@@ -1,6 +1,7 @@
 // Catalogue public + gestion des conférences par les organisateurs.
 import { quizInfo } from './quiz.js';
 import { kidCanSee } from './kids.js';
+import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
 import { timeState } from '../kidsControl.js';
 import { z } from 'zod';
 import { pool } from '../db.js';
@@ -50,6 +51,9 @@ const talkSchema = z.object({
   speaker: z.string().trim().max(200).default(''),
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().optional(),
+  extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires (2 au plus)
+  kidsBands: z.array(z.enum(BANDS)).max(9).default([]), // Mejliss Kids : tranches d'âge (vide = pas pour les enfants)
+  showAdults: z.boolean().optional(), // visible dans le catalogue adultes (par défaut : oui, sauf conférence Kids)
   access: z.enum(['free', 'premium']).default('free'),
   // Niveau de difficulté (étape 24.1) : vide = tous niveaux.
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
@@ -72,7 +76,9 @@ const patchSchema = z.object({
   categoryId: z.number().int().positive().nullable(),
   access: z.enum(['free', 'premium']),
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
-  kidsBand: z.enum(['3-6', '7-10', '11-14']).nullable(), // Mejliss Kids : tranche d'âge visée (null = pas pour les enfants)
+  extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES),
+  kidsBands: z.array(z.enum(BANDS)).max(9), // Mejliss Kids : tranches d'âge (liste vide = pas pour les enfants)
+  showAdults: z.boolean(), // visible dans le catalogue adultes
   publication: z.enum(['draft', 'scheduled', 'published']),
   publishAt: z.string().datetime({ offset: true }).nullable(),
   // 0..2 : une des 3 images tirées de la vidéo ; -1 : miniature de la plateforme d'origine (YouTube, Vimeo, archive.org).
@@ -82,12 +88,13 @@ const patchSchema = z.object({
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
-  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level, t.kids_band AS "kidsBand",
+  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
+  COALESCE((SELECT array_agg(tc.category_id ORDER BY tc.category_id) FROM talk_categories tc WHERE tc.talk_id = t.id), '{}') AS "extraCategoryIds",
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
   t.publication, t.publish_at AS "publishAt", t.featured, ${visibleSql('t')} AS visible`;
-const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
+const FROM = 'FROM talks t LEFT JOIN category_names c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
 
 // Remplace poster_key par un lien de miniature temporaire.
@@ -102,6 +109,15 @@ async function withPosters(rows) {
   return rows;
 }
 
+// Tranches d'âge dans l'ordre 3-6, 7-10, 11-14, sans doublon.
+const cleanBands = (l) => BANDS.filter((b) => (l || []).includes(b));
+// Catégories supplémentaires : sans doublon, sans la catégorie principale.
+const cleanExtras = (extras, principal) => [...new Set(extras || [])].filter((x) => x !== principal).slice(0, MAX_EXTRA_CATEGORIES);
+async function saveExtras(db, talkId, ids) {
+  await db.query('DELETE FROM talk_categories WHERE talk_id = $1', [talkId]);
+  if (ids.length) await db.query('INSERT INTO talk_categories(talk_id, category_id) SELECT $1, unnest($2::int[])', [talkId, ids]);
+}
+
 // Vérifie la cohérence publication / date ; renvoie { publication, publishAt } ou un message d'erreur.
 function checkPublication(publication, publishAt) {
   if (publication !== 'scheduled') return { publication, publishAt: null };
@@ -113,13 +129,31 @@ function checkPublication(publication, publishAt) {
 export default async function talksRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
 
-  app.get('/categories', async () => (await pool.query('SELECT id, name FROM categories ORDER BY name')).rows);
+  // Liste des catégories dans l'ordre de l'arbre : chaque catégorie principale suivie de ses sous-catégories.
+  const TREE = `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth
+                  FROM categories c JOIN category_names n ON n.id = c.id LEFT JOIN categories p ON p.id = c.parent_id`;
+  const TREE_ORDER = 'ORDER BY lower(COALESCE(p.name, c.name)), (c.parent_id IS NOT NULL), lower(c.name)';
+  app.get('/categories', async () => (await pool.query(`${TREE} ${TREE_ORDER}`)).rows);
+
+  // Sous-catégories sur deux niveaux : le parent doit exister et être lui-même une catégorie principale.
+  async function checkParent(parentId, selfId = null) {
+    if (parentId == null) return null;
+    if (selfId != null && parentId === selfId) return 'Une catégorie ne peut pas être sa propre catégorie parente';
+    const p = (await pool.query('SELECT parent_id FROM categories WHERE id = $1', [parentId])).rows[0];
+    if (!p) return 'Catégorie parente introuvable';
+    if (p.parent_id != null) return 'Une sous-catégorie ne peut pas avoir de sous-catégorie (deux niveaux au maximum)';
+    return null;
+  }
+  const dupName = async (name, parentId, selfId = null) => (await pool.query(
+    `SELECT 1 FROM categories WHERE lower(name) = lower($1) AND parent_id IS NOT DISTINCT FROM $2::int AND ($3::int IS NULL OR id <> $3)`, [name, parentId, selfId])).rowCount > 0;
 
   app.post('/categories', { preHandler: app.requireRole('admin') }, async (req, reply) => {
-    const { name } = z.object({ name: z.string().trim().min(1).max(60) }).parse(req.body);
+    const { name, parentId } = z.object({ name: z.string().trim().min(1).max(60), parentId: z.number().int().positive().nullable().optional() }).parse(req.body);
+    const bad = await checkParent(parentId ?? null);
+    if (bad) return reply.code(400).send({ error: bad });
     try {
-      if ((await pool.query('SELECT 1 FROM categories WHERE lower(name) = lower($1)', [name])).rowCount) return reply.code(409).send({ error: 'Catégorie déjà existante' });
-      const { rows } = await pool.query('INSERT INTO categories(name) VALUES ($1) RETURNING id, name', [name]);
+      if (await dupName(name, parentId ?? null)) return reply.code(409).send({ error: parentId ? 'Cette catégorie a déjà une sous-catégorie de ce nom' : 'Catégorie déjà existante' });
+      const { rows } = await pool.query('INSERT INTO categories(name, parent_id) VALUES ($1, $2) RETURNING id, name, parent_id AS "parentId"', [name, parentId ?? null]);
       return reply.code(201).send(rows[0]);
     } catch (err) {
       if (err.code === '23505') return reply.code(409).send({ error: 'Catégorie déjà existante' });
@@ -127,28 +161,40 @@ export default async function talksRoutes(app) {
     }
   });
 
-  // Gestion des catégories (admin) : liste avec nombre de conférences, renommer, supprimer.
+  // Gestion des catégories (admin) : liste avec nombre de conférences, renommer / déplacer, supprimer.
   const admin = { preHandler: app.requireRole('admin') };
   const catId = z.object({ id: z.coerce.number().int().positive() });
-  const catName = z.object({ name: z.string().trim().min(1).max(60) });
+  const catPatch = z.object({ name: z.string().trim().min(1).max(60), parentId: z.number().int().positive().nullable() }).partial().refine((x) => Object.keys(x).length > 0);
 
+  // « count » : conférences dont c'est la catégorie principale ; « total » : principale ou supplémentaire, sous-catégories comprises.
   app.get('/categories/stats', admin, async () => (await pool.query(
-    `SELECT c.id, c.name, count(t.id)::int AS count FROM categories c LEFT JOIN talks t ON t.category_id = c.id
-     GROUP BY c.id ORDER BY c.name`)).rows);
+    `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth,
+            (SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) AS count,
+            (SELECT count(*)::int FROM talks t WHERE ${inCategorySql('t', 'c.id')}) AS total,
+            (SELECT count(*)::int FROM categories k WHERE k.parent_id = c.id) AS children
+       FROM categories c JOIN category_names n ON n.id = c.id LEFT JOIN categories p ON p.id = c.parent_id ${TREE_ORDER}`)).rows);
 
   app.patch('/categories/:id', admin, async (req, reply) => {
     const { id } = catId.parse(req.params);
-    const { name } = catName.parse(req.body);
-    const dup = await pool.query('SELECT 1 FROM categories WHERE lower(name) = lower($1) AND id <> $2', [name, id]);
-    if (dup.rowCount) return reply.code(409).send({ error: 'Une catégorie porte déjà ce nom' });
-    const { rows } = await pool.query('UPDATE categories SET name = $2 WHERE id = $1 RETURNING id, name', [id, name]);
-    if (!rows[0]) return reply.code(404).send({ error: 'Catégorie introuvable' });
-    return rows[0]; // la recherche se met à jour seule (la signature d'indexation contient le nom)
+    const b = catPatch.parse(req.body);
+    const cur = (await pool.query('SELECT name, parent_id FROM categories WHERE id = $1', [id])).rows[0];
+    if (!cur) return reply.code(404).send({ error: 'Catégorie introuvable' });
+    const name = b.name ?? cur.name;
+    const parentId = b.parentId !== undefined ? b.parentId : cur.parent_id;
+    if (b.parentId !== undefined && parentId != null) {
+      if ((await pool.query('SELECT 1 FROM categories WHERE parent_id = $1', [id])).rowCount) return reply.code(400).send({ error: 'Cette catégorie a des sous-catégories : elle ne peut pas devenir une sous-catégorie' });
+      const bad = await checkParent(parentId, id);
+      if (bad) return reply.code(400).send({ error: bad });
+    }
+    if (await dupName(name, parentId, id)) return reply.code(409).send({ error: 'Une catégorie porte déjà ce nom à cet endroit' });
+    const { rows } = await pool.query('UPDATE categories SET name = $2, parent_id = $3 WHERE id = $1 RETURNING id, name, parent_id AS "parentId"', [id, name, parentId]);
+    return rows[0]; // la recherche se met à jour seule (la signature d'indexation contient le nom et les parents)
   });
 
-  // Les conférences de la catégorie supprimée restent en ligne, simplement sans catégorie.
+  // Les conférences de la catégorie supprimée restent en ligne, simplement sans cette catégorie. Une catégorie qui a des sous-catégories ne se supprime pas.
   app.delete('/categories/:id', admin, async (req, reply) => {
     const { id } = catId.parse(req.params);
+    if ((await pool.query('SELECT 1 FROM categories WHERE parent_id = $1', [id])).rowCount) return reply.code(409).send({ error: "Supprimez ou déplacez d'abord ses sous-catégories", code: 'has_children' });
     const n = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE category_id = $1', [id])).rows[0].n;
     const res = await pool.query('DELETE FROM categories WHERE id = $1', [id]);
     if (!res.rowCount) return reply.code(404).send({ error: 'Catégorie introuvable' });
@@ -164,8 +210,9 @@ export default async function talksRoutes(app) {
          AND ($1::text IS NULL OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%'
               OR t.description ILIKE '%' || $1 || '%'
               OR t.transcript_text ILIKE '%' || $1 || '%')
-         AND ($2::int IS NULL OR t.category_id = $2)
+         AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
          AND ($5::text IS NULL OR t.level = $5)
+         AND ${adultSql('t')}
        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
       [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null]
     );
@@ -303,12 +350,15 @@ export default async function talksRoutes(app) {
       const m = video.meta || {};
       const { rows } = await pool.query(
         `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed,
-                           external_file, external_thumb, duration_seconds, publication, publish_at, level)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
+                           external_file, external_thumb, duration_seconds, publication, publish_at, level, kids_bands, show_adults)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
         [req.user.sub, b.title, b.description || m.description || '', b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
           video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
-          m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt, b.level ?? null]
+          m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt, b.level ?? null,
+          cleanBands(b.kidsBands), b.showAdults ?? cleanBands(b.kidsBands).length === 0]
       );
+      const extras = cleanExtras(b.extraCategoryIds, b.categoryId ?? null);
+      if (extras.length) await saveExtras(pool, rows[0].id, extras);
       if (transcribable && b.translateTo.length) {
         const langs = [...new Set(b.translateTo)].filter((l) => l !== baseLang(b.language));
         if (langs.length) {
@@ -326,7 +376,7 @@ export default async function talksRoutes(app) {
   app.patch('/talks/:id', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = patchSchema.parse(req.body ?? {});
-    const cur = (await pool.query('SELECT organizer_id, source, publication, publish_at, poster_key, poster_candidates FROM talks WHERE id = $1', [id])).rows[0];
+    const cur = (await pool.query('SELECT organizer_id, source, publication, publish_at, poster_key, poster_candidates, category_id FROM talks WHERE id = $1', [id])).rows[0];
     if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
 
     const sets = [];
@@ -338,7 +388,8 @@ export default async function talksRoutes(app) {
     if (b.categoryId !== undefined) set('category_id', b.categoryId);
     if (b.access !== undefined) set('access', b.access);
     if (b.level !== undefined) set('level', b.level);
-    if (b.kidsBand !== undefined) set('kids_band', b.kidsBand);
+    if (b.kidsBands !== undefined) set('kids_bands', cleanBands(b.kidsBands));
+    if (b.showAdults !== undefined) set('show_adults', b.showAdults);
     if (b.featured !== undefined) {
       if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une conférence en avant sur l'accueil" });
       set('featured', b.featured);
@@ -362,9 +413,16 @@ export default async function talksRoutes(app) {
         set('poster_key', key);
       }
     }
-    if (!sets.length) return reply.code(400).send({ error: 'Rien à modifier' });
+    const extrasTouched = b.extraCategoryIds !== undefined || b.categoryId !== undefined;
+    if (!sets.length && !extrasTouched) return reply.code(400).send({ error: 'Rien à modifier' });
     try {
-      await pool.query(`UPDATE talks SET ${sets.join(', ')} WHERE id = $1`, vals);
+      if (sets.length) await pool.query(`UPDATE talks SET ${sets.join(', ')} WHERE id = $1`, vals);
+      if (extrasTouched) {
+        // La catégorie principale ne peut pas aussi figurer parmi les supplémentaires.
+        const principal = b.categoryId !== undefined ? b.categoryId : cur.category_id;
+        const current = b.extraCategoryIds ?? (await pool.query('SELECT category_id FROM talk_categories WHERE talk_id = $1', [id])).rows.map((r) => r.category_id);
+        await saveExtras(pool, id, cleanExtras(current, principal));
+      }
       // Épisode d'une série : choisir un accès ici fixe le réglage de l'épisode (identique à la série = il hérite de nouveau).
       if (b.access !== undefined) {
         await pool.query(`UPDATE series_episodes e SET access_override = CASE WHEN s.access = $2 THEN NULL ELSE $2 END FROM series s WHERE e.talk_id = $1 AND s.id = e.series_id`, [id, b.access]);

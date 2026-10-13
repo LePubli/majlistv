@@ -780,40 +780,47 @@ function LegalPages() {
 }
 
 /* ---------------------------------------------------------------- Catégories */
+// Deux niveaux : « Coran » puis ses sous-catégories (« Lecture », « Apprentissage »…). Une conférence a une catégorie principale et jusqu'à 2 autres.
 function Categories() {
   const { call } = useApp();
   const [cats, setCats] = useState(null);
   const [name, setName] = useState('');
-  const [editing, setEditing] = useState(null); // { id, name }
+  const [parentId, setParentId] = useState('');
+  const [editing, setEditing] = useState(null); // { id, name, parentId, children }
   const [msg, setMsg] = useState(null);
   const load = useCallback(() => call('/categories/stats').then((r) => r.ok && setCats(r.data)), [call]);
   useEffect(() => { load(); }, [load]);
+  const tops = (cats || []).filter((c) => !c.parentId);
 
   const done = (ok, text) => setMsg({ ok, text });
   const add = async (e) => {
     e.preventDefault();
-    const r = await call('/categories', { method: 'POST', body: JSON.stringify({ name }) });
-    if (r.ok) { setName(''); done(true, `Catégorie « ${r.data.name} » ajoutée.`); load(); } else done(false, r.data?.error || 'Erreur');
+    const r = await call('/categories', { method: 'POST', body: JSON.stringify({ name, parentId: parentId ? Number(parentId) : null }) });
+    if (r.ok) { setName(''); done(true, `${r.data.parentId ? 'Sous-catégorie' : 'Catégorie'} « ${r.data.name} » ajoutée.`); load(); } else done(false, r.data?.error || 'Erreur');
   };
-  const rename = async (e) => {
+  const save = async (e) => {
     e.preventDefault();
-    const r = await call(`/categories/${editing.id}`, { method: 'PATCH', body: JSON.stringify({ name: editing.name }) });
-    if (r.ok) { setEditing(null); done(true, 'Catégorie renommée.'); load(); } else done(false, r.data?.error || 'Erreur');
+    const r = await call(`/categories/${editing.id}`, { method: 'PATCH', body: JSON.stringify({ name: editing.name, parentId: editing.parentId ? Number(editing.parentId) : null }) });
+    if (r.ok) { setEditing(null); done(true, 'Catégorie enregistrée.'); load(); } else done(false, r.data?.error || 'Erreur');
   };
   const remove = async (c) => {
     const warn = c.count > 0
-      ? `Supprimer « ${c.name} » ? Ses ${c.count} conférence(s) resteront en ligne, mais sans catégorie.`
-      : `Supprimer la catégorie « ${c.name} » ?`;
+      ? `Supprimer « ${c.fullName} » ? Ses ${c.count} conférence(s) resteront en ligne, mais sans cette catégorie.`
+      : `Supprimer la catégorie « ${c.fullName} » ?`;
     if (!window.confirm(warn)) return;
     const r = await call(`/categories/${c.id}`, { method: 'DELETE' });
-    if (r.ok) { done(true, `Catégorie « ${c.name} » supprimée.`); load(); } else done(false, r.data?.error || 'Erreur');
+    if (r.ok) { done(true, `Catégorie « ${c.fullName} » supprimée.`); load(); } else done(false, r.data?.error || 'Erreur');
   };
 
   return (
     <section className="panel">
-      <p className="meta">Les catégories classent les conférences dans le catalogue, la recherche et le Studio. Supprimer une catégorie ne supprime jamais de conférence.</p>
+      <p className="meta">Les catégories classent les conférences dans le catalogue, la recherche et le Studio. Créez des sous-catégories pour affiner (Coran › Lecture, Coran › Apprentissage…). Chercher « Coran » trouve aussi ses sous-catégories. Une conférence a une catégorie principale et jusqu'à deux autres. Supprimer une catégorie ne supprime jamais de conférence.</p>
       <form className="cat-add" onSubmit={add}>
-        <input required maxLength={60} placeholder="Nouvelle catégorie (ex. Jurisprudence)" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom de la nouvelle catégorie" />
+        <input required maxLength={60} placeholder={parentId ? 'Nouvelle sous-catégorie (ex. Apprentissage)' : 'Nouvelle catégorie (ex. Jurisprudence)'} value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom de la nouvelle catégorie" />
+        <select value={parentId} onChange={(e) => setParentId(e.target.value)} aria-label="Catégorie parente">
+          <option value="">Catégorie principale</option>
+          {tops.map((c) => <option key={c.id} value={c.id}>Sous-catégorie de « {c.name} »</option>)}
+        </select>
         <button className="btn">+ Ajouter</button>
       </form>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
@@ -822,18 +829,24 @@ function Categories() {
       {cats && cats.length > 0 && (
         <ul className="cat-list">
           {cats.map((c) => (
-            <li key={c.id}>
+            <li key={c.id} className={c.parentId ? 'cat-sub' : undefined}>
               {editing?.id === c.id ? (
-                <form className="cat-edit" onSubmit={rename}>
+                <form className="cat-edit" onSubmit={save}>
                   <input autoFocus required maxLength={60} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Nouveau nom" />
+                  <select value={editing.parentId || ''} disabled={c.children > 0} onChange={(e) => setEditing({ ...editing, parentId: e.target.value })} aria-label="Catégorie parente" title={c.children > 0 ? 'Cette catégorie a des sous-catégories : elle reste une catégorie principale' : undefined}>
+                    <option value="">Catégorie principale</option>
+                    {tops.filter((x) => x.id !== c.id).map((x) => <option key={x.id} value={x.id}>Sous-catégorie de « {x.name} »</option>)}
+                  </select>
                   <button className="btn">Enregistrer</button>
                   <button type="button" className="btn ghost" onClick={() => setEditing(null)}>Annuler</button>
                 </form>
               ) : (
                 <>
-                  <span className="cat-name"><b>{c.name}</b><small className="meta">{c.count} conférence{c.count > 1 ? 's' : ''}</small></span>
+                  <span className="cat-name"><b>{c.parentId ? '↳ ' : ''}{c.name}</b>
+                    <small className="meta">{c.parentId ? `${c.count} conférence${c.count > 1 ? 's' : ''}` : `${c.total} conférence${c.total > 1 ? 's' : ''}${c.children ? ` · ${c.children} sous-catégorie${c.children > 1 ? 's' : ''}` : ''}`}</small></span>
                   <span className="cat-actions">
-                    <button type="button" className="link u" onClick={() => { setMsg(null); setEditing({ id: c.id, name: c.name }); }}>Renommer</button>
+                    {!c.parentId && <button type="button" className="link u" onClick={() => { setMsg(null); setParentId(String(c.id)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>+ Sous-catégorie</button>}
+                    <button type="button" className="link u" onClick={() => { setMsg(null); setEditing({ id: c.id, name: c.name, parentId: c.parentId ? String(c.parentId) : '' }); }}>Renommer / déplacer</button>
                     <button type="button" className="link u danger-link" onClick={() => remove(c)}>Supprimer</button>
                   </span>
                 </>

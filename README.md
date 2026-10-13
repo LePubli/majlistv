@@ -1060,3 +1060,26 @@ cd .. && git add -A && git commit -m "Etape 26.4 identite Kids + bande accueil" 
 grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
 nginx -t && systemctl reload nginx
 ```
+
+## Étape 26.5 — Classement : sous-catégories, plusieurs catégories, plusieurs tranches d'âge Kids
+
+**Ce que ça change**
+- **Sous-catégories** (2 niveaux) : Admin → Catégories → « + Sous-catégorie » (ex. Coran › Lecture, Coran › Apprentissage). Chercher ou filtrer « Coran » trouve aussi ses sous-catégories.
+- **Catégorie principale + 2 autres au maximum** par conférence (Studio → fiche de la conférence).
+- **Kids : plusieurs tranches d'âge** cochables (3-6, 7-10, 11-14). Une conférence cochée « 3 à 6 » + « 7 à 10 » apparaît pour les deux. Les anciennes valeurs sont converties automatiquement (3-6 → toutes, 7-10 → 7-10 et 11-14, 11-14 → 11-14).
+- **Case « Visible aussi dans le catalogue des adultes »** : décochée, une conférence Kids n'apparaît ni dans l'accueil, ni dans la liste, ni dans la recherche des adultes (elle reste accessible par lien direct et dans Kids).
+- Meilisearch se réindexe tout seul.
+
+**Déploiement** (migration 032 automatique au démarrage de l'API)
+```bash
+# Copiez le contenu de majlis-tv/ dans C:\Users\agenc\Documents\GitHub\majlistv, puis commit + push
+# DockPanel : redéployer majlistv-api, puis majlistv-web
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+**Après le déploiement** : réaffectez les 2 conférences de l'ancienne catégorie « Kids » à de vraies thématiques (Studio), puis supprimez la catégorie « Kids » (Admin → Catégories). Cochez la tranche d'âge Kids sur vos conférences concernées.
+
+**Debug** : `docker logs <conteneur api>` ; une catégorie qui a des sous-catégories ne peut pas être supprimée (409) : supprimez ou déplacez d'abord les sous-catégories. Tests : `api/tests/test_taxonomy.py`.
+

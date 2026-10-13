@@ -15,13 +15,13 @@ import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { hasActiveSubscription, hasLearningTier } from '../access.js';
 import { getNumber, getSetting, isOn } from '../settings.js';
+import { bandOkSql } from '../taxonomy.js';
 import { catalogSql, timeState, addPing, kidReport, MIN_LIMIT, MAX_LIMIT } from '../kidsControl.js';
 import { sendReportNow } from '../kidsReportMailer.js';
 import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../kidsLearning.js';
 
 export const BANDS = ['3-6', '7-10', '11-14'];
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'];
-const RANK = { '3-6': 1, '7-10': 2, '11-14': 3 };
 const MAX_FAILS = 5, LOCK_MINUTES = 10;
 const idSchema = z.object({ id: z.string().uuid() });
 const profileBody = z.object({
@@ -31,14 +31,12 @@ const profileBody = z.object({
 });
 const pinSchema = z.string().regex(/^\d{4,6}$/, '4 à 6 chiffres');
 
-// Condition SQL « cette conférence convient à une tranche d'âge » ($n = rang du profil : 1, 2 ou 3).
-export const bandOkSql = (alias, p) => `(${alias}.kids_band IS NOT NULL AND CASE ${alias}.kids_band WHEN '3-6' THEN 1 WHEN '7-10' THEN 2 ELSE 3 END <= $${p})`;
 
 // Une conférence est-elle visible par ce profil ? (prête, publiée, marquée Kids, tranche d'âge compatible)
 export async function kidCanSee(profile, talkId) {
   const { rowCount } = await pool.query(
     `SELECT 1 FROM talks t WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 3, 4)}`,
-    [talkId, RANK[profile.band], profile.id, profile.catalog_mode || 'all']);
+    [talkId, profile.band, profile.id, profile.catalog_mode || 'all']);
   return rowCount > 0;
 }
 
@@ -172,15 +170,15 @@ export default async function kidsRoutes(app) {
     const minQ = await getNumber('quiz_min_questions');
     const quizDefault = isOn(await getSetting('quiz_default_enabled'));
     const { rows } = await pool.query(
-      `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.kids_band AS "kidsBand", t.duration_seconds AS "durationSeconds",
+      `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.kids_bands AS "kidsBands", t.duration_seconds AS "durationSeconds",
               t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 140) AS summary,
               COALESCE(k.completed, false) AS completed, COALESCE(k.position_ms, 0) AS "positionMs",
               (COALESCE(t.quiz_enabled, $5::boolean) AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $6) AS "hasQuiz",
               (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars
          FROM talks t LEFT JOIN kid_progress k ON k.talk_id = t.id AND k.profile_id = $1
         WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 7)} AND ($3::boolean OR t.access = 'free')
-        ORDER BY (t.kids_band = $4) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 60`,
-      [c.profile.id, RANK[c.profile.band], open, c.profile.band, quizDefault, minQ, c.profile.catalog_mode]);
+        ORDER BY (t.kids_bands[1] = $4) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 60`,
+      [c.profile.id, c.profile.band, open, c.profile.band, quizDefault, minQ, c.profile.catalog_mode]);
     for (const r of rows) {
       r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
       delete r.poster_key; delete r.external_thumb;
@@ -278,7 +276,7 @@ export default async function kidsRoutes(app) {
            FROM kid_revision r JOIN talks t ON t.id = r.talk_id
           WHERE r.profile_id = $1 AND r.due_on IS NOT NULL AND r.due_on <= (now() AT TIME ZONE 'Europe/Paris')::date
             AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')
-          ORDER BY r.due_on LIMIT 6`, [c.profile.id, RANK[c.profile.band], open, c.profile.catalog_mode]);
+          ORDER BY r.due_on LIMIT 6`, [c.profile.id, c.profile.band, open, c.profile.catalog_mode]);
       for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
       out.due = rows;
     }
@@ -319,8 +317,7 @@ export default async function kidsRoutes(app) {
       if (b.dailyLimitMin !== undefined) await client.query('UPDATE kid_profiles SET daily_limit_min = $2 WHERE id = $1', [p.id, b.dailyLimitMin]);
       // Changement de mode : on garde ce que l'enfant voit aujourd'hui (rien n'apparaît ni ne disparaît sans que le parent le décide).
       if (b.catalogMode && b.catalogMode !== p.catalog_mode) {
-        const rank = RANK[p.band];
-        const eligible = (await client.query(`SELECT t.id FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 1)}`, [rank])).rows.map((r) => r.id);
+        const eligible = (await client.query(`SELECT t.id FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 1)}`, [p.band])).rows.map((r) => r.id);
         const seen = (await client.query(`SELECT t.id FROM talks t WHERE t.id = ANY($3::uuid[]) AND ${catalogSql('t', 1, 2)}`, [p.id, p.catalog_mode, eligible])).rows.map((r) => r.id);
         const seenSet = new Set(seen);
         await client.query('DELETE FROM kid_catalog WHERE profile_id = $1', [p.id]);
@@ -342,9 +339,9 @@ export default async function kidsRoutes(app) {
   app.get('/me/kids/profiles/:id/catalog', auth, async (req, reply) => {
     const p = await ownProfile(req, reply); if (!p) return;
     const { rows } = await pool.query(
-      `SELECT t.id, t.title, t.speaker, t.kids_band AS "kidsBand", t.duration_seconds AS "durationSeconds", t.access, ${catalogSql('t', 2, 3)} AS allowed
+      `SELECT t.id, t.title, t.speaker, t.kids_bands AS "kidsBands", t.duration_seconds AS "durationSeconds", t.access, ${catalogSql('t', 2, 3)} AS allowed
          FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 1)}
-        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 200`, [RANK[p.band], p.id, p.catalog_mode]);
+        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 200`, [p.band, p.id, p.catalog_mode]);
     return { mode: p.catalog_mode, talks: rows };
   });
 
@@ -356,7 +353,7 @@ export default async function kidsRoutes(app) {
     await pool.query('DELETE FROM kid_catalog WHERE profile_id = $1 AND talk_id = ANY($2::uuid[])', [p.id, b.talkIds]);
     if (keep) {
       await pool.query('INSERT INTO kid_catalog(profile_id, talk_id, allowed) SELECT $1, t.id, $3 FROM talks t WHERE t.id = ANY($2::uuid[]) AND ' + bandOkSql('t', 4),
-        [p.id, b.talkIds, b.allowed, RANK[p.band]]);
+        [p.id, b.talkIds, b.allowed, p.band]);
     }
     return { ok: true };
   });

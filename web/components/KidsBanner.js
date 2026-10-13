@@ -3,6 +3,7 @@
 // Illustration facultative : déposez votre image (PNG transparent) dans web/public/kids/hero.png, elle s'affiche à droite du bandeau.
 import Link from 'next/link';
 import { useApp } from './Providers';
+import { agesLabel } from '../lib/kids';
 
 // « Kids » en lettres de couleur, façon autocollant.
 export function KidsWord({ className = '' }) {
@@ -53,7 +54,7 @@ export default function KidsBanner({ variant = 'full' }) {
 export function KidsBand({ data }) {
   const { t, appName } = useApp();
   if (!data?.enabled || !data.talks?.length) return null;
-  const age = (b) => ({ '3-6': t('kdBand36'), '7-10': t('kdBand710'), '11-14': t('kdBand1114') }[b] || b);
+  const age = (b) => agesLabel(b, t);
   const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
   return (
     <section className="kd-band" aria-labelledby="kd-band-h">
@@ -70,9 +71,9 @@ export function KidsBand({ data }) {
       <ul className="kd-band-list">
         {data.talks.map((x) => (
           <li key={x.id}>
-            <Link href="/kids" className="kd-card" aria-label={`${x.title} — ${age(x.kidsBand)}`}>
+            <Link href="/kids" className="kd-card" aria-label={`${x.title} — ${age(x.kidsBands)}`}>
               <span className="kd-thumb" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined}>
-                <span className="kd-age">{age(x.kidsBand)}</span>
+                <span className="kd-age">{age(x.kidsBands)}</span>
                 {x.durationSeconds ? <span className="dur">{mins(x.durationSeconds)}</span> : null}
               </span>
               <b className="kd-card-title">{x.title}</b>

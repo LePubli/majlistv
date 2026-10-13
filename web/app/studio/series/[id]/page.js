@@ -228,7 +228,7 @@ export default function SeriesEditor() {
         <label className="fld"><span>{t('srDesc')}</span><textarea rows={4} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
         <div className="fld" role="group" aria-label={t('category')}>
           <span>{t('category')}</span>
-          <div className="pills">{pill(!f.categoryId, t('nwNoCat'), () => setF({ ...f, categoryId: '' }))}{cats.map((c) => pill(String(f.categoryId) === String(c.id), c.name, () => setF({ ...f, categoryId: String(c.id) })))}</div>
+          <div className="pills">{pill(!f.categoryId, t('nwNoCat'), () => setF({ ...f, categoryId: '' }))}{cats.map((c) => pill(String(f.categoryId) === String(c.id), c.fullName || c.name, () => setF({ ...f, categoryId: String(c.id) })))}</div>
         </div>
         <div className="fld" role="group" aria-label={t('srAccess')}>
           <span>{t('srAccess')}</span>

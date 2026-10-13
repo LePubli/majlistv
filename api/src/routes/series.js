@@ -49,7 +49,7 @@ export async function syncAccess(db, seriesId) {
 export async function listSeries({ limit = 40, category = null, q = null, level = null, startedBy = null } = {}) {
   const vals = [limit];
   const where = ['s.published'];
-  if (category) { vals.push(category); where.push(`s.category_id = $${vals.length}`); }
+  if (category) { vals.push(category); where.push(`s.category_id IN (SELECT id FROM categories WHERE id = $${vals.length} OR parent_id = $${vals.length})`); }
   if (q) { vals.push(`%${String(q).replace(/[%_\\]/g, '\\$&')}%`); where.push(`(s.title ILIKE $${vals.length} OR s.speaker ILIKE $${vals.length} OR s.description ILIKE $${vals.length})`); }
   if (level) { vals.push(level); where.push(`s.level = $${vals.length}`); }
   let join = '';
@@ -74,7 +74,7 @@ export async function listSeries({ limit = 40, category = null, q = null, level 
        JOIN series_episodes e ON e.series_id = s.id
        JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
        ${join}
-       LEFT JOIN categories c ON c.id = s.category_id
+       LEFT JOIN category_names c ON c.id = s.category_id
       WHERE ${where.join(' AND ')}
       GROUP BY s.id, c.name ${having} ORDER BY ${order} LIMIT $1`, vals);
   const out = [];
@@ -221,7 +221,7 @@ export default async function seriesRoutes(app) {
 
   app.get('/series/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const s = (await pool.query('SELECT s.*, c.name AS category FROM series s LEFT JOIN categories c ON c.id = s.category_id WHERE s.id = $1', [id])).rows[0];
+    const s = (await pool.query('SELECT s.*, c.name AS category FROM series s LEFT JOIN category_names c ON c.id = s.category_id WHERE s.id = $1', [id])).rows[0];
     if (!s) return reply.code(404).send({ error: 'Série introuvable' });
     const viewer = await app.optionalUser(req);
     const manage = viewer && (viewer.role === 'admin' || viewer.sub === s.owner_id);

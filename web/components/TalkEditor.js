@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
 import { BANDS, bandLabel } from '../lib/kids';
+const MAX_EXTRA = 2;
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
 const toLocalInput = (iso) => {
@@ -14,7 +15,8 @@ const toLocalInput = (iso) => {
 };
 const initial = (x) => ({
   title: x.title || '', speaker: x.speaker || '', description: x.description || '',
-  categoryId: x.category_id ? String(x.category_id) : '', access: x.access, level: x.level || '', kidsBand: x.kidsBand || '',
+  categoryId: x.category_id ? String(x.category_id) : '', extraCategoryIds: [...(x.extraCategoryIds || [])].sort((a, b) => a - b), access: x.access, level: x.level || '',
+  kidsBands: BANDS.filter((b) => (x.kidsBands || []).includes(b)), showAdults: x.showAdults !== false,
   publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt), featured: Boolean(x.featured),
 });
 
@@ -58,8 +60,8 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
     if (sched && new Date(f.publishAt).getTime() <= Date.now() + 30000) { setMsg({ ok: false, text: t('errPastDate') }); return; }
     setSaving(true); setMsg(null);
     const body = {
-      title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null, kidsBand: f.kidsBand || null,
-      categoryId: f.categoryId ? Number(f.categoryId) : null,
+      title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null, kidsBands: f.kidsBands, showAdults: f.showAdults,
+      categoryId: f.categoryId ? Number(f.categoryId) : null, extraCategoryIds: f.extraCategoryIds.filter((id) => String(id) !== String(f.categoryId)),
       publication: f.publication, publishAt: sched ? new Date(f.publishAt).toISOString() : null,
       ...(isAdmin ? { featured: f.featured } : {}),
     };
@@ -136,8 +138,21 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
           <span>{t('category')}</span>
           <div className="pills">
             {pill(!f.categoryId, t('nwNoCat'), () => patch({ categoryId: '' }))}
-            {cats.map((c) => pill(String(f.categoryId) === String(c.id), c.name, () => patch({ categoryId: String(c.id) })))}
+            {cats.map((c) => pill(String(f.categoryId) === String(c.id), c.fullName || c.name, () => patch({ categoryId: String(c.id) })))}
           </div>
+          <span className="meta small">{t('txMainHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('txExtra')}>
+          <span>{t('txExtra')}</span>
+          <div className="pills">
+            {cats.filter((c) => String(c.id) !== String(f.categoryId)).map((c) => {
+              const on = f.extraCategoryIds.includes(c.id);
+              const full = !on && f.extraCategoryIds.length >= MAX_EXTRA;
+              return <button key={c.id} type="button" className={on ? 'pill on' : 'pill'} aria-pressed={on} disabled={full}
+                onClick={() => patch({ extraCategoryIds: on ? f.extraCategoryIds.filter((id) => id !== c.id) : [...f.extraCategoryIds, c.id].sort((a, b) => a - b) })}>{on ? '✓ ' : ''}{c.fullName || c.name}</button>;
+            })}
+          </div>
+          <span className="meta small">{t('txExtraHelp')}</span>
         </div>
         <div className="fld" role="group" aria-label={t('nwAccessQ')}>
           <span>{t('nwAccessQ')}</span>
@@ -158,10 +173,18 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
         <div className="fld" role="group" aria-label={t('kdStudioBand')}>
           <span>{t('kdStudioBand')}</span>
           <div className="pills">
-            {pill(!f.kidsBand, t('kdStudioNone'), () => patch({ kidsBand: '' }))}
-            {BANDS.map((b) => pill(f.kidsBand === b, bandLabel(b, t), () => patch({ kidsBand: b })))}
+            {pill(f.kidsBands.length === 0, t('kdStudioNone'), () => patch({ kidsBands: [], showAdults: true }))}
+            {BANDS.map((b) => {
+              const on = f.kidsBands.includes(b);
+              // Première tranche cochée : la conférence est pour les enfants, on la retire du catalogue adultes (décochable ci-dessous).
+              return <button key={b} type="button" className={on ? 'pill on' : 'pill'} aria-pressed={on}
+                onClick={() => patch({ kidsBands: BANDS.filter((x) => (x === b ? !on : f.kidsBands.includes(x))), ...(f.kidsBands.length === 0 && !on ? { showAdults: false } : {}) })}>{on ? '✓ ' : ''}{bandLabel(b, t)}</button>;
+            })}
           </div>
           <span className="meta small">{t('kdStudioHelp')}</span>
+          {f.kidsBands.length > 0 && (
+            <label className="kd-check"><input type="checkbox" checked={f.showAdults} onChange={(e) => patch({ showAdults: e.target.checked })} /> <span>{t('txShowAdults')}</span></label>
+          )}
         </div>
 
         {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
