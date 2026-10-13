@@ -590,3 +590,12 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **Migration** : `020_onboarding.sql` (appliquée au démarrage de l'API).
 **Tests** : `python3 api/tests/test_onboarding.py` (20 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+
+## Étape 12.5 — Revue mobile et arabe (droite-à-gauche)
+
+**Vérifié** : 13 écrans visiteur (accueil, bibliothèque, fiche conférence verrouillée et gratuite, connexion, inscription, mot de passe oublié, formules, mentions légales, compte, bienvenue, préférences) en **français 390 px**, **arabe 390 px** et **arabe 768 px** : aucun défilement horizontal, aucun élément hors écran, `dir="rtl"` correct.
+
+**Correctif** : sur mobile, le menu du haut défilait horizontalement avec une barre invisible, donc « Connexion », « Créer un compte », « Déconnexion » et le sélecteur de langue étaient hors écran. Le menu passe maintenant sur deux lignes (`web/app/globals.css`, bloc `@media (max-width: 720px)`).
+
+**Pas d'API ni de migration.** Déploiement : web seulement, puis `/root/apply-limits.sh` et vérification nginx.

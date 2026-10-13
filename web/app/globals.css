@@ -38,8 +38,11 @@ nav { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
   .header { padding-block: 10px; }
   .logo .logo-emblem { height: 34px; }
   .logo .logo-word { height: 18px; }
-  .header nav { width: 100%; gap: 14px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; scrollbar-width: none; }
+  /* Menu sur deux lignes si besoin : connexion / inscription / langue restent toujours visibles (plus de défilement caché). */
+  .header nav { width: 100%; gap: 8px 16px; flex-wrap: wrap; align-items: center; }
   .header nav > * { flex: none; }
+  .header nav a.btn { padding: 8px 16px; }
+  .header nav select { max-width: 130px; }
 }
 
 /* Formulaires et boutons */
