@@ -1,14 +1,16 @@
 'use client';
-// Studio → onglet « Quiz » → bibliothèque de rappels : passages courts diffusés en « rappel du jour » aux membres Apprentissage.
-// Aucune IA : extrait mot pour mot de la transcription, citation d'un quiz validé, ou saisie à la main avec sa source. Validation humaine obligatoire.
+// Rappels d'une conférence (onglet « Rappels » du Studio, indépendant du quiz) et composant d'un rappel, réutilisé par Studio → Rappels.
+// Aucune IA pour ces trois origines : extrait mot pour mot de la transcription, citation d'un quiz validé, ou saisie à la main avec sa source.
 import { useCallback, useEffect, useState } from 'react';
 import { clock, parseClock } from '../lib/clock';
 
-function Item({ r, t, call, onChange }) {
+export function Item({ r, t, call, onChange }) {
+  const locked = r.origin === 'corpus'; // citation du corpus : le texte est celui de la source, il ne se modifie pas
   const [text, setText] = useState(r.text);
+  const [ar, setAr] = useState(r.textAr || '');
   const [src, setSrc] = useState(r.attribution);
   const [err, setErr] = useState(null);
-  const dirty = text !== r.text || src !== r.attribution;
+  const dirty = !locked && (text !== r.text || src !== r.attribution || ar !== (r.textAr || ''));
   const send = async (body) => {
     setErr(null);
     const x = await call(`/studio/reminders/${r.id}`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -20,14 +22,25 @@ function Item({ r, t, call, onChange }) {
     <li className={`rm-item ${r.status}`}>
       <div className="rm-head">
         <span className={`rm-tag ${r.status}`}>{t(r.status === 'approved' ? 'rmApproved' : 'rmDraft')}</span>
-        <span className="meta small">{t(`rmOrigin_${r.origin}`)}{r.startMs != null ? ` · ${clock(r.startMs)}` : ''}</span>
+        <span className="meta small">{t(`rmOrigin_${r.origin}`)}{r.startMs != null ? ` · ${clock(r.startMs)}` : ''}{r.talkTitle ? ` · ${r.talkTitle}` : ''}</span>
       </div>
-      <textarea rows={3} maxLength={800} value={text} onChange={(e) => setText(e.target.value)} aria-label={t('rmText')} dir="auto" />
-      <input value={src} maxLength={300} onChange={(e) => setSrc(e.target.value)} placeholder={t('rmSourcePh')} aria-label={t('rmSource')} />
+      {locked ? (
+        <>
+          {r.textAr && <p className="rm-ar" dir="rtl" lang="ar">{r.textAr}</p>}
+          <p className="rm-fr">{r.text}</p>
+          <p className="meta small">{r.attribution}</p>
+        </>
+      ) : (
+        <>
+          <textarea rows={3} maxLength={800} value={text} onChange={(e) => setText(e.target.value)} aria-label={t('rmText')} dir="auto" />
+          {r.origin === 'manual' && <textarea rows={2} maxLength={1600} value={ar} onChange={(e) => setAr(e.target.value)} placeholder={t('rmArPh')} aria-label={t('rmArLabel')} dir="rtl" lang="ar" />}
+          <input value={src} maxLength={300} onChange={(e) => setSrc(e.target.value)} placeholder={t('rmSourcePh')} aria-label={t('rmSource')} />
+        </>
+      )}
       {text !== r.text && r.origin !== 'manual' && <p className="meta small">{t('rmEditWarn')}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       <div className="rm-actions">
-        {dirty && <button type="button" className="btn ghost" onClick={() => send({ text, attribution: src })}>{t('save')}</button>}
+        {dirty && <button type="button" className="btn ghost" onClick={() => send({ text, attribution: src, ...(r.origin === 'manual' ? { textAr: ar } : {}) })}>{t('save')}</button>}
         {r.status === 'draft'
           ? <button type="button" className="btn" disabled={dirty} onClick={() => send({ status: 'approved' })}>{t('rmApprove')}</button>
           : <button type="button" className="btn ghost" onClick={() => send({ status: 'draft' })}>{t('rmUnapprove')}</button>}

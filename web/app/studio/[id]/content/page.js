@@ -261,7 +261,7 @@ export default function ContentPage() {
   const { t, call, locale } = useApp();
   const params = useSearchParams();
   const router = useRouter();
-  const tab = ['summary', 'quiz'].includes(params.get('tab')) ? params.get('tab') : 'transcript';
+  const tab = ['summary', 'quiz', 'reminders'].includes(params.get('tab')) ? params.get('tab') : 'transcript';
   const dirty = useRef(false);
   const [title, setTitle] = useState('');
   const onDirty = useCallback((v) => { dirty.current = v; }, []);
@@ -283,10 +283,12 @@ export default function ContentPage() {
         <button type="button" role="tab" aria-selected={tab === 'transcript'} className={tab === 'transcript' ? 'pill on' : 'pill'} onClick={() => go('transcript')}>{t('ctTabTranscript')}</button>
         <button type="button" role="tab" aria-selected={tab === 'summary'} className={tab === 'summary' ? 'pill on' : 'pill'} onClick={() => go('summary')}>{t('ctTabSummary')}</button>
         <button type="button" role="tab" aria-selected={tab === 'quiz'} className={tab === 'quiz' ? 'pill on' : 'pill'} onClick={() => go('quiz')}>{t('qzTab')}</button>
+        <button type="button" role="tab" aria-selected={tab === 'reminders'} className={tab === 'reminders' ? 'pill on' : 'pill'} onClick={() => go('reminders')}>{t('rmTab')}</button>
       </div>
       {tab === 'transcript' && <TranscriptEditor key="tr" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
       {tab === 'summary' && <InsightsEditor key="in" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
-      {tab === 'quiz' && <><QuizEditor key="qz" id={id} t={t} call={call} /><RemindersEditor key="rm" id={id} t={t} call={call} /></>}
+      {tab === 'quiz' && <QuizEditor key="qz" id={id} t={t} call={call} />}
+      {tab === 'reminders' && <RemindersEditor key="rm" id={id} t={t} call={call} />}
     </main>
   );
 }

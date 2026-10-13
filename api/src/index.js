@@ -29,6 +29,8 @@ import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
+import citationRoutes, { autoTopUp } from './routes/citations.js';
+import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
 import { startRevisionMailer } from './revisionMailer.js';
 import seriesRoutes, { listSeries } from './routes/series.js';
@@ -115,6 +117,7 @@ await app.register(studioContentRoutes);
 await app.register(quizRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
+await app.register(citationRoutes);
 await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
@@ -127,4 +130,8 @@ await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
 startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
+await recoverImport();
+// Citations automatiques : toutes les heures, réapprovisionne le stock si besoin (l'IA choisit des références, le texte vient du corpus).
+setInterval(() => autoTopUp().catch((e) => app.log.warn(`citations : ${e.message}`)), 3600 * 1000).unref();
+setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)

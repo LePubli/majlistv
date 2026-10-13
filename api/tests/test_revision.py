@@ -146,16 +146,17 @@ r = requests.patch(f"{B}/studio/reminders/{q['id']}", headers=O1, json={"status"
 
 # --- rappel du jour
 cur.execute("delete from reminders where talk_id=%s and id not in (%s, %s, %s)", (t1, m1, m2, q["id"]))
+cur.execute("update reminders set status='draft', approved_at=null where talk_id is distinct from %s", (t1,))  # seule la conférence de ce test fournit des rappels publiés
 d = requests.get(f"{B}/me/revision", headers=LRN).json(); rem = d["reminder"]
-ok(rem is not None and rem["talkId"] == str(t1) and rem["text"] and "id" in rem, "rappel du jour : un passage validé d'une conférence déjà passée au quiz")
+ok(rem is not None and rem["talkId"] == str(t1) and rem["text"] and "id" in rem, "rappel du jour : un passage validé de la bibliothèque")
 ok(requests.get(f"{B}/me/revision", headers=LRN).json()["reminder"]["id"] == rem["id"], "stable toute la journée")
 # brouillons jamais diffusés
 cur.execute("update reminders set status='draft', approved_at=null where talk_id=%s", (t1,))
 ok(requests.get(f"{B}/me/revision", headers=LRN).json()["reminder"] is None, "brouillons : jamais diffusés")
-# talk jamais passé au quiz → pas de rappel
+# 24.6 : le rappel du jour ne dépend plus des quiz : un membre qui n'a jamais passé de quiz reçoit aussi un rappel
 cur.execute("update reminders set status='approved' where talk_id=%s", (t1,))
 STD2, ustd2 = member(); subscribe(ustd2, "learning")
-ok(requests.get(f"{B}/me/revision", headers=STD2).json()["reminder"] is None, "conférence jamais passée au quiz : pas de rappel")
+ok(requests.get(f"{B}/me/revision", headers=STD2).json()["reminder"]["talkId"] == str(t1), "aucun quiz passé : le rappel du jour est quand même proposé")
 ok(requests.delete(f"{B}/studio/reminders/{m1}", headers=O2).status_code == 404 and requests.delete(f"{B}/studio/reminders/{m1}", headers=O1).status_code == 204, "suppression (propriétaire seulement)")
 cur.execute("delete from talks where id in (%s,%s,%s)", (t1, t2, t3))
 cur.execute("select count(*) from revision_items where talk_id in (%s,%s,%s)", (t1, t2, t3)); ok(cur.fetchone()[0] == 0, "conférence supprimée : calendrier et rappels nettoyés")

@@ -113,8 +113,9 @@ export default function Learning() {
           {rv.reminder && (
             <figure className="rv-reminder">
               <figcaption className="eyebrow">{t('revReminder')}</figcaption>
+              {rv.reminder.textAr && <blockquote className="cit-ar" dir="rtl" lang="ar">{rv.reminder.textAr}</blockquote>}
               <blockquote dir="auto">{rv.reminder.text}</blockquote>
-              <p className="meta small">{[rv.reminder.attribution, rv.reminder.speaker].filter(Boolean).join(' · ')} — <Link className="link u" href={`/talks/${rv.reminder.talkId}${rv.reminder.startMs != null ? `?t=${Math.floor(rv.reminder.startMs / 1000)}` : ''}`}>{rv.reminder.talkTitle}</Link></p>
+              <p className="meta small">{[rv.reminder.attribution, rv.reminder.speaker].filter(Boolean).join(' · ')}{rv.reminder.talkId && <> — <Link className="link u" href={`/talks/${rv.reminder.talkId}${rv.reminder.startMs != null ? `?t=${Math.floor(rv.reminder.startMs / 1000)}` : ''}`}>{rv.reminder.talkTitle}</Link></>}</p>
             </figure>
           )}
           {rv.emailEnabled && (

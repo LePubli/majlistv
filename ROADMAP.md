@@ -134,6 +134,8 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - **Bibliothèque de rappels** dans le Studio : soit un passage extrait mot pour mot d'une de vos conférences (avec le lien vers la minute), soit une citation saisie à la main (auteur, source, recueil, numéro, degré d'authenticité, langue) et marquée « validée ». **Rien de généré par l'IA.**
   - Carte « Rappel du jour » sur l'accueil, e-mail quotidien avec désinscription en un clic, fréquence réglable.
 
+- ✅ **24.6 Rappels indépendants des quiz + citations automatiques** (versets du Coran et hadiths importés d'un corpus public ; l'IA choisit des références dans une liste fermée, le texte affiché est toujours celui de la source ; citation du jour sur l'accueil ; Studio → Rappels)
+
 **25. Ouvrages et boutique** ✅ (filigrane : e-mail + date en pied de page, diagonale et métadonnées)
 - Fiche ouvrage : titre, auteur, présentation, couverture, langues disponibles.
 - Pour chaque langue : un fichier **PDF** à télécharger **ou** un ou plusieurs **liens boutique** (selon le pays ou le revendeur, liens d'affiliation à mettre en place par Epok).
@@ -211,7 +213,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 
 ## Ordre de travail retenu
 
-24.1 → 24.2 → 24.3 → 24.4 → 24.5 → 25 → 26, puis 16.2 (référencement : URL lisibles, page intervenant, chapitres dans le HTML), puis 17 à 23. L'étape 8 (sauvegardes, surveillance) reste en dernier, mais elle devient urgente dès qu'il y a de vrais abonnés.
+24.1 → 24.2 → 24.3 → 24.4 → 24.5 → 24.6 → 25 → 26, puis 16.2 (référencement : URL lisibles, page intervenant, chapitres dans le HTML), puis 17 à 23. L'étape 8 (sauvegardes, surveillance) reste en dernier, mais elle devient urgente dès qu'il y a de vrais abonnés.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

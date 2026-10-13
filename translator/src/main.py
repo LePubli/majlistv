@@ -23,6 +23,7 @@ import requests
 
 from insights import Insights
 from quiz import Quiz
+from citations import Citations
 from settings import Settings
 
 
@@ -518,7 +519,8 @@ class Health(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         body = json.dumps({"status": "ok", "provider": PROVIDER, "overrides": {k: sorted(v) for k, v in OVERRIDES.items() if v}, "model": MODEL, "current": current, "lastOk": last_ok,
                            "insights": {"provider": insights.provider, "lastOk": insights.last_ok} if insights else None,
-                           "quiz": {"provider": quiz.provider, "lastOk": quiz.last_ok} if quiz else None}).encode()
+                           "quiz": {"provider": quiz.provider, "lastOk": quiz.last_ok} if quiz else None,
+                           "citations": {"provider": citations.provider, "lastOk": citations.last_ok} if citations else None}).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
         self.end_headers()
@@ -544,9 +546,10 @@ def main():
     global current
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
-    global insights, quiz
+    global insights, quiz, citations
     insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     quiz = Quiz(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
+    citations = Citations(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
@@ -563,6 +566,7 @@ def main():
 
     insights.start()
     quiz.start()
+    citations.start()
     while not stopping:
         job = None
         try:

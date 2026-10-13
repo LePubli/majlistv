@@ -7,6 +7,7 @@ import SearchHit from '../components/SearchHit';
 import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 import SeriesCard from '../components/SeriesCard';
+import CitationCard from '../components/CitationCard';
 import { LEVELS, levelLabel } from '../lib/levels';
 
 export default function Home() {
@@ -19,6 +20,8 @@ export default function Home() {
   const [cat, setCat] = useState('');
   const [level, setLevel] = useState('');
   const [cont, setCont] = useState([]);
+  const [cit, setCit] = useState(null); // citation du jour (verset ou hadith), la même pour tous
+  useEffect(() => { call('/citation/today', {}, null).then((r) => setCit(r.ok ? r.data : null)); }, [call]);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
@@ -79,6 +82,7 @@ export default function Home() {
         </>
       ) : (
         <>
+          <CitationCard c={cit} t={t} />
           {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}

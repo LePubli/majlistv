@@ -841,11 +841,7 @@ Les questions sont désormais **écrites en français par défaut, quelle que so
 
 **Où le membre le voit** : rangée « À réviser aujourd'hui » sur l'accueil (badge « À réviser »), section dédiée en haut de **Mon apprentissage** (`/learning`) avec le rappel du jour et la case « e-mail du matin », et, à la fin d'un quiz, « Prochaine révision : mercredi 14 octobre ».
 
-**Bibliothèque de rappels (Studio → conférence → Contenu → onglet Quiz → « Rappels »)** — **jamais d'IA** :
-1. *Extraire de la transcription* : indiquer début/fin (mm:ss) ; le serveur copie le texte mot pour mot (40 s par défaut, 2 min au plus).
-2. *Reprendre les citations du quiz* : reprend les citations (déjà retrouvées mot pour mot) des questions validées.
-3. *Saisir un passage* (hadith, verset, citation) : **source obligatoire**.
-Tout arrive en **brouillon** ; seuls les rappels **validés** sont diffusés. Un extrait modifié à la main redevient une saisie manuelle (source obligatoire) et repasse en brouillon. Rappel du jour : un seul passage validé par jour, tiré parmi les conférences que le membre a déjà passées au quiz.
+**Bibliothèque de rappels** : depuis l'étape 24.6 elle est **indépendante des quiz** (voir « Étape 24.6 » plus bas). Les trois modes manuels (extrait de transcription, citations d'un quiz validé, saisie avec source) sont dans **Studio → conférence → Contenu → onglet Rappels**, et toute la bibliothèque dans **Studio → Rappels**.
 
 **E-mail quotidien** : à partir de l'heure réglée (Admin → Paramètres → Quiz, 8 h heure de Paris par défaut), chaque membre Apprentissage ayant au moins une révision reçoit **un seul e-mail par jour** (conférences à réviser + rappel du jour). Désactivable par le membre (case sur `/learning`) ou globalement (réglage « E-mail quotidien »). Il faut que l'envoi d'e-mails soit configuré (Admin → Paramètres → E-mails) ; sinon rien n'est mis en file. Le modèle `revision_daily` existe en fr/en/ar.
 
@@ -881,3 +877,51 @@ Tout arrive en **brouillon** ; seuls les rappels **validés** sont diffusés. Un
 **Test** : `python3 api/tests/test_books.py` (≈ 70 vérifications, nécessite le stockage S3 de test).
 **Déploiement** : api puis web (translator inchangé), `/root/apply-limits.sh`, vérification nginx. Le bucket doit autoriser `PUT` depuis le site : l'API applique le CORS au démarrage (comme pour l'envoi des vidéos).
 **À faire par toi** : programmes d'affiliation (liens à coller dans « Liens boutique »), et ne téléverser que des PDF dont tu as les droits.
+
+
+## Étape 24.6 — Rappels indépendants des quiz et citations automatiques (versets, hadiths)
+
+**Ce qui change**
+- Les rappels forment une **bibliothèque à part** : menu **Studio → Rappels** (liste, filtres origine/statut, recherche, saisie libre). Ils n'ont plus besoin d'une conférence ni d'un quiz. Sur une conférence, ils ont leur propre onglet **Rappels** (à côté de Quiz). « Reprendre les citations du quiz » reste possible, comme simple source parmi d'autres.
+- Le **rappel du jour personnel** (Mon apprentissage et e-mail du matin) est tiré de toute la bibliothèque validée, même pour un membre qui n'a jamais passé de quiz.
+- **Citation du jour** (verset ou hadith, texte arabe + français + référence) sur l'**accueil, pour tout le monde**, y compris les visiteurs : la même pour tous, une par jour, en parcourant les citations publiées.
+
+**Comment l'IA ne peut pas halluciner (liste fermée)**
+1. Le **corpus** (Coran en arabe + traduction française ; hadiths en arabe + français) est **importé depuis des fichiers publics** (`fawazahmed0/quran-api` et `fawazahmed0/hadith-api` sur GitHub) dans la table `corpus_items`. Chaque texte garde sa référence exacte (« Coran 2:153 (Al-Baqara), trad. Hamidullah », « Sahih al-Boukhari, n° 1 »). Ne sont gardés que les textes disponibles dans les deux langues, de 50 à 700 caractères.
+2. L'IA propose d'abord des **mots-clés de thèmes** (patience, gratitude…) d'après les titres de tes conférences : **aucune citation** à ce stade.
+3. Le système cherche des **candidats** dans le corpus pour ces thèmes (recherche plein texte française), complète au hasard, exclut ceux déjà publiés, et les **numérote**.
+4. L'IA ne renvoie que des **numéros**. Un numéro absent de la liste, en double ou illisible est **écarté** (compté dans « références invalides écartées »).
+5. Le rappel créé **copie le texte du corpus**, jamais un texte de l'IA, avec sa référence. Le texte d'une citation du corpus est **verrouillé** (non modifiable). Seul l'administrateur peut les valider, dépublier ou supprimer.
+
+**Réglages** (Admin → Paramètres → « Citations (versets et hadiths) »)
+| Réglage | Défaut | Rôle |
+|---|---|---|
+| Générer automatiquement | oui | toutes les heures, si le stock publié est sous le minimum, l'IA en choisit de nouvelles |
+| Validation humaine avant diffusion | non | oui : les citations arrivent en brouillon (Studio → Rappels → « Valider les brouillons ») |
+| Stock minimum | 30 | seuil de réapprovisionnement |
+| Citations par génération | 15 | plafond d'une demande |
+| Traduction française du Coran | Hamidullah | autres choix : Islamic Foundation, Rashid Maash, Shahnaz Saidi Benbetka |
+| Recueils de hadiths | bukhari, muslim, nawawi, qudsi | aussi : abudawud, ibnmajah, malik, nasai (seuls ceux qui ont un texte français sont importés) |
+
+**Première mise en route (administrateur)**
+1. Déployer (voir ci-dessous).
+2. **Studio → Rappels → panneau « Citations automatiques » → Importer le corpus** (quelques dizaines de secondes ; le serveur doit pouvoir joindre `raw.githubusercontent.com`).
+3. **Générer des citations maintenant** (ou attendre : la génération automatique démarre d'elle-même dès que le corpus est prêt). Le moteur IA est celui des résumés (clé Claude ou DeepSeek déjà réglée).
+4. Vérifier l'accueil : encadré « Citation du jour ».
+Changer de traduction ou de recueils : modifier le réglage puis **Réimporter le corpus** (les rappels déjà publiés gardent leur texte et restent rattachés).
+
+**Ce que je te recommande de vérifier** : le corpus vient de dépôts communautaires. Les traductions françaises sont celles de la source (la source n'est pas ré-écrite). Les degrés d'authenticité (sahih, hasan…) ne sont pas fournis par ces fichiers pour Boukhari et Muslim, dont la quasi-totalité des hadiths est considérée authentique ; si tu actives d'autres recueils (Abu Dawud, Ibn Majah…), active aussi la **validation humaine**.
+
+**API** : `GET /citation/today` (public) ; `GET /studio/reminders`, `POST /studio/reminders` (organisateur) ; `GET /admin/citations`, `POST /admin/citations/import`, `/generate`, `/approve-all` (admin).
+**Migration** : `028_citations.sql` (`corpus_items`, `corpus_import`, `citation_jobs`, rappels sans conférence, colonnes `text_ar` et `corpus_id`). Le service **translator** gère la sélection (fichier `translator/src/citations.py`).
+**Tests** : `python3 api/tests/test_citations.py` (import réel + sélection par la fausse IA, texte identique à la source, droits) ; depuis `api/` : `set -a; . /tmp/claude-0/api.env; set +a; node tests/test_citations_auto.mjs` (réapprovisionnement) ; `python3 api/tests/test_revision.py` mis à jour (rappel du jour sans quiz).
+
+**Déploiement** (api, **translator** et web changent) :
+```bash
+cd /chemin/du/projet && git add -A && git commit -m "24.6 rappels independants et citations" && git push
+# DockPanel : redéployer api, translator, web (dans cet ordre)
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+

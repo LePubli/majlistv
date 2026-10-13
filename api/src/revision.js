@@ -71,13 +71,14 @@ export async function upcoming(userId) {
   return rows[0];
 }
 
-// Rappel du jour : un passage validé, tiré parmi les conférences que le membre a déjà passées au quiz (un seul par jour, stable toute la journée).
+// Rappel du jour (personnel) : un passage validé de la bibliothèque, indépendant des quiz. Rappels de conférences visibles, rappels libres
+// et citations du corpus ; un seul par jour, stable toute la journée, différent d'un membre à l'autre.
 export async function reminderOfTheDay(userId) {
   const { rows } = await pool.query(
-    `SELECT m.id, m.text, m.start_ms AS "startMs", m.attribution, m.origin, t.id AS "talkId", t.title AS "talkTitle", t.speaker
-       FROM reminders m JOIN talks t ON t.id = m.talk_id
-      WHERE m.status = 'approved' AND t.video_status = 'ready' AND ${visibleSql('t')}
-        AND EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id)
+    `SELECT m.id, m.text, m.text_ar AS "textAr", m.start_ms AS "startMs", m.attribution, m.origin,
+            t.id AS "talkId", t.title AS "talkTitle", t.speaker
+       FROM reminders m LEFT JOIN talks t ON t.id = m.talk_id
+      WHERE m.status = 'approved' AND (m.talk_id IS NULL OR (t.video_status = 'ready' AND ${visibleSql('t')}))
       ORDER BY md5(m.id::text || $1::text || ${TODAY}::text) LIMIT 1`, [userId]);
   return rows[0] || null;
 }

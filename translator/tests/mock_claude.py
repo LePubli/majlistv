@@ -91,6 +91,20 @@ class H(BaseHTTPRequestHandler):
             sys.stderr.write(f"mock quiz: {len(qs)} propositions\n")
             send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"questions": qs}}]})
             return
+        if tool == "submit_keywords":  # citations (étape 24.6) : thèmes seulement, aucune citation
+            sys.stderr.write("mock citations: keywords\n")
+            send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"keywords": ["patience", "gratitude", "SQL'; DROP TABLE x;--", "sincérité"]}}]})
+            return
+        if tool == "submit_picks":  # citations : numéros de la liste + trois numéros invalides (inconnu, doublon, texte)
+            import re
+            items = re.findall(r"^(\d+)\. \[(quran|hadith)\] ", body["messages"][0]["content"], re.M)
+            want = int(re.search(r"Choose (\d+) candidates", body["system"]).group(1))
+            q = [int(n) for n, k in items if k == "quran"][: (want + 1) // 2]
+            h = [int(n) for n, k in items if k == "hadith"][: want // 2]
+            picks = q + h + [99999, q[0] if q else 1, "texte"]
+            sys.stderr.write(f"mock citations: {len(picks)} picks\n")
+            send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"picks": picks}}]})
+            return
         payload = json.loads(body["messages"][0]["content"])
         assert body["tool_choice"]["name"] == "submit_translations"
         segs = payload["segments"]
