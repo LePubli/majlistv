@@ -1121,7 +1121,7 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .kd-thumb .dur { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.75); color: #fff; font-size: 13px; padding: 2px 8px; border-radius: 6px; }
 .kd-back { font-size: 1.05rem; }
 .kd-watch-title { font-size: clamp(1.4rem, 3.5vw, 2rem); }
-.kd-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 16px; }
+.kd-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 16px; }
 .kd-modal-box { background: var(--bg, #0B0906); border: 1px solid var(--line-strong, #5b4a2a); border-radius: 16px; padding: 24px; width: min(360px, 100%); display: grid; gap: 12px; }
 .kd-modal-box input { font-size: 1.6rem; letter-spacing: .4em; text-align: center; }
 @media (max-width: 640px) { .kd-grid { grid-template-columns: 1fr; } .kd-profile { min-width: 130px; } }
@@ -1182,10 +1182,9 @@ body.kd-theme {
   background-attachment: fixed;
 }
 body.kd-theme:lang(ar), :root:lang(ar) body.kd-theme { --font-body: 'Noto Sans Arabic Variable', 'Fredoka Variable', system-ui, sans-serif; }
-body.kd-theme::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .8;
+body.kd-theme::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1; opacity: .8;
   background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1.5px 1.5px at 28% 62%, #ffe9a8, transparent), radial-gradient(2px 2px at 47% 10%, #fff, transparent),
     radial-gradient(1.5px 1.5px at 63% 44%, #fff, transparent), radial-gradient(2px 2px at 78% 78%, #ffe9a8, transparent), radial-gradient(1.5px 1.5px at 90% 30%, #fff, transparent), radial-gradient(1.5px 1.5px at 36% 90%, #fff, transparent); }
-body.kd-theme > * { position: relative; z-index: 1; }
 body.kd-theme .btn { border-radius: 999px; box-shadow: 0 4px 0 rgba(0, 0, 0, .28); font-weight: 700; }
 body.kd-theme .btn.ghost { box-shadow: none; }
 body.kd-theme .panel, body.kd-theme .kd-form { border-radius: 22px; }

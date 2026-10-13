@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { KidsWord } from './KidsBanner';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
@@ -36,7 +37,7 @@ function KidHeader() {
         <span className="kd-me"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {kid.name}</span>
         <button type="button" className="btn ghost" onClick={() => { setOpen(true); setErr(''); setCode(''); }}>{t('kdLeave')}</button>
       </nav>
-      {open && (
+      {open && createPortal(
         <div className="kd-modal" role="dialog" aria-modal="true" aria-labelledby="kd-exit-title">
           <form className="kd-modal-box" onSubmit={leave}>
             <h2 id="kd-exit-title">{t('kdExitTitle')}</h2>
@@ -45,7 +46,8 @@ function KidHeader() {
             {err && <p className="error" role="alert">{err}</p>}
             <div className="panel-actions"><button className="btn">{t('kdOk')}</button><button type="button" className="btn ghost" onClick={() => setOpen(false)}>{t('kdCancel')}</button></div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
