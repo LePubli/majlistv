@@ -16,8 +16,9 @@ import { getResult, saveResult, addPending, removePending, getPending } from '..
 
 // `initial` : titre, intervenant et description lus côté serveur. Ils sont dans le HTML dès le premier octet (moteurs de recherche,
 // partage de lien) et affichés pendant le chargement de la page complète, sans jamais montrer l'invitation « premium » par erreur.
-export default function TalkPage({ initial = null }) {
-  const { id } = useParams();
+export default function TalkPage({ initial = null, talkId = null }) {
+  const params = useParams();
+  const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
   const { call, t, locale, user, trialDays, prefs } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);

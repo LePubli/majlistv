@@ -34,7 +34,8 @@ p = requests.get(f"{B}/seo/talks/{prem}").json()
 ok(p["access"] == "premium" and "playbackToken" not in p, "premium : titre et description seulement")
 ok(requests.get(f"{B}/seo/talks/{draft}").status_code == 404, "brouillon : introuvable")
 ok(requests.get(f"{B}/seo/talks/{proc}").status_code == 404, "conversion en cours : introuvable")
-ok(requests.get(f"{B}/seo/talks/not-a-uuid").status_code == 400, "identifiant invalide refusé")
+ok(requests.get(f"{B}/seo/talks/not-a-uuid").status_code == 404, "adresse inconnue : introuvable")
+ok(requests.get(f"{B}/seo/talks/a%20b").status_code == 400, "identifiant invalide refusé")
 
 # --- vignette stable
 cur.execute("update talks set external_thumb='https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' where id=%s", (free,))

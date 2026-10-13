@@ -1094,3 +1094,15 @@ nginx -t && systemctl reload nginx
 
 **Déploiement** : copier le contenu de `majlis-tv/` dans `C:\Users\agenc\Documents\GitHub\majlistv`, commit + push, redéployer `majlistv-web` (l'API n'a pas changé). Ensuite sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
 
+## Étape 16.2a/c — Adresses lisibles, chapitres et extrait dans le HTML
+
+**Ce qui change**
+- Chaque conférence a une adresse lisible : `/conferences/la-patience-dans-l-epreuve` ; chaque série aussi : `/series/serie-lecture-du-coran`. L'adresse est créée à la première lecture publique et **ne change plus**, même si le titre est modifié (les liens et le référencement restent stables). Titre en arabe : `conference-xxxxxxxx`. Deux titres identiques : `-2`, `-3`.
+- Les anciennes adresses (`/talks/<identifiant>`, `/series/<identifiant>`) sont **redirigées en 308 (permanent)** vers l'adresse lisible, en conservant `?t=` (partage à la minute), `?quiz=1`, etc. Une conférence non publique (brouillon d'un organisateur) reste accessible par l'ancienne adresse, en « noindex ».
+- Adresse canonique, `sitemap.xml` et données structurées utilisent les adresses lisibles.
+- **Conférences gratuites uniquement** : résumé, chapitres (liens `?t=`) et extrait de la transcription (1 200 caractères) sont dans le HTML, dans un bloc repliable « Chapitres et extrait » sous le lecteur, et les chapitres sont déclarés à Google (`Clip`). Rien de ce contenu n'est exposé pour une conférence premium.
+
+**Déploiement** (migration 033 automatique) : redéployer `majlistv-api`, puis `majlistv-web`. Après déploiement, ouvrez `/sitemap.xml` : toutes les adresses lisibles sont créées à ce moment-là. Dans la Search Console, soumettez de nouveau le sitemap.
+
+**Debug** : `curl -I https://VOTRE-SITE/talks/<identifiant>` doit répondre `308` avec `location: /conferences/…`. Tests : `api/tests/test_slugs.py`.
+

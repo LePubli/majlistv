@@ -29,7 +29,10 @@ ld = lambda html: [json.loads(m) for m in re.findall(r'<script type="application
 
 h = requests.get(f"{W}/talks/{free}").text
 ok(f"<title>Libre{tag} — Cheikh &lt;b&gt;Test&lt;/b&gt; | Mejliss TV</title>" in h, "titre : « Conférence — Intervenant | Site » (intervenant échappé)")
-ok(f'<link rel="canonical" href="{BASE}/talks/{free}"' in h, "adresse canonique")
+slug = requests.get(f"{B}/seo/talks/{free}").json()["slug"]
+ok(f'<link rel="canonical" href="{BASE}/conferences/{slug}"' in h, "adresse canonique (adresse lisible)")
+r0 = requests.get(f"{W}/talks/{free}", allow_redirects=False)
+ok(r0.status_code == 308 and r0.headers["location"].endswith(f"/conferences/{slug}"), "ancienne adresse : redirection permanente")
 ok(meta(h, "og:type") == "video.other" and meta(h, "og:image") == f"{BASE}/api/seo/poster/talks/{free}" and meta(h, "twitter:card") == "summary_large_image", "aperçu de partage : type, image stable, grande carte")
 d = H.unescape(meta(h, "description") or ""); ok(0 < len(d) <= 160 and "piégée" in d and "<" in d and "&lt;" not in (meta(h, "description") or "").replace("&lt;", ""), "description de moins de 160 caractères, échappée dans la balise")
 ok(f"Libre{tag}" in re.sub(r"<script.*?</script>", "", h, flags=re.S).split("<h1")[1][:200], "titre dans le HTML dès le premier octet (h1)")
@@ -61,8 +64,8 @@ requests.patch(f"{B}/series/{sid}", headers=adm, json={"published": True})
 hs = requests.get(f"{W}/series/{sid}").text
 js = ld(hs)[0]
 ok(f"<title>Série {tag} | Mejliss TV</title>" in hs and meta(hs, "og:type") == "video.tv_show", "série : titre et type de partage")
-ok(js["@type"] == "TVSeries" and js["numberOfEpisodes"] == 2 and js["episode"][0]["url"] == f"{BASE}/talks/{free}" and js["episode"][1]["partOfSeason"]["seasonNumber"] == 1, "série : TVSeries avec épisodes et saison")
-ok(f"Libre{tag}" in hs and f'href="/talks/{free}"' in hs, "série : liste des épisodes dans le HTML (liens explorables)")
+ok(js["@type"] == "TVSeries" and js["numberOfEpisodes"] == 2 and js["episode"][0]["url"] == f"{BASE}/conferences/{slug}" and js["episode"][1]["partOfSeason"]["seasonNumber"] == 1, "série : TVSeries avec épisodes et saison")
+ok(f"Libre{tag}" in hs and f'href="/conferences/{slug}"' in hs, "série : liste des épisodes dans le HTML (liens explorables)")
 hv = requests.get(f"{W}/talks/{free}").text
 ok(js is not None and '"isPartOf"' in hv, "conférence d'une série : rattachée à la série")
 
@@ -70,7 +73,8 @@ ok(js is not None and '"isPartOf"' in hv, "conférence d'une série : rattachée
 rb = requests.get(f"{W}/robots.txt").text
 ok(f"Sitemap: {BASE}/sitemap.xml" in rb and "Disallow: /admin" in rb and "Disallow: /studio" in rb and "Disallow: /account" in rb and "Allow: /" in rb, "robots.txt : sitemap, espaces privés exclus")
 sm = requests.get(f"{W}/sitemap.xml").text
-ok(f"<loc>{BASE}/talks/{free}</loc>" in sm and f"<loc>{BASE}/talks/{prem}</loc>" in sm and f"<loc>{BASE}/series/{sid}</loc>" in sm, "sitemap : conférences et série")
+slug_prem = requests.get(f"{B}/seo/talks/{prem}").json()["slug"]; slug_ser = requests.get(f"{B}/seo/series/{sid}").json()["slug"]
+ok(f"<loc>{BASE}/conferences/{slug}</loc>" in sm and f"<loc>{BASE}/conferences/{slug_prem}</loc>" in sm and f"<loc>{BASE}/series/{slug_ser}</loc>" in sm, "sitemap : conférences et série (adresses lisibles)")
 ok(draft not in sm and f"<loc>{BASE}/</loc>" in sm.replace(f"<loc>{BASE}</loc>", f"<loc>{BASE}/</loc>") and "/legal/cgv" in sm, "sitemap : sans brouillon, avec accueil et pages légales")
 
 # --- espaces privés

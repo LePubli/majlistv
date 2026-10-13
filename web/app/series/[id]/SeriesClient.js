@@ -9,8 +9,9 @@ import BooksBlock from '../../../components/BooksBlock';
 
 const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
 
-export default function SeriesPage({ initial = null }) {
-  const { id } = useParams();
+export default function SeriesPage({ initial = null, seriesId = null }) {
+  const params = useParams();
+  const id = seriesId || params.id; // adresse lisible (slug) : l'identifiant vient du serveur
   const { t, call, ready, user } = useApp();
   const [s, setS] = useState(undefined);
   const [season, setSeason] = useState(0); // index de la saison affichée
@@ -38,7 +39,7 @@ export default function SeriesPage({ initial = null }) {
           {initial.description && <p className="series-desc">{initial.description}</p>}
         </div></section>
         <section className="series-body">
-          <ol className="series-eps">{initial.episodes.map((e) => <li key={e.id}><a href={`/talks/${e.id}`}>{e.title}</a></li>)}</ol>
+          <ol className="series-eps">{initial.episodes.map((e) => <li key={e.id}><a href={`/conferences/${e.slug || e.id}`}>{e.title}</a></li>)}</ol>
         </section>
       </main>
     );
