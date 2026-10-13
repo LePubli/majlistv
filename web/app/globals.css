@@ -1382,3 +1382,17 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .seo-extra h2 { font-size: 1.05rem; margin: 16px 0 6px; }
 .seo-extra ol { margin: 0; padding-inline-start: 22px; display: grid; gap: 4px; }
 .seo-extra a { color: var(--accent); font-weight: 600; }
+
+/* Étape 16.2b : pages intervenants */
+.spk-page { max-width: 1100px; margin: 0 auto; padding: 24px var(--gutter) 56px; }
+.spk-page h1 { margin: 6px 0 12px; } .spk-page h2 { margin: 28px 0 12px; font-size: 1.25rem; }
+.spk-bio { max-width: 70ch; line-height: 1.65; color: var(--text-2); white-space: pre-line; }
+.spk-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.spk-list a { display: grid; gap: 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.spk-list a:hover { border-color: var(--accent); }
+.spk-plain { padding-inline-start: 20px; display: grid; gap: 6px; } .spk-plain a { color: var(--accent); }
+.spk-page .grid { padding-inline: 0; }
+.spk-admin { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 14px; }
+.spk-admin li { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--bg); }
+.spk-admin-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.spk-admin textarea { width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; font: inherit; }

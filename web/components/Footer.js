@@ -15,6 +15,7 @@ export default function Footer() {
         <span>© {new Date().getFullYear()} {appName} · {t('tagline')}</span>
       </span>
       <nav aria-label={t('legalNav')}>
+        <Link href="/intervenants">{t('spTitle')}</Link>
         <Link href="/legal/mentions-legales">{t('legalNotice')}</Link>
         <Link href="/legal/cgv">{t('legalTerms')}</Link>
         <Link href="/legal/confidentialite">{t('legalPrivacy')}</Link>

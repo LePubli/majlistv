@@ -46,12 +46,13 @@ export async function syncAccess(db, seriesId) {
 // Séries publiées avec au moins un épisode en ligne (utilisé par GET /series, l'accueil, la recherche et la bibliothèque).
 //  - q : mot-clé (titre, intervenant, présentation) ; startedBy : ne garde que les séries que ce compte a commencées,
 //    triées de la plus récemment regardée, avec `watched` (épisodes terminés) pour la barre d'avancement.
-export async function listSeries({ limit = 40, category = null, q = null, level = null, startedBy = null } = {}) {
+export async function listSeries({ limit = 40, category = null, q = null, level = null, startedBy = null, speakerNames = null } = {}) {
   const vals = [limit];
   const where = ['s.published'];
   if (category) { vals.push(category); where.push(`s.category_id IN (SELECT id FROM categories WHERE id = $${vals.length} OR parent_id = $${vals.length})`); }
   if (q) { vals.push(`%${String(q).replace(/[%_\\]/g, '\\$&')}%`); where.push(`(s.title ILIKE $${vals.length} OR s.speaker ILIKE $${vals.length} OR s.description ILIKE $${vals.length})`); }
   if (level) { vals.push(level); where.push(`s.level = $${vals.length}`); }
+  if (speakerNames?.length) { vals.push(speakerNames); where.push(`lower(trim(s.speaker)) = ANY($${vals.length}::text[])`); }
   let join = '';
   let extra = '';
   let having = '';

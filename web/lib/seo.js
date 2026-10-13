@@ -27,3 +27,11 @@ export function isoDuration(sec) {
 
 // Balise <script type="application/ld+json"> : « < » échappé pour qu'aucun contenu ne puisse fermer la balise.
 export const jsonLd = (data) => ({ __html: JSON.stringify(data).replace(/</g, '\\u003c') });
+
+// GET public de l'API (hors /seo) : null si introuvable ou API injoignable.
+export async function apiGet(path) {
+  try {
+    const res = await fetch(`${API()}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+}

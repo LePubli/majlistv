@@ -7,8 +7,10 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting } from '../settings.js';
+import { adultSql } from '../taxonomy.js';
 import { episodeLabels, listSeries } from './series.js';
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
+import { publicSpeakers, speakerBio } from '../speakers.js';
 
 const idParam = z.object({ id: z.string().uuid() });
 const refParam = z.object({ id: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/i) }); // UUID ou slug
@@ -110,6 +112,23 @@ export default async function seoRoutes(app) {
   });
 
 
+  // Intervenants : page publique (présentation, conférences et séries) pour le <head>, les données structurées et le HTML.
+  app.get('/seo/speakers/:id', async (req, reply) => {
+    const { id: slug } = refParam.parse(req.params);
+    const e = (await publicSpeakers()).find((x) => x.slug === slug);
+    if (!e) return reply.code(404).send({ error: 'Intervenant introuvable' });
+    const names = e.names.map((n) => n.toLowerCase());
+    const talks = (await pool.query(
+      `SELECT t.id, t.title, t.duration_seconds AS "durationSeconds" FROM talks t
+        WHERE lower(trim(t.speaker)) = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
+        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 100`, [names])).rows;
+    for (const t of talks) t.slug = await ensureSlug('talks', t.id);
+    const series = await listSeries({ limit: 50, speakerNames: names });
+    for (const s of series) s.slug = await ensureSlug('series', s.id);
+    reply.header('cache-control', 'public, max-age=60');
+    return { slug, name: e.name, bio: clip(await speakerBio(slug), 3000), talkCount: e.talks, talks, series: series.map((s) => ({ id: s.id, slug: s.slug, title: s.title })), site: await siteInfo() };
+  });
+
   // Ouvrages : fiche publique (jamais le fichier PDF), couverture à adresse stable.
   const HAS_EDITION = `(EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id))`;
   app.get('/seo/books/:id', async (req, reply) => {
@@ -141,6 +160,7 @@ export default async function seoRoutes(app) {
     const slugOf = new Map(lastmods.map((r) => [r.id, r.slug]));
     reply.header('cache-control', 'public, max-age=300');
     const books = (await pool.query(`SELECT b.id, b.updated_at AS lastmod FROM books b WHERE b.published AND ${HAS_EDITION} ORDER BY b.updated_at DESC LIMIT 2000`)).rows;
-    return { ...(await siteInfo()), talks, series: series.map((id) => ({ id, slug: slugOf.get(id), lastmod: when.get(id) })), books };
+    const speakers = (await publicSpeakers()).map((x) => ({ slug: x.slug }));
+    return { ...(await siteInfo()), speakers, talks, series: series.map((id) => ({ id, slug: slugOf.get(id), lastmod: when.get(id) })), books };
   });
 }

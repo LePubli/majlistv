@@ -1106,3 +1106,16 @@ nginx -t && systemctl reload nginx
 
 **Debug** : `curl -I https://VOTRE-SITE/talks/<identifiant>` doit répondre `308` avec `location: /conferences/…`. Tests : `api/tests/test_slugs.py`.
 
+## Étape 16.2b — Pages intervenants
+
+**Ce qui change**
+- Chaque intervenant a une page publique : `/intervenants/cheikh-hamza` (présentation, séries, conférences), et la liste `/intervenants` (lien « Intervenants » dans le pied de page).
+- L'intervenant reste le nom saisi dans le champ « Intervenant » des conférences. « Cheikh Hamza », « cheikh hamza » et « Cheikh Hamzà » forment **une seule page**. Un nom en arabe donne `intervenant-xxxxxxxx`.
+- Seules les conférences publiées et visibles du catalogue adulte comptent (ni brouillons, ni conférences réservées aux enfants).
+- **Présentation** : Administration → Intervenants → champ texte (3 000 caractères) → Enregistrer. Elle apparaît dans la page et dans le HTML (Google). Vide = aucune présentation.
+- Le nom de l'intervenant sur la fiche d'une conférence est un lien vers sa page. Pages et liste sont dans le `sitemap.xml`, avec des données structurées `Person`.
+
+**Déploiement** (migration 034 automatique) : redéployer `majlistv-api`, puis `majlistv-web`, puis les 3 commandes habituelles (`/root/apply-limits.sh`, grep `proxy_pass`, `nginx -t && systemctl reload nginx`). Ensuite : Administration → Intervenants et rédigez une présentation courte par intervenant.
+
+**Debug** : `curl https://VOTRE-SITE/api/speakers` liste les intervenants détectés. Si deux orthographes très différentes donnent deux pages, harmonisez le champ « Intervenant » dans le Studio. Tests : `api/tests/test_speakers.py`.
+

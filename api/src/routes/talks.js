@@ -1,6 +1,7 @@
 // Catalogue public + gestion des conférences par les organisateurs.
 import { quizInfo } from './quiz.js';
 import { kidCanSee } from './kids.js';
+import { speakerNames, speakerSlug } from '../speakers.js';
 import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
 import { timeState } from '../kidsControl.js';
 import { z } from 'zod';
@@ -41,6 +42,7 @@ const listSchema = z.object({
   q: z.string().max(100).optional(),
   category: z.coerce.number().int().optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  speaker: z.string().max(120).regex(/^[a-z0-9-]+$/).optional(), // slug d'un intervenant (page /intervenants/…)
   limit: z.coerce.number().int().min(1).max(100).default(24),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -204,9 +206,12 @@ export default async function talksRoutes(app) {
   // Catalogue public avec recherche par mot-clé et filtre par catégorie.
   app.get('/talks', async (req) => {
     const p = listSchema.parse(req.query);
+    const names = p.speaker ? await speakerNames(p.speaker) : null;
+    if (names && !names.length) return [];
     const { rows } = await pool.query(
       `${SELECT}
        WHERE t.video_status = 'ready' AND ${visibleSql('t')}
+         AND ($6::text[] IS NULL OR lower(trim(t.speaker)) = ANY($6::text[]))
          AND ($1::text IS NULL OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%'
               OR t.description ILIKE '%' || $1 || '%'
               OR t.transcript_text ILIKE '%' || $1 || '%')
@@ -214,7 +219,7 @@ export default async function talksRoutes(app) {
          AND ($5::text IS NULL OR t.level = $5)
          AND ${adultSql('t')}
        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
-      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null]
+      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names]
     );
     for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
@@ -243,6 +248,7 @@ export default async function talksRoutes(app) {
       const prog = (await pool.query('SELECT position_ms, completed FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [viewer.sub, id])).rows[0];
       talk.resumeMs = prog && !prog.completed && prog.position_ms >= 5000 ? prog.position_ms : 0;
     }
+    talk.speakerSlug = speakerSlug(talk.speaker); // lien vers la page de l'intervenant
     // Premium : réservé au propriétaire, aux admins et aux abonnés ; les autres ont l'aperçu (2 min) et le résumé.
     // Même règle pour les vidéos YouTube / Vimeo : transcription, sous-titres traduits et chapitres suivent l'accès.
     const external = talk.source !== 'upload';

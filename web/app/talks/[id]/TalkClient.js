@@ -387,7 +387,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               )
               : talk.category && <p className="eyebrow">{talk.category}</p>}
             <h1>{talk.title}</h1>
-            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{[talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
+            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/intervenants/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             <div className="talk-actions">
               <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
                 <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
