@@ -15,6 +15,8 @@ import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { hasActiveSubscription, hasLearningTier } from '../access.js';
 import { getNumber, getSetting, isOn } from '../settings.js';
+import { catalogSql, timeState, addPing, kidReport, MIN_LIMIT, MAX_LIMIT } from '../kidsControl.js';
+import { sendReportNow } from '../kidsReportMailer.js';
 import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../kidsLearning.js';
 
 export const BANDS = ['3-6', '7-10', '11-14'];
@@ -35,12 +37,13 @@ export const bandOkSql = (alias, p) => `(${alias}.kids_band IS NOT NULL AND CASE
 // Une conférence est-elle visible par ce profil ? (prête, publiée, marquée Kids, tranche d'âge compatible)
 export async function kidCanSee(profile, talkId) {
   const { rowCount } = await pool.query(
-    `SELECT 1 FROM talks t WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)}`, [talkId, RANK[profile.band]]);
+    `SELECT 1 FROM talks t WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 3, 4)}`,
+    [talkId, RANK[profile.band], profile.id, profile.catalog_mode || 'all']);
   return rowCount > 0;
 }
 
 // Le parent peut-il utiliser Kids ? Abonnement en cours (Mejliss ou Apprentissage) ou compte administrateur.
-async function parentAllowed(userId, role) {
+export async function parentAllowed(userId, role) {
   return role === 'admin' || (await hasActiveSubscription(userId)) || (await hasLearningTier(userId));
 }
 async function profileLimit(userId) {
@@ -79,11 +82,11 @@ export default async function kidsRoutes(app) {
     if (await off(reply)) return;
     const [profiles, u, allowed, max] = await Promise.all([
       pool.query('SELECT * FROM kid_profiles WHERE user_id = $1 ORDER BY created_at', [req.user.sub]),
-      pool.query('SELECT kids_pin_hash IS NOT NULL AS has_pin, kids_pin_locked_until FROM users WHERE id = $1', [req.user.sub]),
+      pool.query('SELECT kids_pin_hash IS NOT NULL AS has_pin, kids_pin_locked_until, kids_report_email FROM users WHERE id = $1', [req.user.sub]),
       parentAllowed(req.user.sub, req.user.role),
       profileLimit(req.user.sub),
     ]);
-    return { allowed, hasPin: u.rows[0].has_pin, max, learning: await hasLearningTier(req.user.sub), profiles: profiles.rows.map(shape), bands: BANDS, avatars: AVATARS };
+    return { allowed, hasPin: u.rows[0].has_pin, max, learning: await hasLearningTier(req.user.sub), reportEmail: u.rows[0].kids_report_email, profiles: profiles.rows.map((x) => ({ ...shape(x), dailyLimitMin: x.daily_limit_min, catalogMode: x.catalog_mode })), bands: BANDS, avatars: AVATARS };
   });
 
   // Définir le code (première fois) ou le changer (l'ancien code est exigé).
@@ -163,6 +166,8 @@ export default async function kidsRoutes(app) {
   // Catalogue de l'enfant : conférences Kids de sa tranche d'âge ou plus jeunes ; seules les gratuites si le parent n'a plus d'abonnement.
   app.get('/kids/talks', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
+    const time = await timeState(c.profile);
+    if (time.timeUp) return { profile: shape(c.profile), talks: [], resume: [], time };
     const open = await parentAllowed(c.parent.sub, c.parent.role);
     const minQ = await getNumber('quiz_min_questions');
     const quizDefault = isOn(await getSetting('quiz_default_enabled'));
@@ -173,15 +178,15 @@ export default async function kidsRoutes(app) {
               (COALESCE(t.quiz_enabled, $5::boolean) AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $6) AS "hasQuiz",
               (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars
          FROM talks t LEFT JOIN kid_progress k ON k.talk_id = t.id AND k.profile_id = $1
-        WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ($3::boolean OR t.access = 'free')
+        WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 7)} AND ($3::boolean OR t.access = 'free')
         ORDER BY (t.kids_band = $4) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 60`,
-      [c.profile.id, RANK[c.profile.band], open, c.profile.band, quizDefault, minQ]);
+      [c.profile.id, RANK[c.profile.band], open, c.profile.band, quizDefault, minQ, c.profile.catalog_mode]);
     for (const r of rows) {
       r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
       delete r.poster_key; delete r.external_thumb;
     }
     const resume = rows.filter((r) => r.positionMs >= 5000 && !r.completed).slice(0, 6);
-    return { profile: shape(c.profile), talks: rows, resume };
+    return { profile: shape(c.profile), talks: rows, resume, time };
   });
 
   const progressBody = z.object({ positionMs: z.number().int().min(0).max(86_400_000), durationMs: z.number().int().min(0).max(86_400_000).default(0) });
@@ -189,6 +194,7 @@ export default async function kidsRoutes(app) {
     const c = await ctx(req, reply); if (!c) return;
     const { id } = idSchema.parse(req.params);
     const b = progressBody.parse(req.body ?? {});
+    if ((await timeState(c.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
     const done = b.durationMs > 0 && b.positionMs >= Math.min(b.durationMs * 0.95, b.durationMs - 30_000);
     await pool.query(
@@ -219,6 +225,7 @@ export default async function kidsRoutes(app) {
   app.get('/kids/talks/:id/quiz', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
     const { id } = idSchema.parse(req.params);
+    if ((await timeState(c.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const qs = await kidQuestions(c.profile, id);
     if (!qs) return reply.code(404).send({ error: "Pas de quiz pour cette vidéo", code: 'no_quiz' });
     return { questions: qs.map((q) => ({ id: q.id, question: q.question, options: q.options })) };
@@ -229,6 +236,7 @@ export default async function kidsRoutes(app) {
     const c = await ctx(req, reply); if (!c) return;
     const { id } = idSchema.parse(req.params);
     const b = submitBody.parse(req.body ?? {});
+    if ((await timeState(c.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
     const ids = [...new Set(b.answers.map((a) => a.questionId))];
     if (ids.length !== b.answers.length) return reply.code(400).send({ error: 'Réponses en double' });
@@ -260,7 +268,7 @@ export default async function kidsRoutes(app) {
   app.get('/kids/summary', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
     const learning = await learningOf(c);
-    const out = { learning, stars: await starTotal(c.profile.id), quizzes: (await pool.query('SELECT count(*)::int AS n FROM kid_quiz_attempts WHERE profile_id = $1', [c.profile.id])).rows[0].n,
+    const out = { time: await timeState(c.profile), learning, stars: await starTotal(c.profile.id), quizzes: (await pool.query('SELECT count(*)::int AS n FROM kid_quiz_attempts WHERE profile_id = $1', [c.profile.id])).rows[0].n,
       watched: (await pool.query('SELECT count(*)::int AS n FROM kid_progress WHERE profile_id = $1 AND completed', [c.profile.id])).rows[0].n, badges: [], allBadges: KID_BADGES, due: [] };
     if (learning) {
       out.badges = (await pool.query('SELECT code, earned_at AS "earnedAt" FROM kid_badges WHERE profile_id = $1 ORDER BY earned_at', [c.profile.id])).rows;
@@ -269,12 +277,109 @@ export default async function kidsRoutes(app) {
         `SELECT t.id, t.title, t.speaker, t.source, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb
            FROM kid_revision r JOIN talks t ON t.id = r.talk_id
           WHERE r.profile_id = $1 AND r.due_on IS NOT NULL AND r.due_on <= (now() AT TIME ZONE 'Europe/Paris')::date
-            AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ($3::boolean OR t.access = 'free')
-          ORDER BY r.due_on LIMIT 6`, [c.profile.id, RANK[c.profile.band], open]);
+            AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')
+          ORDER BY r.due_on LIMIT 6`, [c.profile.id, RANK[c.profile.band], open, c.profile.catalog_mode]);
       for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
       out.due = rows;
     }
     return out;
+  });
+
+
+  // Temps passé : la page enfant « pingue » toutes les 30 s pendant qu'elle est ouverte. Le serveur mesure lui-même le temps écoulé.
+  app.post('/kids/ping', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    return addPing(c.profile);
+  });
+
+  // ------------------------------------------------------------------ Contrôle parental (26.3) — parent connecté, pas de jeton enfant
+  const ownProfile = async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const p = (await pool.query('SELECT * FROM kid_profiles WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
+    if (!p) { reply.code(404).send({ error: 'Profil introuvable' }); return null; }
+    return p;
+  };
+
+  app.get('/me/kids/profiles/:id/controls', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const time = await timeState(p);
+    return { dailyLimitMin: p.daily_limit_min, catalogMode: p.catalog_mode, usedSec: time.usedSec, leftSec: time.leftSec, min: MIN_LIMIT, max: MAX_LIMIT };
+  });
+
+  const controlsBody = z.object({
+    dailyLimitMin: z.number().int().min(MIN_LIMIT).max(MAX_LIMIT).nullable().optional(),
+    catalogMode: z.enum(['all', 'selected']).optional(),
+  }).refine((x) => Object.keys(x).length > 0);
+  app.put('/me/kids/profiles/:id/controls', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const b = controlsBody.parse(req.body ?? {});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      if (b.dailyLimitMin !== undefined) await client.query('UPDATE kid_profiles SET daily_limit_min = $2 WHERE id = $1', [p.id, b.dailyLimitMin]);
+      // Changement de mode : on garde ce que l'enfant voit aujourd'hui (rien n'apparaît ni ne disparaît sans que le parent le décide).
+      if (b.catalogMode && b.catalogMode !== p.catalog_mode) {
+        const rank = RANK[p.band];
+        const eligible = (await client.query(`SELECT t.id FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 1)}`, [rank])).rows.map((r) => r.id);
+        const seen = (await client.query(`SELECT t.id FROM talks t WHERE t.id = ANY($3::uuid[]) AND ${catalogSql('t', 1, 2)}`, [p.id, p.catalog_mode, eligible])).rows.map((r) => r.id);
+        const seenSet = new Set(seen);
+        await client.query('DELETE FROM kid_catalog WHERE profile_id = $1', [p.id]);
+        if (b.catalogMode === 'selected') {
+          if (seen.length) await client.query('INSERT INTO kid_catalog(profile_id, talk_id, allowed) SELECT $1, x, true FROM unnest($2::uuid[]) x', [p.id, seen]);
+        } else {
+          const hidden = eligible.filter((x) => !seenSet.has(x));
+          if (hidden.length) await client.query('INSERT INTO kid_catalog(profile_id, talk_id, allowed) SELECT $1, x, false FROM unnest($2::uuid[]) x', [p.id, hidden]);
+        }
+        await client.query('UPDATE kid_profiles SET catalog_mode = $2 WHERE id = $1', [p.id, b.catalogMode]);
+      }
+      await client.query('COMMIT');
+    } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
+    const q = (await pool.query('SELECT daily_limit_min, catalog_mode FROM kid_profiles WHERE id = $1', [p.id])).rows[0];
+    return { dailyLimitMin: q.daily_limit_min, catalogMode: q.catalog_mode };
+  });
+
+  // Conférences Kids que ce profil pourrait voir (âge compatible), avec l'état « autorisé » selon le mode choisi.
+  app.get('/me/kids/profiles/:id/catalog', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const { rows } = await pool.query(
+      `SELECT t.id, t.title, t.speaker, t.kids_band AS "kidsBand", t.duration_seconds AS "durationSeconds", t.access, ${catalogSql('t', 2, 3)} AS allowed
+         FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 1)}
+        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 200`, [RANK[p.band], p.id, p.catalog_mode]);
+    return { mode: p.catalog_mode, talks: rows };
+  });
+
+  app.put('/me/kids/profiles/:id/catalog', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const b = z.object({ talkIds: z.array(z.string().uuid()).min(1).max(200), allowed: z.boolean() }).parse(req.body ?? {});
+    // Mode « tout sauf » : seul le blocage est enregistré ; mode « sélection » : seule l'autorisation est enregistrée.
+    const keep = p.catalog_mode === 'selected' ? b.allowed : !b.allowed;
+    await pool.query('DELETE FROM kid_catalog WHERE profile_id = $1 AND talk_id = ANY($2::uuid[])', [p.id, b.talkIds]);
+    if (keep) {
+      await pool.query('INSERT INTO kid_catalog(profile_id, talk_id, allowed) SELECT $1, t.id, $3 FROM talks t WHERE t.id = ANY($2::uuid[]) AND ' + bandOkSql('t', 4),
+        [p.id, b.talkIds, b.allowed, RANK[p.band]]);
+    }
+    return { ok: true };
+  });
+
+  // Rapport de progression : par enfant, sans classement ni comparaison.
+  app.get('/me/kids/report', auth, async (req, reply) => {
+    if (await off(reply)) return;
+    const days = z.coerce.number().int().min(1).max(90).catch(7).parse(req.query?.days);
+    const learning = await hasLearningTier(req.user.sub);
+    const pref = (await pool.query('SELECT kids_report_email AS "email" FROM users WHERE id = $1', [req.user.sub])).rows[0];
+    return { ...(await kidReport(req.user.sub, days, learning)), email: pref.email };
+  });
+
+  app.put('/me/kids/report-prefs', auth, async (req) => {
+    const b = z.object({ email: z.boolean() }).parse(req.body ?? {});
+    await pool.query('UPDATE users SET kids_report_email = $2 WHERE id = $1', [req.user.sub, b.email]);
+    return { ok: true, email: b.email };
+  });
+
+  // Envoi immédiat du rapport (7 jours) à l'adresse du parent.
+  app.post('/me/kids/report/send', auth, async (req, reply) => {
+    const n = await sendReportNow(req.user.sub);
+    return n ? { ok: true } : reply.code(409).send({ error: "Aucun profil enfant", code: 'no_profile' });
   });
 
   // Sortie de l'espace enfant : seul le code parental rend un jeton normal.

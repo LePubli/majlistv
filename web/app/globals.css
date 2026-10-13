@@ -1148,3 +1148,25 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .kd-badge-name { font-size: .72rem; line-height: 1.2; }
 .kd-cardstars { position: absolute; left: 8px; bottom: 8px; background: rgba(0, 0, 0, .75); padding: 2px 8px; border-radius: 6px; font-size: .85rem; }
 @media (prefers-reduced-motion: no-preference) { .kd-stars { animation: kd-pop .5s ease-out; } @keyframes kd-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } } }
+
+/* Étape 26.3 : contrôle parental, durée quotidienne, rapport */
+.kd-timeleft { margin: 0 0 12px; padding: 8px 16px; border-radius: 999px; display: inline-block; background: rgba(230, 167, 57, .12); border: 1px solid rgba(230, 167, 57, .4); font-weight: 600; }
+.kd-timeleft.low { background: rgba(230, 167, 57, .28); }
+.kd-timeup { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 40px 20px; margin: 24px auto; max-width: 560px; border: 2px solid rgba(230, 167, 57, .5); border-radius: 24px; background: var(--surface); }
+.kd-timeup h2 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.1rem); }
+.kd-moon { font-size: 4rem; margin: 0; }
+.kd-ctrl { display: grid; gap: 10px; margin-top: 12px; }
+.kd-catalog { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 320px; overflow: auto; border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px; }
+.kd-check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.kd-check input { margin-top: 4px; }
+.kd-report { margin-top: 32px; max-width: 900px; }
+.kd-reports { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin: 12px 0 16px; }
+.kd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.kd-tile { display: grid; gap: 2px; padding: 8px 10px; border-radius: 12px; background: var(--bg, #0B0906); border: 1px solid var(--line-soft); }
+.kd-tile b { font-size: 1.3rem; }
+.kd-bars { display: flex; align-items: flex-end; gap: 4px; height: 76px; margin: 0 0 12px; }
+.kd-bar { flex: 1 1 0; min-width: 3px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.kd-bar i { display: block; width: 100%; min-height: 2px; background: var(--gold, #E6A739); border-radius: 4px 4px 0 0; }
+.kd-bar em { font-style: normal; font-size: .7rem; color: var(--muted, #9a8f7c); }
+.kd-check input[type="checkbox"] { width: auto; flex: none; margin: 4px 0 0; padding: 0; }
+.kd-check { justify-content: flex-start; text-align: start; }

@@ -34,6 +34,7 @@ import citationRoutes, { autoTopUp } from './routes/citations.js';
 import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
 import { startRevisionMailer } from './revisionMailer.js';
+import { startKidsReportMailer } from './kidsReportMailer.js';
 import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
@@ -150,3 +151,4 @@ await recoverImport();
 setInterval(() => autoTopUp().catch((e) => app.log.warn(`citations : ${e.message}`)), 3600 * 1000).unref();
 setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
+startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)

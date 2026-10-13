@@ -1,6 +1,7 @@
 // Catalogue public + gestion des conférences par les organisateurs.
 import { quizInfo } from './quiz.js';
 import { kidCanSee } from './kids.js';
+import { timeState } from '../kidsControl.js';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js';
@@ -180,6 +181,7 @@ export default async function talksRoutes(app) {
     // Espace enfant : le jeton enfant ne donne accès qu'aux conférences Kids de sa tranche d'âge ; les droits sont ceux du parent.
     const kv = await app.kidContext(req);
     if (kv && !(await kidCanSee(kv.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    if (kv && (await timeState(kv.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
     const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);

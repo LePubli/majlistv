@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI, BANDS, bandLabel } from '../lib/kids';
+import KidsControls from './KidsControls';
+import KidsReport from './KidsReport';
 
 function Avatar({ a, size = 56 }) { return <span className="kd-avatar" style={{ fontSize: size * 0.7, width: size, height: size }} aria-hidden="true">{AVATAR_EMOJI[a] || '🦁'}</span>; }
 
@@ -60,6 +62,7 @@ export default function KidsParent() {
   const [state, setState] = useState('loading'); // loading | ok | off
   const [manage, setManage] = useState(false);
   const [edit, setEdit] = useState(null); // profil en cours de modification, ou 'new'
+  const [ctrl, setCtrl] = useState(null); // profil dont on règle le contrôle parental
   const [err, setErr] = useState('');
   const load = useCallback(async () => {
     const r = await call('/me/kids');
@@ -109,9 +112,11 @@ export default function KidsParent() {
                 <li key={p.id}>
                   {edit === p.id ? <ProfileForm t={t} call={call} p={p} bands={d.bands} avatars={d.avatars} onDone={() => { setEdit(null); load(); }} onCancel={() => setEdit(null)} /> : (
                     <div className="kd-row"><Avatar a={p.avatar} size={40} /><span><b>{p.name}</b> · {bandLabel(p.band, t)}</span>
+                      <button type="button" className="link u small" onClick={() => setCtrl(ctrl === p.id ? null : p.id)} aria-expanded={ctrl === p.id}>{t('kcOpen')}</button>
                       <button type="button" className="link u small" onClick={() => setEdit(p.id)}>{t('kdEdit')}</button>
                       <button type="button" className="link u small" onClick={() => del(p)}>{t('delete')}</button></div>
                   )}
+                  {ctrl === p.id && <KidsControls profile={p} onClose={() => setCtrl(null)} />}
                 </li>
               ))}
             </ul>
@@ -121,6 +126,7 @@ export default function KidsParent() {
           </div>
         </section>
       )}
+      <KidsReport hasProfiles={d.profiles.length > 0} />
     </main>
   );
 }

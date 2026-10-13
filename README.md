@@ -1003,3 +1003,42 @@ nginx -t && systemctl reload nginx
 
 ### Tests
 `python3 api/tests/test_kids_learning.py` (≈ 40 vérifications), puis un test navigateur (étoiles, badges, révision, mobile arabe).
+
+## Étape 26.3 — Kids : contrôle parental (durée, catalogue, rapport)
+
+Tout se règle depuis l'espace parents (`/kids` → « Espace parents : gérer les profils » → **Contrôle parental** à côté de chaque enfant). Ces réglages sont refusés par l'API avec un jeton enfant.
+
+### Durée quotidienne
+- Par enfant : sans limite, ou 15 / 30 / 45 / 60 / 90 / 120 / 180 min par jour (API : de 5 à 480 min).
+- **Le serveur mesure lui-même le temps** : la page enfant envoie un « ping » toutes les 30 s tant qu'elle est visible (ou qu'une vidéo se lit) ; le serveur ajoute le temps réellement écoulé depuis le ping précédent (60 s au plus d'un coup). Une page qui enverrait une fausse durée n'a aucun effet.
+- Le compteur repart à zéro chaque jour (heure de Paris).
+- Quand il reste 5 min ou moins : message « Plus que n min ». Une fois la durée écoulée : message doux (« C'est fini pour aujourd'hui ! »), plus aucune vidéo proposée, et le serveur refuse la lecture, le quiz et l'enregistrement de la progression (`403 kid_time_up`). Le parent peut allonger la durée à tout moment.
+- Limite connue : un lien de lecture déjà délivré reste valable pendant sa courte durée de vie ; la vidéo en cours s'arrête dès le prochain ping.
+
+### Catalogue autorisé
+- **Tout le catalogue Kids de son âge** (par défaut) : le parent décoche ce qu'il veut bloquer ; les nouvelles conférences apparaissent toutes seules.
+- **Seulement ma sélection** : l'enfant ne voit que ce qui est coché ; une nouvelle conférence n'apparaît pas tant que le parent ne l'a pas cochée.
+- Au changement de mode, l'état actuel est conservé (rien n'apparaît ni ne disparaît sans décision du parent).
+- Une conférence bloquée disparaît du catalogue, de « À rejouer aujourd'hui », et son accès direct est refusé (404). La tranche d'âge reste prioritaire : autoriser une conférence trop « grande » ne la rend pas visible.
+
+### Rapport de progression
+- Par enfant, sur 7 ou 30 jours : temps passé (et barres par jour), vidéos terminées, quiz faits et moyenne, étoiles gagnées, badges gagnés (Apprentissage), vidéos à reprendre en douceur. **Aucun classement, aucune comparaison** : chaque enfant est présenté seul.
+- Disponible avec les deux formules (seuls les badges demandent Apprentissage).
+- **E-mail hebdomadaire** : un seul par parent et par jour, au jour et à l'heure réglés (Réglages → Kids : `kids_report_enabled`, `kids_report_weekday` — 0 = dimanche —, `kids_report_hour`, heure de Paris). Pas d'e-mail si aucun enfant n'a été actif, ni si le parent l'a désactivé (case dans le rapport) ou n'a plus d'abonnement. Bouton « M'envoyer le rapport maintenant ». Nécessite l'envoi d'e-mails (SMTP) configuré.
+
+### API
+- Enfant : `POST /kids/ping`. `/kids/talks` et `/kids/summary` renvoient `time: {limitMin, usedSec, leftSec, timeUp}`.
+- Parent : `GET/PUT /me/kids/profiles/:id/controls` (`dailyLimitMin`, `catalogMode`) · `GET/PUT /me/kids/profiles/:id/catalog` (`{talkIds, allowed}`) · `GET /me/kids/report?days=7|30` · `PUT /me/kids/report-prefs` · `POST /me/kids/report/send`.
+- Migration `031_kids_control.sql` (appliquée au démarrage) : `kid_profiles.daily_limit_min / catalog_mode`, `kid_catalog`, `kid_usage`, `users.kids_report_email / kids_report_last`.
+
+### Déploiement
+```bash
+cd /chemin/du/projet && git add -A && git commit -m "Etape 26.3 Kids controle parental" && git push
+# DockPanel : redéployer api puis web (translator inchangé)
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Tests
+`python3 api/tests/test_kids_control.py` (≈ 70 vérifications) · `node api/tests/test_kids_report.mjs` (e-mail hebdomadaire) · puis un test navigateur (réglages, rapport, fin de journée, mobile arabe).

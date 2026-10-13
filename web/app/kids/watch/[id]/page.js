@@ -8,6 +8,7 @@ import VideoPlayer from '../../../../components/VideoPlayer';
 import ExternalPlayer from '../../../../components/ExternalPlayer';
 import { langName } from '../../../../components/Transcript';
 import KidsQuiz from '../../../../components/KidsQuiz';
+import { useKidTime, leftMin } from '../../../../lib/kidTime';
 
 export default function KidsWatch() {
   const { id } = useParams();
@@ -15,7 +16,10 @@ export default function KidsWatch() {
   const [talk, setTalk] = useState(undefined);
   const videoRef = useRef(null);
   const [quiz, setQuiz] = useState(false);
-  useEffect(() => { if (kid) call(`/talks/${id}`).then((r) => setTalk(r.ok ? r.data : null)); }, [kid, id, call]);
+  useEffect(() => { if (kid) call(`/talks/${id}`).then((r) => setTalk(r.ok ? r.data : r.data?.code === 'kid_time_up' ? { timeUp: true } : null)); }, [kid, id, call]);
+  const time = useKidTime(call, kid, null);
+  // Durée du jour écoulée pendant la lecture : on arrête la vidéo avec douceur.
+  useEffect(() => { if (time?.timeUp) videoRef.current?.pause?.(); }, [time]);
 
   // Reprise : on enregistre la position toutes les 10 s, à la pause et à la fermeture (progression de l'enfant, pas celle du parent).
   const startMs = useRef(0);
@@ -39,6 +43,9 @@ export default function KidsWatch() {
   if (!kid) return null;
   if (talk === undefined) return <main className="page kd-page" />;
   const back = <p><Link className="btn kd-back" href="/kids">{t('kdBack')}</Link></p>;
+  if (talk?.timeUp || time?.timeUp) return (
+    <main className="page kd-page"><section className="kd-timeup" role="status"><p className="kd-moon" aria-hidden="true">🌙</p><h2>{t('kdTimeUpTitle')}</h2><p>{t('kdTimeUpText')}</p>{back}</section></main>
+  );
   if (talk === null || talk.locked) return <main className="page kd-page">{back}<p className="soon">{t('kdUnavailableTalk')}</p></main>;
   const tracks = (talk.tracks || []).map((lang) => ({ lang, isDefault: lang === locale && lang !== String(talk.language || '').split('-')[0], label: langName(lang, locale), src: `/api/talks/${id}/subs/${lang}.vtt?t=${encodeURIComponent(talk.playbackToken)}` }));
   const start = (talk.resumeMs || 0) / 1000;
@@ -49,6 +56,7 @@ export default function KidsWatch() {
   return (
     <main className="page kd-page kd-watch">
       {back}
+      {leftMin(time) != null && leftMin(time) <= 5 && <p className="kd-timeleft low" role="status"><span aria-hidden="true">⏳</span> {t('kdTimeLow').replace('{n}', leftMin(time))}</p>}
       <h1 className="kd-watch-title">{talk.title}</h1>
       <div className="player">{player}</div>
       {talk.quiz?.available && (quiz

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
+import { useKidTime, leftMin } from '../lib/kidTime';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -26,11 +27,21 @@ export default function KidsHome() {
   const { t, call, kid } = useApp();
   const [d, setD] = useState(null);
   const [sum, setSum] = useState(null);
+  const time = useKidTime(call, kid, d?.time);
   useEffect(() => { call('/kids/talks').then((r) => setD(r.ok ? r.data : { talks: [], resume: [] })); call('/kids/summary').then((r) => r.ok && setSum(r.data)); }, [call]);
   if (!kid) return null;
+  const left = leftMin(time);
+  if (time?.timeUp) return (
+    <main className="page kd-page kd-home">
+      <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>
+      <section className="kd-timeup" role="status"><p className="kd-moon" aria-hidden="true">🌙</p><h2>{t('kdTimeUpTitle')}</h2><p>{t('kdTimeUpText')}</p>
+        {sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>}</section>
+    </main>
+  );
   return (
     <main className="page kd-page kd-home">
       <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>
+      {left != null && <p className={left <= 5 ? 'kd-timeleft low' : 'kd-timeleft'} role="status"><span aria-hidden="true">⏳</span> {t(left <= 5 ? 'kdTimeLow' : 'kdTimeLeft').replace('{n}', left)}</p>}
       {sum && (
         <section className="kd-summary" aria-label={t('kdMyStars')}>
           <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>

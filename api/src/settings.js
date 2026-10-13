@@ -126,6 +126,10 @@ export const FIELDS = [
     help: "Profils enfants sous le compte du parent, code parental, conférences marquées « Kids » par tranche d'âge." },
   { key: 'kids_max_standard', group: 'kids', type: 'number', label: "Profils enfants : abonnement Mejliss", env: 'KIDS_MAX_STANDARD', def: '1', min: 1, max: 10 },
   { key: 'kids_max_learning', group: 'kids', type: 'number', label: "Profils enfants : abonnement Mejliss Apprentissage", env: 'KIDS_MAX_LEARNING', def: '5', min: 1, max: 10 },
+  { key: 'kids_report_enabled', group: 'kids', type: 'bool', label: 'Rapport hebdomadaire envoyé aux parents', env: 'KIDS_REPORT_ENABLED', def: 'true',
+    help: "Un e-mail par semaine par parent qui a au moins un profil enfant actif (chaque parent peut le désactiver). Nécessite l'envoi d'e-mails configuré." },
+  { key: 'kids_report_weekday', group: 'kids', type: 'number', label: "Jour d'envoi du rapport (0 = dimanche, 1 = lundi … 6 = samedi)", env: 'KIDS_REPORT_WEEKDAY', def: '0', min: 0, max: 6 },
+  { key: 'kids_report_hour', group: 'kids', type: 'number', label: "Heure d'envoi du rapport (heure de Paris)", env: 'KIDS_REPORT_HOUR', def: '18', min: 0, max: 23 },
 
   { key: 'citations_auto', group: 'citations', type: 'bool', label: 'Générer automatiquement des citations (versets et hadiths)', env: 'CITATIONS_AUTO', def: 'true',
     help: "Quand le stock de citations publiées passe sous le minimum ci-dessous, l'IA en choisit de nouvelles dans le corpus importé. Elle ne rédige jamais le texte : elle choisit des références, le texte affiché est celui de la source." },
