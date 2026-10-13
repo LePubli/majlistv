@@ -83,7 +83,7 @@ class H(BaseHTTPRequestHandler):
             for h, m, sec, text in lines[:max(0, want - 2)]:
                 words = text.split()
                 qs.append({"question": f"Que dit l'intervenant à {m}:{sec} ?", "options": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"], "correct_index": 0,
-                           "explanation": "Il le dit dans ce passage.", "evidence_quote": " ".join(words[:12]), "evidence_seconds": int(h) * 3600 + int(m) * 60 + int(sec) + 7})
+                           "explanation": "Il le dit dans ce passage. (" + re.search(r"Write EVERYTHING in (\w+)", body["system"]).group(1) + ")", "evidence_quote": " ".join(words[:12]), "evidence_seconds": int(h) * 3600 + int(m) * 60 + int(sec) + 7})
             qs.append({"question": "Question inventée sans appui ?", "options": ["A1", "B1", "C1"], "correct_index": 1, "explanation": "x",
                        "evidence_quote": "cette phrase n'a jamais été prononcée par l'intervenant", "evidence_seconds": 5})
             qs.append({"question": "Réponses en double ?", "options": ["Pareil", "pareil", "Autre"], "correct_index": 0, "explanation": "x",

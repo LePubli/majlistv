@@ -108,6 +108,8 @@ export const FIELDS = [
 
   { key: 'quiz_default_enabled', group: 'quiz', type: 'bool', label: 'Quiz de fin de vidéo activé par défaut', env: 'QUIZ_DEFAULT_ENABLED', def: 'true',
     help: 'Chaque organisateur peut l\'activer ou le désactiver conférence par conférence. Un quiz n\'est proposé que s\'il a assez de questions validées.' },
+  { key: 'quiz_language', group: 'quiz', type: 'select', options: ['fr', 'en', 'ar'], label: 'Langue des questions générées', env: 'QUIZ_LANGUAGE', def: 'fr',
+    help: 'Les questions sont écrites dans cette langue, quelle que soit celle de la vidéo (une conférence en arabe aura un quiz en français). La citation est affichée dans cette langue si la transcription traduite existe, sinon dans la langue d\'origine.' },
   { key: 'quiz_pass_percent', group: 'quiz', type: 'number', label: 'Seuil de réussite du quiz (%)', env: 'QUIZ_PASS_PERCENT', def: '70', min: 50, max: 100 },
   { key: 'quiz_min_questions', group: 'quiz', type: 'number', label: 'Nombre minimum de questions validées pour proposer le quiz', env: 'QUIZ_MIN_QUESTIONS', def: '3', min: 1, max: 10 },
   { key: 'quiz_max_questions', group: 'quiz', type: 'number', label: 'Nombre maximum de questions par quiz', env: 'QUIZ_MAX_QUESTIONS', def: '10', min: 3, max: 20 },

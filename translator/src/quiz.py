@@ -111,7 +111,7 @@ class Quiz(Insights):
         best = min(hits, key=lambda h: abs(segs[self.seg_at(owner, h)]["start_ms"] - near_ms))
         first, last = self.seg_at(owner, best), self.seg_at(owner, best + len(q) - 1)
         text = " ".join(segs[i]["text"].strip() for i in range(first, last + 1))
-        return segs[first]["start_ms"], text[:1500]
+        return segs[first]["start_ms"], text[:1500], segs[first].get("idx"), segs[last].get("idx")
 
     def clean(self, data, segs, existing_texts):
         """Garde les questions valides et vérifiées ; renvoie (questions, nombre écarté)."""
@@ -142,7 +142,7 @@ class Quiz(Insights):
             order = list(range(len(options)))
             random.shuffle(order)
             out.append({"question": question, "options": [options[i] for i in order], "correct_index": order.index(correct),
-                        "explanation": explanation[:1000], "evidence_ms": found[0], "evidence_quote": found[1]})
+                        "explanation": explanation[:1000], "evidence_ms": found[0], "evidence_quote": found[1], "idx": (found[2], found[3])})
         out.sort(key=lambda x: x["evidence_ms"])
         return out, dropped
 
@@ -154,7 +154,7 @@ class Quiz(Insights):
             self.log(f"{tag} début ({self.provider})")
             started = time.time()
             talk = self.query("SELECT title, level FROM talks WHERE id = %s", (talk_id,), fetch=True)[0]
-            segs = self.query("SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = %s AND lang = %s ORDER BY idx", (talk_id, lang), fetch=True)
+            segs = self.query("SELECT idx, start_ms, end_ms, text FROM transcript_segments WHERE talk_id = %s AND lang = %s ORDER BY idx", (talk_id, lang), fetch=True)
             if not segs:
                 raise self.FatalError("Aucun segment de transcription")
             text = self.transcript_text(segs)
@@ -163,16 +163,28 @@ class Quiz(Insights):
             existing = [r["question"] for r in self.query(
                 "SELECT question FROM quiz_questions WHERE talk_id = %s AND status = 'approved'", (talk_id,), fetch=True)]
             wanted = max(3, min(int(job["wanted"]), 15))
+            # Langue des questions : celle réglée par le site (français par défaut), pas celle de la vidéo. La citation, elle, reste
+            # cherchée mot pour mot dans la transcription d'origine ; si la transcription traduite existe, c'est elle qui est affichée.
+            out = (self.S.get("quiz_language", "QUIZ_LANGUAGE", "fr") or "fr").strip().lower()[:2]
+            if out not in self.LANG_NAMES:
+                out = "fr"
             system = SYSTEM_QUIZ.format(
-                lang=self.LANG_NAMES.get(lang.split("-")[0], "the language of the transcript"), count=wanted + 2, n_options="4",
+                lang=self.LANG_NAMES.get(out, "French"), count=wanted + 2, n_options="4",
                 level=LEVELS.get(talk["level"], "general audience"),
                 existing=json.dumps(existing, ensure_ascii=False) if existing else "none")
             data = self.ask(system, f"Title: {talk['title']}\n\n{text}", tool=QUIZ_TOOL, max_tokens=8000)
             questions, dropped = self.clean(data, segs, existing)
+            if out != lang.split("-")[0]:  # citation affichée dans la langue des questions quand la traduction existe
+                tsegs = {r["idx"]: r["text"] for r in self.query(
+                    "SELECT idx, text FROM transcript_segments WHERE talk_id = %s AND lang = %s", (talk_id, out), fetch=True)}
+                for q in questions:
+                    a, b = q["idx"]
+                    if a is not None and b is not None and all(i in tsegs for i in range(a, b + 1)):
+                        q["evidence_quote"] = " ".join(tsegs[i].strip() for i in range(a, b + 1))[:1500]
             if not questions:
                 raise RuntimeError("Aucune question exploitable (citations introuvables dans la transcription)")
             chapters = (self.query("SELECT chapters FROM talk_insights WHERE talk_id = %s AND status = 'ready' ORDER BY (lang = %s) DESC LIMIT 1",
-                                   (talk_id, lang), fetch=True) or [{"chapters": []}])[0]["chapters"] or []
+                                   (talk_id, out), fetch=True) or [{"chapters": []}])[0]["chapters"] or []
             with self.db().cursor() as cur:  # une seule transaction : on remplace les anciennes propositions, jamais les validées
                 self.db().autocommit = False
                 try:
@@ -185,7 +197,7 @@ class Quiz(Insights):
                         cur.execute(
                             """INSERT INTO quiz_questions(talk_id, lang, question, options, correct_index, explanation, evidence_ms, evidence_quote,
                                                           chapter_ms, chapter_title, origin) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'ai')""",
-                            (talk_id, lang, q["question"], json.dumps(q["options"], ensure_ascii=False), q["correct_index"], q["explanation"],
+                            (talk_id, out, q["question"], json.dumps(q["options"], ensure_ascii=False), q["correct_index"], q["explanation"],
                              q["evidence_ms"], q["evidence_quote"], ch["ms"] if ch else None, ch["title"] if ch else ""))
                     cur.execute("UPDATE quiz_jobs SET status = 'ready', produced = %s, dropped = %s, error = NULL, updated_at = now() "
                                 "WHERE talk_id = %s AND status = 'processing'", (len(questions), dropped, talk_id))
