@@ -32,12 +32,14 @@ export default function Pricing() {
   };
 
   if (!info || !ready) return null;
-  const month = info.plans.find((p) => p.interval === 'month');
-  const year = info.plans.find((p) => p.interval === 'year');
-  const saving = month && year ? Math.round(100 - (year.amount / (month.amount * 12)) * 100) : 0;
-  // Mois offerts par la formule annuelle (ex. 6,99 € × 12 = 83,88 € contre 69,99 € → 2 mois).
-  const freeMonths = month && year ? Math.floor((month.amount * 12 - year.amount) / month.amount + 0.05) : 0;
   const active = status?.active;
+  // Deux paliers : « Mejliss » (visionnage) et « Mejliss Apprentissage » (score, badges, courbe, attestations).
+  const learnPlans = info.learning?.plans || [];
+  const tiers = [
+    { key: 'standard', title: t('tierStd'), tag: t('tierStdTag'), plans: info.plans, enabled: info.enabled, bullets: ['planB1', 'planB2', 'planB3', 'planB4'] },
+    ...(learnPlans.length ? [{ key: 'learning', title: t('tierLearn'), tag: t('tierLearnTag'), plans: learnPlans, enabled: Boolean(info.learning?.enabled), bullets: ['planL0', 'planL1', 'planL2', 'planL3'] }] : []),
+  ];
+  const anyPlans = tiers.some((x) => x.plans.length > 0);
 
   return (
     <main className="page pricing">
@@ -45,34 +47,50 @@ export default function Pricing() {
       {!active && <Steps current={user ? 2 : 1} t={t} />}
       <h1>{t('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
-      {!info.enabled && <p className="soon">{info.plans.length ? t('pricingSoon') : t('billingUnavailable')}</p>}
+      {!info.enabled && <p className="soon">{anyPlans ? t('pricingSoon') : t('billingUnavailable')}</p>}
       {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t('trialNote'), info.trialDays)}</p>}
       {err && <p className="error">{err}</p>}
-      {info.plans.length > 0 && (
-        <div className="plans">
-          {[['month', month], ['year', year]].filter(([, p]) => p).map(([interval, p]) => (
-            <section key={interval} className={`plan ${interval === 'year' ? 'best' : ''}`}>
-              <h2>{t(interval === 'year' ? 'yearly' : 'monthly')}</h2>
-              <p className="price">{money(p)} <span>{t(interval === 'year' ? 'perYear' : 'perMonth')}</span></p>
-              {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(t('freeMonths'), freeMonths)}</p>}
-              {interval === 'year' && freeMonths < 1 && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
-              <ul className="plan-list">{['planB1', 'planB2', 'planB3', 'planB4'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
-              {!info.enabled ? (
-                <button className="btn" disabled>{t('soonBtn')}</button>
-              ) : active ? (
-                <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{t('manageSub')}</button>
-              ) : user ? (
-                <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, waiver: true, ...(from ? { returnTo: from } : {}) }, interval)}>
-                  {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
-                </button>
-              ) : (
-                <Link className="btn" href={authPath('register', pricingPath(from))}>{info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('register')}</Link>
-              )}
-            </section>
-          ))}
-        </div>
-      )}
-      {info.plans.length > 0 && (
+      {tiers.map((tier) => {
+        const month = tier.plans.find((p) => p.interval === 'month');
+        const year = tier.plans.find((p) => p.interval === 'year');
+        const saving = month && year ? Math.round(100 - (year.amount / (month.amount * 12)) * 100) : 0;
+        // Mois offerts par la formule annuelle (ex. 6,99 € × 12 = 83,88 € contre 69,99 € → 2 mois).
+        const freeMonths = month && year ? Math.floor((month.amount * 12 - year.amount) / month.amount + 0.05) : 0;
+        if (!tier.plans.length) return null;
+        const current = active && status?.tier === tier.key;
+        return (
+          <section key={tier.key} className={`tier tier-${tier.key}`} aria-labelledby={`tier-${tier.key}`}>
+            <div className="tier-head">
+              <h2 id={`tier-${tier.key}`}>{tier.title}</h2>
+              {current && <span className="tier-current">{t('tierCurrent')}</span>}
+            </div>
+            <p className="meta tier-tag">{tier.tag}</p>
+            <div className="plans">
+              {[['month', month], ['year', year]].filter(([, p]) => p).map(([interval, p]) => (
+                <section key={interval} className={`plan ${interval === 'year' ? 'best' : ''}`}>
+                  <h3>{t(interval === 'year' ? 'yearly' : 'monthly')}</h3>
+                  <p className="price">{money(p)} <span>{t(interval === 'year' ? 'perYear' : 'perMonth')}</span></p>
+                  {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(t('freeMonths'), freeMonths)}</p>}
+                  {interval === 'year' && freeMonths < 1 && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
+                  <ul className="plan-list">{tier.bullets.map((k) => <li key={k}>{t(k)}</li>)}</ul>
+                  {!tier.enabled ? (
+                    <button className="btn" disabled>{t('soonBtn')}</button>
+                  ) : active ? (
+                    <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{current ? t('manageSub') : t('changePlan')}</button>
+                  ) : user ? (
+                    <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, tier: tier.key, waiver: true, ...(from ? { returnTo: from } : {}) }, `${tier.key}-${interval}`)}>
+                      {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
+                    </button>
+                  ) : (
+                    <Link className="btn" href={authPath('register', pricingPath(from))}>{info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('register')}</Link>
+                  )}
+                </section>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      {anyPlans && (
         <p className="pay-methods" aria-label={t('payMethods')}>
           <span>{t('payMethods')}</span>
           <span className="pay-chip">{t('payCard')}</span>
@@ -86,7 +104,7 @@ export default function Pricing() {
         </label>
       )}
       {info.enabled && !user && <p className="meta small"><Link className="link u" href={authPath('login', pricingPath(from))}>{t('haveAccount')}</Link></p>}
-      {info.plans.length > 0 && <p className="meta small">{t('pricingFooter')}</p>}
+      {anyPlans && <p className="meta small">{t('pricingFooter')}</p>}
     </main>
   );
 }

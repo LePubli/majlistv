@@ -50,6 +50,7 @@ function Billing() {
       {justPaid && !st.active && <p className="meta">{t('billingSuccess')}</p>}
       {justPaid && back && <Link className="btn btn-lg resume-btn" href={back}>▶ {t('resumeTalk')}</Link>}
       <p><strong>{line}</strong></p>
+      {st.active && st.tier && <p className="meta">{t('tierYours')} : <b>{st.tier === 'learning' ? t('tierLearn') : t('tierStd')}</b>{st.learning && <> · <Link className="link u" href="/learning">{t('lrOpen')}</Link></>}</p>}
       {sub ? <button className="btn" disabled={busy} onClick={portal}>{t('manageSub')}</button>
         : <Link className="btn" href="/pricing">{t('subscribe')}</Link>}
     </section>

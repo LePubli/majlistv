@@ -801,3 +801,27 @@ Cette étape prépare le quiz côté organisateur. Le public ne le voit pas enco
 **Migration** : `024_quiz_attempts.sql` (tables `quiz_attempts` et `quiz_reports`), appliquée au démarrage de l'API.
 **Tests** : `python3 api/tests/test_quiz_play.py` (44 vérifications, API et PG de test).
 **Déploiement** : api puis web (le translator n'a pas changé), `/root/apply-limits.sh`, vérification nginx.
+
+## Étape 24.4 — Mejliss Apprentissage : score, courbe, badges, attestation
+
+**Le palier** : *Mejliss Apprentissage* (9,99 €/mois · 99,99 €/an) s'ajoute à *Mejliss* (6,99 € / 69,99 € ou les prix que tu as réglés). Le quiz de fin de vidéo reste **gratuit pour tous, même sans compte**. L'Apprentissage ajoute : score, courbe, badges, attestation (et, aux étapes suivantes, révision espacée, rappels, profils Kids complets). Les comptes **admin** ont l'accès Apprentissage.
+
+**À faire côté Stripe (toi, sans code)**
+1. Stripe → Produits → créer « Mejliss Apprentissage » avec **2 prix récurrents** : 9,99 € / mois et 99,99 € / an (TTC). Copier leurs identifiants `price_…`.
+2. Admin → Paramètres → Paiement : renseigner **« Apprentissage : identifiant du prix mensuel »** et **« … annuel »**. Tant qu'ils sont vides, la formule s'affiche mais le bouton reste « Bientôt disponible ».
+3. Stripe → Paramètres → Portail client : autoriser le **changement de formule** entre les deux produits (Mejliss ⇄ Mejliss Apprentissage). Les événements du webhook sont inchangés ; le palier est déduit du prix souscrit.
+
+**Score** : par quiz = meilleur pourcentage × fraîcheur. La fraîcheur baisse doucement sans révision (jusqu'à −40 % en 120 jours, jamais sous 60 % du score). Score global = moyenne des quiz tentés. Tout est calculé à la demande depuis `quiz_attempts` (rien de stocké, donc rien à migrer si la formule change).
+
+**Courbe** : un point par semaine (52 semaines max). **Badges** (8) : Premier quiz, Studieux (5 réussis), Assidu (10), Sans faute, Persévérant (réussi après un échec), Régulier (3 jours de suite), Explorateur (3 thèmes), Série terminée.
+
+**Attestation de suivi** : disponible quand **tous les quiz d'une série** sont réussis. Ce n'est **ni un diplôme ni une ijâza** (mention imprimée). C'est une **page publique vérifiable** `/attestation/<code>` (code de 12 caractères, non indexée, ne montre ni e-mail ni identifiant) ; « Imprimer / enregistrer en PDF » du navigateur produit le PDF (feuille d'impression dédiée). Le membre peut la supprimer.
+
+**Pages** : `/learning` (Mon apprentissage ; teaser pour les autres membres), `/pricing` (deux formules), `/account` (formule), panneau de résultat du quiz (score + nouveaux badges, ou invitation à passer à l'Apprentissage).
+
+**API** : `GET /me/learning` (403 `learning_required` sinon), `POST /me/learning/attestations {seriesId}`, `DELETE /me/learning/attestations/:code`, `GET /attestations/:code` (public), `GET /billing/plans` (+ `learning`), `/billing/status` (+ `tier`), `POST /billing/checkout {tier}`.
+
+**Migration** : `025_learning.sql` (`subscriptions.tier`, table `attestations`), appliquée au démarrage de l'API.
+**Tests** : `test_learning_unit.mjs` (depuis `api/`, avec `DATABASE_URL`), `test_learning.py`, `test_pricing_learning.py`, plus non-régression `test_pricing.py`, `test_quiz.py`, `test_quiz_play.py`, `test_home.py`, `test_levels.py`.
+**Déploiement** : api puis web (translator inchangé), `/root/apply-limits.sh`, vérification nginx.
+**Debug** : `/me/learning` en 403 alors que tu es abonné → vérifier que le prix souscrit est bien l'un des deux prix Apprentissage (Admin → Paramètres → Paiement) ; le palier est relu à chaque événement Stripe.

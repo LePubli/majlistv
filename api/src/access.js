@@ -16,3 +16,18 @@ export async function hasActiveSubscription(userId) {
   );
   return rowCount > 0;
 }
+
+// Palier « Apprentissage » (score, badges, courbe, attestations) : abonnement de ce palier en cours, ou compte administrateur.
+export async function hasLearningTier(userId) {
+  if (!userId) return false;
+  const { rowCount } = await pool.query(
+    `SELECT 1 FROM users WHERE id = $1 AND role = 'admin'
+     UNION ALL
+     SELECT 1 FROM subscriptions
+      WHERE user_id = $1 AND tier = 'learning' AND status IN ('trialing', 'active', 'past_due')
+        AND (current_period_end IS NULL OR current_period_end > now() - interval '2 days')
+     LIMIT 1`,
+    [userId]
+  );
+  return rowCount > 0;
+}

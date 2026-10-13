@@ -4,7 +4,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlsplit
 LOG = []
 PRICES = {"price_m": {"id": "price_m", "object": "price", "unit_amount": 990, "currency": "eur", "recurring": {"interval": "month"}},
-          "price_y": {"id": "price_y", "object": "price", "unit_amount": 9900, "currency": "eur", "recurring": {"interval": "year"}}}
+          "price_y": {"id": "price_y", "object": "price", "unit_amount": 9900, "currency": "eur", "recurring": {"interval": "year"}},
+          "price_lm": {"id": "price_lm", "object": "price", "unit_amount": 999, "currency": "eur", "recurring": {"interval": "month"}},
+          "price_ly": {"id": "price_ly", "object": "price", "unit_amount": 9999, "currency": "eur", "recurring": {"interval": "year"}}}
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         raw = json.dumps(obj).encode()

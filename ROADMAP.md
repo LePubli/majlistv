@@ -120,7 +120,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - **Navigation jamais bloquée** : un quiz non validé donne une pastille « À revoir » sur l'épisode, un bandeau discret au lancement de l'épisode suivant, et une carte « Quiz à rattraper » dans « Continuer à regarder ». C'est l'attestation de fin de cours qui exige tous les quiz validés.
   - Bouton « signaler cette question » → file de traitement dans le Studio.
 
-- **24.4 Score, badges, courbe, attestation — et nouveau palier**
+- ✅ **24.4 Score, badges, courbe, attestation — et nouveau palier** (attestation = page publique vérifiable, imprimable en PDF)
   - Score par conférence, par thème et global, qui **s'érode doucement avec le temps** : la courbe redescend si l'on n'entretient pas, ce qui donne son sens à la révision.
   - Niveaux affichés : Découverte, Compréhension, Approfondissement, Maîtrise.
   - Badges : premiers pas, série terminée, thème maîtrisé, régularité…

@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
 import { visibleSql } from '../visibility.js';
+import { hasLearningTier } from '../access.js';
+import { learningBrief } from '../learning.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const qidSchema = z.object({ qid: z.string().uuid() });
@@ -284,13 +286,20 @@ export default async function quizRoutes(app) {
     const passed = percent >= passPercent;
     const viewer = await app.optionalUser(req);
     let best = null;
+    let learning = null; // palier Apprentissage : score global et badges gagnés grâce à cette tentative
     if (viewer) {
+      const tracked = await hasLearningTier(viewer.sub);
+      const before = tracked ? await learningBrief(viewer.sub) : null;
       await pool.query(
         'INSERT INTO quiz_attempts(user_id, talk_id, score, total, percent, passed, answers) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [viewer.sub, id, score, total, percent, passed, JSON.stringify(results.map((r) => ({ questionId: r.questionId, index: r.chosen, correct: r.correct })))]);
       best = (await lastAttempt(viewer.sub, id))?.best ?? percent;
+      if (tracked) {
+        const after = await learningBrief(viewer.sub);
+        learning = { score: after.score, previousScore: before.score, newBadges: after.badges.filter((b) => !before.badges.includes(b)) };
+      }
     }
-    return { score, total, percent, passed, passPercent, best, saved: Boolean(viewer), results };
+    return { score, total, percent, passed, passPercent, best, saved: Boolean(viewer), learning, results };
   });
 
   // « Signaler cette question » (membre ou visiteur).

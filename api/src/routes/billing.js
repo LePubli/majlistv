@@ -7,6 +7,7 @@ import { pool } from '../db.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
 import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
+import { hasLearningTier } from '../access.js';
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
 export const WAIVER_VERSION = '2026-10-12';
@@ -37,18 +38,21 @@ let clientCache = { key: null, client: null };
 
 // Configuration Stripe actuelle, ou null si le paiement n'est pas configuré.
 export async function stripeContext() {
-  const [secret, monthly, yearly] = await Promise.all([getSetting('stripe_secret_key'), getSetting('stripe_price_monthly'), getSetting('stripe_price_yearly')]);
+  const [secret, monthly, yearly, lm, ly] = await Promise.all([getSetting('stripe_secret_key'), getSetting('stripe_price_monthly'), getSetting('stripe_price_yearly'),
+    getSetting('stripe_price_learn_monthly'), getSetting('stripe_price_learn_yearly')]);
   if (!secret || !monthly || !yearly) return null;
   if (clientCache.key !== secret) clientCache = { key: secret, client: makeStripe(secret) };
-  return { stripe: clientCache.client, prices: { month: monthly, year: yearly } };
+  // Palier Apprentissage : vendu seulement si ses deux prix sont renseignés.
+  return { stripe: clientCache.client, prices: { month: monthly, year: yearly }, learn: lm && ly ? { month: lm, year: ly } : null };
 }
 
 // Prix affichés saisis dans le back-office (centimes). Servent à montrer les formules tant que Stripe n'est pas configuré.
 const toCents = (v) => { const n = Math.round(Number(String(v || '').replace(',', '.')) * 100); return Number.isFinite(n) && n > 0 ? n : 0; };
-async function listedPlans() {
+async function listedPlans(tier = 'standard') {
   const currency = await getSetting('plan_currency');
   const out = [];
-  for (const [interval, key] of [['month', 'plan_price_monthly'], ['year', 'plan_price_yearly']]) {
+  const keys = tier === 'learning' ? [['month', 'plan_learn_price_monthly'], ['year', 'plan_learn_price_yearly']] : [['month', 'plan_price_monthly'], ['year', 'plan_price_yearly']];
+  for (const [interval, key] of keys) {
     const amount = toCents(await getSetting(key));
     if (amount) out.push({ interval, amount, currency });
   }
@@ -66,29 +70,39 @@ export default async function billingRoutes(app) {
     const ctx = await stripeContext();
     const trialDays = await getNumber('trial_days');
     const methods = await methodsList();
-    if (!ctx) return { enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods };
-    const sig = `${clientCache.key}|${ctx.prices.month}|${ctx.prices.year}`;
+    // `plans` : formule standard (inchangé). `learning` : palier Apprentissage (mêmes champs).
+    const fromSettings = async () => ({
+      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods,
+      learning: { enabled: false, plans: await listedPlans('learning') },
+    });
+    if (!ctx) return fromSettings();
+    const sig = `${clientCache.key}|${ctx.prices.month}|${ctx.prices.year}|${ctx.learn?.month || ''}|${ctx.learn?.year || ''}`;
     if (!plansCache.data || plansCache.sig !== sig || Date.now() - plansCache.at > 10 * 60 * 1000) {
       try {
-        const plans = [];
-        for (const [interval, id] of Object.entries(ctx.prices)) {
-          const p = await ctx.stripe.prices.retrieve(id);
-          plans.push({ interval, amount: p.unit_amount, currency: p.currency });
-        }
-        plansCache = { sig, at: Date.now(), data: plans };
+        const get = async (prices) => {
+          const out = [];
+          for (const [interval, id] of Object.entries(prices)) {
+            const p = await ctx.stripe.prices.retrieve(id);
+            out.push({ interval, amount: p.unit_amount, currency: p.currency });
+          }
+          return out;
+        };
+        plansCache = { sig, at: Date.now(), data: { standard: await get(ctx.prices), learning: ctx.learn ? await get(ctx.learn) : [] } };
       } catch (err) {
         // Stripe injoignable : on montre quand même les formules, mais on ne propose pas de payer.
         req.log.error(err);
-        return { enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods };
+        return fromSettings();
       }
     }
-    return { enabled: true, source: 'stripe', plans: plansCache.data, trialDays, methods };
+    // Palier Apprentissage non configuré chez Stripe : on montre les prix saisis, sans bouton de paiement.
+    const learning = ctx.learn ? { enabled: true, plans: plansCache.data.learning } : { enabled: false, plans: await listedPlans('learning') };
+    return { enabled: true, source: 'stripe', plans: plansCache.data.standard, trialDays, methods, learning };
   });
 
   // --- Mon abonnement ---
   app.get('/billing/status', { preHandler: app.authenticate }, async (req) => {
     const { rows } = await pool.query(
-      `SELECT status, billing_interval AS interval, current_period_end AS "currentPeriodEnd", trial_end AS "trialEnd",
+      `SELECT status, tier, billing_interval AS interval, current_period_end AS "currentPeriodEnd", trial_end AS "trialEnd",
               cancel_at_period_end AS "cancelAtPeriodEnd"
          FROM subscriptions WHERE user_id = $1
         ORDER BY (status IN ('trialing', 'active', 'past_due')) DESC, updated_at DESC LIMIT 1`,
@@ -99,7 +113,10 @@ export default async function billingRoutes(app) {
     const complimentaryUntil = u[0]?.premium_until && new Date(u[0].premium_until) > new Date() ? u[0].premium_until : null;
     const paid = Boolean(sub) && ['trialing', 'active', 'past_due'].includes(sub.status)
       && (!sub.currentPeriodEnd || new Date(sub.currentPeriodEnd) > new Date(Date.now() - 2 * 86400000));
-    return { enabled: Boolean(await stripeContext()), active: paid || Boolean(complimentaryUntil), subscription: sub, complimentaryUntil };
+    const active = paid || Boolean(complimentaryUntil);
+    // Palier : « learning » = Apprentissage (aussi pour un administrateur) ; « standard » = visionnage + quiz de fin de vidéo.
+    const learning = await hasLearningTier(req.user.sub);
+    return { enabled: Boolean(await stripeContext()), active, tier: learning ? 'learning' : active ? 'standard' : null, learning, subscription: sub, complimentaryUntil };
   });
 
   // Client Stripe de l'utilisateur (créé à la première souscription, recréé si le compte Stripe a changé).
@@ -127,7 +144,9 @@ export default async function billingRoutes(app) {
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
     const ctx = await stripeContext();
     if (!ctx) return off(reply);
-    const { interval, waiver, returnTo } = z.object({ interval: z.enum(['month', 'year']), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional() }).parse(req.body);
+    const { interval, tier, waiver, returnTo } = z.object({ interval: z.enum(['month', 'year']), tier: z.enum(['standard', 'learning']).default('standard'), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional() }).parse(req.body);
+    if (tier === 'learning' && !ctx.learn) return reply.code(503).send({ error: "La formule Apprentissage n'est pas encore disponible" });
+    const priceId = (tier === 'learning' ? ctx.learn : ctx.prices)[interval];
     // Page à retrouver après le paiement (ex. la conférence qui a donné envie de s'abonner) : chemin du site uniquement.
     const back = returnTo && /^\/(?![\/\\])/.test(returnTo) ? returnTo : '';
     // Renonciation expresse au droit de rétractation, exigée avant tout paiement (contenu numérique).
@@ -147,13 +166,13 @@ export default async function billingRoutes(app) {
     // Preuve horodatée du consentement (texte exact, version, adresse IP, navigateur).
     await pool.query(
       `INSERT INTO consents(user_id, email, kind, version, text, context, ip, user_agent) VALUES ($1, $2, 'withdrawal_waiver', $3, $4, $5, $6, $7)`,
-      [req.user.sub, me[0].email, WAIVER_VERSION, WAIVER_TEXT[l], `checkout:${interval}`, req.ip, String(req.headers['user-agent'] || '').slice(0, 300)]
+      [req.user.sub, me[0].email, WAIVER_VERSION, WAIVER_TEXT[l], `checkout:${tier}:${interval}`, req.ip, String(req.headers['user-agent'] || '').slice(0, 300)]
     );
     const params = {
       mode: 'subscription',
       customer,
       client_reference_id: req.user.sub,
-      line_items: [{ price: ctx.prices[interval], quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       subscription_data,
       allow_promotion_codes: true, // codes promo créés dans Stripe → Produits → Coupons
       custom_text: { submit: { message: SUBMIT_TEXT[l] } },
@@ -203,6 +222,7 @@ export default async function billingRoutes(app) {
     hook.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => done(null, body));
 
     async function applySubscription(client, sub, eventCreated) {
+      const learnIds = [await getSetting('stripe_price_learn_monthly'), await getSetting('stripe_price_learn_yearly')].filter(Boolean);
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
       let userId = sub.metadata?.user_id || null;
       if (customerId) {
@@ -216,14 +236,15 @@ export default async function billingRoutes(app) {
       // Selon la version de l'API Stripe, la fin de période est sur l'abonnement ou sur son article.
       const periodEnd = sub.current_period_end ?? item?.current_period_end ?? null;
       await client.query(
-        `INSERT INTO subscriptions (id, user_id, status, price_id, billing_interval, current_period_end, trial_end, cancel_at_period_end, event_created)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, price_id = EXCLUDED.price_id, billing_interval = EXCLUDED.billing_interval,
+        `INSERT INTO subscriptions (id, user_id, status, price_id, billing_interval, current_period_end, trial_end, cancel_at_period_end, event_created, tier)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, price_id = EXCLUDED.price_id, billing_interval = EXCLUDED.billing_interval, tier = EXCLUDED.tier,
            current_period_end = EXCLUDED.current_period_end, trial_end = EXCLUDED.trial_end,
            cancel_at_period_end = EXCLUDED.cancel_at_period_end, event_created = EXCLUDED.event_created, updated_at = now()
          WHERE subscriptions.event_created <= EXCLUDED.event_created`,
         [sub.id, userId, sub.status, item?.price?.id || null, item?.price?.recurring?.interval || null,
-          toDate(periodEnd), toDate(sub.trial_end), Boolean(sub.cancel_at_period_end || sub.cancel_at), eventCreated]
+          toDate(periodEnd), toDate(sub.trial_end), Boolean(sub.cancel_at_period_end || sub.cancel_at), eventCreated,
+          learnIds.includes(item?.price?.id) ? 'learning' : 'standard']
       );
       if (customerId) await client.query('UPDATE users SET stripe_customer_id = COALESCE(stripe_customer_id, $2) WHERE id = $1', [userId, customerId]);
       return true;

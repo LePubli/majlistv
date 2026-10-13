@@ -68,6 +68,15 @@ export default function Quiz({ talkId, t, call, user, onResult, onSeek, nextHref
         </div>
         <p className="qp-msg">{res.passed ? t('qpWin') : t('qpLose')}</p>
         {!res.passed && <p className="meta small">{t('qpPassNeeded').replace('{p}', res.passPercent)}</p>}
+        {res.learning && (
+          <div className="qp-learn" role="status">
+            <b>{t('qpLearnScore').replace('{s}', res.learning.score)}</b>
+            {res.learning.score !== res.learning.previousScore && <span className="meta"> ({res.learning.score > res.learning.previousScore ? '+' : ''}{res.learning.score - res.learning.previousScore})</span>}
+            {res.learning.newBadges.length > 0 && <p className="qp-newbadges">🏅 {t('qpNewBadges')} : {res.learning.newBadges.map((id) => t(`bdg_${id}`)).join(' · ')}</p>}
+            <Link className="link u small" href="/learning">{t('qpSeeProgress')}</Link>
+          </div>
+        )}
+        {user && !res.learning && <p className="meta small">{t('qpUpsell')} <Link className="link u" href="/pricing">{t('qpUpsellLink')}</Link></p>}
         {user
           ? <p className="meta small">{t('qpSaved')}</p>
           : <p className="meta small">{t('qpGuest')} <Link className="link u" href="/register">{t('qpGuestLink')}</Link></p>}

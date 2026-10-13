@@ -30,6 +30,7 @@ export default function Header() {
           <>
             {['organizer', 'admin'].includes(user.role) && <Link href="/studio">{t('studioNav')}</Link>}
             <Link href="/library" aria-current={cur('/library')}>{t('library')}</Link>
+            <Link href="/learning" aria-current={cur('/learning')}>{t('lrNav')}</Link>
             {user.role === 'admin' && <Link href="/admin" aria-current={cur('/admin')}>{t('adminNav')}</Link>}
             <Link href="/account" aria-current={cur('/account')}>{t('account')}</Link>
             <button className="link" onClick={() => { logout(); router.push('/'); }}>{t('logout')}</button>
