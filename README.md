@@ -778,3 +778,26 @@ Cette étape prépare le quiz côté organisateur. Le public ne le voit pas enco
 **Tests**
 - `python3 translator/tests/test_quiz_clean.py` : vérification des citations, mélange, doublons (sans base ni réseau).
 - `python3 api/tests/test_quiz.py` : API complète (réglages, droits, validation, plafond, file de relecture, génération). Prérequis : API 3055, PG 5544, `MOCK_PORT=8099 python3 translator/tests/mock_claude.py &`, puis le translator lancé avec `ANTHROPIC_API_KEY=test-key ANTHROPIC_API_URL=http://127.0.0.1:8099/v1/messages POLL_SECONDS=1 python3 translator/src/main.py`.
+
+## Étape 24.3 — Passer le quiz
+
+**Parcours**
+- À la fin de la vidéo, si la conférence a un quiz (activé + au moins 3 questions validées) et que le visiteur ne l'a pas encore réussi, une invitation s'affiche sur le lecteur : **Passer le quiz** / **Plus tard**. Dans une série, le compte à rebours de l'épisode suivant ne démarre qu'après ce choix.
+- Une carte « Quiz de compréhension » reste sous le lecteur (avec le dernier résultat : « Réussi · 80 % » ou « À revoir · 60 % »).
+- Le quiz se passe **une question à la fois**, **gratuit et sans compte**. La correction se fait côté serveur : les bonnes réponses ne sont jamais envoyées avant la validation.
+- Résultat : pourcentage (seuil de réussite 70 %, réglable), puis revue de chaque question avec la bonne réponse, l'explication, le lien **« Revoir à mm:ss »** (le lecteur se place sur le passage) et **« Signaler cette question »**.
+- Rien n'est bloquant : le quiz non réussi peut être refait ou laissé de côté.
+
+**Visiteur sans compte** : résultat gardé **7 jours** dans le navigateur (aucune donnée en base). **Membre connecté** : chaque tentative est enregistrée (`quiz_attempts`), le meilleur score est conservé.
+
+**Rappels sans blocage**
+- Quiz laissé de côté (« Plus tard » ou épisode suivant lancé sans réussir) : bannière discrète sur les pages suivantes (« Quiz à valider : … »), valable 7 jours, fermable.
+- Membres : rangée **« Quiz à rattraper »** sur l'accueil (avant « Continuer à regarder ») et dans la bibliothèque. Badge « Quiz à passer » (vidéo terminée sans tentative) ou « À revoir · 60 % » (tenté sans réussite). Un clic ouvre la conférence avec le quiz (`?quiz=1`).
+
+**Signalements** : « Signaler cette question » (membre ou visiteur, motif facultatif). Côté Studio, la question signalée réapparaît dans **« Quiz à relire »** avec le nombre de signalements et les motifs ; bouton **« Ignorer le signalement »**, ou correction de la question (ce qui clôt les signalements).
+
+**API** : `GET /talks/:id/quiz`, `POST /talks/:id/quiz/submit`, `POST /talks/:id/quiz/questions/:qid/report`, `GET /me/quiz/todo`, `POST /studio/quiz/questions/:qid/reports/dismiss` ; la fiche `GET /talks/:id` porte `quiz: { available, count }`.
+
+**Migration** : `024_quiz_attempts.sql` (tables `quiz_attempts` et `quiz_reports`), appliquée au démarrage de l'API.
+**Tests** : `python3 api/tests/test_quiz_play.py` (44 vérifications, API et PG de test).
+**Déploiement** : api puis web (le translator n'a pas changé), `/root/apply-limits.sh`, vérification nginx.

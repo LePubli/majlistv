@@ -113,7 +113,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - Studio : **file de relecture** pour traiter le fonds existant par lots, écoute du passage source en un clic, valider / corriger / rejeter, et rédaction manuelle de questions.
   - Réglages : nombre de questions (3 à 10), seuil de réussite (70 % par défaut), quiz activé ou non **par conférence**, avec une valeur par défaut dans le back-office.
 
-- **24.3 Passage du quiz (visiteur)**
+- ✅ **24.3 Passage du quiz (visiteur)**
   - Proposé à la fin de la vidéo (si activé) et accessible depuis un onglet « Quiz ».
   - Une question à la fois, correction immédiate avec l'explication et le lien « revoir le passage à 12:40 ».
   - Visiteur sans compte : résultat gardé 7 jours dans son navigateur, avec invitation à créer un compte pour le conserver.

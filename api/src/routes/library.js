@@ -4,6 +4,7 @@ import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { episodeLabels, seriesNextUp } from './series.js';
+import { getSetting, getNumber, isOn } from '../settings.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const progressSchema = z.object({
@@ -104,6 +105,30 @@ export default async function libraryRoutes(app) {
       rows.sort((x, y) => new Date(y.watchedAt) - new Date(x.watchedAt));
       rows.length = Math.min(rows.length, 12);
     }
+    const labels = await episodeLabels(rows.map((r) => r.id));
+    for (const r of rows) r.series = labels.get(r.id) || null;
+    return cards(rows);
+  });
+
+  // « Quiz à rattraper » : conférences terminées dont le quiz n'est pas encore validé (jamais tenté : « à passer », tenté sans réussite : « à revoir »).
+  app.get('/me/quiz/todo', auth, async (req) => {
+    const enabledByDefault = isOn(await getSetting('quiz_default_enabled'));
+    const min = await getNumber('quiz_min_questions');
+    const { rows } = await pool.query(
+      `SELECT ${CARD},
+              (SELECT max(a.percent) FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id) AS "bestPercent",
+              EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id) AS attempted,
+              GREATEST((SELECT max(a.created_at) FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id),
+                       (SELECT p.updated_at FROM watch_progress p WHERE p.user_id = $1 AND p.talk_id = t.id)) AS "since"
+         FROM talks t LEFT JOIN categories c ON c.id = t.category_id
+        WHERE t.video_status = 'ready' AND ${visibleSql('t')}
+          AND COALESCE(t.quiz_enabled, $2::boolean)
+          AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $3
+          AND NOT EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id AND a.passed)
+          AND (EXISTS (SELECT 1 FROM watch_progress p WHERE p.user_id = $1 AND p.talk_id = t.id AND p.completed)
+               OR EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id))
+        ORDER BY "since" DESC NULLS LAST LIMIT 12`, [req.user.sub, enabledByDefault, min]);
+    for (const r of rows) r.quizState = r.attempted ? 'retry' : 'todo';
     const labels = await episodeLabels(rows.map((r) => r.id));
     for (const r of rows) r.series = labels.get(r.id) || null;
     return cards(rows);

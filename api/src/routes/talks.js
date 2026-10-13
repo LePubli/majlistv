@@ -1,4 +1,5 @@
 // Catalogue public + gestion des conférences par les organisateurs.
+import { quizInfo } from './quiz.js';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js';
@@ -234,6 +235,7 @@ export default async function talksRoutes(app) {
       }
     }
     if (!external) delete talk.video_ref;
+    talk.quiz = await quizInfo(id);
     await withPosters([talk]);
     return talk;
   });

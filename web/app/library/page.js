@@ -13,12 +13,14 @@ export default function Library() {
   const [cont, setCont] = useState(null);
   const [favs, setFavs] = useState(null);
   const [mine, setMine] = useState(null);
+  const [todo, setTodo] = useState([]);
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => {
     call('/me/continue').then((r) => setCont(r.ok ? r.data : []));
     call('/me/favorites').then((r) => setFavs(r.ok ? r.data : []));
     call('/me/series').then((r) => setMine(r.ok ? r.data : []));
+    call('/me/quiz/todo').then((r) => setTodo(r.ok ? r.data : []));
   }, [call]);
   useEffect(() => { if (user) load(); }, [user, load]);
   if (!user) return null;
@@ -29,6 +31,12 @@ export default function Library() {
   return (
     <main className="page">
       <h1>{t('library')}</h1>
+      {todo.length > 0 && (
+        <>
+          <h2>{t('qpTodoRow')}</h2>
+          <div className="grid">{todo.map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
+        </>
+      )}
       <h2>{t('continueWatching')}</h2>
       {cont && cont.length === 0 && <p className="meta">{t('nothingToContinue')}</p>}
       <div className="grid">

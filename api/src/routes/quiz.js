@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
+import { visibleSql } from '../visibility.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const qidSchema = z.object({ qid: z.string().uuid() });
@@ -38,8 +39,21 @@ const shape = (r) => ({
   explanation: r.explanation, evidenceMs: r.evidence_ms, evidenceQuote: r.evidence_quote,
   chapterMs: r.chapter_ms, chapterTitle: r.chapter_title, origin: r.origin, status: r.status,
   reviewedAt: r.reviewed_at, createdAt: r.created_at,
+  reports: r.reports ?? 0, reportReasons: r.report_reasons ?? [],
   ...(r.talk_title !== undefined ? { talkTitle: r.talk_title } : {}),
 });
+
+
+// Quiz proposé au public pour cette conférence ? (activé + assez de questions validées). Sert aussi à la fiche conférence.
+export async function quizInfo(talkId) {
+  const min = await getNumber('quiz_min_questions');
+  const { rows } = await pool.query(
+    `SELECT t.quiz_enabled, (SELECT count(*)::int FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') AS n FROM talks t WHERE t.id = $1`, [talkId]);
+  const r = rows[0];
+  if (!r) return { available: false, count: 0 };
+  const enabled = r.quiz_enabled ?? isOn(await getSetting('quiz_default_enabled'));
+  return { available: enabled && r.n >= min, count: r.n };
+}
 
 export default async function quizRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
@@ -102,7 +116,7 @@ export default async function quizRoutes(app) {
     const t = await ownedTalk(req, reply, id);
     if (!t) return;
     const [qs, job, lim, def] = await Promise.all([
-      pool.query('SELECT * FROM quiz_questions WHERE talk_id = $1 ORDER BY evidence_ms NULLS LAST, created_at, id', [id]),
+      pool.query(`SELECT q.*, (SELECT count(*)::int FROM quiz_reports r WHERE r.question_id = q.id AND r.resolved_at IS NULL) AS reports, (SELECT COALESCE(array_agg(r.reason) FILTER (WHERE r.reason <> ''), '{}') FROM quiz_reports r WHERE r.question_id = q.id AND r.resolved_at IS NULL) AS report_reasons FROM quiz_questions q WHERE q.talk_id = $1 ORDER BY q.evidence_ms NULLS LAST, q.created_at, q.id`, [id]),
       pool.query('SELECT status, wanted, produced, dropped, error, updated_at FROM quiz_jobs WHERE talk_id = $1', [id]),
       limits(), getSetting('quiz_default_enabled'),
     ]);
@@ -184,6 +198,7 @@ export default async function quizRoutes(app) {
     }
     const ch = b.evidenceMs !== undefined ? await chapterAt(q.talk_id, q.lang, next.evidence_ms) : { ms: q.chapter_ms, title: q.chapter_title };
     const reviewed = next.status !== q.status;
+    await pool.query('UPDATE quiz_reports SET resolved_at = now() WHERE question_id = $1 AND resolved_at IS NULL', [qid]); // la question a été relue
     const { rows } = await pool.query(
       `UPDATE quiz_questions SET question = $2, options = $3, correct_index = $4, explanation = $5, evidence_ms = $6, evidence_quote = $7,
               chapter_ms = $8, chapter_title = $9, status = $10,
@@ -204,9 +219,89 @@ export default async function quizRoutes(app) {
   // ------------------------------------------------------------------ File de relecture : toutes les questions à valider
   app.get('/studio/quiz/review', organizer, async (req) => {
     const { rows } = await pool.query(
-      `SELECT q.*, t.title AS talk_title FROM quiz_questions q JOIN talks t ON t.id = q.talk_id
-        WHERE q.status = 'draft' AND ($1::boolean OR t.organizer_id = $2)
+      `SELECT q.*, t.title AS talk_title, (SELECT count(*)::int FROM quiz_reports r WHERE r.question_id = q.id AND r.resolved_at IS NULL) AS reports, (SELECT COALESCE(array_agg(r.reason) FILTER (WHERE r.reason <> ''), '{}') FROM quiz_reports r WHERE r.question_id = q.id AND r.resolved_at IS NULL) AS report_reasons
+         FROM quiz_questions q JOIN talks t ON t.id = q.talk_id
+        WHERE (q.status = 'draft' OR (q.status = 'approved' AND EXISTS (SELECT 1 FROM quiz_reports r WHERE r.question_id = q.id AND r.resolved_at IS NULL)))
+          AND ($1::boolean OR t.organizer_id = $2)
         ORDER BY t.title, q.talk_id, q.evidence_ms NULLS LAST, q.created_at LIMIT 300`, [req.user.role === 'admin', req.user.sub]);
     return { questions: rows.map(shape), ...(await limits()) };
+  });
+
+  // Signalement jugé sans suite : il disparaît de la file de relecture.
+  app.post('/studio/quiz/questions/:qid/reports/dismiss', organizer, async (req, reply) => {
+    const { qid } = qidSchema.parse(req.params);
+    const q = await ownedQuestion(req, reply, qid);
+    if (!q) return;
+    await pool.query('UPDATE quiz_reports SET resolved_at = now() WHERE question_id = $1 AND resolved_at IS NULL', [qid]);
+    return reply.code(204).send();
+  });
+
+  // ------------------------------------------------------------------ Public : passer le quiz (étape 24.3)
+  // Conférence visible par le public dont le quiz est proposé ; sinon 404 (les réponses ne sont jamais envoyées avant la correction).
+  async function publicQuiz(talkId) {
+    const ok = (await pool.query(`SELECT 1 FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [talkId])).rowCount;
+    if (!ok || !(await quizInfo(talkId)).available) return null;
+    const { rows } = await pool.query(
+      `SELECT id, question, options, correct_index, explanation, evidence_ms, chapter_ms, chapter_title
+         FROM quiz_questions WHERE talk_id = $1 AND status = 'approved' ORDER BY evidence_ms NULLS LAST, created_at, id`, [talkId]);
+    return rows;
+  }
+  const lastAttempt = async (userId, talkId) => {
+    const { rows } = await pool.query(
+      `SELECT percent, passed, created_at AS "at", (SELECT max(percent) FROM quiz_attempts WHERE user_id = $1 AND talk_id = $2) AS best,
+              EXISTS (SELECT 1 FROM quiz_attempts WHERE user_id = $1 AND talk_id = $2 AND passed) AS "everPassed"
+         FROM quiz_attempts WHERE user_id = $1 AND talk_id = $2 ORDER BY created_at DESC LIMIT 1`, [userId, talkId]);
+    return rows[0] || null;
+  };
+
+  app.get('/talks/:id/quiz', async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const qs = await publicQuiz(id);
+    if (!qs) return reply.code(404).send({ error: "Cette conférence n'a pas de quiz" });
+    const viewer = await app.optionalUser(req);
+    return {
+      passPercent: await getNumber('quiz_pass_percent'),
+      questions: qs.map((q) => ({ id: q.id, question: q.question, options: q.options, chapterMs: q.chapter_ms, chapterTitle: q.chapter_title })),
+      last: viewer ? await lastAttempt(viewer.sub, id) : null,
+    };
+  });
+
+  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.string().uuid(), index: z.number().int().min(0).max(3) })).max(20) });
+  app.post('/talks/:id/quiz/submit', async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const b = submitBody.parse(req.body ?? {});
+    const qs = await publicQuiz(id);
+    if (!qs) return reply.code(404).send({ error: "Cette conférence n'a pas de quiz" });
+    const chosen = new Map(b.answers.map((a) => [a.questionId, a.index]));
+    const results = qs.map((q) => {
+      const index = chosen.has(q.id) ? chosen.get(q.id) : null;
+      return { questionId: q.id, chosen: index, correct: index === q.correct_index, correctIndex: q.correct_index, explanation: q.explanation, evidenceMs: q.evidence_ms, chapterTitle: q.chapter_title };
+    });
+    const score = results.filter((r) => r.correct).length;
+    const total = qs.length;
+    const percent = Math.round((100 * score) / total);
+    const passPercent = await getNumber('quiz_pass_percent');
+    const passed = percent >= passPercent;
+    const viewer = await app.optionalUser(req);
+    let best = null;
+    if (viewer) {
+      await pool.query(
+        'INSERT INTO quiz_attempts(user_id, talk_id, score, total, percent, passed, answers) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [viewer.sub, id, score, total, percent, passed, JSON.stringify(results.map((r) => ({ questionId: r.questionId, index: r.chosen, correct: r.correct })))]);
+      best = (await lastAttempt(viewer.sub, id))?.best ?? percent;
+    }
+    return { score, total, percent, passed, passPercent, best, saved: Boolean(viewer), results };
+  });
+
+  // « Signaler cette question » (membre ou visiteur).
+  app.post('/talks/:id/quiz/questions/:qid/report', async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { qid } = qidSchema.parse(req.params);
+    const { reason } = z.object({ reason: z.string().trim().max(300).default('') }).parse(req.body ?? {});
+    const qs = await publicQuiz(id);
+    if (!qs || !qs.some((q) => q.id === qid)) return reply.code(404).send({ error: 'Question introuvable' });
+    const viewer = await app.optionalUser(req);
+    await pool.query('INSERT INTO quiz_reports(question_id, user_id, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [qid, viewer?.sub ?? null, reason]);
+    return reply.code(204).send();
   });
 }

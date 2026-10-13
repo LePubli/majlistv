@@ -71,6 +71,12 @@ export default function QuizQuestion({ q, t, call, onChange, showTalk = false })
     onChange(r.data);
     return true;
   };
+  const dismiss = async () => {
+    setBusy(true); setErr(null);
+    const r = await call(`/studio/quiz/questions/${q.id}/reports/dismiss`, { method: 'POST' });
+    setBusy(false);
+    if (r.ok) onChange({ ...q, reports: 0, reportReasons: [] }); else setErr(r.data?.error || t('errGeneric'));
+  };
   const remove = async () => {
     if (!window.confirm(t('qzConfirmDel'))) return;
     const r = await call(`/studio/quiz/questions/${q.id}`, { method: 'DELETE' });
@@ -104,8 +110,12 @@ export default function QuizQuestion({ q, t, call, onChange, showTalk = false })
         {q.chapterTitle && <span className="meta small"> · {t('qzChapter')} : {q.chapterTitle}</span>}
         {q.evidenceQuote && <blockquote>{q.evidenceQuote}</blockquote>}
       </div>
+      {q.reports > 0 && (
+        <p className="qz-reported" role="status">⚑ {t('qzReports').replace('{n}', q.reports)}{q.reportReasons?.length ? ` — « ${q.reportReasons.join(' » · « ')} »` : ''}</p>
+      )}
       {err && <p className="error" role="alert">{err}</p>}
       <div className="qz-actions">
+        {q.reports > 0 && <button className="btn ghost" disabled={busy} onClick={dismiss}>{t('qzDismiss')}</button>}
         {q.status !== 'approved' && <button className="btn" disabled={busy} onClick={() => patch({ status: 'approved' })}>{t('qzApprove')}</button>}
         {q.status === 'draft' && <button className="btn ghost" disabled={busy} onClick={() => patch({ status: 'rejected' })}>{t('qzReject')}</button>}
         {q.status !== 'draft' && <button className="btn ghost" disabled={busy} onClick={() => patch({ status: 'draft' })}>{t('qzUndo')}</button>}

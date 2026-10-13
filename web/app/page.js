@@ -24,6 +24,8 @@ export default function Home() {
   // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
   useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call]);
+  const [quizTodo, setQuizTodo] = useState([]);
+  useEffect(() => { if (user) call('/me/quiz/todo').then((r) => setQuizTodo(r.ok ? r.data : [])); else setQuizTodo([]); }, [user, call]);
 
   // Mot-clé : recherche plein texte (/search) ; catégorie seule : grille filtrée ; sinon rangées de l'accueil.
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function Home() {
         </>
       ) : (
         <>
+          {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r) => (r.key === 'series' ? (

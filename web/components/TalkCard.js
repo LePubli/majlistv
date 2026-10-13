@@ -142,9 +142,11 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
   const mins = minutesOf(talk, t);
   return (
     <div className="talk-wrap" ref={wrap} onMouseEnter={enter} onMouseLeave={leave}>
-      <Link href={`/talks/${talk.id}`} className="talk">
+      <Link href={talk.quizState ? `/talks/${talk.id}?quiz=1` : `/talks/${talk.id}`} className="talk">
         <div className="thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
-          {talk.nextUp
+          {talk.quizState
+            ? <span className="badge next">{talk.quizState === 'retry' ? `${t('qpRevise')} · ${talk.bestPercent} %` : t('qpTodo')}</span>
+            : talk.nextUp
             ? <span className="badge next">{t('nextEp')}</span>
             : show.access && <span className={`badge ${talk.access}`}>{t(talk.access)}</span>}
           {show.duration && mins && <span className="dur">{mins}</span>}

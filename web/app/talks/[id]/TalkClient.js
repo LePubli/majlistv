@@ -10,6 +10,8 @@ import Insights from '../../../components/Insights';
 import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
 import { levelLabel } from '../../../lib/levels';
+import Quiz from '../../../components/Quiz';
+import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
 // `initial` : titre, intervenant et description lus côté serveur. Ils sont dans le HTML dès le premier octet (moteurs de recherche,
 // partage de lien) et affichés pendant le chargement de la page complète, sans jamais montrer l'invitation « premium » par erreur.
@@ -26,6 +28,12 @@ export default function TalkPage({ initial = null }) {
   const [ins, setIns] = useState({ summary: false, chapters: false }); // ce que contient l'analyse (résumé, chapitres)
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
   const [upNext, setUpNext] = useState(null);      // compte à rebours avant l'épisode suivant (secondes), null = pas affiché
+  const [quizOpen, setQuizOpen] = useState(false);   // panneau du quiz ouvert sous le lecteur
+  const [quizOffer, setQuizOffer] = useState(false); // invitation affichée sur le lecteur à la fin de la vidéo
+  const [qres, setQres] = useState(null);            // dernier résultat connu : { percent, passed }
+  const [pending, setPending] = useState([]);        // quiz laissés de côté, rappelés par la bannière
+  const [pendingHidden, setPendingHidden] = useState(false);
+  const quizRef = useRef(null);
   const [shared, setShared] = useState(null);       // retour visuel du bouton Partager (secondes du lien, -1 = lien simple)
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
   const qs = useSearchParams();
@@ -35,7 +43,7 @@ export default function TalkPage({ initial = null }) {
   const videoRef = useRef(null);
 
   // Changement de conférence (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
-  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); startMs.current = 0; }, [id]);
+  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
   useEffect(() => {
@@ -110,23 +118,49 @@ export default function TalkPage({ initial = null }) {
     };
   }, [trackable, id, call]);
 
-  // Fin de lecture dans une série : compte à rebours de 8 s avant l'épisode suivant (annulable).
+  // Fin de lecture : si la conférence a un quiz pas encore réussi, on le propose d'abord ; sinon (ou « Plus tard »),
+  // dans une série, compte à rebours de 8 s avant l'épisode suivant (annulable).
   const next = ctx && ctx.next;
   const canChain = Boolean(next && talk && !talk.locked && (talk.hlsPath || external));
+  const quizOn = Boolean(talk && !talk.locked && talk.quiz && talk.quiz.available);
+  const quizPassed = Boolean(qres && qres.passed);
   useEffect(() => {
-    if (!canChain) return undefined;
+    if (!canChain && !quizOn) return undefined;
     const video = videoRef.current;
     if (!video) return undefined;
-    const onEnd = () => setUpNext(8);
+    const onEnd = () => { if (quizOn && !quizPassed) setQuizOffer(true); else if (canChain) setUpNext(8); };
     video.addEventListener('ended', onEnd);
     return () => video.removeEventListener('ended', onEnd);
-  }, [canChain, id]);
+  }, [canChain, quizOn, quizPassed, id]);
   useEffect(() => {
     if (upNext === null || !next) return undefined;
     if (upNext <= 0) { router.push(`/talks/${next.id}?autoplay=1`); return undefined; }
     const timer = setTimeout(() => setUpNext((v) => (v === null ? null : v - 1)), 1000);
     return () => clearTimeout(timer);
   }, [upNext, next, router]);
+  // Dernier résultat du membre (autre appareil compris) ; ?quiz=1 ouvre le quiz tout de suite (lien « Quiz à rattraper »).
+  useEffect(() => {
+    if (!quizOn || !user) return;
+    call(`/talks/${id}/quiz`).then((r) => { if (r.ok && r.data.last) setQres({ percent: r.data.last.best ?? r.data.last.percent, passed: Boolean(r.data.last.everPassed) }); });
+  }, [quizOn, user, id, call]);
+  const wantQuiz = qs.get('quiz') === '1';
+  useEffect(() => { if (quizOn && wantQuiz) openQuiz(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [quizOn, wantQuiz, id]);
+  const openQuiz = () => {
+    setQuizOffer(false); setQuizOpen(true);
+    setTimeout(() => quizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  const laterQuiz = () => {
+    addPending({ id, title: talk.title }); setPending(getPending(id));
+    setQuizOffer(false);
+    if (canChain) setUpNext(8);
+  };
+  const onQuizResult = (res) => { setQres(saveResult(id, res)); if (res.passed) removePending(id); };
+  // « Revoir à mm:ss » : le lecteur se place sur le passage qui justifie la réponse.
+  const seekTo = (sec) => {
+    const v = videoRef.current;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (v) { try { v.currentTime = sec; v.play && v.play(); } catch { /* lecteur pas prêt */ } }
+  };
   // Liste des épisodes : l'épisode en cours est amené dans la zone visible de la colonne.
   const sideRef = useRef(null);
   useEffect(() => {
@@ -296,6 +330,16 @@ export default function TalkPage({ initial = null }) {
                 </div>
               </div>
             )}
+            {quizOffer && (
+              <div className="upnext quiz-offer" role="status" aria-live="polite">
+                <strong>{t('qpOfferTitle')}</strong>
+                <p className="meta">{t('qpOfferText').replace('{n}', talk.quiz.count).replace('{m}', Math.max(1, Math.round(talk.quiz.count / 2)))}</p>
+                <div className="upnext-btns">
+                  <button type="button" className="btn" onClick={openQuiz}>{t('qpStart')}</button>
+                  <button type="button" className="btn ghost" onClick={laterQuiz}>{t('qpLater')}</button>
+                </div>
+              </div>
+            )}
             {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
           </div>
           {!previewEnded && lock}
@@ -305,6 +349,30 @@ export default function TalkPage({ initial = null }) {
                 ? t('schedBanner').replace('{d}', new Date(talk.publishAt).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' }))
                 : t('draftBanner')}
             </p>
+          )}
+
+          {pending.length > 0 && !pendingHidden && (
+            <p className="quiz-banner" role="status">
+              <span>{t('qpBanner').replace('{title}', pending[0].title)}</span>
+              <Link className="link u" href={`/talks/${pending[0].id}?quiz=1`}>{t('qpBannerGo')}</Link>
+              <button type="button" className="link" onClick={() => setPendingHidden(true)} aria-label={t('qpClose')}>✕</button>
+            </p>
+          )}
+          {quizOn && (
+            <div className="quiz-slot" ref={quizRef}>
+              {quizOpen ? (
+                <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={seekTo} onClose={() => setQuizOpen(false)}
+                  nextHref={canChain ? `/talks/${next.id}?autoplay=1` : null} onNext={(res) => { if (!res.passed) addPending({ id, title: talk.title }); }} />
+              ) : (
+                <div className="quiz-card">
+                  <div>
+                    <strong>{t('qpTitle')}</strong>
+                    <p className="meta small">{t('qpIntro').replace('{n}', talk.quiz.count)}{qres ? ` · ${qres.passed ? t('qpPassedChip') : t('qpToRevise')} ${qres.percent} %` : ''}</p>
+                  </div>
+                  <button type="button" className={qres && qres.passed ? 'btn ghost' : 'btn'} onClick={openQuiz}>{qres ? t('qpRetry') : t('qpStart')}</button>
+                </div>
+              )}
+            </div>
           )}
 
           <header className="talk-head">
