@@ -61,6 +61,12 @@ export const FIELDS = [
   { key: 'stripe_price_yearly', group: 'payment', type: 'text', label: 'Identifiant du prix annuel', env: 'STRIPE_PRICE_YEARLY', help: 'price_…' },
   { key: 'trial_days', group: 'payment', type: 'number', label: "Essai gratuit (jours, 0 = aucun)", env: 'TRIAL_DAYS', def: '7', min: 0, max: 90 },
 
+  { key: 'plan_price_monthly', group: 'payment', type: 'price', label: 'Prix mensuel affiché (TTC)', env: 'PLAN_PRICE_MONTHLY', def: '6.99',
+    help: 'Montant montré sur la page Abonnement tant que Stripe n\'est pas configuré (ex. 6.99). Une fois Stripe actif, ce sont les prix de Stripe qui s\'affichent et qui sont facturés : mettez les mêmes ici.' },
+  { key: 'plan_price_yearly', group: 'payment', type: 'price', label: 'Prix annuel affiché (TTC)', env: 'PLAN_PRICE_YEARLY', def: '69.99', help: 'Même principe que le prix mensuel (ex. 69.99). Vide ou 0 = pas de formule annuelle affichée.' },
+  { key: 'plan_currency', group: 'payment', type: 'select', options: ['eur', 'usd', 'gbp', 'chf', 'cad'], label: 'Devise affichée', env: 'PLAN_CURRENCY', def: 'eur' },
+  { key: 'paypal_enabled', group: 'payment', type: 'bool', label: 'Proposer PayPal en plus de la carte bancaire', env: 'PAYPAL_ENABLED', def: 'false',
+    help: 'À activer APRÈS avoir activé PayPal dans Stripe (Paramètres → Moyens de paiement). Si PayPal est refusé par Stripe, le paiement retombe automatiquement sur la carte bancaire.' },
   { key: 'stripe_automatic_tax', group: 'payment', type: 'bool', label: 'TVA automatique (Stripe Tax)', env: 'STRIPE_AUTOMATIC_TAX', def: 'false',
     help: 'Activer seulement après avoir configuré Stripe Tax (Stripe → Taxes) et défini vos prix « taxes incluses ». L\'adresse de facturation est alors demandée au paiement.' },
 
@@ -190,6 +196,11 @@ export function validateValue(f, raw) {
       const n = Number(v);
       if (!Number.isFinite(n) || n < (f.min ?? -Infinity) || n > (f.max ?? Infinity)) throw new Error(`${f.label} : nombre entre ${f.min} et ${f.max} attendu`);
       return String(Math.trunc(n));
+    }
+    case 'price': { // « 6,99 » ou « 6.99 » → « 6.99 » (vide = aucun prix)
+      if (!v) return '';
+      if (!/^\d{1,5}([.,]\d{1,2})?$/.test(v)) throw new Error(`${f.label} : montant attendu, ex. 6.99`);
+      return String(Number(v.replace(',', '.')));
     }
     case 'bool':
       if (!['true', 'false'].includes(v)) throw new Error(`${f.label} : oui ou non attendu`);

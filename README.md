@@ -685,3 +685,31 @@ Quand une conférence fait partie d'une série, sa page change :
 **API** : `GET /search` renvoie en plus `series` (liste) et `series` sur chaque résultat (`{id, title, seasonNumber, number}` ou `null`) ; `GET /me/continue` ajoute `series` et `nextUp` ; nouvelle route `GET /me/series` (connexion requise). La recherche de séries est en SQL (même avec Meilisearch, qui reste réservé aux conférences). Pas de migration.
 **Tests** : `python3 api/tests/test_series_discovery.py` (26 vérifications). `test_home.py` ne suppose plus que toutes les rangées contiennent des conférences.
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+## Étape 15 — Formules visibles sans Stripe, et PayPal
+
+**Page Abonnement (`/pricing`)**
+- Les **deux formules et leurs prix s'affichent toujours**, même si Stripe n'est pas configuré. Dans ce cas les boutons indiquent « Bientôt disponible » (aucun paiement possible) ;
+- chaque formule liste ses avantages (conférences premium, séries, sous-titres/transcription/résumés, sans engagement) ;
+- une ligne « Paiement sécurisé par » montre les moyens acceptés (Carte bancaire, et PayPal si l'option est activée).
+
+**Réglages** — Administration → Paramètres → **Paiement (Stripe)** :
+| Réglage | Rôle |
+|---|---|
+| Prix mensuel affiché / Prix annuel affiché | Montants TTC montrés tant que Stripe n'est pas configuré (défaut 6,99 et 69,99 ; virgule ou point acceptés ; 0 = formule masquée) |
+| Devise affichée | eur, usd, gbp, chf, cad |
+| Proposer PayPal | Active PayPal à côté de la carte (voir ci-dessous) |
+
+**Règle de vérité des prix** : dès que Stripe est configuré (clé + 2 prix), **les montants lus chez Stripe remplacent ceux du back-office** : ce sont eux qui sont facturés. Mettez donc les mêmes montants dans les deux endroits.
+Si Stripe est injoignable, les formules restent visibles mais le paiement est fermé.
+
+**PayPal (via Stripe)** — à faire une fois :
+1. Stripe → Paramètres → **Moyens de paiement** → activer **PayPal** (une validation peut être demandée pour les paiements récurrents) ;
+2. Paramètres du site → **Proposer PayPal** = oui ;
+3. tester en mode test : un abonnement avec essai gratuit, puis le renouvellement.
+Quand l'option est active, le site demande « carte + PayPal » à Stripe. **Si Stripe refuse PayPal** (pas encore activé, indisponible pour l'abonnement), le paiement **retombe automatiquement sur le choix normal de Stripe (carte)** : aucun client n'est bloqué. Option désactivée : Stripe affiche les moyens activés dans son tableau de bord.
+Le webhook ne change pas : un abonnement PayPal produit les mêmes événements `customer.subscription.*`.
+
+**API** : `GET /billing/plans` renvoie toujours `plans`, plus `enabled` (paiement possible), `source` (`stripe` ou `settings`) et `methods` (`["card"]` ou `["card","paypal"]`). Pas de migration.
+**Tests** : `python3 api/tests/test_pricing.py` (17 vérifications ; API lancée avec `STRIPE_API_BASE=http://127.0.0.1:12111` et `python3 api/tests/mock_stripe.py`, qui sait aussi refuser PayPal). `test_compliance.py` repasse (paiement conforme, e-mails).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

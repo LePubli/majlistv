@@ -28,6 +28,8 @@ class H(BaseHTTPRequestHandler):
         body = {k: v[0] for k, v in parse_qs(self.rfile.read(int(self.headers.get("content-length", 0))).decode()).items()}
         LOG.append({"path": path, "body": body, "auth": self.headers.get("authorization")})
         if path == "/v1/customers": return self._send({"id": "cus_1", "object": "customer"})
+        if path == "/v1/checkout/sessions" and body.get("payment_method_types[1]") == "paypal" and __import__("os").path.exists("/tmp/claude-0/paypal_reject"):
+            return self._send({"error": {"type": "invalid_request_error", "param": "payment_method_types[1]", "message": 'The payment method type "paypal" is invalid. Please ensure the provided type is activated in your dashboard.'}}, 400)
         if path == "/v1/checkout/sessions": return self._send({"id": "cs_1", "object": "checkout.session", "url": "https://checkout.stripe.test/cs_1"})
         if path == "/v1/billing_portal/sessions": return self._send({"id": "bps_1", "object": "billing_portal.session", "url": "https://billing.stripe.test/p/1"})
         self._send({"error": {"message": "not found"}}, 404)

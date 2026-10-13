@@ -43,15 +43,30 @@ export async function stripeContext() {
   return { stripe: clientCache.client, prices: { month: monthly, year: yearly } };
 }
 
+// Prix affichés saisis dans le back-office (centimes). Servent à montrer les formules tant que Stripe n'est pas configuré.
+const toCents = (v) => { const n = Math.round(Number(String(v || '').replace(',', '.')) * 100); return Number.isFinite(n) && n > 0 ? n : 0; };
+async function listedPlans() {
+  const currency = await getSetting('plan_currency');
+  const out = [];
+  for (const [interval, key] of [['month', 'plan_price_monthly'], ['year', 'plan_price_yearly']]) {
+    const amount = toCents(await getSetting(key));
+    if (amount) out.push({ interval, amount, currency });
+  }
+  return out;
+}
+const methodsList = async () => (isOn(await getSetting('paypal_enabled')) ? ['card', 'paypal'] : ['card']);
+
 export default async function billingRoutes(app) {
   const off = (reply) => reply.code(503).send({ error: "Le paiement n'est pas configuré" });
 
-  // --- Formules (public) : montants lus chez Stripe, donc modifiables sans toucher au code ---
+  // --- Formules (public) : toujours affichées. Avec Stripe, les montants sont lus chez Stripe (donc modifiables sans toucher
+  // au code) ; sinon ce sont les prix saisis dans le back-office, et le paiement est annoncé « bientôt disponible » (enabled: false).
   let plansCache = { sig: '', at: 0, data: null };
-  app.get('/billing/plans', async (req, reply) => {
+  app.get('/billing/plans', async (req) => {
     const ctx = await stripeContext();
-    if (!ctx) return { enabled: false, plans: [], trialDays: 0 };
     const trialDays = await getNumber('trial_days');
+    const methods = await methodsList();
+    if (!ctx) return { enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods };
     const sig = `${clientCache.key}|${ctx.prices.month}|${ctx.prices.year}`;
     if (!plansCache.data || plansCache.sig !== sig || Date.now() - plansCache.at > 10 * 60 * 1000) {
       try {
@@ -62,11 +77,12 @@ export default async function billingRoutes(app) {
         }
         plansCache = { sig, at: Date.now(), data: plans };
       } catch (err) {
+        // Stripe injoignable : on montre quand même les formules, mais on ne propose pas de payer.
         req.log.error(err);
-        return reply.code(502).send({ error: 'Tarifs indisponibles' });
+        return { enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods };
       }
     }
-    return { enabled: true, plans: plansCache.data, trialDays };
+    return { enabled: true, source: 'stripe', plans: plansCache.data, trialDays, methods };
   });
 
   // --- Mon abonnement ---
@@ -154,7 +170,18 @@ export default async function billingRoutes(app) {
         tax_id_collection: { enabled: true },
       });
     }
-    const session = await ctx.stripe.checkout.sessions.create(params);
+    // PayPal (via Stripe) : demandé explicitement quand l'option est active ; si Stripe le refuse (PayPal pas encore activé
+    // sur le compte, ou indisponible pour cet abonnement), on retombe sur le choix automatique de Stripe (carte) plutôt que d'échouer.
+    let session;
+    if (isOn(await getSetting('paypal_enabled'))) {
+      try {
+        session = await ctx.stripe.checkout.sessions.create({ ...params, payment_method_types: ['card', 'paypal'] });
+      } catch (err) {
+        if (!(err && err.type === 'StripeInvalidRequestError' && /payment_method/i.test(`${err.param || ''} ${err.message || ''}`))) throw err;
+        req.log.warn(`PayPal refusé par Stripe, paiement par carte : ${err.message}`);
+      }
+    }
+    if (!session) session = await ctx.stripe.checkout.sessions.create(params);
     return { url: session.url };
   });
 

@@ -20,7 +20,7 @@ export default function Pricing() {
   const canceled = qs.get('canceled');
   const from = safePath(qs.get('from')); // page d'origine (ex. la conférence verrouillée)
 
-  useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [] })); }, [call]);
+  useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] })); }, [call]);
   useEffect(() => { if (user) call('/billing/status').then((r) => r.ok && setStatus(r.data)); }, [user, call]);
 
   const money = (p) => new Intl.NumberFormat(locale, { style: 'currency', currency: p.currency.toUpperCase(), minimumFractionDigits: p.amount % 100 ? 2 : 0 }).format(p.amount / 100);
@@ -45,10 +45,10 @@ export default function Pricing() {
       {!active && <Steps current={user ? 2 : 1} t={t} />}
       <h1>{t('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
-      {!info.enabled && <p className="soon">{t('billingUnavailable')}</p>}
+      {!info.enabled && <p className="soon">{info.plans.length ? t('pricingSoon') : t('billingUnavailable')}</p>}
       {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t('trialNote'), info.trialDays)}</p>}
       {err && <p className="error">{err}</p>}
-      {info.enabled && (
+      {info.plans.length > 0 && (
         <div className="plans">
           {[['month', month], ['year', year]].filter(([, p]) => p).map(([interval, p]) => (
             <section key={interval} className={`plan ${interval === 'year' ? 'best' : ''}`}>
@@ -56,7 +56,10 @@ export default function Pricing() {
               <p className="price">{money(p)} <span>{t(interval === 'year' ? 'perYear' : 'perMonth')}</span></p>
               {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(t('freeMonths'), freeMonths)}</p>}
               {interval === 'year' && freeMonths < 1 && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
-              {active ? (
+              <ul className="plan-list">{['planB1', 'planB2', 'planB3', 'planB4'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
+              {!info.enabled ? (
+                <button className="btn" disabled>{t('soonBtn')}</button>
+              ) : active ? (
                 <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{t('manageSub')}</button>
               ) : user ? (
                 <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, waiver: true, ...(from ? { returnTo: from } : {}) }, interval)}>
@@ -69,6 +72,13 @@ export default function Pricing() {
           ))}
         </div>
       )}
+      {info.plans.length > 0 && (
+        <p className="pay-methods" aria-label={t('payMethods')}>
+          <span>{t('payMethods')}</span>
+          <span className="pay-chip">{t('payCard')}</span>
+          {(info.methods || []).includes('paypal') && <span className="pay-chip">PayPal</span>}
+        </p>
+      )}
       {info.enabled && user && !active && (
         <label className="waiver">
           <input type="checkbox" checked={waiver} onChange={(e) => setWaiver(e.target.checked)} />
@@ -76,7 +86,7 @@ export default function Pricing() {
         </label>
       )}
       {info.enabled && !user && <p className="meta small"><Link className="link u" href={authPath('login', pricingPath(from))}>{t('haveAccount')}</Link></p>}
-      {info.enabled && <p className="meta small">{t('pricingFooter')}</p>}
+      {info.plans.length > 0 && <p className="meta small">{t('pricingFooter')}</p>}
     </main>
   );
 }

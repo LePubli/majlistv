@@ -74,7 +74,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - Modèle : **Série > Saisons > Épisodes** ou **Série > Épisodes** (sans saisons) ; une conférence peut rester isolée ou devenir un épisode (dans une seule série).
 - **Accès au choix, sur les deux niveaux** : réglage par série **et** par épisode ; le réglage de l'épisode l'emporte (ex. épisode 1 gratuit, la suite premium).
 
-**15. Paiements : carte bancaire et PayPal**
+**15. Paiements : carte bancaire et PayPal** — ✅ livré côté site (reste : activer PayPal dans Stripe et tester, voir README étape 15)
 - Carte bancaire : déjà incluse dans le paiement Stripe actuel (Visa, Mastercard, CB, Apple Pay / Google Pay selon l'appareil).
 - **PayPal** : via Stripe (compte français pris en charge, abonnements possibles, **peut nécessiter une validation de Stripe/PayPal** pour les paiements récurrents). À activer dans Stripe → Paramètres → Moyens de paiement, puis tester l'essai gratuit et le renouvellement avec PayPal.
 - Côté site : mention des moyens de paiement sur la page des formules, vérification du webhook et de l'essai gratuit avec PayPal. Peu de code : l'essentiel est l'activation et les tests.

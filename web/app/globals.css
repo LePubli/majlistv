@@ -872,3 +872,11 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .hit-series a:hover { text-decoration: underline; }
 .badge.next { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .results .row { margin: 0 calc(var(--gutter, 4vw) * -1) 6px; }
+
+/* 15 — Page Abonnement : avantages, moyens de paiement */
+.plan-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 8px; text-align: start; }
+.plan-list li { position: relative; padding-inline-start: 22px; font-size: .95rem; line-height: 1.45; color: var(--text-2); }
+.plan-list li::before { content: '✓'; position: absolute; inset-inline-start: 0; color: var(--accent); font-weight: 700; }
+.pay-methods { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; color: var(--muted); font-size: .9rem; }
+.pay-chip { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text); font-size: .85rem; }
+.pricing .soon { padding-inline: 0; }
