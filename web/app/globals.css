@@ -1170,3 +1170,93 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .kd-bar em { font-style: normal; font-size: .7rem; color: var(--muted, #9a8f7c); }
 .kd-check input[type="checkbox"] { width: auto; flex: none; margin: 4px 0 0; padding: 0; }
 .kd-check { justify-content: flex-start; text-align: start; }
+
+/* ===== Mejliss TV Kids : thème « nuit étoilée » coloré (page des parents, espace enfant, bande de l'accueil) ===== */
+body.kd-theme {
+  --bg: #0A1038; --surface: #16215F; --surface-2: #1D2A78; --line: #34459F; --line-soft: #2A3A8C; --line-strong: #4A5DC0;
+  --accent: #FFC83D; --accent-hover: #FFD76E; --on-accent: #1B1300; --gold: #FFC83D; --gold-soft: rgba(255, 200, 61, .16);
+  --text: #F6F7FF; --text-2: #D6DAFF; --muted: #AEB6EE;
+  --font-title: 'Fredoka Variable', 'Noto Kufi Arabic Variable', 'Montserrat Variable', system-ui, sans-serif;
+  --font-body: 'Fredoka Variable', 'DM Sans Variable', 'Noto Sans Arabic Variable', system-ui, sans-serif;
+  background: radial-gradient(900px 480px at 88% -8%, rgba(255, 200, 61, .20), transparent 62%), radial-gradient(800px 520px at 0% 12%, rgba(130, 95, 255, .30), transparent 60%), linear-gradient(180deg, #101A56 0%, #0A1038 55%, #070B27 100%);
+  background-attachment: fixed;
+}
+body.kd-theme:lang(ar), :root:lang(ar) body.kd-theme { --font-body: 'Noto Sans Arabic Variable', 'Fredoka Variable', system-ui, sans-serif; }
+body.kd-theme::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .8;
+  background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1.5px 1.5px at 28% 62%, #ffe9a8, transparent), radial-gradient(2px 2px at 47% 10%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 63% 44%, #fff, transparent), radial-gradient(2px 2px at 78% 78%, #ffe9a8, transparent), radial-gradient(1.5px 1.5px at 90% 30%, #fff, transparent), radial-gradient(1.5px 1.5px at 36% 90%, #fff, transparent); }
+body.kd-theme > * { position: relative; z-index: 1; }
+body.kd-theme .btn { border-radius: 999px; box-shadow: 0 4px 0 rgba(0, 0, 0, .28); font-weight: 700; }
+body.kd-theme .btn.ghost { box-shadow: none; }
+body.kd-theme .panel, body.kd-theme .kd-form { border-radius: 22px; }
+.kd-header { background: rgba(10, 16, 56, .82); backdrop-filter: blur(6px); border-bottom: 2px solid transparent; border-image: linear-gradient(90deg, #FFC83D, #7BD957, #9B6BFF, #29B6F6) 1; }
+.kd-brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-title); font-weight: 700; }
+.kd-brand-name { font-size: 1.25rem; color: #fff; }
+
+/* « Kids » en lettres de couleur, façon autocollant */
+.kd-word { display: inline-flex; font-family: 'Fredoka Variable', 'Noto Kufi Arabic Variable', system-ui, sans-serif; font-weight: 700; line-height: 1; letter-spacing: .02em; direction: ltr; }
+.kd-l { display: inline-block; text-shadow: 0 3px 0 rgba(0, 0, 0, .28); -webkit-text-stroke: 1px rgba(255, 255, 255, .55); paint-order: stroke fill; }
+.kd-l0 { color: #FFC83D; transform: rotate(-6deg); } .kd-l1 { color: #29B6F6; transform: translateY(-2px) rotate(4deg); } .kd-l2 { color: #7BD957; transform: rotate(-3deg); } .kd-l3 { color: #FF6B8B; transform: translateY(1px) rotate(5deg); }
+.kd-word.big { font-size: clamp(2.6rem, 8vw, 4.6rem); }
+
+/* Bandeau */
+.kd-banner { position: relative; overflow: hidden; margin: 0 0 24px; padding: clamp(18px, 3vw, 30px); border-radius: 28px; border: 2px solid rgba(255, 200, 61, .35);
+  background: url('/kids/hero.png') right center / auto 92% no-repeat, linear-gradient(120deg, #18237A 0%, #2A1C78 55%, #3A2582 100%); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.kd-banner-top { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 28px; position: relative; }
+.kd-banner-brand { display: flex; align-items: center; gap: 14px; }
+.kd-banner-emblem { height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .4)); }
+.kd-banner-name { margin: 0; font-family: 'Montserrat Variable', sans-serif; font-weight: 800; font-size: clamp(1.4rem, 4vw, 2.2rem); color: #fff; line-height: 1.05; }
+.kd-tagline { margin: 0; font-family: var(--font-title); font-size: clamp(1.15rem, 2.6vw, 1.7rem); font-weight: 600; color: #fff; transform: rotate(-2deg); max-width: 22ch; }
+.kd-tagline.small { transform: none; font-size: 1rem; font-weight: 500; max-width: 60ch; color: var(--text-2); }
+.kd-art { grid-column: 1 / -1; margin: 0; display: flex; gap: 14px; font-size: 1.8rem; opacity: .9; }
+.kd-art span { animation: kd-float 4s ease-in-out infinite; } .kd-art span:nth-child(2) { animation-delay: .7s; } .kd-art span:nth-child(3) { animation-delay: 1.4s; } .kd-art span:nth-child(4) { animation-delay: 2.1s; }
+@keyframes kd-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .kd-art span { animation: none; } }
+.kd-banner.compact .kd-art { display: none; }
+.kd-banner.compact { padding-block: 16px; }
+
+/* 4 étapes numérotées */
+.kd-steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: none; }
+.kd-step { position: relative; display: grid; align-content: start; gap: 8px; padding: 46px 14px 14px; border-radius: 20px; background: rgba(8, 14, 60, .55); border: 2px solid var(--c); }
+.kd-step.s1 { --c: #F6B93B; } .kd-step.s2 { --c: #6FCF4F; } .kd-step.s3 { --c: #9B6BFF; } .kd-step.s4 { --c: #29B6F6; }
+.kd-num { position: absolute; top: -14px; inset-inline-start: 12px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--c); color: #fff; font: 700 1.6rem 'Fredoka Variable', sans-serif; border: 3px solid rgba(255, 255, 255, .85); box-shadow: 0 3px 0 rgba(0, 0, 0, .3); }
+.kd-step-title { display: inline-block; justify-self: start; padding: 4px 14px; border-radius: 999px 999px 999px 8px; background: linear-gradient(90deg, #1E4FBF, #2B6CE0); color: #fff; font-size: 1.1rem; margin-top: -30px; margin-inline-start: 56px; }
+.kd-step-text { color: var(--text-2); font-size: .95rem; line-height: 1.4; }
+.kd-step-emoji { font-size: 1.8rem; justify-self: end; }
+.kd-perks { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 22px; color: #fff; font-weight: 500; }
+.kd-perks li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, .08); }
+@media (max-width: 900px) { .kd-steps { grid-template-columns: repeat(2, 1fr); } .kd-banner { background-size: auto 60%; background-position: right bottom; } }
+@media (max-width: 560px) { .kd-steps { grid-template-columns: 1fr; gap: 22px; } .kd-banner-top { grid-template-columns: 1fr; } .kd-tagline { max-width: none; } }
+
+/* Cartes de vidéos : un cadre de couleur par carte */
+.kd-grid li:nth-child(4n+1) .kd-thumb, .kd-band-list li:nth-child(4n+1) .kd-thumb { border-color: #FFC83D; }
+.kd-grid li:nth-child(4n+2) .kd-thumb, .kd-band-list li:nth-child(4n+2) .kd-thumb { border-color: #6FCF4F; }
+.kd-grid li:nth-child(4n+3) .kd-thumb, .kd-band-list li:nth-child(4n+3) .kd-thumb { border-color: #9B6BFF; }
+.kd-grid li:nth-child(4n) .kd-thumb, .kd-band-list li:nth-child(4n) .kd-thumb { border-color: #29B6F6; }
+.kd-thumb { border-width: 3px; border-radius: 22px; }
+.kd-home h2 { display: inline-block; padding: 4px 18px; border-radius: 999px 999px 999px 8px; background: linear-gradient(90deg, #1E4FBF, #2B6CE0); font-size: 1.2rem; color: #fff; }
+.kd-hello { color: #fff; }
+.kd-total { color: #FFC83D; }
+.kd-profile { border-radius: 24px; border-width: 3px; background: var(--surface); }
+.kd-profile:hover, .kd-profile:focus-visible { border-color: #FFC83D; }
+.kd-profiles li:nth-child(4n+1) .kd-profile { border-color: #F6B93B; } .kd-profiles li:nth-child(4n+2) .kd-profile { border-color: #6FCF4F; }
+.kd-profiles li:nth-child(4n+3) .kd-profile { border-color: #9B6BFF; } .kd-profiles li:nth-child(4n) .kd-profile { border-color: #29B6F6; }
+.kd-badge.on { border-color: #FFC83D; background: rgba(255, 200, 61, .16); }
+
+/* Bande « Espace Kids » de l'accueil */
+.kd-band { margin: 24px 0 8px; padding: clamp(16px, 3vw, 26px); border-radius: 28px; border: 2px solid rgba(255, 200, 61, .35); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); color: #F6F7FF;
+  background: radial-gradient(600px 240px at 90% 0%, rgba(255, 200, 61, .22), transparent 65%), linear-gradient(120deg, #18237A 0%, #2A1C78 60%, #3A2582 100%);
+  --text: #F6F7FF; --text-2: #D6DAFF; --muted: #AEB6EE; --surface: #16215F; --line-soft: #34459F; }
+.kd-band-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
+.kd-band-title { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; font-size: clamp(1.4rem, 3.6vw, 2.1rem); line-height: 1.1; }
+.kd-band-name { font-family: 'Montserrat Variable', sans-serif; font-weight: 800; color: #fff; }
+.kd-band .kd-word { font-size: clamp(2rem, 5vw, 3rem); }
+.kd-band-cta { border-radius: 999px; background: #FFC83D; color: #1B1300; box-shadow: 0 4px 0 rgba(0, 0, 0, .28); }
+.kd-band-list { list-style: none; margin: 0; padding: 4px 2px 10px; display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x proximity; }
+.kd-band-list li { flex: 0 0 clamp(210px, 26vw, 280px); scroll-snap-align: start; }
+.kd-band .kd-card { display: grid; gap: 10px; color: #fff; text-decoration: none; }
+.kd-band .kd-thumb { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 22px; background: #16215F center / cover; border: 3px solid #FFC83D; overflow: hidden; }
+.kd-band .kd-card:hover .kd-thumb { transform: scale(1.03); }
+.kd-band .kd-card-title { font-family: 'Fredoka Variable', 'Noto Kufi Arabic Variable', sans-serif; font-size: 1.05rem; line-height: 1.3; }
+.kd-age { position: absolute; left: 10px; top: 10px; background: #fff; color: #1B1300; font: 700 .8rem 'Fredoka Variable', sans-serif; padding: 2px 10px; border-radius: 999px; }
+.kd-band .dur { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, .75); color: #fff; font-size: 13px; padding: 2px 8px; border-radius: 6px; }

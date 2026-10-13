@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
 import { useKidTime, leftMin } from '../lib/kidTime';
+import KidsBanner from './KidsBanner';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -40,6 +41,7 @@ export default function KidsHome() {
   );
   return (
     <main className="page kd-page kd-home">
+      <KidsBanner variant="compact" />
       <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>
       {left != null && <p className={left <= 5 ? 'kd-timeleft low' : 'kd-timeleft'} role="status"><span aria-hidden="true">⏳</span> {t(left <= 5 ? 'kdTimeLow' : 'kdTimeLeft').replace('{n}', left)}</p>}
       {sum && (

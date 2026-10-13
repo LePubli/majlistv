@@ -1042,3 +1042,21 @@ nginx -t && systemctl reload nginx
 
 ### Tests
 `python3 api/tests/test_kids_control.py` (≈ 70 vérifications) · `node api/tests/test_kids_report.mjs` (e-mail hebdomadaire) · puis un test navigateur (réglages, rapport, fin de journée, mobile arabe).
+
+## Étape 26.4 — Identité visuelle Kids et bande « Espace Kids » sur l'accueil
+
+- **Thème Kids** (page `/kids` et espace enfant) : nuit étoilée bleu nuit et violet, police arrondie (Fredoka, paquet `@fontsource-variable/fredoka`), logo « Mejliss TV **Kids** » aux lettres colorées, boutons ronds, cadres de vignettes jaune / vert / violet / bleu. Le thème s'active tout seul (classe `kd-theme` sur la page) ; le reste du site garde son style doré.
+- **Bandeau** (`components/KidsBanner.js`) : sur la page des parents, version complète avec les 4 étapes numérotées et les 4 engagements (contenus adaptés, pédagogie ludique, suivi de progression, environnement sûr) ; sur l'accueil de l'enfant, version courte. Textes en français, anglais et arabe (clés `kdTagline`, `kdS1T`…`kdS4D`, `kdP1`…`kdP4`).
+- **Votre illustration** : déposez une image PNG à fond transparent (le personnage, par exemple) dans `web/public/kids/hero.png` ; elle apparaît à droite du bandeau. Sans fichier, de petites icônes flottantes (🌙 ⭐ 📚 🕌) servent de décor. Les couleurs se changent dans `app/globals.css` (section « Mejliss TV Kids »).
+- **Bande sur l'accueil du site** : sous la bannière du haut, un bandeau « Mejliss TV Kids » avec les 10 dernières conférences Kids (vignette, âge, durée) et le bouton « Découvrir l'espace Kids ». Un clic sur une vidéo mène à `/kids` : le parent s'y connecte, choisit le profil, et l'enfant regarde dans son espace protégé. La bande disparaît si l'espace Kids est désactivé ou s'il n'y a aucune conférence Kids.
+- API : `GET /home/kids` (public, aperçu seulement : aucun lien de lecture).
+
+### Déploiement
+```bash
+cd /chemin/du/projet/web && npm install      # nouvelle dépendance : police Fredoka
+cd .. && git add -A && git commit -m "Etape 26.4 identite Kids + bande accueil" && git push
+# DockPanel : redéployer api puis web
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```

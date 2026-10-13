@@ -6,6 +6,7 @@ import { useApp } from './Providers';
 import { AVATAR_EMOJI, BANDS, bandLabel } from '../lib/kids';
 import KidsControls from './KidsControls';
 import KidsReport from './KidsReport';
+import KidsBanner from './KidsBanner';
 
 function Avatar({ a, size = 56 }) { return <span className="kd-avatar" style={{ fontSize: size * 0.7, width: size, height: size }} aria-hidden="true">{AVATAR_EMOJI[a] || '🦁'}</span>; }
 
@@ -92,6 +93,7 @@ export default function KidsParent() {
 
   return (
     <main className="page kd-page">
+      <KidsBanner variant="full" />
       <h1>{t('kdWho')}</h1>
       {err && <p className="error" role="alert">{err}</p>}
       {d.profiles.length === 0 && !manage && <p className="meta">{t('kdNoProfile')}</p>}

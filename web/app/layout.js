@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 // Polices auto-hébergées (fichiers servis par le site, aucun appel à Google Fonts : conforme RGPD).
 import '@fontsource-variable/montserrat';
+import '@fontsource-variable/fredoka';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/noto-kufi-arabic';
 import '@fontsource-variable/noto-sans-arabic';

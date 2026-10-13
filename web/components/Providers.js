@@ -67,6 +67,8 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Enfant : il ne quitte jamais l'espace Kids. Le verrou se base sur le jeton lui-même, pour tenir même si l'API répond mal.
   const kidMode = Boolean(kid) || Boolean(token && kidIdOf(token));
   useEffect(() => { if (kidMode && !path.startsWith('/kids')) router.replace('/kids'); }, [kidMode, path, router]);
+  // Thème coloré de l'espace Kids (page des parents et espace enfant).
+  useEffect(() => { document.body.classList.toggle('kd-theme', kidMode || path.startsWith('/kids')); }, [kidMode, path]);
   const toggleFav = useCallback(async (id) => {
     const on = favs.has(id);
     setFavs((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });

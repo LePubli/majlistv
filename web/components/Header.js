@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { KidsWord } from './KidsBanner';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
@@ -29,7 +30,7 @@ function KidHeader() {
     <header className="header kd-header">
       <Link href="/kids" className="logo" aria-label={appName}>
         <img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" />
-        <span className="kd-brand">{t('kdTitle')}</span>
+        <span className="kd-brand"><span className="kd-brand-name">{appName}</span> <KidsWord /></span>
       </Link>
       <nav aria-label={t('mainNav')}>
         <span className="kd-me"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {kid.name}</span>

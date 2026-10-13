@@ -5,7 +5,7 @@ import { useApp } from './Providers';
 import { AVATAR_EMOJI, BADGE_ICON } from '../lib/kids';
 
 const dayLetter = (iso, locale) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : locale === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(iso + 'T12:00:00Z'));
-const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`);
+const fmtMin = (m, t) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : t('kcMin').replace('{n}', m));
 
 function Tile({ label, value }) { return <div className="kd-tile"><b>{value}</b><span className="meta small">{label}</span></div>; }
 
@@ -37,7 +37,7 @@ export default function KidsReport({ hasProfiles }) {
               {!p.active ? <p className="meta">{t('krNoActivity')}</p> : (
                 <>
                   <div className="kd-tiles">
-                    <Tile label={t('krTime')} value={fmtMin(p.minutes)} />
+                    <Tile label={t('krTime')} value={fmtMin(p.minutes, t)} />
                     <Tile label={t('krVideos')} value={p.watched} />
                     <Tile label={t('krQuizzes')} value={p.quizzes} />
                     {p.quizzes > 0 && <Tile label={t('krAvg')} value={`${p.avgPercent} %`} />}

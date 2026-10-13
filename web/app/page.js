@@ -8,6 +8,7 @@ import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 import SeriesCard from '../components/SeriesCard';
 import CitationCard from '../components/CitationCard';
+import { KidsBand } from '../components/KidsBanner';
 import { LEVELS, levelLabel } from '../lib/levels';
 
 export default function Home() {
@@ -21,6 +22,8 @@ export default function Home() {
   const [level, setLevel] = useState('');
   const [cont, setCont] = useState([]);
   const [cit, setCit] = useState(null); // citation du jour (verset ou hadith), la même pour tous
+  const [kids, setKids] = useState(null); // bande « Espace Kids » : dernières conférences Kids
+  useEffect(() => { call('/home/kids', {}, null).then((r) => setKids(r.ok ? r.data : null)); }, [call]);
   useEffect(() => { call('/citation/today', {}, null).then((r) => setCit(r.ok ? r.data : null)); }, [call]);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
@@ -82,6 +85,7 @@ export default function Home() {
         </>
       ) : (
         <>
+          <KidsBand data={kids} />
           <CitationCard c={cit} t={t} />
           {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}

@@ -29,6 +29,17 @@ const safeLink = (u) => (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u) ? u : '')
 export default async function homeRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
 
+  // Bande « Espace Kids » de l'accueil : les dernières conférences Kids (aperçu seulement : un clic mène à l'espace Kids, où le parent choisit le profil).
+  app.get('/home/kids', async () => {
+    if (!isOn(await getSetting('kids_enabled'))) return { enabled: false, talks: [] };
+    const { rows } = await pool.query(
+      `SELECT t.id, t.title, t.speaker, t.access, t.kids_band AS "kidsBand", t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb
+         FROM talks t WHERE t.kids_band IS NOT NULL AND t.video_status = 'ready' AND ${visibleSql('t')}
+        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 10`);
+    for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
+    return { enabled: true, talks: rows };
+  });
+
   app.get('/home', async (req) => {
     const viewer = await app.optionalUser(req); // connecté : ses thèmes préférés passent en premier
     const mode = await getSetting('home_hero_mode');

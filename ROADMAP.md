@@ -147,6 +147,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - ✅ **26.1 Profils enfants et espace verrouillé** : profils sous le compte du parent (prénom, avatar, tranche d'âge **3-6, 7-10, 11-14**) sans adresse e-mail propre ; sélecteur « Qui regarde ? » ; code parental (haché, blocage après 5 erreurs) pour sortir ; jeton « enfant » refusé partout ailleurs par l'API ; catalogue Kids par tranche d'âge marqué dans le Studio ; reprise de lecture propre à chaque enfant.
 - ✅ **26.2 Quiz, étoiles et badges enfants** : quiz de 5 questions (réponses jamais envoyées avant la correction), 1 à 3 étoiles, messages toujours encourageants, correction douce ; avec Apprentissage : 7 badges et révision enfant J+1 / J+3 / J+7 (« À rejouer aujourd'hui ») ; aucun classement entre enfants.
 - ✅ **26.3 Contrôle parental** : durée quotidienne par enfant (le serveur mesure le temps lui-même), catalogue « tout sauf ce que je bloque » ou « seulement ma sélection », rapport de progression par enfant (7 ou 30 jours) et e-mail hebdomadaire au parent ; aucun classement ni comparaison entre enfants.
+- ✅ **26.4 Identité visuelle Kids et bande d'accueil** : thème « nuit étoilée » coloré (lettres Kids multicolores, quatre étapes numérotées Je regarde / Je fais le quiz / Je progresse / Je retiens durablement, cadres de couleur), bandeau sur la page des parents et sur l'accueil de l'enfant, et bande « Espace Kids » avec les dernières vidéos sur la page d'accueil du site.
 
 
 ### Phase C2 — Faire venir et garder les abonnés
