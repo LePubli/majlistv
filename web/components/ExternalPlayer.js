@@ -39,6 +39,8 @@ class MediaAdapter {
   get ended() { return this.isEnded; }
   play() { this.impl?.play(); return Promise.resolve(); }
   pause() { this.impl?.pause(); }
+  get playbackRate() { return this.rate || 1; }
+  set playbackRate(v) { this.rate = Number(v) || 1; this.impl?.setRate?.(this.rate); }
 }
 
 function parseVtt(text) {
@@ -55,11 +57,18 @@ function parseVtt(text) {
   return cues;
 }
 
-export default function ExternalPlayer({ source, videoId, title, startSeconds = 0, previewSeconds = 0, onPreviewEnd, tracks = [], videoRef, t, autoPlay = false }) {
+export default function ExternalPlayer({ source, videoId, title, startSeconds = 0, previewSeconds = 0, onPreviewEnd, tracks = [], videoRef, t, autoPlay = false, rate = 1 }) {
   const auto = useRef(autoPlay); // lancement automatique (épisode suivant d'une série)
   const [adapter] = useState(() => new MediaAdapter());
   if (videoRef) videoRef.current = adapter; // disponible avant les effets des composants parents
   const host = useRef(null);
+  // Vitesse : appliquée au changement, puis à chaque démarrage (le lecteur distant peut l'ignorer avant d'être prêt).
+  useEffect(() => {
+    adapter.playbackRate = rate;
+    const apply = () => adapter.impl?.setRate?.(rate);
+    adapter.addEventListener('canplay', apply); adapter.addEventListener('play', apply);
+    return () => { adapter.removeEventListener('canplay', apply); adapter.removeEventListener('play', apply); };
+  }, [adapter, rate]);
   const start = useRef(startSeconds); // lu une seule fois, au montage
   const [failed, setFailed] = useState(false);
   const [sub, setSub] = useState(() => (tracks.find((x) => x.isDefault) || {}).lang || '');
@@ -107,6 +116,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
           seek: (s) => player.seekTo?.(s, true),
           play: () => player.playVideo?.(),
           pause: () => player.pauseVideo?.(),
+          setRate: (r) => player.setPlaybackRate?.(r),
         };
         // L'API YouTube n'envoie pas d'événement de temps : on interroge le lecteur 4 fois par seconde.
         poll = setInterval(() => {
@@ -135,6 +145,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
           seek: (s) => player.setCurrentTime(s).catch(() => {}),
           play: () => player.play().catch(() => {}),
           pause: () => player.pause().catch(() => {}),
+          setRate: (r) => player.setPlaybackRate(r).catch(() => {}),
         };
       }).catch(() => alive && setFailed(true));
     }

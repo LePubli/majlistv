@@ -8,7 +8,7 @@ import pg from 'pg';
 import {
   S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand,
 } from '@aws-sdk/client-s3';
-import { probe, transcode, killCurrent } from './transcode.js';
+import { probe, transcode, makeAudio, killCurrent } from './transcode.js';
 
 const env = (k, d) => process.env[k] ?? d;
 const need = (k) => { const v = process.env[k]; if (!v) { console.error(`Variable manquante : ${k}`); process.exit(1); } return v; };
@@ -19,6 +19,7 @@ const WORK_DIR = env('WORK_DIR', '/work');
 const POLL_MS = Number(env('POLL_SECONDS', '10')) * 1000;
 const THREADS = Number(env('FFMPEG_THREADS', '0')); // 0 = automatique
 const MAX_ATTEMPTS = 3;
+const MAX_AUDIO_ATTEMPTS = 3;
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 3 });
 const s3 = new S3Client({
@@ -118,13 +119,19 @@ async function processJob(job) {
       },
     });
 
+    // Version audio seul (mode audio). Un échec ici ne bloque pas la mise en ligne : le worker réessaiera plus tard.
+    let audio = info.hasAudio ? 'pending' : 'none';
+    if (info.hasAudio) {
+      try { await makeAudio({ input, outDir: path.join(out, 'audio') }); audio = 'ready'; } catch (err) { log(`[${job.id}] audio seul : ${err.message}`); }
+    }
+
     log(`[${job.id}] envoi vers le stockage`);
     const n = await uploadDir(out, prefix);
     const res = await pool.query(
-      `UPDATE talks SET video_status = 'ready', video_progress = 100, video_error = NULL,
+      `UPDATE talks SET video_status = 'ready', video_progress = 100, video_error = NULL, audio_status = $5,
               duration_seconds = $2, poster_key = $3, poster_candidates = $4 WHERE id = $1`,
       [job.id, Math.round(info.duration), `${prefix}poster.jpg`,
-        [1, 2, 3].map((i) => `${prefix}c${i}.jpg`).filter((k) => fs.existsSync(path.join(out, k.slice(prefix.length))))]
+        [1, 2, 3].map((i) => `${prefix}c${i}.jpg`).filter((k) => fs.existsSync(path.join(out, k.slice(prefix.length)))), audio]
     );
     if (!res.rowCount) { await deletePrefix(prefix); log(`[${job.id}] conférence supprimée entre-temps, nettoyé`); }
     else log(`[${job.id}] terminé (${n} fichiers)`);
@@ -136,6 +143,52 @@ async function processJob(job) {
     await pool.query('UPDATE talks SET video_status = $2, video_error = $3 WHERE id = $1',
       [job.id, final ? 'failed' : 'pending', String(err.message).slice(0, 1000)]).catch(() => {});
     await deletePrefix(prefix).catch(() => {});
+  } finally {
+    await fsp.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+// Vidéos déjà en ligne sans version audio : on la tire de la plus petite qualité (l'audio est recopié, sans nouvelle conversion).
+async function claimAudio() {
+  const { rows } = await pool.query(
+    `UPDATE talks SET audio_attempts = audio_attempts + 1
+     WHERE id = (SELECT id FROM talks WHERE source = 'upload' AND video_status = 'ready' AND audio_status = 'pending' AND audio_attempts < $1
+                 ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+     RETURNING id, audio_attempts`, [MAX_AUDIO_ATTEMPTS]);
+  return rows[0];
+}
+
+async function processAudio(job) {
+  const dir = path.join(WORK_DIR, `${job.id}-audio`);
+  const prefix = `hls/${job.id}/`;
+  try {
+    await fsp.rm(dir, { recursive: true, force: true });
+    await fsp.mkdir(path.join(dir, 'v0'), { recursive: true });
+    // Copie locale de la plus petite qualité (playlist + segments), puis extraction de la piste audio.
+    let token; let n = 0;
+    do {
+      const page = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `${prefix}v0/`, ContinuationToken: token }));
+      for (const o of page.Contents || []) { await download(o.Key, path.join(dir, 'v0', path.basename(o.Key))); n += 1; }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    if (!n) throw new Error('Qualité de base introuvable dans le stockage');
+    const info = await probe(path.join(dir, 'v0', 'index.m3u8')).catch(() => ({ hasAudio: true }));
+    if (!info.hasAudio) {
+      await pool.query(`UPDATE talks SET audio_status = 'none' WHERE id = $1`, [job.id]);
+      log(`[${job.id}] pas de piste audio`);
+      return;
+    }
+    const out = path.join(dir, 'audio');
+    await makeAudio({ input: path.join(dir, 'v0', 'index.m3u8'), outDir: out, copy: true });
+    const files = await uploadDir(out, `${prefix}audio/`);
+    const res = await pool.query(`UPDATE talks SET audio_status = 'ready' WHERE id = $1`, [job.id]);
+    if (!res.rowCount) await deletePrefix(`${prefix}audio/`);
+    log(`[${job.id}] version audio prête (${files} fichiers)`);
+  } catch (err) {
+    if (stopping) throw err;
+    log(`[${job.id}] audio seul : échec (${job.audio_attempts}/${MAX_AUDIO_ATTEMPTS}) : ${err.message}`);
+    await pool.query(`UPDATE talks SET audio_status = $2 WHERE id = $1`, [job.id, job.audio_attempts >= MAX_AUDIO_ATTEMPTS ? 'failed' : 'pending']).catch(() => {});
+    await deletePrefix(`${prefix}audio/`).catch(() => {});
   } finally {
     await fsp.rm(dir, { recursive: true, force: true }).catch(() => {});
   }
@@ -159,7 +212,16 @@ async function main() {
   while (!stopping) {
     let job;
     try { job = await claim(); } catch (err) { log('Erreur base :', err.message); }
-    if (!job) { await sleep(POLL_MS); continue; }
+    if (!job) {
+      // Pas de vidéo à convertir : on prépare les versions audio manquantes (une à la fois).
+      let a;
+      try { a = await claimAudio(); } catch (err) { log('Erreur base (audio) :', err.message); }
+      if (!a) { await sleep(POLL_MS); continue; }
+      current = a;
+      await processAudio(a);
+      current = null;
+      continue;
+    }
     current = job;
     await processJob(job);
     current = null;
@@ -170,7 +232,7 @@ async function main() {
 const shutdown = async () => {
   stopping = true;
   killCurrent();
-  if (current) await pool.query(`UPDATE talks SET video_status = 'pending' WHERE id = $1`, [current.id]).catch(() => {});
+  if (current?.video_ref) await pool.query(`UPDATE talks SET video_status = 'pending' WHERE id = $1`, [current.id]).catch(() => {});
   process.exit(0);
 };
 process.on('SIGTERM', shutdown);

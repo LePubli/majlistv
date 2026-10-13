@@ -156,6 +156,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 
 **16. Référencement Google** — découpé en deux parties
 - ✅ **16.1 Bases techniques** : titre / description / aperçu de partage / adresse canonique pour chaque conférence et série, données structurées `VideoObject` (conférences) et `TVSeries` (séries), titre et description présents dans le HTML dès le premier octet, `sitemap.xml`, `robots.txt`, vignettes à adresse stable, espaces privés en `noindex`. Le partage « à la minute » existe déjà (étape 13).
+- ✅ **17a Vitesse de lecture + mode audio** (livré). 17b marque-pages et notes dans Ma bibliothèque : à venir.
 - ✅ **16.2a/c URL lisibles + chapitres et extrait dans le HTML** (livré). ✅ **16.2b pages intervenants** (livré). 16.2d versions linguistiques (hreflang) reste à décider. Détail d'origine :
 - 16.2 **Contenu et URL** : URL lisibles (`/conferences/la-patience-dans-l-epreuve`, anciennes adresses redirigées), chapitres et extrait de transcription affichés dans le HTML des conférences gratuites, **page par intervenant** (présentation, toutes ses conférences et séries), versions linguistiques (`hreflang`, demande une URL par langue : à décider avec vous).
 

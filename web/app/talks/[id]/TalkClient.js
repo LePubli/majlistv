@@ -14,6 +14,8 @@ import { levelLabel } from '../../../lib/levels';
 import Quiz from '../../../components/Quiz';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
+const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+
 // `initial` : titre, intervenant et description lus côté serveur. Ils sont dans le HTML dès le premier octet (moteurs de recherche,
 // partage de lien) et affichés pendant le chargement de la page complète, sans jamais montrer l'invitation « premium » par erreur.
 export default function TalkPage({ initial = null, talkId = null }) {
@@ -26,6 +28,17 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const [resumeMs, setResumeMs] = useState(0);
   const [previewEnded, setPreviewEnded] = useState(false);
   const [similar, setSimilar] = useState([]);
+  const [rate, setRate] = useState(1);              // vitesse de lecture (mémorisée sur cet appareil)
+  const [audioMode, setAudioMode] = useState(false); // lecture audio seule (écran éteint)
+  useEffect(() => {
+    try {
+      const r = Number(localStorage.getItem('mj-speed'));
+      if (SPEEDS.includes(r)) setRate(r);
+      setAudioMode(localStorage.getItem('mj-audio') === '1');
+    } catch { /* stockage indisponible */ }
+  }, []);
+  const pickRate = (r) => { setRate(r); try { localStorage.setItem('mj-speed', String(r)); } catch { /* ignoré */ } };
+  const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
   const [tab, setTab] = useState('about');          // onglet affiché sous le lecteur
   const [ins, setIns] = useState({ summary: false, chapters: false }); // ce que contient l'analyse (résumé, chapitres)
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
@@ -222,7 +235,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
     player = talk.fileUrl
       ? (
         <div className="player">
-          <VideoPlayer src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
+          <VideoPlayer rate={rate} title={talk.title} src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
             previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} />
         </div>
       )
@@ -231,12 +244,12 @@ export default function TalkPage({ initial = null, talkId = null }) {
     // YouTube / Vimeo : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
     player = (
       <div className="player">
-        <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
+        <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay} rate={rate}
           previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} tracks={tracks} videoRef={videoRef} t={t} />
       </div>
     );
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
+    player = <div className="player"><VideoPlayer rate={rate} title={talk.title} audioSrc={talk.audioPath ? '/api' + talk.audioPath : ''} audioMode={audioMode} src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
       previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
@@ -321,6 +334,19 @@ export default function TalkPage({ initial = null, talkId = null }) {
         <div className="watch-main">
           <div className="player-wrap">
             {player}
+            {(talk.hlsPath || talk.fileUrl || embed) && (
+              <div className="speed-bar" role="group" aria-label={t('spdLabel')}>
+                <span className="meta">{t('spdLabel')}</span>
+                {SPEEDS.map((r) => (
+                  <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>
+                ))}
+                {talk.audioPath && (
+                  <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
+                    🎧 {audioMode ? t('audBackVideo') : t('audMode')}
+                  </button>
+                )}
+              </div>
+            )}
             {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
             {upNext !== null && next && (
               <div className="upnext" role="status" aria-live="polite">

@@ -92,7 +92,7 @@ const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'w
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
   t.video_ref, t.category_id, c.name AS category, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
   COALESCE((SELECT array_agg(tc.category_id ORDER BY tc.category_id) FROM talk_categories tc WHERE tc.talk_id = t.id), '{}') AS "extraCategoryIds",
-  t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
+  t.audio_status, t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
   t.publication, t.publish_at AS "publishAt", t.featured, ${visibleSql('t')} AS visible`;
@@ -278,7 +278,10 @@ export default async function talksRoutes(app) {
         talk.preview = true;
         talk.previewSeconds = await getNumber('preview_seconds');
         if (archiveUrl) talk.fileUrl = archiveUrl; // fichier public sur archive.org : l'aperçu est limité par le lecteur
-        if (!external) talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+        if (!external) {
+          talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+          if (talk.audio_status === 'ready') talk.audioPath = `/hls/${id}/audio/index.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+        }
       }
     } else {
       // Jeton de lecture : flux HLS (vidéo envoyée), transcription et sous-titres (toutes les sources).
@@ -293,11 +296,15 @@ export default async function talksRoutes(app) {
       )).rows[0].x;
       if (archiveUrl) talk.fileUrl = archiveUrl;
       if (!external) {
-        if (talk.status === 'ready') talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+        if (talk.status === 'ready') {
+          talk.hlsPath = `/hls/${id}/master.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+          if (talk.audio_status === 'ready') talk.audioPath = `/hls/${id}/audio/index.m3u8?t=${encodeURIComponent(talk.playbackToken)}`;
+        }
         else if (isOwner) talk.videoUrl = await presignGet(talk.video_ref); // aperçu du fichier d'origine pendant la conversion
       }
     }
     if (!external) delete talk.video_ref;
+    delete talk.audio_status;
     talk.quiz = await quizInfo(id);
     await withPosters([talk]);
     return talk;

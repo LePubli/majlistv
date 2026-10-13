@@ -1119,3 +1119,19 @@ nginx -t && systemctl reload nginx
 
 **Debug** : `curl https://VOTRE-SITE/api/speakers` liste les intervenants détectés. Si deux orthographes très différentes donnent deux pages, harmonisez le champ « Intervenant » dans le Studio. Tests : `api/tests/test_speakers.py`.
 
+
+## Étape 17a — Vitesse de lecture et mode audio
+
+**Ce que ça fait**
+- Sous chaque lecteur : boutons de vitesse **0,75× · 1× · 1,25× · 1,5× · 1,75× · 2×** (vidéos envoyées, archive.org, YouTube, Vimeo). Le choix est mémorisé sur l'appareil.
+- Bouton **🎧 Mode audio** (vidéos envoyées uniquement) : le lecteur passe sur une piste audio seule (pochette + lecteur). La position et l'état lecture/pause sont conservés dans les deux sens ; le choix est mémorisé.
+- Écran verrouillé / notifications (Media Session) : titre, pochette, lecture-pause, ±15 s.
+- Le serveur crée la piste audio **sans ré-encoder** (copie de l'audio du premier rendu) : quelques Mo par heure de vidéo, accès protégé comme la vidéo (jeton, aperçu tronqué pour les non-abonnés).
+
+**Limites honnêtes** : la lecture écran éteint dépend du téléphone et du navigateur (Android/Chrome : généralement oui ; iPhone/Safari : variable selon la version). Pas de mode audio pour YouTube/Vimeo/archive.org (le fichier n'est pas chez nous).
+
+**Déploiement** (migration 035 automatique) : redéployer `majlistv-api`, puis `majlistv-web`, puis **`majlistv-worker`**. Le worker crée la piste audio des vidéos existantes **toutes seules, une à la fois**, quand il n'a pas de conversion en cours. Ensuite : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+
+**Suivi / debug** : `select audio_status, count(*) from talks where source='upload' group by 1;` (`pending` = en attente, `ready`, `failed` après 3 essais, `none`). Pour relancer un échec : `update talks set audio_status='pending', audio_attempts=0 where audio_status='failed';`. Logs : `docker logs dockpanel-git-majlistv-worker`.
+
+**Tests** : `node worker/tests/test_audio.mjs /tmp/audio_out` (ffmpeg), puis `python3 api/tests/test_audio.py` (API + S3).

@@ -96,3 +96,18 @@ export async function transcode({ input, outDir, info, threads, onProgress }) {
     },
   });
 }
+
+// Version « audio seul » (HLS fMP4 AAC) : écoute sans l'image, écran éteint, peu de données (≈ 28 Mo par heure à 64 kbit/s).
+// input : fichier source ou playlist HLS locale ; copy = true recopie l'audio tel quel (vidéos déjà converties), sinon ré-encode en AAC 64 kbit/s.
+export function buildAudioArgs({ input, outDir, copy = false }) {
+  return ['-y', '-nostdin', '-v', 'error', '-i', input, '-vn', '-map', '0:a:0',
+    ...(copy ? ['-c:a', 'copy'] : ['-c:a', 'aac', '-b:a', '64k', '-ac', '2']),
+    '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod', '-hls_segment_type', 'fmp4',
+    '-hls_flags', 'independent_segments', '-hls_fmp4_init_filename', 'init.mp4',
+    '-hls_segment_filename', path.join(outDir, 'seg_%05d.m4s'), path.join(outDir, 'index.m3u8')];
+}
+
+export async function makeAudio({ input, outDir, copy = false }) {
+  await fs.mkdir(outDir, { recursive: true });
+  await run('nice', ['-n', '10', 'ffmpeg', ...buildAudioArgs({ input, outDir, copy })]);
+}

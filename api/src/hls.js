@@ -1,5 +1,5 @@
 // Réécriture des playlists HLS : le master pointe vers l'API, les variantes vers des liens S3 signés.
-export const HLS_PATH = /^(master\.m3u8|v\d+\/index\.m3u8)$/;
+export const HLS_PATH = /^(master\.m3u8|v\d+\/index\.m3u8|audio\/index\.m3u8)$/;
 
 // Master : les lignes d'URI (variantes) reçoivent le jeton de lecture.
 export function rewriteMaster(text, token) {
