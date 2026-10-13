@@ -756,3 +756,25 @@ Note : l'indexation prend de quelques jours à quelques semaines ; Google n'inde
 **Migration** : `022_levels.sql`, appliquée automatiquement au démarrage de l'API.
 **Tests** : `python3 api/tests/test_levels.py` (28 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+## Étape 24.2 — Quiz de compréhension : données et Studio
+
+Cette étape prépare le quiz côté organisateur. Le public ne le voit pas encore (étape 24.3).
+
+**Fonctionnement**
+- **Studio → conférence → Corriger le contenu → onglet « Quiz »** : activer / désactiver le quiz pour cette conférence (ou suivre le réglage du site), générer des questions, relire, ajouter à la main.
+- **Studio → « Quiz à relire »** : toutes les questions en attente de validation, toutes conférences confondues.
+- **Génération** : le service `translator` (même moteur et mêmes clés que les résumés : Admin → Paramètres → Résumés et chapitres) lit la transcription et propose des questions à 4 réponses (ordre mélangé).
+- **Anti-invention** : chaque question doit citer **mot pour mot** le passage de la transcription qui donne la réponse. Si la citation est introuvable, la question est écartée. La minute est recalée sur le passage réellement trouvé, le chapitre en est déduit. Aucune citation de hadith ou de savant n'est écrite par l'IA.
+- **Relecture obligatoire** : les questions arrivent en *brouillon*. Une question n'est *validée* que si elle a une explication et une minute. Lien « Écouter à mm:ss » pour vérifier dans la vidéo. Statuts : brouillon / validée / refusée.
+- Une nouvelle génération remplace les anciens brouillons ; les questions validées et saisies à la main sont conservées.
+
+**Réglages** (Admin → Paramètres → Quiz de compréhension) : activé par défaut, seuil de réussite (70 %), minimum (3) et maximum (10) de questions validées, nombre proposé à la génération (8).
+
+**Migration** : `023_quiz.sql` (tables `quiz_questions`, `quiz_jobs`, colonne `talks.quiz_enabled`), appliquée au démarrage de l'API.
+
+**Déploiement** : api, **translator** (il porte la génération), puis web. Ensuite `/root/apply-limits.sh` et la vérification nginx.
+
+**Tests**
+- `python3 translator/tests/test_quiz_clean.py` : vérification des citations, mélange, doublons (sans base ni réseau).
+- `python3 api/tests/test_quiz.py` : API complète (réglages, droits, validation, plafond, file de relecture, génération). Prérequis : API 3055, PG 5544, `MOCK_PORT=8099 python3 translator/tests/mock_claude.py &`, puis le translator lancé avec `ANTHROPIC_API_KEY=test-key ANTHROPIC_API_URL=http://127.0.0.1:8099/v1/messages POLL_SECONDS=1 python3 translator/src/main.py`.

@@ -22,6 +22,7 @@ import psycopg2.extras
 import requests
 
 from insights import Insights
+from quiz import Quiz
 from settings import Settings
 
 
@@ -123,6 +124,7 @@ stopping = False
 current = None  # (talk_id, lang) en cours
 last_ok = None
 insights = None
+quiz = None
 
 
 def log(*args):
@@ -515,7 +517,8 @@ def process(job):
 class Health(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         body = json.dumps({"status": "ok", "provider": PROVIDER, "overrides": {k: sorted(v) for k, v in OVERRIDES.items() if v}, "model": MODEL, "current": current, "lastOk": last_ok,
-                           "insights": {"provider": insights.provider, "lastOk": insights.last_ok} if insights else None}).encode()
+                           "insights": {"provider": insights.provider, "lastOk": insights.last_ok} if insights else None,
+                           "quiz": {"provider": quiz.provider, "lastOk": quiz.last_ok} if quiz else None}).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
         self.end_headers()
@@ -541,8 +544,9 @@ def main():
     global current
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
-    global insights
+    global insights, quiz
     insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
+    quiz = Quiz(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
@@ -558,6 +562,7 @@ def main():
     log(f"Traducteur prêt (moteur par défaut {PROVIDER}{'; ' + extra if extra else ''}).")
 
     insights.start()
+    quiz.start()
     while not stopping:
         job = None
         try:

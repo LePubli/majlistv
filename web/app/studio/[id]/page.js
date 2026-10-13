@@ -10,6 +10,21 @@ import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/tal
 import TalkEditor from '../../../components/TalkEditor';
 import Timeline from '../../../components/Timeline';
 
+// Encart « Quiz » : état et lien vers l'onglet de gestion.
+function QuizPanel({ id, t, call }) {
+  const [q, setQ] = useState(null);
+  useEffect(() => { call(`/talks/${id}/studio/quiz`).then((r) => r.ok && setQ(r.data)); }, [call, id]);
+  if (!q) return null;
+  const state = !q.enabled ? t('qzIsOff') : q.ready ? t('qzReadyYes').replace('{a}', q.approved) : t('qzReadyNo').replace('{a}', q.approved).replace('{n}', q.min);
+  return (
+    <section className="panel qz-panel">
+      <h2 className="panel-title">{t('qzSettingsTitle')}</h2>
+      <p className={q.enabled && !q.ready ? 'qz-warn' : 'meta'}>{state}{q.drafts > 0 ? ` · ${t('qzToReview').replace('{n}', q.drafts)}` : ''}</p>
+      <div className="panel-actions"><Link className="btn ghost" href={`/studio/${id}/content?tab=quiz`}>{t('qzManage')}</Link></div>
+    </section>
+  );
+}
+
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 const base = (c) => String(c || '').split('-')[0].toLowerCase();
 
@@ -88,6 +103,8 @@ export default function ManageTalk() {
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
 
       <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} />
+
+      <QuizPanel id={x.id} t={t} call={call} />
 
       <h2 className="panel-title outside">{t('sectProcessing')}</h2>
       <ol className="tracks">

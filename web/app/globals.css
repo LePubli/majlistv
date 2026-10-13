@@ -889,3 +889,38 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .hit .lvl, .talk p .lvl { font-size: 10px; padding: 0 8px; }
 .series-prereq { margin: 0; color: var(--text-2); font-size: .95rem; }
 .series-prereq a { color: var(--accent); }
+
+/* 24.2 — Quiz de compréhension : gestion dans le Studio */
+.qz-gen { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
+.qz-count { display: grid; gap: 4px; }
+.qz-count input { width: 90px; background: var(--bg); }
+.qz-warn { color: #e6a739; margin: 0; }
+.qz-list { margin-block: 22px; display: grid; gap: 14px; }
+.qz-list-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; }
+.qz-list-head .panel-title { margin: 0; }
+.qz-group { display: grid; gap: 12px; }
+.qz-group > summary { cursor: pointer; padding: 6px 0; }
+.qz-group[open] > summary { margin-bottom: 8px; }
+.qz-card { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line-soft); border-inline-start: 3px solid var(--line-strong); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
+.qz-card.approved { border-inline-start-color: var(--ok); }
+.qz-card.rejected { opacity: .65; }
+.qz-card.editing { border-inline-start-color: var(--accent); }
+.qz-talk { margin: 0; }
+.qz-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.qz-q { font-size: 1.02rem; line-height: 1.4; }
+.qz-origin { font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap; }
+.qz-origin.ai { color: var(--accent); border-color: var(--accent); }
+.qz-opts { margin: 0; padding-inline-start: 24px; display: grid; gap: 4px; color: var(--text-2); }
+.qz-opts li.right { color: var(--text); font-weight: 600; }
+.qz-tick { color: var(--ok); }
+.qz-expl { margin: 0; color: var(--text-2); font-size: .93rem; }
+.qz-proof blockquote { margin: 8px 0 0; padding: 6px 12px; border-inline-start: 2px solid var(--line-strong); color: var(--muted); font-size: .9rem; font-style: italic; }
+.qz-at { color: var(--accent); font-weight: 600; }
+.qz-missing { color: #e6a739; font-size: .9rem; }
+.qz-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.qz-form { display: grid; gap: 14px; }
+.qz-form textarea, .qz-form input:not([type=radio]) { background: var(--bg); }
+.qz-opt-edit { display: flex; align-items: center; gap: 10px; }
+.qz-opt-edit input[type=radio] { width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+.qz-opt-edit input:not([type=radio]) { flex: 1; }
+.qz-minute { max-width: 140px; }

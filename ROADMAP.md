@@ -107,7 +107,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - **Prérequis** : une série peut déclarer une ou plusieurs séries à suivre avant elle (« Conseillé après : … »).
   - Badge de niveau sur les vignettes et les pages, filtre par niveau dans le catalogue et la recherche, rangée « Pour commencer » sur l'accueil.
 
-- **24.2 Quiz : données et Studio** (la grosse étape)
+- ✅ **24.2 Quiz : données et Studio** (la grosse étape)
   - Un quiz par conférence : questions à choix multiples, chacune rattachée à un **chapitre et à une minute**, avec l'explication et le passage source.
   - Génération automatique depuis la transcription (moteurs déjà configurés : Claude, Azure, DeepSeek), **jamais publiée telle quelle**.
   - Studio : **file de relecture** pour traiter le fonds existant par lots, écoute du passage source en un clic, valider / corriger / rejeter, et rédaction manuelle de questions.

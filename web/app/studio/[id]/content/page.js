@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
+import QuizEditor from '../../../../components/QuizEditor';
 
 const PAGE = 100;
 const clock = (ms) => {
@@ -259,7 +260,7 @@ export default function ContentPage() {
   const { t, call, locale } = useApp();
   const params = useSearchParams();
   const router = useRouter();
-  const tab = params.get('tab') === 'summary' ? 'summary' : 'transcript';
+  const tab = ['summary', 'quiz'].includes(params.get('tab')) ? params.get('tab') : 'transcript';
   const dirty = useRef(false);
   const [title, setTitle] = useState('');
   const onDirty = useCallback((v) => { dirty.current = v; }, []);
@@ -280,10 +281,11 @@ export default function ContentPage() {
       <div className="pills tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'transcript'} className={tab === 'transcript' ? 'pill on' : 'pill'} onClick={() => go('transcript')}>{t('ctTabTranscript')}</button>
         <button type="button" role="tab" aria-selected={tab === 'summary'} className={tab === 'summary' ? 'pill on' : 'pill'} onClick={() => go('summary')}>{t('ctTabSummary')}</button>
+        <button type="button" role="tab" aria-selected={tab === 'quiz'} className={tab === 'quiz' ? 'pill on' : 'pill'} onClick={() => go('quiz')}>{t('qzTab')}</button>
       </div>
-      {tab === 'transcript'
-        ? <TranscriptEditor key="tr" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />
-        : <InsightsEditor key="in" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
+      {tab === 'transcript' && <TranscriptEditor key="tr" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
+      {tab === 'summary' && <InsightsEditor key="in" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
+      {tab === 'quiz' && <QuizEditor key="qz" id={id} t={t} call={call} />}
     </main>
   );
 }

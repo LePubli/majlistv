@@ -70,6 +70,27 @@ class H(BaseHTTPRequestHandler):
             return send(401, {"error": {"type": "authentication_error", "message": "invalid x-api-key"}})
         if MODE == "flaky" and calls["n"] % 2 == 1:
             return send(429, {"error": {"message": "rate limited"}}, {"retry-after": "0"})
+        tool = body["tool_choice"]["name"]
+        if tool == "submit_insights":  # résumé + chapitres (étape 3D) avec Claude
+            send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {
+                "summary": "Résumé de test.", "key_points": ["a", "b", "c", "d"], "chapters": [{"start_seconds": 0, "title": "Début"}, {"start_seconds": 100, "title": "Suite"}]}}]})
+            return
+        if tool == "submit_quiz":  # quiz (étape 24.2) : citations tirées de la transcription reçue + deux propositions invalides
+            import re
+            lines = re.findall(r"^\[(\d\d):(\d\d):(\d\d)\] (.+)$", body["messages"][0]["content"], re.M)
+            want = int(re.search(r"with (\d+) questions", body["system"]).group(1))
+            qs = []
+            for h, m, sec, text in lines[:max(0, want - 2)]:
+                words = text.split()
+                qs.append({"question": f"Que dit l'intervenant à {m}:{sec} ?", "options": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"], "correct_index": 0,
+                           "explanation": "Il le dit dans ce passage.", "evidence_quote": " ".join(words[:12]), "evidence_seconds": int(h) * 3600 + int(m) * 60 + int(sec) + 7})
+            qs.append({"question": "Question inventée sans appui ?", "options": ["A1", "B1", "C1"], "correct_index": 1, "explanation": "x",
+                       "evidence_quote": "cette phrase n'a jamais été prononcée par l'intervenant", "evidence_seconds": 5})
+            qs.append({"question": "Réponses en double ?", "options": ["Pareil", "pareil", "Autre"], "correct_index": 0, "explanation": "x",
+                       "evidence_quote": " ".join(lines[0][3].split()[:12]), "evidence_seconds": 0})
+            sys.stderr.write(f"mock quiz: {len(qs)} propositions\n")
+            send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"questions": qs}}]})
+            return
         payload = json.loads(body["messages"][0]["content"])
         assert body["tool_choice"]["name"] == "submit_translations"
         segs = payload["segments"]

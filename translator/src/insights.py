@@ -181,10 +181,11 @@ class Insights:
             time.sleep(min(2 ** attempt, 30))
         raise RuntimeError(f"{name} indisponible : {last}")
 
-    def ask(self, system, user):
-        """Un appel IA qui renvoie un objet JSON (dict)."""
+    def ask(self, system, user, tool=None, max_tokens=4096):
+        """Un appel IA qui renvoie un objet JSON (dict). `tool` : schéma de sortie (Claude), par défaut celui des résumés."""
+        tool = tool or TOOL
         if self.provider == "deepseek":
-            body = {"model": self.deepseek_model, "max_tokens": 4096, "stream": False, "temperature": 0.3,
+            body = {"model": self.deepseek_model, "max_tokens": max_tokens, "stream": False, "temperature": 0.3,
                     "response_format": {"type": "json_object"}, "thinking": {"type": "disabled"},
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
 
@@ -193,12 +194,12 @@ class Insights:
                 text = (choice["message"].get("content") or "").strip()
                 return json.loads(text) if text and choice.get("finish_reason") != "length" else None
             return self._post("DeepSeek", self.deepseek_url, {"Authorization": f"Bearer {self.deepseek_key}"}, body, parse)
-        body = {"model": self.claude_model, "max_tokens": 4096, "system": system, "tools": [TOOL],
-                "tool_choice": {"type": "tool", "name": TOOL["name"]}, "messages": [{"role": "user", "content": user}]}
+        body = {"model": self.claude_model, "max_tokens": max_tokens, "system": system, "tools": [tool],
+                "tool_choice": {"type": "tool", "name": tool["name"]}, "messages": [{"role": "user", "content": user}]}
 
         def parse_claude(data):
             for block in data.get("content", []):
-                if block.get("type") == "tool_use" and block.get("name") == TOOL["name"]:
+                if block.get("type") == "tool_use" and block.get("name") == tool["name"]:
                     return block.get("input")
             return None
         headers = {"x-api-key": self.claude_key, "anthropic-version": "2023-06-01"}
