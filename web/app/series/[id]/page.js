@@ -1,91 +1,48 @@
-'use client';
-// Page d'une série : bannière, bouton « Regarder / Reprendre », saisons et épisodes (avancement, accès).
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useApp } from '../../../components/Providers';
+// Page d'une série (serveur) : balises <head>, données structurées TVSeries (avec ses épisodes) pour Google, puis SeriesClient.
+import SeriesClient from './SeriesClient';
+import { seoGet, absolute, clip, jsonLd } from '../../../lib/seo';
 
-const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
+export async function generateMetadata({ params }) {
+  const s = await seoGet(`series/${params.id}`);
+  if (!s) return { title: 'Série', robots: { index: false, follow: false } };
+  const base = s.site.baseUrl;
+  const description = clip(s.description, 160) || s.site.description || undefined;
+  const image = absolute(base, s.posterPath);
+  const url = `${base}/series/${s.id}`;
+  return {
+    title: s.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: 'video.tv_show', siteName: s.site.appName, title: s.title, description, url, ...(image ? { images: [image] } : {}) },
+    twitter: { card: image ? 'summary_large_image' : 'summary', title: s.title, description, ...(image ? { images: [image] } : {}) },
+  };
+}
 
-export default function SeriesPage() {
-  const { id } = useParams();
-  const { t, call, ready, user } = useApp();
-  const [s, setS] = useState(undefined);
-  const [season, setSeason] = useState(0); // index de la saison affichée
-
-  useEffect(() => {
-    if (!ready) return;
-    call(`/series/${id}`).then((r) => {
-      setS(r.ok ? r.data : null);
-      if (r.ok && r.data.seasons) {
-        // Ouvre la saison de l'épisode à reprendre.
-        const at = r.data.seasons.findIndex((z) => z.episodes.some((e) => e.id === r.data.resume?.talkId));
-        setSeason(at >= 0 ? at : 0);
-      }
-    });
-  }, [id, call, ready, user]);
-
-  const flat = useMemo(() => (s ? (s.seasons ? s.seasons.flatMap((z) => z.episodes) : s.episodes) : []), [s]);
-  if (s === undefined) return null;
-  if (s === null) return <main className="page"><p>{t('noSeriesFound')}</p><Link href="/series">{t('seriesTitle')}</Link></main>;
-
-  const group = s.seasons ? s.seasons[season] : null;
-  const list = group ? group.episodes : s.episodes;
-  const resume = s.resume;
-  const label = resume ? (resume.started ? t('resumeEp').replace('{n}', resume.number) : t('watchEp1')) : '';
-  const access = flat.length && flat.every((e) => e.access === 'free') ? t('free') : flat.length && flat.every((e) => e.access === 'premium') ? t('premium') : t('mixed');
-  const meta = [s.speaker, s.category, s.seasons && s.seasons.length > 1 ? t('seasonCount').replace('{n}', s.seasons.length) : '', t('episodeCount').replace('{n}', s.episodeCount), access].filter(Boolean).join(' · ');
-
+export default async function Page({ params }) {
+  const s = await seoGet(`series/${params.id}`);
+  let ld = null;
+  if (s) {
+    const base = s.site.baseUrl;
+    const image = absolute(base, s.posterPath);
+    ld = {
+      '@context': 'https://schema.org',
+      '@type': 'TVSeries',
+      name: s.title,
+      description: clip(s.description, 500) || s.title,
+      url: `${base}/series/${s.id}`,
+      ...(image ? { image } : {}),
+      ...(s.speaker ? { creator: { '@type': 'Person', name: s.speaker } } : {}),
+      numberOfEpisodes: s.episodes.length,
+      episode: s.episodes.slice(0, 100).map((e, i) => ({
+        '@type': 'TVEpisode', name: e.title, episodeNumber: e.number || i + 1, url: `${base}/talks/${e.id}`,
+        ...(e.seasonNumber ? { partOfSeason: { '@type': 'TVSeason', seasonNumber: e.seasonNumber } } : {}),
+      })),
+    };
+  }
   return (
-    <main className="series-page">
-      <section className="series-hero" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined}>
-        <div className="series-hero-in">
-          <p className="eyebrow">{t('seriesTag')}</p>
-          <h1>{s.title}</h1>
-          <p className="meta">{meta}</p>
-          {s.description && <p className="series-desc">{s.description}</p>}
-          {!s.published && <p className="notice" role="status">{t('seriesDraftNote')}</p>}
-          {resume && <div className="series-cta"><Link className="btn btn-lg" href={`/talks/${resume.talkId}`}>▶ {label}</Link></div>}
-        </div>
-      </section>
-
-      <div className="series-body">
-        {s.seasons && s.seasons.length > 1 && (
-          <div className="pills series-seasons" role="tablist" aria-label={t('seasonPick')}>
-            {s.seasons.map((z, i) => (
-              <button key={z.id} type="button" role="tab" aria-selected={i === season} className={i === season ? 'pill on' : 'pill'} onClick={() => setSeason(i)}>
-                {t('seasonN').replace('{n}', z.number)}
-              </button>
-            ))}
-          </div>
-        )}
-        {group && group.title && <h2 className="series-season-title">{group.title}</h2>}
-        {list.length === 0 && <p className="soon">{t('seasonEmpty')}</p>}
-        <ol className="series-eps">
-          {list.map((e) => {
-            const pct = e.durationSeconds && e.positionMs ? Math.min(100, Math.round((e.positionMs / 1000 / e.durationSeconds) * 100)) : 0;
-            return (
-              <li key={e.id}>
-                <Link href={`/talks/${e.id}`} className="series-ep">
-                  <span className="series-num">{e.number}</span>
-                  <span className="series-thumb" style={e.posterUrl ? { backgroundImage: `url(${e.posterUrl})` } : undefined}>
-                    {(pct > 0 || e.completed) && <span className="progress"><span style={{ width: `${e.completed ? 100 : pct}%` }} /></span>}
-                  </span>
-                  <span className="series-ep-text">
-                    <b>{e.title}</b>
-                    {e.summary && <span className="meta">{e.summary}</span>}
-                  </span>
-                  <span className="series-ep-side">
-                    <span className="meta">{mins(e.durationSeconds, t)}</span>
-                    <span className={`badge-inline ${e.access}`}>{t(e.access)}</span>
-                    {e.completed && <span className="meta small">✓ {t('watched')}</span>}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-    </main>
+    <>
+      {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
+      <SeriesClient initial={s ? { title: s.title, speaker: s.speaker, description: s.description, episodes: s.episodes.map((e) => ({ id: e.id, title: e.title })) } : null} />
+    </>
   );
 }

@@ -11,7 +11,11 @@ async function handler(req, { params }) {
   }
   const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await req.text();
   try {
-    const res = await fetch(url, { method: req.method, headers, body, cache: 'no-store' });
+    // Les redirections ne sont pas suivies ici : elles sont renvoyées au navigateur (vignettes à adresse stable /seo/poster/…).
+    const res = await fetch(url, { method: req.method, headers, body, cache: 'no-store', redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+      return new Response(null, { status: res.status, headers: { location: res.headers.get('location'), 'cache-control': res.headers.get('cache-control') || 'no-store' } });
+    }
     // 204 / 205 / 304 : une réponse sans contenu ne doit pas porter de corps (sinon erreur -> 502, ex. favoris).
     const noBody = [204, 205, 304].includes(res.status);
     return new Response(noBody ? null : await res.text(), {

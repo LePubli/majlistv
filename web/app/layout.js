@@ -9,6 +9,7 @@ import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { DICT, DIR, getLocale } from '../lib/i18n';
+import { seoSite } from '../lib/seo';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -20,10 +21,22 @@ async function siteConfig() {
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
-export const generateMetadata = async () => ({
-  title: (await siteConfig()).appName,
-  icons: { icon: [{ url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' },
-});
+// Titre « Page | Nom du site », description et aperçu de partage par défaut ; chaque page peut les remplacer (conférences, séries).
+export const generateMetadata = async () => {
+  const site = await seoSite();
+  const name = site.appName || (await siteConfig()).appName;
+  let metadataBase;
+  try { metadataBase = new URL(site.baseUrl); } catch { /* adresse du site non valide : adresses relatives */ }
+  return {
+    metadataBase,
+    title: { default: name, template: `%s | ${name}` },
+    description: site.description || undefined,
+    applicationName: name,
+    openGraph: { type: 'website', siteName: name, title: name, description: site.description || undefined, images: ['/icon-512.png'] },
+    twitter: { card: 'summary', title: name, description: site.description || undefined },
+    icons: { icon: [{ url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' },
+  };
+};
 export const viewport = { themeColor: '#0B0906', width: 'device-width', initialScale: 1 };
 
 export default async function RootLayout({ children }) {

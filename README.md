@@ -713,3 +713,32 @@ Le webhook ne change pas : un abonnement PayPal produit les mêmes événements 
 **API** : `GET /billing/plans` renvoie toujours `plans`, plus `enabled` (paiement possible), `source` (`stripe` ou `settings`) et `methods` (`["card"]` ou `["card","paypal"]`). Pas de migration.
 **Tests** : `python3 api/tests/test_pricing.py` (17 vérifications ; API lancée avec `STRIPE_API_BASE=http://127.0.0.1:12111` et `python3 api/tests/mock_stripe.py`, qui sait aussi refuser PayPal). `test_compliance.py` repasse (paiement conforme, e-mails).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+## Étape 16.1 — Référencement Google : les bases
+
+**Ce que voit Google (et les réseaux sociaux)**
+- **Conférence** (`/talks/<id>`) : titre « Conférence — Intervenant | Mejliss TV », description (160 caractères), adresse canonique, aperçu de partage (Facebook, WhatsApp, X…) avec la vignette, et données structurées **VideoObject** (nom, description, durée ISO 8601, langue, date de mise en ligne, vignette, lien d'intégration YouTube/Vimeo, appartenance à la série). Une conférence **premium** est déclarée « contenu payant » (`isAccessibleForFree: false`), comme l'exige Google, pour ne pas être prise pour du camouflage ;
+- **Série** (`/series/<id>`) : titre, description, aperçu, données structurées **TVSeries** avec la liste des épisodes et des saisons ; la liste des épisodes est aussi dans le HTML (liens explorables) ;
+- **Accueil** : titre et description du site, réglable : Administration → Paramètres → Général → **Description du site** ;
+- **Le titre et la description sont dans le HTML dès le premier octet** (rendu serveur), puis la page complète prend le relais : pas de page blanche, et jamais d'invitation « premium » affichée par erreur à un abonné pendant le chargement ;
+- **Jamais indexés** : brouillons, conférences en conversion, conférences inconnues, et tous les espaces privés (compte, bibliothèque, connexion, inscription, studio, administration) : balise `noindex`.
+- **Aucune donnée premium n'est exposée** : ni transcription, ni lien de lecture ; seulement titre, description, intervenant, durée, vignette.
+
+**Fichiers générés automatiquement**
+- `https://<votre-site>/sitemap.xml` : accueil, séries, conférences et séries visibles, pages légales (5 000 conférences max) ;
+- `https://<votre-site>/robots.txt` : tout est ouvert sauf `/api/`, `/admin`, `/studio`, `/organizer`, `/account`, `/library`, `/welcome`, `/login`, `/register`, `/forgot`, `/reset`, et indique le sitemap.
+Ils utilisent l'**adresse publique du site** (Paramètres → Général → Adresse publique du site) : vérifiez qu'elle est exacte (https, sans barre finale).
+
+**Vignettes** : `https://<votre-site>/api/seo/poster/talks/<id>` (et `/series/<id>`) est une adresse stable qui redirige vers l'image (les liens de stockage expirent, pas celle-ci). Le proxy du site transmet désormais les redirections.
+
+**API** (publiques, sans compte) : `GET /seo/site`, `/seo/talks/:id`, `/seo/series/:id`, `/seo/poster/talks|series/:id`, `/seo/sitemap`. Pas de migration.
+
+**À faire une fois en production (≈ 10 min)**
+1. Google Search Console → **Ajouter une propriété** → « Préfixe d'URL » `https://majlisstv.le-publicitaire.fr` → vérification (balise HTML ou enregistrement DNS) ;
+2. Search Console → **Sitemaps** → ajouter `sitemap.xml` ;
+3. Après quelques jours : **Indexation → Vidéos** (pages détectées avec une vidéo) et **Améliorations** (erreurs éventuelles de données structurées) ;
+4. Test immédiat : https://search.google.com/test/rich-results avec l'adresse d'une conférence → doit détecter « Vidéo ».
+Note : l'indexation prend de quelques jours à quelques semaines ; Google n'indexe une vidéo que si elle est visible sur la page (lecteur intégré). Les conférences au lecteur Mejliss TV n'ont pas de lien de vidéo public (par protection du contenu) : elles sont référencées comme pages, pas comme vidéos.
+
+**Tests** : `python3 api/tests/test_seo.py` (23 vérifications, API) et `python3 api/tests/test_seo_web.py` (30, site : balises, JSON-LD, robots, sitemap, noindex ; site lancé sur 3077).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx. Vérifier ensuite : `curl -s https://majlisstv.le-publicitaire.fr/robots.txt` et `curl -s https://majlisstv.le-publicitaire.fr/sitemap.xml | head`.

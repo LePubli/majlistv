@@ -81,11 +81,9 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 
 ### Phase C — Faire venir et garder les abonnés
 
-**16. Référencement Google**
-- Une page publique par conférence, rendue côté serveur : titre, résumé, chapitres, extrait de la transcription, données structurées `VideoObject`, balises de partage.
-- Une page par intervenant : présentation, toutes ses conférences, bouton **Suivre**.
-- Sitemap automatique, URL lisibles (`/conferences/la-patience-dans-l-epreuve`), versions linguistiques (`hreflang`).
-- Partage d'un passage précis : lien vers la conférence à la minute choisie.
+**16. Référencement Google** — découpé en deux parties
+- ✅ **16.1 Bases techniques** : titre / description / aperçu de partage / adresse canonique pour chaque conférence et série, données structurées `VideoObject` (conférences) et `TVSeries` (séries), titre et description présents dans le HTML dès le premier octet, `sitemap.xml`, `robots.txt`, vignettes à adresse stable, espaces privés en `noindex`. Le partage « à la minute » existe déjà (étape 13).
+- 16.2 **Contenu et URL** : URL lisibles (`/conferences/la-patience-dans-l-epreuve`, anciennes adresses redirigées), chapitres et extrait de transcription affichés dans le HTML des conférences gratuites, **page par intervenant** (présentation, toutes ses conférences et séries), versions linguistiques (`hreflang`, demande une URL par langue : à décider avec vous).
 
 **17. Confort de lecture**
 - **Mode audio** : écoute écran éteint, comme un podcast.

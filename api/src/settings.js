@@ -23,6 +23,9 @@ export const FIELDS = [
   { key: 'app_name', group: 'general', type: 'text', label: 'Nom du site', env: 'APP_NAME', def: 'Mejliss TV' },
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',
     help: 'Utilisée pour le retour après paiement (ex. https://majlisstv.le-publicitaire.fr).' },
+  { key: 'seo_description', group: 'general', type: 'text', label: 'Description du site (Google et réseaux sociaux)', env: 'SEO_DESCRIPTION',
+    def: 'Conférences vidéo sur l\'islam, la religion et l\'histoire : regardez à la demande, avec sous-titres traduits et transcription.',
+    help: 'Phrase affichée sous le nom du site dans les résultats de recherche et lors d\'un partage de lien (150 caractères conseillés).' },
   { key: 'preview_seconds', group: 'general', type: 'number', label: "Aperçu gratuit des conférences premium (secondes)", env: 'PREVIEW_SECONDS', def: '120', min: 0, max: 1800 },
 
   { key: 'home_hero_mode', group: 'home', type: 'select', options: ['featured', 'custom', 'text'], label: 'Bannière du haut de page', env: 'HOME_HERO_MODE', def: 'featured',
