@@ -21,11 +21,18 @@ export default function TalkPage() {
   const [similar, setSimilar] = useState([]);
   const [tab, setTab] = useState('about');          // onglet affiché sous le lecteur
   const [ins, setIns] = useState({ summary: false, chapters: false }); // ce que contient l'analyse (résumé, chapitres)
+  const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
+  const [upNext, setUpNext] = useState(null);      // compte à rebours avant l'épisode suivant (secondes), null = pas affiché
   const [shared, setShared] = useState(null);       // retour visuel du bouton Partager (secondes du lien, -1 = lien simple)
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
-  const tParam = Number(useSearchParams().get('t'));
+  const qs = useSearchParams();
+  const tParam = Number(qs.get('t'));
+  const autoplay = qs.get('autoplay') === '1'; // arrivée depuis « épisode suivant » : la lecture démarre seule
   const jumpMs = Number.isFinite(tParam) && tParam > 0 ? Math.floor(tParam * 1000) : 0;
   const videoRef = useRef(null);
+
+  // Changement de conférence (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
+  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); startMs.current = 0; }, [id]);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
   useEffect(() => {
@@ -34,6 +41,9 @@ export default function TalkPage() {
       if (r.ok) { setFav(Boolean(r.data.favorite)); setResumeMs(r.data.resumeMs || 0); }
     });
   }, [id, call]);
+
+  // Série : numéro d'épisode, précédent / suivant et liste des épisodes (avancement du compte connecté).
+  useEffect(() => { call(`/talks/${id}/series`).then((r) => setCtx(r.ok ? r.data.series : null)); }, [id, call]);
 
   useEffect(() => { setSimilar([]); call(`/talks/${id}/similar`, {}, null).then((r) => r.ok && setSimilar(r.data)); }, [id, call]);
 
@@ -97,6 +107,31 @@ export default function TalkPage() {
     };
   }, [trackable, id, call]);
 
+  // Fin de lecture dans une série : compte à rebours de 8 s avant l'épisode suivant (annulable).
+  const next = ctx && ctx.next;
+  const canChain = Boolean(next && talk && !talk.locked && (talk.hlsPath || external));
+  useEffect(() => {
+    if (!canChain) return undefined;
+    const video = videoRef.current;
+    if (!video) return undefined;
+    const onEnd = () => setUpNext(8);
+    video.addEventListener('ended', onEnd);
+    return () => video.removeEventListener('ended', onEnd);
+  }, [canChain, id]);
+  useEffect(() => {
+    if (upNext === null || !next) return undefined;
+    if (upNext <= 0) { router.push(`/talks/${next.id}?autoplay=1`); return undefined; }
+    const timer = setTimeout(() => setUpNext((v) => (v === null ? null : v - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [upNext, next, router]);
+  // Liste des épisodes : l'épisode en cours est amené dans la zone visible de la colonne.
+  const sideRef = useRef(null);
+  useEffect(() => {
+    const box = sideRef.current;
+    const cur = box && box.querySelector('[aria-current="true"]');
+    if (box && cur) box.scrollTop = Math.max(0, cur.offsetTop - box.offsetTop - 60);
+  }, [ctx]);
+
   const fromStart = () => {
     startMs.current = 0;
     setResumeMs(0);
@@ -132,7 +167,7 @@ export default function TalkPage() {
     player = talk.fileUrl
       ? (
         <div className="player">
-          <VideoPlayer src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000}
+          <VideoPlayer src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
             previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} />
         </div>
       )
@@ -141,12 +176,12 @@ export default function TalkPage() {
     // YouTube / Vimeo : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
     player = (
       <div className="player">
-        <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000}
+        <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
           previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} tracks={tracks} videoRef={videoRef} t={t} />
       </div>
     );
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000}
+    player = <div className="player"><VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
       previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
@@ -232,6 +267,16 @@ export default function TalkPage() {
           <div className="player-wrap">
             {player}
             {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
+            {upNext !== null && next && (
+              <div className="upnext" role="status" aria-live="polite">
+                <p className="meta">{t('upNextIn').replace('{n}', Math.max(0, upNext))}</p>
+                <strong>{next.seasonNumber ? `${t('seasonN').replace('{n}', next.seasonNumber)} · ` : ''}{t('epN').replace('{n}', next.number)} — {next.title}</strong>
+                <div className="upnext-btns">
+                  <button type="button" className="btn" onClick={() => setUpNext(0)}>{t('playNow')}</button>
+                  <button type="button" className="btn ghost" onClick={() => setUpNext(null)}>{t('cancelBtn')}</button>
+                </div>
+              </div>
+            )}
             {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
           </div>
           {!previewEnded && lock}
@@ -244,13 +289,22 @@ export default function TalkPage() {
           )}
 
           <header className="talk-head">
-            {talk.category && <p className="eyebrow">{talk.category}</p>}
+            {ctx
+              ? (
+                <p className="eyebrow">
+                  <Link href={`/series/${ctx.id}`}>{ctx.title}</Link>
+                  {ctx.season ? ` · ${t('seasonN').replace('{n}', ctx.season.number)}` : ''}{ctx.number ? ` · ${t('epN').replace('{n}', ctx.number)}` : ''}
+                </p>
+              )
+              : talk.category && <p className="eyebrow">{talk.category}</p>}
             <h1>{talk.title}</h1>
             <p className="meta">{[talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             <div className="talk-actions">
               <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
                 <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
               </button>
+              {ctx && ctx.prev && <Link className="fav" href={`/talks/${ctx.prev.id}`}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {t('prevEp')}</Link>}
+              {ctx && ctx.next && <Link className="fav next" href={`/talks/${ctx.next.id}`}>{t('nextEp')} <span aria-hidden="true">{locale === 'ar' ? '←' : '→'}</span></Link>}
               <button type="button" className="fav" onClick={share}><span aria-hidden="true">↗</span> {t('shareBtn')}</button>
               <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
             </div>
@@ -286,24 +340,56 @@ export default function TalkPage() {
           </div>
         </div>
 
-        {similar.length > 0 && (
-          <aside className="watch-side" aria-labelledby="side-title">
-            <h2 id="side-title">{t('nextTitle')}</h2>
-            <ul className="side-list">
-              {similar.slice(0, 8).map((x) => {
-                const th = thumbOf(x);
-                return (
-                  <li key={x.id}>
-                    <Link href={`/talks/${x.id}`} className="side-item">
-                      <span className="side-thumb" style={th ? { backgroundImage: `url(${th})` } : undefined}>
-                        {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
-                      </span>
-                      <span className="side-info"><strong>{x.title}</strong><span className="meta">{[x.speaker, t(x.access)].filter(Boolean).join(' · ')}</span></span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        {(ctx || similar.length > 0) && (
+          <aside className="watch-side" aria-labelledby="side-title" ref={sideRef}>
+            {ctx && (
+              <section className="side-series">
+                <div className="side-head">
+                  <h2 id="side-title"><Link href={`/series/${ctx.id}`}>{ctx.title}</Link></h2>
+                  <span className="meta small">{t('epOf').replace('{n}', ctx.number || '').replace('{total}', ctx.total)}</span>
+                </div>
+                <ul className="side-list">
+                  {ctx.episodes.map((x, i) => {
+                    const pct = x.durationSeconds && x.positionMs ? Math.min(100, Math.round((x.positionMs / 1000 / x.durationSeconds) * 100)) : 0;
+                    const startsSeason = x.seasonNumber && (i === 0 || ctx.episodes[i - 1].seasonNumber !== x.seasonNumber);
+                    return (
+                      <li key={x.id}>
+                        {startsSeason && <p className="side-season">{t('seasonN').replace('{n}', x.seasonNumber)}</p>}
+                        <Link href={`/talks/${x.id}`} className={`side-item${x.current ? ' on' : ''}`} aria-current={x.current ? 'true' : undefined}>
+                          <span className="side-thumb" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined}>
+                            {(pct > 0 || x.completed) && <span className="progress"><span style={{ width: `${x.completed ? 100 : pct}%` }} /></span>}
+                          </span>
+                          <span className="side-info">
+                            <strong>{x.number}. {x.title}</strong>
+                            <span className="meta">{[x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : '', x.current ? t('nowPlaying') : x.completed ? `✓ ${t('watched')}` : '', x.access === 'premium' ? t('premium') : ''].filter(Boolean).join(' · ')}</span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+            {similar.length > 0 && (
+              <section className="side-similar">
+                <h2 id={ctx ? undefined : 'side-title'}>{ctx ? t('sameVein') : t('nextTitle')}</h2>
+                <ul className="side-list">
+                  {similar.slice(0, ctx ? 4 : 8).map((x) => {
+                    const th = thumbOf(x);
+                    return (
+                      <li key={x.id}>
+                        <Link href={`/talks/${x.id}`} className="side-item">
+                          <span className="side-thumb" style={th ? { backgroundImage: `url(${th})` } : undefined}>
+                            {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
+                          </span>
+                          <span className="side-info"><strong>{x.title}</strong><span className="meta">{[x.speaker, t(x.access)].filter(Boolean).join(' · ')}</span></span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
           </aside>
         )}
       </div>

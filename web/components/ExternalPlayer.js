@@ -55,7 +55,8 @@ function parseVtt(text) {
   return cues;
 }
 
-export default function ExternalPlayer({ source, videoId, title, startSeconds = 0, previewSeconds = 0, onPreviewEnd, tracks = [], videoRef, t }) {
+export default function ExternalPlayer({ source, videoId, title, startSeconds = 0, previewSeconds = 0, onPreviewEnd, tracks = [], videoRef, t, autoPlay = false }) {
+  const auto = useRef(autoPlay); // lancement automatique (épisode suivant d'une série)
   const [adapter] = useState(() => new MediaAdapter());
   if (videoRef) videoRef.current = adapter; // disponible avant les effets des composants parents
   const host = useRef(null);
@@ -86,7 +87,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
         player = new window.YT.Player(el, {
           videoId,
           host: 'https://www.youtube-nocookie.com',
-          playerVars: { start: Math.floor(start.current || 0), ...(limit ? { end: Math.ceil(limit) } : {}), rel: 0, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0 },
+          playerVars: { ...(auto.current ? { autoplay: 1 } : {}), start: Math.floor(start.current || 0), ...(limit ? { end: Math.ceil(limit) } : {}), rel: 0, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0 },
           events: {
             onReady: () => {
               adapter.d = player.getDuration() || NaN;
@@ -119,7 +120,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
       loadScript('https://player.vimeo.com/api/player.js', () => Boolean(window.Vimeo && window.Vimeo.Player)).then(() => {
         if (!alive) return;
         const frame = document.createElement('iframe');
-        frame.src = `https://player.vimeo.com/video/${encodeURIComponent(videoId)}?dnt=1&title=0&byline=0&portrait=0${start.current ? `#t=${Math.floor(start.current)}s` : ''}`;
+        frame.src = `https://player.vimeo.com/video/${encodeURIComponent(videoId)}?dnt=1&title=0&byline=0&portrait=0${auto.current ? '&autoplay=1' : ''}${start.current ? `#t=${Math.floor(start.current)}s` : ''}`;
         frame.allow = 'autoplay; fullscreen; picture-in-picture';
         frame.allowFullscreen = true;
         frame.title = title || 'Vimeo';

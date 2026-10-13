@@ -662,3 +662,15 @@ Changer l'accès d'une conférence dans sa propre fiche (Studio) fait de même u
 **API** : `GET /home` renvoie une rangée `{ key: 'series', series: [...] }` ; `GET /config` renvoie `hasSeries`. Pas de migration.
 **Tests** : `python3 api/tests/test_series.py` (54 vérifications).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
+
+## Étape 14.4 — Page conférence dans une série
+
+Quand une conférence fait partie d'une série, sa page change :
+- **Surtitre** : « Titre de la série · Saison 1 · Épisode 3 » (le titre est un lien vers la page série) ; sans série, la catégorie reste affichée ;
+- **Boutons « Précédent » et « Épisode suivant »** à côté de Favoris / Partager (flèches inversées en arabe) ;
+- **Colonne de droite** : la liste des épisodes de la série (groupés par saison, épisode en cours surligné et amené dans la zone visible, barre d'avancement, « ✓ Vu », badge Premium), puis un bloc réduit **« Dans la même veine »** (4 suggestions). Hors série, la colonne « À suivre » reste inchangée ;
+- **Fin de lecture** : un compte à rebours de **8 s** propose l'épisode suivant (« Lancer maintenant » / « Annuler »). La navigation ouvre `/talks/<id>?autoplay=1` : le lecteur (Mejliss TV, YouTube, Vimeo) démarre seul. Pas d'enchaînement pendant un aperçu premium ni après le dernier épisode ;
+- si l'épisode suivant est premium et que le compte n'y a pas droit, la page affiche l'invitation habituelle à s'abonner.
+
+**Fichiers** : `web/app/talks/[id]/page.js`, `web/components/VideoPlayer.js` et `ExternalPlayer.js` (prop `autoPlay`), `web/lib/i18n.js` (fr/en/ar), `web/app/globals.css` (section 14.4).
+**API / base** : aucun changement (utilise `GET /talks/:id/series`). **Déploiement** : web uniquement, puis `/root/apply-limits.sh` et vérification nginx.

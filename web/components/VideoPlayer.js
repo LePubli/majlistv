@@ -6,7 +6,8 @@ import { useEffect, useRef } from 'react';
 // - Fichier direct (MP4 / WebM, ex. archive.org) : lecture native par plages, sans téléchargement complet.
 // startSeconds : reprise de lecture. videoRef : ref du parent (transcription cliquable). tracks : [{ lang, label, src, isDefault }].
 // previewSeconds / onPreviewEnd : aperçu limité (fichiers directs ; pour le HLS, la limite est appliquée par le serveur).
-export default function VideoPlayer({ src, poster, tracks = [], videoRef, startSeconds = 0, previewSeconds = 0, onPreviewEnd }) {
+export default function VideoPlayer({ src, poster, tracks = [], videoRef, startSeconds = 0, previewSeconds = 0, onPreviewEnd, autoPlay = false }) {
+  const auto = useRef(autoPlay); // lancement automatique (épisode suivant d'une série) : lu au montage
   const start = useRef(startSeconds); // position de reprise : lue une seule fois, au montage
   const isHls = /\.m3u8(\?|$)/i.test(src || '');
   useEffect(() => {
@@ -15,6 +16,7 @@ export default function VideoPlayer({ src, poster, tracks = [], videoRef, startS
     if (!isHls) {
       const seek = () => { if (start.current > 0) video.currentTime = start.current; };
       video.addEventListener('loadedmetadata', seek, { once: true });
+      if (auto.current) video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
       video.src = src;
       return () => { video.removeEventListener('loadedmetadata', seek); video.removeAttribute('src'); video.load(); };
     }
@@ -26,6 +28,7 @@ export default function VideoPlayer({ src, poster, tracks = [], videoRef, startS
         hls = new Hls(start.current > 0 ? { startPosition: start.current } : {});
         hls.loadSource(src);
         hls.attachMedia(video);
+        if (auto.current) video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
       } else {
         video.src = src; // Safari / iOS : HLS natif
       }
