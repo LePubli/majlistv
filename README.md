@@ -674,3 +674,14 @@ Quand une conférence fait partie d'une série, sa page change :
 
 **Fichiers** : `web/app/talks/[id]/page.js`, `web/components/VideoPlayer.js` et `ExternalPlayer.js` (prop `autoPlay`), `web/lib/i18n.js` (fr/en/ar), `web/app/globals.css` (section 14.4).
 **API / base** : aucun changement (utilise `GET /talks/:id/series`). **Déploiement** : web uniquement, puis `/root/apply-limits.sh` et vérification nginx.
+
+## Étape 14.5 — Séries : recherche, bibliothèque, « Continuer à regarder »
+
+**Pour le visiteur**
+- **Recherche** : une rangée **« Séries »** apparaît au-dessus des résultats quand le titre, l'intervenant ou la présentation d'une série contient le mot cherché (6 séries max, première page seulement). Chaque conférence trouvée qui est un épisode affiche en tête « TITRE DE LA SÉRIE · SAISON 1 · ÉPISODE 3 » (lien vers la série) ;
+- **Continuer à regarder** (accueil et bibliothèque) : les épisodes en cours montrent « Titre de la série · S1 É3 » à la place de l'intervenant. Quand un épisode est **terminé**, l'**épisode suivant** est proposé avec le badge « Épisode suivant » (au passage à la saison suivante aussi) — sauf si un autre épisode de la série est déjà en cours, ou s'il n'est pas publié. Série terminée : plus rien n'est proposé ;
+- **Ma bibliothèque** : nouvelle section **« Mes séries »** (séries commencées, la plus récente d'abord) avec barre d'avancement et « 1 / 4 épisodes vus ».
+
+**API** : `GET /search` renvoie en plus `series` (liste) et `series` sur chaque résultat (`{id, title, seasonNumber, number}` ou `null`) ; `GET /me/continue` ajoute `series` et `nextUp` ; nouvelle route `GET /me/series` (connexion requise). La recherche de séries est en SQL (même avec Meilisearch, qui reste réservé aux conférences). Pas de migration.
+**Tests** : `python3 api/tests/test_series_discovery.py` (26 vérifications). `test_home.py` ne suppose plus que toutes les rangées contiennent des conférences.
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

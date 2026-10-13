@@ -55,7 +55,10 @@ export default function Home() {
       </div>
       {res ? (
         <section className="results">
-          <p className="meta">{res.total ? t('nResults').replace('{n}', res.total) : t('noResults')}</p>
+          <p className="meta">{res.total || (res.series || []).length ? t('nResults').replace('{n}', res.total) : t('noResults')}</p>
+          {(res.series || []).length > 0 && (
+            <Row id="row-found-series" title={t('seriesNav')} talks={res.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
+          )}
           {res.hits.map((h) => <SearchHit key={h.id} hit={h} t={t} markers={res.markers} />)}
         </section>
       ) : cat ? (

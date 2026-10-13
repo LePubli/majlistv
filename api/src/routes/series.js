@@ -40,32 +40,105 @@ export async function syncAccess(db, seriesId) {
       WHERE e.talk_id = t.id AND e.series_id = $1 AND t.access <> COALESCE(e.access_override, s.access)`, [seriesId]);
 }
 
-// Séries publiées avec au moins un épisode en ligne (utilisé par GET /series et par l'accueil).
-export async function listSeries({ limit = 40, category = null } = {}) {
+// Séries publiées avec au moins un épisode en ligne (utilisé par GET /series, l'accueil, la recherche et la bibliothèque).
+//  - q : mot-clé (titre, intervenant, présentation) ; startedBy : ne garde que les séries que ce compte a commencées,
+//    triées de la plus récemment regardée, avec `watched` (épisodes terminés) pour la barre d'avancement.
+export async function listSeries({ limit = 40, category = null, q = null, startedBy = null } = {}) {
+  const vals = [limit];
+  const where = ['s.published'];
+  if (category) { vals.push(category); where.push(`s.category_id = $${vals.length}`); }
+  if (q) { vals.push(`%${String(q).replace(/[%_\\]/g, '\\$&')}%`); where.push(`(s.title ILIKE $${vals.length} OR s.speaker ILIKE $${vals.length} OR s.description ILIKE $${vals.length})`); }
+  let join = '';
+  let extra = '';
+  let having = '';
+  let order = 'max(COALESCE(t.publish_at, t.created_at)) DESC';
+  if (startedBy) {
+    vals.push(startedBy);
+    join = `LEFT JOIN watch_progress p ON p.talk_id = t.id AND p.user_id = $${vals.length}`;
+    extra = ', (count(p.talk_id) FILTER (WHERE p.completed))::int AS watched, max(p.updated_at) AS last_watched';
+    having = 'HAVING count(p.talk_id) > 0';
+    order = 'max(p.updated_at) DESC';
+  }
   const { rows } = await pool.query(
     `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key,
             count(t.id)::int AS "episodeCount",
             (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount",
             bool_and(t.access = 'free') AS "allFree", bool_and(t.access = 'premium') AS "allPremium",
             (array_agg(t.poster_key ORDER BY e.position) FILTER (WHERE t.poster_key IS NOT NULL))[1] AS first_poster,
-            (array_agg(t.external_thumb ORDER BY e.position) FILTER (WHERE t.external_thumb IS NOT NULL))[1] AS first_thumb
+            (array_agg(t.external_thumb ORDER BY e.position) FILTER (WHERE t.external_thumb IS NOT NULL))[1] AS first_thumb${extra}
        FROM series s
        JOIN series_episodes e ON e.series_id = s.id
        JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
+       ${join}
        LEFT JOIN categories c ON c.id = s.category_id
-      WHERE s.published ${category ? 'AND s.category_id = $2' : ''}
-      GROUP BY s.id, c.name ORDER BY max(COALESCE(t.publish_at, t.created_at)) DESC LIMIT $1`, category ? [limit, category] : [limit]);
+      WHERE ${where.join(' AND ')}
+      GROUP BY s.id, c.name ${having} ORDER BY ${order} LIMIT $1`, vals);
   const out = [];
   for (const r of rows) {
     const poster = r.poster_key || r.first_poster;
-    out.push({
+    const item = {
       id: r.id, title: r.title, speaker: r.speaker, summary: clip(r.description, 170), hasSeasons: r.hasSeasons, categoryId: r.categoryId, category: r.category,
       episodeCount: r.episodeCount, seasonCount: r.hasSeasons ? r.seasonCount : 0,
       access: r.allFree ? 'free' : r.allPremium ? 'premium' : 'mixed',
       posterUrl: poster ? await presignGet(poster) : (r.first_thumb || null),
-    });
+    };
+    if (startedBy) item.watched = r.watched;
+    out.push(item);
   }
   return out;
+}
+
+// Épisodes (en ligne) des séries publiées qui contiennent l'une de ces conférences, rangés dans l'ordre de lecture.
+async function seriesOrder(talkIds) {
+  const { rows } = await pool.query(
+    `SELECT e.series_id, s.title, s.has_seasons, e.talk_id, e.season_id,
+            COALESCE((SELECT z.rn FROM (SELECT id, row_number() OVER (ORDER BY position, id) AS rn FROM seasons WHERE series_id = e.series_id) z WHERE z.id = e.season_id), 0)::int AS season_number
+       FROM series_episodes e JOIN series s ON s.id = e.series_id AND s.published
+       JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
+      WHERE e.series_id IN (SELECT series_id FROM series_episodes WHERE talk_id = ANY($1))
+      ORDER BY e.series_id, CASE WHEN s.has_seasons THEN COALESCE((SELECT z.rn FROM (SELECT id, row_number() OVER (ORDER BY position, id) AS rn FROM seasons WHERE series_id = e.series_id) z WHERE z.id = e.season_id), 0) ELSE 0 END, e.position`, [talkIds]);
+  const bySeries = new Map();
+  for (const r of rows) { if (!bySeries.has(r.series_id)) bySeries.set(r.series_id, []); bySeries.get(r.series_id).push(r); }
+  return bySeries;
+}
+
+// Pour des conférences : { id série, titre, saison, numéro } de leur place dans une série (absent si hors série).
+export async function episodeLabels(talkIds) {
+  const out = new Map();
+  if (!talkIds.length) return out;
+  for (const list of (await seriesOrder(talkIds)).values()) {
+    const counters = new Map();
+    for (const r of list) {
+      const key = r.season_number;
+      const n = (counters.get(key) || 0) + 1;
+      counters.set(key, n);
+      out.set(r.talk_id, { id: r.series_id, title: r.title, seasonNumber: r.has_seasons ? r.season_number : null, number: n });
+    }
+  }
+  return out;
+}
+
+// « Épisode suivant » pour « Continuer à regarder » : dans chaque série commencée, sans épisode en cours de lecture,
+// l'épisode qui suit le dernier terminé (s'il n'est pas déjà commencé). Triés du plus récemment regardé.
+export async function seriesNextUp(userId, minResumeMs = 5000) {
+  const { rows } = await pool.query(
+    `SELECT e.series_id, e.talk_id, p.position_ms, p.completed, p.updated_at
+       FROM series_episodes e JOIN series s ON s.id = e.series_id AND s.published
+       JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
+       LEFT JOIN watch_progress p ON p.talk_id = e.talk_id AND p.user_id = $1
+      WHERE e.series_id IN (SELECT e2.series_id FROM series_episodes e2 JOIN watch_progress p2 ON p2.talk_id = e2.talk_id AND p2.user_id = $1)
+      ORDER BY e.series_id, COALESCE((SELECT z.rn FROM (SELECT id, row_number() OVER (ORDER BY position, id) AS rn FROM seasons WHERE series_id = e.series_id) z WHERE z.id = e.season_id), 0), e.position`, [userId]);
+  const bySeries = new Map();
+  for (const r of rows) { if (!bySeries.has(r.series_id)) bySeries.set(r.series_id, []); bySeries.get(r.series_id).push(r); }
+  const out = [];
+  for (const list of bySeries.values()) {
+    if (list.some((r) => r.position_ms >= minResumeMs && !r.completed)) continue; // un épisode est déjà en cours : il apparaît seul
+    let last = -1;
+    list.forEach((r, i) => { if (r.completed && (last < 0 || r.updated_at > list[last].updated_at)) last = i; });
+    const nxt = last >= 0 ? list[last + 1] : null;
+    if (nxt && !nxt.completed && !(nxt.position_ms >= minResumeMs)) out.push({ talkId: nxt.talk_id, watchedAt: list[last].updated_at });
+  }
+  return out.sort((x, y) => y.watchedAt - x.watchedAt);
 }
 
 export default async function seriesRoutes(app) {
@@ -130,6 +203,9 @@ export default async function seriesRoutes(app) {
     const q = z.object({ category: z.coerce.number().int().optional(), limit: z.coerce.number().int().min(1).max(100).default(40) }).parse(req.query);
     return listSeries({ limit: q.limit, category: q.category || null });
   });
+
+  // Séries que le compte a commencées (bibliothèque), la plus récemment regardée d'abord.
+  app.get('/me/series', { preHandler: app.authenticate }, async (req) => listSeries({ limit: 40, startedBy: req.user.sub }));
 
   app.get('/series/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);

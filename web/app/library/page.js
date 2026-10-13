@@ -5,17 +5,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import TalkCard from '../../components/TalkCard';
+import SeriesCard from '../../components/SeriesCard';
 
 export default function Library() {
   const { user, ready, t, call } = useApp();
   const router = useRouter();
   const [cont, setCont] = useState(null);
   const [favs, setFavs] = useState(null);
+  const [mine, setMine] = useState(null);
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => {
     call('/me/continue').then((r) => setCont(r.ok ? r.data : []));
     call('/me/favorites').then((r) => setFavs(r.ok ? r.data : []));
+    call('/me/series').then((r) => setMine(r.ok ? r.data : []));
   }, [call]);
   useEffect(() => { if (user) load(); }, [user, load]);
   if (!user) return null;
@@ -33,6 +36,12 @@ export default function Library() {
           <TalkCard key={x.id} talk={x} t={t} progress={x.durationMs ? x.positionMs / x.durationMs : 0} onRemove={() => dropProgress(x.id)} removeLabel={t('removeFromList')} />
         ))}
       </div>
+      {mine && mine.length > 0 && (
+        <>
+          <h2>{t('mySeries')}</h2>
+          <div className="grid">{mine.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
+        </>
+      )}
       <h2>{t('myFavorites')}</h2>
       {favs && favs.length === 0 && <p className="meta">{t('noFavorites')} <Link href="/">{t('browseCatalog')}</Link></p>}
       <div className="grid">

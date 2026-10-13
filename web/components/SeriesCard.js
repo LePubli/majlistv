@@ -13,9 +13,10 @@ export default function SeriesCard({ series, t }) {
         <div className="thumb" style={series.posterUrl ? { backgroundImage: `url(${series.posterUrl})` } : undefined}>
           <span className={`badge ${series.access === 'premium' ? 'premium' : ''}`}>{access}</span>
           <span className="dur">{count}</span>
+          {series.watched > 0 && <span className="progress"><span style={{ width: `${Math.min(100, Math.round((series.watched / series.episodeCount) * 100))}%` }} /></span>}
         </div>
         <h3>{series.title}</h3>
-        <p>{[t('seriesTag'), series.speaker].filter(Boolean).join(' · ')}</p>
+        <p>{series.watched !== undefined ? t('watchedOf').replace('{n}', series.watched).replace('{total}', series.episodeCount) : [t('seriesTag'), series.speaker].filter(Boolean).join(' · ')}</p>
       </Link>
     </div>
   );

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
+import { episodeLabels, seriesNextUp } from './series.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const progressSchema = z.object({
@@ -83,6 +84,7 @@ export default async function libraryRoutes(app) {
   });
 
   // "Continuer à regarder" : conférences commencées et non terminées, la plus récente d'abord.
+  // Les épisodes de série portent leur place (`series`), et l'épisode qui suit un épisode terminé est proposé (`nextUp`).
   app.get('/me/continue', auth, async (req) => {
     const { rows } = await pool.query(
       `SELECT ${CARD}, p.position_ms AS "positionMs", p.duration_ms AS "durationMs", p.updated_at AS "watchedAt"
@@ -91,6 +93,19 @@ export default async function libraryRoutes(app) {
        ORDER BY p.updated_at DESC LIMIT 12`,
       [req.user.sub, MIN_RESUME_MS]
     );
+    const nexts = await seriesNextUp(req.user.sub, MIN_RESUME_MS);
+    if (nexts.length) {
+      const have = new Set(rows.map((r) => r.id));
+      const ids = nexts.map((n) => n.talkId).filter((id) => !have.has(id));
+      const more = ids.length ? (await pool.query(
+        `SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ANY($1)`, [ids])).rows : [];
+      const when = new Map(nexts.map((n) => [n.talkId, n.watchedAt]));
+      for (const m of more) rows.push({ ...m, positionMs: 0, durationMs: 0, watchedAt: when.get(m.id), nextUp: true });
+      rows.sort((x, y) => new Date(y.watchedAt) - new Date(x.watchedAt));
+      rows.length = Math.min(rows.length, 12);
+    }
+    const labels = await episodeLabels(rows.map((r) => r.id));
+    for (const r of rows) r.series = labels.get(r.id) || null;
     return cards(rows);
   });
 }

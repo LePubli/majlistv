@@ -34,6 +34,12 @@ export default function SearchHit({ hit, t, markers }) {
         <span className={`badge ${hit.access}`}>{t(hit.access)}</span>
       </Link>
       <div className="hit-body">
+        {hit.series && (
+          <p className="hit-series">
+            <Link href={`/series/${hit.series.id}`}>{hit.series.title}</Link>
+            {` · ${[hit.series.seasonNumber ? t('seasonN').replace('{n}', hit.series.seasonNumber) : '', t('epN').replace('{n}', hit.series.number)].filter(Boolean).join(' · ')}`}
+          </p>
+        )}
         <h3><Link href={`/talks/${hit.id}`}>{hit.title}</Link></h3>
         <p className="meta">{hit.speaker}{hit.category ? ` · ${hit.category}` : ''}{hit.durationSeconds ? ` · ${Math.max(1, Math.round(hit.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
         {hit.snippet && <p className="hit-snippet"><Marked text={hit.snippet} markers={markers} /></p>}

@@ -132,13 +132,19 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
   useEffect(() => close, [close]);
 
   const thumb = thumbOf(talk);
-  const sub = [show.speaker && talk.speaker, show.category && talk.category].filter(Boolean).join(' · ');
+  // Épisode de série : « Titre de la série · S1 É3 » à la place de l'intervenant ; « épisode suivant » à la place du badge d'accès.
+  const place = talk.series ? [talk.series.seasonNumber ? t('sShort').replace('{n}', talk.series.seasonNumber) : '', t('eShort').replace('{n}', talk.series.number)].filter(Boolean).join(' ') : '';
+  const sub = talk.series
+    ? [talk.series.title, place].join(' · ')
+    : [show.speaker && talk.speaker, show.category && talk.category].filter(Boolean).join(' · ');
   const mins = minutesOf(talk, t);
   return (
     <div className="talk-wrap" ref={wrap} onMouseEnter={enter} onMouseLeave={leave}>
       <Link href={`/talks/${talk.id}`} className="talk">
         <div className="thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
-          {show.access && <span className={`badge ${talk.access}`}>{t(talk.access)}</span>}
+          {talk.nextUp
+            ? <span className="badge next">{t('nextEp')}</span>
+            : show.access && <span className={`badge ${talk.access}`}>{t(talk.access)}</span>}
           {show.duration && mins && <span className="dur">{mins}</span>}
           {progress > 0 && show.progress && <span className="progress"><span style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }} /></span>}
         </div>

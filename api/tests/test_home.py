@@ -47,7 +47,7 @@ ok(h["hero"]["mode"] == "text", "sans conférence mise en avant : bannière text
 put({"home_row_new": "false"}); ok(not any(r["key"] == "new" for r in home()["rows"]), "rangée Nouveautés désactivable")
 put({"home_rows_categories": "false"}); ok(not any(r["key"].startswith("cat:") for r in home()["rows"]), "rangées par catégorie désactivables")
 put({"home_row_new": "true", "home_rows_categories": "true", "home_row_size": "4"})
-ok(all(len(r["talks"]) <= 4 for r in home()["rows"]), "taille des rangées respectée")
+ok(all(len(r.get("talks", [])) <= 4 for r in home()["rows"]), "taille des rangées respectée")
 ok(put({"home_row_size": "2"}).status_code == 400, "taille minimale refusée")
 put({"home_row_size": "16"})
 
