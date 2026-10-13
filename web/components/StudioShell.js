@@ -43,10 +43,11 @@ export default function StudioShell({ children }) {
     }
     if (href === '/studio/series') return path.startsWith('/studio/series');
     if (href === '/studio/quiz') return path.startsWith('/studio/quiz');
-    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz')) : path === href;
+    if (href === '/studio/books') return path.startsWith('/studio/books');
+    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/books')) : path === href;
   };
   const groups = [
-    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check]] },
+    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/books', t('bkNav'), ICONS.doc]] },
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
       ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],

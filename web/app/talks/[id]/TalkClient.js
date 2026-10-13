@@ -6,6 +6,7 @@ import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
 import ExternalPlayer from '../../../components/ExternalPlayer';
 import Transcript, { langName } from '../../../components/Transcript';
+import BooksBlock from '../../../components/BooksBlock';
 import Insights from '../../../components/Insights';
 import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
@@ -480,6 +481,7 @@ export default function TalkPage({ initial = null }) {
           </aside>
         )}
       </div>
+      <BooksBlock kind="talks" id={id} />
     </main>
   );
 }

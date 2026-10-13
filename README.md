@@ -854,3 +854,30 @@ Tout arrive en **brouillon** ; seuls les rappels **validés** sont diffusés. Un
 **Tests** : `python3 api/tests/test_revision.py` (calendrier, rappels, préférences) ; depuis `api/` : `set -a; . /tmp/claude-0/api.env; set +a; node tests/test_revision_mail.mjs` (e-mail quotidien, base de test, SMTP factice).
 **Déploiement** : api puis web (translator inchangé), `/root/apply-limits.sh`, vérification nginx.
 **Debug** : pas d'e-mail du matin → SMTP configuré ? réglage activé ? heure atteinte (heure de Paris) ? membre avec une révision à échéance et case non décochée ? Voir `email_outbox` (statut, dernière erreur).
+
+## Étape 25 — Ouvrages (livres et documents liés aux conférences)
+
+**Ce que c'est** : une fiche (titre, auteur, présentation, couverture), des **éditions par langue** (un **PDF** et/ou des **liens boutique**), un rattachement à des **conférences** et des **séries**.
+
+**Studio → Ouvrages** (organisateurs ; l'admin voit tout)
+1. *Nouvel ouvrage* (titre, auteur) puis, dans la fiche : présentation, couverture, publication.
+2. **PDF par langue** : choisir la langue et le fichier, cocher **« Je confirme avoir le droit de diffuser ce PDF »** (obligatoire), envoyer. Le PDF part **directement du navigateur vers le stockage** (pas de limite Nginx), puis l'API vérifie que c'est un vrai PDF non protégé par mot de passe, compte les pages et enregistre. Taille maximale réglable (60 Mo). « Retirer la diffusion » coupe immédiatement le PDF sans le supprimer (droits remis en cause) ; « Rétablir » le remet.
+3. **Liens boutique** : jusqu'à 10 par langue (librairie, revendeur, **lien d'affiliation** — à créer par toi chez chaque programme). Adresses http(s) seulement ; affichés avec `rel="sponsored nofollow noopener"` et la mention « certains liens sont des liens d'affiliation ».
+4. **Rattachement** : cocher les séries et conférences concernées (un organisateur ne peut lier que les siennes). Un bloc **« L'ouvrage étudié »** apparaît alors sur leur page ; une conférence d'une série liée l'affiche aussi.
+5. Publier : il faut au moins un PDF (droits confirmés) ou un lien boutique. Un ouvrage qui n'a plus aucune édition repasse en brouillon.
+
+**Côté public** : menu **Ouvrages** (affiché dès qu'un ouvrage est publié), page `/books` et fiche `/books/<id>` (balises de partage, adresse canonique, données structurées `Book`, dans `sitemap.xml`).
+
+**Téléchargement du PDF — réservé à Mejliss Apprentissage** (admins inclus) :
+- le membre demande un **lien personnel à durée limitée** (10 min, réglable), signé ; il expire et ne peut pas être modifié ;
+- à chaque téléchargement, le PDF est **fabriqué à la demande avec un filigrane** : e-mail du membre et date en pied de page de chaque page, en diagonale discrète, et dans les métadonnées. Rien n'est stocké, le fichier d'origine n'est jamais exposé ;
+- **10 téléchargements par membre et par jour** (réglable) ; chaque téléchargement est journalisé (`book_downloads`) ;
+- sans abonnement Apprentissage : message d'invitation (connexion / offre), aucun lien délivré.
+
+**Réglages** (Admin → Paramètres → Ouvrages) : taille maximale d'un PDF, durée du lien, téléchargements par jour.
+**API** : public `GET /books`, `GET /books/:id`, `GET /talks/:id/books`, `GET /series/:id/books`, `POST /books/:id/download-link`, `GET /books/download?t=…` ; Studio `GET|POST /studio/books`, `GET|PATCH|DELETE /studio/books/:id`, `POST …/cover`, `POST …/pdf/:lang/upload-url`, `POST …/pdf/:lang/confirm`, `PATCH|DELETE …/pdf/:lang`, `POST|DELETE …/links`, `GET /studio/books-targets` ; SEO `GET /seo/books/:id`, `/seo/poster/books/:id`.
+**Migration** : `027_books.sql` (`books`, `book_files`, `book_links`, `book_talks`, `book_series`, `book_downloads`). Nouvelle dépendance API : `pdf-lib` (installée par le build Docker).
+**Proxy web** : `/api/*` relaie maintenant le corps en octets et conserve `Content-Disposition` (sinon le PDF arrivait corrompu).
+**Test** : `python3 api/tests/test_books.py` (≈ 70 vérifications, nécessite le stockage S3 de test).
+**Déploiement** : api puis web (translator inchangé), `/root/apply-limits.sh`, vérification nginx. Le bucket doit autoriser `PUT` depuis le site : l'API applique le CORS au démarrage (comme pour l'envoi des vidéos).
+**À faire par toi** : programmes d'affiliation (liens à coller dans « Liens boutique »), et ne téléverser que des PDF dont tu as les droits.

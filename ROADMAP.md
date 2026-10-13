@@ -134,7 +134,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - **Bibliothèque de rappels** dans le Studio : soit un passage extrait mot pour mot d'une de vos conférences (avec le lien vers la minute), soit une citation saisie à la main (auteur, source, recueil, numéro, degré d'authenticité, langue) et marquée « validée ». **Rien de généré par l'IA.**
   - Carte « Rappel du jour » sur l'accueil, e-mail quotidien avec désinscription en un clic, fréquence réglable.
 
-**25. Ouvrages et boutique**
+**25. Ouvrages et boutique** ✅ (filigrane : e-mail + date en pied de page, diagonale et métadonnées)
 - Fiche ouvrage : titre, auteur, présentation, couverture, langues disponibles.
 - Pour chaque langue : un fichier **PDF** à télécharger **ou** un ou plusieurs **liens boutique** (selon le pays ou le revendeur, liens d'affiliation à mettre en place par Epok).
 - Case **« droits confirmés »** obligatoire avant de diffuser un PDF (même principe que pour les vidéos YouTube).

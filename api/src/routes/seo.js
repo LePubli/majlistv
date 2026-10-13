@@ -91,6 +91,26 @@ export default async function seoRoutes(app) {
     return reply.redirect(url, 302);
   });
 
+
+  // Ouvrages : fiche publique (jamais le fichier PDF), couverture à adresse stable.
+  const HAS_EDITION = `(EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id))`;
+  app.get('/seo/books/:id', async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const b = (await pool.query(`SELECT b.id, b.title, b.author, b.description, b.updated_at AS "updatedAt", b.cover_key FROM books b WHERE b.id = $1 AND b.published AND ${HAS_EDITION}`, [id])).rows[0];
+    if (!b) return reply.code(404).send({ error: 'Ouvrage introuvable' });
+    const langs = (await pool.query(
+      `SELECT DISTINCT lang FROM (SELECT lang FROM book_files WHERE book_id = $1 AND rights_confirmed UNION SELECT lang FROM book_links WHERE book_id = $1) x ORDER BY lang`, [id])).rows.map((r) => r.lang);
+    reply.header('cache-control', 'public, max-age=60');
+    return { id: b.id, title: b.title, author: b.author, description: clip(b.description, 5000), updatedAt: b.updatedAt, langs, posterPath: b.cover_key ? `/api/seo/poster/books/${id}` : null, site: await siteInfo() };
+  });
+  app.get('/seo/poster/books/:id', async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const b = (await pool.query('SELECT cover_key FROM books WHERE id = $1 AND published', [id])).rows[0];
+    if (!b?.cover_key) return reply.code(404).send({ error: 'Pas de couverture' });
+    reply.header('cache-control', 'public, max-age=300');
+    return reply.redirect(await presignGet(b.cover_key), 302);
+  });
+
   // Plan du site : conférences et séries visibles (jusqu'à 5 000 de chaque).
   app.get('/seo/sitemap', async (req, reply) => {
     const talks = (await pool.query(
@@ -100,6 +120,7 @@ export default async function seoRoutes(app) {
     const lastmods = (await pool.query('SELECT id, updated_at FROM series WHERE id = ANY($1)', [series])).rows;
     const when = new Map(lastmods.map((r) => [r.id, r.updated_at]));
     reply.header('cache-control', 'public, max-age=300');
-    return { ...(await siteInfo()), talks, series: series.map((id) => ({ id, lastmod: when.get(id) })) };
+    const books = (await pool.query(`SELECT b.id, b.updated_at AS lastmod FROM books b WHERE b.published AND ${HAS_EDITION} ORDER BY b.updated_at DESC LIMIT 2000`)).rows;
+    return { ...(await siteInfo()), talks, series: series.map((id) => ({ id, lastmod: when.get(id) })), books };
   });
 }

@@ -18,10 +18,10 @@ async function handler(req, { params }) {
     }
     // 204 / 205 / 304 : une réponse sans contenu ne doit pas porter de corps (sinon erreur -> 502, ex. favoris).
     const noBody = [204, 205, 304].includes(res.status);
-    return new Response(noBody ? null : await res.text(), {
-      status: res.status,
-      headers: { 'content-type': res.headers.get('content-type') || 'application/json' },
-    });
+    // Corps relayé en octets (PDF des ouvrages) ; le nom de fichier du téléchargement et l'interdiction de cache sont conservés.
+    const out = { 'content-type': res.headers.get('content-type') || 'application/json' };
+    for (const h of ['content-disposition', 'cache-control']) if (res.headers.get(h)) out[h] = res.headers.get(h);
+    return new Response(noBody ? null : await res.arrayBuffer(), { status: res.status, headers: out });
   } catch {
     return Response.json({ error: 'API indisponible' }, { status: 502 });
   }

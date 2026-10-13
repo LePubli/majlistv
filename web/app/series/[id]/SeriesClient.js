@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import { levelLabel } from '../../../lib/levels';
+import BooksBlock from '../../../components/BooksBlock';
 
 const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
 
@@ -109,6 +110,7 @@ export default function SeriesPage({ initial = null }) {
           })}
         </ol>
       </div>
+      <BooksBlock kind="series" id={id} />
     </main>
   );
 }

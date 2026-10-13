@@ -29,6 +29,7 @@ import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
+import bookRoutes from './routes/books.js';
 import { startRevisionMailer } from './revisionMailer.js';
 import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
@@ -89,8 +90,9 @@ app.get('/config', async () => {
   for (const k of ['access', 'duration', 'speaker', 'category', 'language', 'description', 'favorite', 'progress']) show[k] = await on(`card_show_${k}`);
   // Le menu « Séries » n'apparaît que s'il y a au moins une série à montrer.
   const hasSeries = (await listSeries({ limit: 1 })).length > 0;
+  const hasBooks = (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
   return {
-    hasSeries, appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    hasSeries, hasBooks, appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };
@@ -113,6 +115,7 @@ await app.register(studioContentRoutes);
 await app.register(quizRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
+await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
 await app.register(seriesRoutes);
