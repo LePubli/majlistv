@@ -1135,3 +1135,17 @@ nginx -t && systemctl reload nginx
 **Suivi / debug** : `select audio_status, count(*) from talks where source='upload' group by 1;` (`pending` = en attente, `ready`, `failed` après 3 essais, `none`). Pour relancer un échec : `update talks set audio_status='pending', audio_attempts=0 where audio_status='failed';`. Logs : `docker logs dockpanel-git-majlistv-worker`.
 
 **Tests** : `node worker/tests/test_audio.mjs /tmp/audio_out` (ffmpeg), puis `python3 api/tests/test_audio.py` (API + S3).
+
+## Étape 17b — Marque-pages et notes personnelles
+
+**Ce que ça fait** (réservé aux utilisateurs connectés, gratuit, strictement privé)
+- Sur une conférence : bouton **🔖 Marque-page** sous le lecteur (ajoute un repère à l'instant exact) et onglet **Mes notes** : écrire une note liée à l'instant courant, la modifier, la supprimer, cliquer sur l'heure pour y retourner.
+- Dans **Ma bibliothèque** : section « Mes marque-pages et notes », groupée par conférence ; chaque heure ouvre la conférence **au bon passage** (`?t=`), suppression possible sur place.
+- Un marque-page posé deux fois au même instant (±1,5 s) n'est pas dupliqué. Limites : 2 000 caractères par note, 300 notes par conférence. Supprimer une conférence supprime les notes associées.
+- Fonctionne pour les vidéos envoyées, YouTube, Vimeo et archive.org. Non disponible dans l'espace Kids (jeton enfant refusé par l'API).
+
+**Déploiement** (migration 036 automatique) : redéployer `majlistv-api`, puis `majlistv-web` (le worker n'a pas changé), puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+
+**Debug** : `select count(*) from talk_notes;` ; `select user_id, count(*) from talk_notes group by 1 order by 2 desc limit 5;`.
+
+**Tests** : `python3 api/tests/test_notes.py` (isolation entre utilisateurs, limites, cascade).

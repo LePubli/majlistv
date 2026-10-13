@@ -11,6 +11,7 @@ import Insights from '../../../components/Insights';
 import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
 import { levelLabel } from '../../../lib/levels';
+import NotesPanel from '../../../components/NotesPanel';
 import Quiz from '../../../components/Quiz';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -39,6 +40,8 @@ export default function TalkPage({ initial = null, talkId = null }) {
   }, []);
   const pickRate = (r) => { setRate(r); try { localStorage.setItem('mj-speed', String(r)); } catch { /* ignoré */ } };
   const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
+  const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette conférence
+  const [bmFlash, setBmFlash] = useState(false);
   const [tab, setTab] = useState('about');          // onglet affiché sous le lecteur
   const [ins, setIns] = useState({ summary: false, chapters: false }); // ce que contient l'analyse (résumé, chapitres)
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
@@ -76,6 +79,23 @@ export default function TalkPage({ initial = null, talkId = null }) {
   // Arrivée avec ?t= (clic sur un résultat de recherche) : on ouvre la transcription, là où se trouve le passage.
   const hasTracks = Boolean(talk && talk.tracks && talk.tracks.length);
   useEffect(() => { setTab('about'); }, [id]);
+  useEffect(() => {
+    setNotes([]);
+    if (user) call(`/talks/${id}/notes`).then((r) => r.ok && setNotes(r.data));
+  }, [id, user, call]);
+  const curSec = () => Math.max(0, Math.floor(videoRef.current?.currentTime || 0));
+  const addNote = async (body) => {
+    const r = await call(`/talks/${id}/notes`, { method: 'POST', body: JSON.stringify({ positionMs: curSec() * 1000, body }) });
+    if (!r.ok) return false;
+    setNotes((l) => [...l.filter((x) => x.id !== r.data.id), r.data].sort((a, b) => a.positionMs - b.positionMs));
+    if (!body) { setBmFlash(true); setTimeout(() => setBmFlash(false), 1800); }
+    return true;
+  };
+  const saveNote = async (nid, body) => {
+    const r = await call(`/me/notes/${nid}`, { method: 'PATCH', body: JSON.stringify({ body }) });
+    if (r.ok) setNotes((l) => l.map((x) => (x.id === nid ? r.data : x)));
+  };
+  const dropNote = async (nid) => { setNotes((l) => l.filter((x) => x.id !== nid)); await call(`/me/notes/${nid}`, { method: 'DELETE' }); };
   useEffect(() => { if (jumpMs && hasTracks) setTab('transcript'); }, [jumpMs, hasTracks, id]);
 
   // Favori : mise à jour immédiate, annulée si le serveur refuse.
@@ -308,6 +328,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
     ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
     ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(hasInsights && ins.summary ? [{ key: 'summary', label: t('summary') }] : []),
+    ...(user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
   ];
   const current = tabs.some((x) => x.key === tab) ? tab : 'about';
   const onTabKey = (e) => {
@@ -340,6 +361,9 @@ export default function TalkPage({ initial = null, talkId = null }) {
                 {SPEEDS.map((r) => (
                   <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>
                 ))}
+                {user && hasPlayer && !talk.locked && (
+                  <button type="button" className="speed-pill bm-btn" onClick={() => addNote('')} title={t('ntBookmarkHelp')}>🔖 {bmFlash ? t('ntBookmarked') : t('ntBookmark')}</button>
+                )}
                 {talk.audioPath && (
                   <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
                     🎧 {audioMode ? t('audBackVideo') : t('audMode')}
@@ -441,6 +465,11 @@ export default function TalkPage({ initial = null, talkId = null }) {
               {talk.description && <p className="about-text">{talk.description}</p>}
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
             </div>
+            {user && hasPlayer && !talk.locked && (
+              <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden={current !== 'notes'} className="tpanel">
+                <NotesPanel notes={notes} onAdd={addNote} onSave={saveNote} onDelete={dropNote} onSeek={seekTo} getPos={() => curSec() * 1000} t={t} />
+              </div>
+            )}
             {hasInsights && (
               <div id="panel-insights" role="tabpanel" aria-labelledby={`tab-${current}`} hidden={current !== 'chapters' && current !== 'summary'} className="tpanel">
                 <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t}
