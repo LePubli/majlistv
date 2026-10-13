@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { clock } from '../lib/clock';
+import { useApp } from './Providers';
 
 function Report({ talkId, qid, t, call }) {
   const [state, setState] = useState('idle'); // idle | open | sent
@@ -26,6 +27,7 @@ function Report({ talkId, qid, t, call }) {
 
 // props : talkId, onResult(result), onSeek(secondes), nextHref (épisode suivant, facultatif), onNext(), onClose()
 export default function Quiz({ talkId, t, call, user, onResult, onSeek, nextHref, onNext, onClose }) {
+  const { locale } = useApp();
   const [data, setData] = useState(undefined); // undefined = chargement, null = indisponible
   const [step, setStep] = useState(0);
   const [picks, setPicks] = useState([]);
@@ -73,6 +75,7 @@ export default function Quiz({ talkId, t, call, user, onResult, onSeek, nextHref
             <b>{t('qpLearnScore').replace('{s}', res.learning.score)}</b>
             {res.learning.score !== res.learning.previousScore && <span className="meta"> ({res.learning.score > res.learning.previousScore ? '+' : ''}{res.learning.score - res.learning.previousScore})</span>}
             {res.learning.newBadges.length > 0 && <p className="qp-newbadges">🏅 {t('qpNewBadges')} : {res.learning.newBadges.map((id) => t(`bdg_${id}`)).join(' · ')}</p>}
+            {res.learning.review && <p className="meta small qp-review-next">{res.learning.review.mastered ? t('revMastered') : t('revNext').replace('{d}', new Date(res.learning.review.nextReviewOn + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</p>}
             <Link className="link u small" href="/learning">{t('qpSeeProgress')}</Link>
           </div>
         )}

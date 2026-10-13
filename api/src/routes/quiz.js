@@ -8,6 +8,7 @@ import { getSetting, getNumber, isOn } from '../settings.js';
 import { visibleSql } from '../visibility.js';
 import { hasLearningTier } from '../access.js';
 import { learningBrief } from '../learning.js';
+import { recordAttempt } from '../revision.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const qidSchema = z.object({ qid: z.string().uuid() });
@@ -296,7 +297,8 @@ export default async function quizRoutes(app) {
       best = (await lastAttempt(viewer.sub, id))?.best ?? percent;
       if (tracked) {
         const after = await learningBrief(viewer.sub);
-        learning = { score: after.score, previousScore: before.score, newBadges: after.badges.filter((b) => !before.badges.includes(b)) };
+        const review = await recordAttempt(viewer.sub, id, passed, percent); // calendrier J+1 / J+3 / J+7 / J+21
+        learning = { score: after.score, previousScore: before.score, newBadges: after.badges.filter((b) => !before.badges.includes(b)), review };
       }
     }
     return { score, total, percent, passed, passPercent, best, saved: Boolean(viewer), learning, results };

@@ -25,6 +25,8 @@ export default function Home() {
   useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call]);
   const [quizTodo, setQuizTodo] = useState([]);
+  const [review, setReview] = useState([]); // « À réviser aujourd'hui » (Apprentissage ; 403 sinon)
+  useEffect(() => { if (user) call('/me/revision').then((r) => setReview(r.ok ? r.data.items : [])); else setReview([]); }, [user, call]);
   useEffect(() => { if (user) call('/me/quiz/todo').then((r) => setQuizTodo(r.ok ? r.data : [])); else setQuizTodo([]); }, [user, call]);
 
   // Mot-clé : recherche plein texte (/search) ; catégorie seule : grille filtrée ; sinon rangées de l'accueil.
@@ -77,6 +79,7 @@ export default function Home() {
         </>
       ) : (
         <>
+          {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}

@@ -1021,3 +1021,26 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
   .attest { border-color: #444; background: #fff; color: #000; }
   .attest *, .attest .attest-name { color: #000 !important; }
 }
+
+/* 24.5 — révision espacée, rappel du jour, bibliothèque de rappels (Studio) */
+.rv-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 10px; }
+.rv-list li { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 12px 16px; }
+.rv-list li > div { display: grid; gap: 2px; min-width: 0; }
+.rv-list li b { overflow-wrap: anywhere; }
+.rv-reminder { margin: 16px 0 0; padding: 16px 18px; border-inline-start: 3px solid var(--gold, #E6A739); background: var(--surface); border-radius: var(--radius); }
+.rv-reminder blockquote { margin: 6px 0 8px; font-size: 1.08rem; line-height: 1.6; }
+.rv-email { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: .95rem; }
+.qp-review-next { margin: 6px 0 0; }
+.rm-panel { display: grid; gap: 14px; }
+.rm-tools { display: grid; gap: 16px; }
+.rm-form { display: grid; gap: 8px; }
+.rm-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.rm-row input { flex: 1 1 110px; min-width: 0; }
+.rm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rm-item { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); }
+.rm-item.approved { border-color: rgba(230, 167, 57, .5); }
+.rm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.rm-tag { font-size: .75rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--line-soft); }
+.rm-tag.approved { background: var(--gold, #E6A739); color: #120D06; }
+.rm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+@media (max-width: 560px) { .rv-list li { flex-direction: column; align-items: stretch; } }

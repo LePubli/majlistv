@@ -5,6 +5,8 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { episodeLabels, seriesNextUp } from './series.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
+import { hasLearningTier } from '../access.js';
+import { dueTalks, upcoming, reminderOfTheDay } from '../revision.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const progressSchema = z.object({
@@ -132,5 +134,34 @@ export default async function libraryRoutes(app) {
     const labels = await episodeLabels(rows.map((r) => r.id));
     for (const r of rows) r.series = labels.get(r.id) || null;
     return cards(rows);
+  });
+
+  // « À réviser aujourd'hui » (palier Apprentissage) : conférences à échéance, rappel du jour, préférences d'e-mail.
+  app.get('/me/revision', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return reply.code(403).send({ error: "Cette fonction fait partie de l'offre Mejliss Apprentissage", code: 'learning_required' });
+    const { items, total } = await dueTalks(req.user.sub);
+    let rows = [];
+    if (items.length) {
+      rows = (await pool.query(
+        `SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ANY($1::uuid[])`, [items.map((x) => x.id)])).rows;
+      await cards(rows);
+      const labels = await episodeLabels(rows.map((r) => r.id));
+      const by = new Map(items.map((x) => [x.id, x]));
+      for (const r of rows) { r.series = labels.get(r.id) || null; Object.assign(r, { revision: by.get(r.id) }); r.quizState = 'review'; }
+      rows.sort((a, b) => items.findIndex((x) => x.id === a.id) - items.findIndex((x) => x.id === b.id));
+    }
+    const prefs = (await pool.query('SELECT daily_email FROM learning_prefs WHERE user_id = $1', [req.user.sub])).rows[0];
+    return {
+      items: rows, total, remaining: Math.max(0, total - rows.length),
+      reminder: await reminderOfTheDay(req.user.sub), upcoming: await upcoming(req.user.sub),
+      dailyEmail: prefs ? prefs.daily_email : true, emailEnabled: isOn(await getSetting('revision_email_enabled')),
+    };
+  });
+
+  app.put('/me/learning/prefs', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return reply.code(403).send({ error: "Cette fonction fait partie de l'offre Mejliss Apprentissage", code: 'learning_required' });
+    const { dailyEmail } = z.object({ dailyEmail: z.boolean() }).parse(req.body ?? {});
+    await pool.query('INSERT INTO learning_prefs(user_id, daily_email) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET daily_email = $2', [req.user.sub, dailyEmail]);
+    return { ok: true, dailyEmail };
   });
 }

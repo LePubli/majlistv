@@ -145,7 +145,7 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
       <Link href={talk.quizState ? `/talks/${talk.id}?quiz=1` : `/talks/${talk.id}`} className="talk">
         <div className="thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
           {talk.quizState
-            ? <span className="badge next">{talk.quizState === 'retry' ? `${t('qpRevise')} · ${talk.bestPercent} %` : t('qpTodo')}</span>
+            ? <span className="badge next">{talk.quizState === 'retry' ? `${t('qpRevise')} · ${talk.bestPercent} %` : talk.quizState === 'review' ? t('revBadge') : t('qpTodo')}</span>
             : talk.nextUp
             ? <span className="badge next">{t('nextEp')}</span>
             : show.access && <span className={`badge ${talk.access}`}>{t(talk.access)}</span>}

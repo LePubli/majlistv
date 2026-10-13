@@ -20,6 +20,7 @@ const T = {
     payment_failed: { subject: 'Échec du paiement de votre abonnement', lines: ['Le paiement de {amount} n\'a pas abouti. Votre accès reste ouvert quelques jours.', 'Mettez à jour votre moyen de paiement pour continuer à regarder les conférences.'], button: 'Mettre à jour ma carte' },
     subscription_canceled: { subject: 'Résiliation enregistrée', lines: ['Votre résiliation est bien prise en compte.', 'Vous gardez l\'accès à toutes les conférences jusqu\'au {date}. Vous pouvez reprendre votre abonnement à tout moment avant cette date.'], button: 'Mon compte' },
     subscription_ended: { subject: 'Votre abonnement est terminé', lines: ['Votre abonnement est arrivé à son terme. Les conférences gratuites restent accessibles.', 'Vous pouvez vous réabonner quand vous le souhaitez.'], button: 'Voir les formules' },
+    revision_daily: { subject: '{count} à réviser aujourd\'hui', lines: ['Vos révisions du jour ({count}) :', '{titles}', '?Rappel du jour : « {reminder} » ({source})', 'Quelques minutes suffisent : refaire le quiz fait remonter votre score.'], button: 'Commencer mes révisions' },
     test: { subject: 'Test d\'envoi {app}', lines: ['Cet e-mail confirme que les réglages d\'envoi fonctionnent.'], button: 'Ouvrir le site' },
     plans: { month: 'mensuel', year: 'annuel' },
   },
@@ -32,6 +33,7 @@ const T = {
     payment_failed: { subject: 'Your subscription payment failed', lines: ['The payment of {amount} did not go through. Your access stays open for a few days.', 'Update your payment method to keep watching.'], button: 'Update my card' },
     subscription_canceled: { subject: 'Cancellation confirmed', lines: ['Your cancellation is confirmed.', 'You keep full access until {date}. You can resume your subscription any time before then.'], button: 'My account' },
     subscription_ended: { subject: 'Your subscription has ended', lines: ['Your subscription has ended. Free conferences remain available.', 'You can subscribe again whenever you like.'], button: 'See plans' },
+    revision_daily: { subject: '{count} to review today', lines: ['Your reviews for today ({count}):', '{titles}', '?Reminder of the day: "{reminder}" ({source})', 'A few minutes are enough: retaking the quiz lifts your score.'], button: 'Start my reviews' },
     test: { subject: '{app} test email', lines: ['This email confirms that the sending settings work.'], button: 'Open the site' },
     plans: { month: 'monthly', year: 'yearly' },
   },
@@ -44,6 +46,7 @@ const T = {
     payment_failed: { subject: 'تعذّر دفع اشتراكك', lines: ['لم يتم دفع مبلغ {amount}. يبقى وصولك مفتوحًا لبضعة أيام.', 'حدّث وسيلة الدفع لمتابعة المشاهدة.'], button: 'تحديث البطاقة' },
     subscription_canceled: { subject: 'تم تسجيل الإلغاء', lines: ['تم تسجيل إلغاء اشتراكك.', 'يبقى لك الوصول الكامل حتى {date}. يمكنك استئناف الاشتراك في أي وقت قبل ذلك.'], button: 'حسابي' },
     subscription_ended: { subject: 'انتهى اشتراكك', lines: ['انتهى اشتراكك. تبقى المحاضرات المجانية متاحة.', 'يمكنك الاشتراك من جديد متى شئت.'], button: 'عرض الباقات' },
+    revision_daily: { subject: '{count} للمراجعة اليوم', lines: ['مراجعاتك اليوم ({count}):', '{titles}', '?تذكير اليوم: «{reminder}» ({source})', 'دقائق قليلة تكفي: إعادة الاختبار ترفع درجتك.'], button: 'ابدأ مراجعتي' },
     test: { subject: 'رسالة اختبار من {app}', lines: ['تؤكد هذه الرسالة أن إعدادات الإرسال تعمل.'], button: 'فتح الموقع' },
     plans: { month: 'شهري', year: 'سنوي' },
   },
@@ -62,7 +65,11 @@ export function renderEmail(kind, locale, vars) {
   const dir = l === 'ar' ? 'rtl' : 'ltr';
   const align = l === 'ar' ? 'right' : 'left';
   const logo = v.webUrl ? `<img src="${esc(v.webUrl)}/brand/email-logo.png" alt="${esc(v.app)}" height="40" style="display:block;height:40px;border:0">` : `<span style="font:700 20px Arial,sans-serif;color:#F7C863">${esc(v.app)}</span>`;
-  const paras = m.lines.map((line) => `<p style="margin:0 0 14px;font:16px/1.55 Arial,sans-serif;color:#2B241A">${fill(line, v, true)}</p>`).join('');
+  // Ligne commençant par « ? » : facultative, retirée si l'une de ses valeurs est vide.
+  const lines = m.lines
+    .filter((x) => !x.startsWith('?') || [...x.matchAll(/\{(\w+)\}/g)].every((g) => String(v[g[1]] ?? '').trim() !== ''))
+    .map((x) => x.replace(/^\?/, ''));
+  const paras = lines.map((line) => `<p style="margin:0 0 14px;font:16px/1.55 Arial,sans-serif;color:#2B241A">${fill(line, v, true).replace(/\n/g, '<br>')}</p>`).join('');
   const button = v.url ? `<p style="margin:22px 0 6px"><a href="${esc(v.url)}" style="display:inline-block;background:#E6A739;color:#120D06;font:700 16px Arial,sans-serif;text-decoration:none;padding:13px 24px;border-radius:999px">${esc(m.button)}</a></p>` : '';
   const html = `<!doctype html><html lang="${l}" dir="${dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(subject)}</title></head>
 <body style="margin:0;background:#F4EFE6">
@@ -76,7 +83,7 @@ ${paras}${button}
 </td></tr>
 <tr><td dir="${dir}" style="padding:14px 24px 22px;border-top:1px solid #EFE7DA;font:12px/1.5 Arial,sans-serif;color:#7A6F5F;text-align:${align}">${fill(t.footer, v, true)}</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [fill(t.hello, v, false), '', ...m.lines.map((x) => fill(x, v, false)), '', v.url ? `${m.button} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(t.footer, v, false)]
+  const text = [fill(t.hello, v, false), '', ...lines.map((x) => fill(x, v, false)), '', v.url ? `${m.button} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(t.footer, v, false)]
     .filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
   return { subject, html, text };
 }

@@ -28,6 +28,8 @@ import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
 import learningRoutes from './routes/learning.js';
+import reminderRoutes from './routes/reminders.js';
+import { startRevisionMailer } from './revisionMailer.js';
 import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
@@ -110,6 +112,7 @@ await app.register(importRoutes);
 await app.register(studioContentRoutes);
 await app.register(quizRoutes);
 await app.register(learningRoutes);
+await app.register(reminderRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
 await app.register(seriesRoutes);
@@ -120,4 +123,5 @@ await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
-startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré) // index Meilisearch tenu à jour en arrière-plan (inactif tant qu'il n'est pas configuré)
+startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
+startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)

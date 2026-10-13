@@ -828,3 +828,29 @@ Cette étape prépare le quiz côté organisateur. Le public ne le voit pas enco
 
 ### Correctif 24.2 — langue des questions du quiz
 Les questions sont désormais **écrites en français par défaut, quelle que soit la langue de la vidéo** (une conférence en arabe a un quiz en français, avec ou sans sous-titres traduits). Réglage : Admin → Paramètres → Quiz → **« Langue des questions générées »** (fr / en / ar). La citation qui prouve la réponse est toujours retrouvée mot pour mot dans la transcription d'origine ; elle est **affichée dans la langue des questions si la transcription traduite existe**, sinon dans la langue d'origine. Pour les questions déjà générées en arabe : Studio → onglet Quiz → « Générer des questions » (remplace les brouillons ; les questions déjà validées sont conservées). Déploiement : **api + translator**. Test : `python3 api/tests/test_quiz_lang.py`.
+
+## Étape 24.5 — Révision espacée, rappels, e-mail quotidien (palier Apprentissage)
+
+**Révision espacée** : après un quiz, la conférence entre dans le calendrier **J+1, J+3, J+7, J+21** (comptés depuis la première tentative ou le dernier échec). Réviser = **refaire le quiz** de la conférence.
+- Quiz refait **à l'échéance (ou en retard) et réussi** → on avance d'un cran ; après J+21 réussi, la conférence est « acquise » (plus de révision).
+- Quiz **raté** → retour à J+1 (ancre = aujourd'hui).
+- Quiz refait **avant** l'échéance → le calendrier ne bouge pas. Une échéance n'est jamais placée dans le passé.
+- Chaque tentative remet la fraîcheur du score à 100 % (voir 24.4).
+- Un membre qui passe à l'Apprentissage voit ses anciens quiz entrer dans le calendrier (échéance : aujourd'hui).
+- Limite quotidienne réglable (Admin → Paramètres → Quiz → « Révisions proposées par jour », 5 par défaut) : le reste est reporté, les plus en retard d'abord. Les conférences dépubliées ou sans question validée sont ignorées.
+
+**Où le membre le voit** : rangée « À réviser aujourd'hui » sur l'accueil (badge « À réviser »), section dédiée en haut de **Mon apprentissage** (`/learning`) avec le rappel du jour et la case « e-mail du matin », et, à la fin d'un quiz, « Prochaine révision : mercredi 14 octobre ».
+
+**Bibliothèque de rappels (Studio → conférence → Contenu → onglet Quiz → « Rappels »)** — **jamais d'IA** :
+1. *Extraire de la transcription* : indiquer début/fin (mm:ss) ; le serveur copie le texte mot pour mot (40 s par défaut, 2 min au plus).
+2. *Reprendre les citations du quiz* : reprend les citations (déjà retrouvées mot pour mot) des questions validées.
+3. *Saisir un passage* (hadith, verset, citation) : **source obligatoire**.
+Tout arrive en **brouillon** ; seuls les rappels **validés** sont diffusés. Un extrait modifié à la main redevient une saisie manuelle (source obligatoire) et repasse en brouillon. Rappel du jour : un seul passage validé par jour, tiré parmi les conférences que le membre a déjà passées au quiz.
+
+**E-mail quotidien** : à partir de l'heure réglée (Admin → Paramètres → Quiz, 8 h heure de Paris par défaut), chaque membre Apprentissage ayant au moins une révision reçoit **un seul e-mail par jour** (conférences à réviser + rappel du jour). Désactivable par le membre (case sur `/learning`) ou globalement (réglage « E-mail quotidien »). Il faut que l'envoi d'e-mails soit configuré (Admin → Paramètres → E-mails) ; sinon rien n'est mis en file. Le modèle `revision_daily` existe en fr/en/ar.
+
+**API** : `GET /me/revision`, `PUT /me/learning/prefs {dailyEmail}`, `POST /talks/:id/quiz/submit` (renvoie `learning.review`), Studio : `GET|POST /talks/:id/studio/reminders`, `POST …/reminders/from-transcript {fromMs,toMs}`, `POST …/reminders/from-quiz`, `PATCH|DELETE /studio/reminders/:rid`.
+**Migration** : `026_revision.sql` (`revision_items`, `reminders`, `learning_prefs`), appliquée au démarrage de l'API.
+**Tests** : `python3 api/tests/test_revision.py` (calendrier, rappels, préférences) ; depuis `api/` : `set -a; . /tmp/claude-0/api.env; set +a; node tests/test_revision_mail.mjs` (e-mail quotidien, base de test, SMTP factice).
+**Déploiement** : api puis web (translator inchangé), `/root/apply-limits.sh`, vérification nginx.
+**Debug** : pas d'e-mail du matin → SMTP configuré ? réglage activé ? heure atteinte (heure de Paris) ? membre avec une révision à échéance et case non décochée ? Voir `email_outbox` (statut, dernière erreur).

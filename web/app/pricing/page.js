@@ -37,7 +37,7 @@ export default function Pricing() {
   const learnPlans = info.learning?.plans || [];
   const tiers = [
     { key: 'standard', title: t('tierStd'), tag: t('tierStdTag'), plans: info.plans, enabled: info.enabled, bullets: ['planB1', 'planB2', 'planB3', 'planB4'] },
-    ...(learnPlans.length ? [{ key: 'learning', title: t('tierLearn'), tag: t('tierLearnTag'), plans: learnPlans, enabled: Boolean(info.learning?.enabled), bullets: ['planL0', 'planL1', 'planL2', 'planL3'] }] : []),
+    ...(learnPlans.length ? [{ key: 'learning', title: t('tierLearn'), tag: t('tierLearnTag'), plans: learnPlans, enabled: Boolean(info.learning?.enabled), bullets: ['planL0', 'planL1', 'planL2', 'planL3', 'planL4'] }] : []),
   ];
   const anyPlans = tiers.some((x) => x.plans.length > 0);
 

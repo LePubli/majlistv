@@ -128,7 +128,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
   - **Attestation de suivi** en PDF à la fin d'un cours, tous quiz validés. Formulation volontairement neutre : une attestation de suivi, ni diplôme ni ijâza.
   - Création du palier **Apprentissage** dans Stripe, règles d'accès, page Abonnement à deux colonnes.
 
-- **24.5 Révision espacée et rappels quotidiens**
+- ✅ **24.5 Révision espacée et rappels quotidiens** (révision = refaire le quiz entier ; désinscription par case dans Mon apprentissage — lien « un clic » dans l'e-mail et séance courte ciblée sur les questions ratées : à reprendre plus tard)
   - Planification **J+1, J+3, J+7, J+21** après un quiz réussi, resserrée sur les questions ratées.
   - File de révision : « 5 questions à réviser aujourd'hui », deux minutes.
   - **Bibliothèque de rappels** dans le Studio : soit un passage extrait mot pour mot d'une de vos conférences (avec le lien vers la minute), soit une citation saisie à la main (auteur, source, recueil, numéro, degré d'authenticité, langue) et marquée « validée ». **Rien de généré par l'IA.**

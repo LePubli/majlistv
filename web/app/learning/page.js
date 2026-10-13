@@ -33,10 +33,14 @@ export default function Learning() {
   const [d, setD] = useState(undefined); // undefined = chargement, null = palier requis
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState('');
+  const [rv, setRv] = useState(null); // révisions du jour, rappel, e-mail
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => call('/me/learning').then((r) => setD(r.ok ? r.data : null)), [call]);
   useEffect(() => { if (user) load(); }, [user, load]);
+  const loadRv = useCallback(() => call('/me/revision').then((r) => setRv(r.ok ? r.data : null)), [call]);
+  useEffect(() => { if (user) loadRv(); }, [user, loadRv]);
+  const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
   if (!user || d === undefined) return null;
 
   // Palier requis : on présente ce que l'offre apporte.
@@ -47,7 +51,7 @@ export default function Learning() {
         <section className="lr-teaser">
           <h2>{t('tierLearn')}</h2>
           <p>{t('lrTeaser')}</p>
-          <ul className="plan-list">{['planL1', 'planL2', 'planL3'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
+          <ul className="plan-list">{['planL1', 'planL2', 'planL3', 'planL4'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
           <p className="meta small">{t('lrTeaserKeep')}</p>
           <Link className="btn" href="/pricing">{t('lrDiscover')}</Link>
         </section>
@@ -85,6 +89,39 @@ export default function Learning() {
           <p className="meta small">{t('lrDecay').replace('{p}', Math.round((1 - d.decay.floor) * 100)).replace('{d}', d.decay.days)}</p>
         </div>
       </section>
+
+      {rv && (
+        <section className="lr-block rv-block" aria-labelledby="rv-title">
+          <h2 id="rv-title">{t('revTitle')}</h2>
+          {rv.items.length === 0 ? (
+            <p className="meta">{rv.upcoming.week > 0 ? t('revNone').replace('{n}', rv.upcoming.week) : t('revNoneYet')}</p>
+          ) : (
+            <ul className="rv-list">
+              {rv.items.map((x) => (
+                <li key={x.id}>
+                  <div>
+                    <b>{x.title}</b>
+                    <span className="meta small">{t('revStep').replace('{j}', [1, 3, 7, 21][x.revision.stage])}{x.revision.lateDays > 0 ? ` · ${t('revLate').replace('{n}', x.revision.lateDays)}` : ''}{x.revision.lastPercent != null ? ` · ${t('revLast').replace('{p}', x.revision.lastPercent)}` : ''}</span>
+                  </div>
+                  <Link className="btn" href={`/talks/${x.id}?quiz=1`}>{t('revGo')}</Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {rv.remaining > 0 && <p className="meta small">{t('revMore').replace('{n}', rv.remaining)}</p>}
+          {rv.upcoming.mastered > 0 && <p className="meta small">{t('revMasteredN').replace('{n}', rv.upcoming.mastered)}</p>}
+          {rv.reminder && (
+            <figure className="rv-reminder">
+              <figcaption className="eyebrow">{t('revReminder')}</figcaption>
+              <blockquote dir="auto">{rv.reminder.text}</blockquote>
+              <p className="meta small">{[rv.reminder.attribution, rv.reminder.speaker].filter(Boolean).join(' · ')} — <Link className="link u" href={`/talks/${rv.reminder.talkId}${rv.reminder.startMs != null ? `?t=${Math.floor(rv.reminder.startMs / 1000)}` : ''}`}>{rv.reminder.talkTitle}</Link></p>
+            </figure>
+          )}
+          {rv.emailEnabled && (
+            <label className="rv-email"><input type="checkbox" checked={rv.dailyEmail} onChange={(e) => setEmail(e.target.checked)} /> {t('revEmail')}</label>
+          )}
+        </section>
+      )}
 
       <section className="lr-block">
         <h2>{t('lrCurve')}</h2>

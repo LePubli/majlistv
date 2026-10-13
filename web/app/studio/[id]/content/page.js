@@ -7,6 +7,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
 import QuizEditor from '../../../../components/QuizEditor';
+import RemindersEditor from '../../../../components/RemindersEditor';
 
 const PAGE = 100;
 const clock = (ms) => {
@@ -285,7 +286,7 @@ export default function ContentPage() {
       </div>
       {tab === 'transcript' && <TranscriptEditor key="tr" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
       {tab === 'summary' && <InsightsEditor key="in" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
-      {tab === 'quiz' && <QuizEditor key="qz" id={id} t={t} call={call} />}
+      {tab === 'quiz' && <><QuizEditor key="qz" id={id} t={t} call={call} /><RemindersEditor key="rm" id={id} t={t} call={call} /></>}
     </main>
   );
 }
