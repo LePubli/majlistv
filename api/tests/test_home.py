@@ -68,6 +68,7 @@ ok(str(t1) not in [i["id"] for i in home()["hero"]["items"]], "retrait de la mis
 cur.execute("update talks set featured=false, featured_at=null where featured")
 
 # Bannière personnalisée
+cur.execute("delete from app_settings where key = %s", ("home_hero_image_key",))  # état propre : pas d'image téléversée avant ce test
 put({"home_hero_mode": "custom", "home_hero_title": "Bienvenue", "home_hero_subtitle": "Sous-titre", "home_hero_cta_label": "Voir les tarifs", "home_hero_cta_url": "/pricing", "home_hero_video_url": "https://exemple.fr/v.mp4"})
 c = home()["hero"]
 ok(c["mode"] == "custom" and c["title"] == "Bienvenue" and c["ctaUrl"] == "/pricing" and c["videoUrl"].endswith("v.mp4") and c["imageUrl"] is None, "bannière personnalisée")

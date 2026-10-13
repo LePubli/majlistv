@@ -25,6 +25,7 @@ import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
+import seriesRoutes from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -103,6 +104,7 @@ await app.register(importRoutes);
 await app.register(studioContentRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
+await app.register(seriesRoutes);
 await app.register(cardsRoutes);
 
 await migrate();

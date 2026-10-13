@@ -65,11 +65,14 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - Colonne « épisodes de la série / à suivre » (structure A) ou onglet Épisodes (structure B), « épisode suivant » automatique en fin de lecture.
 - Version mobile en une colonne, droite-à-gauche inclus.
 
-**14. Séries et saisons** (les deux structures au choix par série)
-- Modèle : **Série > Saisons > Épisodes** ou **Série > Épisodes** (sans saisons) ; une conférence peut rester isolée ou devenir un épisode ; ordre modifiable par glisser-déposer dans le Studio.
-- Page série : bannière, présentation, sélecteur de saison, liste des épisodes (miniature, résumé, durée, accès, avancement), bouton « Regarder / Reprendre », « Suivre la série ».
-- **Accès au choix, sur les deux niveaux** : réglage par série (toute la série gratuite ou premium) **et** par épisode (ex. épisode 1 gratuit, la suite premium) ; le réglage de l'épisode l'emporte.
-- Accueil : rangée « Séries », vignette série ; recherche et bibliothèque comprennent les séries.
+**14. Séries et saisons** (les deux structures au choix par série) — découpé en 5 pièces
+- ✅ 14.1 Données et API : séries, saisons, épisodes, règle d'accès (série + épisode), contexte pour la fiche conférence.
+- 14.2 Studio : créer et modifier une série, saisons, ajouter / ordonner les épisodes (glisser-déposer), accès par épisode, image de la série.
+- 14.3 Page série publique et accueil : bannière, sélecteur de saison, liste d'épisodes, « Regarder / Reprendre », rangée « Séries ».
+- 14.4 Page conférence : colonne latérale = épisodes de la série, « épisode suivant » à la fin de la lecture, badge « Saison 1 · Épisode 3 ».
+- 14.5 Recherche, bibliothèque et « Continuer » : séries trouvables, reprise à l'épisode en cours.
+- Modèle : **Série > Saisons > Épisodes** ou **Série > Épisodes** (sans saisons) ; une conférence peut rester isolée ou devenir un épisode (dans une seule série).
+- **Accès au choix, sur les deux niveaux** : réglage par série **et** par épisode ; le réglage de l'épisode l'emporte (ex. épisode 1 gratuit, la suite premium).
 
 **15. Paiements : carte bancaire et PayPal**
 - Carte bancaire : déjà incluse dans le paiement Stripe actuel (Visa, Mastercard, CB, Apple Pay / Google Pay selon l'appareil).

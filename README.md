@@ -615,3 +615,18 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **Pas encore là** : « Mes notes » et « Mode audio » (étape 17).
 
 **Pas d'API ni de migration.** Déploiement : web seulement, puis `/root/apply-limits.sh` et vérification nginx.
+
+
+## Étape 14.1 — Séries, saisons, épisodes (données et API)
+
+**Modèle** (migration `021_series.sql`, appliquée au démarrage de l'API) :
+- une **série** (titre, présentation, intervenant, catégorie, accès par défaut, publiée ou non) ;
+- avec ou sans **saisons** (l'ordre donne « Saison 1, 2… » ; le passage sans/avec saisons range les épisodes automatiquement) ;
+- des **épisodes** = des conférences existantes (une conférence appartient à une seule série) ; supprimer une série **ne supprime pas** les conférences.
+
+**Règle d'accès** : chaque épisode hérite de l'accès de la série, **sauf s'il a son propre réglage** (il l'emporte). Choisir l'accès d'un épisode dans le Studio fixe son réglage ; le remettre comme la série le fait hériter de nouveau. Changer l'accès de la série ne touche que les épisodes qui héritent. L'accès effectif reste dans `talks.access` : lecture, aperçu gratuit, recherche et verrous fonctionnent sans changement.
+
+**API publique** : `GET /series` (séries publiées avec au moins un épisode en ligne ; accès `free`, `premium` ou `mixed`), `GET /series/:id` (saisons ou liste continue, épisodes numérotés, `resume` = épisode à lancer ou reprendre pour le visiteur connecté), `GET /talks/:id/series` (saison, numéro, précédent / suivant, liste des épisodes pour la colonne latérale ; `{ "series": null }` si la conférence est isolée).
+**API Studio** (organisateur propriétaire ou admin) : `GET /studio/series`, `GET /studio/series-candidates`, `POST /series`, `GET|PATCH|DELETE /series/:id`, `GET /series/:id/manage`, saisons (`POST /series/:id/seasons`, `PATCH|DELETE /series/:id/seasons/:sid`, `PUT /series/:id/seasons-order`) et `PUT /series/:id/episodes` (ordre, saison et accès de tous les épisodes en une sauvegarde).
+**Tests** : `python3 api/tests/test_series.py` (46 vérifications).
+**Déploiement** : api seulement (pas de changement du site pour cette pièce), puis `/root/apply-limits.sh` et vérification nginx.

@@ -346,6 +346,10 @@ export default async function talksRoutes(app) {
     if (!sets.length) return reply.code(400).send({ error: 'Rien à modifier' });
     try {
       await pool.query(`UPDATE talks SET ${sets.join(', ')} WHERE id = $1`, vals);
+      // Épisode d'une série : choisir un accès ici fixe le réglage de l'épisode (identique à la série = il hérite de nouveau).
+      if (b.access !== undefined) {
+        await pool.query(`UPDATE series_episodes e SET access_override = CASE WHEN s.access = $2 THEN NULL ELSE $2 END FROM series s WHERE e.talk_id = $1 AND s.id = e.series_id`, [id, b.access]);
+      }
     } catch (err) {
       if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
       throw err;
