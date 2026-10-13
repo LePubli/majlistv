@@ -5,10 +5,11 @@
 // talks.access garde la valeur effective ; syncAccess() la recalcule.
 import { z } from 'zod';
 import { pool } from '../db.js';
-import { presignGet } from '../storage.js';
+import { presignGet, putObject, deleteObject } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 
 const uuid = z.string().uuid();
+const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const idParam = z.object({ id: uuid });
 const seriesBody = z.object({
   title: z.string().trim().min(1).max(200),
@@ -279,6 +280,7 @@ export default async function seriesRoutes(app) {
     if (!s) return;
     await pool.query('DELETE FROM series_episodes WHERE series_id = $1', [id]);
     await pool.query('DELETE FROM series WHERE id = $1', [id]);
+    if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
     return reply.code(204).send();
   });
 
@@ -361,5 +363,35 @@ export default async function seriesRoutes(app) {
       await client.query('COMMIT');
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
     return { ok: true, count: episodes.length };
+  });
+
+  // ---------- Image de la série (JPEG / PNG / WebP en data-URL, 2,5 Mo max) ----------
+  // Sans image, la page et les vignettes utilisent la miniature du premier épisode.
+  app.post('/series/:id/poster', { ...organizer, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const { image } = z.object({ image: z.string().max(3_500_000) }).strict().parse(req.body ?? {});
+    const s = await owned(req, reply, id);
+    if (!s) return;
+    const m = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if (!m) return reply.code(400).send({ error: 'Image JPEG, PNG ou WebP attendue' });
+    const buf = Buffer.from(m[2], 'base64');
+    const magic = (m[1] === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8)
+      || (m[1] === 'image/png' && buf.subarray(1, 4).toString() === 'PNG')
+      || (m[1] === 'image/webp' && buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP');
+    if (!magic || buf.length > 2.5 * 1024 * 1024) return reply.code(400).send({ error: 'Image invalide ou trop lourde (2,5 Mo maximum)' });
+    const key = `series/${id}-${Date.now()}.${IMG_TYPES[m[1]]}`;
+    await putObject(key, buf, m[1]);
+    await pool.query('UPDATE series SET poster_key = $2, updated_at = now() WHERE id = $1', [id, key]);
+    if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
+    return reply.code(201).send({ posterUrl: await presignGet(key) });
+  });
+
+  app.delete('/series/:id/poster', organizer, async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const s = await owned(req, reply, id);
+    if (!s) return;
+    await pool.query('UPDATE series SET poster_key = NULL, updated_at = now() WHERE id = $1', [id]);
+    if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
+    return reply.code(204).send();
   });
 }

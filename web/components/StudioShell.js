@@ -17,6 +17,7 @@ const ICONS = {
   tag: 'M3 12V4h8l9 9-8 8zM7.5 8.5h.01',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
   out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11',
+  layers: 'M12 3 3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5',
 };
 const Icon = ({ d }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
@@ -39,10 +40,11 @@ export default function StudioShell({ children }) {
       const want = new URL(href, 'http://x').searchParams.get('tab') || 'dashboard';
       return path === '/admin' && tab === want;
     }
-    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new') : path === href;
+    if (href === '/studio/series') return path.startsWith('/studio/series');
+    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series')) : path === href;
   };
   const groups = [
-    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus]] },
+    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers]] },
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
       ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],

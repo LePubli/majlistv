@@ -126,6 +126,16 @@ ok(requests.put(f"{B}/series/{mine}/episodes", headers=org, json={"episodes": [{
 ok(len(requests.get(f"{B}/studio/series", headers=org).json()) == 1 and len(requests.get(f"{B}/studio/series", headers=adm).json()) >= 3, "liste Studio : les miennes / toutes pour un admin")
 ok(requests.get(f"{B}/studio/series", headers=viewer).status_code == 403, "liste Studio : réservée aux organisateurs")
 
+# --- image de la série
+PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+r = requests.post(f"{B}/series/{mine}/poster", headers=org, json={"image": PNG})
+ok(r.status_code == 201 and r.json()["posterUrl"], "envoi de l'image de la série")
+ok(requests.get(f"{B}/series/{mine}/manage", headers=org).json()["posterUrl"], "l'image apparaît dans la fiche")
+ok(requests.post(f"{B}/series/{mine}/poster", headers=org, json={"image": "data:image/png;base64,AAAA"}).status_code == 400, "fichier qui n'est pas une image : refusé")
+ok(requests.post(f"{B}/series/{mine}/poster", headers=org, json={"image": "data:image/gif;base64,R0lGOD"}).status_code == 400, "type non autorisé : refusé")
+ok(requests.post(f"{B}/series/{mine}/poster", headers=org2, json={"image": PNG}).status_code == 404, "autre organisateur : refusé")
+ok(requests.delete(f"{B}/series/{mine}/poster", headers=org).status_code == 204 and requests.get(f"{B}/series/{mine}/manage", headers=org).json()["posterUrl"] is None, "suppression de l'image")
+
 # --- avec / sans saisons
 requests.patch(f"{B}/series/{sid}", headers=adm, json={"hasSeasons": False})
 d = requests.get(f"{B}/series/{sid}").json()

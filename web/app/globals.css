@@ -706,14 +706,14 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 @media (max-width: 600px) { .preview-end { position: static; border-radius: 8px; margin-top: 8px; } }
 
 /* 12.4 — parcours d'inscription : bandeau d'étapes, bienvenue, préférences */
-.steps { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 0 0 22px; flex-wrap: wrap; }
-.step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
-.step + .step::before { content: ''; width: 22px; height: 1px; background: var(--line-soft); margin-inline-end: 2px; }
-.step-dot { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; border: 1px solid var(--line-soft); background: var(--surface-2); }
-.step.now { color: var(--text); font-weight: 600; }
-.step.now .step-dot { background: var(--accent); border-color: var(--accent); color: #1a1205; }
-.step.done .step-dot { border-color: var(--accent); color: var(--accent); }
-@media (max-width: 480px) { .step-label { display: none; } .step.now .step-label { display: inline; } }
+.flow { display: flex; justify-content: center; gap: 6px; list-style: none; padding: 0; margin: 0 0 22px; flex-wrap: wrap; }
+.flow-step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.flow-step + .flow-step::before { content: ''; width: 22px; height: 1px; background: var(--line-soft); margin-inline-end: 2px; }
+.flow-dot { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; border: 1px solid var(--line-soft); background: var(--surface-2); }
+.flow-step.now { color: var(--text); font-weight: 600; }
+.flow-step.now .flow-dot { background: var(--accent); border-color: var(--accent); color: #1a1205; }
+.flow-step.done .flow-dot { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 480px) { .flow-label { display: none; } .flow-step.now .flow-label { display: inline; } }
 .welcome { max-width: 520px; }
 .welcome select { width: 100%; }
 .pick { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
@@ -723,9 +723,9 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .pick-chip:hover { border-color: var(--accent); }
 .pick-chip.on { background: rgba(230,167,57,.16); border-color: var(--accent); color: var(--accent); }
 .row-badge { margin-inline-start: 10px; font-size: 12px; font-weight: 600; color: var(--accent); vertical-align: middle; }
-.back { display: inline-block; margin-bottom: 14px; color: var(--muted); }
-.resume { margin: 8px 0 14px; }
-.pricing .steps { justify-content: flex-start; }
+.pricing .back { display: inline-block; margin-bottom: 14px; }
+.resume-btn { margin: 8px 0 14px; }
+.pricing .flow { justify-content: flex-start; }
 
 /* 13 — page conférence : lecteur + colonne latérale + onglets */
 .page.watch { max-width: 1360px; }
@@ -771,4 +771,46 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 @media (max-width: 600px) {
   .tablist { gap: 20px; margin-inline: -4vw; padding-inline: 4vw; }
   .side-thumb { flex-basis: 108px; }
+}
+
+/* 14.2 — Studio : séries, saisons, épisodes */
+.sr-image { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.sr-poster { flex: 0 0 240px; aspect-ratio: 16 / 9; border-radius: var(--radius); border: 1px solid var(--line-soft); background: var(--surface-2) center / cover no-repeat; }
+.sr-season { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 12px; margin-bottom: 14px; display: grid; gap: 10px; }
+.sr-season-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sr-season-title { flex: 1 1 200px; min-width: 0; background: var(--bg); }
+.sr-season-tools, .sr-tools { display: inline-flex; gap: 4px; }
+.sr-empty { margin: 0; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; text-align: center; }
+.sr-eps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sr-ep { display: grid; grid-template-columns: auto 24px 112px minmax(0, 1fr) minmax(190px, 230px) auto auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--bg); }
+.sr-ep.over { border-color: var(--accent); box-shadow: 0 -2px 0 var(--accent); }
+.sr-ep.dragging { opacity: .45; }
+.sr-handle { cursor: grab; color: var(--muted); font-size: 18px; user-select: none; }
+.sr-num { font-family: var(--font-title); color: var(--muted); text-align: center; }
+.sr-ep .studio-thumb { width: 112px; height: 63px; }
+.sr-ep-text { display: grid; gap: 2px; min-width: 0; }
+.sr-ep-text b { overflow-wrap: anywhere; }
+.sr-ep-text small { color: var(--muted); }
+.sr-ep select { width: 100%; padding: 8px 10px; font-size: 14px; }
+.icon-btn { background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--text); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font: inherit; }
+.icon-btn:hover:not(:disabled) { border-color: var(--accent); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+.sr-addseason { justify-self: start; margin-bottom: 18px; }
+.sr-toggle { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: start; }
+.sr-toggle .panel-title { margin: 0; }
+.sr-cands { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.sr-cands .check { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; }
+.sr-cands .check:hover { background: var(--surface-2); }
+.sr-cands input { width: 18px; height: 18px; margin-top: 3px; flex: none; accent-color: var(--accent); }
+.sr-addbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.sr-addbar select { width: auto; }
+.sr-savebtns { display: inline-flex; gap: 10px; }
+.sr-danger { margin: 28px 0 8px; }
+@media (max-width: 900px) {
+  .sr-ep { grid-template-columns: 24px 96px minmax(0, 1fr); }
+  .sr-ep .sr-handle { display: none; }
+  .sr-ep .sr-num { grid-column: 1; }
+  .sr-ep .studio-thumb { width: 96px; height: 54px; }
+  .sr-ep .sr-access, .sr-ep .sr-move, .sr-ep .sr-tools { grid-column: 1 / -1; }
+  .sr-ep .sr-tools { justify-content: flex-end; }
 }

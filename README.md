@@ -630,3 +630,21 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **API Studio** (organisateur propriétaire ou admin) : `GET /studio/series`, `GET /studio/series-candidates`, `POST /series`, `GET|PATCH|DELETE /series/:id`, `GET /series/:id/manage`, saisons (`POST /series/:id/seasons`, `PATCH|DELETE /series/:id/seasons/:sid`, `PUT /series/:id/seasons-order`) et `PUT /series/:id/episodes` (ordre, saison et accès de tous les épisodes en une sauvegarde).
 **Tests** : `python3 api/tests/test_series.py` (46 vérifications).
 **Déploiement** : api seulement (pas de changement du site pour cette pièce), puis `/root/apply-limits.sh` et vérification nginx.
+
+
+## Étape 14.2 — Studio : gérer les séries
+
+**Où** : Studio → **Mes séries** (menu de gauche). Création en 3 champs (titre, intervenant, avec ou sans saisons), puis la fiche de la série :
+- **Informations** : titre, intervenant, présentation, catégorie, **accès par défaut** (gratuit / premium), **structure** (avec ou sans saisons) ;
+- **Image de la série** (JPEG / PNG / WebP, recadrée en 16/9 ; sans image, la miniature du premier épisode sert) ;
+- **Publier / repasser en brouillon** (la série n'apparaît au public que publiée et avec au moins un épisode en ligne) ;
+- **Saisons** : ajout, titre facultatif, ordre (flèches), suppression d'une saison vide — enregistrés tout de suite ;
+- **Épisodes** : glisser-déposer (ou boutons ↑ ↓, utilisables au doigt), changement de saison, retrait, et **accès par épisode** : « Comme la série (…) », Gratuit ou Premium. Une barre « Modifications non enregistrées » apparaît ; **Enregistrer les épisodes** envoie tout d'un coup (Annuler remet l'état enregistré) ;
+- **Ajouter des conférences** : recherche dans *mes* conférences qui ne sont dans aucune série, cases à cocher, choix de la saison.
+
+Changer l'accès d'une conférence dans sa propre fiche (Studio) fait de même un réglage « à part » pour l'épisode.
+
+**Correctif de style** : le bandeau « 1 Créer un compte · 2 Choisir la formule · 3 Profiter » (étape 12.4) partageait des noms de classes CSS avec les pastilles V·T·S·R du Studio et pouvait les déformer ; il a été renommé (`.flow`). Même vérification faite pour la page conférence (étape 13).
+
+**API** : `POST|DELETE /series/:id/poster` (nouveau). **Tests** : `python3 api/tests/test_series.py` (52 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

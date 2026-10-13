@@ -48,7 +48,7 @@ function Billing() {
       <h2>{t('subscription')}</h2>
       {justPaid && <Steps current={st.active ? 4 : 3} t={t} />}
       {justPaid && !st.active && <p className="meta">{t('billingSuccess')}</p>}
-      {justPaid && back && <Link className="btn btn-lg resume" href={back}>▶ {t('resumeTalk')}</Link>}
+      {justPaid && back && <Link className="btn btn-lg resume-btn" href={back}>▶ {t('resumeTalk')}</Link>}
       <p><strong>{line}</strong></p>
       {sub ? <button className="btn" disabled={busy} onClick={portal}>{t('manageSub')}</button>
         : <Link className="btn" href="/pricing">{t('subscribe')}</Link>}
