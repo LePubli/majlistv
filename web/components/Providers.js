@@ -5,10 +5,15 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-export default function Providers({ locale, dict, appName, trialDays = 0, children }) {
+// Réglages d'affichage des vignettes si l'API ne les fournit pas (valeurs par défaut).
+const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
+  show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
+
+export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
   const t = (key) => dict[key] || key;
 
   // Appel de l'API via le proxy same-origin /api (pas de CORS).
@@ -32,8 +37,23 @@ export default function Providers({ locale, dict, appName, trialDays = 0, childr
       .finally(() => setReady(true));
   }, []);
 
+  // Favoris de l'utilisateur connecté (cœur sur les vignettes).
+  useEffect(() => {
+    if (!token) { setFavs(new Set()); return; }
+    fetch('/api/me/favorites', { headers: { Authorization: 'Bearer ' + token } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => setFavs(new Set(rows.map((x) => x.id))))
+      .catch(() => {});
+  }, [token]);
+  const toggleFav = useCallback(async (id) => {
+    const on = favs.has(id);
+    setFavs((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
+    const r = await call(`/me/favorites/${id}`, { method: on ? 'DELETE' : 'PUT' });
+    if (!r.ok) setFavs((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); // échec : on annule
+  }, [favs, call]);
+
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); };
 
-  return <Ctx.Provider value={{ locale, t, appName, trialDays, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ locale, t, appName, trialDays, cards: cards || DEFAULT_CARDS, favs, toggleFav, user, ready, call, login, logout }}>{children}</Ctx.Provider>;
 }

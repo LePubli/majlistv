@@ -14,13 +14,14 @@ import hlsRoutes from './routes/hls.js';
 import transcriptRoutes from './routes/transcripts.js';
 import billingRoutes from './routes/billing.js';
 import { ensureCors } from './storage.js';
-import { getSetting } from './settings.js';
+import { getSetting, getNumber, isOn } from './settings.js';
 import { currentUser } from './userstate.js';
 import settingsRoutes from './routes/settings.js';
 import libraryRoutes from './routes/library.js';
 import searchRoutes from './routes/search.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
+import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
@@ -76,7 +77,16 @@ app.get('/health', async () => {
 });
 
 // Configuration publique (nom de l'application) utilisée par les front-ends.
-app.get('/config', async () => ({ appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0 }));
+app.get('/config', async () => {
+  const on = async (k) => isOn(await getSetting(k));
+  const show = {};
+  for (const k of ['access', 'duration', 'speaker', 'category', 'language', 'description', 'favorite', 'progress']) show[k] = await on(`card_show_${k}`);
+  return {
+    appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
+    cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
+  };
+});
 
 await app.register(authRoutes);
 await app.register(adminRoutes);
@@ -93,6 +103,7 @@ await app.register(importRoutes);
 await app.register(studioContentRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
+await app.register(cardsRoutes);
 
 await migrate();
 await ensureAdmin();

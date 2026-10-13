@@ -164,6 +164,7 @@ function Field({ f, value, onChange, onClear, langs, dirty, onTest, testing }) {
 }
 
 const SECTION_HELP = {
+  cards: "Comportement et informations des vignettes (style plateforme de streaming) : agrandissement au survol, aperçu vidéo, et chaque information affichée ou non. Les changements s'appliquent à tout le site dès l'enregistrement.",
   home: "Bannière du haut de page et rangées de l'accueil. Les conférences à afficher en bannière se choisissent dans leur fiche du Studio (« Mise en avant »).",
   general: "Nom du site, adresse publique et durée de l'aperçu gratuit des conférences premium.",
   payment: 'Abonnements via Stripe : clé, webhook, prix et essai gratuit.',

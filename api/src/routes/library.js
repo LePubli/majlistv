@@ -16,7 +16,7 @@ const isCompleted = (pos, dur) => dur > 0 && pos >= Math.min(dur * 0.95, dur - 3
 const MIN_RESUME_MS = 5000;
 
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category,
-  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb`;
+  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
 
 async function cards(rows) {
   for (const r of rows) {

@@ -13,10 +13,10 @@ const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
 const clip = (s, n) => { const x = String(s || '').replace(/\s+/g, ' ').trim(); return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x; };
 
 // Même mise en forme que les autres listes : lien de miniature temporaire, pas de clé interne.
-async function card(r, { withDescription = false } = {}) {
+async function card(r, { withDescription = false } = {}) { // summary : extrait pour la vignette agrandie
   const out = { ...r };
   out.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
-  if (withDescription) out.summary = clip(r.description, 240);
+  out.summary = clip(r.description, withDescription ? 240 : 170);
   for (const k of ['poster_key', 'external_thumb', 'description']) delete out[k];
   if (out.source === 'upload') delete out.video_ref;
   return out;

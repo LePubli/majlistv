@@ -160,6 +160,7 @@ export default async function talksRoutes(app) {
        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
       [p.q ?? null, p.category ?? null, p.limit, p.offset]
     );
+    for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
   });
 

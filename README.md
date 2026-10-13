@@ -539,3 +539,22 @@ Les visiteurs qui ont demandé de réduire les animations n'ont ni défilement a
 **Tests** : `python3 api/tests/test_home.py` (31 vérifications).
 
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx. Après déploiement : mets 3 à 5 conférences en avant depuis le Studio.
+
+
+## Étape 12.2 — Vignettes interactives (style Prime Video)
+
+**Sur ordinateur (souris)** : quand la souris reste ~0,35 s sur une vignette, elle s'**agrandit** dans une fenêtre flottante (elle n'est jamais coupée par la rangée qui défile) avec : boutons ▶ lire, ♥ favori (renvoie vers la connexion si on n'est pas connecté), ⌄ détails ; titre, intervenant, badge Gratuit/Premium, durée, langue, catégorie et un extrait de la description. Si la souris **reste encore** (1,5 s par défaut), un **court extrait muet** démarre par-dessus la miniature, rejoué en boucle ; un bouton 🔇/🔊 permet d'activer le son. `Échap`, le défilement ou la sortie de la souris referment la fenêtre.
+**Sur téléphone / tablette** (écran tactile) et pour les visiteurs qui ont demandé de réduire les animations : la vignette reste simple (pas de fenêtre ni de vidéo).
+
+**D'où vient l'extrait** (`GET /talks/:id/hover`, public) :
+- vidéo envoyée : le début du flux HLS avec un *jeton d'aperçu* — le serveur ne délivre jamais plus que la durée de l'aperçu gratuit, **même pour une conférence premium** ;
+- YouTube / Vimeo : seulement si la conférence est **gratuite** ; premium : miniature seule ;
+- archive.org : miniature seule.
+
+**Tout se règle dans Back-office → Paramètres → Vignettes des conférences** (appliqué à tout le site dès l'enregistrement) : agrandissement au survol, aperçu vidéo, délai avant l'aperçu (500–6000 ms), durée de l'extrait (5–60 s), et affichage on/off de : Gratuit/Premium, durée, intervenant, catégorie, langue, description, bouton favori, barre de progression.
+
+**Correctif** : le proxy `/api` du site renvoyait une erreur 502 pour les réponses « 204 sans contenu » (ajout / retrait d'un favori). Corrigé dans `web/app/api/[...path]/route.js`.
+
+**API** : `/config` expose `cards` ; les listes (`/talks`, `/home`, favoris, reprise) ajoutent `summary` (extrait de 170 caractères). Pas de migration.
+**Tests** : `python3 api/tests/test_cards.py` (18 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.
