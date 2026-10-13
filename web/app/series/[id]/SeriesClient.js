@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
+import { levelLabel } from '../../../lib/levels';
 
 const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
 
@@ -48,8 +49,9 @@ export default function SeriesPage({ initial = null }) {
   const resume = s.resume;
   const label = resume ? (resume.started ? t('resumeEp').replace('{n}', resume.number) : t('watchEp1')) : '';
   const access = flat.length && flat.every((e) => e.access === 'free') ? t('free') : flat.length && flat.every((e) => e.access === 'premium') ? t('premium') : t('mixed');
-  const meta = [s.speaker, s.category, s.seasons && s.seasons.length > 1 ? t('seasonCount').replace('{n}', s.seasons.length) : '', t('episodeCount').replace('{n}', s.episodeCount), access].filter(Boolean).join(' · ');
+  const meta = [s.speaker, s.category, levelLabel(s.level, t), s.seasons && s.seasons.length > 1 ? t('seasonCount').replace('{n}', s.seasons.length) : '', t('episodeCount').replace('{n}', s.episodeCount), access].filter(Boolean).join(' · ');
 
+  const prereq = s.prerequisites || [];
   return (
     <main className="series-page">
       <section className="series-hero" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined}>
@@ -59,6 +61,13 @@ export default function SeriesPage({ initial = null }) {
           <p className="meta">{meta}</p>
           {s.description && <p className="series-desc">{s.description}</p>}
           {!s.published && <p className="notice" role="status">{t('seriesDraftNote')}</p>}
+          {prereq.length > 0 && (
+            <p className="series-prereq">
+              {t('srPrereqAfter')} {prereq.map((x, i) => (
+                <span key={x.id}>{i > 0 ? ', ' : ''}<Link href={`/series/${x.id}`}>{x.title}</Link></span>
+              ))}
+            </p>
+          )}
           {resume && <div className="series-cta"><Link className="btn btn-lg" href={`/talks/${resume.talkId}`}>▶ {label}</Link></div>}
         </div>
       </section>

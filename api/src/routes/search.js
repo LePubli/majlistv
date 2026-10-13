@@ -12,11 +12,12 @@ import { listSeries, episodeLabels } from './series.js';
 const schema = z.object({
   q: z.string().trim().min(1).max(100),
   category: z.coerce.number().int().positive().optional(),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(24),
   offset: z.coerce.number().int().min(0).max(1000).default(0),
 });
 
-const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category,
+const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category, t.level,
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description`;
 const PRE = '⟦';
 const POST = '⟧';
@@ -64,11 +65,13 @@ export default async function searchRoutes(app) {
         WHERE t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')}`, [ids]);
       const byId = new Map(res.rows.map((r) => [r.id, r]));
       rows = ids.map((id) => byId.get(id)).filter(Boolean);
+      if (p.level) { rows = rows.filter((r) => r.level === p.level); total = rows.length; }
     } else {
       const where = `t.video_status = 'ready' AND ${visibleSql('t')}
         AND (t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%' OR t.description ILIKE '%' || $1 || '%'
              OR t.transcript_text ILIKE '%' || $1 || '%')
-        AND ($2::int IS NULL OR t.category_id = $2)`;
+        AND ($2::int IS NULL OR t.category_id = $2)
+        AND (${p.level ? `t.level = '${p.level}'` : 'TRUE'})`;
       const q = p.q.replace(/[%_\\]/g, '\\$&');
       total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${where}`, [q, p.category ?? null])).rows[0].n;
       rows = (await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN categories c ON c.id = t.category_id WHERE ${where}
@@ -107,7 +110,7 @@ export default async function searchRoutes(app) {
       const see = canSee(r);
       const snip = pickSnippet(formatted.get(r.id), see);
       hits.push({
-        id: r.id, title: r.title, speaker: r.speaker, language: r.language, access: r.access, source: r.source,
+        id: r.id, title: r.title, speaker: r.speaker, language: r.language, access: r.access, source: r.source, level: r.level,
         video_ref: r.source === 'upload' ? undefined : r.video_ref, category: r.category, durationSeconds: r.durationSeconds,
         posterUrl: r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null),
         snippet: snip ? snip.text : null,
@@ -117,7 +120,7 @@ export default async function searchRoutes(app) {
       });
     }
     // Séries dont le titre, l'intervenant ou la présentation contiennent la recherche (première page seulement).
-    const series = p.offset === 0 ? await listSeries({ limit: 6, q: p.q, category: p.category || null }) : [];
+    const series = p.offset === 0 ? await listSeries({ limit: 6, q: p.q, category: p.category || null, level: p.level || null }) : [];
     return { engine, total, hits, series, markers: [PRE, POST] };
   });
 }

@@ -38,6 +38,8 @@ export const FIELDS = [
     help: 'Adresse d\'un fichier .mp4 / .webm (court, léger, sans son). Jouée en boucle par-dessus l\'image, sauf si le visiteur a demandé de limiter les animations.' },
   { key: 'home_hero_image_key', group: 'home', type: 'text', hidden: true, label: 'Image de bannière (interne)' },
   { key: 'home_row_new', group: 'home', type: 'bool', label: 'Afficher la rangée « Nouveautés »', env: 'HOME_ROW_NEW', def: 'true' },
+  { key: 'home_row_beginner', group: 'home', type: 'bool', label: 'Afficher la rangée « Pour commencer » (niveau débutant)', env: 'HOME_ROW_BEGINNER', def: 'true',
+    help: 'Reprend les conférences marquées « Débutant » par l\'organisateur. La rangée n\'apparaît que s\'il y en a.' },
   { key: 'home_row_series', group: 'home', type: 'bool', label: 'Afficher la rangée « Séries »', env: 'HOME_ROW_SERIES', def: 'true' },
   { key: 'home_rows_categories', group: 'home', type: 'bool', label: 'Afficher une rangée par catégorie', env: 'HOME_ROWS_CATEGORIES', def: 'true' },
   { key: 'home_row_size', group: 'home', type: 'number', label: 'Nombre de conférences par rangée', env: 'HOME_ROW_SIZE', def: '16', min: 4, max: 40 },

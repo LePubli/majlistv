@@ -1,6 +1,7 @@
 'use client';
 // Vignette d'une série (accueil, liste des séries) : même gabarit que les conférences, avec un effet « pile » et le nombre d'épisodes.
 import Link from 'next/link';
+import { levelLabel } from '../lib/levels';
 
 export default function SeriesCard({ series, t }) {
   const access = series.access === 'mixed' ? t('mixed') : t(series.access);
@@ -16,7 +17,7 @@ export default function SeriesCard({ series, t }) {
           {series.watched > 0 && <span className="progress"><span style={{ width: `${Math.min(100, Math.round((series.watched / series.episodeCount) * 100))}%` }} /></span>}
         </div>
         <h3>{series.title}</h3>
-        <p>{series.watched !== undefined ? t('watchedOf').replace('{n}', series.watched).replace('{total}', series.episodeCount) : [t('seriesTag'), series.speaker].filter(Boolean).join(' · ')}</p>
+        <p>{series.level && <span className={`lvl ${series.level}`}>{levelLabel(series.level, t)}</span>}{series.watched !== undefined ? t('watchedOf').replace('{n}', series.watched).replace('{total}', series.episodeCount) : [t('seriesTag'), series.speaker].filter(Boolean).join(' · ')}</p>
       </Link>
     </div>
   );

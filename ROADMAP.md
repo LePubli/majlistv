@@ -2,6 +2,8 @@
 
 Chaque étape est livrée complète (code, tests, README, commandes de déploiement à copier-coller), puis validée sur le VPS avant la suivante. L'étape 9 passe avant tout le reste : elle est nécessaire avant d'encaisser de vrais clients. L'étape 8 (socle technique) est reportée à la fin, à la demande d'Epok.
 
+**Nouveau cap décidé le 13/10 :** Mejliss TV ne doit pas rester une plateforme de visionnage, mais devenir une **plateforme d'apprentissage à 360°** — on regarde, on vérifie ce qu'on a compris par un quiz, on révise, on progresse, on obtient des badges, et on peut lire l'ouvrage étudié. Avec le même principe pour les enfants (**Mejliss TV Kids**). C'est l'objet des étapes 24 à 26, qui passent devant les étapes 16.2 à 23.
+
 ## Déjà fait
 
 | # | Étape | État |
@@ -79,7 +81,74 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - **PayPal** : via Stripe (compte français pris en charge, abonnements possibles, **peut nécessiter une validation de Stripe/PayPal** pour les paiements récurrents). À activer dans Stripe → Paramètres → Moyens de paiement, puis tester l'essai gratuit et le renouvellement avec PayPal.
 - Côté site : mention des moyens de paiement sur la page des formules, vérification du webhook et de l'essai gratuit avec PayPal. Peu de code : l'essentiel est l'activation et les tests.
 
-### Phase C — Faire venir et garder les abonnés
+### Phase C — Plateforme d'apprentissage 360° (décidé le 13/10)
+
+**Deux règles qui ne changent pas, quelles que soient les étapes :**
+1. **Aucune citation ni aucune question n'est publiée sans relecture humaine.** L'IA ne produit jamais un hadith ni une parole de savant. Elle propose des questions **ancrées sur un passage précis de la conférence** (chapitre + minute), la bonne réponse étant justifiée par les mots de l'intervenant ; l'organisateur valide, corrige ou rejette dans le Studio.
+2. **Le quiz de fin de vidéo est gratuit pour tout le monde**, visiteur non connecté compris. C'est la meilleure porte d'entrée vers l'inscription. Tout ce qui suit (révision, badges, courbe, attestation) demande un abonnement.
+
+**Les deux formules**
+
+| | Mejliss — 6,99 €/mois · 69,99 €/an | Mejliss Apprentissage — 9,99 €/mois · 99,99 €/an |
+|---|---|---|
+| Conférences premium, séries, sous-titres, transcription | ✔ | ✔ |
+| Quiz de compréhension en fin de vidéo | ✔ (gratuit, même sans compte) | ✔ |
+| Révision espacée (J+1, J+3, J+7, J+21), rappels quotidiens | — | ✔ |
+| Score, badges, courbe d'apprentissage, attestation de suivi | — | ✔ |
+| Ouvrages en PDF | — | ✔ (lien boutique visible par tous) |
+| Espace Kids | ✔ visionnage + quiz de fin de vidéo, **1 profil enfant** | ✔ **jusqu'à 5 profils**, avec révision, badges, score et courbe |
+
+Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquement, l'abonnement porte un palier et les fonctions d'apprentissage vérifient ce palier.
+
+**24. Apprentissage (adultes)** — découpé en 5 pièces
+
+- ✅ **24.1 Niveaux et prérequis**
+  - Niveau de difficulté sur chaque conférence et chaque série : **débutant, intermédiaire, avancé**, choisi par l'organisateur (vide = tous niveaux).
+  - **Prérequis** : une série peut déclarer une ou plusieurs séries à suivre avant elle (« Conseillé après : … »).
+  - Badge de niveau sur les vignettes et les pages, filtre par niveau dans le catalogue et la recherche, rangée « Pour commencer » sur l'accueil.
+
+- **24.2 Quiz : données et Studio** (la grosse étape)
+  - Un quiz par conférence : questions à choix multiples, chacune rattachée à un **chapitre et à une minute**, avec l'explication et le passage source.
+  - Génération automatique depuis la transcription (moteurs déjà configurés : Claude, Azure, DeepSeek), **jamais publiée telle quelle**.
+  - Studio : **file de relecture** pour traiter le fonds existant par lots, écoute du passage source en un clic, valider / corriger / rejeter, et rédaction manuelle de questions.
+  - Réglages : nombre de questions (3 à 10), seuil de réussite (70 % par défaut), quiz activé ou non **par conférence**, avec une valeur par défaut dans le back-office.
+
+- **24.3 Passage du quiz (visiteur)**
+  - Proposé à la fin de la vidéo (si activé) et accessible depuis un onglet « Quiz ».
+  - Une question à la fois, correction immédiate avec l'explication et le lien « revoir le passage à 12:40 ».
+  - Visiteur sans compte : résultat gardé 7 jours dans son navigateur, avec invitation à créer un compte pour le conserver.
+  - **Navigation jamais bloquée** : un quiz non validé donne une pastille « À revoir » sur l'épisode, un bandeau discret au lancement de l'épisode suivant, et une carte « Quiz à rattraper » dans « Continuer à regarder ». C'est l'attestation de fin de cours qui exige tous les quiz validés.
+  - Bouton « signaler cette question » → file de traitement dans le Studio.
+
+- **24.4 Score, badges, courbe, attestation — et nouveau palier**
+  - Score par conférence, par thème et global, qui **s'érode doucement avec le temps** : la courbe redescend si l'on n'entretient pas, ce qui donne son sens à la révision.
+  - Niveaux affichés : Découverte, Compréhension, Approfondissement, Maîtrise.
+  - Badges : premiers pas, série terminée, thème maîtrisé, régularité…
+  - Page « Ma progression » : courbe (instantané quotidien du score), points forts et points faibles par thème, recommandations de conférences.
+  - **Attestation de suivi** en PDF à la fin d'un cours, tous quiz validés. Formulation volontairement neutre : une attestation de suivi, ni diplôme ni ijâza.
+  - Création du palier **Apprentissage** dans Stripe, règles d'accès, page Abonnement à deux colonnes.
+
+- **24.5 Révision espacée et rappels quotidiens**
+  - Planification **J+1, J+3, J+7, J+21** après un quiz réussi, resserrée sur les questions ratées.
+  - File de révision : « 5 questions à réviser aujourd'hui », deux minutes.
+  - **Bibliothèque de rappels** dans le Studio : soit un passage extrait mot pour mot d'une de vos conférences (avec le lien vers la minute), soit une citation saisie à la main (auteur, source, recueil, numéro, degré d'authenticité, langue) et marquée « validée ». **Rien de généré par l'IA.**
+  - Carte « Rappel du jour » sur l'accueil, e-mail quotidien avec désinscription en un clic, fréquence réglable.
+
+**25. Ouvrages et boutique**
+- Fiche ouvrage : titre, auteur, présentation, couverture, langues disponibles.
+- Pour chaque langue : un fichier **PDF** à télécharger **ou** un ou plusieurs **liens boutique** (selon le pays ou le revendeur, liens d'affiliation à mettre en place par Epok).
+- Case **« droits confirmés »** obligatoire avant de diffuser un PDF (même principe que pour les vidéos YouTube).
+- Téléchargement réservé au palier Apprentissage, **filigrane portant l'adresse e-mail de l'abonné et la date**, lien de téléchargement à durée limitée.
+- Rattachement à une conférence et/ou à une série ; bloc « L'ouvrage étudié » sur la page conférence ; page « Ouvrages » publique (bonne pour Google).
+
+**26. Mejliss TV Kids**
+- **Profils enfants sous le compte du parent** (prénom, avatar, tranche d'âge **3-6, 7-10, 11-14**), sans adresse e-mail propre : en France, en dessous de 15 ans, c'est le parent qui consent.
+- Sélecteur de profil, code parental pour revenir au profil adulte.
+- Catalogue et design Kids séparés : chaque conférence et chaque série porte son public (adultes ou enfants).
+- Quiz, score, badges et courbe adaptés à la tranche d'âge (score affiché, formulation encourageante, pas de classement entre enfants).
+- Contrôle parental : durée quotidienne, catalogue autorisé, rapport de progression envoyé au parent.
+
+### Phase C2 — Faire venir et garder les abonnés
 
 **16. Référencement Google** — découpé en deux parties
 - ✅ **16.1 Bases techniques** : titre / description / aperçu de partage / adresse canonique pour chaque conférence et série, données structurées `VideoObject` (conférences) et `TVSeries` (séries), titre et description présents dans le HTML dès le premier octet, `sitemap.xml`, `robots.txt`, vignettes à adresse stable, espaces privés en `noindex`. Le partage « à la minute » existe déjà (étape 13).
@@ -127,20 +196,22 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 - Rotation des secrets : mot de passe de la base (apparu dans une capture) et `GARAGE_RPC_SECRET`.
 
 ## Idées mises de côté (à étudier plus tard, pas planifiées)
-- **Quiz sur la vidéo** : questions à choix multiples générées à partir de la transcription (relues et corrigées par l'organisateur dans le Studio), proposées après la lecture.
-- **Section « Cours » en quiz, par niveau** : parcours de quiz classés par niveau (débutant, intermédiaire, avancé), avec progression du visiteur.
 - **Vignettes interactives style plateforme de streaming** (inspiration : captures de Prime Video fournies par Epok) : au survol, la carte grossit ; si la souris reste dessus, un **aperçu vidéo** démarre dans la carte, avec les infos (titre, intervenant, durée, catégorie, langue, accès, note…). **Toutes les informations affichées sur la carte sont paramétrables** (Administration → Paramètres : choisir lesquelles apparaissent, délai avant l'aperçu, aperçu activé ou non). À prévoir : sur mobile (pas de survol), un appui long ou un bouton ; respect de « réduire les animations » ; pas d'aperçu pour les conférences premium non accessibles au visiteur sans l'accord prévu. À rapprocher de l'étape 12 (accueil vitrine).
 - **Haut du site avec bannière photo / vidéo** : grande bannière en tête d'accueil (conférence vedette en image ou en vidéo muette, titre, boutons « Regarder » et « Plus d'infos », points de navigation entre plusieurs vedettes), choisie et programmable depuis le Studio. À rapprocher de l'étape 12 (accueil vitrine).
 
 ## Suggestions ajoutées (à valider, non planifiées)
 - **Page intervenant** (déjà dans « Référencement ») avec ses séries, à rapprocher de l'étape 14.
+- *(Le quiz sur la vidéo, les cours par niveau et le certificat de progression sont devenus les étapes 24 à 26.)*
 - **Reprise automatique** : « Continuer » mène à la bonne minute et au bon épisode.
 - **Cercle de sous-titres** : traduction à la demande d'une langue manquante par un abonné (file d'attente côté Studio).
 - **Liste de lecture « À regarder plus tard »** distincte des favoris.
-- **Certificat / suivi de progression** d'une série terminée (lié aux idées quiz).
 - **Essai sans carte** (option Stripe) pour réduire la friction à l'inscription.
 - **Paiement local** : Apple Pay / Google Pay (inclus avec la carte), virement SEPA, ou autres moyens selon ta clientèle.
 - **Pays et langues** : page d'accueil et e-mails traduits (déjà fr/en/ar) ; ajout du turc, de l'indonésien ou de l'ourdou si la clientèle le justifie.
+
+## Ordre de travail retenu
+
+24.1 → 24.2 → 24.3 → 24.4 → 24.5 → 25 → 26, puis 16.2 (référencement : URL lisibles, page intervenant, chapitres dans le HTML), puis 17 à 23. L'étape 8 (sauvegardes, surveillance) reste en dernier, mais elle devient urgente dès qu'il y a de vrais abonnés.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

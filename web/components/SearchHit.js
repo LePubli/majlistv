@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { levelLabel } from '../lib/levels';
 
 // Texte avec passages surlignés : l'API encadre les mots trouvés par deux marqueurs (pas de HTML injecté).
 export function Marked({ text, markers = ['⟦', '⟧'] }) {
@@ -41,7 +42,7 @@ export default function SearchHit({ hit, t, markers }) {
           </p>
         )}
         <h3><Link href={`/talks/${hit.id}`}>{hit.title}</Link></h3>
-        <p className="meta">{hit.speaker}{hit.category ? ` · ${hit.category}` : ''}{hit.durationSeconds ? ` · ${Math.max(1, Math.round(hit.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
+        <p className="meta">{hit.level && <span className={`lvl ${hit.level}`}>{levelLabel(hit.level, t)}</span>}{hit.speaker}{hit.category ? ` · ${hit.category}` : ''}{hit.durationSeconds ? ` · ${Math.max(1, Math.round(hit.durationSeconds / 60))} ${t('minutes')}` : ''}</p>
         {hit.snippet && <p className="hit-snippet"><Marked text={hit.snippet} markers={markers} /></p>}
         {hit.moments.length > 0 && (
           <ul className="moments">

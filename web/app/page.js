@@ -7,6 +7,7 @@ import SearchHit from '../components/SearchHit';
 import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 import SeriesCard from '../components/SeriesCard';
+import { LEVELS, levelLabel } from '../lib/levels';
 
 export default function Home() {
   const { t, trialDays, user, ready, call } = useApp();
@@ -16,6 +17,7 @@ export default function Home() {
   const [cats, setCats] = useState([]);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
+  const [level, setLevel] = useState('');
   const [cont, setCont] = useState([]);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
@@ -28,10 +30,11 @@ export default function Home() {
     const timer = setTimeout(() => {
       const p = new URLSearchParams();
       if (cat) p.set('category', cat);
+      if (level) p.set('level', level);
       if (q.trim()) {
         p.set('q', q.trim());
         call('/search?' + p).then((r) => setRes(r.ok ? r.data : { hits: [], total: 0 }));
-      } else if (cat) {
+      } else if (cat || level) {
         setRes(null);
         call('/talks?' + p, {}, null).then((r) => setTalks(r.ok ? r.data : []));
       } else {
@@ -39,9 +42,9 @@ export default function Home() {
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [q, cat, call]);
+  }, [q, cat, level, call]);
 
-  const browsing = !q.trim() && !cat; // accueil vitrine (pas de recherche ni de filtre)
+  const browsing = !q.trim() && !cat && !level; // accueil vitrine (pas de recherche ni de filtre)
   const rows = home?.rows || [];
   return (
     <>
@@ -52,6 +55,10 @@ export default function Home() {
           <option value="">{t('allCategories')}</option>
           {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <select value={level} onChange={(e) => setLevel(e.target.value)} aria-label={t('lvAll')}>
+          <option value="">{t('lvAll')}</option>
+          {LEVELS.map((l) => <option key={l} value={l}>{levelLabel(l, t)}</option>)}
+        </select>
       </div>
       {res ? (
         <section className="results">
@@ -61,7 +68,7 @@ export default function Home() {
           )}
           {res.hits.map((h) => <SearchHit key={h.id} hit={h} t={t} markers={res.markers} />)}
         </section>
-      ) : cat ? (
+      ) : (cat || level) ? (
         <>
           {talks && talks.length === 0 && <p className="soon">{t('noTalks')}</p>}
           <div className="grid">{(talks || []).map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
@@ -73,7 +80,8 @@ export default function Home() {
           {rows.map((r) => (r.key === 'series' ? (
             <Row key="series" id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
           ) : (
-            <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} title={r.key === 'new' ? t('rowNew') : r.title} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
+            <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
+              title={r.key === 'new' ? t('rowNew') : r.key === 'beginner' ? t('rowBeginner') : r.title}
               onSeeAll={r.categoryId && r.total > r.talks.length ? () => { setCat(String(r.categoryId)); window.scrollTo({ top: 0 }); } : undefined} />
           )))}
         </>

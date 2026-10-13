@@ -19,6 +19,9 @@ const seriesBody = z.object({
   access: z.enum(['free', 'premium']),
   published: z.boolean(),
   hasSeasons: z.boolean(),
+  // Étape 24.1 : niveau de difficulté (null = tous niveaux) et séries conseillées avant celle-ci.
+  level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
+  prerequisites: z.array(uuid).max(5),
 }).partial().strict();
 const createBody = seriesBody.extend({ title: z.string().trim().min(1).max(200) }).strict();
 const layoutBody = z.object({
@@ -43,11 +46,12 @@ export async function syncAccess(db, seriesId) {
 // Séries publiées avec au moins un épisode en ligne (utilisé par GET /series, l'accueil, la recherche et la bibliothèque).
 //  - q : mot-clé (titre, intervenant, présentation) ; startedBy : ne garde que les séries que ce compte a commencées,
 //    triées de la plus récemment regardée, avec `watched` (épisodes terminés) pour la barre d'avancement.
-export async function listSeries({ limit = 40, category = null, q = null, startedBy = null } = {}) {
+export async function listSeries({ limit = 40, category = null, q = null, level = null, startedBy = null } = {}) {
   const vals = [limit];
   const where = ['s.published'];
   if (category) { vals.push(category); where.push(`s.category_id = $${vals.length}`); }
   if (q) { vals.push(`%${String(q).replace(/[%_\\]/g, '\\$&')}%`); where.push(`(s.title ILIKE $${vals.length} OR s.speaker ILIKE $${vals.length} OR s.description ILIKE $${vals.length})`); }
+  if (level) { vals.push(level); where.push(`s.level = $${vals.length}`); }
   let join = '';
   let extra = '';
   let having = '';
@@ -60,7 +64,7 @@ export async function listSeries({ limit = 40, category = null, q = null, starte
     order = 'max(p.updated_at) DESC';
   }
   const { rows } = await pool.query(
-    `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key,
+    `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key, s.level,
             count(t.id)::int AS "episodeCount",
             (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount",
             bool_and(t.access = 'free') AS "allFree", bool_and(t.access = 'premium') AS "allPremium",
@@ -77,7 +81,7 @@ export async function listSeries({ limit = 40, category = null, q = null, starte
   for (const r of rows) {
     const poster = r.poster_key || r.first_poster;
     const item = {
-      id: r.id, title: r.title, speaker: r.speaker, summary: clip(r.description, 170), hasSeasons: r.hasSeasons, categoryId: r.categoryId, category: r.category,
+      id: r.id, title: r.title, speaker: r.speaker, summary: clip(r.description, 170), hasSeasons: r.hasSeasons, categoryId: r.categoryId, category: r.category, level: r.level,
       episodeCount: r.episodeCount, seasonCount: r.hasSeasons ? r.seasonCount : 0,
       access: r.allFree ? 'free' : r.allPremium ? 'premium' : 'mixed',
       posterUrl: poster ? await presignGet(poster) : (r.first_thumb || null),
@@ -155,7 +159,7 @@ export default async function seriesRoutes(app) {
   // Épisodes d'une série avec infos de carte ; `all` : inclut brouillons / non prêts (propriétaire).
   async function loadEpisodes(seriesId, { all, viewerId }) {
     const { rows } = await pool.query(
-      `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.description,
+      `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.description, t.level,
               t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.video_status AS status,
               t.publication, ${visibleSql('t')} AS visible,
               e.season_id AS "seasonId", e.position, e.access_override AS "accessOverride",
@@ -196,12 +200,20 @@ export default async function seriesRoutes(app) {
   }
 
   const loadSeasons = async (seriesId) => (await pool.query('SELECT id, title, position FROM seasons WHERE series_id = $1 ORDER BY position, id', [seriesId])).rows;
-  const facts = (s) => ({ id: s.id, title: s.title, description: s.description, speaker: s.speaker, categoryId: s.category_id, hasSeasons: s.has_seasons, access: s.access, published: s.published });
+  const facts = (s) => ({ id: s.id, title: s.title, description: s.description, speaker: s.speaker, categoryId: s.category_id, hasSeasons: s.has_seasons, access: s.access, published: s.published, level: s.level });
+
+  // Séries conseillées avant celle-ci. `publicOnly` : on ne montre au visiteur que les séries publiées.
+  async function prerequisitesOf(seriesId, { publicOnly }) {
+    const { rows } = await pool.query(
+      `SELECT s.id, s.title, s.level, s.published FROM series_prerequisites p JOIN series s ON s.id = p.requires_id
+        WHERE p.series_id = $1 ${publicOnly ? 'AND s.published' : ''} ORDER BY p.position, s.title`, [seriesId]);
+    return rows.map((r) => (publicOnly ? { id: r.id, title: r.title, level: r.level } : r));
+  }
 
   // ---------- Public ----------
   app.get('/series', async (req) => {
-    const q = z.object({ category: z.coerce.number().int().optional(), limit: z.coerce.number().int().min(1).max(100).default(40) }).parse(req.query);
-    return listSeries({ limit: q.limit, category: q.category || null });
+    const q = z.object({ category: z.coerce.number().int().optional(), level: z.enum(['beginner', 'intermediate', 'advanced']).optional(), limit: z.coerce.number().int().min(1).max(100).default(40) }).parse(req.query);
+    return listSeries({ limit: q.limit, category: q.category || null, level: q.level || null });
   });
 
   // Séries que le compte a commencées (bibliothèque), la plus récemment regardée d'abord.
@@ -225,6 +237,7 @@ export default async function seriesRoutes(app) {
     const poster = s.poster_key ? await presignGet(s.poster_key) : (flat.find((e) => e.posterUrl)?.posterUrl || null);
     return {
       ...facts(s), category: s.category, posterUrl: poster, episodeCount: shaped.total,
+      prerequisites: await prerequisitesOf(id, { publicOnly: true }),
       seasons: shaped.seasons, episodes: shaped.episodes,
       resume: next ? { talkId: next.id, positionMs: started ? started.positionMs : 0, number: next.number, started: Boolean(started) } : null,
     };
@@ -264,7 +277,7 @@ export default async function seriesRoutes(app) {
   // ---------- Studio ----------
   app.get('/studio/series', organizer, async (req) => {
     const { rows } = await pool.query(
-      `SELECT s.id, s.title, s.speaker, s.published, s.has_seasons AS "hasSeasons", s.access, s.updated_at AS "updatedAt", u.name AS "ownerName",
+      `SELECT s.id, s.title, s.speaker, s.published, s.has_seasons AS "hasSeasons", s.access, s.level, s.updated_at AS "updatedAt", u.name AS "ownerName",
               (SELECT count(*)::int FROM series_episodes e WHERE e.series_id = s.id) AS "episodeCount",
               (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount"
          FROM series s JOIN users u ON u.id = s.owner_id
@@ -291,9 +304,9 @@ export default async function seriesRoutes(app) {
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `INSERT INTO series(owner_id, title, description, speaker, category_id, has_seasons, access, published)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-        [req.user.sub, b.title, b.description ?? '', b.speaker ?? '', b.categoryId ?? null, b.hasSeasons ?? false, b.access ?? 'free', b.published ?? false]);
+        `INSERT INTO series(owner_id, title, description, speaker, category_id, has_seasons, access, published, level)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+        [req.user.sub, b.title, b.description ?? '', b.speaker ?? '', b.categoryId ?? null, b.hasSeasons ?? false, b.access ?? 'free', b.published ?? false, b.level ?? null]);
       if (b.hasSeasons) await client.query("INSERT INTO seasons(series_id, position, title) VALUES ($1, 1, '')", [rows[0].id]);
       await client.query('COMMIT');
       return reply.code(201).send({ id: rows[0].id });
@@ -311,7 +324,7 @@ export default async function seriesRoutes(app) {
     if (!s) return;
     const episodes = await loadEpisodes(id, { all: true, viewerId: null });
     const seasons = s.has_seasons ? (await loadSeasons(id)).map((z, i) => ({ id: z.id, number: i + 1, title: z.title })) : [];
-    return { ...facts(s), posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, seasons, episodes };
+    return { ...facts(s), posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, seasons, episodes, prerequisites: await prerequisitesOf(id, { publicOnly: false }) };
   });
 
   app.patch('/series/:id', organizer, async (req, reply) => {
@@ -329,11 +342,30 @@ export default async function seriesRoutes(app) {
     if (b.access !== undefined) set('access', b.access);
     if (b.published !== undefined) set('published', b.published);
     if (b.hasSeasons !== undefined) set('has_seasons', b.hasSeasons);
-    if (sets.length === 1) return reply.code(400).send({ error: 'Rien à modifier' });
+    if (b.level !== undefined) set('level', b.level);
+    if (sets.length === 1 && b.prerequisites === undefined) return reply.code(400).send({ error: 'Rien à modifier' });
+    if (b.prerequisites !== undefined) {
+      const want = [...new Set(b.prerequisites)];
+      if (want.includes(id)) return reply.code(400).send({ error: 'Une série ne peut pas être son propre prérequis' });
+      if (want.length) {
+        const found = await pool.query('SELECT id FROM series WHERE id = ANY($1)', [want]);
+        if (found.rowCount !== want.length) return reply.code(400).send({ error: 'Série prérequise inconnue' });
+        // Garde-fou : on refuse l'aller-retour A conseillée avant B et B conseillée avant A.
+        const back = await pool.query('SELECT 1 FROM series_prerequisites WHERE series_id = ANY($1) AND requires_id = $2 LIMIT 1', [want, id]);
+        if (back.rowCount) return reply.code(400).send({ error: 'Prérequis circulaire : cette série est déjà conseillée avant l\'une de celles-ci' });
+      }
+      b._prereq = want;
+    }
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query(`UPDATE series SET ${sets.join(', ')} WHERE id = $1`, vals);
+      if (sets.length > 1) await client.query(`UPDATE series SET ${sets.join(', ')} WHERE id = $1`, vals);
+      if (b._prereq) {
+        await client.query('DELETE FROM series_prerequisites WHERE series_id = $1', [id]);
+        for (const [i, r] of b._prereq.entries()) {
+          await client.query('INSERT INTO series_prerequisites(series_id, requires_id, position) VALUES ($1, $2, $3)', [id, r, i]);
+        }
+      }
       if (b.hasSeasons === true && !s.has_seasons) {
         // Passage « avec saisons » : une première saison reçoit tous les épisodes.
         const z = await client.query("INSERT INTO seasons(series_id, position, title) VALUES ($1, 1, '') RETURNING id", [id]);

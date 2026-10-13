@@ -742,3 +742,17 @@ Note : l'indexation prend de quelques jours à quelques semaines ; Google n'inde
 
 **Tests** : `python3 api/tests/test_seo.py` (23 vérifications, API) et `python3 api/tests/test_seo_web.py` (30, site : balises, JSON-LD, robots, sitemap, noindex ; site lancé sur 3077).
 **Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx. Vérifier ensuite : `curl -s https://majlisstv.le-publicitaire.fr/robots.txt` et `curl -s https://majlisstv.le-publicitaire.fr/sitemap.xml | head`.
+
+## Étape 24.1 — Niveaux de difficulté et prérequis
+
+**Niveaux** : *débutant*, *intermédiaire*, *avancé* (ou vide = tous niveaux), choisis par l'organisateur dans le Studio, sur chaque conférence (fiche + création) et chaque série. Un badge de niveau apparaît sur les vignettes, les résultats de recherche et les pages conférence / série.
+
+**Filtres** : sélecteur de niveau sur l'accueil ; API `GET /talks?level=`, `/search?level=`, `/series?level=`.
+
+**Rangée « Pour commencer »** : les conférences de niveau débutant, sur l'accueil. Réglage `home_row_beginner` (Admin → Paramètres, activé par défaut).
+
+**Prérequis de série** : jusqu'à 5 séries conseillées avant celle-ci (Studio → série → Prérequis). Indicatif : jamais bloquant. Le public ne voit que les prérequis publiés. Refusés : une série prérequis d'elle-même, une série inconnue, une boucle (A→B→A).
+
+**Migration** : `022_levels.sql`, appliquée automatiquement au démarrage de l'API.
+**Tests** : `python3 api/tests/test_levels.py` (28 vérifications).
+**Déploiement** : api puis web, `/root/apply-limits.sh`, vérification nginx.

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
+import { LEVELS, levelLabel } from '../../../../lib/levels';
 
 const clock = (s) => {
   if (!s) return '';
@@ -43,6 +44,7 @@ export default function SeriesEditor() {
   const [eps, setEps] = useState([]);
   const [snap, setSnap] = useState('[]');    // dernière disposition enregistrée
   const [cats, setCats] = useState([]);
+  const [others, setOthers] = useState([]);   // autres séries, pour choisir les prérequis
   const [msg, setMsg] = useState(null);
   const [lmsg, setLmsg] = useState(null);
   const [imgMsg, setImgMsg] = useState(null);
@@ -61,17 +63,26 @@ export default function SeriesEditor() {
     if (!r.ok) { setS(false); return; }
     const d = r.data;
     setS(d);
-    setF({ title: d.title, speaker: d.speaker, description: d.description, categoryId: d.categoryId ? String(d.categoryId) : '', access: d.access, hasSeasons: d.hasSeasons });
+    setF({
+      title: d.title, speaker: d.speaker, description: d.description, categoryId: d.categoryId ? String(d.categoryId) : '', access: d.access,
+      hasSeasons: d.hasSeasons, level: d.level || '', prerequisites: (d.prerequisites || []).map((x) => x.id),
+    });
     setSeasons(d.seasons.map((z) => ({ id: z.id, title: z.title })));
     const list = d.episodes.map((e) => ({ ...e, access: e.accessOverride || 'inherit' }));
     setEps(list);
     setSnap(JSON.stringify(layoutOf(list, d.hasSeasons)));
   }, [call, id]);
-  useEffect(() => { load(); call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [load, call]);
+  useEffect(() => {
+    load();
+    call('/categories', {}, null).then((r) => r.ok && setCats(r.data));
+    call('/studio/series').then((r) => r.ok && setOthers(r.data));
+  }, [load, call]);
 
   const dirty = s && JSON.stringify(layoutOf(eps, s.hasSeasons)) !== snap;
+  const savedPrereq = (s?.prerequisites || []).map((x) => x.id).join();
   const infoDirty = s && f && (f.title !== s.title || f.speaker !== s.speaker || f.description !== s.description || f.access !== s.access
-    || (f.categoryId || '') !== (s.categoryId ? String(s.categoryId) : '') || f.hasSeasons !== s.hasSeasons);
+    || (f.categoryId || '') !== (s.categoryId ? String(s.categoryId) : '') || f.hasSeasons !== s.hasSeasons
+    || (f.level || '') !== (s.level || '') || f.prerequisites.join() !== savedPrereq);
   useEffect(() => {
     if (!dirty) return undefined;
     const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
@@ -101,12 +112,16 @@ export default function SeriesEditor() {
     if (!infoDirty || saving) return;
     if (f.hasSeasons !== s.hasSeasons && dirty) { setMsg({ ok: false, text: t('srSaveFirst') }); return; }
     setSaving(true); setMsg(null);
-    const body = { title: f.title, speaker: f.speaker, description: f.description, access: f.access, categoryId: f.categoryId ? Number(f.categoryId) : null, hasSeasons: f.hasSeasons };
+    const body = {
+      title: f.title, speaker: f.speaker, description: f.description, access: f.access, categoryId: f.categoryId ? Number(f.categoryId) : null,
+      hasSeasons: f.hasSeasons, level: f.level || null, prerequisites: f.prerequisites,
+    };
     const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
     setSaving(false);
     if (!r.ok) { setMsg({ ok: false, text: r.data?.error || t('errGeneric') }); return; }
     setMsg({ ok: true, text: t('saved') });
-    if (f.hasSeasons !== s.hasSeasons) await load(); else setS({ ...s, ...body, categoryId: body.categoryId });
+    if (f.hasSeasons !== s.hasSeasons) await load();
+    else setS({ ...s, ...body, categoryId: body.categoryId, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) });
   };
   const togglePublish = async () => {
     const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify({ published: !s.published }) });
@@ -219,6 +234,28 @@ export default function SeriesEditor() {
           <span>{t('srAccess')}</span>
           <div className="pills">{pill(f.access === 'free', t('free'), () => setF({ ...f, access: 'free' }))}{pill(f.access === 'premium', t('premium'), () => setF({ ...f, access: 'premium' }))}</div>
           <span className="meta small">{t('srAccessHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('lvLabel')}>
+          <span>{t('lvLabel')}</span>
+          <div className="pills">
+            {pill(!f.level, t('lvNone'), () => setF({ ...f, level: '' }))}
+            {LEVELS.map((l) => pill(f.level === l, levelLabel(l, t), () => setF({ ...f, level: l })))}
+          </div>
+          <span className="meta small">{t('lvHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('srPrereq')}>
+          <span>{t('srPrereq')}</span>
+          {others.filter((o) => o.id !== id).length === 0
+            ? <span className="meta small">{t('srPrereqNone')}</span>
+            : (
+              <div className="pills">
+                {others.filter((o) => o.id !== id).map((o) => pill(f.prerequisites.includes(o.id), o.title, () => setF({
+                  ...f,
+                  prerequisites: f.prerequisites.includes(o.id) ? f.prerequisites.filter((x) => x !== o.id) : [...f.prerequisites, o.id].slice(0, 5),
+                })))}
+              </div>
+            )}
+          <span className="meta small">{t('srPrereqHelp')}</span>
         </div>
         <div className="fld" role="group" aria-label={t('srStructure')}>
           <span>{t('srStructure')}</span>

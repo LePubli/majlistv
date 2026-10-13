@@ -2,6 +2,7 @@
 // Studio → fiche d'une conférence : modifier les informations, la publication (publiée / brouillon / programmée) et la miniature.
 import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
+import { LEVELS, levelLabel } from '../lib/levels';
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
 const toLocalInput = (iso) => {
@@ -12,7 +13,7 @@ const toLocalInput = (iso) => {
 };
 const initial = (x) => ({
   title: x.title || '', speaker: x.speaker || '', description: x.description || '',
-  categoryId: x.category_id ? String(x.category_id) : '', access: x.access,
+  categoryId: x.category_id ? String(x.category_id) : '', access: x.access, level: x.level || '',
   publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt), featured: Boolean(x.featured),
 });
 
@@ -56,7 +57,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
     if (sched && new Date(f.publishAt).getTime() <= Date.now() + 30000) { setMsg({ ok: false, text: t('errPastDate') }); return; }
     setSaving(true); setMsg(null);
     const body = {
-      title: f.title, speaker: f.speaker, description: f.description, access: f.access,
+      title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null,
       categoryId: f.categoryId ? Number(f.categoryId) : null,
       publication: f.publication, publishAt: sched ? new Date(f.publishAt).toISOString() : null,
       ...(isAdmin ? { featured: f.featured } : {}),
@@ -144,6 +145,14 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
             {pill(f.access === 'premium', t('premium'), () => patch({ access: 'premium' }))}
           </div>
           <span className="meta small">{f.access === 'free' ? t('nwFreeHelp') : t('nwPremHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('lvLabel')}>
+          <span>{t('lvLabel')}</span>
+          <div className="pills">
+            {pill(!f.level, t('lvNone'), () => patch({ level: '' }))}
+            {LEVELS.map((l) => pill(f.level === l, levelLabel(l, t), () => patch({ level: l })))}
+          </div>
+          <span className="meta small">{t('lvHelp')}</span>
         </div>
 
         {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}

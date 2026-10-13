@@ -9,6 +9,7 @@ import { useApp } from '../../../components/Providers';
 import { uploadFile } from '../../../lib/upload';
 import { langName } from '../../../components/Transcript';
 import ImportPanel from '../../../components/ImportPanel';
+import { LEVELS, levelLabel } from '../../../lib/levels';
 
 // Langues de sous-titres proposées (doit correspondre à api/src/langs.js).
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
@@ -66,7 +67,7 @@ export default function NewTalk() {
   const [cats, setCats] = useState([]);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', access: 'free', translateTo: [], rightsConfirmed: false });
+  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
   const token = useRef(0);
   const fileInput = useRef(null);
   const parsed = link ? parseLink(link) : null;
@@ -108,7 +109,7 @@ export default function NewTalk() {
     e?.preventDefault();
     if (saving || (mode === 'file' && up.state !== 'done')) return;
     setErr(''); setSaving(true);
-    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined };
+    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, level: f.level || undefined };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
     if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else body.videoUrl = link.trim();
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
@@ -213,6 +214,17 @@ export default function NewTalk() {
                 ))}
               </div>
               <span className="meta small">{f.access === 'free' ? t('nwFreeHelp') : t('nwPremHelp')}</span>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('lvLabel')}>
+              <span>{t('lvLabel')}</span>
+              <div className="pills">
+                <button type="button" aria-pressed={!f.level} className={!f.level ? 'pill on' : 'pill'} onClick={() => patch({ level: '' })}>{t('lvNone')}</button>
+                {LEVELS.map((l) => (
+                  <button key={l} type="button" aria-pressed={f.level === l} className={f.level === l ? 'pill on' : 'pill'} onClick={() => patch({ level: l })}>{levelLabel(l, t)}</button>
+                ))}
+              </div>
+              <span className="meta small">{t('lvHelp')}</span>
             </div>
 
             {mode === 'link' && (

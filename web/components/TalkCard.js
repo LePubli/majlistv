@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 import { langName } from './Transcript';
+import { levelLabel } from '../lib/levels';
 
 const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par conférence
 
@@ -91,6 +92,7 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
         </div>
         <h3 className="hc-title">{talk.title}</h3>
         {show.speaker && talk.speaker && <p className="hc-speaker">{talk.speaker}</p>}
+        {talk.level && <p className="hc-meta"><span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span></p>}
         {meta.length > 0 && <p className="hc-meta">{meta.map((m, i) => <span key={i} className={i === 0 && show.access && m === t(talk.access) && talk.access === 'premium' ? 'prem' : undefined}>{m}</span>)}</p>}
         {show.description && talk.summary && <p className="hc-desc">{talk.summary}</p>}
       </div>
@@ -149,7 +151,7 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
           {progress > 0 && show.progress && <span className="progress"><span style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }} /></span>}
         </div>
         <h3>{talk.title}</h3>
-        {sub && <p>{sub}</p>}
+        {(talk.level || sub) && <p>{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{sub}</p>}
       </Link>
       {onRemove && <button type="button" className="card-remove" onClick={onRemove} aria-label={removeLabel} title={removeLabel}>×</button>}
       {rect && <HoverCard talk={talk} rect={rect} t={t} locale={locale} cfg={cfg} progress={progress} onEnter={() => clearTimeout(closeTimer.current)} onLeave={close} />}

@@ -36,6 +36,7 @@ export function parseVideoUrl(raw) {
 const listSchema = z.object({
   q: z.string().max(100).optional(),
   category: z.coerce.number().int().optional(),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(24),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -47,6 +48,8 @@ const talkSchema = z.object({
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().optional(),
   access: z.enum(['free', 'premium']).default('free'),
+  // Niveau de difficulté (étape 24.1) : vide = tous niveaux.
+  level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   videoUrl: z.string().url().max(500).optional(),
   uploadId: z.string().uuid().optional(),
   // Langues des sous-titres à générer automatiquement (vidéos envoyées uniquement).
@@ -65,6 +68,7 @@ const patchSchema = z.object({
   speaker: z.string().trim().max(200),
   categoryId: z.number().int().positive().nullable(),
   access: z.enum(['free', 'premium']),
+  level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
   publication: z.enum(['draft', 'scheduled', 'published']),
   publishAt: z.string().datetime({ offset: true }).nullable(),
   // 0..2 : une des 3 images tirées de la vidéo ; -1 : miniature de la plateforme d'origine (YouTube, Vimeo, archive.org).
@@ -74,7 +78,7 @@ const patchSchema = z.object({
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
-  t.video_ref, t.category_id, c.name AS category, t.created_at,
+  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level,
   t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
@@ -157,8 +161,9 @@ export default async function talksRoutes(app) {
               OR t.description ILIKE '%' || $1 || '%'
               OR t.transcript_text ILIKE '%' || $1 || '%')
          AND ($2::int IS NULL OR t.category_id = $2)
+         AND ($5::text IS NULL OR t.level = $5)
        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
-      [p.q ?? null, p.category ?? null, p.limit, p.offset]
+      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null]
     );
     for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
@@ -286,11 +291,11 @@ export default async function talksRoutes(app) {
       const m = video.meta || {};
       const { rows } = await pool.query(
         `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed,
-                           external_file, external_thumb, duration_seconds, publication, publish_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
+                           external_file, external_thumb, duration_seconds, publication, publish_at, level)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
         [req.user.sub, b.title, b.description || m.description || '', b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
           video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
-          m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt]
+          m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt, b.level ?? null]
       );
       if (transcribable && b.translateTo.length) {
         const langs = [...new Set(b.translateTo)].filter((l) => l !== baseLang(b.language));
@@ -320,6 +325,7 @@ export default async function talksRoutes(app) {
     if (b.speaker !== undefined) set('speaker', b.speaker);
     if (b.categoryId !== undefined) set('category_id', b.categoryId);
     if (b.access !== undefined) set('access', b.access);
+    if (b.level !== undefined) set('level', b.level);
     if (b.featured !== undefined) {
       if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une conférence en avant sur l'accueil" });
       set('featured', b.featured);

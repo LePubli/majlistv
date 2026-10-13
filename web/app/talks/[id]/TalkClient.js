@@ -9,6 +9,7 @@ import Transcript, { langName } from '../../../components/Transcript';
 import Insights from '../../../components/Insights';
 import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
+import { levelLabel } from '../../../lib/levels';
 
 // `initial` : titre, intervenant et description lus côté serveur. Ils sont dans le HTML dès le premier octet (moteurs de recherche,
 // partage de lien) et affichés pendant le chargement de la page complète, sans jamais montrer l'invitation « premium » par erreur.
@@ -274,7 +275,7 @@ export default function TalkPage({ initial = null }) {
 
   const minutes = talk.durationSeconds ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : '';
   const details = [
-    [t('dSpeaker'), talk.speaker], [t('dCategory'), talk.category], [t('dLang'), audioLang ? langName(audioLang, locale) : ''],
+    [t('dSpeaker'), talk.speaker], [t('dCategory'), talk.category], [t('lvLabel'), levelLabel(talk.level, t)], [t('dLang'), audioLang ? langName(audioLang, locale) : ''],
     [t('dDuration'), minutes], [t('dAccess'), t(talk.access)], [t('dSubs'), (talk.tracks || []).map((l) => langName(l, locale)).join(' · ')],
   ].filter(([, v]) => v);
 
@@ -316,7 +317,7 @@ export default function TalkPage({ initial = null }) {
               )
               : talk.category && <p className="eyebrow">{talk.category}</p>}
             <h1>{talk.title}</h1>
-            <p className="meta">{[talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
+            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{[talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             <div className="talk-actions">
               <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
                 <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}

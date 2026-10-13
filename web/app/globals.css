@@ -880,3 +880,12 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .pay-methods { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; color: var(--muted); font-size: .9rem; }
 .pay-chip { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text); font-size: .85rem; }
 .pricing .soon { padding-inline: 0; }
+
+/* 24.1 — Niveaux de difficulté et prérequis */
+.lvl { display: inline-block; margin-inline-end: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .02em; vertical-align: 1px; border: 1px solid currentColor; }
+.lvl.beginner { color: #7fd1a0; }
+.lvl.intermediate { color: #e6a739; }
+.lvl.advanced { color: #d98b8b; }
+.hit .lvl, .talk p .lvl { font-size: 10px; padding: 0 8px; }
+.series-prereq { margin: 0; color: var(--text-2); font-size: .95rem; }
+.series-prereq a { color: var(--accent); }

@@ -8,7 +8,7 @@ import { getSetting, getNumber, isOn, saveSettings } from '../settings.js';
 import { listSeries } from './series.js';
 
 const HERO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.category_id AS "categoryId", c.name AS category,
+const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.category_id AS "categoryId", c.name AS category, t.level,
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description`;
 const FROM = 'FROM talks t LEFT JOIN categories c ON c.id = t.category_id';
 const clip = (s, n) => { const x = String(s || '').replace(/\s+/g, ' ').trim(); return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x; };
@@ -59,6 +59,11 @@ export default async function homeRoutes(app) {
       const list = await listSeries({ limit: size });
       if (list.length) rows.push({ key: 'series', title: null, series: list });
     }
+    // « Pour commencer » : les conférences de niveau débutant, pour un visiteur qui découvre le sujet.
+    if (isOn(await getSetting('home_row_beginner'))) {
+      const r = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.level = 'beginner' AND t.video_status = 'ready' AND ${vis} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $1`, [size]);
+      if (r.rows.length) rows.push({ key: 'beginner', title: null, talks: await Promise.all(r.rows.map((x) => card(x))) });
+    }
     if (isOn(await getSetting('home_rows_categories'))) {
       // Les catégories les plus fournies d'abord ; les conférences sans catégorie n'ont pas de rangée (elles sont dans « Nouveautés »).
       const { rows: cats } = await pool.query(
@@ -74,7 +79,8 @@ export default async function homeRoutes(app) {
       const fav = (await pool.query('SELECT favorite_categories AS c FROM users WHERE id = $1', [viewer.sub])).rows[0]?.c || [];
       if (fav.length) {
         for (const r of rows) r.forYou = r.categoryId != null && fav.includes(r.categoryId);
-        const head = rows.filter((r) => r.key === 'new' || r.key === 'series'); const mine = rows.filter((r) => r.forYou); const rest = rows.filter((r) => r.key !== 'new' && r.key !== 'series' && !r.forYou);
+        const top = (r) => ['new', 'series', 'beginner'].includes(r.key);
+        const head = rows.filter(top); const mine = rows.filter((r) => !top(r) && r.forYou); const rest = rows.filter((r) => !top(r) && !r.forYou);
         rows.splice(0, rows.length, ...head, ...mine, ...rest);
       }
     }
