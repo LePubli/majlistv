@@ -15,6 +15,7 @@ import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { hasActiveSubscription, hasLearningTier } from '../access.js';
 import { getNumber, getSetting, isOn } from '../settings.js';
+import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../kidsLearning.js';
 
 export const BANDS = ['3-6', '7-10', '11-14'];
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'];
@@ -163,14 +164,18 @@ export default async function kidsRoutes(app) {
   app.get('/kids/talks', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
     const open = await parentAllowed(c.parent.sub, c.parent.role);
+    const minQ = await getNumber('quiz_min_questions');
+    const quizDefault = isOn(await getSetting('quiz_default_enabled'));
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.kids_band AS "kidsBand", t.duration_seconds AS "durationSeconds",
               t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 140) AS summary,
-              COALESCE(k.completed, false) AS completed, COALESCE(k.position_ms, 0) AS "positionMs"
+              COALESCE(k.completed, false) AS completed, COALESCE(k.position_ms, 0) AS "positionMs",
+              (COALESCE(t.quiz_enabled, $5::boolean) AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $6) AS "hasQuiz",
+              (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars
          FROM talks t LEFT JOIN kid_progress k ON k.talk_id = t.id AND k.profile_id = $1
         WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ($3::boolean OR t.access = 'free')
         ORDER BY (t.kids_band = $4) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 60`,
-      [c.profile.id, RANK[c.profile.band], open, c.profile.band]);
+      [c.profile.id, RANK[c.profile.band], open, c.profile.band, quizDefault, minQ]);
     for (const r of rows) {
       r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
       delete r.poster_key; delete r.external_thumb;
@@ -191,6 +196,85 @@ export default async function kidsRoutes(app) {
        ON CONFLICT (profile_id, talk_id) DO UPDATE SET position_ms = EXCLUDED.position_ms, completed = kid_progress.completed OR EXCLUDED.completed, updated_at = now()`,
       [c.profile.id, id, b.positionMs, done]);
     return { ok: true, completed: done };
+  });
+
+  // ------------------------------------------------------------------ Quiz, étoiles, badges, révision (26.2)
+  const learningOf = (c) => hasLearningTier(c.parent.sub);
+
+  // Questions d'un quiz pour l'enfant : 5 au plus, jamais les réponses. Le tirage change à chaque essai.
+  async function kidQuestions(profile, talkId) {
+    if (!(await kidCanSee(profile, talkId))) return null;
+    const minQ = await getNumber('quiz_min_questions');
+    const meta = (await pool.query(
+      `SELECT COALESCE(t.quiz_enabled, $2::boolean) AS on, (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved')::int AS n,
+              (SELECT count(*) FROM kid_quiz_attempts a WHERE a.profile_id = $3 AND a.talk_id = t.id)::int AS tries
+         FROM talks t WHERE t.id = $1`, [talkId, isOn(await getSetting('quiz_default_enabled')), profile.id])).rows[0];
+    if (!meta || !meta.on || meta.n < minQ) return null;
+    const { rows } = await pool.query(
+      `SELECT id, question, options, correct_index, explanation, evidence_ms FROM quiz_questions WHERE talk_id = $1 AND status = 'approved'
+        ORDER BY md5(id::text || $2::text) LIMIT ${KID_QUESTIONS}`, [talkId, String(meta.tries)]);
+    return rows.sort((a, b) => (a.evidence_ms ?? 1e9) - (b.evidence_ms ?? 1e9));
+  }
+
+  app.get('/kids/talks/:id/quiz', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    const { id } = idSchema.parse(req.params);
+    const qs = await kidQuestions(c.profile, id);
+    if (!qs) return reply.code(404).send({ error: "Pas de quiz pour cette vidéo", code: 'no_quiz' });
+    return { questions: qs.map((q) => ({ id: q.id, question: q.question, options: q.options })) };
+  });
+
+  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.string().uuid(), index: z.number().int().min(0).max(3) })).min(1).max(KID_QUESTIONS) });
+  app.post('/kids/talks/:id/quiz/submit', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    const { id } = idSchema.parse(req.params);
+    const b = submitBody.parse(req.body ?? {});
+    if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    const ids = [...new Set(b.answers.map((a) => a.questionId))];
+    if (ids.length !== b.answers.length) return reply.code(400).send({ error: 'Réponses en double' });
+    const { rows } = await pool.query(
+      `SELECT id, correct_index, explanation, evidence_ms FROM quiz_questions WHERE talk_id = $1 AND status = 'approved' AND id = ANY($2::uuid[])`, [id, ids]);
+    if (rows.length !== ids.length) return reply.code(400).send({ error: 'Question inconnue' });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const results = b.answers.map((a) => {
+      const q = byId.get(a.questionId);
+      return { questionId: q.id, chosen: a.index, correct: a.index === q.correct_index, correctIndex: q.correct_index, explanation: q.explanation, evidenceMs: q.evidence_ms };
+    });
+    const score = results.filter((r) => r.correct).length;
+    const percent = Math.round((100 * score) / results.length);
+    const stars = starsOf(percent);
+    const before = await starTotal(c.profile.id);
+    await pool.query('INSERT INTO kid_quiz_attempts(profile_id, talk_id, score, total, percent, stars) VALUES ($1, $2, $3, $4, $5, $6)', [c.profile.id, id, score, results.length, percent, stars]);
+    const learning = await learningOf(c);
+    let newBadges = [];
+    let nextReview = null;
+    if (learning) {
+      await recordKidAttempt(c.profile.id, id, percent);
+      newBadges = await awardBadges(c.profile.id);
+      nextReview = (await pool.query('SELECT due_on::text AS "dueOn" FROM kid_revision WHERE profile_id = $1 AND talk_id = $2', [c.profile.id, id])).rows[0]?.dueOn ?? null;
+    }
+    return { score, total: results.length, percent, stars, totalStars: await starTotal(c.profile.id), previousStars: before, newBadges, nextReview, results };
+  });
+
+  // Résumé : étoiles (tous les paliers) ; badges et « à rejouer aujourd'hui » (Apprentissage).
+  app.get('/kids/summary', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    const learning = await learningOf(c);
+    const out = { learning, stars: await starTotal(c.profile.id), quizzes: (await pool.query('SELECT count(*)::int AS n FROM kid_quiz_attempts WHERE profile_id = $1', [c.profile.id])).rows[0].n,
+      watched: (await pool.query('SELECT count(*)::int AS n FROM kid_progress WHERE profile_id = $1 AND completed', [c.profile.id])).rows[0].n, badges: [], allBadges: KID_BADGES, due: [] };
+    if (learning) {
+      out.badges = (await pool.query('SELECT code, earned_at AS "earnedAt" FROM kid_badges WHERE profile_id = $1 ORDER BY earned_at', [c.profile.id])).rows;
+      const open = await parentAllowed(c.parent.sub, c.parent.role);
+      const { rows } = await pool.query(
+        `SELECT t.id, t.title, t.speaker, t.source, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb
+           FROM kid_revision r JOIN talks t ON t.id = r.talk_id
+          WHERE r.profile_id = $1 AND r.due_on IS NOT NULL AND r.due_on <= (now() AT TIME ZONE 'Europe/Paris')::date
+            AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ($3::boolean OR t.access = 'free')
+          ORDER BY r.due_on LIMIT 6`, [c.profile.id, RANK[c.profile.band], open]);
+      for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
+      out.due = rows;
+    }
+    return out;
   });
 
   // Sortie de l'espace enfant : seul le code parental rend un jeton normal.

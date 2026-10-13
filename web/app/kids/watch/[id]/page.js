@@ -7,12 +7,14 @@ import { useApp } from '../../../../components/Providers';
 import VideoPlayer from '../../../../components/VideoPlayer';
 import ExternalPlayer from '../../../../components/ExternalPlayer';
 import { langName } from '../../../../components/Transcript';
+import KidsQuiz from '../../../../components/KidsQuiz';
 
 export default function KidsWatch() {
   const { id } = useParams();
   const { t, call, kid, locale } = useApp();
   const [talk, setTalk] = useState(undefined);
   const videoRef = useRef(null);
+  const [quiz, setQuiz] = useState(false);
   useEffect(() => { if (kid) call(`/talks/${id}`).then((r) => setTalk(r.ok ? r.data : null)); }, [kid, id, call]);
 
   // Reprise : on enregistre la position toutes les 10 s, à la pause et à la fermeture (progression de l'enfant, pas celle du parent).
@@ -29,8 +31,9 @@ export default function KidsWatch() {
       call(`/kids/progress/${id}`, { method: 'PUT', body: JSON.stringify({ positionMs: pos, durationMs: dur }), keepalive: true });
     };
     const timer = setInterval(() => { if (!video.paused && !video.ended) save(); }, 10000);
-    video.addEventListener('pause', save); video.addEventListener('ended', save); window.addEventListener('pagehide', save);
-    return () => { clearInterval(timer); save(); video.removeEventListener('pause', save); video.removeEventListener('ended', save); window.removeEventListener('pagehide', save); };
+    const finished = () => { save(); setQuiz(true); }; // fin de la vidéo : on propose le quiz
+    video.addEventListener('pause', save); video.addEventListener('ended', finished); window.addEventListener('pagehide', save);
+    return () => { clearInterval(timer); save(); video.removeEventListener('pause', save); video.removeEventListener('ended', finished); window.removeEventListener('pagehide', save); };
   }, [talk, id, call]);
 
   if (!kid) return null;
@@ -48,6 +51,9 @@ export default function KidsWatch() {
       {back}
       <h1 className="kd-watch-title">{talk.title}</h1>
       <div className="player">{player}</div>
+      {talk.quiz?.available && (quiz
+        ? <KidsQuiz talkId={id} onClose={() => setQuiz(false)} />
+        : <p><button type="button" className="btn kd-quiz-btn" onClick={() => setQuiz(true)}>🎯 {t('kdQuizBtn')}</button></p>)}
       {talk.description && <p className="about-text">{talk.description}</p>}
     </main>
   );

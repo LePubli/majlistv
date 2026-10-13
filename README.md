@@ -969,3 +969,37 @@ nginx -t && systemctl reload nginx
 
 **À faire par toi** : marquer dans le Studio les conférences adaptées aux enfants (sans cela, l'espace Kids reste vide), et prévoir une ligne sur les profils enfants dans ta politique de confidentialité (seul un prénom est stocké).
 
+
+## Étape 26.2 — Kids : quiz, étoiles, badges et révision
+
+**Principe.** Après la vidéo (ou via « Teste-toi ! »), l'enfant répond à **5 questions** tirées des questions **approuvées** de la conférence. Le quiz est gratuit pour tous les profils.
+
+| | Mejliss | Mejliss Apprentissage |
+|---|---|---|
+| Quiz de fin de vidéo | oui | oui |
+| Étoiles (1 à 3 par conférence, total = meilleur résultat de chacune) | oui | oui |
+| 7 badges (premier quiz, 3 étoiles, 5 quiz, explorateur, 3 vidéos, mieux qu'avant, 10 étoiles) | non | oui |
+| Révision J+1 / J+3 / J+7 (« À rejouer aujourd'hui ») | non | oui |
+
+- **Étoiles** : 1 pour avoir terminé, +1 à partir de 60 %, +1 à partir de 90 %. Jamais de mot « raté » : « Bien essayé ! » et « La bonne réponse était… ».
+- **Pas de classement** entre enfants, ni entre profils.
+- **Révision** : un bon essai (≥ 60 %) à la date prévue fait avancer ; un essai moyen revient à J+1 ; 3 réussites = « retenu ».
+- **Sécurité** : toutes les routes sont `kidOk` et limitées au profil du jeton enfant ; les bonnes réponses ne sont envoyées qu'après la soumission.
+
+### API
+- `GET /kids/talks/:id/quiz` · `POST /kids/talks/:id/quiz/submit` (`{answers:[0..n]}`, 5 réponses)
+- `GET /kids/summary` → `{learning, stars, quizzes, watched, badges, allBadges, due}`
+- `/kids/talks` renvoie en plus `hasQuiz` et `stars`.
+- Migration `030_kids_learning.sql` (appliquée au démarrage) : `kid_quiz_attempts`, `kid_badges`, `kid_revision`.
+
+### Déploiement
+```bash
+cd /chemin/du/projet && git add -A && git commit -m "Etape 26.2 Kids quiz" && git push
+# DockPanel : redéployer api puis web (translator inchangé)
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Tests
+`python3 api/tests/test_kids_learning.py` (≈ 40 vérifications), puis un test navigateur (étoiles, badges, révision, mobile arabe).
