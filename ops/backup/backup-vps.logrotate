@@ -1,0 +1,8 @@
+/var/log/backup-vps.log /var/log/backup-vps.cron.log {
+    weekly
+    rotate 8
+    compress
+    missingok
+    notifempty
+    create 600 root root
+}
