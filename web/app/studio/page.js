@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { langName } from '../../components/Transcript';
+import BulkEdit from '../../components/BulkEdit';
 import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../lib/talkState';
 
 const clock = (s) => {
@@ -27,6 +28,9 @@ export default function StudioTalks() {
   const [mine, setMine] = useState(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sel, setSel] = useState(() => new Set()); // conférences cochées (modification en lot)
+  const [bulk, setBulk] = useState(false);
+  const [flash, setFlash] = useState('');
   // Lien depuis le tableau de bord : /studio?filter=err ouvre directement le bon filtre.
   useEffect(() => { const f = new URLSearchParams(window.location.search).get('filter'); if (FILTERS.includes(f)) setFilter(f); }, []);
   const load = useCallback(() => call('/me/talks').then((r) => r.ok && setMine(r.data)), [call]);
@@ -49,6 +53,9 @@ export default function StudioTalks() {
   const needle = q.trim().toLowerCase();
   const shown = rows.filter((r) => inFilter(r.kind, filter)
     && (!needle || `${r.title} ${r.speaker}`.toLowerCase().includes(needle)));
+  const allShown = shown.length > 0 && shown.every((r) => sel.has(r.id));
+  const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) shown.forEach((r) => n.delete(r.id)); else shown.forEach((r) => n.add(r.id)); return n; });
+  const toggleOne = (id) => setSel((s0) => { const n = new Set(s0); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const dateTime = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -90,18 +97,31 @@ export default function StudioTalks() {
       )}
       {mine && rows.length > 0 && shown.length === 0 && <p className="meta">{t('noResults')}</p>}
 
+      {flash && <p className="notice" role="status">{flash}</p>}
+      {sel.size > 0 && !bulk && (
+        <div className="bk-bar" role="region" aria-label={t('bkEdit')}>
+          <strong>{t('bkSelected').replace('{n}', sel.size)}</strong>
+          <button type="button" className="btn" onClick={() => setBulk(true)}>{t('bkEdit')}</button>
+          <button type="button" className="btn ghost" onClick={() => setSel(new Set())}>{t('bkClear')}</button>
+        </div>
+      )}
+      {bulk && sel.size > 0 && (
+        <BulkEdit ids={[...sel]} onCancel={() => setBulk(false)}
+          onDone={(n) => { setBulk(false); setSel(new Set()); setFlash(t('bkDone').replace('{n}', n)); load(); setTimeout(() => setFlash(''), 5000); }} />
+      )}
       {shown.length > 0 && (
         <div className="studio-table-wrap">
           <table className="studio-table">
             <thead>
               <tr>
-                <th>{t('colTalk')}</th><th>{t('colState')}</th><th>{t('colSteps')}</th><th>{t('access')}</th><th>{t('colAdded')}</th>
+                <th className="bk-col"><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} /></th><th>{t('colTalk')}</th><th>{t('colState')}</th><th>{t('colSteps')}</th><th>{t('access')}</th><th>{t('colAdded')}</th>
                 <th><span className="sr-only">{t('colActions')}</span></th>
               </tr>
             </thead>
             <tbody>
               {shown.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} className={sel.has(r.id) ? 'bk-sel' : undefined}>
+                  <td className="bk-col"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></td>
                   <td>
                     <Link href={`/studio/${r.id}`} className="studio-talk">
                       <span className="studio-thumb" style={r.posterUrl ? { backgroundImage: `url(${r.posterUrl})` } : undefined}>

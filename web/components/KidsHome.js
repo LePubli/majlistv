@@ -9,7 +9,7 @@ import KidsBanner from './KidsBanner';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
-function KidCard({ x, t }) {
+export function KidCard({ x, t }) {
   return (
     <li>
       <Link href={`/kids/watch/${x.id}`} className="kd-card">

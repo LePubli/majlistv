@@ -52,6 +52,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const [pending, setPending] = useState([]);        // quiz laissés de côté, rappelés par la bannière
   const [pendingHidden, setPendingHidden] = useState(false);
   const quizRef = useRef(null);
+  const stageRef = useRef(null); // zone du lecteur : le quiz s'y affiche en superposition
   const [shared, setShared] = useState(null);       // retour visuel du bouton Partager (secondes du lien, -1 = lien simple)
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
   const qs = useSearchParams();
@@ -182,7 +183,8 @@ export default function TalkPage({ initial = null, talkId = null }) {
   useEffect(() => { if (quizOn && wantQuiz) openQuiz(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [quizOn, wantQuiz, id]);
   const openQuiz = () => {
     setQuizOffer(false); setQuizOpen(true);
-    setTimeout(() => quizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    try { videoRef.current?.pause?.(); } catch { /* lecteur pas prêt */ }
+    setTimeout(() => stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };
   const laterQuiz = () => {
     addPending({ id, title: talk.title }); setPending(getPending(id));
@@ -353,8 +355,16 @@ export default function TalkPage({ initial = null, talkId = null }) {
     <main className="page watch">
       <div className="watch-grid">
         <div className="watch-main">
-          <div className="player-wrap">
-            {player}
+          <div className="player-wrap" ref={stageRef}>
+            <div className={quizOpen ? 'player-stage quiz-on' : 'player-stage'}>
+              {player}
+            {quizOpen && (
+              <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('qpTitle')}>
+                <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={(sec) => { setQuizOpen(false); seekTo(sec); }} onClose={() => setQuizOpen(false)}
+                  nextHref={canChain ? `/talks/${next.id}?autoplay=1` : null} onNext={(res) => { if (!res.passed) addPending({ id, title: talk.title }); }} />
+              </div>
+            )}
+            </div>
             {(talk.hlsPath || talk.fileUrl || embed) && (
               <div className="speed-bar" role="group" aria-label={t('spdLabel')}>
                 <span className="meta">{t('spdLabel')}</span>
@@ -412,10 +422,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
           )}
           {quizOn && (
             <div className="quiz-slot" ref={quizRef}>
-              {quizOpen ? (
-                <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={seekTo} onClose={() => setQuizOpen(false)}
-                  nextHref={canChain ? `/talks/${next.id}?autoplay=1` : null} onNext={(res) => { if (!res.passed) addPending({ id, title: talk.title }); }} />
-              ) : (
+              {!quizOpen && (
                 <div className="quiz-card">
                   <div>
                     <strong>{t('qpTitle')}</strong>

@@ -128,6 +128,23 @@ function checkPublication(publication, publishAt) {
   return { publication, publishAt };
 }
 
+// Modification en lot (étape 27.1) : mêmes règles que PATCH /talks/:id, appliquées à plusieurs conférences d'un coup.
+const bulkSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  bandsMode: z.enum(['replace', 'add', 'remove']).default('replace'), // façon de modifier les tranches Kids
+  changes: z.object({
+    categoryId: z.number().int().positive().nullable(),
+    extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES),
+    access: z.enum(['free', 'premium']),
+    level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
+    kidsBands: z.array(z.enum(BANDS)).max(9),
+    showAdults: z.boolean(),
+    publication: z.enum(['draft', 'published']),
+    speaker: z.string().trim().max(200),
+    language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
+  }).partial().strict(),
+});
+
 export default async function talksRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
 
@@ -383,6 +400,54 @@ export default async function talksRoutes(app) {
       if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
       throw err;
     }
+  });
+
+  // Modification en lot : { ids, changes, bandsMode }. Un organisateur ne touche qu'à ses conférences ; l'administrateur à toutes.
+  app.post('/talks/bulk', organizer, async (req, reply) => {
+    const { ids, changes: b, bandsMode } = bulkSchema.parse(req.body ?? {});
+    if (!Object.keys(b).length) return reply.code(400).send({ error: 'Choisissez au moins une modification' });
+    const own = (await pool.query(
+      'SELECT id, kids_bands, category_id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3)',
+      [ids, req.user.role === 'admin', req.user.sub])).rows;
+    if (own.length !== new Set(ids).size) return reply.code(404).send({ error: 'Certaines conférences sont introuvables' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const cur of own) {
+        const sets = [];
+        const vals = [cur.id];
+        const set = (col, v) => { vals.push(v); sets.push(`${col} = $${vals.length}`); };
+        if (b.speaker !== undefined) set('speaker', b.speaker);
+        if (b.language !== undefined) set('language', b.language);
+        if (b.categoryId !== undefined) set('category_id', b.categoryId);
+        if (b.access !== undefined) set('access', b.access);
+        if (b.level !== undefined) set('level', b.level);
+        if (b.showAdults !== undefined) set('show_adults', b.showAdults);
+        if (b.publication !== undefined) { set('publication', b.publication); set('publish_at', null); }
+        if (b.kidsBands !== undefined) {
+          const have = cur.kids_bands || [];
+          const next = bandsMode === 'add' ? [...have, ...b.kidsBands] : bandsMode === 'remove' ? have.filter((x) => !b.kidsBands.includes(x)) : b.kidsBands;
+          set('kids_bands', cleanBands(next));
+        }
+        if (sets.length) await client.query(`UPDATE talks SET ${sets.join(', ')} WHERE id = $1`, vals);
+        if (b.extraCategoryIds !== undefined || b.categoryId !== undefined) {
+          const principal = b.categoryId !== undefined ? b.categoryId : cur.category_id;
+          const current = b.extraCategoryIds ?? (await client.query('SELECT category_id FROM talk_categories WHERE talk_id = $1', [cur.id])).rows.map((r) => r.category_id);
+          await saveExtras(client, cur.id, cleanExtras(current, principal));
+        }
+        if (b.access !== undefined) {
+          await client.query(`UPDATE series_episodes e SET access_override = CASE WHEN s.access = $2 THEN NULL ELSE $2 END FROM series s WHERE e.talk_id = $1 AND s.id = e.series_id`, [cur.id, b.access]);
+        }
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
+      throw err;
+    } finally {
+      client.release();
+    }
+    return { ok: true, updated: own.length };
   });
 
   // Modifie une conférence : informations, accès, publication (brouillon / programmée / publiée) et choix de la miniature.

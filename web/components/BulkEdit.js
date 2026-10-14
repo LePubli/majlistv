@@ -1,0 +1,88 @@
+'use client';
+// Studio → modification en lot (étape 27.1) : on coche des conférences, on choisit les champs à changer, on applique.
+// Seuls les champs cochés « modifier » sont envoyés ; tout est appliqué en une seule fois (tout ou rien).
+import { useEffect, useState } from 'react';
+import { useApp } from './Providers';
+import { BANDS, bandLabel } from '../lib/kids';
+import { LEVELS, levelLabel } from '../lib/levels';
+
+export default function BulkEdit({ ids, onDone, onCancel }) {
+  const { t, call } = useApp();
+  const [cats, setCats] = useState([]);
+  const [on, setOn] = useState({});            // champs à modifier
+  const [v, setV] = useState({ access: 'free', categoryId: '', level: '', publication: 'published', speaker: '', kidsBands: [], bandsMode: 'replace', showAdults: true });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+  const toggle = (k) => setOn((o) => ({ ...o, [k]: !o[k] }));
+  const set = (k, val) => { setV((x) => ({ ...x, [k]: val })); setOn((o) => ({ ...o, [k === 'bandsMode' ? 'kidsBands' : k]: true })); };
+
+  const apply = async () => {
+    const changes = {};
+    if (on.access) changes.access = v.access;
+    if (on.categoryId) changes.categoryId = v.categoryId ? Number(v.categoryId) : null;
+    if (on.level) changes.level = v.level || null;
+    if (on.publication) changes.publication = v.publication;
+    if (on.speaker) changes.speaker = v.speaker.trim();
+    if (on.kidsBands) changes.kidsBands = v.kidsBands;
+    if (on.showAdults) changes.showAdults = v.showAdults;
+    if (!Object.keys(changes).length) { setErr(t('bkNothing')); return; }
+    if (!window.confirm(t('bkConfirm').replace('{n}', ids.length))) return;
+    setBusy(true); setErr('');
+    const r = await call('/talks/bulk', { method: 'POST', body: JSON.stringify({ ids, changes, bandsMode: v.bandsMode }) });
+    setBusy(false);
+    if (r.ok) onDone(r.data.updated); else setErr(r.data?.error || t('errGeneric'));
+  };
+
+  const row = (k, label, control) => (
+    <div className={on[k] ? 'bk-row on' : 'bk-row'}>
+      <label className="bk-check"><input type="checkbox" checked={Boolean(on[k])} onChange={() => toggle(k)} /> {label}</label>
+      <div className="bk-control">{control}</div>
+    </div>
+  );
+  return (
+    <section className="bk-panel" aria-label={t('bkEdit')}>
+      <h2>{t('bkEdit')} — {t('bkSelected').replace('{n}', ids.length)}</h2>
+      <p className="meta small">{t('bkHelp')}</p>
+      {row('access', t('access'), (
+        <select value={v.access} onChange={(e) => set('access', e.target.value)}><option value="free">{t('free')}</option><option value="premium">{t('premium')}</option></select>
+      ))}
+      {row('categoryId', t('bkCategory'), (
+        <select value={v.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
+          <option value="">{t('bkNoCategory')}</option>
+          {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
+        </select>
+      ))}
+      {row('level', t('lvLabel'), (
+        <select value={v.level} onChange={(e) => set('level', e.target.value)}>
+          <option value="">{t('lvAll')}</option>
+          {LEVELS.map((l) => <option key={l} value={l}>{levelLabel(l, t)}</option>)}
+        </select>
+      ))}
+      {row('publication', t('bkPublication'), (
+        <select value={v.publication} onChange={(e) => set('publication', e.target.value)}><option value="published">{t('bkPublished')}</option><option value="draft">{t('bkDraft')}</option></select>
+      ))}
+      {row('speaker', t('dSpeaker'), <input type="text" maxLength={200} value={v.speaker} onChange={(e) => set('speaker', e.target.value)} />)}
+      {row('kidsBands', 'Kids', (
+        <div className="bk-kids">
+          <select value={v.bandsMode} onChange={(e) => set('bandsMode', e.target.value)}>
+            <option value="replace">{t('bkKidsReplace')}</option><option value="add">{t('bkKidsAdd')}</option><option value="remove">{t('bkKidsRemove')}</option>
+          </select>
+          {BANDS.map((b) => {
+            const sel = v.kidsBands.includes(b);
+            return <button key={b} type="button" className={sel ? 'pill on' : 'pill'} aria-pressed={sel}
+              onClick={() => set('kidsBands', BANDS.filter((x) => (x === b ? !sel : v.kidsBands.includes(x))))}>{sel ? '✓ ' : ''}{bandLabel(b, t)}</button>;
+          })}
+        </div>
+      ))}
+      {row('showAdults', t('txShowAdults'), (
+        <select value={v.showAdults ? '1' : '0'} onChange={(e) => set('showAdults', e.target.value === '1')}><option value="1">{t('bkYes')}</option><option value="0">{t('bkNo')}</option></select>
+      ))}
+      {err && <p className="error" role="alert">{err}</p>}
+      <div className="panel-actions">
+        <button type="button" className="btn" disabled={busy} onClick={apply}>{t('bkApply').replace('{n}', ids.length)}</button>
+        <button type="button" className="btn ghost" disabled={busy} onClick={onCancel}>{t('cancelBtn')}</button>
+      </div>
+    </section>
+  );
+}

@@ -1149,3 +1149,21 @@ nginx -t && systemctl reload nginx
 **Debug** : `select count(*) from talk_notes;` ; `select user_id, count(*) from talk_notes group by 1 order by 2 desc limit 5;`.
 
 **Tests** : `python3 api/tests/test_notes.py` (isolation entre utilisateurs, limites, cascade).
+
+## Étape 27 — Modification en lot, quiz sur le lecteur, page vidéo Kids
+
+### 27.1 Modification des conférences en lot (Studio)
+Dans **Studio → Mes conférences**, une case à cocher par ligne (et une dans l'en-tête pour tout sélectionner). Dès qu'une conférence est cochée, une barre apparaît : **Modifier en lot**.
+On coche uniquement les champs à changer : accès (gratuit/premium), catégorie principale, niveau, publication (publiée/brouillon), intervenant, tranches d'âge Kids (**remplacer / ajouter / retirer**), visibilité dans le catalogue adultes.
+Tout est appliqué en **une seule transaction** : si une conférence pose problème, rien n'est modifié. Un organisateur ne peut toucher qu'à ses propres conférences ; l'administrateur à toutes. Limite : 200 conférences par opération.
+API : `POST /talks/bulk` `{ ids: [...], changes: {...}, bandsMode: "replace|add|remove" }`.
+
+### 27.2 Le quiz s'affiche sur le lecteur
+Le quiz de fin de conférence ne s'ouvre plus **sous** la vidéo mais **par-dessus**, dans la zone du lecteur (la vidéo se met en pause automatiquement). « Revoir à mm:ss » referme le quiz et replace la vidéo au bon endroit. La carte d'invitation reste sous le lecteur quand le quiz est fermé.
+
+### 27.3 Page vidéo de l'espace Kids
+La page `/kids/watch/<id>` était réduite à la vidéo. Elle contient maintenant : barre du haut (retour + total d'étoiles), lecteur encadré aux couleurs Kids avec le **quiz en superposition**, titre, puces d'infos (intervenant, durée, tranche d'âge, étoiles obtenues), carte colorée **« Teste-toi ! »** (ou « Rejouer » si l'enfant a déjà des étoiles), bloc **« De quoi ça parle ? »**, et une rangée **« Et ensuite ? »** avec d'autres vidéos de son âge. À la fin de la vidéo, le quiz s'ouvre tout seul s'il existe.
+
+**Déploiement** (aucune migration) : redéployer `majlistv-api`, puis `majlistv-web`, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+
+**Tests** : `python3 api/tests/test_bulk.py` (droits, transaction, tranches Kids).
