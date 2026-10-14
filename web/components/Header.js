@@ -100,6 +100,7 @@ function MainHeader() {
   const pages = [
     ['/', t('home'), ICONS.home, true],
     ['/series', t('seriesNav'), ICONS.series, hasSeries],
+    ['/collections', t('colNav'), ICONS.series, true],
     ['/books', t('bkNav'), ICONS.books, hasBooks],
     ['/learning', t('lrNav'), ICONS.learn, Boolean(user)],
     ['/library', t('library'), ICONS.lib, Boolean(user)],

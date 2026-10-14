@@ -50,13 +50,14 @@ export default function StudioShell({ children }) {
     if (href === '/studio/quiz') return path.startsWith('/studio/quiz');
     if (href === '/studio/practice') return path.startsWith('/studio/practice');
     if (href === '/studio/moderation') return path.startsWith('/studio/moderation');
+    if (href === '/studio/collections') return path.startsWith('/studio/collections');
     if (href === '/studio/books') return path.startsWith('/studio/books');
     if (href === '/studio/reminders') return path.startsWith('/studio/reminders');
     if (href === '/studio/stats') return path.startsWith('/studio/stats');
     return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
   };
   const groups = [
-    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
+    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
     ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] }]),
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],

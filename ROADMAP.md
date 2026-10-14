@@ -171,7 +171,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - Statistiques internes : vues, temps de visionnage, taux de fin, conférences et intervenants les plus regardés, conversion de l'aperçu vers l'essai.
 - Tableau de bord admin et statistiques par organisateur dans le Studio.
 
-**19. Collections et listes** (les séries sont dans l'étape 14)
+**19. Collections et listes** (les séries sont dans l'étape 14) — *fait*
 - Collections éditoriales (par l'équipe) : cycles, séries d'un même intervenant, thèmes du moment.
 - Listes personnelles des abonnés, partageables.
 
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution) et 20 (modération). **Suite : 19** (collections) et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération) et 19 (collections, listes). **Suite : 21** (notifications et cartes cadeaux), 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

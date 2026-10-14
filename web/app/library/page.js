@@ -40,6 +40,7 @@ export default function Library() {
   return (
     <main className="page">
       <h1>{t('library')}</h1>
+      <p><Link href="/lists" className="link u">{t('lsMyLists')} →</Link></p>
       {todo.length > 0 && (
         <>
           <h2>{t('qpTodoRow')}</h2>

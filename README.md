@@ -1661,3 +1661,52 @@ Résultat attendu : « TOUT EST OK ». La limite de 100 requêtes/minute s'appli
 
 ### 20.9 Retour arrière
 Désactiver le réglage « Relire les conférences… » : les nouvelles publications sont de nouveau immédiates. Pour remettre en ligne ce qui est en attente : Modération → Valider, ou en SQL `UPDATE talks SET review_status='approved' WHERE review_status='pending';`.
+
+---
+
+## Étape 19 — Collections et listes
+
+### 19.1 Ce que ça fait
+- **Collections éditoriales** (`/collections`, `/collections/:id`) : sélections de conférences choisies par l'équipe (type : *cycle*, *série d'un intervenant*, *thème du moment*), dans l'ordre voulu. Visibles seulement si elles sont **publiées** et contiennent au moins une conférence visible (une conférence en brouillon, en attente de relecture ou retirée n'apparaît pas). Une collection **épinglée** passe en tête. Gestion : **Studio → Collections** (modérateurs et administrateurs) : créer, modifier, ajouter des conférences par recherche, réordonner (↑ ↓), publier, supprimer. Chaque action est inscrite au journal (étape 20).
+- **Listes personnelles** (`/lists`, lien « Mes listes » dans la Bibliothèque) pour tout membre connecté : jusqu'à **20 listes** de **200 conférences**. Bouton **« Ajouter à une liste »** sur chaque conférence (cocher les listes, ou en créer une à la volée). Réordonner, retirer, renommer, supprimer.
+- **Partage** : « Partager par un lien » crée un lien secret `/l/<jeton>` lisible **sans compte**, **non indexé** (`noindex`), qui **n'affiche jamais le membre** (ni nom, ni e-mail). « Nouveau lien » invalide l'ancien ; « Arrêter le partage » coupe l'accès. Une conférence retirée du site disparaît aussi des listes partagées.
+- Choix de conception : les listes sont ouvertes à tous les comptes connectés (pas seulement aux abonnés payants), comme les favoris. Les comptes enfants (Kids) n'y ont pas accès.
+
+### 19.2 Prérequis et installation
+Aucune variable. Migration `042_collections.sql` (automatique) : `collections`, `collection_items`, `user_lists`, `user_list_items`. Déployer **l'API d'abord, puis le web**.
+
+```bash
+cd /chemin/vers/majlistv
+unzip -o ~/majlis-tv-etape19-collections.zip -d /tmp/e19 && cp -r /tmp/e19/. .
+git add -A && git commit -m "Etape 19 : collections et listes" && git push
+# DockPanel : redéployer majlistv-api, attendre « Running », puis majlistv-web
+```
+
+### 19.3 Utilisation
+- **Équipe** : Studio → Collections → nom → *Créer* → ouvrir la collection → rechercher et *Ajouter* des conférences, ordonner, *Enregistrer les conférences*, cocher *Publiée* → *Enregistrer les informations*.
+- **Membre** : page d'une conférence → *Ajouter à une liste* ; Bibliothèque → *Mes listes* → ouvrir une liste → *Partager par un lien* → *Copier le lien*.
+
+### 19.4 API (résumé)
+| Route | Rôle |
+|---|---|
+| `GET /collections`, `GET /collections/:id` | public (publiées, conférences visibles) |
+| `GET/POST /studio/collections`, `GET/PATCH/DELETE /studio/collections/:id`, `PUT /studio/collections/:id/items` | équipe (modérateur, administrateur) ; `items` = `{talkIds}` dans l'ordre, 100 au plus |
+| `GET/POST /me/lists`, `GET/PATCH/DELETE /me/lists/:id` | listes du membre (`409 limit` au-delà de 20) |
+| `PUT/DELETE /me/lists/:id/items/:talkId`, `PUT /me/lists/:id/items` | ajouter / retirer / réordonner (`{talkIds}`) |
+| `GET /me/lists/containing/:talkId` | listes qui contiennent cette conférence |
+| `POST /me/lists/:id/share` (`{renew}`), `DELETE /me/lists/:id/share` | activer ou renouveler / couper le lien |
+| `GET /lists/shared/:token` | lecture publique d'une liste partagée |
+
+### 19.5 Tests
+```bash
+python3 api/tests/test_collections.py   # API (3055) + PG de test (5544)
+```
+Résultat attendu : « TOUT EST OK ».
+
+### 19.6 Debug
+- **Une collection n'apparaît pas** : elle n'est pas publiée, ou aucune de ses conférences n'est visible (brouillon, relecture, vidéo en cours de traitement).
+- **Un lien de liste ne marche plus** : le membre a coupé le partage ou demandé un nouveau lien.
+- **« Vous avez déjà 20 listes »** : limite volontaire, supprimer une liste.
+
+### 19.7 Retour arrière
+Dépublier une collection (décocher *Publiée*) la retire du site sans rien perdre. Les listes de membres ne s'affichent que pour leur propriétaire ou par lien secret.
