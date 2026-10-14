@@ -184,6 +184,39 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - E-mails : nouvelles conférences des intervenants suivis, sélection de la semaine, avec désinscription en un clic.
 - **Abonnement à offrir** : carte cadeau (1, 3 ou 12 mois) payée par Stripe, code à activer.
 
+### Phase C bis — Du savoir à l'action (décidée avec Epok le 14/10/2026, passe avant 20 à 23)
+
+**Principe** : « l'Islam se vit au quotidien ». Une conférence ne s'arrête pas au quiz : elle débouche sur un acte, suivi dans l'espace Apprentissage, puis sur un bilan personnel régulier. Boucle : **comprendre** (vidéo + quiz) → **choisir une action** → **s'engager** (intention, échéance) → **faire le point** chaque semaine → **revenir** (rappel du vendredi).
+
+Décisions prises : (1) les propositions d'action sont **générées par l'IA puis validées** par l'organisateur de la conférence, un modérateur ou un administrateur (rien n'est publié sans validation) ; (2) l'écran « Et maintenant, que faire ? » est **visible par tous**, le suivi des engagements, le bilan personnel et les rappels sont **réservés à Apprentissage** ; (3) rappel hebdomadaire **le vendredi** ; (4) base de thèmes inspirée de l'*Ihyâ' 'ulûm ad-dîn* d'al-Ghazâlî (qualités et défauts), proposée dans `docs/themes-tazkiya-base.md`, à faire relire.
+
+Règles transversales :
+- **Données très sensibles** (pratique religieuse, défauts personnels) : consentement explicite au premier usage (RGPD, convictions religieuses), contenu **chiffré en base** (clé dédiée `PRACTICE_KEY`, distincte de `SETTINGS_KEY`), **jamais** visible par un administrateur, jamais dans les statistiques ni les exports de l'étape 18, **export et suppression en un clic**, mention dans la page Confidentialité.
+- **Pas de score, de série de jours, de classement ni de badge** dans le bilan personnel (risque de culpabilité et d'ostentation). États : *à faire / en cours / fait / pas encore*, et pour le bilan *réussi / en progrès / pas encore*. Les étoiles et badges restent réservés à Kids.
+- **L'IA ne rédige jamais de texte religieux** : elle propose des idées de mise en pratique ; les références (verset, hadith) viennent du corpus déjà importé (étape 25), comme pour les citations. Chaque proposition affiche : « Idée de mise en pratique, pas un avis religieux. »
+- Le rôle **modérateur** arrive avec l'étape 20 ; d'ici là, la validation est faite par l'organisateur (ses conférences) et l'administrateur.
+
+**29. Mise en pratique (après la vidéo et le quiz)**
+- *29.1 Propositions d'action* : génération par l'IA à partir de la transcription, du résumé et des points clés (même chaîne que le quiz : brouillon → relecture → approuvé) ; 3 à 5 propositions par conférence en trois tailles (● petit pas, ●● moyen, ●●● ambitieux), avec référence facultative du corpus ; file de validation dans le Studio (organisateur) et dans l'administration ; modification, rejet, ajout manuel.
+- *29.2 Écran « Et maintenant, que faire ? »* : affiché à la fin du quiz (ou à la fin de la vidéo s'il n'y a pas de quiz) et en bas de la page de la conférence ; **visible par tous**. Le lecteur choisit une proposition ou écrit la sienne.
+- *29.3 Mes engagements* (Apprentissage) : intention (niyya) facultative, échéance (aujourd'hui, cette semaine, ce mois-ci), état *à faire / en cours / fait / pas encore*, note privée ; liste dans l'espace Apprentissage, regroupée par conférence et par thème. Sans abonnement Apprentissage : la proposition s'affiche et peut être copiée, l'enregistrement est proposé en abonnement.
+- Tables : `practice_suggestions` (talk_id, texte par langue, taille, origine ia/manuelle, statut brouillon/approuvé/rejeté, validé par, référence), `practice_commitments` (user_id, suggestion_id ou texte libre chiffré, talk_id, intention chiffrée, échéance, état, note chiffrée, dates).
+- Tests : droits (qui valide, qui voit quoi), jamais de proposition non validée côté public, chiffrement des champs, isolation entre utilisateurs, suppression en cascade avec le compte.
+
+**30. Bilan personnel — *Tazkiyat an-nafs* (Apprentissage)**
+- *30.1 Mes objectifs* : deux listes tenues par la personne, **qualités à cultiver** et **défauts à corriger** ; on les choisit dans la base de thèmes ou on les écrit soi-même ; une personne peut en archiver ; aucun maximum arbitraire mais une limite raisonnable (20 actifs).
+- *30.2 Bilan de la semaine* : pour chaque objectif, *réussi / en progrès / pas encore* + note facultative ; historique des 4 à 8 dernières semaines sous forme de petite frise (couleurs douces, aucun total ni pourcentage « de réussite ») ; possibilité de relier un objectif à un engagement de l'étape 29.
+- *30.3 Rappel du vendredi* : un **seul** e-mail hebdomadaire (jour par défaut : vendredi, réglable ; heure réglable dans Administration → Paramètres, 17 h par défaut) listant les engagements en cours et le bilan à faire, avec un lien direct ; désactivable par chacun ; réutilise l'envoi d'e-mails de l'étape 9 et la boucle de l'e-mail de révision. Sur l'application Android (étape 22) : notification à la place de l'e-mail.
+- *30.4 Confidentialité* : consentement au premier usage, export (JSON et CSV) et suppression complète en un clic, mention légale mise à jour.
+- Tables : `self_goals` (user_id, nature qualité/défaut, thème facultatif, intitulé chiffré, dates, archivé), `self_checkins` (goal_id, semaine, état, note chiffrée ; unique par objectif et semaine) ; colonnes `users.practice_consent_at`, `users.practice_email`, `users.practice_weekday`.
+- Tests : isolation totale entre comptes, un administrateur ne lit jamais le contenu, e-mail du vendredi (jour, heure, désinscription, une seule fois par semaine), export et suppression, absence de toute donnée dans `/admin/stats`.
+
+**31. Thèmes, parcours et évolution**
+- *31.1 Bibliothèque de thèmes* : import de la base `docs/themes-tazkiya-base.md` (qualités, défauts, thèmes d'action) une fois relue ; page par thème avec description, petits pas et **conférences du catalogue associées** (par étiquette posée par l'organisateur ou par catégorie) ; on peut « ajouter à mes objectifs » ou « m'engager » depuis une conférence.
+- *31.2 Mon évolution* (Apprentissage) : tableau personnel qui rapproche, **par thème**, ce qui a été appris (conférences vues, quiz réussis) et ce qui est mis en pratique (engagements faits, objectifs en progrès) ; vue mensuelle ; aucun partage public, aucune comparaison avec d'autres personnes.
+- *31.3 Retour aux organisateurs* : chiffres **anonymes et agrégés** (par exemple « 38 personnes se sont engagées après cette conférence »), affichés seulement au-delà de 5 personnes ; aucun contenu individuel. Ajouté à l'onglet Statistiques de l'étape 18.
+- *31.4 Plus tard* : version **Kids** (actions du jour validées par le parent, étoiles), notifications push (Android), partage volontaire d'un engagement avec un proche de confiance.
+
 ### Phase D — Au-delà du site
 
 **22. Applications**
@@ -218,7 +251,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 
 ## Ordre de travail retenu
 
-24.1 → 24.2 → 24.3 → 24.4 → 24.5 → 24.6 → 25 → 26, puis 16.2 (référencement : URL lisibles, page intervenant, chapitres dans le HTML), puis 17 à 23. L'étape 8 (sauvegardes, surveillance) reste en dernier, mais elle devient urgente dès qu'il y a de vrais abonnés.
+Fait : 24 à 28, 28b (CSP) et 18 (statistiques). **Suite : 29 → 30 → 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.
