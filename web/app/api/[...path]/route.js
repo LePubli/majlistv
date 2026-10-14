@@ -9,6 +9,16 @@ async function handler(req, { params }) {
     const v = req.headers.get(h);
     if (v) headers[h] = v;
   }
+  // Statistiques d'audience : l'API doit connaître le navigateur, la langue et (pour compter un visiteur une seule fois) l'adresse du
+  // visiteur, que le proxy local lui masquerait. L'adresse n'est jamais enregistrée : elle sert à calculer l'empreinte du jour.
+  if (/^(stats|kids\/stats)(\/|$)/.test(params.path.join('/'))) {
+    for (const h of ['user-agent', 'accept-language', 'dnt', 'sec-gpc', 'cf-ipcountry']) {
+      const v = req.headers.get(h);
+      if (v) headers[h] = v;
+    }
+    const ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || (req.headers.get('x-forwarded-for') || '').split(',').pop().trim();
+    if (ip) headers['x-client-ip'] = ip;
+  }
   const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await req.text();
   try {
     // Les redirections ne sont pas suivies ici : elles sont renvoyées au navigateur (vignettes à adresse stable /seo/poster/…).

@@ -956,7 +956,7 @@ Première partie de l'étape 26. Les quiz, étoiles et badges pour enfants (26.2
 
 **API** : parent `GET /me/kids`, `PUT /me/kids/pin`, `POST|PATCH|DELETE /me/kids/profiles[/:id]`, `POST /me/kids/profiles/:id/enter` ; enfant `GET /kids/me`, `GET /kids/talks`, `PUT /kids/progress/:id`, `POST /kids/exit`.
 **Migration** : `029_kids.sql` (`kid_profiles`, `kid_progress`, `talks.kids_band`, code parental sur `users`).
-**Tests** : `python3 api/tests/test_kids.py` (≈ 60 vérifications : droits, limites, code parental, verrouillage du jeton enfant, tranches d'âge, progression).
+**Tests** : `python3 api/tests/test_kids.py` (≈ 70 vérifications : droits, limites, code parental, verrouillage du jeton enfant, tranches d'âge, progression).
 
 **Déploiement** (api et web ; le translator ne change pas) :
 ```bash
@@ -1332,3 +1332,67 @@ gratuite et d'une conférence premium, et l'espace Kids.
 `test_revision_mail.mjs` (10). Non rejoués faute de prérequis dans l'environnement de test :
 `test_citations*` (corpus à importer), `test_audio` (fichiers produits par le worker), `test_quiz*`
 (translator + faux Claude), `test_archive` (faux archive.org).
+
+## Étape 18 — Statistiques d'audience (site, Studio, Kids)
+
+Des chiffres d'audience **internes et anonymes**, sans outil externe, sans cookie et sans bandeau supplémentaire.
+
+### 18.1 Ce qui est mesuré
+
+| Quoi | Où le voir |
+|---|---|
+| Visiteurs et pages vues (par jour), provenance (direct, moteurs de recherche, réseaux sociaux, autres sites + noms de domaine), appareils, langue du navigateur, pays (seulement si un CDN fournit l'en-tête) | Administration → **Statistiques** |
+| Par conférence : ouvertures de la page, spectateurs du jour, lectures lancées, **temps réellement regardé**, 25 / 50 / 75 % regardés, lectures terminées, part moyenne regardée ; catégories et intervenants les plus regardés ; variation par rapport à la période précédente | Administration (toutes les conférences) et **Studio → Statistiques** (les siennes seulement, avec filtre par conférence) |
+| **Kids** : ouvertures, lectures, temps regardé, fin, quiz joués, score et étoiles moyens par vidéo ; pour l'administrateur : enfants actifs par jour, minutes passées, familles, profils par tranche d'âge | Onglet « Mejliss Kids » des deux écrans |
+| Export | Bouton « Exporter en CSV » (ouvre directement dans Excel) |
+
+Périodes : 7 jours, 30 jours, 90 jours, 12 mois. Un « spectateur » est compté une fois par jour (revenu plusieurs jours, il compte plusieurs fois).
+
+### 18.2 Respect de la vie privée (important pour les mentions légales)
+
+- **Aucun cookie, aucune adresse IP enregistrée, aucun identifiant de personne.** Seuls des compteurs par jour sont conservés (≈ 26 mois, puis supprimés automatiquement).
+- Pour ne compter qu'une fois un visiteur dans la journée, le serveur calcule une **empreinte du jour** (signature de l'adresse + navigateur + date avec une clé secrète du serveur). Elle ne se retrouve pas en sens inverse et est **supprimée au bout de 2 jours**.
+- Les visiteurs qui envoient **« Do Not Track »** ou **« Global Privacy Control »**, les robots, les administrateurs et le propriétaire d'une conférence (pour ses propres vidéos) ne sont **pas comptés**.
+- **Kids** : compteurs globaux par vidéo uniquement. Ni provenance, ni appareil, ni langue, ni pays ; **aucun enfant n'est nommé ni identifiable**, y compris pour l'administrateur. Le temps passé vient de la mesure du serveur déjà utilisée pour le contrôle parental.
+- Interrupteur : Administration → Paramètres → **Statistiques d'audience** (désactive la collecte ; les chiffres déjà enregistrés restent).
+- À ajouter à la page « Confidentialité » (Administration → Pages légales) une phrase du type : « Nous mesurons l'audience de façon anonyme, sans cookie ni conservation de votre adresse IP. »
+
+### 18.3 Fonctionnement technique
+
+- **Base** : migration `037_stats.sql` — `stat_dim_daily` (site entier), `stat_talk_daily` (par conférence et par jour, supprimé avec la conférence), `stat_talk_dim_daily` (provenance/appareil/langue des ouvertures d'une conférence), `stat_seen` (empreintes du jour).
+- **Collecte** : `POST /stats/hit` (site) et `POST /kids/stats` (jeton enfant), `api/src/routes/stats_collect.js`. Toujours `204` : une mesure ne gêne jamais le site. Limite : 240 envois / minute / adresse.
+- **Navigateur** : `web/lib/stats.js` (`useTalkStats`) et `web/components/StatsBeacon.js`. Le temps est compté uniquement en **lecture continue** : avancer dans la barre ne gonfle ni le temps ni les quartiles (un quartile = part réellement regardée) ; « terminée » exige la fin atteinte **et** au moins la moitié regardée. Fonctionne pour la vidéo envoyée, YouTube, Vimeo et archive.org.
+- **Proxy du site** (`web/app/api/[...path]/route.js`) : pour les routes de statistiques seulement, il transmet à l'API le navigateur, la langue et l'adresse du visiteur (en-tête `x-client-ip`, jamais enregistré). Il lit `cf-connecting-ip`, puis `x-real-ip`, puis la dernière adresse de `x-forwarded-for`.
+- **Rapports** : `GET /admin/stats` (administrateur) et `GET /studio/stats` (organisateur : ses conférences uniquement, `404` pour celles des autres) ; paramètres `days`, `audience`, `talk`, `format=csv`. `api/src/routes/stats.js`.
+- **Écrans** : `web/components/StatsView.js` (graphiques SVG sans bibliothèque, textes en français / anglais / arabe, tableau équivalent au clavier).
+- **Entretien** : purge toutes les heures (`startStatsMaintenance`).
+
+### 18.4 Déploiement
+
+Une migration (automatique au démarrage de l'API). Redéployer **`majlistv-api`** puis **`majlistv-web`**, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`. Rien à régler : la collecte est active par défaut. Les chiffres s'affichent dès les premières visites (le graphique démarre le jour de la mise en ligne).
+
+Pour afficher aussi le **pays** des visiteurs : il faut un CDN qui l'indique (en-tête `CF-IPCountry` de Cloudflare). Sans CDN, la rubrique « Pays » n'apparaît pas.
+
+### 18.5 Contrôle après déploiement
+
+1. Ouvrir le site dans une fenêtre de navigation privée, regarder 30 secondes d'une conférence, fermer.
+2. Administration → Statistiques : au bout de quelques secondes, 1 visiteur, des pages vues, 1 lecture, du temps regardé.
+3. Studio (compte organisateur) → Statistiques : ses conférences seulement.
+4. Si rien n'apparaît : F12 → Console, aucune ligne rouge ne doit mentionner `/api/stats/hit`.
+
+### 18.6 Tests
+
+- `python3 api/tests/test_stats.py` (51 vérifications : collecte, doublons, robots / DNT / admin ignorés, provenance, droits admin / organisateur, CSV, Kids sans aucune donnée personnelle, interrupteur, cascade).
+- `node api/tests/test_stats_unit.mjs` (provenance, appareils, langues, pays, empreinte, purge).
+- Test de bout en bout dans Chromium (site compilé, CSP active) : lecture réelle d'une vidéo envoyée, quartiles et fin comptés, saut dans la barre non compté, Do Not Track, tableaux de bord admin / Studio / Kids, export CSV, espace enfant — **0 violation de la CSP**.
+
+### 18.7 Pas dans cette étape
+
+- **Umami** (outil externe) : non installé, les statistiques internes couvrent le besoin ; ajout possible plus tard sans rien changer ici.
+- **Conversion de l'aperçu gratuit vers l'essai** (prévue dans la feuille de route) : demande de suivre l'inscription après un aperçu ; à faire avec les notifications (étape 21).
+- Statistiques par série (les séries se retrouvent par leurs conférences).
+
+### 18.8 Petit correctif joint
+
+Le lien de la vignette animée de l'accueil ne garde plus le focus au clic (avertissement « aria-hidden » de la console).
+

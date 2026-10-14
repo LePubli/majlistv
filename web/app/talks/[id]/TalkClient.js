@@ -13,6 +13,7 @@ import { pricingPath } from '../../../lib/nav';
 import { levelLabel } from '../../../lib/levels';
 import NotesPanel from '../../../components/NotesPanel';
 import Quiz from '../../../components/Quiz';
+import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -22,7 +23,7 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
@@ -113,6 +114,8 @@ export default function TalkPage({ initial = null, talkId = null }) {
   // archive.org : fichier vidéo lu avec le lecteur Mejliss TV (pas de lecteur ni de publicité de la plateforme).
   const embed = Boolean(talk && ['youtube', 'vimeo'].includes(talk.source));
   const trackable = Boolean(user && talk && (talk.hlsPath || external) && !talk.locked);
+  // Statistiques d'audience anonymes : ouverture, lecture, temps regardé, quartiles, fin (l'aperçu d'une conférence premium ne compte que comme ouverture).
+  useTalkStats({ videoRef, talkId: id, call, active: Boolean(talk && talk.id), playing: Boolean(talk && !talk.locked && (talk.hlsPath || external)), statsOn });
   const startMs = useRef(0);
   useEffect(() => { if (jumpMs) startMs.current = jumpMs; else if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs, jumpMs]);
   useEffect(() => {

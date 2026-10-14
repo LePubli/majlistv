@@ -1,0 +1,16 @@
+ÉTAPE 18 — Statistiques d'audience (site, Studio, Kids)
+=========================================================
+Cumulatif : à copier par-dessus le dépôt (après les étapes 28 et 28b), puis commit + push.
+
+Nouveau : Administration → Statistiques (tout le site + Kids), Studio → Statistiques (mes conférences + Kids), export CSV.
+Anonyme : aucun cookie, aucune adresse IP conservée, « Do Not Track » respecté, aucun enfant identifiable.
+
+Déploiement : redéployer majlistv-api (migration 037 automatique) puis majlistv-web, puis :
+   /root/apply-limits.sh
+   grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+   nginx -t && systemctl reload nginx
+
+Contrôle : fenêtre privée → regarder 30 s d'une conférence → Administration → Statistiques (1 visiteur, 1 lecture).
+Interrupteur : Administration → Paramètres → Statistiques d'audience.
+Ajouter à la page Confidentialité : « Nous mesurons l'audience de façon anonyme, sans cookie ni conservation de votre adresse IP. »
+Détails : README, section « Étape 18 ».

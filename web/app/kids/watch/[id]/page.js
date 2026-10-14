@@ -12,10 +12,11 @@ import KidsQuiz from '../../../../components/KidsQuiz';
 import { KidCard } from '../../../../components/KidsHome';
 import { Stars, bandLabel } from '../../../../lib/kids';
 import { useKidTime, leftMin } from '../../../../lib/kidTime';
+import { useTalkStats } from '../../../../lib/stats';
 
 export default function KidsWatch() {
   const { id } = useParams();
-  const { t, call, kid, locale } = useApp();
+  const { t, call, kid, locale, statsOn } = useApp();
   const [talk, setTalk] = useState(undefined);
   const videoRef = useRef(null);
   const [quiz, setQuiz] = useState(false);
@@ -29,6 +30,8 @@ export default function KidsWatch() {
   }, [kid, id, call]);
   useEffect(() => { if (kid) call(`/talks/${id}`).then((r) => setTalk(r.ok ? r.data : r.data?.code === 'kid_time_up' ? { timeUp: true } : null)); }, [kid, id, call]);
   const time = useKidTime(call, kid, null);
+  // Statistiques anonymes (compteurs par vidéo, aucun profil identifiable).
+  useTalkStats({ videoRef, talkId: id, call, kids: true, active: Boolean(talk && !talk.timeUp && !talk.locked), playing: Boolean(talk && !talk.timeUp && !talk.locked), statsOn });
   // Durée du jour écoulée pendant la lecture : on arrête la vidéo avec douceur.
   useEffect(() => { if (time?.timeUp) videoRef.current?.pause?.(); }, [time]);
 

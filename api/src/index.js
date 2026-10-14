@@ -37,6 +37,9 @@ import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
 import { startRevisionMailer } from './revisionMailer.js';
 import { startKidsReportMailer } from './kidsReportMailer.js';
+import { startStatsMaintenance } from './stats.js';
+import statsCollectRoutes from './routes/stats_collect.js';
+import statsRoutes from './routes/stats.js';
 import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
@@ -114,7 +117,7 @@ app.get('/config', async () => {
   const hasSeries = (await listSeries({ limit: 1 })).length > 0;
   const hasBooks = (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
   return {
-    hasSeries, hasBooks, appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };
@@ -146,6 +149,8 @@ await app.register(dashboardRoutes);
 await app.register(homeRoutes);
 await app.register(seriesRoutes);
 await app.register(cardsRoutes);
+await app.register(statsCollectRoutes);
+await app.register(statsRoutes);
 
 await migrate();
 await ensureAdmin();
@@ -158,4 +163,5 @@ await recoverImport();
 setInterval(() => autoTopUp().catch((e) => app.log.warn(`citations : ${e.message}`)), 3600 * 1000).unref();
 setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
+startStatsMaintenance(app.log); // purge des empreintes du jour (2 jours) et des compteurs anciens
 startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)

@@ -76,7 +76,7 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
   const withVideo = info && info.kind !== 'none';
   return createPortal(
     <div className="hc" style={{ left, top, width: W }} onMouseEnter={onEnter} onMouseLeave={onLeave} role="group" aria-label={talk.title}>
-      <Link href={`/talks/${talk.id}`} className="hc-media" tabIndex={-1} aria-hidden="true">
+      <Link href={`/talks/${talk.id}`} className="hc-media" tabIndex={-1} aria-hidden="true" onMouseDown={(e) => e.preventDefault()}>
         <div className="hc-thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined} />
         {withVideo && <div className={`hc-vid${playing ? ' on' : ''}`}><Preview info={info} seconds={cfg.previewSeconds} muted={muted} onReady={() => setPlaying(true)} /></div>}
         {progress > 0 && show.progress && <span className="progress"><span style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }} /></span>}

@@ -166,7 +166,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - Vitesse de lecture (1×, 1,25×, 1,5×, 2×).
 - Marque-pages et notes personnelles sur un passage de la transcription, retrouvés dans Ma bibliothèque.
 
-**18. Mesure d'audience et statistiques**
+**18. Mesure d'audience et statistiques** — *fait (README, étape 18) ; restent Umami (optionnel) et la conversion aperçu → essai*
 - Umami hébergé sur le VPS (sans cookie publicitaire).
 - Statistiques internes : vues, temps de visionnage, taux de fin, conférences et intervenants les plus regardés, conversion de l'aperçu vers l'essai.
 - Tableau de bord admin et statistiques par organisateur dans le Studio.
