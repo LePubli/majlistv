@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import PracticeList from '../../components/PracticeList';
 import SelfCheck from '../../components/SelfCheck';
+import Evolution from '../../components/Evolution';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -129,6 +130,7 @@ export default function Learning() {
       <PracticeList t={t} call={call} locale={locale} />
 
       <SelfCheck t={t} call={call} locale={locale} />
+      <Evolution t={t} call={call} locale={locale} />
 
       <section className="lr-block">
         <h2>{t('lrCurve')}</h2>

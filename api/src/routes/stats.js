@@ -15,6 +15,34 @@ const query = z.object({
   format: z.enum(['json', 'csv']).default('json'),
 });
 
+// Étape 31.3 — Retour aux organisateurs : nombre de personnes (jamais leur identité) ayant pris ou tenu un engagement
+// après une conférence. Un chiffre n'est donné qu'à partir de 6 personnes (« au-delà de 5 ») ; en dessous, null.
+export const PRACTICE_MIN_PEOPLE = 6;
+const shown = (n) => (n >= PRACTICE_MIN_PEOPLE ? n : null);
+
+export async function practiceFeedback(since, until, scope) {
+  if (!scope.organizerId && !scope.talkId) return null; // pas de chiffre pour l'ensemble du site
+  const P = [since, until, scope.organizerId || null, scope.talkId || null];
+  const rows = (await pool.query(
+    `SELECT t.id, t.title,
+            count(DISTINCT c.user_id) FILTER (WHERE c.created_at >= $1::date AND c.created_at < ($2::date + 1))::int AS committed,
+            count(DISTINCT c.user_id) FILTER (WHERE c.status = 'done' AND c.done_at >= $1::date AND c.done_at < ($2::date + 1))::int AS done
+       FROM talks t JOIN practice_commitments c ON c.talk_id = t.id
+      WHERE ($3::uuid IS NULL OR t.organizer_id = $3) AND ($4::uuid IS NULL OR t.id = $4)
+      GROUP BY t.id, t.title`, P)).rows;
+  const tot = (await pool.query(
+    `SELECT count(DISTINCT c.user_id) FILTER (WHERE c.created_at >= $1::date AND c.created_at < ($2::date + 1))::int AS committed,
+            count(DISTINCT c.user_id) FILTER (WHERE c.status = 'done' AND c.done_at >= $1::date AND c.done_at < ($2::date + 1))::int AS done
+       FROM talks t JOIN practice_commitments c ON c.talk_id = t.id
+      WHERE ($3::uuid IS NULL OR t.organizer_id = $3) AND ($4::uuid IS NULL OR t.id = $4)`, P)).rows[0];
+  return {
+    min: PRACTICE_MIN_PEOPLE,
+    committed: shown(tot.committed), done: shown(tot.done),
+    talks: rows.map((r) => ({ talkId: r.id, title: r.title, committed: shown(r.committed), done: shown(r.done) }))
+      .filter((r) => r.committed !== null || r.done !== null).sort((a, b) => (b.committed ?? 0) - (a.committed ?? 0)),
+  };
+}
+
 const addDays = async (day, n) => (await pool.query('SELECT ($1::date + $2::int)::text AS d', [day, n])).rows[0].d;
 const num = (v) => Number(v) || 0;
 const pct = (a, b) => (b > 0 ? Math.min(100, Math.round((100 * a) / b)) : null);
@@ -51,6 +79,7 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
   const prev = await talkPart(audience, prevSince, prevUntil, scope);
   const wide = site && !talkId; // chiffres du site entier (hors conférence précise)
   const out = { days, audience, since, until, scope: site ? 'site' : 'mine', talkId: talkId || null };
+  out.practice = audience === 'web' ? await practiceFeedback(since, until, scope) : null;
   out.totals = totalsShape(cur.tot);
   out.prev = totalsShape(prev.tot);
 
@@ -143,6 +172,11 @@ export function toCsv(r) {
   lines.push('');
   row('Conférence', 'Ouvertures', 'Lectures', 'Minutes regardées', 'Terminées', 'Taux de fin %', '% moyen regardé', ...(r.audience === 'kids' ? ['Quiz joués', 'Étoiles moyennes'] : []));
   for (const t of r.top) row(t.title, t.views, t.plays, t.minutes, t.completes, t.completionRate, t.avgWatchPct, ...(r.audience === 'kids' ? [t.quizAttempts, t.quizStars] : []));
+  if (r.practice) {
+    lines.push('');
+    row('Après la conférence (personnes, anonyme, à partir de 6)', 'Se sont engagées', 'Ont tenu un engagement');
+    for (const t of r.practice.talks) row(t.title, t.committed ?? '', t.done ?? '');
+  }
   // BOM : Excel ouvre ainsi correctement les accents.
   return '﻿' + lines.join('\r\n') + '\r\n';
 }

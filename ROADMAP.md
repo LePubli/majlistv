@@ -211,7 +211,7 @@ Règles transversales :
 - Tables : `self_goals` (user_id, nature qualité/défaut, thème facultatif, intitulé chiffré, dates, archivé), `self_checkins` (goal_id, semaine, état, note chiffrée ; unique par objectif et semaine) ; colonnes `users.practice_consent_at`, `users.practice_email`, `users.practice_weekday`.
 - Tests : isolation totale entre comptes, un administrateur ne lit jamais le contenu, e-mail du vendredi (jour, heure, désinscription, une seule fois par semaine), export et suppression, absence de toute donnée dans `/admin/stats`.
 
-**31. Thèmes, parcours et évolution**
+**31. Thèmes, parcours et évolution** — *fait (31.1 à 31.3 ; 31.4 reste à faire)*
 - *31.1 Bibliothèque de thèmes* : import de la base `docs/themes-tazkiya-base.md` (qualités, défauts, thèmes d'action) une fois relue ; page par thème avec description, petits pas et **conférences du catalogue associées** (par étiquette posée par l'organisateur ou par catégorie) ; on peut « ajouter à mes objectifs » ou « m'engager » depuis une conférence.
 - *31.2 Mon évolution* (Apprentissage) : tableau personnel qui rapproche, **par thème**, ce qui a été appris (conférences vues, quiz réussis) et ce qui est mis en pratique (engagements faits, objectifs en progrès) ; vue mensuelle ; aucun partage public, aucune comparaison avec d'autres personnes.
 - *31.3 Retour aux organisateurs* : chiffres **anonymes et agrégés** (par exemple « 38 personnes se sont engagées après cette conférence »), affichés seulement au-delà de 5 personnes ; aucun contenu individuel. Ajouté à l'onglet Statistiques de l'étape 18.
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques) 29 (mise en pratique) et 30 (bilan personnel). **Suite : 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) et 31 (thèmes, évolution). **Suite : 20** (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

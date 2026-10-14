@@ -1559,3 +1559,36 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .sc-archived { margin-top: 10px; }
 .sc-block .rv-email { display: flex; justify-content: flex-start; align-items: center; gap: 10px; }
 .sc-block .rv-email input { width: auto; flex: none; accent-color: var(--accent); }
+
+/* Étape 31 — thèmes, évolution, retour anonyme */
+.th-page { max-width: 960px; margin: 0 auto; padding: 0 16px 40px; }
+.th-group { margin-top: 26px; }
+.th-group h2, .th-detail h2 { font-size: 1.15rem; font-family: var(--font-title); margin: 22px 0 10px; }
+.th-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.th-card { display: grid; gap: 6px; height: 100%; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); color: var(--text); text-decoration: none; }
+.th-card:hover { border-color: var(--line-strong); }
+.th-desc { color: var(--text-2); font-size: .93rem; line-height: 1.45; }
+.th-note { margin-top: 24px; }
+.th-lead { font-size: 1.05rem; line-height: 1.55; }
+.th-steps { display: grid; gap: 8px; padding-inline-start: 0; list-style: none; margin: 0 0 6px; }
+.th-steps li { padding: 10px 14px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); line-height: 1.45; }
+.th-actions { display: grid; gap: 10px; margin-top: 18px; padding: 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.th-actions h2 { margin: 0; }
+.th-actions p { margin: 0; }
+.th-step { font-weight: 600; line-height: 1.45; }
+.th-talks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.th-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; }
+.th-chip { padding: 3px 10px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: .85rem; color: var(--text); text-decoration: none; }
+.th-chip:hover { border-color: var(--accent); }
+.th-fs { border: 0; padding: 0; margin: 12px 0 0; }
+.th-fs legend { font-weight: 600; margin-bottom: 6px; padding: 0; }
+.th-actions .rv-email, .th-picker .rv-email { display: flex; justify-content: flex-start; align-items: center; gap: 10px; }
+.th-actions .rv-email input { width: auto; flex: none; accent-color: var(--accent); }
+.ev-month { max-width: 280px; }
+.ev-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.ev-item { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); display: grid; gap: 8px; }
+.ev-item a { color: var(--text); }
+.ev-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ev-cols h3 { font-size: .9rem; margin: 0 0 4px; color: var(--muted); font-weight: 600; }
+.ev-cols ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 2px; }
+.st-practice { margin: 8px 0 0; padding-inline-start: 18px; display: grid; gap: 4px; }

@@ -8,6 +8,7 @@ import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
 import QuizEditor from '../../../../components/QuizEditor';
 import PracticeEditor from '../../../../components/PracticeEditor';
+import ThemesPicker from '../../../../components/ThemesPicker';
 import RemindersEditor from '../../../../components/RemindersEditor';
 
 const PAGE = 100;
@@ -290,7 +291,7 @@ export default function ContentPage() {
       {tab === 'transcript' && <TranscriptEditor key="tr" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
       {tab === 'summary' && <InsightsEditor key="in" id={id} t={t} call={call} locale={locale} onDirty={onDirty} />}
       {tab === 'quiz' && <QuizEditor key="qz" id={id} t={t} call={call} />}
-      {tab === 'practice' && <PracticeEditor key="pz" id={id} t={t} call={call} />}
+      {tab === 'practice' && <><ThemesPicker key="th" id={id} t={t} call={call} /><PracticeEditor key="pz" id={id} t={t} call={call} /></>}
       {tab === 'reminders' && <RemindersEditor key="rm" id={id} t={t} call={call} />}
     </main>
   );

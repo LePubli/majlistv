@@ -1528,3 +1528,72 @@ Résultat attendu : « tout est bon ». L'API limite à 100 requêtes/minute par
 
 ### 30.10 Retour arrière
 Couper le rappel : Admin → Paramètres → « Rappel hebdomadaire » → désactiver. Les données restent en base (`self_goals`, `self_checkins`).
+
+---
+
+## Étape 31 — Thèmes, évolution et retour aux organisateurs
+
+### 31.1 Ce que ça fait
+- **Bibliothèque de thèmes** (`/themes`, `/themes/:id`) : 33 thèmes issus de `docs/themes-tazkiya-base.md` (12 qualités, 12 défauts, 9 actions), chacun avec une description, **trois petits pas** (● petit · ●● moyen · ●●● ambitieux) et les conférences du catalogue qui lui sont associées.
+- **Étiquettes posées par l'organisateur** : Studio → conférence → *Contenu* → onglet « Mise en pratique » → bloc « Thèmes de la conférence » (3 au maximum). Ces thèmes apparaissent en pastilles sous le titre de la conférence et sur la page du thème. (L'association « par catégorie » du ROADMAP n'est pas faite : les étiquettes la remplacent, plus précises.)
+- **S'engager depuis un thème** (Apprentissage) : sur la page d'un thème, choisir un pas, « M'engager sur ce pas » (devient un engagement « cette semaine » dans *Mes engagements*) ou « Ajouter à mes objectifs » (qualités et défauts → *Mon bilan*). Depuis une conférence, on clique sur la pastille du thème.
+- **Mon évolution** (Apprentissage → `/learning#evolution`) : mois par mois, **par thème**, ce qui a été appris (conférences terminées, quiz réussis) et ce qui a été mis en pratique (engagements pris et tenus, objectifs de bilan et leurs bilans). Des faits, **aucun score, pourcentage, série ni comparaison**, aucun partage.
+- **Retour aux organisateurs** (Studio → Statistiques → bloc « Après la conférence ») : nombre de **personnes** engagées et ayant tenu un engagement, par conférence. **Anonyme**, affiché **seulement à partir de 6 personnes** (au-delà de 5) ; chaque personne est comptée une fois ; jamais de contenu ; pas de chiffre pour le site entier (administrateur) ni pour Kids ; présent dans l'export CSV.
+
+### 31.2 Prérequis
+Étapes 18, 29 et 30 en place, `PRACTICE_KEY` définie sur l'API (voir étapes 29 et 30). Aucune nouvelle variable.
+
+### 31.3 Installation / mise à jour
+Migration `040_themes.sql` (appliquée automatiquement au démarrage de l'API) : table `talk_themes` et colonne `practice_commitments.theme_enc`. Déployer **l'API d'abord, puis le web** (pas de changement du traducteur).
+
+```bash
+cd /chemin/vers/majlistv
+unzip -o ~/majlis-tv-etape31-themes-evolution.zip -d /tmp/e31 && cp -r /tmp/e31/. .
+git add -A && git commit -m "Etape 31 : themes, evolution, retour organisateurs" && git push
+# DockPanel : redéployer majlistv-api, attendre « Running », puis majlistv-web
+```
+
+### 31.4 Mise en ligne de la bibliothèque
+La bibliothèque est **cachée au public** tant que le réglage **Admin → Paramètres → Mise en pratique → « Proposer la base de thèmes »** est désactivé (il l'est par défaut). Relire d'abord `docs/themes-tazkiya-base.md` (descriptions, petits pas) : toute correction se fait dans `api/src/themesTazkiya.json` (champs `title`, `translit`, `ar`, `desc`, `steps`), puis redéployer l'API. Les textes des thèmes sont en français pour l'instant (l'interface autour est en FR/EN/AR). Aucune citation n'est écrite dans la base.
+Les thèmes d'**action** (A1 à A9) ont une description écrite pour le site (le fichier de base n'en contenait pas) : à relire aussi.
+
+### 31.5 Confidentialité
+- Engagement pris depuis un thème : texte, intention et thème **chiffrés** (`PRACTICE_KEY`), comme le reste. Même accord, même export, même effacement que les étapes 29 et 30 ; supprimés avec le compte.
+- « Mon évolution » est calculée à la demande, rien n'est stocké en plus ; personne d'autre (administrateur compris) ne peut la voir.
+- Retour aux organisateurs : uniquement des nombres de personnes distinctes ≥ 6.
+- Texte à ajouter à la page légale (à faire relire) : « Les statistiques fournies aux conférenciers indiquent uniquement le nombre de personnes qui se sont engagées après une conférence, à partir de 6 personnes, sans aucune information permettant de les identifier. »
+
+### 31.6 Utilisation
+- **Organisateur** : Studio → conférence → Contenu → « Mise en pratique » → choisir jusqu'à 3 thèmes → Enregistrer. Chiffres : Studio → Statistiques.
+- **Membre** : Menu → `/themes` → un thème → choisir un pas → *M'engager* ou *Ajouter à mes objectifs*. Suivi : Apprentissage → *Mes engagements*, *Mon bilan*, *Mon évolution*.
+
+### 31.7 API (résumé)
+| Route | Rôle |
+|---|---|
+| `GET /themes`, `GET /themes/:id` | bibliothèque publique (`enabled:false` / 404 si désactivée) |
+| `GET/PUT /studio/talks/:id/themes` | étiquettes d'une conférence (organisateur propriétaire ou admin, 3 max) |
+| `POST /me/practice/themes/:themeId` | s'engager sur un pas (`size` 1-3, `niyya`, `due`, `consent`) |
+| `GET /me/evolution?month=AAAA-MM` | évolution mensuelle par thème (12 derniers mois) |
+| `GET /studio/stats` | contient `practice` : personnes engagées, `null` sous le seuil |
+`GET /talks/:id` renvoie aussi `themes`. Les routes `/me/*` exigent l'offre Apprentissage (`403 learning_required`).
+
+### 31.8 Tests
+```bash
+# API (3055, avec PRACTICE_KEY), PG de test (5544)
+python3 api/tests/test_themes.py      # attend 1 minute au milieu (limite de 100 requêtes/minute)
+python3 api/tests/test_selfcheck.py   # non-régression étape 30
+```
+Résultat attendu : « TOUT EST OK ».
+
+### 31.9 Debug
+- **/themes affiche « bientôt disponible »** : réglage « Proposer la base de thèmes » désactivé.
+- **Pas de pastille sur la conférence** : aucun thème choisi dans le Studio, ou base désactivée.
+- **« Chiffrement non configuré »** : `PRACTICE_KEY` absente sur l'API.
+- **Statistiques sans bloc « Après la conférence »** : vue Kids, ou moins de 6 personnes (message « pas encore assez de personnes »).
+- **« Mon évolution » vide** : normal tant que les conférences consultées n'ont pas de thème posé par l'organisateur.
+
+### 31.10 Retour arrière
+Désactiver « Proposer la base de thèmes » : la bibliothèque, les pastilles et les choix disparaissent du public. Les données restent en base (`talk_themes`).
+
+### 31.11 Plus tard (31.4 du ROADMAP)
+Version Kids (actions du jour validées par le parent), notifications push (Android), partage volontaire avec un proche : non faits.

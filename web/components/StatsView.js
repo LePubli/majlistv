@@ -172,6 +172,20 @@ export default function StatsView({ endpoint, site }) {
 
       <div className="admin-cards st-kpis">{kpis.map(([l, v, c, p]) => <Kpi key={l} label={l} value={v} cur={c} prev={p} t={t} />)}</div>
 
+      {!kids && d.practice && (
+        <section className="st-card" id="st-practice">
+          <h2>{t('stPracticeTitle')}</h2>
+          <p className="meta small">{t('stPracticeIntro').replace('{n}', d.practice.min)}</p>
+          {d.practice.committed == null && d.practice.talks.length === 0 ? <p className="meta">{t('stPracticeNone').replace('{n}', d.practice.min)}</p> : (
+            <ul className="st-practice">
+              {d.practice.committed != null && <li><b>{t('stPracticeTotal').replace('{n}', n(d.practice.committed))}</b>{d.practice.done != null && <> · {t('stPracticeDone').replace('{n}', n(d.practice.done))}</>}</li>}
+              {d.practice.talks.map((x) => (
+                <li key={x.talkId}>{x.title} — {x.committed != null ? t('stPracticeTotal').replace('{n}', n(x.committed)) : ''}{x.done != null ? ` · ${t('stPracticeDone').replace('{n}', n(x.done))}` : ''}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       <section className="st-card">
         <div className="st-head">
           <h4>{curLabel} — {t('stPerDay')}</h4>

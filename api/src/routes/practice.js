@@ -46,7 +46,7 @@ const DUE_SQL = `CASE $1::text
   WHEN 'week'  THEN (now() AT TIME ZONE 'Europe/Paris')::date + (7 - extract(isodow FROM now() AT TIME ZONE 'Europe/Paris'))::int
   WHEN 'month' THEN (date_trunc('month', now() AT TIME ZONE 'Europe/Paris') + interval '1 month - 1 day')::date
   ELSE NULL END`;
-const dueOn = async (kind) => (kind ? (await pool.query(`SELECT to_char(${DUE_SQL}, 'YYYY-MM-DD') AS d`, [kind])).rows[0].d : null);
+export const dueOn = async (kind) => (kind ? (await pool.query(`SELECT to_char(${DUE_SQL}, 'YYYY-MM-DD') AS d`, [kind])).rows[0].d : null);
 
 // Rappel affiché au membre : « à reprendre » si l'échéance est passée et que ce n'est pas fait.
 const commitShape = (r) => ({

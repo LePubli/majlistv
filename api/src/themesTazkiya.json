@@ -310,5 +310,122 @@
    "Reprendre un devoir négligé (prière à l'heure, rendre ses comptes).",
    "Se faire accompagner : un compagnon qui rappelle le droit chemin."
   ]
+ },
+ {
+  "id": "A1",
+  "kind": "action",
+  "title": "L'aumône",
+  "translit": "",
+  "ar": "",
+  "desc": "Donner de ses biens, même peu, avec régularité et discrétion.",
+  "steps": [
+   "Donner une pièce ou un petit don aujourd'hui.",
+   "Mettre en place un don hebdomadaire.",
+   "Parrainer une cause ou une famille sur plusieurs mois."
+  ]
+ },
+ {
+  "id": "A2",
+  "kind": "action",
+  "title": "La prière",
+  "translit": "",
+  "ar": "",
+  "desc": "Soigner sa relation à la prière : sa ponctualité, sa présence, sa régularité.",
+  "steps": [
+   "Prier une prière à l'heure, sans retard.",
+   "Ajouter un rappel pour chaque prière de la semaine.",
+   "S'engager sur une prière en plus (surérogatoire) régulière."
+  ]
+ },
+ {
+  "id": "A3",
+  "kind": "action",
+  "title": "Le Coran",
+  "translit": "",
+  "ar": "",
+  "desc": "Entretenir un lien quotidien avec le Coran : lecture, compréhension, mémorisation.",
+  "steps": [
+   "Lire une page avec attention.",
+   "Lire chaque jour 5 minutes pendant une semaine.",
+   "Terminer une sourate apprise et comprise en un mois."
+  ]
+ },
+ {
+  "id": "A4",
+  "kind": "action",
+  "title": "Le jeûne",
+  "translit": "",
+  "ar": "",
+  "desc": "Pratiquer le jeûne comme un entraînement de la maîtrise de soi.",
+  "steps": [
+   "Ne pas grignoter un après-midi.",
+   "Jeûner un lundi ou un jeudi.",
+   "Établir un rythme de jeûne surérogatoire mensuel."
+  ]
+ },
+ {
+  "id": "A5",
+  "kind": "action",
+  "title": "Les parents",
+  "translit": "",
+  "ar": "",
+  "desc": "Prendre soin de ses parents par la présence, le service et la douceur.",
+  "steps": [
+   "Les appeler aujourd'hui.",
+   "Leur rendre un service concret cette semaine.",
+   "Régler une tension ou une dette envers eux."
+  ]
+ },
+ {
+  "id": "A6",
+  "kind": "action",
+  "title": "La famille et le voisinage",
+  "translit": "",
+  "ar": "",
+  "desc": "Entretenir les liens avec les proches et les voisins, par de petits gestes réguliers.",
+  "steps": [
+   "Saluer un voisin par son prénom.",
+   "Inviter ou prendre des nouvelles d'un proche éloigné.",
+   "Organiser un repas de réconciliation."
+  ]
+ },
+ {
+  "id": "A7",
+  "kind": "action",
+  "title": "Le savoir",
+  "translit": "",
+  "ar": "",
+  "desc": "Apprendre, comprendre et transmettre, pas à pas et avec constance.",
+  "steps": [
+   "Écouter 10 minutes d'une conférence en marchant.",
+   "Suivre une série entière sur 4 semaines.",
+   "Transmettre ce qu'on a appris à quelqu'un."
+  ]
+ },
+ {
+  "id": "A8",
+  "kind": "action",
+  "title": "Le rappel et l'invocation",
+  "translit": "dhikr, du'â'",
+  "ar": "",
+  "desc": "Garder le cœur en éveil par de courts rappels et des invocations régulières.",
+  "steps": [
+   "Réciter un rappel court après chaque prière.",
+   "Un moment fixe matin et soir.",
+   "Apprendre une invocation par semaine."
+  ]
+ },
+ {
+  "id": "A9",
+  "kind": "action",
+  "title": "L'honnêteté dans le travail et les affaires",
+  "translit": "",
+  "ar": "",
+  "desc": "Être droit et transparent dans son travail, ses comptes et ses échanges.",
+  "steps": [
+   "Rendre ce qui a été payé en trop.",
+   "Corriger une pratique douteuse dans son travail.",
+   "Mettre ses comptes à plat avec un proche de confiance."
+  ]
  }
 ]

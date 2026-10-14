@@ -83,7 +83,7 @@ export default async function selfcheckRoutes(app) {
   app.get('/me/selfcheck/themes', auth, async (req, reply) => {
     if (!(await gate(req, reply))) return;
     if (!(await themesOn())) return { enabled: false, themes: [] };
-    return { enabled: true, themes: THEMES.map(({ id, kind, title, translit, ar, desc }) => ({ id, kind, title, translit, ar, desc })) };
+    return { enabled: true, themes: THEMES.filter((x) => x.kind !== 'action').map(({ id, kind, title, translit, ar, desc }) => ({ id, kind, title, translit, ar, desc })) };
   });
 
   // ------------------------------------------------------------------ Objectifs
@@ -103,7 +103,7 @@ export default async function selfcheckRoutes(app) {
     if (b.themeId) {
       const th = THEME_BY_ID.get(b.themeId);
       if (!(await themesOn()) || !th) return reply.code(400).send({ error: 'Thème indisponible', code: 'theme' });
-      if ((th.kind === 'quality') !== (b.nature === 'quality')) return reply.code(400).send({ error: 'Ce thème ne correspond pas à cette liste', code: 'theme' });
+      if (th.kind !== b.nature) return reply.code(400).send({ error: 'Ce thème ne correspond pas à cette liste', code: 'theme' });
       themeId = th.id; title = title || th.title;
     }
     const u = (await pool.query('SELECT practice_consent_at FROM users WHERE id = $1', [req.user.sub])).rows[0];
