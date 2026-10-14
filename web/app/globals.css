@@ -1592,3 +1592,16 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .ev-cols h3 { font-size: .9rem; margin: 0 0 4px; color: var(--muted); font-weight: 600; }
 .ev-cols ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 2px; }
 .st-practice { margin: 8px 0 0; padding-inline-start: 18px; display: grid; gap: 4px; }
+
+/* Étape 20 — modération */
+.rp { display: inline-block; position: relative; }
+.rp-form { display: grid; gap: 10px; margin-top: 10px; padding: 14px; width: min(420px, 90vw); background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.rp-form p, .rp-done { margin: 0; }
+.md-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 14px; }
+.md-item { display: grid; gap: 10px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.md-head { display: grid; gap: 4px; }
+.md-title { font-weight: 600; color: var(--text); }
+.md-details { margin: 4px 0 0; padding: 8px 12px; background: var(--bg); border-inline-start: 3px solid var(--line-strong); border-radius: 4px; white-space: pre-wrap; }
+.state-review { color: #e6a739; }
+.stat-review strong { color: #e6a739; }
+.review-note { display: block; margin-top: 4px; max-width: 280px; }

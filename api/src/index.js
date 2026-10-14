@@ -30,6 +30,8 @@ import quizRoutes from './routes/quiz.js';
 import practiceRoutes from './routes/practice.js';
 import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
+import moderationRoutes from './routes/moderation.js';
+import { startAudit } from './audit.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
 import kidsRoutes from './routes/kids.js';
@@ -57,6 +59,7 @@ await app.register(helmet);
 await app.register(cors, { origin: config.corsOrigin.split(','), credentials: true });
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 await app.register(jwt, { secret: config.jwtSecret, sign: { expiresIn: config.jwtExpires } });
+startAudit(app); // journal des actions de l'équipe (étape 20) : à poser AVANT les routes pour qu'elles en héritent
 
 // Vérifie le token JWT, puis que le compte existe toujours, n'est pas suspendu, et applique son rôle actuel.
 app.decorate('authenticate', async (req, reply) => {
@@ -145,6 +148,7 @@ await app.register(quizRoutes);
 await app.register(practiceRoutes);
 await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
+await app.register(moderationRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
 await app.register(citationRoutes);

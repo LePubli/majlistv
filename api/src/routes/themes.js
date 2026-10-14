@@ -10,6 +10,7 @@ import { hasLearningTier } from '../access.js';
 import { sealText, openText, practiceKeyReady } from '../practiceCrypto.js';
 import { THEMES, THEME_BY_ID, MAX_TALK_THEMES, themesOn, themeCard, talksOfTheme } from '../themes.js';
 import { dueOn, DUE_KINDS } from './practice.js';
+import { visibleSql } from '../visibility.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const themeIdSchema = z.string().regex(/^[QDA]\d{1,2}$/);
@@ -25,7 +26,7 @@ export default async function themesRoutes(app) {
     if (!(await themesOn())) return { enabled: false, themes: [] };
     const counts = new Map((await pool.query(
       `SELECT x.theme_id, count(*)::int AS n FROM talk_themes x JOIN talks t ON t.id = x.talk_id
-        WHERE t.publication = 'published' OR (t.publication = 'scheduled' AND t.publish_at <= now()) GROUP BY x.theme_id`)).rows.map((r) => [r.theme_id, r.n]));
+        WHERE ${visibleSql('t')} GROUP BY x.theme_id`)).rows.map((r) => [r.theme_id, r.n]));
     return { enabled: true, themes: THEMES.map((t) => ({ ...themeCard(t), talks: counts.get(t.id) || 0 })) };
   });
 

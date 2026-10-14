@@ -14,7 +14,7 @@ const clock = (s) => {
   const sec = String(Math.floor(s % 60)).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
-const FILTERS = ['all', 'live', 'run', 'err', 'draft'];
+const FILTERS = ['all', 'live', 'run', 'err', 'draft', 'review'];
 // Le filtre « Brouillons » regroupe les brouillons et les conférences programmées.
 const inFilter = (kind, f) => f === 'all' || kind === f || (f === 'draft' && kind === 'sched');
 
@@ -67,7 +67,7 @@ export default function StudioTalks() {
       </div>
 
       <div className="studio-stats">
-        {[['live', t('kind_live')], ['run', t('kind_run')], ['err', t('kind_err')], ['draft', t('kind_draft')]].map(([k, label]) => (
+        {[['live', t('kind_live')], ['run', t('kind_run')], ['err', t('kind_err')], ['draft', t('kind_draft')], ...(rows.some((r) => r.kind === 'review') ? [['review', t('kind_review')]] : [])].map(([k, label]) => (
           <button key={k} type="button" className={`stat stat-${k}`} onClick={() => setFilter(k)}>
             <strong>{mine ? count(k) : '…'}</strong><span>{label}</span>
           </button>
@@ -135,8 +135,13 @@ export default function StudioTalks() {
                   </td>
                   <td>
                     <span className={`state state-${r.kind}`}>
-                      <i aria-hidden="true" />{t('state_' + r.kind)}{r.kind === 'run' && r.pct != null ? ` ${r.pct} %` : ''}
+                      <i aria-hidden="true" />{r.kind === 'review' ? t('state_review_' + r.reviewStatus) : t('state_' + r.kind)}{r.kind === 'run' && r.pct != null ? ` ${r.pct} %` : ''}
                     </span>
+                    {r.kind === 'review' && r.reviewStatus === 'rejected' && (
+                      <small className="muted review-note">{t('reviewReason')} : {r.reviewNote}{' '}
+                        <button type="button" className="link u small" onClick={async () => { const x = await call(`/talks/${r.id}/review/submit`, { method: 'POST' }); if (x.ok) load(); }}>{t('reviewResubmit')}</button>
+                      </small>
+                    )}
                     {r.kind === 'sched' && <small className="muted sched-date">{t('scheduledFor').replace('{d}', dateTime(r.publishAt))}</small>}
                   </td>
                   <td>

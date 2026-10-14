@@ -97,7 +97,7 @@ const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.s
   t.audio_status, t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
   t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
-  t.publication, t.publish_at AS "publishAt", t.featured, ${visibleSql('t')} AS visible`;
+  t.publication, t.publish_at AS "publishAt", t.featured, t.review_status AS "reviewStatus", t.review_note AS "reviewNote", ${visibleSql('t')} AS visible`;
 const FROM = 'FROM talks t LEFT JOIN category_names c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
 
@@ -255,7 +255,7 @@ export default async function talksRoutes(app) {
     if (kv && (await timeState(kv.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
-    const isOwner = viewer && (viewer.role === 'admin' || viewer.sub === owner.rows[0].organizer_id);
+    const isOwner = viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === owner.rows[0].organizer_id); // le modérateur relit les conférences en attente
     // Brouillon ou publication programmée à venir : invisible pour tout le monde sauf le propriétaire et les admins.
     if (!talk.visible && !isOwner) return reply.code(404).send({ error: 'Conférence introuvable' });
     if (kv) {

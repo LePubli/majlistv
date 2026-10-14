@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import StatsView from '../../components/StatsView';
 
-const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', admin: 'Administrateur' };
+const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
 const SUB_LABEL = { trialing: 'Essai', active: 'Abonné', past_due: 'Paiement en retard', canceled: 'Résilié', incomplete: 'Incomplet', unpaid: 'Impayé' };
 const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—');
 const LANG_NAMES = { fr: 'Français', en: 'Anglais', ar: 'Arabe', es: 'Espagnol', de: 'Allemand', it: 'Italien', pt: 'Portugais', tr: 'Turc', ur: 'Ourdou', id: 'Indonésien', ru: 'Russe', nl: 'Néerlandais', zh: 'Chinois', ja: 'Japonais', ko: 'Coréen', hi: 'Hindi', fa: 'Persan', bn: 'Bengali', ms: 'Malais', sw: 'Swahili' };
@@ -407,6 +407,7 @@ function Settings() {
 const ROLE_HELP = {
   user: 'Regarde les conférences, garde ses favoris et sa progression. Les conférences premium demandent un abonnement ou un accès offert.',
   organizer: "Comme un utilisateur, et accède au Studio : ajoute, modifie et publie ses propres conférences. Ne voit pas le back-office.",
+  moderator: "Comme un utilisateur, et accède à la Modération : relit les conférences en attente, traite les signalements, valide les propositions d'action. Ne voit pas le back-office ni les paramètres.",
   admin: 'Accès total : back-office (utilisateurs, paramètres, catégories, pages légales) et toutes les conférences du Studio.',
 };
 const FILTERS = [['all', 'Tous'], ['paying', 'Abonnés'], ['trialing', 'Essais'], ['offered', 'Accès offerts'], ['none', 'Sans abonnement'], ['suspended', 'Suspendus']];
@@ -563,6 +564,13 @@ function UserSheet({ id, me, onClose, onChanged }) {
               </div>
               {self && <p className="meta">Tu ne peux pas modifier ton propre rôle.</p>}
             </section>
+
+            {u.role === 'organizer' && (
+              <section className="sheet-sec">
+                <h4>Publication</h4>
+                <label className="rv-email"><input type="checkbox" checked={Boolean(u.trustedPublisher)} disabled={busy} onChange={(e) => patch({ trustedPublisher: e.target.checked }, e.target.checked ? 'Organisateur de confiance' : 'Relecture rétablie')} /> <span>Organisateur de confiance : ses conférences sont publiées sans relecture (utile seulement quand « Relire les conférences » est activé dans les Paramètres).</span></label>
+              </section>
+            )}
 
             <section className="sheet-sec">
               <h4>Abonnement et accès</h4>
@@ -895,6 +903,62 @@ function Speakers() {
   );
 }
 
+/* ---------------------------------------------------------------- Journal des actions (étape 20) */
+function AuditLog() {
+  const { call } = useApp();
+  const [days, setDays] = useState(30);
+  const [role, setRole] = useState('');
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
+  const [d, setD] = useState(null);
+  const LIMIT = 100;
+  const qs = (extra = {}) => new URLSearchParams({ days, limit: LIMIT, offset: page * LIMIT, ...(role ? { role } : {}), ...(q.trim() ? { q: q.trim() } : {}), ...extra }).toString();
+  useEffect(() => { let off = false; call(`/admin/audit?${qs()}`).then((r) => { if (!off && r.ok) setD(r.data); }); return () => { off = true; }; }, [call, days, role, q, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  const exportCsv = async () => {
+    const res = await fetch('/api/admin/audit?' + qs({ format: 'csv', offset: 0 }), { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    if (!res.ok) return;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = 'journal-actions.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  return (
+    <section>
+      <p className="meta">Qui a fait quoi : chaque modification faite par un administrateur ou un modérateur. Seuls les noms des champs modifiés sont conservés, jamais leurs valeurs (mots de passe, clés…).</p>
+      <div className="studio-tools">
+        <label className="fld"><span>Période</span><select value={days} onChange={(e) => { setPage(0); setDays(Number(e.target.value)); }}>{[[1, '24 heures'], [7, '7 jours'], [30, '30 jours'], [90, '90 jours'], [365, '1 an'], [730, '2 ans']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <label className="fld"><span>Équipe</span><select value={role} onChange={(e) => { setPage(0); setRole(e.target.value); }}><option value="">Tous</option><option value="admin">Administrateurs</option><option value="moderator">Modérateurs</option></select></label>
+        <label className="fld"><span>Recherche</span><input type="search" value={q} placeholder="Nom, action, identifiant…" onChange={(e) => { setPage(0); setQ(e.target.value); }} /></label>
+        <button type="button" className="btn ghost" onClick={exportCsv}>Exporter (CSV)</button>
+      </div>
+      {d && d.items.length === 0 && <p className="meta">Aucune action sur cette période.</p>}
+      {d && d.items.length > 0 && (
+        <div className="studio-table-wrap">
+          <table className="studio-table">
+            <thead><tr><th>Date</th><th>Qui</th><th>Action</th><th>Cible</th><th>Détail</th></tr></thead>
+            <tbody>
+              {d.items.map((r) => (
+                <tr key={r.id}>
+                  <td className="muted">{fmtDT(r.at)}</td>
+                  <td>{r.actorName}<br /><small className="muted">{ROLE_LABEL[r.actorRole] || r.actorRole}</small></td>
+                  <td><code>{r.method} {r.route}</code></td>
+                  <td className="muted">{r.target}</td>
+                  <td>{r.summary || (r.fields.length ? `Champs : ${r.fields.join(', ')}` : '')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {d && (
+        <div className="panel-actions">
+          <button type="button" className="btn ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>← Précédent</button>
+          <span className="meta small">{d.total} action(s) · page {page + 1}</span>
+          <button type="button" className="btn ghost" disabled={(page + 1) * LIMIT >= d.total} onClick={() => setPage(page + 1)}>Suivant →</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
   const { user, ready } = useApp();
@@ -903,7 +967,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions" };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
@@ -914,6 +978,7 @@ export default function Admin() {
       {tab === 'categories' && <Categories />}
       {tab === 'speakers' && <Speakers />}
       {tab === 'stats' && <StatsView endpoint="/admin/stats" site />}
+      {tab === 'audit' && <AuditLog />}
     </main>
   );
 }

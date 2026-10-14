@@ -95,7 +95,8 @@ function MainHeader() {
   // Studio et administration ont leur propre menu (components/StudioShell.js).
   if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
   const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) ? 'page' : undefined);
-  const manager = user && ['organizer', 'admin'].includes(user.role);
+  const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
+  const modOnly = user && user.role === 'moderator';
   const pages = [
     ['/', t('home'), ICONS.home, true],
     ['/series', t('seriesNav'), ICONS.series, hasSeries],
@@ -148,7 +149,7 @@ function MainHeader() {
                 {manager && (
                   <>
                     <p className="hd-menu-title">{t('hmManage')}</p>
-                    <Link href="/studio" role="menuitem">{t('studioNav')}</Link>
+                    <Link href={modOnly ? '/studio/moderation' : '/studio'} role="menuitem">{modOnly ? t('modNav') : t('studioNav')}</Link>
                     {user.role === 'admin' && <Link href="/admin" role="menuitem">{t('adminNav')}</Link>}
                   </>
                 )}
@@ -177,7 +178,7 @@ function MainHeader() {
               {manager && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('hmManage')}</p>
-                  <Link href="/studio"><Ico d={ICONS.studio} />{t('studioNav')}</Link>
+                  <Link href={modOnly ? '/studio/moderation' : '/studio'}><Ico d={ICONS.studio} />{modOnly ? t('modNav') : t('studioNav')}</Link>
                   {user.role === 'admin' && <Link href="/admin"><Ico d={ICONS.admin} />{t('adminNav')}</Link>}
                 </>
               )}

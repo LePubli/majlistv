@@ -3,7 +3,7 @@
 //    relues puis validées ; seules les propositions « validées » sont publiques.
 //  • Public : l'écran « Et maintenant, que faire ? » est visible par tous (visiteurs compris).
 //  • Apprentissage : « Mes engagements » (enregistrement, suivi, note privée). Les textes personnels sont chiffrés (PRACTICE_KEY).
-// Le rôle « modérateur » arrivera avec l'étape 20 : il suffira de l'ajouter à `organizer` ci-dessous.
+// Le modérateur (étape 20) relit toutes les propositions, comme l'administrateur.
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
@@ -67,21 +67,23 @@ export async function practiceInfo(talkId) {
   return { available: rows[0].n > 0, count: rows[0].n };
 }
 
+const STAFF = new Set(['admin', 'moderator']);
+
 export default async function practiceRoutes(app) {
-  const organizer = { preHandler: app.requireRole('organizer', 'admin') };
+  const organizer = { preHandler: app.requireRole('organizer', 'moderator', 'admin') };
   const auth = { preHandler: app.authenticate };
   const sourceOf = (t) => t.transcript_language || t.language;
 
   async function ownedTalk(req, reply, id) {
     const { rows } = await pool.query('SELECT id, organizer_id, title, transcript_status, transcript_language, language FROM talks WHERE id = $1', [id]);
     const t = rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (!STAFF.has(req.user.role) && t.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
     return t;
   }
   async function ownedSuggestion(req, reply, sid) {
     const { rows } = await pool.query('SELECT s.*, t.organizer_id FROM practice_suggestions s JOIN talks t ON t.id = s.talk_id WHERE s.id = $1', [sid]);
     const s = rows[0];
-    if (!s || (req.user.role !== 'admin' && s.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Proposition introuvable' }); return null; }
+    if (!s || (!STAFF.has(req.user.role) && s.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Proposition introuvable' }); return null; }
     return s;
   }
   // Une proposition n'est validable que complète et sans citation inventée.
@@ -167,7 +169,7 @@ export default async function practiceRoutes(app) {
     const { rows } = await pool.query(
       `SELECT s.*, t.title AS talk_title FROM practice_suggestions s JOIN talks t ON t.id = s.talk_id
         WHERE s.status = 'draft' AND ($1::boolean OR t.organizer_id = $2)
-        ORDER BY t.title, s.talk_id, s.size, s.created_at LIMIT 300`, [req.user.role === 'admin', req.user.sub]);
+        ORDER BY t.title, s.talk_id, s.size, s.created_at LIMIT 300`, [STAFF.has(req.user.role), req.user.sub]);
     return { suggestions: rows.map(shape) };
   });
 

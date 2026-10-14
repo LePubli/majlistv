@@ -14,6 +14,7 @@ import { levelLabel } from '../../../lib/levels';
 import NotesPanel from '../../../components/NotesPanel';
 import Quiz from '../../../components/Quiz';
 import PracticeBlock from '../../../components/PracticeBlock';
+import ReportButton from '../../../components/ReportButton';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -480,6 +481,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               {ctx && ctx.prev && <Link className="fav" href={`/talks/${ctx.prev.id}`}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {t('prevEp')}</Link>}
               {ctx && ctx.next && <Link className="fav next" href={`/talks/${ctx.next.id}`}>{t('nextEp')} <span aria-hidden="true">{locale === 'ar' ? '←' : '→'}</span></Link>}
               <button type="button" className="fav" onClick={share}><span aria-hidden="true">↗</span> {t('shareBtn')}</button>
+              <ReportButton talkId={id} t={t} call={call} />
               <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
             </div>
             {trackable && resumeMs > 0 && !jumpMs && (

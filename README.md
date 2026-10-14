@@ -1597,3 +1597,67 @@ Désactiver « Proposer la base de thèmes » : la bibliothèque, les pastilles 
 
 ### 31.11 Plus tard (31.4 du ROADMAP)
 Version Kids (actions du jour validées par le parent), notifications push (Android), partage volontaire avec un proche : non faits.
+
+---
+
+## Étape 20 — Modération
+
+### 20.1 Ce que ça fait
+- **Rôle « Modérateur »** (Admin → Utilisateurs → fiche → Rôle) : accède à **Modération** (menu du Studio) et à la validation des propositions d'action (étape 29). Il ne voit ni le back-office, ni les paramètres, ni le journal.
+- **Relecture avant mise en ligne** : réglage **Admin → Paramètres → Modération → « Relire les conférences des organisateurs avant leur mise en ligne »** (désactivé par défaut). Activé, toute conférence qu'un **organisateur** publie ou programme passe « en attente » : invisible du public (liste, recherche, page, plan du site) jusqu'à validation. Les conférences déjà en ligne ne bougent pas. Les **administrateurs** et les organisateurs **« de confiance »** (case sur leur fiche utilisateur) sont dispensés. Un brouillon n'est jamais relu : la relecture se déclenche au moment de publier.
+- **Décision du modérateur** : *Valider* ou *Refuser* (motif obligatoire). L'organisateur reçoit un e-mail (FR/EN/AR), voit le statut et le motif dans le Studio, corrige puis clique « Corriger puis renvoyer à la relecture ». Le modérateur peut prévisualiser une conférence en attente.
+- **Signalement par les spectateurs** : bouton « Signaler » sur la page de chaque conférence (motif : droits d'auteur, contenu inapproprié, trompeur, propos religieux à vérifier, problème technique, autre ; précisions ≤ 1000 caractères). Compte facultatif ; un même membre ne peut avoir qu'un signalement ouvert par conférence ; **5 signalements par heure et par adresse** (anti-abus).
+- **Traitement** (Modération → Signalements) : *Classer sans suite*, *Réglé (sans retrait)* ou *Retirer la conférence* (motif obligatoire, envoyé à l'organisateur ; la conférence passe en « refusée », tous ses signalements ouverts sont réglés d'un coup, elle peut être renvoyée puis revalidée). L'identité de la personne qui signale n'est visible que de l'équipe, jamais de l'organisateur.
+- **Journal des actions** (Admin → Journal des actions) : qui, quand, quelle action, quelle cible, quels champs modifiés. Enregistre les modifications de l'administrateur (administration, conférences, séries, catégories, ouvrages, imports…) et du modérateur (décisions). **Seuls les noms des champs sont conservés, jamais les valeurs** (mots de passe, clés). Filtres par période, par équipe, recherche, export CSV. En ajout seul : aucune route ne le modifie ni ne le vide.
+
+### 20.2 Prérequis
+Rien de nouveau : aucune variable obligatoire. Facultatif : `REPORT_RATE_MAX` (défaut 5) = nombre de signalements par heure et par adresse.
+
+### 20.3 Installation / mise à jour
+Migration `041_moderation.sql` (automatique au démarrage de l'API) : rôle `moderator`, colonne `users.trusted_publisher`, colonnes de relecture sur `talks` (+ déclencheur SQL), tables `content_reports` et `audit_log`. Déployer **l'API d'abord, puis le web**.
+
+```bash
+cd /chemin/vers/majlistv
+unzip -o ~/majlis-tv-etape20-moderation.zip -d /tmp/e20 && cp -r /tmp/e20/. .
+git add -A && git commit -m "Etape 20 : moderation" && git push
+# DockPanel : redéployer majlistv-api, attendre « Running », puis majlistv-web
+```
+
+### 20.4 Mise en service pas à pas
+1. Créer le compte du relecteur (Admin → Utilisateurs → Créer) avec le rôle **Modérateur**, ou changer le rôle d'un compte existant.
+2. Pour chaque organisateur que vous connaissez bien : fiche → case **« Organisateur de confiance »**.
+3. Admin → Paramètres → **Modération** → activer « Relire les conférences… » → Enregistrer.
+4. Le modérateur se connecte : menu du compte → **Modération**.
+
+### 20.5 Confidentialité et obligations
+- Le journal est une donnée de sécurité : accessible aux seuls administrateurs. Aucune suppression automatique : prévoir une purge manuelle périodique (ex. au-delà de 2 ans) et la mentionner dans la politique de confidentialité.
+- Les signalements contiennent éventuellement l'adresse e-mail du membre : visible uniquement de l'équipe. Si vous êtes hébergeur de contenus d'organisateurs externes, conserver aussi le motif de retrait (champ `note`) : il sert de trace en cas de contestation.
+- À faire relire juridiquement : la procédure de signalement pour droits d'auteur (mentions légales) avant ouverture aux organisateurs externes.
+
+### 20.6 API (résumé)
+| Route | Rôle |
+|---|---|
+| `POST /talks/:id/report` | signalement (visiteur ou membre ; `429` au-delà de la limite) |
+| `GET /moderation/summary`, `GET /moderation/queue?status=pending\|rejected` | compteurs, file de relecture |
+| `POST /moderation/talks/:id/decision` | `{decision: approve\|reject, note}` (motif ≥ 5 caractères pour un refus) |
+| `GET /moderation/reports?status=open\|handled`, `POST /moderation/reports/:id/resolve` | `{action: dismiss\|resolve\|unpublish, note}` |
+| `POST /talks/:id/review/submit` | l'organisateur renvoie une conférence refusée |
+| `GET /admin/audit?days&role&q&limit&offset&format=csv` | journal (administrateur) |
+`GET /me/talks` renvoie `reviewStatus` et `reviewNote`. Rôles : `/moderation/*` = modérateur ou administrateur.
+
+### 20.7 Tests
+```bash
+# API (3055, avec REPORT_RATE_MAX élevé dans l'environnement de test), PG de test (5544)
+python3 api/tests/test_moderation.py
+```
+Résultat attendu : « TOUT EST OK ». La limite de 100 requêtes/minute s'applique : en cas d'échec sur une connexion, attendre 1 à 2 minutes.
+
+### 20.8 Debug
+- **Une conférence n'apparaît pas après publication** : elle est « en attente » (Studio → état). Vérifier Modération → À relire.
+- **Aucune relecture malgré le réglage** : l'organisateur est « de confiance », administrateur, ou la conférence est restée en brouillon.
+- **Plus de relecture à demander** : décocher le réglage ; les conférences déjà en attente restent à traiter (ou à valider une par une).
+- **Pas d'e-mail de décision** : voir Admin → Paramètres → E-mails (SMTP) ; table `email_outbox` (types `review_approved`, `review_rejected`).
+- **Le journal ne montre pas mon action** : seules les modifications (POST/PUT/PATCH/DELETE) de l'administrateur et du modérateur y figurent, pas les lectures ni les gestes personnels (favoris, notes, engagements).
+
+### 20.9 Retour arrière
+Désactiver le réglage « Relire les conférences… » : les nouvelles publications sont de nouveau immédiates. Pour remettre en ligne ce qui est en attente : Modération → Valider, ou en SQL `UPDATE talks SET review_status='approved' WHERE review_status='pending';`.

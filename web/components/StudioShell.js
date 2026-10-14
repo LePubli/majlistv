@@ -36,9 +36,11 @@ export default function StudioShell({ children }) {
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   if (!ready || !user) return null;
-  if (!['organizer', 'admin'].includes(user.role)) return <main className="card"><p>{t('noAccess')}</p></main>;
+  if (!['organizer', 'moderator', 'admin'].includes(user.role)) return <main className="card"><p>{t('noAccess')}</p></main>;
 
   const isAdmin = user.role === 'admin';
+  const isStaff = isAdmin || user.role === 'moderator';
+  const isModOnly = user.role === 'moderator';
   const on = (href) => {
     if (href.startsWith('/admin')) {
       const want = new URL(href, 'http://x').searchParams.get('tab') || 'dashboard';
@@ -47,16 +49,18 @@ export default function StudioShell({ children }) {
     if (href === '/studio/series') return path.startsWith('/studio/series');
     if (href === '/studio/quiz') return path.startsWith('/studio/quiz');
     if (href === '/studio/practice') return path.startsWith('/studio/practice');
+    if (href === '/studio/moderation') return path.startsWith('/studio/moderation');
     if (href === '/studio/books') return path.startsWith('/studio/books');
     if (href === '/studio/reminders') return path.startsWith('/studio/reminders');
     if (href === '/studio/stats') return path.startsWith('/studio/stats');
     return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
   };
   const groups = [
-    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] },
+    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
+    ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] }]),
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
-      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
+      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };

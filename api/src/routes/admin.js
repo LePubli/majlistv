@@ -7,7 +7,7 @@ import { forgetUser } from '../userstate.js';
 import { enqueueEmail } from '../mailer.js';
 import { createHash } from 'node:crypto';
 
-const ROLES = ['user', 'organizer', 'admin'];
+const ROLES = ['user', 'organizer', 'moderator', 'admin'];
 const idSchema = z.object({ id: z.string().uuid() });
 const listSchema = z.object({
   q: z.string().trim().max(100).optional(),
@@ -26,6 +26,7 @@ const createSchema = z.object({
   password: z.string().min(8).max(72).optional(), // vide : un mot de passe provisoire est généré
 });
 const patchSchema = z.object({
+  trustedPublisher: z.boolean().optional(),
   email: emailSchema.optional(),
   name: z.string().trim().min(1).max(100).optional(),
   role: z.enum(ROLES).optional(),
@@ -37,7 +38,7 @@ const patchSchema = z.object({
 // Mot de passe provisoire lisible (affiché une seule fois à l'admin).
 const tempPassword = () => randomBytes(9).toString('base64url');
 
-const USER_COLS = `u.id, u.email, u.name, u.role, u.locale, u.created_at AS "createdAt", u.disabled_at AS "disabledAt",
+const USER_COLS = `u.id, u.email, u.name, u.role, u.trusted_publisher AS "trustedPublisher", u.locale, u.created_at AS "createdAt", u.disabled_at AS "disabledAt",
   u.premium_until AS "premiumUntil",
   (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY (s.status IN ('trialing','active','past_due')) DESC, s.updated_at DESC LIMIT 1) AS "subscriptionStatus",
   (SELECT count(*) FROM talks t WHERE t.organizer_id = u.id)::int AS "talksCount",
@@ -153,6 +154,7 @@ export default async function adminRoutes(app) {
     if (b.email !== undefined) add('email', b.email);
     if (b.name !== undefined) add('name', b.name);
     if (b.role !== undefined) add('role', b.role);
+    if (b.trustedPublisher !== undefined) add('trusted_publisher', b.trustedPublisher);
     if (b.locale !== undefined) add('locale', b.locale);
     if (b.disabled !== undefined) sets.push(`disabled_at = ${b.disabled ? 'COALESCE(disabled_at, now())' : 'NULL'}`);
     if (b.premiumUntil !== undefined) add('premium_until', b.premiumUntil);

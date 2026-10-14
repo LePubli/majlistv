@@ -53,6 +53,7 @@ export function talkKind(x, steps = talkSteps(x)) {
   if (all.includes('err')) return 'err';
   // Un brouillon ou une conférence programmée garde son statut même pendant le traitement (la progression reste visible dans les pastilles).
   if (x.publication === 'draft') return 'draft';
+  if (x.reviewStatus === 'pending' || x.reviewStatus === 'rejected') return 'review'; // étape 20 : relecture avant mise en ligne
   if (x.publication === 'scheduled' && x.visible === false) return 'sched';
   if (steps.video !== 'ok') return 'run';
   if (all.includes('run')) return 'run';

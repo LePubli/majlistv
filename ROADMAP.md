@@ -175,7 +175,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - Collections éditoriales (par l'équipe) : cycles, séries d'un même intervenant, thèmes du moment.
 - Listes personnelles des abonnés, partageables.
 
-**20. Modération**
+**20. Modération** — *fait (rôle « modérateur » au lieu de « relecteur »)*
 - Rôle **relecteur** : les conférences des organisateurs externes sont validées avant d'être en ligne.
 - Signalement d'un contenu par les spectateurs, avec une file de traitement dans le back-office.
 - Journal des actions des admins (qui a modifié quoi).
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) et 31 (thèmes, évolution). **Suite : 20** (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution) et 20 (modération). **Suite : 19** (collections) et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.
