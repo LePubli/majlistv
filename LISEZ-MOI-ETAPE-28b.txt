@@ -1,0 +1,15 @@
+ÉTAPE 28b — Content-Security-Policy du site Mejliss TV
+=======================================================
+Contenu : web/middleware.js (nouveau), web/next.config.mjs, README.md (section 28.6), .env.example.
+Cumulatif avec l'étape 28 (sécurité) : copier par-dessus le dépôt, puis commit + push.
+
+1) Sur le VPS (DockPanel → majlistv-web → Variables), ajouter :
+   CSP_STORAGE_ORIGINS=https://s3-majlisstv.le-publicitaire.fr
+   (la même adresse que S3_ENDPOINT de l'API ; sans elle, la CSP reste active mais moins stricte)
+2) Redéployer majlistv-web (rien d'autre : l'API ne change pas).
+3) Puis :
+   /root/apply-limits.sh
+   grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+   nginx -t && systemctl reload nginx
+4) Contrôle : F12 → Console sur l'accueil, une conférence envoyée, une YouTube, une Vimeo : aucune ligne rouge « Refused to … ».
+SECOURS si une vidéo/image ne s'affiche plus : variable CSP_MODE=report-only, redéployer majlistv-web, me transmettre les lignes de la console.

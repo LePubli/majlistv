@@ -1221,10 +1221,7 @@ de sécurité et annonçait sa technologie (`X-Powered-By: Next.js`). `web/next.
 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` et
 `Strict-Transport-Security`, et supprime `X-Powered-By`.
 
-**Reste à faire, volontairement non fait ici** : une `Content-Security-Policy` sur le site. Le site intègre
-les lecteurs YouTube et Vimeo (`www.youtube.com`, `www.youtube-nocookie.com`, `player.vimeo.com`,
-`i.ytimg.com`) ; une CSP mal réglée empêcherait les vidéos de démarrer. À traiter dans une étape dédiée,
-en testant la lecture sur les trois sources (fichier envoyé, YouTube, Vimeo).
+La `Content-Security-Policy` du site est traitée plus bas (28.6).
 
 ### 28.5 Deux points de propreté
 
@@ -1266,6 +1263,54 @@ en testant la lecture sur les trois sources (fichier envoyé, YouTube, Vimeo).
 - **Conteneurs** : les six services tournent sous un utilisateur non privilégié.
 - **Données JSON-LD** (référencement) : les `<` sont échappés, donc pas d'injection de script par ce biais.
 
+### 28.6 Content-Security-Policy du site (ajoutée et testée)
+
+**À quoi ça sert.** La CSP est la liste de ce que le navigateur a le droit de charger sur une page. Si un jour une faille
+permettait d'injecter un script dans le site, le navigateur le refuserait : seuls les scripts du site, marqués d'un code
+aléatoire (« nonce ») propre à chaque page vue, s'exécutent.
+
+**Où.** `web/middleware.js` (nouveau). Il pose l'en-tête sur les pages ; les fichiers statiques et le proxy `/api` n'en
+ont pas besoin (l'API a déjà la sienne via helmet).
+
+**Ce qui est autorisé** (et rien d'autre) :
+
+| Quoi | Origine autorisée |
+|---|---|
+| Scripts | le site + code aléatoire ; les scripts chargés par ceux-ci (API YouTube, API Vimeo) via `strict-dynamic` |
+| Vidéos envoyées (HLS) | le site (`/api/hls/…`), segments sur le stockage (liens signés), `blob:` pour le lecteur |
+| YouTube | cadres `youtube-nocookie.com` et `youtube.com`, miniatures `i.ytimg.com` |
+| Vimeo | cadre `player.vimeo.com` |
+| Images, affiches | le site, `data:`, `blob:`, `i.ytimg.com`, le stockage |
+| Envoi vidéo / PDF | navigateur → stockage (`connect-src`) |
+| Polices | le site uniquement (déjà auto-hébergées) |
+| Interdit | `object`/`embed` (aucun), cadres venant d'un autre site (`frame-ancestors 'self'`), `<base>` détourné |
+
+Limite connue : les styles en ligne (`style="…"`, très utilisés par React pour les vignettes) ne peuvent pas porter de
+nonce, donc `style-src` garde `'unsafe-inline'`. Le risque est bien plus faible que pour les scripts.
+
+**Réglages (facultatifs, variables du service `majlistv-web` dans DockPanel)**
+
+- `CSP_STORAGE_ORIGINS=https://s3-majlisstv.le-publicitaire.fr` — adresse du stockage (la même que `S3_ENDPOINT` de
+  l'API). **Recommandé** : la CSP n'autorise alors que ce stockage. Sans cette variable, le site accepte n'importe quel
+  `https:` pour les images, médias et envois : tout fonctionne, mais en moins strict.
+- `CSP_MODE` — `enforce` (défaut, bloque), `report-only` (le navigateur signale dans la console sans rien bloquer) ou
+  `off` (aucune CSP). **C'est le bouton de secours** : si une vidéo ou une image ne s'affiche plus après la mise en
+  ligne, mettre `CSP_MODE=report-only`, redéployer `majlistv-web`, puis me transmettre le message de la console
+  (touche F12 → Console, lignes « Content Security Policy… »).
+- `CSP_EXTRA_FRAME` — autre site à autoriser en cadre (par exemple un futur lecteur), séparé par des virgules.
+
+**Tests réalisés** (Chromium, site compilé en production, stockage simulé) : 15 pages (accueil, connexion, inscription,
+tarifs, Kids, conférence vidéo envoyée, conférence YouTube, conférence Vimeo, séries, bibliothèque, studio, nouvelle
+conférence, compte, administration, mentions légales) → **0 violation** ; lecture HLS réelle (la vidéo avance, 5 s lues
+sur 6) ; API YouTube et Vimeo chargées dynamiquement et cadres ouverts ; envoi direct d'un fichier au stockage ;
+vignettes du stockage et de `i.ytimg.com` affichées ; témoins négatifs (un `onclick` injecté ne s'exécute pas, un script
+externe inconnu est bloqué) ; modes `report-only` et `off` vérifiés. Non testable ici faute d'accès à Internet : le
+chargement des vrais serveurs YouTube/Vimeo (leurs scripts ont été simulés) — d'où le test de contrôle ci-dessous.
+
+**Contrôle après déploiement (2 minutes)** : ouvrir le site, touche F12 → onglet Console, puis visiter l'accueil, une
+conférence envoyée (lecture), une conférence YouTube, une conférence Vimeo. Aucune ligne rouge « Refused to … » ne doit
+apparaître.
+
 ### Deux points à surveiller (pas des failles, des choix à connaître)
 
 - **Le jeton de lecture n'est pas lié à un compte** : il autorise une conférence pendant 6 heures, quel que
@@ -1276,7 +1321,7 @@ en testant la lecture sur les trois sources (fichier envoyé, YouTube, Vimeo).
   nécessaire pour suivre les changements de YouTube, mais fait entrer du code non figé dans le conteneur.
   Désactivable avec `YTDLP_AUTO_UPDATE=0`, au prix de téléchargements YouTube qui finiront par échouer.
 
-**Déploiement** (aucune migration de base) : redéployer `majlistv-api`, puis `majlistv-web`, puis
+**Déploiement** (aucune migration de base) : redéployer `majlistv-api`, puis `majlistv-web` (après avoir ajouté `CSP_STORAGE_ORIGINS`, voir 28.6), puis
 `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`,
 `nginx -t && systemctl reload nginx`. Vérifier ensuite la connexion au site, la lecture d'une conférence
 gratuite et d'une conférence premium, et l'espace Kids.

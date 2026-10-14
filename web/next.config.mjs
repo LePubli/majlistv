@@ -3,9 +3,7 @@
 // En-têtes de sécurité du site public.
 // Le nginx du serveur en pose déjà une partie (HSTS, X-Frame-Options…) ; les répéter ici garantit
 // qu'ils sont présents même si le site est servi autrement (test local, autre hébergement, prévisualisation).
-// Pas de Content-Security-Policy pour l'instant : le site intègre les lecteurs YouTube et Vimeo, et une
-// CSP mal réglée empêcherait les vidéos de se lancer. À ajouter dans une étape dédiée, avec test de la
-// lecture sur les trois sources (fichier envoyé, YouTube, Vimeo) — voir README, section Sécurité.
+// La Content-Security-Policy (avec nonce) est posée par middleware.js, pas ici : elle change à chaque page vue.
 const securityHeaders = [
   // Empêche le navigateur de « devenir » le type de fichier annoncé (attaques par type MIME).
   { key: 'X-Content-Type-Options', value: 'nosniff' },
