@@ -1466,3 +1466,65 @@ Résultat attendu : « tout est bon » à chaque fois. Attention : l'API limite 
 
 ### 29.10 Retour arrière
 Retirer l'écran sans rien supprimer : Admin → Paramètres → « Mise en pratique » → désactiver. Les données restent en base (tables `practice_suggestions`, `practice_jobs`, `practice_commitments`).
+
+---
+
+## Étape 30 — Mon bilan (*Tazkiyat an-nafs*)
+
+### 30.1 Ce que ça fait
+Dans **Apprentissage**, la personne tient deux listes, **à elle** : *qualités à cultiver* et *défauts à corriger*. Elle les choisit dans la base de thèmes (si activée) ou les écrit avec ses mots, jusqu'à **20 objectifs actifs** (on peut en **archiver**, rien n'est perdu). Chaque semaine (lundi → dimanche, heure de Paris) elle note pour chaque objectif : **Réussi / En progrès / Pas encore**, avec une note facultative. Une **frise des 8 dernières semaines** (couleurs douces) montre le chemin ; on peut compléter une semaine passée (8 semaines au plus). Un objectif peut être **relié à un engagement** de l'étape 29.
+**Aucun total, score, pourcentage, série de jours, classement ni badge.**
+
+### 30.2 Rappel hebdomadaire par e-mail
+Un **seul e-mail par semaine**, au jour choisi par chaque membre (**vendredi par défaut**, réglable dans « Mon bilan »), à partir de l'heure réglée par l'administrateur (**17 h, heure de Paris**, Admin → Paramètres → « Mise en pratique »). Il n'est envoyé que s'il y a quelque chose à dire (engagements en cours ou objectifs sans bilan cette semaine), jamais deux fois la même semaine (même après un redémarrage), jamais sans l'accord de la personne, et chacun peut le désactiver.
+⚠️ **Écart volontaire avec la spec** : l'e-mail ne contient que des **chiffres et un lien** (« 2 engagements en cours », « 3 objectifs à faire »), **jamais le texte** des objectifs ou des engagements : un e-mail n'est pas chiffré, et ces textes sont très sensibles. Le lien ouvre directement « Mon bilan ».
+Nécessite l'envoi d'e-mails déjà configuré (Admin → Paramètres → E-mails). Sans SMTP, rien n'est mis en file.
+
+### 30.3 Base de thèmes (qualités et défauts)
+Les 24 thèmes de `docs/themes-tazkiya-base.md` (12 qualités, 12 défauts, avec leur nom arabe) sont embarqués dans `api/src/themesTazkiya.json`. **Ils ne sont pas proposés tant que vous n'avez pas relu la liste** : Admin → Paramètres → « Mise en pratique » → **« Proposer la base de thèmes »** (désactivé par défaut). Désactivée, chacun écrit ses propres objectifs. Pour corriger un thème : modifier `docs/themes-tazkiya-base.md` **et** `api/src/themesTazkiya.json` (même contenu ; l'import automatique viendra à l'étape 31). Les thèmes ne sont disponibles qu'en français (+ nom arabe) pour l'instant.
+
+### 30.4 Confidentialité (à publier)
+- Intitulé, **code du thème**, note : **chiffrés** en base (AES-256-GCM, `PRACTICE_KEY`, la même clé dédiée que l'étape 29). Le code du thème est chiffré lui aussi (il révélerait le défaut choisi).
+- Aucune route ne permet à un tiers, **administrateur compris**, de lire le contenu d'un autre compte. Rien n'entre dans `/admin/stats` ni dans les exports de l'étape 18.
+- **Accord explicite** au premier objectif ou engagement (case à cocher, partagée avec l'étape 29), date enregistrée.
+- **Export** JSON et CSV, **effacement** en un clic (« Effacer mon bilan »), possibles **même après la fin de l'abonnement**. « Tout effacer » de *Mes engagements* efface aussi objectifs et bilans, et retire l'accord. La suppression du compte efface tout (cascade).
+- **Texte à ajouter à la page « Politique de confidentialité »** (Admin → Pages légales) :
+  > *Mise en pratique et bilan personnel (offre Apprentissage). Si vous utilisez « Mes engagements » et « Mon bilan », les actions que vous choisissez, vos objectifs, vos intentions et vos notes sont enregistrés de façon chiffrée, uniquement pour vous les afficher. Ces informations peuvent révéler des convictions religieuses ; elles ne sont traitées qu'avec votre accord explicite, ne sont jamais visibles par l'équipe, les organisateurs ou les autres membres, et n'entrent dans aucune statistique. Vous pouvez à tout moment les exporter (JSON, CSV) ou les effacer, et retirer votre accord, depuis votre espace Apprentissage. Le rappel hebdomadaire par e-mail ne contient jamais le texte de vos objectifs.*
+  (À faire relire par un juriste avant publication.)
+
+### 30.5 Installation (DockPanel / Ubuntu 24)
+1. Rien de nouveau côté clés : `PRACTICE_KEY` (étape 29) suffit. **Aucune nouvelle variable.**
+2. Dézipper à la racine du dépôt, pousser sur `LePubli/majlistv`, redéployer dans l'ordre : `majlistv-api` (log attendu : `Migration appliquée : 039_selfcheck.sql`), puis `majlistv-web`. Le translator n'est pas concerné.
+3. Admin → Paramètres → « Mise en pratique » : vérifier « Rappel hebdomadaire » (activé, 17 h). Activer « Proposer la base de thèmes » **après relecture**.
+4. Coller le texte de 30.4 dans la politique de confidentialité.
+
+### 30.6 Utilisation
+Apprentissage → **Mon bilan** : « + Ajouter une qualité / un défaut » → (choisir un thème ou écrire) → case d'accord la 1re fois. Chaque semaine : cliquer *Réussi / En progrès / Pas encore*, éventuellement « Ajouter une note ». Le lien de l'e-mail ouvre `/learning#bilan`.
+
+### 30.7 API (résumé)
+| Route | Rôle |
+|---|---|
+| `GET /me/selfcheck[?archived=1]` | objectifs, bilan de la semaine, frise, préférences, engagements reliables |
+| `GET /me/selfcheck/themes` | base de thèmes (vide si désactivée) |
+| `POST/PATCH/DELETE /me/selfcheck/goals[/:id]` | créer (`409 consent_required`, `409 limit`), modifier, archiver, relier, supprimer |
+| `PUT/DELETE /me/selfcheck/goals/:id/checkin` | bilan d'une semaine (état + note) |
+| `PUT /me/selfcheck/prefs` | rappel : activé, jour (1 = lundi … 7 = dimanche) |
+| `GET /me/selfcheck/export?format=json\|csv`, `DELETE /me/selfcheck` | export, effacement (ouverts sans abonnement) |
+Tout est réservé au palier Apprentissage (`403 learning_required`), sauf export et effacement.
+
+### 30.8 Tests
+```bash
+# API (3055, avec PRACTICE_KEY), PG de test (5544)
+python3 api/tests/test_selfcheck.py
+cd api && set -a; . /var/tmp/api-test.env; set +a; node tests/test_selfcheck_mail.mjs   # base de test, SMTP factice
+```
+Résultat attendu : « tout est bon ». L'API limite à 100 requêtes/minute par adresse : en cas d'échec sur une connexion, attendre 1 minute et relancer.
+
+### 30.9 Debug
+- **Pas d'e-mail le vendredi** : vérifier Admin → Paramètres → E-mails (SMTP), « Rappel hebdomadaire » activé, l'heure (le rappel part à partir de l'heure réglée, pas avant), que le membre a l'offre Apprentissage, a donné son accord, n'a pas désactivé le rappel, et qu'il a bien quelque chose à faire (sinon aucun e-mail). Table `email_outbox` (type `selfcheck_weekly`).
+- **« Chiffrement non configuré »** : `PRACTICE_KEY` absente sur l'API.
+- **Intitulés vides après un changement de clé** : remettre l'ancienne `PRACTICE_KEY`.
+- **La liste de thèmes n'apparaît pas** : réglage « Proposer la base de thèmes » désactivé.
+
+### 30.10 Retour arrière
+Couper le rappel : Admin → Paramètres → « Rappel hebdomadaire » → désactiver. Les données restent en base (`self_goals`, `self_checkins`).

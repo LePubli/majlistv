@@ -1536,3 +1536,26 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .pz-overdue { color: #e6a739; }
 .pz-tools { display: flex; flex-wrap: wrap; gap: 16px; }
 .pz-note { display: grid; gap: 8px; }
+
+/* ---- Étape 30 : Mon bilan (Tazkiyat an-nafs). Couleurs douces, aucun total ni pourcentage. ---- */
+.sc-list h3 { font-size: 1.02rem; margin: 18px 0 8px; }
+.sc-goal { display: grid; gap: 8px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-inline-start: 3px solid var(--line-strong); border-radius: var(--radius); }
+.sc-goal.archived { opacity: .65; }
+.sc-goal p { margin: 0; }
+.sc-title { line-height: 1.45; font-weight: 600; }
+.sc-frise { list-style: none; margin: 2px 0 0; padding: 0; display: flex; gap: 5px; }
+.sc-cell { width: 22px; height: 12px; border-radius: 4px; background: var(--line-soft); }
+.sc-cell.achieved { background: #7fb69a; }
+.sc-cell.progress { background: #e1b866; }
+.sc-cell.not_yet { background: #8a93a6; }
+.pill.on.sc-st-achieved { background: #7fb69a; border-color: #7fb69a; color: #0b0b0b; }
+.pill.on.sc-st-progress { background: #e1b866; border-color: #e1b866; color: #0b0b0b; }
+.pill.on.sc-st-not_yet { background: #8a93a6; border-color: #8a93a6; color: #0b0b0b; }
+.sc-link { max-width: 240px; background: var(--bg); font-size: .85rem; }
+.sc-add { display: grid; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); margin-top: 8px; }
+.sc-add input, .sc-add select { width: 100%; background: var(--bg); }
+.sc-remind { display: grid; gap: 8px; margin-top: 16px; }
+.sc-day select { background: var(--bg); }
+.sc-archived { margin-top: 10px; }
+.sc-block .rv-email { display: flex; justify-content: flex-start; align-items: center; gap: 10px; }
+.sc-block .rv-email input { width: auto; flex: none; accent-color: var(--accent); }

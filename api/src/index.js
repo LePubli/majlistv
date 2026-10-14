@@ -28,6 +28,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
 import practiceRoutes from './routes/practice.js';
+import selfcheckRoutes from './routes/selfcheck.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
 import kidsRoutes from './routes/kids.js';
@@ -37,6 +38,7 @@ import citationRoutes, { autoTopUp } from './routes/citations.js';
 import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
 import { startRevisionMailer } from './revisionMailer.js';
+import { startSelfcheckMailer } from './selfcheckMailer.js';
 import { startKidsReportMailer } from './kidsReportMailer.js';
 import { startStatsMaintenance } from './stats.js';
 import statsCollectRoutes from './routes/stats_collect.js';
@@ -140,6 +142,7 @@ await app.register(importRoutes);
 await app.register(studioContentRoutes);
 await app.register(quizRoutes);
 await app.register(practiceRoutes);
+await app.register(selfcheckRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
 await app.register(citationRoutes);
@@ -165,5 +168,6 @@ await recoverImport();
 setInterval(() => autoTopUp().catch((e) => app.log.warn(`citations : ${e.message}`)), 3600 * 1000).unref();
 setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
+startSelfcheckMailer(app.log); // rappel hebdomadaire du bilan personnel (Apprentissage)
 startStatsMaintenance(app.log); // purge des empreintes du jour (2 jours) et des compteurs anciens
 startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)

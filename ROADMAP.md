@@ -203,7 +203,7 @@ Règles transversales :
 - Tables : `practice_suggestions` (talk_id, texte par langue, taille, origine ia/manuelle, statut brouillon/approuvé/rejeté, validé par, référence), `practice_commitments` (user_id, suggestion_id ou texte libre chiffré, talk_id, intention chiffrée, échéance, état, note chiffrée, dates).
 - Tests : droits (qui valide, qui voit quoi), jamais de proposition non validée côté public, chiffrement des champs, isolation entre utilisateurs, suppression en cascade avec le compte.
 
-**30. Bilan personnel — *Tazkiyat an-nafs* (Apprentissage)**
+**30. Bilan personnel — *Tazkiyat an-nafs* (Apprentissage)** — ✅ fait (README, étape 30). Écarts par rapport à la spec : l'e-mail hebdomadaire ne liste pas le texte des engagements ni des objectifs (chiffres et lien seulement, un e-mail n'étant pas chiffré) ; le choix de thèmes dans la base est désactivé par défaut tant qu'elle n'est pas relue (réglage « Proposer la base de thèmes »).
 - *30.1 Mes objectifs* : deux listes tenues par la personne, **qualités à cultiver** et **défauts à corriger** ; on les choisit dans la base de thèmes ou on les écrit soi-même ; une personne peut en archiver ; aucun maximum arbitraire mais une limite raisonnable (20 actifs).
 - *30.2 Bilan de la semaine* : pour chaque objectif, *réussi / en progrès / pas encore* + note facultative ; historique des 4 à 8 dernières semaines sous forme de petite frise (couleurs douces, aucun total ni pourcentage « de réussite ») ; possibilité de relier un objectif à un engagement de l'étape 29.
 - *30.3 Rappel du vendredi* : un **seul** e-mail hebdomadaire (jour par défaut : vendredi, réglable ; heure réglable dans Administration → Paramètres, 17 h par défaut) listant les engagements en cours et le bilan à faire, avec un lien direct ; désactivable par chacun ; réutilise l'envoi d'e-mails de l'étape 9 et la boucle de l'e-mail de révision. Sur l'application Android (étape 22) : notification à la place de l'e-mail.
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques) et 29 (mise en pratique). **Suite : 30 → 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques) 29 (mise en pratique) et 30 (bilan personnel). **Suite : 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

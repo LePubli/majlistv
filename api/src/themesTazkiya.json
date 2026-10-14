@@ -1,0 +1,314 @@
+[
+ {
+  "id": "Q1",
+  "kind": "quality",
+  "title": "Le repentir",
+  "translit": "tawba",
+  "ar": "توبة",
+  "desc": "Reconnaître une faute, la regretter, s'en détourner et réparer ce qui peut l'être.",
+  "steps": [
+   "Nommer en silence une faute récente et demander pardon à Dieu.",
+   "Réparer une erreur envers quelqu'un (excuse, restitution).",
+   "Prendre une habitude de retour à Dieu chaque soir, pendant 4 semaines."
+  ]
+ },
+ {
+  "id": "Q2",
+  "kind": "quality",
+  "title": "La patience",
+  "translit": "ṣabr",
+  "ar": "صبر",
+  "desc": "Tenir bon dans l'obéissance, s'abstenir du mal, accueillir l'épreuve sans se plaindre.",
+  "steps": [
+   "Attendre 10 secondes avant de répondre quand on s'agace.",
+   "Choisir une contrariété de la semaine et ne pas s'en plaindre.",
+   "Rester constant dans une bonne habitude difficile, 30 jours."
+  ]
+ },
+ {
+  "id": "Q3",
+  "kind": "quality",
+  "title": "La gratitude",
+  "translit": "shukr",
+  "ar": "شكر",
+  "desc": "Reconnaître les bienfaits reçus, les remercier en parole et les utiliser dans le bien.",
+  "steps": [
+   "Dire « merci » à Dieu pour trois bienfaits ce soir.",
+   "Remercier concrètement une personne qui t'a aidé.",
+   "Utiliser un bienfait précis (temps, santé, savoir) au service des autres."
+  ]
+ },
+ {
+  "id": "Q4",
+  "kind": "quality",
+  "title": "La crainte et l'espoir",
+  "translit": "khawf wa rajâ'",
+  "ar": "خوف ورجاء",
+  "desc": "Garder l'équilibre entre le respect de Dieu et la confiance en Sa miséricorde.",
+  "steps": [
+   "Relire ses actes de la journée avec confiance, sans désespérer.",
+   "Lire un passage sur la miséricorde et un sur la responsabilité, noter ce qui change.",
+   "Se fixer un objectif concret motivé par l'espoir et non par la peur."
+  ]
+ },
+ {
+  "id": "Q5",
+  "kind": "quality",
+  "title": "Le détachement",
+  "translit": "zuhd",
+  "ar": "زهد",
+  "desc": "Ne pas faire de la vie d'ici-bas le but de ses efforts ; garder le cœur libre des biens.",
+  "steps": [
+   "Renoncer à un achat superflu cette semaine.",
+   "Donner un objet inutilisé à quelqu'un qui en a besoin.",
+   "Fixer un plafond de dépenses « plaisir » et en reverser le surplus."
+  ]
+ },
+ {
+  "id": "Q6",
+  "kind": "quality",
+  "title": "La confiance en Dieu",
+  "translit": "tawakkul",
+  "ar": "توكل",
+  "desc": "Prendre les moyens, puis remettre le résultat à Dieu avec sérénité.",
+  "steps": [
+   "Après avoir fait ce qui dépend de soi, dire « je confie le reste à Dieu ».",
+   "Devant une inquiétude, lister ce qui dépend de moi / ne dépend pas de moi.",
+   "Entreprendre une démarche repoussée par peur, en prenant les moyens."
+  ]
+ },
+ {
+  "id": "Q7",
+  "kind": "quality",
+  "title": "L'amour de Dieu et le contentement",
+  "translit": "maḥabba, riḍâ",
+  "ar": "محبة، رضا",
+  "desc": "Aimer Dieu, être content de ce qu'Il décide, sans cesser d'agir pour s'améliorer.",
+  "steps": [
+   "Un moment de remerciement et de recueillement de 2 minutes.",
+   "Pendant une semaine, ajouter un rappel d'invocation après chaque prière.",
+   "Apprendre le sens d'un nom de Dieu par semaine et le mettre en pratique."
+  ]
+ },
+ {
+  "id": "Q8",
+  "kind": "quality",
+  "title": "La sincérité et l'intention",
+  "translit": "ikhlâṣ, niyya",
+  "ar": "إخلاص، نية",
+  "desc": "Agir pour Dieu seul, sans chercher l'approbation des gens.",
+  "steps": [
+   "Renouveler son intention avant une action ordinaire (travail, repas).",
+   "Faire une bonne action en secret cette semaine.",
+   "Faire un don ou un service sans que personne ne le sache, régulièrement."
+  ]
+ },
+ {
+  "id": "Q9",
+  "kind": "quality",
+  "title": "La véracité",
+  "translit": "ṣidq",
+  "ar": "صدق",
+  "desc": "Être vrai en paroles, en intentions et en actes.",
+  "steps": [
+   "Ne dire aucune exagération aujourd'hui.",
+   "Tenir une promesse en suspens.",
+   "Corriger une fausse impression qu'on a laissée, même si cela coûte."
+  ]
+ },
+ {
+  "id": "Q10",
+  "kind": "quality",
+  "title": "La vigilance et l'examen de conscience",
+  "translit": "murâqaba, muḥâsaba",
+  "ar": "مراقبة، محاسبة",
+  "desc": "Se savoir observé par Dieu et faire le point sur ses actes avant d'être jugé.",
+  "steps": [
+   "3 minutes le soir : « qu'ai-je bien fait ? qu'ai-je à améliorer ? »",
+   "Tenir un bilan écrit chaque soir pendant une semaine.",
+   "Établir un objectif d'amélioration mensuel et le revoir chaque vendredi."
+  ]
+ },
+ {
+  "id": "Q11",
+  "kind": "quality",
+  "title": "La réflexion",
+  "translit": "tafakkur",
+  "ar": "تفكر",
+  "desc": "Méditer sur la création, sur soi et sur les signes pour fortifier la foi.",
+  "steps": [
+   "5 minutes d'observation d'un élément de la nature, en silence.",
+   "Une promenade de réflexion sans écran.",
+   "Un temps de réflexion hebdomadaire fixe."
+  ]
+ },
+ {
+  "id": "Q12",
+  "kind": "quality",
+  "title": "Le souvenir de la mort",
+  "translit": "dhikr al-mawt",
+  "ar": "ذكر الموت",
+  "desc": "Garder en tête l'échéance pour hiérarchiser ses priorités.",
+  "steps": [
+   "Se demander : « et si c'était ma dernière semaine ? » puis agir sur une chose.",
+   "Régler une dette ou rédiger ses volontés.",
+   "Visiter un cimetière ou un malade, et tirer une décision."
+  ]
+ },
+ {
+  "id": "D1",
+  "kind": "defect",
+  "title": "L'excès de nourriture",
+  "translit": "shahwat al-baṭn",
+  "ar": "شهوة البطن",
+  "desc": "Manger pour le plaisir sans mesure, au détriment du corps et de l'âme.",
+  "steps": [
+   "Se lever de table avant d'être rassasié, une fois par jour.",
+   "Jeûner un jour surérogatoire dans la semaine.",
+   "Adopter une règle d'équilibre alimentaire pour un mois."
+  ]
+ },
+ {
+  "id": "D2",
+  "kind": "defect",
+  "title": "Le regard et la pudeur",
+  "translit": "ghaḍḍ al-baṣar, ḥayâ'",
+  "ar": "غض البصر، حياء",
+  "desc": "Préserver son regard, ses pensées et sa pudeur.",
+  "steps": [
+   "Baisser le regard devant une sollicitation, aujourd'hui.",
+   "Supprimer un contenu qui nourrit le désordre intérieur.",
+   "Remplacer une habitude numérique nocive par une activité utile."
+  ]
+ },
+ {
+  "id": "D3",
+  "kind": "defect",
+  "title": "Les méfaits de la langue",
+  "translit": "âfât al-lisân",
+  "ar": "آفات اللسان",
+  "desc": "Médisance, calomnie, mensonge, paroles inutiles, disputes.",
+  "steps": [
+   "Une conversation du jour sans médire de personne.",
+   "Quand on médit, s'interrompre et dire du bien de la personne.",
+   "7 jours sans médisance, avec un bilan chaque soir."
+  ]
+ },
+ {
+  "id": "D4",
+  "kind": "defect",
+  "title": "La colère",
+  "translit": "ghaḍab",
+  "ar": "غضب",
+  "desc": "Se laisser emporter, au point de nuire à autrui ou à soi.",
+  "steps": [
+   "Prendre une respiration et changer de posture avant de répondre.",
+   "Identifier ses 3 déclencheurs de colère et préparer une réponse calme.",
+   "Se réconcilier avec une personne avec qui on est resté fâché."
+  ]
+ },
+ {
+  "id": "D5",
+  "kind": "defect",
+  "title": "La rancune",
+  "translit": "ḥiqd",
+  "ar": "حقد",
+  "desc": "Garder dans le cœur du ressentiment envers quelqu'un.",
+  "steps": [
+   "Souhaiter du bien, en silence, à la personne concernée.",
+   "Faire un geste de paix (message, salut).",
+   "Pardonner explicitement et tourner la page, devant témoin ou en face."
+  ]
+ },
+ {
+  "id": "D6",
+  "kind": "defect",
+  "title": "La jalousie",
+  "translit": "ḥasad",
+  "ar": "حسد",
+  "desc": "Souffrir du bien dont jouit autrui et désirer qu'il le perde.",
+  "steps": [
+   "Invoquer le bien pour une personne qu'on envie.",
+   "Féliciter sincèrement quelqu'un dont la réussite pique.",
+   "Aider activement quelqu'un à réussir là où on est jaloux."
+  ]
+ },
+ {
+  "id": "D7",
+  "kind": "defect",
+  "title": "L'attachement à ce bas monde",
+  "translit": "ḥubb ad-dunyâ",
+  "ar": "حب الدنيا",
+  "desc": "Faire des biens et des plaisirs terrestres le but principal.",
+  "steps": [
+   "Réduire une heure d'écran de divertissement pour un acte utile.",
+   "Planifier un temps fixe d'adoration/étude, à l'abri des distractions.",
+   "Revoir ses priorités sur un trimestre et en supprimer une."
+  ]
+ },
+ {
+  "id": "D8",
+  "kind": "defect",
+  "title": "L'avarice",
+  "translit": "bukhl",
+  "ar": "بخل",
+  "desc": "Retenir ce qu'il faut donner, par attachement à l'argent.",
+  "steps": [
+   "Donner un petit montant à quelqu'un, sans réfléchir.",
+   "Mettre en place une aumône régulière modeste.",
+   "S'acquitter d'une charge que l'on retardait (zakât, dette, pension)."
+  ]
+ },
+ {
+  "id": "D9",
+  "kind": "defect",
+  "title": "La recherche de statut et l'ostentation",
+  "translit": "jâh, riyâ'",
+  "ar": "جاه، رياء",
+  "desc": "Agir pour être vu, estimé, admiré.",
+  "steps": [
+   "Faire une action utile sans la raconter.",
+   "Refuser un éloge en détournant le mérite vers Dieu.",
+   "Prendre un service discret et ingrat dans sa communauté."
+  ]
+ },
+ {
+  "id": "D10",
+  "kind": "defect",
+  "title": "L'orgueil",
+  "translit": "kibr",
+  "ar": "كبر",
+  "desc": "Se croire supérieur, refuser la vérité ou mépriser les gens.",
+  "steps": [
+   "Reconnaître sans se défendre une erreur devant quelqu'un.",
+   "Demander conseil à quelqu'un qu'on aurait sous-estimé.",
+   "Servir quelqu'un de « plus petit » que soi, de façon concrète."
+  ]
+ },
+ {
+  "id": "D11",
+  "kind": "defect",
+  "title": "La suffisance",
+  "translit": "'ujb",
+  "ar": "عجب",
+  "desc": "Admirer ses propres actes et se croire quitte.",
+  "steps": [
+   "Attribuer en pensée une réussite à Dieu avant de la raconter.",
+   "Noter ses actes et leurs défauts possibles (manque de sincérité, de qualité).",
+   "Demander à un proche un retour franc sur un défaut qu'on ne voit pas."
+  ]
+ },
+ {
+  "id": "D12",
+  "kind": "defect",
+  "title": "L'illusion",
+  "translit": "ghurûr",
+  "ar": "غرور",
+  "desc": "Se croire en sécurité parce qu'on a de bonnes habitudes, en négligeant l'essentiel.",
+  "steps": [
+   "Se demander honnêtement : « qu'est-ce que je repousse ? »",
+   "Reprendre un devoir négligé (prière à l'heure, rendre ses comptes).",
+   "Se faire accompagner : un compagnon qui rappelle le droit chemin."
+  ]
+ }
+]

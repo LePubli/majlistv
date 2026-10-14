@@ -271,9 +271,10 @@ export default async function practiceRoutes(app) {
     return reply.code(204).send();
   });
 
-  // Droit à l'effacement : supprime tous les engagements du membre et retire son consentement. Ouvert même après la fin d'un abonnement.
+  // Droit à l'effacement : supprime tous les engagements, objectifs et bilans du membre et retire son consentement. Ouvert même après la fin d'un abonnement.
   app.delete('/me/practice', auth, async (req, reply) => {
     await pool.query('DELETE FROM practice_commitments WHERE user_id = $1', [req.user.sub]);
+    await pool.query('DELETE FROM self_goals WHERE user_id = $1', [req.user.sub]); // objectifs et bilans (étape 30) : tout part avec l'accord
     await pool.query('UPDATE users SET practice_consent_at = NULL WHERE id = $1', [req.user.sub]);
     return reply.code(204).send();
   });
