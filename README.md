@@ -1167,3 +1167,123 @@ La page `/kids/watch/<id>` était réduite à la vidéo. Elle contient maintenan
 **Déploiement** (aucune migration) : redéployer `majlistv-api`, puis `majlistv-web`, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
 
 **Tests** : `python3 api/tests/test_bulk.py` (droits, transaction, tranches Kids).
+
+## Étape 28 — Audit de sécurité du code (correctifs appliqués)
+
+Revue complète du code et des dépendances des six services. Le détail de ce qui a été vérifié et jugé
+correct est en fin de section ; voici d'abord ce qui a été **corrigé**.
+
+### 28.1 Dépendances : deux failles critiques fermées
+
+| Service | Paquet | Avant | Après | Pourquoi |
+|---|---|---|---|---|
+| api | `@fastify/jwt` (et `fast-jwt`) | 9.1.0 / 5.0.6 | **10.2.4 / 6.3.4** | 10 bulletins, dont trois notés 9,1/10 : acceptation de jetons non signés quand la clé est vide, confusion de cache renvoyant les droits d'un **autre** utilisateur, contournement de la validation quand le contenu du jeton est un tableau JSON. Le jeton d'authentification est la pièce qui décide qui est administrateur : c'était la correction la plus urgente. |
+| web | `next` | 14.2.35 | **15.5.28** | Falsification de requête côté serveur (8,6/10), contournement du middleware, empoisonnement de cache, injection de script dans l'App Router, plusieurs dénis de service. Aucune version 14.x ne les corrige. |
+| web | `postcss` (dépendance interne de Next) | 8.4.31 | **8.5.30** (via `overrides`) | Lecture de fichiers arbitraires et injection via `sourceMappingURL`. Le passage par `overrides` évite d'imposer Next 16, qui exigerait React 19. |
+
+Résultat : `npm audit` renvoie **0 vulnérabilité** sur `api`, `web` et `worker`.
+
+Next 15 rend `params` asynchrone dans les pages : la compilation a été refaite et les pages du site
+vérifiées une par une (accueil, formules, connexion, séries, bibliothèque, Kids, intervenants) ainsi que
+la feuille de style produite. Aucune adaptation du code n'a été nécessaire.
+
+### 28.2 Limite anti-force brute contournable (faille réelle, corrigée)
+
+L'API était démarrée avec `trustProxy: true`. Avec ce réglage, l'adresse IP retenue pour un visiteur est
+celle qu'il **annonce lui-même** dans l'en-tête `X-Forwarded-For`. En la changeant à chaque essai, on
+obtenait un compteur neuf à chaque fois : les limites de débit de `/auth/login` (10 essais par minute) et
+de `/auth/forgot` ne s'appliquaient plus, et les mots de passe pouvaient être essayés en série sans frein.
+
+Correctif : `trustProxy` vaut maintenant `'loopback'` (seul le nginx de la machine est digne de confiance),
+réglable par `TRUST_PROXY` pour un éventuel proxy distant. Mesuré avant/après :
+
+| Réglage | IP retenue avec l'en-tête `9.9.9.9, <vraie IP>` | Effet |
+|---|---|---|
+| `true` (avant) | `9.9.9.9` — celle annoncée par le visiteur | limite contournable |
+| nombre (`1`, `2`) | `127.0.0.1` — en-tête ignoré | **une seule limite pour tous** : un visiteur bloquerait les autres |
+| `'loopback'` (après) | la vraie IP | limite correcte, par visiteur |
+
+Vérification sur l'API : 13 essais de connexion en faisant varier l'en-tête donnent `401 401 401 401 401
+401 401 401 401 401 429 429 429` — le blocage revient bien après 10 essais.
+
+### 28.3 Images Docker : versions non garanties (corrigé)
+
+Les quatre Dockerfiles copiaient `package.json` **sans** le fichier de verrouillage, puis lançaient
+`npm install` : les versions installées étaient donc celles du jour du build, et rien ne garantissait la
+présence des versions corrigées ci-dessus. Ils copient maintenant aussi `package-lock.json` et utilisent
+`npm ci`, qui installe exactement les versions validées. Contrôlé en reproduisant l'étape de build :
+`@fastify/jwt@10.2.4`, `next@15.5.28`, `postcss@8.5.30`, et 0 vulnérabilité pour les trois services.
+
+### 28.4 En-têtes de sécurité du site public (corrigé)
+
+L'API est protégée par helmet (CSP, HSTS, anti-clickjacking…), mais le **site** ne renvoyait aucun en-tête
+de sécurité et annonçait sa technologie (`X-Powered-By: Next.js`). `web/next.config.mjs` pose désormais
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` et
+`Strict-Transport-Security`, et supprime `X-Powered-By`.
+
+**Reste à faire, volontairement non fait ici** : une `Content-Security-Policy` sur le site. Le site intègre
+les lecteurs YouTube et Vimeo (`www.youtube.com`, `www.youtube-nocookie.com`, `player.vimeo.com`,
+`i.ytimg.com`) ; une CSP mal réglée empêcherait les vidéos de démarrer. À traiter dans une étape dédiée,
+en testant la lecture sur les trois sources (fichier envoyé, YouTube, Vimeo).
+
+### 28.5 Deux points de propreté
+
+- `transcriber/src/external.py` contenait un **espace sans largeur** (U+200B) écrit en clair dans le code,
+  donc invisible à la relecture : remplacé par `"​"`, comportement identique (vérifié).
+- `api/tests/test_compliance.py` attendait encore `checkout:year` alors que le code écrit
+  `checkout:standard:year` depuis l'ajout du palier Apprentissage : test mis à jour (le code était juste).
+
+### Ce qui a été vérifié et qui est correct
+
+- **Injections SQL** : aucune. Toutes les valeurs passent en paramètres (`$1`, `$2`…). Les morceaux de
+  requête assemblés par du texte ne contiennent que des noms de colonnes issus de listes fixes
+  (`SORT_SQL[sort]`, `STATUS_SQL`), des valeurs validées par `zod` (`z.enum`, entiers bornés) ou des
+  constantes ; les caractères `%` et `_` des recherches sont échappés.
+- **Mots de passe** : bcrypt à 12 tours. Réinitialisation par jeton aléatoire de 32 octets stocké sous
+  forme d'empreinte SHA-256, valable 1 heure, à usage unique, 3 demandes par heure maximum, et réponse
+  identique que l'adresse existe ou non (on n'apprend pas qui a un compte). Changer de mot de passe
+  déconnecte les sessions antérieures (`sessions_valid_after`).
+- **Jetons et rôles** : le rôle est relu en base à chaque requête (un jeton de plusieurs jours ne garde pas
+  un ancien rôle), les comptes suspendus sont refusés, et un jeton « espace enfant » est rejeté partout
+  sauf sur les routes prévues. Jetons falsifiés testés : `alg=none`, signature modifiée, jeton inventé —
+  tous refusés (401).
+- **Accès aux vidéos payantes** : les playlists HLS exigent un jeton HMAC-SHA256 propre à la conférence,
+  avec expiration, comparaison à temps constant et signature distincte pour l'aperçu. Les chemins acceptés
+  sont une liste blanche (`master.m3u8`, `vN/index.m3u8`, `audio/index.m3u8`) : pas de remontée de
+  dossiers possible.
+- **Envois de fichiers** : l'API ne fait que signer des liens, le type doit correspondre à `video/*`, la
+  taille est plafonnée, et un organisateur ne peut compléter ou annuler que ses propres envois.
+- **Liens externes (SSRF)** : les URL fournies par les organisateurs ne sont jamais appelées telles quelles.
+  Seuls `youtu.be`, `youtube.com`, `vimeo.com` et `archive.org` sont acceptés, et seul l'identifiant extrait
+  est conservé ; les services reconstruisent l'adresse à partir d'un domaine inscrit dans le code.
+- **Exécution de commandes** : `ffmpeg`, `ffprobe` et `yt-dlp` sont appelés avec une liste d'arguments, sans
+  passer par un interpréteur de commandes : pas d'injection possible.
+- **Paiement** : le webhook Stripe vérifie la signature sur le corps brut de la requête.
+- **Code parental Kids** : comparaison bcrypt, blocage temporaire après 5 erreurs.
+- **Secrets** : aucun secret en dur dans le code. `.env` est exclu de Git et des images Docker ; les clés du
+  back-office sont chiffrées en base (AES-256-GCM) ; `JWT_SECRET` doit faire au moins 32 caractères, sinon
+  l'API refuse de démarrer.
+- **Conteneurs** : les six services tournent sous un utilisateur non privilégié.
+- **Données JSON-LD** (référencement) : les `<` sont échappés, donc pas d'injection de script par ce biais.
+
+### Deux points à surveiller (pas des failles, des choix à connaître)
+
+- **Le jeton de lecture n'est pas lié à un compte** : il autorise une conférence pendant 6 heures, quel que
+  soit celui qui le présente. Un abonné peut donc transmettre son lien. C'est le fonctionnement habituel
+  des liens signés ; si le partage devient un problème, il faudra lier le jeton au compte ou à l'adresse IP
+  et raccourcir sa durée.
+- **`yt-dlp` se met à jour au démarrage du transcripteur** (téléchargement depuis PyPI), ce qui est
+  nécessaire pour suivre les changements de YouTube, mais fait entrer du code non figé dans le conteneur.
+  Désactivable avec `YTDLP_AUTO_UPDATE=0`, au prix de téléchargements YouTube qui finiront par échouer.
+
+**Déploiement** (aucune migration de base) : redéployer `majlistv-api`, puis `majlistv-web`, puis
+`/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`,
+`nginx -t && systemctl reload nginx`. Vérifier ensuite la connexion au site, la lecture d'une conférence
+gratuite et d'une conférence premium, et l'espace Kids.
+
+**Tests** : 367 vérifications passées après correctifs — `test_users_admin` (30), `test_publication` (43),
+`test_taxonomy` (59), `test_slugs` (20), `test_onboarding` (20), `test_kids` (76), `test_levels` (28),
+`test_compliance` (43), `test_kids_report.mjs` (12), `test_learning_unit.mjs` (26),
+`test_revision_mail.mjs` (10). Non rejoués faute de prérequis dans l'environnement de test :
+`test_citations*` (corpus à importer), `test_audio` (fichiers produits par le worker), `test_quiz*`
+(translator + faux Claude), `test_archive` (faux archive.org).

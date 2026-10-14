@@ -144,7 +144,7 @@ _TAG = re.compile(r"<[^>]+>")
 
 def _clean(text):
     text = html.unescape(_TAG.sub("", text or ""))
-    text = text.replace("​", " ").replace("\n", " ")
+    text = text.replace("\u200b", " ").replace("\n", " ")  # U+200B : espace sans largeur, invisible dans le code source
     return re.sub(r"\s+", " ", text).strip()
 
 

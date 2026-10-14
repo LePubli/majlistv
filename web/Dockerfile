@@ -1,8 +1,9 @@
 # Dockerfile du front-end. Contexte de build = racine du dépôt (comme le Dockerfile de l'API).
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY web/package.json ./
-RUN npm install
+# npm ci : versions exactes du fichier de verrouillage (correctifs de sécurité inclus).
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
 COPY web/ .
 RUN npm run build
 

@@ -74,7 +74,7 @@ requests.put(B + "/admin/settings", headers=A, json={"values": {"stripe_secret_k
 r = requests.post(B + "/billing/checkout", headers=U, json={"interval": "year"}); ok(r.status_code == 400 and r.json()["code"] == "waiver_required", "sans case de renonciation -> refus")
 r = requests.post(B + "/billing/checkout", headers=U, json={"interval": "year", "waiver": True}); ok(r.status_code == 200 and r.json()["url"].startswith("https://checkout"), "avec renonciation -> page de paiement")
 cur.execute("select kind, version, context, text, ip from consents where user_id=%s", (uid,)); row = cur.fetchone()
-ok(row and row[0] == "withdrawal_waiver" and row[2] == "checkout:year" and "L221-28" in row[3] and row[4], "consentement horodaté enregistré (texte, version, IP)")
+ok(row and row[0] == "withdrawal_waiver" and row[2] == "checkout:standard:year" and "L221-28" in row[3] and row[4], "consentement horodaté enregistré (texte, version, IP)")
 body = [x for x in requests.get(M + "/_log").json() if x["path"] == "/v1/checkout/sessions"][-1]["body"]
 ok(body.get("allow_promotion_codes") == "true" and "renouvelle" in body.get("custom_text[submit][message]", "") and "automatic_tax[enabled]" not in body, "codes promo + mention de renouvellement, sans TVA auto")
 requests.put(B + "/admin/settings", headers=A, json={"values": {"stripe_automatic_tax": "true"}})

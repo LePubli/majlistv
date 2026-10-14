@@ -1,8 +1,11 @@
 # Dockerfile racine utilisé par DockPanel (Git Deploy) : construit l'API située dans ./api
 FROM node:22-alpine
 WORKDIR /app
-COPY api/package.json ./
-RUN npm install --omit=dev && npm cache clean --force
+# npm ci (et non npm install) avec le fichier de verrouillage : on installe exactement les versions
+# validées, y compris les correctifs de sécurité. Sans lui, le build réinstallerait ce qui passe et
+# la version corrigée d'une dépendance ne serait pas garantie.
+COPY api/package.json api/package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 COPY api/ .
 USER node
 EXPOSE 3000

@@ -1,0 +1,54 @@
+ÉTAPE 28 — AUDIT DE SÉCURITÉ MEJLISS TV : fichiers à remplacer dans le dépôt
+===========================================================================
+
+Copier ce contenu par-dessus le dépôt majlis-tv (en conservant l'arborescence),
+puis pousser sur GitHub, puis redéployer majlistv-api et majlistv-web.
+
+CE QUI CHANGE
+-------------
+1. FAILLES CRITIQUES DE DÉPENDANCES (api/package.json, web/package.json + verrous)
+   - @fastify/jwt 9.1.0 -> 10.2.4 : 10 bulletins dont 3 notés 9,1/10 sur le jeton
+     d'authentification (jetons non signés acceptés, droits d'un autre utilisateur
+     renvoyés par confusion de cache).
+   - next 14.2.35 -> 15.5.28 : SSRF 8,6/10, contournement de middleware,
+     empoisonnement de cache, injection de script.
+   - postcss -> 8.5.30 via "overrides" (lecture de fichiers arbitraires).
+   Résultat : npm audit = 0 vulnérabilité sur api, web et worker.
+
+2. LIMITE ANTI-FORCE BRUTE CONTOURNABLE (api/src/config.js, api/src/index.js)
+   trustProxy passait de "true" à "loopback". Avant, un attaquant changeait l'IP
+   annoncée dans l'en-tête X-Forwarded-For à chaque essai et les 10 essais par
+   minute sur /auth/login ne s'appliquaient plus.
+
+3. IMAGES DOCKER (les 4 Dockerfiles)
+   npm install SANS fichier de verrouillage -> npm ci AVEC. Sans cela, les versions
+   corrigées ci-dessus ne seraient pas garanties au moment du build.
+
+4. EN-TÊTES DE SÉCURITÉ DU SITE (web/next.config.mjs)
+   Le site ne renvoyait aucun en-tête de sécurité et annonçait "X-Powered-By:
+   Next.js". Cinq en-têtes ajoutés, annonce supprimée.
+
+5. PROPRETÉ
+   - transcriber/src/external.py : espace sans largeur invisible -> "​".
+   - api/tests/test_compliance.py : test périmé mis à jour (le code était juste).
+   - .env.example : variable TRUST_PROXY documentée.
+   - README.md : nouvelle section « Étape 28 » avec le détail complet.
+
+ORDRE DE DÉPLOIEMENT
+--------------------
+1. Pousser sur GitHub.
+2. DockPanel : redéployer majlistv-api, puis majlistv-web.
+3. Sur le serveur :
+      /root/apply-limits.sh
+      grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+      nginx -t && systemctl reload nginx
+4. Vérifier : connexion au site, lecture d'une conférence gratuite, d'une
+   conférence premium, et l'espace Kids.
+
+Aucune migration de base de données.
+
+POINT RESTANT (volontairement non fait)
+---------------------------------------
+Content-Security-Policy sur le site : le site intègre les lecteurs YouTube et
+Vimeo, et une CSP mal réglée empêcherait les vidéos de démarrer. À traiter dans
+une étape dédiée, avec test de la lecture sur les trois sources.

@@ -41,7 +41,10 @@ import seriesRoutes, { listSeries } from './routes/series.js';
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
-const app = Fastify({ logger: true, trustProxy: true });
+// trustProxy : liste des proxys de confiance ('loopback' = le nginx local), et surtout pas « true »,
+// qui ferait confiance à l'en-tête X-Forwarded-For envoyé par le visiteur lui-même — de quoi
+// contourner les limites de débit et tenter une force brute sur /auth/login. Voir config.js.
+const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 await app.register(helmet);
 await app.register(cors, { origin: config.corsOrigin.split(','), credentials: true });
