@@ -31,6 +31,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Définir JWT_SECRET}
       JWT_EXPIRES: ${JWT_EXPIRES:-7d}
       SETTINGS_KEY: ${SETTINGS_KEY:?Définir SETTINGS_KEY (openssl rand -hex 32)}
+      PRACTICE_KEY: ${PRACTICE_KEY:-}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}

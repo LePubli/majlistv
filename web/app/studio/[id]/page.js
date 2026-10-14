@@ -25,6 +25,20 @@ function QuizPanel({ id, t, call }) {
   );
 }
 
+function PracticePanel({ id, t, call }) {
+  const [p, setP] = useState(null);
+  useEffect(() => { call(`/talks/${id}/studio/practice`).then((r) => r.ok && setP(r.data)); }, [call, id]);
+  if (!p) return null;
+  const state = !p.siteEnabled ? t('pzSiteOff') : p.approved > 0 ? t('pzReadyYes').replace('{a}', p.approved) : t('pzReadyNo');
+  return (
+    <section className="panel qz-panel">
+      <h2 className="panel-title">{t('pzTitle')}</h2>
+      <p className="meta">{state}{p.drafts > 0 ? ` · ${t('qzToReview').replace('{n}', p.drafts)}` : ''}</p>
+      <div className="panel-actions"><Link className="btn ghost" href={`/studio/${id}/content?tab=practice`}>{t('pzManage')}</Link></div>
+    </section>
+  );
+}
+
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 const base = (c) => String(c || '').split('-')[0].toLowerCase();
 
@@ -105,6 +119,7 @@ export default function ManageTalk() {
       <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} />
 
       <QuizPanel id={x.id} t={t} call={call} />
+      <PracticePanel id={x.id} t={t} call={call} />
 
       <h2 className="panel-title outside">{t('sectProcessing')}</h2>
       <ol className="tracks">

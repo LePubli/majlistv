@@ -1,5 +1,6 @@
 // Catalogue public + gestion des conférences par les organisateurs.
 import { quizInfo } from './quiz.js';
+import { practiceInfo } from './practice.js';
 import { kidCanSee } from './kids.js';
 import { speakerNames, speakerSlug } from '../speakers.js';
 import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
@@ -323,6 +324,7 @@ export default async function talksRoutes(app) {
     if (!external) delete talk.video_ref;
     delete talk.audio_status;
     talk.quiz = await quizInfo(id);
+    talk.practice = await practiceInfo(id);
     await withPosters([talk]);
     return talk;
   });

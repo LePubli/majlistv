@@ -26,7 +26,7 @@ function Report({ talkId, qid, t, call }) {
 }
 
 // props : talkId, onResult(result), onSeek(secondes), nextHref (épisode suivant, facultatif), onNext(), onClose()
-export default function Quiz({ talkId, t, call, user, onResult, onSeek, nextHref, onNext, onClose }) {
+export default function Quiz({ talkId, t, call, user, onResult, onSeek, onPractice, nextHref, onNext, onClose }) {
   const { locale } = useApp();
   const [data, setData] = useState(undefined); // undefined = chargement, null = indisponible
   const [step, setStep] = useState(0);
@@ -102,6 +102,7 @@ export default function Quiz({ talkId, t, call, user, onResult, onSeek, nextHref
           })}
         </ol>
         <div className="qp-actions">
+          {onPractice && <button type="button" className={res.passed ? 'btn' : 'btn ghost'} onClick={onPractice}>{t('pzFromQuiz')}</button>}
           {!res.passed && <button type="button" className="btn" onClick={load}>{t('qpRetry')}</button>}
           {nextHref && <Link className={res.passed ? 'btn' : 'btn ghost'} href={nextHref} onClick={() => onNext && onNext(res)}>{t('qpNextEp')}</Link>}
           <button type="button" className="btn ghost" onClick={onClose}>{t('qpClose')}</button>

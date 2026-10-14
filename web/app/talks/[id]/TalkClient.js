@@ -13,6 +13,7 @@ import { pricingPath } from '../../../lib/nav';
 import { levelLabel } from '../../../lib/levels';
 import NotesPanel from '../../../components/NotesPanel';
 import Quiz from '../../../components/Quiz';
+import PracticeBlock from '../../../components/PracticeBlock';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -53,6 +54,9 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const [pending, setPending] = useState([]);        // quiz laissés de côté, rappelés par la bannière
   const [pendingHidden, setPendingHidden] = useState(false);
   const quizRef = useRef(null);
+  const practiceRef = useRef(null);
+  const [practiceOffer, setPracticeOffer] = useState(false); // invitation « Et maintenant, que faire ? » à la fin de la vidéo
+  const [practiceHl, setPracticeHl] = useState(false);
   const stageRef = useRef(null); // zone du lecteur : le quiz s'y affiche en superposition
   const [shared, setShared] = useState(null);       // retour visuel du bouton Partager (secondes du lien, -1 = lien simple)
   // ?t=SECONDES (lien depuis un résultat de recherche) : ouvre la vidéo à ce passage, prioritaire sur la reprise.
@@ -63,7 +67,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const videoRef = useRef(null);
 
   // Changement de conférence (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
-  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
+  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setPracticeOffer(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
   useEffect(() => {
@@ -163,14 +167,15 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const canChain = Boolean(next && talk && !talk.locked && (talk.hlsPath || external));
   const quizOn = Boolean(talk && !talk.locked && talk.quiz && talk.quiz.available);
   const quizPassed = Boolean(qres && qres.passed);
+  const practiceOn = Boolean(talk && !talk.locked && talk.practice && talk.practice.available);
   useEffect(() => {
-    if (!canChain && !quizOn) return undefined;
+    if (!canChain && !quizOn && !practiceOn) return undefined;
     const video = videoRef.current;
     if (!video) return undefined;
-    const onEnd = () => { if (quizOn && !quizPassed) setQuizOffer(true); else if (canChain) setUpNext(8); };
+    const onEnd = () => { if (quizOn && !quizPassed) setQuizOffer(true); else if (canChain) setUpNext(8); else if (practiceOn) setPracticeOffer(true); };
     video.addEventListener('ended', onEnd);
     return () => video.removeEventListener('ended', onEnd);
-  }, [canChain, quizOn, quizPassed, id]);
+  }, [canChain, quizOn, quizPassed, practiceOn, id]);
   useEffect(() => {
     if (upNext === null || !next) return undefined;
     if (upNext <= 0) { router.push(`/talks/${next.id}?autoplay=1`); return undefined; }
@@ -193,6 +198,15 @@ export default function TalkPage({ initial = null, talkId = null }) {
     addPending({ id, title: talk.title }); setPending(getPending(id));
     setQuizOffer(false);
     if (canChain) setUpNext(8);
+  };
+  // « Et maintenant, que faire ? » : on referme le quiz, on descend jusqu'à l'écran de mise en pratique et on le met en évidence un instant.
+  const goPractice = () => {
+    setPracticeOffer(false); setQuizOpen(false); setQuizOffer(false);
+    setTimeout(() => {
+      practiceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      practiceRef.current?.focus({ preventScroll: true });
+      setPracticeHl(true); setTimeout(() => setPracticeHl(false), 2500);
+    }, 60);
   };
   const onQuizResult = (res) => { setQres(saveResult(id, res)); if (res.passed) removePending(id); };
   // « Revoir à mm:ss » : le lecteur se place sur le passage qui justifie la réponse.
@@ -363,7 +377,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               {player}
             {quizOpen && (
               <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('qpTitle')}>
-                <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={(sec) => { setQuizOpen(false); seekTo(sec); }} onClose={() => setQuizOpen(false)}
+                <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={(sec) => { setQuizOpen(false); seekTo(sec); }} onPractice={practiceOn ? goPractice : undefined} onClose={() => setQuizOpen(false)}
                   nextHref={canChain ? `/talks/${next.id}?autoplay=1` : null} onNext={(res) => { if (!res.passed) addPending({ id, title: talk.title }); }} />
               </div>
             )}
@@ -402,6 +416,16 @@ export default function TalkPage({ initial = null, talkId = null }) {
                 <div className="upnext-btns">
                   <button type="button" className="btn" onClick={openQuiz}>{t('qpStart')}</button>
                   <button type="button" className="btn ghost" onClick={laterQuiz}>{t('qpLater')}</button>
+                </div>
+              </div>
+            )}
+            {practiceOffer && (
+              <div className="upnext quiz-offer" role="status" aria-live="polite">
+                <strong>{t('pzTitle')}</strong>
+                <p className="meta">{t('pzOfferText')}</p>
+                <div className="upnext-btns">
+                  <button type="button" className="btn" onClick={goPractice}>{t('pzOfferBtn')}</button>
+                  <button type="button" className="btn ghost" onClick={() => setPracticeOffer(false)}>{t('qpLater')}</button>
                 </div>
               </div>
             )}
@@ -492,6 +516,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               </div>
             )}
           </div>
+          {practiceOn && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
         {(ctx || similar.length > 0) && (

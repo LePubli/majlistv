@@ -1396,3 +1396,73 @@ Pour afficher aussi le **pays** des visiteurs : il faut un CDN qui l'indique (en
 
 Le lien de la vignette animée de l'accueil ne garde plus le focus au clic (avertissement « aria-hidden » de la console).
 
+
+---
+
+## Étape 29 — Mise en pratique (« Et maintenant, que faire ? » et « Mes engagements »)
+
+### 29.1 Ce que ça fait
+Après une conférence (et son quiz), le lecteur passe de l'écoute à l'action.
+- **Propositions d'action** : l'IA lit la transcription et propose 3 à 5 actions concrètes en trois tailles (● petit pas, ●● moyen, ●●● ambitieux). Chaque proposition s'appuie sur un passage de l'intervenant, **cité mot pour mot** : un passage introuvable écarte la proposition. L'IA n'écrit **jamais** de texte religieux : une proposition avec guillemets, « hadith », « verset », « sourate », « obligatoire », « interdit », etc. est écartée. Aucune référence n'est produite par l'IA ; le relecteur peut en saisir une à la main.
+- **Relecture** : les propositions arrivent en *brouillon*. L'organisateur (ses conférences) ou l'administrateur les relit, les modifie, les valide, les refuse ou en ajoute. Seules les propositions *validées* sont publiques. Le rôle *modérateur* viendra avec l'étape 20.
+- **Écran « Et maintenant, que faire ? »** : visible par **tout le monde** (visiteurs compris) en bas de la page conférence, avec une invitation à la fin de la vidéo (si pas de quiz à passer) et un bouton à la fin du quiz.
+- **Mes engagements** (offre **Apprentissage**) : le membre choisit une proposition ou écrit la sienne, ajoute une intention (niyya) facultative et une échéance (aujourd'hui / cette semaine / ce mois-ci, jours de Paris). Puis il suit : *à faire / en cours / fait / pas encore*, avec une note privée. Une échéance dépassée affiche « À reprendre » (jamais de pénalité). **Aucun score, total, pourcentage ni classement.** Sans l'offre Apprentissage : la proposition s'affiche et se copie, l'enregistrement est proposé à l'abonnement.
+
+### 29.2 Vie privée
+- Texte de l'action, intention et note sont **chiffrés en base** (AES-256-GCM) avec une clé **dédiée** `PRACTICE_KEY`, distincte de `SETTINGS_KEY`. Ni l'équipe, ni les organisateurs, ni les statistiques n'y ont accès.
+- **Accord explicite** demandé au premier engagement (case à cocher), date enregistrée.
+- **Export** (JSON) et **effacement total** (avec retrait de l'accord) disponibles à tout moment, **même après la fin de l'abonnement**. La suppression du compte efface les engagements.
+- Les espaces Kids n'ont pas accès à cette fonction.
+
+### 29.3 Prérequis
+Étapes précédentes en place (API, web, translator avec un moteur de résumés configuré, quiz). Migration `038_practice.sql` (appliquée toute seule au démarrage de l'API).
+
+### 29.4 Installation (DockPanel / Ubuntu 24)
+1. Sur le serveur, générer la clé : `openssl rand -hex 32`
+2. DockPanel → service **majlistv-api** → variables d'environnement : ajouter `PRACTICE_KEY=<la valeur>` (l'API uniquement). **La noter dans un gestionnaire de mots de passe et ne jamais la changer** : les engagements existants deviendraient illisibles. Sans cette variable, l'écran public fonctionne mais l'enregistrement d'un engagement répond « Chiffrement non configuré ».
+3. Pousser le code sur GitHub (`LePubli/majlistv`), puis redéployer **dans cet ordre** : `majlistv-api` (log attendu : `Migration appliquée : 038_practice.sql`), `majlistv-translator`, `majlistv-web`.
+4. Variables du web et du translator : **aucune nouvelle**.
+
+### 29.5 Réglages (Admin → Paramètres → « Mise en pratique »)
+| Réglage | Défaut | Rôle |
+|---|---|---|
+| Écran « Et maintenant, que faire ? » activé | oui | coupe l'écran sur tout le site |
+| Propositions générées par l'IA | 4 (3 à 5) | nombre demandé à l'IA |
+
+La langue des propositions est celle des quiz (Paramètres → Quiz → « Langue des questions générées »).
+
+### 29.6 Utilisation
+- **Organisateur** : Studio → ma conférence → onglet **Mise en pratique** → *Générer* (la transcription doit être prête) → relire, *Valider*. File globale : Studio → **Mise en pratique** (menu de gauche). Ajout à la main : « + Ajouter une proposition ».
+- **Visiteur** : page conférence → « Et maintenant, que faire ? » → choisir → *Copier*.
+- **Membre Apprentissage** : choisir (ou « Écrire ma propre action ») → intention, échéance, case d'accord (1re fois) → *Je m'engage*. Suivi : **Apprentissage → Mes engagements**.
+
+### 29.7 API (résumé)
+| Route | Qui | Rôle |
+|---|---|---|
+| `GET /talks/:id/practice` | tous | propositions validées (+ ses engagements si Apprentissage) |
+| `POST /talks/:id/practice/commitments` | Apprentissage | prendre un engagement (`403 learning_required`, `409 consent_required`, `503 no_key`) |
+| `GET/PATCH/DELETE /me/practice[/:id]` | Apprentissage | liste, état, note, échéance, retrait |
+| `GET /me/practice/export`, `DELETE /me/practice` | tout membre | export, effacement total |
+| `GET/POST /talks/:id/studio/practice[/generate\|/suggestions]` | organisateur, admin | état, génération, ajout |
+| `PATCH/DELETE /studio/practice/suggestions/:sid`, `GET /studio/practice/review` | organisateur, admin | validation, file de relecture |
+
+### 29.8 Tests
+```bash
+# API (3055, avec PRACTICE_KEY), PG de test (5544)
+node api/tests/test_practice_crypto.mjs
+python3 api/tests/test_practice.py
+python3 translator/tests/test_practice_clean.py
+# Génération de bout en bout : translator + fausse API Claude (voir translator/README.md, « Développement local »)
+python3 api/tests/test_practice_gen.py
+```
+Résultat attendu : « tout est bon » à chaque fois. Attention : l'API limite à 100 requêtes/minute par adresse ; si un test échoue sur une connexion, attendre 1 minute et relancer.
+
+### 29.9 Debug
+- **« Aucune proposition exploitable »** : l'IA n'a rien produit de vérifiable (passages introuvables, texte religieux écarté). Relancer la génération ; vérifier que la transcription est prête.
+- **Génération bloquée en « en cours »** : regarder les logs du translator (`[pratique …]`) et que le moteur de résumés est configuré (Admin → Paramètres → Résumés et chapitres).
+- **« Chiffrement non configuré »** à l'engagement : `PRACTICE_KEY` absente (16 caractères minimum) sur l'API.
+- **Engagements affichés vides ou texte manquant** : `PRACTICE_KEY` a été changée ; remettre l'ancienne valeur.
+- **L'écran n'apparaît pas sur une conférence** : il faut au moins une proposition *validée*, une conférence publiée, et le réglage du site activé.
+
+### 29.10 Retour arrière
+Retirer l'écran sans rien supprimer : Admin → Paramètres → « Mise en pratique » → désactiver. Les données restent en base (tables `practice_suggestions`, `practice_jobs`, `practice_commitments`).

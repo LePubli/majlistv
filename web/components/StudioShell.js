@@ -20,6 +20,7 @@ const ICONS = {
   check: 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   bell: 'M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0',
   layers: 'M12 3 3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5',
+  heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
 };
 const Icon = ({ d }) => (
@@ -45,13 +46,14 @@ export default function StudioShell({ children }) {
     }
     if (href === '/studio/series') return path.startsWith('/studio/series');
     if (href === '/studio/quiz') return path.startsWith('/studio/quiz');
+    if (href === '/studio/practice') return path.startsWith('/studio/practice');
     if (href === '/studio/books') return path.startsWith('/studio/books');
     if (href === '/studio/reminders') return path.startsWith('/studio/reminders');
     if (href === '/studio/stats') return path.startsWith('/studio/stats');
-    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
+    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
   };
   const groups = [
-    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] },
+    { title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] },
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
       ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],

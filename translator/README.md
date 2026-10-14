@@ -139,3 +139,6 @@ MOCK_PORT=8099 python tests/mock_claude.py &
 DATABASE_URL=postgres://... ANTHROPIC_API_KEY=test-key ANTHROPIC_API_URL=http://127.0.0.1:8099/v1/messages python src/main.py
 ```
 La fausse API renvoie « [fr] texte » : utile pour vérifier toute la chaîne (base, lecteur, interface) sans appeler le vrai service. `MOCK_MODE=flaky|badlen|401` simule une limite de débit, une réponse incohérente, une clé refusée.
+
+## Mise en pratique (étape 29)
+Le même conteneur génère aussi les propositions d'action de « Et maintenant, que faire ? » (file `practice_jobs`, logs `[pratique …]`, santé : champ `practice`). Même moteur et mêmes réglages que les résumés ; aucune nouvelle variable. Garde-fous : passage cité mot pour mot dans la transcription, aucun texte religieux ni citation, brouillon relu par un humain. Test sans coût : `python3 translator/tests/test_practice_clean.py` ; de bout en bout avec la fausse API : `api/tests/test_practice_gen.py`.

@@ -91,6 +91,20 @@ class H(BaseHTTPRequestHandler):
             sys.stderr.write(f"mock quiz: {len(qs)} propositions\n")
             send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"questions": qs}}]})
             return
+        if tool == "submit_practice":  # mise en pratique (étape 29.1) : propositions valides + trois invalides (citation inventée, texte religieux, guillemets)
+            import re
+            lines = re.findall(r"^\[(\d\d):(\d\d):(\d\d)\] (.+)$", body["messages"][0]["content"], re.M)
+            want = int(re.search(r"with (\d+) suggestions", body["system"]).group(1))
+            sg = []
+            for i, (h, m, sec, text) in enumerate(lines[:max(0, want - 2)]):
+                sg.append({"text": f"Faire une petite action concrète n°{i + 1} autour de toi aujourd'hui", "size": 1 + i % 3,
+                           "evidence_quote": " ".join(text.split()[:12]), "evidence_seconds": int(h) * 3600 + int(m) * 60 + int(sec) + 3})
+            sg.append({"text": "Action sans appui dans la vidéo", "size": 1, "evidence_quote": "cette phrase n'a jamais été prononcée par l'intervenant", "evidence_seconds": 5})
+            sg.append({"text": "Réciter ce hadith chaque matin pour être pardonné", "size": 2, "evidence_quote": " ".join(lines[0][3].split()[:12]), "evidence_seconds": 0})
+            sg.append({"text": "Dire « Que Dieu te récompense » à un proche", "size": 1, "evidence_quote": " ".join(lines[0][3].split()[:12]), "evidence_seconds": 0})
+            sys.stderr.write(f"mock practice: {len(sg)} propositions\n")
+            send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"suggestions": sg}}]})
+            return
         if tool == "submit_keywords":  # citations (étape 24.6) : thèmes seulement, aucune citation
             sys.stderr.write("mock citations: keywords\n")
             send(200, {"stop_reason": "tool_use", "content": [{"type": "tool_use", "name": tool, "input": {"keywords": ["patience", "gratitude", "SQL'; DROP TABLE x;--", "sincérité"]}}]})

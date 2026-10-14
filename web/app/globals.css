@@ -1503,3 +1503,36 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .st-table th { color: var(--muted); font-weight: 600; font-size: 12px; white-space: nowrap; }
 .st-privacy { font-size: 12px; margin: 0; }
 @media (max-width: 640px) { .st-export { margin-inline-start: 0; } .st-hbars li { grid-template-columns: 90px 1fr auto; } }
+
+/* ---- Étape 29 : mise en pratique (« Et maintenant, que faire ? », Mes engagements) ---- */
+.pz-block { margin-block: 22px; display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line-soft); border-inline-start: 3px solid var(--accent); border-radius: var(--radius); padding: 18px 20px; scroll-margin-top: 80px; transition: box-shadow .3s; }
+.pz-block:focus { outline: none; }
+.pz-block.pz-hl { box-shadow: 0 0 0 2px var(--accent); }
+.pz-title { margin: 0; font-size: 1.2rem; }
+.pz-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pz-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); cursor: pointer; background: var(--bg); }
+.pz-item.on { border-color: var(--accent); }
+.pz-item input[type=radio] { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+.pz-body { display: grid; gap: 2px; }
+.pz-text { line-height: 1.45; }
+.pz-size { color: var(--accent); letter-spacing: 1px; font-size: .75em; white-space: nowrap; }
+.pz-seek { margin-inline-start: 44px; margin-top: 4px; }
+.pz-own, .pz-note textarea, .pz-commit textarea { width: 100%; background: var(--bg); margin-top: 8px; }
+.pz-commit { display: grid; gap: 12px; padding-top: 4px; }
+.pz-chosen { margin: 0; font-weight: 600; }
+.pz-consent { display: flex; align-items: flex-start; gap: 10px; font-size: .92rem; color: var(--text-2); }
+.pz-consent input { margin-top: 3px; accent-color: var(--accent); }
+.pz-upsell, .pz-note { margin: 0; }
+.pz-clist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.pz-group h3 { font-size: 1rem; margin: 14px 0 8px; }
+.pz-commit-item { display: grid; gap: 8px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-inline-start: 3px solid var(--line-strong); border-radius: var(--radius); }
+.pz-commit-item.st-doing { border-inline-start-color: #e6a739; }
+.pz-commit-item.st-done { border-inline-start-color: var(--ok); }
+.pz-commit-item.st-not_yet { border-inline-start-color: var(--muted); }
+.pz-commit-item p { margin: 0; }
+.pz-ctext { line-height: 1.45; }
+.pz-niyya, .pz-notetext { color: var(--text-2); }
+.pz-notetext { font-size: .93rem; font-style: italic; }
+.pz-overdue { color: #e6a739; }
+.pz-tools { display: flex; flex-wrap: wrap; gap: 16px; }
+.pz-note { display: grid; gap: 8px; }

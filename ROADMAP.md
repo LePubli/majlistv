@@ -196,7 +196,7 @@ Règles transversales :
 - **L'IA ne rédige jamais de texte religieux** : elle propose des idées de mise en pratique ; les références (verset, hadith) viennent du corpus déjà importé (étape 25), comme pour les citations. Chaque proposition affiche : « Idée de mise en pratique, pas un avis religieux. »
 - Le rôle **modérateur** arrive avec l'étape 20 ; d'ici là, la validation est faite par l'organisateur (ses conférences) et l'administrateur.
 
-**29. Mise en pratique (après la vidéo et le quiz)**
+**29. Mise en pratique (après la vidéo et le quiz)** — ✅ fait (README, étape 29)
 - *29.1 Propositions d'action* : génération par l'IA à partir de la transcription, du résumé et des points clés (même chaîne que le quiz : brouillon → relecture → approuvé) ; 3 à 5 propositions par conférence en trois tailles (● petit pas, ●● moyen, ●●● ambitieux), avec référence facultative du corpus ; file de validation dans le Studio (organisateur) et dans l'administration ; modification, rejet, ajout manuel.
 - *29.2 Écran « Et maintenant, que faire ? »* : affiché à la fin du quiz (ou à la fin de la vidéo s'il n'y a pas de quiz) et en bas de la page de la conférence ; **visible par tous**. Le lecteur choisit une proposition ou écrit la sienne.
 - *29.3 Mes engagements* (Apprentissage) : intention (niyya) facultative, échéance (aujourd'hui, cette semaine, ce mois-ci), état *à faire / en cours / fait / pas encore*, note privée ; liste dans l'espace Apprentissage, regroupée par conférence et par thème. Sans abonnement Apprentissage : la proposition s'affiche et peut être copiée, l'enregistrement est proposé en abonnement.
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP) et 18 (statistiques). **Suite : 29 → 30 → 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques) et 29 (mise en pratique). **Suite : 30 → 31** (Du savoir à l'action), puis 20 (modération, qui apporte le rôle modérateur utilisé par 29), 19 et 21, 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.
