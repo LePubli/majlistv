@@ -7,10 +7,14 @@ import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 import SeriesCard from '../components/SeriesCard';
 import CitationCard from '../components/CitationCard';
+import Vitrine from '../components/Vitrine';
 import { KidsBand } from '../components/KidsBanner';
 
+// Première rangée de conférences de l'accueil (nouveautés) : elle sert de « Dernières conférences » sous la vitrine.
+const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
+
 export default function Home() {
-  const { t, trialDays, user, ready, call } = useApp();
+  const { t, trialDays, user, ready, call, feat } = useApp();
   const [home, setHome] = useState(null);   // { hero, rows } : accueil vitrine
   const [talks, setTalks] = useState(null); // grille quand une catégorie est choisie
   const [cats, setCats] = useState([]);
@@ -36,6 +40,11 @@ export default function Home() {
     call('/talks?' + new URLSearchParams({ category: cat }), {}, null).then((r) => setTalks(r.ok ? r.data : []));
   }, [cat, call]);
 
+  // Visiteur non connecté : la vitrine (méthode, exemple, tarifs). Invisible (mais présente dans la page) le temps de connaître la session.
+  if (!user && !cat && feat('showcase')) {
+    const latest = rows0(home);
+    return <Vitrine cit={cit} latest={latest} wait={!ready} />;
+  }
   const browsing = !cat; // accueil vitrine (pas de filtre)
   const catName = cats.find((c) => String(c.id) === cat);
   const rows = home?.rows || [];
@@ -70,7 +79,7 @@ export default function Home() {
             </Fragment>
           ))}
           {rows.length === 0 && <KidsBand data={kids} />}
-          <CitationCard c={cit} t={t} compact />
+          <CitationCard c={cit} t={t} framed />
         </>
       )}
     </>

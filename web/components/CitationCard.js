@@ -2,10 +2,21 @@
 // Citation du jour (verset ou hadith) : texte arabe + français tels qu'ils figurent dans la source, avec la référence exacte.
 import { useState } from 'react';
 
-export default function CitationCard({ c, t, label, compact = false }) {
+export default function CitationCard({ c, t, label, compact = false, framed = false }) {
   const [more, setMore] = useState(false);
   if (!c) return null;
   const long = (c.textAr || '').length > 260; // long hadith : texte arabe replié par défaut
+  if (framed) { // bas de l'accueil : grand cadre centré, texte mis en valeur
+    return (
+      <figure className="cit-framed" aria-label={label || t('citTitle')}>
+        <span className="cit-label">{label || t('citTitle')}</span>
+        {c.textAr && <blockquote className="cit-ar" dir="rtl" lang="ar">{long && !more ? `${c.textAr.slice(0, 260).trimEnd()}…` : c.textAr}</blockquote>}
+        <blockquote className="cit-fr" dir="auto">« {c.text} »</blockquote>
+        <figcaption>{c.attribution}</figcaption>
+        {long && <button type="button" className="link u small cit-more" onClick={() => setMore((v) => !v)} aria-expanded={more}>{more ? t('citLess') : t('citMore')}</button>}
+      </figure>
+    );
+  }
   if (compact) { // accueil : une ligne de français, l'arabe s'ouvre à la demande
     return (
       <figure className="cit-card cit-compact" aria-label={label || t('citTitle')}>

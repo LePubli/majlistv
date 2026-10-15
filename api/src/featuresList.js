@@ -50,6 +50,8 @@ export const FEATURES = [
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',
     rules: [{ re: '^/citation/today$' }] },
   { id: 'kids', group: 'community', label: 'Mejliss Kids', hint: 'Univers enfants séparé', setting: 'kids_enabled' },
+  { id: 'showcase', group: 'access', label: 'Vitrine visiteur', hint: 'Page d\'accueil des visiteurs non connectés : méthode, exemple de conférence avec quiz, tarifs',
+    rules: [{ re: '^/showcase$' }] },
   { id: 'stats', group: 'community', label: 'Statistiques d\'audience', hint: 'Mesure anonyme des vues', setting: 'stats_enabled' },
   // Argent
   { id: 'gifts', group: 'money', label: 'Cartes cadeaux', hint: 'Offrir un abonnement', setting: 'gift_enabled' },

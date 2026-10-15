@@ -1911,3 +1911,41 @@ unzip -o majlis-tv-etapeB-menu-lateral.zip -d /opt/majlis-tv
 - « Chaînes » remplacera « Intervenants » à l'étape C ; « Historique » et « Chaînes suivies » (maquette) viendront avec elle.
 - Le Studio et l'Administration avaient déjà un menu latéral ; l'harmonisation visuelle complète est prévue à l'étape E.
 - Tests : `web` compilé et vérifié dans un navigateur (ordinateur, mobile, arabe RTL, clavier, interrupteurs, pas d'erreur CSP).
+
+## Étape E1 — Vitrine visiteur et citation du jour encadrée
+
+### E1.1 Description
+- **Vitrine visiteur** : un visiteur non connecté qui ouvre l'accueil voit la promesse *Regarder. Comprendre. Retenir. Mettre en pratique.*, puis **une vraie conférence tirée au hasard parmi les plus vues** (différente à chaque visite) présentée en quatre étapes : 1 lecteur (lien vers la conférence ou son extrait gratuit), 2 résumé et chapitres, 3 **une vraie question de son quiz, jouable sans compte** (correction et explication immédiates, lien vers le quiz complet), 4 mise en pratique et calendrier de révision J+1 / J+3 / J+7 / J+21. Suivent les trois atouts (contenus structurés, compréhension vérifiable, progression personnelle dont enfants), la bande Mejliss Kids, les dernières conférences, les formules (« à partir de », prix lus dans Stripe) et la citation du jour.
+- **Citation du jour encadrée** : grand cadre centré en bas de l'accueil (visiteurs et membres), texte arabe puis français mis en valeur, source dessous.
+- Les membres connectés gardent l'accueil habituel (avec le menu latéral de l'étape B).
+
+### E1.2 Règles du tirage (API `GET /showcase`, public)
+- Candidates : conférences prêtes, publiées, pour adultes, dont le quiz est proposé au public (assez de questions validées, fonction Quiz allumée).
+- Classement par audience des 90 derniers jours (une lecture compte triple, une ouverture simple) ; tirage au hasard parmi les **8** premières. Sans statistiques, les plus récentes passent en premier.
+- La bonne réponse n'est **jamais** envoyée par `/showcase` : le visiteur répond via `POST /talks/:id/quiz/submit` (rien n'est enregistré sans compte).
+- Conférence réservée aux abonnés : les titres de chapitres restent cachés (seul leur nombre est annoncé), comme dans l'aperçu gratuit.
+- Si aucune conférence n'a de quiz, la section « exemple » n'est pas affichée (le reste de la vitrine l'est).
+
+### E1.3 Prérequis et déploiement
+Étapes A et B déployées. Aucune migration ni variable `.env`. **API puis web** (nouvelle route `/showcase`) :
+```bash
+cd /opt/majlis-tv && unzip -o majlis-tv-etapeE1-vitrine.zip
+# Coolify : Redeploy « api » puis « web »
+```
+Pour que la vitrine montre un exemple : au moins quelques conférences publiques avec un quiz validé (Studio → Quiz). Idéalement avec un extrait gratuit ou en accès libre.
+
+### E1.4 Interrupteur
+Administration → Fonctions → **Vitrine visiteur** (groupe Accès). Coupée : les visiteurs retrouvent l'accueil classique.
+
+### E1.5 Fichiers
+`api/src/routes/showcase.js`, `api/src/featuresList.js` (fonction `showcase`), `api/tests/test_showcase.py` ; `web/components/Vitrine.js`, `web/components/CitationCard.js` (variante `framed`), `web/app/page.js`, styles `.vt-*` et `.cit-framed`, textes `vt*` fr/en/ar.
+
+### E1.6 Debug
+- **« Voir un exemple » absent** : aucune conférence n'a de quiz proposé au public.
+- **Même conférence à chaque fois** : moins de 2 conférences éligibles.
+- **Pas de citation** : importer et valider le corpus (Administration → citations) ; sans citation, le cadre n'apparaît pas.
+- **Miniature grise** : la conférence n'a pas d'affiche ni de miniature externe.
+
+### E1.7 À savoir
+- Reste pour **E2** : page chaîne publique et finitions après l'étape C ; harmonisation visuelle Studio/Administration.
+- Les tarifs affichés viennent de Stripe : sans formule configurée, la section « Commencez à votre rythme » n'apparaît pas.
