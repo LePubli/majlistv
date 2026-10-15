@@ -1765,7 +1765,7 @@ git add -A && git commit -m "Etape 21 : notifications et cartes cadeaux" && git 
 | `GET /admin/gifts`, `POST /admin/gifts/generate`, `POST /admin/gifts/:id/void` | administration |
 
 ### 21.5 Points juridiques à faire valider (avant d'ouvrir la vente)
-- **Conditions de vente** : le texte d'acceptation (`GIFT_TERMS_TEXT` dans `api/src/routes/gifts.js`) promet un remboursement dans les 14 jours tant que la carte n'est pas activée. À intégrer dans vos CGV (page légale « cgv ») et à faire relire. Changer le texte : changer aussi `GIFT_TERMS_VERSION`.
+- **Conditions de vente** : le texte d'acceptation (`GIFT_TERMS_TEXT` dans `api/src/modules/gifts/routes.js`) promet un remboursement dans les 14 jours tant que la carte n'est pas activée. À intégrer dans vos CGV (page légale « cgv ») et à faire relire. Changer le texte : changer aussi `GIFT_TERMS_VERSION`.
 - **TVA** : une carte cadeau utilisable dans plusieurs pays peut être un « bon à usage multiple » (TVA due à l'**activation**) ou « à usage unique » (TVA due à la **vente**). À trancher avec votre comptable ; Stripe Tax ne règle pas ce point à votre place.
 - **Données personnelles** : l'adresse e-mail d'un destinataire (qui n'a pas de compte) est conservée dans `gift_cards` ; à mentionner dans la politique de confidentialité, avec les intervenants suivis et les préférences d'e-mails. Aucun autre e-mail n'est envoyé à cette adresse.
 - **Prospection** : les alertes d'intervenants viennent d'un choix explicite (le membre suit l'intervenant) ; la sélection de la semaine est **opt-in** (décochée par défaut). Ne pas la cocher pour les membres.
@@ -2263,7 +2263,7 @@ docker restart dockpanel-git-majlistv-api
 ## Étape I2 — Textes modifiables (Admin → Textes)
 
 ### Description
-Tous les textes du site (1 570 intitulés × français, anglais, arabe) se modifient depuis **Admin → Textes**, sans toucher au code ni demander une mise à jour. Les textes d'origine restent dans `web/lib/i18n.js` ; la base ne garde que ce qui a été changé (table `site_texts`, une ligne par clé et par langue). Le site superpose les textes modifiés aux textes d'origine à chaque page, au plus tard 10 secondes après l'enregistrement. « Rétablir l'original » supprime la modification.
+Tous les textes du site (1 571 intitulés × français, anglais, arabe) se modifient depuis **Admin → Textes**, sans toucher au code ni demander une mise à jour. Les textes d'origine restent dans `web/lib/i18n.js` ; la base ne garde que ce qui a été changé (table `site_texts`, une ligne par clé et par langue). Le site superpose les textes modifiés aux textes d'origine à chaque page, au plus tard 10 secondes après l'enregistrement. « Rétablir l'original » supprime la modification.
 
 Dans la page :
 - recherche (sans tenir compte des accents ni des majuscules) dans les clés, les textes actuels et les textes d'origine ;
@@ -2538,3 +2538,52 @@ Chromium (1440 et 390 px) : bouton absent pour visiteur et membre, présent pour
 
 ### Limites
 On modifie les blocs existants et leurs textes ; ajouter, déplacer ou supprimer un bloc se fait toujours dans Admin → Pages. Le panneau d'un bloc publie tout le brouillon de la page.
+
+## Étape M1 — Socle des modules (Admin → Modules)
+
+### Description
+Une fonction peut maintenant arriver comme un **module** : un dossier `api/src/modules/<nom>/` livré avec le zip, puis redéployé. Il apparaît dans **Admin → Modules** avec sa version, un interrupteur, ses dépendances et ses réglages. Principes :
+- **Un module livré est désactivé** tant qu'on ne l'a pas activé (sauf `"defaultEnabled": true` dans sa fiche). Désactivé, toutes ses routes répondent 404 `module_off`. Les données ne sont jamais supprimées.
+- **Dépendances** : un module peut en exiger d'autres (`"requires"`) : on ne peut pas l'activer sans eux, ni les couper tant qu'il est actif.
+- **Réglages** : déclarés dans la fiche, ils sont validés (nombre, prix, adresse, choix…), les clés secrètes sont chiffrées (variable `SETTINGS_KEY`) et jamais réaffichées. Ils apparaissent aussi dans Admin → Paramètres, sous « Module : <nom> ».
+- **Migrations SQL du module** (`migrations/*.sql`) : appliquées une seule fois au démarrage de l'API, dans l'ordre alphabétique. La version installée est mémorisée.
+- **Isolation des pannes** : une fiche invalide, une migration qui échoue ou un `index.js` qui plante marque ce module « Erreur » (message lisible dans l'écran) ; le site et les autres modules démarrent normalement.
+- **Module pilote : Cartes cadeaux.** Son code (routes, logique, test inchangé) est déplacé dans `api/src/modules/gifts/`. Il est **lié à la fonction « Cartes cadeaux »** : l'interrupteur de Admin → Modules est exactement celui de Admin → Fonctions, et les prix sont réglables des deux côtés (Admin → Paramètres ou Admin → Modules). Comportement des cartes cadeaux inchangé.
+- `GET /config` publie maintenant `modules` (`{ "gifts": true, … }`) pour que le site s'adapte.
+
+### Fichiers
+`api/src/modules.js` (chargeur, routes `GET /admin/modules` et `PUT /admin/modules/:id`) ; `api/src/index.js` ; `api/migrations/052_modules.sql` (tables `modules` et `module_migrations`) ; `api/src/modules/gifts/` (`module.json`, `index.js`, `routes.js`, `lib.js`, ex-`routes/gifts.js` et `gifts.js`) ; `api/src/routes/billing.js` (import) ; `web/components/ModulesAdmin.js`, `web/app/admin/page.js`, `web/components/StudioShell.js` (entrée de menu « Modules »), `web/lib/i18n.js` (`admModules`) ; `api/tests/test_modules.py` + `api/tests/fixtures/modules/` (modules d'essai).
+
+### Créer un module (pour la suite)
+1. Créer `api/src/modules/mon-module/` avec :
+   - `module.json` : `{ "id": "mon-module", "name": "Mon module", "version": "1.0.0", "description": "…", "requires": [], "settings": [ { "key": "titre", "type": "text", "label": "Titre", "def": "Bonjour" } ] }` — l'identifiant doit être le nom du dossier. Types de réglage : `text`, `number` (`min`, `max`), `bool`, `select` (`options`), `price`, `url`, `secret`. Un réglage déclaré se range sous la clé `mod_mon_module_titre`. Un module lié à une fonction existante ajoute `"feature": "<id>"` et peut citer par leur clé des réglages existants (`"settings": ["gift_price_1"]`).
+   - `index.js` : `export default async function register(app, ctx) { app.get('/mon-module/salut', async () => ({ titre: await ctx.setting('titre') })); }` (`ctx` : `id`, `version`, `enabled()`, `setting(clé)`, `log`).
+   - `migrations/001_init.sql` si le module a ses tables (idempotent de préférence : `CREATE TABLE IF NOT EXISTS …`).
+2. Livrer, redéployer l'API : le module apparaît **désactivé** dans Admin → Modules ; l'activer, le régler.
+
+### Prérequis
+Aucune variable `.env` nouvelle (`SETTINGS_KEY` déjà requise pour les clés secrètes), aucune dépendance.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers) ; **supprimer les deux anciens fichiers** `api/src/routes/gifts.js` et `api/src/gifts.js` (déplacés dans `api/src/modules/gifts/`) ; GitHub Desktop : **Commit to main**, **Push origin**. (Le commit déjà poussé contient ce déplacement : si vous récupérez le dépôt par GitHub Desktop, rien à supprimer à la main.)
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (migration 052), puis **`majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+Admin → **Modules** : « Cartes cadeaux v1.0.0 » est listé ; son état correspond à celui de Admin → Fonctions. Ou, en ligne de commande, `curl -s https://api-majlisstv.le-publicitaire.fr/config` contient `"modules":{"gifts":…}`. Les cartes cadeaux se comportent comme avant (page « Offrir », activation d'un code, Admin → Cartes cadeaux).
+
+### Tests
+Deux API de test : la normale (3055) et une seconde (3056) lancée avec `PORT=3056 MODULES_EXTRA_DIR=api/tests/fixtures/modules`. `python3 api/tests/test_modules.py` : 47 contrôles (droits, module pilote, activation liée aux Fonctions, module livré inactif, migration appliquée une seule fois, module en erreur isolé, dépendances dans les deux sens, réglages et clé secrète chiffrée, journal des actions). `test_gifts.py` (cartes cadeaux, avec le faux Stripe) repasse intégralement. Interface testée dans Chromium (1440 et 390 px). **Non testé** : une vraie livraison par DockPanel d'un second module.
+
+### Dépannage
+- **Un module n'apparaît pas** : son dossier doit contenir `module.json` ; vérifier les journaux de `majlistv-api` (« module … : fiche invalide »).
+- **« Erreur » sur un module** : le message dit pourquoi (fiche, migration SQL, chargement). Corriger, redéployer.
+- **« Absent du code »** : le dossier a disparu (retiré d'une livraison) ; ses routes sont fermées, ses données gardées. Remettre le dossier pour le retrouver.
+
+### Limites (volontaires pour M1)
+Les modules ne peuvent pas encore ajouter leurs propres écrans d'administration ni des blocs de pages (à venir avec M2) ; le webhook de paiement Stripe appelle toujours directement la logique des cartes cadeaux ; l'activation d'un module sans « feature » ne masque pas encore les menus du site (`/config` expose `modules` pour le prochain lot).

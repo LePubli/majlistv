@@ -8,7 +8,7 @@ import { getSetting, getNumber, isOn } from '../settings.js';
 import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
 import { hasLearningTier } from '../access.js';
-import { applyGiftPaid, applyGiftRefund } from '../gifts.js';
+import { applyGiftPaid, applyGiftRefund } from '../modules/gifts/lib.js';
 import { recordInvoicePaid, recordChargeRefund } from '../revenue.js';
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.

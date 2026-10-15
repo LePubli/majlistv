@@ -1,0 +1,12 @@
+{
+  "id": "hello-demo",
+  "name": "Démo bonjour",
+  "version": "1.2.0",
+  "description": "Module d'essai des tests : une route /hello-demo/hi et une table.",
+  "requires": ["gifts"],
+  "settings": [
+    { "key": "greeting", "type": "text", "label": "Message d'accueil", "def": "Bonjour" },
+    { "key": "times", "type": "number", "label": "Répétitions", "def": "1", "min": 1, "max": 5 },
+    { "key": "token", "type": "secret", "label": "Clé de démonstration" }
+  ]
+}

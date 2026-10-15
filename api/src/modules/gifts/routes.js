@@ -5,12 +5,12 @@
 //   POST /gifts/redeem             connecté : active un code → accès offert (users.premium_until)
 //   GET/POST /admin/gifts…         administrateur : liste, génération de cartes offertes, annulation
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getSetting, isOn } from '../settings.js';
-import { enqueueForUser } from '../mailer.js';
-import { fmtDate } from '../emails.js';
-import { stripeClient } from './billing.js';
-import { GIFT_MONTHS, newCode, normalizeCode, monthsLabel } from '../gifts.js';
+import { pool } from '../../db.js';
+import { getSetting, isOn } from '../../settings.js';
+import { enqueueForUser } from '../../mailer.js';
+import { fmtDate } from '../../emails.js';
+import { stripeClient } from '../../routes/billing.js';
+import { GIFT_MONTHS, newCode, normalizeCode, monthsLabel } from './lib.js';
 
 // Texte exact accepté à l'achat (conservé avec la date, l'adresse IP et le navigateur). Changer le texte = changer la version.
 export const GIFT_TERMS_VERSION = '2026-10-14';

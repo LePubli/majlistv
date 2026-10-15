@@ -1,0 +1,1 @@
+{ "id": "broken-migration", "name": "Migration cassée", "version": "0.1.0", "description": "Sa migration échoue : le module doit être signalé en erreur, sans empêcher les autres." }

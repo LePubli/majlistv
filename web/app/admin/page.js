@@ -8,6 +8,7 @@ import { useApp } from '../../components/Providers';
 import StatsView from '../../components/StatsView';
 import RevenueAdmin from '../../components/RevenueAdmin';
 import AppearanceAdmin from '../../components/AppearanceAdmin';
+import ModulesAdmin from '../../components/ModulesAdmin';
 import TextsAdmin from '../../components/TextsAdmin';
 import PagesAdmin from '../../components/PagesAdmin';
 
@@ -1091,13 +1092,14 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux', revenue: 'Rémunération des chaînes' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux', revenue: 'Rémunération des chaînes' };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'users' && <Users me={user.id} />}
       {tab === 'features' && <FeaturesAdmin />}
+      {tab === 'modules' && <ModulesAdmin />}
       {tab === 'appearance' && <AppearanceAdmin />}
       {tab === 'texts' && <TextsAdmin />}
       {tab === 'pages' && <PagesAdmin />}

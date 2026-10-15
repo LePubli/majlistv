@@ -1,7 +1,7 @@
 // Cartes cadeaux (étape 21) : codes, durées et traitement du paiement confirmé. Utilisé par les routes et par le webhook Stripe.
 import { randomInt } from 'node:crypto';
-import { enqueueForUser, enqueueEmail } from './mailer.js';
-import { pickLocale } from './emails.js';
+import { enqueueForUser, enqueueEmail } from '../../mailer.js';
+import { pickLocale } from '../../emails.js';
 
 export const GIFT_MONTHS = [1, 3, 12];
 // 32 caractères sans ambiguïté (ni 0/O ni 1/I) : 32^12 ≈ 1,2 × 10^18 codes possibles.

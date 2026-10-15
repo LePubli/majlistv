@@ -40,7 +40,7 @@ import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pag
 import moderationRoutes from './routes/moderation.js';
 import collectionsRoutes from './routes/collections.js';
 import notificationsRoutes from './routes/notifications.js';
-import giftsRoutes from './routes/gifts.js';
+import moduleRoutes, { discoverModules, registerModules, migrateModules, allModules } from './modules.js'; // étape M1 : socle des modules (api/src/modules/<id>/)
 import { startNotifyMailer } from './notifyMailer.js';
 import listsRoutes from './routes/lists.js';
 import { startAudit } from './audit.js';
@@ -140,13 +140,15 @@ app.get('/config', async () => {
   const hasSeries = features.series && (await listSeries({ limit: 1 })).length > 0;
   const hasBooks = features.books && (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
   return {
-    features, hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };
 });
 
+await discoverModules(app.log); // fiches des modules + réglages qu'ils déclarent (avant les routes)
 await app.register(featureRoutes);
+await app.register(moduleRoutes);
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(talksRoutes);
@@ -171,7 +173,6 @@ await app.register(pagesRoutes);
 await app.register(moderationRoutes);
 await app.register(collectionsRoutes);
 await app.register(notificationsRoutes);
-await app.register(giftsRoutes);
 await app.register(listsRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
@@ -189,8 +190,10 @@ await app.register(seriesRoutes);
 await app.register(cardsRoutes);
 await app.register(statsCollectRoutes);
 await app.register(statsRoutes);
+await registerModules(app); // routes de chaque module (cartes cadeaux : api/src/modules/gifts)
 
 await migrate();
+await migrateModules(app.log); // migrations propres aux modules + version installée
 await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });

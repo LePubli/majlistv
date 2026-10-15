@@ -2429,3 +2429,10 @@ body.edit-on .em-hover{outline:2px dashed var(--gold,#e0a526);outline-offset:2px
   .em-bar{bottom:84px;max-width:calc(100vw - 24px)}
   .em-panel{top:auto;width:100vw;height:68vh;border-inline-start:0;border-top:1px solid var(--gold,#e0a526);border-radius:16px 16px 0 0}
 }
+
+/* Étape M1 — Admin → Modules */
+.md-list{display:grid;gap:12px;margin-top:12px}
+.md-card{border:1px solid var(--line,#2a2a2a);border-radius:14px;padding:14px;display:grid;gap:8px}
+.md-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.md-head h3{margin:0 0 4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.md-fields{display:grid;gap:10px;max-width:520px}
