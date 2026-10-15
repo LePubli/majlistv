@@ -10,6 +10,7 @@ import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RouteGate from '../components/RouteGate';
+import MemberShell from '../components/MemberShell';
 import StatsBeacon from '../components/StatsBeacon';
 import { DICT, DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
@@ -51,7 +52,7 @@ export default async function RootLayout({ children }) {
         <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
           <StatsBeacon />
           <Header />
-          <RouteGate>{children}</RouteGate>
+          <MemberShell><RouteGate>{children}</RouteGate></MemberShell>
           <Footer />
         </Providers>
       </body>

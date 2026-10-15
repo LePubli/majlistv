@@ -8,6 +8,7 @@ import SearchPanel from './SearchPanel';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
+import { memberShellOn } from '../lib/shell';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 // Espace enfant : en-tête réduit ; on n'en sort qu'avec le code parental du parent.
@@ -113,7 +114,7 @@ function MainHeader() {
   );
   const initial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
   return (
-    <header className="header hd">
+    <header className={`header hd${memberShellOn(path, user, null) ? ' hd-side' : ''}`}>
       <button type="button" className="hd-icon hd-burger" onClick={() => setDrawer(true)} aria-label={t('hmMenu')} aria-expanded={drawer}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
       </button>

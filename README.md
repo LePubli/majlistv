@@ -1860,3 +1860,54 @@ Résultat attendu : « TOUT EST BON » (49 contrôles : fonctions coupées / ral
 - Couper « Séries » retire les séries de l'accueil, des menus et des pages ; les épisodes restent des conférences ordinaires.
 - Les abonnements et le paiement Stripe n'ont **pas** d'interrupteur à ce stade : couper le paiement a des conséquences sur l'accès qui sont à décider avec l'étape « Rémunération ».
 - Les fonctions à venir (chaînes, rémunération, vitrine visiteur) s'ajouteront à la même liste lors de leur étape.
+
+## Étape B — Menu latéral, onglets et fil d'Ariane (espace membre)
+
+### B.1 Description
+Fini le long défilement vertical : l'espace membre a désormais un gabarit commun.
+- **Menu latéral à gauche** (ordinateur) pour tout membre connecté : *Découvrir* (Accueil, Séries, Collections, Ouvrages, Intervenants), *Mon espace* (Apprentissage, Ma bibliothèque, Mon bilan), *Compte* (Kids, Mon compte) et, pour les rôles concernés, *Gestion* (Studio / Modération, Administration). La page courante est surlignée.
+- **Barre de 5 entrées en bas** (téléphone) : Accueil, Séries (ou Collections si les séries sont coupées), Apprendre, Bibliothèque, Compte. Le menu ☰ de l'en-tête garde tout le reste.
+- **Onglets** (au lieu d'une seule page très longue), chacun avec sa propre adresse `?tab=` :
+  - **Mon compte** (onglets verticaux) : Profil (dont langue du site), Abonnement, Mes e-mails, Cartes cadeaux.
+  - **Apprentissage** : Tableau de bord (score, courbe, badges, derniers résultats), Révisions, Parcours (mise en pratique, séries, attestations), Mon bilan.
+  - **Ma bibliothèque** : Reprendre, Favoris, Mes listes, Mes notes. L'ancienne page `/lists` renvoie vers l'onglet *Mes listes*.
+- **Fil d'Ariane** en haut de chaque page à onglets.
+- Les **interrupteurs de l'étape A** s'appliquent : une fonction coupée disparaît du menu, de la barre du bas et des onglets.
+- Visiteurs, Studio/Administration (menu propre), Kids, connexion, tarifs et pages légales : inchangés.
+
+### B.2 Prérequis
+Étape A déployée. Aucune migration, aucune variable `.env` nouvelle, **aucune modification de l'API** : seule l'image `web` change.
+
+### B.3 Installation / déploiement
+```bash
+cd /opt/majlis-tv            # dossier du projet sur le serveur
+unzip -o majlis-tv-etapeB-menu-lateral.zip -d /opt/majlis-tv
+# Coolify : Redeploy de l'application « web » (l'API n'a pas changé)
+```
+
+### B.4 Fichiers
+- `web/lib/shell.js` : où le menu latéral s'affiche.
+- `web/components/MemberShell.js` : menu latéral + barre du bas (branché dans `app/layout.js`).
+- `web/components/Tabs.js` : onglets accessibles (`useTab`, `TabBar`, `TabPanel`), clavier (flèches, Début, Fin), adresse `?tab=`.
+- `web/components/Crumbs.js` : fil d'Ariane.
+- `web/components/ListsPanel.js` : contenu de « Mes listes », partagé par la bibliothèque.
+- Pages remaniées : `app/account`, `app/learning`, `app/library`, `app/lists` (redirection) ; styles `.ms-*`, `.tabs*`, `.crumbs` à la fin de `globals.css` ; textes `bc*`, `ms*`, `tb*`, `ac*` en français, anglais, arabe.
+
+### B.5 Ajouter un onglet ou une entrée de menu
+- Onglet : ajouter `{ id, label }` à la liste `tabs` de la page et un `<TabPanel id="…" current={tab}>`.
+- Entrée de menu : ajouter une ligne `[adresse, libellé, icône, condition]` dans `groups` de `MemberShell.js` ; la condition reprend l'interrupteur de fonction (`feat('…')`).
+
+### B.6 Debug
+- **Pas de menu latéral** : il n'apparaît que connecté, hors Studio/Administration/Kids/connexion/tarifs. Vérifier la session.
+- **Un onglet manque** : sa fonction est coupée dans Administration → Fonctions.
+- **Retour de paiement** : `/account?billing=success` ouvre directement l'onglet Abonnement (le suivi de l'activation s'y fait).
+- **Un lien `?tab=` inconnu** ouvre le premier onglet.
+
+### B.7 Exemples
+- Lien direct vers les révisions : `/learning?tab=rev` ; vers les listes : `/library?tab=lists` ; vers l'abonnement : `/account?tab=billing`.
+
+### B.8 À savoir
+- Le menu apparaît une fraction de seconde après le chargement (le site attend de connaître la session).
+- « Chaînes » remplacera « Intervenants » à l'étape C ; « Historique » et « Chaînes suivies » (maquette) viendront avec elle.
+- Le Studio et l'Administration avaient déjà un menu latéral ; l'harmonisation visuelle complète est prévue à l'étape E.
+- Tests : `web` compilé et vérifié dans un navigateur (ordinateur, mobile, arabe RTL, clavier, interrupteurs, pas d'erreur CSP).

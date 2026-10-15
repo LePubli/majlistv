@@ -7,6 +7,8 @@ import { useApp } from '../../components/Providers';
 import PracticeList from '../../components/PracticeList';
 import SelfCheck from '../../components/SelfCheck';
 import Evolution from '../../components/Evolution';
+import Crumbs from '../../components/Crumbs';
+import { TabBar, TabPanel, useTab } from '../../components/Tabs';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -31,7 +33,7 @@ function Curve({ points, locale, t }) {
 }
 
 export default function Learning() {
-  const { user, ready, t, call, locale } = useApp();
+  const { user, ready, t, call, locale, feat } = useApp();
   const router = useRouter();
   const [d, setD] = useState(undefined); // undefined = chargement, null = palier requis
   const [msg, setMsg] = useState(null);
@@ -43,6 +45,13 @@ export default function Learning() {
   useEffect(() => { if (user) load(); }, [user, load]);
   const loadRv = useCallback(() => call('/me/revision').then((r) => setRv(r.ok ? r.data : null)), [call]);
   useEffect(() => { if (user) loadRv(); }, [user, loadRv]);
+  const tabs = [
+    { id: 'dash', label: t('tbDash') },
+    ...(feat('revision') ? [{ id: 'rev', label: t('tbRev') }] : []),
+    { id: 'path', label: t('tbPath') },
+    ...(feat('selfcheck') ? [{ id: 'bilan', label: t('msBilan') }] : []),
+  ];
+  const [tab, go] = useTab(tabs);
   const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
   if (!user || d === undefined) return null;
 
@@ -79,8 +88,11 @@ export default function Learning() {
 
   return (
     <main className="page learning">
+      <Crumbs items={[[null, t('msSpace')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, tabs.find((x) => x.id === tab).label]] : [])]} />
       <h1>{t('lrTitle')}</h1>
+      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
 
+      <TabPanel id="dash" current={tab}>
       <section className="lr-top">
         <div className="lr-score" aria-label={t('lrScore')}>
           <b>{d.score}</b><span>/100</span>
@@ -93,6 +105,38 @@ export default function Learning() {
         </div>
       </section>
 
+      <section className="lr-block">
+        <h2>{t('lrCurve')}</h2>
+        <Curve points={d.curve} locale={locale} t={t} />
+      </section>
+
+      <section className="lr-block">
+        <h2>{t('lrBadges')}</h2>
+        <ul className="lr-badges">
+          {d.badges.map((b) => (
+            <li key={b.id} className={b.earned ? 'on' : ''}>
+              <span className="lr-ico" aria-hidden="true">{BADGE_ICON[b.id]}</span>
+              <b>{t(`bdg_${b.id}`)}</b>
+              <span className="meta small">{t(`bdgD_${b.id}`)}</span>
+              {b.earned ? <span className="lr-when">{date(b.earnedAt)}</span> : <span className="lr-when locked">{t('lrLocked')}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {d.recent.length > 0 && (
+        <section className="lr-block">
+          <h2>{t('lrRecent')}</h2>
+          <ul className="lr-recent">
+            {d.recent.map((r, i) => (
+              <li key={i}><Link href={`/talks/${r.talkId}`}>{r.title}</Link><span className={r.passed ? 'ok-msg' : 'meta'}>{r.percent} %</span><span className="meta small">{date(r.at)}</span></li>
+            ))}
+          </ul>
+        </section>
+      )}
+      </TabPanel>
+
+      <TabPanel id="rev" current={tab}>
       {rv && (
         <section className="lr-block rv-block" aria-labelledby="rv-title">
           <h2 id="rv-title">{t('revTitle')}</h2>
@@ -127,30 +171,10 @@ export default function Learning() {
         </section>
       )}
 
+      </TabPanel>
+
+      <TabPanel id="path" current={tab}>
       <PracticeList t={t} call={call} locale={locale} />
-
-      <SelfCheck t={t} call={call} locale={locale} />
-      <Evolution t={t} call={call} locale={locale} />
-
-      <section className="lr-block">
-        <h2>{t('lrCurve')}</h2>
-        <Curve points={d.curve} locale={locale} t={t} />
-      </section>
-
-      <section className="lr-block">
-        <h2>{t('lrBadges')}</h2>
-        <ul className="lr-badges">
-          {d.badges.map((b) => (
-            <li key={b.id} className={b.earned ? 'on' : ''}>
-              <span className="lr-ico" aria-hidden="true">{BADGE_ICON[b.id]}</span>
-              <b>{t(`bdg_${b.id}`)}</b>
-              <span className="meta small">{t(`bdgD_${b.id}`)}</span>
-              {b.earned ? <span className="lr-when">{date(b.earnedAt)}</span> : <span className="lr-when locked">{t('lrLocked')}</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section className="lr-block">
         <h2>{t('lrSeries')}</h2>
         {msg && <p className="error" role="alert">{msg}</p>}
@@ -179,16 +203,12 @@ export default function Learning() {
         <p className="meta small">{t('lrAttNote')}</p>
       </section>
 
-      {d.recent.length > 0 && (
-        <section className="lr-block">
-          <h2>{t('lrRecent')}</h2>
-          <ul className="lr-recent">
-            {d.recent.map((r, i) => (
-              <li key={i}><Link href={`/talks/${r.talkId}`}>{r.title}</Link><span className={r.passed ? 'ok-msg' : 'meta'}>{r.percent} %</span><span className="meta small">{date(r.at)}</span></li>
-            ))}
-          </ul>
-        </section>
-      )}
+      </TabPanel>
+
+      <TabPanel id="bilan" current={tab}>
+      <SelfCheck t={t} call={call} locale={locale} />
+      <Evolution t={t} call={call} locale={locale} />
+      </TabPanel>
     </main>
   );
 }

@@ -1678,3 +1678,55 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 [dir=rtl] .ft-switch .ft-knob { left: auto; right: 3px; }
 [dir=rtl] .ft-switch.on .ft-knob { transform: translateX(-22px); }
 @media (prefers-reduced-motion: reduce) { .ft-switch, .ft-switch .ft-knob { transition: none; } }
+
+/* Étape B : gabarit membre (menu latéral, barre du bas), onglets, fil d'Ariane */
+.ms { display: grid; grid-template-columns: 232px minmax(0, 1fr); align-items: start; }
+.ms-side { position: sticky; top: 65px; height: calc(100vh - 65px); overflow-y: auto; padding: 18px 12px 24px; border-inline-end: 1px solid var(--line-soft); background: rgba(255, 255, 255, .012); }
+.ms-side nav { display: grid; gap: 18px; align-items: start; flex-wrap: nowrap; }
+.ms-group { display: grid; gap: 2px; }
+.ms-title { padding: 0 12px 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.ms-side a, .ms-bar a { display: flex; align-items: center; gap: 12px; color: var(--text-2, var(--muted)); font-weight: 600; font-size: 15px; }
+.ms-side a { padding: 10px 12px; border-radius: 12px; }
+.ms-side a:hover { background: var(--surface); color: var(--text); }
+.ms-side a.on { background: var(--surface-2, #241d12); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+[dir="rtl"] .ms-side a.on { box-shadow: inset -3px 0 0 var(--accent); }
+.ms-main { min-width: 0; }
+.ms-main .page { margin-inline: auto; max-width: 980px; }
+.ms-bar { display: none; }
+.hd-side .hd-nav { display: none; }
+
+.crumbs { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 0; }
+.crumbs li + li::before { content: '›'; margin-inline: 8px; opacity: .6; }
+[dir="rtl"] .crumbs li + li::before { content: '‹'; }
+.crumbs a:hover { color: var(--text); text-decoration: underline; }
+.crumbs [aria-current="page"] { color: var(--text-2, var(--text)); }
+
+.tabs { display: flex; gap: 4px; margin: 14px 0 18px; border-bottom: 1px solid var(--line-soft); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: none; padding: 12px 16px; background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; min-height: 44px; }
+.tabs button:hover { color: var(--text); }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.tab-panel:focus { outline: none; }
+.tabs-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start; }
+.tabs-v { flex-direction: column; margin: 0; border-bottom: 0; border-inline-end: 1px solid var(--line-soft); overflow: visible; padding-inline-end: 12px; }
+.tabs-v button { text-align: start; border-bottom: 0; border-radius: 10px; margin: 0; }
+.tabs-v button.on { background: var(--surface-2, #241d12); box-shadow: inset 3px 0 0 var(--accent); }
+[dir="rtl"] .tabs-v button.on { box-shadow: inset -3px 0 0 var(--accent); }
+.tabs-body { min-width: 0; }
+.acct .card-lite { display: grid; gap: 10px; }
+
+@media (max-width: 900px) {
+  .ms { display: block; }
+  .ms-side { display: none; }
+  .ms-bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; inset-inline: 0; bottom: 0; z-index: 25; background: rgba(11, 9, 6, .96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .ms-bar a { flex-direction: column; justify-content: center; gap: 3px; font-size: 11px; padding: 6px 2px; border-radius: 10px; min-height: 52px; text-align: center; }
+  .ms-bar a.on { color: var(--accent); }
+  body:has(.ms-bar) .site-footer { padding-bottom: 84px; }
+  .tabs-layout { grid-template-columns: 1fr; gap: 0; }
+  .tabs-v { flex-direction: row; border-inline-end: 0; border-bottom: 1px solid var(--line-soft); overflow-x: auto; padding-inline-end: 0; margin: 14px 0 18px; }
+  .tabs-v button { border-bottom: 3px solid transparent; border-radius: 0; }
+  .tabs-v button.on { background: none; box-shadow: none; border-bottom-color: var(--accent); }
+}
+.acct .tab-panel label:has(input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 10px; }
+.acct .tab-panel input[type="checkbox"] { width: auto; flex: none; margin-top: 4px; }

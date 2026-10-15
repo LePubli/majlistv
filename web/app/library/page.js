@@ -7,9 +7,12 @@ import { useApp } from '../../components/Providers';
 import TalkCard from '../../components/TalkCard';
 import SeriesCard from '../../components/SeriesCard';
 import { clock } from '../../lib/clock';
+import ListsPanel from '../../components/ListsPanel';
+import Crumbs from '../../components/Crumbs';
+import { TabBar, TabPanel, useTab } from '../../components/Tabs';
 
 export default function Library() {
-  const { user, ready, t, call } = useApp();
+  const { user, ready, t, call, feat } = useApp();
   const router = useRouter();
   const [cont, setCont] = useState(null);
   const [favs, setFavs] = useState(null);
@@ -17,6 +20,13 @@ export default function Library() {
   const [todo, setTodo] = useState([]);
   const [notes, setNotes] = useState([]);
 
+  const tabs = [
+    { id: 'resume', label: t('tbResume') },
+    ...(feat('favorites') ? [{ id: 'favs', label: t('tbFavs') }] : []),
+    ...(feat('lists') ? [{ id: 'lists', label: t('tbLists') }] : []),
+    ...(feat('notes') ? [{ id: 'notes', label: t('tbNotes') }] : []),
+  ];
+  const [tab, go] = useTab(tabs);
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => {
     call('/me/continue').then((r) => setCont(r.ok ? r.data : []));
@@ -39,52 +49,62 @@ export default function Library() {
 
   return (
     <main className="page">
+      <Crumbs items={[[null, t('msSpace')], ['/library', t('library')], ...(tab !== 'resume' ? [[null, tabs.find((x) => x.id === tab).label]] : [])]} />
       <h1>{t('library')}</h1>
-      <p><Link href="/lists" className="link u">{t('lsMyLists')} →</Link></p>
-      {todo.length > 0 && (
-        <>
-          <h2>{t('qpTodoRow')}</h2>
-          <div className="grid">{todo.map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
-        </>
-      )}
-      <h2>{t('continueWatching')}</h2>
-      {cont && cont.length === 0 && <p className="meta">{t('nothingToContinue')}</p>}
-      <div className="grid">
-        {(cont || []).map((x) => (
-          <TalkCard key={x.id} talk={x} t={t} progress={x.durationMs ? x.positionMs / x.durationMs : 0} onRemove={() => dropProgress(x.id)} removeLabel={t('removeFromList')} />
-        ))}
-      </div>
-      {mine && mine.length > 0 && (
-        <>
-          <h2>{t('mySeries')}</h2>
-          <div className="grid">{mine.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
-        </>
-      )}
-      <h2>{t('ntLibTitle')}</h2>
-      {notes.length === 0 && <p className="meta">{t('ntLibEmpty')}</p>}
-      <div className="lib-notes">
-        {notes.map((g) => (
-          <section key={g.talkId} className="lib-note-group">
-            <h3><Link href={g.slug ? `/conferences/${g.slug}` : `/talks/${g.talkId}`}>{g.title}</Link></h3>
-            <ul className="notes-list">
-              {g.notes.map((n) => (
-                <li key={n.id} className={n.body ? 'note' : 'note bm'}>
-                  <Link className="note-time" href={noteHref(g, n)}>{n.body ? '📝' : '🔖'} {clock(n.positionMs)}</Link>
-                  <div className="note-body">
-                    {n.body ? <p>{n.body}</p> : <p className="meta">{t('ntBookmark')}</p>}
-                    <span className="note-btns"><button type="button" className="link" onClick={() => dropNote(g.talkId, n.id)}>{t('ntDelete')}</button></span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <h2>{t('myFavorites')}</h2>
-      {favs && favs.length === 0 && <p className="meta">{t('noFavorites')} <Link href="/">{t('browseCatalog')}</Link></p>}
-      <div className="grid">
-        {(favs || []).map((x) => <TalkCard key={x.id} talk={x} t={t} onRemove={() => dropFav(x.id)} removeLabel={t('removeFav')} />)}
-      </div>
+      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+
+      <TabPanel id="resume" current={tab}>
+        {todo.length > 0 && (
+          <>
+            <h2>{t('qpTodoRow')}</h2>
+            <div className="grid">{todo.map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
+          </>
+        )}
+        <h2>{t('continueWatching')}</h2>
+        {cont && cont.length === 0 && <p className="meta">{t('nothingToContinue')}</p>}
+        <div className="grid">
+          {(cont || []).map((x) => (
+            <TalkCard key={x.id} talk={x} t={t} progress={x.durationMs ? x.positionMs / x.durationMs : 0} onRemove={() => dropProgress(x.id)} removeLabel={t('removeFromList')} />
+          ))}
+        </div>
+        {mine && mine.length > 0 && (
+          <>
+            <h2>{t('mySeries')}</h2>
+            <div className="grid">{mine.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
+          </>
+        )}
+      </TabPanel>
+
+      <TabPanel id="favs" current={tab}>
+        {favs && favs.length === 0 && <p className="meta">{t('noFavorites')} <Link href="/">{t('browseCatalog')}</Link></p>}
+        <div className="grid">
+          {(favs || []).map((x) => <TalkCard key={x.id} talk={x} t={t} onRemove={() => dropFav(x.id)} removeLabel={t('removeFav')} />)}
+        </div>
+      </TabPanel>
+
+      <TabPanel id="lists" current={tab}><ListsPanel /></TabPanel>
+
+      <TabPanel id="notes" current={tab}>
+        {notes.length === 0 && <p className="meta">{t('ntLibEmpty')}</p>}
+        <div className="lib-notes">
+          {notes.map((g) => (
+            <section key={g.talkId} className="lib-note-group">
+              <h3><Link href={g.slug ? `/conferences/${g.slug}` : `/talks/${g.talkId}`}>{g.title}</Link></h3>
+              <ul className="notes-list">
+                {g.notes.map((n) => (
+                  <li key={n.id} className={n.body ? 'note' : 'note bm'}>
+                    <Link className="note-time" href={noteHref(g, n)}>{n.body ? '📝' : '🔖'} {clock(n.positionMs)}</Link>
+                    <div className="note-body">
+                      {n.body ? <p>{n.body}</p> : <p className="meta">{t('ntBookmark')}</p>}
+                      <span className="note-btns"><button type="button" className="link" onClick={() => dropNote(g.talkId, n.id)}>{t('ntDelete')}</button></span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </TabPanel>
     </main>
   );
 }
