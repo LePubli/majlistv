@@ -1879,10 +1879,14 @@ Fini le long défilement vertical : l'espace membre a désormais un gabarit comm
 Étape A déployée. Aucune migration, aucune variable `.env` nouvelle, **aucune modification de l'API** : seule l'image `web` change.
 
 ### B.3 Installation / déploiement
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-web` uniquement (l'API ne change pas).
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv            # dossier du projet sur le serveur
-unzip -o majlis-tv-etapeB-menu-lateral.zip -d /opt/majlis-tv
-# Coolify : Redeploy de l'application « web » (l'API n'a pas changé)
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 
 ### B.4 Fichiers
@@ -1928,9 +1932,14 @@ unzip -o majlis-tv-etapeB-menu-lateral.zip -d /opt/majlis-tv
 
 ### E1.3 Prérequis et déploiement
 Étapes A et B déployées. Aucune migration ni variable `.env`. **API puis web** (nouvelle route `/showcase`) :
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-api` (attendre « running » : la migration s'applique au démarrage), puis `majlistv-web`.
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv && unzip -o majlis-tv-etapeE1-vitrine.zip
-# Coolify : Redeploy « api » puis « web »
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 Pour que la vitrine montre un exemple : au moins quelques conférences publiques avec un quiz validé (Studio → Quiz). Idéalement avec un extrait gratuit ou en accès libre.
 
@@ -1968,9 +1977,14 @@ Administration → Fonctions → **Vitrine visiteur** (groupe Accès). Coupée :
 
 ### C.3 Prérequis et déploiement
 Étapes A, B et E1 déployées. **Une migration** (`044_channels.sql`, lancée automatiquement au démarrage de l'API : ajoute nom, propriétaire à la table des présentations). Aucune variable `.env`. API puis web :
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-api` (attendre « running » : la migration s'applique au démarrage), puis `majlistv-web`.
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv && unzip -o majlis-tv-etapeC-chaines.zip
-# Coolify : Redeploy « api » puis « web »
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 Après le redéploiement : ouvrir `/chaines`, puis Studio → Chaînes (administrateur) pour vérifier les propriétaires attribués.
 
@@ -2017,9 +2031,14 @@ Valeurs de départ : **part 55 %** (comme YouTube), **frais de paiement 3 %**, *
 
 ### D.3 Prérequis et déploiement
 Étapes A, B, C et E1 déployées. **Une migration** (`045_revenue.sql`, automatique). Aucune variable `.env`. Dans Stripe → Développeurs → Webhooks, l'événement **`charge.refunded`** doit être coché (déjà demandé pour les cartes cadeaux) et `invoice.paid` aussi. API puis web :
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-api` (attendre « running » : la migration s'applique au démarrage), puis `majlistv-web`.
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv && unzip -o majlis-tv-etapeD-remuneration.zip
-# Coolify : Redeploy « api » puis « web »
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 Mise en route : Fonctions → activer « Rémunération des chaînes » → Paramètres → vérifier part, frais, seuil → le mois suivant, Administration → Rémunération → Clôturer → CSV → virements → Marquer payé.
 
@@ -2050,9 +2069,14 @@ Web : `app/studio/revenue/page.js`, `components/RevenueAdmin.js`, `app/admin/pag
 
 ### E2.2 Prérequis et déploiement
 Étapes A à D déployées (surtout C : chaînes). **Une migration** (`046_channel_images.sql`, automatique). Aucune variable `.env`. Les images sont stockées avec les miniatures : `CSP_STORAGE_ORIGINS` doit déjà contenir l'adresse du stockage (réglage existant, nécessaire aux miniatures). API puis web :
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-api` (attendre « running » : la migration s'applique au démarrage), puis `majlistv-web`.
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv && unzip -o majlis-tv-etapeE2-chaines-visuels.zip
-# Coolify : Redeploy « api » puis « web »
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 
 ### E2.3 Interrupteur
@@ -2092,9 +2116,14 @@ Une page « trop large » sur téléphone est une page où un élément dépasse
 
 ### F.3 Déploiement
 Aucune migration, aucun `.env`, **web uniquement** :
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-web` uniquement (l'API ne change pas).
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
 ```bash
-cd /opt/majlis-tv && unzip -o majlis-tv-etapeF-mobile.zip
-# Coolify : Redeploy « web »
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
 ```
 Vérifier ensuite sur votre téléphone : une conférence, Ma bibliothèque, Studio → Mes conférences, Administration → Utilisateurs.
 
@@ -2118,9 +2147,16 @@ Ce qui change (front-end uniquement, **aucune migration, aucune variable d'envir
 | Vitrine visiteur | Bannière d'en-tête : image de fond (image de bannière définie dans Admin → Accueil si mode « personnalisé », sinon affiche de la conférence à la une, sinon affiche de la conférence d'exemple) avec voile dégradé, titre en dégradé or, pastilles Regarder / Comprendre / Retenir / Mettre en pratique, boutons, et carte de la conférence d'exemple à droite (dessous sur téléphone). |
 
 ### Déploiement
-1. Remplacer le dossier `web/` par celui du zip (l'API ne change pas).
-2. Coolify : *Redeploy* du service web (ou sur le serveur Ubuntu 24 : `docker compose up -d --build web`).
-3. Vider le cache du navigateur (Ctrl + F5) pour charger le nouveau CSS.
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* `majlistv-web` uniquement (l'API ne change pas).
+4. Sur le VPS (SSH), réappliquer les limites et vérifier nginx :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+5. Vider le cache du navigateur (Ctrl + F5) pour charger le nouveau CSS.
 
 ### Vérification rapide
 - Membre connecté sur ordinateur : cliquer « Réduire le menu », recharger la page → le menu reste réduit.
