@@ -5,6 +5,7 @@
 // Rien n'est mis en file tant que l'envoi d'e-mails n'est pas configuré (ni annoncé, pour ne rien perdre).
 import { pool } from './db.js';
 import { getSetting, isOn, getNumber } from './settings.js';
+import { featureOn } from './features.js';
 import { enqueueEmail, smtpConf } from './mailer.js';
 import { speakerSlug } from './speakers.js';
 import { visibleSql } from './visibility.js';
@@ -17,7 +18,7 @@ const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.
 
 // --- 1. Intervenants suivis
 export async function runSpeakers(log) {
-  if (!isOn(await getSetting('notify_speakers_enabled'))) return 0;
+  if (!isOn(await getSetting('notify_speakers_enabled')) || !(await featureOn('follow'))) return 0;
   if (!(await smtpConf())) return 0;
   const talks = (await pool.query(
     `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, t.language FROM talks t

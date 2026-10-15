@@ -49,7 +49,7 @@ function Preview({ info, seconds, muted, onReady }) {
 
 // Fenêtre agrandie, posée en position fixe au-dessus de la vignette (elle n'est pas coupée par la rangée qui défile).
 function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
-  const { user, favs, toggleFav } = useApp();
+  const { user, favs, toggleFav, feat } = useApp();
   const router = useRouter();
   const [info, setInfo] = useState(null);
   const [playing, setPlaying] = useState(false);
@@ -87,7 +87,7 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
       <div className="hc-body">
         <div className="hc-actions">
           <Link href={`/talks/${talk.id}`} className="hc-btn play" aria-label={`${t('cardPlay')} : ${talk.title}`} title={t('cardPlay')}>▶</Link>
-          {show.favorite && <button type="button" className={`hc-btn${fav ? ' on' : ''}`} onClick={onFav} aria-pressed={fav} aria-label={fav ? t('favRemove') : t('favAdd')} title={fav ? t('favRemove') : t('favAdd')}>{fav ? '♥' : '♡'}</button>}
+          {show.favorite && feat('favorites') && <button type="button" className={`hc-btn${fav ? ' on' : ''}`} onClick={onFav} aria-pressed={fav} aria-label={fav ? t('favRemove') : t('favAdd')} title={fav ? t('favRemove') : t('favAdd')}>{fav ? '♥' : '♡'}</button>}
           <Link href={`/talks/${talk.id}`} className="hc-btn more" aria-label={t('cardDetails')} title={t('cardDetails')}>⌄</Link>
         </div>
         <h3 className="hc-title">{talk.title}</h3>

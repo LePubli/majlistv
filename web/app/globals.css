@@ -1659,3 +1659,22 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .gf-state { font-weight: 600; }
 .gf-links, .gf-offer { margin-top: 18px; }
 .gf-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* Page « Fonctions » de l'administration et pages de garde (étape A) */
+.gate { text-align: center; }
+.ft-alert { margin: 12px 0; padding: 12px 16px; border-radius: var(--radius-sm); background: rgba(240, 118, 107, .14); border: 1px solid var(--danger); color: var(--text); font-weight: 600; }
+.ft-msg { min-height: 1.4em; margin: 8px 0; color: var(--ok); }
+.ft-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; align-items: start; }
+.ft-group { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 18px 22px; }
+.ft-group h2 { margin: 0 0 6px; font-size: 1.1rem; }
+.ft-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line-soft); }
+.ft-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ft-switch { flex: none; width: 52px; height: 30px; padding: 0; border-radius: 15px; border: 1px solid var(--line); background: var(--line-soft); position: relative; cursor: pointer; transition: background .15s; }
+.ft-switch .ft-knob { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.ft-switch.on { background: var(--accent); border-color: var(--accent); }
+.ft-switch.on .ft-knob { transform: translateX(22px); background: var(--on-accent); }
+.ft-switch.warn.on { background: var(--danger); border-color: var(--danger); }
+.ft-switch:disabled { opacity: .6; cursor: progress; }
+[dir=rtl] .ft-switch .ft-knob { left: auto; right: 3px; }
+[dir=rtl] .ft-switch.on .ft-knob { transform: translateX(-22px); }
+@media (prefers-reduced-motion: reduce) { .ft-switch, .ft-switch .ft-knob { transition: none; } }

@@ -26,7 +26,7 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs, statsOn } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn, feat } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
@@ -349,7 +349,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
     ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
     ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(hasInsights && ins.summary ? [{ key: 'summary', label: t('summary') }] : []),
-    ...(user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
+    ...(feat('notes') && user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
   ];
   const current = tabs.some((x) => x.key === tab) ? tab : 'about';
   const onTabKey = (e) => {
@@ -476,13 +476,13 @@ export default function TalkPage({ initial = null, talkId = null }) {
             <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/intervenants/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
             <div className="talk-actions">
-              <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
+              {feat('favorites') && <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
                 <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
-              </button>
+              </button>}
               {ctx && ctx.prev && <Link className="fav" href={`/talks/${ctx.prev.id}`}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {t('prevEp')}</Link>}
               {ctx && ctx.next && <Link className="fav next" href={`/talks/${ctx.next.id}`}>{t('nextEp')} <span aria-hidden="true">{locale === 'ar' ? '←' : '→'}</span></Link>}
               <button type="button" className="fav" onClick={share}><span aria-hidden="true">↗</span> {t('shareBtn')}</button>
-              <ListButton talkId={id} t={t} call={call} user={user} />
+              {feat('lists') && <ListButton talkId={id} t={t} call={call} user={user} />}
               <ReportButton talkId={id} t={t} call={call} />
               <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
             </div>
@@ -504,7 +504,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               {talk.description && <p className="about-text">{talk.description}</p>}
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
             </div>
-            {user && hasPlayer && !talk.locked && (
+            {feat('notes') && user && hasPlayer && !talk.locked && (
               <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden={current !== 'notes'} className="tpanel">
                 <NotesPanel notes={notes} onAdd={addNote} onSave={saveNote} onDelete={dropNote} onSeek={seekTo} getPos={() => curSec() * 1000} t={t} />
               </div>

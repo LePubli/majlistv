@@ -1793,3 +1793,70 @@ Désactiver les réglages (alertes, sélection, cartes cadeaux) arrête tout san
 ### 21.9 À savoir
 - La carte cadeau donne l'accès **standard** (toutes les conférences, quiz de fin de vidéo). La formule **Apprentissage** (bilan, thèmes, révisions) n'est pas offerte par carte : à décider avec vous (prochaine évolution possible).
 - Les erreurs renvoyées par l'API lors de l'activation (« Code inconnu… ») sont en français quelle que soit la langue du site.
+
+## Étape A — Fonctions activables et désactivables
+
+### A.1 Ce que ça fait
+Une page **Administration → Fonctions** (menu latéral) avec **un interrupteur par fonction du site**. Une fonction coupée :
+- disparaît des **menus** (en-tête, tiroir mobile, menu du Studio et de l'administration) et des **pages** concernées (bouton favori, listes, notes, « Suivre », cartes cadeaux dans Mon compte…) ;
+- voit ses **routes API refusées** (`404` avec `code: "feature_off"`), y compris si quelqu'un tape l'adresse à la main ; l'inscription fermée répond `403` ;
+- affiche, sur ses pages, « Cette fonction n'est pas disponible » (fr / en / ar) au lieu d'un contenu cassé ;
+- arrête ses **e-mails automatiques** (révisions, bilan, alertes d'intervenants).
+
+**Aucune donnée n'est supprimée** : rallumer la fonction remet tout comme avant. Chaque changement est inscrit au **journal des actions** (« Fonctions : Quiz désactivée »).
+
+| Groupe | Fonctions |
+|---|---|
+| Catalogue | Séries et épisodes · Collections · Ouvrages |
+| Apprentissage | Quiz · Mise en pratique · Révision espacée · Mon bilan personnel · Parcours et attestations · Notes |
+| Communauté | Favoris · Listes de lecture · Suivre un intervenant · Citation du jour · Mejliss Kids · Statistiques d'audience |
+| Argent | Cartes cadeaux |
+| Communication | Sélection de la semaine · Annonce des nouvelles conférences |
+| Accès | Inscription ouverte · **Mode maintenance** |
+
+Les fonctions qui avaient déjà leur réglage (Kids, cartes cadeaux, mise en pratique, statistiques, sélection de la semaine, annonces) **gardent ce même réglage** : le modifier dans Paramètres ou dans Fonctions revient au même.
+
+**Mode maintenance** : visiteurs et membres voient une page d'attente (API : `503`, `code: "maintenance"`). Restent ouverts : connexion, mot de passe oublié, administration, webhook Stripe. **Un administrateur connecté garde l'accès à tout le site**, pour vérifier avant de rouvrir. Une confirmation est demandée avant de l'activer.
+
+### A.2 Prérequis et installation
+Aucune variable d'environnement, **aucune migration** : les interrupteurs sont des réglages (`feat_<nom>`) enregistrés dans la table `app_settings`. Tout est **activé par défaut**, sauf la maintenance : après la mise à jour, le site se comporte exactement comme avant.
+
+```bash
+cd /chemin/vers/majlistv
+unzip -o ~/majlis-tv-etapeA-fonctions.zip -d /tmp/eA && cp -r /tmp/eA/. .
+git add -A && git commit -m "Etape A : fonctions activables" && git push
+# DockPanel : redéployer majlistv-api, attendre « Running », puis majlistv-web
+```
+Après le redéploiement, lancer sur le serveur : `/root/apply-limits.sh`, puis vérifier le port nginx de l'API (7000).
+
+### A.3 Utilisation
+Administration → **Fonctions** → cliquer l'interrupteur (or = activée, gris = coupée). Le site se met à jour tout de suite pour les nouveaux visiteurs ; un onglet déjà ouvert se met à jour au prochain rechargement.
+
+### A.4 Ajouter une fonction plus tard (développeur)
+Tout est dans `api/src/featuresList.js` : ajouter une entrée `{ id, group, label, hint, rules: [{ re: '^/chemin' }] }`. L'interrupteur, la garde de routes, la route publique `GET /features` et la page d'administration suivent sans autre code. Côté site : `const { feat } = useApp(); feat('id')` pour masquer un bouton, et `web/lib/features.js` pour rattacher une page à une fonction.
+
+### A.5 API (résumé)
+| Route | Rôle |
+|---|---|
+| `GET /features` | état de toutes les fonctions `{ quiz: true, … }` (public ; aussi dans `GET /config`) |
+| `GET /admin/features` | groupes, fonctions, état (administrateur) |
+| `PUT /admin/features` | `{ values: { quiz: false } }` → nouvel état ; journalisé |
+
+### A.6 Tests
+```bash
+# API (3055), PG de test (5544). Attendre ~1 min : le cache des réglages dure 5 s et le test coupe puis rallume chaque fonction.
+python3 api/tests/test_features.py
+```
+Résultat attendu : « TOUT EST BON » (49 contrôles : fonctions coupées / rallumées, inscription fermée, maintenance avec accès administrateur, journal, droits).
+
+### A.7 Debug
+- **Une fonction coupée apparaît encore** : l'onglet n'a pas été rechargé (le menu vient du chargement de la page) ; recharger.
+- **Un membre voit « Fonction indisponible »** : la fonction est coupée dans Administration → Fonctions.
+- **Plus d'accès au site** : on ne peut pas se bloquer côté administration (les routes `/admin` ne sont jamais fermées). En cas d'oubli de la maintenance, un administrateur se connecte (`/login` reste ouvert) et rallume le site ; en dernier recours : `DELETE FROM app_settings WHERE key = 'feat_maintenance';` dans la base.
+- **Les e-mails ne partent plus** : vérifier que la fonction n'est pas coupée (révision espacée, bilan, suivi d'intervenants).
+
+### A.8 À savoir
+- Couper « Suivre un intervenant » masque aussi, dans Mon compte → Mes e-mails, le réglage de la sélection de la semaine (les deux partagent la même page d'API).
+- Couper « Séries » retire les séries de l'accueil, des menus et des pages ; les épisodes restent des conférences ordinaires.
+- Les abonnements et le paiement Stripe n'ont **pas** d'interrupteur à ce stade : couper le paiement a des conséquences sur l'accès qui sont à décider avec l'étape « Rémunération ».
+- Les fonctions à venir (chaînes, rémunération, vitrine visiteur) s'ajouteront à la même liste lors de leur étape.

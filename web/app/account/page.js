@@ -60,7 +60,7 @@ function Billing() {
 }
 
 export default function Account() {
-  const { user, ready, t } = useApp();
+  const { user, ready, t, feat } = useApp();
   const router = useRouter();
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   if (!user) return null;
@@ -72,8 +72,8 @@ export default function Account() {
       <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
       <Suspense fallback={null}><Billing /></Suspense>
       <EmailPrefs />
-      <MyGifts />
-      <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
+      {feat('gifts') && <MyGifts />}
+      {feat('gifts') && <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>}
     </main>
   );
 }

@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authPath } from '../lib/nav';
+import { useApp } from './Providers';
 
 export default function FollowButton({ slug, t, call, user }) {
+  const { feat } = useApp();
   const [on, setOn] = useState(null); // null = inconnu (chargement ou déconnecté)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -14,6 +16,7 @@ export default function FollowButton({ slug, t, call, user }) {
     call('/me/notifications').then((r) => { if (!off && r.ok) setOn(r.data.follows.some((f) => f.slug === slug)); });
     return () => { off = true; };
   }, [user, slug, call]);
+  if (!feat('follow')) return null; // fonction coupée dans Admin → Fonctions
   if (!user) return <Link className="fav" href={authPath('login', `/intervenants/${slug}`)} title={t('nfFollowLogin')}>＋ {t('nfFollow')}</Link>;
   if (on === null) return null;
   const toggle = async () => {

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { useApp } from './Providers';
 import { LOCALES } from '../lib/i18n';
+import { featureForPath } from '../lib/features';
 
 const ICONS = {
   list: 'M4 6h16M4 12h16M4 18h10',
@@ -28,7 +29,7 @@ const Icon = ({ d }) => (
 );
 
 export default function StudioShell({ children }) {
-  const { t, user, ready, logout, locale } = useApp();
+  const { t, user, ready, logout, locale, feat } = useApp();
   const path = usePathname();
   const params = useSearchParams();
   const router = useRouter();
@@ -56,14 +57,17 @@ export default function StudioShell({ children }) {
     if (href === '/studio/stats') return path.startsWith('/studio/stats');
     return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
   };
-  const groups = [
+  const allGroups = [
     ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
     ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] }]),
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
-      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
+      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
+  // Étape A : une fonction coupée disparaît du menu (l'entrée « Fonctions » reste toujours là pour la rallumer).
+  const featureOfItem = (href) => (href.startsWith('/admin?tab=gifts') ? 'gifts' : /^\/(admin\?tab=|studio\/)stats/.test(href) ? 'stats' : featureForPath(href));
+  const groups = allGroups.map((g) => ({ ...g, items: g.items.filter(([href]) => { const id = featureOfItem(href); return !id || feat(id); }) })).filter((g) => g.items.length);
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };
   const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
 

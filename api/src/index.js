@@ -37,6 +37,7 @@ import giftsRoutes from './routes/gifts.js';
 import { startNotifyMailer } from './notifyMailer.js';
 import listsRoutes from './routes/lists.js';
 import { startAudit } from './audit.js';
+import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
 import kidsRoutes from './routes/kids.js';
@@ -65,6 +66,7 @@ await app.register(cors, { origin: config.corsOrigin.split(','), credentials: tr
 await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 await app.register(jwt, { secret: config.jwtSecret, sign: { expiresIn: config.jwtExpires } });
 startAudit(app); // journal des actions de l'équipe (étape 20) : à poser AVANT les routes pour qu'elles en héritent
+registerFeatureGuard(app); // étape A : routes des fonctions coupées fermées, mode maintenance — aussi AVANT les routes
 
 // Vérifie le token JWT, puis que le compte existe toujours, n'est pas suspendu, et applique son rôle actuel.
 app.decorate('authenticate', async (req, reply) => {
@@ -126,15 +128,17 @@ app.get('/config', async () => {
   const show = {};
   for (const k of ['access', 'duration', 'speaker', 'category', 'language', 'description', 'favorite', 'progress']) show[k] = await on(`card_show_${k}`);
   // Le menu « Séries » n'apparaît que s'il y a au moins une série à montrer.
-  const hasSeries = (await listSeries({ limit: 1 })).length > 0;
-  const hasBooks = (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
+  const features = await allFeatures();
+  const hasSeries = features.series && (await listSeries({ limit: 1 })).length > 0;
+  const hasBooks = features.books && (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
   return {
-    hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    features, hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };
 });
 
+await app.register(featureRoutes);
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(talksRoutes);

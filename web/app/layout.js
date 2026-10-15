@@ -9,6 +9,7 @@ import './globals.css';
 import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import RouteGate from '../components/RouteGate';
 import StatsBeacon from '../components/StatsBeacon';
 import { DICT, DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
@@ -19,7 +20,7 @@ async function siteConfig() {
   try {
     const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
     const c = await res.json();
-    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false };
+    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {} };
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
@@ -43,14 +44,14 @@ export const viewport = { themeColor: '#0B0906', width: 'device-width', initialS
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const { appName, trialDays, cards, hasSeries, hasBooks, stats } = await siteConfig();
+  const { appName, trialDays, cards, hasSeries, hasBooks, stats, features } = await siteConfig();
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
-        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false}>
+        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
           <StatsBeacon />
           <Header />
-          {children}
+          <RouteGate>{children}</RouteGate>
           <Footer />
         </Providers>
       </body>

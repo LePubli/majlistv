@@ -9,6 +9,7 @@ import { visibleSql } from '../visibility.js';
 import { hasLearningTier } from '../access.js';
 import { learningBrief } from '../learning.js';
 import { recordAttempt } from '../revision.js';
+import { featureOn } from '../features.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const qidSchema = z.object({ qid: z.string().uuid() });
@@ -54,6 +55,7 @@ export async function quizInfo(talkId) {
     `SELECT t.quiz_enabled, (SELECT count(*)::int FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') AS n FROM talks t WHERE t.id = $1`, [talkId]);
   const r = rows[0];
   if (!r) return { available: false, count: 0 };
+  if (!(await featureOn('quiz'))) return { available: false, count: r.n }; // fonction coupée dans Admin → Fonctions
   const enabled = r.quiz_enabled ?? isOn(await getSetting('quiz_default_enabled'));
   return { available: enabled && r.n >= min, count: r.n };
 }

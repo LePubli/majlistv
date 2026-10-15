@@ -3,6 +3,7 @@
 // qui a au moins une révision du jour reçoit UN e-mail (jamais deux le même jour, même après un redémarrage), sauf s'il l'a désactivé.
 import { pool } from './db.js';
 import { getSetting, isOn } from './settings.js';
+import { featureOn } from './features.js';
 import { enqueueForUser, smtpConf } from './mailer.js';
 import { dueTalks, reminderOfTheDay, parisHour, todayParis } from './revision.js';
 
@@ -34,7 +35,7 @@ async function sendFor(userId, today) {
 }
 
 export async function runDaily(log) {
-  if (!isOn(await getSetting('revision_email_enabled'))) return 0;
+  if (!isOn(await getSetting('revision_email_enabled')) || !(await featureOn('revision'))) return 0;
   if (!(await smtpConf())) return 0; // envoi non configuré : rien n'est mis en file
   const hour = Number(await getSetting('revision_email_hour'));
   if ((await parisHour()) < (Number.isFinite(hour) ? hour : 8)) return 0;

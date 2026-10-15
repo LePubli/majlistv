@@ -71,7 +71,7 @@ const ICONS = {
 
 // En-tête du site : pages principales, loupe (recherche en panneau), compte. Sur téléphone : menu latéral.
 function MainHeader() {
-  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks } = useApp();
+  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks, feat } = useApp();
   const router = useRouter();
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
@@ -100,10 +100,10 @@ function MainHeader() {
   const pages = [
     ['/', t('home'), ICONS.home, true],
     ['/series', t('seriesNav'), ICONS.series, hasSeries],
-    ['/collections', t('colNav'), ICONS.series, true],
+    ['/collections', t('colNav'), ICONS.series, feat('collections')],
     ['/books', t('bkNav'), ICONS.books, hasBooks],
-    ['/learning', t('lrNav'), ICONS.learn, Boolean(user)],
-    ['/library', t('library'), ICONS.lib, Boolean(user)],
+    ['/learning', t('lrNav'), ICONS.learn, Boolean(user) && feat('learning')],
+    ['/library', t('library'), ICONS.lib, Boolean(user) && (feat('favorites') || feat('lists'))],
   ].filter((x) => x[3]);
   const logoutNow = () => { logout(); setMenu(false); setDrawer(false); router.push('/'); };
   const langSelect = (
@@ -123,7 +123,7 @@ function MainHeader() {
       </Link>
       <nav className="hd-nav" aria-label={t('mainNav')}>
         {pages.map(([href, label]) => <Link key={href} href={href} aria-current={cur(href)}>{label}</Link>)}
-        <Link href="/kids" className="hd-kids" aria-current={cur('/kids')}>{t('kdNav')}</Link>
+        {feat('kids') && <Link href="/kids" className="hd-kids" aria-current={cur('/kids')}>{t('kdNav')}</Link>}
       </nav>
       <div className="hd-right">
         <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
@@ -175,7 +175,7 @@ function MainHeader() {
             <nav aria-label={t('mainNav')} className="dr-nav">
               <p className="hd-menu-title">{t('hmDiscover')}</p>
               {pages.map(([href, label, ic]) => <Link key={href} href={href} aria-current={cur(href)}><Ico d={ic} />{label}</Link>)}
-              <Link href="/kids" className="dr-kids" aria-current={cur('/kids')}><Ico d={ICONS.price} />{t('kdNav')}</Link>
+              {feat('kids') && <Link href="/kids" className="dr-kids" aria-current={cur('/kids')}><Ico d={ICONS.price} />{t('kdNav')}</Link>}
               {manager && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('hmManage')}</p>

@@ -4,6 +4,7 @@
 // ni des engagements, car un e-mail n'est pas chiffré.
 import { pool } from './db.js';
 import { getSetting, isOn } from './settings.js';
+import { featureOn } from './features.js';
 import { enqueueForUser, smtpConf } from './mailer.js';
 import { parisHour } from './revision.js';
 
@@ -33,7 +34,7 @@ async function sendFor(userId, week) {
 }
 
 export async function runWeekly(log) {
-  if (!isOn(await getSetting('practice_email_enabled'))) return 0;
+  if (!isOn(await getSetting('practice_email_enabled')) || !(await featureOn('selfcheck'))) return 0;
   if (!(await smtpConf())) return 0; // envoi non configuré : rien n'est mis en file
   const hour = Number(await getSetting('practice_email_hour'));
   if ((await parisHour()) < (Number.isFinite(hour) ? hour : 17)) return 0;

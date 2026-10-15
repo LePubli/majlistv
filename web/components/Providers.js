@@ -12,7 +12,7 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -81,5 +81,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout, kid, kidMode, enterKid }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout, kid, kidMode, enterKid }}>{children}</Ctx.Provider>;
 }

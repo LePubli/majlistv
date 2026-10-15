@@ -3,6 +3,7 @@
 import { pool } from './db.js';
 import { cryptoReady, encrypt, decrypt } from './crypto.js';
 import { TRANSLATION_LANGS } from './langs.js';
+import { FEATURES, settingKey } from './featuresList.js';
 
 export const GROUPS = [
   { id: 'general', label: 'Général' },
@@ -210,6 +211,12 @@ export const FIELDS = [
   { key: 'meili_key', group: 'search', type: 'secret', label: 'Clé maître Meilisearch', env: 'MEILI_KEY', test: 'meili',
     help: 'La même valeur que la variable MEILI_MASTER_KEY du service majlistv-search. L\'index se remplit tout seul en quelques minutes.' },
 ];
+// Interrupteurs des fonctions (étape A) : un réglage « feat_<id> » par fonction sans réglage existant.
+// Masqués de la page Paramètres classique : ils se règlent dans Admin → Fonctions et paramètres.
+for (const f of FEATURES) {
+  if (f.setting) continue;
+  FIELDS.push({ key: settingKey(f), group: 'features', type: 'bool', label: f.label, def: f.def || 'true', hidden: true });
+}
 export const BY_KEY = Object.fromEntries(FIELDS.map((f) => [f.key, f]));
 export const isSecretType = (t) => t === 'secret' || t === 'secret_text';
 

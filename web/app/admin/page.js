@@ -1032,6 +1032,52 @@ function GiftsAdmin() {
   );
 }
 
+/* ---------------------------------------------------------------- Fonctions (étape A) */
+// Un interrupteur par fonction du site. Une fonction coupée disparaît du menu et des pages, et l'API refuse ses routes ;
+// les données ne sont jamais supprimées : on peut rallumer à tout moment.
+function FeaturesAdmin() {
+  const { call } = useApp();
+  const router = useRouter();
+  const [d, setD] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => { call('/admin/features').then((r) => r.ok && setD(r.data)); }, [call]);
+  if (!d) return <p className="meta">Chargement…</p>;
+  const flip = async (f) => {
+    if (f.id === 'maintenance' && !f.enabled && !window.confirm('Activer la maintenance ? Les visiteurs et les membres verront une page d\'attente. Vous gardez l\'accès en étant connecté comme administrateur.')) return;
+    setBusy(f.id); setMsg('');
+    const r = await call('/admin/features', { method: 'PUT', body: JSON.stringify({ values: { [f.id]: !f.enabled } }) });
+    setBusy('');
+    if (r.ok) { setD(r.data); router.refresh(); setMsg(`${f.label} : ${!f.enabled ? 'activée' : 'désactivée'}.`); } else setMsg(r.data?.error || 'Échec de l\'enregistrement');
+  };
+  const active = d.features.find((f) => f.id === 'maintenance')?.enabled;
+  return (
+    <section className="ft-admin">
+      <p className="meta">Chaque fonction se coupe ou se rallume ici, sans toucher au code. Les données sont conservées. Les changements sont appliqués tout de suite et inscrits au journal des actions.</p>
+      {active && <p className="ft-alert" role="alert">Mode maintenance actif : les visiteurs et les membres voient une page d'attente.</p>}
+      <p className="ft-msg" role="status" aria-live="polite">{msg}</p>
+      <div className="ft-grid">
+        {d.groups.map((g) => {
+          const list = d.features.filter((f) => f.group === g.id);
+          if (!list.length) return null;
+          return (
+            <section key={g.id} className="ft-group" aria-labelledby={`ft-${g.id}`}>
+              <h2 id={`ft-${g.id}`}>{g.label}</h2>
+              {list.map((f) => (
+                <div key={f.id} className="ft-row">
+                  <div className="ft-text"><b id={`ft-l-${f.id}`}>{f.label}</b><span className="meta small">{f.hint}</span></div>
+                  <button type="button" role="switch" aria-checked={f.enabled} aria-labelledby={`ft-l-${f.id}`} disabled={busy === f.id}
+                    className={`ft-switch${f.enabled ? ' on' : ''}${f.alert ? ' warn' : ''}`} onClick={() => flip(f)}><span className="ft-knob" aria-hidden="true" /></button>
+                </div>
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
   const { user, ready } = useApp();
@@ -1040,12 +1086,13 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux' };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'users' && <Users me={user.id} />}
+      {tab === 'features' && <FeaturesAdmin />}
       {tab === 'settings' && <Settings />}
       {tab === 'legal' && <LegalPages />}
       {tab === 'categories' && <Categories />}
