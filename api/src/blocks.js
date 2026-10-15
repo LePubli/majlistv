@@ -12,7 +12,8 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'] };
+export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
 export const ZONE_LABELS = { main: 'Contenu de la page', before: 'Avant le contenu de la page', after: 'Après le contenu de la page' };
 // Couleurs du thème utilisables dans un bloc (suivent Admin → Apparence) : « @accent » devient var(--accent).
 export const COLOR_REFS = {
@@ -73,7 +74,7 @@ export const BLOCK_TYPES = {
     label: 'Conférences', hint: 'Une rangée de conférences du catalogue (mise à jour automatique).',
     fields: [T('title', 'Titre de la rangée'), S('source', 'Quelles conférences', [['latest', 'Les plus récentes'], ['category', 'D’une catégorie']], 'latest'),
       N('category', 'Numéro de la catégorie (Admin → Catégories)', 0, 100000, 0), S('level', 'Niveau', [['', 'Tous'], ['beginner', 'Débutant'], ['intermediate', 'Intermédiaire'], ['advanced', 'Avancé']], ''),
-      N('limit', 'Nombre de conférences', 1, 12, 4)],
+      N('limit', 'Nombre de conférences', 1, 12, 4), T('moreLabel', 'Lien « Tout voir » : texte'), U('moreUrl', 'Lien « Tout voir » : adresse')],
     sample: { title: { fr: 'Nouveautés' } },
   },
   quote: {
@@ -89,10 +90,49 @@ export const BLOCK_TYPES = {
     label: 'Vidéo', hint: 'Une vidéo YouTube ou Vimeo intégrée.',
     fields: [{ k: 'url', label: 'Adresse de la vidéo (YouTube ou Vimeo)', kind: 'video' }, T('title', 'Titre de la vidéo')], sample: {},
   },
+  // ---- Blocs « données du site » (étape H) : leur contenu vient du catalogue et du compte de la personne, il se met à jour tout seul.
+  featured: {
+    label: 'À la une + Reprendre', hint: 'Grande conférence mise en avant (Admin → Conférences → « À la une »), avec à droite la carte « Reprendre » de la personne connectée.',
+    fields: [S('layout', 'Conférences à la une', [['auto', 'Plusieurs, qui défilent'], ['fixed', 'Une seule, fixe']], 'auto'),
+      S('resume', 'Carte « Reprendre »', [['yes', 'Oui (si une conférence est en cours)'], ['no', 'Non']], 'yes')],
+    sample: {},
+  },
+  mine: {
+    label: 'Ma progression', hint: 'Une rangée personnelle : à réviser, quiz à rattraper, ou conférences en cours. Invisible si la personne n’a rien dedans ou n’est pas connectée.',
+    fields: [S('what', 'Contenu', [['review', 'À réviser aujourd’hui'], ['quiz', 'Quiz à rattraper'], ['continue', 'Continuer à regarder']], 'review')],
+    sample: { what: 'review' },
+  },
+  channels: {
+    label: 'Chaînes à suivre', hint: 'Des chaînes avec leur bouton « Suivre ».',
+    fields: [T('title', 'Titre (à défaut : « Chaînes à suivre »)'), N('limit', 'Nombre de chaînes', 1, 10, 5),
+      S('order', 'Ordre', [['new', 'Celles que la personne ne suit pas encore, d’abord'], ['popular', 'Les plus suivies'], ['alpha', 'Ordre alphabétique']], 'new')],
+    sample: {},
+  },
+  collections: {
+    label: 'Collections', hint: 'Cycles, séries d’un intervenant et thèmes du moment (Studio → Collections).',
+    fields: [T('title', 'Titre (à défaut : « Collections »)'), N('limit', 'Nombre de collections', 1, 12, 3)], sample: {},
+  },
+  dayquote: {
+    label: 'Citation du jour', hint: 'Le verset ou le hadith du jour (Admin → Citations), identique pour tout le monde.',
+    fields: [S('style', 'Présentation', [['framed', 'Grand cadre'], ['compact', 'Compacte']], 'framed')], sample: {},
+  },
+  series: {
+    label: 'Séries', hint: 'Une rangée de séries.',
+    fields: [T('title', 'Titre (à défaut : « Séries »)'), N('limit', 'Nombre de séries', 1, 12, 8)], sample: {},
+  },
+  catrows: {
+    label: 'Rangées par catégorie', hint: 'Une rangée par grande catégorie, les thèmes préférés de la personne connectée d’abord (« Pour vous »).',
+    fields: [N('max', 'Nombre de rangées', 1, 12, 4)], sample: {},
+  },
+  kids: {
+    label: 'Bande Espace Kids', hint: 'Les dernières conférences Kids. Invisible si l’Espace Kids est coupé (Admin → Paramètres).', fields: [], sample: {},
+  },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'spacer', 'divider'];
+// Types qui lisent les données du site (l'éditeur les range à part).
+export const DATA_TYPES = ['featured', 'mine', 'channels', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
@@ -271,4 +311,26 @@ export function blockSummary(b, lang = 'fr') {
   if (b.type === 'video') return p.url || '';
   if (b.type === 'spacer') return `${p.size || 40} px`;
   return '';
+}
+
+// ---- Modèle de l'accueil des membres (maquette « Main » ; puis séries, rangées par catégorie et bande Kids, qui existaient déjà)
+export function homeTemplate() {
+  const mk = (type, props = {}) => { const b = newBlock(type); b.props = { ...b.props, ...props }; return b; };
+  return {
+    meta: {},
+    zones: {
+      main: [
+        mk('featured'),
+        mk('mine', { what: 'review' }),
+        mk('mine', { what: 'quiz' }),
+        mk('talks', { title: { fr: 'Nouveautés', en: 'New releases', ar: 'الجديد' }, limit: 8 }),
+        mk('channels'),
+        mk('collections'),
+        mk('series'),
+        mk('catrows'),
+        mk('kids'),
+        mk('dayquote'),
+      ],
+    },
+  };
 }

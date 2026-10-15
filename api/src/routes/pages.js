@@ -3,6 +3,7 @@
 // Deux sortes de pages :
 //   custom : page créée dans l'administration, adresse /p/<nom> (zone « main »).
 //   slot   : blocs ajoutés avant / après une page EXISTANTE du site (adresse exacte, ex. /pricing).
+//   home   : l'accueil des membres entièrement composé en blocs (adresse interne /_home, zone « main »). Une seule. Non publiée : l'accueil d'origine reste.
 // Chaque page a une version publiée et un brouillon (comme les thèmes de l'étape I1).
 //
 // Public :
@@ -20,13 +21,13 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, cleanContent, audienceMatches } from '../blocks.js';
+import { ZONES, HOME_PATH, cleanContent, audienceMatches, homeTemplate } from '../blocks.js';
 
 const KEEP_VERSIONS = 20;
 const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
-const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
 export function imageFormat(buf) {
@@ -123,7 +124,7 @@ export default async function pagesRoutes(app) {
 
   app.post('/admin/pages', admin, async (req, reply) => {
     const body = z.object({
-      kind: z.enum(['custom', 'slot']),
+      kind: z.enum(['custom', 'slot', 'home']),
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
       path: z.string().trim().max(100).optional(),
@@ -136,16 +137,18 @@ export default async function pagesRoutes(app) {
       const slug = b.slug ? b.slug : slugify(b.title);
       if (!SLUG.test(slug)) return reply.code(400).send({ error: 'Adresse invalide : lettres minuscules, chiffres et tirets (ex. ramadan-2027)' });
       path = `/p/${slug}`; title = b.title;
+    } else if (b.kind === 'home') {
+      path = HOME_PATH; title = 'Accueil des membres';
     } else {
       path = (b.path || '').replace(/\/+$/, '') || '/';
       if (!/^\/[a-z0-9_/-]{0,98}$/.test(path) || path.includes('//')) return reply.code(400).send({ error: 'Adresse invalide (ex. /pricing)' });
       if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration, le Studio ni l’espace Kids' });
       title = b.title || (path === '/' ? 'Accueil' : path);
     }
-    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
+    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [b.kind, path, title, emptyContent(b.kind), req.user.sub])).rows[0];
+      [b.kind, path, title, b.kind === 'home' ? homeTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
     req.auditSummary = `Page « ${title} » (${path}) créée`;
     return reply.code(201).send(full(r));
   });

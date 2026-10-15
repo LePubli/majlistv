@@ -2263,7 +2263,7 @@ docker restart dockpanel-git-majlistv-api
 ## Étape I2 — Textes modifiables (Admin → Textes)
 
 ### Description
-Tous les textes du site (1 563 intitulés × français, anglais, arabe) se modifient depuis **Admin → Textes**, sans toucher au code ni demander une mise à jour. Les textes d'origine restent dans `web/lib/i18n.js` ; la base ne garde que ce qui a été changé (table `site_texts`, une ligne par clé et par langue). Le site superpose les textes modifiés aux textes d'origine à chaque page, au plus tard 10 secondes après l'enregistrement. « Rétablir l'original » supprime la modification.
+Tous les textes du site (1 570 intitulés × français, anglais, arabe) se modifient depuis **Admin → Textes**, sans toucher au code ni demander une mise à jour. Les textes d'origine restent dans `web/lib/i18n.js` ; la base ne garde que ce qui a été changé (table `site_texts`, une ligne par clé et par langue). Le site superpose les textes modifiés aux textes d'origine à chaque page, au plus tard 10 secondes après l'enregistrement. « Rétablir l'original » supprime la modification.
 
 Dans la page :
 - recherche (sans tenir compte des accents ni des majuscules) dans les clés, les textes actuels et les textes d'origine ;
@@ -2383,3 +2383,59 @@ Depuis la racine du dépôt, avec l'API (port 3055) et la base de test (5544) d�
 - **« Certains blocs sont incomplets » à la publication** : un bloc Image sans image, une Vidéo sans adresse ou une rangée « d'une catégorie » sans numéro ; le bloc concerné est entouré en rouge.
 - **Aperçu vide** : l'aperçu est une page du site chargée dans un cadre ; si la CSP a été modifiée, vérifier que `frame-src` contient `'self'` (voir étape I1).
 - **Image impossible à supprimer** : elle est encore utilisée par une page (le message dit laquelle). Les anciennes versions de l'historique peuvent encore y faire référence : une version restaurée dont l'image a été supprimée affiche un emplacement vide.
+
+## Étape H — Accueil des membres en blocs (Admin → Pages → Accueil des membres)
+
+### Description
+L'accueil que voient les membres connectés (et tout le monde si la vitrine visiteurs est coupée) peut être recomposé avec des blocs, dans l'ordre voulu, avec visibilité par appareil et par public. Le modèle de départ suit la maquette « Main » :
+1. **À la une + Reprendre** : la conférence mise à la une (Admin → Conférences → « À la une » ; plusieurs défilent, ou une seule fixe) et, à droite, la carte « Reprendre » (dernière conférence en cours, temps restant). Sans conférence à la une, la plus récente est proposée.
+2. **Ma progression** ×2 : « À réviser aujourd'hui » et « Quiz à rattraper » (un 3e choix, « Continuer à regarder », existe). Invisibles si la personne n'a rien.
+3. **Conférences** « Nouveautés ».
+4. **Chaînes à suivre** : bouton Suivre / Suivi ✓ ; ordre au choix (non suivies d'abord, plus suivies, alphabétique).
+5. **Collections** (cycles, séries d'un intervenant, thèmes du moment).
+6. **Séries**, **Rangées par catégorie** (« Pour vous » d'abord) et **Bande Espace Kids** : ce que l'accueil d'origine affichait déjà.
+7. **Citation du jour** (grand cadre ou compacte).
+
+Ces blocs « données du site » se mettent à jour seuls, se taisent quand ils n'ont rien à montrer, et sont disponibles dans n'importe quelle page en blocs (rubrique « Données du site » du choix de bloc). Les titres se changent dans le bloc (par langue) ou dans Admin → Textes (groupe « Accueil membre (blocs) »).
+
+**Sécurité de repli** : tant que « Accueil des membres » n'est pas publié, ou s'il est supprimé ou mis hors ligne, l'accueil d'origine s'affiche, comme avant. Les visiteurs non connectés gardent la vitrine tant qu'elle est activée (Admin → Fonctions).
+
+### Fichiers
+- `api/migrations/050_site_pages_home.sql` : autorise le type de page `home` (adresse interne `/_home`) ;
+- `api/src/blocks.js` + `web/lib/blocks.js` (deux copies identiques) : 8 types de blocs, `homeTemplate()`, champs « Tout voir » du bloc Conférences ;
+- `api/src/routes/pages.js` : création de l'accueil (`POST /admin/pages {"kind":"home"}`), un seul possible ; `api/src/routes/home.js` : `GET /home/featured` ;
+- `web/components/HomeBlocks.js` (les 8 blocs), `web/components/PageBlocks.js` (`HomeBlocks`), `web/app/page.js` (choisit accueil en blocs ou d'origine ; `?cat=ID`), `web/components/PagesAdmin.js` (panneau « Accueil des membres », choix de blocs en deux groupes), `web/lib/i18n.js` (6 textes `hb…`), `web/app/globals.css` (`.hb-*`) ;
+- `api/tests/test_home_blocks.py` : 31 contrôles.
+
+### Prérequis
+Aucune nouvelle variable `.env`, aucune dépendance.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), puis GitHub Desktop : **Commit to main**, **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (migration 050), puis **`majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+```
+curl -s https://api-majlisstv.le-publicitaire.fr/home/featured
+```
+Doit répondre `{"fallback":…,"items":[…]}`. Ensuite : Admin → Pages → **Créer l'accueil à partir du modèle** → regardez l'aperçu → **Publier** → ouvrez `https://majlisstv.le-publicitaire.fr/` connecté : le nouvel accueil s'affiche. Pour revenir à l'ancien : Plus → Mettre hors ligne.
+
+### Exemples d'utilisation
+- **Mettre les chaînes avant les nouveautés** : ouvrir le bloc Chaînes, bouton ↑.
+- **Message pour les membres sans abonnement** : ajouter un bloc Bannière (public « Membres sans abonnement ») en haut.
+- **Moins de rangées sur téléphone** : onglet Affichage d'un bloc → décocher Téléphone.
+
+### Tests
+API (avec `RATE_LIMIT_MAX=5000`) : `python3 api/tests/test_home_blocks.py` (31 contrôles), puis les tests des étapes précédentes (relancer `test_pages.py` après ~60 s : limite de connexions). Interface testée dans Chromium : création depuis le modèle, aperçu, publication, À la une, carte Reprendre (« Il vous reste 20 min »), suivi d'une chaîne, ordre « non suivies d'abord », collections, citation, retour à l'accueil d'origine quand la page est hors ligne, `?cat=`, 1440 px, 390 px, arabe (droite à gauche), aucune erreur JavaScript. Pas testé : Safari / iPhone réels, Firefox, grande quantité de chaînes ou de collections.
+
+### Dépannage
+- **L'accueil n'a pas changé** : la page doit être publiée et « En ligne » ; attendre 10 secondes, recharger. Un visiteur non connecté voit la vitrine, pas l'accueil membre.
+- **Un bloc n'apparaît pas** : il n'a rien à montrer (pas de collection publiée, pas de conférence en cours, Espace Kids coupé, fonction Suivre ou Séries coupée dans Admin → Fonctions).
+- **Pas de carte Reprendre** : la personne n'a pas de conférence commencée (plus d'une minute vue, non terminée).
+- **« Tout voir » d'une catégorie** : ouvre `/?cat=ID` ; le bouton « retour » de la page ramène à l'accueil.

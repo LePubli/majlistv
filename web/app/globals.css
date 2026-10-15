@@ -2314,3 +2314,63 @@ h3.pb-h { font-size: clamp(1.15rem, 2vw, 1.4rem); }
 .pe-gallery { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .pe-gallery li { display: grid; gap: 4px; } .pe-thumb { padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; aspect-ratio: 16 / 9; } .pe-thumb:hover { border-color: var(--accent); }
 .pe-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; } .pe-thumb-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Étape H : accueil des membres en blocs (blocs « données du site ») ---- */
+.pb-home { padding: 8px var(--gutter) 56px; }
+.pb-home .pb:not(.mw-narrow) .pb-in { max-width: none; }
+.pb-home .pb { padding-block: 12px; }
+.pb .row-head, .pb .row-rail { padding-inline: 0; }
+.pb .row-rail { scroll-padding-inline: 0; }
+.pb .cit-framed, .pb .kd-band { margin-inline: 0; }
+.pe-types-title { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.hb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.hb-head .pb-h { margin: 0; }
+.hb-title { margin: 0; font-size: clamp(1.25rem, 2.4vw, 1.6rem); font-weight: 800; }
+.hb-all { font-size: 14px; font-weight: 600; color: var(--accent-light); text-decoration: none; white-space: nowrap; }
+.hb-all:hover { text-decoration: underline; }
+/* À la une + Reprendre */
+.hb-feature { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
+.hb-feature.has-side { grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); }
+.hb-wait { min-height: 360px; border-radius: 24px; background: var(--surface); opacity: .5; }
+.hb-hero { position: relative; min-height: 360px; border-radius: 24px; overflow: hidden; display: flex; align-items: flex-end; background: linear-gradient(120deg, #2A1D0C 0%, #6B4A18 55%, #B58634 100%); }
+.hb-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity .8s; }
+.hb-hero-bg.on { opacity: 1; }
+.hb-hero-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(11, 9, 6, .92) 0%, rgba(11, 9, 6, .1) 72%); }
+.hb-hero-body { position: relative; padding: clamp(20px, 3vw, 32px); display: grid; gap: 10px; max-width: 600px; color: #fff; }
+.hb-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-light); }
+.hb-hero h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.4rem); line-height: 1.12; font-weight: 800; color: #fff; max-width: none; }
+.hb-hero-meta { margin: 0; font-size: 15px; color: #fff; opacity: .85; }
+.hb-hero-sum { margin: 0; font-size: 15px; color: #fff; opacity: .8; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hb-hero-cta { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 6px; }
+.hb-dots { position: absolute; inset-block-end: 14px; inset-inline-end: 20px; }
+.hb-resume { display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line-soft); }
+.hb-resume-label { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+.hb-resume-card { display: grid; gap: 8px; color: inherit; text-decoration: none; }
+.hb-resume-thumb { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 14px; background: var(--surface-2) center / cover no-repeat; overflow: hidden; }
+.hb-bar { position: absolute; inset-inline: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, .25); }
+.hb-bar span { display: block; height: 100%; background: var(--accent); }
+.hb-resume-title { font-size: 1.05rem; line-height: 1.3; }
+.hb-resume-who { font-size: 14px; color: var(--muted); }
+.hb-resume-left { margin: 0; font-size: 14px; color: var(--muted); }
+.hb-resume-btn { margin-top: auto; justify-content: center; text-align: center; }
+@media (max-width: 900px) { .hb-feature.has-side { grid-template-columns: minmax(0, 1fr); } .hb-hero, .hb-wait { min-height: 300px; border-radius: 18px; } }
+/* Chaînes à suivre */
+.hb-channels { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }
+.hb-chan { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 12px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line-soft); text-align: center; }
+.hb-chan-link { display: flex; flex-direction: column; align-items: center; gap: 8px; color: inherit; text-decoration: none; min-width: 0; max-width: 100%; }
+.hb-chan-link b { font-size: 1rem; }
+.hb-chan-n { font-size: 13px; color: var(--muted); }
+.hb-follow { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--accent); background: transparent; color: var(--accent-light); font: 700 14px var(--font-body, inherit); text-decoration: none; cursor: pointer; }
+.hb-follow:hover { background: var(--gold-soft); }
+.hb-follow.on { background: var(--accent); color: var(--on-accent); }
+/* Collections */
+.hb-cols { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.hb-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 150px; padding: 22px; border-radius: 20px; text-decoration: none; color: #fff; background-size: cover; background-position: center; }
+.hb-col.k-cycle { background-image: linear-gradient(135deg, #3B2A12, #A9772A); }
+.hb-col.k-theme { background-image: linear-gradient(135deg, #1F2A2C, #4C8A86); }
+.hb-col.k-speaker { background-image: linear-gradient(135deg, #2C1F2E, #8A5B8F); }
+.hb-col-kind { font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; opacity: .85; }
+.hb-col-title { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+.hb-col-n { font-size: 14px; opacity: .85; }
+.hb-col:hover { filter: brightness(1.08); }
+.hb-col:focus-visible, .hb-follow:focus-visible, .hb-resume-card:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 3px; }

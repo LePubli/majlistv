@@ -42,6 +42,15 @@ export default async function homeRoutes(app) {
     return { enabled: true, talks: rows };
   });
 
+  // Bloc « À la une » de l'accueil en blocs : les conférences mises à la une (jusqu'à 5) ; à défaut, la plus récente (fallback = true).
+  app.get('/home/featured', async () => {
+    const vis = `${visibleSql('t')} AND ${adultSql('t')}`;
+    let { rows } = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.featured AND t.video_status = 'ready' AND ${vis} ORDER BY t.featured_at DESC LIMIT 5`);
+    const fallback = rows.length === 0;
+    if (fallback) rows = (await pool.query(`SELECT ${CARD} ${FROM} WHERE t.video_status = 'ready' AND ${vis} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 1`)).rows;
+    return { fallback, items: await Promise.all(rows.map((r) => card(r, { withDescription: true }))) };
+  });
+
   app.get('/home', async (req) => {
     const viewer = await app.optionalUser(req); // connecté : ses thèmes préférés passent en premier
     const mode = await getSetting('home_hero_mode');

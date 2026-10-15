@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import TalkCard from './TalkCard';
+import { DataBlock } from './HomeBlocks';
 import { tx, validUrl, validMedia, colorCss, videoEmbed, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
 import { DIR } from '../lib/i18n';
 
@@ -71,10 +72,16 @@ function TalksBlock({ p, lang }) {
     return () => { dead = true; };
   }, [limit, category, p.level]);
   const title = tx(p.title, lang);
+  const moreLabel = tx(p.moreLabel, lang);
   if (talks && !talks.length) return null;
   return (
     <>
-      {title && <h2 className="pb-h">{title}</h2>}
+      {(title || (moreLabel && validUrl(p.moreUrl || ''))) && (
+        <div className="hb-head">
+          {title && <h2 className="pb-h">{title}</h2>}
+          {moreLabel && validUrl(p.moreUrl || '') && <Link2 href={p.moreUrl}><span className="hb-all">{moreLabel} →</span></Link2>}
+        </div>
+      )}
       <div className="pb-talks">{(talks || []).map((talk) => <TalkCard key={talk.id} talk={talk} t={t} />)}</div>
     </>
   );
@@ -148,7 +155,7 @@ function Block({ b, lang }) {
     }
     case 'spacer': return <div className="pb-spacer" style={{ height: Math.max(8, Math.min(240, Number(p.size) || 40)) }} aria-hidden="true" />;
     case 'divider': return <hr className="pb-divider" />;
-    default: return null;
+    default: return <DataBlock b={b} lang={lang} />; // blocs « données du site » (étape H) ; null pour un type inconnu
   }
 }
 
@@ -241,6 +248,16 @@ export function CustomPage({ page }) {
     <main className="pb-page">
       {!hasH1 && <h1 className="sr-only">{title}</h1>}
       <PageZone path={page.path} zone="main" initial={page.zones?.main} targeted={page.targeted} className="pb-main" />
+    </main>
+  );
+}
+
+// Accueil des membres en blocs (étape H) : le serveur renvoie les blocs adaptés à la personne (connexion, abonnement).
+export function HomeBlocks({ page }) {
+  const { locale } = useApp();
+  return (
+    <main className="pb-page pb-home" lang={locale} dir={DIR[locale] || 'ltr'}>
+      <BlocksView blocks={page.zones?.main || []} locale={locale} />
     </main>
   );
 }

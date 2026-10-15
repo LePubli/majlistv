@@ -13,7 +13,7 @@ const MAX_PER_REQUEST = 1000;
 
 // Regroupement des clés par page / zone du site (d'après le début de la clé). Sert uniquement à filtrer la liste.
 const GROUP_OF = {
-  kd: 'Espace Kids', kr: 'Espace Kids', kc: 'Espace Kids',
+  hb: 'Accueil membre (blocs)', kd: 'Espace Kids', kr: 'Espace Kids', kc: 'Espace Kids',
   bk: 'Ouvrages', pz: 'Mise en pratique', st: 'Statistiques et suivi', sr: 'Séries et parcours',
   qz: 'Quiz', qp: 'Quiz et progression', vt: 'Page d’accueil visiteur', hero: 'Page d’accueil visiteur',
   rm: 'Rappels', ct: 'Studio : conférences', nw: 'Studio : nouvelle conférence', thumb: 'Studio : miniatures', import: 'Studio : import',

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 // Respecte « réduire les animations » : pas de défilement automatique ni de vidéo d'ambiance.
-function useReducedMotion() {
+export function useReducedMotion() {
   const [reduced, setReduced] = useState(true);
   useEffect(() => {
     const q = window.matchMedia('(prefers-reduced-motion: reduce)');

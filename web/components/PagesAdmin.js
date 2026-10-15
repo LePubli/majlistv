@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { BlockEditor, TextField, LANG_NAMES } from './PageFields';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
 
 const DEVICE_SIZES = [{ id: 390, label: 'Téléphone' }, { id: 768, label: 'Tablette' }, { id: 1024, label: 'Petit écran' }, { id: 1440, label: 'Grand écran' }];
 const KNOWN_PATHS = [
@@ -213,7 +213,7 @@ function Editor({ pageId, onBack, pages }) {
     if (r.ok) setPage((p) => ({ ...p, title: r.data.title, path: r.data.path })); else setMsg(r.data?.error || 'Échec.');
   };
   const remove = async () => {
-    if (!window.confirm(`Supprimer définitivement la page « ${page.title} » et tous ses blocs ?`)) return;
+    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : `Supprimer définitivement la page « ${page.title} » et tous ses blocs ?`)) return;
     const r = await call(`/admin/pages/${pageId}`, { method: 'DELETE' });
     if (r.ok) onBack(); else setMsg(r.data?.error || 'Échec.');
   };
@@ -239,7 +239,7 @@ function Editor({ pageId, onBack, pages }) {
       <div className="ap-top">
         <div>
           <button type="button" className="link u" onClick={async () => { if (timer.current) await flush(); onBack(); }}>← Toutes les pages</button>
-          <h2 className="pe-title">{page.title} <code>{page.path}</code></h2>
+          <h2 className="pe-title">{page.title} {page.kind !== 'home' && <code>{page.path}</code>}</h2>
         </div>
         <div className="ap-actions">
           <button type="button" className="btn" onClick={publish} disabled={!page.hasDraft && save !== 'pending'}>Publier</button>
@@ -250,7 +250,7 @@ function Editor({ pageId, onBack, pages }) {
             <div className="ap-more-menu">
               <button type="button" onClick={rename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>
               {page.publishedAt && <button type="button" onClick={() => setLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
-              {page.live && <a className="pe-menu-link" href={page.path} target="_blank" rel="noopener noreferrer">Voir la page sur le site ↗</a>}
+              {page.live && <a className="pe-menu-link" href={page.kind === 'home' ? '/' : page.path} target="_blank" rel="noopener noreferrer">Voir la page sur le site ↗</a>}
               <button type="button" className="danger" onClick={remove}>Supprimer la page</button>
             </div>
           </details>
@@ -286,6 +286,7 @@ function Editor({ pageId, onBack, pages }) {
             </div>
           </div>
 
+          {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site pour les membres connectés (et pour tous si la vitrine visiteurs est coupée). Tant qu’elle n’est pas publiée, ou si vous la supprimez ou la mettez hors ligne, l’accueil d’origine reste en place. Les blocs « données du site » (À la une, Chaînes à suivre, Collections…) se mettent à jour tout seuls.</p>}
           {page.kind === 'custom' && (
             <details className="pe-meta">
               <summary>Titre et description de la page (affichés sur Google et dans l’onglet du navigateur)</summary>
@@ -333,7 +334,10 @@ function Editor({ pageId, onBack, pages }) {
                 </ol>
                 {adding === zone ? (
                   <div className="pe-types" role="group" aria-label="Choisir un type de bloc">
-                    {TYPE_ORDER.map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
+                    <p className="pe-types-title">Contenu écrit par vous</p>
+                    {TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
+                    <p className="pe-types-title">Données du site (mises à jour automatiquement)</p>
+                    {TYPE_ORDER.filter((t) => DATA_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
                     <button type="button" className="link u" onClick={() => setAdding(null)}>Annuler</button>
                   </div>
                 ) : (
@@ -376,6 +380,7 @@ export default function PagesAdmin() {
   if (!pages) return <p className="meta" role="status">{msg || 'Chargement…'}</p>;
   if (editing) return <Editor pageId={editing} pages={pages} onBack={() => { setEditing(null); load(); }} />;
 
+  const home = pages.find((p) => p.kind === 'home');
   const custom = pages.filter((p) => p.kind === 'custom');
   const slots = pages.filter((p) => p.kind === 'slot');
   const free = KNOWN_PATHS.filter(([p]) => !slots.some((s) => s.path === p));
@@ -385,6 +390,22 @@ export default function PagesAdmin() {
     <section className="pe-list-view" lang="fr" dir="ltr">
       <p className="meta">Créez de nouvelles pages et composez-les avec des blocs (bannière, titre, texte, image, cartes, conférences, questions…), ou ajoutez des blocs avant ou après une page existante du site. Chaque bloc peut être réservé à un appareil ou à un public, et avoir ses propres couleurs.</p>
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
+
+      <div className="panel">
+        <h2 className="panel-title">Accueil des membres</h2>
+        <p className="meta small">Recomposez l’accueil du site avec des blocs : À la une + Reprendre, Chaînes à suivre, Collections, Citation du jour, rangées de conférences… dans l’ordre que vous voulez, avec une visibilité par appareil et par public. Le modèle de départ reprend la maquette « Main ».</p>
+        {home ? (
+          <ul className="pe-pages">
+            <li>
+              <div><strong>{home.title}</strong><br />{status(home)} {home.hasDraft && <span className="ap-tag">brouillon en cours</span>} <span className="meta small">modifié le {fmtDate(home.updatedAt)}</span></div>
+              <span className="pe-btns">
+                {home.live && <a className="btn ghost pe-mini" href="/" target="_blank" rel="noopener noreferrer">Voir ↗</a>}
+                <button type="button" className="btn pe-mini" onClick={() => setEditing(home.id)}>Modifier</button>
+              </span>
+            </li>
+          </ul>
+        ) : <button type="button" className="btn" onClick={() => create({ kind: 'home' })}>Créer l’accueil à partir du modèle</button>}
+      </div>
 
       <div className="panel">
         <h2 className="panel-title">Nouvelle page</h2>
