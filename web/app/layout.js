@@ -18,6 +18,8 @@ import { DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
 import { siteTheme, themeBg } from '../lib/theme';
 import { dictFor } from '../lib/texts';
+import { pageSlots } from '../lib/pages';
+import { PageSlots } from '../components/PageBlocks';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -50,7 +52,7 @@ export const generateViewport = async () => ({ themeColor: themeBg(await siteThe
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme, dict] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale)]);
+  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme, dict, slots] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots()]);
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
@@ -62,7 +64,7 @@ export default async function RootLayout({ children }) {
           <ResponsiveTables />
           <SkipLink />
           <Header />
-          <MemberShell><RouteGate>{children}</RouteGate></MemberShell>
+          <MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell>
           <Footer />
         </Providers>
       </body>

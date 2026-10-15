@@ -2317,3 +2317,69 @@ Depuis la racine du dépôt, avec l'API (port 3055) et la base de test (5544) d�
 - **« Enregistrement impossible »** : session administrateur expirée (se reconnecter) ou texte refusé (vide, trop long : 2000 caractères maximum).
 - **Un texte de la page reste inchangé** : il est peut-être écrit directement dans le code et non dans le dictionnaire ; il n'est alors pas modifiable ici (à signaler pour l'ajouter au dictionnaire).
 - **Retour à l'origine d'un coup** : Plus → Tout rétablir à l'origine.
+
+## Étape I3 — Pages en blocs (Admin → Pages)
+
+### Description
+Depuis **Admin → Pages**, on crée de nouvelles pages et on compose chaque page avec des blocs, sans toucher au code. Deux usages :
+- **Pages créées** : adresse `/p/<nom>` (ex. `/p/ramadan-2027`), ajoutées automatiquement au plan du site (`sitemap.xml`) tant qu'elles sont en ligne ;
+- **Blocs sur une page existante** : des blocs affichés **avant** et/ou **après** le contenu habituel d'une page du site (Accueil, Tarifs, Bibliothèque…, adresse exacte). Le contenu habituel reste en place. L'administration, le Studio et l'espace Kids ne peuvent pas recevoir de blocs.
+
+**Les 12 types de blocs** : bannière (titre, texte, 2 boutons, image de fond), titre, texte (gras, italique, liens, listes), image, bouton, cartes (2 à 4 colonnes), rangée de conférences (les plus récentes ou d'une catégorie), citation, questions fréquentes, vidéo YouTube/Vimeo (intégration sans cookies), espace, séparateur.
+
+**Réglages de chaque bloc** :
+- *Contenu* : textes en français, anglais et arabe (une langue à la fois ; des pastilles montrent les langues remplies ; à défaut, le français s'affiche) ;
+- *Affichage* : appareils (téléphone ≤ 700 px, tablette 701–1024 px, ordinateur ≥ 1025 px) et public (tout le monde, visiteurs non connectés, membres connectés, abonnés, membres sans abonnement) ;
+- *Style* : couleur du texte et du fond (couleurs du thème, qui suivent Admin → Apparence, ou code libre), alignement, largeur du contenu, espaces au-dessus et en dessous, arrondi.
+
+**Fonctionnement** : comme pour l'apparence, un **brouillon** est enregistré tout seul une seconde après chaque modification ; l'**aperçu** montre la page à la taille de l'appareil choisi (un clic sur un bloc de l'aperçu l'ouvre dans l'éditeur) ; **Publier** met en ligne (et garde la version dans l'**historique**, 20 versions) ; **Mettre hors ligne** retire la page sans rien perdre. Les images se téléversent dans la bibliothèque (PNG, JPEG, WebP, GIF, 3 Mo ; les fichiers SVG sont refusés).
+
+**Public et confidentialité** : un bloc réservé à un public n'est jamais écrit dans le code source de la page pour les autres : le serveur n'envoie que les blocs « tout le monde », puis le navigateur charge les blocs adaptés à la personne connectée. C'est un **ciblage d'affichage**, pas une protection : pour réserver une vidéo, utilisez l'abonnement.
+
+**Sécurité** : les textes sont du texte brut (du HTML tapé s'affiche tel quel, jamais interprété) ; les adresses doivent commencer par `/`, `https://`, `mailto:` ou `tel:` (`javascript:` et `//` sont refusés) ; les images viennent uniquement de la bibliothèque ; les vidéos uniquement de YouTube/Vimeo ; les couleurs sont des codes hexadécimaux ou des couleurs du thème ; tout est revérifié par l'API à chaque enregistrement.
+
+### Fichiers
+- `api/migrations/049_site_pages.sql` : tables `site_pages`, `site_page_versions`, `site_page_media` ;
+- `api/src/blocks.js` et `web/lib/blocks.js` : **deux copies identiques** (types de blocs, validation) — un test vérifie l'égalité ; si vous en modifiez une, copiez-la sur l'autre ;
+- `api/src/routes/pages.js` : routes publiques (`/pages/slots`, `/pages/view`, `/pages/public-list`, `/pages/media/:id`) et d'administration (`/admin/pages…`, `/admin/page-media…`) ;
+- `api/src/features.js` : ces pages restent lisibles en mode maintenance ; `api/src/index.js` : enregistrement des routes + réglage facultatif `RATE_LIMIT_MAX` (limite de requêtes par minute, 100 par défaut ; sert aux tests) ;
+- `web/components/PageBlocks.js` (rendu des blocs et des emplacements), `web/app/p/[slug]/page.js` (pages créées), `web/app/pb-preview/` (aperçu), `web/lib/pages.js`, `web/app/layout.js` (emplacements autour de chaque page), `web/app/sitemap.js` ;
+- `web/components/PagesAdmin.js` et `web/components/PageFields.js` : l'éditeur ; `web/components/StudioShell.js`, `web/app/admin/page.js`, `web/lib/i18n.js` (entrée de menu « Pages ») ;
+- `web/app/globals.css` : styles `.pb-*` (blocs) et `.pe-*` (éditeur) ;
+- `api/tests/test_pages.py` : 108 contrôles.
+
+### Prérequis
+Aucune nouvelle variable `.env`, aucune dépendance. Les images utilisent le stockage Garage déjà en place (dossier `site/pages/`).
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), puis GitHub Desktop : **Commit to main**, **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** en premier (la migration 049 s'applique au démarrage), puis **`majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+```
+curl -s https://api-majlisstv.le-publicitaire.fr/pages/slots
+```
+Doit répondre `{"version":"…","slots":{}}` tant qu'aucun bloc n'est publié. Ensuite : Admin → Pages → « Nouvelle page » (titre « Test »), « + Ajouter un bloc » → Bannière, tapez un titre, attendez « Brouillon enregistré », **Publier**, puis ouvrez `https://majlisstv.le-publicitaire.fr/p/test` (déconnecté) : la bannière s'affiche. « Plus → Mettre hors ligne » la retire (page « introuvable »).
+
+### Exemples d'utilisation
+- **Page de campagne** : Nouvelle page « Ramadan 2027 » → Bannière + Rangée de conférences d'une catégorie + Questions fréquentes → Publier → partager `/p/ramadan-2027`.
+- **Bandeau sur Tarifs** : « Blocs sur les pages existantes » → Tarifs → zone « Avant » → Titre + Texte « Offre de rentrée » → Publier.
+- **Message pour les nouveaux** : un bloc Texte avec public « Visiteurs non connectés » sur la page d'accueil, et un autre « Membres connectés » pour les inscrits.
+- **Bloc seulement sur téléphone** : onglet Affichage → décocher Tablette et Ordinateur.
+
+### Tests
+Depuis la racine du dépôt, avec l'API (port 3055) et la base de test (5544) démarrées, et `RATE_LIMIT_MAX=5000` dans l'environnement de l'API de test : `python3 api/tests/test_pages.py` (108 contrôles : droits, validation et refus d'adresses/couleurs dangereuses, images, publication, public visiteur/membre/abonné, emplacements, historique, hors ligne, maintenance). Les tests des étapes précédentes passent toujours. Interface testée dans Chromium : création, aperçu à 390 et 1440 px, arabe, envoi d'image, visibilité par appareil, publication, emplacement sur `/pricing`, navigation sans rechargement, téléphone 390 px. Pas testé : Safari / iPhone réels, Firefox, lecture réelle des vidéos YouTube/Vimeo (réseau bloqué dans l'environnement de test).
+
+### Dépannage
+- **La page ne s'affiche pas (« introuvable »)** : elle n'est pas publiée ou elle est hors ligne (badge « En ligne » dans l'éditeur), ou l'adresse a changé.
+- **Un bloc n'apparaît pas sur le site** : vérifier l'onglet Affichage (appareil, public) ; l'aperçu l'affiche toujours avec une étiquette.
+- **Le bloc ajouté à une page existante n'apparaît pas** : attendre 10 secondes, recharger ; après une navigation sans rechargement d'une session très ancienne, un rechargement est parfois nécessaire.
+- **« Certains blocs sont incomplets » à la publication** : un bloc Image sans image, une Vidéo sans adresse ou une rangée « d'une catégorie » sans numéro ; le bloc concerné est entouré en rouge.
+- **Aperçu vide** : l'aperçu est une page du site chargée dans un cadre ; si la CSP a été modifiée, vérifier que `frame-src` contient `'self'` (voir étape I1).
+- **Image impossible à supprimer** : elle est encore utilisée par une page (le message dit laquelle). Les anciennes versions de l'historique peuvent encore y faire référence : une version restaurée dont l'image a été supprimée affiche un emplacement vide.

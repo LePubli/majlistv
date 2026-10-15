@@ -36,6 +36,7 @@ import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
+import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
 import collectionsRoutes from './routes/collections.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -69,7 +70,8 @@ const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 await app.register(helmet);
 await app.register(cors, { origin: config.corsOrigin.split(','), credentials: true });
-await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+// 100 requêtes par minute et par adresse ; RATE_LIMIT_MAX (facultatif) sert aux tests automatiques, qui en font davantage.
+await app.register(rateLimit, { max: Number(process.env.RATE_LIMIT_MAX) || 100, timeWindow: '1 minute' });
 await app.register(jwt, { secret: config.jwtSecret, sign: { expiresIn: config.jwtExpires } });
 startAudit(app); // journal des actions de l'équipe (étape 20) : à poser AVANT les routes pour qu'elles en héritent
 registerFeatureGuard(app); // étape A : routes des fonctions coupées fermées, mode maintenance — aussi AVANT les routes
@@ -165,6 +167,7 @@ await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);
 await app.register(textsRoutes);
+await app.register(pagesRoutes);
 await app.register(moderationRoutes);
 await app.register(collectionsRoutes);
 await app.register(notificationsRoutes);

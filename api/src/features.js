@@ -23,7 +23,7 @@ export async function allFeatures() {
 const RULES = FEATURES.flatMap((f) => (f.rules || []).map((r) => ({ id: f.id, re: new RegExp(r.re), methods: r.methods || null })));
 
 // Chemins toujours ouverts pendant la maintenance : santé, configuration, thème (apparence de la page de maintenance), connexion, administration, webhook de paiement.
-const MAINTENANCE_OPEN = /^\/(health|config|theme(\/|$)|texts$|features|auth\/|admin(\/|$)|billing\/webhook)/;
+const MAINTENANCE_OPEN = /^\/(health|config|theme(\/|$)|texts$|pages\/(slots|view|media|public-list)|features|auth\/|admin(\/|$)|billing\/webhook)/;
 
 // À brancher avant l'enregistrement des routes : ferme les routes des fonctions coupées (404) et gère la maintenance (503).
 export function registerFeatureGuard(app) {
