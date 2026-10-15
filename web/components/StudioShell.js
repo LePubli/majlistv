@@ -93,7 +93,7 @@ export default function StudioShell({ children }) {
           ))}
         </nav>
         <div className="studio-foot">
-          <Link href="/" className="studio-link"><Icon d={ICONS.eye} /><span>{t('viewSite')}</span></Link>
+          <Link href="/" className="studio-link" aria-label={t('viewSite')}><Icon d={ICONS.eye} /><span>{t('viewSite')}</span></Link>
           <select value={locale} onChange={setLocale} aria-label={t('languageMenu')}>
             {Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>

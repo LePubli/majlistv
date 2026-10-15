@@ -21,13 +21,14 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 | A | Fonctions activables et désactivables (Administration → Fonctions, mode maintenance) | ✅ livré, à déployer |
 | C | Chaînes (intervenant fusionné, propriétaire organisateur, attribution modération, Chaînes suivies) | ✅ livré, à déployer |
 | D | Rémunération des chaînes (part des abonnements, temps de visionnage, clôture mensuelle, CSV, suivi des paiements) | ✅ livré, à déployer |
+| F | Mobile (plus aucune page plus large que l'écran, tableaux en fiches, zones tactiles) et accessibilité (lien d'évitement, repères, étiquettes, contrastes) | ✅ livré, à déployer |
 | E2 | Avatar et bannière des chaînes (page publique, liste, Studio), journal des actions des modérateurs sur les chaînes | ✅ livré, à déployer |
 | E1 | Vitrine visiteur (exemple réel + quiz jouable), citation du jour encadrée | ✅ livré, à déployer |
 | B | Menu latéral membre, barre du bas mobile, onglets (compte, apprentissage, bibliothèque), fil d'Ariane | ✅ livré, à déployer |
 
 ## À venir
 
-**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · ~~C chaînes~~ (fait) · ~~D rémunération~~ (fait) · E pages refondues + vitrine visiteur · F mobile et accessibilité. Chaque étape sur « go ».
+**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · ~~C chaînes~~ (fait) · ~~D rémunération~~ (fait) · ~~E pages refondues + vitrine visiteur~~ (fait) · ~~F mobile et accessibilité~~ (fait). Chaque étape sur « go ».
 
 ### Phase A — Avant d'ouvrir au public
 

@@ -12,7 +12,7 @@ export default function RouteGate({ children }) {
     if (!ready) return null; // on attend de savoir si c'est un administrateur
     if (!user || user.role !== 'admin') {
       return (
-        <main className="card gate" role="status">
+        <main className="card gate">
           <h1>{t('mtTitle')}</h1>
           <p className="meta">{t('mtText')}</p>
           <p><Link className="link u" href="/login">{t('login')}</Link></p>
@@ -23,7 +23,7 @@ export default function RouteGate({ children }) {
   const id = featureForPath(path);
   if (id && features[id] === false) {
     return (
-      <main className="card gate" role="status">
+      <main className="card gate">
         <h1>{t('ftOffTitle')}</h1>
         <p className="meta">{t('ftOffText')}</p>
         <p><Link className="btn" href="/">{t('ftBackHome')}</Link></p>

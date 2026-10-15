@@ -71,7 +71,7 @@ export default function Vitrine({ cit, latest, wait }) {
   const stdFrom = from(plans?.plans); const learnFrom = from(plans?.learning?.plans);
 
   return (
-    <div className={`vt${wait ? ' vt-wait' : ''}`}>
+    <main className={`vt${wait ? ' vt-wait' : ''}`}>
       <section className="vt-hero" aria-label={t('vtBadge')}>
         <span className="vt-badge">{t('vtBadge')}</span>
         <h1>{t('vtTitle1')}<br /><span>{t('vtTitle2')}</span></h1>
@@ -168,6 +168,6 @@ export default function Vitrine({ cit, latest, wait }) {
       )}
 
       <CitationCard c={cit} t={t} framed />
-    </div>
+    </main>
   );
 }

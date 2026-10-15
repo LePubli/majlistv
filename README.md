@@ -2071,3 +2071,36 @@ Web : `components/ChannelAvatar.js`, `components/ChannelImages.js`, `components/
 - Pas de recadrage manuel : l'image est centrée automatiquement. Choisir une bannière dont le sujet est au centre.
 - L'image de la chaîne n'est pas encore utilisée comme aperçu de partage (réseaux sociaux) : les liens d'images sont temporaires.
 - L'harmonisation visuelle complète du Studio et de l'Administration n'est pas incluse ici ; elle sera traitée avec l'étape F (mobile et accessibilité).
+
+
+## Étape F — Mobile et accessibilité
+
+### F.1 Ce qui a été corrigé
+Une page « trop large » sur téléphone est une page où un élément dépasse l'écran : le navigateur la réduit alors pour tout afficher. Un audit automatique (360 et 390 px, 58 pages dont Studio et Administration) avec des contenus volontairement très longs a trouvé et corrigé :
+- **Page d'une conférence** : un titre de série ou un mot très long (adresse, nom sans espace) pouvait élargir toute la page (jusqu'à 1900 px). Les textes passent maintenant à la ligne et les colonnes de la page ne peuvent plus être élargies par leur contenu.
+- **Administration → Journal des actions** : les routes longues élargissaient la page.
+- **Tableaux** (Administration : utilisateurs, cartes cadeaux, rémunération ; Studio : revenus, statistiques) : sur téléphone, chaque ligne devient une **fiche** « Colonne : valeur » au lieu d'un tableau à faire défiler de côté. Mécanisme général : les tableaux futurs en profitent s'ils utilisent les classes existantes (`adm-table`, `st-table`, `studio-table`).
+- **Studio → Mes conférences** : la case de sélection (modification en lot) n'écrase plus le titre ; la vignette passe au-dessus du titre sur petit écran.
+- **Zones tactiles** : boutons, pastilles, onglets et menus d'au moins 44 px de haut sur écran tactile.
+
+### F.2 Accessibilité
+- **Lien « Aller au contenu »** (premier élément atteint au clavier, visible au focus).
+- Chaque page a une zone principale (`<main>`) : accueil, vitrine et liste des séries en manquaient.
+- Champs de l'Administration → Paramètres reliés à leur étiquette (lecteurs d'écran) ; liens sans texte (« Voir le site » en menu réduit) nommés ; tableau défilant du tableau de bord accessible au clavier.
+- Contrastes : badges non obtenus (Apprentissage) et comptes suspendus (Administration) plus lisibles.
+- Audit axe-core (WCAG 2 A/AA) sur 18 pages : plus aucune erreur critique ni grave. Reste un avertissement mineur d'ordre des titres sur la liste des séries (titre de carte en `h3` sous le `h1`).
+
+### F.3 Déploiement
+Aucune migration, aucun `.env`, **web uniquement** :
+```bash
+cd /opt/majlis-tv && unzip -o majlis-tv-etapeF-mobile.zip
+# Coolify : Redeploy « web »
+```
+Vérifier ensuite sur votre téléphone : une conférence, Ma bibliothèque, Studio → Mes conférences, Administration → Utilisateurs.
+
+### F.4 Outils
+`ops/audit-mobile/` : les deux scripts d'audit (voir son README) à relancer après chaque évolution de l'interface.
+
+### F.5 À savoir
+- Les tableaux se transforment en fiches **en dessous de 700 px** ; au-dessus, ils gardent le défilement latéral si nécessaire.
+- L'audit a été fait avec Chromium : un essai sur un vrai iPhone (Safari) reste conseillé ; si une page vous semble encore large, notez son adresse et l'appareil.

@@ -115,7 +115,7 @@ progress { width: 100%; accent-color: var(--accent); }
 .chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; padding: 2px 8px; border-radius: 12px; background: var(--surface); color: var(--muted); }
 .chip.ready { color: var(--text); }
 .chip.processing { color: var(--accent); }
-.chip.failed { color: var(--danger); }
+.chip.failed { color: #FF9D93; }
 .chip .link { font-size: 12px; color: inherit; text-decoration: underline; }
 .chips select { width: auto; font-size: 12px; padding: 2px 6px; background: var(--bg); }
 .langs { border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px 16px; }
@@ -175,7 +175,7 @@ progress { width: 100%; accent-color: var(--accent); }
 .adm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .adm-table th, .adm-table td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--surface); white-space: nowrap; }
 .adm-table th { color: var(--muted); font-weight: 400; }
-.adm-off { opacity: .55; }
+.adm-off { opacity: .8; }
 .adm-modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow-y: auto; z-index: 50; }
 .adm-dialog { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 20px; width: 100%; max-width: 480px; }
 .adm-dialog h3 { margin-top: 0; }
@@ -991,7 +991,7 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .lr-curve .line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
 .lr-curve .dot { fill: var(--accent); }
 .lr-badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-.lr-badges li { display: grid; gap: 4px; justify-items: start; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); opacity: .55; }
+.lr-badges li { display: grid; gap: 4px; justify-items: start; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); opacity: .8; border-style: dashed; }
 .lr-badges li.on { opacity: 1; border-color: var(--accent); }
 .lr-ico { font-size: 1.8rem; filter: grayscale(1); }
 .lr-badges li.on .lr-ico { filter: none; }
@@ -1832,3 +1832,50 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .ch-img-banner { align-items: flex-start; } .ch-img-banner .ch-banner { flex: 1 1 260px; }
 .ch-img-actions { display: grid; gap: 6px; flex: 1 1 220px; } .ch-img-actions > div { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 @media (max-width: 600px) { .ch-banner { aspect-ratio: 3 / 1; } .ch-head.has-banner { padding-inline: 10px; } .ch-head.has-banner .ch-avatar-lg { margin-top: -36px; } }
+
+/* Étape F : tableaux en fiches empilées sur téléphone (les étiquettes viennent de components/ResponsiveTables.js) */
+@media (max-width: 700px) {
+  .adm-table-wrap, .st-tablewrap { overflow: visible; }
+  .adm-table, .st-table { display: block; font-size: 14px; }
+  .adm-table thead, .st-table thead { display: none; }
+  .adm-table tbody, .st-table tbody { display: grid; gap: 10px; }
+  .adm-table tr, .st-table tr { display: grid; gap: 6px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+  .adm-table td, .st-table td { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 0; border: 0; white-space: normal; text-align: end; min-width: 0; overflow-wrap: anywhere; }
+  .st-table th:first-child, .st-table td:first-child { min-width: 0; }
+  .adm-table td::before, .st-table td::before { content: attr(data-label); flex: none; color: var(--muted); font-size: 12px; font-weight: 600; text-align: start; }
+  .adm-table td:first-child, .st-table td:first-child { font-weight: 700; justify-content: flex-start; text-align: start; }
+  .adm-table td:first-child::before, .st-table td:first-child::before { display: none; }
+  .adm-table td:empty, .st-table td:empty { display: none; }
+  .adm-table td:last-child:has(button) { justify-content: flex-end; }
+  .users-table tr.row-click { cursor: pointer; }
+
+  /* Studio : colonne de sélection (modification en lot) en haut à droite de la fiche, titre à gauche */
+  .studio-table td.bk-col:first-child { grid-column: 2; grid-row: 1; align-self: start; }
+  .studio-table td.bk-col + td { grid-column: 1; grid-row: 1; }
+  .studio-table td.bk-col + td + td { grid-column: 1; grid-row: 2; }
+  .studio-table:has(td.bk-col) td:nth-child(5) { grid-column: 1; grid-row: 3; color: var(--muted); font-size: 13px; }
+  .studio-table:has(td.bk-col) td.end { grid-column: 2; grid-row: 2 / span 2; }
+}
+
+/* Étape F : un mot très long (adresse, nom sans espace) ne doit jamais élargir la page */
+body { overflow-wrap: break-word; }
+.watch-main, .watch-side { grid-template-columns: minmax(0, 1fr); }
+.watch-main > *, .watch-side > * { min-width: 0; }
+.adm-table code { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .studio-table tr { grid-template-columns: minmax(0, 1fr) auto; }
+  .studio-table td { min-width: 0; overflow-wrap: anywhere; }
+  .studio-table code { overflow-wrap: anywhere; word-break: break-all; }
+}
+main :where(h1, h2, h3, h4, p, li, a, small, b, strong, dd, figcaption, label, blockquote) { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .studio-talk { flex-direction: column; align-items: flex-start; gap: 8px; } .studio-thumb { width: 100%; max-width: 220px; } }
+
+/* Étape F : lien d'évitement, visible seulement quand il reçoit le focus au clavier */
+.skip-link { position: fixed; inset-block-start: 8px; inset-inline-start: 8px; z-index: 1000; transform: translateY(-200%); padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.skip-link:focus { transform: none; }
+/* Zones tactiles d'au moins 44 px sur téléphone */
+@media (pointer: coarse) {
+  .btn, .pill, .tabs button, .tabs a, .tablist button, .studio-nav a, .ms-nav a { min-height: 44px; }
+  .btn, .pill { display: inline-flex; align-items: center; justify-content: center; }
+  input[type=checkbox], input[type=radio] { min-width: 22px; min-height: 22px; }
+}

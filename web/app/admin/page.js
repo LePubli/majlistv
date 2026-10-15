@@ -100,7 +100,7 @@ function Dashboard() {
       </div>
 
       <h3 className="dash-h">Dernières inscriptions</h3>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Dernières inscriptions">
         <table className="admin-table">
           <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Abonnement</th><th>Inscrit le</th></tr></thead>
           <tbody>
@@ -123,32 +123,33 @@ function Dashboard() {
 
 /* ---------------------------------------------------------------- Paramètres */
 function Field({ f, value, onChange, onClear, langs, dirty, onTest, testing }) {
-  const label = <label className="adm-label">{f.label}{f.source === 'env' && <em className="adm-src"> (variable d'environnement)</em>}{f.source === 'db' && <em className="adm-src"> (enregistré)</em>}</label>;
+  const fid = `fld-${f.key}`;
+  const label = <label className="adm-label" htmlFor={fid}>{f.label}{f.source === 'env' && <em className="adm-src"> (variable d'environnement)</em>}{f.source === 'db' && <em className="adm-src"> (enregistré)</em>}</label>;
   let input;
   if (f.type === 'secret') {
     input = (
       <div className="adm-row">
-        <input type="password" autoComplete="new-password" value={value ?? ''} placeholder={f.isSet ? `défini ${f.hint} — saisir pour remplacer` : 'non renseigné'} onChange={(e) => onChange(e.target.value)} />
+        <input id={fid} type="password" autoComplete="new-password" value={value ?? ''} placeholder={f.isSet ? `défini ${f.hint} — saisir pour remplacer` : 'non renseigné'} onChange={(e) => onChange(e.target.value)} />
         {f.isSet && value !== null && <button type="button" className="link" onClick={onClear}>Effacer</button>}
       </div>
     );
   } else if (f.type === 'select') {
-    input = <select value={value ?? f.value} onChange={(e) => onChange(e.target.value)}>{f.options.map((o) => <option key={o} value={o}>{o}</option>)}</select>;
+    input = <select id={fid} value={value ?? f.value} onChange={(e) => onChange(e.target.value)}>{f.options.map((o) => <option key={o} value={o}>{o}</option>)}</select>;
   } else if (f.type === 'bool') {
-    input = <select value={value ?? f.value} onChange={(e) => onChange(e.target.value)}><option value="true">Oui</option><option value="false">Non</option></select>;
+    input = <select id={fid} value={value ?? f.value} onChange={(e) => onChange(e.target.value)}><option value="true">Oui</option><option value="false">Non</option></select>;
   } else if (f.type === 'number') {
-    input = <input type="number" min={f.min ?? undefined} max={f.max ?? undefined} value={value ?? f.value} onChange={(e) => onChange(e.target.value)} />;
+    input = <input id={fid} type="number" min={f.min ?? undefined} max={f.max ?? undefined} value={value ?? f.value} onChange={(e) => onChange(e.target.value)} />;
   } else if (f.type === 'langs') {
     const cur = new Set((value ?? f.value).split(',').filter(Boolean));
     input = (
-      <div className="langs adm-langs">
+      <div className="langs adm-langs" role="group" aria-label={f.label}>
         {langs.map((l) => (
           <label key={l} className="check"><input type="checkbox" checked={cur.has(l)} onChange={(e) => { e.target.checked ? cur.add(l) : cur.delete(l); onChange([...cur].join(',')); }} /> {LANG_NAMES[l] || l} <small>({l})</small></label>
         ))}
       </div>
     );
   } else {
-    input = <input type={f.type === 'url' ? 'url' : 'text'} value={value ?? f.value} onChange={(e) => onChange(e.target.value)} placeholder={f.default || ''} />;
+    input = <input id={fid} type={f.type === 'url' ? 'url' : 'text'} value={value ?? f.value} onChange={(e) => onChange(e.target.value)} placeholder={f.default || ''} />;
   }
   return (
     <div className="adm-field">

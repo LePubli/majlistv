@@ -49,7 +49,7 @@ export default function Home() {
   const catName = cats.find((c) => String(c.id) === cat);
   const rows = home?.rows || [];
   return (
-    <>
+    <main>
       {browsing && <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />}
       {cat ? (
         <>
@@ -82,6 +82,6 @@ export default function Home() {
           <CitationCard c={cit} t={t} framed />
         </>
       )}
-    </>
+    </main>
   );
 }
