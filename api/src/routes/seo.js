@@ -11,6 +11,7 @@ import { adultSql } from '../taxonomy.js';
 import { episodeLabels, listSeries } from './series.js';
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
 import { publicSpeakers, speakerBio } from '../speakers.js';
+import { channelImages } from '../channels.js';
 
 const idParam = z.object({ id: z.string().uuid() });
 const refParam = z.object({ id: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/i) }); // UUID ou slug
@@ -126,7 +127,7 @@ export default async function seoRoutes(app) {
     const series = await listSeries({ limit: 50, speakerNames: names });
     for (const s of series) s.slug = await ensureSlug('series', s.id);
     reply.header('cache-control', 'public, max-age=60');
-    return { slug, name: e.name, bio: clip(await speakerBio(slug), 3000), talkCount: e.talks, talks, series: series.map((s) => ({ id: s.id, slug: s.slug, title: s.title })), site: await siteInfo() };
+    return { slug, name: e.name, bio: clip(await speakerBio(slug), 3000), talkCount: e.talks, ...((await channelImages([slug])).get(slug) || { avatarUrl: null, bannerUrl: null }), talks, series: series.map((s) => ({ id: s.id, slug: s.slug, title: s.title })), site: await siteInfo() };
   });
 
   // Ouvrages : fiche publique (jamais le fichier PDF), couverture à adresse stable.

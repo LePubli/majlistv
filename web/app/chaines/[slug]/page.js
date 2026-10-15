@@ -27,7 +27,7 @@ export default async function Page({ params }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <ChannelClient slug={s.slug} initial={{ name: s.name, bio: s.bio, talks: s.talks, series: s.series }} />
+      <ChannelClient slug={s.slug} initial={{ name: s.name, bio: s.bio, talks: s.talks, series: s.series, avatarUrl: s.avatarUrl, bannerUrl: s.bannerUrl }} />
     </>
   );
 }

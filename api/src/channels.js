@@ -3,6 +3,7 @@
 // /intervenants/<slug> deviennent /chaines/<slug> sans aucun changement de slug.
 import { pool } from './db.js';
 import { speakerSlug } from './speakers.js';
+import { presignGet } from './storage.js';
 
 let lastSync = 0;
 
@@ -39,4 +40,13 @@ export function startChannelSync(log) {
   const run = () => syncChannels({ force: true }).then((n) => n && log?.info(`Chaînes créées : ${n}`)).catch((e) => log?.warn(`Synchronisation des chaînes : ${e.message}`));
   run();
   setInterval(run, 10 * 60 * 1000).unref();
+}
+
+// Liens temporaires vers les images de chaînes : Map slug → { avatarUrl, bannerUrl }.
+export async function channelImages(slugs) {
+  const out = new Map();
+  if (!slugs.length) return out;
+  const { rows } = await pool.query('SELECT slug, avatar_key, banner_key FROM speakers WHERE slug = ANY($1) AND (avatar_key IS NOT NULL OR banner_key IS NOT NULL)', [slugs]);
+  for (const r of rows) out.set(r.slug, { avatarUrl: r.avatar_key ? await presignGet(r.avatar_key) : null, bannerUrl: r.banner_key ? await presignGet(r.banner_key) : null });
+  return out;
 }

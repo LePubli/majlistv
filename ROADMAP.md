@@ -21,6 +21,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 | A | Fonctions activables et désactivables (Administration → Fonctions, mode maintenance) | ✅ livré, à déployer |
 | C | Chaînes (intervenant fusionné, propriétaire organisateur, attribution modération, Chaînes suivies) | ✅ livré, à déployer |
 | D | Rémunération des chaînes (part des abonnements, temps de visionnage, clôture mensuelle, CSV, suivi des paiements) | ✅ livré, à déployer |
+| E2 | Avatar et bannière des chaînes (page publique, liste, Studio), journal des actions des modérateurs sur les chaînes | ✅ livré, à déployer |
 | E1 | Vitrine visiteur (exemple réel + quiz jouable), citation du jour encadrée | ✅ livré, à déployer |
 | B | Menu latéral membre, barre du bas mobile, onglets (compte, apprentissage, bibliothèque), fil d'Ariane | ✅ livré, à déployer |
 

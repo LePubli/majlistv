@@ -7,6 +7,7 @@ import TalkCard from './TalkCard';
 import SeriesCard from './SeriesCard';
 import FollowButton from './FollowButton';
 import Crumbs from './Crumbs';
+import ChannelAvatar from './ChannelAvatar';
 import { TabBar, TabPanel, useTab } from './Tabs';
 
 export default function ChannelClient({ slug, initial }) {
@@ -25,8 +26,9 @@ export default function ChannelClient({ slug, initial }) {
   return (
     <main className="spk-page ch-page">
       <Crumbs items={[['/chaines', t('spTitle')], [null, initial.name]]} />
-      <header className="ch-head">
-        <span className="ch-avatar ch-avatar-lg" aria-hidden="true">{(initial.name || '?').trim().charAt(0).toUpperCase()}</span>
+      {initial.bannerUrl && <div className="ch-banner"><img src={initial.bannerUrl} alt="" /></div>}
+      <header className={`ch-head${initial.bannerUrl ? ' has-banner' : ''}`}>
+        <ChannelAvatar name={initial.name} url={initial.avatarUrl} size="lg" />
         <div className="ch-head-text">
           <h1>{initial.name}</h1>
           <p className="meta">{t(initial.talks.length > 1 ? 'chTalksN' : 'chTalks1').replace('{n}', initial.talks.length)}{followers > 0 && ` · ${t(followers > 1 ? 'chFolN' : 'chFol1').replace('{n}', followers)}`}</p>

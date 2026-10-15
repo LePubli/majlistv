@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
+import ChannelAvatar from '../../../components/ChannelAvatar';
+import ChannelImages from '../../../components/ChannelImages';
 
 function Channel({ c, owners, canAssign, t, call, onSaved }) {
   const [name, setName] = useState(c.name);
@@ -27,13 +29,14 @@ function Channel({ c, owners, canAssign, t, call, onSaved }) {
   return (
     <li className="ch-card">
       <div className="ch-card-head">
-        <span className="ch-avatar" aria-hidden="true">{(c.name || '?').trim().charAt(0).toUpperCase()}</span>
+        <ChannelAvatar name={c.name} url={c.avatarUrl} />
         <div className="ch-li-text">
           <b>{c.name}</b>
           <span className="meta">{t(c.talks > 1 ? 'chTalksN' : 'chTalks1').replace('{n}', c.talks)} · {t(c.followers > 1 ? 'chFolN' : 'chFol1').replace('{n}', c.followers)}{c.mine && canAssign ? ` · ${t('chMine')}` : ''}</span>
         </div>
         <Link className="link u small" href={`/chaines/${c.slug}`} target="_blank">{t('chView')}</Link>
       </div>
+      <ChannelImages c={c} t={t} call={call} onSaved={onSaved} />
       <form onSubmit={save} className="ch-form">
         <label className="fld"><span>{t('chName')}</span><input value={name} maxLength={120} required onChange={(e) => setName(e.target.value)} /></label>
         <label className="fld"><span>{t('chBio')}</span><textarea rows={4} maxLength={3000} value={bio} placeholder={t('chBioPh')} onChange={(e) => setBio(e.target.value)} /></label>

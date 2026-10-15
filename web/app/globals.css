@@ -1819,3 +1819,16 @@ body.kd-theme { background-image: radial-gradient(circle at 6% 14%, rgba(255, 94
 .rv-st { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--line-soft); }
 .rv-due { border-color: var(--gold, #c9a24a); } .rv-paid { opacity: .8; } .rv-carried, .rv-rolled, .rv-draft { color: var(--muted); }
 .rv-admin h2 { margin-top: 28px; }
+
+/* Étape E2 : avatar et bannière des chaînes */
+.ch-avatar-img { object-fit: cover; background: var(--surface); }
+.ch-banner { margin: 6px 0 0; aspect-ratio: 4 / 1; border-radius: var(--radius); overflow: hidden; background: var(--surface); border: 1px solid var(--line-soft); }
+.ch-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ch-banner-sm { max-width: 520px; } .ch-banner.empty { display: grid; place-items: center; }
+.ch-head.has-banner { margin-top: 12px; padding-inline: 18px; align-items: flex-start; }
+.ch-head.has-banner .ch-avatar-lg { border: 3px solid var(--bg); width: 84px; height: 84px; margin-top: -48px; position: relative; }
+.ch-images { display: grid; gap: 16px; padding: 14px; border: 1px dashed var(--line-soft); border-radius: var(--radius); }
+.ch-img-block { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ch-img-banner { align-items: flex-start; } .ch-img-banner .ch-banner { flex: 1 1 260px; }
+.ch-img-actions { display: grid; gap: 6px; flex: 1 1 220px; } .ch-img-actions > div { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+@media (max-width: 600px) { .ch-banner { aspect-ratio: 3 / 1; } .ch-head.has-banner { padding-inline: 10px; } .ch-head.has-banner .ch-avatar-lg { margin-top: -36px; } }

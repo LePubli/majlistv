@@ -13,7 +13,7 @@ const VIEWER = [/^\/talks\/:id\/notes/, /^\/talks\/:id\/practice\/commitments/, 
 export function shouldLog(role, method, route) {
   if (!MUTATING.has(method) || !route) return false;
   if (role !== 'admin' && role !== 'moderator') return false;
-  if (route.startsWith('/admin/') || route.startsWith('/moderation/') || route.startsWith('/studio/collections')) return true; // le modérateur gère aussi les collections
+  if (route.startsWith('/admin/') || route.startsWith('/moderation/') || route.startsWith('/studio/collections') || route.startsWith('/studio/channels')) return true; // le modérateur gère aussi les collections et les chaînes
   if (role !== 'admin') return false;
   if (VIEWER.some((re) => re.test(route))) return false;
   return EDITORIAL.some((p) => route === p || route.startsWith(p + '/'));

@@ -1,6 +1,7 @@
 // Liste des chaînes (serveur) : chaque chaîne mène à sa page (présentation, conférences, séries). Ex-« Intervenants » (étape C).
 import Link from 'next/link';
 import { apiGet, seoSite } from '../../lib/seo';
+import ChannelAvatar from '../../components/ChannelAvatar';
 
 export async function generateMetadata() {
   const site = await seoSite();
@@ -20,7 +21,7 @@ export default async function Page() {
         {list.map((s) => (
           <li key={s.slug}>
             <Link href={`/chaines/${s.slug}`}>
-              <span className="ch-avatar" aria-hidden="true">{(s.name || '?').trim().charAt(0).toUpperCase()}</span>
+              <ChannelAvatar name={s.name} url={s.avatarUrl} />
               <span className="ch-li-text"><b>{s.name}</b><span className="meta">{s.talks} conférence{s.talks > 1 ? 's' : ''}{s.series ? ` · ${s.series} série${s.series > 1 ? 's' : ''}` : ''}{s.followers ? ` · ${s.followers} abonné${s.followers > 1 ? 's' : ''}` : ''}</span></span>
             </Link>
           </li>

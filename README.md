@@ -2037,3 +2037,37 @@ Web : `app/studio/revenue/page.js`, `components/RevenueAdmin.js`, `app/admin/pag
 - **Les versements sont manuels** (virement, CSV puis « Marquer payé »). Un versement automatique (Stripe Connect) est possible plus tard mais demande l'ouverture de comptes pour chaque organisateur.
 - **Aspects légaux et fiscaux** (statut des organisateurs, facturation, TVA, déclarations) : à valider avec un comptable avant les premiers versements ; le site calcule, il ne remplace pas ce conseil.
 - Les abonnés de l'offre Apprentissage et de l'offre standard comptent de la même façon ; la répartition ne tient pas compte du prix payé par chaque membre.
+
+
+## Étape E2 — Avatar et bannière des chaînes
+
+### E2.1 Description
+- Chaque chaîne peut avoir une **image de profil** (ronde) et une **bannière** (large, format 4 pour 1). Sans image, la page garde la lettre initiale sur fond de couleur et n'affiche aucune bannière.
+- **Où elles apparaissent** : en-tête de la page publique `/chaines/<slug>` (bannière, avatar qui la chevauche), liste `/chaines`, Studio → Ma chaîne.
+- **Qui les change** : le propriétaire de la chaîne (Studio → **Ma chaîne** → « Choisir une image » / « Retirer »), ainsi que les modérateurs et administrateurs (Studio → Chaînes).
+- Les images sont **recadrées au centre et réduites dans le navigateur** (avatar 384×384, bannière 1600×400, JPEG). Formats acceptés : JPEG, PNG, WebP ; 2,5 Mo au plus après réduction ; le serveur vérifie le type réel du fichier.
+- Les actions des modérateurs et administrateurs sur les chaînes (nom, propriétaire, images) sont inscrites au **journal des actions**.
+
+### E2.2 Prérequis et déploiement
+Étapes A à D déployées (surtout C : chaînes). **Une migration** (`046_channel_images.sql`, automatique). Aucune variable `.env`. Les images sont stockées avec les miniatures : `CSP_STORAGE_ORIGINS` doit déjà contenir l'adresse du stockage (réglage existant, nécessaire aux miniatures). API puis web :
+```bash
+cd /opt/majlis-tv && unzip -o majlis-tv-etapeE2-chaines-visuels.zip
+# Coolify : Redeploy « api » puis « web »
+```
+
+### E2.3 Interrupteur
+Les images font partie de la fonction **Chaînes** (Administration → Fonctions) : coupée, elles disparaissent avec les pages de chaîne.
+
+### E2.4 Fichiers
+API : `migrations/046_channel_images.sql`, `src/channels.js` (`channelImages`), `src/routes/channels.js` (envoi, retrait, listes), `src/routes/seo.js`, `src/audit.js`, `tests/test_channel_images.py`.
+Web : `components/ChannelAvatar.js`, `components/ChannelImages.js`, `components/ChannelClient.js`, `app/chaines/page.js`, `app/chaines/[slug]/page.js`, `app/studio/channel/page.js`, `lib/i18n.js`, `globals.css`.
+
+### E2.5 Debug
+- **Image envoyée mais invisible** : vérifier `CSP_STORAGE_ORIGINS` (la console du navigateur signale un blocage CSP).
+- **« Impossible de lire cette image »** : fichier non JPEG/PNG/WebP (HEIC d'iPhone par exemple) ; l'exporter en JPEG.
+- **Ancienne image encore affichée** : les liens d'images sont temporaires et mis en cache 1 minute côté API ; recharger la page.
+
+### E2.6 À savoir
+- Pas de recadrage manuel : l'image est centrée automatiquement. Choisir une bannière dont le sujet est au centre.
+- L'image de la chaîne n'est pas encore utilisée comme aperçu de partage (réseaux sociaux) : les liens d'images sont temporaires.
+- L'harmonisation visuelle complète du Studio et de l'Administration n'est pas incluse ici ; elle sera traitée avec l'étape F (mobile et accessibilité).
