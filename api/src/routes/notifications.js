@@ -16,7 +16,8 @@ export default async function notificationsRoutes(app) {
   app.get('/me/notifications', { preHandler: app.authenticate }, async (req) => {
     const u = (await pool.query('SELECT notify_speakers, notify_weekly FROM users WHERE id = $1', [req.user.sub])).rows[0];
     const follows = (await pool.query(
-      'SELECT speaker_slug AS slug, speaker_name AS name, created_at AS "createdAt" FROM speaker_follows WHERE user_id = $1 ORDER BY speaker_name', [req.user.sub])).rows;
+      `SELECT f.speaker_slug AS slug, COALESCE(NULLIF(c.name, ''), f.speaker_name) AS name, f.created_at AS "createdAt"
+         FROM speaker_follows f LEFT JOIN speakers c ON c.slug = f.speaker_slug WHERE f.user_id = $1 ORDER BY 2`, [req.user.sub])).rows; // nom actuel de la chaîne
     return {
       prefs: { speakers: u.notify_speakers, weekly: u.notify_weekly },
       available: { speakers: isOn(await getSetting('notify_speakers_enabled')), weekly: isOn(await getSetting('weekly_enabled')) },

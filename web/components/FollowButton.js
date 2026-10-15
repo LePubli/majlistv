@@ -17,7 +17,7 @@ export default function FollowButton({ slug, t, call, user }) {
     return () => { off = true; };
   }, [user, slug, call]);
   if (!feat('follow')) return null; // fonction coupée dans Admin → Fonctions
-  if (!user) return <Link className="fav" href={authPath('login', `/intervenants/${slug}`)} title={t('nfFollowLogin')}>＋ {t('nfFollow')}</Link>;
+  if (!user) return <Link className="fav" href={authPath('login', `/chaines/${slug}`)} title={t('nfFollowLogin')}>＋ {t('nfFollow')}</Link>;
   if (on === null) return null;
   const toggle = async () => {
     setBusy(true); setErr('');

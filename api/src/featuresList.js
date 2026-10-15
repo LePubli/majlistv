@@ -45,6 +45,8 @@ export const FEATURES = [
     rules: [{ re: '^/me/favorites(/|$)' }] },
   { id: 'lists', group: 'community', label: 'Listes de lecture', hint: 'Listes personnelles et partage par lien',
     rules: [{ re: '^/(me/lists|lists/shared)(/|$)' }] },
+  { id: 'channels', group: 'catalog', label: 'Chaînes', hint: 'Pages de chaînes (ex-intervenants), propriétaire organisateur, Studio « Ma chaîne »',
+    rules: [{ re: '^/(channels|studio/channels|studio/channel-owners)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre et alertes par e-mail',
     rules: [{ re: '^/me/notifications(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',

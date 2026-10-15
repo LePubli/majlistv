@@ -8,6 +8,7 @@ import TalkCard from '../../components/TalkCard';
 import SeriesCard from '../../components/SeriesCard';
 import { clock } from '../../lib/clock';
 import ListsPanel from '../../components/ListsPanel';
+import FollowedChannels from '../../components/FollowedChannels';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
 
@@ -24,6 +25,7 @@ export default function Library() {
     { id: 'resume', label: t('tbResume') },
     ...(feat('favorites') ? [{ id: 'favs', label: t('tbFavs') }] : []),
     ...(feat('lists') ? [{ id: 'lists', label: t('tbLists') }] : []),
+    ...(feat('follow') && feat('channels') ? [{ id: 'follows', label: t('tbFollows') }] : []),
     ...(feat('notes') ? [{ id: 'notes', label: t('tbNotes') }] : []),
   ];
   const [tab, go] = useTab(tabs);
@@ -83,6 +85,8 @@ export default function Library() {
       </TabPanel>
 
       <TabPanel id="lists" current={tab}><ListsPanel /></TabPanel>
+
+      <TabPanel id="follows" current={tab}><FollowedChannels /></TabPanel>
 
       <TabPanel id="notes" current={tab}>
         {notes.length === 0 && <p className="meta">{t('ntLibEmpty')}</p>}

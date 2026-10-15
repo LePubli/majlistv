@@ -869,7 +869,7 @@ function Categories() {
 }
 
 /* ---------------------------------------------------------------- Intervenants */
-// Présentation affichée sur la page publique de chaque intervenant (/intervenants/…). Le nom vient des conférences.
+// Présentation affichée sur la page publique de chaque chaîne (/chaines/…). Le nom vient des conférences. Depuis l'étape C, l'édition courante se fait dans Studio → Chaînes (avec attribution du propriétaire) ; cet écran reste accessible par ?tab=speakers.
 function Speakers() {
   const { call } = useApp();
   const [list, setList] = useState(null);
@@ -884,7 +884,7 @@ function Speakers() {
   };
   return (
     <section className="panel">
-      <p className="meta">Chaque intervenant a sa page publique (<code>/intervenants/nom</code>) avec sa présentation, ses conférences et ses séries. Les noms viennent du champ « Intervenant » des conférences : « Cheikh Hamza » et « cheikh hamza » forment une seule page. Une présentation courte (2 à 5 phrases) aide le référencement.</p>
+      <p className="meta">Chaque intervenant a sa page publique (<code>/chaines/nom</code>) avec sa présentation, ses conférences et ses séries. Les noms viennent du champ « Intervenant » des conférences : « Cheikh Hamza » et « cheikh hamza » forment une seule page. Une présentation courte (2 à 5 phrases) aide le référencement.</p>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
       {list && list.length === 0 && <p className="meta">Aucun intervenant : renseignez le champ « Intervenant » dans vos conférences.</p>}
       <ul className="spk-admin">
@@ -892,7 +892,7 @@ function Speakers() {
           const val = draft[s.slug] ?? s.bio;
           return (
             <li key={s.slug}>
-              <div className="spk-admin-head"><b>{s.name}</b><span className="meta">{s.talks} conférence{s.talks > 1 ? 's' : ''} · <a href={`/intervenants/${s.slug}`} target="_blank" rel="noreferrer">voir la page</a></span></div>
+              <div className="spk-admin-head"><b>{s.name}</b><span className="meta">{s.talks} conférence{s.talks > 1 ? 's' : ''} · <a href={`/chaines/${s.slug}`} target="_blank" rel="noreferrer">voir la page</a></span></div>
               <textarea rows={3} maxLength={3000} value={val} placeholder="Présentation de l’intervenant…" aria-label={`Présentation de ${s.name}`} onChange={(e) => setDraft({ ...draft, [s.slug]: e.target.value })} />
               <div className="panel-actions"><button className="btn" disabled={val === s.bio} onClick={() => save(s)}>Enregistrer</button></div>
             </li>

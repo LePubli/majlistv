@@ -8,6 +8,8 @@ const RULES = [
   [/^\/learning(\/|$)/, 'learning'],
   [/^\/attestation(\/|$)/, 'learning'],
   [/^\/lists(\/|$)/, 'lists'],
+  [/^\/chaines(\/|$)/, 'channels'],
+  [/^\/studio\/channel(\/|$)/, 'channels'],
   [/^\/kids(\/|$)/, 'kids'],
   [/^\/(gift|redeem)(\/|$)/, 'gifts'],
   [/^\/register(\/|$)/, 'registration'],

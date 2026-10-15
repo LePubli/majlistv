@@ -44,8 +44,7 @@ export default async function speakersRoutes(app) {
     const known = (await pool.query(`SELECT trim(speaker) AS name FROM talks WHERE trim(speaker) <> '' GROUP BY 1`)).rows.some((r) => speakerSlug(r.name) === slug);
     if (!known) return reply.code(404).send({ error: 'Intervenant introuvable' });
     const text = bio.trim();
-    if (!text) await pool.query('DELETE FROM speakers WHERE slug = $1', [slug]);
-    else await pool.query('INSERT INTO speakers(slug, bio) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET bio = EXCLUDED.bio, updated_at = now()', [slug, text]);
+    await pool.query('INSERT INTO speakers(slug, bio) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET bio = EXCLUDED.bio, updated_at = now()', [slug, text]); // la ligne reste (nom et propriétaire de la chaîne)
     return { slug, bio: text };
   });
 }

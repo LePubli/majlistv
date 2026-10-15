@@ -25,6 +25,8 @@ import importRoutes from './routes/imports.js';
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import showcaseRoutes from './routes/showcase.js';
+import channelRoutes from './routes/channels.js';
+import { startChannelSync } from './channels.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
 import quizRoutes from './routes/quiz.js';
@@ -173,6 +175,7 @@ await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
 await app.register(showcaseRoutes);
+await app.register(channelRoutes);
 await app.register(seriesRoutes);
 await app.register(cardsRoutes);
 await app.register(statsCollectRoutes);
@@ -191,5 +194,6 @@ setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
 startSelfcheckMailer(app.log); // rappel hebdomadaire du bilan personnel (Apprentissage)
 startStatsMaintenance(app.log); // purge des empreintes du jour (2 jours) et des compteurs anciens
+startChannelSync(app.log); // chaînes manquantes créées à partir des conférences (étape C)
 startNotifyMailer(app.log); // alertes des intervenants suivis et sélection de la semaine (étape 21)
 startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)

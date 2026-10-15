@@ -54,15 +54,16 @@ export default function StudioShell({ children }) {
     if (href === '/studio/collections') return path.startsWith('/studio/collections');
     if (href === '/studio/books') return path.startsWith('/studio/books');
     if (href === '/studio/reminders') return path.startsWith('/studio/reminders');
+    if (href === '/studio/channel') return path.startsWith('/studio/channel');
     if (href === '/studio/stats') return path.startsWith('/studio/stats');
-    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats')) : path === href;
+    return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats') && !path.startsWith('/studio/channel')) : path === href;
   };
   const allGroups = [
-    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
-    ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] }]),
+    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/channel', t('chNavAll'), ICONS.users], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
+    ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ...(isStaff ? [] : [['/studio/channel', t('chNav'), ICONS.users]]), ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart]] }]),
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
-      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=speakers', t('spTitle'), ICONS.users], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
+      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
   // Étape A : une fonction coupée disparaît du menu (l'entrée « Fonctions » reste toujours là pour la rallumer).

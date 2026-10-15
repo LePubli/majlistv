@@ -473,7 +473,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               )
               : talk.category && <p className="eyebrow">{talk.category}</p>}
             <h1>{talk.title}</h1>
-            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/intervenants/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
+            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/chaines/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
             <div className="talk-actions">
               {feat('favorites') && <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>

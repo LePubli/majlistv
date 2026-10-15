@@ -43,7 +43,7 @@ export default function MemberShell({ children }) {
       ['/series', t('seriesNav'), ICONS.series, hasSeries],
       ['/collections', t('colNav'), ICONS.col, feat('collections')],
       ['/books', t('bkNav'), ICONS.books, hasBooks],
-      ['/intervenants', t('spTitle'), ICONS.people, true],
+      ['/chaines', t('spTitle'), ICONS.people, feat('channels')],
     ] },
     { title: t('msSpace'), items: [
       ['/learning', t('lrNav'), ICONS.learn, feat('learning')],

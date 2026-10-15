@@ -19,12 +19,13 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 | 9 bis | Vidéos YouTube/Vimeo transcrites, traduites, indexées ; import de playlists et de chaînes | ✅ en ligne |
 | 9 ter | Vidéos archive.org (lecteur Mejliss TV, import de collections) ; résumé toujours en français | ✅ en ligne |
 | A | Fonctions activables et désactivables (Administration → Fonctions, mode maintenance) | ✅ livré, à déployer |
+| C | Chaînes (intervenant fusionné, propriétaire organisateur, attribution modération, Chaînes suivies) | ✅ livré, à déployer |
 | E1 | Vitrine visiteur (exemple réel + quiz jouable), citation du jour encadrée | ✅ livré, à déployer |
 | B | Menu latéral membre, barre du bas mobile, onglets (compte, apprentissage, bibliothèque), fil d'Ariane | ✅ livré, à déployer |
 
 ## À venir
 
-**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · C chaînes (intervenant fusionné) · D rémunération · E pages refondues + vitrine visiteur · F mobile et accessibilité. Chaque étape sur « go ».
+**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · ~~C chaînes~~ (fait) · D rémunération · E pages refondues + vitrine visiteur · F mobile et accessibilité. Chaque étape sur « go ».
 
 ### Phase A — Avant d'ouvrir au public
 
@@ -256,7 +257,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) 21 (notifications, cartes cadeaux) A (fonctions activables/désactivables) B (menu latéral et onglets) et E1 (vitrine visiteur). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) 21 (notifications, cartes cadeaux) A (fonctions activables/désactivables) B (menu latéral et onglets) E1 (vitrine visiteur) et C (chaînes). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

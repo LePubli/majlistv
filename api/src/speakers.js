@@ -30,7 +30,8 @@ export async function publicSpeakers() {
     }
   };
   add(t, 'talks'); add(s, 'series');
-  return [...map.values()].map((e) => ({ slug: e.slug, name: [...e.names.entries()].sort((a, b) => b[1] - a[1])[0][0], names: [...e.names.keys()], talks: e.talks, series: e.series }))
+  const custom = new Map((await pool.query("SELECT slug, name FROM speakers WHERE name <> ''")).rows.map((r) => [r.slug, r.name]));
+  return [...map.values()].map((e) => ({ slug: e.slug, name: custom.get(e.slug) || [...e.names.entries()].sort((a, b) => b[1] - a[1])[0][0], names: [...e.names.keys()], talks: e.talks, series: e.series }))
     .sort((a, b) => b.talks - a.talks || a.name.localeCompare(b.name));
 }
 

@@ -1949,3 +1949,45 @@ Administration → Fonctions → **Vitrine visiteur** (groupe Accès). Coupée :
 ### E1.7 À savoir
 - Reste pour **E2** : page chaîne publique et finitions après l'étape C ; harmonisation visuelle Studio/Administration.
 - Les tarifs affichés viennent de Stripe : sans formule configurée, la section « Commencez à votre rythme » n'apparaît pas.
+
+## Étape C — Chaînes (l'intervenant devient une chaîne avec un propriétaire)
+
+### C.1 Description
+- **Une chaîne = la page publique d'un intervenant**, désormais fusionnée avec la notion de chaîne : nom, présentation, nombre d'abonnés, bouton *Suivre*, puis onglets **Conférences** / **Séries**, fil d'Ariane. Adresse : `/chaines/<slug>` (le slug est celui de l'ancien intervenant : rien ne change pour les abonnés ni pour les liens).
+- **Anciennes adresses** `/intervenants` et `/intervenants/<slug>` : redirection permanente (308) vers `/chaines…`, le référencement suit. Sitemap et adresse canonique mis à jour.
+- **Propriétaire** : chaque chaîne appartient à un **organisateur**. À la migration, le propriétaire est l'organisateur qui a le plus de conférences sous ce nom. L'organisateur gère nom et présentation dans **Studio → Ma chaîne**. Il continue de gérer ses propres conférences, séries et épisodes comme avant.
+- **Modérateur et administrateur** : **Studio → Chaînes** (menu Modération) liste toutes les chaînes, permet de corriger nom et présentation, **d'attribuer ou de retirer le propriétaire** (organisateur, modérateur ou administrateur). Chaque modification est inscrite au journal des actions.
+- **Membre** : Ma bibliothèque → onglet **Chaînes suivies** (avec « Ne plus suivre »). Le menu parle de « Chaînes » partout (menu latéral, pied de page, administration).
+- Les e-mails d'alerte des nouvelles conférences continuent d'utiliser les chaînes suivies (même identifiant).
+
+### C.2 Règles
+- Les chaînes sont créées automatiquement (au démarrage puis toutes les 10 minutes, et à l'ouverture de Studio → Chaînes) à partir des conférences existantes. Une chaîne apparaît donc dans les 10 minutes qui suivent la première conférence portant ce nom d'intervenant.
+- Le nom choisi pour une chaîne n'est **jamais écrasé** par la synchronisation. Le champ « Intervenant » des conférences continue de relier une conférence à sa chaîne (même nom = même chaîne).
+- Un propriétaire retiré volontairement par la modération le reste (la synchronisation ne le réattribue pas).
+- Vider la présentation (ancien écran Administration → intervenants) ne supprime plus la chaîne.
+
+### C.3 Prérequis et déploiement
+Étapes A, B et E1 déployées. **Une migration** (`044_channels.sql`, lancée automatiquement au démarrage de l'API : ajoute nom, propriétaire à la table des présentations). Aucune variable `.env`. API puis web :
+```bash
+cd /opt/majlis-tv && unzip -o majlis-tv-etapeC-chaines.zip
+# Coolify : Redeploy « api » puis « web »
+```
+Après le redéploiement : ouvrir `/chaines`, puis Studio → Chaînes (administrateur) pour vérifier les propriétaires attribués.
+
+### C.4 Interrupteur
+Administration → Fonctions → **Chaînes** (groupe Catalogue). Coupé : pages `/chaines`, Studio → Ma chaîne et onglet Chaînes suivies indisponibles (les données restent). L'interrupteur « Suivre un intervenant » reste indépendant.
+
+### C.5 Fichiers
+API : `migrations/044_channels.sql`, `src/channels.js`, `src/routes/channels.js`, `src/speakers.js` (nom de chaîne), `src/routes/notifications.js` (nom actuel dans les suivis), `src/featuresList.js`, `tests/test_channels.py`.
+Web : `app/chaines/…`, `components/ChannelClient.js`, `components/FollowedChannels.js`, `app/studio/channel/page.js`, `next.config.mjs` (redirections), `StudioShell.js`, `MemberShell.js`, `Footer.js`, `sitemap.js`, styles `.ch-*`, textes `ch*`, `tb Follows` fr/en/ar.
+
+### C.6 Debug
+- **Ma chaîne vide** : aucune conférence de l'organisateur n'a de nom d'intervenant, ou la chaîne appartient à un autre organisateur (voir Studio → Chaînes côté modération).
+- **Chaîne sans propriétaire** : la modération l'a retirée ; la réattribuer depuis Studio → Chaînes.
+- **Une chaîne en double** : deux graphies différentes (ex. « Cheikh Hamza » / « Hamza ») donnent deux chaînes ; harmoniser le champ « Intervenant » des conférences.
+- **Ancien lien cassé** : vérifier que le web est redéployé (les redirections sont dans `next.config.mjs`).
+
+### C.7 À savoir
+- Pas encore d'image d'avatar ni de bannière : l'avatar est la première lettre du nom (à ajouter plus tard avec les finitions E2).
+- Un organisateur ne gère toujours que **ses** conférences ; la chaîne n'ouvre pas la modification des conférences d'un autre organisateur (la modération le peut déjà).
+- La rémunération (étape D) s'appuiera sur ce propriétaire.

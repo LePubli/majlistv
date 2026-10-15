@@ -22,6 +22,13 @@ export default {
   // N'annonce pas la technologie du site (l'en-tête « X-Powered-By: Next.js » renseigne un attaquant
   // sur la pile à cibler).
   poweredByHeader: false,
+  // Étape C : l'ancienne page « Intervenants » est devenue « Chaînes » (mêmes identifiants) : redirection permanente, le référencement suit.
+  async redirects() {
+    return [
+      { source: '/intervenants', destination: '/chaines', permanent: true },
+      { source: '/intervenants/:slug', destination: '/chaines/:slug', permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

@@ -33,12 +33,12 @@ export default function EmailPrefs() {
       <p className="meta small" role="status" aria-live="polite">{saved ? `✓ ${t('nfSaved')}` : ' '}</p>
       <h3>{t('nfFollows')}</h3>
       {d.follows.length === 0 ? (
-        <p className="meta">{t('nfNoFollow')} <Link className="link u" href="/intervenants">{t('nfBrowse')}</Link></p>
+        <p className="meta">{t('nfNoFollow')} <Link className="link u" href="/chaines">{t('nfBrowse')}</Link></p>
       ) : (
         <ul className="nf-list">
           {d.follows.map((f) => (
             <li key={f.slug}>
-              <Link href={`/intervenants/${f.slug}`}>{f.name}</Link>
+              <Link href={`/chaines/${f.slug}`}>{f.name}</Link>
               <button type="button" className="btn ghost small" onClick={() => unfollow(f.slug)} aria-label={`${t('nfUnfollow')} : ${f.name}`}>{t('nfUnfollow')}</button>
             </li>
           ))}
