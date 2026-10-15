@@ -34,6 +34,7 @@ const manifestSchema = z.object({
   name: z.string().min(1).max(80), version: z.string().regex(SEMVER), description: z.string().max(600).default(''),
   feature: z.string().optional(), requires: z.array(z.string()).max(20).default([]), defaultEnabled: z.boolean().default(false),
   settings: z.array(z.union([z.string(), fieldSchema])).max(40).default([]),
+  admin: z.object({ label: z.string().min(1).max(80), href: z.string().regex(/^\/admin(\?tab=[a-z]+)?$/) }).strict().optional(),
 }).strict();
 
 // Registre en mémoire : id → { manifest, dir, fields:[clés de réglages], enabledKey, error, loaded }
@@ -162,12 +163,12 @@ async function describeAll() {
       id: e.invalid ? null : m.id, folder: path.basename(e.dir), name: m.name, description: m.description, version: m.version,
       installedVersion: row?.installed_version || null, installedAt: row?.first_seen_at || null, updatedAt: row?.updated_at || null,
       status: e.invalid || e.error ? 'error' : enabledOf[m.id] ? 'on' : 'off', error: e.error || null,
-      feature: m.feature || null, requires, dependents: [...registry.values()].filter((o) => !o.invalid && o.manifest.requires.includes(m.id)).map((o) => ({ id: o.manifest.id, name: o.manifest.name, enabled: Boolean(enabledOf[o.manifest.id]) })),
+      feature: m.feature || null, admin: m.admin || null, requires, dependents: [...registry.values()].filter((o) => !o.invalid && o.manifest.requires.includes(m.id)).map((o) => ({ id: o.manifest.id, name: o.manifest.name, enabled: Boolean(enabledOf[o.manifest.id]) })),
       fields: e.fields.map((k) => settings.fields.find((f) => f.key === k)).filter(Boolean),
     });
   }
   // Modules connus de la base mais dont le dossier a disparu : on garde la trace (les données ne sont jamais supprimées).
-  for (const [id, row] of db) if (![...registry.values()].some((e) => e.manifest.id === id)) out.push({ id, folder: null, name: id, description: '', version: null, installedVersion: row.installed_version, installedAt: row.first_seen_at, updatedAt: row.updated_at, status: 'absent', error: 'Le dossier du module n’est plus dans le code : ses routes sont fermées, ses données sont conservées.', feature: null, requires: [], dependents: [], fields: [] });
+  for (const [id, row] of db) if (![...registry.values()].some((e) => e.manifest.id === id)) out.push({ id, folder: null, name: id, description: '', version: null, installedVersion: row.installed_version, installedAt: row.first_seen_at, updatedAt: row.updated_at, status: 'absent', admin: null, error: 'Le dossier du module n’est plus dans le code : ses routes sont fermées, ses données sont conservées.', feature: null, requires: [], dependents: [], fields: [] });
   return { modules: out, secrets: settings.encryption };
 }
 

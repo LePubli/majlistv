@@ -2587,3 +2587,36 @@ Deux API de test : la normale (3055) et une seconde (3056) lancée avec `PORT=30
 
 ### Limites (volontaires pour M1)
 Les modules ne peuvent pas encore ajouter leurs propres écrans d'administration ni des blocs de pages (à venir avec M2) ; le webhook de paiement Stripe appelle toujours directement la logique des cartes cadeaux ; l'activation d'un module sans « feature » ne masque pas encore les menus du site (`/config` expose `modules` pour le prochain lot).
+
+## Étape M2 (lot 1) — Collections, Listes, Notes et Rémunération en modules
+
+### Description
+Quatre fonctions existantes deviennent des modules du socle M1, sans changement de comportement :
+| Module | Dossier | Lié à la fonction | Réglages dans Admin → Modules | Écran d'administration |
+|---|---|---|---|---|
+| Collections | `api/src/modules/collections/` | `collections` | — | Studio → Collections |
+| Listes de lecture | `api/src/modules/lists/` | `lists` | — | — |
+| Notes sur les conférences | `api/src/modules/notes/` | `notes` | — | — |
+| Rémunération des chaînes | `api/src/modules/revenue/` | `revenue` | 6 (part reversée, frais, seuil…) | Admin → Rémunération |
+Chacun garde le même interrupteur que dans Admin → Fonctions. Seul le fichier de routes a été déplacé (ex-`api/src/routes/<nom>.js` → `api/src/modules/<nom>/routes.js`) ; les fichiers partagés restent où ils étaient (`api/src/revenue.js` sert aussi à Stripe et à la lecture des vidéos). Les Listes importent la fonction `visibleItems` du module Collections (dépendance de code, pas d'activation : les listes marchent même si Collections est coupé).
+
+Nouveauté du socle : la fiche peut contenir `"admin": { "label": "Ouvrir …", "href": "/admin?tab=revenue" }` ; Admin → Modules affiche alors un lien vers l'écran d'administration du module (Cartes cadeaux et Rémunération en ont un).
+
+**Non converties volontairement** : les citations (leur API démarre des tâches planifiées, il faut d'abord un point d'entrée « démarrage » dans les modules) et les fonctions dont le code est partagé avec beaucoup d'autres (séries, par exemple, importées par 6 fichiers).
+
+### Fichiers
+`api/src/modules/{collections,lists,notes,revenue}/` (`module.json`, `index.js`, `routes.js`) ; `api/src/index.js` (imports et enregistrements retirés) ; `api/src/modules.js` (champ `admin`) ; `web/components/ModulesAdmin.js` (lien) ; `api/tests/test_modules.py` (étendu).
+
+### Prérequis, déploiement
+Aucune variable, aucune migration, aucune dépendance. Décompresser le zip, **supprimer les 4 anciens fichiers** `api/src/routes/collections.js`, `lists.js`, `notes.js`, `revenue.js` (déjà fait si vous récupérez le dépôt par GitHub Desktop), Commit + Push, puis DockPanel → Redeploy `majlistv-api` puis `majlistv-web`, puis les commandes VPS habituelles :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+Admin → Modules : 5 modules (Cartes cadeaux, Collections, Listes de lecture, Notes, Rémunération des chaînes), tous en v1.0.0, dont l'état suit Admin → Fonctions. Le site se comporte comme avant.
+
+### Tests
+`test_modules.py` étendu (5 modules, état = fonction, réglages de la rémunération, lien d'administration, fermeture et réouverture de `/collections`), puis `test_collections.py` (collections et listes), `test_notes.py`, `test_revenue.py`, `test_features.py` : tous OK. Chromium : écran Modules (8 cartes avec les modules d'essai), lien vers Admin → Rémunération, 1440 et 390 px.

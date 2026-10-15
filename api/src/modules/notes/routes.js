@@ -5,7 +5,7 @@
 //   DELETE /me/notes/:id         supprime
 //   GET    /me/notes             toutes les notes, regroupées par conférence (Ma bibliothèque)
 import { z } from 'zod';
-import { pool } from '../db.js';
+import { pool } from '../../db.js';
 
 const MAX_PER_TALK = 300;
 const idSchema = z.object({ id: z.string().uuid() });

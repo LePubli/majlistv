@@ -3,9 +3,9 @@
 //   GET /studio/collections[/:id]                 équipe (modérateur, administrateur) : toutes les collections
 //   POST /studio/collections, PATCH/DELETE /studio/collections/:id, PUT /studio/collections/:id/items
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { presignGet } from '../storage.js';
-import { visibleSql } from '../visibility.js';
+import { pool } from '../../db.js';
+import { presignGet } from '../../storage.js';
+import { visibleSql } from '../../visibility.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const KINDS = ['cycle', 'speaker', 'theme'];

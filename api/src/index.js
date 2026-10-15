@@ -26,7 +26,6 @@ import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import showcaseRoutes from './routes/showcase.js';
 import channelRoutes from './routes/channels.js';
-import revenueRoutes from './routes/revenue.js';
 import { startChannelSync } from './channels.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
@@ -38,18 +37,15 @@ import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → 
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
 import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
-import collectionsRoutes from './routes/collections.js';
 import notificationsRoutes from './routes/notifications.js';
 import moduleRoutes, { discoverModules, registerModules, migrateModules, allModules } from './modules.js'; // étape M1 : socle des modules (api/src/modules/<id>/)
 import { startNotifyMailer } from './notifyMailer.js';
-import listsRoutes from './routes/lists.js';
 import { startAudit } from './audit.js';
 import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
 import learningRoutes from './routes/learning.js';
 import reminderRoutes from './routes/reminders.js';
 import kidsRoutes from './routes/kids.js';
 import speakersRoutes from './routes/speakers.js';
-import notesRoutes from './routes/notes.js';
 import citationRoutes, { autoTopUp } from './routes/citations.js';
 import { recoverImport } from './corpus.js';
 import bookRoutes from './routes/books.js';
@@ -171,21 +167,17 @@ await app.register(appearanceRoutes);
 await app.register(textsRoutes);
 await app.register(pagesRoutes);
 await app.register(moderationRoutes);
-await app.register(collectionsRoutes);
 await app.register(notificationsRoutes);
-await app.register(listsRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
 await app.register(citationRoutes);
 await app.register(kidsRoutes);
 await app.register(speakersRoutes);
-await app.register(notesRoutes);
 await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
 await app.register(showcaseRoutes);
 await app.register(channelRoutes);
-await app.register(revenueRoutes);
 await app.register(seriesRoutes);
 await app.register(cardsRoutes);
 await app.register(statsCollectRoutes);

@@ -29,8 +29,20 @@ mods = requests.get(N + "/admin/modules", headers=A).json()["modules"]
 g = next(m for m in mods if m["id"] == "gifts")
 ok(g["version"] == "1.0.0" and g["installedVersion"] == "1.0.0" and g["feature"] == "gifts", "gifts : version 1.0.0 lue et installée, liée à la fonction « gifts »")
 ok([f["key"] for f in g["fields"]] == ["gift_price_1", "gift_price_3", "gift_price_12"], "gifts : 3 réglages de prix")
-ok([m["id"] for m in mods if m["status"] != "absent"] == ["gifts"], "API normale : un seul module présent dans le code (les autres, connus de la base, sont « absent »)")
-ok(requests.get(N + "/config").json()["modules"] == {"gifts": g["status"] == "on"}, "/config publie l'état des modules")
+ok(sorted(m["id"] for m in mods if m["status"] != "absent") == ["collections", "gifts", "lists", "notes", "revenue"], "API normale : 5 modules présents dans le code (les autres, connus de la base, sont « absent »)")
+ok(all(m["version"] == "1.0.0" and m["feature"] == m["id"] for m in mods if m["status"] != "absent"), "tous en v1.0.0 et liés à la fonction du même nom")
+rv = next(m for m in mods if m["id"] == "revenue")
+ok(len(rv["fields"]) == 6 and rv["admin"]["href"] == "/admin?tab=revenue", "revenue : 6 réglages et lien vers son écran d'administration")
+fe = requests.get(N + "/features").json()
+for mid in ("collections", "lists", "notes"):
+    ok(next(m for m in mods if m["id"] == mid)["status"] == ("on" if fe[mid] else "off"), f"{mid} : état du module = état de la fonction")
+ok(requests.get(N + "/collections").status_code == 200 and requests.get(N + "/me/lists", headers=A).status_code == 200, "routes de collections et de listes toujours branchées")
+requests.put(N + "/admin/modules/collections", headers=A, json={"enabled": False})
+ok(requests.get(N + "/collections").status_code == 404, "module Collections coupé : route fermée (404)")
+requests.put(N + "/admin/modules/collections", headers=A, json={"enabled": True})
+ok(requests.get(N + "/collections").status_code == 200, "rallumé : route rouverte")
+cm = requests.get(N + "/config").json()["modules"]
+ok(cm["gifts"] == (g["status"] == "on") and {"collections", "lists", "notes", "revenue"} <= set(cm), "/config publie l'état des modules")
 # interrupteur = Admin → Fonctions
 r = requests.put(N + "/admin/modules/gifts", headers=A, json={"enabled": True}); ok(r.status_code == 200, "activer gifts")
 ok(requests.get(N + "/features").json()["gifts"] is True, "… la fonction « gifts » (Admin → Fonctions) est activée aussi")

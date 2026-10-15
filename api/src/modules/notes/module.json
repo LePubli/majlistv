@@ -1,0 +1,9 @@
+{
+  "id": "notes",
+  "name": "Notes sur les conférences",
+  "version": "1.0.0",
+  "description": "Prise de notes pendant la lecture d'une conférence.",
+  "feature": "notes",
+  "requires": [],
+  "settings": []
+}

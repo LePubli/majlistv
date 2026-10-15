@@ -2,6 +2,7 @@
 // Étape M1 — Administration → Modules : la liste des modules installés (livrés par zip puis redéployés), leur version, un
 // interrupteur, leurs dépendances et leurs réglages. Les données d'un module ne sont jamais supprimées en le coupant.
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 
@@ -57,6 +58,7 @@ function Card({ m, onChange, call }) {
             className={`ft-switch${m.status === 'on' ? ' on' : ''}`} onClick={() => put({ enabled: m.status !== 'on' })}><span className="ft-knob" aria-hidden="true" /></button>
         )}
       </header>
+      {m.admin && m.status !== 'absent' && <p><Link className="link u" href={m.admin.href}>{m.admin.label} →</Link></p>}
       {m.error && <p className="pe-err" role="alert">{m.error}</p>}
       {m.requires.length > 0 && <p className="meta small">Nécessite : {m.requires.map((r) => `${r.name}${!r.present ? ' (absent)' : r.enabled ? ' ✓' : ' (désactivé)'}`).join(', ')}.</p>}
       {m.dependents.length > 0 && <p className="meta small">Utilisé par : {m.dependents.map((d) => `${d.name}${d.enabled ? ' (actif)' : ''}`).join(', ')}.</p>}

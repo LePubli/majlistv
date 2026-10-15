@@ -1,0 +1,10 @@
+{
+  "id": "revenue",
+  "name": "Rémunération des chaînes",
+  "version": "1.0.0",
+  "description": "Partage des abonnements entre les chaînes selon le temps de visionnage : relevés Studio, clôture mensuelle, suivi des paiements.",
+  "feature": "revenue",
+  "requires": [],
+  "settings": ["rev_share_pct", "rev_costs_pct", "rev_min_payout", "rev_count_free", "rev_user_day_cap", "rev_show_estimate"],
+  "admin": { "label": "Ouvrir la rémunération des chaînes", "href": "/admin?tab=revenue" }
+}

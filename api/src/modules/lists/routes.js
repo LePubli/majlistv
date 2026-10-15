@@ -5,9 +5,9 @@
 //   GET /lists/shared/:token                     lecture publique d'une liste partagée (jamais l'identité du membre)
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { visibleSql } from '../visibility.js';
-import { visibleItems } from './collections.js';
+import { pool } from '../../db.js';
+import { visibleSql } from '../../visibility.js';
+import { visibleItems } from '../collections/routes.js';
 
 export const MAX_LISTS = 20;
 export const MAX_LIST_ITEMS = 200;
