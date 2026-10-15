@@ -2171,3 +2171,29 @@ progress { accent-color: var(--progress-bar); }
   .ap-font-form { grid-template-columns: 1fr; }
   .ap-seg button { padding: 6px 9px; }
 }
+
+/* ---- Étape I2 : Administration → Textes ---- */
+.tt { display: grid; gap: 14px; }
+.tt-bar { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end; }
+.tt-bar label { display: grid; gap: 6px; font-size: 14px; color: var(--text-2); }
+.tt-bar .tt-search { grid-column: 1 / -1; }
+.tt-bar .tt-check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.tt-bar .tt-check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.tt-list { display: grid; gap: 12px; }
+.tt-card { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); padding: 14px; display: grid; gap: 10px; }
+.tt-card header { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.tt-card code { font-size: 13px; color: var(--accent-light); word-break: break-all; }
+.tt-group { font-weight: 600; }
+.tt-fields { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 1100px) { .tt-fields.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tt-fields.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tt-field { display: grid; gap: 6px; align-content: start; }
+.tt-field > label { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.tt-field textarea { min-height: 52px; resize: vertical; line-height: 1.45; }
+.tt-field.mod textarea { border-color: var(--accent); }
+.tt-field.bad textarea { border-color: var(--danger); }
+.tt-err { margin: 0; color: var(--danger); font-size: 13px; }
+.tt-orig { margin: 0; overflow-wrap: anywhere; }
+.tt-pager { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: center; margin-block: 6px; }
+.tt-save { position: sticky; bottom: 12px; z-index: 20; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 14px; background: var(--surface); box-shadow: 0 12px 36px rgba(0, 0, 0, .55); }
+.tt-save-btns { display: flex; gap: 8px; }
+.tt-save { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }

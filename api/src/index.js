@@ -35,6 +35,7 @@ import practiceRoutes from './routes/practice.js';
 import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
+import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
 import moderationRoutes from './routes/moderation.js';
 import collectionsRoutes from './routes/collections.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -163,6 +164,7 @@ await app.register(practiceRoutes);
 await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);
+await app.register(textsRoutes);
 await app.register(moderationRoutes);
 await app.register(collectionsRoutes);
 await app.register(notificationsRoutes);

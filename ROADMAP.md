@@ -31,7 +31,7 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 
 **Socle no-code (décidé avec Epok le 15/10/2026, passe avant le reste)** — tout se modifie depuis l'administration, sans repasser par le code :
 - ✅ **I1 Apparence** : couleurs, polices (dont polices importées), arrondis et espacements, par familles d'éléments ; brouillon, aperçu sur une vraie page (390 → 1440 px, FR/EN/AR), publication, historique, plusieurs thèmes, alertes de lisibilité. Migration 047.
-- **I2 Textes modifiables** : les 1 561 intitulés × 3 langues dans Admin → Textes (recherche, filtre par page, rétablir l'original). Migration 048.
+- ✅ **I2 Textes modifiables** : les 1 563 intitulés × 3 langues dans Admin → Textes (recherche sans accents, filtre par page et par langue, variables {n} protégées, enregistrement groupé, rétablir l'original, export/import JSON, journal des actions). Migration 048. Limite connue : seuls les textes du dictionnaire (web/lib/i18n.js) sont modifiables ; les écrans Studio/Admin et quelques libellés écrits directement dans le code restent à reprendre dans le dictionnaire au fil des étapes suivantes.
 - **I3 Pages en blocs** : pages composées de blocs (texte, image, bouton, colonnes, FAQ, rangées de conférences, À la une, Chaînes à suivre, Collections, citation, tarifs…), création de nouvelles pages, visibilité par appareil et par public, style propre à chaque bloc. Migration 049.
 - **H Accueil membre** refait en blocs selon la maquette « Accueil » (À la une + Reprendre, Nouveautés, Chaînes à suivre, Collections).
 - **I4 En-tête et pied de page en zones** (barre du haut, gauche, centre, droite, barre du bas), réglage par appareil, éditeur de menus.
@@ -270,7 +270,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Socle no-code en cours : I1 (apparence) fait ; suite I2, I3, H, I4, I5, M1. Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) 21 (notifications, cartes cadeaux) A (fonctions activables/désactivables) B (menu latéral et onglets) E1 (vitrine visiteur) et C (chaînes). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Socle no-code en cours : I1 (apparence) et I2 (textes) faits ; suite I3, H, I4, I5, M1. Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) 21 (notifications, cartes cadeaux) A (fonctions activables/désactivables) B (menu latéral et onglets) E1 (vitrine visiteur) et C (chaînes). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

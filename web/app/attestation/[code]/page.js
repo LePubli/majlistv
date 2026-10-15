@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { DICT, DIR, getLocale } from '../../../lib/i18n';
+import { dictFor } from '../../../lib/texts';
 import PrintButton from './PrintButton';
 
 export const metadata = { title: 'Attestation de suivi', robots: { index: false, follow: false } };
@@ -16,7 +17,8 @@ async function load(code) {
 
 export default async function Attestation({ params }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const t = (k) => DICT[locale][k] || DICT.fr[k] || k;
+  const dict = await dictFor(locale); // textes d'origine + textes modifiés (Admin → Textes)
+  const t = (k) => dict[k] || DICT.fr[k] || k;
   const a = await load(params.code);
   if (!a) notFound();
   const date = new Date(a.issuedAt).toLocaleDateString(locale, { dateStyle: 'long' });

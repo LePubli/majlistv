@@ -2259,3 +2259,61 @@ docker exec -it postgres-majlisstv psql -U majlis -d majlis -c "UPDATE themes SE
 docker restart dockpanel-git-majlistv-api
 ```
 (Adapter `-U` et `-d` à vos valeurs `POSTGRES_USER` et `POSTGRES_DB`.)
+
+## Étape I2 — Textes modifiables (Admin → Textes)
+
+### Description
+Tous les textes du site (1 563 intitulés × français, anglais, arabe) se modifient depuis **Admin → Textes**, sans toucher au code ni demander une mise à jour. Les textes d'origine restent dans `web/lib/i18n.js` ; la base ne garde que ce qui a été changé (table `site_texts`, une ligne par clé et par langue). Le site superpose les textes modifiés aux textes d'origine à chaque page, au plus tard 10 secondes après l'enregistrement. « Rétablir l'original » supprime la modification.
+
+Dans la page :
+- recherche (sans tenir compte des accents ni des majuscules) dans les clés, les textes actuels et les textes d'origine ;
+- filtres : page ou zone du site, langue (une seule ou les trois), « seulement les textes modifiés » ;
+- 40 textes par page ; chaque texte montre ses trois langues côte à côte (l'un sous l'autre sur téléphone), l'arabe s'écrit de droite à gauche ;
+- les modifications s'accumulent, puis **Enregistrer** (ou Ctrl/Cmd + S) les envoie d'un coup ; **Annuler** les abandonne ; la page prévient si on la quitte avec des modifications non enregistrées ;
+- protection : un texte ne peut pas être vide, et les mots entre accolades (`{n}`, `{date}`…) doivent rester, car le site y met un nombre, un nom ou une date ;
+- menu « Plus » : exporter les modifications (fichier JSON), importer un fichier JSON (il remplit les modifications en attente, à vérifier puis enregistrer), tout rétablir à l'origine.
+
+Les textes sont du **texte brut** : du HTML tapé dans un texte s'affiche tel quel, il n'est jamais interprété.
+
+### Fichiers
+- `api/migrations/048_site_texts.sql` : table `site_texts` ;
+- `api/src/routes/texts.js` : `GET /texts` (public), `GET/PUT/DELETE /admin/texts` (administrateur) ;
+- `api/src/features.js` : `/texts` reste lisible en mode maintenance ;
+- `web/lib/texts.js` : lecture des textes modifiés et fusion avec le dictionnaire ;
+- `web/app/layout.js`, `web/app/books/page.js`, `web/app/attestation/[code]/page.js` : utilisent le dictionnaire fusionné ;
+- `web/components/TextsAdmin.js`, `web/app/admin/page.js`, `web/components/StudioShell.js` : page Admin → Textes et entrée de menu ;
+- `web/lib/i18n.js` : nouveau texte `admTexts` (nom du menu) ; `web/app/globals.css` : styles `.tt-*` ;
+- `api/tests/test_texts.py` : 29 contrôles.
+
+### Prérequis
+Aucun nouveau réglage, aucune nouvelle variable `.env`. Aucune dépendance ajoutée.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), puis GitHub Desktop : **Commit to main**, **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** en premier (la migration 048 s'applique au démarrage), puis **`majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+```
+curl -s https://api-majlisstv.le-publicitaire.fr/texts
+```
+Doit répondre `{"version":"…","texts":{"fr":{},"en":{},"ar":{}}}` tant qu'aucun texte n'est modifié. Ensuite : Admin → Textes, chercher `heroEyebrow`, changer le français, Enregistrer, recharger le site (déconnecté) dans les 10 secondes : le nouveau texte apparaît ; « Rétablir l'original » le fait disparaître.
+
+### Exemples d'utilisation
+- Changer la signature du site : chercher « Des conférences qui éclairent », modifier les trois langues, Enregistrer.
+- Corriger une traduction arabe : filtrer la langue « العربية », chercher le mot, corriger, Enregistrer.
+- Sauvegarder ses textes avant une grosse modification : Plus → Exporter.
+
+### Tests
+Depuis la racine du dépôt, avec l'API (port 3055) et la base de test (5544) démarrées : `python3 api/tests/test_texts.py` (29 contrôles : droits, validation, remplacement, rétablissement, journal, maintenance). Les tests de l'étape I1 (`test_theme.py`), `test_features.py` et `test_home.py` passent toujours. Interface testée dans Chromium (1440 px et 390 px, français et arabe). Pas testé : Safari / iPhone réels, Firefox.
+
+### Dépannage
+- **Le texte modifié n'apparaît pas** : attendre 10 secondes puis recharger ; vérifier `curl …/texts` (le texte doit y figurer). Si `/texts` répond mais pas le site, vérifier que `majlistv-web` a été redéployé et que `API_URL` du site pointe vers l'API.
+- **« Enregistrement impossible »** : session administrateur expirée (se reconnecter) ou texte refusé (vide, trop long : 2000 caractères maximum).
+- **Un texte de la page reste inchangé** : il est peut-être écrit directement dans le code et non dans le dictionnaire ; il n'est alors pas modifiable ici (à signaler pour l'ajouter au dictionnaire).
+- **Retour à l'origine d'un coup** : Plus → Tout rétablir à l'origine.

@@ -14,9 +14,10 @@ import MemberShell from '../components/MemberShell';
 import StatsBeacon from '../components/StatsBeacon';
 import ResponsiveTables from '../components/ResponsiveTables';
 import SkipLink from '../components/SkipLink';
-import { DICT, DIR, getLocale } from '../lib/i18n';
+import { DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
 import { siteTheme, themeBg } from '../lib/theme';
+import { dictFor } from '../lib/texts';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -49,14 +50,14 @@ export const generateViewport = async () => ({ themeColor: themeBg(await siteThe
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme] = await Promise.all([siteConfig(), siteTheme()]);
+  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme, dict] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale)]);
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
+        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
           <StatsBeacon />
           <ResponsiveTables />
           <SkipLink />
