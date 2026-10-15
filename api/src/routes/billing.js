@@ -9,6 +9,7 @@ import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
 import { hasLearningTier } from '../access.js';
 import { applyGiftPaid, applyGiftRefund } from '../gifts.js';
+import { recordInvoicePaid, recordChargeRefund } from '../revenue.js';
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
 export const WAIVER_VERSION = '2026-10-12';
@@ -322,10 +323,12 @@ export default async function billingRoutes(app) {
             await notify(client, event);
           } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
             await notify(client, event);
+            if (event.type === 'invoice.paid') await recordInvoicePaid(client, obj); // base de la rémunération des chaînes (étape D)
           } else if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && obj.mode === 'payment' && obj.metadata?.gift_id) {
             await applyGiftPaid(client, obj); // carte cadeau payée
           } else if (event.type === 'charge.refunded') {
             await applyGiftRefund(client, obj);
+            await recordChargeRefund(client, obj);
           } else if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) {
             // Filet de sécurité si l'événement d'abonnement arrive plus tard : on récupère l'état actuel chez Stripe.
             const sub = await ctx.stripe.subscriptions.retrieve(obj.subscription);

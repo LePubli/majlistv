@@ -57,6 +57,8 @@ export const FEATURES = [
   { id: 'stats', group: 'community', label: 'Statistiques d\'audience', hint: 'Mesure anonyme des vues', setting: 'stats_enabled' },
   // Argent
   { id: 'gifts', group: 'money', label: 'Cartes cadeaux', hint: 'Offrir un abonnement', setting: 'gift_enabled' },
+  { id: 'revenue', group: 'money', label: 'Rémunération des chaînes', hint: 'Partage des abonnements entre les chaînes selon le temps de visionnage ; relevés Studio, clôture mensuelle et suivi des paiements', def: 'false',
+    rules: [{ re: '^/(studio|admin)/revenue(/|$)' }] },
   // Communication
   { id: 'weekly', group: 'comms', label: 'Sélection de la semaine', hint: 'E-mail hebdomadaire (pour les membres qui l\'ont demandé)', setting: 'weekly_enabled' },
   { id: 'announce', group: 'comms', label: 'Annonce des nouvelles conférences', hint: 'E-mail aux abonnés d\'un intervenant', setting: 'notify_speakers_enabled' },

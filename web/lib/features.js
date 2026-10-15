@@ -10,6 +10,7 @@ const RULES = [
   [/^\/lists(\/|$)/, 'lists'],
   [/^\/chaines(\/|$)/, 'channels'],
   [/^\/studio\/channel(\/|$)/, 'channels'],
+  [/^\/studio\/revenue(\/|$)/, 'revenue'],
   [/^\/kids(\/|$)/, 'kids'],
   [/^\/(gift|redeem)(\/|$)/, 'gifts'],
   [/^\/register(\/|$)/, 'registration'],

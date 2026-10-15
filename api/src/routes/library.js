@@ -5,7 +5,8 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { episodeLabels, seriesNextUp } from './series.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
-import { hasLearningTier } from '../access.js';
+import { hasLearningTier, hasActiveSubscription } from '../access.js';
+import { creditWatch } from '../revenue.js';
 import { dueTalks, upcoming, reminderOfTheDay } from '../revision.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -65,11 +66,14 @@ export default async function libraryRoutes(app) {
   app.put('/me/progress/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { positionMs, durationMs } = progressSchema.parse(req.body);
-    const talk = await pool.query('SELECT duration_seconds FROM talks WHERE id = $1', [id]);
+    const talk = await pool.query('SELECT duration_seconds, speaker FROM talks WHERE id = $1', [id]);
     if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
     // La durée connue du serveur fait foi (le navigateur peut envoyer 0 pendant le chargement).
     const dur = durationMs || Math.round((talk.rows[0].duration_seconds || 0) * 1000);
     const pos = dur ? Math.min(positionMs, dur) : positionMs;
+    // Étape D : temps de visionnage crédité à la chaîne (sans effet si la rémunération est désactivée).
+    const prev = (await pool.query('SELECT position_ms, updated_at FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id])).rows[0];
+    await creditWatch({ userId: req.user.sub, talkId: id, speaker: talk.rows[0].speaker, positionMs: pos, prev, paid: prev ? await hasActiveSubscription(req.user.sub) : false }).catch((e) => req.log.warn(`Crédit de visionnage : ${e.message}`));
     await pool.query(
       `INSERT INTO watch_progress(user_id, talk_id, position_ms, duration_ms, completed, updated_at)
        VALUES ($1, $2, $3, $4, $5, now())

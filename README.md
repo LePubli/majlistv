@@ -1991,3 +1991,49 @@ Web : `app/chaines/…`, `components/ChannelClient.js`, `components/FollowedChan
 - Pas encore d'image d'avatar ni de bannière : l'avatar est la première lettre du nom (à ajouter plus tard avec les finitions E2).
 - Un organisateur ne gère toujours que **ses** conférences ; la chaîne n'ouvre pas la modification des conférences d'un autre organisateur (la modération le peut déjà).
 - La rémunération (étape D) s'appuiera sur ce propriétaire.
+
+
+## Étape D — Rémunération des chaînes (« comme YouTube »)
+
+### D.1 Description
+Chaque mois, **une part des abonnements encaissés est répartie entre les chaînes selon le temps passé à regarder leurs conférences**.
+```
+cagnotte  = encaissé du mois (hors taxes, net des remboursements) × (100 − frais %) × part %
+une chaîne = cagnotte × temps de visionnage de la chaîne ÷ temps de visionnage total
+```
+Valeurs de départ : **part 55 %** (comme YouTube), **frais de paiement 3 %**, **seuil de paiement 20 €**, plafond de **8 h par membre et par jour**, visionnage des membres gratuits **compté**. Tout se règle dans **Administration → Paramètres → Rémunération des chaînes** ; la fonction entière s'active dans **Administration → Fonctions → Rémunération des chaînes** (groupe Argent, **désactivée par défaut**).
+
+- **Organisateur** : Studio → **Revenus** : estimation du mois en cours (modifiable tant que le mois n'est pas clôturé), report des mois précédents, heures par chaîne, relevés des mois clôturés avec leur statut (À payer, Payé, Reporté).
+- **Administrateur** : Administration → **Rémunération** : choisir un mois, voir encaissé, cagnotte, heures, part de chaque chaîne ; **Clôturer** un mois terminé (montants figés) ; **Exporter en CSV** pour le virement ; **Marquer payé** (avec une note : référence du virement).
+- Chaque clôture et chaque paiement sont inscrits au **journal des actions**.
+
+### D.2 Règles de calcul
+- **Encaissé** : factures d'abonnement Stripe (`invoice.paid`), montant **hors taxes**. Un remboursement (`charge.refunded`) réduit la facture au prorata. Les essais gratuits (0 €) et les **cartes cadeaux** ne comptent pas.
+- **Temps de visionnage** : mesuré **par le serveur** à chaque reprise de lecture (toutes les ~10 s), jamais plus que le temps réel écoulé : sauter à la fin d'une vidéo ne crédite rien. Indépendant des statistiques d'audience anonymes (qui respectent « Do Not Track »). Plafonné par membre et par jour.
+- **Attribution** : le temps est crédité à la chaîne dont le nom d'intervenant figure sur la conférence ; le montant revient au **propriétaire** de la chaîne (étape C).
+- **Seuil et report** : sous le seuil, ou si la chaîne n'a pas de propriétaire, la somme est **reportée** au mois suivant (et s'additionne). Dès que le total atteint le seuil et qu'un propriétaire existe, la ligne passe à « À payer ».
+- Un mois ne se clôture qu'**une fois terminé**. Après clôture, un remboursement ou un changement de réglage ne le modifie plus (à corriger à la main lors du mois suivant si besoin).
+- Seul le visionnage **depuis l'activation de la fonction** est compté : activez-la avant le premier jour du mois à rémunérer. Les factures, elles, sont enregistrées dès cette version (même fonction coupée).
+
+### D.3 Prérequis et déploiement
+Étapes A, B, C et E1 déployées. **Une migration** (`045_revenue.sql`, automatique). Aucune variable `.env`. Dans Stripe → Développeurs → Webhooks, l'événement **`charge.refunded`** doit être coché (déjà demandé pour les cartes cadeaux) et `invoice.paid` aussi. API puis web :
+```bash
+cd /opt/majlis-tv && unzip -o majlis-tv-etapeD-remuneration.zip
+# Coolify : Redeploy « api » puis « web »
+```
+Mise en route : Fonctions → activer « Rémunération des chaînes » → Paramètres → vérifier part, frais, seuil → le mois suivant, Administration → Rémunération → Clôturer → CSV → virements → Marquer payé.
+
+### D.4 Fichiers
+API : `migrations/045_revenue.sql`, `src/revenue.js` (calcul, clôture, crédit), `src/routes/revenue.js`, `src/routes/billing.js` (enregistrement des factures et remboursements), `src/routes/library.js` (crédit à la reprise de lecture), `src/settings.js`, `src/featuresList.js`, `tests/test_revenue.py`.
+Web : `app/studio/revenue/page.js`, `components/RevenueAdmin.js`, `app/admin/page.js`, `StudioShell.js`, `lib/features.js`, `lib/i18n.js` (fr/en/ar), `globals.css`.
+
+### D.5 Debug
+- **Rien n'est compté** : la fonction est-elle activée ? Les membres regardent-ils des conférences dont le champ « Intervenant » est rempli ? (une conférence sans intervenant n'a pas de chaîne).
+- **Cagnotte à 0** : aucune facture `invoice.paid` reçue ce mois-là (vérifier le webhook Stripe), ou devise différente de celle du site (seule la devise du site est comptée).
+- **Une chaîne reste « Reporté »** : sous le seuil, ou sans propriétaire (Studio → Chaînes pour l'attribuer).
+- **Mois impossible à clôturer** : le mois n'est pas terminé, ou déjà clôturé.
+
+### D.6 À savoir (honnêtement)
+- **Les versements sont manuels** (virement, CSV puis « Marquer payé »). Un versement automatique (Stripe Connect) est possible plus tard mais demande l'ouverture de comptes pour chaque organisateur.
+- **Aspects légaux et fiscaux** (statut des organisateurs, facturation, TVA, déclarations) : à valider avec un comptable avant les premiers versements ; le site calcule, il ne remplace pas ce conseil.
+- Les abonnés de l'offre Apprentissage et de l'offre standard comptent de la même façon ; la répartition ne tient pas compte du prix payé par chaque membre.

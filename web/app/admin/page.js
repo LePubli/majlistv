@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import StatsView from '../../components/StatsView';
+import RevenueAdmin from '../../components/RevenueAdmin';
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
 const SUB_LABEL = { trialing: 'Essai', active: 'Abonné', past_due: 'Paiement en retard', canceled: 'Résilié', incomplete: 'Incomplet', unpaid: 'Impayé' };
@@ -1086,7 +1087,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux', revenue: 'Rémunération des chaînes' };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
@@ -1100,6 +1101,7 @@ export default function Admin() {
       {tab === 'stats' && <StatsView endpoint="/admin/stats" site />}
       {tab === 'audit' && <AuditLog />}
       {tab === 'gifts' && <GiftsAdmin />}
+      {tab === 'revenue' && <RevenueAdmin />}
     </main>
   );
 }

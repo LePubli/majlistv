@@ -20,12 +20,13 @@ Chaque étape est livrée complète (code, tests, README, commandes de déploiem
 | 9 ter | Vidéos archive.org (lecteur Mejliss TV, import de collections) ; résumé toujours en français | ✅ en ligne |
 | A | Fonctions activables et désactivables (Administration → Fonctions, mode maintenance) | ✅ livré, à déployer |
 | C | Chaînes (intervenant fusionné, propriétaire organisateur, attribution modération, Chaînes suivies) | ✅ livré, à déployer |
+| D | Rémunération des chaînes (part des abonnements, temps de visionnage, clôture mensuelle, CSV, suivi des paiements) | ✅ livré, à déployer |
 | E1 | Vitrine visiteur (exemple réel + quiz jouable), citation du jour encadrée | ✅ livré, à déployer |
 | B | Menu latéral membre, barre du bas mobile, onglets (compte, apprentissage, bibliothèque), fil d'Ariane | ✅ livré, à déployer |
 
 ## À venir
 
-**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · ~~C chaînes~~ (fait) · D rémunération · E pages refondues + vitrine visiteur · F mobile et accessibilité. Chaque étape sur « go ».
+**Refonte validée (plan « Mejliss TV – Plan des points restants »)** : ~~B menu latéral et onglets~~ (fait) · ~~C chaînes~~ (fait) · ~~D rémunération~~ (fait) · E pages refondues + vitrine visiteur · F mobile et accessibilité. Chaque étape sur « go ».
 
 ### Phase A — Avant d'ouvrir au public
 
