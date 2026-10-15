@@ -183,9 +183,11 @@ function sectionProps(b, preview) {
 // Liste de blocs. preview = vrai : tous les publics sont montrés, avec une étiquette sur les blocs limités.
 export function BlocksView({ blocks, locale, preview = false, onPick, pickedId }) {
   const lang = locale || 'fr';
+  const { blockEdits } = useApp(); // mode édition sur la page (étape I5) : le bloc en cours de modification s'affiche tout de suite
   return (
     <>
-      {(blocks || []).map((b) => {
+      {(blocks || []).map((b0) => {
+        const b = blockEdits?.[b0.id] || b0;
         const props = sectionProps(b, preview);
         const flags = preview ? [
           ...((b.show?.devices || []).length < 3 ? [(b.show.devices || []).map((d) => DEVICE_LABELS[d]).join(' + ')] : []),
@@ -221,7 +223,7 @@ export function PageZone({ path, zone, initial, targeted, className = '' }) {
   const { locale } = useApp();
   const blocks = useZoneBlocks(path, zone, initial, targeted);
   if (!blocks.length) return null;
-  return <div className={`pb-zone ${className}`} lang={locale} dir={DIR[locale] || 'ltr'}><BlocksView blocks={blocks} locale={locale} /></div>;
+  return <div className={`pb-zone ${className}`} data-pbpath={path} lang={locale} dir={DIR[locale] || 'ltr'}><BlocksView blocks={blocks} locale={locale} /></div>;
 }
 
 // Autour du contenu de chaque page : blocs « avant » et « après » ajoutés dans Admin → Pages.
@@ -267,7 +269,7 @@ export function LayoutZone({ zone, className = '' }) {
 export function HomeBlocks({ page }) {
   const { locale } = useApp();
   return (
-    <main className="pb-page pb-home" lang={locale} dir={DIR[locale] || 'ltr'}>
+    <main className="pb-page pb-home" data-pbpath="/_home" lang={locale} dir={DIR[locale] || 'ltr'}>
       <BlocksView blocks={page.zones?.main || []} locale={locale} />
     </main>
   );

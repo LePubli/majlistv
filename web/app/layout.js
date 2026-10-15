@@ -20,6 +20,7 @@ import { siteTheme, themeBg } from '../lib/theme';
 import { dictFor } from '../lib/texts';
 import { pageSlots, siteLayout } from '../lib/pages';
 import { PageSlots } from '../components/PageBlocks';
+import EditMode from '../components/EditMode';
 import TopBar from '../components/TopBar';
 
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }) {
           <Header />
           <MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell>
           <Footer />
+          <EditMode />
         </Providers>
       </body>
     </html>

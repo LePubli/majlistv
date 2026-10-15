@@ -23,7 +23,9 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const [layoutPreview, setLayoutPreview] = useState(null); // aperçu de l'éditeur (Admin → Pages) : remplace les réglages publiés
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
-  const t = (key) => dict[key] || key;
+  const [blockEdits, setBlockEdits] = useState({}); // mode édition sur la page : blocs modifiés (id → bloc), vus tout de suite par l'administrateur
+  const [textPatch, setTextPatch] = useState({});   // mode édition sur la page : textes modifiés (clé → texte), pour la langue courante
+  const t = (key) => textPatch[key] || dict[key] || key;
 
   // Appel de l'API via le proxy same-origin /api (pas de CORS).
   const call = useCallback(async (path, opts = {}, tk = token) => {
@@ -83,5 +85,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }

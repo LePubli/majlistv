@@ -2412,3 +2412,20 @@ h3.pb-h { font-size: clamp(1.15rem, 2vw, 1.4rem); }
 .pe-show{display:grid;gap:8px;margin-top:8px}
 .pe-checks{display:flex;flex-wrap:wrap;gap:12px}
 @media (min-width:1100px){.ne-zones{grid-template-columns:repeat(3,1fr)}}
+
+/* Étape I5 — mode édition sur la page (administrateur) */
+.em-bar{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:16px;z-index:9000;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:#17130a;border:1px solid var(--gold,#e0a526);box-shadow:0 6px 24px rgba(0,0,0,.5)}
+[dir=rtl] .em-bar{transform:translateX(50%)}
+.em-hint{font-size:.9rem;color:#fff}
+.em-panel{position:fixed;top:0;inset-inline-end:0;bottom:0;width:min(440px,100vw);z-index:9100;background:#0f0d08;border-inline-start:1px solid var(--gold,#e0a526);overflow:auto;padding:14px;box-shadow:-8px 0 30px rgba(0,0,0,.5)}
+.em-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;color:#fff}
+.em-body{display:grid;gap:12px}
+.em-body textarea{width:100%}
+.em-actions{display:flex;flex-wrap:wrap;gap:8px}
+.em-key{display:flex;gap:6px;align-items:center;margin:4px 0}
+body.edit-on [data-block]{cursor:pointer}
+body.edit-on .em-hover{outline:2px dashed var(--gold,#e0a526);outline-offset:2px;cursor:pointer}
+@media (max-width:700px){
+  .em-bar{bottom:84px;max-width:calc(100vw - 24px)}
+  .em-panel{top:auto;width:100vw;height:68vh;border-inline-start:0;border-top:1px solid var(--gold,#e0a526);border-radius:16px 16px 0 0}
+}

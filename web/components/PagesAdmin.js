@@ -22,7 +22,7 @@ const readAsDataUrl = (file) => new Promise((ok, ko) => { const r = new FileRead
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 /* ------------------------------------------------------------------ Bibliothèque d'images */
-function MediaPicker({ call, onPick, onClose }) {
+export function MediaPicker({ call, onPick, onClose }) {
   const [list, setList] = useState(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);

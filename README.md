@@ -2495,3 +2495,46 @@ API (`RATE_LIMIT_MAX=5000`) : `python3 api/tests/test_layout.py`, puis les tests
 
 ### Limites
 Les menus sont les mêmes sur tout le site (pas de menu par page) ; le ciblage par public est un affichage, pas une protection ; les icônes sont choisies dans une liste de 14.
+
+## Étape I5 — Mode édition sur la page (administrateur)
+
+### Description
+Connecté en administrateur, un bouton **« ✎ Modifier cette page »** apparaît en bas de chaque page du site (pas dans /admin, /studio, /kids, connexion). Une fois le mode actif :
+- **Cliquer un bloc** (bannière, titre, texte, cartes, conférences, blocs de l'accueil, barre d'annonce, blocs avant/après une page…) ouvre un panneau avec les mêmes réglages que Admin → Pages : Contenu (FR/EN/AR), Affichage (appareil, public), Style. La page change sous vos yeux ; le brouillon s'enregistre tout seul ; les visiteurs ne voient rien avant **Publier** (qui publie tout le brouillon de cette page).
+- **Cliquer un texte du site** (lien de menu, bouton, titre…) ouvre ses trois langues ; **Enregistrer** l'applique comme dans Admin → Textes (visible des visiteurs au plus tard 10 s après) ; **Rétablir l'original** revient au texte du code. Si un même texte sert à plusieurs endroits, une liste de cases permet de choisir lesquels modifier.
+- Pendant l'édition, rien ne navigue ni ne se déclenche (liens, boutons). **Terminer** ou la touche Échap ferment le mode / le panneau.
+- Les textes qui changent selon la personne ou le contenu (nom, titre d'une conférence, textes à variables {n}) ne sont pas reconnus : le panneau l'indique et renvoie vers Admin → Textes ou Studio.
+- Sur téléphone, le panneau s'ouvre en bas de l'écran.
+
+### Fichiers
+`web/components/EditMode.js` (barre, panneaux, écouteurs) ; `web/components/Providers.js` (`blockEdits`, `textPatch`) ; `web/components/PageBlocks.js` (`BlocksView` affiche le bloc en cours de modification, `data-pbpath` sur les zones) ; `web/components/PagesAdmin.js` (`MediaPicker` exporté, pour les images) ; `web/app/layout.js` ; `web/app/globals.css`. Aucune modification de l'API ni de la base : le mode réutilise `/admin/pages…` et `/admin/texts`.
+
+### Prérequis
+Compte administrateur. Aucune variable `.env`, aucune dépendance, aucune migration.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), puis GitHub Desktop : **Commit to main**, **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-web`** seulement (l'API et le worker ne changent pas).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Exemples d'utilisation
+- **Changer un titre** : ouvrir la page → « Modifier cette page » → cliquer le titre → modifier → attendre « Brouillon enregistré » → **Publier**.
+- **Renommer « Collections » dans le menu** : cliquer le mot dans le menu → changer FR/EN/AR → **Enregistrer**.
+- **Cacher un bloc sur téléphone** : cliquer le bloc → onglet Affichage → décocher Téléphone → Publier.
+
+### Tests
+Chromium (1440 et 390 px) : bouton absent pour visiteur et membre, présent pour l'administrateur ; clic bloc → panneau, modification instantanée, brouillon API, visiteurs inchangés jusqu'à Publier ; clic texte de menu → 3 langues, enregistrement API, menu mis à jour ; liens inactifs en mode édition ; panneau en bas sur téléphone ; pas de barre dans /admin ; aucune erreur console. Étapes I3, H et I4 revérifiées. **Non testé** : vrai téléphone, lecteur d'écran, Safari/Firefox (la détection du texte sous le clic utilise `caretPositionFromPoint` / `caretRangeFromPoint`).
+
+### Dépannage
+- **Pas de bouton** : il faut être connecté avec le rôle administrateur, hors pages /admin, /studio, /kids.
+- **« Cette zone n'appartient à aucune page modifiable »** : le bloc vient d'une page dont l'administration n'a pas la fiche ; ouvrir Admin → Pages.
+- **Mon texte change sur plusieurs pages** : il est partagé ; décochez les endroits à ne pas toucher dans la liste.
+- **Un visiteur ne voit pas ma modification** : publier (blocs) ou attendre 10 secondes (textes), puis recharger.
+
+### Limites
+On modifie les blocs existants et leurs textes ; ajouter, déplacer ou supprimer un bloc se fait toujours dans Admin → Pages. Le panneau d'un bloc publie tout le brouillon de la page.
