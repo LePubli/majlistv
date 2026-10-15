@@ -2166,3 +2166,96 @@ nginx -t && systemctl reload nginx
 ### Débogage
 - Le menu ne se replie pas : vérifier que le navigateur autorise le stockage local (en navigation privée, l'état n'est pas mémorisé mais le bouton fonctionne).
 - Bannière sans image : aucune affiche disponible → fond dégradé or (comportement prévu). Ajouter une image dans Admin → Accueil (mode personnalisé) ou une affiche à la conférence à la une.
+
+## Étape I1 — Apparence réglable (Admin → Apparence)
+
+Première étape du « socle no-code » : les couleurs, polices, arrondis et espacements du site se règlent depuis l'administration, sans toucher au code ni redéployer.
+
+### Ce qui change
+
+| Point | Détail |
+|---|---|
+| Nouvelle page | **Administration → Apparence** (menu latéral, entre Journal des actions et Fonctions). Réservée au rôle admin. |
+| 98 réglages | En 16 groupes : couleurs de base, polices et taille du texte, arrondis, espacements et largeur, en-tête, menu latéral, barre du bas (téléphone), menu du Studio, boutons, cartes et panneaux, badges, champs, onglets, pied de page, citation du jour, espace Kids. |
+| Réglages liés | Un réglage de famille (ex. « Fond du bouton principal ») peut reprendre une couleur de base (« = Couleur principale ») avec une opacité. Changer l'or change alors tous les éléments liés d'un coup. |
+| Brouillon → aperçu → publier | Chaque changement part dans un brouillon (enregistré tout seul après 1 s). L'aperçu affiche une **vraie page du site** au choix (accueil, bibliothèque, Apprentissage, Kids…, ou n'importe quelle adresse), en largeur téléphone 390 / tablette 768 / petit écran 1024 / grand écran 1440, et en FR / EN / AR. Les visiteurs ne voient rien avant « Publier ». |
+| Historique | Chaque publication est gardée (50 dernières par thème). « Recopier dans le brouillon » remet une ancienne version en brouillon, à vérifier puis publier. |
+| Plusieurs thèmes | Créer un thème (copie), renommer, activer (un seul actif), supprimer (jamais l'actif), exporter / importer un fichier JSON. |
+| Lisibilité | Alerte automatique quand un texte devient peu lisible sur son fond (règle WCAG : 4,5:1 ; 3:1 pour les textes d'exemple des champs), avec lien vers le réglage. Confirmation demandée avant de publier malgré une alerte. |
+| Polices | Polices intégrées (DM Sans, Montserrat, Fredoka, Noto Sans Arabic, Noto Kufi Arabic, police de l'appareil, Serif) + **import de vos polices** (WOFF2, WOFF, TTF, OTF, 2 Mo max), hébergées sur votre stockage Garage et servies par le site : aucun appel à Google (RGPD). Une police utilisée par un thème ne peut pas être supprimée. |
+| Sécurité | Seules des valeurs contrôlées sont acceptées (codes couleur, longueurs bornées, noms de polices connues) : aucun texte libre n'entre dans la feuille de style. Le fichier de police est vérifié par sa signature, pas par son extension. Toutes les actions sont inscrites au journal des actions. |
+| Apparence actuelle | Le thème d'origine (« Mejliss TV (origine) ») reproduit le site à l'identique. Comparaison automatique image par image, avant / après, sur 19 pages (visiteur et membre, 390 et 1440 px, FR et AR) : aucune différence, **sauf l'en-tête sur les pages Kids**, désormais bleu nuit comme le reste de l'espace Kids (il restait noir). |
+
+**Base de données** : migration `047_themes.sql` (tables `themes`, `theme_versions`, `theme_fonts`), appliquée automatiquement au démarrage de l'API.
+**Variables d'environnement** : aucune nouvelle.
+
+### Ce qui n'est pas encore réglable (prévu)
+- Environ 180 teintes décoratives restent fixes dans `globals.css` : dégradés de la vitrine et de l'espace Apprentissage, couleurs d'état (vert / orange / rouge de l'administration), ombres noires, voiles sur les vidéos, décorations de Kids (étoiles, lettres colorées). Elles deviendront réglables **bloc par bloc** avec les pages en blocs (étape I3) et le mode édition sur la page (étape I5).
+- La couleur d'un élément précis sur une page précise : étapes I3 et I5.
+- Les textes : étape I2.
+
+### Fichiers
+| Fichier | Rôle |
+|---|---|
+| `api/migrations/047_themes.sql` | Tables des thèmes, de l'historique et des polices ; thème d'origine actif. |
+| `api/src/themeCss.js` **et** `web/lib/themeCss.js` | Liste des réglages, validation, fabrication de la feuille de style, calcul du contraste. **Deux copies identiques** (le test le vérifie) : toute modification se fait dans les deux. |
+| `api/src/routes/appearance.js` | Routes `/theme`, `/theme/fonts/:id` (publiques) et `/admin/themes…`, `/admin/theme/fonts…` (admin). |
+| `web/lib/theme.js` | Lecture du thème actif côté serveur (gardé 10 s en mémoire). |
+| `web/app/layout.js` | Injecte le thème dans chaque page (`<style id="theme-vars">`), couleur de barre d'adresse = fond du thème. |
+| `web/components/AppearanceAdmin.js` | Page Administration → Apparence. |
+| `web/app/globals.css` | Couleurs de base remplacées par les réglages (96 remplacements), nouveaux réglages déclarés en tête, bloc « Étape I1 » à la fin qui branche chaque famille d'éléments. |
+| `web/middleware.js` | `frame-src 'self'` ajouté à la CSP (l'aperçu affiche une page du site dans un cadre). |
+| `api/src/features.js` | `/theme` reste accessible pendant la maintenance. |
+| `api/tests/test_theme.py` | 47 vérifications. |
+
+### Déploiement
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` en remplaçant les fichiers.
+2. GitHub Desktop : *Commit to main*, puis *Push origin*.
+3. DockPanel → Git Deploy : *Redeploy* **`majlistv-api` d'abord** (la migration 047 s'applique au démarrage), puis **`majlistv-web`**. Le worker ne change pas.
+4. Sur le VPS (SSH) :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+5. Vérifier l'API et la migration :
+```bash
+curl -s https://api-majlisstv.le-publicitaire.fr/health
+curl -s https://api-majlisstv.le-publicitaire.fr/theme | head -c 200; echo
+docker logs --tail 50 dockpanel-git-majlistv-api 2>&1 | grep -i "047_themes"
+```
+La deuxième commande doit afficher `{"version":"…","css":":root{--bg:#0B0906;…`.
+
+6. Dans le navigateur : Ctrl + F5 sur le site, puis Administration → Apparence.
+
+### Exemples d'utilisation
+- **Changer l'or du site** : Apparence → Couleurs de base → « Couleur principale (or) » → choisir la couleur → regarder l'aperçu (boutons, liens, badges Premium suivent) → Publier.
+- **Boutons carrés** : Arrondis → « Arrondi des boutons » → 6 px → Publier.
+- **Police arabe personnelle** : Polices et taille du texte → Polices importées → nom « Amiri », fichier `.woff2` → Importer → « Police du texte (arabe) » = Amiri → aperçu en AR → Publier.
+- **Thème du Ramadan** : Plus → Nouveau thème (copie) → régler → Publier → « Activer sur le site » le jour venu ; réactiver « Mejliss TV (origine) » ensuite.
+- **Revenir en arrière** : Historique → « Recopier dans le brouillon » sur la bonne date → Publier.
+
+### Tests
+Prérequis : API sur le port 3055, PostgreSQL de test 5544, stockage S3 de test (moto, bucket `majlis-videos`).
+```bash
+python3 api/tests/test_theme.py
+```
+47 vérifications : lecture publique, droits (visiteur, membre, admin), refus des valeurs invalides (dont tentative d'injection CSS), brouillon invisible, publication, activation, un seul thème actif, historique et restauration, import JSON, polices (format vérifié, doublon, service du fichier, @font-face, police utilisée non supprimable), journal des actions, maintenance, retour exact à l'apparence d'origine, et égalité des deux copies de `themeCss.js`. `test_home.py` et `test_features.py` repassés sans erreur.
+
+Testé aussi dans un vrai navigateur (Chromium) : page Apparence à 1440 px et à 390 px en arabe (aucune page plus large que l'écran, aucune erreur JavaScript), aperçu en direct, alertes de lisibilité, publication visible sur le site en moins de 10 s, couleurs Kids, arrondi et police des boutons.
+**Non testé** : Safari / iPhone et Firefox réels ; l'aperçu à 768 et 1024 px n'a été vérifié qu'à l'œil sur les captures.
+
+### Débogage
+- **La page Apparence affiche « Chargement… » sans fin** : l'API n'a pas appliqué la migration 047 → `docker logs --tail 100 dockpanel-git-majlistv-api` et chercher `047_themes` ou une erreur SQL.
+- **L'aperçu reste vide** : la CSP de `majlistv-web` n'est pas à jour (il faut `frame-src 'self'`). Vérifier :
+```bash
+curl -sI https://majlisstv.le-publicitaire.fr/ | grep -i content-security-policy | grep -o "frame-src[^;]*"
+```
+- **Publié mais le site ne change pas** : attendre 10 secondes puis Ctrl + F5 ; vérifier que le thème modifié est bien « actif » (sinon « Activer sur le site »).
+- **Une police importée ne s'affiche pas** : tester `https://majlisstv.le-publicitaire.fr/api/theme/fonts/<id>` (doit télécharger le fichier) ; vérifier que la licence et le fichier sont corrects (un WOFF2 converti avec un outil en ligne peut être abîmé).
+- **Tout casser par erreur** : Apparence → choisir « Mejliss TV (origine) » → Historique → recopier la première version → Publier ; ou, en dernier recours, sur le VPS :
+```bash
+docker exec -it postgres-majlisstv psql -U majlis -d majlis -c "UPDATE themes SET is_active = (name = 'Mejliss TV (origine)');"
+docker restart dockpanel-git-majlistv-api
+```
+(Adapter `-U` et `-d` à vos valeurs `POSTGRES_USER` et `POSTGRES_DB`.)

@@ -34,6 +34,7 @@ import quizRoutes from './routes/quiz.js';
 import practiceRoutes from './routes/practice.js';
 import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
+import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
 import moderationRoutes from './routes/moderation.js';
 import collectionsRoutes from './routes/collections.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -161,6 +162,7 @@ await app.register(quizRoutes);
 await app.register(practiceRoutes);
 await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
+await app.register(appearanceRoutes);
 await app.register(moderationRoutes);
 await app.register(collectionsRoutes);
 await app.register(notificationsRoutes);

@@ -22,8 +22,8 @@ export async function allFeatures() {
 // Règles compilées une fois : chemin → fonction concernée.
 const RULES = FEATURES.flatMap((f) => (f.rules || []).map((r) => ({ id: f.id, re: new RegExp(r.re), methods: r.methods || null })));
 
-// Chemins toujours ouverts pendant la maintenance : santé, configuration, connexion, administration, webhook de paiement.
-const MAINTENANCE_OPEN = /^\/(health|config|features|auth\/|admin(\/|$)|billing\/webhook)/;
+// Chemins toujours ouverts pendant la maintenance : santé, configuration, thème (apparence de la page de maintenance), connexion, administration, webhook de paiement.
+const MAINTENANCE_OPEN = /^\/(health|config|theme(\/|$)|features|auth\/|admin(\/|$)|billing\/webhook)/;
 
 // À brancher avant l'enregistrement des routes : ferme les routes des fonctions coupées (404) et gère la maintenance (503).
 export function registerFeatureGuard(app) {

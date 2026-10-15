@@ -24,7 +24,8 @@ export function buildCsp(nonce, { https, dev }) {
     .map((u) => (u ? origin(u) : null)).filter(Boolean))];
   // Sans adresse de stockage connue : schéma https: (ou http: en test local) plutôt que de casser les vidéos et images.
   const stor = storage.length ? storage : [https ? 'https:' : 'https: http:'];
-  const frames = ['https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com', ...list(process.env.CSP_EXTRA_FRAME)];
+  // 'self' : l'aperçu d'Admin → Apparence affiche une page du site dans un cadre (étape I1).
+  const frames = ["'self'", 'https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com', ...list(process.env.CSP_EXTRA_FRAME)];
   const d = {
     'default-src': ["'self'"],
     // strict-dynamic : les scripts chargés par un script de confiance (API YouTube / Vimeo) sont autorisés ;

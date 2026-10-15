@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import StatsView from '../../components/StatsView';
 import RevenueAdmin from '../../components/RevenueAdmin';
+import AppearanceAdmin from '../../components/AppearanceAdmin';
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
 const SUB_LABEL = { trialing: 'Essai', active: 'Abonné', past_due: 'Paiement en retard', canceled: 'Résilié', incomplete: 'Incomplet', unpaid: 'Impayé' };
@@ -1088,13 +1089,14 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux', revenue: 'Rémunération des chaînes' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', appearance: 'Apparence', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', stats: 'Statistiques', audit: "Journal des actions", gifts: 'Cartes cadeaux', revenue: 'Rémunération des chaînes' };
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{titles[tab] || titles.dashboard}</h1>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'users' && <Users me={user.id} />}
       {tab === 'features' && <FeaturesAdmin />}
+      {tab === 'appearance' && <AppearanceAdmin />}
       {tab === 'settings' && <Settings />}
       {tab === 'legal' && <LegalPages />}
       {tab === 'categories' && <Categories />}

@@ -16,6 +16,7 @@ import ResponsiveTables from '../components/ResponsiveTables';
 import SkipLink from '../components/SkipLink';
 import { DICT, DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
+import { siteTheme, themeBg } from '../lib/theme';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -43,14 +44,18 @@ export const generateMetadata = async () => {
     icons: { icon: [{ url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' },
   };
 };
-export const viewport = { themeColor: '#0B0906', width: 'device-width', initialScale: 1 };
+// Couleur de la barre d'adresse des téléphones : le fond du thème publié (Admin → Apparence).
+export const generateViewport = async () => ({ themeColor: themeBg(await siteTheme()), width: 'device-width', initialScale: 1 });
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const { appName, trialDays, cards, hasSeries, hasBooks, stats, features } = await siteConfig();
+  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme] = await Promise.all([siteConfig(), siteTheme()]);
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
+        {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
+            l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
+        <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
         <Providers locale={locale} dict={DICT[locale]} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
           <StatsBeacon />
           <ResponsiveTables />

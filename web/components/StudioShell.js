@@ -24,6 +24,7 @@ const ICONS = {
   layers: 'M12 3 3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5',
   heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  brush: 'M14.5 4.5l5 5L10 19H5v-5zM12.5 6.5l5 5M5 19l-2 2',
 };
 const Icon = ({ d }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
@@ -66,7 +67,7 @@ export default function StudioShell({ children }) {
     ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ...(isStaff ? [] : [['/studio/channel', t('chNav'), ICONS.users]]), ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart], ['/studio/revenue', t('rvNav'), ICONS.tag]] }]),
     ...(isAdmin ? [{ title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
-      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=revenue', t('rvAdminNav'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
+      ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=revenue', t('rvAdminNav'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=appearance', t('admAppearance'), ICONS.brush], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
   // Étape A : une fonction coupée disparaît du menu (l'entrée « Fonctions » reste toujours là pour la rallumer).
