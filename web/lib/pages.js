@@ -33,3 +33,20 @@ export async function publicPages() {
     return res.ok ? await res.json() : [];
   } catch { return []; }
 }
+
+// Étape I4 — « En-tête, menus et pied de page » publié : { nav, zones: { topbar, footerTop }, targeted } (blocs « tout le monde » seulement ; 10 s en mémoire).
+let layoutCache = null;
+let layoutAt = 0;
+export async function siteLayout() {
+  if (layoutCache !== null && Date.now() - layoutAt < 10_000) return layoutCache || null;
+  try {
+    const res = await fetch(`${API}/pages/view?path=%2F_layout&ssr=1`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    if (res.status === 404) { layoutCache = false; layoutAt = Date.now(); return null; }
+    if (res.ok) {
+      const j = await res.json();
+      layoutCache = { nav: j.nav || null, zones: { topbar: j.zones?.topbar || [], footerTop: j.zones?.footerTop || [] }, targeted: Boolean(j.targeted) };
+      layoutAt = Date.now();
+    }
+  } catch { /* API injoignable : derniers réglages connus, ou menus d'origine */ }
+  return layoutCache || null;
+}

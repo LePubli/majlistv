@@ -3,10 +3,14 @@
 // Le menu suit les interrupteurs de fonctions (Admin → Fonctions) : une fonction coupée disparaît du menu.
 // Visiteurs, Studio/Administration (leur propre menu), Kids et pages d'entrée de compte : aucun changement.
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { memberShellOn } from '../lib/shell';
+import NavLink from './NavLink';
+import { resolveList } from '../lib/menus';
+import { MENUS } from '../lib/navcfg';
+import { NAV_ICON_PATHS } from '../lib/navicons';
+import { tx } from '../lib/blocks';
 
 const ICONS = {
   home: 'M4 11l8-7 8 7v9H4z', series: 'M4 6h16M4 12h16M4 18h10', col: 'M12 3L3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5', books: 'M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3zM8 20v-3',
@@ -36,7 +40,7 @@ export const ChevIco = () => (
 );
 
 export default function MemberShell({ children }) {
-  const { t, user, kid, feat, hasSeries, hasBooks } = useApp();
+  const { t, user, kid, feat, hasSeries, hasBooks, locale, layout } = useApp();
   const path = usePathname();
   const params = useSearchParams();
   const [col, toggle] = useCollapsed();
@@ -55,37 +59,45 @@ export default function MemberShell({ children }) {
   const manager = ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user.role === 'moderator';
 
-  const groups = [
-    { title: t('hmDiscover'), items: [
-      ['/', t('home'), ICONS.home, true],
-      ['/series', t('seriesNav'), ICONS.series, hasSeries],
-      ['/collections', t('colNav'), ICONS.col, feat('collections')],
-      ['/books', t('bkNav'), ICONS.books, hasBooks],
-      ['/chaines', t('spTitle'), ICONS.people, feat('channels')],
-    ] },
-    { title: t('msSpace'), items: [
-      ['/learning', t('lrNav'), ICONS.learn, feat('learning')],
-      ['/library', t('library'), ICONS.lib, feat('favorites') || feat('lists')],
-      ['/learning?tab=bilan', t('msBilan'), ICONS.bilan, feat('learning') && feat('selfcheck')],
-    ] },
-    { title: t('msAccount'), items: [
-      ['/kids', t('kdNav'), ICONS.kids, feat('kids')],
-      ['/account', t('account'), ICONS.user, true],
-    ] },
-    ...(manager ? [{ title: t('hmManage'), items: [
-      [modOnly ? '/studio/moderation' : '/studio', modOnly ? t('modNav') : t('studioNav'), ICONS.studio, true],
-      ['/admin', t('adminNav'), ICONS.admin, user.role === 'admin'],
-    ] }] : []),
-  ].map((g) => ({ ...g, items: g.items.filter((x) => x[3]) })).filter((g) => g.items.length);
+  // Menus d'origine, avec leurs conditions ; l'ordre, la visibilité, les textes et les liens ajoutés viennent des réglages
+  // de Admin → Pages → En-tête, menus et pied de page (étape I4). Sans réglage : exactement le menu d'origine.
+  const cfg = layout?.nav?.menus;
+  const opts = { user, lang: locale };
+  const D = {
+    home: { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
+    series: { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
+    collections: { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.col, on: feat('collections') },
+    books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
+    channels: { key: 'channels', href: '/chaines', label: t('spTitle'), icon: ICONS.people, on: feat('channels') },
+    learning: { key: 'learning', href: '/learning', label: t('lrNav'), icon: ICONS.learn, on: feat('learning') },
+    library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: feat('favorites') || feat('lists') },
+    bilan: { key: 'bilan', href: '/learning?tab=bilan', label: t('msBilan'), icon: ICONS.bilan, on: feat('learning') && feat('selfcheck') },
+    kids: { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.kids, on: feat('kids') },
+    account: { key: 'account', href: '/account', label: t('account'), icon: ICONS.user, on: true },
+    studio: { key: 'studio', href: modOnly ? '/studio/moderation' : '/studio', label: modOnly ? t('modNav') : t('studioNav'), icon: ICONS.studio, on: manager },
+    admin: { key: 'admin', href: '/admin', label: t('adminNav'), icon: ICONS.admin, on: user.role === 'admin' },
+  };
+  const GROUP_TITLE = { discover: t('hmDiscover'), space: t('msSpace'), account: t('msAccount'), manage: t('hmManage') };
+  const groups = MENUS.side.groups.map(([g]) => ({
+    key: g,
+    title: tx(cfg?.side?.titles?.[g], locale) || GROUP_TITLE[g],
+    items: resolveList(cfg?.side?.[g], MENUS.side.builtin[g].map(([k]) => D[k]), opts),
+  })).filter((g) => g.items.length);
+  const iconOf = (it) => (it.custom ? NAV_ICON_PATHS[it.icon] || NAV_ICON_PATHS.link : it.icon);
 
   // Barre du bas (téléphone) : 5 entrées au plus, les plus utiles ; le reste reste dans le menu ☰ de l'en-tête.
-  const barItems = [
-    ['/', t('home'), ICONS.home, true],
-    hasSeries ? ['/series', t('seriesNav'), ICONS.series, true] : ['/collections', t('colNav'), ICONS.col, feat('collections')],
-    ['/learning', t('msLearnShort'), ICONS.learn, feat('learning')],
-    ['/library', t('library'), ICONS.lib, feat('favorites') || feat('lists')],
-    ['/account', t('account'), ICONS.user, true],
-  ].filter((x) => x[3]);
+  // D'origine : « Séries » si la bibliothèque en compte, sinon « Collections » ; texte court pour « Apprentissage ».
+  const barDefaults = [
+    D.home,
+    hasSeries ? D.series : { ...D.collections, on: feat('collections') },
+    { ...D.learning, label: t('msLearnShort') },
+    D.library,
+    D.account,
+  ];
+  const barKeys = ['home', 'series', 'learning', 'library', 'account', 'collections', 'books', 'channels', 'kids'];
+  const barItems = (Array.isArray(cfg?.bar)
+    ? resolveList(cfg.bar, barKeys.map((k) => (k === 'learning' ? { ...D.learning, label: t('msLearnShort') } : D[k])), opts)
+    : resolveList(undefined, barDefaults, opts)).slice(0, 5);
 
   return (
     <div className={`ms${col ? ' col' : ''}`}>
@@ -93,10 +105,10 @@ export default function MemberShell({ children }) {
         <button type="button" className="ms-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <nav aria-label={t('msSide')}>
           {groups.map((g) => (
-            <div key={g.title} className="ms-group">
+            <div key={g.key} className="ms-group">
               <div className="ms-title">{g.title}</div>
-              {g.items.map(([href, label, d]) => (
-                <Link key={href} href={href} title={col ? label : undefined} className={isOn(href) ? 'on' : ''} aria-current={isOn(href) ? 'page' : undefined}><Ico d={d} /><span>{label}</span></Link>
+              {g.items.map((it) => (
+                <NavLink key={it.key} href={it.href} title={col ? it.label : undefined} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span></NavLink>
               ))}
             </div>
           ))}
@@ -104,8 +116,8 @@ export default function MemberShell({ children }) {
       </aside>
       <div className="ms-main">{children}</div>
       <nav className="ms-bar" aria-label={t('msBar')}>
-        {barItems.map(([href, label, d]) => (
-          <Link key={href} href={href} className={isOn(href) ? 'on' : ''} aria-current={isOn(href) ? 'page' : undefined}><Ico d={d} /><span>{label}</span></Link>
+        {barItems.map((it) => (
+          <NavLink key={it.key} href={it.href} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span></NavLink>
         ))}
       </nav>
     </div>

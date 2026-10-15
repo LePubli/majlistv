@@ -12,9 +12,10 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
-export const ZONE_LABELS = { main: 'Contenu de la page', before: 'Avant le contenu de la page', after: 'Après le contenu de la page' };
+export const LAYOUT_PATH = '/_layout'; // adresse interne de « En-tête, menus et pied de page » (page « layout »)
+export const ZONE_LABELS = { main: 'Contenu de la page', before: 'Avant le contenu de la page', after: 'Après le contenu de la page', topbar: 'Barre d’annonce (tout en haut du site, au-dessus de l’en-tête)', footerTop: 'Au-dessus du pied de page (sur toutes les pages)' };
 // Couleurs du thème utilisables dans un bloc (suivent Admin → Apparence) : « @accent » devient var(--accent).
 export const COLOR_REFS = {
   accent: '--accent', accentLight: '--accent-light', surface: '--surface', surface2: '--surface-2', bg: '--bg',
@@ -222,6 +223,9 @@ function cleanField(f, v) {
     default: throw new Error('Champ inconnu');
   }
 }
+
+// Texte d'une langue pour les autres modules (menus) : une seule ligne, max caractères.
+export const cleanShortText = (v, max = 60) => cleanField({ k: 'x', label: 'x', kind: 't', max }, v);
 
 // ---- Validation du contenu d'une page → { value, errors } (errors : chemin → message ; vide si tout est bon).
 // strict = false pour un brouillon : les champs obligatoires (image, vidéo, catégorie) peuvent encore être vides.

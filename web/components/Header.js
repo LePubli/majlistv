@@ -9,6 +9,11 @@ import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
 import { memberShellOn } from '../lib/shell';
+import NavLink from './NavLink';
+import { resolveList, audienceOk, deviceClass } from '../lib/menus';
+import { defaultHeader } from '../lib/navcfg';
+import { tx } from '../lib/blocks';
+import { NAV_ICON_PATHS } from '../lib/navicons';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 // Espace enfant : en-tête réduit ; on n'en sort qu'avec le code parental du parent.
@@ -72,7 +77,7 @@ const ICONS = {
 
 // En-tête du site : pages principales, loupe (recherche en panneau), compte. Sur téléphone : menu latéral.
 function MainHeader() {
-  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks, feat } = useApp();
+  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks, feat, layout } = useApp();
   const router = useRouter();
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
@@ -98,14 +103,19 @@ function MainHeader() {
   const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) ? 'page' : undefined);
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
-  const pages = [
-    ['/', t('home'), ICONS.home, true],
-    ['/series', t('seriesNav'), ICONS.series, hasSeries],
-    ['/collections', t('colNav'), ICONS.series, feat('collections')],
-    ['/books', t('bkNav'), ICONS.books, hasBooks],
-    ['/learning', t('lrNav'), ICONS.learn, Boolean(user) && feat('learning')],
-    ['/library', t('library'), ICONS.lib, Boolean(user) && (feat('favorites') || feat('lists'))],
-  ].filter((x) => x[3]);
+  // Menu principal : éléments d'origine (avec leurs conditions) mis dans l'ordre et au gré des réglages de Admin → Pages (étape I4).
+  const nav = layout?.nav;
+  const pages = resolveList(nav?.menus?.main, [
+    { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
+    { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
+    { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.series, on: feat('collections') },
+    { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
+    { key: 'learning', href: '/learning', label: t('lrNav'), icon: ICONS.learn, on: Boolean(user) && feat('learning') },
+    { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: Boolean(user) && (feat('favorites') || feat('lists')) },
+    { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.price, on: feat('kids'), kids: true },
+  ], { user, lang: locale });
+  const iconOf = (it) => (it.custom ? NAV_ICON_PATHS[it.icon] || NAV_ICON_PATHS.link : it.icon);
+  const hz = nav?.header || defaultHeader();
   const logoutNow = () => { logout(); setMenu(false); setDrawer(false); router.push('/'); };
   const langSelect = (
     <select value={locale} onChange={setLocale} aria-label={t('languageMenu')}>
@@ -113,55 +123,67 @@ function MainHeader() {
     </select>
   );
   const initial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
+  // Éléments de l'en-tête (étape I4) : chacun peut être placé à gauche, au centre ou à droite.
+  const accountEl = !ready ? null : !user ? <Link href="/login" className="hd-login">{t('login')}</Link> : (
+    <div className="hd-account" ref={menuRef}>
+      <button type="button" className="hd-avatar-btn" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu} aria-label={t('account')}>
+        <span className="hd-avatar" aria-hidden="true">{initial}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {menu && (
+        <div className="hd-menu" role="menu">
+          <div className="hd-menu-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>
+          <Link href="/account" role="menuitem" aria-current={cur('/account')}>{t('account')}</Link>
+          <Link href="/pricing" role="menuitem">{t('pricing')}</Link>
+          {manager && (
+            <>
+              <p className="hd-menu-title">{t('hmManage')}</p>
+              <Link href={modOnly ? '/studio/moderation' : '/studio'} role="menuitem">{modOnly ? t('modNav') : t('studioNav')}</Link>
+              {user.role === 'admin' && <Link href="/admin" role="menuitem">{t('adminNav')}</Link>}
+            </>
+          )}
+          <div className="hd-menu-lang">{langSelect}</div>
+          <button type="button" role="menuitem" className="hd-menu-out" onClick={logoutNow}>{t('logout')}</button>
+        </div>
+      )}
+    </div>
+  );
+  const renderEl = (el) => {
+    if (el.hidden || !audienceOk(el.show?.audience, user)) return null;
+    switch (el.key || el.type) {
+      case 'logo': return (
+        <Link href="/" className="logo" aria-label={appName}>
+          <img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" />
+          <img className="logo-word" src="/brand/wordmark.png" alt={appName} width="108" height="22" />
+        </Link>
+      );
+      case 'menu': return (
+        <nav className="hd-nav" aria-label={t('mainNav')}>
+          {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}</NavLink>)}
+        </nav>
+      );
+      case 'search': return (
+        <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        </button>
+      );
+      case 'lang': return ready ? <span className="hd-lang">{langSelect}</span> : null;
+      case 'account': return accountEl;
+      case 'cta': return ready && !user ? <Link href="/pricing" className="btn hd-cta">{t('hmSubscribe')}</Link> : null;
+      case 'link': { const l = tx(el.label, locale); return l && el.url ? <NavLink href={el.url} className="hd-link">{l}</NavLink> : null; }
+      case 'button': { const l = tx(el.label, locale); return l && el.url ? <NavLink href={el.url} className={`btn hd-cta hd-x${el.buttonKind === 'ghost' ? ' ghost' : ''}`}>{l}</NavLink> : null; }
+      default: return null;
+    }
+  };
+  const zone = (name) => (hz[name] || []).map((el) => { const n = renderEl(el); return n ? <div key={el.id} className={`hd-el ${deviceClass(el.show)}`.trim()}>{n}</div> : null; });
   return (
     <header className={`header hd${memberShellOn(path, user, null) ? ' hd-side' : ''}`}>
       <button type="button" className="hd-icon hd-burger" onClick={() => setDrawer(true)} aria-label={t('hmMenu')} aria-expanded={drawer}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
       </button>
-      <Link href="/" className="logo" aria-label={appName}>
-        <img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" />
-        <img className="logo-word" src="/brand/wordmark.png" alt={appName} width="108" height="22" />
-      </Link>
-      <nav className="hd-nav" aria-label={t('mainNav')}>
-        {pages.map(([href, label]) => <Link key={href} href={href} aria-current={cur(href)}>{label}</Link>)}
-        {feat('kids') && <Link href="/kids" className="hd-kids" aria-current={cur('/kids')}>{t('kdNav')}</Link>}
-      </nav>
-      <div className="hd-right">
-        <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
-        </button>
-        {ready && !user && (
-          <>
-            <span className="hd-lang">{langSelect}</span>
-            <Link href="/login" className="hd-login">{t('login')}</Link>
-            <Link href="/pricing" className="btn hd-cta">{t('hmSubscribe')}</Link>
-          </>
-        )}
-        {ready && user && (
-          <div className="hd-account" ref={menuRef}>
-            <button type="button" className="hd-avatar-btn" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu} aria-label={t('account')}>
-              <span className="hd-avatar" aria-hidden="true">{initial}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-            </button>
-            {menu && (
-              <div className="hd-menu" role="menu">
-                <div className="hd-menu-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>
-                <Link href="/account" role="menuitem" aria-current={cur('/account')}>{t('account')}</Link>
-                <Link href="/pricing" role="menuitem">{t('pricing')}</Link>
-                {manager && (
-                  <>
-                    <p className="hd-menu-title">{t('hmManage')}</p>
-                    <Link href={modOnly ? '/studio/moderation' : '/studio'} role="menuitem">{modOnly ? t('modNav') : t('studioNav')}</Link>
-                    {user.role === 'admin' && <Link href="/admin" role="menuitem">{t('adminNav')}</Link>}
-                  </>
-                )}
-                <div className="hd-menu-lang">{langSelect}</div>
-                <button type="button" role="menuitem" className="hd-menu-out" onClick={logoutNow}>{t('logout')}</button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <div className="hd-left">{zone('left')}</div>
+      <div className="hd-center">{zone('center')}</div>
+      <div className="hd-right">{zone('right')}</div>
       {search && <SearchPanel onClose={() => setSearch(false)} />}
       {drawer && createPortal(
         <div className="dr-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDrawer(false); }}>
@@ -175,8 +197,7 @@ function MainHeader() {
             {user && <div className="dr-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>}
             <nav aria-label={t('mainNav')} className="dr-nav">
               <p className="hd-menu-title">{t('hmDiscover')}</p>
-              {pages.map(([href, label, ic]) => <Link key={href} href={href} aria-current={cur(href)}><Ico d={ic} />{label}</Link>)}
-              {feat('kids') && <Link href="/kids" className="dr-kids" aria-current={cur('/kids')}><Ico d={ICONS.price} />{t('kdNav')}</Link>}
+              {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined}><Ico d={iconOf(it)} />{it.label}</NavLink>)}
               {manager && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('hmManage')}</p>

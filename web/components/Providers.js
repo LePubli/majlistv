@@ -12,13 +12,15 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, layout = null, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
   const [kid, setKid] = useState(null); // profil enfant actif (espace Kids) : { id, name, avatar, band }
   const router = useRouter();
   const path = usePathname();
+  const [viewAs, setViewAs] = useState(null); // aperçu de l'éditeur : 'visitor' = voir le site comme un visiteur non connecté
+  const [layoutPreview, setLayoutPreview] = useState(null); // aperçu de l'éditeur (Admin → Pages) : remplace les réglages publiés
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
   const t = (key) => dict[key] || key;
@@ -81,5 +83,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user, ready, call, login, logout, kid, kidMode, enterKid }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }

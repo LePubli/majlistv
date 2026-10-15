@@ -18,8 +18,9 @@ import { DIR, getLocale } from '../lib/i18n';
 import { seoSite } from '../lib/seo';
 import { siteTheme, themeBg } from '../lib/theme';
 import { dictFor } from '../lib/texts';
-import { pageSlots } from '../lib/pages';
+import { pageSlots, siteLayout } from '../lib/pages';
 import { PageSlots } from '../components/PageBlocks';
+import TopBar from '../components/TopBar';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -52,17 +53,18 @@ export const generateViewport = async () => ({ themeColor: themeBg(await siteThe
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme, dict, slots] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots()]);
+  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}}>
+        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}} layout={layout}>
           <StatsBeacon />
           <ResponsiveTables />
           <SkipLink />
+          <TopBar />
           <Header />
           <MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell>
           <Footer />

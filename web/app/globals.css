@@ -2374,3 +2374,41 @@ h3.pb-h { font-size: clamp(1.15rem, 2vw, 1.4rem); }
 .hb-col-n { font-size: 14px; opacity: .85; }
 .hb-col:hover { filter: brightness(1.08); }
 .hb-col:focus-visible, .hb-follow:focus-visible, .hb-resume-card:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 3px; }
+
+/* ---- Étape I4 : en-tête en zones, menus configurables, barre d'annonce, pied de page en zones ---- */
+.hd-el { display: contents; }
+.hd-left { display: contents; }
+.hd-center { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.hd-link { color: var(--muted); font-weight: 600; font-size: 15px; padding: 8px 6px; white-space: nowrap; }
+.hd-link:hover { color: var(--text); }
+.hd-x { white-space: nowrap; }
+@media (max-width: 900px) { .hd-center { flex: 0 0 auto; } }
+.topbar:empty { display: none; }
+.pb-topbar { padding-inline: var(--gutter); }
+.pb-topbar .pb { padding-block: 6px; }
+.site-footer-top:empty { display: none; }
+.site-footer-top { margin-top: 48px; }
+.site-footer-top .pb-zone { padding-inline: var(--gutter); }
+.ft-el { display: contents; }
+.ft-zone { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; min-width: 0; }
+.ft-text { color: var(--muted); }
+
+/* Étape I4 — éditeur de navigation (Admin → Pages) */
+.ne{border:1px solid var(--line,#2a2a2a);border-radius:14px;padding:14px;margin-bottom:16px}
+.ne-head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.ne-head h3{margin:0}
+.ne-view select{margin-inline-start:6px}
+.ne-tabs{flex-wrap:wrap;margin:10px 0}
+.ne-group{border:1px solid var(--line,#2a2a2a);border-radius:12px;margin:10px 0;padding:10px}
+.ne-group legend{padding:0 6px;font-weight:600}
+.ne-zones{display:grid;gap:12px}
+.ne-zone{border:1px solid var(--line,#2a2a2a);border-radius:12px;padding:10px}
+.ne-zone h4{margin:0 0 8px}
+.ne-add{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ne-off{opacity:.6}
+.ne-vis{display:inline-flex;align-items:center;padding:0 8px}
+.ne-warn{color:#ff9d9d}
+.ne-moveto{margin:8px 0}
+.pe-show{display:grid;gap:8px;margin-top:8px}
+.pe-checks{display:flex;flex-wrap:wrap;gap:12px}
+@media (min-width:1100px){.ne-zones{grid-template-columns:repeat(3,1fr)}}

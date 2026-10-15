@@ -2439,3 +2439,59 @@ API (avec `RATE_LIMIT_MAX=5000`) : `python3 api/tests/test_home_blocks.py` (31 c
 - **Un bloc n'apparaît pas** : il n'a rien à montrer (pas de collection publiée, pas de conférence en cours, Espace Kids coupé, fonction Suivre ou Séries coupée dans Admin → Fonctions).
 - **Pas de carte Reprendre** : la personne n'a pas de conférence commencée (plus d'une minute vue, non terminée).
 - **« Tout voir » d'une catégorie** : ouvre `/?cat=ID` ; le bouton « retour » de la page ramène à l'accueil.
+
+## Étape I4 — En-tête, menus et pied de page (Admin → Pages → « En-tête, menus et pied de page »)
+
+### Description
+Tout ce qui entoure les pages se règle depuis l'administration, sans code :
+- **Menu principal** (en-tête ordinateur + menu ☰ du téléphone), **menu latéral des membres** (4 groupes : Découvrir, Mon espace, Compte, Gérer), **barre du bas du téléphone** (5 liens affichés au maximum) et **liens du pied de page** : réordonner (↑ ↓), masquer (case à cocher), changer le texte en FR / EN / AR, ajouter ses propres liens (20 par liste, avec icône pour le menu latéral et la barre du bas), réserver un élément à un appareil (téléphone / tablette / ordinateur) et à un public (tout le monde, visiteurs, membres, équipe).
+- **En-tête en 3 zones** (gauche, centre, droite) : logo, menu, loupe, langue, connexion/compte, bouton « S'abonner », plus des liens ou boutons ajoutés. Les éléments ajoutés sont réservés à l'ordinateur par défaut.
+- **Pied de page en 2 zones** (gauche, droite) : marque, liens, textes et liens ajoutés ; des blocs (adresse, réseaux, newsletter…) peuvent s'afficher **au-dessus du pied de page**, et une **barre d'annonce** (blocs) tout en haut du site.
+- **Garde-fous** : logo et connexion/compte obligatoires dans l'en-tête ; les trois liens légaux (mentions légales, CGV, confidentialité) ne peuvent être ni masqués ni retirés et restent affichés partout ; une fonction coupée dans Admin → Fonctions disparaît toujours des menus ; la barre du bas refuse plus de 5 liens à la publication. Le ciblage par public adapte l'affichage, il ne protège pas un contenu.
+- **Sans réglage enregistré, le site est strictement identique à avant.** Page supprimée ou mise hors ligne : retour immédiat aux menus d'origine. Bouton « Rétablir » par partie et « Tout rétablir ».
+- Brouillon enregistré tout seul, aperçu en direct (vraie page du site, 390 → 1440 px) avec choix « Aperçu en tant que : moi / visiteur non connecté », historique de 20 publications.
+
+### Fichiers
+- `api/migrations/051_site_pages_layout.sql` : autorise le type de page `layout` (adresse interne `/_layout`) ;
+- `api/src/navcfg.js` + `web/lib/navcfg.js` (deux copies identiques) : éléments d'origine, valeurs par défaut, validation `cleanNav` ; `api/src/blocks.js` + `web/lib/blocks.js` : zones `topbar` et `footerTop` ;
+- `api/src/routes/pages.js` : création `POST /admin/pages {"kind":"layout"}` (une seule), validation souple en brouillon / stricte à la publication, `nav` renvoyée par `/pages/view` ;
+- `web/lib/menus.js`, `web/lib/navicons.js`, `web/lib/pages.js` (`siteLayout`), `web/components/` : `Header.js`, `Footer.js`, `MemberShell.js`, `TopBar.js`, `NavLink.js`, `PageBlocks.js` (`LayoutZone`), `Providers.js`, `NavAdmin.js` (éditeur), `PagesAdmin.js` ; `web/app/layout.js`, `web/app/pb-preview/PreviewClient.js`, `web/app/globals.css` ;
+- `api/tests/test_layout.py` (validation, publication, droits, repli).
+
+### Prérequis
+Aucune nouvelle variable `.env`, aucune dépendance.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), puis GitHub Desktop : **Commit to main**, **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (migration 051), puis **`majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+```
+curl -s -o /dev/null -w "%{http_code}\n" "https://api-majlisstv.le-publicitaire.fr/pages/view?path=%2F_layout&ssr=1"
+```
+Répond `404` tant que rien n'est publié (le site garde ses menus d'origine). Ensuite : Admin → Pages → **Personnaliser l'en-tête, les menus et le pied de page** → modifier → regarder l'aperçu → **Publier** → recharger le site (au plus 10 secondes).
+
+### Exemples d'utilisation
+- **Ajouter « Blog » au menu** : onglet Menu principal → « + Ajouter un lien » → texte + adresse.
+- **Retirer « Séries » du menu** : décocher la case devant « Séries ».
+- **Annonce Ramadan en haut du site** : plus bas, zone « Barre d'annonce » → ajouter un bloc Titre.
+- **Bouton « Faire un don » sur ordinateur et tablette** : onglet En-tête → zone Droite → « + Bouton » → cocher Ordinateur et Tablette.
+- **Revenir à l'origine** : « Tout rétablir », ou supprimer la page (Plus → Supprimer).
+
+### Tests
+API (`RATE_LIMIT_MAX=5000`) : `python3 api/tests/test_layout.py`, puis les tests précédents en laissant ~70 s entre deux fichiers (limite de connexions). Interface testée dans Chromium : en-tête, menus, pied de page, barre d'annonce, aperçu, 390 et 1440 px, arabe (RTL), retour à l'origine hors ligne. **Non testé** : vrai téléphone, lecteurs d'écran.
+
+### Dépannage
+- **Rien ne change** : la page doit être publiée et « En ligne » ; attendre 10 secondes, recharger.
+- **Publication refusée** : lire le message en rouge (barre du bas > 5 liens, lien sans adresse, lien légal manquant…).
+- **Un lien n'apparaît pas** : il est masqué, réservé à un autre appareil ou public, ou sa fonction est coupée dans Admin → Fonctions.
+- **Je me suis perdu** : « Tout rétablir ».
+
+### Limites
+Les menus sont les mêmes sur tout le site (pas de menu par page) ; le ciblage par public est un affichage, pas une protection ; les icônes sont choisies dans une liste de 14.

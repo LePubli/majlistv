@@ -3,6 +3,7 @@
 // Deux sortes de pages :
 //   custom : page créée dans l'administration, adresse /p/<nom> (zone « main »).
 //   slot   : blocs ajoutés avant / après une page EXISTANTE du site (adresse exacte, ex. /pricing).
+//   layout : « En-tête, menus et pied de page » : barre d'annonce et blocs au-dessus du pied de page (zones topbar / footerTop) + réglages de navigation (content.nav). Une seule (/_layout).
 //   home   : l'accueil des membres entièrement composé en blocs (adresse interne /_home, zone « main »). Une seule. Non publiée : l'accueil d'origine reste.
 // Chaque page a une version publiée et un brouillon (comme les thèmes de l'étape I1).
 //
@@ -21,13 +22,14 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, HOME_PATH, cleanContent, audienceMatches, homeTemplate } from '../blocks.js';
+import { ZONES, HOME_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate } from '../blocks.js';
+import { cleanNav } from '../navcfg.js';
 
 const KEEP_VERSIONS = 20;
 const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
-const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|_layout|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
 export function imageFormat(buf) {
@@ -43,7 +45,17 @@ const emptyContent = (kind) => ({ meta: {}, zones: Object.fromEntries(ZONES[kind
 const norm = (kind, c) => {
   const base = emptyContent(kind);
   if (!c || typeof c !== 'object') return base;
-  return { meta: c.meta || {}, zones: { ...base.zones, ...(c.zones || {}) } };
+  return { meta: c.meta || {}, zones: { ...base.zones, ...(c.zones || {}) }, ...(kind === 'layout' && c.nav ? { nav: c.nav } : {}) };
+};
+// Blocs (cleanContent) + réglages de navigation (cleanNav) pour une page « layout » → { value, errors }.
+const validate = (kind, content, strict) => {
+  const r = cleanContent(content, kind, strict);
+  if (kind === 'layout' && content && typeof content === 'object') {
+    const n = cleanNav(content.nav, strict);
+    if (n.value) r.value.nav = n.value;
+    Object.assign(r.errors, n.errors);
+  }
+  return r;
 };
 const slugify = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -94,12 +106,12 @@ export default async function pagesRoutes(app) {
     if (!r) return reply.code(404).send({ error: 'Page introuvable' });
     const content = norm(r.kind, r.published);
     reply.header('cache-control', 'private, no-store');
-    if (q.data.ssr) return { kind: r.kind, path: r.path, title: r.title, meta: content.meta, zones: onlyPublic(content.zones), targeted: hasTargeted(content.zones) };
+    if (q.data.ssr) return { kind: r.kind, path: r.path, title: r.title, meta: content.meta, zones: onlyPublic(content.zones), targeted: hasTargeted(content.zones), ...(content.nav ? { nav: content.nav } : {}) };
     // Public réel : visiteur, membre, abonné (un administrateur voit tout ce que voit un abonné).
     let user = null;
     const u = await app.optionalUser(req);
     if (u) user = { subscriber: u.role === 'admin' || (await hasActiveSubscription(u.sub)) };
-    return { kind: r.kind, path: r.path, title: r.title, meta: content.meta, zones: forUser(content.zones, user), targeted: hasTargeted(content.zones) };
+    return { kind: r.kind, path: r.path, title: r.title, meta: content.meta, zones: forUser(content.zones, user), targeted: hasTargeted(content.zones), ...(content.nav ? { nav: content.nav } : {}) };
   });
 
   // Pages personnalisées en ligne (pour le plan du site /sitemap.xml).
@@ -124,7 +136,7 @@ export default async function pagesRoutes(app) {
 
   app.post('/admin/pages', admin, async (req, reply) => {
     const body = z.object({
-      kind: z.enum(['custom', 'slot', 'home']),
+      kind: z.enum(['custom', 'slot', 'home', 'layout']),
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
       path: z.string().trim().max(100).optional(),
@@ -139,13 +151,15 @@ export default async function pagesRoutes(app) {
       path = `/p/${slug}`; title = b.title;
     } else if (b.kind === 'home') {
       path = HOME_PATH; title = 'Accueil des membres';
+    } else if (b.kind === 'layout') {
+      path = LAYOUT_PATH; title = 'En-tête, menus et pied de page';
     } else {
       path = (b.path || '').replace(/\/+$/, '') || '/';
       if (!/^\/[a-z0-9_/-]{0,98}$/.test(path) || path.includes('//')) return reply.code(400).send({ error: 'Adresse invalide (ex. /pricing)' });
       if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration, le Studio ni l’espace Kids' });
       title = b.title || (path === '/' ? 'Accueil' : path);
     }
-    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
+    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [b.kind, path, title, b.kind === 'home' ? homeTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
@@ -193,7 +207,7 @@ export default async function pagesRoutes(app) {
     const { id } = idParam.parse(req.params);
     const cur = (await pool.query('SELECT kind FROM site_pages WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Page introuvable' });
-    const { value, errors } = cleanContent(req.body?.content, cur.kind, false);
+    const { value, errors } = validate(cur.kind, req.body?.content, false);
     if (Object.keys(errors).length) return reply.code(400).send({ error: 'Certains réglages sont refusés', errors });
     const r = (await pool.query('UPDATE site_pages SET draft = $2, updated_at = now(), updated_by = $3 WHERE id = $1 RETURNING *', [id, value, req.user.sub])).rows[0];
     return full(r);
@@ -215,7 +229,7 @@ export default async function pagesRoutes(app) {
       const cur = (await client.query('SELECT * FROM site_pages WHERE id = $1 FOR UPDATE', [id])).rows[0];
       if (!cur) { await client.query('ROLLBACK'); return reply.code(404).send({ error: 'Page introuvable' }); }
       if (cur.draft === null) { await client.query('ROLLBACK'); return reply.code(409).send({ error: 'Rien à publier : aucun brouillon' }); }
-      const { value, errors } = cleanContent(cur.draft, cur.kind, true);
+      const { value, errors } = validate(cur.kind, cur.draft, true);
       if (Object.keys(errors).length) { await client.query('ROLLBACK'); return reply.code(400).send({ error: 'Certains blocs sont incomplets', errors }); }
       const r = (await client.query(
         'UPDATE site_pages SET published = $2, draft = NULL, live = true, published_at = now(), updated_at = now(), updated_by = $3 WHERE id = $1 RETURNING *', [id, value, req.user.sub])).rows[0];

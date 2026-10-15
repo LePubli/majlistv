@@ -252,6 +252,17 @@ export function CustomPage({ page }) {
   );
 }
 
+// Étape I4 — Zone de blocs de « En-tête, menus et pied de page » (topbar, footerTop). Dans l'aperçu de l'éditeur : les blocs du brouillon, sans appel au serveur.
+export function LayoutZone({ zone, className = '' }) {
+  const { layout, layoutIsPreview, locale } = useApp();
+  const blocks = layout?.zones?.[zone] || [];
+  if (layoutIsPreview) {
+    if (!blocks.length) return null;
+    return <div className={`pb-zone ${className}`} lang={locale} dir={DIR[locale] || 'ltr'}><BlocksView blocks={blocks} locale={locale} /></div>;
+  }
+  return <PageZone path="/_layout" zone={zone} initial={blocks} targeted={Boolean(layout?.targeted)} className={className} />;
+}
+
 // Accueil des membres en blocs (étape H) : le serveur renvoie les blocs adaptés à la personne (connexion, abonnement).
 export function HomeBlocks({ page }) {
   const { locale } = useApp();

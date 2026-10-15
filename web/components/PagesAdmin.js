@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { BlockEditor, TextField, LANG_NAMES } from './PageFields';
+import NavEditor from './NavAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
 
 const DEVICE_SIZES = [{ id: 390, label: 'Téléphone' }, { id: 768, label: 'Tablette' }, { id: 1024, label: 'Petit écran' }, { id: 1440, label: 'Grand écran' }];
@@ -75,7 +76,7 @@ function MediaPicker({ call, onPick, onClose }) {
 }
 
 /* ------------------------------------------------------------------ Aperçu */
-function Preview({ zones, lang, pickedId, onPick }) {
+function Preview({ zones, lang, pickedId, onPick, nav, viewAs, layout = false }) {
   const frame = useRef(null);
   const box = useRef(null);
   const [device, setDevice] = useState(1440);
@@ -83,7 +84,7 @@ function Preview({ zones, lang, pickedId, onPick }) {
   const [viewH, setViewH] = useState(900);
   const [ready, setReady] = useState(false);
   const payload = useRef(null);
-  payload.current = { type: 'pb-content', zones, locale: lang, pickedId };
+  payload.current = layout ? { type: 'pb-layout', nav, zones, locale: lang, viewAs: viewAs || null, pickedId } : { type: 'pb-content', zones, locale: lang, pickedId };
 
   useEffect(() => {
     if (!box.current) return undefined;
@@ -105,7 +106,7 @@ function Preview({ zones, lang, pickedId, onPick }) {
     if (!ready) return undefined;
     const id = setTimeout(() => frame.current?.contentWindow?.postMessage(payload.current, window.location.origin), 120);
     return () => clearTimeout(id);
-  }, [ready, zones, lang, pickedId]);
+  }, [ready, zones, lang, pickedId, nav, viewAs, layout]);
 
   const scale = Math.min(1, boxW / device);
   const boxH = Math.max(420, Math.min(1100, viewH - 190));
@@ -137,6 +138,7 @@ function Editor({ pageId, onBack, pages }) {
   const [msg, setMsg] = useState('');
   const [versions, setVersions] = useState(null);
   const [adding, setAdding] = useState(null);       // zone où l'on ajoute un bloc
+  const [viewAs, setViewAs] = useState(null);      // aperçu de l'en-tête : null (connecté) ou 'visitor'
   const [mediaCb, setMediaCb] = useState(null);     // fonction à appeler avec l'image choisie
   const timer = useRef(null);
   const latest = useRef(null);
@@ -187,6 +189,7 @@ function Editor({ pageId, onBack, pages }) {
   const dup = (zone, i) => { const l = [...content.zones[zone]]; if (l.length >= MAX_BLOCKS_PER_ZONE) return; const c = clone(l[i]); c.id = newId(); l.splice(i + 1, 0, c); setZone(zone, l); setPicked(c.id); };
   const del = (zone, i) => { if (!window.confirm('Supprimer ce bloc ?')) return; setZone(zone, content.zones[zone].filter((_, j) => j !== i)); setPicked(null); };
   const add = (zone, type) => { const b = newBlock(type); setZone(zone, [...content.zones[zone], b]); setPicked(b.id); setAdding(null); };
+  const setNav = (nav) => { const c = { ...content }; if (nav === undefined) delete c.nav; else c.nav = nav; change(c); };
   const setMeta = (k, v) => { const meta = { ...(content.meta || {}) }; if (v === undefined) delete meta[k]; else meta[k] = v; change({ ...content, meta }); };
 
   const publish = async () => {
@@ -213,7 +216,7 @@ function Editor({ pageId, onBack, pages }) {
     if (r.ok) setPage((p) => ({ ...p, title: r.data.title, path: r.data.path })); else setMsg(r.data?.error || 'Échec.');
   };
   const remove = async () => {
-    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : `Supprimer définitivement la page « ${page.title} » et tous ses blocs ?`)) return;
+    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : page.kind === 'layout' ? 'Supprimer les réglages d’en-tête, de menus et de pied de page ? Le site retrouvera immédiatement ses menus d’origine.' : `Supprimer définitivement la page « ${page.title} » et tous ses blocs ?`)) return;
     const r = await call(`/admin/pages/${pageId}`, { method: 'DELETE' });
     if (r.ok) onBack(); else setMsg(r.data?.error || 'Échec.');
   };
@@ -239,7 +242,7 @@ function Editor({ pageId, onBack, pages }) {
       <div className="ap-top">
         <div>
           <button type="button" className="link u" onClick={async () => { if (timer.current) await flush(); onBack(); }}>← Toutes les pages</button>
-          <h2 className="pe-title">{page.title} {page.kind !== 'home' && <code>{page.path}</code>}</h2>
+          <h2 className="pe-title">{page.title} {page.kind !== 'home' && page.kind !== 'layout' && <code>{page.path}</code>}</h2>
         </div>
         <div className="ap-actions">
           <button type="button" className="btn" onClick={publish} disabled={!page.hasDraft && save !== 'pending'}>Publier</button>
@@ -250,7 +253,7 @@ function Editor({ pageId, onBack, pages }) {
             <div className="ap-more-menu">
               <button type="button" onClick={rename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>
               {page.publishedAt && <button type="button" onClick={() => setLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
-              {page.live && <a className="pe-menu-link" href={page.kind === 'home' ? '/' : page.path} target="_blank" rel="noopener noreferrer">Voir la page sur le site ↗</a>}
+              {page.live && <a className="pe-menu-link" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.path} target="_blank" rel="noopener noreferrer">Voir la page sur le site ↗</a>}
               <button type="button" className="danger" onClick={remove}>Supprimer la page</button>
             </div>
           </details>
@@ -287,6 +290,7 @@ function Editor({ pageId, onBack, pages }) {
           </div>
 
           {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site pour les membres connectés (et pour tous si la vitrine visiteurs est coupée). Tant qu’elle n’est pas publiée, ou si vous la supprimez ou la mettez hors ligne, l’accueil d’origine reste en place. Les blocs « données du site » (À la une, Chaînes à suivre, Collections…) se mettent à jour tout seuls.</p>}
+          {page.kind === 'layout' && <NavEditor nav={content.nav} onChange={setNav} lang={lang} errors={errors} viewAs={viewAs} onViewAs={setViewAs} />}
           {page.kind === 'custom' && (
             <details className="pe-meta">
               <summary>Titre et description de la page (affichés sur Google et dans l’onglet du navigateur)</summary>
@@ -347,7 +351,7 @@ function Editor({ pageId, onBack, pages }) {
             );
           })}
         </div>
-        <Preview zones={content.zones} lang={lang} pickedId={picked} onPick={(id) => { setPicked(id); setTimeout(() => document.querySelector(`[data-block-row="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50); }} />
+        <Preview layout={page.kind === 'layout'} nav={content.nav} viewAs={viewAs} zones={content.zones} lang={lang} pickedId={picked} onPick={(id) => { setPicked(id); setTimeout(() => document.querySelector(`[data-block-row="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50); }} />
       </div>
       {mediaCb && <MediaPicker call={call} onClose={() => setMediaCb(null)} onPick={(id) => { mediaCb(id); setMediaCb(null); }} />}
     </section>
@@ -381,6 +385,7 @@ export default function PagesAdmin() {
   if (editing) return <Editor pageId={editing} pages={pages} onBack={() => { setEditing(null); load(); }} />;
 
   const home = pages.find((p) => p.kind === 'home');
+  const layoutPage = pages.find((p) => p.kind === 'layout');
   const custom = pages.filter((p) => p.kind === 'custom');
   const slots = pages.filter((p) => p.kind === 'slot');
   const free = KNOWN_PATHS.filter(([p]) => !slots.some((s) => s.path === p));
@@ -405,6 +410,19 @@ export default function PagesAdmin() {
             </li>
           </ul>
         ) : <button type="button" className="btn" onClick={() => create({ kind: 'home' })}>Créer l’accueil à partir du modèle</button>}
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">En-tête, menus et pied de page</h2>
+        <p className="meta small">Réorganisez l’en-tête (gauche, centre, droite), les menus (principal, latéral, barre du bas téléphone) et le pied de page ; masquez, renommez ou ajoutez des liens, avec une visibilité par appareil et par public. Les liens légaux restent toujours affichés. Vous pouvez aussi placer des blocs (annonce, adresse, réseaux…) tout en haut du site et au-dessus du pied de page. Sans réglage, le site garde ses menus d’origine.</p>
+        {layoutPage ? (
+          <ul className="pe-pages">
+            <li>
+              <div><strong>{layoutPage.title}</strong><br />{status(layoutPage)} {layoutPage.hasDraft && <span className="ap-tag">brouillon en cours</span>} <span className="meta small">modifié le {fmtDate(layoutPage.updatedAt)}</span></div>
+              <span className="pe-btns"><button type="button" className="btn pe-mini" onClick={() => setEditing(layoutPage.id)}>Modifier</button></span>
+            </li>
+          </ul>
+        ) : <button type="button" className="btn" onClick={() => create({ kind: 'layout' })}>Personnaliser l’en-tête, les menus et le pied de page</button>}
       </div>
 
       <div className="panel">
