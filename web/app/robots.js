@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export default async function robots() {
   const { baseUrl } = await seoSite();
   return {
-    rules: [{ userAgent: '*', allow: '/', disallow: ['/api/', '/admin', '/studio', '/organizer', '/account', '/library', '/welcome', '/login', '/register', '/forgot', '/reset'] }],
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/api/', '/admin', '/studio', '/organizer', '/account', '/library', '/welcome', '/login', '/register', '/forgot', '/reset', '/redeem', '/unsubscribe'] }],
     sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

@@ -26,6 +26,13 @@ const T = {
     review_approved: { subject: 'Votre conférence « {title} » est en ligne', lines: ['Après relecture, votre conférence « {title} » est validée.', '?Message de la relecture : {note}'], button: 'Ouvrir le Studio' },
     review_rejected: { subject: 'Votre conférence « {title} » n\'est pas en ligne', lines: ['Après relecture, votre conférence « {title} » n\'est pas publiée pour le moment.', 'Motif : {note}', 'Vous pouvez la corriger puis la renvoyer à la relecture depuis le Studio.'], button: 'Ouvrir le Studio' },
     test: { subject: 'Test d\'envoi {app}', lines: ['Cet e-mail confirme que les réglages d\'envoi fonctionnent.'], button: 'Ouvrir le site' },
+    helloAnon: 'Bonjour,', unsub: 'Se désabonner en un clic', manage: 'Gérer mes e-mails',
+    speaker_new: { subject: 'Nouveau chez les intervenants que vous suivez', lines: ['Du nouveau chez les intervenants que vous suivez :', '{titles}'], button: 'Voir les conférences' },
+    weekly_selection: { subject: 'La sélection de la semaine', lines: ['Voici notre sélection de la semaine :', '{titles}'], button: 'Découvrir la sélection' },
+    gift_purchased: { subject: 'Votre carte cadeau {months} est prête', lines: ['Merci ! Votre carte cadeau ({months}) est payée.', 'Son code : {code}', '?Nous l\'avons aussi envoyée à {recipient}.', 'Vous pouvez aussi l\'offrir vous-même : le destinataire la saisit dans « Activer une carte cadeau ». Retrouvez-la à tout moment dans Mon compte.'], button: 'Mes cartes cadeaux', footer: 'Vous recevez cet e-mail car vous avez acheté une carte cadeau sur {app}.' },
+    gift_received: { subject: '{from} vous offre un abonnement {app}', lines: ['{from} vous offre {months} d\'accès à toutes les conférences de {app}.', '?Son message : « {message} »', 'Votre code : {code}', 'Pour l\'activer, connectez-vous (ou créez un compte gratuit) puis saisissez ce code. Il n\'engage à rien : aucun paiement, aucun renouvellement automatique.'], button: 'Activer ma carte cadeau', footer: '{from} a choisi de vous envoyer cette carte cadeau. Aucun autre e-mail ne sera envoyé à cette adresse à ce sujet.' },
+    gift_redeemed: { subject: 'Votre carte cadeau a été activée', lines: ['{redeemer} a activé la carte cadeau que vous avez offerte ({months}). Merci pour ce beau geste !'], button: 'Mes cartes cadeaux' },
+    gift_activated: { subject: 'Votre carte cadeau est activée', lines: ['Votre carte cadeau est activée : vous avez accès à toutes les conférences jusqu\'au {date}.'], button: 'Regarder les conférences' },
     plans: { month: 'mensuel', year: 'annuel' },
   },
   en: {
@@ -43,6 +50,13 @@ const T = {
     review_approved: { subject: 'Your talk “{title}” is live', lines: ['After review, your talk “{title}” has been approved.', '?Message from the review: {note}'], button: 'Open the Studio' },
     review_rejected: { subject: 'Your talk “{title}” is not live', lines: ['After review, your talk “{title}” is not published for now.', 'Reason: {note}', 'You can fix it and send it back for review from the Studio.'], button: 'Open the Studio' },
     test: { subject: '{app} test email', lines: ['This email confirms that the sending settings work.'], button: 'Open the site' },
+    helloAnon: 'Hello,', unsub: 'Unsubscribe in one click', manage: 'Manage my emails',
+    speaker_new: { subject: 'New from the speakers you follow', lines: ['There is something new from the speakers you follow:', '{titles}'], button: 'See the talks' },
+    weekly_selection: { subject: 'This week\'s selection', lines: ['Here is our selection for the week:', '{titles}'], button: 'Discover the selection' },
+    gift_purchased: { subject: 'Your {months} gift card is ready', lines: ['Thank you! Your gift card ({months}) is paid.', 'Its code: {code}', '?We also sent it to {recipient}.', 'You can also give it yourself: the recipient enters it under “Redeem a gift card”. You will find it any time in My account.'], button: 'My gift cards', footer: 'You are receiving this email because you bought a gift card on {app}.' },
+    gift_received: { subject: '{from} is giving you a {app} subscription', lines: ['{from} is giving you {months} of access to all the talks on {app}.', '?Their message: “{message}”', 'Your code: {code}', 'To redeem it, sign in (or create a free account) and enter this code. No payment, no automatic renewal.'], button: 'Redeem my gift card', footer: '{from} chose to send you this gift card. No other email will be sent to this address about it.' },
+    gift_redeemed: { subject: 'Your gift card was redeemed', lines: ['{redeemer} redeemed the gift card you gave ({months}). Thank you for the kind gesture!'], button: 'My gift cards' },
+    gift_activated: { subject: 'Your gift card is active', lines: ['Your gift card is active: you have access to all talks until {date}.'], button: 'Watch the talks' },
     plans: { month: 'monthly', year: 'yearly' },
   },
   ar: {
@@ -60,6 +74,13 @@ const T = {
     review_approved: { subject: 'محاضرتك «{title}» منشورة', lines: ['بعد المراجعة، تمت الموافقة على محاضرتك «{title}».', '?رسالة المراجعة: {note}'], button: 'فتح الاستوديو' },
     review_rejected: { subject: 'محاضرتك «{title}» غير منشورة', lines: ['بعد المراجعة، لم تُنشر محاضرتك «{title}» في الوقت الحالي.', 'السبب: {note}', 'يمكنك تصحيحها ثم إعادة إرسالها للمراجعة من الاستوديو.'], button: 'فتح الاستوديو' },
     test: { subject: 'رسالة اختبار من {app}', lines: ['تؤكد هذه الرسالة أن إعدادات الإرسال تعمل.'], button: 'فتح الموقع' },
+    helloAnon: 'مرحبًا،', unsub: 'إلغاء الاشتراك بنقرة واحدة', manage: 'إدارة رسائلي',
+    speaker_new: { subject: 'جديد من المحاضرين الذين تتابعهم', lines: ['جديد من المحاضرين الذين تتابعهم:', '{titles}'], button: 'عرض المحاضرات' },
+    weekly_selection: { subject: 'اختيارات الأسبوع', lines: ['هذه اختياراتنا لهذا الأسبوع:', '{titles}'], button: 'اكتشف الاختيارات' },
+    gift_purchased: { subject: 'بطاقة الهدية ({months}) جاهزة', lines: ['شكرًا لك! تم دفع بطاقة الهدية ({months}).', 'رمزها: {code}', '?أرسلناها أيضًا إلى {recipient}.', 'يمكنك أيضًا إهداؤها بنفسك: يدخل المستلم الرمز في «تفعيل بطاقة هدية». تجدها دائمًا في حسابي.'], button: 'بطاقات الهدايا', footer: 'تصلك هذه الرسالة لأنك اشتريت بطاقة هدية على {app}.' },
+    gift_received: { subject: '{from} يهديك اشتراكًا في {app}', lines: ['يهديك {from} {months} من الوصول إلى جميع محاضرات {app}.', '?رسالته: «{message}»', 'رمزك: {code}', 'لتفعيله، سجّل الدخول (أو أنشئ حسابًا مجانيًا) ثم أدخل هذا الرمز. بلا دفع وبلا تجديد تلقائي.'], button: 'تفعيل بطاقة الهدية', footer: 'اختار {from} أن يرسل إليك بطاقة الهدية هذه. لن تصلك رسائل أخرى على هذا العنوان بهذا الشأن.' },
+    gift_redeemed: { subject: 'تم تفعيل بطاقة الهدية', lines: ['فعّل {redeemer} بطاقة الهدية التي أهديتها ({months}). شكرًا على هذه اللفتة الكريمة!'], button: 'بطاقات الهدايا' },
+    gift_activated: { subject: 'بطاقة الهدية مفعّلة', lines: ['بطاقة الهدية مفعّلة: يمكنك مشاهدة جميع المحاضرات حتى {date}.'], button: 'مشاهدة المحاضرات' },
     plans: { month: 'شهري', year: 'سنوي' },
   },
 };
@@ -73,6 +94,8 @@ export function renderEmail(kind, locale, vars) {
   const m = t[kind];
   if (!m) throw new Error(`Modèle d'e-mail inconnu : ${kind}`);
   const v = { ...vars, plan: vars.interval ? t.plans[vars.interval] || vars.interval : vars.plan };
+  const helloTxt = String(v.name ?? '').trim() ? t.hello : t.helloAnon;
+  const footTxt = m.footer || t.footer;
   const subject = fill(m.subject, v, false);
   const dir = l === 'ar' ? 'rtl' : 'ltr';
   const align = l === 'ar' ? 'right' : 'left';
@@ -82,6 +105,7 @@ export function renderEmail(kind, locale, vars) {
     .filter((x) => !x.startsWith('?') || [...x.matchAll(/\{(\w+)\}/g)].every((g) => String(v[g[1]] ?? '').trim() !== ''))
     .map((x) => x.replace(/^\?/, ''));
   const paras = lines.map((line) => `<p style="margin:0 0 14px;font:16px/1.55 Arial,sans-serif;color:#2B241A">${fill(line, v, true).replace(/\n/g, '<br>')}</p>`).join('');
+  const unsubHtml = v.unsubUrl ? `<br><a href="${esc(v.unsubUrl)}" style="color:#7A6F5F">${esc(t.unsub)}</a>${v.prefsUrl ? ` · <a href="${esc(v.prefsUrl)}" style="color:#7A6F5F">${esc(t.manage)}</a>` : ''}` : '';
   const button = v.url ? `<p style="margin:22px 0 6px"><a href="${esc(v.url)}" style="display:inline-block;background:#E6A739;color:#120D06;font:700 16px Arial,sans-serif;text-decoration:none;padding:13px 24px;border-radius:999px">${esc(m.button)}</a></p>` : '';
   const html = `<!doctype html><html lang="${l}" dir="${dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(subject)}</title></head>
 <body style="margin:0;background:#F4EFE6">
@@ -89,13 +113,13 @@ export function renderEmail(kind, locale, vars) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:14px;overflow:hidden">
 <tr><td style="background:#0B0906;padding:18px 24px;text-align:${align}">${logo}</td></tr>
 <tr><td dir="${dir}" style="padding:28px 24px 20px;text-align:${align}">
-<p style="margin:0 0 16px;font:700 17px Arial,sans-serif;color:#120D06">${fill(t.hello, v, true)}</p>
+<p style="margin:0 0 16px;font:700 17px Arial,sans-serif;color:#120D06">${fill(helloTxt, v, true)}</p>
 ${paras}${button}
 <p style="margin:22px 0 0;font:15px Arial,sans-serif;color:#5C5244">${fill(t.team, v, true)}</p>
 </td></tr>
-<tr><td dir="${dir}" style="padding:14px 24px 22px;border-top:1px solid #EFE7DA;font:12px/1.5 Arial,sans-serif;color:#7A6F5F;text-align:${align}">${fill(t.footer, v, true)}</td></tr>
+<tr><td dir="${dir}" style="padding:14px 24px 22px;border-top:1px solid #EFE7DA;font:12px/1.5 Arial,sans-serif;color:#7A6F5F;text-align:${align}">${fill(footTxt, v, true)}${unsubHtml}</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [fill(t.hello, v, false), '', ...lines.map((x) => fill(x, v, false)), '', v.url ? `${m.button} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(t.footer, v, false)]
+  const text = [fill(helloTxt, v, false), '', ...lines.map((x) => fill(x, v, false)), '', v.url ? `${m.button} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(footTxt, v, false), v.unsubUrl ? `${t.unsub} : ${v.unsubUrl}` : '']
     .filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
   return { subject, html, text };
 }

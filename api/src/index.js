@@ -32,6 +32,9 @@ import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
 import moderationRoutes from './routes/moderation.js';
 import collectionsRoutes from './routes/collections.js';
+import notificationsRoutes from './routes/notifications.js';
+import giftsRoutes from './routes/gifts.js';
+import { startNotifyMailer } from './notifyMailer.js';
 import listsRoutes from './routes/lists.js';
 import { startAudit } from './audit.js';
 import learningRoutes from './routes/learning.js';
@@ -152,6 +155,8 @@ await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
 await app.register(moderationRoutes);
 await app.register(collectionsRoutes);
+await app.register(notificationsRoutes);
+await app.register(giftsRoutes);
 await app.register(listsRoutes);
 await app.register(learningRoutes);
 await app.register(reminderRoutes);
@@ -180,4 +185,5 @@ setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
 startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
 startSelfcheckMailer(app.log); // rappel hebdomadaire du bilan personnel (Apprentissage)
 startStatsMaintenance(app.log); // purge des empreintes du jour (2 jours) et des compteurs anciens
+startNotifyMailer(app.log); // alertes des intervenants suivis et sélection de la semaine (étape 21)
 startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)

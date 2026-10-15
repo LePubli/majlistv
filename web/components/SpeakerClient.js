@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 import TalkCard from './TalkCard';
 import SeriesCard from './SeriesCard';
+import FollowButton from './FollowButton';
 
 export default function SpeakerClient({ slug, initial }) {
   const { t, call, ready, user } = useApp();
@@ -20,6 +21,7 @@ export default function SpeakerClient({ slug, initial }) {
     <main className="spk-page">
       <p className="meta"><Link href="/intervenants">{t('spTitle')}</Link></p>
       <h1>{initial.name}</h1>
+      <p className="spk-follow"><FollowButton slug={slug} t={t} call={call} user={user} /></p>
       {initial.bio && <p className="spk-bio">{initial.bio}</p>}
       {(series ?? []).length > 0 && (
         <section><h2>{t('spSeries')}</h2><div className="grid">{series.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div></section>

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
+import EmailPrefs from '../../components/EmailPrefs';
+import MyGifts from '../../components/MyGifts';
 import { safePath } from '../../lib/nav';
 
 const date = (d, locale) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
@@ -69,6 +71,9 @@ export default function Account() {
       <p>{t('role')} : <strong>{user.role}</strong></p>
       <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
       <Suspense fallback={null}><Billing /></Suspense>
+      <EmailPrefs />
+      <MyGifts />
+      <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
     </main>
   );
 }

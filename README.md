@@ -1710,3 +1710,86 @@ Résultat attendu : « TOUT EST OK ».
 
 ### 19.7 Retour arrière
 Dépublier une collection (décocher *Publiée*) la retire du site sans rien perdre. Les listes de membres ne s'affichent que pour leur propriétaire ou par lien secret.
+
+## Étape 21 — Notifications et cartes cadeaux
+
+### 21.1 Ce que ça fait
+**E-mails d'information** (jamais d'e-mail commercial non demandé) :
+- **Suivre un intervenant** : bouton **Suivre** sur la page de l'intervenant (membre connecté, 100 intervenants au plus). Quand de nouvelles conférences de cet intervenant deviennent visibles, le membre reçoit **un seul e-mail groupé** (jamais un par conférence). Chaque conférence n'est annoncée qu'**une fois** (`talks.announced_at`) ; les conférences déjà en ligne au déploiement ne déclenchent rien. Un brouillon, une conférence en attente de relecture, une publication programmée dans le futur ou une conférence « hors catalogue adultes » n'est annoncé qu'au moment où elle devient réellement visible.
+- **Sélection de la semaine** : un e-mail par semaine, **uniquement aux membres qui l'ont demandée** (case décochée par défaut, Mon compte → Mes e-mails). Contenu : la **collection** désignée dans les réglages (idéal : une vraie sélection éditoriale que vous changez chaque semaine) ou, à défaut, les **nouveautés des 7 derniers jours**. S'il n'y a rien à proposer, rien n'est envoyé.
+- **Désinscription en un clic** : chaque e-mail d'information contient un lien « Se désabonner en un clic » **et** les en-têtes `List-Unsubscribe` / `List-Unsubscribe-Post` (RFC 8058) : Gmail et Apple Mail affichent leur propre bouton « Se désabonner ». Le lien est un **jeton signé** (aucune connexion nécessaire, aucune expiration) qui ne permet **que** de se désabonner de **cette catégorie**. Ouvrir la page ne désinscrit personne tant qu'on ne clique pas (les antivirus qui « visitent » les liens ne désabonnent pas les gens). Un e-mail déjà en file mais dont le destinataire s'est désabonné entre-temps **n'est pas envoyé**.
+- **Mon compte → Mes e-mails** : cocher/décocher les deux types, voir et retirer les intervenants suivis.
+- Les e-mails de compte et de paiement (bienvenue, mot de passe, facture…) ne sont **pas** concernés : ils ne portent pas de lien de désinscription.
+
+**Cartes cadeaux** (1, 3 ou 12 mois) :
+- Page **/gift** (« Offrir un abonnement », lien sur la page des formules et dans Mon compte) : durée, destinataire facultatif (prénom, e-mail), message de 300 caractères, case d'acceptation des conditions de vente (texte, version, date, IP et navigateur conservés comme preuve), puis **paiement unique** sur Stripe Checkout (carte, et PayPal si activé ; TVA automatique si Stripe Tax est activé). Aucun renouvellement.
+- Le **code** (`XXXX-XXXX-XXXX`, 12 caractères sans 0/O/1/I) n'existe pour l'acheteur qu'**après confirmation du paiement par Stripe** (webhook). L'acheteur le retrouve dans **Mon compte → Mes cartes cadeaux** (avec un lien d'activation à partager) et par e-mail. Si une adresse de destinataire est saisie, **la carte lui est envoyée tout de suite** avec le message et le prénom de l'expéditeur ; sinon seul l'acheteur reçoit le code.
+- **Activation** : page **/redeem** (le lien de l'e-mail préremplit le code ; connexion ou compte gratuit requis). Le code ouvre l'accès à toutes les conférences (formule standard) pour la durée de la carte, via `users.premium_until`. Une 2ᵉ carte s'**ajoute** à la durée restante. Un code ne sert **qu'une fois**, même si deux personnes l'activent au même instant. Sécurité : 10 essais par minute au plus, 32¹² codes possibles.
+- Le bénéficiaire peut déjà avoir un abonnement : l'accès offert court **en parallèle dès aujourd'hui** ; s'il résilie son abonnement, il prend le relais sans coupure (l'écran le lui explique).
+- L'acheteur est prévenu quand sa carte est activée, **sans voir qui l'a activée**.
+- **Administration → Cartes cadeaux** : totaux (disponibles, activées, annulées, ventes), liste filtrable (état, code, e-mail), **génération de cartes offertes** (concours, partenaires : 50 au plus par fois, aucune facturation, aucun e-mail), **annulation** d'une carte non activée. Tout est inscrit au journal des actions (étape 20), sans les codes.
+- **Remboursement** : un remboursement **complet** fait dans Stripe annule automatiquement la carte si elle n'a pas été activée (si elle l'était, elle est seulement marquée « remboursée » et l'accès reste : à vous de décider).
+
+### 21.2 Prérequis, réglages, installation
+Aucune variable d'environnement. Migration `043_notifications_gifts.sql` (automatique) : `speaker_follows`, colonnes `users.notify_speakers` (vrai par défaut) / `notify_weekly` (faux par défaut) / `weekly_last_week`, `talks.announced_at`, `gift_cards`. Déployer **l'API d'abord, puis le web**.
+
+1. **Envoi d'e-mails** configuré (Admin → Paramètres → E-mails). Sans lui, rien n'est mis en file et rien n'est perdu : les conférences ne sont « annoncées » qu'une fois l'envoi actif.
+2. **Délivrabilité** : le domaine d'envoi doit avoir **SPF et DKIM** valides (chez votre fournisseur SMTP). C'est indispensable pour que le bouton « Se désabonner » natif de Gmail s'affiche et que les messages n'aillent pas en spam.
+3. **Stripe (cartes cadeaux uniquement)** : dans Stripe → Développeurs → Webhooks, ouvrir le point d'accès existant (`…/api/billing/webhook`) et **ajouter ces 3 événements** si absents : `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`. Sans eux, une carte payée resterait « en attente ».
+4. **Admin → Paramètres → Notifications par e-mail** : alertes d'intervenants (activées par défaut), sélection de la semaine (désactivée par défaut), collection envoyée (coller son identifiant : Studio → Collections → l'identifiant figure dans l'adresse de la collection, `/collections/<identifiant>`), jour (4 = jeudi) et heure (9 h, Paris), nombre de conférences.
+5. **Admin → Paramètres → Cartes cadeaux** : cocher « Vendre des cartes cadeaux », fixer les trois prix (0 = durée non vendue). Les montants sont ceux **réellement facturés** (pas de produit à créer dans Stripe).
+
+```bash
+cd /chemin/vers/majlistv
+unzip -o ~/majlis-tv-etape21-notifications-cadeaux.zip -d /tmp/e21 && cp -r /tmp/e21/. .
+git add -A && git commit -m "Etape 21 : notifications et cartes cadeaux" && git push
+# DockPanel : redéployer majlistv-api, attendre « Running », puis majlistv-web
+```
+
+### 21.3 Utilisation
+- **Membre** : page d'un intervenant → *Suivre* ; Mon compte → *Mes e-mails* pour régler ; *Offrir un abonnement* (ou /gift) pour acheter ; *Activer une carte cadeau* (ou /redeem) pour utiliser un code.
+- **Équipe** : pour une vraie sélection de la semaine, créer une collection (Studio → Collections), la publier, coller son identifiant dans le réglage, et le changer chaque semaine.
+- **Administrateur** : Administration → Cartes cadeaux.
+
+### 21.4 API (résumé)
+| Route | Rôle |
+|---|---|
+| `PUT/DELETE /speakers/:slug/follow` | suivre / ne plus suivre (connecté) |
+| `GET/PUT /me/notifications` | réglages (`speakers`, `weekly`), intervenants suivis, disponibilité des envois |
+| `GET /unsubscribe/:token` | lecture seule : catégorie et état (aucun changement) |
+| `POST /unsubscribe/:token` | désinscription (JSON ou formulaire `List-Unsubscribe=One-Click`), sans connexion |
+| `GET /gifts/options` | durées, prix, texte des conditions (public) |
+| `POST /gifts/checkout` | `{months, terms, recipientEmail?, recipientName?, message?}` → `{url}` Stripe |
+| `GET /me/gifts` | mes cartes payées (code visible une fois payée) |
+| `POST /gifts/redeem` | `{code}` → durée et date de fin (`409` déjà utilisé, `410` annulé, `404` inconnu) |
+| `GET /admin/gifts`, `POST /admin/gifts/generate`, `POST /admin/gifts/:id/void` | administration |
+
+### 21.5 Points juridiques à faire valider (avant d'ouvrir la vente)
+- **Conditions de vente** : le texte d'acceptation (`GIFT_TERMS_TEXT` dans `api/src/routes/gifts.js`) promet un remboursement dans les 14 jours tant que la carte n'est pas activée. À intégrer dans vos CGV (page légale « cgv ») et à faire relire. Changer le texte : changer aussi `GIFT_TERMS_VERSION`.
+- **TVA** : une carte cadeau utilisable dans plusieurs pays peut être un « bon à usage multiple » (TVA due à l'**activation**) ou « à usage unique » (TVA due à la **vente**). À trancher avec votre comptable ; Stripe Tax ne règle pas ce point à votre place.
+- **Données personnelles** : l'adresse e-mail d'un destinataire (qui n'a pas de compte) est conservée dans `gift_cards` ; à mentionner dans la politique de confidentialité, avec les intervenants suivis et les préférences d'e-mails. Aucun autre e-mail n'est envoyé à cette adresse.
+- **Prospection** : les alertes d'intervenants viennent d'un choix explicite (le membre suit l'intervenant) ; la sélection de la semaine est **opt-in** (décochée par défaut). Ne pas la cocher pour les membres.
+- **Durée de validité** : aucune expiration n'est appliquée aux cartes (choix prudent). À revoir avec votre conseil si vous voulez en fixer une.
+
+### 21.6 Tests
+```bash
+# API (3055, lancée avec STRIPE_API_BASE=http://127.0.0.1:12111), faux Stripe (api/tests/mock_stripe.py), faux SMTP (api/tests/smtp_sink.py 2525), PG de test (5544)
+python3 api/tests/test_gifts.py           # achat, webhook, activation simultanée, cumul, annulation, remboursement, admin
+python3 api/tests/test_notifications.py   # suivi, réglages, jetons de désinscription, envoi réel avec en-têtes
+set -a; . /var/tmp/api-test.env; set +a; node api/tests/test_notify_mail.mjs   # boucles : annonces, sélection, doublons, échappement, arabe
+```
+Résultat attendu : « TOUT EST OK » / « TOUT OK ». Les contrôles sont limités à 10 requêtes par minute sur l'achat et l'activation : laisser une minute entre deux exécutions.
+
+### 21.7 Debug
+- **Aucun e-mail d'alerte** : envoi non configuré, réglage « alertes » désactivé, ou le membre est désinscrit. Les boucles tournent toutes les 10 minutes (journal : « Alertes d'intervenants mises en file »). Le tableau de bord montre les e-mails en attente.
+- **Une carte payée reste « en attente »** : le webhook Stripe n'a pas reçu l'événement `checkout.session.completed` (voir 21.2, point 3), ou la signature (`stripe_webhook_secret`) est fausse. Rejouer l'événement depuis Stripe.
+- **« Code inconnu »** : le code est mal recopié, ou la carte n'est pas encore payée. L'administrateur retrouve la carte par son code (Cartes cadeaux → recherche).
+- **Pas de bouton « Se désabonner » dans Gmail** : SPF/DKIM manquants, ou trop peu d'envois ; le lien en bas du message fonctionne dans tous les cas.
+- **Rien dans la sélection de la semaine** : la collection choisie n'est pas publiée / vide, et aucune conférence n'a été publiée ces 7 derniers jours.
+
+### 21.8 Retour arrière
+Désactiver les réglages (alertes, sélection, cartes cadeaux) arrête tout sans rien perdre. Les cartes déjà vendues restent activables tant que la page /redeem existe ; ne pas retirer l'API sans avoir honoré les cartes payées.
+
+### 21.9 À savoir
+- La carte cadeau donne l'accès **standard** (toutes les conférences, quiz de fin de vidéo). La formule **Apprentissage** (bilan, thèmes, révisions) n'est pas offerte par carte : à décider avec vous (prochaine évolution possible).
+- Les erreurs renvoyées par l'API lors de l'activation (« Code inconnu… ») sont en français quelle que soit la langue du site.

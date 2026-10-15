@@ -180,7 +180,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - Signalement d'un contenu par les spectateurs, avec une file de traitement dans le back-office.
 - Journal des actions des admins (qui a modifié quoi).
 
-**21. Notifications et cadeaux**
+**21. Notifications et cadeaux** — *fait*
 - E-mails : nouvelles conférences des intervenants suivis, sélection de la semaine, avec désinscription en un clic.
 - **Abonnement à offrir** : carte cadeau (1, 3 ou 12 mois) payée par Stripe, code à activer.
 
@@ -251,7 +251,7 @@ Règles transversales :
 
 ## Ordre de travail retenu
 
-Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération) et 19 (collections, listes). **Suite : 21** (notifications et cartes cadeaux), 22 (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
+Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) et 21 (notifications, cartes cadeaux). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
 - TriMaint (port 7001) n'est jamais touché.

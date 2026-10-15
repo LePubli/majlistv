@@ -16,11 +16,13 @@ export default function Pricing() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [waiver, setWaiver] = useState(false);
+  const [gifts, setGifts] = useState(false);
   const qs = useSearchParams();
   const canceled = qs.get('canceled');
   const from = safePath(qs.get('from')); // page d'origine (ex. la conférence verrouillée)
 
   useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] })); }, [call]);
+  useEffect(() => { call('/gifts/options', {}, null).then((r) => setGifts(Boolean(r.ok && r.data.enabled))); }, [call]);
   useEffect(() => { if (user) call('/billing/status').then((r) => r.ok && setStatus(r.data)); }, [user, call]);
 
   const money = (p) => new Intl.NumberFormat(locale, { style: 'currency', currency: p.currency.toUpperCase(), minimumFractionDigits: p.amount % 100 ? 2 : 0 }).format(p.amount / 100);
@@ -104,6 +106,7 @@ export default function Pricing() {
         </label>
       )}
       {info.enabled && !user && <p className="meta small"><Link className="link u" href={authPath('login', pricingPath(from))}>{t('haveAccount')}</Link></p>}
+      {gifts && <p className="gf-offer"><Link className="btn ghost" href="/gift">🎁 {t('gfOffer')}</Link></p>}
       {anyPlans && <p className="meta small">{t('pricingFooter')}</p>}
     </main>
   );

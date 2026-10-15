@@ -32,7 +32,9 @@ class H(BaseHTTPRequestHandler):
         if path == "/v1/customers": return self._send({"id": "cus_1", "object": "customer"})
         if path == "/v1/checkout/sessions" and body.get("payment_method_types[1]") == "paypal" and __import__("os").path.exists("/tmp/claude-0/paypal_reject"):
             return self._send({"error": {"type": "invalid_request_error", "param": "payment_method_types[1]", "message": 'The payment method type "paypal" is invalid. Please ensure the provided type is activated in your dashboard.'}}, 400)
-        if path == "/v1/checkout/sessions": return self._send({"id": "cs_1", "object": "checkout.session", "url": "https://checkout.stripe.test/cs_1"})
+        if path == "/v1/checkout/sessions":
+            n = sum(1 for x in LOG if x["path"] == "/v1/checkout/sessions")  # identifiant distinct à chaque session
+            return self._send({"id": f"cs_{n}", "object": "checkout.session", "url": f"https://checkout.stripe.test/cs_{n}"})
         if path == "/v1/billing_portal/sessions": return self._send({"id": "bps_1", "object": "billing_portal.session", "url": "https://billing.stripe.test/p/1"})
         self._send({"error": {"message": "not found"}}, 404)
     def log_message(self, *a): pass

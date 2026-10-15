@@ -8,6 +8,7 @@ import { getSetting, getNumber, isOn } from '../settings.js';
 import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
 import { hasLearningTier } from '../access.js';
+import { applyGiftPaid, applyGiftRefund } from '../gifts.js';
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
 export const WAIVER_VERSION = '2026-10-12';
@@ -35,6 +36,14 @@ export function makeStripe(secretKey) {
 }
 
 let clientCache = { key: null, client: null };
+
+// Client Stripe seul (cartes cadeaux : paiement unique, sans identifiants de prix), ou null si la clé secrète n'est pas saisie.
+export async function stripeClient() {
+  const secret = await getSetting('stripe_secret_key');
+  if (!secret) return null;
+  if (clientCache.key !== secret) clientCache = { key: secret, client: makeStripe(secret) };
+  return clientCache.client;
+}
 
 // Configuration Stripe actuelle, ou null si le paiement n'est pas configuré.
 export async function stripeContext() {
@@ -313,6 +322,10 @@ export default async function billingRoutes(app) {
             await notify(client, event);
           } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
             await notify(client, event);
+          } else if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && obj.mode === 'payment' && obj.metadata?.gift_id) {
+            await applyGiftPaid(client, obj); // carte cadeau payée
+          } else if (event.type === 'charge.refunded') {
+            await applyGiftRefund(client, obj);
           } else if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) {
             // Filet de sécurité si l'événement d'abonnement arrive plus tard : on récupère l'état actuel chez Stripe.
             const sub = await ctx.stripe.subscriptions.retrieve(obj.subscription);

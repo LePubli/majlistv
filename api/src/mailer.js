@@ -4,6 +4,7 @@ import nodemailer from 'nodemailer';
 import { pool } from './db.js';
 import { getSetting } from './settings.js';
 import { renderEmail } from './emails.js';
+import { CATEGORIES, KIND_CATEGORY, unsubToken } from './unsubscribe.js';
 
 const MAX_ATTEMPTS = 5;
 const state = { running: false, timer: null, log: null, transport: null, sig: '' };
@@ -61,10 +62,20 @@ export async function enqueueEmail(db, { userId = null, to, locale, kind, vars =
 }
 
 // Mise en forme au moment de l'envoi : nom du site, adresse et logo actuels.
-function compose(m, base) {
+// Les e-mails d'information (intervenants suivis, sélection de la semaine) portent un lien de désinscription en un clic
+// et les en-têtes List-Unsubscribe (RFC 8058) que Gmail et Apple Mail transforment en bouton « Se désabonner ».
+export function compose(m, base) {
   const vars = { ...base, ...m.vars };
   if (m.vars.path && base.webUrl) vars.url = base.webUrl + m.vars.path;
-  return renderEmail(m.kind, m.locale, vars);
+  const cat = KIND_CATEGORY[m.kind];
+  let headers;
+  if (cat && m.user_id && base.webUrl) {
+    const token = unsubToken(m.user_id, cat);
+    vars.unsubUrl = `${base.webUrl}/unsubscribe/${token}`;
+    vars.prefsUrl = `${base.webUrl}/account#emails`;
+    headers = { 'List-Unsubscribe': `<${base.webUrl}/api/unsubscribe/${token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' };
+  }
+  return { ...renderEmail(m.kind, m.locale, vars), headers };
 }
 
 // Même chose pour un utilisateur connu : e-mail, prénom et langue lus en base.
@@ -87,13 +98,19 @@ async function tick() {
       `UPDATE email_outbox SET attempts = attempts + 1, send_after = now() + interval '10 minutes'
         WHERE id IN (SELECT id FROM email_outbox WHERE status = 'pending' AND send_after <= now()
                      ORDER BY id LIMIT 10 FOR UPDATE SKIP LOCKED)
-        RETURNING id, to_email, kind, locale, vars, attempts`
+        RETURNING id, user_id, to_email, kind, locale, vars, attempts`
     );
     if (!rows.length) return;
     const transport = transportFor(c);
     const base = await baseVars();
     for (const m of rows) {
       try {
+        // Désinscrit entre la mise en file et l'envoi : on n'envoie plus rien.
+        const cat = KIND_CATEGORY[m.kind];
+        if (cat && m.user_id) {
+          const on = await pool.query(`SELECT ${CATEGORIES[cat]} AS on FROM users WHERE id = $1`, [m.user_id]);
+          if (!on.rows[0]?.on) { await pool.query("UPDATE email_outbox SET status = 'expired' WHERE id = $1", [m.id]); continue; }
+        }
         const mail = compose(m, base);
         await transport.sendMail({ from: c.from, replyTo: c.replyTo || undefined, to: m.to_email, ...mail });
         await pool.query("UPDATE email_outbox SET status = 'sent', sent_at = now(), last_error = NULL, subject = $2 WHERE id = $1", [m.id, mail.subject]);
