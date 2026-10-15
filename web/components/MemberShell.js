@@ -2,6 +2,7 @@
 // Étape B — Gabarit commun de l'espace membre : menu latéral à gauche (ordinateur), barre de 5 entrées en bas (téléphone).
 // Le menu suit les interrupteurs de fonctions (Admin → Fonctions) : une fonction coupée disparaît du menu.
 // Visiteurs, Studio/Administration (leur propre menu), Kids et pages d'entrée de compte : aucun changement.
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
@@ -18,10 +19,27 @@ const Ico = ({ d }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
 );
 
+const KEY = 'ms-collapsed';
+// Hook partagé avec le Studio : état replié mémorisé (localStorage, avec try/catch), défaut selon la largeur d'écran.
+export function useCollapsed() {
+  const [col, setCol] = useState(false);
+  useEffect(() => {
+    let v = null;
+    try { v = localStorage.getItem(KEY); } catch {}
+    setCol(v === null ? window.innerWidth < 1280 : v === '1');
+  }, []);
+  const toggle = () => setCol((c) => { try { localStorage.setItem(KEY, c ? '0' : '1'); } catch {} return !c; });
+  return [col, toggle];
+}
+export const ChevIco = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+);
+
 export default function MemberShell({ children }) {
   const { t, user, kid, feat, hasSeries, hasBooks } = useApp();
   const path = usePathname();
   const params = useSearchParams();
+  const [col, toggle] = useCollapsed();
   if (!memberShellOn(path, user, kid)) return children;
 
   const tab = params.get('tab');
@@ -70,14 +88,15 @@ export default function MemberShell({ children }) {
   ].filter((x) => x[3]);
 
   return (
-    <div className="ms">
+    <div className={`ms${col ? ' col' : ''}`}>
       <aside className="ms-side">
+        <button type="button" className="ms-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <nav aria-label={t('msSide')}>
           {groups.map((g) => (
             <div key={g.title} className="ms-group">
               <div className="ms-title">{g.title}</div>
               {g.items.map(([href, label, d]) => (
-                <Link key={href} href={href} className={isOn(href) ? 'on' : ''} aria-current={isOn(href) ? 'page' : undefined}><Ico d={d} /><span>{label}</span></Link>
+                <Link key={href} href={href} title={col ? label : undefined} className={isOn(href) ? 'on' : ''} aria-current={isOn(href) ? 'page' : undefined}><Ico d={d} /><span>{label}</span></Link>
               ))}
             </div>
           ))}

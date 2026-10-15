@@ -2104,3 +2104,29 @@ Vérifier ensuite sur votre téléphone : une conférence, Ma bibliothèque, Stu
 ### F.5 À savoir
 - Les tableaux se transforment en fiches **en dessous de 700 px** ; au-dessus, ils gardent le défilement latéral si nécessaire.
 - L'audit a été fait avec Chromium : un essai sur un vrai iPhone (Safari) reste conseillé ; si une page vous semble encore large, notez son adresse et l'appareil.
+
+## Étape G — Fidélité à la maquette
+
+Ce qui change (front-end uniquement, **aucune migration, aucune variable d'environnement nouvelle**) :
+
+| Point | Détail |
+|---|---|
+| Texte blanc | `--text` passe de `#FCF7F0` (blanc cassé) à `#FFFFFF` ; `--text-2` éclairci (`#EDE6DA`). |
+| Menu latéral repliable | Bouton « Réduire le menu » en haut du menu membre **et** du menu Studio/Administration. Replié = rail d'icônes (68 px membre, 76 px Studio) avec infobulle au survol. Le choix est mémorisé dans le navigateur (`localStorage`, clé `ms-collapsed`, partagée membre/Studio). Par défaut : ouvert à partir de 1280 px, replié en dessous. Sur téléphone (≤ 900 px) : rien ne change, menu ☰ + barre du bas. |
+| Citation du jour | Bandeau compact doré (dégradé, liseré, grand guillemet, texte arabe en or clair, texte français en blanc). |
+| Espace Apprentissage | Refait selon la maquette : « Bonjour Prénom, reprenons votre apprentissage », onglets **Tableau de bord / Parcours / Révisions (pastille du nombre à revoir) / Mon bilan / Attestations**, carte « Reprendre le cours » (affiche, catégorie, progression, minutes restantes), anneau « Votre parcours », carte « À réviser aujourd'hui », trois raccourcis (continuer le parcours, quiz à passer ou catalogue, historique), bandeau « Mon bilan personnel » (objectif de la semaine), puis score, courbe et badges. |
+| Vitrine visiteur | Bannière d'en-tête : image de fond (image de bannière définie dans Admin → Accueil si mode « personnalisé », sinon affiche de la conférence à la une, sinon affiche de la conférence d'exemple) avec voile dégradé, titre en dégradé or, pastilles Regarder / Comprendre / Retenir / Mettre en pratique, boutons, et carte de la conférence d'exemple à droite (dessous sur téléphone). |
+
+### Déploiement
+1. Remplacer le dossier `web/` par celui du zip (l'API ne change pas).
+2. Coolify : *Redeploy* du service web (ou sur le serveur Ubuntu 24 : `docker compose up -d --build web`).
+3. Vider le cache du navigateur (Ctrl + F5) pour charger le nouveau CSS.
+
+### Vérification rapide
+- Membre connecté sur ordinateur : cliquer « Réduire le menu », recharger la page → le menu reste réduit.
+- `/learning` : les 5 onglets ; sans activité, la carte « Commencez votre première conférence » s'affiche à la place de « Reprendre ».
+- Visiteur déconnecté sur `/` : bannière avec image (si une conférence a une affiche).
+
+### Débogage
+- Le menu ne se replie pas : vérifier que le navigateur autorise le stockage local (en navigation privée, l'état n'est pas mémorisé mais le bouton fonctionne).
+- Bannière sans image : aucune affiche disponible → fond dégradé or (comportement prévu). Ajouter une image dans Admin → Accueil (mode personnalisé) ou une affiche à la conférence à la une.

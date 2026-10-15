@@ -9,7 +9,8 @@ export default function CitationCard({ c, t, label, compact = false, framed = fa
   if (framed) { // bas de l'accueil : grand cadre centré, texte mis en valeur
     return (
       <figure className="cit-framed" aria-label={label || t('citTitle')}>
-        <span className="cit-label">{label || t('citTitle')}</span>
+        <span className="cit-mark" aria-hidden="true">“</span>
+        <span className="cit-label">✦ {label || t('citTitle')}</span>
         {c.textAr && <blockquote className="cit-ar" dir="rtl" lang="ar">{long && !more ? `${c.textAr.slice(0, 260).trimEnd()}…` : c.textAr}</blockquote>}
         <blockquote className="cit-fr" dir="auto">« {c.text} »</blockquote>
         <figcaption>{c.attribution}</figcaption>

@@ -43,7 +43,7 @@ export default function Home() {
   // Visiteur non connecté : la vitrine (méthode, exemple, tarifs). Invisible (mais présente dans la page) le temps de connaître la session.
   if (!user && !cat && feat('showcase')) {
     const latest = rows0(home);
-    return <Vitrine cit={cit} latest={latest} wait={!ready} />;
+    return <Vitrine cit={cit} latest={latest} wait={!ready} hero={home?.hero} />;
   }
   const browsing = !cat; // accueil vitrine (pas de filtre)
   const catName = cats.find((c) => String(c.id) === cat);

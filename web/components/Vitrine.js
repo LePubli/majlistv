@@ -53,7 +53,7 @@ function QuizStep({ talkId, question, t, call }) {
   );
 }
 
-export default function Vitrine({ cit, latest, wait }) {
+export default function Vitrine({ cit, latest, wait, hero }) {
   const { t, locale, user, trialDays, call, feat } = useApp();
   const [d, setD] = useState(undefined);   // undefined = chargement, null = pas d'exemple disponible
   const [plans, setPlans] = useState(null);
@@ -68,19 +68,35 @@ export default function Vitrine({ cit, latest, wait }) {
   const talk = d?.talk;
   const thumb = talk ? thumbOf({ posterUrl: talk.posterUrl, source: talk.source, video_ref: talk.video_ref }) : null;
   const mins = talk ? Math.max(1, Math.round(talk.durationSeconds / 60)) : 0;
+  const banner = hero?.imageUrl || hero?.items?.[0]?.posterUrl || thumb;
   const stdFrom = from(plans?.plans); const learnFrom = from(plans?.learning?.plans);
 
   return (
     <main className={`vt${wait ? ' vt-wait' : ''}`}>
-      <section className="vt-hero" aria-label={t('vtBadge')}>
-        <span className="vt-badge">{t('vtBadge')}</span>
-        <h1>{t('vtTitle1')}<br /><span>{t('vtTitle2')}</span></h1>
-        <p className="vt-lead">{t('vtLead')}</p>
-        <div className="vt-cta">
-          {feat('registration') && <Link href="/register" className="btn btn-lg">{cta}</Link>}
-          {d && <a href="#vt-example" className="btn ghost btn-lg">{t('vtSee')}</a>}
+      <section className={`vt-hero${banner ? ' has-img' : ''}`} aria-label={t('vtBadge')}>
+        {banner && <div className="vt-hero-bg" style={{ backgroundImage: `url(${banner})` }} aria-hidden="true" />}
+        <div className="vt-hero-glow" aria-hidden="true" />
+        <div className="vt-hero-in">
+          <div className="vt-hero-txt">
+            <span className="vt-badge">{t('vtBadge')}</span>
+            <h1>{t('vtTitle1')}<br /><span>{t('vtTitle2')}</span></h1>
+            <p className="vt-lead">{t('vtLead')}</p>
+            <ul className="vt-pills" aria-hidden="true">
+              <li>▶ {t('vtS1')}</li><li>✦ {t('vtS2')}</li><li>? {t('vtS3')}</li><li>↻ {t('vtS4')}</li>
+            </ul>
+            <div className="vt-cta">
+              {feat('registration') && <Link href="/register" className="btn btn-lg">{cta}</Link>}
+              {d && <a href="#vt-example" className="btn ghost btn-lg">{t('vtSee')}</a>}
+            </div>
+            {trialDays > 0 && feat('registration') && <p className="hero-note">{t('heroNote').replace('{n}', trialDays)}</p>}
+          </div>
+          {talk && (
+            <Link href={`/talks/${talk.id}`} className="vt-hero-card" aria-label={talk.title}>
+              <span className="vt-hero-thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}><span className="vt-play" aria-hidden="true">▶</span></span>
+              <span className="vt-hero-meta"><small>{t('vtExNote')}</small><b>{talk.title}</b><em>{talk.speaker} · {t('vtMin').replace('{n}', mins)}</em></span>
+            </Link>
+          )}
         </div>
-        {trialDays > 0 && feat('registration') && <p className="hero-note">{t('heroNote').replace('{n}', trialDays)}</p>}
       </section>
 
       {d && (

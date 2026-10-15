@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useApp } from './Providers';
 import { LOCALES } from '../lib/i18n';
 import { featureForPath } from '../lib/features';
+import { useCollapsed, ChevIco } from './MemberShell';
 
 const ICONS = {
   list: 'M4 6h16M4 12h16M4 18h10',
@@ -34,6 +35,7 @@ export default function StudioShell({ children }) {
   const params = useSearchParams();
   const router = useRouter();
   const tab = params.get('tab') || 'dashboard';
+  const [col, toggle] = useCollapsed();
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   if (!ready || !user) return null;
@@ -74,8 +76,9 @@ export default function StudioShell({ children }) {
   const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="studio">
+    <div className={`studio${col ? ' col' : ''}`}>
       <aside className="studio-side">
+        <button type="button" className="ms-toggle studio-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <Link href="/studio" className="studio-brand" aria-label="Mejliss TV Studio">
           <img src="/brand/emblem.png" alt="" width="35" height="38" />
           <span><img src="/brand/wordmark.png" alt="Mejliss TV" width="78" height="16" /><b>STUDIO</b></span>
@@ -85,7 +88,7 @@ export default function StudioShell({ children }) {
             <div key={g.title} className="studio-group">
               <div className="studio-group-title">{g.title}</div>
               {g.items.map(([href, label, d]) => (
-                <Link key={href} href={href} className={on(href) ? 'on' : ''} aria-current={on(href) ? 'page' : undefined}>
+                <Link key={href} href={href} title={col ? label : undefined} className={on(href) ? 'on' : ''} aria-current={on(href) ? 'page' : undefined}>
                   <Icon d={d} /><span>{label}</span>
                 </Link>
               ))}
