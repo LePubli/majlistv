@@ -2436,3 +2436,26 @@ body.edit-on .em-hover{outline:2px dashed var(--gold,#e0a526);outline-offset:2px
 .md-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .md-head h3{margin:0 0 4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .md-fields{display:grid;gap:10px;max-width:520px}
+
+/* ======================================================================
+   Étape A : grands écrans et barres de défilement
+   1) Les marges latérales (--gutter) sont calculées sur la largeur de la zone réellement disponible : à côté du menu latéral
+      des membres, on retire sa largeur (232 px, 68 px replié, 0 sur téléphone). Avant, sur un écran de 27 pouces, la marge
+      dépassait 360 px de chaque côté.
+   2) Un bloc qui a une largeur maximale ET des marges en --gutter ajoute ces marges à sa largeur maximale : sinon, sur grand
+      écran, il ne reste plus de place pour le texte (titre de la bannière affiché lettre par lettre).
+   3) Barres de défilement fines et presque invisibles partout (les défilements volontairement masqués restent masqués).
+   ====================================================================== */
+.ms { --shell-side: 232px; }
+.ms.col { --shell-side: 68px; }
+@media (max-width: 900px) { .ms, .ms.col { --shell-side: 0px; } }
+.ms-main { --gutter: max(clamp(var(--gutter-min), 3vw, var(--gutter-max)), calc((100vw - var(--shell-side) - var(--wrap)) / 2 + var(--gutter-max))); }
+.banner-body { width: 100%; max-width: calc(760px + 2 * var(--gutter)); }
+.spk-page { max-width: calc(1100px + 2 * var(--gutter)); }
+
+html, * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--line-soft) 80%, transparent) transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--line-soft) 80%, transparent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line); }
+::-webkit-scrollbar-corner { background: transparent; }

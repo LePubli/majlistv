@@ -2808,3 +2808,54 @@ Ouvrir le site : accueil, `/series`, `/gift`, `/kids`, `/studio/series` s'affich
 ### Dépannage
 - **La construction du site échoue avec « You cannot have two parallel pages that resolve to the same path »** : un ancien dossier de pages est resté (mise à jour par zip). Supprimer les anciens dossiers `web/app/series`, `collections`, `books`, `learning`, `attestation`, `lists`, `l`, `chaines`, `kids`, `gift`, `redeem` et `web/app/studio/series`, `collections`, `books`, `channel`, `quiz`, `practice`, `reminders`, `revenue`, `stats` (ils sont maintenant dans les dossiers `(module-…)`), ou mieux : récupérer le dépôt par GitHub Desktop.
 - **Une entrée de menu a disparu** : sa fonction est coupée (Admin → Fonctions) ou son module est absent (Admin → Modules).
+
+---
+
+## Étape A — Grands écrans et barres de défilement (réorganisation en 5 espaces, lot 1)
+
+### Description
+Sur un écran de 27 pouces, le titre et les étiquettes de la bannière d'accueil s'affichaient lettre par lettre à la verticale. Cause : les marges latérales du site (`--gutter`) grandissaient avec la largeur de l'écran, mais le bloc de texte de la bannière était limité à 760 px marges comprises ; il ne restait plus de place pour le texte. Cette étape corrige cela et rend les barres de défilement fines et presque invisibles. Seul `web/app/globals.css` change (fin du fichier) ; aucune base de données, aucune API.
+
+Ce qui change :
+- Les marges latérales sont calculées sur la zone réellement disponible à côté du menu latéral (232 px, 68 px replié, 0 sur téléphone).
+- Le texte de la bannière (`.banner-body`) et la page intervenant (`.spk-page`) gardent leur largeur de texte quelle que soit la taille de l'écran.
+- Barres de défilement de 6 px, couleur très discrète, partout (les défilements volontairement masqués, comme les rangées de vignettes, restent masqués).
+
+### Prérequis
+Aucun nouveau. Pour lancer le test : Python 3 avec Playwright et Chromium (déjà présents sur la machine de travail ; sur WSL : `pip install playwright --break-system-packages && python3 -m playwright install chromium`).
+
+### Installation et déploiement (workflow habituel)
+1. Décompresser le zip livré dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers).
+2. GitHub Desktop : **Commit to main**, puis **Push origin**.
+3. DockPanel → Git Deploy → **Redeploy `majlistv-web`** uniquement (l'API et le worker ne changent pas).
+4. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Configuration
+Aucune variable `.env` nouvelle.
+
+### Vérifier que ça marche
+Ouvrir https://majlisstv.le-publicitaire.fr sur un grand écran (ou élargir la fenêtre à 1990 ou 2560 px) : le titre de la bannière est sur 2 ou 3 lignes, pas lettre par lettre ; le texte reste aligné avec le contenu des rangées. Les barres de défilement sont fines. Vérifier aussi en arabe (langue AR) et à 390 px (téléphone).
+
+### Test automatique
+```bash
+cd web
+python3 tests/responsive_widths.py
+```
+Charge le vrai `app/globals.css` dans Chromium et vérifie 28 cas (7 largeurs de 390 à 2560 px × français/arabe × menu déplié/replié) : largeur de texte suffisante, titre sur 4 lignes au plus, pas de défilement horizontal, marge raisonnable. Avec l'ancien CSS, 12 cas échouent ; avec le nouveau, tous passent.
+
+### Debug
+- Le titre de la bannière est encore écrasé : vider le cache du navigateur (Ctrl+F5) puis vérifier que le redéploiement de `majlistv-web` est bien terminé.
+- Un thème publié dans Admin → Apparence peut redéfinir `--gutter-min` / `--gutter-max` : le correctif en tient compte.
+- Pour revenir en arrière : supprimer le bloc « Étape A » à la fin de `web/app/globals.css`.
+
+### Exemples d'utilisation
+Aucun réglage : le correctif est automatique. Test à la main : ouvrir les outils du navigateur (F12), mode appareil, tester 390, 1440, 1990 et 2560 px.
+
+### Ce qui a été testé / non testé
+Testé : le test automatique ci-dessus (Chromium, 28 cas). Non testé : construction complète du site (`next build`, changement CSS seulement), rendu sur le vrai site en ligne, vrai téléphone, navigateurs autres que Chromium.
+
