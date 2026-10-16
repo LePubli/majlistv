@@ -99,7 +99,11 @@ ok(all(r[0] == r[6] and r[1] == r[7] and r[2].startswith(r[8]) for r in rows), "
 ok(all(r[3] == "approved" and r[5] is None for r in rows), "publiés directement, sans conférence")
 ok({r[9] for r in rows} == {"quran", "hadith"}, "mélange versets et hadiths")
 cur.execute("select count(*) from reminders where origin='corpus' and text not in (select text_fr from corpus_items)"); ok(cur.fetchone()[0] == 0, "aucun texte hors corpus")
-print(open("/tmp/claude-0/translator.log").read().count("SQL"), "occurrence(s) de la valeur piégée dans le journal (attendu 0)")
+_tlog = os.environ.get("TRANSLATOR_LOG", "/tmp/claude-0/translator.log")  # journal du service translator lancé pour le test
+if os.path.exists(_tlog):
+    ok(open(_tlog).read().count("SQL") == 0, "la valeur piégée n'apparaît pas dans le journal du traducteur")
+else:
+    print(f"(journal du traducteur introuvable : {_tlog} — vérification sautée)")
 
 # --- les mots-clés piégés n'ont pas touché la base, et les candidats déjà utilisés ne reviennent pas ---
 r = requests.post(B + "/admin/citations/generate", headers=ADM, json={"count": 4}); ok(r.status_code == 202, "seconde génération")

@@ -26,9 +26,9 @@ async function getJson(url) {
   return r.json();
 }
 
-async function insertBatch(rows) {
+async function insertBatch(rows, db = pool) {
   if (!rows.length) return;
-  await pool.query(
+  await db.query(
     `INSERT INTO corpus_items(kind, collection, ref, label, text_ar, text_fr, grade)
      SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[])
      ON CONFLICT (collection, ref) DO NOTHING`,
@@ -109,18 +109,31 @@ async function runImport(log) {
       }
     }
     await progress(`Enregistrement de ${rows.length} textes…`);
+    // Remplacement du corpus en UNE transaction : personne ne voit un corpus vide ou à moitié importé, et les rappels déjà
+    // publiés sont rattachés aux nouveaux textes avant que l'import soit annoncé « terminé ».
     const db = await pool.connect();
+    let n = 0;
     try {
       await db.query('BEGIN');
-      await db.query('DELETE FROM corpus_items');
-      await db.query('COMMIT'); // les rappels déjà créés gardent leur copie du texte (corpus_id passe à NULL)
+      await db.query('DELETE FROM corpus_items'); // les rappels gardent leur copie du texte ; corpus_id passe à NULL
+      for (let i = 0; i < rows.length; i += 2000) await insertBatch(rows.slice(i, i + 2000), db);
+      n = (await db.query('SELECT count(*)::int AS n FROM corpus_items')).rows[0].n;
+      // Réattache chaque rappel à SON texte (même texte français, référence identique au début de l'attribution).
+      // Un texte ne peut être rattaché qu'à un seul rappel (index unique) : en cas de doublon, le plus ancien rappel l'emporte.
+      await db.query(`WITH cand AS (
+                        SELECT m.id AS mid, c.id AS cid FROM reminders m JOIN corpus_items c ON c.text_fr = m.text
+                         AND (m.attribution = c.label OR m.attribution LIKE c.label || ' %' OR m.attribution LIKE c.label || ',%')
+                         WHERE m.origin = 'corpus' AND m.corpus_id IS NULL),
+                      by_text AS (SELECT DISTINCT ON (cid) mid, cid FROM cand ORDER BY cid, mid),
+                      one AS (SELECT DISTINCT ON (mid) mid, cid FROM by_text ORDER BY mid, cid)
+                      UPDATE reminders m SET corpus_id = one.cid FROM one
+                       WHERE m.id = one.mid AND NOT EXISTS (SELECT 1 FROM reminders x WHERE x.corpus_id = one.cid)`);
+      await db.query('COMMIT');
+    } catch (err) {
+      await db.query('ROLLBACK').catch(() => {}); // l'ancien corpus reste intact
+      throw err;
     } finally { db.release(); }
-    for (let i = 0; i < rows.length; i += 2000) await insertBatch(rows.slice(i, i + 2000));
-    const n = (await pool.query('SELECT count(*)::int AS n FROM corpus_items')).rows[0].n;
     await pool.query("UPDATE corpus_import SET status = 'ready', message = $1, items = $2, finished_at = now() WHERE id = 1", [`${n} textes importés`, n]);
-    // Réattache les rappels existants au corpus réimporté (même source et même référence).
-    await pool.query(`UPDATE reminders m SET corpus_id = c.id FROM corpus_items c
-                       WHERE m.origin = 'corpus' AND m.corpus_id IS NULL AND m.attribution LIKE c.label || '%'`);
   } catch (err) {
     log.error?.(`corpus : import échoué : ${err.message}`);
     await pool.query("UPDATE corpus_import SET status = 'failed', message = $1, finished_at = now() WHERE id = 1", [String(err.message).slice(0, 300)]).catch(() => {});
