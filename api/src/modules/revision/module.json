@@ -1,0 +1,13 @@
+{
+  "id": "revision",
+  "name": "Révision espacée",
+  "version": "1.0.0",
+  "description": "Notions à revoir, rappels du jour et e-mail quotidien des révisions.",
+  "feature": "revision",
+  "requires": [],
+  "settings": [
+    "revision_daily_max",
+    "revision_email_enabled",
+    "revision_email_hour"
+  ]
+}

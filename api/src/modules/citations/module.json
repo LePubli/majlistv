@@ -1,0 +1,17 @@
+{
+  "id": "citations",
+  "name": "Citation du jour",
+  "version": "1.0.0",
+  "description": "Versets et hadiths : corpus, génération automatique, relecture, citation du jour sur l'accueil.",
+  "feature": "citations",
+  "requires": [],
+  "settings": [
+    "citations_auto",
+    "citations_review",
+    "citations_min_stock",
+    "citations_per_run",
+    "quran_edition_fr",
+    "hadith_collections",
+    "corpus_base_url"
+  ]
+}

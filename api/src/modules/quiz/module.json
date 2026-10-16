@@ -1,0 +1,16 @@
+{
+  "id": "quiz",
+  "name": "Quiz",
+  "version": "1.0.0",
+  "description": "Questions après chaque conférence, avec explication ; génération par IA et relecture dans le Studio.",
+  "feature": "quiz",
+  "requires": [],
+  "settings": [
+    "quiz_default_enabled",
+    "quiz_language",
+    "quiz_pass_percent",
+    "quiz_min_questions",
+    "quiz_max_questions",
+    "quiz_generate_count"
+  ]
+}

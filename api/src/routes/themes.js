@@ -9,7 +9,7 @@ import { pool } from '../db.js';
 import { hasLearningTier } from '../access.js';
 import { sealText, openText, practiceKeyReady } from '../practiceCrypto.js';
 import { THEMES, THEME_BY_ID, MAX_TALK_THEMES, themesOn, themeCard, talksOfTheme } from '../themes.js';
-import { dueOn, DUE_KINDS } from './practice.js';
+import { dueOn, DUE_KINDS } from '../modules/practice/routes.js';
 import { visibleSql } from '../visibility.js';
 
 const idSchema = z.object({ id: z.string().uuid() });

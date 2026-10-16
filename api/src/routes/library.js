@@ -1,9 +1,9 @@
-// Bibliothèque personnelle : favoris et reprise de lecture ("Continuer à regarder").
+// Bibliothèque personnelle : reprise de lecture ("Continuer à regarder").
 import { z } from 'zod';
 import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
-import { episodeLabels, seriesNextUp } from './series.js';
+import { episodeLabels, seriesNextUp } from '../modules/series/routes.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
 import { hasLearningTier, hasActiveSubscription } from '../access.js';
 import { creditWatch } from '../revenue.js';
@@ -36,30 +36,7 @@ async function cards(rows) {
 export default async function libraryRoutes(app) {
   const auth = { preHandler: app.authenticate };
 
-  // --- Favoris ---
-  app.get('/me/favorites', auth, async (req) => {
-    const { rows } = await pool.query(
-      `SELECT ${CARD}, f.created_at AS "favoritedAt"
-       FROM favorites f JOIN talks t ON t.id = f.talk_id LEFT JOIN category_names c ON c.id = t.category_id
-       WHERE f.user_id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} ORDER BY f.created_at DESC LIMIT 200`,
-      [req.user.sub]
-    );
-    return cards(rows);
-  });
-
-  app.put('/me/favorites/:id', auth, async (req, reply) => {
-    const { id } = idSchema.parse(req.params);
-    const talk = await pool.query('SELECT 1 FROM talks WHERE id = $1', [id]);
-    if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
-    await pool.query('INSERT INTO favorites(user_id, talk_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user.sub, id]);
-    return reply.code(204).send();
-  });
-
-  app.delete('/me/favorites/:id', auth, async (req, reply) => {
-    const { id } = idSchema.parse(req.params);
-    await pool.query('DELETE FROM favorites WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id]);
-    return reply.code(204).send();
-  });
+  // Favoris : module « favorites » (api/src/modules/favorites), étape M2.
 
   // --- Reprise de lecture ---
   // Enregistre la position (appelé toutes les ~10 s pendant la lecture). Ignoré si la conférence n'existe plus.

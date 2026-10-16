@@ -94,6 +94,7 @@ export async function registerModules(app) {
     try {
       const mod = await import(pathToFileURL(path.join(e.dir, 'index.js')).href);
       if (typeof mod.default !== 'function') throw new Error('index.js doit exporter par défaut une fonction register(app, ctx)');
+      e.mod = mod;
       await app.register(async (scope) => {
         if (!e.manifest.feature) {
           scope.addHook('onRequest', async (req, reply) => {
@@ -102,7 +103,8 @@ export async function registerModules(app) {
             return undefined;
           });
         }
-        await mod.default(scope, { id, version: e.manifest.version, enabled: () => moduleOn(id), setting: (k) => getSetting(BY_KEY[k] ? k : prefix(id) + k), log: app.log });
+        e.ctx = { id, version: e.manifest.version, enabled: () => moduleOn(id), setting: (k) => getSetting(BY_KEY[k] ? k : prefix(id) + k), log: app.log };
+        await mod.default(scope, e.ctx);
       });
       e.loaded = true;
     } catch (err) {
@@ -139,6 +141,19 @@ export async function migrateModules(log = console) {
       e.error = err.message; e.loaded = false;
       log.error?.(`Module ${id} : ${err.message}`);
       await pool.query(`INSERT INTO modules(id, installed_version, last_error) VALUES ($1, '0.0.0', $2) ON CONFLICT (id) DO UPDATE SET last_error = EXCLUDED.last_error, updated_at = now()`, [id, err.message]).catch(() => {});
+    }
+  }
+}
+
+// 4) Tâches de fond : `export async function start(app, ctx)` dans index.js, appelée une fois l'API à l'écoute (étape M2).
+//    Elle est appelée même si le module est désactivé : c'est à la tâche de vérifier ctx.enabled() ou son réglage (comme le faisaient
+//    déjà les e-mails programmés). Une erreur au démarrage d'un module est inscrite et n'empêche pas les autres.
+export async function startModules(app) {
+  for (const e of registry.values()) {
+    if (!e.loaded || e.error || typeof e.mod?.start !== 'function') continue;
+    try { await e.mod.start(app, e.ctx); } catch (err) {
+      e.error = `Démarrage impossible : ${err.message}`; app.log.error(`module ${e.manifest.id} : ${err.message}`);
+      await pool.query('UPDATE modules SET last_error = $2, updated_at = now() WHERE id = $1', [e.manifest.id, e.error]).catch(() => {});
     }
   }
 }

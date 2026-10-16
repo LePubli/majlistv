@@ -5,12 +5,12 @@
 // ne permet à un tiers (administrateur compris) de lire le contenu d'un autre compte ; rien n'entre dans les statistiques.
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getSetting, isOn } from '../settings.js';
-import { hasLearningTier } from '../access.js';
-import { sealText, openText, practiceKeyReady } from '../practiceCrypto.js';
+import { pool } from '../../db.js';
+import { getSetting, isOn } from '../../settings.js';
+import { hasLearningTier } from '../../access.js';
+import { sealText, openText, practiceKeyReady } from '../../practiceCrypto.js';
 
-const THEMES = JSON.parse(readFileSync(new URL('../themesTazkiya.json', import.meta.url), 'utf8'));
+const THEMES = JSON.parse(readFileSync(new URL('../../themesTazkiya.json', import.meta.url), 'utf8'));
 const THEME_BY_ID = new Map(THEMES.map((t) => [t.id, t]));
 export const MAX_ACTIVE_GOALS = 20;
 export const HISTORY_WEEKS = 8;

@@ -1,0 +1,16 @@
+{
+  "id": "follow",
+  "name": "Suivre et notifications",
+  "version": "1.0.0",
+  "description": "Bouton Suivre un intervenant, alertes par e-mail, annonce des nouvelles conférences, sélection de la semaine.",
+  "feature": "follow",
+  "requires": [],
+  "settings": [
+    "notify_speakers_enabled",
+    "weekly_enabled",
+    "weekly_collection",
+    "weekly_weekday",
+    "weekly_count",
+    "weekly_hour"
+  ]
+}

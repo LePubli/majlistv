@@ -4,9 +4,9 @@
 // Paramètres : days (7 | 30 | 90 | 365), audience (web | kids), talk (une conférence), format (json | csv).
 // Chiffres uniquement agrégés : jamais d'identité, y compris pour Kids (aucun profil d'enfant n'est nommé ni identifiable).
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { TZ } from '../revision.js';
-import { todayStr } from '../stats.js';
+import { pool } from '../../db.js';
+import { TZ } from '../../revision.js';
+import { todayStr } from '../../stats.js';
 
 const query = z.object({
   days: z.coerce.number().int().refine((n) => [7, 30, 90, 365].includes(n), 'days').default(30),

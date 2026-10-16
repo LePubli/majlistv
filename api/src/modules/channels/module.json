@@ -1,0 +1,9 @@
+{
+  "id": "channels",
+  "name": "Chaînes",
+  "version": "1.0.0",
+  "description": "Pages de chaînes (ex-intervenants), propriétaire organisateur, Studio « Ma chaîne », création automatique des chaînes manquantes.",
+  "feature": "channels",
+  "requires": [],
+  "settings": []
+}

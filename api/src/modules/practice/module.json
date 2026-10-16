@@ -1,0 +1,14 @@
+{
+  "id": "practice",
+  "name": "Mise en pratique",
+  "version": "1.0.0",
+  "description": "Écran « Et maintenant, que faire ? » : engagements, rappels, thèmes.",
+  "feature": "practice",
+  "requires": [],
+  "settings": [
+    "practice_generate_count",
+    "practice_themes_on",
+    "practice_email_enabled",
+    "practice_email_hour"
+  ]
+}

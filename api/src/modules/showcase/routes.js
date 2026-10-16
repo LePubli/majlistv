@@ -1,12 +1,12 @@
 // Vitrine visiteur (étape E1) : une vraie conférence, tirée au hasard parmi les plus vues, avec une vraie question de son quiz.
 // GET /showcase est public. Il ne renvoie jamais la bonne réponse : le visiteur répond via POST /talks/:id/quiz/submit
 // (ouvert aux visiteurs, rien n'est enregistré sans compte).
-import { pool } from '../db.js';
-import { presignGet } from '../storage.js';
-import { visibleSql } from '../visibility.js';
-import { adultSql } from '../taxonomy.js';
-import { getNumber } from '../settings.js';
-import { quizInfo } from './quiz.js';
+import { pool } from '../../db.js';
+import { presignGet } from '../../storage.js';
+import { visibleSql } from '../../visibility.js';
+import { adultSql } from '../../taxonomy.js';
+import { getNumber } from '../../settings.js';
+import { quizInfo } from '../quiz/routes.js';
 
 const TOP = 8;      // le tirage se fait parmi les 8 conférences les plus vues qui ont un quiz
 const WINDOW = 90;  // « les plus vues » = les 90 derniers jours (lectures comptent triple)

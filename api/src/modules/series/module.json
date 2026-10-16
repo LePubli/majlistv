@@ -1,0 +1,9 @@
+{
+  "id": "series",
+  "name": "Séries et épisodes",
+  "version": "1.0.0",
+  "description": "Regroupements ordonnés en saisons et épisodes, page Séries, progression dans une série.",
+  "feature": "series",
+  "requires": [],
+  "settings": []
+}

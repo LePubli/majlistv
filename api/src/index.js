@@ -24,38 +24,18 @@ import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
-import showcaseRoutes from './routes/showcase.js';
-import channelRoutes from './routes/channels.js';
-import { startChannelSync } from './channels.js';
 import dashboardRoutes from './routes/dashboard.js';
 import studioContentRoutes from './routes/studio_content.js';
-import quizRoutes from './routes/quiz.js';
-import practiceRoutes from './routes/practice.js';
-import selfcheckRoutes from './routes/selfcheck.js';
 import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
 import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
-import notificationsRoutes from './routes/notifications.js';
-import moduleRoutes, { discoverModules, registerModules, migrateModules, allModules } from './modules.js'; // étape M1 : socle des modules (api/src/modules/<id>/)
-import { startNotifyMailer } from './notifyMailer.js';
+import moduleRoutes, { discoverModules, registerModules, migrateModules, allModules, startModules } from './modules.js'; // étape M1 : socle des modules (api/src/modules/<id>/)
 import { startAudit } from './audit.js';
 import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
-import learningRoutes from './routes/learning.js';
-import reminderRoutes from './routes/reminders.js';
-import kidsRoutes from './routes/kids.js';
 import speakersRoutes from './routes/speakers.js';
-import citationRoutes, { autoTopUp } from './routes/citations.js';
-import { recoverImport } from './corpus.js';
-import bookRoutes from './routes/books.js';
-import { startRevisionMailer } from './revisionMailer.js';
-import { startSelfcheckMailer } from './selfcheckMailer.js';
-import { startKidsReportMailer } from './kidsReportMailer.js';
-import { startStatsMaintenance } from './stats.js';
-import statsCollectRoutes from './routes/stats_collect.js';
-import statsRoutes from './routes/stats.js';
-import seriesRoutes, { listSeries } from './routes/series.js';
+import { listSeries } from './modules/series/routes.js'; // le menu « Séries » n'apparaît que s'il y a une série (module series)
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -159,29 +139,15 @@ await app.register(seoRoutes);
 await app.register(legalRoutes);
 await app.register(importRoutes);
 await app.register(studioContentRoutes);
-await app.register(quizRoutes);
-await app.register(practiceRoutes);
-await app.register(selfcheckRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);
 await app.register(textsRoutes);
 await app.register(pagesRoutes);
 await app.register(moderationRoutes);
-await app.register(notificationsRoutes);
-await app.register(learningRoutes);
-await app.register(reminderRoutes);
-await app.register(citationRoutes);
-await app.register(kidsRoutes);
 await app.register(speakersRoutes);
-await app.register(bookRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);
-await app.register(showcaseRoutes);
-await app.register(channelRoutes);
-await app.register(seriesRoutes);
 await app.register(cardsRoutes);
-await app.register(statsCollectRoutes);
-await app.register(statsRoutes);
 await registerModules(app); // routes de chaque module (cartes cadeaux : api/src/modules/gifts)
 
 await migrate();
@@ -191,13 +157,4 @@ await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
 startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
-await recoverImport();
-// Citations automatiques : toutes les heures, réapprovisionne le stock si besoin (l'IA choisit des références, le texte vient du corpus).
-setInterval(() => autoTopUp().catch((e) => app.log.warn(`citations : ${e.message}`)), 3600 * 1000).unref();
-setTimeout(() => autoTopUp().catch(() => {}), 60 * 1000).unref();
-startRevisionMailer(app.log); // e-mail quotidien des révisions (Apprentissage)
-startSelfcheckMailer(app.log); // rappel hebdomadaire du bilan personnel (Apprentissage)
-startStatsMaintenance(app.log); // purge des empreintes du jour (2 jours) et des compteurs anciens
-startChannelSync(app.log); // chaînes manquantes créées à partir des conférences (étape C)
-startNotifyMailer(app.log); // alertes des intervenants suivis et sélection de la semaine (étape 21)
-startKidsReportMailer(app.log); // rapport hebdomadaire envoyé aux parents (Kids)
+await startModules(app); // tâches de fond de chaque module (citations, e-mails de révision, bilan, Kids, chaînes, statistiques, alertes…)

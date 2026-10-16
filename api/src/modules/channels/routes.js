@@ -6,11 +6,11 @@
 //   GET  /studio/channel-owners          personnes à qui une chaîne peut être attribuée : modérateur ou administrateur
 // Les conférences, séries et épisodes restent gérés par l'organisateur qui les a créés (organizer_id) ; la chaîne porte la présentation.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { publicSpeakers, speakerBio, speakerSlug } from '../speakers.js';
-import { syncChannels, channelImages } from '../channels.js';
-import { listSeries } from './series.js';
-import { putObject, presignGet, deleteObject } from '../storage.js';
+import { pool } from '../../db.js';
+import { publicSpeakers, speakerBio, speakerSlug } from '../../speakers.js';
+import { syncChannels, channelImages } from '../../channels.js';
+import { listSeries } from '../series/routes.js';
+import { putObject, presignGet, deleteObject } from '../../storage.js';
 
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });
 const OWNER_ROLES = ['organizer', 'moderator', 'admin'];

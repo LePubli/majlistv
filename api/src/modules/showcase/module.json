@@ -1,0 +1,9 @@
+{
+  "id": "showcase",
+  "name": "Vitrine visiteur",
+  "version": "1.0.0",
+  "description": "Page d'accueil des visiteurs non connectés : méthode, exemple de conférence avec quiz, tarifs.",
+  "feature": "showcase",
+  "requires": [],
+  "settings": []
+}

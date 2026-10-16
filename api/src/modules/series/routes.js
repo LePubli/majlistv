@@ -4,9 +4,9 @@
 // Règle d'accès : chaque épisode hérite de l'accès de la série, sauf s'il a son propre réglage (l'épisode l'emporte).
 // talks.access garde la valeur effective ; syncAccess() la recalcule.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { presignGet, putObject, deleteObject } from '../storage.js';
-import { visibleSql } from '../visibility.js';
+import { pool } from '../../db.js';
+import { presignGet, putObject, deleteObject } from '../../storage.js';
+import { visibleSql } from '../../visibility.js';
 
 const uuid = z.string().uuid();
 const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };

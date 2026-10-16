@@ -7,11 +7,11 @@
 //   POST /admin/citations/approve-all   (admin) valide d'un coup les brouillons du corpus
 //   GET  /citation/today                citation du jour (publique), identique pour tout le monde
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { shape } from './reminders.js';
-import { corpusStatus, startImport } from '../corpus.js';
-import { getNumber, getSetting, isOn } from '../settings.js';
-import { TZ } from '../revision.js';
+import { pool } from '../../db.js';
+import { shape } from '../revision/routes.js';
+import { corpusStatus, startImport } from '../../corpus.js';
+import { getNumber, getSetting, isOn } from '../../settings.js';
+import { TZ } from '../../revision.js';
 
 const textSchema = z.string().trim().min(5).max(800);
 

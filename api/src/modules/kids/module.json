@@ -1,0 +1,15 @@
+{
+  "id": "kids",
+  "name": "Mejliss Kids",
+  "version": "1.0.0",
+  "description": "Univers enfants séparé : profils, contrôle parental, apprentissage, rapport hebdomadaire aux parents.",
+  "feature": "kids",
+  "requires": [],
+  "settings": [
+    "kids_max_standard",
+    "kids_max_learning",
+    "kids_report_enabled",
+    "kids_report_weekday",
+    "kids_report_hour"
+  ]
+}

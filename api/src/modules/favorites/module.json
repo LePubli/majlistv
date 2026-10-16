@@ -1,0 +1,9 @@
+{
+  "id": "favorites",
+  "name": "Favoris",
+  "version": "1.0.0",
+  "description": "Cœur sur les vignettes et liste des favoris.",
+  "feature": "favorites",
+  "requires": [],
+  "settings": []
+}

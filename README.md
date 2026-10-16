@@ -1360,10 +1360,10 @@ Périodes : 7 jours, 30 jours, 90 jours, 12 mois. Un « spectateur » est compt�
 ### 18.3 Fonctionnement technique
 
 - **Base** : migration `037_stats.sql` — `stat_dim_daily` (site entier), `stat_talk_daily` (par conférence et par jour, supprimé avec la conférence), `stat_talk_dim_daily` (provenance/appareil/langue des ouvertures d'une conférence), `stat_seen` (empreintes du jour).
-- **Collecte** : `POST /stats/hit` (site) et `POST /kids/stats` (jeton enfant), `api/src/routes/stats_collect.js`. Toujours `204` : une mesure ne gêne jamais le site. Limite : 240 envois / minute / adresse.
+- **Collecte** : `POST /stats/hit` (site) et `POST /kids/stats` (jeton enfant), `api/src/modules/stats/collect.js`. Toujours `204` : une mesure ne gêne jamais le site. Limite : 240 envois / minute / adresse.
 - **Navigateur** : `web/lib/stats.js` (`useTalkStats`) et `web/components/StatsBeacon.js`. Le temps est compté uniquement en **lecture continue** : avancer dans la barre ne gonfle ni le temps ni les quartiles (un quartile = part réellement regardée) ; « terminée » exige la fin atteinte **et** au moins la moitié regardée. Fonctionne pour la vidéo envoyée, YouTube, Vimeo et archive.org.
 - **Proxy du site** (`web/app/api/[...path]/route.js`) : pour les routes de statistiques seulement, il transmet à l'API le navigateur, la langue et l'adresse du visiteur (en-tête `x-client-ip`, jamais enregistré). Il lit `cf-connecting-ip`, puis `x-real-ip`, puis la dernière adresse de `x-forwarded-for`.
-- **Rapports** : `GET /admin/stats` (administrateur) et `GET /studio/stats` (organisateur : ses conférences uniquement, `404` pour celles des autres) ; paramètres `days`, `audience`, `talk`, `format=csv`. `api/src/routes/stats.js`.
+- **Rapports** : `GET /admin/stats` (administrateur) et `GET /studio/stats` (organisateur : ses conférences uniquement, `404` pour celles des autres) ; paramètres `days`, `audience`, `talk`, `format=csv`. `api/src/modules/stats/routes.js`.
 - **Écrans** : `web/components/StatsView.js` (graphiques SVG sans bibliothèque, textes en français / anglais / arabe, tableau équivalent au clavier).
 - **Entretien** : purge toutes les heures (`startStatsMaintenance`).
 
@@ -1947,7 +1947,7 @@ Pour que la vitrine montre un exemple : au moins quelques conférences publiques
 Administration → Fonctions → **Vitrine visiteur** (groupe Accès). Coupée : les visiteurs retrouvent l'accueil classique.
 
 ### E1.5 Fichiers
-`api/src/routes/showcase.js`, `api/src/featuresList.js` (fonction `showcase`), `api/tests/test_showcase.py` ; `web/components/Vitrine.js`, `web/components/CitationCard.js` (variante `framed`), `web/app/page.js`, styles `.vt-*` et `.cit-framed`, textes `vt*` fr/en/ar.
+`api/src/modules/showcase/routes.js`, `api/src/featuresList.js` (fonction `showcase`), `api/tests/test_showcase.py` ; `web/components/Vitrine.js`, `web/components/CitationCard.js` (variante `framed`), `web/app/page.js`, styles `.vt-*` et `.cit-framed`, textes `vt*` fr/en/ar.
 
 ### E1.6 Debug
 - **« Voir un exemple » absent** : aucune conférence n'a de quiz proposé au public.
@@ -2620,3 +2620,65 @@ Admin → Modules : 5 modules (Cartes cadeaux, Collections, Listes de lecture, N
 
 ### Tests
 `test_modules.py` étendu (5 modules, état = fonction, réglages de la rémunération, lien d'administration, fermeture et réouverture de `/collections`), puis `test_collections.py` (collections et listes), `test_notes.py`, `test_revenue.py`, `test_features.py` : tous OK. Chromium : écran Modules (8 cartes avec les modules d'essai), lien vers Admin → Rémunération, 1440 et 390 px.
+
+## Étape M2 (complète) — Toutes les fonctions du site en modules
+
+### Description
+Après le lot 1, **toutes les fonctions activables** de Admin → Fonctions sont devenues des modules. Admin → Modules en liste 19, chacun en v1.0.0, lié à sa fonction (même interrupteur que Admin → Fonctions), avec ses réglages quand il en a :
+
+| Module (dossier `api/src/modules/…`) | Fonction | Réglages repris dans Admin → Modules | Tâche de fond (`start`) |
+|---|---|---|---|
+| `gifts` Cartes cadeaux | gifts | 3 prix | — |
+| `collections` Collections | collections | — | — |
+| `lists` Listes de lecture | lists | — | — |
+| `notes` Notes | notes | — | — |
+| `revenue` Rémunération des chaînes | revenue | 6 | — |
+| `series` Séries et épisodes | series | — | — |
+| `books` Ouvrages | books | 3 (taille PDF, lien, téléchargements/jour) | — |
+| `quiz` Quiz | quiz | 6 | — |
+| `practice` Mise en pratique | practice | 4 | — |
+| `revision` Révision espacée | revision | 3 | e-mail quotidien des révisions |
+| `selfcheck` Mon bilan personnel | selfcheck | — | rappel hebdomadaire |
+| `learning` Parcours et attestations | learning | — | — |
+| `channels` Chaînes | channels | — | création des chaînes manquantes |
+| `citations` Citation du jour | citations | 7 | reprise d'import du corpus + réapprovisionnement horaire |
+| `kids` Mejliss Kids | kids | 5 | rapport hebdomadaire aux parents |
+| `showcase` Vitrine visiteur | showcase | — | — |
+| `stats` Statistiques d'audience | stats | — | purge des compteurs |
+| `follow` Suivre et notifications | follow | 6 (annonces, sélection de la semaine) | alertes et sélection de la semaine |
+| `favorites` Favoris | favorites | — | — |
+
+Nouveautés du socle : un module peut exporter `start(app, ctx)` dans son `index.js` (tâches de fond lancées une fois l'API à l'écoute ; une erreur ne bloque pas les autres) ; les favoris ont été sortis de `routes/library.js` (la bibliothèque garde la reprise de lecture).
+
+**Ce qui reste dans le socle (et pourquoi)** : comptes et connexion, catalogue des conférences et lecteur vidéo, envoi / HLS / transcription / traduction / résumés, abonnements et paiement Stripe, recherche, SEO, pages légales, imports YouTube / Vimeo / archive.org, thèmes, outils no-code (apparence, textes, pages, menus), administration (paramètres, fonctions, modules, journal), modération, tableau de bord, accueil. Ce sont les fondations dont tous les modules dépendent ; « Inscription ouverte » et « Mode maintenance » restent des interrupteurs de Admin → Fonctions (ce sont des règles d'accès, pas des fonctions).
+
+**Limite honnête** : ces modules viennent du code d'origine, et le socle appelle encore certaines de leurs fonctions (la page d'une conférence lit le quiz, la mise en pratique et le contrôle parental Kids ; la bibliothèque, la recherche, le SEO et les chaînes lisent les séries ; Stripe et la lecture créditent la rémunération). On peut donc les **activer et désactiver** (données conservées), mais pas **supprimer leur dossier** du dépôt : l'API ne démarrerait plus. Un nouveau module écrit selon le guide de l'étape M1, lui, peut être retiré.
+
+### Fichiers
+`api/src/modules/<14 nouveaux dossiers>/` (`module.json`, `index.js`, `routes.js`, et `collect.js` pour les statistiques) — les fichiers de routes ont été **déplacés** depuis `api/src/routes/` (`series`, `books`, `quiz`, `practice`, `reminders` → `revision`, `selfcheck`, `learning`, `channels`, `citations`, `kids`, `showcase`, `stats`, `stats_collect`, `notifications` → `follow`) ; `api/src/modules/favorites/routes.js` (nouveau) ; `api/src/routes/library.js` (favoris retirés) ; `api/src/modules.js` (`startModules`) ; `api/src/index.js` ; chemins d'import mis à jour dans `routes/talks.js`, `themes.js`, `home.js`, `library.js`, `search.js`, `seo.js`, `speakers.js` ; `api/tests/test_modules.py`, `api/tests/test_citations_auto.mjs`.
+
+### Prérequis
+Aucune variable, aucune migration, aucune dépendance.
+
+### Déploiement (DockPanel + GitHub Desktop)
+**Recommandé : récupérer le dépôt par GitHub Desktop (Fetch / Pull)** : le commit contient les déplacements, rien à supprimer à la main. Avec le zip, il faut en plus supprimer les 14 anciens fichiers de `api/src/routes/` : `series.js`, `books.js`, `quiz.js`, `practice.js`, `reminders.js`, `selfcheck.js`, `learning.js`, `channels.js`, `citations.js`, `kids.js`, `showcase.js`, `stats.js`, `stats_collect.js`, `notifications.js`.
+Puis DockPanel → Git Deploy → **Redeploy `majlistv-api`**, puis **`majlistv-web`** (aucun changement de code web dans cette partie, mais le lot 1 en avait). Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+Admin → Modules : 19 modules, aucun en « Erreur ». Dans DockPanel, les journaux de `majlistv-api` ne doivent contenir aucune ligne « module … : ». Le site se comporte exactement comme avant.
+
+### Tests
+- `test_modules.py` (45 contrôles) : 19 modules présents, aucun en erreur (chargement, migrations, tâches de fond), tous liés à leur fonction, plus les contrôles de M1.
+- Batterie complète de l'API (49 fichiers de test) relancée. **Tous les tests des fonctions déplacées passent** : séries, ouvrages (une fois corrigé un chemin écrit en dur dans le test), quiz (lecture), révision, bilan, apprentissage, chaînes, Kids (3 suites), vitrine, suivi et notifications, collections, listes, notes, rémunération, cartes cadeaux, ainsi que les tests unitaires des e-mails programmés (révision, bilan, Kids, alertes) et des statistiques.
+- 10 tests échouent **à l'identique sur le code d'avant cette étape** (comparaison faite sur la même base de test, code d'avant puis nouveau code) : statistiques (comptage des ouvertures), intervenants (slug arabe), thèmes, modération, publication, accueil, tableau de bord, ouvrages (série liée), conformité, vidéos externes. Ils dépendent de l'état accumulé de la base de test et de services absents ici ; ils ne sont pas causés par les modules, mais restent à examiner sur une base de test neuve.
+- Non lancés (services absents ici) : génération des quiz, de la mise en pratique et des citations (traducteur / IA), archive.org, piste audio (worker) ; `test_citations_auto.mjs` demande un corpus importé.
+- Chromium : Admin → Modules (22 cartes avec les modules d'essai) à 1440 et 390 px, sans erreur console.
+
+### Dépannage
+- **L'API ne démarre plus après la mise à jour** : un ancien fichier `api/src/routes/<nom>.js` est resté alors que son module existe → routes en double. Supprimer les 14 anciens fichiers listés plus haut, Commit, Push, Redeploy.
+- **Un module « Erreur » avec « Démarrage impossible »** : sa tâche de fond a échoué (le message dit pourquoi) ; les routes du module restent utilisables.

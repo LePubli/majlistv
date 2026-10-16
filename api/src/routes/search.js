@@ -8,7 +8,7 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { INDEX, meili, meiliConf, queryWords } from '../search.js';
-import { listSeries, episodeLabels } from './series.js';
+import { listSeries, episodeLabels } from '../modules/series/routes.js';
 
 const schema = z.object({
   q: z.string().trim().min(1).max(100),

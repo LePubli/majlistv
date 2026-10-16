@@ -3,13 +3,13 @@
 // puis relues et validées par un humain : seules les questions « validées » seront proposées au public (étape 24.3).
 // Chaque question est rattachée à un passage précis : minute, chapitre et extrait mot pour mot de la transcription.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getSetting, getNumber, isOn } from '../settings.js';
-import { visibleSql } from '../visibility.js';
-import { hasLearningTier } from '../access.js';
-import { learningBrief } from '../learning.js';
-import { recordAttempt } from '../revision.js';
-import { featureOn } from '../features.js';
+import { pool } from '../../db.js';
+import { getSetting, getNumber, isOn } from '../../settings.js';
+import { visibleSql } from '../../visibility.js';
+import { hasLearningTier } from '../../access.js';
+import { learningBrief } from '../../learning.js';
+import { recordAttempt } from '../../revision.js';
+import { featureOn } from '../../features.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const qidSchema = z.object({ qid: z.string().uuid() });

@@ -10,15 +10,15 @@
 //   GET  /kids/me · GET /kids/talks · PUT /kids/progress/:id · POST /kids/exit (code parental → jeton du parent)
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { pool } from '../db.js';
-import { presignGet } from '../storage.js';
-import { visibleSql } from '../visibility.js';
-import { hasActiveSubscription, hasLearningTier } from '../access.js';
-import { getNumber, getSetting, isOn } from '../settings.js';
-import { bandOkSql } from '../taxonomy.js';
-import { catalogSql, timeState, addPing, kidReport, MIN_LIMIT, MAX_LIMIT } from '../kidsControl.js';
-import { sendReportNow } from '../kidsReportMailer.js';
-import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../kidsLearning.js';
+import { pool } from '../../db.js';
+import { presignGet } from '../../storage.js';
+import { visibleSql } from '../../visibility.js';
+import { hasActiveSubscription, hasLearningTier } from '../../access.js';
+import { getNumber, getSetting, isOn } from '../../settings.js';
+import { bandOkSql } from '../../taxonomy.js';
+import { catalogSql, timeState, addPing, kidReport, MIN_LIMIT, MAX_LIMIT } from '../../kidsControl.js';
+import { sendReportNow } from '../../kidsReportMailer.js';
+import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../../kidsLearning.js';
 
 export const BANDS = ['3-6', '7-10', '11-14'];
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'];

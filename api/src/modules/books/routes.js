@@ -4,12 +4,12 @@
 //  - Studio : création, couverture, PDF (envoi direct vers le stockage), « droits confirmés », liens boutique, rattachements, publication.
 // Un PDF n'est jamais diffusé tant que la case « droits confirmés » n'est pas cochée.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getNumber, getSetting } from '../settings.js';
-import { hasLearningTier } from '../access.js';
-import { visibleSql } from '../visibility.js';
-import { storage, presignGet, presignPut, putObject, deleteObject, headObject, getObjectBuffer } from '../storage.js';
-import { watermarkPdf, inspectPdf, signDownload, verifyDownload } from '../books.js';
+import { pool } from '../../db.js';
+import { getNumber, getSetting } from '../../settings.js';
+import { hasLearningTier } from '../../access.js';
+import { visibleSql } from '../../visibility.js';
+import { storage, presignGet, presignPut, putObject, deleteObject, headObject, getObjectBuffer } from '../../storage.js';
+import { watermarkPdf, inspectPdf, signDownload, verifyDownload } from '../../books.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const langSchema = z.string().regex(/^[a-z]{2,3}$/);

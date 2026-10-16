@@ -1,0 +1,9 @@
+{
+  "id": "selfcheck",
+  "name": "Mon bilan personnel",
+  "version": "1.0.0",
+  "description": "Objectifs, notes privées, évolution, rappel hebdomadaire.",
+  "feature": "selfcheck",
+  "requires": [],
+  "settings": []
+}

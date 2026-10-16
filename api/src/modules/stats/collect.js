@@ -3,11 +3,11 @@
 //   POST /kids/stats   espace enfant (jeton enfant) : uniquement des compteurs par vidéo, aucune provenance/appareil/langue/pays
 // Ignorés : robots, visiteurs qui envoient « Do Not Track » / « Global Privacy Control », administrateurs, et le propriétaire de la conférence.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { visibleSql } from '../visibility.js';
-import { kidCanSee } from './kids.js';
-import { isOn, getSetting } from '../settings.js';
-import { todayStr, isBot, fingerprint, firstToday, classifySource, deviceOf, langOf, countryOf, addDim, addTalk, addTalkDim } from '../stats.js';
+import { pool } from '../../db.js';
+import { visibleSql } from '../../visibility.js';
+import { kidCanSee } from '../kids/routes.js';
+import { isOn, getSetting } from '../../settings.js';
+import { todayStr, isBot, fingerprint, firstToday, classifySource, deviceOf, langOf, countryOf, addDim, addTalk, addTalkDim } from '../../stats.js';
 
 const hitBody = z.object({
   type: z.enum(['page', 'view', 'play', 'progress', 'quartile', 'complete']),

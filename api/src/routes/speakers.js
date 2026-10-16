@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { speakerSlug, publicSpeakers, speakerNames, speakerBio } from '../speakers.js';
-import { listSeries } from './series.js';
+import { listSeries } from '../modules/series/routes.js';
 
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });
 

@@ -5,7 +5,7 @@ import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting, getNumber, isOn, saveSettings } from '../settings.js';
-import { listSeries } from './series.js';
+import { listSeries } from '../modules/series/routes.js';
 import { featureOn } from '../features.js';
 import { inCategorySql, adultSql } from '../taxonomy.js';
 

@@ -1,6 +1,6 @@
 // 24.6 : réapprovisionnement automatique des citations (stock minimum). Prérequis : PG de test, corpus importé (test_citations.py).
 import { pool } from '../src/db.js';
-import { autoTopUp } from '../src/routes/citations.js';
+import { autoTopUp } from '../src/modules/citations/routes.js';
 import { saveSettings, invalidateSettings } from '../src/settings.js';
 const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) process.exit(1); };
 const jobs = async () => (await pool.query("select count(*)::int n from citation_jobs where status in ('pending','processing')")).rows[0].n;

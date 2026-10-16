@@ -5,11 +5,11 @@
 //  • Apprentissage : « Mes engagements » (enregistrement, suivi, note privée). Les textes personnels sont chiffrés (PRACTICE_KEY).
 // Le modérateur (étape 20) relit toutes les propositions, comme l'administrateur.
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getSetting, getNumber, isOn } from '../settings.js';
-import { visibleSql } from '../visibility.js';
-import { hasLearningTier } from '../access.js';
-import { sealText, openText, practiceKeyReady } from '../practiceCrypto.js';
+import { pool } from '../../db.js';
+import { getSetting, getNumber, isOn } from '../../settings.js';
+import { visibleSql } from '../../visibility.js';
+import { hasLearningTier } from '../../access.js';
+import { sealText, openText, practiceKeyReady } from '../../practiceCrypto.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const sidSchema = z.object({ sid: z.string().uuid() });

@@ -8,7 +8,7 @@ import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting } from '../settings.js';
 import { adultSql } from '../taxonomy.js';
-import { episodeLabels, listSeries } from './series.js';
+import { episodeLabels, listSeries } from '../modules/series/routes.js';
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
 import { publicSpeakers, speakerBio } from '../speakers.js';
 import { channelImages } from '../channels.js';

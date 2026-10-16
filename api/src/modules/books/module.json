@@ -1,0 +1,13 @@
+{
+  "id": "books",
+  "name": "Ouvrages",
+  "version": "1.0.0",
+  "description": "Livres et PDF liés aux conférences, téléchargement limité, gestion dans le Studio.",
+  "feature": "books",
+  "requires": [],
+  "settings": [
+    "book_pdf_max_mb",
+    "book_link_minutes",
+    "book_download_daily_max"
+  ]
+}

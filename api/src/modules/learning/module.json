@@ -1,0 +1,9 @@
+{
+  "id": "learning",
+  "name": "Parcours et attestations",
+  "version": "1.0.0",
+  "description": "Tableau de bord d'apprentissage et attestations.",
+  "feature": "learning",
+  "requires": [],
+  "settings": []
+}

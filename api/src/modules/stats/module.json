@@ -1,0 +1,13 @@
+{
+  "id": "stats",
+  "name": "Statistiques d'audience",
+  "version": "1.0.0",
+  "description": "Mesure anonyme des vues, tableaux de statistiques (site, Studio), purge automatique.",
+  "feature": "stats",
+  "requires": [],
+  "settings": [],
+  "admin": {
+    "label": "Ouvrir les statistiques",
+    "href": "/admin?tab=stats"
+  }
+}

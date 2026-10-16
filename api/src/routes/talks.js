@@ -1,8 +1,8 @@
 // Catalogue public + gestion des conférences par les organisateurs.
-import { quizInfo } from './quiz.js';
-import { practiceInfo } from './practice.js';
+import { quizInfo } from '../modules/quiz/routes.js';
+import { practiceInfo } from '../modules/practice/routes.js';
 import { talkThemes } from '../themes.js';
-import { kidCanSee } from './kids.js';
+import { kidCanSee } from '../modules/kids/routes.js';
 import { speakerNames, speakerSlug } from '../speakers.js';
 import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
 import { timeState } from '../kidsControl.js';

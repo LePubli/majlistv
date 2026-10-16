@@ -1,6 +1,6 @@
 """25 : ouvrages — fiche, PDF (envoi direct, droits confirmés), liens boutique, rattachements, téléchargement filigrané (Apprentissage).
 Prérequis : API (3055), PG de test (5544), stockage S3 de test (moto, bucket majlis-videos)."""
-import io, subprocess, sys, uuid, requests, psycopg2
+import io, os, subprocess, sys, uuid, requests, psycopg2
 from pypdf import PdfReader
 
 B = "http://127.0.0.1:3055"
@@ -32,7 +32,7 @@ def subscribe(uid, tier):
 
 def make_pdf(pages=3):
     js = f"import {{PDFDocument,StandardFonts}} from 'pdf-lib';const d=await PDFDocument.create();const f=await d.embedFont(StandardFonts.Helvetica);for(let i=1;i<={pages};i++){{const p=d.addPage([420,595]);p.drawText('Page '+i+' du livre de test',{{x:40,y:500,size:16,font:f}})}};process.stdout.write(Buffer.from(await d.save()));"
-    return subprocess.run(["node", "--input-type=module", "-e", js], capture_output=True, cwd="/home/claude/majlis-tv/api", check=True).stdout
+    return subprocess.run(["node", "--input-type=module", "-e", js], capture_output=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))), check=True).stdout
 
 
 ADM = login("admin@test.local", "AdminPassw0rd-test")

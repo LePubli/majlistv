@@ -1,11 +1,11 @@
 // Apprentissage : tableau de bord du membre (palier « Apprentissage ») et attestations de suivi.
 import crypto from 'node:crypto';
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { presignGet } from '../storage.js';
-import { hasLearningTier } from '../access.js';
-import { getSetting } from '../settings.js';
-import { BADGES, FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, badgesOf, scoreAt, curveOf } from '../learning.js';
+import { pool } from '../../db.js';
+import { presignGet } from '../../storage.js';
+import { hasLearningTier } from '../../access.js';
+import { getSetting } from '../../settings.js';
+import { BADGES, FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, badgesOf, scoreAt, curveOf } from '../../learning.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };

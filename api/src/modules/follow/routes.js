@@ -4,10 +4,10 @@
 //   PUT/DELETE /speakers/:slug/follow   suivre / ne plus suivre
 //   GET/POST /unsubscribe/:token        désinscription (sans compte ni connexion : le jeton signé suffit)
 import { z } from 'zod';
-import { pool } from '../db.js';
-import { getSetting, isOn } from '../settings.js';
-import { publicSpeakers } from '../speakers.js';
-import { CATEGORIES, parseUnsubToken } from '../unsubscribe.js';
+import { pool } from '../../db.js';
+import { getSetting, isOn } from '../../settings.js';
+import { publicSpeakers } from '../../speakers.js';
+import { CATEGORIES, parseUnsubToken } from '../../unsubscribe.js';
 
 export const MAX_FOLLOWS = 100;
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });

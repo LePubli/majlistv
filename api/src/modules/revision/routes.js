@@ -5,7 +5,7 @@
 //   - « manual »     : saisi à la main, avec sa source (obligatoire) : hadith, verset, citation d'un savant relue par l'organisateur.
 // Tout arrive en « brouillon » ; seuls les rappels validés par un humain sont diffusés.
 import { z } from 'zod';
-import { pool } from '../db.js';
+import { pool } from '../../db.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const ridSchema = z.object({ rid: z.string().uuid() });
