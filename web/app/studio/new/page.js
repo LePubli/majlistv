@@ -157,7 +157,7 @@ export default function NewTalk() {
             </label>
           </form>
           {linkErr && <p className="error">{linkErr}</p>}
-          <ImportPanel cats={cats} onImported={() => router.push('/studio')} />
+          <ImportPanel cats={cats} onImported={() => router.push('/studio/contents')} />
         </>
       )}
 

@@ -78,11 +78,11 @@ export default function ManageTalk() {
   const remove = async () => {
     if (!window.confirm(t('confirmDelete'))) return;
     const r = await call('/talks/' + id, { method: 'DELETE' });
-    if (r.ok) router.push('/studio'); else setMsg({ ok: false, text: t('errGeneric') });
+    if (r.ok) router.push('/studio/contents'); else setMsg({ ok: false, text: t('errGeneric') });
   };
 
   if (x === undefined) return <main className="studio-page"><p className="meta">…</p></main>;
-  if (x === null) return <main className="studio-page"><p>{t('noTalks')}</p><Link href="/studio" className="link">← {t('myTalks')}</Link></main>;
+  if (x === null) return <main className="studio-page"><p>{t('noTalks')}</p><Link href="/studio/contents" className="link">← {t('myTalks')}</Link></main>;
 
   const pct = talkProgress(steps);
   const external = x.source !== 'upload';
@@ -101,7 +101,7 @@ export default function ManageTalk() {
 
   return (
     <main className="studio-page">
-      <Link href="/studio" className="back">← {t('myTalks')}</Link>
+      <Link href="/studio/contents" className="back">← {t('myTalks')}</Link>
       <div className="manage-head">
         <span className="studio-thumb big" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined} />
         <div className="manage-title">

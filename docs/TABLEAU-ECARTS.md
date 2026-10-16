@@ -3,7 +3,7 @@
 Date : 16/10/2026. Établi en LISANT le code du dépôt (commit db8d745), pas en testant le site en ligne. Les écarts marqués « à vérifier » n'ont pas été lus en détail. Aucun code modifié.
 Maquettes : https://claude.ai/artifact/XevbycqkP3UdNU2kUAnFPk
 
-**Avancement (16/10/2026)** : étape A faite (commit 5eea1a2) ; étape B faite (commit 86423c1) : §1 menu du haut, §2 menu latéral et barre du bas (visiteurs inclus), §5 Catalogue, §9 champ Format, tiroir ☰ avec catégories. Reste : C (§3 « Explorer par format » sur l'accueil connecté, §6 Séries, §7 fiche/lecteur, §8 Apprendre), D (§12 Studio, §13 Admin), puis doublage.
+**Avancement (16/10/2026)** : étape A faite (commit 5eea1a2) ; étape B faite (commit 86423c1) : §1 menu du haut, §2 menu latéral et barre du bas (visiteurs inclus), §5 Catalogue, §9 champ Format, tiroir ☰ avec catégories. Reste : C (§3 « Explorer par format » sur l'accueil connecté, §6 Séries, §7 fiche/lecteur, §8 Apprendre), D (§12 Studio, §13 Admin), puis doublage. **Étape C faite (88c3054) puis correctifs du 16/10 (6559495). Étape D faite : §12 Studio (8 entrées, modération dedans) et §13 Admin (4 groupes, AdminShell) ; Sous-titres, Activité, Tableau de bord réels ; Audio/doublage et Éditeur « Bientôt ».**
 
 Légende effort : S = petit (quelques fichiers), M = moyen, L = gros chantier.
 

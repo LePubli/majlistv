@@ -2542,3 +2542,55 @@ body.cinema-on .player-tools { max-width: min(100%, calc((100vh - 130px) * 16 / 
 .lk-banner > * { position: relative; max-width: min(540px, 50%); }
 @media (max-width: 700px) { .lk-banner { background-image: linear-gradient(180deg, rgba(12, 16, 32, .92), rgba(12, 16, 32, .75)), url('/brand/learning-banner.jpg'); background-position: center, center; background-size: 100% 100%, cover; } .lk-banner > * { max-width: 100%; } }
 body.cinema-on .player-wrap, body.cinema-on .player-tools { width: 100%; box-sizing: border-box; }
+
+/* ---- Étape D : Studio (8 entrées) et Administration séparés ---- */
+.studio-soon { font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .04em; margin-inline-start: auto; padding: 2px 8px; border-radius: 999px; background: #2A1F10; color: var(--accent-hover); white-space: nowrap; }
+h1 .studio-soon { font-size: 12px; margin-inline-start: 10px; vertical-align: middle; }
+.studio.col .studio-soon { display: none; }
+.studio-admin .studio-brand b { letter-spacing: .24em; }
+.st-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line-soft); }
+.st-tabs a { display: flex; align-items: center; min-height: 44px; padding: 0 18px; color: var(--text-2); font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.st-tabs a:hover { color: var(--text); }
+.st-tabs a.on { color: var(--accent-hover); border-bottom-color: var(--accent); font-weight: 700; }
+.sd-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.sd-card { display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-soft); min-width: 0; }
+.sd-card h2, .sd-h2 { margin: 0; font-size: 1.15rem; font-weight: 800; font-family: var(--font-title); }
+.sd-grid .sd-wide { grid-column: span 3; }
+.sd-grid .sd-card:not(.sd-wide) { grid-column: span 2; }
+.sd-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sd-big { font-size: 2.6rem; line-height: 1; }
+.sd-dl { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.sd-dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: .95rem; }
+.sd-dl dt { color: var(--muted); }
+.sd-dl dd { margin: 0; font-weight: 700; }
+.sd-last { display: flex; flex-wrap: wrap; gap: 20px; }
+.sd-poster { flex: 1 1 240px; min-height: 150px; border-radius: 14px; background: linear-gradient(135deg, #3B2A12, #A9772A) center / cover no-repeat; display: block; }
+.sd-last-info { flex: 1 1 240px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sd-last-info b { font-size: 1.05rem; overflow-wrap: anywhere; }
+.sd-job { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 14px; background: #1C160D; }
+.sd-job > div:first-child { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
+.sd-job b { overflow-wrap: anywhere; }
+.sd-job span { color: var(--accent-hover); white-space: nowrap; }
+.sd-bar { height: 5px; border-radius: 3px; background: var(--line-soft); }
+.sd-bar i { display: block; height: 5px; border-radius: 3px; background: var(--accent); }
+.sd-todo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #1C160D; font-size: .92rem; }
+.sd-todo i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.sd-todo span { flex: 1; min-width: 0; }
+.sd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sd-act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-soft); }
+.sd-act-title { flex: 1 1 260px; display: flex; flex-direction: column; min-width: 0; color: inherit; }
+.sd-act-title small { color: var(--muted); }
+.sd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sd-chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #1C160D; color: var(--text-2); }
+.sd-chip.ok { color: #8FD3A4; }
+.sd-chip.run { color: var(--accent-hover); }
+.sd-chip.err { color: #F08A7A; }
+.sd-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 12px; }
+.sd-tool { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-soft); color: var(--text); min-height: 44px; }
+.sd-tool:hover { border-color: var(--accent); }
+.sd-tool > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sd-tool small { color: var(--muted); font-size: .85rem; }
+.sd-tool-ico { flex: none; width: 46px; height: 46px; border-radius: 13px; background: #1C160D; display: grid; place-items: center; color: var(--accent-hover); }
+@media (max-width: 1100px) { .sd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sd-grid .sd-wide { grid-column: 1 / -1; } .sd-grid .sd-card:not(.sd-wide) { grid-column: auto; } }
+@media (max-width: 700px) { .sd-grid { grid-template-columns: minmax(0, 1fr); } .sd-card { padding: 16px; } }
+.sd-card .btn { align-self: flex-start; }

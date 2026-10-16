@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
+import StudioTabs from '../../../../components/StudioTabs';
 
 const KINDS = { cycle: 'Cycle', speaker: "Série d'un intervenant", theme: 'Thème du moment' };
 
@@ -92,6 +93,7 @@ export default function StudioCollections() {
   return (
     <main className="studio-page studio-narrow">
       <h1 className="studio-title">Collections</h1>
+      <StudioTabs group="contents" />
       <p className="meta">Des sélections éditoriales : cycles, séries d'un intervenant, thèmes du moment. <Link href="/collections" className="link u" target="_blank">Voir la page publique</Link></p>
       <form className="ls-new" onSubmit={create}>
         <label className="fld"><span>Nouvelle collection</span><input value={title} maxLength={120} placeholder="Ex. Le mois de Ramadan" onChange={(e) => setTitle(e.target.value)} /></label>

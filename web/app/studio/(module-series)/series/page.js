@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
+import StudioTabs from '../../../../components/StudioTabs';
 
 export default function StudioSeries() {
   const { t, call, locale, user } = useApp();
@@ -32,6 +33,7 @@ export default function StudioSeries() {
         <h1 className="studio-title">{t('srTitle')}</h1>
         <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>+ {t('srNew')}</button>
       </div>
+      <StudioTabs group="contents" />
 
       {open && (
         <form className="panel" onSubmit={create}>

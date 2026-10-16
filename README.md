@@ -2983,3 +2983,53 @@ python3 web/tests/retours_16oct.py   # menu du haut, alignement des rangées, ba
 - « Langue de l'audio » de la maquette : seulement avec le doublage (étape 0 / S…).
 - Bannière Kids dans l'espace Kids lui-même : non touchée (thème Kids conservé) en attendant votre avis.
 - Test sur vrai lecteur vidéo : l'environnement de test n'a pas accès à YouTube, le cinéma a été vérifié avec le lecteur indisponible (même mise en page).
+
+## Étape D — Studio et Administration séparés (réorganisation en 5 espaces, lot 4)
+
+### Description
+- **Deux habillages distincts** : le Studio (`/studio…`) et l'Administration (`/admin…`) ont chacun leur menu latéral repliable (composants `StudioShell.js` et `AdminShell.js`, sur un habillage commun `ManageShell.js`). Plus aucune « Administration » dans le menu du Studio.
+- **Studio — 8 entrées** (maquette) : Tableau de bord · Contenus · Données analytiques · Sous-titres · Audio et doublage · Éditeur · Activité · Paramètres. Les administrateurs ont en plus **Modération** (dans le Studio, comme décidé). Un **modérateur seul** n'a que ses outils de modération (file, collections, chaînes, mise en pratique) et arrive directement sur la file de modération.
+- **Rangement des anciens écrans (adresses inchangées)** :
+  - *Contenus* : onglets Conférences et cours · Séries · Collections (équipe) · Ouvrages. L'ancienne liste « Mes conférences » est maintenant **`/studio/contents`** (la page `/studio` est le nouveau tableau de bord).
+  - *Données analytiques* : onglets Audience (`/studio/stats`) · Revenus (`/studio/revenue`).
+  - *Paramètres* : ma chaîne + **Outils** (Quiz, Mise en pratique, Rappels de révision, Ouvrages, Collections, et toute entrée ajoutée par un nouveau module).
+- **Nouvelles pages réelles** : *Tableau de bord* (dernier contenu publié avec vues et % regardé sur 30 jours, données de la chaîne : abonnés, vues, heures d'écoute, production en cours, à faire), *Sous-titres* (langue transcrite et état de chaque langue par contenu, filtres, lien « Gérer »), *Activité* (traitements en cours ou en erreur, dernières mises en ligne, rafraîchi automatiquement).
+- **Annoncés « Bientôt », sans rien simuler** : *Audio et doublage* (arrive avec l'étape doublage) et *Éditeur* (montage, pas encore développé). La page l'explique.
+- **Administration — 4 groupes** : Pilotage (Tableau de bord, Utilisateurs, Statistiques globales) · Catalogue (Catégories et formats, Intervenants, Cartes cadeaux) · Réglages (Fonctions, Modules, Paramètres, Apparence, Pages, Textes, Pages légales) · Sécurité (Journal d'audit). Liens « Aller au Studio » et « Voir le site ». Un organisateur ou un modérateur voit « accès refusé » et n'a aucun lien vers l'Admin. Les écrans eux-mêmes (onglets `?tab=…`) sont inchangés.
+- Aucune migration SQL et **aucun changement d'API** : cette étape ne touche que le site web.
+
+### Prérequis
+Étapes A à C déployées. Aucune variable `.env`.
+
+### Déploiement (workflow habituel)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer), GitHub Desktop → Commit to main → Push origin (ou déjà poussé : voir le message de livraison).
+2. DockPanel → Git Deploy → **Redeploy `majlistv-web`** uniquement (API et worker inchangés).
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+1. Connecté en administrateur : https://majlisstv.le-publicitaire.fr/studio → 8 entrées + Modération ; le pied contient « Administration » → ouvre un menu à 4 groupes avec « Aller au Studio ».
+2. Connecté en organisateur : pas de lien Administration, et `/admin` affiche un accès refusé.
+3. Connecté en modérateur : `/studio` redirige vers `/studio/moderation`.
+4. Anciennes adresses : `/studio/series`, `/studio/quiz`, `/studio/books`… fonctionnent et allument « Contenus » ou « Paramètres ».
+
+### Tests
+```bash
+python3 web/tests/etape_d.py          # navigateur : menus par rôle, accès, onglets, pages ; fr + ar ; 390 / 1440 / 1990 px
+python3 web/tests/catalogue_menus.py  # non-régression (menus du site)
+python3 web/tests/etape_c.py          # non-régression Apprendre
+python3 web/tests/module_removal_build.py series stats quiz revenue   # le site se construit sans ces modules
+```
+
+### Debug
+- **Un lien « Revenus » ou « Statistiques » n'apparaît pas** : la fonction correspondante est coupée dans Admin → Fonctions (ou le module est retiré). Normal.
+- **Ancien favori `/studio` qui montrait la liste** : la liste est maintenant sur `/studio/contents`.
+- **Modérateur qui ne voit pas « Contenus »** : volontaire, il n'a que la modération.
+
+### Ce qui a été testé / non testé
+Testé : `next build`, navigateur Chromium émulé (administrateur, organisateur, modérateur ; fr + ar ; 390, 1440 et 1990 px, sans débordement), non-régression des étapes B et C et des retours du 16/10.
+**Non testé / limites** : vrai téléphone ; données réelles (le tableau de bord a été vu avec les données de test : vues à 0). Le bloc « Espace de stockage » de la maquette n'est **pas repris** : l'API n'expose pas l'occupation du stockage (à ajouter plus tard si vous le souhaitez). « Chaînes » du groupe Catalogue de l'Admin et « Extraits » / « Archivés » des Contenus n'existent pas encore (pas de fonction correspondante) : non ajoutés plutôt qu'inventés. Les textes des nouveaux écrans sont dans le dictionnaire (fr/en/ar) mais les anciens écrans Admin gardent leurs libellés écrits en français dans le code.

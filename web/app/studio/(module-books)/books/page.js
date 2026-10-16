@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
+import StudioTabs from '../../../../components/StudioTabs';
 
 export default function StudioBooks() {
   const { t, call, locale } = useApp();
@@ -29,6 +30,7 @@ export default function StudioBooks() {
         <h1 className="studio-title">{t('bkNav')}</h1>
         <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>+ {t('bkNew')}</button>
       </div>
+      <StudioTabs group="contents" />
       {open && (
         <form className="panel" onSubmit={create}>
           <h2 className="panel-title">{t('bkNew')}</h2>

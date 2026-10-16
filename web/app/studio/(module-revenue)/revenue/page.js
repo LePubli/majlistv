@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
+import StudioTabs from '../../../../components/StudioTabs';
 
 export default function StudioRevenue() {
   const { t, call, user, locale } = useApp();
@@ -18,6 +19,7 @@ export default function StudioRevenue() {
   return (
     <main className="studio-page rv-page">
       <h1>{t('rvTitle')}</h1>
+      <StudioTabs group="analytics" />
       <p className="meta">{t('rvIntro').replace('{p}', d.sharePct)}</p>
       {d.channels === 0 && <p className="soon">{t('rvNoChannel')} <Link className="link u" href="/studio/channel">{t('chNav')}</Link></p>}
       {d.channels > 0 && (
