@@ -11,7 +11,7 @@ AUDIO=$(ls "$BASE/in/$TALK".{mp3,mp4,wav,m4a,mkv,webm} 2>/dev/null | head -1 || 
 [ -n "$AUDIO" ] || { echo "Manque l'audio $BASE/in/$TALK.(mp3|mp4|wav|m4a)"; exit 1; }
 mkdir -p "$BASE/out/$TALK" "$BASE/models"
 # Limites : 4 cœurs et 8 Go max pour ne pas gêner les autres sites du serveur
-docker run --rm --cpus 4 --memory 8g \
+docker run --rm --cpus 4 --memory 8g -e OMP_NUM_THREADS=4 \
   -v "$BASE/in":/in:ro -v "$BASE/out":/out -v "$BASE/models":/models \
   majlis-dub-test \
   --vtt "/in/$TALK.vtt" --audio "/in/${AUDIO##*/}" --out "/out/$TALK" "$@"

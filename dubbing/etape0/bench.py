@@ -98,7 +98,19 @@ class FakeEngine:
         return (0.2 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
 
 
+def to_np(x):
+    """Tenseur torch ou tableau -> numpy float32 à une dimension."""
+    if hasattr(x, "detach"):
+        x = x.detach().cpu().numpy()
+    return np.asarray(x, dtype=np.float32).reshape(-1)
+
+
+def resample_file(src, dst, sr=SR):
+    ffmpeg("-i", src, "-ac", "1", "-ar", str(sr), "-sample_fmt", "s16", dst)
+
+
 class ChatterboxEngine:
+    """Voix + clonage en une seule passe (lent sur processeur : génération mot à mot)."""
     name = "chatterbox"
     def __init__(self, device="cpu", voice=None, lang="fr", exaggeration=0.5, cfg_weight=0.5, **_):
         from chatterbox.mtl_tts import ChatterboxMultilingualTTS  # import tardif : lourd
@@ -106,8 +118,57 @@ class ChatterboxEngine:
         self.voice, self.lang = voice, lang
         self.kw = dict(exaggeration=exaggeration, cfg_weight=cfg_weight)
     def synth(self, text):
-        wav = self.model.generate(text, language_id=self.lang, audio_prompt_path=self.voice, **self.kw)
-        return wav.squeeze().cpu().numpy().astype(np.float32)
+        return to_np(self.model.generate(text, language_id=self.lang, audio_prompt_path=self.voice, **self.kw))
+
+
+class PiperEngine:
+    """Piper : voix française très légère (ONNX), sans clonage. Appelle la ligne de commande de Piper."""
+    name = "piper"
+    def __init__(self, piper_voice="fr_FR-siwis-medium", piper_dir="/models/piper", **_):
+        self.cmd = os.environ.get("PIPER_CMD", f"{sys.executable} -m piper").split()
+        self.model = os.path.join(piper_dir, piper_voice + ".onnx")
+        if not os.path.isfile(self.model) and not os.environ.get("PIPER_CMD"):
+            os.makedirs(piper_dir, exist_ok=True)
+            r = subprocess.run([sys.executable, "-m", "piper.download_voices", piper_voice, "--download-dir", piper_dir],
+                               capture_output=True, text=True)
+            if r.returncode or not os.path.isfile(self.model):
+                raise RuntimeError("Téléchargement de la voix Piper impossible : " + (r.stderr or r.stdout)[-300:])
+    def synth(self, text):
+        with tempfile.TemporaryDirectory() as d:
+            raw, out = os.path.join(d, "r.wav"), os.path.join(d, "o.wav")
+            r = subprocess.run(self.cmd + ["-m", self.model, "-f", raw], input=text, capture_output=True, text=True)
+            if r.returncode or not os.path.isfile(raw):
+                raise RuntimeError("piper : " + r.stderr[-300:])
+            resample_file(raw, out)
+            return read_wav(out)[0]
+
+
+class KokoroEngine:
+    """Kokoro 82M (Apache 2.0) : voix française légère, sans clonage."""
+    name = "kokoro"
+    def __init__(self, kokoro_voice="ff_siwis", **_):
+        from kokoro import KPipeline  # import tardif
+        self.pipe = KPipeline(lang_code="f")
+        self.voice = kokoro_voice
+    def synth(self, text):
+        parts = [to_np(a) for _, _, a in self.pipe(text, voice=self.voice) if a is not None]
+        return np.concatenate(parts) if parts else np.zeros(1, dtype=np.float32)
+
+
+class VoiceConverter:
+    """Seconde passe : donne la voix d'Epok à une voix synthétique (ChatterboxVC, sans génération mot à mot)."""
+    def __init__(self, target_voice, device="cpu"):
+        from chatterbox.vc import ChatterboxVC  # import tardif
+        self.vc = ChatterboxVC.from_pretrained(device=device)
+        self.vc.set_target_voice(target_voice)
+    def convert(self, wav):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "s.wav")
+            write_wav(src, wav)
+            return to_np(self.vc.generate(src))
+
+
+ENGINES = {"fake": FakeEngine, "chatterbox": ChatterboxEngine, "piper": PiperEngine, "kokoro": KokoroEngine}
 
 
 def main(argv=None):
@@ -115,7 +176,14 @@ def main(argv=None):
     ap.add_argument("--vtt", required=True, help="sous-titres français .vtt")
     ap.add_argument("--audio", required=True, help="audio ou vidéo d'origine")
     ap.add_argument("--out", required=True, help="dossier de sortie")
-    ap.add_argument("--engine", choices=["fake", "chatterbox"], default="chatterbox")
+    ap.add_argument("--engine", choices=sorted(ENGINES), default="chatterbox")
+    ap.add_argument("--vc-voice", help="échantillon de voix cible : convertit la voix du moteur léger vers cette voix (piper/kokoro)")
+    ap.add_argument("--cfg-weight", type=float, default=0.5, help="Chatterbox : 0 = ~2 fois plus rapide (sans double passe)")
+    ap.add_argument("--exaggeration", type=float, default=0.5, help="Chatterbox : expressivité")
+    ap.add_argument("--threads", type=int, default=4, help="fils de calcul (= nombre de cœurs alloués au conteneur)")
+    ap.add_argument("--piper-voice", default="fr_FR-siwis-medium")
+    ap.add_argument("--piper-dir", default="/models/piper")
+    ap.add_argument("--kokoro-voice", default="ff_siwis")
     ap.add_argument("--voice", help="échantillon de voix (wav/mp3, 10–30 s) ; sans lui, voix par défaut du modèle")
     ap.add_argument("--consent-date", help="AAAA-MM-JJ : date du consentement de la personne dont la voix est clonée")
     ap.add_argument("--consent-by", help="nom de la personne qui a consenti")
@@ -127,12 +195,17 @@ def main(argv=None):
     a = ap.parse_args(argv)
 
     # Garde-fous AVANT tout chargement lourd
-    if a.engine == "chatterbox":
-        if a.voice and not (a.consent_date and a.consent_by):
+    clone = a.voice or a.vc_voice
+    if a.voice and a.engine in ("piper", "kokoro"):
+        sys.exit("ERREUR : --voice s'utilise avec --engine chatterbox ; pour piper/kokoro utilise --vc-voice.")
+    if a.vc_voice and a.engine in ("chatterbox", "fake"):
+        sys.exit("ERREUR : --vc-voice s'utilise avec --engine piper ou kokoro.")
+    if a.engine != "fake":
+        if clone and not (a.consent_date and a.consent_by):
             sys.exit("ERREUR : un clonage de voix exige --consent-date AAAA-MM-JJ et --consent-by \"Nom\".")
         if a.consent_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.consent_date):
             sys.exit("ERREUR : --consent-date doit être au format AAAA-MM-JJ.")
-    for f in (a.vtt, a.audio) + ((a.voice,) if a.voice else ()):
+    for f in (a.vtt, a.audio) + tuple(x for x in (a.voice, a.vc_voice) if x):
         if not os.path.isfile(f):
             sys.exit(f"ERREUR : fichier introuvable : {f}")
     os.makedirs(a.out, exist_ok=True)
@@ -143,8 +216,17 @@ def main(argv=None):
     if not cues:
         sys.exit("ERREUR : aucune phrase trouvée dans le .vtt")
 
+    for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ[k] = str(a.threads)
     t0 = time.time()
-    eng = (FakeEngine if a.engine == "fake" else ChatterboxEngine)(device=a.device, voice=a.voice, lang=a.lang)
+    eng = ENGINES[a.engine](device=a.device, voice=a.voice, lang=a.lang, cfg_weight=a.cfg_weight, exaggeration=a.exaggeration,
+                            piper_voice=a.piper_voice, piper_dir=a.piper_dir, kokoro_voice=a.kokoro_voice)
+    vc = VoiceConverter(a.vc_voice, a.device) if a.vc_voice else None
+    try:
+        import torch
+        torch.set_num_threads(a.threads)
+    except ImportError:
+        pass
     load_s = time.time() - t0
 
     orig = load_original(a.audio)
@@ -163,6 +245,9 @@ def main(argv=None):
             segs.append(row); continue
         t = time.time()
         wav = eng.synth(c["text"])
+        base_s = time.time() - t
+        if vc:
+            wav = vc.convert(wav)
         synth_s = time.time() - t
         raw = len(wav) / SR
         # Le créneau utilisable inclut le silence avant la phrase suivante (emprunt)
@@ -176,7 +261,7 @@ def main(argv=None):
         end_i = min(n, s0 + len(fit))
         voice_track[s0:end_i] += fit[: end_i - s0]
         row.update(protected=False, raw_s=round(raw, 2), room_s=round(room, 2), speedup=round(factor, 3),
-                   fit_s=round(fit_s, 2), overflow_s=round(overflow, 2), synth_s=round(synth_s, 2),
+                   fit_s=round(fit_s, 2), overflow_s=round(overflow, 2), synth_s=round(synth_s, 2), vc_s=round(synth_s - base_s, 2),
                    rtf=round(synth_s / raw, 2) if raw else None)
         segs.append(row)
 
@@ -194,14 +279,14 @@ def main(argv=None):
     over = [s for s in spoken if s["overflow_s"] > 0.05 or s["speedup"] >= a.max_speedup - 1e-6 and s["overflow_s"] > 0]
     ram_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024
     rep = {
-        "engine": eng.name, "lang": a.lang, "device": a.device, "voice": os.path.basename(a.voice) if a.voice else None,
-        "consent": {"date": a.consent_date, "by": a.consent_by} if a.voice else None,
+        "engine": eng.name + ("+vc" if vc else ""), "threads": a.threads, "cfg_weight": a.cfg_weight if a.engine == "chatterbox" else None, "lang": a.lang, "device": a.device, "voice": os.path.basename(clone) if clone else None,
+        "consent": {"date": a.consent_date, "by": a.consent_by} if clone else None,
         "model_load_s": round(load_s, 1), "segments": len(segs), "protected_segments": len(segs) - len(spoken),
         "audio_total_s": round(total, 1),
         "rtf_median": round(statistics.median(rtfs), 2) if rtfs else None,
         "rtf_max": round(max(rtfs), 2) if rtfs else None,
         "speedup_mean": round(statistics.mean(s["speedup"] for s in spoken), 3) if spoken else None,
-        "overflow_count": len(over), "overflow_share": round(len(over) / len(spoken), 3) if spoken else 0,
+        "vc_mean_s": round(statistics.mean(x["vc_s"] for x in spoken), 2) if spoken and vc else None, "overflow_count": len(over), "overflow_share": round(len(over) / len(spoken), 3) if spoken else 0,
         "ram_peak_gb": round(ram_gb, 2), "thresholds_proposed": THRESH, "details": segs,
     }
     ok = {
@@ -228,6 +313,8 @@ def write_md(path, r):
          f"- Phrases : {r['segments']} (dont {r['protected_segments']} protégées, gardées en voix d'origine)",
          f"- Durée audio : {r['audio_total_s']} s · chargement du modèle : {r['model_load_s']} s",
          f"- Vitesse (RTF = temps de calcul / durée produite) : médiane {r['rtf_median']} · max {r['rtf_max']}",
+         f"- Réglages : {r['threads']} fils" + (f" · cfg_weight {r['cfg_weight']}" if r.get("cfg_weight") is not None else ""),
+         f"- Dont conversion de voix (moyenne par phrase) : {r['vc_mean_s']} s" if r.get("vc_mean_s") is not None else "- Pas de conversion de voix",
          f"- Accélération moyenne pour caler : ×{r['speedup_mean']}",
          f"- Phrases qui débordent encore : {r['overflow_count']} ({round(r['overflow_share']*100)} %)",
          f"- Mémoire max : {r['ram_peak_gb']} Go", "",

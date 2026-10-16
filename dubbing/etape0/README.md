@@ -103,3 +103,73 @@ Aucun. Ce banc n'est **pas** un service du site : il ne passe pas par DockPanel 
 
 ## Décision après l'étape 0
 Sur la base de ton écoute et du rapport, on tranche : **(A)** Chatterbox convient → étape S1 ; **(B)** qualité insuffisante en arabe/turc → autre moteur auto-hébergé ou doublage limité au français/anglais ; **(C)** trop lent sur CPU → une conférence à la fois la nuit, ou voix de base plus rapide. Je ne choisis rien sans ton accord.
+
+
+---
+
+# Étape 0 bis — moteurs légers et réglages de vitesse
+
+## Pourquoi
+Premier essai (16/10/2026, VPS, 4 cœurs, conférence `arabe1`, 10 phrases) : la voix Chatterbox clonée est **ressemblante**, mais le calcul est **trop lent** : environ 34 secondes de calcul par seconde de voix (RTF médian 34), pic de mémoire 6,95 Go. Une conférence d'1 h demanderait plus d'une journée de calcul. L'étape 0 bis cherche une solution plus rapide.
+
+## Ce qui est ajouté
+| Essai | Idée | Clonage de ta voix |
+|---|---|---|
+| **A. Chatterbox réglé** | `--cfg-weight 0` (une seule passe de calcul au lieu de deux) et `--threads 4` (le conteneur voyait 6 cœurs pour 4 autorisés : le calcul se bousculait) | oui |
+| **B. Piper** | voix française légère (ONNX), très rapide | non (voix prédéfinie) |
+| **C. Kokoro** | voix française légère (82 M de paramètres, licence Apache 2.0) | non (voix prédéfinie) |
+| **D. Voix légère + conversion vers ta voix** | on génère le français avec Piper ou Kokoro, puis `--vc-voice` donne ta voix par-dessus (conversion de voix de Chatterbox, qui ne génère pas mot à mot) | oui, qualité à écouter |
+
+Les phrases qui commencent par `#` restent protégées. Toute conversion ou tout clonage vers ta voix exige `--consent-date` et `--consent-by`.
+
+## Honnêteté sur ce qui est testé
+- **Testé** : branchement des moteurs, conversion, garde-fous, rapport (27 contrôles avec de faux moteurs) ; la ligne de commande de Piper existe bien avec les options utilisées ; la résolution des paquets (Chatterbox + Kokoro + Piper dans la même image, Python 3.11).
+- **NON testé** : le fonctionnement réel de Kokoro, de Piper avec une voix française et de la conversion de voix sur ce serveur ; leur vitesse, leur qualité et leur mémoire sont **inconnues**. Les licences des voix Piper varient d'une voix à l'autre : à vérifier avant tout usage commercial (Piper lui-même est sous GPL-3, ce qui n'empêche pas de l'utiliser en interne ; ses voix ont chacune leur licence).
+
+## Mise à jour (VPS)
+Les nouveaux moteurs sont dans l'image Docker : il faut la reconstruire (5 à 10 minutes ; le modèle déjà téléchargé est conservé).
+```bash
+cd /root/dubbing-test/src && git pull
+docker build -t majlis-dub-test dubbing/etape0
+docker run --rm --entrypoint python majlis-dub-test test_pipeline.py | tail -3
+```
+Résultat attendu : « 0 échec(s) ».
+
+## Les essais (même conférence `arab1`, mêmes 10 phrases)
+```bash
+cd /root/dubbing-test/src/dubbing/etape0
+mkdir -p /root/dubbing-test/out
+# garder le premier essai de côté
+mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_0 2>/dev/null || true
+
+# A. Chatterbox réglé (même voix qu'avant, peut-être 2 fois plus rapide)
+./run.sh arab1 --voice /in/epok.wav --consent-date 2026-10-16 --consent-by "Epok" --cfg-weight 0 --max-segments 10
+mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_A
+
+# B. Piper (voix française prédéfinie)
+./run.sh arab1 --engine piper --max-segments 10
+mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_B
+
+# C. Kokoro
+./run.sh arab1 --engine kokoro --max-segments 10
+mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_C
+
+# D. Kokoro puis ta voix
+./run.sh arab1 --engine kokoro --vc-voice /in/epok.wav --consent-date 2026-10-16 --consent-by "Epok" --max-segments 10
+mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_D
+
+# Résumé des quatre
+grep -H -E "Vitesse|Phrases qui débordent|Mémoire|conversion" /root/dubbing-test/out/arab1_*/report.md
+```
+Chaque essai affiche son rapport à la fin. Le premier lancement de B et de C télécharge leur voix (quelques dizaines de Mo). Un essai à la fois, ne les enchaîne pas en parallèle. Pour changer de voix : `--piper-voice` (liste : `docker run --rm --entrypoint python majlis-dub-test -m piper.download_voices | grep fr_FR`) ou `--kokoro-voice`.
+
+Écoute ensuite les quatre `dub_mix.mp3` (dans `arab1_A` à `arab1_D`) et compare : naturel du français, ressemblance à ta voix, vitesse.
+
+## Debug (en plus de l'étape 0)
+- `Téléchargement de la voix Piper impossible` : le VPS n'atteint pas huggingface.co, ou le nom de la voix est faux (voir la liste ci-dessus).
+- Erreur sur `espeak` avec Kokoro : l'image n'a pas été reconstruite (étape « Mise à jour »).
+- `--voice s'utilise avec chatterbox` : avec Piper et Kokoro, la voix cible se donne avec `--vc-voice`.
+- Mémoire insuffisante (`Killed`) : relance avec `--max-segments 5`.
+
+## Lecture des résultats (seuils proposés, inchangés)
+Vitesse (RTF) ≤ 3 pour un doublage de nuit raisonnable ; idéalement ≤ 1. En dessous de 1, une conférence d'1 h se double en moins d'1 h.

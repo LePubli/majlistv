@@ -1,3 +1,6 @@
 # torch et torchaudio sont installés dans le Dockerfile (version CPU).
+# Combinaison vérifiée (résolution pip, Python 3.11) : chatterbox-tts 0.1.7 + kokoro 0.9.4 + piper-tts 1.8.0.
 chatterbox-tts==0.1.7
+kokoro==0.9.4
+piper-tts==1.8.0
 numpy<2

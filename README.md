@@ -3105,3 +3105,6 @@ cd src/dubbing/etape0 && ./run.sh arabe1 --max-segments 10
 ```
 - **Debug** : voir `dubbing/etape0/README.md` (consentement, noms de fichiers, mémoire, téléchargement du modèle).
 - **Testé / non testé** : chaîne complète testée avec un faux moteur (15 contrôles). Le vrai modèle n'a pas pu être téléchargé ici : vitesse et qualité inconnues jusqu'à tes mesures.
+
+### Étape 0 bis du doublage (moteurs légers)
+Mesure réelle de l'étape 0 : voix Chatterbox ressemblante mais RTF 34 (trop lent). Étape 0 bis dans `dubbing/etape0/README.md` : réglages Chatterbox (`--cfg-weight 0`, `--threads 4`), moteurs Piper et Kokoro, conversion vers la voix d'Epok (`--vc-voice`). Commandes VPS : `cd /root/dubbing-test/src && git pull && docker build -t majlis-dub-test dubbing/etape0`, puis les quatre essais A à D du README de l'étape. Testé avec de faux moteurs (27 contrôles) ; vrais moteurs légers non testés.
