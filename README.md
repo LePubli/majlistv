@@ -3108,3 +3108,57 @@ cd src/dubbing/etape0 && ./run.sh arabe1 --max-segments 10
 
 ### Étape 0 bis du doublage (moteurs légers)
 Mesure réelle de l'étape 0 : voix Chatterbox ressemblante mais RTF 34 (trop lent). Étape 0 bis dans `dubbing/etape0/README.md` : réglages Chatterbox (`--cfg-weight 0`, `--threads 4`), moteurs Piper et Kokoro, conversion vers la voix d'Epok (`--vc-voice`). Commandes VPS : `cd /root/dubbing-test/src && git pull && docker build -t majlis-dub-test dubbing/etape0`, puis les quatre essais A à D du README de l'étape. Testé avec de faux moteurs (27 contrôles) ; vrais moteurs légers non testés.
+
+## Étape S1 — Module « Doublage français » : réglages, voix et écran Audio et doublage
+
+### Description
+Premier module du doublage, **sans génération de voix** : tout ce qui se règle et se prépare avant que le moteur (étape D1a) existe.
+- **Module `dubbing`** (API `api/src/modules/dubbing/`, site `web/modules/dubbing/`), inactif tant que l'administrateur ne l'active pas (Admin → Modules → « Doublage français »). Retirer ses deux dossiers et `web/app/studio/(module-dubbing)/` le retire du site sans rien casser (testé).
+- **Studio → Audio et doublage** (administrateurs) : l'entrée du menu n'est plus « Bientôt ». Quatre onglets :
+  - **Conférences** : conférences dont la langue n'est pas le français, avec le nombre de phrases françaises (ou « Manquant »), le temps de calcul estimé et le type de réglages (par défaut / propres).
+  - **Réglages par défaut** : voix de base, voix cible, préréglages (Rapide, Équilibré, Qualité), niveau de la voix d'origine (15 %), accélération maximale (× 1,35), réglages avancés (étapes de conversion : 3, blocs : 20 s, silence emprunté, vitesse et variations de la voix de base).
+  - **Voix** : les 6 voix françaises de Piper (Tom par défaut, siwis, gilles, upmc 0 et 1, mls_1840) avec leur licence ; ajout d'une **voix cible** (échantillon audio + date et nom du consentement + case à cocher, obligatoires) ou d'une voix de base Piper ; écoute de l'échantillon ; désactivation (l'échantillon et la trace du consentement sont gardés).
+  - **Langue d'écoute** : temps d'écoute de l'audio d'origine et de la version française (7, 30 ou 90 jours).
+- **Fiche d'une conférence** (`/studio/dubbing/<id>`, maquette « Studio v2 », écran 3) : fil d'Ariane, boutons « Écouter 60 secondes » et « Lancer le doublage » **désactivés** avec la mention « Disponible avec le moteur de doublage (étape D1a) », onglets Détails · Audio et doublage · Montage, carte « Voix du doublage », carte « Réglages » (langue d'origine, curseurs, relecture et glossaire annoncés pour l'étape D1b), carte « Piste française » avec l'estimation du temps de calcul, tableau des **segments** (début, texte, durée, état) filtrable « Tous / À doubler / Voix d'origine », mention « Doublage par voix de synthèse ». Seules les valeurs qui diffèrent des réglages par défaut sont enregistrées pour la conférence.
+- **Phrases protégées** : une phrase française qui commence par `#` (verset, hadith, invocation) est comptée « Voix d'origine » et exclue du temps de parole à doubler.
+- **Estimation** : temps de calcul = secondes de parole × (voix de base + conversion : part fixe + part par étape × étapes). Coefficients réglables dans Admin → Modules → Doublage français (valeurs de départ tirées des mesures du 16/10/2026 : 2,0 ; 0,3 ; 0,42).
+- **Analytique** : la reprise de lecture (`PUT /me/progress/:id`) accepte `audioLang` (`orig` par défaut, ou `fr`) ; le module compte le temps d'écoute par langue (table `dub_listen`). Tant que le lecteur n'a pas de version française (étape D2), tout compte pour l'audio d'origine.
+- Un lien « Audio et doublage » apparaît pour l'administrateur dans la fiche Studio d'une conférence.
+
+### Prérequis
+- Rien de nouveau : pas de variable `.env`, pas de nouveau service, pas de port. Le stockage (Garage) sert aux échantillons de voix, comme pour les PDF des ouvrages.
+- Migrations : celles du module (`api/src/modules/dubbing/migrations/001_dubbing.sql`), appliquées au démarrage de l'API.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. Récupérer le code (déjà poussé sur `main`) ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis GitHub Desktop → Commit to main → Push origin.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (applique la migration du module), puis **Redeploy `majlistv-web`**. Le worker n'a pas changé.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Sur le site : **Admin → Modules → « Doublage français » → Activer**, puis Studio → Audio et doublage.
+
+### Exemples d'utilisation
+- Ajouter ta voix : Audio et doublage → Voix → « Ajouter une voix cible » → nom « Ma voix », fichier `epok.wav`, date du consentement, ton nom, case cochée → Ajouter.
+- Régler une conférence : Conférences → Ouvrir → choisir « Ma voix » → curseurs → Enregistrer. « Revenir aux réglages par défaut » efface ses réglages propres.
+- Vérifier la migration sur le VPS :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT slug, name, model, license FROM dub_voices ORDER BY created_at"'
+```
+
+### Debug
+- **« Le module est désactivé »** dans le Studio : Admin → Modules → Doublage français → Activer.
+- **Erreur 404 sur `/studio/dubbing/...`** côté API alors que le module est activé : l'API n'a pas été redéployée (module absent) ; vérifier Admin → Modules (version 0.1.0, aucune erreur).
+- **L'envoi d'un échantillon échoue** : le stockage doit accepter les envois du navigateur (même réglage que les PDF des ouvrages) ; vérifier `S3_*` dans DockPanel et le message de la console du navigateur. Taille maximale : 15 Mo (réglable dans Admin → Modules).
+- **Une conférence n'est pas dans la liste** : elle est déjà en français (langue ou transcription `fr`).
+- **« Manquant » dans la colonne Texte français** : demander la traduction en français dans la fiche de la conférence (sous-titres).
+
+### Tests
+- API : `python3 api/tests/test_dubbing.py` (54 contrôles : activation, droits, plages, voix, consentement, envoi de l'échantillon, estimation, langue d'écoute) — nécessite un stockage S3 de test (moto, port 5599 : `S3_ENDPOINT=http://127.0.0.1:5599 S3_ACCESS_KEY=test S3_SECRET_KEY=test`).
+- Site : `python3 web/tests/s1_dubbing.py [dossier] fr` puis `... ar` (390, 1440, 1990 px, sans débordement).
+- Retrait du module : `python3 api/tests/test_module_removal.py dubbing` et `python3 web/tests/module_removal_build.py dubbing`.
+
+### Testé / non testé
+Testé ici : API (54 contrôles), navigateur Chromium (fr et ar, 390 / 1440 / 1990 px), retrait du module (API et site), non-régression de l'étape D, des modules et de la rémunération (hors contrôles Stripe, non configuré dans mon environnement de test). **Non testé** : envoi d'un échantillon vers le vrai Garage (testé avec un faux stockage S3), vrai téléphone. Aucune voix n'est générée à cette étape.

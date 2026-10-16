@@ -12,6 +12,8 @@ const idSchema = z.object({ id: z.string().uuid() });
 const progressSchema = z.object({
   positionMs: z.number().int().min(0).max(86_400_000),
   durationMs: z.number().int().min(0).max(86_400_000).default(0),
+  // Étape S1 (doublage) : langue de l'audio écouté — « orig » (audio d'origine, par défaut) ou « fr » (version française).
+  audioLang: z.enum(['orig', 'fr']).default('orig'),
 });
 
 // Une conférence est "terminée" quand il reste moins de 5 % (ou 30 s) à lire.
@@ -41,7 +43,7 @@ export default async function libraryRoutes(app) {
   // Enregistre la position (appelé toutes les ~10 s pendant la lecture). Ignoré si la conférence n'existe plus.
   app.put('/me/progress/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { positionMs, durationMs } = progressSchema.parse(req.body);
+    const { positionMs, durationMs, audioLang } = progressSchema.parse(req.body);
     const talk = await pool.query('SELECT duration_seconds, speaker FROM talks WHERE id = $1', [id]);
     if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
     // La durée connue du serveur fait foi (le navigateur peut envoyer 0 pendant le chargement).
@@ -49,7 +51,7 @@ export default async function libraryRoutes(app) {
     const pos = dur ? Math.min(positionMs, dur) : positionMs;
     // Étape D : temps de visionnage crédité à la chaîne (sans effet si la rémunération est désactivée).
     const prev = (await pool.query('SELECT position_ms, updated_at FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id])).rows[0];
-    await ext.emit('watch.progress', { userId: req.user.sub, talkId: id, speaker: talk.rows[0].speaker, positionMs: pos, prev, paid: prev ? await hasActiveSubscription(req.user.sub) : false }).catch((e) => req.log.warn(`Crédit de visionnage : ${e.message}`));
+    await ext.emit('watch.progress', { userId: req.user.sub, talkId: id, speaker: talk.rows[0].speaker, positionMs: pos, prev, paid: prev ? await hasActiveSubscription(req.user.sub) : false, audioLang }).catch((e) => req.log.warn(`Crédit de visionnage : ${e.message}`));
     await pool.query(
       `INSERT INTO watch_progress(user_id, talk_id, position_ms, duration_ms, completed, updated_at)
        VALUES ($1, $2, $3, $4, $5, now())

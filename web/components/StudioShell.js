@@ -16,6 +16,7 @@ import ManageShell, { ICONS } from './ManageShell';
 const MODULE_OF_HREF = {
   '/studio/series': 'series', '/studio/collections': 'collections', '/studio/channel': 'channels', '/studio/practice': 'practice', '/studio/quiz': 'quiz',
   '/studio/books': 'books', '/studio/reminders': 'revision', '/studio/stats': 'stats', '/studio/revenue': 'revenue',
+  '/studio/dubbing': 'dubbing', // module « Doublage français » (étape S1)
 };
 const UUID = /^\/studio\/[0-9a-f]{8}-[0-9a-f]{4}-/i;
 // Quelle page du menu est « allumée » pour une adresse ?
@@ -54,7 +55,7 @@ export default function StudioShell({ children }) {
     ['/studio/contents', t('sdContents'), ICONS.list, '', 'contents'],
     [analyticsHref, t('sdAnalytics'), ICONS.chart, '', 'analytics'],
     ['/studio/subtitles', t('sdSubs'), ICONS.sub, '', 'subtitles'],
-    ['/studio/dubbing', t('sdDub'), ICONS.mic, t('sdSoon'), 'dubbing'],
+    ['/studio/dubbing', t('sdDub'), ICONS.mic, '', 'dubbing'],
     ['/studio/editor', t('sdEditor'), ICONS.film, t('sdSoon'), 'editor'],
     ['/studio/activity', t('sdActivity'), ICONS.pulse, '', 'activity'],
     ['/studio/settings', t('sdSettings'), ICONS.gear, '', 'settings'],

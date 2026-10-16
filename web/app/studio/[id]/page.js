@@ -8,6 +8,7 @@ import { useApp } from '../../../components/Providers';
 import { langName } from '../../../components/Transcript';
 import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/talkState';
 import TalkEditor from '../../../components/TalkEditor';
+import { hasWebModule } from '../../../lib/modules';
 import Timeline from '../../../components/Timeline';
 
 // Encart « Quiz » : état et lien vers l'onglet de gestion.
@@ -112,6 +113,7 @@ export default function ManageTalk() {
         </div>
         <div className="manage-actions">
           <Link href={`/talks/${x.id}`} className="btn ghost">{t('viewPage')}</Link>
+          {user?.role === 'admin' && hasWebModule('dubbing') && <Link href={`/studio/dubbing/${x.id}`} className="btn ghost">{t('sdDub')}</Link>}
         </div>
       </div>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
