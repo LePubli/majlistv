@@ -11,6 +11,7 @@ import CitationCard from '../components/CitationCard';
 import Vitrine from '../components/Vitrine';
 import { KidsBand } from '../components/KidsBanner';
 import { HomeBlocks } from '../components/PageBlocks';
+import FormatTiles from '../components/FormatTiles';
 
 // Première rangée de conférences de l'accueil (nouveautés) : elle sert de « Dernières conférences » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -87,6 +88,7 @@ function HomeInner() {
           {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
+          {user && <FormatTiles />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r, i) => (
             <Fragment key={r.key}>

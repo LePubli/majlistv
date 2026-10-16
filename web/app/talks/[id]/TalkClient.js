@@ -57,6 +57,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const [pendingHidden, setPendingHidden] = useState(false);
   const quizRef = useRef(null);
   const practiceRef = useRef(null);
+  const [practiceOpen, setPracticeOpen] = useState(false); // étape C : la mise en pratique s'ouvre SUR la vidéo (comme le quiz)
   const [practiceOffer, setPracticeOffer] = useState(false); // invitation « Et maintenant, que faire ? » à la fin de la vidéo
   const [practiceHl, setPracticeHl] = useState(false);
   const stageRef = useRef(null); // zone du lecteur : le quiz s'y affiche en superposition
@@ -69,7 +70,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const videoRef = useRef(null);
 
   // Changement de conférence (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
-  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setPracticeOffer(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
+  useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setPracticeOffer(false); setPracticeOpen(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
   useEffect(() => {
@@ -204,6 +205,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   // « Et maintenant, que faire ? » : on referme le quiz, on descend jusqu'à l'écran de mise en pratique et on le met en évidence un instant.
   const goPractice = () => {
     setPracticeOffer(false); setQuizOpen(false); setQuizOffer(false);
+    if (hasPlayer && !talk.locked) { setPracticeOpen(true); stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; } // sur la vidéo
     setTimeout(() => {
       practiceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       practiceRef.current?.focus({ preventScroll: true });
@@ -375,8 +377,16 @@ export default function TalkPage({ initial = null, talkId = null }) {
       <div className="watch-grid">
         <div className="watch-main">
           <div className="player-wrap" ref={stageRef}>
-            <div className={quizOpen ? 'player-stage quiz-on' : 'player-stage'}>
+            <div className={quizOpen || practiceOpen ? 'player-stage quiz-on' : 'player-stage'}>
               {player}
+            {practiceOpen && practiceOn && (
+              <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('pzTitle')}>
+                <div>
+                  <PracticeBlock talkId={id} t={t} call={call} user={user} onSeek={(sec) => { setPracticeOpen(false); seekTo(sec); }} />
+                  <p className="pz-over-close"><button type="button" className="btn ghost" onClick={() => setPracticeOpen(false)}>{t('hmClose')}</button></p>
+                </div>
+              </div>
+            )}
             {quizOpen && (
               <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('qpTitle')}>
                 <Quiz talkId={id} t={t} call={call} user={user} onResult={onQuizResult} onSeek={(sec) => { setQuizOpen(false); seekTo(sec); }} onPractice={practiceOn ? goPractice : undefined} onClose={() => setQuizOpen(false)}
@@ -521,7 +531,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               </div>
             )}
           </div>
-          {practiceOn && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
+          {practiceOn && !practiceOpen && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
         {(ctx || similar.length > 0) && (

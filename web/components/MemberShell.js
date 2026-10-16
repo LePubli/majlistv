@@ -85,7 +85,7 @@ export default function MemberShell({ children }) {
     channels: { key: 'channels', href: '/chaines', label: t('spTitle'), icon: ICONS.people, on: feat('channels') },
     learning: { key: 'learning', href: '/learning', label: t('msPath'), icon: ICONS.learn, on: learn },
     quiz: { key: 'quiz', href: '/learning?tab=rev', label: t('msQuiz'), icon: ICONS.bilan, on: learn && feat('revision') },
-    practice: { key: 'practice', href: '/learning?tab=path', label: t('msPractice'), icon: ICONS.note, on: learn },
+    practice: { key: 'practice', href: '/learning?tab=commit', label: t('msPractice'), icon: ICONS.note, on: learn },
     bilan: { key: 'bilan', href: '/learning?tab=bilan', label: t('msBilan'), icon: ICONS.tag, on: learn && feat('selfcheck') },
     library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: feat('favorites') || feat('lists') },
     favs: { key: 'favs', href: '/library?tab=favs', label: t('tbFavs'), icon: ICONS.heart, on: feat('favorites') },

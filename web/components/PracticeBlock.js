@@ -104,9 +104,9 @@ const PracticeBlock = forwardRef(function PracticeBlock({ talkId, t, call, user,
         </div>
       )}
 
-      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role={msg.ok ? 'status' : 'alert'}>{msg.text} {msg.ok && <Link className="link u" href="/learning#engagements">{t('pzSeeMine')}</Link>}</p>}
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role={msg.ok ? 'status' : 'alert'}>{msg.text} {msg.ok && <Link className="link u" href="/learning?tab=commit">{t('pzSeeMine')}</Link>}</p>}
       {d.tier && d.mine.length > 0 && (
-        <p className="meta small">{t('pzMineHere').replace('{n}', d.mine.length)} <Link className="link u" href="/learning#engagements">{t('pzSeeMine')}</Link></p>
+        <p className="meta small">{t('pzMineHere').replace('{n}', d.mine.length)} <Link className="link u" href="/learning?tab=commit">{t('pzSeeMine')}</Link></p>
       )}
       <p className="meta small pz-note">{t('pzAiNote')}</p>
     </section>

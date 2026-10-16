@@ -37,7 +37,14 @@ const SEL = 'SELECT id, slug, name_fr AS "nameFr", name_en AS "nameEn", name_ar 
 export default async function formatRoutes(app) {
   const admin = { preHandler: app.requireRole('admin') };
 
-  app.get('/formats', async () => (await pool.query(`${SEL} ORDER BY position, id`)).rows);
+  // ?used=1 : seulement les formats qui contiennent des contenus visibles, avec leur nombre (tuiles « Explorer par format » de l'accueil).
+  app.get('/formats', async (req) => {
+    if (req.query?.used !== '1') return (await pool.query(`${SEL} ORDER BY position, id`)).rows;
+    return (await pool.query(
+      `SELECT f.id, f.slug, f.name_fr AS "nameFr", f.name_en AS "nameEn", f.name_ar AS "nameAr", f.position, count(t.id)::int AS count
+         FROM formats f JOIN talks t ON t.format_id = f.id AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
+        GROUP BY f.id ORDER BY f.position, f.id`)).rows;
+  });
 
   // Version admin : avec le nombre de contenus par format.
   app.get('/formats/stats', admin, async () => (await pool.query(

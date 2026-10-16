@@ -2466,3 +2466,44 @@ html, * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--line-
 
 .catalogue .more { text-align: center; padding: 8px var(--gutter) 32px; }
 .catalogue .grid { padding-inline: var(--gutter); }
+
+/* Étape C : la mise en pratique s'ouvre sur la vidéo, comme le quiz. */
+.quiz-overlay .pz-block { margin: 0; border: 0; background: transparent; box-shadow: none; padding: 6px; }
+.pz-over-close { text-align: end; margin: 8px 6px 0; }
+
+/* Étape C : tuiles « Explorer par format ». */
+.fmt-grid { list-style: none; margin: 0; padding: 0 var(--gutter); display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.fmt-tile { display: flex; flex-direction: column; gap: 4px; justify-content: center; min-height: 84px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); text-decoration: none; }
+.fmt-tile b { font-size: 1.05rem; color: var(--accent); }
+.fmt-tile span { font-size: .85rem; color: var(--muted); }
+.fmt-tile:hover, .fmt-tile:focus-visible { border-color: var(--line-strong); }
+
+/* Étape C : Apprendre — les quatre temps, engagements sur le tableau de bord, écran verrouillé. */
+.lg-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.lg-step { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-soft); background: var(--surface); }
+.lg-step span { font-size: .8rem; color: var(--accent); font-weight: 700; letter-spacing: .02em; }
+.lg-step b { font-size: 1.05rem; color: var(--text); }
+.lg-commits { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.lg-commits li { display: flex; gap: 8px; align-items: baseline; }
+.lg-commits li.done span { color: var(--accent); }
+.lk-page { display: grid; gap: 22px; }
+.lk-banner { padding: clamp(28px, 6vw, 64px) clamp(20px, 4vw, 48px); border-radius: 24px; border: 1px solid var(--line-soft); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface)), var(--surface)); }
+.lk-banner h1 { margin: 6px 0 10px; max-width: 18ch; }
+.lk-banner p:last-child { max-width: 56ch; margin: 0; color: var(--text-2, var(--muted)); }
+.lk-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.lk-tile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: 16px; border: 1px solid var(--line-soft); background: var(--surface); }
+.lk-tile small { color: var(--accent); font-weight: 700; }
+.lk-ico { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; color: var(--accent); display: inline-flex; }
+.lk-cta { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; padding: 22px 24px; border-radius: 20px; border: 1px solid var(--line-strong); background: var(--surface); }
+.lk-cta h2 { margin: 0 0 6px; } .lk-cta p { margin: 0; max-width: 60ch; }
+
+/* Étape C : Séries — « Continuer ». */
+.sr-cont, .sr-all { padding-inline: var(--gutter); }
+.sr-cont-card { display: grid; grid-template-columns: minmax(140px, 320px) 1fr; gap: 20px; align-items: center; padding: 14px; border-radius: 20px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); text-decoration: none; }
+.sr-cont-img { aspect-ratio: 16 / 9; border-radius: 12px; background: var(--surface-2, var(--bg)) center / cover; }
+.sr-cont-body { display: grid; gap: 10px; justify-items: start; }
+.sr-cont-body small { color: var(--accent); font-weight: 700; }
+.sr-cont-body b { font-size: 1.2rem; }
+.sr-cont-body .qp-bar { width: min(100%, 360px); }
+@media (max-width: 600px) { .sr-cont-card { grid-template-columns: 1fr; } }
+.lk-page > * { min-width: 0; }

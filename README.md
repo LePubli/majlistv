@@ -2915,3 +2915,48 @@ python3 web/tests/catalogue_menus.py     # menus, barre du bas, catalogue, fran�
 
 ### Ce qui a été testé / non testé
 Testé : API (36 contrôles formats + tests existants home, cartes, lot, catégories, contenu, fonctions, mise en page : OK), `next build`, navigateur (Chromium émulé, français et arabe, 390 / 1440 / 1990 px, visiteur et administrateur). Non testé : vrai téléphone, vraies miniatures du stockage Garage, rôles organisateur / modérateur dans le navigateur. À noter : dans l'environnement de test, `test_home.py` échoue sur l'envoi d'une image de bannière (stockage S3 absent de l'environnement de test, sans lien avec cette étape).
+
+## Étape C — Apprendre, accueil par format, Séries et mise en pratique sur la vidéo (réorganisation en 5 espaces, lot 3)
+
+### Description
+- **Apprendre — tableau de bord** : une bande des **quatre temps** (1 Regarder · 2 Comprendre · 3 Retenir · 4 Mettre en pratique, avec un chiffre chacun), puis le bloc « reprendre » existant, **Mes engagements** (les deux plus récents), « À réviser aujourd'hui », et une rangée **« Pour continuer à apprendre »**. Chaque temps suit les interrupteurs de Admin → Fonctions (révision ou mise en pratique coupée = temps masqué).
+- **Onglets** : Tableau de bord · Parcours (séries et progression) · **Quiz et révision** · **Mes engagements** (nouvel onglet `?tab=commit`, avant mélangé avec Parcours) · Mon bilan · Attestations. Le menu latéral et les liens « Voir mes engagements » pointent sur ce nouvel onglet.
+- **Écran verrouillé** (membre sans formule Apprentissage) : bannière « Allez plus loin que le visionnage », 4 tuiles avec cadenas (Comprendre, Retenir, Mettre en pratique, Mon bilan), invitation « Passer à la formule » vers les tarifs, puis les contenus accessibles dès maintenant. Aucun prix n'est écrit en dur : il reste sur la page Tarifs.
+- **Accueil connecté** : tuiles **« Explorer par format »** (une par format qui contient des contenus, avec leur nombre), placées avant les rangées ; chaque tuile ouvre la grille du format. Masquées s'il n'y a qu'un seul format.
+- **Séries** : bloc **« Continuer »** (série commencée la plus récente, avec barre de progression et bouton « Reprendre la série »), puis « Toutes les séries ».
+- **Fiche d'une conférence** : « Et maintenant, que faire ? » s'ouvre **sur la vidéo**, comme le quiz (avant : on descendait sous le lecteur). Sans lecteur (contenu verrouillé), l'ancien comportement (descente vers le bloc) est conservé.
+
+### Prérequis
+Étapes A et B déployées. **Aucune migration, aucune variable `.env`.** Un petit ajout d'API : `GET /formats?used=1` (formats utilisés + nombre).
+
+### Déploiement
+Le code est poussé sur GitHub (`main`). Puis :
+1. DockPanel → Git Deploy → **Redeploy `majlistv-api`**, puis **`majlistv-web`** (le worker ne change pas).
+2. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+1. Connecté avec la formule Apprentissage : https://majlisstv.le-publicitaire.fr/learning → bande des quatre temps, onglets « Quiz et révision » et « Mes engagements ».
+2. Connecté avec un abonnement standard : même adresse → écran verrouillé avec l'invitation.
+3. Accueil connecté : tuiles de formats (visibles dès deux formats utilisés).
+4. Fin d'une vidéo avec mise en pratique : le bouton « Et maintenant » ouvre les propositions sur la vidéo.
+
+### Tests
+```bash
+python3 api/tests/test_formats.py        # 38 contrôles (dont ?used=1)
+python3 web/tests/etape_c.py             # navigateur : Apprendre, verrouillé, tuiles, Séries ; fr + ar ; 390 / 1440 px
+python3 web/tests/catalogue_menus.py     # non-régression étape B
+```
+
+### Debug
+- **Pas de tuiles de formats** : un seul format est utilisé (normal), ou l'API n'est pas redéployée (`curl https://api-majlisstv.le-publicitaire.fr/formats?used=1`).
+- **« Mes engagements » vide alors qu'il y en a** : l'ancien lien `/learning#engagements` mène au tableau de bord ; utiliser `/learning?tab=commit`.
+- **Le bouton « Et maintenant » descend encore sous la vidéo** : contenu verrouillé (pas de lecteur) ou page non rechargée (Ctrl+F5).
+
+### Ce qui a été testé / non testé
+Testé : `next build`, navigateur (Chromium émulé, fr + ar, 390 et 1440 px, administrateur et membre standard), test API formats. **Non testé** : l'ouverture de la mise en pratique sur la vidéo dans le navigateur (compilé, mais pas déclenché de bout en bout : il faut une vidéo avec quiz et propositions) ; vrai téléphone ; données réelles du site en ligne.
+**Volontairement pas fait** : les onglets « Toutes / Séries / Cycles / Parcours » de la maquette Séries, car le site n'a aucune notion de « cycle » ou de « parcours » distincte d'une série (aucun champ). À décider avec vous.

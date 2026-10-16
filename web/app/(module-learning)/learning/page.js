@@ -10,6 +10,7 @@ import Evolution from '../../../components/Evolution';
 import Crumbs from '../../../components/Crumbs';
 import { thumbOf } from '../../../components/TalkCard';
 import { TabBar, TabPanel, useTab } from '../../../components/Tabs';
+import Row from '../../../components/Row';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -43,6 +44,8 @@ export default function Learning() {
   const [cont, setCont] = useState([]); // conférences à reprendre
   const [todo, setTodo] = useState([]); // quiz à passer
   const [goals, setGoals] = useState(null); // objectifs du bilan (privés)
+  const [pz, setPz] = useState(null); // mes engagements : { items, counts } (synthèse du tableau de bord)
+  const [next, setNext] = useState([]); // « Pour continuer à apprendre » (ou ce qu'on peut faire dès maintenant)
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => call('/me/learning').then((r) => setD(r.ok ? r.data : null)), [call]);
@@ -52,11 +55,14 @@ export default function Learning() {
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); }, [user, call]);
   useEffect(() => { if (user && feat('quiz')) call('/me/quiz/todo').then((r) => setTodo(r.ok && Array.isArray(r.data) ? r.data : (r.data?.items || []))); }, [user, call, feat]);
   useEffect(() => { if (user && feat('selfcheck')) call('/me/selfcheck').then((r) => setGoals(r.ok ? r.data.goals || [] : null)); }, [user, call, feat]);
+  useEffect(() => { if (user && d && feat('practice')) call('/me/practice').then((r) => setPz(r.ok ? r.data : null)); }, [user, d, call, feat]);
+  useEffect(() => { if (user) call('/talks?limit=12', {}, null).then((r) => setNext(r.ok ? r.data : [])); }, [user, call]);
   const revN = rv ? rv.items.length + (rv.remaining || 0) : 0;
   const tabs = [
     { id: 'dash', label: t('tbDash') },
     { id: 'path', label: t('tbPath') },
-    ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbRev') }] : []),
+    ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
+    ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
     ...(feat('selfcheck') ? [{ id: 'bilan', label: t('msBilan') }] : []),
     { id: 'att', label: t('tbAtt') },
   ];
@@ -64,18 +70,31 @@ export default function Learning() {
   const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
   if (!user || d === undefined) return null;
 
-  // Palier requis : on présente ce que l'offre apporte.
+  // Palier requis : écran « verrouillé » (maquette) : bannière, les temps avec cadenas, invitation, puis ce qu'on peut faire dès maintenant.
   if (d === null) {
+    const tiles = [['lrStepQ', 'lzH1'], ['lrStepR', 'lzH2s'], ['lrStepP', 'lzH3'], ['msBilan', 'lzH4']];
     return (
-      <main className="page learning">
-        <h1>{t('lrTitle')}</h1>
-        <section className="lr-teaser">
-          <h2>{t('tierLearn')}</h2>
-          <p>{t('lrTeaser')}</p>
-          <ul className="plan-list">{['planL1', 'planL2', 'planL3', 'planL4'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
-          <p className="meta small">{t('lrTeaserKeep')}</p>
-          <Link className="btn" href="/pricing">{t('lrDiscover')}</Link>
+      <main className="page learning lk-page">
+        <section className="lk-banner" aria-label={t('tierLearn')}>
+          <p className="eyebrow">{t('lzKicker')}</p>
+          <h1>{t('lzTitle')}</h1>
+          <p>{t('lzText')}</p>
         </section>
+        <section className="lk-tiles" aria-label={t('tierLearn')}>
+          {tiles.map(([n, h], i) => (
+            <div key={n} className="lk-tile">
+              <span className="lk-ico" role="img" aria-label={t('lzLocked')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg></span>
+              <small>{i + 2}</small>
+              <b>{t(n)}</b>
+              <span className="meta">{t(h)}</span>
+            </div>
+          ))}
+        </section>
+        <section className="lk-cta" aria-label={t('lzH2')}>
+          <div><h2>{t('lzH2')}</h2><p>{t('lzP')}</p></div>
+          <div className="lk-btns"><Link className="btn" href="/pricing">{t('lzCta')}</Link></div>
+        </section>
+        {next.length > 0 && <Row id="row-lk-now" title={t('lzNow')} talks={next.slice(0, 8)} t={t} />}
       </main>
     );
   }
@@ -138,7 +157,7 @@ export default function Learning() {
 
   return (
     <main className="page learning">
-      <Crumbs items={[[null, t('msSpace')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, tabs.find((x) => x.id === tab).plain || tabs.find((x) => x.id === tab).label]] : [])]} />
+      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, tabs.find((x) => x.id === tab).plain || tabs.find((x) => x.id === tab).label]] : [])]} />
       <header className="lg-head">
         <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
         <p>{t('lgSub')}</p>
@@ -146,6 +165,13 @@ export default function Learning() {
       <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
 
       <TabPanel id="dash" current={tab}>
+      <section className="lg-steps" aria-label={t('lgSteps')}>
+        {[['lrStepW', t('lrStepWv').replace('{n}', cont.length)], ['lrStepQ', t('lrStepQv').replace('{n}', d.quizzesPassed)],
+          ...(feat('revision') ? [['lrStepR', t('lrStepRv').replace('{n}', revN)]] : []),
+          ...(feat('practice') ? [['lrStepP', t('lrStepPv').replace('{n}', pz ? pz.counts.todo + pz.counts.doing : 0)]] : [])].map(([n, v], i) => (
+          <div key={n} className="lg-step"><span>{i + 1} · {t(n)}</span><b>{v}</b></div>
+        ))}
+      </section>
       <div className="lg-top">
         {first ? (
           <section className="lg-resume" aria-label={t('lgResumeAria')}>
@@ -191,6 +217,17 @@ export default function Learning() {
               </>
             ) : <p className="lg-dim">{t('lgNoPath')}</p>}
           </section>
+          {feat('practice') && pz && (
+            <section className="lg-card" aria-label={t('lrMyCommits')}>
+              <h2>{t('lrMyCommits')}</h2>
+              {pz.items.length === 0 ? <p className="lg-txt">{t('lrNoCommit')}</p> : (
+                <ul className="lg-commits">
+                  {pz.items.filter((x) => x.status !== 'not_yet').slice(0, 2).map((x) => <li key={x.id} className={x.status === 'done' ? 'done' : ''}><span aria-hidden="true">{x.status === 'done' ? '✓' : '○'}</span> {x.text}</li>)}
+                </ul>
+              )}
+              <button type="button" className="lg-ghost" onClick={() => go('commit')}>{t('lrAllCommits')}</button>
+            </section>
+          )}
           {feat('revision') && (
             <section className="lg-card" aria-label={t('lgTodayRev')}>
               <h2>{t('lgTodayRev')}</h2>
@@ -231,6 +268,10 @@ export default function Learning() {
           </Link>
         </div>
       </section>
+
+      {next.filter((x) => !cont.some((c) => c.id === x.id)).length > 0 && (
+        <Row id="row-lg-next" title={t('lrNext')} talks={next.filter((x) => !cont.some((c) => c.id === x.id)).slice(0, 8)} t={t} />
+      )}
 
       {feat('selfcheck') && goals && (
         <section className="lg-bilan" aria-label={t('msBilan')}>
@@ -328,8 +369,11 @@ export default function Learning() {
       </TabPanel>
 
       <TabPanel id="path" current={tab}>
-      <PracticeList t={t} call={call} locale={locale} />
       {seriesBlock('path')}
+      </TabPanel>
+
+      <TabPanel id="commit" current={tab}>
+      <PracticeList t={t} call={call} locale={locale} />
       </TabPanel>
 
       <TabPanel id="att" current={tab}>
