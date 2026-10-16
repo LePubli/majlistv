@@ -173,3 +173,23 @@ Chaque essai affiche son rapport à la fin. Le premier lancement de B et de C t�
 
 ## Lecture des résultats (seuils proposés, inchangés)
 Vitesse (RTF) ≤ 3 pour un doublage de nuit raisonnable ; idéalement ≤ 1. En dessous de 1, une conférence d'1 h se double en moins d'1 h.
+
+---
+
+# Étape 0 ter — accélérer la conversion vers la voix d'Epok
+
+Résultat de l'écoute (16/10/2026) : l'essai D (Kokoro puis voix d'Epok) est **retenu** ; Piper et Kokoro seuls sonnent comme des voix féminines trop « IA ». D mesure RTF 8,5 (≈ 8 h 30 de calcul pour 1 h de conférence), dont l'essentiel (≈ 19 s par phrase) est la conversion de voix. Option ajoutée : `--vc-steps N` (nombre d'étapes de génération de la conversion ; défaut du modèle : 10). Moins d'étapes = plus rapide, mais la qualité peut baisser : à écouter.
+
+```bash
+cd /root/dubbing-test/src && git pull
+docker build -t majlis-dub-test dubbing/etape0
+cd dubbing/etape0
+for n in 5 3; do
+  ./run.sh arab1 --engine kokoro --vc-voice /in/epok.wav --consent-date 2026-10-16 --consent-by "Epok" --vc-steps $n --max-segments 10
+  mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_D$n
+done
+grep -H -E "Vitesse|conversion|Mémoire" /root/dubbing-test/out/arab1_D*/report.md
+mkdir -p /root/dubbing-test/out/ecoute
+for n in 5 3; do cp /root/dubbing-test/out/arab1_D$n/dub_mix.mp3 /root/dubbing-test/out/ecoute/essai_D$n.mp3; done
+```
+Non testé sur le vrai modèle : seulement l'acheminement de l'option (28 contrôles avec faux moteurs).

@@ -86,6 +86,18 @@ with tempfile.TemporaryDirectory() as d:
     check("conversion de voix appelée avec la voix cible", calls == [voice] and rep["engine"] == "kokoro+vc")
     check("consentement consigné pour la conversion", rep["consent"] == {"date": "2026-10-16", "by": "Epok"})
     check("durée de conversion rapportée", rep["vc_mean_s"] is not None)
+    # --vc-steps : l'option doit arriver jusqu'à s3gen.inference
+    seen = []
+    class FakeS3(object):
+        def inference(self, *a, **k): seen.append(k.get("n_cfm_timesteps"))
+    class FakeVC2(FakeVC):
+        def __init__(self): self.s3gen = FakeS3()
+        def generate(self, path):
+            self.s3gen.inference(); return FakeVC.generate(self, path)
+    vcm.ChatterboxVC = FakeVC2
+    rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/s", "--engine", "kokoro", "--vc-voice", voice,
+                      "--consent-date", "2026-10-16", "--consent-by", "Epok", "--vc-steps", "5"])
+    check("--vc-steps transmis à la conversion", seen and set(seen) == {5} and rep["vc_steps"] == 5)
     # garde-fous
     base = [sys.executable, os.path.join(os.path.dirname(__file__), "bench.py"), "--vtt", vtt, "--audio", audio, "--out", f"{d}/z"]
     r = subprocess.run(base + ["--engine", "kokoro", "--vc-voice", voice], capture_output=True, text=True)

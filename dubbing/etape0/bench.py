@@ -157,10 +157,13 @@ class KokoroEngine:
 
 class VoiceConverter:
     """Seconde passe : donne la voix d'Epok à une voix synthétique (ChatterboxVC, sans génération mot à mot)."""
-    def __init__(self, target_voice, device="cpu"):
+    def __init__(self, target_voice, device="cpu", steps=None):
         from chatterbox.vc import ChatterboxVC  # import tardif
         self.vc = ChatterboxVC.from_pretrained(device=device)
         self.vc.set_target_voice(target_voice)
+        if steps:  # moins d'étapes de génération = plus rapide, qualité à écouter (défaut du modèle : 10)
+            orig = self.vc.s3gen.inference
+            self.vc.s3gen.inference = lambda *a, **k: orig(*a, n_cfm_timesteps=steps, **k)
     def convert(self, wav):
         with tempfile.TemporaryDirectory() as d:
             src = os.path.join(d, "s.wav")
@@ -178,6 +181,7 @@ def main(argv=None):
     ap.add_argument("--out", required=True, help="dossier de sortie")
     ap.add_argument("--engine", choices=sorted(ENGINES), default="chatterbox")
     ap.add_argument("--vc-voice", help="échantillon de voix cible : convertit la voix du moteur léger vers cette voix (piper/kokoro)")
+    ap.add_argument("--vc-steps", type=int, default=0, help="conversion de voix : nombre d'étapes de génération (0 = défaut du modèle, 10 ; essayer 5 puis 3)")
     ap.add_argument("--cfg-weight", type=float, default=0.5, help="Chatterbox : 0 = ~2 fois plus rapide (sans double passe)")
     ap.add_argument("--exaggeration", type=float, default=0.5, help="Chatterbox : expressivité")
     ap.add_argument("--threads", type=int, default=4, help="fils de calcul (= nombre de cœurs alloués au conteneur)")
@@ -221,7 +225,7 @@ def main(argv=None):
     t0 = time.time()
     eng = ENGINES[a.engine](device=a.device, voice=a.voice, lang=a.lang, cfg_weight=a.cfg_weight, exaggeration=a.exaggeration,
                             piper_voice=a.piper_voice, piper_dir=a.piper_dir, kokoro_voice=a.kokoro_voice)
-    vc = VoiceConverter(a.vc_voice, a.device) if a.vc_voice else None
+    vc = VoiceConverter(a.vc_voice, a.device, a.vc_steps) if a.vc_voice else None
     try:
         import torch
         torch.set_num_threads(a.threads)
@@ -279,7 +283,7 @@ def main(argv=None):
     over = [s for s in spoken if s["overflow_s"] > 0.05 or s["speedup"] >= a.max_speedup - 1e-6 and s["overflow_s"] > 0]
     ram_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024
     rep = {
-        "engine": eng.name + ("+vc" if vc else ""), "threads": a.threads, "cfg_weight": a.cfg_weight if a.engine == "chatterbox" else None, "lang": a.lang, "device": a.device, "voice": os.path.basename(clone) if clone else None,
+        "engine": eng.name + ("+vc" if vc else ""), "threads": a.threads, "vc_steps": a.vc_steps or None, "cfg_weight": a.cfg_weight if a.engine == "chatterbox" else None, "lang": a.lang, "device": a.device, "voice": os.path.basename(clone) if clone else None,
         "consent": {"date": a.consent_date, "by": a.consent_by} if clone else None,
         "model_load_s": round(load_s, 1), "segments": len(segs), "protected_segments": len(segs) - len(spoken),
         "audio_total_s": round(total, 1),
@@ -314,7 +318,7 @@ def write_md(path, r):
          f"- Durée audio : {r['audio_total_s']} s · chargement du modèle : {r['model_load_s']} s",
          f"- Vitesse (RTF = temps de calcul / durée produite) : médiane {r['rtf_median']} · max {r['rtf_max']}",
          f"- Réglages : {r['threads']} fils" + (f" · cfg_weight {r['cfg_weight']}" if r.get("cfg_weight") is not None else ""),
-         f"- Dont conversion de voix (moyenne par phrase) : {r['vc_mean_s']} s" if r.get("vc_mean_s") is not None else "- Pas de conversion de voix",
+         f"- Dont conversion de voix (moyenne par phrase) : {r['vc_mean_s']} s (étapes : {r.get('vc_steps') or 'défaut 10'})" if r.get("vc_mean_s") is not None else "- Pas de conversion de voix",
          f"- Accélération moyenne pour caler : ×{r['speedup_mean']}",
          f"- Phrases qui débordent encore : {r['overflow_count']} ({round(r['overflow_share']*100)} %)",
          f"- Mémoire max : {r['ram_peak_gb']} Go", "",
