@@ -1,4 +1,4 @@
-"""17a : rendition audio — audioPath, playlist protégée, aperçu tronqué. Prérequis : API (3055), PG (5544), S3 moto (5599) ;
+"""17a : rendition audio — audioPath, playlist protégée, aperçu tronqué. Prérequis : API (3055), PG (5544), S3 moto (5599, ou TEST_S3) ;
 produire d'abord les fichiers : node worker/tests/test_audio.mjs /tmp/claude-0/audio_out"""
 import os, sys, boto3, requests, psycopg2, glob
 
@@ -13,7 +13,7 @@ def ok(c, m):
         sys.exit(1)
 
 
-s3 = boto3.client("s3", endpoint_url="http://127.0.0.1:5599", region_name="us-east-1", aws_access_key_id=os.environ.get("S3_ACCESS_KEY", "x"), aws_secret_access_key=os.environ.get("S3_SECRET_KEY", "x"))
+s3 = boto3.client("s3", endpoint_url=os.environ.get("TEST_S3", "http://127.0.0.1:5599"), region_name="us-east-1", aws_access_key_id=os.environ.get("S3_ACCESS_KEY", "x"), aws_secret_access_key=os.environ.get("S3_SECRET_KEY", "x"))
 A = {"authorization": "Bearer " + requests.post(B + "/auth/login", json={"email": "admin@test.local", "password": "AdminPassw0rd-test"}).json()["token"]}
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 
