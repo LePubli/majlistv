@@ -4,7 +4,7 @@ import { pool } from './db.js';
 import { presignGet } from './storage.js';
 import { visibleSql } from './visibility.js';
 
-export const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category,
+export const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category, (SELECT slug FROM formats WHERE id = t.format_id) AS format, 
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
 
 export async function cards(rows) {

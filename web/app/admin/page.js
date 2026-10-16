@@ -873,6 +873,88 @@ function Categories() {
   );
 }
 
+/* ---------------------------------------------------------------- Formats (étape B) */
+// Le format dit « ce que c'est » (Conférence, Cours, Récitation, Dessin animé…) ; la catégorie dit « de quoi ça parle ».
+// Chaque format qui contient des contenus devient une rangée de la page Catalogue et un badge sur les vignettes.
+const slugOf = (txt) => txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+function Formats() {
+  const { call } = useApp();
+  const [list, setList] = useState(null);
+  const [add, setAdd] = useState({ nameFr: '', nameEn: '', nameAr: '' });
+  const [editing, setEditing] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const load = useCallback(() => call('/formats/stats').then((r) => r.ok && setList(r.data)), [call]);
+  useEffect(() => { load(); }, [load]);
+  const done = (ok, text) => setMsg({ ok, text });
+  const create = async (e) => {
+    e.preventDefault();
+    const slug = slugOf(add.nameFr);
+    if (slug.length < 2) { done(false, 'Donnez un nom en français (lettres ou chiffres).'); return; }
+    const r = await call('/formats', { method: 'POST', body: JSON.stringify({ slug, ...add }) });
+    if (r.ok) { setAdd({ nameFr: '', nameEn: '', nameAr: '' }); done(true, `Format « ${r.data.nameFr} » ajouté.`); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+  const save = async (e) => {
+    e.preventDefault();
+    const r = await call(`/formats/${editing.id}`, { method: 'PATCH', body: JSON.stringify({ nameFr: editing.nameFr, nameEn: editing.nameEn, nameAr: editing.nameAr }) });
+    if (r.ok) { setEditing(null); done(true, 'Format enregistré.'); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+  const move = async (i, dir) => {
+    const a = list[i]; const b = list[i + dir];
+    if (!b) return;
+    // On échange les positions des deux formats voisins (si elles sont égales, on les écarte).
+    const pa = a.position === b.position ? a.position + dir : b.position;
+    const r1 = await call(`/formats/${a.id}`, { method: 'PATCH', body: JSON.stringify({ position: pa }) });
+    const r2 = await call(`/formats/${b.id}`, { method: 'PATCH', body: JSON.stringify({ position: a.position }) });
+    if (r1.ok && r2.ok) load(); else done(false, 'Erreur');
+  };
+  const remove = async (f) => {
+    if (!window.confirm(f.count > 0 ? `Supprimer « ${f.nameFr} » ? Ses ${f.count} contenu(s) resteront en ligne, mais sans format.` : `Supprimer le format « ${f.nameFr} » ?`)) return;
+    const r = await call(`/formats/${f.id}`, { method: 'DELETE' });
+    if (r.ok || r.status === 204) { done(true, `Format « ${f.nameFr} » supprimé.`); load(); } else done(false, r.data?.error || 'Erreur');
+  };
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Formats</h2>
+      <p className="meta">Le format dit ce qu'est le contenu (conférence, cours, récitation, dessin animé…). Chaque format qui contient des contenus devient une rangée de la page Catalogue et un badge sur les vignettes. L'ordre ci-dessous est celui du Catalogue.</p>
+      <form className="cat-add" onSubmit={create}>
+        <input required maxLength={60} placeholder="Nom en français (ex. Documentaire)" value={add.nameFr} onChange={(e) => setAdd({ ...add, nameFr: e.target.value })} aria-label="Nom du format en français" />
+        <input maxLength={60} placeholder="English name" value={add.nameEn} onChange={(e) => setAdd({ ...add, nameEn: e.target.value })} aria-label="Nom du format en anglais" />
+        <input maxLength={60} dir="rtl" placeholder="الاسم بالعربية" value={add.nameAr} onChange={(e) => setAdd({ ...add, nameAr: e.target.value })} aria-label="Nom du format en arabe" />
+        <button className="btn">+ Ajouter</button>
+      </form>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      {list === null && <p className="meta">…</p>}
+      {list && (
+        <ul className="cat-list">
+          {list.map((f, i) => (
+            <li key={f.id}>
+              {editing?.id === f.id ? (
+                <form className="cat-edit" onSubmit={save}>
+                  <input autoFocus required maxLength={60} value={editing.nameFr} onChange={(e) => setEditing({ ...editing, nameFr: e.target.value })} aria-label="Nom en français" />
+                  <input maxLength={60} value={editing.nameEn} onChange={(e) => setEditing({ ...editing, nameEn: e.target.value })} aria-label="Nom en anglais" />
+                  <input maxLength={60} dir="rtl" value={editing.nameAr} onChange={(e) => setEditing({ ...editing, nameAr: e.target.value })} aria-label="Nom en arabe" />
+                  <button className="btn">Enregistrer</button>
+                  <button type="button" className="btn ghost" onClick={() => setEditing(null)}>Annuler</button>
+                </form>
+              ) : (
+                <>
+                  <span className="cat-name"><b>{f.nameFr}</b><small className="meta">{f.nameEn || '—'} · {f.nameAr || '—'} · {f.count} contenu{f.count > 1 ? 's' : ''}</small></span>
+                  <span className="cat-actions">
+                    <button type="button" className="link u" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Monter ${f.nameFr}`}>↑</button>
+                    <button type="button" className="link u" disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label={`Descendre ${f.nameFr}`}>↓</button>
+                    <button type="button" className="link u" onClick={() => { setMsg(null); setEditing({ id: f.id, nameFr: f.nameFr, nameEn: f.nameEn, nameAr: f.nameAr }); }}>Renommer</button>
+                    <button type="button" className="link u danger-link" onClick={() => remove(f)}>Supprimer</button>
+                  </span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /* ---------------------------------------------------------------- Intervenants */
 // Présentation affichée sur la page publique de chaque chaîne (/chaines/…). Le nom vient des conférences. Depuis l'étape C, l'édition courante se fait dans Studio → Chaînes (avec attribution du propriétaire) ; cet écran reste accessible par ?tab=speakers.
 function Speakers() {
@@ -1027,7 +1109,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories', speakers: 'Intervenants', audit: "Journal des actions" };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions" };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1041,7 +1123,7 @@ export default function Admin() {
       {tab === 'pages' && <PagesAdmin />}
       {tab === 'settings' && <Settings />}
       {tab === 'legal' && <LegalPages />}
-      {tab === 'categories' && <Categories />}
+      {tab === 'categories' && <><Categories /><Formats /></>}
       {tab === 'speakers' && <Speakers />}
       {tab === 'audit' && <AuditLog />}
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}

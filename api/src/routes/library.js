@@ -19,7 +19,7 @@ const isCompleted = (pos, dur) => dur > 0 && pos >= Math.min(dur * 0.95, dur - 3
 // En dessous de ce seuil, ce n'est pas une vraie reprise (évite "Reprendre à 0:02").
 const MIN_RESUME_MS = 5000;
 
-const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category,
+const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category, (SELECT slug FROM formats WHERE id = t.format_id) AS format, 
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
 
 async function cards(rows) {

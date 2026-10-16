@@ -7,10 +7,11 @@ import { BANDS, bandLabel } from '../lib/kids';
 import { LEVELS, levelLabel } from '../lib/levels';
 
 export default function BulkEdit({ ids, onDone, onCancel }) {
-  const { t, call } = useApp();
+  const { t, call, formats, locale } = useApp();
+  const fmtLabel = (f) => f['name' + locale[0].toUpperCase() + locale.slice(1)] || f.nameFr;
   const [cats, setCats] = useState([]);
   const [on, setOn] = useState({});            // champs à modifier
-  const [v, setV] = useState({ access: 'free', categoryId: '', level: '', publication: 'published', speaker: '', kidsBands: [], bandsMode: 'replace', showAdults: true });
+  const [v, setV] = useState({ access: 'free', categoryId: '', formatId: '', level: '', publication: 'published', speaker: '', kidsBands: [], bandsMode: 'replace', showAdults: true });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
@@ -21,6 +22,7 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
     const changes = {};
     if (on.access) changes.access = v.access;
     if (on.categoryId) changes.categoryId = v.categoryId ? Number(v.categoryId) : null;
+    if (on.formatId && v.formatId) changes.formatId = Number(v.formatId);
     if (on.level) changes.level = v.level || null;
     if (on.publication) changes.publication = v.publication;
     if (on.speaker) changes.speaker = v.speaker.trim();
@@ -51,6 +53,12 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
         <select value={v.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
           <option value="">{t('bkNoCategory')}</option>
           {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
+        </select>
+      ))}
+      {row('formatId', t('fmtLabel'), (
+        <select value={v.formatId} onChange={(e) => set('formatId', e.target.value)}>
+          <option value="">—</option>
+          {formats.map((f) => <option key={f.id} value={f.id}>{fmtLabel(f)}</option>)}
         </select>
       ))}
       {row('level', t('lvLabel'), (

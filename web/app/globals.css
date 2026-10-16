@@ -2459,3 +2459,10 @@ html, * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--line-
 ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--line-soft) 80%, transparent); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--line); }
 ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Étape B : badge de format (conférence, cours…) en haut à gauche de la vignette ; le badge d'accès passe en haut à droite. */
+.fmt-badge { position: absolute; inset-block-start: 8px; inset-inline-start: 8px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: color-mix(in srgb, var(--bg) 80%, transparent); color: var(--accent); padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+.thumb.has-fmt .badge { inset-inline-start: auto; inset-inline-end: 8px; }
+
+.catalogue .more { text-align: center; padding: 8px var(--gutter) 32px; }
+.catalogue .grid { padding-inline: var(--gutter); }

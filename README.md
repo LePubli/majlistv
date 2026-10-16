@@ -2859,3 +2859,59 @@ Aucun réglage : le correctif est automatique. Test à la main : ouvrir les outi
 ### Ce qui a été testé / non testé
 Testé : le test automatique ci-dessus (Chromium, 28 cas). Non testé : construction complète du site (`next build`, changement CSS seulement), rendu sur le vrai site en ligne, vrai téléphone, navigateurs autres que Chromium.
 
+
+## Étape B — Formats, page Catalogue et nouveaux menus (réorganisation en 5 espaces, lot 2)
+
+### Description
+- **Champ « Format »** : en plus de la catégorie (« de quoi ça parle »), chaque contenu a un format (« ce que c'est ») : Conférence, Cours, Récitation et lecture, Documentaire / entretien / débat, Dessin animé, Rappel. La liste se gère dans **Administration → Catégories et formats** (ajouter, renommer en fr/en/ar, réordonner, supprimer ; supprimer un format ne supprime aucun contenu). Tous les contenus existants passent en « Conférence » à la mise à jour ; on corrige ensuite contenu par contenu (Studio → fiche → **Format**) ou en lot (modification en lot → **Format**). À l'envoi d'un nouveau contenu, un choix « Format » est proposé (par défaut : Conférence).
+- **Badge de format** en haut à gauche de chaque vignette (le badge Gratuit / Premium passe en haut à droite).
+- **Page Catalogue** (`/catalogue`) : grande bannière (conférences « à la une »), rangée « Nouveautés », puis **une rangée horizontale par format** (seuls les formats qui contiennent des contenus). Pas de filtres. « Tout voir » ouvre la grille du format (`/catalogue?format=cours`) ; une catégorie du menu latéral ouvre sa grille (`/catalogue?cat=12`).
+- **Menu du haut** : Accueil · Catalogue · Séries · Apprendre · Kids. Collections, Ouvrages et Ma bibliothèque restent dans le menu latéral (on peut les réafficher en haut dans Admin → Pages → menus).
+- **Menu latéral** (membres) : Découvrir · **Catégories** (liste automatique, mêmes noms partout) · Apprendre (Mon parcours, Quiz et révision, Mes engagements, Mon bilan) · Ma bibliothèque (Favoris, Mes listes, Mes notes, Chaînes suivies) · Mon compte (Profil et abonnement, Cartes cadeaux, Notifications) · Gestion. Kids n'y figure plus (il est en haut).
+- **Téléphone** : menu ☰ avec les catégories ; **barre du bas** Accueil · Catalogue · Séries · Apprendre · Kids, **aussi pour les visiteurs** (pas sur connexion, inscription, tarifs, pages légales). Sans série dans la bibliothèque, « Collections » remplace « Séries » comme avant.
+- **Accueil visiteur : inchangé.**
+
+### Prérequis
+Étapes précédentes déployées. **Une migration** (`053_formats.sql`, appliquée automatiquement au démarrage de l'API) : table `formats` + colonne `talks.format_id` (tous les contenus existants → Conférence). Aucune variable `.env` nouvelle.
+
+### Installation et déploiement
+Le code est déjà poussé sur GitHub (`main`) ; le zip joint sert de secours (même contenu). Sinon, workflow habituel : décompresser dans `C:\Users\agenc\Documents\GitHub\majlistv`, GitHub Desktop → Commit to main → Push origin. Puis :
+1. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (attendre « Running » : la migration 053 s'applique).
+2. Puis **Redeploy `majlistv-web`**. Le worker ne change pas.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### API (résumé)
+| Route | Rôle |
+|---|---|
+| `GET /formats` | liste publique (id, slug, nameFr/nameEn/nameAr, position) |
+| `GET /formats/stats` | idem avec le nombre de contenus (admin) |
+| `POST /formats`, `PATCH /formats/:id`, `DELETE /formats/:id` | gestion (admin) ; code `a-z0-9-`, 409 si déjà pris |
+| `GET /catalogue` | `{ hero: { items }, rows: [{ key: 'new' \| 'format:<slug>', format, total, talks }] }` |
+| `GET /talks?format=<slug>` | liste filtrée par format ; `formatId` accepté à la création, la modification et en lot |
+
+### Vérifier que ça marche
+1. https://majlisstv.le-publicitaire.fr/catalogue : bannière + rangées (au début, tout est en « Conférence » : une seule rangée de format).
+2. Studio → une conférence → **Format** : choisir « Cours », enregistrer → la vignette porte le badge « Cours » et le Catalogue a une rangée « Cours ».
+3. Téléphone (ou fenêtre étroite 390 px) : barre du bas à 5 entrées, y compris déconnecté.
+
+### Tests
+```bash
+# API (3055) + PG de test (5544)
+python3 api/tests/test_formats.py        # 36 contrôles : liste, droits, ajout/renommage/suppression, défaut, lot, rangées, ?format
+# Navigateur : site lancé sur 3001 (API_URL=http://127.0.0.1:3055 npx next start -p 3001)
+python3 web/tests/catalogue_menus.py     # menus, barre du bas, catalogue, français + arabe, 390 / 1440 / 1990 px
+```
+
+### Debug
+- **« Catalogue » ou une rangée n'apparaît pas** : l'API n'est pas redéployée (la migration 053 n'a pas tourné) ou aucun contenu n'a ce format ; vérifier `curl https://api-majlisstv.le-publicitaire.fr/formats`.
+- **Les menus gardent l'ancien ordre** : un réglage enregistré dans Admin → Pages → menus prime sur l'ordre d'origine. Les nouvelles entrées (Catalogue…) s'ajoutent en fin de liste ; pour repartir de l'ordre d'origine, supprimer le réglage de menu dans l'éditeur.
+- **Les miniatures de la page Catalogue n'ont pas d'image** : vérifier `CSP_STORAGE_ORIGINS` côté web (adresse du stockage).
+- **Retour arrière** : redéployer le commit précédent ; la table `formats` reste en base sans gêner l'ancienne version.
+
+### Ce qui a été testé / non testé
+Testé : API (36 contrôles formats + tests existants home, cartes, lot, catégories, contenu, fonctions, mise en page : OK), `next build`, navigateur (Chromium émulé, français et arabe, 390 / 1440 / 1990 px, visiteur et administrateur). Non testé : vrai téléphone, vraies miniatures du stockage Garage, rôles organisateur / modérateur dans le navigateur. À noter : dans l'environnement de test, `test_home.py` échoue sur l'envoi d'une image de bannière (stockage S3 absent de l'environnement de test, sans lien avec cette étape).

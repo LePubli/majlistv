@@ -18,7 +18,7 @@ const schema = z.object({
   offset: z.coerce.number().int().min(0).max(1000).default(0),
 });
 
-const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category, t.level,
+const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category, t.level, (SELECT slug FROM formats WHERE id = t.format_id) AS format, 
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description`;
 const PRE = '⟦';
 const POST = '⟧';

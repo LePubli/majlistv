@@ -35,6 +35,7 @@ import moduleRoutes, { discoverModules, registerModules, migrateModules, allModu
 import { startAudit } from './audit.js';
 import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
 import speakersRoutes from './routes/speakers.js';
+import formatRoutes from './routes/formats.js'; // étape B : formats de contenu et page Catalogue
 import * as ext from './ext.js'; // étape M3a : le menu « Séries » n'apparaît que s'il y a une série (fournie par le module series)
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
@@ -128,6 +129,7 @@ await app.register(moduleRoutes);
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(talksRoutes);
+await app.register(formatRoutes);
 await app.register(uploadRoutes);
 await app.register(hlsRoutes);
 await app.register(transcriptRoutes);

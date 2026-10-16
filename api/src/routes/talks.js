@@ -41,6 +41,7 @@ export function parseVideoUrl(raw) {
 const listSchema = z.object({
   q: z.string().max(100).optional(),
   category: z.coerce.number().int().optional(),
+  format: z.string().regex(/^[a-z0-9-]{2,40}$/).optional(), // étape B : slug d'un format (page /catalogue?format=…)
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   speaker: z.string().max(120).regex(/^[a-z0-9-]+$/).optional(), // slug d'un intervenant (page /intervenants/…)
   limit: z.coerce.number().int().min(1).max(100).default(24),
@@ -53,6 +54,7 @@ const talkSchema = z.object({
   speaker: z.string().trim().max(200).default(''),
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().optional(),
+  formatId: z.number().int().positive().optional(), // étape B : format (conférence, cours…) ; par défaut « conférence »
   extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires (2 au plus)
   kidsBands: z.array(z.enum(BANDS)).max(9).default([]), // Mejliss Kids : tranches d'âge (vide = pas pour les enfants)
   showAdults: z.boolean().optional(), // visible dans le catalogue adultes (par défaut : oui, sauf conférence Kids)
@@ -76,6 +78,7 @@ const patchSchema = z.object({
   description: z.string().trim().max(5000),
   speaker: z.string().trim().max(200),
   categoryId: z.number().int().positive().nullable(),
+  formatId: z.number().int().positive().nullable(),
   access: z.enum(['free', 'premium']),
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
   extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES),
@@ -90,7 +93,7 @@ const patchSchema = z.object({
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
-  t.video_ref, t.category_id, c.name AS category, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
+  t.video_ref, t.category_id, c.name AS category, t.format_id AS "formatId", (SELECT slug FROM formats WHERE id = t.format_id) AS format, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
   COALESCE((SELECT array_agg(tc.category_id ORDER BY tc.category_id) FROM talk_categories tc WHERE tc.talk_id = t.id), '{}') AS "extraCategoryIds",
   t.audio_status, t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
@@ -134,6 +137,7 @@ const bulkSchema = z.object({
   bandsMode: z.enum(['replace', 'add', 'remove']).default('replace'), // façon de modifier les tranches Kids
   changes: z.object({
     categoryId: z.number().int().positive().nullable(),
+    formatId: z.number().int().positive().nullable(),
     extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES),
     access: z.enum(['free', 'premium']),
     level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
@@ -234,9 +238,10 @@ export default async function talksRoutes(app) {
               OR t.transcript_text ILIKE '%' || $1 || '%')
          AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
          AND ($5::text IS NULL OR t.level = $5)
+         AND ($7::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $7))
          AND ${adultSql('t')}
        ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
-      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names]
+      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names, p.format ?? null]
     );
     for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
@@ -382,12 +387,12 @@ export default async function talksRoutes(app) {
       const m = video.meta || {};
       const { rows } = await pool.query(
         `INSERT INTO talks(organizer_id, title, description, speaker, language, category_id, access, source, video_ref, video_status, transcript_status, rights_confirmed,
-                           external_file, external_thumb, duration_seconds, publication, publish_at, level, kids_bands, show_adults)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
+                           external_file, external_thumb, duration_seconds, publication, publish_at, level, kids_bands, show_adults, format_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, COALESCE($21::int, (SELECT id FROM formats WHERE slug = 'conference'))) RETURNING id`,
         [req.user.sub, b.title, b.description || m.description || '', b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
           video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
           m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt, b.level ?? null,
-          cleanBands(b.kidsBands), b.showAdults ?? cleanBands(b.kidsBands).length === 0]
+          cleanBands(b.kidsBands), b.showAdults ?? cleanBands(b.kidsBands).length === 0, b.formatId ?? null]
       );
       const extras = cleanExtras(b.extraCategoryIds, b.categoryId ?? null);
       if (extras.length) await saveExtras(pool, rows[0].id, extras);
@@ -399,7 +404,7 @@ export default async function talksRoutes(app) {
       }
       return reply.code(201).send(rows[0]);
     } catch (err) {
-      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
+      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie ou format inconnu' });
       throw err;
     }
   });
@@ -422,6 +427,7 @@ export default async function talksRoutes(app) {
         if (b.speaker !== undefined) set('speaker', b.speaker);
         if (b.language !== undefined) set('language', b.language);
         if (b.categoryId !== undefined) set('category_id', b.categoryId);
+        if (b.formatId !== undefined) set('format_id', b.formatId);
         if (b.access !== undefined) set('access', b.access);
         if (b.level !== undefined) set('level', b.level);
         if (b.showAdults !== undefined) set('show_adults', b.showAdults);
@@ -444,7 +450,7 @@ export default async function talksRoutes(app) {
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');
-      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
+      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie ou format inconnu' });
       throw err;
     } finally {
       client.release();
@@ -466,6 +472,7 @@ export default async function talksRoutes(app) {
     if (b.description !== undefined) set('description', b.description);
     if (b.speaker !== undefined) set('speaker', b.speaker);
     if (b.categoryId !== undefined) set('category_id', b.categoryId);
+    if (b.formatId !== undefined) set('format_id', b.formatId);
     if (b.access !== undefined) set('access', b.access);
     if (b.level !== undefined) set('level', b.level);
     if (b.kidsBands !== undefined) set('kids_bands', cleanBands(b.kidsBands));
@@ -508,7 +515,7 @@ export default async function talksRoutes(app) {
         await pool.query(`UPDATE series_episodes e SET access_override = CASE WHEN s.access = $2 THEN NULL ELSE $2 END FROM series s WHERE e.talk_id = $1 AND s.id = e.series_id`, [id, b.access]);
       }
     } catch (err) {
-      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
+      if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie ou format inconnu' });
       throw err;
     }
     // L'ancienne image envoyée n'est plus utilisée : on la supprime.

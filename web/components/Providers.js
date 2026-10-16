@@ -22,6 +22,8 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   const [viewAs, setViewAs] = useState(null); // aperçu de l'éditeur : 'visitor' = voir le site comme un visiteur non connecté
   const [layoutPreview, setLayoutPreview] = useState(null); // aperçu de l'éditeur (Admin → Pages) : remplace les réglages publiés
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
+  const [formats, setFormats] = useState([]); // liste des formats (conférence, cours…) : nom selon la langue, pour les badges et le catalogue
+  const [cats, setCats] = useState([]); // catégories principales (menu latéral et tiroir du téléphone)
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
   const [blockEdits, setBlockEdits] = useState({}); // mode édition sur la page : blocs modifiés (id → bloc), vus tout de suite par l'administrateur
   const [textPatch, setTextPatch] = useState({});   // mode édition sur la page : textes modifiés (clé → texte), pour la langue courante
@@ -55,6 +57,10 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
       .finally(() => setReady(true));
   }, []);
 
+  useEffect(() => { fetch('/api/formats').then((r) => (r.ok ? r.json() : [])).then((f) => Array.isArray(f) && setFormats(f)).catch(() => {}); }, []);
+  useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setCats(c.filter((x) => x.parentId == null))).catch(() => {}); }, []);
+  // Nom d'un format (slug) dans la langue courante ; vide si inconnu.
+  const formatName = (slug) => { const f = formats.find((x) => x.slug === slug); return f ? (f['name' + locale[0].toUpperCase() + locale.slice(1)] || f.nameFr) : ''; };
   // Favoris de l'utilisateur connecté (cœur sur les vignettes).
   useEffect(() => {
     if (!token || kid) { setFavs(new Set()); return; }
@@ -85,5 +91,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ formats, formatName, cats, features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }

@@ -25,10 +25,11 @@ export function deviceClass(show) {
 //   cfg      : liste enregistrée (ou undefined = menu d'origine)
 //   defaults : éléments d'origine dans l'ordre d'origine : { key, href, label, on (condition), …autres champs }
 //   required : clés qu'on n'a pas le droit de masquer (liens légaux)
+// Un élément marqué `hid` est masqué tant qu'aucun réglage ne l'a affiché (ex. Collections dans le menu du haut depuis l'étape B).
 // Un élément d'origine garde son adresse et sa condition ; on peut changer son texte, son ordre, sa visibilité.
 export function resolveList(cfg, defaults, { user, lang, required = [] }) {
   const byKey = new Map(defaults.map((d) => [d.key, d]));
-  if (!Array.isArray(cfg)) return defaults.filter((d) => d.on).map((d) => ({ ...d, cls: '' }));
+  if (!Array.isArray(cfg)) return defaults.filter((d) => d.on && !d.hid).map((d) => ({ ...d, cls: '' }));
   const out = [];
   const seen = new Set();
   for (const it of cfg) {
@@ -50,6 +51,9 @@ export function resolveList(cfg, defaults, { user, lang, required = [] }) {
     }
   }
   // Une fonction ajoutée plus tard (ou un élément absent des réglages) apparaît quand même, à la fin.
-  for (const d of defaults) if (!seen.has(d.key) && d.on) out.push({ ...d, cls: '' });
+  for (const d of defaults) if (!seen.has(d.key) && d.on && !d.hid) out.push({ ...d, cls: '' });
   return out;
 }
+
+// Éléments d'origine d'un menu (navcfg MENUS) avec leur condition : applique le drapeau « masqué par défaut » (3e valeur).
+export const withHid = (builtin, D) => builtin.map(([k, , hid]) => ({ ...D[k], ...(hid ? { hid: true } : {}) }));

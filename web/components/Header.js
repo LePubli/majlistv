@@ -10,8 +10,8 @@ import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
 import { memberShellOn } from '../lib/shell';
 import NavLink from './NavLink';
-import { resolveList, audienceOk, deviceClass } from '../lib/menus';
-import { defaultHeader } from '../lib/navcfg';
+import { resolveList, audienceOk, deviceClass, withHid } from '../lib/menus';
+import { defaultHeader, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 import { NAV_ICON_PATHS } from '../lib/navicons';
 
@@ -77,7 +77,7 @@ const ICONS = {
 
 // En-tête du site : pages principales, loupe (recherche en panneau), compte. Sur téléphone : menu latéral.
 function MainHeader() {
-  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks, feat, layout } = useApp();
+  const { appName, t, locale, user, ready, logout, hasSeries, hasBooks, feat, layout, cats } = useApp();
   const router = useRouter();
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
@@ -105,15 +105,17 @@ function MainHeader() {
   const modOnly = user && user.role === 'moderator';
   // Menu principal : éléments d'origine (avec leurs conditions) mis dans l'ordre et au gré des réglages de Admin → Pages (étape I4).
   const nav = layout?.nav;
-  const pages = resolveList(nav?.menus?.main, [
-    { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
-    { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
-    { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.series, on: feat('collections') },
-    { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
-    { key: 'learning', href: '/learning', label: t('lrNav'), icon: ICONS.learn, on: Boolean(user) && feat('learning') },
-    { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: Boolean(user) && (feat('favorites') || feat('lists')) },
-    { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.price, on: feat('kids'), kids: true },
-  ], { user, lang: locale });
+  const mainD = {
+    home: { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
+    catalogue: { key: 'catalogue', href: '/catalogue', label: t('navCatalogue'), icon: ICONS.series, on: true },
+    series: { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
+    collections: { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.series, on: feat('collections') },
+    books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
+    learning: { key: 'learning', href: '/learning', label: t('navLearn'), icon: ICONS.learn, on: feat('learning') },
+    library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: Boolean(user) && (feat('favorites') || feat('lists')) },
+    kids: { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.price, on: feat('kids'), kids: true },
+  };
+  const pages = resolveList(nav?.menus?.main, withHid(MENUS.main.builtin, mainD), { user, lang: locale });
   const iconOf = (it) => (it.custom ? NAV_ICON_PATHS[it.icon] || NAV_ICON_PATHS.link : it.icon);
   const hz = nav?.header || defaultHeader();
   const logoutNow = () => { logout(); setMenu(false); setDrawer(false); router.push('/'); };
@@ -198,6 +200,12 @@ function MainHeader() {
             <nav aria-label={t('mainNav')} className="dr-nav">
               <p className="hd-menu-title">{t('hmDiscover')}</p>
               {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined}><Ico d={iconOf(it)} />{it.label}</NavLink>)}
+              {cats?.length > 0 && (
+                <>
+                  <p className="hd-menu-title dr-sep">{t('msCats')}</p>
+                  {cats.map((c) => <NavLink key={c.id} href={`/catalogue?cat=${c.id}`}>{c.name}</NavLink>)}
+                </>
+              )}
               {manager && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('hmManage')}</p>

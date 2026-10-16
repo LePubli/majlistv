@@ -102,8 +102,9 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
 }
 
 export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
-  const { cards, locale } = useApp();
+  const { cards, locale, formatName } = useApp();
   const cfg = cards;
+  const fmt = talk.format ? formatName(talk.format) : '';
   const show = cfg.show;
   const wrap = useRef(null);
   const [rect, setRect] = useState(null);
@@ -143,7 +144,8 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
   return (
     <div className="talk-wrap" ref={wrap} onMouseEnter={enter} onMouseLeave={leave}>
       <Link href={talk.quizState ? `/talks/${talk.id}?quiz=1` : `/talks/${talk.id}`} className="talk">
-        <div className="thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
+        <div className={fmt ? 'thumb has-fmt' : 'thumb'} style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
+          {fmt && <span className="fmt-badge">{fmt}</span>}
           {talk.quizState
             ? <span className="badge next">{talk.quizState === 'retry' ? `${t('qpRevise')} · ${talk.bestPercent} %` : talk.quizState === 'review' ? t('revBadge') : t('qpTodo')}</span>
             : talk.nextUp

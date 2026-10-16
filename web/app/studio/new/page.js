@@ -55,7 +55,7 @@ function frameOf(file) {
 }
 
 export default function NewTalk() {
-  const { t, call, locale } = useApp();
+  const { t, call, locale, formats } = useApp();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
@@ -67,7 +67,7 @@ export default function NewTalk() {
   const [cats, setCats] = useState([]);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
+  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', formatId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
   const token = useRef(0);
   const fileInput = useRef(null);
   const parsed = link ? parseLink(link) : null;
@@ -109,7 +109,7 @@ export default function NewTalk() {
     e?.preventDefault();
     if (saving || (mode === 'file' && up.state !== 'done')) return;
     setErr(''); setSaving(true);
-    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, level: f.level || undefined };
+    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, formatId: f.formatId ? Number(f.formatId) : undefined, level: f.level || undefined };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
     if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else body.videoUrl = link.trim();
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
@@ -193,6 +193,16 @@ export default function NewTalk() {
                   <option value="">{t('nwLangOther')}</option>
                   {TR_LANGS.filter((c) => !QUICK_LANGS.includes(c)).map((c) => <option key={c} value={c}>{langName(c, locale)}</option>)}
                 </select>
+              </div>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('fmtLabel')}>
+              <span>{t('fmtLabel')}</span>
+              <div className="pills">
+                <button type="button" aria-pressed={!f.formatId} className={!f.formatId ? 'pill on' : 'pill'} onClick={() => patch({ formatId: '' })}>{t('fmtNone')}</button>
+                {formats.map((fm) => (
+                  <button key={fm.id} type="button" aria-pressed={String(f.formatId) === String(fm.id)} className={String(f.formatId) === String(fm.id) ? 'pill on' : 'pill'} onClick={() => patch({ formatId: String(fm.id) })}>{fm['name' + locale[0].toUpperCase() + locale.slice(1)] || fm.nameFr}</button>
+                ))}
               </div>
             </div>
 

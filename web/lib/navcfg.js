@@ -23,22 +23,25 @@ export const MAX_CUSTOM = 20;
 export const MENUS = {
   main: {
     label: 'Menu principal', hint: 'Les liens de l’en-tête (ordinateur) et du menu ☰ du téléphone.',
-    builtin: [['home', 'Accueil'], ['series', 'Séries'], ['collections', 'Collections'], ['books', 'Ouvrages'], ['learning', 'Apprentissage'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids']],
+    // Étape B : Accueil · Catalogue · Séries · Apprendre · Kids ; Collections, Ouvrages et Bibliothèque restent dans le menu latéral (masqués ici par défaut, à réafficher dans l'éditeur).
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['learning', 'Apprendre'], ['kids', 'Mejliss Kids'],
+      ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['library', 'Ma bibliothèque', true]],
   },
   side: {
-    label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur), en quatre groupes.',
-    groups: [['discover', 'Découvrir'], ['space', 'Mon espace'], ['account', 'Compte'], ['manage', 'Gérer']],
+    label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur), en cinq groupes ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
+    groups: [['discover', 'Découvrir'], ['space', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
-      discover: [['home', 'Accueil'], ['series', 'Séries'], ['collections', 'Collections'], ['books', 'Ouvrages'], ['channels', 'Chaînes']],
-      space: [['learning', 'Apprentissage'], ['library', 'Ma bibliothèque'], ['bilan', 'Mon bilan']],
-      account: [['kids', 'Mejliss Kids'], ['account', 'Mon compte']],
+      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['books', 'Ouvrages'], ['channels', 'Chaînes']],
+      space: [['learning', 'Mon parcours'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
+      library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
+      account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],
       manage: [['studio', 'Studio'], ['admin', 'Administration']],
     },
   },
   bar: {
     label: 'Barre du bas (téléphone)', hint: `La barre de ${BAR_MAX} liens en bas de l’écran du téléphone, pour les membres connectés.`,
-    builtin: [['home', 'Accueil'], ['series', 'Séries'], ['learning', 'Apprentissage'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'],
-      ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true], ['kids', 'Mejliss Kids', true]],
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['learning', 'Apprendre'], ['kids', 'Mejliss Kids'],
+      ['library', 'Ma bibliothèque', true], ['account', 'Mon compte', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true]],
   },
   footer: {
     label: 'Liens du pied de page', hint: 'Les trois liens légaux sont obligatoires : on peut les déplacer ou les renommer, pas les retirer.',

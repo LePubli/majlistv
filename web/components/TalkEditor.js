@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
 import { BANDS, bandLabel } from '../lib/kids';
+import { useApp } from './Providers';
 const MAX_EXTRA = 2;
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
@@ -15,7 +16,7 @@ const toLocalInput = (iso) => {
 };
 const initial = (x) => ({
   title: x.title || '', speaker: x.speaker || '', description: x.description || '',
-  categoryId: x.category_id ? String(x.category_id) : '', extraCategoryIds: [...(x.extraCategoryIds || [])].sort((a, b) => a - b), access: x.access, level: x.level || '',
+  formatId: x.formatId ? String(x.formatId) : '', categoryId: x.category_id ? String(x.category_id) : '', extraCategoryIds: [...(x.extraCategoryIds || [])].sort((a, b) => a - b), access: x.access, level: x.level || '',
   kidsBands: BANDS.filter((b) => (x.kidsBands || []).includes(b)), showAdults: x.showAdults !== false,
   publication: x.publication || 'published', publishAt: toLocalInput(x.publishAt), featured: Boolean(x.featured),
 });
@@ -40,6 +41,7 @@ function resizeImage(file) {
 }
 
 export default function TalkEditor({ x, reload, t, call, isAdmin }) {
+  const { formats, locale } = useApp();
   const [f, setF] = useState(() => initial(x));
   const [cats, setCats] = useState([]);
   const [msg, setMsg] = useState(null);
@@ -61,6 +63,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
     setSaving(true); setMsg(null);
     const body = {
       title: f.title, speaker: f.speaker, description: f.description, access: f.access, level: f.level || null, kidsBands: f.kidsBands, showAdults: f.showAdults,
+      ...(f.formatId ? { formatId: Number(f.formatId) } : {}),
       categoryId: f.categoryId ? Number(f.categoryId) : null, extraCategoryIds: f.extraCategoryIds.filter((id) => String(id) !== String(f.categoryId)),
       publication: f.publication, publishAt: sched ? new Date(f.publishAt).toISOString() : null,
       ...(isAdmin ? { featured: f.featured } : {}),
@@ -134,6 +137,12 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
           <input maxLength={200} value={f.speaker} onChange={(e) => patch({ speaker: e.target.value })} /></label>
         <label className="fld"><span>{t('description')}</span>
           <textarea rows={5} maxLength={5000} value={f.description} onChange={(e) => patch({ description: e.target.value })} /></label>
+        <div className="fld" role="group" aria-label={t('fmtLabel')}>
+          <span>{t('fmtLabel')}</span>
+          <div className="pills">
+            {formats.map((fm) => pill(String(f.formatId) === String(fm.id), fm['name' + locale[0].toUpperCase() + locale.slice(1)] || fm.nameFr, () => patch({ formatId: String(fm.id) })))}
+          </div>
+        </div>
         <div className="fld" role="group" aria-label={t('category')}>
           <span>{t('category')}</span>
           <div className="pills">
