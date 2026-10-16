@@ -3033,3 +3033,19 @@ python3 web/tests/module_removal_build.py series stats quiz revenue   # le site 
 ### Ce qui a été testé / non testé
 Testé : `next build`, navigateur Chromium émulé (administrateur, organisateur, modérateur ; fr + ar ; 390, 1440 et 1990 px, sans débordement), non-régression des étapes B et C et des retours du 16/10.
 **Non testé / limites** : vrai téléphone ; données réelles (le tableau de bord a été vu avec les données de test : vues à 0). Le bloc « Espace de stockage » de la maquette n'est **pas repris** : l'API n'expose pas l'occupation du stockage (à ajouter plus tard si vous le souhaitez). « Chaînes » du groupe Catalogue de l'Admin et « Extraits » / « Archivés » des Contenus n'existent pas encore (pas de fonction correspondante) : non ajoutés plutôt qu'inventés. Les textes des nouveaux écrans sont dans le dictionnaire (fr/en/ar) mais les anciens écrans Admin gardent leurs libellés écrits en français dans le code.
+
+## Accueil de l'enfant (Kids) : menu latéral et cartes de progression (retour d'Epok du 16/10, soir)
+
+### Description
+- L'accueil de l'enfant (`/kids`, une fois le profil ouvert) a maintenant un **menu latéral** (Accueil · Regarder · Apprendre), qui devient une barre en haut sur téléphone.
+- **Accueil** : bannière Kids (inchangée), salutation, temps restant, grande carte « Regarder » (reprise de la dernière vidéo, sinon la première à voir), **cartes de progression** (étoiles, badges obtenus sur le total, vidéos vues sur le total avec barre, « à rejouer aujourd'hui »), badges, à rejouer, à continuer, « Pour toi » (8 premières, lien « Voir toutes les vidéos »).
+- **Regarder** (`/kids?tab=watch`) : à continuer + toutes les vidéos de son âge. **Apprendre** (`/kids?tab=learn`) : étoiles, tous les badges avec leur explication (grisés tant qu'ils ne sont pas gagnés), vidéos à rejouer.
+- Couleurs et logo Kids inchangés. Aucune migration, aucun changement d'API : web seulement (redéployer `majlistv-web`).
+
+### À décider
+La « **bonne action de la semaine** » / « Mes petites actions » de la maquette (actions validées par un parent) n'existe pas encore côté données (aucun écran, aucune table). Elle n'est donc **pas** ajoutée : voir les questions posées à Epok.
+
+### Test
+```bash
+python3 web/tests/kids_menu.py   # navigateur : profil enfant, menu, cartes, onglets ; fr + ar ; 390 / 1440 / 1990 px
+```

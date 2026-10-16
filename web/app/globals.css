@@ -2594,3 +2594,42 @@ h1 .studio-soon { font-size: 12px; margin-inline-start: 10px; vertical-align: mi
 @media (max-width: 1100px) { .sd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sd-grid .sd-wide { grid-column: 1 / -1; } .sd-grid .sd-card:not(.sd-wide) { grid-column: auto; } }
 @media (max-width: 700px) { .sd-grid { grid-template-columns: minmax(0, 1fr); } .sd-card { padding: 16px; } }
 .sd-card .btn { align-self: flex-start; }
+
+/* ---- Accueil de l'enfant : menu latéral + cartes de progression (maquette Kids) ---- */
+.kd-shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); max-width: 1380px; margin: 0 auto; padding-inline: clamp(12px, 2vw, 28px); gap: 8px; align-items: start; }
+.kd-shell .kd-page { max-width: none; margin: 0; min-width: 0; padding-inline: clamp(8px, 1.5vw, 20px); }
+.kd-side { position: sticky; top: 16px; margin-top: 24px; display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: 24px; background: rgba(22, 33, 95, .85); border: 2px solid rgba(255, 255, 255, .12); }
+.kd-side nav { display: flex; flex-direction: column; gap: 6px; }
+.kd-side nav a { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 999px; color: #F6F7FF; font-weight: 700; font-size: 1.05rem; }
+.kd-side nav a:hover { background: rgba(255, 255, 255, .1); }
+.kd-side nav a.on { background: #FFC83D; color: #101A56; font-weight: 800; }
+.kd-side nav a span:first-child { font-size: 1.25rem; }
+.kd-side-note { margin: 0; padding: 0 6px; font-size: .8rem; color: #B9C0F0; line-height: 1.4; }
+.kd-hero { display: block; }
+.kd-hero-main { position: relative; display: flex; align-items: flex-end; min-height: clamp(220px, 28vw, 340px); border-radius: 28px; overflow: hidden; border: 3px solid #FFC83D; background: linear-gradient(135deg, #2a1a6b, #a0336f) center / cover no-repeat; color: #fff; }
+.kd-hero-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(7, 11, 39, .92) 0%, rgba(7, 11, 39, .05) 70%); }
+.kd-hero-text { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: clamp(16px, 3vw, 28px); }
+.kd-hero-text small { font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #FFC83D; }
+.kd-hero-text b { font-size: clamp(1.4rem, 3.4vw, 2.2rem); line-height: 1.15; overflow-wrap: anywhere; }
+.kd-hero-btn { display: inline-flex; align-items: center; min-height: 52px; padding: 0 28px; border-radius: 999px; background: #FFC83D; color: #101A56; font-weight: 800; font-size: 1.1rem; }
+.kd-progress { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+.kd-pcard { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: 24px; background: #16215F; border: 2px solid rgba(255, 255, 255, .12); color: #F6F7FF; min-width: 0; }
+.kd-pcard b { font-size: 1.9rem; line-height: 1.1; color: #FFC83D; }
+.kd-pcard > span:last-of-type { color: #B9C0F0; font-size: .95rem; }
+.kd-pico { font-size: 1.6rem; }
+.kd-pbar { display: block; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .15); margin-top: 6px; }
+.kd-pbar u { display: block; height: 8px; border-radius: 4px; background: #6FCF4F; text-decoration: none; }
+a.kd-pcard:hover { border-color: #FFC83D; }
+.kd-badges-big { gap: 14px; }
+.kd-badges-big .kd-badge { width: 150px; padding: 14px 8px; text-align: center; }
+.kd-badges-big .kd-badge small { font-size: .72rem; color: #B9C0F0; line-height: 1.3; }
+@media (max-width: 900px) {
+  .kd-shell { grid-template-columns: minmax(0, 1fr); }
+  .kd-side { position: static; margin-top: 12px; padding: 8px; border-radius: 999px; }
+  .kd-side nav { flex-direction: row; overflow-x: auto; }
+  .kd-side nav a { flex: 1 0 auto; justify-content: center; min-height: 48px; padding: 0 14px; font-size: 1rem; }
+  .kd-side-note { display: none; }
+}
+.kd-hero { margin-bottom: 20px; }
+.kd-progress { margin-bottom: 8px; }
+@media (min-width: 901px) { .kd-side nav a { justify-content: flex-start; } }
