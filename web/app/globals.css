@@ -2633,3 +2633,22 @@ a.kd-pcard:hover { border-color: #FFC83D; }
 .kd-hero { margin-bottom: 20px; }
 .kd-progress { margin-bottom: 8px; }
 @media (min-width: 901px) { .kd-side nav a { justify-content: flex-start; } }
+
+/* ---- Kids : « Mes petites actions » ---- */
+.ka-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ka-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 20px; background: #16215F; border: 2px solid rgba(255, 255, 255, .12); color: #F6F7FF; }
+.ka-item.validated { border-color: rgba(111, 207, 79, .55); }
+.ka-item.claimed { border-color: rgba(255, 200, 61, .55); }
+.ka-box { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; border: 2px solid rgba(255, 255, 255, .5); }
+.ka-item.validated .ka-box { background: #FFC83D; border-color: #FFC83D; color: #101A56; }
+.ka-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ka-text b { overflow-wrap: anywhere; font-size: 1.05rem; }
+.ka-text small { color: #B9C0F0; }
+.ka-done { flex: none; min-height: 44px; }
+.ka-title { margin: 0 0 12px; }
+.ka-after { margin: 14px 0; padding: 16px; border-radius: 20px; background: rgba(255, 255, 255, .06); }
+.ka-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 8px 0 14px; }
+.ka-add .fld { flex: 1 1 260px; }
+.kd-ctrl .ka-item { background: var(--surface); border-color: var(--line-soft); color: inherit; }
+.kd-ctrl .ka-text small { color: var(--muted); }
+.ka-note { margin-top: 10px; }

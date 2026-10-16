@@ -280,6 +280,7 @@ export default async function kidsRoutes(app) {
       for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
       out.due = rows;
     }
+    out.actions = await actionCounts(c.profile.id);
     return out;
   });
 
@@ -390,5 +391,60 @@ export default async function kidsRoutes(app) {
     }
     const u = (await pool.query('SELECT id, email, name, role, locale FROM users WHERE id = $1', [c.parent.sub])).rows[0];
     return { token: app.jwt.sign({ sub: u.id, role: u.role }), user: u };
+  });
+
+  // ------------------------------------------------------------------ « Mes petites actions »
+  // Le parent propose des actions concrètes à un enfant ; l'enfant dit « je l'ai fait » ; le parent valide. L'enfant ne peut jamais valider.
+  const MAX_OPEN_ACTIONS = 20;
+  const actionBody = z.object({ title: z.string().trim().min(1).max(120) });
+  const actionIds = z.object({ id: z.string().uuid(), aid: z.string().uuid() });
+  const actionCounts = async (profileId) => {
+    const r = (await pool.query(`SELECT count(*) FILTER (WHERE status = 'todo')::int AS todo, count(*) FILTER (WHERE status = 'claimed')::int AS claimed,
+        count(*) FILTER (WHERE status = 'validated')::int AS validated FROM kid_actions WHERE profile_id = $1`, [profileId])).rows[0];
+    return r;
+  };
+  const actionRows = async (profileId) => (await pool.query(
+    `SELECT id, title, status, created_at AS "createdAt", claimed_at AS "claimedAt", validated_at AS "validatedAt" FROM kid_actions
+      WHERE profile_id = $1 ORDER BY (status = 'validated'), created_at DESC LIMIT 100`, [profileId])).rows;
+
+  // Parent : liste, ajout, validation, suppression (profil du parent connecté seulement).
+  app.get('/me/kids/profiles/:id/actions', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    return { actions: await actionRows(p.id), counts: await actionCounts(p.id) };
+  });
+  app.post('/me/kids/profiles/:id/actions', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const b = actionBody.parse(req.body ?? {});
+    const open = (await actionCounts(p.id));
+    if (open.todo + open.claimed >= MAX_OPEN_ACTIONS) return reply.code(409).send({ error: `Déjà ${MAX_OPEN_ACTIONS} actions en cours : validez ou supprimez-en d'abord`, code: 'limit' });
+    const r = await pool.query('INSERT INTO kid_actions(profile_id, title) VALUES ($1, $2) RETURNING id', [p.id, b.title]);
+    return reply.code(201).send({ id: r.rows[0].id });
+  });
+  app.post('/me/kids/profiles/:id/actions/:aid/validate', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const { aid } = actionIds.parse(req.params);
+    const r = await pool.query(`UPDATE kid_actions SET status = 'validated', validated_at = now() WHERE id = $1 AND profile_id = $2 AND status <> 'validated'`, [aid, p.id]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable ou déjà validée' });
+    return { ok: true };
+  });
+  app.delete('/me/kids/profiles/:id/actions/:aid', auth, async (req, reply) => {
+    const p = await ownProfile(req, reply); if (!p) return;
+    const { aid } = actionIds.parse(req.params);
+    const r = await pool.query('DELETE FROM kid_actions WHERE id = $1 AND profile_id = $2', [aid, p.id]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable' });
+    return { ok: true };
+  });
+
+  // Enfant : voir ses actions et dire « je l'ai fait » (en attente de la validation du parent).
+  app.get('/kids/actions', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    return { actions: await actionRows(c.profile.id), counts: await actionCounts(c.profile.id) };
+  });
+  app.post('/kids/actions/:aid/claim', kidAuth, async (req, reply) => {
+    const c = await ctx(req, reply); if (!c) return;
+    const { aid } = z.object({ aid: z.string().uuid() }).parse(req.params);
+    const r = await pool.query(`UPDATE kid_actions SET status = 'claimed', claimed_at = now() WHERE id = $1 AND profile_id = $2 AND status = 'todo'`, [aid, c.profile.id]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable' });
+    return { ok: true };
   });
 }

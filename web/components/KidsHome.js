@@ -7,6 +7,7 @@ import { useApp } from './Providers';
 import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
 import { useKidTime, leftMin } from '../lib/kidTime';
 import KidsBanner from './KidsBanner';
+import { KidActions } from './KidsActions';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -41,12 +42,12 @@ export default function KidsHome() {
         {sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>}</section>
     </main>
   );
-  const tab = ['watch', 'learn'].includes(tab0) ? tab0 : 'home';
+  const tab = ['watch', 'learn', 'act'].includes(tab0) ? tab0 : 'home';
   const talks = d?.talks || [];
   const seen = talks.filter((x) => x.completed).length;
   const hero = (d?.resume || [])[0] || talks.find((x) => !x.completed) || talks[0] || null;
   const earned = sum?.badges?.length || 0;
-  const MENU = [['home', 'kdMHome', '🏠', '/kids'], ['watch', 'kdMWatch', '▶️', '/kids?tab=watch'], ...(sum?.learning !== false ? [['learn', 'kdMLearn', '🧠', '/kids?tab=learn']] : [])];
+  const MENU = [['home', 'kdMHome', '🏠', '/kids'], ['watch', 'kdMWatch', '▶️', '/kids?tab=watch'], ...(sum?.learning !== false ? [['learn', 'kdMLearn', '🧠', '/kids?tab=learn']] : []), ['act', 'kdMAct', '🌱', '/kids?tab=act']];
   const Stars3 = () => sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>;
   const Badges = ({ detail }) => sum?.learning && (
     <ul className={detail ? 'kd-badges kd-badges-big' : 'kd-badges'} aria-label={t('kdBadges')}>
@@ -86,9 +87,11 @@ export default function KidsHome() {
                 {sum.learning && <div className="kd-pcard"><span className="kd-pico" aria-hidden="true">🏅</span><b>{earned} / {BADGE_CODES.length}</b><span>{t('kdBadges')}</span></div>}
                 <div className="kd-pcard"><span className="kd-pico" aria-hidden="true">📺</span><b>{seen} / {talks.length}</b><span>{t('kdMSeen')}</span>
                   <i className="kd-pbar" aria-hidden="true"><u style={{ width: `${talks.length ? Math.round((seen / talks.length) * 100) : 0}%` }} /></i></div>
+                <Link href="/kids?tab=act" className="kd-pcard link-card"><span className="kd-pico" aria-hidden="true">🌱</span><b>{sum.actions?.validated ?? 0}</b><span>{t('kaValidatedCount')}</span></Link>
                 {sum.learning && <Link href="/kids?tab=learn" className="kd-pcard link-card"><span className="kd-pico" aria-hidden="true">🧠</span><b>{sum.due.length}</b><span>{t('kdDue')}</span></Link>}
               </section>
             )}
+            <section className="ka-home"><KidActions limit={3} onlyOpen hideEmpty title={t('kaTitle')} /></section>
             {sum?.learning && earned > 0 && <section aria-labelledby="kd-bd"><h2 id="kd-bd">{t('kdBadges')}</h2><Badges /></section>}
             {sum && sum.due.length > 0 && (
               <section aria-labelledby="kd-due"><h2 id="kd-due">{t('kdDue')}</h2><ul className="kd-grid">{sum.due.slice(0, 4).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
@@ -112,6 +115,10 @@ export default function KidsHome() {
               {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}
             </section>
           </>
+        )}
+
+        {tab === 'act' && (
+          <section aria-labelledby="kd-act"><h2 id="kd-act">{t('kaTitle')}</h2><KidActions /></section>
         )}
 
         {tab === 'learn' && sum && (

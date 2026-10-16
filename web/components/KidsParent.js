@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI, BANDS, bandLabel } from '../lib/kids';
 import KidsControls from './KidsControls';
+import { KidActionsParent } from './KidsActions';
 import KidsReport from './KidsReport';
 import KidsBanner from './KidsBanner';
 
@@ -64,6 +65,7 @@ export default function KidsParent() {
   const [manage, setManage] = useState(false);
   const [edit, setEdit] = useState(null); // profil en cours de modification, ou 'new'
   const [ctrl, setCtrl] = useState(null); // profil dont on règle le contrôle parental
+  const [act, setAct] = useState(null); // profil dont on gère les petites actions
   const [err, setErr] = useState('');
   const load = useCallback(async () => {
     const r = await call('/me/kids');
@@ -115,10 +117,12 @@ export default function KidsParent() {
                   {edit === p.id ? <ProfileForm t={t} call={call} p={p} bands={d.bands} avatars={d.avatars} onDone={() => { setEdit(null); load(); }} onCancel={() => setEdit(null)} /> : (
                     <div className="kd-row"><Avatar a={p.avatar} size={40} /><span><b>{p.name}</b> · {bandLabel(p.band, t)}</span>
                       <button type="button" className="link u small" onClick={() => setCtrl(ctrl === p.id ? null : p.id)} aria-expanded={ctrl === p.id}>{t('kcOpen')}</button>
+                      <button type="button" className="link u small" onClick={() => setAct(act === p.id ? null : p.id)} aria-expanded={act === p.id}>{t('kaOpen')}</button>
                       <button type="button" className="link u small" onClick={() => setEdit(p.id)}>{t('kdEdit')}</button>
                       <button type="button" className="link u small" onClick={() => del(p)}>{t('delete')}</button></div>
                   )}
                   {ctrl === p.id && <KidsControls profile={p} onClose={() => setCtrl(null)} />}
+                  {act === p.id && <KidActionsParent profile={p} />}
                 </li>
               ))}
             </ul>

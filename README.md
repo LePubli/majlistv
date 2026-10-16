@@ -3049,3 +3049,41 @@ La « **bonne action de la semaine** » / « Mes petites actions » de la maquet
 ```bash
 python3 web/tests/kids_menu.py   # navigateur : profil enfant, menu, cartes, onglets ; fr + ar ; 390 / 1440 / 1990 px
 ```
+
+## Kids : « Mes petites actions » (proposées et validées par les parents)
+
+### Description
+- **Le parent propose** des actions concrètes à chaque enfant (ex. « Dire bonjour avec le sourire ») : page `/kids` (espace parent) → *Gérer les profils* → lien **Petites actions** à côté du profil. 20 actions en cours au maximum par enfant. Rien n'est généré par l'IA.
+- **L'enfant les voit** : à la fin d'un quiz (« Bravo ! Une petite action pour continuer », 3 au plus), sur son accueil (carte « Mes petites actions »), dans l'onglet **Agir** du menu, et un compteur « Actions validées » dans ses cartes de progression. Il appuie sur **« Je l'ai fait »** : l'action passe « en attente d'un parent ». **L'enfant ne peut jamais valider** (le jeton enfant est refusé sur les routes parent).
+- **Le parent valide** (ou supprime) depuis le même écran, y compris sans attendre que l'enfant ait appuyé.
+- Migration **054_kid_actions.sql** (table `kid_actions`, statuts à faire → fait par l'enfant → validée). API : `GET/POST /me/kids/profiles/:id/actions`, `POST …/:aid/validate`, `DELETE …/:aid` (parent) ; `GET /kids/actions`, `POST /kids/actions/:aid/claim` (enfant) ; `/kids/summary` renvoie `actions: {todo, claimed, validated}`.
+
+### Prérequis
+Étape D et menu Kids déployés. Aucune variable `.env`.
+
+### Déploiement
+Code poussé sur GitHub. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (la migration 054 s'applique au démarrage), puis **`majlistv-web`**. Worker inchangé. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+1. Connecté en parent : https://majlisstv.le-publicitaire.fr/kids → *Espace parents* → *Petites actions* → ajouter une action.
+2. Ouvrir le profil de l'enfant, terminer un quiz : l'action apparaît sous les étoiles ; « Je l'ai fait ».
+3. Revenir en parent (code parental) : l'action est « Fait par l'enfant, à valider » → **Valider**.
+
+### Tests
+```bash
+python3 api/tests/test_kid_actions.py   # 27 contrôles : droits, isolation entre familles, enfant ne valide pas, limite, suppression du profil
+python3 web/tests/kids_actions.py       # navigateur : parent propose, enfant déclare (accueil, Agir, fin de quiz), parent valide ; fr + ar ; 390 / 1440 px
+python3 web/tests/kids_menu.py          # non-régression du menu Kids
+```
+
+### Debug
+- **Le lien « Petites actions » n'apparaît pas** : le web n'est pas redéployé (Ctrl+F5) ; **erreur 404/500 sur `/kids/actions`** : l'API n'est pas redéployée (migration 054 non appliquée).
+- **Rien après le quiz** : aucune action « à faire » pour cet enfant (normal).
+
+### Testé / non testé
+Testé : API (27 contrôles), navigateur Chromium émulé (fr + ar, 390 et 1440 px, sans débordement), fin de quiz avec 5 questions de test. **Non testé** : vrai téléphone ; rapport hebdomadaire aux parents (il ne mentionne pas encore les actions validées : possible suite) ; modèles d'actions prêtes à choisir (volontairement absents : le parent écrit les siennes).

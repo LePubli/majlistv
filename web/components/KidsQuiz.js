@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { BADGE_ICON, Stars } from '../lib/kids';
+import { KidActions } from './KidsActions';
 
 export default function KidsQuiz({ talkId, onClose, onDone }) {
   const { t, call, locale } = useApp();
@@ -46,6 +47,7 @@ export default function KidsQuiz({ talkId, onClose, onDone }) {
           <div className="kd-newbadge" role="status"><b>{t('kdNewBadge')}</b>
             <ul>{res.newBadges.map((b) => <li key={b}><span aria-hidden="true">{BADGE_ICON[b]}</span> {t(`kdB_${b}`)}</li>)}</ul></div>
         )}
+        <div className="ka-after"><KidActions limit={3} onlyOpen hideEmpty title={t('kaAfterQuiz')} /></div>
         {res.nextReview && <p className="meta">{t('kdNextReview').replace('{date}', new Date(res.nextReview + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</p>}
         <ol className="kd-review">
           {res.results.map((r, i) => (
