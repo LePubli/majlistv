@@ -16,6 +16,7 @@ import Quiz from '../../../components/Quiz';
 import PracticeBlock from '../../../components/PracticeBlock';
 import ReportButton from '../../../components/ReportButton';
 import ListButton from '../../../components/ListButton';
+import Crumbs from '../../../components/Crumbs';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -26,7 +27,7 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs, statsOn, feat } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName } = useApp();
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
@@ -47,7 +48,8 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette conférence
   const [bmFlash, setBmFlash] = useState(false);
   const [tab, setTab] = useState('about');          // onglet affiché sous le lecteur
-  const [ins, setIns] = useState({ summary: false, chapters: false }); // ce que contient l'analyse (résumé, chapitres)
+  const [cinema, setCinema] = useState(false); // mode cinéma : lecteur pleine largeur, menus masqués (Échap pour sortir)
+  const [ins, setIns] = useState({ summary: false, chapters: false, list: [] }); // ce que contient l'analyse (résumé, chapitres)
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
   const [upNext, setUpNext] = useState(null);      // compte à rebours avant l'épisode suivant (secondes), null = pas affiché
   const [quizOpen, setQuizOpen] = useState(false);   // panneau du quiz ouvert sous le lecteur
@@ -84,6 +86,15 @@ export default function TalkPage({ initial = null, talkId = null }) {
   useEffect(() => { call(`/talks/${id}/series`).then((r) => setCtx(r.ok ? r.data.series : null)); }, [id, call]);
 
   useEffect(() => { setSimilar([]); call(`/talks/${id}/similar`, {}, null).then((r) => r.ok && setSimilar(r.data)); }, [id, call]);
+  // Mode cinéma : la classe sur <body> masque les menus et élargit le lecteur ; Échap en sort ; on en sort aussi en quittant la page.
+  useEffect(() => {
+    document.body.classList.toggle('cinema-on', cinema);
+    if (!cinema) return undefined;
+    const esc = (e) => { if (e.key === 'Escape') setCinema(false); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [cinema]);
+  useEffect(() => () => document.body.classList.remove('cinema-on'), []);
 
   // Arrivée avec ?t= (clic sur un résultat de recherche) : on ouvre la transcription, là où se trouve le passage.
   const hasTracks = Boolean(talk && talk.tracks && talk.tracks.length);
@@ -346,14 +357,15 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const clockS = (sec) => clock(sec * 1000);
 
   // Onglets : seuls ceux qui ont du contenu apparaissent (À propos est toujours là).
+  // Ordre de la maquette : Résumé · Transcription · Mes notes, puis Chapitres et À propos. L'onglet d'arrivée est le premier disponible.
   const tabs = [
-    { key: 'about', label: t('tabAbout') },
-    ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
-    ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(hasInsights && ins.summary ? [{ key: 'summary', label: t('summary') }] : []),
+    ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(feat('notes') && user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
+    ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
+    { key: 'about', label: t('tabAbout') },
   ];
-  const current = tabs.some((x) => x.key === tab) ? tab : 'about';
+  const current = tabs.some((x) => x.key === tab) ? tab : tabs[0].key;
   const onTabKey = (e) => {
     const i = tabs.findIndex((x) => x.key === current);
     const dir = getComputedStyle(e.currentTarget).direction === 'rtl' ? -1 : 1;
@@ -374,6 +386,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
 
   return (
     <main className="page watch">
+      <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
       <div className="watch-grid">
         <div className="watch-main">
           <div className="player-wrap" ref={stageRef}>
@@ -395,19 +408,26 @@ export default function TalkPage({ initial = null, talkId = null }) {
             )}
             </div>
             {(talk.hlsPath || talk.fileUrl || embed) && (
-              <div className="speed-bar" role="group" aria-label={t('spdLabel')}>
-                <span className="meta">{t('spdLabel')}</span>
-                {SPEEDS.map((r) => (
-                  <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>
-                ))}
-                {user && hasPlayer && !talk.locked && (
-                  <button type="button" className="speed-pill bm-btn" onClick={() => addNote('')} title={t('ntBookmarkHelp')}>🔖 {bmFlash ? t('ntBookmarked') : t('ntBookmark')}</button>
-                )}
-                {talk.audioPath && (
-                  <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
-                    🎧 {audioMode ? t('audBackVideo') : t('audMode')}
+              <div className="player-tools">
+                <div className="pt-speeds" role="group" aria-label={t('spdLabel')}>
+                  <span className="meta">{t('spdLabel')}</span>
+                  {SPEEDS.map((r) => (
+                    <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>
+                  ))}
+                </div>
+                <div className="pt-actions">
+                  {user && hasPlayer && !talk.locked && (
+                    <button type="button" className="speed-pill bm-btn" onClick={() => addNote('')} title={t('ntBookmarkHelp')}>🔖 {bmFlash ? t('ntBookmarked') : t('ntBookmark')}</button>
+                  )}
+                  {talk.audioPath && (
+                    <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
+                      🎧 {audioMode ? t('audBackVideo') : t('audMode')}
+                    </button>
+                  )}
+                  <button type="button" className={'speed-pill cinema-toggle' + (cinema ? ' on' : '')} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')}>
+                    ▭ {cinema ? t('cnOff') : t('cnOn')}
                   </button>
-                )}
+                </div>
               </div>
             )}
             {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
@@ -474,14 +494,15 @@ export default function TalkPage({ initial = null, talkId = null }) {
           )}
 
           <header className="talk-head">
-            {ctx
-              ? (
-                <p className="eyebrow">
+            <p className="eyebrow">
+              {talk.format && <span className="fmt-chip">{formatName(talk.format)}</span>}
+              {ctx ? (
+                <>
                   <Link href={`/series/${ctx.id}`}>{ctx.title}</Link>
                   {ctx.season ? ` · ${t('seasonN').replace('{n}', ctx.season.number)}` : ''}{ctx.number ? ` · ${t('epN').replace('{n}', ctx.number)}` : ''}
-                </p>
-              )
-              : talk.category && <p className="eyebrow">{talk.category}</p>}
+                </>
+              ) : talk.category}
+            </p>
             <h1>{talk.title}</h1>
             <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/chaines/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
             {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
@@ -534,8 +555,16 @@ export default function TalkPage({ initial = null, talkId = null }) {
           {practiceOn && !practiceOpen && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
-        {(ctx || similar.length > 0) && (
+        {(ctx || similar.length > 0 || ins.list?.length > 0) && (
           <aside className="watch-side" aria-labelledby="side-title" ref={sideRef}>
+            {ins.list?.length > 0 && (
+              <section className="side-chapters" aria-label={t('chapters')}>
+                <h2>{t('chapters')}</h2>
+                <ol>
+                  {ins.list.map((c) => <li key={c.s}><button type="button" onClick={() => seekTo(Math.floor(c.s / 1000))}><span className="ts">{clock(c.s)}</span> {c.t}</button></li>)}
+                </ol>
+              </section>
+            )}
             {ctx && (
               <section className="side-series">
                 <div className="side-head">

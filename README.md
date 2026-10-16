@@ -2960,3 +2960,26 @@ python3 web/tests/catalogue_menus.py     # non-régression étape B
 ### Ce qui a été testé / non testé
 Testé : `next build`, navigateur (Chromium émulé, fr + ar, 390 et 1440 px, administrateur et membre standard), test API formats. **Non testé** : l'ouverture de la mise en pratique sur la vidéo dans le navigateur (compilé, mais pas déclenché de bout en bout : il faut une vidéo avec quiz et propositions) ; vrai téléphone ; données réelles du site en ligne.
 **Volontairement pas fait** : les onglets « Toutes / Séries / Cycles / Parcours » de la maquette Séries, car le site n'a aucune notion de « cycle » ou de « parcours » distincte d'une série (aucun champ). À décider avec vous.
+
+## Correctifs du 16/10 (retours d'Epok après l'étape C)
+
+### Description
+- **Menu du haut conservé une fois connecté** (Accueil · Catalogue · Séries · Apprendre · Kids) : il était masqué par une règle de l'étape B ; elle est supprimée.
+- **Rangées (carrousels) bien centrées** dans les pages à largeur limitée (Apprendre verrouillé, Séries, comptes…) : elles ajoutaient la grande marge de l'accueil et étaient décalées vers la droite. Corrigé pour toutes les pages concernées.
+- **Bannières avec de vraies images** : l'écran Apprendre verrouillé utilise votre bannière (`web/public/brand/learning-banner.jpg`, partie droite de l'image fournie, texte réel à gauche donc traduisible) ; l'accueil visiteur remplace l'ancien encart Kids par la bannière **Mejliss TV Kids** (`web/public/brand/kids-banner.jpg`) cliquable, avec un bouton en dessous. Pour changer une image : remplacer le fichier du même nom puis redéployer `majlistv-web`.
+- **Fiche d'une conférence** : fil d'Ariane (Catalogue › Format › Titre), puce de format, onglets dans l'ordre de la maquette (Résumé · Transcription · Mes notes · Chapitres · À propos, le premier disponible s'ouvre), **chapitres cliquables dans la colonne de droite**, lecteur plus large dans l'espace membre.
+- **Barre d'outils du lecteur alignée** : vitesses à gauche, Marque-page / Mode audio / **Mode cinéma** à droite, tous de même hauteur ; retour à la ligne propre sur téléphone.
+- **Mode cinéma** : bouton « Mode cinéma » sous le lecteur → menus, colonne latérale, titre et onglets masqués, lecteur le plus grand possible (sans dépasser la hauteur de l'écran). **Échap** (ou le même bouton) pour quitter.
+
+### Déploiement
+Code déjà poussé sur GitHub. DockPanel → Redeploy **majlistv-web** uniquement (aucun changement d'API), puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+
+### Test
+```bash
+python3 web/tests/retours_16oct.py   # menu du haut, alignement des rangées, bannières, barre d'outils, cinéma ; fr + ar ; 390 / 1440 / 1990 px
+```
+
+### Non fait / à décider
+- « Langue de l'audio » de la maquette : seulement avec le doublage (étape 0 / S…).
+- Bannière Kids dans l'espace Kids lui-même : non touchée (thème Kids conservé) en attendant votre avis.
+- Test sur vrai lecteur vidéo : l'environnement de test n'a pas accès à YouTube, le cinéma a été vérifié avec le lecteur indisponible (même mise en page).

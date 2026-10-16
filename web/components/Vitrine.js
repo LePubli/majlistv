@@ -160,9 +160,9 @@ export default function Vitrine({ cit, latest, wait, hero }) {
       </section>
 
       {feat('kids') && (
-        <section className="vt-kids" aria-label="Mejliss Kids">
-          <div><span className="vt-lab">Mejliss Kids</span><h2>{t('vtKidsT')}</h2><p>{t('vtKidsText')}</p></div>
-          <Link href="/kids" className="btn">{t('vtKidsCta')}</Link>
+        <section className="vt-kidsban" aria-label="Mejliss Kids">
+          <Link href="/kids" className="vt-kidsban-img"><img src="/brand/kids-banner.jpg" alt={`Mejliss TV Kids : ${t('vtKidsT')}`} width="2048" height="768" loading="lazy" /></Link>
+          <p className="vt-kidsban-cta"><Link href="/kids" className="btn">{t('vtKidsCta')}</Link></p>
         </section>
       )}
 

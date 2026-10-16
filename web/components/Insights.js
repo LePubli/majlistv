@@ -54,7 +54,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
 
   const hasSummary = Boolean(data && data.lang && (data.summary || data.keyPoints.length));
   const hasChapters = Boolean(data && data.lang && data.chapters.length);
-  useEffect(() => { if (onData) onData({ summary: hasSummary, chapters: hasChapters }); }, [hasSummary, hasChapters]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (onData) onData({ summary: hasSummary, chapters: hasChapters, list: hasChapters ? data.chapters : [] }); }, [hasSummary, hasChapters]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!data || !data.lang) return null;
   const jump = (ms) => {
     const video = videoRef.current;
