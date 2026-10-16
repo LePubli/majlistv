@@ -270,9 +270,17 @@ export async function getSetting(key) { return (await resolve(key)).value; }
 export async function getNumber(key) { const n = Number(await getSetting(key)); return Number.isFinite(n) ? n : Number(BY_KEY[key].def || 0); }
 
 // Description complète pour le back-office : jamais de clé en clair (seulement « défini » + 4 derniers caractères).
-export async function describeSettings() {
+// Étape M3a : réglages propres à un module, masqués de Admin → Paramètres quand le dossier du module est absent.
+const GROUP_MODULE = { gifts: 'gifts', revenue: 'revenue', practice: 'practice', books: 'books', kids: 'kids', stats: 'stats', citations: 'citations', notifications: 'follow', quiz: 'quiz' };
+const FIELD_MODULE = { revision_daily_max: 'revision', revision_email_enabled: 'revision', revision_email_hour: 'revision' };
+let moduleCheck = () => true;
+export const setSettingsModuleCheck = (fn) => { moduleCheck = fn; };
+const fieldVisible = (f) => { const m = FIELD_MODULE[f.key] || GROUP_MODULE[f.group]; return !m || moduleCheck(m); };
+
+export async function describeSettings({ all = false } = {}) {
   const out = [];
   for (const f of FIELDS) {
+    if (!all && !fieldVisible(f)) continue;
     const r = await resolve(f.key);
     const item = { key: f.key, group: f.group, type: f.type, label: f.label, help: f.help || '', options: f.options || null,
       test: f.test || null, hidden: Boolean(f.hidden), min: f.min ?? null, max: f.max ?? null, source: r.source };
@@ -285,7 +293,7 @@ export async function describeSettings() {
     }
     out.push(item);
   }
-  return { groups: GROUPS, fields: out, encryption: cryptoReady, langs: TRANSLATION_LANGS };
+  return { groups: all ? GROUPS : GROUPS.filter((g) => !GROUP_MODULE[g.id] || moduleCheck(GROUP_MODULE[g.id]) || out.some((f) => f.group === g.id)), fields: out, encryption: cryptoReady, langs: TRANSLATION_LANGS };
 }
 
 // Contrôle d'une valeur reçue ; renvoie la valeur normalisée ou lève une Error lisible.

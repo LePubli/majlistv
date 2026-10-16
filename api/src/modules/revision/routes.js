@@ -12,10 +12,8 @@ const ridSchema = z.object({ rid: z.string().uuid() });
 const MAX_MS = 48 * 3600 * 1000;
 const textSchema = z.string().trim().min(5).max(800);
 
-export const shape = (r) => ({
-  id: r.id, talkId: r.talk_id, talkTitle: r.talk_title ?? null, textAr: r.text_ar || '', lang: r.lang, text: r.text, startMs: r.start_ms, origin: r.origin, attribution: r.attribution,
-  status: r.status, createdAt: r.created_at, approvedAt: r.approved_at,
-});
+import { shape } from '../../reminderFormat.js'; // format partagé avec les citations (socle), étape M3a
+export { shape };
 
 export default async function reminderRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };

@@ -3,10 +3,9 @@ import { z } from 'zod';
 import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
-import { episodeLabels, seriesNextUp } from '../modules/series/routes.js';
 import { getSetting, getNumber, isOn } from '../settings.js';
 import { hasLearningTier, hasActiveSubscription } from '../access.js';
-import { creditWatch } from '../revenue.js';
+import * as ext from '../ext.js'; // étape M3a : séries et rémunération fournies par leurs modules
 import { dueTalks, upcoming, reminderOfTheDay } from '../revision.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -50,7 +49,7 @@ export default async function libraryRoutes(app) {
     const pos = dur ? Math.min(positionMs, dur) : positionMs;
     // Étape D : temps de visionnage crédité à la chaîne (sans effet si la rémunération est désactivée).
     const prev = (await pool.query('SELECT position_ms, updated_at FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id])).rows[0];
-    await creditWatch({ userId: req.user.sub, talkId: id, speaker: talk.rows[0].speaker, positionMs: pos, prev, paid: prev ? await hasActiveSubscription(req.user.sub) : false }).catch((e) => req.log.warn(`Crédit de visionnage : ${e.message}`));
+    await ext.emit('watch.progress', { userId: req.user.sub, talkId: id, speaker: talk.rows[0].speaker, positionMs: pos, prev, paid: prev ? await hasActiveSubscription(req.user.sub) : false }).catch((e) => req.log.warn(`Crédit de visionnage : ${e.message}`));
     await pool.query(
       `INSERT INTO watch_progress(user_id, talk_id, position_ms, duration_ms, completed, updated_at)
        VALUES ($1, $2, $3, $4, $5, now())
@@ -77,7 +76,7 @@ export default async function libraryRoutes(app) {
        ORDER BY p.updated_at DESC LIMIT 12`,
       [req.user.sub, MIN_RESUME_MS]
     );
-    const nexts = await seriesNextUp(req.user.sub, MIN_RESUME_MS);
+    const nexts = await ext.call('series.nextUp', [], req.user.sub, MIN_RESUME_MS);
     if (nexts.length) {
       const have = new Set(rows.map((r) => r.id));
       const ids = nexts.map((n) => n.talkId).filter((id) => !have.has(id));
@@ -88,7 +87,7 @@ export default async function libraryRoutes(app) {
       rows.sort((x, y) => new Date(y.watchedAt) - new Date(x.watchedAt));
       rows.length = Math.min(rows.length, 12);
     }
-    const labels = await episodeLabels(rows.map((r) => r.id));
+    const labels = await ext.call('series.episodeLabels', () => new Map(), rows.map((r) => r.id));
     for (const r of rows) r.series = labels.get(r.id) || null;
     return cards(rows);
   });
@@ -112,7 +111,7 @@ export default async function libraryRoutes(app) {
                OR EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.user_id = $1 AND a.talk_id = t.id))
         ORDER BY "since" DESC NULLS LAST LIMIT 12`, [req.user.sub, enabledByDefault, min]);
     for (const r of rows) r.quizState = r.attempted ? 'retry' : 'todo';
-    const labels = await episodeLabels(rows.map((r) => r.id));
+    const labels = await ext.call('series.episodeLabels', () => new Map(), rows.map((r) => r.id));
     for (const r of rows) r.series = labels.get(r.id) || null;
     return cards(rows);
   });
@@ -126,7 +125,7 @@ export default async function libraryRoutes(app) {
       rows = (await pool.query(
         `SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE t.id = ANY($1::uuid[])`, [items.map((x) => x.id)])).rows;
       await cards(rows);
-      const labels = await episodeLabels(rows.map((r) => r.id));
+      const labels = await ext.call('series.episodeLabels', () => new Map(), rows.map((r) => r.id));
       const by = new Map(items.map((x) => [x.id, x]));
       for (const r of rows) { r.series = labels.get(r.id) || null; Object.assign(r, { revision: by.get(r.id) }); r.quizState = 'review'; }
       rows.sort((a, b) => items.findIndex((x) => x.id === a.id) - items.findIndex((x) => x.id === b.id));

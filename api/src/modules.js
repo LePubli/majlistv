@@ -15,8 +15,10 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { pool } from './db.js';
-import { FIELDS, BY_KEY, GROUPS, getSetting, isOn, describeSettings, saveSettings } from './settings.js';
+import { FIELDS, BY_KEY, GROUPS, getSetting, isOn, describeSettings, saveSettings, setSettingsModuleCheck } from './settings.js';
+import { setFeatureModuleCheck } from './features.js';
 import { BY_ID, settingKey } from './featuresList.js';
+import * as ext from './ext.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Dossiers de modules : celui du code, plus (tests, essais) celui de MODULES_EXTRA_DIR.
@@ -46,6 +48,7 @@ const prefix = (id) => `mod_${id.replace(/-/g, '_')}_`;
 // 1) Lecture des fiches et déclaration des réglages. À appeler AVANT l'enregistrement des routes.
 export async function discoverModules(log = console) {
   registry.clear();
+  setFeatureModuleCheck(moduleLoaded); setSettingsModuleCheck(moduleLoaded);
   for (const base of dirs()) {
     let names = [];
     try { names = (await fs.readdir(base, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort(); } catch { continue; }
@@ -80,6 +83,9 @@ export async function discoverModules(log = console) {
   }
 }
 
+// Le dossier du module est-il présent et chargé sans erreur ? (Admin → Fonctions et Paramètres masquent les fonctions des modules absents.)
+export const moduleLoaded = (id) => { const e = registry.get(id); return Boolean(e && e.loaded && !e.error); };
+
 export async function moduleOn(id) {
   const e = registry.get(id);
   if (!e || e.error) return false;
@@ -103,11 +109,17 @@ export async function registerModules(app) {
             return undefined;
           });
         }
-        e.ctx = { id, version: e.manifest.version, enabled: () => moduleOn(id), setting: (k) => getSetting(BY_KEY[k] ? k : prefix(id) + k), log: app.log };
+        // Un module lié à une fonction gère lui-même la fonction coupée (comme avant) ; un module autonome ne répond que s'il est activé.
+        const active = e.manifest.feature ? async () => true : () => moduleOn(id);
+        e.ctx = {
+          id, version: e.manifest.version, enabled: () => moduleOn(id), setting: (k) => getSetting(BY_KEY[k] ? k : prefix(id) + k), log: app.log,
+          provide: (name, fn) => ext.provide(name, fn, { owner: id, active }), on: (name, fn) => ext.on(name, fn, { owner: id, active }),
+        };
         await mod.default(scope, e.ctx);
       });
       e.loaded = true;
     } catch (err) {
+      ext.forget(id);
       e.error = `Chargement impossible : ${err.message}`; app.log.error(`module ${id} : ${err.message}`);
     }
   }
@@ -167,7 +179,8 @@ export async function allModules() {
 
 async function describeAll() {
   const db = new Map((await pool.query('SELECT id, installed_version, first_seen_at, updated_at, last_error FROM modules')).rows.map((r) => [r.id, r]));
-  const settings = await describeSettings();
+  const settings = await describeSettings({ all: true });
+  const wiring = ext.describeExt();
   const enabledOf = {};
   for (const e of registry.values()) if (!e.invalid) enabledOf[e.manifest.id] = e.error ? false : await moduleOn(e.manifest.id);
   const out = [];
@@ -180,10 +193,11 @@ async function describeAll() {
       status: e.invalid || e.error ? 'error' : enabledOf[m.id] ? 'on' : 'off', error: e.error || null,
       feature: m.feature || null, admin: m.admin || null, requires, dependents: [...registry.values()].filter((o) => !o.invalid && o.manifest.requires.includes(m.id)).map((o) => ({ id: o.manifest.id, name: o.manifest.name, enabled: Boolean(enabledOf[o.manifest.id]) })),
       fields: e.fields.map((k) => settings.fields.find((f) => f.key === k)).filter(Boolean),
+      provides: Object.keys(wiring.provides).filter((k) => wiring.provides[k] === m.id), listens: Object.keys(wiring.listens).filter((k) => wiring.listens[k].includes(m.id)),
     });
   }
   // Modules connus de la base mais dont le dossier a disparu : on garde la trace (les données ne sont jamais supprimées).
-  for (const [id, row] of db) if (![...registry.values()].some((e) => e.manifest.id === id)) out.push({ id, folder: null, name: id, description: '', version: null, installedVersion: row.installed_version, installedAt: row.first_seen_at, updatedAt: row.updated_at, status: 'absent', admin: null, error: 'Le dossier du module n’est plus dans le code : ses routes sont fermées, ses données sont conservées.', feature: null, requires: [], dependents: [], fields: [] });
+  for (const [id, row] of db) if (![...registry.values()].some((e) => e.manifest.id === id)) out.push({ id, folder: null, name: id, description: '', version: null, installedVersion: row.installed_version, installedAt: row.first_seen_at, updatedAt: row.updated_at, status: 'absent', admin: null, provides: [], listens: [], error: 'Le dossier du module n’est plus dans le code : ses routes sont fermées, ses données sont conservées.', feature: null, requires: [], dependents: [], fields: [] });
   return { modules: out, secrets: settings.encryption };
 }
 

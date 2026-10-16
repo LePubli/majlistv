@@ -35,7 +35,7 @@ import moduleRoutes, { discoverModules, registerModules, migrateModules, allModu
 import { startAudit } from './audit.js';
 import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
 import speakersRoutes from './routes/speakers.js';
-import { listSeries } from './modules/series/routes.js'; // le menu « Séries » n'apparaît que s'il y a une série (module series)
+import * as ext from './ext.js'; // étape M3a : le menu « Séries » n'apparaît que s'il y a une série (fournie par le module series)
 import { startMailer } from './mailer.js';
 import { startSearchSync } from './search.js';
 
@@ -113,7 +113,7 @@ app.get('/config', async () => {
   for (const k of ['access', 'duration', 'speaker', 'category', 'language', 'description', 'favorite', 'progress']) show[k] = await on(`card_show_${k}`);
   // Le menu « Séries » n'apparaît que s'il y a au moins une série à montrer.
   const features = await allFeatures();
-  const hasSeries = features.series && (await listSeries({ limit: 1 })).length > 0;
+  const hasSeries = features.series && (await ext.call('series.list', [], { limit: 1 })).length > 0;
   const hasBooks = features.books && (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
   return {
     features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,

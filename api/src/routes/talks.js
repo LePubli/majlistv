@@ -1,8 +1,6 @@
 // Catalogue public + gestion des conférences par les organisateurs.
-import { quizInfo } from '../modules/quiz/routes.js';
-import { practiceInfo } from '../modules/practice/routes.js';
 import { talkThemes } from '../themes.js';
-import { kidCanSee } from '../modules/kids/routes.js';
+import * as ext from '../ext.js'; // étape M3a : quiz, mise en pratique et Kids sont fournis par leurs modules s'ils sont présents
 import { speakerNames, speakerSlug } from '../speakers.js';
 import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
 import { timeState } from '../kidsControl.js';
@@ -251,7 +249,7 @@ export default async function talksRoutes(app) {
     if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
     // Espace enfant : le jeton enfant ne donne accès qu'aux conférences Kids de sa tranche d'âge ; les droits sont ceux du parent.
     const kv = await app.kidContext(req);
-    if (kv && !(await kidCanSee(kv.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    if (kv && !(await ext.call('kids.canSee', false, kv.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
     if (kv && (await timeState(kv.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
@@ -324,8 +322,8 @@ export default async function talksRoutes(app) {
     }
     if (!external) delete talk.video_ref;
     delete talk.audio_status;
-    talk.quiz = await quizInfo(id);
-    talk.practice = await practiceInfo(id);
+    talk.quiz = await ext.call('talk.quiz', { available: false, count: 0 }, id);
+    talk.practice = await ext.call('talk.practice', { available: false, count: 0 }, id);
     talk.themes = await talkThemes(id);
     await withPosters([talk]);
     return talk;

@@ -5,7 +5,7 @@ import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting, getNumber, isOn, saveSettings } from '../settings.js';
-import { listSeries } from '../modules/series/routes.js';
+import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 import { featureOn } from '../features.js';
 import { inCategorySql, adultSql } from '../taxonomy.js';
 
@@ -78,7 +78,7 @@ export default async function homeRoutes(app) {
       if (r.rows.length) rows.push({ key: 'new', title: null, talks: await Promise.all(r.rows.map((x) => card(x))) });
     }
     if (isOn(await getSetting('home_row_series')) && (await featureOn('series'))) {
-      const list = await listSeries({ limit: size });
+      const list = await ext.call('series.list', [], { limit: size });
       if (list.length) rows.push({ key: 'series', title: null, series: list });
     }
     // « Pour commencer » : les conférences de niveau débutant, pour un visiteur qui découvre le sujet.

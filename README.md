@@ -2682,3 +2682,64 @@ Admin → Modules : 19 modules, aucun en « Erreur ». Dans DockPanel, les journ
 ### Dépannage
 - **L'API ne démarre plus après la mise à jour** : un ancien fichier `api/src/routes/<nom>.js` est resté alors que son module existe → routes en double. Supprimer les 14 anciens fichiers listés plus haut, Commit, Push, Redeploy.
 - **Un module « Erreur » avec « Démarrage impossible »** : sa tâche de fond a échoué (le message dit pourquoi) ; les routes du module restent utilisables.
+
+## Étape M3a — Socle de l'API indépendant des modules
+
+### Description
+Avant cette étape, le socle appelait directement le code de 6 modules (10 endroits) et 5 modules s'appelaient entre eux : supprimer un dossier de module empêchait l'API de démarrer. Désormais :
+- **Points d'extension** (`api/src/ext.js`) : le socle demande une information sans savoir qui la fournit, avec une réponse de repli si aucun module ne la fournit. Exemple : la fiche d'une conférence demande `talk.quiz` ; sans le module Quiz, la réponse est « pas de quiz ».
+- **Événements** : le socle annonce un fait, chaque module intéressé réagit. Exemple : Stripe annonce `stripe.charge.refunded` ; les Cartes cadeaux puis la Rémunération réagissent, dans le même ordre qu'avant et dans la même transaction (une erreur annule tout, comme avant).
+- **Code partagé sorti des modules vers le socle** : échéances des engagements (`dueDates.js`, utilisées aussi par les thèmes), fiches de conférences des collections et des listes (`talkCards.js`), format des rappels (`reminderFormat.js`, révision et citations). La logique de la rémunération est passée dans son module (`modules/revenue/lib.js`).
+- **Module absent = fonction coupée et masquée** : si le dossier d'un module n'est pas là, sa fonction est considérée comme coupée, disparaît de Admin → Fonctions (impossible de la rallumer) et ses réglages disparaissent de Admin → Paramètres. Le site masque déjà menus et pages des fonctions coupées.
+
+| Point d'extension / événement | Fourni / écouté par | Utilisé par | Réponse sans le module |
+|---|---|---|---|
+| `talk.quiz` | quiz | fiche conférence, vitrine | pas de quiz |
+| `talk.practice` | practice | fiche conférence | pas d'écran « Et maintenant ? » |
+| `kids.canSee` | kids | fiche conférence (jeton enfant), statistiques Kids | non (rien n'est visible) |
+| `series.list`, `series.episodeLabels`, `series.nextUp` | series | menu, recherche, SEO, bibliothèque, accueil, intervenants, chaînes | aucune série |
+| `stripe.checkout.payment` (événement) | gifts | paiement Stripe | rien |
+| `stripe.invoice.paid` (événement) | revenue | paiement Stripe | rien |
+| `stripe.charge.refunded` (événement) | gifts, revenue | paiement Stripe | rien |
+| `watch.progress` (événement) | revenue | enregistrement de la lecture | rien |
+
+Pour qui écrit un module : dans `index.js`, `register(app, ctx)` reçoit `ctx.provide(nom, fonction)` et `ctx.on(événement, fonction)` ; un module autonome (sans `"feature"`) ne répond et ne réagit que s'il est activé dans Admin → Modules. La liste des points d'extension connus est `CATALOG` dans `api/src/ext.js`.
+
+**Ce qui reste** : les modules venus du code d'origine utilisent encore des bibliothèques du socle (accès, réglages, e-mails…), c'est normal (un module dépend du socle, jamais l'inverse). Les écrans web ne sont pas encore modulaires (étape M3b).
+
+### Fichiers
+Nouveaux : `api/src/ext.js`, `api/src/dueDates.js`, `api/src/talkCards.js`, `api/src/reminderFormat.js`, `api/tests/test_module_removal.py`. Déplacé : `api/src/revenue.js` → `api/src/modules/revenue/lib.js`. Modifiés : `api/src/index.js`, `modules.js`, `features.js`, `featuresList.js`, `settings.js`, `routes/talks.js`, `billing.js`, `library.js`, `home.js`, `search.js`, `seo.js`, `speakers.js`, `themes.js` ; `index.js` des modules quiz, practice, kids, series, gifts, revenue ; `routes.js` des modules practice, collections, lists, revision, citations, stats (`collect.js`), channels, showcase ; `api/tests/test_modules.py`.
+
+### Prérequis
+Aucune variable, aucune migration, aucune dépendance. **Seule l'API change** (pas le site web, pas le worker).
+
+### Déploiement (DockPanel + GitHub Desktop)
+Recommandé : GitHub Desktop → **Fetch origin** puis **Pull origin** (le commit contient le déplacement de `revenue.js`). Avec le zip : décompresser dans `C:\Users\agenc\Documents\GitHub\majlistv`, **supprimer `api/src/revenue.js`**, puis **Commit to main** et **Push origin**.
+Puis DockPanel → Git Deploy → **Redeploy `majlistv-api`** uniquement. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+Admin → Modules : 19 modules, aucun en « Erreur » ; le site se comporte comme avant (fiche d'une conférence avec quiz, séries, cartes cadeaux, statistiques…). En ligne de commande :
+```
+curl -s https://api-majlisstv.le-publicitaire.fr/health
+curl -s https://api-majlisstv.le-publicitaire.fr/config
+```
+La première répond `{"status":"ok"}`, la seconde contient `"modules":{…}` avec les 19 modules.
+
+### Exemples d'utilisation
+- **Retirer définitivement une fonction du code** (ex. les Ouvrages) : supprimer le dossier `api/src/modules/books`, Commit, Push, Redeploy `majlistv-api`. La fonction disparaît de Admin → Fonctions et Paramètres, ses routes n'existent plus, ses données restent en base ; remettre le dossier la fait revenir.
+- **Écrire un module qui réagit à un remboursement** : dans son `index.js`, `ctx.on('stripe.charge.refunded', async (client, charge) => { … })`.
+
+### Tests
+- `test_module_removal.py` : pour chacun des 19 modules, copie de l'API **sans** ce dossier, démarrage, puis 22 vérifications (l'API démarre, fonction coupée et absente de Admin → Fonctions, impossible de la rallumer, route du module disparue, Paramètres et Modules répondent, catalogue, accueil, recherche, SEO, sitemap, reprise de lecture, fiche d'une conférence, enregistrement de la lecture, remboursement Stripe sans erreur, aucune erreur dans le journal) ; puis le **socle seul, sans aucun module**. Résultat : 19 retraits + socle seul, **0 échec**.
+- `test_modules.py` étendu (points d'extension et événements déclarés par chaque module).
+- Non-régression avec tous les modules : cartes cadeaux, rémunération, séries, Kids (3 suites), quiz, collections et listes, vitrine, chaînes, thèmes, publication, accueil, SEO, apprentissage, révision, bilan, fonctions, ouvrages : OK ; tests unitaires des e-mails programmés et des statistiques : OK. 6 tests (statistiques, tableau de bord, intervenants, modération, conformité, vidéos externes) échouent à l'identique avec le code d'avant cette étape (vérifié côte à côte) : ils dépendent de l'état de la base de test ou de services absents, pas du découplage.
+- Le faux Stripe des tests (`tests/mock_stripe.py`) donne désormais des identifiants de session uniques d'un lancement à l'autre.
+
+### Dépannage
+- **« Point d'extension … déjà fourni par le module … »** dans Admin → Modules : deux modules fournissent la même information ; en désactiver ou en retirer un.
+- **L'API ne démarre plus après la mise à jour par zip** : l'ancien `api/src/revenue.js` est resté ; le supprimer, Commit, Push, Redeploy.

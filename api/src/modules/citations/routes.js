@@ -8,7 +8,7 @@
 //   GET  /citation/today                citation du jour (publique), identique pour tout le monde
 import { z } from 'zod';
 import { pool } from '../../db.js';
-import { shape } from '../revision/routes.js';
+import { shape } from '../../reminderFormat.js';
 import { corpusStatus, startImport } from '../../corpus.js';
 import { getNumber, getSetting, isOn } from '../../settings.js';
 import { TZ } from '../../revision.js';

@@ -6,7 +6,7 @@ import { presignGet } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
 import { adultSql } from '../../taxonomy.js';
 import { getNumber } from '../../settings.js';
-import { quizInfo } from '../quiz/routes.js';
+import * as ext from '../../ext.js'; // quiz : point d'extension « talk.quiz »
 
 const TOP = 8;      // le tirage se fait parmi les 8 conférences les plus vues qui ont un quiz
 const WINDOW = 90;  // « les plus vues » = les 90 derniers jours (lectures comptent triple)
@@ -28,7 +28,7 @@ export default async function showcaseRoutes(app) {
         ORDER BY COALESCE(p.score, 0) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 30`, [min, WINDOW]);
     // Le quiz doit aussi être proposé au public (réglage de la conférence, fonction Quiz allumée).
     const ok = [];
-    for (const r of rows) { if (ok.length >= TOP) break; if ((await quizInfo(r.id)).available) ok.push(r); }
+    for (const r of rows) { if (ok.length >= TOP) break; if ((await ext.call('talk.quiz', { available: false, count: 0 }, r.id)).available) ok.push(r); }
     if (!ok.length) return { available: false };
     const talk = ok[Math.floor(Math.random() * ok.length)];
 

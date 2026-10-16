@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { speakerSlug, publicSpeakers, speakerNames, speakerBio } from '../speakers.js';
-import { listSeries } from '../modules/series/routes.js';
+import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });
 
@@ -17,7 +17,7 @@ export default async function speakersRoutes(app) {
     const e = (await publicSpeakers()).find((x) => x.slug === slug);
     if (!e) return reply.code(404).send({ error: 'Intervenant introuvable' });
     const names = e.names.map((n) => n.toLowerCase());
-    const series = (await listSeries({ limit: 100, speakerNames: names }));
+    const series = (await ext.call('series.list', [], { limit: 100, speakerNames: names }));
     reply.header('cache-control', 'public, max-age=60');
     return { slug, name: e.name, bio: await speakerBio(slug), talks: e.talks, seriesCount: e.series, series };
   });

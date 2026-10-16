@@ -8,7 +8,7 @@ import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting } from '../settings.js';
 import { adultSql } from '../taxonomy.js';
-import { episodeLabels, listSeries } from '../modules/series/routes.js';
+import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
 import { publicSpeakers, speakerBio } from '../speakers.js';
 import { channelImages } from '../channels.js';
@@ -39,7 +39,7 @@ export default async function seoRoutes(app) {
         WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')}`, [id]);
     const t = rows[0];
     if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
-    const series = (await episodeLabels([id])).get(id) || null;
+    const series = (await ext.call('series.episodeLabels', () => new Map(), [id])).get(id) || null;
     // Chapitres et extrait de la transcription : seulement pour les conférences gratuites (jamais de contenu premium dans le HTML public).
     let chapters = []; let excerpt = ''; let summary = '';
     if (t.access === 'free') {
@@ -75,7 +75,7 @@ export default async function seoRoutes(app) {
          FROM series_episodes e JOIN talks t ON t.id = e.talk_id AND t.video_status = 'ready' AND ${visibleSql('t')}
         WHERE e.series_id = $1 ORDER BY e.position`, [id]);
     if (!rows.length) return reply.code(404).send({ error: 'Série introuvable' });
-    const labels = await episodeLabels(rows.map((r) => r.id));
+    const labels = await ext.call('series.episodeLabels', () => new Map(), rows.map((r) => r.id));
     reply.header('cache-control', 'public, max-age=60');
     return {
       id: s.id, slug: await ensureSlug('series', id), title: s.title, description: clip(s.description, 5000), speaker: s.speaker, category: s.category, updatedAt: s.updatedAt,
@@ -124,7 +124,7 @@ export default async function seoRoutes(app) {
         WHERE lower(trim(t.speaker)) = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
         ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 100`, [names])).rows;
     for (const t of talks) t.slug = await ensureSlug('talks', t.id);
-    const series = await listSeries({ limit: 50, speakerNames: names });
+    const series = await ext.call('series.list', [], { limit: 50, speakerNames: names });
     for (const s of series) s.slug = await ensureSlug('series', s.id);
     reply.header('cache-control', 'public, max-age=60');
     return { slug, name: e.name, bio: clip(await speakerBio(slug), 3000), talkCount: e.talks, ...((await channelImages([slug])).get(slug) || { avatarUrl: null, bannerUrl: null }), talks, series: series.map((s) => ({ id: s.id, slug: s.slug, title: s.title })), site: await siteInfo() };
@@ -155,7 +155,7 @@ export default async function seoRoutes(app) {
     const talks = (await pool.query(
       `SELECT t.id, t.slug, COALESCE(t.publish_at, t.created_at) AS "lastmod" FROM talks t
         WHERE t.video_status = 'ready' AND ${visibleSql('t')} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 5000`)).rows;
-    const series = (await listSeries({ limit: 5000 })).map((s) => s.id);
+    const series = (await ext.call('series.list', [], { limit: 5000 })).map((s) => s.id);
     const lastmods = (await pool.query('SELECT id, slug, updated_at FROM series WHERE id = ANY($1)', [series])).rows;
     const when = new Map(lastmods.map((r) => [r.id, r.updated_at]));
     const slugOf = new Map(lastmods.map((r) => [r.id, r.slug]));

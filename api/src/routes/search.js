@@ -8,7 +8,7 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { INDEX, meili, meiliConf, queryWords } from '../search.js';
-import { listSeries, episodeLabels } from '../modules/series/routes.js';
+import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 
 const schema = z.object({
   q: z.string().trim().min(1).max(100),
@@ -106,7 +106,7 @@ export default async function searchRoutes(app) {
       }
     }
 
-    const labels = await episodeLabels(rows.map((r) => r.id)); // place de chaque résultat dans une série
+    const labels = await ext.call('series.episodeLabels', () => new Map(), rows.map((r) => r.id)); // place de chaque résultat dans une série
     const hits = [];
     for (const r of rows) {
       const see = canSee(r);
@@ -122,7 +122,7 @@ export default async function searchRoutes(app) {
       });
     }
     // Séries dont le titre, l'intervenant ou la présentation contiennent la recherche (première page seulement).
-    const series = p.offset === 0 ? await listSeries({ limit: 6, q: p.q, category: p.category || null, level: p.level || null }) : [];
+    const series = p.offset === 0 ? await ext.call('series.list', [], { limit: 6, q: p.q, category: p.category || null, level: p.level || null }) : [];
     return { engine, total, hits, series, markers: [PRE, POST] };
   });
 }

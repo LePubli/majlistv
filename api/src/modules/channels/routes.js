@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 import { publicSpeakers, speakerBio, speakerSlug } from '../../speakers.js';
 import { syncChannels, channelImages } from '../../channels.js';
-import { listSeries } from '../series/routes.js';
+import * as ext from '../../ext.js'; // séries : point d'extension « series.list »
 import { putObject, presignGet, deleteObject } from '../../storage.js';
 
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });
@@ -36,7 +36,7 @@ export default async function channelRoutes(app) {
     const { slug } = slugParam.parse(req.params);
     const e = (await publicSpeakers()).find((x) => x.slug === slug);
     if (!e) return reply.code(404).send({ error: 'Chaîne introuvable' });
-    const series = await listSeries({ limit: 100, speakerNames: e.names.map((n) => n.toLowerCase()) });
+    const series = await ext.call('series.list', [], { limit: 100, speakerNames: e.names.map((n) => n.toLowerCase()) });
     reply.header('cache-control', 'public, max-age=60');
     return { slug, name: e.name, bio: await speakerBio(slug), talks: e.talks, seriesCount: e.series, series, followers: (await followersOf([slug])).get(slug) || 0, ...((await channelImages([slug])).get(slug) || { avatarUrl: null, bannerUrl: null }) };
   });

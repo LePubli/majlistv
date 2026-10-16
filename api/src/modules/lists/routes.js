@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { visibleSql } from '../../visibility.js';
-import { visibleItems } from '../collections/routes.js';
+import { visibleItems } from '../../talkCards.js';
 
 export const MAX_LISTS = 20;
 export const MAX_LIST_ITEMS = 200;

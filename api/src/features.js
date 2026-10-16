@@ -6,9 +6,15 @@ import { getSetting, saveSettings, isOn } from './settings.js';
 import { currentUser } from './userstate.js';
 
 // Une fonction est « activée » quand son réglage vaut oui (la maintenance, elle, est « active » quand il vaut oui).
+// Étape M3a : le socle des modules indique quels modules sont présents (sans import croisé).
+let moduleCheck = () => true;
+export const setFeatureModuleCheck = (fn) => { moduleCheck = fn; };
+export const featureAvailable = (f) => !f.module || moduleCheck(f.module);
+
 export async function featureOn(id) {
   const f = BY_ID[id];
   if (!f) throw new Error(`Fonction inconnue : ${id}`);
+  if (!featureAvailable(f)) return false; // module absent du code : fonction coupée
   return isOn(await getSetting(settingKey(f)));
 }
 
@@ -56,7 +62,7 @@ async function describe() {
   const state = await allFeatures();
   return {
     groups: FEATURE_GROUPS,
-    features: FEATURES.map((f) => ({ id: f.id, group: f.group, label: f.label, hint: f.hint, enabled: state[f.id], default: (f.def || 'true') === 'true', alert: f.id === 'maintenance' })),
+    features: FEATURES.filter(featureAvailable).map((f) => ({ id: f.id, group: f.group, label: f.label, hint: f.hint, enabled: state[f.id], default: (f.def || 'true') === 'true', alert: f.id === 'maintenance' })),
   };
 }
 
@@ -73,7 +79,7 @@ export default async function featureRoutes(app) {
     const { values } = z.object({ values: z.record(z.string(), z.boolean()) }).parse(req.body);
     const ids = Object.keys(values);
     if (!ids.length) return reply.code(400).send({ error: 'Aucune fonction à modifier' });
-    const bad = ids.find((k) => !BY_ID[k]);
+    const bad = ids.find((k) => !BY_ID[k] || !featureAvailable(BY_ID[k]));
     if (bad) return reply.code(400).send({ error: `Fonction inconnue : ${bad}` });
     const toSave = {};
     for (const id of ids) toSave[settingKey(BY_ID[id])] = values[id] ? 'true' : 'false';

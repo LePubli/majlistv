@@ -33,7 +33,8 @@ class H(BaseHTTPRequestHandler):
         if path == "/v1/checkout/sessions" and body.get("payment_method_types[1]") == "paypal" and __import__("os").path.exists("/tmp/claude-0/paypal_reject"):
             return self._send({"error": {"type": "invalid_request_error", "param": "payment_method_types[1]", "message": 'The payment method type "paypal" is invalid. Please ensure the provided type is activated in your dashboard.'}}, 400)
         if path == "/v1/checkout/sessions":
-            n = sum(1 for x in LOG if x["path"] == "/v1/checkout/sessions")  # identifiant distinct à chaque session
+            # identifiant distinct à chaque session, et unique d'un lancement du faux serveur à l'autre (la base de test garde les anciennes)
+            n = f'{int(__import__("time").time())}_{sum(1 for x in LOG if x["path"] == "/v1/checkout/sessions")}'
             return self._send({"id": f"cs_{n}", "object": "checkout.session", "url": f"https://checkout.stripe.test/cs_{n}"})
         if path == "/v1/billing_portal/sessions": return self._send({"id": "bps_1", "object": "billing_portal.session", "url": "https://billing.stripe.test/p/1"})
         self._send({"error": {"message": "not found"}}, 404)

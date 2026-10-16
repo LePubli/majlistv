@@ -32,6 +32,9 @@ ok([f["key"] for f in g["fields"]] == ["gift_price_1", "gift_price_3", "gift_pri
 ok(sorted(m["id"] for m in mods if m["status"] != "absent") == sorted(["books", "channels", "citations", "collections", "favorites", "follow", "gifts", "kids", "learning", "lists", "notes", "practice", "quiz", "revenue", "revision", "selfcheck", "series", "showcase", "stats"]), "API normale : 19 modules présents dans le code (les autres, connus de la base, sont « absent »)")
 ok(not [m["id"] for m in mods if m["status"] == "error"], "aucun module en erreur (chargement, migrations, démarrage des tâches de fond)")
 ok(all(m["version"] == "1.0.0" and m["feature"] == m["id"] for m in mods if m["status"] != "absent"), "tous en v1.0.0 et liés à la fonction du même nom")
+byid = {m["id"]: m for m in mods}
+ok(byid["quiz"]["provides"] == ["talk.quiz"] and byid["kids"]["provides"] == ["kids.canSee"] and sorted(byid["series"]["provides"]) == ["series.episodeLabels", "series.list", "series.nextUp"], "points d'extension fournis (quiz, Kids, séries)")
+ok(sorted(byid["gifts"]["listens"]) == ["stripe.charge.refunded", "stripe.checkout.payment"] and sorted(byid["revenue"]["listens"]) == ["stripe.charge.refunded", "stripe.invoice.paid", "watch.progress"], "événements écoutés (cartes cadeaux, rémunération)")
 rv = next(m for m in mods if m["id"] == "revenue")
 ok(len(rv["fields"]) == 6 and rv["admin"]["href"] == "/admin?tab=revenue", "revenue : 6 réglages et lien vers son écran d'administration")
 fe = requests.get(N + "/features").json()

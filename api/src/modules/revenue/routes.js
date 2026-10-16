@@ -6,7 +6,7 @@
 //   GET  /admin/revenue/:month/export.csv      administrateur : lignes du mois clôturé, pour le virement
 import { z } from 'zod';
 import { pool } from '../../db.js';
-import { parseMonth, currentMonthKey, revenueSettings, computeMonth, carriedByChannel, closeMonth } from '../../revenue.js';
+import { parseMonth, currentMonthKey, revenueSettings, computeMonth, carriedByChannel, closeMonth } from './lib.js';
 
 const monthParam = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
 const csvCell = (v) => { const s = String(v ?? ''); return /^[=+\-@\t\r]/.test(s) ? `"'${s.replace(/"/g, '""')}"` : /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };

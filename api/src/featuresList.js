@@ -68,5 +68,12 @@ export const FEATURES = [
   { id: 'maintenance', group: 'access', label: 'Mode maintenance', hint: 'Le site affiche une page d\'attente aux visiteurs ; les administrateurs gardent l\'accès', def: 'false', inverted: true },
 ];
 
+// Étape M3a : module qui porte chaque fonction (dossier api/src/modules/<module>). Si ce dossier est absent, la fonction est
+// considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
+const MODULE_OF = { weekly: 'follow', announce: 'follow' };
+const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
+  'channels', 'follow', 'citations', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
+for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
+
 export const BY_ID = Object.fromEntries(FEATURES.map((f) => [f.id, f]));
 export const settingKey = (f) => f.setting || `feat_${f.id}`;

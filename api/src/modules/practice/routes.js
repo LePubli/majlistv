@@ -38,15 +38,9 @@ const shape = (r) => ({
 // Version publique : ni statut, ni origine, ni relecteur.
 const publicShape = (r) => ({ id: r.id, text: r.text, size: r.size, reference: r.reference, evidenceMs: r.evidence_ms, evidenceQuote: r.evidence_quote });
 
-export const DUE_KINDS = ['today', 'week', 'month'];
+import { DUE_KINDS, dueOn } from '../../dueDates.js';
 export const STATUSES = ['todo', 'doing', 'done', 'not_yet'];
-// Échéance en date (jour de Paris) : aujourd'hui, dimanche de cette semaine, dernier jour du mois.
-const DUE_SQL = `CASE $1::text
-  WHEN 'today' THEN (now() AT TIME ZONE 'Europe/Paris')::date
-  WHEN 'week'  THEN (now() AT TIME ZONE 'Europe/Paris')::date + (7 - extract(isodow FROM now() AT TIME ZONE 'Europe/Paris'))::int
-  WHEN 'month' THEN (date_trunc('month', now() AT TIME ZONE 'Europe/Paris') + interval '1 month - 1 day')::date
-  ELSE NULL END`;
-export const dueOn = async (kind) => (kind ? (await pool.query(`SELECT to_char(${DUE_SQL}, 'YYYY-MM-DD') AS d`, [kind])).rows[0].d : null);
+export { DUE_KINDS, dueOn } from '../../dueDates.js'; // échéances partagées avec les thèmes (socle)
 
 // Rappel affiché au membre : « à reprendre » si l'échéance est passée et que ce n'est pas fait.
 const commitShape = (r) => ({

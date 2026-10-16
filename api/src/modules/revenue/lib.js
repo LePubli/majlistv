@@ -5,10 +5,10 @@
 //   cagnotte = encaissé net × (1 − frais %) × part %
 //   chaîne   = cagnotte × temps de la chaîne / temps total
 // Le temps est compté côté serveur (reprise de lecture), plafonné par membre et par jour. Les cartes cadeaux ne sont pas dans la base.
-import { pool } from './db.js';
-import { speakerSlug } from './speakers.js';
-import { getNumber, getSetting, isOn } from './settings.js';
-import { featureOn } from './features.js';
+import { pool } from '../../db.js';
+import { speakerSlug } from '../../speakers.js';
+import { getNumber, getSetting, isOn } from '../../settings.js';
+import { featureOn } from '../../features.js';
 
 const MAX_STEP_MS = 60_000; // une reprise de lecture arrive toutes les ~10 s ; au-delà, on ne crédite pas plus d'une minute d'un coup
 

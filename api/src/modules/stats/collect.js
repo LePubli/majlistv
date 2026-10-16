@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { visibleSql } from '../../visibility.js';
-import { kidCanSee } from '../kids/routes.js';
+import * as ext from '../../ext.js'; // Kids : point d'extension « kids.canSee »
 import { isOn, getSetting } from '../../settings.js';
 import { todayStr, isBot, fingerprint, firstToday, classifySource, deviceOf, langOf, countryOf, addDim, addTalk, addTalkDim } from '../../stats.js';
 
@@ -98,7 +98,7 @@ export default async function statsCollectRoutes(app) {
       const c = await app.kidContext(req);
       if (!c || !isOn(await getSetting('stats_enabled'))) return done();
       const b = kidBody.parse(req.body ?? {});
-      if (!(await kidCanSee(c.profile, b.talkId))) return done();
+      if (!(await ext.call('kids.canSee', false, c.profile, b.talkId))) return done();
       const day = todayStr();
       const newViewer = b.type === 'view' ? await firstToday(day, `kidtalk:${b.talkId}`, fingerprint(day, 'kid', c.profile.id)) : false;
       await addTalk(day, b.talkId, 'kids', incOf(b, newViewer));

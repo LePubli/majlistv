@@ -1,0 +1,10 @@
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+CORS du bucket configuré.
+{"level":30,"time":1792139938992,"pid":881,"hostname":"vm","msg":"Server listening at http://127.0.0.1:3057"}
+{"level":30,"time":1792139938992,"pid":881,"hostname":"vm","msg":"Server listening at http://192.0.2.2:3057"}
+{"level":30,"time":1792139938997,"pid":881,"hostname":"vm","reqId":"req-1","req":{"method":"GET","url":"/health","host":"127.0.0.1:3057","remoteAddress":"127.0.0.1","remotePort":56534},"msg":"incoming request"}
+{"level":30,"time":1792139939023,"pid":881,"hostname":"vm","reqId":"req-1","res":{"statusCode":200},"responseTime":25.047226999999793,"msg":"request completed"}
+{"level":30,"time":1792139939027,"pid":881,"hostname":"vm","reqId":"req-2","req":{"method":"PUT","url":"/admin/settings","host":"127.0.0.1:3057","remoteAddress":"127.0.0.1","remotePort":56550},"msg":"incoming request"}
+{"level":30,"time":1792139939061,"pid":881,"hostname":"vm","reqId":"req-3","req":{"method":"GET","url":"/talks","host":"127.0.0.1:3057","remoteAddress":"127.0.0.1","remotePort":56552},"msg":"incoming request"}
+{"level":30,"time":1792139939062,"pid":881,"hostname":"vm","reqId":"req-2","res":{"statusCode":200},"responseTime":28.17425800000001,"msg":"request completed"}
+{"level":30,"time":1792139939073,"pid":881,"hostname":"vm","reqId":"req-3","res":{"statusCode":200},"responseTime":11.672821000000113,"msg":"request completed"}
