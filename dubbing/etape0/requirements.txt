@@ -1,0 +1,3 @@
+# torch et torchaudio sont installés dans le Dockerfile (version CPU).
+chatterbox-tts==0.1.7
+numpy<2

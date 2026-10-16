@@ -3087,3 +3087,21 @@ python3 web/tests/kids_menu.py          # non-régression du menu Kids
 
 ### Testé / non testé
 Testé : API (27 contrôles), navigateur Chromium émulé (fr + ar, 390 et 1440 px, sans débordement), fin de quiz avec 5 questions de test. **Non testé** : vrai téléphone ; rapport hebdomadaire aux parents (il ne mentionne pas encore les actions validées : possible suite) ; modèles d'actions prêtes à choisir (volontairement absents : le parent écrit les siennes).
+
+
+## Étape 0 du doublage — test de voix et mesures
+
+Banc d'essai **hors site** dans `dubbing/etape0/` (aucune migration, aucun redéploiement DockPanel, aucun port). Il sert à décider du moteur de voix avant de construire le module. Documentation complète, commandes VPS, fichiers à fournir et lecture du rapport : `dubbing/etape0/README.md`.
+
+- **Description** : sous-titres français + audio d'origine → voix française (Chatterbox, CPU) calée sur les créneaux, mixée avec l'original à 15 %, rapport `report.md`/`report.json`.
+- **Prérequis** : Docker sur le VPS, accès à huggingface.co, ~8 Go de disque, échantillon de ta voix (10–30 s) et 3 conférences courtes (ar, tr, en) avec sous-titres français.
+- **Commandes** (VPS) :
+```bash
+mkdir -p /root/dubbing-test/in /root/dubbing-test/out /root/dubbing-test/models && cd /root/dubbing-test
+git clone --depth 1 https://github.com/LePubli/majlistv.git src || (cd src && git pull)
+docker build -t majlis-dub-test src/dubbing/etape0
+docker run --rm --entrypoint python majlis-dub-test test_pipeline.py
+cd src/dubbing/etape0 && ./run.sh arabe1 --max-segments 10
+```
+- **Debug** : voir `dubbing/etape0/README.md` (consentement, noms de fichiers, mémoire, téléchargement du modèle).
+- **Testé / non testé** : chaîne complète testée avec un faux moteur (15 contrôles). Le vrai modèle n'a pas pu être téléchargé ici : vitesse et qualité inconnues jusqu'à tes mesures.

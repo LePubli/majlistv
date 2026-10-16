@@ -188,6 +188,7 @@ Les deux tarifs annuels correspondent bien à « 2 mois offerts ». Techniquemen
 - ✅ **27 Confort d'édition et d'usage** : modification des conférences en lot dans le Studio, quiz affiché sur le lecteur (et non plus en dessous), page vidéo Kids complète (infos, carte « Teste-toi », « De quoi ça parle ? », « Et ensuite ? »).
 - ✅ **17a Vitesse de lecture + mode audio** (livré). ✅ **17b marque-pages et notes personnelles** retrouvés dans Ma bibliothèque (livré).
 - ✅ **16.2a/c URL lisibles + chapitres et extrait dans le HTML** (livré). ✅ **16.2b pages intervenants** (livré). 16.2d versions linguistiques (hreflang) reste à décider. Détail d'origine :
+- 🧪 **Doublage — étape 0 (test de voix et mesures)** : banc d'essai jetable `dubbing/etape0/` (Chatterbox, CPU) : voix française, voix clonée d'Epok avec consentement daté obligatoire, calage ×1,35 max, original à 15 %, phrases `#` jamais synthétisées, rapport chiffré. Rien n'est branché au site. Chaîne testée avec un faux moteur ; **modèle réel non testé** (à mesurer sur le VPS). Ensuite : décision sur le moteur, puis S1.
 - 16.2 **Contenu et URL** : URL lisibles (`/conferences/la-patience-dans-l-epreuve`, anciennes adresses redirigées), chapitres et extrait de transcription affichés dans le HTML des conférences gratuites, **page par intervenant** (présentation, toutes ses conférences et séries), versions linguistiques (`hreflang`, demande une URL par langue : à décider avec vous).
 
 **17. Confort de lecture**
