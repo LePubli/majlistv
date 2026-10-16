@@ -25,7 +25,7 @@ def talk(title, speaker, pub="published", adult=True):
 name = f"Cheikh Ámine {tag}"
 a = talk(f"A {tag}", name); b = talk(f"B {tag}", name.lower()); c = talk(f"C {tag}", name, pub="draft"); k = talk(f"K {tag}", name, adult=False)
 slug = f"cheikh-amine-{tag}"
-cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds) values (%s,'d',%s,'youtube','vv'||%s::text,%s,'published','ready','free',60)", (f"Arabe {tag}", f"الشيخ {tag}", tag, aid))
+cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds) values (%s,'d',%s,'youtube','vv'||%s::text,%s,'published','ready','free',60)", (f"Arabe {tag}", "الشيخ " + "".join(chr(0x0627 + int(ch, 16)) for ch in tag), tag, aid))
 # 1. Fiche : regroupe les graphies, ignore brouillon et contenu réservé aux enfants
 r = requests.get(f"{B}/speakers/{slug}"); ok(r.status_code == 200, "fiche par slug")
 j = r.json(); ok(j["talks"] == 2 and j["name"] in (name, name.lower()), f"2 conférences visibles, graphies regroupées ({j['name']})")

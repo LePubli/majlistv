@@ -1,5 +1,5 @@
 """11.1 : tableau de bord admin (GET /admin/dashboard). Prérequis : API (3055) et PG de test (5544)."""
-import sys, uuid, requests, psycopg2
+import sys, time, uuid, requests, psycopg2
 
 B = "http://127.0.0.1:3055"
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
@@ -39,6 +39,9 @@ def mkuser():
     requests.post(B + "/auth/register", json={"email": e, "password": "Passw0rd-test", "name": "Abonné"})
     cur.execute("select id from users where email=%s", (e,)); return cur.fetchone()[0]
 
+# Point de départ connu : Stripe non configuré (d'autres suites de tests enregistrent des clés et des prix de test).
+cur.execute("delete from app_settings where key like 'stripe_%'")
+time.sleep(6)  # cache des réglages de l'API : 5 s
 before = requests.get(B + "/admin/dashboard", headers=admin).json()["subscribers"]
 for status, cancel in (("active", False), ("trialing", False), ("past_due", False), ("active", True)):
     uid = mkuser()

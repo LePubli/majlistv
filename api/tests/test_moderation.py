@@ -28,6 +28,10 @@ tag = uuid.uuid4().hex[:6]
 mk = lambda h, n, pub="published": requests.post(B + "/talks", headers=h, json={"title": f"Conf modération {n} {tag}", "language": "fr", "translateTo": [], "videoUrl": "https://youtu.be/" + (tag + n + "abcdefghi")[:11], "rightsConfirmed": True, "publication": pub}).json()["id"]
 status = lambda tid: cur.execute("select review_status, publication from talks where id=%s", (tid,)) or cur.fetchone()
 setting("review_required", "false")
+import atexit
+# Quoi qu'il arrive (échec en cours de route), la relecture obligatoire est remise à « non » : sinon les suites suivantes
+# (publication, mise en pratique, thèmes…) verraient leurs conférences « en attente de relecture ».
+atexit.register(lambda: cur.execute("update app_settings set value='false' where key='review_required'"))
 
 O1, o1, o1mail = user("organizer"); O2, o2, _ = user("organizer"); MOD, mid, _ = user(); U, uid, _ = user(); U2, u2, _ = user()
 
@@ -129,7 +133,10 @@ requests.post(f"{B}/admin/users/{uid}/password", headers=ADM, json={"password": 
 rows = requests.get(B + "/admin/audit?days=1&q=password&limit=50", headers=ADM).json()["items"]
 ok(rows and "password" in rows[0]["fields"] and "Secret-Tres-Long" not in str(rows), "journal : le champ « password » est noté, jamais sa valeur")
 requests.patch(f"{B}/talks/{t1}", headers=ADM, json={"access": "premium"})
-rows = requests.get(B + "/admin/audit?days=1&q=talks&limit=50", headers=ADM).json()["items"]
+for _ in range(10):  # le journal s'écrit juste APRÈS la réponse (crochet onResponse) : on lui laisse un instant
+    rows = requests.get(B + "/admin/audit?days=1&q=talks&limit=50", headers=ADM).json()["items"]
+    if any(r["method"] == "PATCH" and f"id={t1}" in r["target"] for r in rows): break
+    time.sleep(0.3)
 ok(any(r["method"] == "PATCH" and r["route"] == "/talks/:id" and r["actorRole"] == "admin" and f"id={t1}" in r["target"] for r in rows), "journal : l'administrateur modifie une conférence")
 before = requests.get(B + "/admin/audit?days=1&limit=1", headers=ADM).json()["total"]
 requests.get(B + "/admin/users", headers=ADM); requests.get(f"{B}/talks/{t1}", headers=ADM); requests.put(f"{B}/me/learning/prefs", headers=ADM, json={})

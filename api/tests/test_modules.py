@@ -75,6 +75,7 @@ ok(mods["bad-manifest"]["status"] == "error" and "invalide" in mods["bad-manifes
 ok(requests.put(F + "/admin/modules/broken-migration", headers=FA, json={"enabled": True}).status_code == 409, "un module en erreur ne s'active pas")
 ok(requests.get(F + "/health").status_code == 200, "les autres modules et le site démarrent quand même")
 # dépendances
+requests.put(F + "/admin/modules/gifts", headers=FA, json={"enabled": False})  # point de départ connu : Cartes cadeaux coupé
 r = requests.put(F + "/admin/modules/hello-demo", headers=FA, json={"enabled": True})
 ok(r.status_code == 409 and "Cartes cadeaux" in r.json()["error"], "activation refusée : dépend de « Cartes cadeaux » (inactif)")
 ok(requests.put(F + "/admin/modules/gifts", headers=FA, json={"enabled": True}).status_code == 200, "activer le module requis")

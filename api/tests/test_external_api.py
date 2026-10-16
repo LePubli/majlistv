@@ -25,7 +25,7 @@ ok(create("noRights001", True).status_code == 409, "doublon refusé (déjà dans
 # 2) sous-titres de l'auteur
 r = create("subsAAAAAAA", True, tr=["en", "ar"]); t1 = r.json()["id"]
 st = wait(t1); ok(st[0] == "ready" and st[1] == "subtitles", f"sous-titres de l'auteur utilisés ({st})")
-cur.execute("select start_ms, text from transcript_segments where talk_id=%s order by idx", (t1,)); segs = cur.fetchall()
+cur.execute("select start_ms, text from transcript_segments where talk_id=%s and lang=(select transcript_language from talks where id=%s) order by idx", (t1, t1)); segs = cur.fetchall()  # langue d'origine (le traducteur ajoute les autres)
 ok(segs == [(0, "Bonjour et bienvenue."), (65000, "La patience est une lumière.")], "segments horodatés enregistrés")
 cur.execute("select duration_seconds, external_thumb, description from talks where id=%s", (t1,)); d = cur.fetchone()
 ok(d[0] == 3725 and d[1] == "https://img.test/subsAAAAAAA.jpg" and d[2] == "Description venue de la plateforme", "durée, miniature et description récupérées")

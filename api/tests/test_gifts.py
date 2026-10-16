@@ -128,7 +128,8 @@ ok(full["totals"]["redeemed"] >= 2 and full["totals"]["voided"] >= 1 and full["t
 ok(any(x["code"] == code and x["purchaserEmail"] == uemail and x["redeemerEmail"] for x in full["gifts"]), "l'administrateur voit acheteur et bénéficiaire")
 ok(len(requests.get(B + "/admin/gifts?q=" + code[:9], headers=ADM).json()["gifts"]) == 1, "recherche par code")
 ok(requests.get(B + "/admin/gifts", headers=U).status_code == 403, "liste réservée à l'administrateur")
-cur.execute("select count(*) from audit_log where route like '/admin/gifts%'"); ok(cur.fetchone()[0] >= 3, "actions de l'administrateur inscrites au journal")
+cur.execute("select route from audit_log where route like '/admin/gifts%' and at > now() - interval '10 minutes'"); routes = {r[0] for r in cur.fetchall()}
+ok({"/admin/gifts/generate", "/admin/gifts/:id/void"} <= routes, f"actions de l'administrateur inscrites au journal (génération, annulation) : {sorted(routes)}")
 
 # --- remboursement Stripe
 ok(requests.post(B + "/gifts/checkout", headers=U, json={"months": 1, "terms": True}).status_code == 200, "2e achat")

@@ -32,7 +32,10 @@ await runDaily(console);
 const ma = await mails(a);
 ok(ma.length === 1 && ma[0].vars.count === 2, 'membre Apprentissage avec 2 révisions : 1 e-mail');
 ok(ma[0].vars.titles.includes('Patience') && ma[0].vars.titles.includes('Gratitude'), 'titres des conférences à réviser');
-ok(ma[0].vars.reminder === 'La patience est lumière.' && ma[0].vars.source.includes('Source test'), 'rappel du jour joint (validé, avec sa source)');
+// Le rappel du jour est tiré parmi TOUS les rappels validés (la base de test peut contenir le corpus de citations) :
+// on vérifie qu'il s'agit bien d'un rappel validé, joint avec sa source.
+const picked = ma[0].vars.reminder ? (await pool.query("SELECT text, attribution FROM reminders WHERE status='approved' AND text = $1 LIMIT 1", [ma[0].vars.reminder])).rows[0] : null;
+ok(Boolean(picked) && (ma[0].vars.reminder !== 'La patience est lumière.' || ma[0].vars.source.includes('Source test')) && (!picked?.attribution || ma[0].vars.source.includes(picked.attribution)), 'rappel du jour joint (validé, avec sa source)');
 ok(ma[0].vars.path === '/learning', 'lien vers Mon apprentissage');
 ok((await mails(b)).length === 0, 'e-mail désactivé : rien envoyé');
 ok((await mails(c)).length === 0, "rien à réviser : pas d'e-mail");

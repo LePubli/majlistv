@@ -132,10 +132,11 @@ ok(c.status_code == 200 and c.headers["content-type"].startswith("text/csv") and
 # --- Kids
 cur.execute("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values (%s,%s,'active','p','month',now()+interval '20 days',1,'standard')", ("sub_" + uuid.uuid4().hex[:12], u1))
 PAR = {"authorization": "Bearer " + login(*[x for x in ()] or ("admin@test.local", "AdminPassw0rd-test"))}
-requests.put(B + "/me/kids/pin", headers=PAR, json={"pin": "1234"})
+cur.execute("update users set kids_pin_hash=null, kids_pin_fails=0, kids_pin_locked_until=null where id=%s", (admin_id,))  # point de départ connu
+ok(requests.put(B + "/me/kids/pin", headers=PAR, json={"code": "1234"}).status_code in (200, 204), "code parental défini")  # le champ de l'API est « code »
 cur.execute("delete from kid_profiles where user_id=%s", (admin_id,))
 kid = requests.post(B + "/me/kids/profiles", headers=PAR, json={"name": "Enfant", "band": "7-10"}).json()["id"]
-KT = requests.post(B + f"/me/kids/profiles/{kid}/enter", headers=PAR, json={"pin": "1234"}).json()["token"]
+KT = requests.post(B + f"/me/kids/profiles/{kid}/enter", headers=PAR, json={}).json()["token"]
 K = {"authorization": "Bearer " + KT}
 TK = mk("Conf Kids", o1, bands=["7-10", "11-14"]); TA = mk("Conf adulte", o1)
 ks = lambda body: requests.post(B + "/kids/stats", json=body, headers=K)

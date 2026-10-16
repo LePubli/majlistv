@@ -63,8 +63,15 @@ cols = {c["collection"]: c["n"] for c in st["collections"]}
 ok(cols.get("quran", 0) > 3000 and cols.get("nawawi", 0) >= 25 and cols.get("qudsi", 0) >= 15 and "inconnu" not in cols, f"collections importées {cols}")
 
 # --- le texte du corpus est celui de la source -------------------------------------------------
-import json
+import json, os
 src = "/tmp/claude-0/corp/"
+# Copies de référence des fichiers sources (téléchargées une fois, aux mêmes adresses que l'import de l'API).
+_BASE = "https://raw.githubusercontent.com/fawazahmed0"
+os.makedirs(src, exist_ok=True)
+for _name, _path in [("q_fr.json", "/quran-api/1/editions/fra-muhammadhamidul.json"), ("q_ar.json", "/quran-api/1/editions/ara-quranuthmanihaf.json"),
+                     ("fra-nawawi.json", "/hadith-api/1/editions/fra-nawawi.json")]:
+    if not os.path.exists(src + _name):
+        open(src + _name, "wb").write(requests.get(_BASE + _path, timeout=60).content)
 qfr = {f"{v['chapter']}:{v['verse']}": v["text"] for v in json.load(open(src + "q_fr.json"))["quran"]}
 qar = {f"{v['chapter']}:{v['verse']}": v["text"] for v in json.load(open(src + "q_ar.json"))["quran"]}
 norm = lambda s: " ".join(s.split())
