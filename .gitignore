@@ -1,2 +1,6 @@
 node_modules/
 .env
+# Fichiers générés automatiquement (ne pas versionner)
+__pycache__/
+*.pyc
+*.log
