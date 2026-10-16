@@ -100,10 +100,29 @@ with tempfile.TemporaryDirectory() as d:
     rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/s", "--engine", "kokoro", "--vc-voice", voice,
                       "--consent-date", "2026-10-16", "--consent-by", "Epok", "--vc-steps", "5"])
     check("--vc-steps transmis à la conversion", seen and set(seen) == {5} and rep["vc_steps"] == 5)
+    # conversion par blocs : un seul appel pour les deux phrases voisines, durée conservée
+    n_calls = []
+    class FakeVC3(FakeVC):
+        def generate(self, path):
+            n_calls.append(1); return FakeVC.generate(self, path)
+    vcm.ChatterboxVC = FakeVC3
+    rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/b", "--engine", "kokoro", "--vc-voice", voice,
+                      "--consent-date", "2026-10-16", "--consent-by", "Epok", "--vc-chunk", "20"])
+    check("blocs : 1 seul appel de conversion pour 2 phrases proches", len(n_calls) == 1 and rep["vc_chunks"] == 1)
+    check("blocs : RTF global rapporté", rep["rtf_total"] is not None)
+    v, _ = bench.read_wav(f"{d}/b/voice_only.wav")
+    check("blocs : voix convertie au bon endroit, silence dans l'intervalle",
+          float(np.max(np.abs(v[int(0.6 * bench.SR):int(1.0 * bench.SR)]))) > 0.15 and float(np.max(np.abs(v[int(2.5 * bench.SR):int(3.9 * bench.SR)]))) < 1e-4)
+    n_calls.clear()
+    rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/b2", "--engine", "kokoro", "--vc-voice", voice,
+                      "--consent-date", "2026-10-16", "--consent-by", "Epok", "--vc-chunk", "2"])
+    check("blocs courts : un appel par phrase", len(n_calls) == 2)
     # garde-fous
     base = [sys.executable, os.path.join(os.path.dirname(__file__), "bench.py"), "--vtt", vtt, "--audio", audio, "--out", f"{d}/z"]
     r = subprocess.run(base + ["--engine", "kokoro", "--vc-voice", voice], capture_output=True, text=True)
     check("conversion refusée sans consentement", r.returncode != 0 and "consent" in r.stderr.lower())
+    r = subprocess.run(base + ["--engine", "kokoro", "--vc-voice", voice, "--consent-date", "2026-10-16", "--consent-by", "E", "--vc-chunk", "40"], capture_output=True, text=True)
+    check("--vc-chunk > 25 refusé", r.returncode != 0 and "25" in r.stderr)
     r = subprocess.run(base + ["--engine", "kokoro", "--voice", voice], capture_output=True, text=True)
     check("--voice refusé avec kokoro", r.returncode != 0 and "--vc-voice" in r.stderr)
     r = subprocess.run(base + ["--engine", "chatterbox", "--vc-voice", voice], capture_output=True, text=True)

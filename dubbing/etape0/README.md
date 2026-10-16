@@ -209,3 +209,30 @@ for s in 0 1; do
 done
 ls -la /root/dubbing-test/out/ecoute
 ```
+
+---
+
+# Étape 0 quater — conversion de voix par blocs
+
+## Constat (mesures du 16/10/2026, voix de Tom puis voix d'Epok, 6 phrases)
+| Étapes de conversion | Conversion par phrase | RTF global |
+|---|---|---|
+| 10 (défaut) | 17,5 s | 11,4 |
+| 5 | 9,3 s | 7,1 |
+
+Piper (Tom) tient dans les créneaux : 0 % de débordement, contre 30 % avec Kokoro. Les durées de conversion mesurées sont presque les mêmes pour une phrase de 1,2 s et de 2,2 s : **chaque appel semble avoir un coût fixe élevé** (la voix de référence est retraitée à chaque appel), et la durée de la phrase pèse peu. C'est une **hypothèse tirée de 6 mesures**, pas une certitude.
+
+## Option `--vc-chunk N`
+Au lieu d'un appel par phrase, regroupe les phrases voisines en blocs d'au plus N secondes (max 25) et convertit chaque bloc en un seul appel. La durée est conservée, les phrases restent à leur place. Le rapport donne le **RTF global** (voix de base + conversion).
+
+```bash
+cd /root/dubbing-test/src && git pull && docker build -t majlis-dub-test dubbing/etape0
+cd dubbing/etape0 && mkdir -p /root/dubbing-test/out/ecoute
+for n in 5 10; do
+  ./run.sh arab1 --engine piper --piper-voice fr_FR-tom-medium --vc-voice /in/epok.wav --consent-date 2026-10-16 --consent-by "Epok" --vc-steps $n --vc-chunk 20 --max-segments 30
+  cp /root/dubbing-test/out/arab1/dub_mix.mp3 /root/dubbing-test/out/ecoute/tom_blocs_${n}etapes.mp3
+  mv /root/dubbing-test/out/arab1 /root/dubbing-test/out/arab1_F$n
+done
+grep -H -E "RTF global|Mémoire|débordent" /root/dubbing-test/out/arab1_F*/report.md
+```
+Si le RTF global tombe nettement sous 7, l'hypothèse est confirmée. Si la qualité change entre phrases courtes et blocs, c'est à l'écoute qu'on le verra.

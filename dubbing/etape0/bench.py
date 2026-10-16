@@ -184,6 +184,7 @@ def main(argv=None):
     ap.add_argument("--engine", choices=sorted(ENGINES), default="chatterbox")
     ap.add_argument("--vc-voice", help="échantillon de voix cible : convertit la voix du moteur léger vers cette voix (piper/kokoro)")
     ap.add_argument("--vc-steps", type=int, default=0, help="conversion de voix : nombre d'étapes de génération (0 = défaut du modèle, 10 ; essayer 5 puis 3)")
+    ap.add_argument("--vc-chunk", type=float, default=0, help="conversion de voix par blocs de N secondes (max 25) au lieu de phrase par phrase : amortit le coût fixe de chaque appel")
     ap.add_argument("--cfg-weight", type=float, default=0.5, help="Chatterbox : 0 = ~2 fois plus rapide (sans double passe)")
     ap.add_argument("--exaggeration", type=float, default=0.5, help="Chatterbox : expressivité")
     ap.add_argument("--threads", type=int, default=4, help="fils de calcul (= nombre de cœurs alloués au conteneur)")
@@ -203,6 +204,8 @@ def main(argv=None):
 
     # Garde-fous AVANT tout chargement lourd
     clone = a.voice or a.vc_voice
+    if a.vc_chunk and (a.vc_chunk > 25 or not a.vc_voice):
+        sys.exit("ERREUR : --vc-chunk s'utilise avec --vc-voice et vaut au plus 25 secondes.")
     if a.voice and a.engine in ("piper", "kokoro"):
         sys.exit("ERREUR : --voice s'utilise avec --engine chatterbox ; pour piper/kokoro utilise --vc-voice.")
     if a.vc_voice and a.engine in ("chatterbox", "fake"):
@@ -242,6 +245,7 @@ def main(argv=None):
     voice_track = np.zeros(n, dtype=np.float32)
     gain = np.full(n, a.duck, dtype=np.float32)  # volume de l'original, par échantillon
     segs = []
+    placed = []  # (début en échantillons, voix calée) de chaque phrase parlée
     for i, c in enumerate(cues):
         s0, s1 = int(c["start"] * SR), int(c["end"] * SR)
         slot = c["end"] - c["start"]
@@ -253,7 +257,7 @@ def main(argv=None):
         t = time.time()
         wav = eng.synth(c["text"])
         base_s = time.time() - t
-        if vc:
+        if vc and not a.vc_chunk:
             wav = vc.convert(wav)
         synth_s = time.time() - t
         raw = len(wav) / SR
@@ -267,10 +271,35 @@ def main(argv=None):
         overflow = max(0.0, fit_s - room)
         end_i = min(n, s0 + len(fit))
         voice_track[s0:end_i] += fit[: end_i - s0]
+        placed.append((s0, fit[: end_i - s0]))
         row.update(protected=False, raw_s=round(raw, 2), room_s=round(room, 2), speedup=round(factor, 3),
                    fit_s=round(fit_s, 2), overflow_s=round(overflow, 2), synth_s=round(synth_s, 2), vc_s=round(synth_s - base_s, 2),
                    rtf=round(synth_s / raw, 2) if raw else None)
         segs.append(row)
+
+    vc_total_s, vc_chunks = 0.0, 0
+    if vc and a.vc_chunk and placed:
+        # Regroupe les phrases voisines en blocs <= vc_chunk secondes, convertit chaque bloc en un seul appel
+        groups, cur = [], [placed[0]]
+        for item in placed[1:]:
+            if (item[0] + len(item[1]) - cur[0][0]) / SR <= a.vc_chunk:
+                cur.append(item)
+            else:
+                groups.append(cur); cur = [item]
+        groups.append(cur)
+        voice_track = np.zeros(n, dtype=np.float32)
+        for g in groups:
+            g0 = g[0][0]
+            g1 = max(st + len(w) for st, w in g)
+            local = np.zeros(g1 - g0, dtype=np.float32)
+            for st, w in g:
+                local[st - g0: st - g0 + len(w)] += w
+            t = time.time()
+            conv = vc.convert(local)
+            vc_total_s += time.time() - t
+            vc_chunks += 1
+            conv = np.pad(conv, (0, max(0, len(local) - len(conv))))[: len(local)]  # durée conservée
+            voice_track[g0:g1] += conv
 
     mix = voice_track + orig_pad(orig, n) * gain
     peak = float(np.max(np.abs(mix))) or 1.0
@@ -293,11 +322,13 @@ def main(argv=None):
         "rtf_median": round(statistics.median(rtfs), 2) if rtfs else None,
         "rtf_max": round(max(rtfs), 2) if rtfs else None,
         "speedup_mean": round(statistics.mean(s["speedup"] for s in spoken), 3) if spoken else None,
-        "vc_mean_s": round(statistics.mean(x["vc_s"] for x in spoken), 2) if spoken and vc else None, "overflow_count": len(over), "overflow_share": round(len(over) / len(spoken), 3) if spoken else 0,
+        "vc_mean_s": round(statistics.mean(x["vc_s"] for x in spoken), 2) if spoken and vc and not a.vc_chunk else None,
+        "vc_chunk": a.vc_chunk or None, "vc_chunks": vc_chunks or None, "vc_total_s": round(vc_total_s, 1) if vc_chunks else None,
+        "rtf_total": round((sum(x["synth_s"] for x in spoken) + vc_total_s) / max(1e-9, sum(x["fit_s"] for x in spoken)), 2) if spoken and vc_chunks else None, "overflow_count": len(over), "overflow_share": round(len(over) / len(spoken), 3) if spoken else 0,
         "ram_peak_gb": round(ram_gb, 2), "thresholds_proposed": THRESH, "details": segs,
     }
     ok = {
-        "vitesse": rep["rtf_median"] is not None and rep["rtf_median"] <= THRESH["rtf_median_max"],
+        "vitesse": (rep["rtf_total"] if rep["rtf_total"] is not None else (rep["rtf_median"] if rep["rtf_median"] is not None else 99)) <= THRESH["rtf_median_max"],
         "calage": rep["overflow_share"] <= THRESH["overflow_share_max"],
         "memoire": rep["ram_peak_gb"] <= THRESH["ram_gb_max"],
     }
@@ -321,6 +352,7 @@ def write_md(path, r):
          f"- Durée audio : {r['audio_total_s']} s · chargement du modèle : {r['model_load_s']} s",
          f"- Vitesse (RTF = temps de calcul / durée produite) : médiane {r['rtf_median']} · max {r['rtf_max']}",
          f"- Réglages : {r['threads']} fils" + (f" · cfg_weight {r['cfg_weight']}" if r.get("cfg_weight") is not None else ""),
+         f"- Conversion de voix par blocs de {r['vc_chunk']} s : {r['vc_chunks']} blocs, {r['vc_total_s']} s au total · **RTF global (voix de base + conversion) : {r['rtf_total']}**" if r.get("vc_chunks") else
          f"- Dont conversion de voix (moyenne par phrase) : {r['vc_mean_s']} s (étapes : {r.get('vc_steps') or 'défaut 10'})" if r.get("vc_mean_s") is not None else "- Pas de conversion de voix",
          f"- Accélération moyenne pour caler : ×{r['speedup_mean']}",
          f"- Phrases qui débordent encore : {r['overflow_count']} ({round(r['overflow_share']*100)} %)",
