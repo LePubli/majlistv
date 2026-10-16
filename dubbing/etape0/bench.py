@@ -124,7 +124,8 @@ class ChatterboxEngine:
 class PiperEngine:
     """Piper : voix française très légère (ONNX), sans clonage. Appelle la ligne de commande de Piper."""
     name = "piper"
-    def __init__(self, piper_voice="fr_FR-siwis-medium", piper_dir="/models/piper", **_):
+    def __init__(self, piper_voice="fr_FR-siwis-medium", piper_dir="/models/piper", piper_speaker=None, **_):
+        self.speaker = piper_speaker
         self.cmd = os.environ.get("PIPER_CMD", f"{sys.executable} -m piper").split()
         self.model = os.path.join(piper_dir, piper_voice + ".onnx")
         if not os.path.isfile(self.model) and not os.environ.get("PIPER_CMD"):
@@ -136,7 +137,8 @@ class PiperEngine:
     def synth(self, text):
         with tempfile.TemporaryDirectory() as d:
             raw, out = os.path.join(d, "r.wav"), os.path.join(d, "o.wav")
-            r = subprocess.run(self.cmd + ["-m", self.model, "-f", raw], input=text, capture_output=True, text=True)
+            extra = ["-s", str(self.speaker)] if self.speaker is not None else []
+            r = subprocess.run(self.cmd + ["-m", self.model, "-f", raw] + extra, input=text, capture_output=True, text=True)
             if r.returncode or not os.path.isfile(raw):
                 raise RuntimeError("piper : " + r.stderr[-300:])
             resample_file(raw, out)
@@ -187,6 +189,7 @@ def main(argv=None):
     ap.add_argument("--threads", type=int, default=4, help="fils de calcul (= nombre de cœurs alloués au conteneur)")
     ap.add_argument("--piper-voice", default="fr_FR-siwis-medium")
     ap.add_argument("--piper-dir", default="/models/piper")
+    ap.add_argument("--piper-speaker", type=int, default=None, help="numéro de locuteur (voix à plusieurs locuteurs, ex. upmc : 0 puis 1)")
     ap.add_argument("--kokoro-voice", default="ff_siwis")
     ap.add_argument("--voice", help="échantillon de voix (wav/mp3, 10–30 s) ; sans lui, voix par défaut du modèle")
     ap.add_argument("--consent-date", help="AAAA-MM-JJ : date du consentement de la personne dont la voix est clonée")
@@ -224,7 +227,7 @@ def main(argv=None):
         os.environ[k] = str(a.threads)
     t0 = time.time()
     eng = ENGINES[a.engine](device=a.device, voice=a.voice, lang=a.lang, cfg_weight=a.cfg_weight, exaggeration=a.exaggeration,
-                            piper_voice=a.piper_voice, piper_dir=a.piper_dir, kokoro_voice=a.kokoro_voice)
+                            piper_voice=a.piper_voice, piper_dir=a.piper_dir, piper_speaker=a.piper_speaker, kokoro_voice=a.kokoro_voice)
     vc = VoiceConverter(a.vc_voice, a.device, a.vc_steps) if a.vc_voice else None
     try:
         import torch

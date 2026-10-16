@@ -63,6 +63,8 @@ with tempfile.TemporaryDirectory() as d:
     rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/p", "--engine", "piper"])
     check("piper : 2 phrases synthétisées", rep["engine"] == "piper" and all(x["raw_s"] > 0.3 for x in rep["details"]))
     check("piper : rééchantillonné à 24 kHz (durée cohérente)", abs(rep["details"][0]["raw_s"] - 0.05 * len("Bonjour à tous.")) < 0.15)
+    rep = bench.main(["--vtt", vtt, "--audio", audio, "--out", f"{d}/p2", "--engine", "piper", "--piper-speaker", "1"])
+    check("piper : option locuteur acceptée", rep["segments"] == 2)
     # Kokoro : faux module
     class FakePipe:
         def __init__(self, lang_code): assert lang_code == "f"

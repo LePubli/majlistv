@@ -193,3 +193,19 @@ mkdir -p /root/dubbing-test/out/ecoute
 for n in 5 3; do cp /root/dubbing-test/out/arab1_D$n/dub_mix.mp3 /root/dubbing-test/out/ecoute/essai_D$n.mp3; done
 ```
 Non testé sur le vrai modèle : seulement l'acheminement de l'option (28 contrôles avec faux moteurs).
+
+## Voix masculines libres de Piper (à écouter)
+Voix françaises de Piper (fr_FR) : `tom` (medium), `gilles` (low), `upmc` (medium, 2 locuteurs : `--piper-speaker 0` puis `1`), `mls_1840` (low), `mls`, `siwis` (féminine, déjà testée). Les fiches des modèles ne donnent pas le genre : il se vérifie à l'écoute. Licences relevées sur les fiches : tom AGPL-3.0 ; gilles CC0 ; upmc CC BY-SA 4.0 ; mls_1840 CC BY 4.0 (à valider avant usage commercial).
+```bash
+cd /root/dubbing-test/src && git pull && docker build -t majlis-dub-test dubbing/etape0
+cd dubbing/etape0 && mkdir -p /root/dubbing-test/out/ecoute
+for v in fr_FR-tom-medium fr_FR-gilles-low fr_FR-mls_1840-low; do
+  ./run.sh arab1 --engine piper --piper-voice $v --max-segments 6 >/dev/null 2>&1
+  cp /root/dubbing-test/out/arab1/dub_mix.mp3 /root/dubbing-test/out/ecoute/piper_$v.mp3
+done
+for s in 0 1; do
+  ./run.sh arab1 --engine piper --piper-voice fr_FR-upmc-medium --piper-speaker $s --max-segments 6 >/dev/null 2>&1
+  cp /root/dubbing-test/out/arab1/dub_mix.mp3 /root/dubbing-test/out/ecoute/piper_upmc_locuteur$s.mp3
+done
+ls -la /root/dubbing-test/out/ecoute
+```
