@@ -7,6 +7,14 @@ import { useEffect } from 'react';
 import { useApp } from './Providers';
 import { LOCALES } from '../lib/i18n';
 import { featureForPath } from '../lib/features';
+import { hasWebModule, MODULE_STUDIO_LINKS } from '../lib/modules';
+
+// Étape M3b : entrées du menu qui mènent aux écrans d'un module (identifiant du module = identifiant de sa fonction).
+const MODULE_OF_HREF = {
+  '/studio/series': 'series', '/studio/collections': 'collections', '/studio/channel': 'channels', '/studio/practice': 'practice', '/studio/quiz': 'quiz',
+  '/studio/books': 'books', '/studio/reminders': 'revision', '/studio/stats': 'stats', '/studio/revenue': 'revenue',
+  '/admin?tab=stats': 'stats', '/admin?tab=gifts': 'gifts', '/admin?tab=revenue': 'revenue',
+};
 import { useCollapsed, ChevIco } from './MemberShell';
 
 const ICONS = {
@@ -63,16 +71,27 @@ export default function StudioShell({ children }) {
     return href === '/studio' ? path === '/studio' || (path.startsWith('/studio/') && path !== '/studio/new' && !path.startsWith('/studio/series') && !path.startsWith('/studio/quiz') && !path.startsWith('/studio/practice') && !path.startsWith('/studio/books') && !path.startsWith('/studio/reminders') && !path.startsWith('/studio/stats') && !path.startsWith('/studio/revenue') && !path.startsWith('/studio/channel')) : path === href;
   };
   const allGroups = [
-    ...(isStaff ? [{ title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/channel', t('chNavAll'), ICONS.users], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
-    ...(isModOnly ? [] : [{ title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ...(isStaff ? [] : [['/studio/channel', t('chNav'), ICONS.users]]), ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart], ['/studio/revenue', t('rvNav'), ICONS.tag]] }]),
-    ...(isAdmin ? [{ title: t('adminNav'), items: [
+    ...(isStaff ? [{ key: 'mod', title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/channel', t('chNavAll'), ICONS.users], ['/studio/practice', t('pzNav'), ICONS.list]] }] : []),
+    ...(isModOnly ? [] : [{ key: 'studio', title: t('studioNav'), items: [['/studio', t('myTalks'), ICONS.list], ['/studio/new', t('newTalk'), ICONS.plus], ...(isStaff ? [] : [['/studio/channel', t('chNav'), ICONS.users]]), ['/studio/series', t('srNav'), ICONS.layers], ['/studio/quiz', t('qzNav'), ICONS.check], ['/studio/practice', t('pzNav'), ICONS.heart], ['/studio/books', t('bkNav'), ICONS.doc], ['/studio/reminders', t('rmNav'), ICONS.bell], ['/studio/stats', t('stNav'), ICONS.chart], ['/studio/revenue', t('rvNav'), ICONS.tag]] }]),
+    ...(isAdmin ? [{ key: 'admin', title: t('adminNav'), items: [
       ['/admin', t('admDashboard'), ICONS.dash], ['/admin?tab=users', t('admUsers'), ICONS.users],
       ['/admin?tab=stats', t('stNav'), ICONS.chart], ['/admin?tab=categories', t('admCategories'), ICONS.tag], ['/admin?tab=gifts', t('admGifts'), ICONS.tag], ['/admin?tab=revenue', t('rvAdminNav'), ICONS.tag], ['/admin?tab=audit', t('admAudit'), ICONS.list], ['/admin?tab=appearance', t('admAppearance'), ICONS.brush], ['/admin?tab=pages', t('admPages'), ICONS.doc], ['/admin?tab=texts', t('admTexts'), ICONS.doc], ['/admin?tab=features', t('admFeatures'), ICONS.gear], ['/admin?tab=modules', t('admModules'), ICONS.gear], ['/admin?tab=settings', t('admSettings'), ICONS.gear], ['/admin?tab=legal', t('admLegal'), ICONS.doc],
     ] }] : []),
   ];
-  // Étape A : une fonction coupée disparaît du menu (l'entrée « Fonctions » reste toujours là pour la rallumer).
-  const featureOfItem = (href) => (href.startsWith('/admin?tab=gifts') ? 'gifts' : href.startsWith('/admin?tab=revenue') ? 'revenue' : /^\/(admin\?tab=|studio\/)stats/.test(href) ? 'stats' : featureForPath(href));
-  const groups = allGroups.map((g) => ({ ...g, items: g.items.filter(([href]) => { const id = featureOfItem(href); return !id || feat(id); }) })).filter((g) => g.items.length);
+  // Étape M3b : les entrées supplémentaires fournies par de nouveaux modules (fiche web/modules/<id>/module.js, champ « studio »).
+  for (const l of MODULE_STUDIO_LINKS) {
+    const g = allGroups.find((x) => x.key === l.group);
+    if (g && (!l.roles || l.roles.includes(user.role))) g.items.push([l.href, t(l.label), ICONS[l.icon] || ICONS.doc]);
+  }
+  // Étape A + M3b : une entrée disparaît si sa fonction est coupée, ou si la partie web de son module est absente
+  // (l'entrée « Fonctions » reste toujours là pour rallumer une fonction).
+  const visible = (href) => {
+    const mod = MODULE_OF_HREF[href];
+    if (mod) return hasWebModule(mod) && feat(mod);
+    const id = featureForPath(href);
+    return !id || feat(id);
+  };
+  const groups = allGroups.map((g) => ({ ...g, items: g.items.filter(([href]) => visible(href)) })).filter((g) => g.items.length);
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };
   const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
 

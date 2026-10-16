@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
+import { hasWebModule, webModule } from '../lib/modules';
 
 const STATUS = { on: ['Activé', 'on'], off: ['Désactivé', ''], error: ['Erreur', 'warn'], absent: ['Absent du code', 'warn'] };
 
@@ -52,6 +53,9 @@ function Card({ m, onChange, call }) {
           <p className="meta small">{m.description}</p>
           {m.installedVersion && m.version && m.installedVersion !== m.version && <p className="meta small">Version enregistrée en base : v{m.installedVersion}.</p>}
           {m.feature && <p className="meta small">Lié à la fonction « {m.feature} » : même interrupteur que dans Admin → Fonctions.</p>}
+          {m.id && m.status !== 'absent' && (hasWebModule(m.id)
+            ? (webModule(m.id).paths || []).length > 0 && <p className="meta small">Écrans du site : présents.</p>
+            : <p className="meta small">Pas d’écran sur le site pour ce module (partie web absente ou inutile).</p>)}
         </div>
         {switchable && (
           <button type="button" role="switch" aria-checked={m.status === 'on'} aria-label={`Activer le module ${m.name}`} disabled={busy}

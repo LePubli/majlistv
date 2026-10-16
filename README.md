@@ -2743,3 +2743,68 @@ La première répond `{"status":"ok"}`, la seconde contient `"modules":{…}` av
 ### Dépannage
 - **« Point d'extension … déjà fourni par le module … »** dans Admin → Modules : deux modules fournissent la même information ; en désactiver ou en retirer un.
 - **L'API ne démarre plus après la mise à jour par zip** : l'ancien `api/src/revenue.js` est resté ; le supprimer, Commit, Push, Redeploy.
+
+## Étape M3b — Site web modulaire
+
+### Description
+La partie web de chaque module est désormais rangée avec lui, et le site s'adapte tout seul aux modules présents :
+- **Fiche web du module** : `web/modules/<id>/module.js` (nom, fonctions portées, adresses de ses pages, écrans d'administration, entrées du Studio). Les fiches sont **trouvées automatiquement** à la construction du site : aucune liste à tenir à jour.
+- **Pages rangées par module** dans des « groupes de routes » Next.js : `web/app/(module-<id>)/…` et `web/app/studio/(module-<id>)/…`. Le nom entre parenthèses n'apparaît pas dans l'adresse : **toutes les adresses restent identiques** (`/series`, `/gift`, `/studio/quiz`…).
+- **Écrans d'administration fournis par les modules** : Cartes cadeaux, Rémunération des chaînes et Statistiques sont maintenant dans leur module (`web/modules/gifts/Admin.js`, `revenue/Admin.js`, `stats/Admin.js`) et chargés à la demande par Admin.
+- **Masquage automatique** : une fonction n'est disponible sur le site que si son module est activé côté API **et** que sa partie web est présente. Sinon ses entrées disparaissent des menus (en-tête, menu latéral, barre du bas, Studio, Administration) et ses pages affichent « Cette fonction n'est pas disponible » (ou n'existent plus si le dossier a été retiré).
+- **Admin → Modules** indique si les écrans du site d'un module sont présents.
+
+| Module | Pages sur le site | Écran d'administration |
+|---|---|---|
+| series | /series, /studio/series | — |
+| collections | /collections, /studio/collections | — |
+| books | /books, /studio/books | — |
+| learning | /learning, /attestation | — |
+| lists | /lists, /l (lien partagé) | — |
+| channels | /chaines, /studio/channel | — |
+| kids | /kids | — |
+| gifts | /gift, /redeem | Admin → Cartes cadeaux |
+| revenue | /studio/revenue | Admin → Rémunération |
+| stats | /studio/stats | Admin → Statistiques |
+| quiz, practice, revision | /studio/quiz, /studio/practice, /studio/reminders | — |
+| selfcheck, notes, favorites, follow, citations, showcase | (affichés dans les pages du socle) | — |
+
+### Ajouter la partie web d'un nouveau module
+1. `web/modules/mon-module/module.js` :
+```js
+const mod = {
+  id: 'mon-module', name: 'Mon module', features: ['mon-module'],
+  paths: [/^\/mon-module(\/|$)/],                                   // pages masquées si le module est coupé
+  admin: [{ tab: 'mon-module', title: 'Mon module', label: 'admMonModule', icon: 'doc', load: () => import('./Admin') }],
+  studio: [{ group: 'admin', href: '/admin?tab=mon-module', label: 'admMonModule', icon: 'doc' }], // entrée de menu
+};
+export default mod;
+```
+2. Ses pages dans `web/app/(module-mon-module)/mon-module/page.js`, son écran d'administration dans `web/modules/mon-module/Admin.js`.
+3. Redéployer `majlistv-web` (Next.js assemble les pages à la construction : un nouveau module demande toujours un redéploiement du site, comme de l'API).
+
+### Fichiers
+Nouveaux : `web/lib/modules.js`, `web/modules/<19 modules>/module.js`, `web/modules/gifts/Admin.js` (sorti de `app/admin/page.js`), `web/modules/stats/Admin.js`, `web/tests/module_removal_build.py`. Déplacés : `web/components/RevenueAdmin.js` → `web/modules/revenue/Admin.js`, `web/components/StatsView.js` → `web/modules/stats/StatsView.js`, et les pages de 13 modules vers leurs groupes `(module-<id>)`. Modifiés : `web/app/layout.js`, `web/app/admin/page.js`, `web/lib/features.js`, `web/components/StudioShell.js`, `web/components/ModulesAdmin.js`.
+
+### Prérequis
+Aucune variable, aucune dépendance, aucune migration. **Seul le site web change** (l'API ne change pas dans cette étape).
+
+### Déploiement (DockPanel + GitHub Desktop)
+**Indispensable : passer par GitHub Desktop → Fetch origin puis Pull origin** (beaucoup de fichiers sont déplacés ; avec le zip, les anciens dossiers resteraient et le site aurait deux fois les mêmes pages, ce qui bloque la construction).
+Puis DockPanel → Git Deploy → **Redeploy `majlistv-api`** (correctifs M3a et citations, si pas encore fait) puis **`majlistv-web`**. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Vérifier que ça marche
+Ouvrir le site : accueil, `/series`, `/gift`, `/kids`, `/studio/series` s'affichent comme avant. Admin → Cartes cadeaux, Rémunération et Statistiques s'ouvrent. Admin → Fonctions : couper « Cartes cadeaux » → l'entrée disparaît du menu et `/gift` affiche « Cette fonction n'est pas disponible » ; la rallumer.
+
+### Tests
+- `web/tests/module_removal_build.py` : pour chacun des 19 modules, copie du site **sans** sa partie web (dossier et pages), construction, démarrage, puis vérification des pages du socle (accueil, connexion, tarifs, bibliothèque, compte, CGV, Studio, Administration), de la disparition des pages du module et de la présence de celles des autres ; puis le **site sans aucun module**.
+- Navigateur (Chromium, 1440 et 390 px) : écrans d'administration des modules, menus du Studio, pages des modules, fonction coupée (menu masqué, page « indisponible »), aucune erreur console, pas de défilement horizontal.
+
+### Dépannage
+- **La construction du site échoue avec « You cannot have two parallel pages that resolve to the same path »** : un ancien dossier de pages est resté (mise à jour par zip). Supprimer les anciens dossiers `web/app/series`, `collections`, `books`, `learning`, `attestation`, `lists`, `l`, `chaines`, `kids`, `gift`, `redeem` et `web/app/studio/series`, `collections`, `books`, `channel`, `quiz`, `practice`, `reminders`, `revenue`, `stats` (ils sont maintenant dans les dossiers `(module-…)`), ou mieux : récupérer le dépôt par GitHub Desktop.
+- **Une entrée de menu a disparu** : sa fonction est coupée (Admin → Fonctions) ou son module est absent (Admin → Modules).

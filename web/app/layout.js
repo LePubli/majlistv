@@ -21,6 +21,7 @@ import { dictFor } from '../lib/texts';
 import { pageSlots, siteLayout } from '../lib/pages';
 import { PageSlots } from '../components/PageBlocks';
 import EditMode from '../components/EditMode';
+import { webFeatures, hasWebModule } from '../lib/modules'; // étape M3b : fonctions dont la partie web du module est présente
 import TopBar from '../components/TopBar';
 
 export const dynamic = 'force-dynamic';
@@ -61,7 +62,7 @@ export default async function RootLayout({ children }) {
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries)} hasBooks={Boolean(hasBooks)} statsOn={stats !== false} features={features || {}} layout={layout}>
+        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} layout={layout}>
           <StatsBeacon />
           <ResponsiveTables />
           <SkipLink />
