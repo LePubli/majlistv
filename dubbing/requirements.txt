@@ -1,0 +1,8 @@
+# torch et torchaudio sont installés dans le Dockerfile (version processeur, sans CUDA).
+# Combinaison vérifiée sur le VPS à l'étape 0 (Python 3.11) : chatterbox-tts 0.1.7 + piper-tts 1.8.0.
+chatterbox-tts==0.1.7
+piper-tts==1.8.0
+numpy<2
+psycopg2-binary==2.9.10
+boto3>=1.36,<2
+cryptography>=44,<51

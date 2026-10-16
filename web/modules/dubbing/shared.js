@@ -61,9 +61,22 @@ export function Gate({ user, err, children }) {
   return children;
 }
 
-// Bandeau honnête : la génération n'existe pas encore.
+// État du service de doublage : prêt (signe de vie < 90 s) ou hors ligne. Les demandes attendent son retour.
 export function EngineNote({ engine }) {
   const { t } = useApp();
-  if (!engine || engine.ready) return null;
-  return <p className="db-engine" role="note"><strong>{t('dbEngineOffTitle')}</strong> {t('dbEngineOffText')}</p>;
+  if (!engine) return null;
+  if (engine.ready) {
+    const night = engine.info?.night;
+    const when = engine.info?.queueMode === 'always' ? t('dbQueueAlways') : (night ? tf(t('dbQueueNight'), { a: night[0], b: night[1] }) : '');
+    return <p className="db-engine ok" role="status"><strong>{t('dbEngineReady')}</strong> {when}</p>;
+  }
+  return <p className="db-engine" role="note"><strong>{t('dbEngineDown')}</strong> {t('dbEngineDownText')}</p>;
+}
+
+// Libellé d'une demande : « En attente », « Voix 35 % »…
+export function jobLabel(j, t) {
+  if (!j) return '';
+  if (j.status === 'queued') return j.kind === 'full' ? t('dbJobQueuedFull') : t('dbJobQueued');
+  if (j.status === 'running') return `${t('dbPhase_' + (j.phase || 'download'))} ${j.progress} %`;
+  return t('dbJob_' + j.status);
 }

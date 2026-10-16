@@ -63,15 +63,37 @@ export function effective(defaults, talk, voices) {
   return out;
 }
 
-// Temps de calcul estimé. Modèle simple tiré des mesures : voix de base + (conversion : part fixe + part par étape × étapes).
-export function estimate(params, speechSeconds, coefs) {
-  if (!speechSeconds) return { speechSeconds: 0, rtf: null, seconds: null };
-  const rtf = coefs.base + (params.targetVoice ? coefs.vcFixed + coefs.vcStep * params.vcSteps : 0);
-  return { speechSeconds: Math.round(speechSeconds), rtf: Math.round(rtf * 100) / 100, seconds: Math.round(speechSeconds * rtf) };
+// Temps de calcul estimé. Si le service a déjà doublé avec la même configuration (avec ou sans conversion, même nombre
+// d'étapes), on prend la vitesse réellement mesurée (médiane des 5 derniers travaux d'au moins 20 s de parole) ; sinon le modèle tiré des essais :
+// voix de base + (conversion : part fixe + part par étape × étapes).
+export function estimate(params, speechSeconds, coefs, measured = null) {
+  if (!speechSeconds) return { speechSeconds: 0, rtf: null, seconds: null, measured: false };
+  const m = measured?.get?.(configKey(params));
+  const rtf = m ?? (coefs.base + (params.targetVoice ? coefs.vcFixed + coefs.vcStep * params.vcSteps : 0));
+  return { speechSeconds: Math.round(speechSeconds), rtf: Math.round(rtf * 100) / 100, seconds: Math.round(speechSeconds * rtf), measured: m != null };
+}
+export const configKey = (p) => (p.targetVoice ? `vc${p.vcSteps}` : 'base');
+
+// Vitesses mesurées par le service : Map(configuration → médiane des 5 derniers travaux réussis).
+export async function measuredRtf() {
+  const { rows } = await pool.query(
+    `SELECT CASE WHEN params->>'targetVoice' IS NULL THEN 'base' ELSE 'vc' || (params->>'vcSteps') END AS k, (result->>'rtf')::float AS rtf
+     FROM dub_jobs WHERE status = 'done' AND result ? 'rtf' AND (result->>'rtf')::float > 0 AND COALESCE((result->>'engine') <> 'fake', true) AND (result->>'speechS')::float >= 20 ORDER BY finished_at DESC LIMIT 200`);
+  const by = new Map();
+  for (const r of rows) { const a = by.get(r.k) || []; if (a.length < 5) a.push(r.rtf); by.set(r.k, a); }
+  const out = new Map();
+  for (const [k, a] of by) { const s = [...a].sort((x, y) => x - y); out.set(k, s[Math.floor(s.length / 2)]); }
+  return out;
+}
+
+// État du service de doublage : « prêt » s'il a donné signe de vie depuis moins de 90 secondes.
+export async function engineState() {
+  const r = (await pool.query(`SELECT last_seen AS "lastSeen", version, info, (now() - last_seen) < interval '90 seconds' AS ready FROM dub_engine WHERE id = 1`)).rows[0];
+  return r ? { ready: r.ready, lastSeen: r.lastSeen, version: r.version, info: r.info } : { ready: false, lastSeen: null, version: null, info: {} };
 }
 
 export async function coefficients(ctx) {
-  const n = async (k, d) => { const v = Number(await ctx.setting(k)); return Number.isFinite(v) && v >= 0 ? v : d; };
+  const n = async (k, d) => { const v = Number(await ctx.setting('mod_dubbing_' + k)); return Number.isFinite(v) && v >= 0 ? v : d; };
   return { base: await n('rtf_base', 2), vcFixed: await n('rtf_vc_fixed', 0.3), vcStep: await n('rtf_vc_step', 0.42) };
 }
 

@@ -42,7 +42,7 @@ a_id, A = mk("admin", "admin"); o_id, O = mk("organizer", "orga"); u_id, U = mk(
 rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": False})
 r = rq("GET", "/studio/dubbing/state", headers=A); ok(r.status_code == 404 and r.json().get("code") == "module_off", "module désactivé : routes fermées (404 module_off)")
 mods = {m["id"]: m for m in rq("GET", "/admin/modules", headers=A).json()["modules"]}
-ok("dubbing" in mods and mods["dubbing"]["status"] == "off" and mods["dubbing"]["version"] == "0.1.0", "Admin → Modules : « Doublage français » présent, inactif")
+ok("dubbing" in mods and mods["dubbing"]["status"] == "off" and mods["dubbing"]["version"] == "0.2.0", "Admin → Modules : « Doublage français » présent, inactif")
 ok(any(f["key"] == "mod_dubbing_rtf_base" for f in mods["dubbing"]["fields"]), "réglages du module dans Admin → Modules (coefficients d'estimation)")
 ok(rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": True}).status_code == 200, "activation par l'administrateur")
 ok(rq("GET", "/studio/dubbing/state", headers=O).status_code == 403, "organisateur : refusé (administration seulement à l'étape S1)")
@@ -55,7 +55,7 @@ base = {v["slug"]: v for v in s["voices"] if v["kind"] == "base"}
 ok({"tom", "siwis", "gilles", "upmc-0", "upmc-1", "mls-1840"} <= set(base), "6 voix de base Piper fournies")
 ok(base["tom"]["model"] == "fr_FR-tom-medium" and "AGPL" in base["tom"]["license"] and base["upmc-1"]["speaker"] == 1, "Tom : modèle et licence ; UPMC : numéro de locuteur")
 ok(s["defaults"]["baseVoice"] == base["tom"]["id"] and s["defaults"]["vcSteps"] == 3 and s["defaults"]["vcChunk"] == 20 and s["defaults"]["duck"] == 15 and s["defaults"]["targetVoice"] is None, "réglages par défaut : Tom, 3 étapes, blocs de 20 s, original à 15 %")
-ok(s["engine"] == {"ready": False, "step": "D1a"}, "moteur annoncé honnêtement comme absent (étape D1a)")
+ok(s["engine"]["ready"] is False, "sans service de doublage : moteur « pas prêt »")
 ok(set(s["presets"]) == {"fast", "balanced", "quality"} and s["params"]["vcSteps"]["max"] == 10, "préréglages et plages fournis")
 ok(rq("PUT", "/studio/dubbing/defaults", headers=A, json={"params": {"vcSteps": 11}}).status_code == 400, "étapes hors plage refusées")
 ok(rq("PUT", "/studio/dubbing/defaults", headers=A, json={"params": {"duck": -1}}).status_code == 400, "volume négatif refusé")

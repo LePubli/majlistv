@@ -1,14 +1,89 @@
 {
   "id": "dubbing",
   "name": "Doublage français",
-  "version": "0.1.0",
-  "description": "Doublage français des conférences : voix de base (Piper, voix « Tom » par défaut) puis, au choix, conversion vers une voix autorisée (voix clonée avec consentement daté). Étape S1 : réglages par défaut et par conférence, bibliothèque de voix, estimation du temps de calcul, suivi de la langue d'écoute. La génération de la piste arrive avec le service de doublage (étape D1a).",
+  "version": "0.2.0",
+  "description": "Doublage français des conférences : voix de base (Piper, voix « Tom » par défaut) puis, au choix, conversion vers une voix autorisée (voix clonée avec consentement daté). Réglages par défaut et par conférence, bibliothèque de voix, estimation du temps de calcul, suivi de la langue d'écoute (S1) ; file d'attente du service de doublage (dossier dubbing/), écoute de 60 secondes et piste française (D1a).",
   "requires": [],
   "defaultEnabled": false,
   "settings": [
-    { "key": "rtf_base", "type": "number", "label": "Vitesse de la voix de base (secondes de calcul par seconde de voix)", "help": "Sert à estimer le temps de calcul. Mesuré sur le serveur le 16/10/2026 : 2,0 avec le banc d'essai (Piper relancé à chaque phrase). Le service de doublage (étape D1a) le mettra à jour.", "def": "2.0", "min": 0, "max": 50 },
-    { "key": "rtf_vc_fixed", "type": "number", "label": "Conversion de voix : part fixe (secondes de calcul par seconde de voix)", "help": "Estimation : part fixe + part par étape × nombre d'étapes. Mesures du 16/10/2026 par blocs de 20 s : 3 étapes ≈ 1,55 ; 5 étapes ≈ 2,38.", "def": "0.3", "min": 0, "max": 50 },
-    { "key": "rtf_vc_step", "type": "number", "label": "Conversion de voix : part par étape (secondes de calcul par seconde de voix)", "def": "0.42", "min": 0, "max": 20 },
-    { "key": "sample_max_mb", "type": "number", "label": "Taille maximale d'un échantillon de voix (Mo)", "def": "15", "min": 1, "max": 100 }
+    {
+      "key": "rtf_base",
+      "type": "number",
+      "label": "Vitesse de la voix de base (secondes de calcul par seconde de voix)",
+      "help": "Sert à estimer le temps de calcul. Mesuré sur le serveur le 16/10/2026 : 2,0 avec le banc d'essai (Piper relancé à chaque phrase). Le service de doublage (étape D1a) le mettra à jour.",
+      "def": "2.0",
+      "min": 0,
+      "max": 50
+    },
+    {
+      "key": "rtf_vc_fixed",
+      "type": "number",
+      "label": "Conversion de voix : part fixe (secondes de calcul par seconde de voix)",
+      "help": "Estimation : part fixe + part par étape × nombre d'étapes. Mesures du 16/10/2026 par blocs de 20 s : 3 étapes ≈ 1,55 ; 5 étapes ≈ 2,38.",
+      "def": "0.3",
+      "min": 0,
+      "max": 50
+    },
+    {
+      "key": "rtf_vc_step",
+      "type": "number",
+      "label": "Conversion de voix : part par étape (secondes de calcul par seconde de voix)",
+      "def": "0.42",
+      "min": 0,
+      "max": 20
+    },
+    {
+      "key": "sample_max_mb",
+      "type": "number",
+      "label": "Taille maximale d'un échantillon de voix (Mo)",
+      "def": "15",
+      "min": 1,
+      "max": 100
+    },
+    {
+      "key": "queue_mode",
+      "type": "select",
+      "label": "Quand lancer les doublages complets",
+      "help": "« night » : seulement pendant la plage de nuit ci-dessous (les écoutes de 60 secondes partent tout de suite). « always » : dès que le service est libre.",
+      "def": "night",
+      "options": [
+        "night",
+        "always"
+      ]
+    },
+    {
+      "key": "night_start",
+      "type": "number",
+      "label": "Début de la plage de nuit (heure de Paris, 0-23)",
+      "def": "1",
+      "min": 0,
+      "max": 23
+    },
+    {
+      "key": "night_end",
+      "type": "number",
+      "label": "Fin de la plage de nuit (heure de Paris, 0-23)",
+      "help": "Un doublage commencé dans la plage va jusqu'au bout, même s'il la dépasse.",
+      "def": "7",
+      "min": 0,
+      "max": 23
+    },
+    {
+      "key": "threads",
+      "type": "number",
+      "label": "Cœurs utilisés par le service de doublage",
+      "help": "Doit correspondre à la limite du conteneur (4 conseillé sur le VPS partagé). Pris en compte au doublage suivant.",
+      "def": "4",
+      "min": 1,
+      "max": 16
+    },
+    {
+      "key": "preview_seconds",
+      "type": "number",
+      "label": "Durée de l'écoute rapide (secondes)",
+      "def": "60",
+      "min": 15,
+      "max": 180
+    }
   ]
 }

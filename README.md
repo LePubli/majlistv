@@ -3162,3 +3162,53 @@ docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" 
 
 ### Testé / non testé
 Testé ici : API (54 contrôles), navigateur Chromium (fr et ar, 390 / 1440 / 1990 px), retrait du module (API et site), non-régression de l'étape D, des modules et de la rémunération (hors contrôles Stripe, non configuré dans mon environnement de test). **Non testé** : envoi d'un échantillon vers le vrai Garage (testé avec un faux stockage S3), vrai téléphone. Aucune voix n'est générée à cette étape.
+
+## Étape D1a — Service de doublage (`dubbing/`) branché sur le Studio
+
+### Description
+- **Nouveau service** `dubbing/` (Python, processeur seul) : voix de base Piper **gardée en mémoire**, calage, conversion vers la voix cible **par blocs** (ChatterboxVC), mélange avec la voix d'origine baissée, fichiers AAC dans le stockage. Détails : `dubbing/README.md`.
+- **Module « Doublage français » 0.2.0** (migration `002_jobs.sql`) : file `dub_jobs`, signe de vie `dub_engine`, piste en service `dub_tracks` ; réglages ajoutés dans Admin → Modules : plage de nuit (1 h – 7 h), mode `night` / `always`, cœurs (4), durée de l'écoute rapide (60 s).
+- **Studio → Audio et doublage** : « Écouter 60 secondes » et « Lancer le doublage » sont **actifs** ; barre de progression et « Annuler » ; la page se met à jour seule ; lecteur de l'écoute rapide et de la piste complète (version française, voix seule) ; état de chaque phrase (**Calé**, **Calé (accéléré)**, **À revoir**, **Voix d'origine**) avec la durée et l'accélération, filtre « À revoir » ; bandeau « Moteur prêt / hors ligne » ; file d'attente sur l'écran d'accueil ; colonne « Piste » dans la liste.
+- **Estimation** : la vitesse réellement mesurée par le service remplace l'estimation théorique dès qu'il a doublé au moins 20 s de parole avec la même configuration.
+- Correctif : la durée de l'écoute rapide utilisait par erreur le réglage « aperçu gratuit » du site (même nom) ; les réglages du module sont désormais lus avec leur nom complet.
+
+### Prérequis
+- Étape S1 en place. Accès du VPS à huggingface.co au premier lancement du service. 4 cœurs / 8 Go pour le service.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le code est déjà poussé sur `main`).
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (migration du module), puis **Redeploy `majlistv-web`**.
+3. DockPanel → Git Deploy → **nouveau déploiement `majlistv-dubbing`** : Dockerfile `dubbing/Dockerfile`, contexte `.`, port conteneur `3000`, aucun domaine, volume persistant `/models`, variables :
+```
+DATABASE_URL=<même valeur que majlistv-api>
+SETTINGS_KEY=<même valeur que majlistv-api>
+S3_ENDPOINT=https://s3-majlisstv.le-publicitaire.fr
+S3_REGION=garage
+S3_BUCKET=majlis-videos
+S3_ACCESS_KEY=<même valeur que majlistv-api>
+S3_SECRET_KEY=<même valeur que majlistv-api>
+DUB_THREADS=4
+```
+4. Sur le VPS :
+```bash
+/root/apply-limits.sh
+docker update --cpus 4 --memory 8g --memory-swap 8g dockpanel-git-majlistv-dubbing
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 20 dockpanel-git-majlistv-dubbing
+```
+Si DockPanel refuse le port : voir `dubbing/README.md` (port hôte 7041 par exemple ; jamais 7000, 7001, 7010).
+
+### Exemples d'utilisation
+- Studio → Audio et doublage → une conférence → **Écouter 60 secondes** : quelques minutes plus tard, « Écouter les 60 secondes ». Changer les curseurs, Enregistrer, réécouter.
+- **Lancer le doublage** : la demande attend la nuit ; le matin, « Doublage terminé · durée · N passages à revoir » et le lecteur de la piste.
+- Pour tester tout de suite un doublage complet : Admin → Modules → Doublage français → « Quand lancer les doublages complets » = `always`.
+
+### Debug
+Voir `dubbing/README.md` (journaux, requête d'état des demandes, plage de nuit, mémoire, accès à huggingface.co).
+
+### Tests
+- `python3 dubbing/tests/test_pipeline.py` (19 contrôles) ; `DUB_PY=python3.11 python3 dubbing/tests/test_service.py` (31 contrôles, aussi avec le vrai Piper) ; `python3 api/tests/test_dubbing.py` ; `DUB_PY=python3.11 python3 web/tests/d1a_dubbing.py` puis `python3 web/tests/s1_dubbing.py [dossier] fr|ar`.
+
+### Testé / non testé
+Testé ici : logique audio, service complet avec de faux moteurs **et avec le vrai Piper** (voix française d'essai siwis-low : ≈ 0,05 s de calcul par seconde de voix une fois chargée), file d'attente, plage de nuit, annulation, reprise après arrêt brutal, nettoyage des anciens fichiers, navigateur (fr / ar, 390 / 1440 px). **Non testé ici** : la **conversion vers ta voix** (ChatterboxVC ne se télécharge pas depuis mon environnement : testée seulement sur le VPS aux étapes 0 ter / quater), la voix Tom elle-même, la construction de l'image Docker (pas de Docker dans mon environnement : mêmes paquets que le banc d'essai qui s'est construit sur le VPS), un vrai téléphone, une conférence d'1 h (mémoire et durée réelles à mesurer).

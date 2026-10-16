@@ -4,6 +4,7 @@ import { pool } from '../../db.js';
 import { storage, presignPut, presignGet, headObject, deleteObject } from '../../storage.js';
 import {
   PARAMS, PRESETS, BUILTIN, paramsSchema, listVoices, getVoice, checkVoices, getDefaults, getTalkParams, effective, estimate, coefficients,
+  measuredRtf, engineState,
 } from './lib.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -12,12 +13,21 @@ const GENDERS = ['', 'male', 'female', 'child'];
 const PIPER_MODEL = /^[a-z]{2,3}_[A-Z]{2}-[a-z0-9_]+-(x_low|low|medium|high)$/;
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date au format AAAA-MM-JJ').refine((s) => !Number.isNaN(Date.parse(s)), 'Date invalide');
 
-// Le moteur de doublage (service dubbing/) n'existe pas encore : il arrive à l'étape D1a. Aucun bouton ne fait semblant.
-const ENGINE = { ready: false, step: 'D1a' };
+// Travail tel que montré au Studio : sans les clés internes des fichiers ni de l'échantillon de voix.
+const JOB_COLS = `id, talk_id AS "talkId", kind, status, cancel_requested AS "cancelRequested", params, phase, progress, attempts, error, result,
+  created_at AS "createdAt", started_at AS "startedAt", finished_at AS "finishedAt"`;
+function publicJob(j) {
+  if (!j) return null;
+  const { params = {}, result, ...rest } = j;
+  const { target, ...p } = params;
+  const r = result ? { ...result } : null;
+  if (r) { r.hasMix = Boolean(r.mixKey); r.hasVoice = Boolean(r.voiceKey); delete r.mixKey; delete r.voiceKey; }
+  return { ...rest, params: { ...p, target: target ? { id: target.id, name: target.name } : null }, result: r };
+}
 
 export default async function routes(app, ctx) {
   const admin = { preHandler: app.requireRole('admin') };
-  const maxBytes = async () => Math.max(1, Number(await ctx.setting('sample_max_mb')) || 15) * 1024 * 1024;
+  const maxBytes = async () => Math.max(1, Number(await ctx.setting('mod_dubbing_sample_max_mb')) || 15) * 1024 * 1024;
 
   async function speech(talkId) {
     const r = await pool.query(
@@ -30,7 +40,7 @@ export default async function routes(app, ctx) {
   async function state() {
     const voices = await listVoices();
     const defaults = await getDefaults();
-    return { engine: ENGINE, params: PARAMS, presets: PRESETS, builtin: BUILTIN, defaults: effective(defaults, null, voices), voices, coefs: await coefficients(ctx), maxSampleMb: (await maxBytes()) / 1048576 };
+    return { engine: await engineState(), params: PARAMS, presets: PRESETS, builtin: BUILTIN, defaults: effective(defaults, null, voices), voices, coefs: await coefficients(ctx), maxSampleMb: (await maxBytes()) / 1048576 };
   }
 
   app.get('/studio/dubbing/state', admin, async () => state());
@@ -133,11 +143,15 @@ export default async function routes(app, ctx) {
   // --- Conférences ---
   app.get('/studio/dubbing/talks', admin, async (req) => {
     const { q } = z.object({ q: z.string().trim().max(100).default('') }).parse(req.query ?? {});
-    const voices = await listVoices(); const defaults = await getDefaults(); const coefs = await coefficients(ctx);
+    const voices = await listVoices(); const defaults = await getDefaults(); const coefs = await coefficients(ctx); const measured = await measuredRtf();
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, COALESCE(t.transcript_language, t.language) AS lang, t.duration_seconds AS "durationSeconds",
-              COALESCE(s.n, 0)::int AS phrases, COALESCE(s.ms, 0)::bigint AS ms, d.params AS override
+              COALESCE(s.n, 0)::int AS phrases, COALESCE(s.ms, 0)::bigint AS ms, d.params AS override,
+              (tr.talk_id IS NOT NULL) AS "hasTrack",
+              (SELECT json_build_object('kind', j.kind, 'status', j.status, 'progress', j.progress) FROM dub_jobs j
+                WHERE j.talk_id = t.id AND j.status IN ('queued', 'running') ORDER BY j.created_at LIMIT 1) AS "activeJob"
        FROM talks t
+       LEFT JOIN dub_tracks tr ON tr.talk_id = t.id
        LEFT JOIN (SELECT talk_id, count(*) AS n, sum(GREATEST(end_ms - start_ms, 0)) FILTER (WHERE left(ltrim(text), 1) <> '#') AS ms
                   FROM transcript_segments WHERE lang = 'fr' GROUP BY talk_id) s ON s.talk_id = t.id
        LEFT JOIN dub_talk_settings d ON d.talk_id = t.id
@@ -147,21 +161,29 @@ export default async function routes(app, ctx) {
     return {
       talks: rows.map(({ ms, override, ...r }) => {
         const eff = effective(defaults, override, voices);
-        return { ...r, hasOverride: Boolean(override && Object.keys(override).length), estimate: estimate(eff, Number(ms) / 1000, coefs) };
+        return { ...r, hasOverride: Boolean(override && Object.keys(override).length), estimate: estimate(eff, Number(ms) / 1000, coefs, measured) };
       }),
     };
   });
 
   async function talkDetail(id) {
     const t = (await pool.query(
-      `SELECT id, title, speaker, language, transcript_language AS "transcriptLanguage", duration_seconds AS "durationSeconds" FROM talks WHERE id = $1`, [id])).rows[0];
+      `SELECT id, title, speaker, source, language, transcript_language AS "transcriptLanguage", duration_seconds AS "durationSeconds" FROM talks WHERE id = $1`, [id])).rows[0];
     if (!t) return null;
     const voices = await listVoices(); const override = await getTalkParams(id);
     const eff = effective(await getDefaults(), override, voices);
     const sp = await speech(id);
     const segs = (await pool.query(
       `SELECT idx, start_ms AS "startMs", end_ms AS "endMs", text FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr' ORDER BY idx LIMIT 3000`, [id])).rows;
-    return { talk: t, override: override || {}, effective: eff, estimate: estimate(eff, sp.speechSeconds, await coefficients(ctx)), phrases: sp.phrases, kept: sp.kept, segments: segs, engine: ENGINE };
+    const jobs = (await pool.query(`SELECT ${JOB_COLS} FROM dub_jobs WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 10`, [id])).rows.map(publicJob);
+    const track = (await pool.query(`SELECT job_id AS "jobId", (mix_key IS NOT NULL) AS "hasMix", duration_s::float AS "durationS", created_at AS "createdAt" FROM dub_tracks WHERE talk_id = $1`, [id])).rows[0] || null;
+    // État de chaque phrase : celui du dernier doublage complet réussi, sinon de la dernière écoute de 60 s.
+    const lastDone = jobs.find((j) => j.status === 'done' && j.kind === 'full') || jobs.find((j) => j.status === 'done' && j.kind === 'preview') || null;
+    return {
+      talk: t, override: override || {}, effective: eff, estimate: estimate(eff, sp.speechSeconds, await coefficients(ctx), await measuredRtf()),
+      phrases: sp.phrases, kept: sp.kept, segments: segs, engine: await engineState(), jobs, track,
+      report: lastDone ? { jobId: lastDone.id, kind: lastDone.kind, segments: lastDone.result?.segments || [] } : null,
+    };
   }
 
   app.get('/studio/dubbing/talks/:id', admin, async (req, reply) => {
@@ -185,6 +207,66 @@ export default async function routes(app, ctx) {
          ON CONFLICT (talk_id) DO UPDATE SET params = EXCLUDED.params, updated_by = EXCLUDED.updated_by, updated_at = now()`, [id, params, req.user.sub]);
     }
     return talkDetail(id);
+  });
+
+  // --- Demandes de doublage (file d'attente du service dubbing/) ---
+  // kind = « preview » (écoute de 60 s, lancée dès que le service est libre) ou « full » (toute la conférence, la nuit par défaut).
+  app.post('/studio/dubbing/talks/:id/jobs', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { kind } = z.object({ kind: z.enum(['preview', 'full']) }).strict().parse(req.body ?? {});
+    const t = (await pool.query('SELECT id FROM talks WHERE id = $1', [id])).rows[0];
+    if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
+    const sp = await speech(id);
+    if (!sp.phrases) return reply.code(400).send({ error: "Pas de texte français pour cette conférence : demandez d'abord la traduction en français", code: 'no_french' });
+    if (!sp.speechSeconds) return reply.code(400).send({ error: 'Toutes les phrases sont gardées en voix d’origine : rien à doubler', code: 'nothing_to_dub' });
+    const voices = await listVoices();
+    const eff = effective(await getDefaults(), await getTalkParams(id), voices);
+    const base = eff.baseVoice ? await getVoice(eff.baseVoice) : null;
+    if (!base) return reply.code(400).send({ error: 'Aucune voix de base active', code: 'no_base_voice' });
+    const target = eff.targetVoice ? await getVoice(eff.targetVoice) : null;
+    const previewSeconds = Math.min(180, Math.max(15, Number(await ctx.setting('mod_dubbing_preview_seconds')) || 60));
+    const params = {
+      ...eff, previewSeconds,
+      base: { id: base.id, name: base.name, model: base.model, speaker: base.speaker },
+      target: target ? { id: target.id, name: target.name, sampleKey: target.sample_key } : null,
+    };
+    try {
+      const r = await pool.query(`INSERT INTO dub_jobs(talk_id, kind, params, created_by) VALUES ($1, $2, $3, $4) RETURNING ${JOB_COLS}`, [id, kind, params, req.user.sub]);
+      return reply.code(201).send(publicJob(r.rows[0]));
+    } catch (err) {
+      if (err.code === '23505') return reply.code(409).send({ error: kind === 'full' ? 'Un doublage de cette conférence est déjà en attente ou en cours' : 'Une écoute de 60 secondes est déjà en attente ou en cours', code: 'already_queued' });
+      throw err;
+    }
+  });
+
+  app.get('/studio/dubbing/jobs', admin, async (req) => {
+    const { active } = z.object({ active: z.enum(['0', '1']).default('1') }).parse(req.query ?? {});
+    const { rows } = await pool.query(
+      `SELECT j.*, t.title FROM (SELECT ${JOB_COLS} FROM dub_jobs WHERE ($1 = '0' OR status IN ('queued', 'running'))) j
+       JOIN talks t ON t.id = j."talkId" ORDER BY (j.status = 'running') DESC, j."createdAt" LIMIT 50`, [active]);
+    return { jobs: rows.map((r) => ({ ...publicJob(r), title: r.title })), engine: await engineState() };
+  });
+
+  // Annuler : une demande en attente est annulée tout de suite ; un travail en cours s'arrête au prochain bloc.
+  app.post('/studio/dubbing/jobs/:id/cancel', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const j = (await pool.query('SELECT status FROM dub_jobs WHERE id = $1', [id])).rows[0];
+    if (!j) return reply.code(404).send({ error: 'Demande introuvable' });
+    if (j.status === 'queued') await pool.query(`UPDATE dub_jobs SET status = 'cancelled', finished_at = now(), updated_at = now() WHERE id = $1`, [id]);
+    else if (j.status === 'running') await pool.query('UPDATE dub_jobs SET cancel_requested = true, updated_at = now() WHERE id = $1', [id]);
+    else return reply.code(409).send({ error: 'Cette demande est déjà terminée', code: 'finished' });
+    return publicJob((await pool.query(`SELECT ${JOB_COLS} FROM dub_jobs WHERE id = $1`, [id])).rows[0]);
+  });
+
+  // Écouter le résultat : lien temporaire vers la voix française seule (« voice ») ou le mélange avec la voix d'origine (« mix »).
+  app.get('/studio/dubbing/jobs/:id/audio', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { which } = z.object({ which: z.enum(['mix', 'voice']).default('mix') }).parse(req.query ?? {});
+    const j = (await pool.query("SELECT result FROM dub_jobs WHERE id = $1 AND status = 'done'", [id])).rows[0];
+    const key = j?.result?.[which === 'mix' ? 'mixKey' : 'voiceKey'] || (which === 'mix' ? j?.result?.voiceKey : null);
+    if (!key) return reply.code(404).send({ error: 'Pas de fichier audio pour cette demande' });
+    if (!storage) return reply.code(503).send({ error: 'Stockage non configuré', code: 'storage_off' });
+    return { url: await presignGet(key) };
   });
 
   // --- Langue d'écoute (analytique) ---

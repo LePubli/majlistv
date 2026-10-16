@@ -2733,3 +2733,27 @@ a.kd-pcard:hover { border-color: #FFC83D; }
   .db-head-actions .btn { flex: 1 1 100%; }
   .db-row { padding: 10px 12px; }
 }
+/* Doublage — étape D1a : état du moteur, demandes en cours, écoute, état des phrases */
+.db-engine.ok { border-color: #5f9f7f; }
+.db-engine.ok strong { color: #8fd0ad; }
+.db-track { gap: 14px; }
+.db-job { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--surface-2, var(--bg)); border: 1px solid var(--line-soft); }
+.db-job-top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.db-job-top span { color: var(--accent-hover); font-weight: 600; }
+.db-job .btn { grid-row: span 2; }
+.db-bar { height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.db-bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .4s ease; }
+.db-listen { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.db-listen > span { color: var(--text-2); flex: 1 1 260px; min-width: 0; }
+.db-queue ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.db-queue li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.db-queue li a { font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.db-tag.ok { border-color: #5f9f7f; color: #8fd0ad; }
+.db-st.fit { color: #8fd0ad; }
+.db-st.sped { color: #c9d98a; }
+.db-st.review { color: var(--accent-hover); }
+.db-table tr.review td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+@media (max-width: 600px) {
+  .db-job { grid-template-columns: minmax(0, 1fr); }
+  .db-job .btn { grid-row: auto; justify-self: start; }
+}

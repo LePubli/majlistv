@@ -33,7 +33,7 @@ ok(sorted(m["id"] for m in mods if m["status"] != "absent") == sorted(["books", 
 ok(not [m["id"] for m in mods if m["status"] == "error"], "aucun module en erreur (chargement, migrations, démarrage des tâches de fond)")
 ok(all(m["version"] == "1.0.0" and m["feature"] == m["id"] for m in mods if m["status"] != "absent" and m["id"] != "dubbing"), "anciens modules : tous en v1.0.0 et liés à la fonction du même nom")
 dub = next(m for m in mods if m["id"] == "dubbing")
-ok(dub["version"] == "0.1.0" and dub["feature"] is None and dub["listens"] == ["watch.progress"], "doublage (étape S1) : module autonome v0.1.0, sans fonction liée, écoute la reprise de lecture")
+ok(dub["version"] == "0.2.0" and dub["feature"] is None and dub["listens"] == ["watch.progress"], "doublage (étape S1) : module autonome v0.2.0, sans fonction liée, écoute la reprise de lecture")
 byid = {m["id"]: m for m in mods}
 ok(byid["quiz"]["provides"] == ["talk.quiz"] and byid["kids"]["provides"] == ["kids.canSee"] and sorted(byid["series"]["provides"]) == ["series.episodeLabels", "series.list", "series.nextUp"], "points d'extension fournis (quiz, Kids, séries)")
 ok(sorted(byid["gifts"]["listens"]) == ["stripe.charge.refunded", "stripe.checkout.payment"] and sorted(byid["revenue"]["listens"]) == ["stripe.charge.refunded", "stripe.invoice.paid", "watch.progress"], "événements écoutés (cartes cadeaux, rémunération)")
