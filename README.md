@@ -3552,3 +3552,53 @@ SQL
 - la construction des images Docker des quatre services (pas de Docker ici). Seul le code de réservation a changé, plus un module `claim.js` pour le worker ;
 - le comportement réel sur le VPS pendant une longue conversion ;
 - un vrai téléphone.
+
+## Étape E0 — Prototype du moteur de rendu (point de décision)
+
+### Description
+- **Prototype jetable**, non déployé : `studio-proto/e0/` (voir son README).
+  - Un montage de 2 minutes décrit en JSON est rendu par **une seule commande FFmpeg**.
+  - Il gère :
+    - les génériques d'ouverture et de fin ;
+    - les coupes et les fondus enchaînés ;
+    - le logo, les bandeaux et les sous-titres recalés après les coupes (l'arabe s'affiche de droite à gauche) ;
+    - la voix française et la musique, avec ducking ;
+    - le volume normalisé ;
+    - l'aperçu en 360p.
+- **Rapport de choix** (moteurs de rendu, base de l'éditeur, licences, ce que Garage conserve, mesures) : document partagé avec Epok.
+- **Ce que Garage conserve** (lu dans `worker/src/index.js` et `api/src/routes/uploads.js`) :
+  - le fichier **original envoyé** (`talks/<uuid>`) est **gardé** après la conversion ;
+  - il n'est effacé qu'à la suppression de la conférence ;
+  - s'y ajoutent les 3 qualités HLS, la version audio et les miniatures (`hls/<id>/`).
+  - Le montage pourra donc partir de l'original, et la qualité 360p déjà produite peut servir d'aperçu.
+
+### Prérequis
+- Aucun pour le site. Pour la mesure : accès SSH au VPS et le zip de l'étape.
+
+### Déploiement
+- **Aucun redéploiement.** Le dossier `studio-proto/` n'est construit par aucun service.
+
+### Exemples d'utilisation (mesure sur le VPS)
+```bash
+cd /root && rm -rf e0 && python3 -m zipfile -e majlistv-etape-E0.zip e0 && cd e0/studio-proto/e0
+sh run_vps.sh
+sh run_vps.sh /root/arab1.mp4
+```
+Pour mesurer ce qu'occupent les originaux, les qualités HLS et le doublage dans Garage :
+```bash
+docker exec dockpanel-git-majlistv-api sh -c 'export RCLONE_CONFIG_G_TYPE=s3 RCLONE_CONFIG_G_PROVIDER=Other RCLONE_CONFIG_G_ENDPOINT="$S3_ENDPOINT" RCLONE_CONFIG_G_ACCESS_KEY_ID="$S3_ACCESS_KEY" RCLONE_CONFIG_G_SECRET_ACCESS_KEY="$S3_SECRET_KEY" RCLONE_CONFIG_G_REGION="${S3_REGION:-garage}" RCLONE_CONFIG_G_FORCE_PATH_STYLE=true; for p in talks hls dubbing; do printf "%s : " "$p"; rclone size --config /tmp/none.conf --s3-no-check-bucket "G:${S3_BUCKET:-majlis-videos}/$p" | tr "\n" " "; echo; done'
+```
+
+### Debug
+- Voir `studio-proto/e0/README.md`.
+
+### Tests
+- `node studio-proto/e0/render.mjs` sur les médias de `make_media.sh` : aperçu et 1080p rendus, ducking mesuré (−15 dB), sous-titres recalés (5 gardés, 1 retiré), arabe vérifié sur les images.
+
+### Testé / non testé
+**Testé ici** : sur 2 cœurs, avec des médias synthétiques (FFmpeg 6.1).
+
+**Non testé** :
+- le VPS (4 cœurs, image Alpine du worker) : c'est la mesure à faire avec `run_vps.sh` ;
+- une vraie conférence ;
+- les transitions autres que le fondu.

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "title": "Prototype E0 — montage de 2 minutes",
+  "output": { "width": 1920, "height": 1080, "fps": 25 },
+  "intro": { "duration": 4, "title": "Mejliss TV", "subtitle": "La patience — conférence" },
+  "clips": [
+    { "src": "source.mp4", "in": 10, "out": 38 },
+    { "src": "source.mp4", "in": 60, "out": 112, "transition": { "type": "fade", "duration": 0.8 } },
+    { "src": "source.mp4", "in": 130, "out": 162, "transition": { "type": "fade", "duration": 0.8 } }
+  ],
+  "outro": { "duration": 5, "title": "Merci de votre écoute", "subtitle": "majlisstv.le-publicitaire.fr", "transition": { "type": "fade", "duration": 1 } },
+  "overlays": [
+    { "type": "logo", "src": "logo.png", "position": "top-right", "size": 120, "opacity": 0.85, "from": 4 },
+    { "type": "banner", "text": "Cheikh Exemple", "subtitle": "La patience est une lumière", "start": 6, "end": 13 },
+    { "type": "banner", "text": "Deuxième partie", "subtitle": "الصبر ضياء", "start": 33, "end": 39 }
+  ],
+  "audio": {
+    "original": { "gain": 1.0 },
+    "tracks": [
+      { "name": "Voix française", "src": "voice_fr.m4a", "start": 4, "gain": 1.0, "duck": true },
+      { "name": "Fond musical", "src": "music.m4a", "start": 0, "gain": 0.35, "loop": true, "fadeIn": 2, "fadeOut": 3 }
+    ],
+    "ducking": { "enabled": true, "threshold": 0.02, "ratio": 8, "attackMs": 20, "releaseMs": 350 },
+    "loudnessLufs": -16
+  },
+  "subtitles": { "src": "subs_fr.vtt", "burn": true }
+}
