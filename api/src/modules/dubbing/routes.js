@@ -7,6 +7,7 @@ import {
   measuredRtf, engineState,
 } from './lib.js';
 import { compile as compileGlossary, apply as applyGlossary } from './glossary.js';
+import * as ext from '../../ext.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 // Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
@@ -392,6 +393,9 @@ export default async function routes(app, ctx) {
     const key = j?.result?.[which === 'mix' ? 'mixKey' : 'voiceKey'] || (which === 'mix' ? j?.result?.voiceKey : null);
     if (!key) return reply.code(404).send({ error: 'Pas de fichier audio pour cette demande' });
     if (!storage) return reply.code(503).send({ error: 'Stockage non configuré', code: 'storage_off' });
+    // Étape S2 : fichier envoyé aux archives (module « Stockage et archivage ») → on propose de le restaurer.
+    const arch = await ext.call('archive.lookup', null, key);
+    if (arch) return reply.code(409).send({ error: 'Ce fichier est dans les archives', code: 'archived', archiveId: arch.id, status: arch.status });
     return { url: await presignGet(key) };
   });
 

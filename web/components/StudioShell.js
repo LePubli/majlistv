@@ -70,6 +70,7 @@ export default function StudioShell({ children }) {
   // Entrées ajoutées par de nouveaux modules (fiche web/modules/<id>/module.js, champ « studio ») : dans le menu principal ou la modération.
   for (const l of MODULE_STUDIO_LINKS) {
     if (l.group === 'admin') continue; // les entrées d'administration passent par AdminShell
+    if (l.group === 'settings') continue; // les entrées « Paramètres » (ex. Stockage et archivage) sont dans Studio → Paramètres
     const g = groups.find((x) => x.key === (l.group === 'mod' ? 'mod' : 'studio'));
     if (g && (!l.roles || l.roles.includes(user.role))) g.items.push([l.href, t(l.label), ICONS[l.icon] || ICONS.doc]);
   }

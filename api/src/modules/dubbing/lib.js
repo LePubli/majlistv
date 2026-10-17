@@ -112,3 +112,25 @@ export async function recordListening({ talkId, positionMs, prev, audioLang }) {
     [talkId, audioLang === 'fr' ? 'fr' : 'orig', sec]);
   return sec;
 }
+
+// Étape S2 : fichiers de travail archivables (événement archive.collect du module « Stockage et archivage »).
+//  - écoutes de 60 secondes terminées depuis plus de N jours (mélange et voix seule) ;
+//  - « voix française seule » de la piste en service d'une vidéo envoyée (le lecteur utilise le mélange).
+export async function collectWorkFiles(out, { kind, olderThanDays } = {}) {
+  if (kind !== 'work_audio' || !(olderThanDays > 0)) return;
+  const day = (d) => new Date(d).toISOString().slice(0, 10);
+  const prev = await pool.query(
+    `SELECT j.id, j.talk_id, j.finished_at, j.result->>'mixKey' AS mix, j.result->>'voiceKey' AS voice, t.title
+     FROM dub_jobs j JOIN talks t ON t.id = j.talk_id
+     WHERE j.kind = 'preview' AND j.status = 'done' AND j.finished_at < now() - make_interval(days => $1)
+       AND (j.result ? 'voiceKey' OR j.result ? 'mixKey')`, [olderThanDays]);
+  for (const r of prev.rows) {
+    for (const [key, what] of [[r.mix, 'mélange'], [r.voice, 'voix seule']]) {
+      if (key) out.push({ key, kind: 'dub_preview', talkId: r.talk_id, label: `${r.title} · écoute de 60 s du ${day(r.finished_at)} (${what})` });
+    }
+  }
+  const tracks = await pool.query(
+    `SELECT tr.talk_id, tr.voice_key, tr.created_at, t.title FROM dub_tracks tr JOIN talks t ON t.id = tr.talk_id
+     WHERE tr.mix_key IS NOT NULL AND tr.created_at < now() - make_interval(days => $1)`, [olderThanDays]);
+  for (const r of tracks.rows) out.push({ key: r.voice_key, kind: 'dub_voice', talkId: r.talk_id, label: `${r.title} · piste française (voix seule) du ${day(r.created_at)}` });
+}

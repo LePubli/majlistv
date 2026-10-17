@@ -25,7 +25,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const dirs = () => [path.join(here, 'modules'), ...(process.env.MODULES_EXTRA_DIR ? [process.env.MODULES_EXTRA_DIR] : [])];
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
-const FIELD_TYPES = ['text', 'number', 'bool', 'select', 'price', 'url', 'secret'];
+const FIELD_TYPES = ['text', 'number', 'bool', 'select', 'price', 'url', 'secret', 'secret_text']; // secret_text : secret sur plusieurs lignes (clé privée)
 const fieldSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9_]{1,40}$/),
   type: z.enum(FIELD_TYPES), label: z.string().min(1).max(120), help: z.string().max(400).optional(),

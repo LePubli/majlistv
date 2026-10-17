@@ -50,11 +50,28 @@ function Player({ jobId, which = 'mix', label }) {
   const { t, call } = useApp();
   const [url, setUrl] = useState(null);
   const [err, setErr] = useState('');
+  const [archived, setArchived] = useState(null); // étape S2 : fichier envoyé aux archives (module « Stockage et archivage »)
   const open = async () => {
     const r = await call(`/studio/dubbing/jobs/${jobId}/audio?which=${which}`);
-    if (r.ok) setUrl(r.data.url); else setErr(r.data?.error || t('dbError'));
+    if (r.ok) { setUrl(r.data.url); setArchived(null); setErr(''); } else if (r.data?.code === 'archived') setArchived({ id: r.data.archiveId, status: r.data.status });
+    else setErr(r.data?.error || t('dbError'));
+  };
+  const restore = async () => {
+    const r = await call(`/studio/storage/archives/${archived.id}/restore`, { method: 'POST' });
+    if (r.ok) setArchived({ ...archived, status: 'restore_queued' }); else setErr(r.data?.error || t('dbError'));
   };
   if (url) return <audio className="db-audio" controls autoPlay src={url} aria-label={label} />;
+  if (archived) {
+    const pending = ['restore_queued', 'restoring'].includes(archived.status);
+    return (
+      <span className="db-archived">
+        <span className="meta small">{t(pending ? 'dbArchRestoring' : 'dbArchived')}</span>
+        {err && <span className="error small">{err}</span>}
+        {pending ? <button type="button" className="btn ghost" onClick={open}>{t('dbArchRetryListen')}</button>
+          : archived.status === 'archived' ? <button type="button" className="btn ghost" onClick={restore}>{t('sgRestore')}</button> : null}
+      </span>
+    );
+  }
   return <>{err && <span className="error small">{err}</span>}<button type="button" className="btn ghost" onClick={open}>{label}</button></>;
 }
 

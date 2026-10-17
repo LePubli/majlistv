@@ -42,7 +42,7 @@ a_id, A = mk("admin", "admin"); o_id, O = mk("organizer", "orga"); u_id, U = mk(
 rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": False})
 r = rq("GET", "/studio/dubbing/state", headers=A); ok(r.status_code == 404 and r.json().get("code") == "module_off", "module désactivé : routes fermées (404 module_off)")
 mods = {m["id"]: m for m in rq("GET", "/admin/modules", headers=A).json()["modules"]}
-ok("dubbing" in mods and mods["dubbing"]["status"] == "off" and mods["dubbing"]["version"] == "0.4.0", "Admin → Modules : « Doublage français » présent, inactif")
+ok("dubbing" in mods and mods["dubbing"]["status"] == "off" and mods["dubbing"]["version"] == "0.4.1", "Admin → Modules : « Doublage français » présent, inactif")
 ok(any(f["key"] == "mod_dubbing_rtf_base" for f in mods["dubbing"]["fields"]), "réglages du module dans Admin → Modules (coefficients d'estimation)")
 ok(rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": True}).status_code == 200, "activation par l'administrateur")
 ok(rq("GET", "/studio/dubbing/state", headers=O).status_code == 403, "organisateur : refusé (administration seulement à l'étape S1)")

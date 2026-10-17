@@ -3343,3 +3343,117 @@ SQL
 **Non testé** :
 - l'effet du glossaire sur la vraie voix Tom ou ta voix clonée. Il faut l'écouter sur le VPS : une orthographe « phonétique » peut demander quelques essais (« Outhaïmine », « Outhaïmîne »…) ;
 - un vrai téléphone.
+
+## Étape S2 — Stockage et archivage
+
+### Description
+- Nouveau module **« Stockage et archivage »** (`api/src/modules/storage/`, `web/modules/storage/`), version **0.1.0**. Il est inactif par défaut : on l'active dans Administration → Modules.
+- L'écran **Studio → Paramètres → Stockage et archivage** suit la maquette « Studio v2 », écran 6. Il est réservé aux administrateurs.
+  - **Trois chiffres :**
+    - **Diffusion (Garage)** : l'espace utilisé sur la capacité réglée, avec une barre et le pourcentage. La mesure se fait au plus toutes les 5 minutes, ou avec « Mesurer maintenant ».
+    - **Archives** : la taille et le nombre de fichiers archivés.
+    - **Originaux en attente** : il affichera les vidéos remplacées à partir de l'étape E4. Pour l'instant, il indique « — ».
+  - **Où archiver vos fichiers** : **PlanetHoster** (SFTP, par défaut, port 5022), **Stockage S3** (Backblaze B2, Wasabi, Scaleway, Cloudflare R2, AWS), **WebDAV** (Nextcloud…) ou **Aucun**.
+    - Pour SFTP : un mot de passe **ou une clé privée**.
+    - Options avancées : le dossier des archives (`studio` par défaut) et une phrase de **chiffrement** facultative.
+  - **« Tester la connexion »** enregistre d'abord les changements. Il crée ensuite le dossier, écrit un petit fichier, le relit et l'efface. Une pastille indique « Connexion réussie · il y a 2 min » ou l'échec.
+  - **« Archiver un fichier d'essai »** : un petit fichier est écrit dans Garage, envoyé chez le fournisseur, vérifié, puis effacé de Garage. On le restaure ensuite depuis **« Dans les archives »**.
+  - **Règles automatiques :**
+    - archiver les pistes audio de travail après **30 jours** (0 = jamais) ;
+    - garder l'original après un remplacement : **7 jours** (appliqué à l'étape E4) ;
+    - alerte quand l'espace libre passe sous **15 %** ;
+    - capacité de Garage : **30 Go** (à vérifier avec `df -h /`) ;
+    - sauvegarde nocturne : **inchangée**.
+    - Les règles passent une fois par jour, ou tout de suite avec « Appliquer maintenant ».
+  - **Dans les archives** : chaque fichier a un bouton **Restaurer** (ou **Réessayer** en cas d'échec), et l'historique liste les fichiers restaurés.
+- **Ce que la règle automatique archive aujourd'hui** (fichiers de travail du module doublage) :
+  - les écoutes de 60 s de plus de N jours ;
+  - la « voix française seule » des vidéos envoyées (le lecteur utilise le mélange).
+  - La piste servie aux spectateurs n'est **jamais** archivée.
+  - Dans Audio et doublage, un fichier archivé affiche « Ce fichier est dans les archives » avec un bouton **Restaurer**.
+- **Sécurité :**
+  - les identifiants sont **chiffrés** dans la base (SETTINGS_KEY) et ne sont jamais renvoyés à l'écran ;
+  - un fichier n'est effacé de Garage qu'**après vérification** de la copie (même taille). Une restauration est vérifiée avant que la copie d'archive soit effacée ;
+  - les actions sont inscrites au journal d'audit.
+- **Moteur** : **rclone**, ajouté à l'image de l'API (`Dockerfile` racine et `api/Dockerfile` : `apk add rclone`). La configuration passe par variables d'environnement, jamais par un fichier ni par la ligne de commande.
+- Le socle des modules accepte maintenant les réglages `secret_text` (secret sur plusieurs lignes, pour une clé privée).
+- Le module doublage passe en 0.4.1 (fichiers de travail archivables).
+
+### Prérequis
+- Étapes précédentes en place. `SETTINGS_KEY` défini sur l'API (déjà le cas) pour chiffrer les identifiants.
+- Un accès SFTP PlanetHoster. On peut réutiliser le compte de la sauvegarde nocturne (`node228-eu.n0c.com`, port 5022, voir `ops/backup/README.md`) avec **une clé dédiée** au module et le dossier `studio` (séparé de `backups-vps`).
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`**. L'image est reconstruite avec rclone et la migration `001_storage.sql` s'applique. Puis **Redeploy `majlistv-web`**. Les services `majlistv-worker` et `majlistv-dubbing` n'ont pas changé.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker exec dockpanel-git-majlistv-api rclone version | head -1
+docker logs --tail 50 dockpanel-git-majlistv-api 2>&1 | grep -i "storage"
+```
+L'avant-dernière commande doit afficher « rclone v1.… ». La dernière doit afficher « Module storage : migration appliquée 001_storage.sql ».
+4. **Clé dédiée au module** (sur le VPS) :
+```bash
+ssh-keygen -t ed25519 -f /root/.ssh/id_mejliss_archive -N "" -C mejliss-archive
+cat /root/.ssh/id_mejliss_archive.pub
+```
+Ajoute la clé publique affichée dans PlanetHoster (Hébergement → SSH → Ajouter une clé), puis vérifie :
+```bash
+ssh -i /root/.ssh/id_mejliss_archive -p 5022 yuxzzjad@node228-eu.n0c.com 'mkdir -p ~/studio && df -h ~ | tail -1'
+cat /root/.ssh/id_mejliss_archive
+```
+Copie la clé privée affichée (de `-----BEGIN` à `END …-----`) **directement** dans le Studio, champ « Clé privée ». Ne l'envoie jamais par le chat ni par e-mail.
+5. Administration → Modules → **Stockage et archivage** → Activer.
+6. Studio → Paramètres → **Stockage et archivage** :
+   1. PlanetHoster : adresse `node228-eu.n0c.com`, port `5022`, identifiant `yuxzzjad` ;
+   2. « Utiliser une clé privée à la place », puis colle la clé ;
+   3. **Tester la connexion** ;
+   4. **Archiver un fichier d'essai** ;
+   5. **Restaurer**.
+
+### Exemples d'utilisation
+- **Recette** : « Tester la connexion » affiche « Connexion réussie ». Le fichier d'essai passe « Dans les archives », puis « Restaurer » le ramène dans « Restaurés récemment ».
+- **Voir ce qui est chez PlanetHoster** :
+```bash
+ssh -i /root/.ssh/id_mejliss_archive -p 5022 yuxzzjad@node228-eu.n0c.com 'ls -laR ~/studio | head -40; du -sh ~/studio'
+```
+- **Voir les archives dans la base** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT kind, status, label, pg_size_pretty(bytes) AS taille, archived_at, restored_at, left(error, 100) AS erreur
+FROM archive_items ORDER BY updated_at DESC LIMIT 20;
+SQL
+```
+
+### Debug
+- **« rclone est introuvable »** : l'image de l'API n'a pas été reconstruite. Refaire Redeploy `majlistv-api`, puis `docker exec dockpanel-git-majlistv-api rclone version`.
+- **« Échec de la connexion »** : le message vient de rclone. Les cas courants :
+  - mauvais port (5022 chez PlanetHoster) ;
+  - clé publique non ajoutée chez PlanetHoster ;
+  - mauvais identifiant ;
+  - le conteneur n'atteint pas l'hôte. Pour le vérifier :
+```bash
+docker exec dockpanel-git-majlistv-api sh -c 'nc -zv -w 5 node228-eu.n0c.com 5022'
+```
+- **Archivage en échec** : le fichier est **resté** dans Garage (rien n'est effacé avant vérification). Corrige la connexion, puis « Réessayer ».
+- **Restauration refusée « archive chiffrée »** : la phrase de chiffrement a été retirée ou changée. Remets la même phrase, puis « Réessayer ».
+- **Espace Garage à 0 ou absent** : variables `S3_*` de l'API.
+- **Les écoutes de 60 s anciennes ne partent pas** : le module « Doublage français » doit être activé ; la règle passe une fois par jour (ou « Appliquer maintenant ») et ne prend que les fichiers de plus de N jours.
+
+### Tests
+- API : `python3 api/tests/test_storage_s2.py` (51 contrôles). Il utilise un serveur SFTP et un serveur WebDAV de test, lancés en local avec `rclone serve` (voir l'en-tête du fichier), et le S3 de test. Il couvre : mot de passe et clé privée, chiffrement, échec sans perte, S3, WebDAV, règle automatique du doublage, espace, audit.
+- Navigateur : `python3 web/tests/s2_storage.py [dossier]` (28 contrôles : écran, test de connexion, fichier d'essai archivé puis restauré, règles, restauration depuis la fiche doublage, fr/ar 390/1440 px).
+- Non-régression : `test_modules.py`, `test_dubbing*.py`, retrait du module, `s1_dubbing.py`, `d1a_dubbing.py`, `d1b_dubbing.py`, `d2_player.py`.
+
+### Testé / non testé
+**Testé ici** :
+- SFTP, S3 et WebDAV avec des serveurs de test locaux (rclone 1.68) ;
+- chiffrement, échecs et reprises.
+
+**Non testé** :
+- le vrai serveur PlanetHoster : c'est la recette à faire de ton côté ;
+- la construction de l'image Docker avec `apk add rclone` : pas de Docker ici. Le paquet existe bien dans le dépôt « community » d'Alpine ;
+- de très gros fichiers (plusieurs Go) : rclone les envoie en flux, sans passer par le disque de l'API.

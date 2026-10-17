@@ -25,6 +25,11 @@ export const CATALOG = {
   'stripe.invoice.paid': 'Événement : facture d’abonnement payée (client SQL, facture)',
   'stripe.charge.refunded': 'Événement : paiement remboursé (client SQL, charge)',
   'watch.progress': 'Événement : position de lecture enregistrée par un membre (détails)',
+  'archive.lookup': 'Archive « vivante » d’un fichier de Garage (clé) : { id, status, … } ou null (module Stockage et archivage)',
+  'storage.space': 'Espace de Garage : utilisé, capacité, part libre, alerte (module Stockage et archivage)',
+  'archive.collect': 'Événement : chaque module ajoute ses fichiers de travail à archiver (liste, { kind, olderThanDays })',
+  'archive.archived': 'Événement : un fichier de Garage a été archivé chez le fournisseur ({ id, key, kind, talkId })',
+  'archive.restored': 'Événement : un fichier archivé est revenu dans Garage ({ id, key, kind, talkId })',
 };
 
 export function provide(name, fn, { owner = 'socle', active = always } = {}) {
