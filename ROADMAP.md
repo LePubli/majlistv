@@ -293,6 +293,7 @@ Règles transversales :
 Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H (accueil des membres en blocs) I4 (en-tête, menus, pied de page) I5 (mode édition sur la page) M1, M2 (toutes les fonctions en modules), M3a (socle API indépendant) et M3b (site web modulaire) faits ; suite : vérification finale globale, module Studio (autre session) à intégrer. Fait : 24 à 28, 28b (CSP), 18 (statistiques), 29 (mise en pratique), 30 (bilan personnel) 31 (thèmes, évolution), 20 (modération), 19 (collections, listes) 21 (notifications, cartes cadeaux) A (fonctions activables/désactivables) B (menu latéral et onglets) E1 (vitrine visiteur) et C (chaînes). **Suite : 22** (applications Android), 23 (CDN), 16.2d (hreflang). L'étape 8 (sauvegardes, surveillance) reste en dernier, avant un trafic important. Refonte complète de TriMaint : projet séparé, à planifier après Mejliss.
 
 ## Rappels
+- **Problèmes à régler** : registre `docs/PROBLEMES-A-REGLER.md`, relu et mis à jour à chaque « go » (règle d'Epok du 17/10/2026).
 - TriMaint (port 7001) n'est jamais touché.
 - Après chaque redéploiement : `/root/apply-limits.sh`, puis vérifier le port nginx de l'API (7000).
 - Les clés ne passent jamais par un chat : DockPanel ou Admin → Paramètres uniquement.
