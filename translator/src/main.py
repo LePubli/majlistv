@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import unquote, urlsplit
 
 import psycopg2
+import psycopg2.errors
 import psycopg2.extras
 import requests
 
@@ -180,13 +181,32 @@ settings = Settings(query, lambda *a: log(*a))
 apply_settings()  # valeurs d'environnement tant que la base n'est pas joignable ; relu ensuite à chaque tour de boucle
 
 
+# Étape S3 (Studio → Activité) : pause et priorité d'une traduction (fonctions SQL de la migration 055 de l'API).
+# Si elles n'existent pas encore, on garde la file d'origine.
+CONTROLS = {"on": True}
+
+
 def claim():
+    try:
+        return _claim()
+    except psycopg2.errors.UndefinedFunction:
+        if not CONTROLS["on"]:
+            raise
+        CONTROLS["on"] = False
+        log("Pause et priorité indisponibles (migration 055 de l'API absente) : file simple")
+        return _claim()
+
+
+def _claim():
+    ref = "tr.talk_id::text || ':' || tr.lang"
+    cond = f"AND NOT activity_paused('translation', {ref})" if CONTROLS["on"] else ""
+    order = f"activity_priority('translation', {ref}) DESC, tr.attempts, tr.created_at" if CONTROLS["on"] else "tr.attempts, tr.created_at"
     rows = query(
-        """WITH next AS (
+        f"""WITH next AS (
              SELECT tr.talk_id, tr.lang
              FROM transcript_translations tr JOIN talks t ON t.id = tr.talk_id
-             WHERE tr.status = 'pending' AND t.transcript_status = 'ready'
-             ORDER BY tr.attempts, tr.created_at LIMIT 1
+             WHERE tr.status = 'pending' AND t.transcript_status = 'ready' {cond}
+             ORDER BY {order} LIMIT 1
              FOR UPDATE OF tr SKIP LOCKED)
            UPDATE transcript_translations x
               SET status = 'processing', progress = 0, error = NULL, attempts = x.attempts + 1, updated_at = now()

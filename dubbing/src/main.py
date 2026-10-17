@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 
 import boto3
 import psycopg2
+import psycopg2.errors
 import psycopg2.extras
 from botocore.config import Config
 
@@ -29,7 +30,7 @@ import pipeline as pl
 from glossary import apply as apply_glossary, compile_entries
 from settings import Settings
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 TZ = ZoneInfo("Europe/Paris")
 
 
@@ -193,14 +194,43 @@ def in_night(now=None):
     return a <= h < b if a < b else (h >= a or h < b)
 
 
+# Étape S3 (Studio → Activité) : une demande mise en pause n'est pas prise ; la priorité passe devant l'ancienneté ;
+# la pause générale et la plage horaire des tâches lourdes retiennent les doublages complets (pas les écoutes de 60 s).
+# Fonctions SQL de la migration 055 de l'API ; si elles manquent, on garde la file d'origine.
+CONTROLS = {"on": True}
+
+
 def claim():
-    rows = query(
-        """UPDATE dub_jobs SET status = 'running', started_at = now(), attempts = attempts + 1, phase = 'download',
-                  progress = 0, error = NULL, updated_at = now()
-           WHERE id = (SELECT id FROM dub_jobs WHERE status = 'queued' AND NOT cancel_requested AND (kind = 'preview' OR %s)
-                       ORDER BY (kind = 'preview') DESC, created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-           RETURNING id, talk_id, kind, params, attempts""", (in_night(),), fetch=True)
+    on = CONTROLS["on"]
+    cond = "AND NOT activity_paused('dubbing', id::text)" if on else ""
+    heavy = "activity_allows('dubbing')" if on else "true"
+    order = "(kind = 'preview') DESC, activity_priority('dubbing', id::text) DESC, created_at" if on else "(kind = 'preview') DESC, created_at"
+    try:
+        rows = query(
+            f"""UPDATE dub_jobs SET status = 'running', started_at = now(), attempts = attempts + 1, phase = 'download',
+                      progress = 0, error = NULL, updated_at = now()
+               WHERE id = (SELECT id FROM dub_jobs WHERE status = 'queued' AND NOT cancel_requested {cond}
+                             AND (kind = 'preview' OR (%s AND {heavy}))
+                           ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING id, talk_id, kind, params, attempts""", (in_night(),), fetch=True)
+    except psycopg2.errors.UndefinedFunction:
+        if not on:
+            raise
+        CONTROLS["on"] = False
+        log("Pause et priorité indisponibles (migration 055 de l'API absente) : file simple")
+        return claim()
     return rows[0] if rows else None
+
+
+def paused_in_activity(job_id):
+    """La demande a-t-elle été mise en pause dans Studio → Activité (et non annulée) ?"""
+    if not CONTROLS["on"]:
+        return False
+    try:
+        rows = query("SELECT activity_paused('dubbing', %s) AS p", (job_id,), fetch=True)
+        return bool(rows and rows[0]["p"])
+    except psycopg2.errors.UndefinedFunction:
+        return False
 
 
 class Cancelled(Exception):
@@ -373,11 +403,20 @@ def process(row):
     try:
         finish_ok(job, run(job, work))
     except Cancelled:
-        query("UPDATE dub_jobs SET status = 'cancelled', finished_at = now(), updated_at = now() WHERE id = %s", (job.id,))
-        log(f"[{job.talk}] annulé")
+        if paused_in_activity(job.id):  # étape S3 : mise en pause → retour dans la file (repartira du début à la reprise)
+            query("""UPDATE dub_jobs SET status = 'queued', cancel_requested = false, attempts = attempts - 1, phase = '', progress = 0,
+                     started_at = NULL, updated_at = now() WHERE id = %s""", (job.id,))
+            log(f"[{job.talk}] mis en pause : retour dans la file")
+        else:
+            query("UPDATE dub_jobs SET status = 'cancelled', finished_at = now(), updated_at = now() WHERE id = %s", (job.id,))
+            log(f"[{job.talk}] annulé")
     except InterruptedError:
         if stopping:  # arrêt du service : la demande repart dans la file, sans compter la tentative
             query("UPDATE dub_jobs SET status = 'queued', attempts = attempts - 1, phase = '', progress = 0, updated_at = now() WHERE id = %s", (job.id,))
+        elif paused_in_activity(job.id):  # étape S3 : mise en pause depuis Studio → Activité
+            query("""UPDATE dub_jobs SET status = 'queued', cancel_requested = false, attempts = attempts - 1, phase = '', progress = 0,
+                     started_at = NULL, updated_at = now() WHERE id = %s""", (job.id,))
+            log(f"[{job.talk}] mis en pause : retour dans la file")
         else:
             query("UPDATE dub_jobs SET status = 'cancelled', finished_at = now(), updated_at = now() WHERE id = %s", (job.id,))
     except Exception as err:  # noqa: BLE001

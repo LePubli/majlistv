@@ -26,6 +26,7 @@ export const GROUPS = [
   { id: 'transcription', label: 'Transcription (Whisper)' },
   { id: 'external', label: 'Vidéos YouTube et Vimeo' },
   { id: 'search', label: 'Recherche (Meilisearch)' },
+  { id: 'activity', label: 'Activité (tâches lourdes)' },
 ];
 
 const PROVIDERS = ['claude', 'azure', 'deepseek'];
@@ -224,6 +225,12 @@ export const FIELDS = [
     help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://IP_DU_CONTENEUR:3000 (docker inspect du service majlistv-search, comme pour la base de données).' },
   { key: 'meili_key', group: 'search', type: 'secret', label: 'Clé maître Meilisearch', env: 'MEILI_KEY', test: 'meili',
     help: 'La même valeur que la variable MEILI_MASTER_KEY du service majlistv-search. L\'index se remplit tout seul en quelques minutes.' },
+  // Étape S3 : Studio → Activité. Lus aussi par les services (fonction SQL activity_allows).
+  { key: 'activity_pause_all', group: 'activity', type: 'bool', label: 'Tâches lourdes en pause', def: 'false',
+    help: 'Conversion des vidéos, transcription et doublage complet ne démarrent plus (une tâche déjà en cours se termine). Se règle aussi dans Studio → Activité.' },
+  { key: 'activity_window_enabled', group: 'activity', type: 'bool', label: 'Limiter les tâches lourdes à une plage horaire', def: 'false' },
+  { key: 'activity_window_start', group: 'activity', type: 'number', label: 'Début de la plage (heure de Paris, 0-23)', def: '22', min: 0, max: 23 },
+  { key: 'activity_window_end', group: 'activity', type: 'number', label: 'Fin de la plage (heure de Paris, 0-23)', def: '7', min: 0, max: 23 },
 ];
 // Interrupteurs des fonctions (étape A) : un réglage « feat_<id> » par fonction sans réglage existant.
 // Masqués de la page Paramètres classique : ils se règlent dans Admin → Fonctions et paramètres.

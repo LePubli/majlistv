@@ -4,6 +4,7 @@ import routes from './routes.js';
 import publicRoutes, { notifyReady } from './public.js';
 import { recordListening, collectWorkFiles } from './lib.js';
 import { enqueueForUser } from '../../mailer.js';
+import { collectTasks, pauseRunning, production, overview } from './studio.js';
 
 export default async function register(app, ctx) {
   // Temps d'écoute par langue de l'audio, à chaque reprise de lecture (seulement quand le module est activé).
@@ -11,6 +12,11 @@ export default async function register(app, ctx) {
   // Étape S2 (module « Stockage et archivage ») : fichiers de travail du doublage à archiver après N jours.
   // La piste servie aux spectateurs (mélange des vidéos envoyées, voix seule des vidéos externes) n'est jamais proposée.
   ctx.on('archive.collect', (out, opts) => collectWorkFiles(out, opts));
+  // Étape S3 : Studio → Activité (tâches, pause d'une demande en cours), tableau de bord et Studio → Contenus.
+  ctx.on('activity.collect', (out, opts) => collectTasks(out, opts));
+  ctx.on('activity.pause', (task) => pauseRunning(task));
+  ctx.on('studio.production', (out, opts) => production(out, opts));
+  ctx.on('studio.overview', (out, opts) => overview(out, opts));
   await app.register(async (scope) => routes(scope, ctx));
   await app.register(publicRoutes); // étape D2 : version française côté spectateurs
 }

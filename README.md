@@ -3457,3 +3457,98 @@ docker exec dockpanel-git-majlistv-api sh -c 'nc -zv -w 5 node228-eu.n0c.com 502
 - le vrai serveur PlanetHoster : c'est la recette à faire de ton côté ;
 - la construction de l'image Docker avec `apk add rclone` : pas de Docker ici. Le paquet existe bien dans le dépôt « community » d'Alpine ;
 - de très gros fichiers (plusieurs Go) : rclone les envoie en flux, sans passer par le disque de l'API.
+
+## Étape S3 — Tableau de bord, Contenus et Activité du Studio
+
+### Description
+- **Tableau de bord** (Studio → Tableau de bord), selon la maquette « Studio v2 », écran 1 :
+  - en haut : boutons « Ouvrir l'éditeur » et « + Nouvelle conférence » ;
+  - **Dernière conférence publiée** (publiée, visible et vidéo prête) : miniature avec durée, vues depuis la publication, temps de visionnage moyen, version française écoutée, et liens vers les données analytiques, Audio et doublage, la fiche et l'éditeur (« Bientôt ») ;
+  - **Données de la chaîne** (28 derniers jours) : abonnés de mes chaînes et nouveaux de la semaine, vues avec l'évolution par rapport à la période précédente, heures d'écoute, écoute en français ;
+  - **Production en cours** : les 3 premières tâches, par exemple « Doublage 64 % » ou « Écoute de 60 s · en attente » ;
+  - **À faire** : relectures de traduction avant doublage, passages « à revoir », demandes de version française, conférences en erreur, validations avant mise en ligne, brouillons, tâches en échec ;
+  - **Espace de stockage** (administrateur, module Stockage activé) : Garage et archives, alerte d'espace.
+  - Un bloc dont le module est désactivé n'apparaît pas.
+- **Menu du Studio** :
+  - pastille sur **Activité** : nombre de tâches en cours ou en attente ;
+  - encart **STOCKAGE** (administrateur, module Stockage activé) : pourcentage, barre, « x utilisés sur 30 Go », avec un lien vers Stockage et archivage.
+- **Contenus**, selon la maquette, écran 2 :
+  - colonnes Conférence (durée, « envoyée le », ou « YouTube (non montable) »), **Langue** (« AR → FR »), **Production** et **Visibilité** (Publique / Brouillon / Programmée / Validation), **Vues** ;
+  - la colonne **Production** montre les 7 étapes Importée › Transcrite › Traduite › Relue › Montée › Doublée › Publiée et une étiquette (« Doublée », « Doublage 64 % », « Relecture à faire », « Traduction en cours », « Conversion 42 % »…) ;
+  - filtres **Toutes / À doubler / À relire / Publiées**, plus Brouillons, En traitement, En erreur et Validation quand il y en a ;
+  - la recherche porte aussi sur la langue et l'étape. La modification en lot reste disponible.
+  - **Montée** reste grisée tant que l'éditeur n'existe pas (étapes E1 à E5). Relue et Doublée viennent du module Doublage.
+- **Activité** : toutes les tâches de fond (conversion vidéo, transcription, traduction des sous-titres, doublage, écoute de 60 s, archivage, restauration), **dans l'ordre où les services vont les prendre**. Elles sont rangées en En cours (avec progression), En attente (numérotées), En pause, et En échec (30 derniers jours).
+  - **Administrateur :**
+    - **Mettre en pause / Reprendre** une tâche ;
+    - **Passer en priorité / Priorité normale** ;
+    - **Mettre en pause les tâches lourdes** (conversion, transcription, doublage complet) ;
+    - **Limiter les tâches lourdes à une plage horaire** (heure de Paris, par exemple 22 h à 7 h).
+  - Une **demande de doublage en cours** peut être mise en pause : le service s'arrête au prochain bloc et la remet dans la file, en pause. Elle repartira du début.
+  - Une conversion ou une transcription déjà en cours va jusqu'au bout.
+  - Les écoutes de 60 s, les traductions et les archivages ne sont pas retenus par la pause générale ni par la plage horaire.
+  - **Organisateur :** il voit les tâches de ses conférences, sans action.
+  - Les actions sont inscrites au journal d'audit.
+- **Technique :**
+  - migration `055_activity.sql` : table `activity_controls` et fonctions SQL `activity_allows`, `activity_paused`, `activity_priority`, lues par les services au moment de prendre une tâche ;
+  - réglages `activity_*` (Admin → Paramètres → Activité) ;
+  - routes `/studio/activity`, `/studio/overview` et `/studio/production` ;
+  - les modules ajoutent leurs données par événements (`activity.collect`, `activity.pause`, `studio.overview`, `studio.production`) ;
+  - versions : statistiques 1.1.0, chaînes 1.1.0, doublage 0.5.0, stockage 0.2.0, service de doublage 0.4.0 ;
+  - le **worker**, le **transcripteur**, le **traducteur** et le **service de doublage** ont changé. Chacun garde sa file d'origine si la migration 055 manque.
+
+### Prérequis
+- Étapes S1 à S2 en place. Aucune variable d'environnement à ajouter.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull**.
+2. DockPanel → Git Deploy, **dans cet ordre** :
+   1. **Redeploy `majlistv-api`** (migration `055_activity.sql`, obligatoire avant les services) ;
+   2. **Redeploy `majlistv-web`** ;
+   3. **Redeploy `majlistv-worker`**, **le transcripteur**, **le traducteur** et **`majlistv-dubbing`** (les quatre ont changé).
+3. Sur le VPS :
+```bash
+docker update --cpus 4 --memory 8g --memory-swap 8g dockpanel-git-majlistv-dubbing
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 80 dockpanel-git-majlistv-api 2>&1 | grep -i "055_activity"
+docker ps --format '{{.Names}}' | grep -i majlistv | while read c; do echo "== $c"; docker logs --tail 200 "$c" 2>&1 | grep -i "pause et priorité indisponibles" | tail -1; done
+```
+- La commande `grep -i "055_activity"` doit afficher « Migration appliquée : 055_activity.sql ».
+- La dernière commande ne doit **rien** afficher sous les noms des services. Si « Pause et priorité indisponibles » apparaît, un service a été redéployé avant l'API : redéploie-le.
+
+### Exemples d'utilisation
+- **Recette** :
+  1. Studio → Tableau de bord : l'encart Stockage et les tâches en cours apparaissent.
+  2. Studio → Activité : sur une tâche en attente, « Mettre en pause ». Elle passe dans « En pause » et n'est pas traitée.
+  3. « Reprendre » : elle revient dans la file.
+- **Calcul la nuit seulement** : Studio → Activité → cocher « Limiter les tâches lourdes à une plage horaire », de 22 h à 7 h, puis « Enregistrer ».
+- **Voir les réglages en base** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT queue, ref, paused, priority, updated_at FROM activity_controls ORDER BY updated_at DESC LIMIT 20;
+SELECT key, value FROM app_settings WHERE key LIKE 'activity_%';
+SELECT activity_allows('video') AS taches_lourdes_autorisees;
+SQL
+```
+
+### Debug
+- **Une tâche ne démarre jamais** : regarde dans Activité si elle est « En pause », si les tâches lourdes sont en pause, ou si l'on est hors de la plage horaire (pastille en haut de la carte « Tâches lourdes »). Une transcription « attend la vidéo » tant que la conversion n'est pas finie.
+- **La pause d'une demande de doublage en cours ne fait rien** : le service doit être en version 0.4.0 (journal « Service de doublage 0.4.0 prêt »).
+- **Pastille ou encart absents** : la pastille n'apparaît que s'il y a des tâches en cours ou en attente. L'encart demande le rôle administrateur et le module Stockage activé.
+- **Vues à « — »** : module Statistiques désactivé, ou conférence pas encore publiée.
+
+### Tests
+- API : `python3 api/tests/test_studio_s3.py` (47 contrôles, dont la pause d'une vraie demande de doublage en cours avec le service et des moteurs factices).
+- Services : `python3 api/tests/test_activity_claims.py` (19 contrôles). Il utilise le **vrai code** de réservation du worker, du transcripteur, du traducteur et du service de doublage, et vérifie aussi la file simple sans la migration 055.
+- Navigateur : `python3 web/tests/s3_studio.py [dossier]` (41 contrôles, fr/ar, 390/1440 px).
+- Non-régression : `test_modules.py`, `test_dubbing*.py`, `test_storage_s2.py`, `test_stats.py`, `test_channels.py`, `etape_c.py`, `etape_d.py`, `retours_16oct.py`, `responsive_widths.py`, `catalogue_menus.py`, `s1/d1a/d1b/d2/s2`, retrait des modules.
+
+### Testé / non testé
+**Testé ici** : tout ce qui précède, avec la base de test et les services lancés en local.
+
+**Non testé** :
+- la construction des images Docker des quatre services (pas de Docker ici). Seul le code de réservation a changé, plus un module `claim.js` pour le worker ;
+- le comportement réel sur le VPS pendant une longue conversion ;
+- un vrai téléphone.

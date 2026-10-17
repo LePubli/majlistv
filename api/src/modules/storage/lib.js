@@ -129,10 +129,20 @@ export async function recover() {
   await pool.query(`UPDATE archive_items SET status = 'restore_queued', updated_at = now() WHERE status = 'restoring'`);
 }
 
+// Étape S3 : pause et priorité réglées dans Studio → Activité (fonctions SQL de la migration 055 de l'API).
+let controlsReady = null;
+async function hasControls() {
+  if (controlsReady === null) controlsReady = Boolean((await pool.query("SELECT to_regprocedure('activity_paused(text,text)') AS f")).rows[0].f);
+  return controlsReady;
+}
 async function claim() {
+  const ctl = await hasControls();
+  const PAUSED = ctl ? "activity_paused('archive', id::text)" : 'false';
+  const PRIORITY = ctl ? "activity_priority('archive', id::text)" : '0';
   const { rows } = await pool.query(
     `UPDATE archive_items SET status = CASE status WHEN 'queued' THEN 'archiving' ELSE 'restoring' END, attempts = attempts + 1, updated_at = now()
-     WHERE id = (SELECT id FROM archive_items WHERE status IN ('queued', 'restore_queued') ORDER BY updated_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+     WHERE id = (SELECT id FROM archive_items WHERE status IN ('queued', 'restore_queued') AND NOT ${PAUSED}
+                 ORDER BY ${PRIORITY} DESC, updated_at LIMIT 1 FOR UPDATE SKIP LOCKED)
      RETURNING *`);
   return rows[0] || null;
 }
@@ -236,4 +246,25 @@ export async function autoArchive(ctx, log, { force = false } = {}) {
   await setState('auto_last_run', { at: new Date().toISOString(), candidates: out.length, queued });
   if (queued) log?.info?.(`Archivage automatique : ${queued} fichier(s) mis en file`);
   return { queued, candidates: out.length };
+}
+
+// --- Étape S3 : Studio → Activité et tableau de bord ---
+export async function collectTasks(out, { organizerId }) {
+  if (organizerId) return; // l'archivage ne concerne que l'administrateur
+  const { rows } = await pool.query(
+    `SELECT a.id, a.source_key, a.label, a.status, a.failed_op, a.error, a.created_at, a.talk_id, t.title
+       FROM archive_items a LEFT JOIN talks t ON t.id = a.talk_id
+      WHERE a.status IN ('queued', 'archiving', 'restore_queued', 'restoring') OR (a.status = 'failed' AND a.updated_at > now() - interval '30 days')
+      ORDER BY a.updated_at`);
+  for (const r of rows) {
+    const restore = ['restore_queued', 'restoring'].includes(r.status) || r.failed_op === 'restore';
+    out.push({ queue: 'archive', ref: r.id, talkId: r.talk_id, title: r.label || r.source_key, kind: restore ? 'restore' : 'archive',
+      status: ['archiving', 'restoring'].includes(r.status) ? 'running' : r.status === 'failed' ? 'failed' : 'waiting',
+      progress: null, error: r.error, createdAt: r.created_at, link: '/studio/settings/storage' });
+  }
+}
+export async function overviewPart(ctx, out, { isAdmin }) {
+  if (!isAdmin) return;
+  const s = await readSettings(ctx);
+  out.storage = { space: await space(s), archives: await totals(), provider: s.provider };
 }

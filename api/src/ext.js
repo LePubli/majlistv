@@ -30,6 +30,10 @@ export const CATALOG = {
   'archive.collect': 'Événement : chaque module ajoute ses fichiers de travail à archiver (liste, { kind, olderThanDays })',
   'archive.archived': 'Événement : un fichier de Garage a été archivé chez le fournisseur ({ id, key, kind, talkId })',
   'archive.restored': 'Événement : un fichier archivé est revenu dans Garage ({ id, key, kind, talkId })',
+  'activity.collect': 'Événement : chaque module ajoute ses tâches de fond à la liste de Studio → Activité (liste, { organizerId })',
+  'activity.pause': 'Événement : une tâche en cours a été mise en pause ({ queue, ref }) : le module l’arrête et la remet dans la file',
+  'studio.production': 'Événement : chaque module ajoute l’état de production de conférences (vues, doublage…) — Studio → Contenus (objet par conférence, { ids })',
+  'studio.overview': 'Événement : chaque module ajoute ses chiffres au tableau de bord du Studio (objet, { organizerId, days, talkId, isAdmin })',
 };
 
 export function provide(name, fn, { owner = 'socle', active = always } = {}) {

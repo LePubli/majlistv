@@ -109,10 +109,10 @@ export default async function dashboardRoutes(app) {
     add('transcript_failed', queues.failed_transcript, 'transcription(s) en échec', '/studio?filter=err', 'error');
     add('translation_failed', queues.failed_translation, 'traduction(s) de sous-titres en échec', '/studio?filter=err', 'error');
     add('insights_failed', queues.failed_insights, 'résumé(s) / chapitres en échec', '/studio?filter=err', 'error');
-    add('stuck_video', queues.stuck_video, `conversion(s) vidéo bloquée(s) depuis plus de 3 h (le worker tourne-t-il ?)`, '/studio?filter=run');
-    add('stuck_transcript', queues.stuck_transcript, 'transcription(s) bloquée(s) (le service de transcription tourne-t-il ?)', '/studio?filter=run');
-    add('stuck_translation', queues.stuck_translation, 'traduction(s) bloquée(s) (le service de traduction tourne-t-il ?)', '/studio?filter=run');
-    add('stuck_insights', queues.stuck_insights, 'résumé(s) bloqué(s) (le service de traduction tourne-t-il ?)', '/studio?filter=run');
+    add('stuck_video', queues.stuck_video, `conversion(s) vidéo bloquée(s) depuis plus de 3 h (le worker tourne-t-il ?)`, '/studio/activity');
+    add('stuck_transcript', queues.stuck_transcript, 'transcription(s) bloquée(s) (le service de transcription tourne-t-il ?)', '/studio/activity');
+    add('stuck_translation', queues.stuck_translation, 'traduction(s) bloquée(s) (le service de traduction tourne-t-il ?)', '/studio/activity');
+    add('stuck_insights', queues.stuck_insights, 'résumé(s) bloqué(s) (le service de traduction tourne-t-il ?)', '/studio/activity');
     add('past_due', pastDue, 'abonné(s) avec un paiement en retard', '/admin?tab=users');
     const mail = Object.fromEntries(emails.map((r) => [r.status, r.n]));
     add('email_failed', mail.failed || 0, 'e-mail(s) en échec sur 30 jours (Paramètres → E-mails)', '/admin?tab=settings', 'error');

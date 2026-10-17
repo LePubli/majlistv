@@ -22,6 +22,8 @@ class FakeBase:
     name = "fake"
 
     def synth(self, text, model, speaker, p):
+        if os.environ.get("DUB_FAKE_DELAY"):  # tests seulement : ralentit le faux moteur pour observer une demande en cours
+            time.sleep(float(os.environ["DUB_FAKE_DELAY"]))
         dur = 0.06 * len(text) * float(p.get("lengthScale") or 1)
         t = np.arange(int(dur * SR)) / SR
         return (0.2 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)

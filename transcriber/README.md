@@ -67,6 +67,9 @@ Les conférences déjà converties sont prises automatiquement (statut `pending`
 ## Utilisation
 Rien à faire côté organisateur : « Mes conférences » affiche « Transcription en cours XX % », puis la page de la conférence montre le panneau de transcription et le bouton de sous-titres du lecteur. Vidéo sans parole détectée (musique, silence, image fixe) : statut `unavailable`, sans nouvel essai.
 
+## Pause, priorité et plage horaire (étape S3)
+Avant de prendre une tâche, le service consulte les réglages de **Studio → Activité** : il saute une tâche en pause, passe une tâche prioritaire avant les autres, et ne démarre pas de tâche lourde (transcription) pendant la pause générale ou hors de la plage horaire. Ces réglages sont lus en base par les fonctions SQL `activity_allows`, `activity_paused` et `activity_priority`, créées par la migration `055_activity.sql` de l'API. **Redéployer l'API avant ce service.** Si les fonctions n'existent pas encore, le service le signale dans son journal (« Pause et priorité indisponibles… ») et garde la file d'origine. Une transcription déjà en cours va jusqu'au bout.
+
 ## Debug
 - État de toutes les transcriptions (le conteneur PostgreSQL de l'application est celui qui contient la base `appmajlistv`) :
 ```sql

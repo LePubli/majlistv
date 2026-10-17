@@ -6,11 +6,13 @@
 // (séries, collections, ouvrages, quiz, mise en pratique, rappels, chaîne, revenus) restent accessibles par leurs onglets
 // (components/StudioTabs.js) et par Paramètres → Outils, avec les mêmes adresses qu'avant.
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useApp } from './Providers';
 import { featureForPath } from '../lib/features';
 import { hasWebModule, MODULE_STUDIO_LINKS } from '../lib/modules';
 import ManageShell, { ICONS } from './ManageShell';
+import { fmtBytes } from '../lib/format';
 
 // Entrées qui mènent aux écrans d'un module (identifiant du module = identifiant de sa fonction).
 const MODULE_OF_HREF = {
@@ -34,13 +36,30 @@ export function studioSection(path) {
 }
 
 export default function StudioShell({ children }) {
-  const { t, user, ready, feat } = useApp();
+  const { t, user, ready, feat, locale } = useApp();
   const path = usePathname();
   const router = useRouter();
 
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   // Un modérateur seul n'a pas de tableau de bord : on l'envoie sur la file de modération.
   useEffect(() => { if (ready && user?.role === 'moderator' && path === '/studio') router.replace('/studio/moderation'); }, [ready, user, path, router]);
+  // Étape S3 : pastille du menu « Activité » (tâches en cours ou en attente) et encart « Stockage » (administrateur, module Stockage).
+  const { call } = useApp();
+  const [actCount, setActCount] = useState(0);
+  const [space, setSpace] = useState(null);
+  const role = user?.role;
+  const storageOn = role === 'admin' && hasWebModule('storage') && feat('storage');
+  useEffect(() => {
+    if (!ready || !role || role === 'moderator' || !['organizer', 'admin'].includes(role)) return undefined;
+    let alive = true;
+    const tick = () => {
+      call('/studio/activity/count').then((r) => { if (alive && r.ok) setActCount(r.data.count); });
+      if (storageOn) call('/studio/storage/space').then((r) => { if (alive && r.ok) setSpace(r.data); });
+    };
+    tick();
+    const h = setInterval(tick, 60000);
+    return () => { alive = false; clearInterval(h); };
+  }, [ready, role, storageOn, call, path]);
   if (!ready || !user) return null;
   if (!['organizer', 'moderator', 'admin'].includes(user.role)) return <main className="card"><p>{t('noAccess')}</p></main>;
 
@@ -57,7 +76,7 @@ export default function StudioShell({ children }) {
     ['/studio/subtitles', t('sdSubs'), ICONS.sub, '', 'subtitles'],
     ['/studio/dubbing', t('sdDub'), ICONS.mic, '', 'dubbing'],
     ['/studio/editor', t('sdEditor'), ICONS.film, t('sdSoon'), 'editor'],
-    ['/studio/activity', t('sdActivity'), ICONS.pulse, '', 'activity'],
+    ['/studio/activity', t('sdActivity'), ICONS.pulse, actCount > 0 ? String(actCount) : '', 'activity'],
     ['/studio/settings', t('sdSettings'), ICONS.gear, '', 'settings'],
   ];
   const groups = [];
@@ -91,5 +110,12 @@ export default function StudioShell({ children }) {
     ...(isAdmin ? [{ href: '/admin', label: t('sdToAdmin'), icon: ICONS.shield }] : []),
     { href: '/', label: t('viewSite'), icon: ICONS.eye },
   ];
-  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn}>{children}</ManageShell>;
+  const extra = storageOn && space && space.usedBytes != null ? (
+    <Link href="/studio/settings/storage" className={`sd-side-space${space.alert ? ' warn' : ''}`} aria-label={t('sdSpaceAria')}>
+      <span className="sd-side-head"><b>{t('sdSpaceTitle')}</b><span>{space.usedPct.toLocaleString(locale)} %</span></span>
+      <span className="sd-side-bar" aria-hidden="true"><i style={{ width: `${Math.min(100, space.usedPct)}%` }} /></span>
+      <small>{t('sdSpaceUsed').replace('{u}', fmtBytes(space.usedBytes, locale)).replace('{c}', fmtBytes(space.capacityBytes, locale))}</small>
+    </Link>
+  ) : null;
+  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn} extra={extra}>{children}</ManageShell>;
 }

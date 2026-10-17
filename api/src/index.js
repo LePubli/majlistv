@@ -31,6 +31,8 @@ import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → 
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
 import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
+import activityRoutes from './routes/activity.js'; // étape S3 : Studio → Activité (pause, priorité, plage horaire)
+import overviewRoutes from './routes/overview.js'; // étape S3 : tableau de bord et contenus du Studio
 import moduleRoutes, { discoverModules, registerModules, migrateModules, allModules, startModules } from './modules.js'; // étape M1 : socle des modules (api/src/modules/<id>/)
 import { startAudit } from './audit.js';
 import featureRoutes, { registerFeatureGuard, allFeatures } from './features.js';
@@ -146,6 +148,8 @@ await app.register(appearanceRoutes);
 await app.register(textsRoutes);
 await app.register(pagesRoutes);
 await app.register(moderationRoutes);
+await app.register(activityRoutes);
+await app.register(overviewRoutes);
 await app.register(speakersRoutes);
 await app.register(dashboardRoutes);
 await app.register(homeRoutes);

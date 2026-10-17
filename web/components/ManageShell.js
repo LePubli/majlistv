@@ -36,8 +36,8 @@ export const Icon = ({ d }) => (
 );
 
 // space : 'studio' | 'admin' ; groups : [{ key, title, items: [[href, libellé, icône, pastille?]] }] ;
-// links : liens du pied [{ href, label, icon }] ; isOn(href) : l'entrée est-elle la page courante ?
-export default function ManageShell({ space, groups, links, isOn, children }) {
+// links : liens du pied [{ href, label, icon }] ; isOn(href) : l'entrée est-elle la page courante ? ; extra : encart au-dessus du pied (facultatif)
+export default function ManageShell({ space, groups, links, isOn, extra, children }) {
   const { t, user, logout, locale } = useApp();
   const router = useRouter();
   const [col, toggle] = useCollapsed();
@@ -66,6 +66,7 @@ export default function ManageShell({ space, groups, links, isOn, children }) {
           ))}
         </nav>
         <div className="studio-foot">
+          {extra /* étape S3 : encart « Stockage » du Studio */}
           {links.map((l) => <Link key={l.href} href={l.href} className="studio-link" aria-label={l.label}><Icon d={l.icon} /><span>{l.label}</span></Link>)}
           <select value={locale} onChange={setLocale} aria-label={t('languageMenu')}>
             {Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

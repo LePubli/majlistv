@@ -114,6 +114,9 @@ curl -s http://127.0.0.1:7050/health                         # adapter le port h
 ## Coût (à vérifier sur ta console Anthropic)
 Une conférence d'une heure représente environ 700 segments, soit de l'ordre de 15 000 jetons de texte à lire et autant à écrire **par langue cible** (plus pour l'arabe), plus quelques milliers de jetons de consignes répétées à chaque paquet. Multiplie par le prix des jetons du modèle choisi (https://www.anthropic.com/pricing) et par le nombre de langues. Mesure sur 2 ou 3 conférences réelles dans la console (Usage), puis décide de proposer les traductions à toutes les conférences ou seulement aux plus vues. `TRANSLATE_MAX_CHARS` empêche une très longue transcription de coûter trop cher par erreur.
 
+## Pause, priorité et plage horaire (étape S3)
+Avant de prendre une tâche, le service consulte les réglages de **Studio → Activité** : il saute une tâche en pause, passe une tâche prioritaire avant les autres, et ne démarre pas de tâche lourde pendant la pause générale ou hors de la plage horaire. Ces réglages sont lus en base par les fonctions SQL `activity_allows`, `activity_paused` et `activity_priority`, créées par la migration `055_activity.sql` de l'API. **Redéployer l'API avant ce service.** Si les fonctions n'existent pas encore, le service le signale dans son journal (« Pause et priorité indisponibles… ») et garde la file d'origine. Les traductions ne sont jamais retenues par la pause générale ni par la plage horaire (tâches légères).
+
 ## Debug
 - État des traductions (dans le conteneur PostgreSQL de l'application, base `appmajlistv`) :
 ```sql

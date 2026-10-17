@@ -9,6 +9,7 @@ import {
   S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand,
 } from '@aws-sdk/client-s3';
 import { probe, transcode, makeAudio, killCurrent } from './transcode.js';
+import { makeClaim } from './claim.js';
 
 const env = (k, d) => process.env[k] ?? d;
 const need = (k) => { const v = process.env[k]; if (!v) { console.error(`Variable manquante : ${k}`); process.exit(1); } return v; };
@@ -39,17 +40,8 @@ let current = null; // { id } du job en cours
 let stopping = false;
 let lastOk = null;
 
-// Réserve la plus ancienne vidéo en attente.
-async function claim() {
-  const { rows } = await pool.query(
-    `UPDATE talks SET video_status = 'processing', video_progress = 0, video_error = NULL,
-            transcode_attempts = transcode_attempts + 1
-     WHERE id = (SELECT id FROM talks WHERE source = 'upload' AND video_status = 'pending'
-                 ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-     RETURNING id, video_ref, transcode_attempts`
-  );
-  return rows[0];
-}
+// Réserve la vidéo en attente suivante (pause, priorité et plage horaire : voir claim.js, étape S3).
+const claim = makeClaim(pool, log);
 
 async function download(key, file) {
   const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));

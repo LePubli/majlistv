@@ -19,6 +19,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import boto3
 import psycopg2
+import psycopg2.errors
 import psycopg2.extras
 from botocore.config import Config
 
@@ -104,17 +105,32 @@ settings = Settings(query, lambda *a: log(*a))
 MODEL_NAME, THREADS, BEAM, LANG_MODE = "small", 4, 3, "declared"  # remplacés par apply_settings() au démarrage
 
 
+# Étape S3 (Studio → Activité) : pause générale et plage horaire des tâches lourdes, pause et priorité par conférence
+# (fonctions SQL de la migration 055 de l'API). Si elles n'existent pas encore, on garde la file d'origine.
+CONTROLS = {"on": True}
+
+
 def claim():
-    rows = query(
-        """UPDATE talks SET transcript_status = 'processing', transcript_progress = 0, transcript_error = NULL,
-                  transcript_attempts = transcript_attempts + 1
-           WHERE id = (SELECT id FROM talks
-                       WHERE transcript_status = 'pending'
-                         AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'archive') AND rights_confirmed))
-                       ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-           RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts""",
-        fetch=True,
-    )
+    cond = "AND activity_allows('transcript') AND NOT activity_paused('transcript', id::text)" if CONTROLS["on"] else ""
+    order = "activity_priority('transcript', id::text) DESC, created_at" if CONTROLS["on"] else "created_at"
+    try:
+        rows = query(
+            f"""UPDATE talks SET transcript_status = 'processing', transcript_progress = 0, transcript_error = NULL,
+                      transcript_attempts = transcript_attempts + 1
+               WHERE id = (SELECT id FROM talks
+                           WHERE transcript_status = 'pending'
+                             AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'archive') AND rights_confirmed))
+                             {cond}
+                           ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts""",
+            fetch=True,
+        )
+    except psycopg2.errors.UndefinedFunction:
+        if not CONTROLS["on"]:
+            raise
+        CONTROLS["on"] = False
+        log("Pause et priorité indisponibles (migration 055 de l'API absente) : file simple")
+        return claim()
     return rows[0] if rows else None
 
 

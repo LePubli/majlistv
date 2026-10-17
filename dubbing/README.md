@@ -63,6 +63,9 @@ curl -s http://127.0.0.1:7041/                     # {"status":"ok",…} — ada
 ```
 Puis dans le Studio : Audio et doublage → une conférence → **Écouter 60 secondes**. Le premier travail télécharge les modèles (quelques minutes), les suivants démarrent tout de suite.
 
+## Pause, priorité et plage horaire (étape S3)
+Avant de prendre une tâche, le service consulte les réglages de **Studio → Activité** : il saute une tâche en pause, passe une tâche prioritaire avant les autres, et ne démarre pas de tâche lourde (doublage complet ; les écoutes de 60 s ne sont jamais retenues) pendant la pause générale ou hors de la plage horaire. Ces réglages sont lus en base par les fonctions SQL `activity_allows`, `activity_paused` et `activity_priority`, créées par la migration `055_activity.sql` de l'API. **Redéployer l'API avant ce service.** Si les fonctions n'existent pas encore, le service le signale dans son journal (« Pause et priorité indisponibles… ») et garde la file d'origine. Une demande en cours mise en pause s'arrête au prochain bloc et retourne dans la file : elle repartira du début.
+
 ## Debug
 - **« Moteur de doublage hors ligne »** : le service est arrêté ou ne joint pas la base. `docker logs --tail 50 dockpanel-git-majlistv-dubbing`.
 - **Demandes et état** (conteneur PostgreSQL de l'application) :

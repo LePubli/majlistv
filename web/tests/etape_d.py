@@ -41,7 +41,7 @@ with sync_playwright() as p:
         for w, h in ((1440, 900), (1990, 1030), (390, 844)):
             tag = f'[{lang} {w}px]'
             # --- Organisateur : 8 entrées, pas d'Administration
-            ctx, pg = page(org, w, h, lang); pg.goto(WEB + '/studio'); pg.wait_for_selector('.studio-nav a', timeout=20000); pg.wait_for_selector('.sd-grid', timeout=20000); pg.wait_for_timeout(600)
+            ctx, pg = page(org, w, h, lang); pg.goto(WEB + '/studio'); pg.wait_for_selector('.studio-nav a', timeout=20000); pg.wait_for_selector('.sd-dash .sd-row', timeout=20000); pg.wait_for_timeout(600)
             m = menu(pg)
             ok(m == STUDIO, f'{tag} organisateur : menu du Studio = 8 entrées ({len(m)})')
             ok(not any('/admin' in x for x in m) and pg.locator('.studio-foot a[href="/admin"]').count() == 0, f'{tag} organisateur : aucun lien Administration')

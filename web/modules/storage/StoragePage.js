@@ -6,6 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { hasWebModule } from '../../lib/modules';
+import { fmtBytes, ago, unitsFor } from '../../lib/format';
+
+export { fmtBytes };
 
 const tf = (s, vars = {}) => Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), s || '');
 const BUSY = ['queued', 'archiving', 'restore_queued', 'restoring'];
@@ -14,25 +17,6 @@ const PLAIN = ['provider', 'sftp_host', 'sftp_port', 'sftp_user', 's3_endpoint',
 const SECRETS = ['sftp_secret', 's3_secret_key', 'webdav_pass', 'encrypt_pass'];
 
 // « 18,6 Go », « 38 Mo »…
-const UNITS = { fr: ['o', 'ko', 'Mo', 'Go', 'To'], en: ['B', 'KB', 'MB', 'GB', 'TB'], ar: ['B', 'KB', 'MB', 'GB', 'TB'] };
-export function fmtBytes(n, locale) {
-  if (n == null) return '—';
-  const u = UNITS[String(locale).slice(0, 2)] || UNITS.fr;
-  for (let i = 4; i >= 1; i -= 1) {
-    const size = 1024 ** i;
-    if (n >= size) return `${(n / size).toLocaleString(locale, { maximumFractionDigits: n / size < 10 ? 1 : 0 })} ${u[i]}`;
-  }
-  return `${n} ${u[0]}`;
-}
-// « il y a 2 min » sans bibliothèque.
-function ago(iso, locale) {
-  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (s < 60) return rtf.format(-Math.round(s), 'second');
-  if (s < 3600) return rtf.format(-Math.round(s / 60), 'minute');
-  if (s < 86400) return rtf.format(-Math.round(s / 3600), 'hour');
-  return rtf.format(-Math.round(s / 86400), 'day');
-}
 const day = (iso, locale) => (iso ? new Date(iso).toLocaleDateString(locale, { dateStyle: 'medium' }) : '');
 
 function Field({ label, children, wide }) {
@@ -284,7 +268,7 @@ export default function StoragePage() {
           </div>
           <div className="sg-rule">
             <span>{t('sgRuleCapacity')}<small className="meta">{t('sgRuleCapacityNote')}</small></span>
-            <span className="sg-num"><input type="number" min={1} max={100000} value={form.garage_capacity_gb} onChange={(e) => set('garage_capacity_gb', e.target.value)} aria-label={t('sgRuleCapacity')} /> {(UNITS[String(locale).slice(0, 2)] || UNITS.fr)[3]}</span>
+            <span className="sg-num"><input type="number" min={1} max={100000} value={form.garage_capacity_gb} onChange={(e) => set('garage_capacity_gb', e.target.value)} aria-label={t('sgRuleCapacity')} /> {unitsFor(locale)[3]}</span>
           </div>
           <div className="sg-rule"><span>{t('sgRuleBackup')}</span><strong className="sg-same">{t('sgUnchanged')}</strong></div>
           <p className="meta small">

@@ -45,6 +45,9 @@ export default async function routes(app, ctx) {
 
   app.get('/studio/storage', admin, async () => view());
 
+  // Petit encart « Stockage » du menu du Studio (étape S3) : espace Garage seulement.
+  app.get('/studio/storage/space', admin, async () => space(await readSettings(ctx)));
+
   // Espace Garage recalculé tout de suite (sinon au plus toutes les 5 minutes).
   app.post('/studio/storage/usage', admin, async (req, reply) => {
     if (!storage) return reply.code(503).send({ error: 'Stockage Garage non configuré', code: 'storage_off' });

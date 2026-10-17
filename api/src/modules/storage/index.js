@@ -3,11 +3,14 @@
 //   Points d'extension fournis : archive.lookup (archive d'un fichier de Garage), storage.space (espace utilisé / libre).
 //   Événements : archive.collect (les modules ajoutent leurs fichiers de travail), archive.archived, archive.restored.
 import routes from './routes.js';
-import { lookup, recover, processQueue, autoArchive, readSettings, space } from './lib.js';
+import { lookup, recover, processQueue, autoArchive, readSettings, space, collectTasks, overviewPart } from './lib.js';
 
 export default async function register(app, ctx) {
   ctx.provide('archive.lookup', (key) => lookup(key));
   ctx.provide('storage.space', async () => space(await readSettings(ctx)));
+  // Étape S3 : archivages dans Studio → Activité, espace de stockage sur le tableau de bord.
+  ctx.on('activity.collect', (out, opts) => collectTasks(out, opts));
+  ctx.on('studio.overview', (out, opts) => overviewPart(ctx, out, opts));
   await app.register(async (scope) => routes(scope, ctx));
 }
 

@@ -11,10 +11,10 @@ import * as ext from '../../ext.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 // Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
-const KEPT = `(COALESCE(f.keep_original, false) OR left(ltrim(s.text), 1) = '#')`;
-const SEGS_FROM = `transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx`;
+export const KEPT = `(COALESCE(f.keep_original, false) OR left(ltrim(s.text), 1) = '#')`;
+export const SEGS_FROM = `transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx`;
 // Empreinte du texte relu (texte + marquages) : calculée en SQL pour pouvoir la comparer aussi dans la liste des conférences.
-const TEXT_HASH = `md5(string_agg(s.idx::text || chr(31) || s.text || chr(31) || (${KEPT})::text, chr(30) ORDER BY s.idx))`;
+export const TEXT_HASH = `md5(string_agg(s.idx::text || chr(31) || s.text || chr(31) || (${KEPT})::text, chr(30) ORDER BY s.idx))`;
 const AUDIO_TYPES = { 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm', 'audio/flac': 'flac' };
 const GENDERS = ['', 'male', 'female', 'child'];
 const PIPER_MODEL = /^[a-z]{2,3}_[A-Z]{2}-[a-z0-9_]+-(x_low|low|medium|high)$/;

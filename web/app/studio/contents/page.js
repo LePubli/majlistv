@@ -1,92 +1,116 @@
 'use client';
-// Studio → Contenus (ex-« Mes conférences », déplacé de /studio à /studio/contents à l'étape D) : chiffres clés, recherche, filtres et avancement des 4 étapes de traitement.
+// Studio → Contenus (maquette « Studio v2 », écran 2) — étape S3 : parcours de production en 7 étapes
+// (Importée › Transcrite › Traduite › Relue › Montée › Doublée › Publiée), langue d'origine → français, visibilité, vues.
+// Données : GET /me/talks (conférences, traitements) + GET /studio/production (vues et doublage, fournis par les modules).
+// Conservé : recherche, modification en lot, relecture avant mise en ligne (modération), conférences programmées.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
 import StudioTabs from '../../../components/StudioTabs';
 import { langName } from '../../../components/Transcript';
 import BulkEdit from '../../../components/BulkEdit';
-import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/talkState';
+import { talkSteps, talkKind, sourceLabel } from '../../../lib/talkState';
+import { production, STAGES } from '../../../lib/production';
+import { hasWebModule } from '../../../lib/modules';
 
-const clock = (s) => {
-  if (!s) return '';
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = String(Math.floor(s % 60)).padStart(2, '0');
-  return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-};
-const FILTERS = ['all', 'live', 'run', 'err', 'draft', 'review'];
-// Le filtre « Brouillons » regroupe les brouillons et les conférences programmées.
-const inFilter = (kind, f) => f === 'all' || kind === f || (f === 'draft' && kind === 'sched');
+const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
+const FILTERS = ['all', 'todub', 'toreview', 'live', 'draft', 'run', 'err', 'modreview'];
+const ALWAYS = ['all', 'live'];
 
-function Step({ letter, state, label, t }) {
-  const mark = { ok: ' ✓', run: ' …', err: ' !', wait: '', none: '' }[state];
-  return <span className={`step step-${state}`} title={`${label} : ${t('step_' + state)}`}>{letter}{mark}</span>;
+function Stages({ p, t }) {
+  return (
+    <span className="pd-stages" role="img" aria-label={STAGES.map((k) => `${t(`pdSt_${k}`)} : ${t(`pdState_${p.stages[k]}`)}`).join(', ')}>
+      {STAGES.map((k) => <i key={k} className={`pd-dash ${p.stages[k]}`} title={`${t(`pdSt_${k}`)} : ${t(`pdState_${p.stages[k]}`)}`} />)}
+    </span>
+  );
 }
 
 export default function StudioTalks() {
-  const { t, call, locale } = useApp();
+  const { t, call, locale, feat } = useApp();
   const [mine, setMine] = useState(null);
+  const [prod, setProd] = useState({});
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
-  const [sel, setSel] = useState(() => new Set()); // conférences cochées (modification en lot)
+  const [sel, setSel] = useState(() => new Set());
   const [bulk, setBulk] = useState(false);
   const [flash, setFlash] = useState('');
-  // Lien depuis le tableau de bord : /studio?filter=err ouvre directement le bon filtre.
-  useEffect(() => { const f = new URLSearchParams(window.location.search).get('filter'); if (FILTERS.includes(f)) setFilter(f); }, []);
-  const load = useCallback(() => call('/me/talks').then((r) => r.ok && setMine(r.data)), [call]);
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get('filter');
+    const map = { review: 'modreview' };
+    if (FILTERS.includes(map[f] || f)) setFilter(map[f] || f);
+  }, []);
+  const load = useCallback(() => Promise.all([
+    call('/me/talks').then((r) => r.ok && setMine(r.data)),
+    call('/studio/production').then((r) => r.ok && setProd(r.data.talks)),
+  ]), [call]);
   useEffect(() => { load(); }, [load]);
 
+  const dubOn = hasWebModule('dubbing') && feat('dubbing');
   const rows = useMemo(() => (mine || []).map((x) => {
     const steps = talkSteps(x);
-    return { ...x, steps, kind: talkKind(x, steps), pct: talkProgress(steps) };
-  }), [mine]);
+    const r = { ...x, steps, kind: talkKind(x, steps) };
+    return { ...r, p: production(r, prod[x.id] || {}) };
+  }), [mine, prod]);
 
-  // Rafraîchissement automatique tant qu'un traitement est en cours.
-  const running = rows.some((r) => r.kind === 'run');
+  const running = rows.some((r) => r.kind === 'run' || r.p.label === 'dubbing');
   useEffect(() => {
     if (!running) return undefined;
     const id = setInterval(load, 6000);
     return () => clearInterval(id);
   }, [running, load]);
 
-  const count = (k) => rows.filter((r) => inFilter(r.kind, k)).length;
+  const match = (r, f) => ({
+    all: true, todub: r.p.toDub, toreview: r.p.toReview, live: r.kind === 'live', draft: r.kind === 'draft' || r.kind === 'sched',
+    run: r.kind === 'run', err: r.kind === 'err', modreview: r.kind === 'review',
+  })[f];
+  const count = (f) => rows.filter((r) => match(r, f)).length;
+  const shownFilters = FILTERS.filter((f) => ALWAYS.includes(f) || (['todub', 'toreview'].includes(f) ? dubOn : count(f) > 0) || filter === f);
+  const langPair = (r) => {
+    const l = String(r.p.lang || '').split('-')[0].toUpperCase();
+    if (!l) return '—';
+    return r.p.french || r.p.stages.translated === 'na' ? l : `${l} → FR`;
+  };
+  const text = (r) => `${r.title} ${r.speaker} ${langPair(r)} ${langName(String(r.p.lang || '').split('-')[0], locale) || ''} ${t(`pdLabel_${r.p.label}`)}`.toLowerCase();
   const needle = q.trim().toLowerCase();
-  const shown = rows.filter((r) => inFilter(r.kind, filter)
-    && (!needle || `${r.title} ${r.speaker}`.toLowerCase().includes(needle)));
+
+  const shown = rows.filter((r) => match(r, filter) && (!needle || text(r).includes(needle)));
   const allShown = shown.length > 0 && shown.every((r) => sel.has(r.id));
   const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) shown.forEach((r) => n.delete(r.id)); else shown.forEach((r) => n.add(r.id)); return n; });
   const toggleOne = (id) => setSel((s0) => { const n = new Set(s0); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const dateTime = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  const dateTime = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const nf = new Intl.NumberFormat(locale);
+  const visibility = (r) => {
+    if (r.kind === 'review') return [t('state_review_' + r.reviewStatus), 'muted'];
+    if (r.kind === 'sched') return [t('pdVisSched').replace('{d}', dateTime(r.publishAt)), 'muted'];
+    if (r.publication === 'draft') return [t('pdVisDraft'), 'muted'];
+    return [t('pdVisPublic'), 'ok'];
+  };
+  const label = (r) => {
+    const base = t(`pdLabel_${r.p.label}`);
+    return r.p.pct != null ? `${base} ${r.p.pct} %` : base;
+  };
 
   return (
-    <main className="studio-page">
+    <main className="studio-page pd-page">
+      <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('sdContents')}</span></nav>
       <div className="studio-head">
         <h1 className="studio-title">{t('sdContentsTitle')}</h1>
-        <Link href="/studio/new" className="btn">+ {t('newTalk')}</Link>
+        <Link href="/studio/new" className="btn sd-pill">+ {t('newTalk')}</Link>
       </div>
 
       <StudioTabs group="contents" />
-
-      <div className="studio-stats">
-        {[['live', t('kind_live')], ['run', t('kind_run')], ['err', t('kind_err')], ['draft', t('kind_draft')], ...(rows.some((r) => r.kind === 'review') ? [['review', t('kind_review')]] : [])].map(([k, label]) => (
-          <button key={k} type="button" className={`stat stat-${k}`} onClick={() => setFilter(k)}>
-            <strong>{mine ? count(k) : '…'}</strong><span>{label}</span>
-          </button>
-        ))}
-      </div>
 
       <div className="studio-tools">
         <label className="studio-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
           <span className="sr-only">{t('search')}</span>
-          <input type="search" placeholder={t('studioSearch')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="search" placeholder={t('pdSearch')} value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
         <div className="pills" role="group" aria-label={t('filterBy')}>
-          {FILTERS.map((k) => (
+          {shownFilters.map((k) => (
             <button key={k} type="button" aria-pressed={filter === k} className={filter === k ? 'pill on' : 'pill'} onClick={() => setFilter(k)}>
-              {t('filter_' + k)}{k !== 'all' && mine ? ` (${count(k)})` : ''}
+              {t('pdFilter_' + k)}{k !== 'all' && mine ? ` (${count(k)})` : ''}
             </button>
           ))}
         </div>
@@ -114,57 +138,58 @@ export default function StudioTalks() {
       )}
       {shown.length > 0 && (
         <div className="studio-table-wrap">
-          <table className="studio-table">
+          <table className="studio-table pd-table">
             <thead>
               <tr>
-                <th className="bk-col"><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} /></th><th>{t('colTalk')}</th><th>{t('colState')}</th><th>{t('colSteps')}</th><th>{t('access')}</th><th>{t('colAdded')}</th>
+                <th className="bk-col"><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} /></th>
+                <th>{t('pdColTalk')}</th><th>{t('pdColLang')}</th><th>{t('pdColProd')}</th><th>{t('pdColVis')}</th><th>{t('pdColViews')}</th>
                 <th><span className="sr-only">{t('colActions')}</span></th>
               </tr>
             </thead>
             <tbody>
-              {shown.map((r) => (
-                <tr key={r.id} className={sel.has(r.id) ? 'bk-sel' : undefined}>
-                  <td className="bk-col"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></td>
-                  <td>
-                    <Link href={`/studio/${r.id}`} className="studio-talk">
-                      <span className="studio-thumb" style={r.posterUrl ? { backgroundImage: `url(${r.posterUrl})` } : undefined}>
-                        <span className="dur">{r.source !== 'upload' && !r.durationSeconds ? sourceLabel(r.source) : clock(r.durationSeconds)}</span>
+              {shown.map((r) => {
+                const [vis, visTone] = visibility(r);
+                return (
+                  <tr key={r.id} className={sel.has(r.id) ? 'bk-sel' : undefined}>
+                    <td className="bk-col"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></td>
+                    <td>
+                      <Link href={`/studio/${r.id}`} className="studio-talk">
+                        <span className="studio-thumb" style={r.posterUrl ? { backgroundImage: `url(${r.posterUrl})` } : undefined} />
+                        <span className="studio-talk-text">
+                          <b dir="auto">{r.title}</b>
+                          <small>{r.source === 'upload'
+                            ? [mins(r.durationSeconds), t('pdSentOn').replace('{d}', date(r.created_at))].filter(Boolean).join(' · ')
+                            : [mins(r.durationSeconds), `${sourceLabel(r.source)} (${t('pdNotEditable')})`].filter(Boolean).join(' · ')}</small>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="pd-lang">{langPair(r)}</td>
+                    <td>
+                      <span className="pd-prod">
+                        <Stages p={r.p} t={t} />
+                        <span className={`pd-label ${r.p.tone}`}>{label(r)}</span>
                       </span>
-                      <span className="studio-talk-text">
-                        <b>{r.title}</b>
-                        <small>{[r.speaker, langName(String(r.language || '').split('-')[0], locale), r.source !== 'upload' ? sourceLabel(r.source) : ''].filter(Boolean).join(' · ')}</small>
-                      </span>
-                    </Link>
-                  </td>
-                  <td>
-                    <span className={`state state-${r.kind}`}>
-                      <i aria-hidden="true" />{r.kind === 'review' ? t('state_review_' + r.reviewStatus) : t('state_' + r.kind)}{r.kind === 'run' && r.pct != null ? ` ${r.pct} %` : ''}
-                    </span>
-                    {r.kind === 'review' && r.reviewStatus === 'rejected' && (
-                      <small className="muted review-note">{t('reviewReason')} : {r.reviewNote}{' '}
-                        <button type="button" className="link u small" onClick={async () => { const x = await call(`/talks/${r.id}/review/submit`, { method: 'POST' }); if (x.ok) load(); }}>{t('reviewResubmit')}</button>
-                      </small>
-                    )}
-                    {r.kind === 'sched' && <small className="muted sched-date">{t('scheduledFor').replace('{d}', dateTime(r.publishAt))}</small>}
-                  </td>
-                  <td>
-                    <span className="steps" aria-label={t('colSteps')}>
-                      <Step letter="V" state={r.steps.video} label={t('stepVideo')} t={t} />
-                      <Step letter="T" state={r.steps.transcript} label={t('stepTranscript')} t={t} />
-                      <Step letter="S" state={r.steps.subs} label={t('stepSubs')} t={t} />
-                      <Step letter="R" state={r.steps.summary} label={t('stepSummary')} t={t} />
-                    </span>
-                  </td>
-                  <td>{t(r.access)}</td>
-                  <td className="muted">{date(r.created_at)}</td>
-                  <td className="end"><Link href={`/studio/${r.id}`} className="manage">{t('manage')}</Link></td>
-                </tr>
-              ))}
+                      {r.kind === 'review' && r.reviewStatus === 'rejected' && (
+                        <small className="muted review-note">{t('reviewReason')} : {r.reviewNote}{' '}
+                          <button type="button" className="link u small" onClick={async () => { const x = await call(`/talks/${r.id}/review/submit`, { method: 'POST' }); if (x.ok) load(); }}>{t('reviewResubmit')}</button>
+                        </small>
+                      )}
+                    </td>
+                    <td><span className={`pd-vis ${visTone}`}>{vis}</span></td>
+                    <td className="pd-views">{r.p.views == null || (r.p.views === 0 && r.kind !== 'live') ? '—' : nf.format(r.p.views)}</td>
+                    <td className="end"><Link href={`/studio/${r.id}`} className="manage">{t('manage')}</Link></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
-      <p className="meta small">{t('stepsLegend')}</p>
+      <p className="pd-legend meta small">
+        <b>{t('pdStages')}</b>
+        {STAGES.map((k, i) => <span key={k}>{i > 0 && <span aria-hidden="true" className="pd-sep">›</span>}{t(`pdSt_${k}`)}</span>)}
+      </p>
+      <p className="meta small">{t('pdLegendNote')}</p>
     </main>
   );
 }

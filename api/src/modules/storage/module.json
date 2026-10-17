@@ -1,8 +1,8 @@
 {
   "id": "storage",
   "name": "Stockage et archivage",
-  "version": "0.1.0",
-  "description": "Espace utilisé sur Garage (stockage des vidéos servies aux spectateurs) et archivage des fichiers froids chez un fournisseur au choix : PlanetHoster en SFTP (par défaut), stockage compatible S3 (Backblaze B2, Wasabi, Scaleway, Cloudflare R2, AWS) ou WebDAV, avec rclone. Test de la connexion, fichier d'essai archivé puis restauré, restauration en un clic, archivage automatique des pistes audio de travail du doublage (étape S2).",
+  "version": "0.2.0",
+  "description": "Espace utilisé sur Garage (stockage des vidéos servies aux spectateurs) et archivage des fichiers froids chez un fournisseur au choix : PlanetHoster en SFTP (par défaut), stockage compatible S3 (Backblaze B2, Wasabi, Scaleway, Cloudflare R2, AWS) ou WebDAV, avec rclone. Test de la connexion, fichier d'essai archivé puis restauré, restauration en un clic, archivage automatique des pistes audio de travail du doublage (étape S2). Tâches d'archivage dans Studio → Activité et espace de stockage sur le tableau de bord (S3).",
   "requires": [],
   "defaultEnabled": false,
   "settings": [

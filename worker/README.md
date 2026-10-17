@@ -43,6 +43,9 @@ curl -s http://127.0.0.1:7030/health              # {"status":"ok",...} (adapter
 ## Utilisation
 Rien à faire : après un upload depuis `/organizer`, la liste affiche « En attente de conversion » puis « Conversion XX % », puis la conférence apparaît dans le catalogue avec sa miniature et sa durée. Les vidéos déjà envoyées avant cette étape sont converties automatiquement au premier démarrage.
 
+## Pause, priorité et plage horaire (étape S3)
+Avant de prendre une tâche, le service consulte les réglages de **Studio → Activité** : il saute une tâche en pause, passe une tâche prioritaire avant les autres, et ne démarre pas de tâche lourde (conversion) pendant la pause générale ou hors de la plage horaire. Ces réglages sont lus en base par les fonctions SQL `activity_allows`, `activity_paused` et `activity_priority`, créées par la migration `055_activity.sql` de l'API. **Redéployer l'API avant ce service.** Si les fonctions n'existent pas encore, le service le signale dans son journal (« Pause et priorité indisponibles… ») et garde la file d'origine. Une conversion déjà en cours va jusqu'au bout.
+
 ## Debug
 - Rien ne se passe : `docker logs dockpanel-git-majlistv-worker`. Le message « Base pas prête » signifie que la migration 004 n'est pas appliquée (redéployer l'API).
 - Voir l'état des vidéos :
