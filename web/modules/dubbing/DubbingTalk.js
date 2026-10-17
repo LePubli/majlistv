@@ -197,6 +197,7 @@ export default function DubbingTalk() {
               )}
               <small className="meta">{d.estimate.measured ? t('dbEstimateMeasured') : t('dbEstimateNote')}</small>
               {d.talk.source && d.talk.source !== 'upload' && <small className="meta">{t('dbExternalNote')}</small>}
+              {d.requests > 0 && <p className="db-req">{tf(t(d.requests === 1 ? 'dbReqStudio1' : 'dbReqStudio'), { n: d.requests })}</p>}
             </section>
 
             {d.phrases > 0 && (

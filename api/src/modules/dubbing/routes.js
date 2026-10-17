@@ -148,6 +148,7 @@ export default async function routes(app, ctx) {
       `SELECT t.id, t.title, t.speaker, COALESCE(t.transcript_language, t.language) AS lang, t.duration_seconds AS "durationSeconds",
               COALESCE(s.n, 0)::int AS phrases, COALESCE(s.ms, 0)::bigint AS ms, d.params AS override,
               (tr.talk_id IS NOT NULL) AS "hasTrack",
+              (SELECT count(*) FROM dub_requests r WHERE r.talk_id = t.id)::int AS requests,
               (SELECT json_build_object('kind', j.kind, 'status', j.status, 'progress', j.progress) FROM dub_jobs j
                 WHERE j.talk_id = t.id AND j.status IN ('queued', 'running') ORDER BY j.created_at LIMIT 1) AS "activeJob"
        FROM talks t
@@ -157,7 +158,7 @@ export default async function routes(app, ctx) {
        LEFT JOIN dub_talk_settings d ON d.talk_id = t.id
        WHERE COALESCE(t.transcript_language, t.language) NOT LIKE 'fr%'
          AND ($1 = '' OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%')
-       ORDER BY (COALESCE(s.n, 0) > 0) DESC, t.created_at DESC LIMIT 300`, [q]);
+       ORDER BY (COALESCE(s.n, 0) > 0) DESC, requests DESC, t.created_at DESC LIMIT 300`, [q]);
     return {
       talks: rows.map(({ ms, override, ...r }) => {
         const eff = effective(defaults, override, voices);
@@ -182,6 +183,7 @@ export default async function routes(app, ctx) {
     return {
       talk: t, override: override || {}, effective: eff, estimate: estimate(eff, sp.speechSeconds, await coefficients(ctx), await measuredRtf()),
       phrases: sp.phrases, kept: sp.kept, segments: segs, engine: await engineState(), jobs, track,
+      requests: (await pool.query('SELECT count(*)::int AS n FROM dub_requests WHERE talk_id = $1', [id])).rows[0].n,
       report: lastDone ? { jobId: lastDone.id, kind: lastDone.kind, segments: lastDone.result?.segments || [] } : null,
     };
   }

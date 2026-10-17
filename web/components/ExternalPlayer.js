@@ -41,6 +41,11 @@ class MediaAdapter {
   pause() { this.impl?.pause(); }
   get playbackRate() { return this.rate || 1; }
   set playbackRate(v) { this.rate = Number(v) || 1; this.impl?.setRate?.(this.rate); }
+  // Volume (0 à 1) et coupure du son : utilisés par la version française (le son de la vidéo est baissé sous la voix doublée).
+  get volume() { return this.vol ?? 1; }
+  set volume(v) { this.vol = Math.min(1, Math.max(0, Number(v))); if (!this.mut) this.impl?.setVolume?.(this.vol); }
+  get muted() { return Boolean(this.mut); }
+  set muted(m) { this.mut = Boolean(m); this.impl?.setVolume?.(this.mut ? 0 : (this.vol ?? 1)); }
 }
 
 function parseVtt(text) {
@@ -117,6 +122,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
           play: () => player.playVideo?.(),
           pause: () => player.pauseVideo?.(),
           setRate: (r) => player.setPlaybackRate?.(r),
+          setVolume: (v) => player.setVolume?.(Math.round(v * 100)),
         };
         // L'API YouTube n'envoie pas d'événement de temps : on interroge le lecteur 4 fois par seconde.
         poll = setInterval(() => {
@@ -146,6 +152,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
           play: () => player.play().catch(() => {}),
           pause: () => player.pause().catch(() => {}),
           setRate: (r) => player.setPlaybackRate(r).catch(() => {}),
+          setVolume: (v) => player.setVolume(v).catch(() => {}),
         };
       }).catch(() => alive && setFailed(true));
     }

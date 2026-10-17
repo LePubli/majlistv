@@ -2757,3 +2757,33 @@ a.kd-pcard:hover { border-color: #FFC83D; }
   .db-job { grid-template-columns: minmax(0, 1fr); }
   .db-job .btn { grid-row: auto; justify-self: start; }
 }
+/* Doublage — étape D2 : « Langue de l'audio » sur la page d'une conférence (maquette Studio v2, écran 7) */
+.talk-head-row { display: block; }
+@media (min-width: 1000px) {
+  .talk-head-row:has(> .dub-card) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 24px; align-items: start; }
+  .talk-head-row:has(> .dub-missing) { display: block; }
+}
+.dub-card { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line-soft); margin-block: 12px; min-width: 0; }
+.dub-card h2 { margin: 0; font-size: 1.05rem; font-family: var(--font-title); }
+.dub-opts { display: flex; flex-direction: column; gap: 10px; }
+.dub-opt { display: flex; gap: 12px; align-items: center; width: 100%; text-align: start; padding: 12px 14px; border-radius: 14px; background: var(--surface-2, var(--bg)); border: 1px solid var(--line-soft); color: var(--text); font: inherit; cursor: pointer; min-height: 56px; }
+.dub-opt:hover:not(:disabled) { border-color: var(--line-strong); }
+.dub-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.dub-opt:disabled { opacity: .55; cursor: not-allowed; }
+.dub-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dub-opt > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dub-opt small { color: var(--muted); }
+.dub-dot { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-strong); }
+.dub-opt.on .dub-dot { border-color: var(--accent); box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 10px var(--accent); }
+.dub-note { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, var(--bg)); color: var(--muted); font-size: .9rem; line-height: 1.45; }
+.dub-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, var(--bg)); }
+.dub-row .link { color: var(--accent-hover); font-weight: 700; min-height: 44px; }
+.dub-missing { flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px 24px; }
+.dub-missing > div:first-child { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dub-missing p { margin: 0; }
+.dub-missing-act { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.dub-missing-act .btn { border-radius: 999px; }
+.dub-done { color: #8fd0ad; font-weight: 700; }
+.dub-badge { position: absolute; inset-block-start: 12px; inset-inline-start: 12px; z-index: 2; pointer-events: none; padding: 5px 12px; border-radius: 999px; font-size: .8rem; font-weight: 700;
+  color: var(--accent-hover); background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); max-width: calc(100% - 24px); }
+.db-req { margin: 0; color: var(--accent-hover); font-weight: 600; }

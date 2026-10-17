@@ -38,3 +38,5 @@ export function featureForModulePath(path) {
 export const MODULE_ADMIN_TABS = WEB_MODULES.flatMap((m) => (m.admin || []).map((a) => ({ feature: (m.features || [m.id])[0], module: m.id, ...a })));
 // Entrées supplémentaires du Studio fournies par les modules (nouveaux modules) : [{ group: 'studio'|'mod'|'admin', href, label, icon, roles }]
 export const MODULE_STUDIO_LINKS = WEB_MODULES.flatMap((m) => (m.studio || []).map((s) => ({ feature: (m.features || [m.id])[0], module: m.id, ...s })));
+// Étape D2 : panneaux affichés par un module sur la page d'une conférence (champ « talkPanel » de la fiche : fonction d'import).
+export const MODULE_TALK_PANELS = WEB_MODULES.flatMap((m) => (m.talkPanel ? [{ module: m.id, load: m.talkPanel }] : []));

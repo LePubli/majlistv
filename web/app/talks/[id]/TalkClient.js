@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
 import ExternalPlayer from '../../../components/ExternalPlayer';
+import ModulePanels from '../../../components/ModulePanels';
 import Transcript, { langName } from '../../../components/Transcript';
 import BooksBlock from '../../../components/BooksBlock';
 import Insights from '../../../components/Insights';
@@ -44,6 +45,10 @@ export default function TalkPage({ initial = null, talkId = null }) {
     } catch { /* stockage indisponible */ }
   }, []);
   const pickRate = (r) => { setRate(r); try { localStorage.setItem('mj-speed', String(r)); } catch { /* ignoré */ } };
+  const [dubLang, setDubLang] = useState('orig');      // étape D2 : langue de l'audio écoutée (« fr » = version française du module Doublage)
+  const [dubAudio, setDubAudio] = useState(null);      // piste française à lire en mode audio seul (fournie par le module)
+  const dubLangRef = useRef('orig');
+  dubLangRef.current = dubLang;
   const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
   const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette conférence
   const [bmFlash, setBmFlash] = useState(false);
@@ -152,7 +157,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
       if (pos < 5000 && !seeked && startMs.current) return;
       if (pos < 5000 && !startMs.current) return;
       const dur = Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0;
-      call(`/me/progress/${id}`, { method: 'PUT', body: JSON.stringify({ positionMs: pos, durationMs: dur }), keepalive: true });
+      call(`/me/progress/${id}`, { method: 'PUT', body: JSON.stringify({ positionMs: pos, durationMs: dur, audioLang: dubLangRef.current }), keepalive: true });
     };
     const timer = setInterval(() => { if (!video.paused && !video.ended) save(); }, 10000);
     const onHide = () => { if (document.visibilityState === 'hidden') save(); };
@@ -303,7 +308,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
       </div>
     );
   } else if (talk.hlsPath) {
-    player = <div className="player"><VideoPlayer rate={rate} title={talk.title} audioSrc={talk.audioPath ? '/api' + talk.audioPath : ''} audioMode={audioMode} src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
+    player = <div className="player"><VideoPlayer rate={rate} title={talk.title} audioSrc={dubAudio || (talk.audioPath ? '/api' + talk.audioPath : '')} audioMode={audioMode} src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay}
       previewSeconds={talk.preview ? talk.previewSeconds : 0} onPreviewEnd={() => setPreviewEnded(true)} /></div>;
   } else if (talk.locked) {
     player = <p className="soon">{t('premiumOnly')}</p>;
@@ -419,7 +424,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
                   {user && hasPlayer && !talk.locked && (
                     <button type="button" className="speed-pill bm-btn" onClick={() => addNote('')} title={t('ntBookmarkHelp')}>🔖 {bmFlash ? t('ntBookmarked') : t('ntBookmark')}</button>
                   )}
-                  {talk.audioPath && (
+                  {(talk.audioPath || dubAudio) && (
                     <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
                       🎧 {audioMode ? t('audBackVideo') : t('audMode')}
                     </button>
@@ -430,6 +435,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
                 </div>
               </div>
             )}
+            {dubLang === 'fr' && <span className="dub-badge">{t('dbBadge')}</span>}
             {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
             {upNext !== null && next && (
               <div className="upnext" role="status" aria-live="polite">
@@ -493,6 +499,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
             </div>
           )}
 
+          <div className="talk-head-row">
           <header className="talk-head">
             <p className="eyebrow">
               {talk.format && <span className="fmt-chip">{formatName(talk.format)}</span>}
@@ -523,6 +530,9 @@ export default function TalkPage({ initial = null, talkId = null }) {
             {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
             {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
           </header>
+          {/* Panneaux des modules (étape D2 : « Langue de l'audio » du module Doublage) */}
+          {hasPlayer && !talk.locked && <ModulePanels talk={talk} talkId={id} videoRef={videoRef} audioMode={audioMode} setAudioMode={pickAudio} onAudioLang={setDubLang} setAudioOverride={setDubAudio} spokenLang={audioLang} />}
+          </div>
 
           <div className="talk-tabs">
             <div className="tablist" role="tablist" aria-label={t('tabsLabel')} onKeyDown={onTabKey}>

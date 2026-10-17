@@ -66,7 +66,7 @@ function Talks() {
       {rows && rows.length > 0 && (
         <div className="studio-table-wrap">
           <table className="studio-table db-table">
-            <thead><tr><th>{t('dbColTalk')}</th><th>{t('dbColLang')}</th><th>{t('dbColFrench')}</th><th>{t('dbColEstimate')}</th><th>{t('dbColTrack')}</th><th>{t('dbColSettings')}</th><th><span className="sr-only">{t('dbOpen')}</span></th></tr></thead>
+            <thead><tr><th>{t('dbColTalk')}</th><th>{t('dbColLang')}</th><th>{t('dbColFrench')}</th><th>{t('dbColEstimate')}</th><th>{t('dbColTrack')}</th><th>{t('dbColRequests')}</th><th>{t('dbColSettings')}</th><th><span className="sr-only">{t('dbOpen')}</span></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
@@ -75,6 +75,7 @@ function Talks() {
                   <td>{r.phrases ? tf(t('dbPhrases'), { n: r.phrases }) : <span className="db-tag warn">{t('dbNoFrench')}</span>}</td>
                   <td>{r.estimate.seconds != null ? `≈ ${fmtDuration(r.estimate.seconds, t)}` : '—'}{r.estimate.rtf != null && <div className="meta small">{tf(t('dbRtfShort'), { r: fmtNum(r.estimate.rtf, locale) })}</div>}</td>
                   <td>{r.activeJob ? <span className="db-tag on">{jobLabel({ phase: '', ...r.activeJob }, t)}</span> : r.hasTrack ? <span className="db-tag ok">{t('dbTrackReady')}</span> : <span className="meta">—</span>}</td>
+                  <td>{r.requests ? <span className="db-tag on">{r.requests}</span> : <span className="meta">—</span>}</td>
                   <td>{r.hasOverride ? <span className="db-tag on">{t('dbOwnSettings')}</span> : <span className="meta">{t('dbDefaultSettings')}</span>}</td>
                   <td className="end"><Link className="btn ghost" href={`/studio/dubbing/${r.id}`}>{t('dbOpen')}</Link></td>
                 </tr>

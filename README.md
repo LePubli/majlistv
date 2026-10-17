@@ -3212,3 +3212,48 @@ Voir `dubbing/README.md` (journaux, requête d'état des demandes, plage de nuit
 
 ### Testé / non testé
 Testé ici : logique audio, service complet avec de faux moteurs **et avec le vrai Piper** (voix française d'essai siwis-low : ≈ 0,05 s de calcul par seconde de voix une fois chargée), file d'attente, plage de nuit, annulation, reprise après arrêt brutal, nettoyage des anciens fichiers, navigateur (fr / ar, 390 / 1440 px). **Non testé ici** : la **conversion vers ta voix** (ChatterboxVC ne se télécharge pas depuis mon environnement : testée seulement sur le VPS aux étapes 0 ter / quater), la voix Tom elle-même, la construction de l'image Docker (pas de Docker dans mon environnement : mêmes paquets que le banc d'essai qui s'est construit sur le VPS), un vrai téléphone, une conférence d'1 h (mémoire et durée réelles à mesurer).
+
+## Étape D2 — Version française dans le lecteur (page d'une conférence)
+
+### Description
+- **Carte « Langue de l'audio »** à côté du titre (maquette « Studio v2 », écran 7), quand la conférence a une piste française : **Version française** (« voix d'origine en arrière-plan ») ou **Voix d'origine** (« avec sous-titres français »), rappel « les versets et invocations restent dans la voix d'origine », **Mode audio seul**. Mention **« Version française · doublage par voix de synthèse »** sur la vidéo. Le choix est mémorisé sur l'appareil.
+- **Vidéos envoyées** : la vidéo est coupée et la piste française (voix française + voix d'origine baissée) est jouée **en phase** avec elle (lecture, pause, saut, vitesse ; recalage au-delà de 0,35 s d'écart). Le bouton « son » du lecteur règle alors le volume de la version française. En mode audio seul, la piste française est lue directement.
+- **YouTube / Vimeo / archive.org** : le son de la vidéo est baissé au niveau choisi au doublage (15 %) et la voix française seule est jouée par-dessus.
+- **Pas encore de version française** (conférence qui n'est pas en français) : « Cette conférence n'a pas encore de version française » + **« Demander la version française »** (abonnés ; administrateurs pour essayer), nombre de demandes, « Retirer ma demande ». Membre gratuit → lien vers les formules ; visiteur → connexion. Quand la piste est prête, les membres qui l'avaient demandée reçoivent un **e-mail** (une seule fois).
+- **Droits** : les liens des pistes ne sont donnés qu'avec un jeton de **lecture complète** (gratuit, abonné, propriétaire) ; un aperçu de conférence premium n'obtient pas la piste entière.
+- **Analytique** : la reprise de lecture envoie la langue écoutée (`fr` ou `orig`) : Studio → Audio et doublage → Langue d'écoute compte enfin la version française.
+- **Studio** : colonne « Demandes » dans la liste (les plus demandées en premier) et nombre de demandes dans la fiche.
+- Module « Doublage français » **0.3.0** (migration `003_requests.sql` : table `dub_requests`), modèle d'e-mail `dub_ready` (fr / en / ar). Le panneau est fourni par le module (`talkPanel` de `web/modules/dubbing/module.js`) : sans le module, la page d'une conférence est inchangée (testé).
+
+### Prérequis
+- Étapes S1 et D1a en place (une piste française existe quand un doublage complet a réussi). Envoi des e-mails configuré (Admin → Paramètres → E-mails) pour l'avertissement « version française disponible ».
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull**.
+2. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (migration du module), puis **Redeploy `majlistv-web`**. Le service `majlistv-dubbing` n'a pas changé.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Exemples d'utilisation
+- Une conférence doublée (piste « prête » dans Studio → Audio et doublage) : ouvrir sa page, choisir « Version française », lancer la vidéo.
+- Une conférence en arabe sans version française, connecté avec un compte abonné : « Demander la version française ». Dans le Studio, la colonne « Demandes » passe à 1.
+- Vérifier les demandes sur le VPS :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT t.title, count(*) AS demandes, count(r.notified_at) AS prevenus FROM dub_requests r JOIN talks t ON t.id = r.talk_id GROUP BY t.title ORDER BY 2 DESC"'
+```
+
+### Debug
+- **Pas de carte « Langue de l'audio »** : le module est désactivé, la conférence n'a pas de piste (« Piste : prête » dans le Studio), ou elle est verrouillée (aperçu premium).
+- **« La version française s'écoute avec l'accès complet »** : visiteur sur une conférence premium (aperçu) ; normal.
+- **Décalage entre l'image et la voix** : la piste est recalée automatiquement au-delà de 0,35 s ; si le décalage est constant, c'est le doublage lui-même (relecture, étape D1b).
+- **Pas d'e-mail** : vérifier Admin → Paramètres → E-mails ; la tâche passe toutes les 2 minutes quand le module est activé.
+
+### Tests
+- API : `python3 api/tests/test_dubbing_d2.py` (23 contrôles). Navigateur : `python3 web/tests/d2_player.py [dossier]` (22 contrôles : synchronisation réelle de la vidéo HLS et de la piste, demande, fr/ar 390/1440 px). Non-régression : `test_dubbing.py`, `test_modules.py`, `s1_dubbing.py`, `d1a_dubbing.py`, `etape_c.py`, `retours_16oct.py`, retrait du module.
+
+### Testé / non testé
+Testé ici dans Chromium (la vidéo HLS et les pistes de test sont en VP9 / Opus car le Chromium de test ne lit pas le H.264 / AAC ; Chrome, Safari et Firefox lisent l'AAC des vraies pistes). **Non testé** : un vrai téléphone (notamment iPhone, où deux sons simultanés et la lecture écran éteint dépendent de Safari), les lecteurs YouTube / Vimeo réels (réseau fermé dans mon environnement : seule la logique est testée), l'envoi réel de l'e-mail.

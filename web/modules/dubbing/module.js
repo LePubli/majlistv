@@ -5,5 +5,7 @@ const mod = {
   name: 'Doublage français',
   features: ['dubbing'],
   paths: [/^\/studio\/dubbing(\/|$)/],
+  // Étape D2 : choix de la langue de l'audio (version française) et demande de version française, sur la page d'une conférence.
+  talkPanel: () => import('./TalkAudio'),
 };
 export default mod;
