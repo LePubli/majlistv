@@ -26,9 +26,10 @@ import psycopg2.extras
 from botocore.config import Config
 
 import pipeline as pl
+from glossary import apply as apply_glossary, compile_entries
 from settings import Settings
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 TZ = ZoneInfo("Europe/Paris")
 
 
@@ -232,10 +233,30 @@ class Job:
         return False
 
 
+def load_glossary():
+    try:
+        rows = query("SELECT term, say, whole_word, case_sensitive, active FROM dub_glossary WHERE active", fetch=True)
+    except psycopg2.Error:  # table absente (API pas encore en 0.4.0)
+        return []
+    return compile_entries(rows)
+
+
 def load_cues(talk_id):
-    rows = query("SELECT idx, start_ms, end_ms, text FROM transcript_segments WHERE talk_id = %s AND lang = 'fr' ORDER BY idx",
-                 (talk_id,), fetch=True)
-    return [{"idx": r["idx"], "start": r["start_ms"] / 1000, "end": r["end_ms"] / 1000, "text": r["text"] or ""} for r in rows]
+    """Phrases françaises + marquage « voix d'origine » (étape D1b) + texte à prononcer après le glossaire."""
+    try:
+        rows = query("""SELECT s.idx, s.start_ms, s.end_ms, s.text, COALESCE(f.keep_original, false) AS keep
+                        FROM transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx
+                        WHERE s.talk_id = %s AND s.lang = 'fr' ORDER BY s.idx""", (talk_id,), fetch=True)
+    except psycopg2.Error:
+        rows = query("SELECT idx, start_ms, end_ms, text, false AS keep FROM transcript_segments WHERE talk_id = %s AND lang = 'fr' ORDER BY idx",
+                     (talk_id,), fetch=True)
+    gl = load_glossary()
+    out = []
+    for r in rows:
+        text = r["text"] or ""
+        out.append({"idx": r["idx"], "start": r["start_ms"] / 1000, "end": r["end_ms"] / 1000, "text": text, "keep": r["keep"],
+                    "say": apply_glossary(text, gl) if gl else text})
+    return out
 
 
 def run(job, work):
@@ -246,7 +267,7 @@ def run(job, work):
     talk = talk[0]
     cues_all = load_cues(job.talk)
     cues, window = pl.select_cues(cues_all, job.kind, float(p.get("previewSeconds") or 60))
-    if not any(not pl.is_kept(c["text"]) for c in cues):
+    if not any(not pl.kept(c) for c in cues):
         raise RuntimeError("Aucune phrase française à doubler")
     offset = window[0] if window else 0.0
 

@@ -58,7 +58,7 @@ docker update --cpus 4 --memory 8g --memory-swap 8g dockpanel-git-majlistv-dubbi
 
 ## Lancement et vérification
 ```bash
-docker logs -f dockpanel-git-majlistv-dubbing     # « Service de doublage 0.2.0 prêt (moteur : real, 4 cœurs…) »
+docker logs -f dockpanel-git-majlistv-dubbing     # « Service de doublage 0.3.0 prêt (moteur : real, 4 cœurs…) »
 curl -s http://127.0.0.1:7041/                     # {"status":"ok",…} — adapter le port hôte
 ```
 Puis dans le Studio : Audio et doublage → une conférence → **Écouter 60 secondes**. Le premier travail télécharge les modèles (quelques minutes), les suivants démarrent tout de suite.
@@ -77,14 +77,19 @@ SQL
 - **Échec « Téléchargement de la voix Piper »** ou **conversion qui ne se charge pas** : le VPS n'atteint pas huggingface.co ; vérifier `curl -I https://huggingface.co`.
 - **Tué (`Killed`, code 137)** : mémoire insuffisante ; garder 8 Go pour ce service, ou baisser la taille des blocs (Réglages avancés).
 - **Trop lent** : regarder la vitesse dans les journaux (« RTF ») ; moins d'étapes de conversion (préréglage « Rapide ») ou voix de base seule (sans voix cible).
-- **Phrase « à revoir »** : la traduction est trop longue pour le créneau ; la raccourcir (relecture, étape D1b) ou augmenter l'accélération maximale.
+- **Phrase « à revoir »** : la traduction est trop longue pour le créneau ; la raccourcir (Studio → fiche de la conférence → « Corriger »), l'« accepter tel quel » ou augmenter l'accélération maximale.
 
 ## Tests (sans modèle de voix réel : la conversion vers ta voix ne peut être testée que sur le VPS)
 ```bash
-python3 dubbing/tests/test_pipeline.py                         # logique audio (19 contrôles)
-DUB_PY=python3.11 python3 dubbing/tests/test_service.py        # service complet avec moteurs factices (31 contrôles)
+python3 dubbing/tests/test_pipeline.py                         # logique audio, marquage et glossaire (29 contrôles)
+DUB_PY=python3.11 python3 dubbing/tests/test_service.py        # service complet avec moteurs factices (36 contrôles)
 ```
 Prérequis du second : API locale (3055), PostgreSQL de test (5544), stockage S3 de test (5599). Variante avec le **vrai Piper** : `DUB_ENGINE=piper DUB_PIPER_MODEL=fr_FR-siwis-low MODELS_DIR=<dossier contenant piper/fr_FR-siwis-low.onnx>`.
+
+## Relecture, voix d'origine et glossaire (étape D1b)
+- Le service lit les phrases françaises **corrigées** dans le Studio (`transcript_segments`), les phrases cochées **« Voix d'origine »** (`dub_segments.keep_original`, ou ancien préfixe « # ») et le **glossaire de prononciation** actif (`dub_glossary`) au début de chaque travail.
+- Le glossaire ne change que **ce que la voix lit** (`say`) ; le rapport et les sous-titres gardent le texte écrit. La règle de remplacement (`src/glossary.py`) est la même que celle de l'API (`api/src/modules/dubbing/glossary.js`) : termes les plus longs d'abord, mot entier par défaut, majuscules ignorées sauf demande.
+- Si l'API n'a pas encore appliqué la migration `004_review.sql`, le service continue sans marquage ni glossaire (redéployer l'API d'abord).
 
 ## Banc d'essai
 Le dossier `etape0/` contient le banc d'essai des étapes 0 à 0 quater (mesures du 16/10/2026). Il n'est pas utilisé par ce service.

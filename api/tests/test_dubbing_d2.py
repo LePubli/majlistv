@@ -1,5 +1,5 @@
 """Étape D2 — version française côté spectateurs : état et liens des pistes selon le droit de lecture, demandes des abonnés,
-e-mail « version française disponible ». Prérequis : API (3055) avec le module « dubbing » 0.3.0, PG (5544), S3 de test (5599)."""
+e-mail « version française disponible ». Prérequis : API (3055) avec le module « dubbing » 0.3.0 ou plus, PG (5544), S3 de test (5599)."""
 import os, subprocess, sys, time, uuid
 import boto3, psycopg2, requests
 

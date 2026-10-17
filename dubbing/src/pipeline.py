@@ -23,6 +23,11 @@ def is_kept(text):
     return text.lstrip().startswith("#")
 
 
+def kept(c):
+    """Phrase gardée en voix d'origine : marquée dans le Studio (étape D1b) ou texte commençant par « # » (ancienne convention)."""
+    return bool(c.get("keep")) or is_kept(c.get("text", ""))
+
+
 def ffmpeg(*args):
     r = subprocess.run(["ffmpeg", "-y", "-nostdin", "-loglevel", "error", *args], capture_output=True, text=True)
     if r.returncode:
@@ -90,7 +95,7 @@ def select_cues(cues, kind, preview_s):
     première phrase à doubler (0,5 s avant). Doublage complet : toutes les phrases, fenêtre = None."""
     if kind != "preview":
         return cues, None
-    first = next((c for c in cues if not is_kept(c["text"])), None)
+    first = next((c for c in cues if not kept(c)), None)
     if not first:
         return [], (0.0, 0.0)
     w0 = max(0.0, first["start"] - 0.5)
@@ -109,11 +114,11 @@ def fit_cues(cues, synth, p, offset=0.0, total=None, on_progress=None, should_st
         start, end = c["start"] - offset, c["end"] - offset
         slot = max(0.0, end - start)
         row = {"idx": c["idx"], "slot": round(slot, 2)}
-        if is_kept(c["text"]):
+        if kept(c):
             row.update(state="kept")
             report.append(row)
             continue
-        wav = synth(c["text"].strip())
+        wav = synth((c.get("say") or c["text"]).strip())  # « say » : texte après le glossaire de prononciation
         raw = len(wav) / SR
         nxt = next((x["start"] - offset for x in cues[i + 1:]), total if total is not None else end + p["borrow"])
         room = min(max(slot, nxt - start - 0.1), slot + p["borrow"])
@@ -179,7 +184,7 @@ def duck_gain(n, cues, duck_pct, offset=0.0):
     ramp = max(1, int(FADE_S * SR))
     lo = duck_pct / 100.0
     for c in cues:
-        if not is_kept(c["text"]):
+        if not kept(c):
             continue
         s0 = max(0, int((c["start"] - offset) * SR))
         s1 = min(n, int((c["end"] - offset) * SR))

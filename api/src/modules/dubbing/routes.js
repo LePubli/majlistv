@@ -6,8 +6,14 @@ import {
   PARAMS, PRESETS, BUILTIN, paramsSchema, listVoices, getVoice, checkVoices, getDefaults, getTalkParams, effective, estimate, coefficients,
   measuredRtf, engineState,
 } from './lib.js';
+import { compile as compileGlossary, apply as applyGlossary } from './glossary.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
+// Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
+const KEPT = `(COALESCE(f.keep_original, false) OR left(ltrim(s.text), 1) = '#')`;
+const SEGS_FROM = `transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx`;
+// Empreinte du texte relu (texte + marquages) : calculée en SQL pour pouvoir la comparer aussi dans la liste des conférences.
+const TEXT_HASH = `md5(string_agg(s.idx::text || chr(31) || s.text || chr(31) || (${KEPT})::text, chr(30) ORDER BY s.idx))`;
 const AUDIO_TYPES = { 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm', 'audio/flac': 'flac' };
 const GENDERS = ['', 'male', 'female', 'child'];
 const PIPER_MODEL = /^[a-z]{2,3}_[A-Z]{2}-[a-z0-9_]+-(x_low|low|medium|high)$/;
@@ -31,9 +37,9 @@ export default async function routes(app, ctx) {
 
   async function speech(talkId) {
     const r = await pool.query(
-      `SELECT count(*)::int AS n, COALESCE(sum(GREATEST(end_ms - start_ms, 0)) FILTER (WHERE left(ltrim(text), 1) <> '#'), 0)::bigint AS ms,
-              count(*) FILTER (WHERE left(ltrim(text), 1) = '#')::int AS kept
-       FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr'`, [talkId]);
+      `SELECT count(*)::int AS n, COALESCE(sum(GREATEST(s.end_ms - s.start_ms, 0)) FILTER (WHERE NOT ${KEPT}), 0)::bigint AS ms,
+              count(*) FILTER (WHERE ${KEPT})::int AS kept
+       FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr'`, [talkId]);
     return { phrases: r.rows[0].n, speechSeconds: Number(r.rows[0].ms) / 1000, kept: r.rows[0].kept };
   }
 
@@ -147,14 +153,15 @@ export default async function routes(app, ctx) {
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, COALESCE(t.transcript_language, t.language) AS lang, t.duration_seconds AS "durationSeconds",
               COALESCE(s.n, 0)::int AS phrases, COALESCE(s.ms, 0)::bigint AS ms, d.params AS override,
-              (tr.talk_id IS NOT NULL) AS "hasTrack",
+              (tr.talk_id IS NOT NULL) AS "hasTrack", (rv.talk_id IS NOT NULL AND rv.text_hash = s.h) AS "reviewed",
               (SELECT count(*) FROM dub_requests r WHERE r.talk_id = t.id)::int AS requests,
               (SELECT json_build_object('kind', j.kind, 'status', j.status, 'progress', j.progress) FROM dub_jobs j
                 WHERE j.talk_id = t.id AND j.status IN ('queued', 'running') ORDER BY j.created_at LIMIT 1) AS "activeJob"
        FROM talks t
        LEFT JOIN dub_tracks tr ON tr.talk_id = t.id
-       LEFT JOIN (SELECT talk_id, count(*) AS n, sum(GREATEST(end_ms - start_ms, 0)) FILTER (WHERE left(ltrim(text), 1) <> '#') AS ms
-                  FROM transcript_segments WHERE lang = 'fr' GROUP BY talk_id) s ON s.talk_id = t.id
+       LEFT JOIN dub_reviews rv ON rv.talk_id = t.id
+       LEFT JOIN (SELECT s.talk_id, count(*) AS n, sum(GREATEST(s.end_ms - s.start_ms, 0)) FILTER (WHERE NOT ${KEPT}) AS ms, ${TEXT_HASH} AS h
+                  FROM ${SEGS_FROM} WHERE s.lang = 'fr' GROUP BY s.talk_id) s ON s.talk_id = t.id
        LEFT JOIN dub_talk_settings d ON d.talk_id = t.id
        WHERE COALESCE(t.transcript_language, t.language) NOT LIKE 'fr%'
          AND ($1 = '' OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%')
@@ -167,6 +174,25 @@ export default async function routes(app, ctx) {
     };
   });
 
+  // --- Étape D1b : relecture, marquage, glossaire ---
+  const requireReview = async () => !['false', '0', 'off', 'no'].includes(String(await ctx.setting('mod_dubbing_require_review') ?? 'true').toLowerCase());
+  async function textHash(id) {
+    const { rows } = await pool.query(`SELECT ${TEXT_HASH} AS h FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr'`, [id]);
+    return rows[0]?.h || '';
+  }
+  // Relecture : validée et toujours à jour (le texte et les marquages n'ont pas changé depuis).
+  async function reviewState(id) {
+    const r = (await pool.query(
+      `SELECT rv.text_hash, rv.reviewed_at AS "reviewedAt", u.name AS "reviewedBy" FROM dub_reviews rv LEFT JOIN users u ON u.id = rv.reviewed_by WHERE rv.talk_id = $1`, [id])).rows[0];
+    if (!r) return { validated: false, stale: false };
+    const stale = r.text_hash !== await textHash(id);
+    return { validated: !stale, stale, reviewedAt: r.reviewedAt, reviewedBy: r.reviewedBy };
+  }
+  const GL_COLS = `id, term, say, whole_word AS "wholeWord", case_sensitive AS "caseSensitive", notes, active, created_at AS "createdAt"`;
+  async function glossaryRows(activeOnly = false) {
+    return (await pool.query(`SELECT ${GL_COLS}, whole_word, case_sensitive FROM dub_glossary ${activeOnly ? 'WHERE active' : ''} ORDER BY lower(term)`)).rows;
+  }
+
   async function talkDetail(id) {
     const t = (await pool.query(
       `SELECT id, title, speaker, source, language, transcript_language AS "transcriptLanguage", duration_seconds AS "durationSeconds" FROM talks WHERE id = $1`, [id])).rows[0];
@@ -174,8 +200,11 @@ export default async function routes(app, ctx) {
     const voices = await listVoices(); const override = await getTalkParams(id);
     const eff = effective(await getDefaults(), override, voices);
     const sp = await speech(id);
+    const gl = compileGlossary(await glossaryRows(true));
     const segs = (await pool.query(
-      `SELECT idx, start_ms AS "startMs", end_ms AS "endMs", text FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr' ORDER BY idx LIMIT 3000`, [id])).rows;
+      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted
+       FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr' ORDER BY s.idx LIMIT 3000`, [id])).rows
+      .map((x) => ({ ...x, say: x.keep ? [] : applyGlossary(x.text, gl).hits }));
     const jobs = (await pool.query(`SELECT ${JOB_COLS} FROM dub_jobs WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 10`, [id])).rows.map(publicJob);
     const track = (await pool.query(`SELECT job_id AS "jobId", (mix_key IS NOT NULL) AS "hasMix", duration_s::float AS "durationS", created_at AS "createdAt" FROM dub_tracks WHERE talk_id = $1`, [id])).rows[0] || null;
     // État de chaque phrase : celui du dernier doublage complet réussi, sinon de la dernière écoute de 60 s.
@@ -184,6 +213,7 @@ export default async function routes(app, ctx) {
       talk: t, override: override || {}, effective: eff, estimate: estimate(eff, sp.speechSeconds, await coefficients(ctx), await measuredRtf()),
       phrases: sp.phrases, kept: sp.kept, segments: segs, engine: await engineState(), jobs, track,
       requests: (await pool.query('SELECT count(*)::int AS n FROM dub_requests WHERE talk_id = $1', [id])).rows[0].n,
+      review: await reviewState(id), glossaryCount: gl.length, requireReview: await requireReview(),
       report: lastDone ? { jobId: lastDone.id, kind: lastDone.kind, segments: lastDone.result?.segments || [] } : null,
     };
   }
@@ -211,6 +241,97 @@ export default async function routes(app, ctx) {
     return talkDetail(id);
   });
 
+  // Corriger une phrase française (corrige aussi les sous-titres français), la garder en voix d'origine, ou l'accepter au contrôle qualité.
+  app.patch('/studio/dubbing/talks/:id/segments/:idx', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const idx = z.coerce.number().int().min(0).parse(req.params.idx);
+    const b = z.object({ text: z.string().trim().min(1, 'Texte vide').max(2000).optional(), keepOriginal: z.boolean().optional(), accepted: z.boolean().optional() })
+      .strict().parse(req.body ?? {});
+    const seg = (await pool.query("SELECT text FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr' AND idx = $2", [id, idx])).rows[0];
+    if (!seg) return reply.code(404).send({ error: 'Phrase introuvable' });
+    if (b.text !== undefined && b.text !== seg.text) {
+      await pool.query("UPDATE transcript_segments SET text = $3 WHERE talk_id = $1 AND lang = 'fr' AND idx = $2", [id, idx, b.text]);
+      // Le texte change : une acceptation « à revoir » ne vaut plus.
+      await pool.query('UPDATE dub_segments SET accepted = false WHERE talk_id = $1 AND idx = $2', [id, idx]);
+    }
+    if (b.keepOriginal !== undefined || b.accepted !== undefined) {
+      await pool.query(
+        `INSERT INTO dub_segments(talk_id, idx, keep_original, accepted, updated_by) VALUES ($1, $2, COALESCE($3, false), COALESCE($4, false), $5)
+         ON CONFLICT (talk_id, idx) DO UPDATE SET keep_original = COALESCE($3, dub_segments.keep_original), accepted = COALESCE($4, dub_segments.accepted),
+           updated_by = EXCLUDED.updated_by, updated_at = now()`, [id, idx, b.keepOriginal ?? null, b.accepted ?? null, req.user.sub]);
+    }
+    // Ancienne convention « # » : retirer la case « voix d'origine » retire aussi le « # » du texte.
+    if (b.keepOriginal === false && /^\s*#/.test(b.text ?? seg.text)) {
+      await pool.query("UPDATE transcript_segments SET text = regexp_replace(text, '^\\s*#\\s*', '') WHERE talk_id = $1 AND lang = 'fr' AND idx = $2", [id, idx]);
+    }
+    const gl = compileGlossary(await glossaryRows(true));
+    const row = (await pool.query(
+      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted
+       FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr' AND s.idx = $2`, [id, idx])).rows[0];
+    return { segment: { ...row, say: row.keep ? [] : applyGlossary(row.text, gl).hits }, review: await reviewState(id), ...(await speech(id)) };
+  });
+
+  // Valider (ou annuler) la relecture du texte français.
+  app.post('/studio/dubbing/talks/:id/review', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const { validated } = z.object({ validated: z.boolean() }).strict().parse(req.body ?? {});
+    const sp = await speech(id);
+    if (validated && !sp.phrases) return reply.code(400).send({ error: 'Pas de texte français à relire', code: 'no_french' });
+    if (validated) {
+      await pool.query(
+        `INSERT INTO dub_reviews(talk_id, text_hash, reviewed_by) VALUES ($1, $2, $3)
+         ON CONFLICT (talk_id) DO UPDATE SET text_hash = EXCLUDED.text_hash, reviewed_by = EXCLUDED.reviewed_by, reviewed_at = now()`, [id, await textHash(id), req.user.sub]);
+    } else await pool.query('DELETE FROM dub_reviews WHERE talk_id = $1', [id]);
+    return { review: await reviewState(id) };
+  });
+
+  // Glossaire de prononciation (un seul pour tout le site).
+  const glSchema = z.object({
+    term: z.string().trim().min(1, 'Terme vide').max(80), say: z.string().trim().min(1, 'Prononciation vide').max(160),
+    wholeWord: z.boolean().optional(), caseSensitive: z.boolean().optional(), notes: z.string().trim().max(300).optional(), active: z.boolean().optional(),
+  }).strict();
+  const pubGl = ({ whole_word: _w, case_sensitive: _c, ...r }) => r;
+  app.get('/studio/dubbing/glossary', admin, async (req) => {
+    const { q, text } = z.object({ q: z.string().trim().max(80).default(''), text: z.string().max(2000).optional() }).parse(req.query ?? {});
+    const all = await glossaryRows();
+    const needle = q.toLowerCase();
+    const out = { entries: all.filter((e) => !needle || e.term.toLowerCase().includes(needle) || e.say.toLowerCase().includes(needle)).map(pubGl) };
+    if (text !== undefined) out.preview = applyGlossary(text, compileGlossary(all)); // essai : « ce que la voix va lire »
+    return out;
+  });
+  app.post('/studio/dubbing/glossary', admin, async (req, reply) => {
+    const b = glSchema.parse(req.body ?? {});
+    try {
+      const r = await pool.query(
+        `INSERT INTO dub_glossary(term, say, whole_word, case_sensitive, notes, active, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${GL_COLS}`,
+        [b.term, b.say, b.wholeWord ?? true, b.caseSensitive ?? false, b.notes ?? '', b.active ?? true, req.user.sub]);
+      return reply.code(201).send(r.rows[0]);
+    } catch (err) {
+      if (err.code === '23505') return reply.code(409).send({ error: 'Ce terme est déjà dans le glossaire', code: 'duplicate' });
+      throw err;
+    }
+  });
+  app.patch('/studio/dubbing/glossary/:id', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const b = glSchema.partial().parse(req.body ?? {});
+    const map = { term: 'term', say: 'say', wholeWord: 'whole_word', caseSensitive: 'case_sensitive', notes: 'notes', active: 'active' };
+    const sets = []; const vals = [id];
+    for (const [k, col] of Object.entries(map)) if (b[k] !== undefined) { vals.push(b[k]); sets.push(`${col} = $${vals.length}`); }
+    try {
+      const r = await pool.query(`UPDATE dub_glossary SET ${[...sets, 'updated_at = now()'].join(', ')} WHERE id = $1 RETURNING ${GL_COLS}`, vals);
+      if (!r.rowCount) return reply.code(404).send({ error: 'Terme introuvable' });
+      return r.rows[0];
+    } catch (err) {
+      if (err.code === '23505') return reply.code(409).send({ error: 'Ce terme est déjà dans le glossaire', code: 'duplicate' });
+      throw err;
+    }
+  });
+  app.delete('/studio/dubbing/glossary/:id', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const r = await pool.query('DELETE FROM dub_glossary WHERE id = $1', [id]);
+    return r.rowCount ? reply.code(204).send() : reply.code(404).send({ error: 'Terme introuvable' });
+  });
+
   // --- Demandes de doublage (file d'attente du service dubbing/) ---
   // kind = « preview » (écoute de 60 s, lancée dès que le service est libre) ou « full » (toute la conférence, la nuit par défaut).
   app.post('/studio/dubbing/talks/:id/jobs', admin, async (req, reply) => {
@@ -221,6 +342,9 @@ export default async function routes(app, ctx) {
     const sp = await speech(id);
     if (!sp.phrases) return reply.code(400).send({ error: "Pas de texte français pour cette conférence : demandez d'abord la traduction en français", code: 'no_french' });
     if (!sp.speechSeconds) return reply.code(400).send({ error: 'Toutes les phrases sont gardées en voix d’origine : rien à doubler', code: 'nothing_to_dub' });
+    if (kind === 'full' && await requireReview() && !(await reviewState(id)).validated) {
+      return reply.code(409).send({ error: 'Validez d’abord la relecture du texte français (Réglages → Relecture de la traduction)', code: 'review_required' });
+    }
     const voices = await listVoices();
     const eff = effective(await getDefaults(), await getTalkParams(id), voices);
     const base = eff.baseVoice ? await getVoice(eff.baseVoice) : null;

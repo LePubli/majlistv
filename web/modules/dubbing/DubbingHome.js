@@ -1,15 +1,16 @@
 'use client';
 // Studio → Audio et doublage (module « Doublage français », étape S1) : conférences à doubler, réglages par défaut,
-// bibliothèque de voix, langue d'écoute. La génération de la piste arrive à l'étape D1a : aucun bouton ne fait semblant.
+// bibliothèque de voix, glossaire de prononciation (D1b), langue d'écoute. La génération de la piste arrive à l'étape D1a : aucun bouton ne fait semblant.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { langName } from '../../components/Transcript';
 import ParamsForm from './ParamsForm';
 import Voices from './Voices';
+import Glossary from './Glossary';
 import { useDubbing, Gate, EngineNote, jobLabel, fmtDuration, fmtNum, tf } from './shared';
 
-const TABS = ['talks', 'defaults', 'voices', 'listening'];
+const TABS = ['talks', 'defaults', 'voices', 'glossary', 'listening'];
 
 // File d'attente du service : demandes en attente et en cours, toutes conférences confondues.
 function Queue() {
@@ -66,7 +67,7 @@ function Talks() {
       {rows && rows.length > 0 && (
         <div className="studio-table-wrap">
           <table className="studio-table db-table">
-            <thead><tr><th>{t('dbColTalk')}</th><th>{t('dbColLang')}</th><th>{t('dbColFrench')}</th><th>{t('dbColEstimate')}</th><th>{t('dbColTrack')}</th><th>{t('dbColRequests')}</th><th>{t('dbColSettings')}</th><th><span className="sr-only">{t('dbOpen')}</span></th></tr></thead>
+            <thead><tr><th>{t('dbColTalk')}</th><th>{t('dbColLang')}</th><th>{t('dbColFrench')}</th><th>{t('dbColEstimate')}</th><th>{t('dbColReview')}</th><th>{t('dbColTrack')}</th><th>{t('dbColRequests')}</th><th>{t('dbColSettings')}</th><th><span className="sr-only">{t('dbOpen')}</span></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
@@ -74,6 +75,7 @@ function Talks() {
                   <td>{lname(r.lang)}</td>
                   <td>{r.phrases ? tf(t('dbPhrases'), { n: r.phrases }) : <span className="db-tag warn">{t('dbNoFrench')}</span>}</td>
                   <td>{r.estimate.seconds != null ? `≈ ${fmtDuration(r.estimate.seconds, t)}` : '—'}{r.estimate.rtf != null && <div className="meta small">{tf(t('dbRtfShort'), { r: fmtNum(r.estimate.rtf, locale) })}</div>}</td>
+                  <td>{r.reviewed ? <span className="db-tag ok">{t('dbReviewed')}</span> : r.phrases ? <span className="meta">{t('dbNotReviewed')}</span> : <span className="meta">—</span>}</td>
                   <td>{r.activeJob ? <span className="db-tag on">{jobLabel({ phase: '', ...r.activeJob }, t)}</span> : r.hasTrack ? <span className="db-tag ok">{t('dbTrackReady')}</span> : <span className="meta">—</span>}</td>
                   <td>{r.requests ? <span className="db-tag on">{r.requests}</span> : <span className="meta">—</span>}</td>
                   <td>{r.hasOverride ? <span className="db-tag on">{t('dbOwnSettings')}</span> : <span className="meta">{t('dbDefaultSettings')}</span>}</td>
@@ -149,7 +151,12 @@ export default function DubbingHome() {
   const { d, setD, err, load } = useDubbing('/studio/dubbing/state');
   const [tab, setTab] = useState('talks');
   // Onglet demandé dans l'adresse (#voices…), par exemple depuis la fiche d'une conférence.
-  useEffect(() => { const h = window.location.hash.slice(1); if (TABS.includes(h)) setTab(h); }, []);
+  useEffect(() => {
+    const read = () => { const h = window.location.hash.slice(1); if (TABS.includes(h)) setTab(h); };
+    read();
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, []);
   return (
     <Gate user={user} err={err}>
       <main className="studio-page db-page">
@@ -163,6 +170,7 @@ export default function DubbingHome() {
             {tab === 'talks' && <Talks />}
             {tab === 'defaults' && <Defaults state={d} setState={setD} />}
             {tab === 'voices' && <Voices state={d} reload={load} />}
+            {tab === 'glossary' && <Glossary />}
             {tab === 'listening' && <Listening />}
           </>
         )}

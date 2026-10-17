@@ -2,6 +2,8 @@
 // Studio → Contenus → [conférence] → Audio et doublage (maquette « Studio v2 », écran 3) — étapes S1 et D1a.
 // Voix du doublage, réglages propres à la conférence, écoute rapide (60 s) et doublage complet (file du service dubbing/),
 // piste française, état de chaque phrase (calée, accélérée, à revoir, voix d'origine).
+// Étape D1b : relecture du texte français (correction, case « voix d'origine », « accepter tel quel »), validation de la relecture,
+// prononciation venant du glossaire commun à tout le site.
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -56,7 +58,65 @@ function Player({ jobId, which = 'mix', label }) {
   return <>{err && <span className="error small">{err}</span>}<button type="button" className="btn ghost" onClick={open}>{label}</button></>;
 }
 
-const STATE_KEY = { fit: 'dbStFit', sped: 'dbStSped', review: 'dbStReview', kept: 'dbStKept' };
+const STATE_KEY = { fit: 'dbStFit', sped: 'dbStSped', review: 'dbStReview', kept: 'dbStKept', accepted: 'dbStAccepted' };
+
+// Une ligne du tableau des phrases : texte modifiable, case « voix d'origine », prononciation, contrôle qualité.
+function SegRow({ s, cellLen, onPatch }) {
+  const { t } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(s.text);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const shownText = s.keep ? s.text.replace(/^\s*#\s*/, '') : s.text;
+  const run = async (body) => {
+    setBusy(true); setErr('');
+    const r = await onPatch(s.idx, body);
+    setBusy(false);
+    if (!r.ok) setErr(r.data?.error || t('dbError'));
+    return r.ok;
+  };
+  const stt = s.keep ? 'kept' : s.r?.state === 'review' && s.accepted ? 'accepted' : s.r?.state;
+  return (
+    <tr className={stt === 'kept' ? 'kept' : stt === 'review' ? 'review' : ''}>
+      <td className="db-mono">{fmtClock(s.startMs)}</td>
+      <td className="db-text">
+        {editing ? (
+          <div className="db-edit">
+            <textarea dir="auto" value={text} rows={3} maxLength={2000} aria-label={tf(t('dbEditAria'), { t: fmtClock(s.startMs) })} onChange={(e) => setText(e.target.value)} />
+            <div className="db-actions">
+              <button type="button" className="btn" disabled={busy || !text.trim() || text === s.text} onClick={async () => { if (await run({ text })) setEditing(false); }}>{t('dbSave')}</button>
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => { setEditing(false); setText(s.text); setErr(''); }}>{t('dbCancel')}</button>
+            </div>
+          </div>
+        ) : (
+          <div className="db-textcell">
+            <span dir="auto">{shownText}</span>
+            <button type="button" className="db-link" onClick={() => { setText(s.text); setEditing(true); }}>{t('dbEditText')}</button>
+          </div>
+        )}
+        {err && <p className="error small" role="alert">{err}</p>}
+      </td>
+      <td>
+        {s.keep ? t('dbSubtitledFr') : s.say?.length ? (
+          <ul className="db-say" dir="auto">{s.say.map((h) => <li key={h.term}><span>{h.term}</span> → <strong>{h.say}</strong></li>)}</ul>
+        ) : '—'}
+      </td>
+      <td className="db-mono">{cellLen(s)}</td>
+      <td>
+        <label className="db-check db-keep">
+          <input type="checkbox" checked={s.keep} disabled={busy} onChange={(e) => run({ keepOriginal: e.target.checked })} />
+          <span>{t('dbKeepOrig')}</span>
+        </label>
+      </td>
+      <td>
+        {stt ? <span className={`db-st ${stt}`}>{t(STATE_KEY[stt])}</span> : <span className="db-st todo">{t('dbStTodo')}</span>}
+        {s.r?.state === 'review' && !s.keep && (
+          <button type="button" className="db-link" disabled={busy} onClick={() => run({ accepted: !s.accepted })}>{t(s.accepted ? 'dbUnaccept' : 'dbAccept')}</button>
+        )}
+      </td>
+    </tr>
+  );
+}
 
 export default function DubbingTalk() {
   const { t, locale, user, call } = useApp();
@@ -71,14 +131,16 @@ export default function DubbingTalk() {
   const d = tk.d; const state = st.d;
   const value = edit || d?.effective;
   const rep = useMemo(() => new Map((d?.report?.segments || []).map((r) => [r.idx, r])), [d]);
-  const segs = useMemo(() => (d?.segments || []).map((s) => ({ ...s, kept: /^\s*#/.test(s.text), r: rep.get(s.idx) })), [d, rep]);
-  const shown = segs.filter((s) => filter === 'all' || (filter === 'kept' ? s.kept : filter === 'review' ? s.r?.state === 'review' : !s.kept));
+  const segs = useMemo(() => (d?.segments || []).map((s) => ({ ...s, r: rep.get(s.idx) })), [d, rep]);
+  const toReview = (s) => !s.keep && s.r?.state === 'review' && !s.accepted;
+  const shown = segs.filter((s) => filter === 'all' || (filter === 'kept' ? s.keep : filter === 'review' ? toReview(s) : !s.keep));
   const jobs = d?.jobs || [];
   const active = jobs.filter((j) => ACTIVE.includes(j.status));
   const busy = (kind) => active.some((j) => j.kind === kind);
   const lastPreview = jobs.find((j) => j.kind === 'preview' && j.status === 'done' && (j.result?.hasMix || j.result?.hasVoice));
   const lastFail = jobs.find((j) => j.status === 'failed');
-  const reviewN = segs.filter((s) => s.r?.state === 'review').length;
+  const reviewN = segs.filter(toReview).length;
+  const mustReview = Boolean(d?.requireReview && !d?.review?.validated);
 
   // Pendant qu'une demande attend ou tourne, la page se met à jour toute seule.
   const { load } = tk;
@@ -99,6 +161,20 @@ export default function DubbingTalk() {
     const r = await call(`/studio/dubbing/talks/${id}/jobs`, { method: 'POST', body: JSON.stringify({ kind }) });
     setJobMsg(r.ok ? { ok: true, text: t(kind === 'full' ? 'dbFullQueued' : 'dbPreviewQueued') } : { ok: false, text: r.data?.error || t('dbError') });
     load();
+  };
+  // Une phrase modifiée : on remplace la ligne et les compteurs sans tout recharger.
+  const patchSeg = async (idx, body) => {
+    const r = await call(`/studio/dubbing/talks/${id}/segments/${idx}`, { method: 'PATCH', body: JSON.stringify(body) });
+    if (r.ok) {
+      const { segment, review, ...sp } = r.data;
+      tk.setD((cur) => ({ ...cur, ...sp, review, segments: cur.segments.map((x) => (x.idx === idx ? segment : x)) }));
+    }
+    return r;
+  };
+  const validate = async (validated) => {
+    const r = await call(`/studio/dubbing/talks/${id}/review`, { method: 'POST', body: JSON.stringify({ validated }) });
+    if (r.ok) tk.setD((cur) => ({ ...cur, review: r.data.review }));
+    setMsg(r.ok ? { ok: true, text: t(validated ? 'dbReviewDone' : 'dbReviewUndone') } : { ok: false, text: r.data?.error || t('dbError') });
   };
   const cancel = async (j) => {
     const r = await call(`/studio/dubbing/jobs/${j.id}/cancel`, { method: 'POST' });
@@ -130,7 +206,7 @@ export default function DubbingTalk() {
               <h1 className="studio-title">{t('sdDub')}</h1>
               <div className="db-head-actions">
                 <button type="button" className="btn ghost" disabled={!d.phrases || busy('preview')} onClick={() => launch('preview')}>{busy('preview') ? t('dbJobQueued') : t('dbListen60')}</button>
-                <button type="button" className="btn" disabled={!d.phrases || busy('full')} onClick={() => launch('full')}>{busy('full') ? t('dbJobQueuedFull') : t('dbLaunch')}</button>
+                <button type="button" className="btn" disabled={!d.phrases || busy('full') || mustReview} title={mustReview ? t('dbNeedReview') : undefined} onClick={() => launch('full')}>{busy('full') ? t('dbJobQueuedFull') : t('dbLaunch')}</button>
               </div>
             </div>
             <nav className="st-tabs" aria-label={d.talk.title}>
@@ -139,6 +215,7 @@ export default function DubbingTalk() {
               <Link href="/studio/editor">{t('dbTabEditing')}</Link>
             </nav>
             <EngineNote engine={d.engine} />
+            {mustReview && d.phrases > 0 && <p className="db-note" role="note">{t('dbNeedReview')}</p>}
             {jobMsg && <p className={jobMsg.ok ? 'ok-msg' : 'error'} role="status">{jobMsg.text}</p>}
 
             <div className="db-grid">
@@ -156,8 +233,21 @@ export default function DubbingTalk() {
                 <div className="sd-card-head"><h2>{t('dbSettingsTitle')}</h2>{own && <span className="db-tag on">{t('dbOwnSettings')}</span>}</div>
                 <div className="db-row"><span className="meta">{t('dbOrigLang')}</span><strong>{lang || '—'}</strong></div>
                 <ParamsForm state={state} value={value} reference={state.defaults} onChange={change} showVoices={false} />
-                <div className="db-row"><span>{t('dbReview')}</span><span className="db-soon">{t('dbSoonD1b')}</span></div>
-                <div className="db-row"><span>{t('dbGlossary')}</span><span className="db-soon">{t('dbSoonD1b')}</span></div>
+                <div className="db-row db-review">
+                  <span>{t('dbReview')}{!d.requireReview && <small className="meta"> · {t('dbReviewOptional')}</small>}</span>
+                  {d.review.validated ? (
+                    <span className="db-review-state">
+                      <span className="db-tag ok">{tf(t('dbReviewedBy'), { n: d.review.reviewedBy || '—', d: new Date(d.review.reviewedAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) })}</span>
+                      <button type="button" className="db-link" onClick={() => validate(false)}>{t('dbReviewUndo')}</button>
+                    </span>
+                  ) : (
+                    <span className="db-review-state">
+                      {d.review.stale && <span className="db-tag warn">{t('dbReviewStale')}</span>}
+                      <button type="button" className="btn" disabled={!d.phrases} onClick={() => validate(true)}>{t('dbReviewValidate')}</button>
+                    </span>
+                  )}
+                </div>
+                <div className="db-row"><span>{t('dbGlossary')}</span><Link href="/studio/dubbing#glossary">{tf(t('dbGlossaryOpen'), { n: d.glossaryCount })}</Link></div>
                 {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
                 <div className="db-actions">
                   <button type="button" className="btn" disabled={!dirty} onClick={() => save(diff(value, state.defaults))}>{t('dbSave')}</button>
@@ -213,20 +303,9 @@ export default function DubbingTalk() {
                 {d.report && <p className="meta small">{t(d.report.kind === 'full' ? 'dbReportFull' : 'dbReportPreview')}</p>}
                 <div className="studio-table-wrap">
                   <table className="studio-table db-table">
-                    <thead><tr><th>{t('dbColStart')}</th><th>{t('dbColText')}</th><th>{t('dbColPron')}</th><th>{t('dbColSlot')}</th><th>{t('dbColState')}</th></tr></thead>
+                    <thead><tr><th>{t('dbColStart')}</th><th>{t('dbColText')}</th><th>{t('dbColPron')}</th><th>{t('dbColSlot')}</th><th>{t('dbColKeep')}</th><th>{t('dbColState')}</th></tr></thead>
                     <tbody>
-                      {shown.slice(0, limit).map((s) => {
-                        const stt = s.kept ? 'kept' : s.r?.state;
-                        return (
-                          <tr key={s.idx} className={stt === 'kept' ? 'kept' : stt === 'review' ? 'review' : ''}>
-                            <td className="db-mono">{fmtClock(s.startMs)}</td>
-                            <td className="db-text">{s.kept ? s.text.replace(/^\s*#\s*/, '') : s.text}</td>
-                            <td>{s.kept ? t('dbSubtitledFr') : '—'}</td>
-                            <td className="db-mono">{cellLen(s)}</td>
-                            <td>{stt ? <span className={`db-st ${stt}`}>{t(STATE_KEY[stt])}</span> : <span className="db-st todo">{t('dbStTodo')}</span>}</td>
-                          </tr>
-                        );
-                      })}
+                      {shown.slice(0, limit).map((s) => <SegRow key={s.idx} s={s} cellLen={cellLen} onPatch={patchSeg} />)}
                     </tbody>
                   </table>
                 </div>

@@ -5,7 +5,7 @@ saut, pause), reprise de lecture envoyée avec audioLang = fr, retour à la voix
 « Demander la version française » (abonné / administrateur, membre gratuit → formules), rien pour une conférence en français,
 FR + AR, 390 / 1440 px, sans débordement.
 Le Chromium de test ne lit pas le H.264 / AAC : la vidéo HLS et les pistes de test sont en VP9 / Opus (les vrais navigateurs lisent l'AAC).
-Prérequis : API (3055) + module dubbing 0.3.0, PG (5544), S3 de test (5599), site (3001). Lancement (depuis web/) : python3 tests/d2_player.py [dossier]"""
+Prérequis : API (3055) + module dubbing 0.3.0 ou plus, PG (5544), S3 de test (5599), site (3001). Lancement (depuis web/) : python3 tests/d2_player.py [dossier]"""
 import json, os, pathlib, subprocess, sys, tempfile, time, uuid
 import boto3, psycopg2, requests
 from playwright.sync_api import sync_playwright

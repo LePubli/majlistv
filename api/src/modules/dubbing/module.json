@@ -1,8 +1,8 @@
 {
   "id": "dubbing",
   "name": "Doublage français",
-  "version": "0.3.0",
-  "description": "Doublage français des conférences : voix de base (Piper, voix « Tom » par défaut) puis, au choix, conversion vers une voix autorisée (voix clonée avec consentement daté). Réglages par défaut et par conférence, bibliothèque de voix, estimation du temps de calcul, suivi de la langue d'écoute (S1) ; file d'attente du service de doublage (dossier dubbing/), écoute de 60 secondes et piste française (D1a) ; choix de la langue de l'audio dans le lecteur et demandes des abonnés (D2).",
+  "version": "0.4.0",
+  "description": "Doublage français des conférences : voix de base (Piper, voix « Tom » par défaut) puis, au choix, conversion vers une voix autorisée (voix clonée avec consentement daté). Réglages par défaut et par conférence, bibliothèque de voix, estimation du temps de calcul, suivi de la langue d'écoute (S1) ; file d'attente du service de doublage (dossier dubbing/), écoute de 60 secondes et piste française (D1a) ; choix de la langue de l'audio dans le lecteur et demandes des abonnés (D2) ; relecture, marquage « voix d'origine », glossaire de prononciation et contrôle qualité (D1b).",
   "requires": [],
   "defaultEnabled": false,
   "settings": [
@@ -84,6 +84,13 @@
       "def": "60",
       "min": 15,
       "max": 180
+    },
+    {
+      "key": "require_review",
+      "type": "bool",
+      "label": "Relecture validée obligatoire avant un doublage complet",
+      "help": "Recommandé : la voix lit exactement le texte français. L'écoute de 60 secondes reste possible sans relecture.",
+      "def": "true"
     }
   ]
 }

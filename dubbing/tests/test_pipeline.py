@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Doublage (étape D1a) — logique audio sans modèle : fenêtre d'écoute rapide, calage, conversion par blocs, voix d'origine,
+"""Doublage (étapes D1a et D1b) — logique audio sans modèle : fenêtre d'écoute rapide, calage, conversion par blocs, voix d'origine,
 mélange, encodage. Lancement : python3 dubbing/tests/test_pipeline.py (Python 3.11+, numpy, ffmpeg)."""
 import os, subprocess, sys, tempfile
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import pipeline as pl
 from engines import FakeBase, FakeVC
+import glossary as gls
 
 fails = []
 def ok(c, m):
@@ -60,6 +61,24 @@ with tempfile.TemporaryDirectory() as d:
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=300:duration=20", "-c:a", "aac", src], check=True)
     part = pl.load_audio(src, 5, 10)
     ok(abs(len(part) / pl.SR - 10) < 0.05, "extraction d'une portion de la voix d'origine (écoute rapide)")
+# --- étape D1b : marquage depuis le Studio et glossaire de prononciation
+ok(pl.kept({"text": "Bonjour", "keep": True}) and pl.kept({"text": " # x"}) and not pl.kept({"text": "Bonjour", "keep": False}), "voix d'origine : case du Studio ou ancien « # »")
+mk = [dict(c) for c in cues[:4]]; mk[1]["keep"] = True
+_, repk = pl.fit_cues(mk, synth, P, total=40.0)
+ok({r["idx"]: r["state"] for r in repk}[1] == "kept", "phrase cochée dans le Studio : jamais synthétisée")
+ok(pl.select_cues(mk, "preview", 60)[1] == (5.0, 65.0), "écoute rapide : commence après les phrases cochées")
+G = gls.compile_entries([{"term": "Imam", "say": "Imame"}, {"term": "Ibn Outhaymine", "say": "Ibne Outhaïmine"},
+                         {"term": "Allah", "say": "Allâh"}, {"term": "SAW", "say": "salla Allahou alayhi wa sallam", "case_sensitive": True},
+                         {"term": "inactif", "say": "x", "active": False}, {"term": "ra", "say": "RA", "whole_word": False}])
+ok(gls.apply("l'Imam Ibn Outhaymine, qu'Allah", G) == "l'Imame Ibne Outhaïmine, qu'Allâh", "glossaire : remplacements (apostrophe = séparation)")
+ok(gls.apply("Imamat", G) == "Imamat", "glossaire : mot entier respecté")
+ok(gls.apply("saw SAW", G) == "saw salla Allahou alayhi wa sallam", "glossaire : majuscules respectées sur demande")
+ok(gls.apply("inactif", G) == "inactif", "glossaire : terme désactivé ignoré")
+ok(gls.apply("Allah", gls.compile_entries([{"term": "Allah", "say": "Allah Allah"}])) == "Allah Allah", "glossaire : pas de remplacement en chaîne")
+ok(gls.apply("mirage", G) == "miRAge", "glossaire : « aussi dans un mot »")
+sy = [dict(c) for c in cues[1:2]]; sy[0]["say"] = sy[0]["text"] + " et une longue prononciation ajoutée par le glossaire"
+_, r1 = pl.fit_cues(cues[1:2], synth, P, total=40.0); _, r2 = pl.fit_cues(sy, synth, P, total=40.0)
+ok(r2[0]["raw"] > r1[0]["raw"], "la voix lit la prononciation du glossaire (« say »), pas le texte des sous-titres")
 ok(len(pl.resample(np.zeros(22050, dtype=np.float32), 22050)) == 24000, "rééchantillonnage 22,05 → 24 kHz")
 print(f"\n{len(fails)} échec(s)")
 sys.exit(1 if fails else 0)

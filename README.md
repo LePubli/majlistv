@@ -3257,3 +3257,89 @@ docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" 
 
 ### Testé / non testé
 Testé ici dans Chromium (la vidéo HLS et les pistes de test sont en VP9 / Opus car le Chromium de test ne lit pas le H.264 / AAC ; Chrome, Safari et Firefox lisent l'AAC des vraies pistes). **Non testé** : un vrai téléphone (notamment iPhone, où deux sons simultanés et la lecture écran éteint dépendent de Safari), les lecteurs YouTube / Vimeo réels (réseau fermé dans mon environnement : seule la logique est testée), l'envoi réel de l'e-mail.
+
+## Étape D1b — Relecture avant doublage, voix d'origine, glossaire de prononciation
+
+### Description
+- **Tableau des phrases modifiable** (Studio → Audio et doublage → une conférence) :
+  - **Corriger** une phrase française. La correction vaut aussi pour les **sous-titres français** (même texte).
+  - Case **« Voix d'origine »** : la phrase (verset, hadith, invocation) n'est pas lue par la voix de synthèse ; la voix d'origine est gardée à 100 % et le texte reste en sous-titre. L'ancien préfixe « # » reste compris ; décocher la case retire aussi ce « # ».
+  - Colonne **Prononciation** : ce que la voix lira à la place d'un terme, d'après le glossaire.
+  - **Contrôle qualité** : après une écoute ou un doublage, une phrase « À revoir » (trop longue pour son créneau) peut être raccourcie avec « Corriger » ou **« Accepter tel quel »**. Une phrase acceptée sort du filtre « À revoir ». Si on modifie son texte, l'acceptation est retirée.
+- **Relecture** (réglages de la conférence) :
+  - **« Valider la relecture »** enregistre qui a validé et quand.
+  - Si un texte ou une case change ensuite, la relecture passe **« À refaire »**.
+  - Tant qu'elle n'est pas validée, **« Lancer le doublage » est grisé**, avec une explication. L'écoute de 60 s reste possible.
+  - Le réglage `require_review` (Admin → Modules → Doublage français) rend la relecture **facultative** (par défaut : obligatoire).
+  - La liste des conférences affiche une colonne **Relecture** (« Relue » / « À relire »).
+- **Glossaire de prononciation** : nouvel onglet **Glossaire** dans Studio → Audio et doublage.
+  - Il y a **un seul glossaire pour tout le site**. On peut ajouter, rechercher, modifier, désactiver et supprimer des termes.
+  - Options par terme : « mot entier seulement » (par défaut) et « respecter les majuscules ».
+  - Zone **« Essayer »** : on tape une phrase et on voit ce que la voix va lire.
+  - Le glossaire ne change **que la voix** : les sous-titres gardent l'orthographe écrite.
+- **Droits** : administrateurs et modérateurs (comme le reste de l'écran doublage).
+- Module « Doublage français » **0.4.0**.
+  - Migration `004_review.sql` : tables `dub_segments` (cases et acceptations), `dub_reviews` (empreinte du texte relu) et `dub_glossary`.
+  - Service `majlistv-dubbing` **0.3.0** : il lit les cases et le glossaire.
+
+### Prérequis
+- Étapes S1, D1a et D2 en place.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (ne pas décompresser de zip par-dessus).
+2. DockPanel → Git Deploy, dans cet ordre :
+   1. **Redeploy `majlistv-api`** (applique la migration `004_review.sql`) ;
+   2. **Redeploy `majlistv-web`** ;
+   3. **Redeploy `majlistv-dubbing`** (le service a changé).
+3. Sur le VPS :
+```bash
+docker update --cpus 4 --memory 8g --memory-swap 8g dockpanel-git-majlistv-dubbing
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 20 dockpanel-git-majlistv-api | grep -i "004_review"
+docker logs --tail 20 dockpanel-git-majlistv-dubbing | grep -i "prêt"
+```
+La première commande `grep` doit afficher « Module dubbing : migration appliquée 004_review.sql ». La seconde doit afficher « Service de doublage 0.3.0 prêt ».
+
+### Exemples d'utilisation
+- **Glossaire** : onglet Glossaire → terme « Ibn Outhaymine », se prononce « Ibne Outhaïmine » → Ajouter. Dans « Essayer », taper « l'Imam Ibn Outhaymine a dit » : la voix lira « l'Imam Ibne Outhaïmine a dit ».
+- **Relecture d'une conférence** :
+  1. Ouvrir la conférence.
+  2. Cocher « Voix d'origine » sur les versets.
+  3. Corriger les phrases mal traduites.
+  4. Lancer « Écouter 60 secondes ».
+  5. Raccourcir ou « Accepter tel quel » les phrases « À revoir ».
+  6. Cliquer sur « Valider la relecture », puis sur « Lancer le doublage ».
+- **Voir le glossaire et les relectures sur le VPS** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT term, say, whole_word, case_sensitive, active FROM dub_glossary ORDER BY lower(term);
+SELECT t.title, rv.reviewed_at, u.name FROM dub_reviews rv JOIN talks t ON t.id = rv.talk_id LEFT JOIN users u ON u.id = rv.reviewed_by ORDER BY rv.reviewed_at DESC LIMIT 20;
+SQL
+```
+
+### Debug
+- **« Lancer le doublage » grisé** : la relecture n'est pas validée, ou elle est « À refaire » parce qu'un texte ou une case a changé. Cliquer sur « Valider la relecture ». Pour la rendre facultative : Admin → Modules → Doublage français → `require_review` = `false`.
+- **Erreur « review_required »** (via l'API) : même cause.
+- **Le glossaire n'est pas appliqué à la voix** :
+  - vérifier que le terme est **actif** ;
+  - vérifier que « mot entier » est cohérent (« Imam » ne remplace pas « Imamat ») ;
+  - relancer une écoute : le glossaire est lu au **début** de chaque travail ;
+  - vérifier que `majlistv-dubbing` a bien été redéployé (journal « 0.3.0 prêt »).
+- **« Ce terme est déjà dans le glossaire »** : les majuscules sont ignorées pour les doublons (« imam » = « Imam »).
+
+### Tests
+- API : `python3 api/tests/test_dubbing_d1b.py` (31 contrôles : glossaire, doublons, essai, cases, « # », relecture, « à refaire », refus `review_required`, réglage facultatif, droits).
+- Service : `python3 dubbing/tests/test_pipeline.py` (29 contrôles) et `DUB_PY=python3.11 python3 dubbing/tests/test_service.py` (36 contrôles : case et glossaire réellement pris en compte par le service).
+- Navigateur : `DUB_PY=python3.11 python3 web/tests/d1b_dubbing.py [dossier]` (41 contrôles, fr/ar, 390/1440 px).
+- Non-régression : `test_dubbing.py`, `test_dubbing_d2.py`, `test_modules.py`, retrait du module, `s1_dubbing.py`, `d1a_dubbing.py`, `d2_player.py`.
+
+### Testé / non testé
+**Testé ici** :
+- tout ce qui précède avec des moteurs de voix factices ;
+- la règle du glossaire, identique en JavaScript et en Python.
+
+**Non testé** :
+- l'effet du glossaire sur la vraie voix Tom ou ta voix clonée. Il faut l'écouter sur le VPS : une orthographe « phonétique » peut demander quelques essais (« Outhaïmine », « Outhaïmîne »…) ;
+- un vrai téléphone.

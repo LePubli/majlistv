@@ -3,7 +3,7 @@
 Vérifie dans le navigateur : moteur hors ligne annoncé, « Écouter 60 secondes » crée une demande (barre de progression, Annuler),
 le service (moteurs factices) la traite, la page se met à jour seule (lecteur des 60 s, état des phrases « Calé / À revoir »),
 « Lancer le doublage » attend la nuit, annulation, piste prête affichée dans la liste, FR + AR, 390 / 1440 px, sans débordement.
-Prérequis : API (3055) + module dubbing 0.2.0, PG (5544), S3 de test (5599), site (3001), Python 3.11 avec numpy/psycopg2/boto3 (DUB_PY).
+Prérequis : API (3055) + module dubbing 0.4.0 (relecture rendue facultative pendant le test), PG (5544), S3 de test (5599), site (3001), Python 3.11 avec numpy/psycopg2/boto3 (DUB_PY).
 Lancement (depuis web/) : DUB_PY=/chemin/python3.11 python3 tests/d1a_dubbing.py [dossier]"""
 import datetime, os, pathlib, subprocess, sys, tempfile, time, uuid
 from zoneinfo import ZoneInfo
@@ -20,7 +20,7 @@ def ok(c, m):
 adm = requests.post(API + '/auth/login', json={'email': 'admin@test.local', 'password': 'AdminPassw0rd-test'}).json()['token']
 H = {'authorization': 'Bearer ' + adm}
 h = datetime.datetime.now(ZoneInfo('Europe/Paris')).hour
-requests.put(API + '/admin/modules/dubbing', headers=H, json={'enabled': True, 'settings': {'mod_dubbing_queue_mode': 'night', 'mod_dubbing_night_start': str((h + 2) % 24), 'mod_dubbing_night_end': str((h + 3) % 24)}})
+requests.put(API + '/admin/modules/dubbing', headers=H, json={'enabled': True, 'settings': {'mod_dubbing_queue_mode': 'night', 'mod_dubbing_night_start': str((h + 2) % 24), 'mod_dubbing_night_end': str((h + 3) % 24), 'mod_dubbing_require_review': 'false'}})
 cur.execute("delete from dub_engine"); cur.execute("update dub_jobs set status='cancelled' where status in ('queued','running')")
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 s3 = boto3.client('s3', endpoint_url=S3, aws_access_key_id='test', aws_secret_access_key='test', region_name='garage')
@@ -93,7 +93,7 @@ try:
         b.close()
 finally:
     if svc: svc.terminate(); svc.wait(timeout=20)
-    requests.put(API + '/admin/modules/dubbing', headers=H, json={'settings': {'mod_dubbing_queue_mode': 'night', 'mod_dubbing_night_start': '1', 'mod_dubbing_night_end': '7'}})
+    requests.put(API + '/admin/modules/dubbing', headers=H, json={'settings': {'mod_dubbing_queue_mode': 'night', 'mod_dubbing_night_start': '1', 'mod_dubbing_night_end': '7', 'mod_dubbing_require_review': 'true'}})
     cur.execute('delete from talks where id=%s', (TID,))
 print('\n' + ('TOUT EST OK' if not bad else f'{len(bad)} ÉCHEC(S)'))
 sys.exit(1 if bad else 0)

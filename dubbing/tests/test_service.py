@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Doublage (étape D1a) — service complet avec la vraie base, le vrai stockage S3 de test et de faux moteurs (ou le vrai Piper) :
+"""Doublage (étapes D1a et D1b) — service complet avec la vraie base, le vrai stockage S3 de test et de faux moteurs (ou le vrai Piper) :
 signe de vie, écoute rapide, doublage complet, plage de nuit, annulation, piste en service, nettoyage des anciens fichiers,
 vidéo YouTube (voix seule), reprise après arrêt brutal, vitesse mesurée reprise par l'estimation.
-Prérequis : API (3055) avec le module « dubbing » 0.2.0, PG (5544), S3 de test (5599). Lancement depuis la racine du dépôt :
+Prérequis : API (3055) avec le module « dubbing » 0.4.0, PG (5544), S3 de test (5599). Lancement depuis la racine du dépôt :
   DUB_PY=/chemin/python3.11 python3 dubbing/tests/test_service.py           (moteurs factices)
   DUB_ENGINE=piper DUB_PIPER_MODEL=fr_FR-siwis-low MODELS_DIR=… python3 dubbing/tests/test_service.py   (vrai Piper, conversion factice)"""
 import datetime, os, subprocess, sys, tempfile, time, uuid
@@ -13,7 +13,7 @@ API = "http://127.0.0.1:3055"; S3 = "http://127.0.0.1:5599"; HERE = os.path.dirn
 PY = os.environ.get("DUB_PY", sys.executable); ENGINE = os.environ.get("DUB_ENGINE", "fake")
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
 s3 = boto3.client("s3", endpoint_url=S3, aws_access_key_id="test", aws_secret_access_key="test", region_name="garage")
-tag = uuid.uuid4().hex[:6]; talks, voices = [], []
+tag = uuid.uuid4().hex[:6]; talks, voices, gls = [], [], []
 fails = []
 def ok(c, m):
     print(("OK   " if c else "FAIL ") + m, flush=True)
@@ -27,7 +27,7 @@ def mod_settings(**kv):
     return api("PUT", "/admin/modules/dubbing", json={"enabled": True, "settings": {f"mod_dubbing_{k}": str(v) for k, v in kv.items()}})
 cur.execute("delete from dub_engine"); cur.execute("update dub_jobs set status='cancelled' where status in ('queued','running')")
 h = datetime.datetime.now(ZoneInfo("Europe/Paris")).hour
-mod_settings(queue_mode="night", night_start=(h + 2) % 24, night_end=(h + 3) % 24, preview_seconds=30)  # la nuit n'est pas maintenant
+mod_settings(queue_mode="night", night_start=(h + 2) % 24, night_end=(h + 3) % 24, preview_seconds=30, require_review="true")  # la nuit n'est pas maintenant
 ok(api("GET", "/studio/dubbing/state")[1]["engine"]["ready"] is False, "sans service : moteur « pas prêt »")
 
 # --- données : vidéo envoyée de 40 s (audio), phrases françaises, voix cible
@@ -63,6 +63,8 @@ ok(api("POST", f"/studio/dubbing/talks/{T0}/jobs", json={"kind": "preview"})[1].
 code, j1 = api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "preview"})
 ok(code == 201 and j1["status"] == "queued" and j1["params"]["target"]["name"] == f"Voix {tag}" and "sampleKey" not in j1["params"]["target"], "écoute rapide demandée (clé de l'échantillon jamais renvoyée)")
 ok(api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "preview"})[1].get("code") == "already_queued", "une seule écoute en attente à la fois")
+ok(api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "full"})[1].get("code") == "review_required", "doublage complet refusé avant la relecture")
+for t in (T1, T2): api("POST", f"/studio/dubbing/talks/{t}/review", json={"validated": True})
 code, jf = api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "full"}); ok(code == 201, "doublage complet demandé")
 
 # --- service
@@ -109,9 +111,18 @@ try:
                 (T2, '{"targetVoice": "%s", "vcSteps": 3}' % VT, '{"rtf": 1.7, "speechS": 30, "engine": "real"}'))
     e = api("GET", f"/studio/dubbing/talks/{T1}")[1]["estimate"]
     ok(e["measured"] and e["rtf"] == 1.7, f"estimation : vitesse réellement mesurée reprise (médiane, ≥ 20 s de parole) ({e['rtf']})")
+    # étape D1b : phrase cochée « voix d'origine » et glossaire repris par le service ; relecture à refaire après la modification
+    raw3 = {x["idx"]: x for x in rf["segments"]}[3]["raw"]
+    api("PATCH", f"/studio/dubbing/talks/{T1}/segments/1", json={"keepOriginal": True})
+    code, g = api("POST", "/studio/dubbing/glossary", json={"term": f"Coran", "say": "Qour-âne, le Livre noble et très honoré", "notes": tag}); gls.append(g["id"])
+    ok(api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "full"})[1].get("code") == "review_required", "texte modifié : relecture à refaire avant un nouveau doublage complet")
+    api("POST", f"/studio/dubbing/talks/{T1}/review", json={"validated": True})
     # second doublage complet : l'ancienne piste est effacée du stockage
     code, jf2 = api("POST", f"/studio/dubbing/talks/{T1}/jobs", json={"kind": "full"})
     ok(wait(lambda: job(jf2["id"])[0] == "done", 120), "second doublage complet")
+    seg2 = {x["idx"]: x for x in job(jf2["id"])[2]["segments"]}
+    ok(seg2[1]["state"] == "kept", "service : phrase cochée dans le Studio gardée en voix d'origine")
+    ok(seg2[3]["raw"] > raw3, f"service : la voix lit la prononciation du glossaire ({raw3} → {seg2[3]['raw']} s)")
     gone = [k for k in (tr[1], tr[2]) if s3.list_objects_v2(Bucket="majlis-videos", Prefix=k).get("KeyCount", 0)]
     ok(not gone, "ancienne piste effacée du stockage")
     # vidéo YouTube : voix seule
@@ -143,5 +154,6 @@ finally:
     mod_settings(queue_mode="night", night_start=1, night_end=7, preview_seconds=60)
     for t in talks: cur.execute("delete from talks where id=%s", (t,))
     for v in voices: cur.execute("delete from dub_voices where id=%s", (v,))
+    for g in gls: cur.execute("delete from dub_glossary where id=%s", (g,))
 print(f"\n{len(fails)} échec(s)")
 sys.exit(1 if fails else 0)

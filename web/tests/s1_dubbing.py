@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Étape S1 : module « Doublage français » dans le Studio (Audio et doublage).
-Vérifie : entrée du menu sans « Bientôt », écran d'accueil à 4 onglets (conférences, réglages par défaut, voix, langue d'écoute),
+Vérifie : entrée du menu sans « Bientôt », écran d'accueil à 5 onglets (conférences, réglages par défaut, voix, glossaire, langue d'écoute),
 réglage au clavier puis enregistrement, fiche d'une conférence fidèle à la maquette (fil d'Ariane, 2 boutons désactivés tant que
 le moteur n'existe pas, voix du doublage, réglages, piste française estimée, segments filtrables), réglages propres à la conférence,
 organisateur → écran réservé, module désactivé → invitation à l'activer, FR + AR, 390 / 1440 / 1990 px, aucun débordement.
@@ -54,7 +54,7 @@ with sync_playwright() as p:
             ok(pg.evaluate('document.documentElement.dir') == ('rtl' if lang == 'ar' else 'ltr'), f'{t} sens de lecture')
             link = pg.locator('.studio-nav a[href="/studio/dubbing"]')
             ok(link.count() == 1 and link.locator('.studio-soon').count() == 0 and 'on' in (link.get_attribute('class') or ''), f'{t} menu : « Audio et doublage » allumé, sans « Bientôt »')
-            ok(pg.locator('.db-page .st-tabs a').count() == 4, f'{t} 4 onglets')
+            ok(pg.locator('.db-page .st-tabs a').count() == 5, f'{t} 5 onglets')
             ok(pg.locator('.db-engine').count() == 1, f'{t} bandeau : état du moteur de doublage')
             ok(pg.locator(f'.db-table a[href="/studio/dubbing/{TID}"]').count() == 1, f'{t} la conférence de test est listée')
             ok(ov(pg) <= 1, f'{t} accueil sans débordement')
@@ -79,7 +79,7 @@ with sync_playwright() as p:
             # fiche de la conférence (maquette écran 3)
             pg.goto(WEB + f'/studio/dubbing/{TID}'); pg.wait_for_selector('.db-segs .studio-table', timeout=25000); pg.wait_for_timeout(500)
             ok(tag in pg.locator('.db-crumbs').inner_text(), f'{t} fil d\'Ariane avec le titre')
-            ok(pg.locator('.db-head-actions .btn:enabled').count() == 2, f'{t} « Écouter 60 secondes » et « Lancer le doublage » actifs (étape D1a)')
+            ok(pg.locator('.db-head-actions .btn:enabled').count() == 1 and pg.locator('.db-note').count() == 1, f'{t} « Écouter 60 secondes » actif, « Lancer le doublage » attend la relecture (étape D1b)')
             ok(pg.locator('.st-tabs a.on').count() == 1 and pg.locator('.st-tabs a').count() == 3, f'{t} onglets de la conférence')
             ok(pg.locator('.db-vcard').count() == 2 and pg.locator('.db-vcard.on').count() == 1, f'{t} voix du doublage : ma voix + voix de base, une sélectionnée')
             ok(pg.locator('.db-segs tbody tr').count() == 200, f'{t} 200 premières phrases affichées')
