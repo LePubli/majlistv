@@ -80,7 +80,8 @@ with sync_playwright() as p:
             pg.goto(WEB + f'/studio/dubbing/{TID}'); pg.wait_for_selector('.db-segs .studio-table', timeout=25000); pg.wait_for_timeout(500)
             ok(tag in pg.locator('.db-crumbs').inner_text(), f'{t} fil d\'Ariane avec le titre')
             ok(pg.locator('.db-head-actions .btn:enabled').count() == 1 and pg.locator('.db-note').count() == 1, f'{t} « Écouter 60 secondes » actif, « Lancer le doublage » attend la relecture (étape D1b)')
-            ok(pg.locator('.st-tabs a.on').count() == 1 and pg.locator('.st-tabs a').count() == 3, f'{t} onglets de la conférence')
+            # Étape E1 : l'onglet « Montage » n'apparaît que pour une vidéo envoyée (celle-ci est sur YouTube) avec le module Éditeur.
+            ok(pg.locator('.st-tabs a.on').count() == 1 and pg.locator('.st-tabs a').count() == 2, f'{t} onglets de la conférence (vidéo YouTube : pas de « Montage »)')
             ok(pg.locator('.db-vcard').count() == 2 and pg.locator('.db-vcard.on').count() == 1, f'{t} voix du doublage : ma voix + voix de base, une sélectionnée')
             ok(pg.locator('.db-segs tbody tr').count() == 200, f'{t} 200 premières phrases affichées')
             ok(pg.locator('.db-segs tbody tr.kept').count() == 3, f'{t} versets marqués « voix d\'origine » (3 dans les 200 premières)')

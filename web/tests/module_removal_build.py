@@ -13,7 +13,7 @@ MODULES = sorted(d for d in os.listdir(os.path.join(WEB, "modules")) if os.path.
 # Une page de chaque module qui a des pages (doit disparaître sans lui)
 PAGE = {"series": "/series", "collections": "/collections", "books": "/books", "learning": "/learning", "lists": "/lists", "channels": "/chaines",
         "revenue": "/studio/revenue", "kids": "/kids", "gifts": "/gift", "quiz": "/studio/quiz", "practice": "/studio/practice",
-        "revision": "/studio/reminders", "stats": "/studio/stats", "dubbing": "/studio/dubbing"}
+        "revision": "/studio/reminders", "stats": "/studio/stats", "dubbing": "/studio/dubbing", "editor": "/studio/editor"}
 CORE = ["/", "/login", "/pricing", "/library", "/account", "/legal/cgv", "/studio", "/admin"]
 fails = []
 

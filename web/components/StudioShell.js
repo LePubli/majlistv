@@ -19,6 +19,7 @@ const MODULE_OF_HREF = {
   '/studio/series': 'series', '/studio/collections': 'collections', '/studio/channel': 'channels', '/studio/practice': 'practice', '/studio/quiz': 'quiz',
   '/studio/books': 'books', '/studio/reminders': 'revision', '/studio/stats': 'stats', '/studio/revenue': 'revenue',
   '/studio/dubbing': 'dubbing', // module « Doublage français » (étape S1)
+  '/studio/editor': 'editor', // module « Éditeur de montage » (étape E1)
 };
 const UUID = /^\/studio\/[0-9a-f]{8}-[0-9a-f]{4}-/i;
 // Quelle page du menu est « allumée » pour une adresse ?
@@ -63,6 +64,11 @@ export default function StudioShell({ children }) {
   if (!ready || !user) return null;
   if (!['organizer', 'moderator', 'admin'].includes(user.role)) return <main className="card"><p>{t('noAccess')}</p></main>;
 
+  // Étape E1 : un projet de l'éditeur de montage s'ouvre en plein écran (sans le menu du Studio), comme sur la maquette.
+  if (/^\/studio\/editor\/[0-9a-f-]{36}/i.test(path)) {
+    return user.role === 'moderator' ? <main className="card"><p>{t('noAccess')}</p></main> : <div className="mt-full">{children}</div>;
+  }
+
   const isAdmin = user.role === 'admin';
   const isModOnly = user.role === 'moderator';
   const sec = studioSection(path);
@@ -75,7 +81,7 @@ export default function StudioShell({ children }) {
     [analyticsHref, t('sdAnalytics'), ICONS.chart, '', 'analytics'],
     ['/studio/subtitles', t('sdSubs'), ICONS.sub, '', 'subtitles'],
     ['/studio/dubbing', t('sdDub'), ICONS.mic, '', 'dubbing'],
-    ['/studio/editor', t('sdEditor'), ICONS.film, t('sdSoon'), 'editor'],
+    ['/studio/editor', t('sdEditor'), ICONS.film, '', 'editor'],
     ['/studio/activity', t('sdActivity'), ICONS.pulse, actCount > 0 ? String(actCount) : '', 'activity'],
     ['/studio/settings', t('sdSettings'), ICONS.gear, '', 'settings'],
   ];

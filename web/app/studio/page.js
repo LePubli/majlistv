@@ -50,7 +50,7 @@ export default function StudioDash() {
       <div className="studio-head">
         <h1 className="studio-title">{t('sdDashTitle')}</h1>
         <div className="sd-head-actions">
-          <Link href="/studio/editor" className="btn ghost sd-pill">{t('sdOpenEditor')}</Link>
+          {on('editor') && <Link href="/studio/editor" className="btn ghost sd-pill">{t('sdOpenEditor')}</Link>}
           <Link href="/studio/new" className="btn sd-pill">+ {t('newTalk')}</Link>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function StudioDash() {
                 {on('stats') && <Link href={`/studio/stats?talk=${last.id}`} className="btn ghost sd-chipbtn">{t('sdAnalytics')}</Link>}
                 {on('dubbing') && <Link href={`/studio/dubbing/${last.id}`} className="btn ghost sd-chipbtn">{t('sdDub')}</Link>}
                 <Link href={`/studio/${last.id}`} className="btn ghost sd-chipbtn">{t('manage')}</Link>
-                <Link href="/studio/editor" className="btn ghost sd-chipbtn">{t('sdEditInEditor')} <em className="studio-soon">{t('sdSoon')}</em></Link>
+                {on('editor') && last.source === 'upload' && <Link href={`/studio/editor?talk=${last.id}`} className="btn ghost sd-chipbtn">{t('sdEditInEditor')}</Link>}
               </div>
             </>
           )}

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import { langName } from '../../components/Transcript';
+import { hasWebModule } from '../../lib/modules';
 import ParamsForm from './ParamsForm';
 import { useDubbing, Gate, EngineNote, jobLabel, fmtDuration, fmtNum, fmtClock, fmtDay, tf } from './shared';
 
@@ -136,7 +137,7 @@ function SegRow({ s, cellLen, onPatch }) {
 }
 
 export default function DubbingTalk() {
-  const { t, locale, user, call } = useApp();
+  const { t, locale, user, call, feat } = useApp();
   const { id } = useParams();
   const st = useDubbing('/studio/dubbing/state');
   const tk = useDubbing(`/studio/dubbing/talks/${id}`);
@@ -229,7 +230,7 @@ export default function DubbingTalk() {
             <nav className="st-tabs" aria-label={d.talk.title}>
               <Link href={`/studio/${id}`}>{t('dbTabDetails')}</Link>
               <Link href={`/studio/dubbing/${id}`} className="on" aria-current="page">{t('sdDub')}</Link>
-              <Link href="/studio/editor">{t('dbTabEditing')}</Link>
+              {hasWebModule('editor') && feat('editor') && d.talk?.source === 'upload' && <Link href={`/studio/editor?talk=${id}`}>{t('dbTabEditing')}</Link>}
             </nav>
             <EngineNote engine={d.engine} />
             {mustReview && d.phrases > 0 && <p className="db-note" role="note">{t('dbNeedReview')}</p>}

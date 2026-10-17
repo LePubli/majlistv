@@ -3598,7 +3598,143 @@ docker exec dockpanel-git-majlistv-api sh -c 'export RCLONE_CONFIG_G_TYPE=s3 RCL
 ### Testé / non testé
 **Testé ici** : sur 2 cœurs, avec des médias synthétiques (FFmpeg 6.1).
 
+**Mesuré sur le VPS par Epok (17/10/2026, image du worker, 4 fils sur 6 cœurs)** : aperçu 360p en 34 s pour 118 s de montage (RTF 0,29) ; 1080p en 100 s (RTF 0,85), soit environ 51 min pour une conférence d'une heure.
+
+**Décision d'Epok (17/10/2026)** : moteur **FFmpeg piloté par notre code** ; temps de rendu jugé correct ; pas de licence Remotion. MLT reste le plan B.
+
 **Non testé** :
-- le VPS (4 cœurs, image Alpine du worker) : c'est la mesure à faire avec `run_vps.sh` ;
-- une vraie conférence ;
+- une vraie conférence (mesure abandonnée, à la demande d'Epok) ;
 - les transitions autres que le fondu.
+
+## Étape E1 — Éditeur de montage : timeline multipiste
+
+### Description
+- Nouveau module **« Éditeur de montage »** (`editor`, version 0.1.0), **désactivé par défaut** : à activer dans Admin → Modules.
+- **Studio → Éditeur** (`/studio/editor`) :
+  - **Montages** : titre, durée montée sur la durée d'origine, nombre d'extraits, dernière modification et qui l'a faite, mention « En cours de modification par … » ;
+  - **Conférences à monter** : bouton **« Monter »**, qui crée le montage (la vidéo entière en un seul extrait) et ouvre l'éditeur ;
+  - les vidéos YouTube, Vimeo et archive.org sont signalées « non hébergée, ne se monte pas », et une vidéo pas encore convertie est signalée elle aussi ;
+  - accès : l'organisateur sur ses conférences, l'administrateur sur toutes. Le modérateur n'a pas accès.
+- **L'éditeur**, plein écran et fidèle à la maquette « Studio v2 », écran 4 :
+  - **en-tête** : retour au Studio, titre, « Version N · enregistré automatiquement il y a … », badge « Aperçu 360p · le rendu final sera en haute qualité », **Annuler**, **Rétablir**, **Versions**, et **Rendre la vidéo**, grisé jusqu'à l'étape E4 ;
+  - **gauche** : Ajouter (titre, bandeau de nom, logo, musique, intro et écran de fin, transition) et Modèles de la chaîne. Ils sont **affichés mais désactivés**, avec l'étape où ils arrivent (E2 ou E3) ;
+  - **centre** : **aperçu 360p** (la qualité déjà produite par la conversion, lue par hls.js) **qui suit le montage** : à la fin d'un extrait, la lecture saute au début du suivant. Boutons −10 s / lecture / +10 s, horloge du montage, sous-titre du moment ;
+  - **droite**, « Piste sélectionnée » :
+    - pour un extrait : début et fin dans la vidéo d'origine (modifiables au clavier, par exemple `1:50,0`), durée, place dans le montage, « Aller au début », « Supprimer le passage » ;
+    - pour les autres pistes : ce qu'elles font, et ce qui arrive en E2 ou E3 ;
+  - **bas** : **Couper**, **Supprimer le passage**, **Aimanter**, résumé (« Montage : 1:35 sur 2:00 · 2 extraits · vidéo d'origine à 0:45,0 »), **Zoom**, puis la **timeline à 6 pistes** :
+    1. **Vidéo** : les extraits. On les **déplace** à la souris, on change leur début ou leur fin en tirant leurs bords. Un raccord hachuré marque un passage coupé ou déplacé ;
+    2. **Voix d'origine** : suit la vidéo ;
+    3. **Voix française** : les phrases du doublage, placées selon le montage. Un passage gardé en voix d'origine est en pointillés. Vide sans version française ;
+    4. **Musique** : arrive à l'étape E2 ;
+    5. **Titres et logo** : arrivent à l'étape E3 ;
+    6. **Sous-titres** : les phrases (en français si elles existent), placées selon le montage ; une phrase coupée est raccourcie.
+  - La **timeline se lit de gauche à droite, même en arabe**. Le reste de l'écran passe de droite à gauche.
+  - L'**aimant** colle la tête de lecture, les coupes et les bords des extraits aux raccords et au début ou à la fin des phrases, pour éviter de couper au milieu d'un mot.
+  - **Raccourcis** : Espace = lecture ; C = couper ; Suppr = supprimer ; ← → = 1 s (Maj : 10 s) ; Alt + ← → = déplacer l'extrait ; Ctrl+Z = annuler ; Ctrl+Maj+Z ou Ctrl+Y = rétablir ; M = aimant.
+  - **Annuler / Rétablir** : jusqu'à 200 gestes.
+  - **Ordinateur seulement** : sous 1024 px de large, un message demande d'utiliser un ordinateur. La liste des montages s'affiche bien sur téléphone.
+- **Sauvegarde automatique** : environ 1 s après chaque geste. Un dernier enregistrement part quand on ferme l'onglet ou qu'on revient au Studio.
+- **Versions** :
+  - une **copie automatique** est faite au premier enregistrement de chaque séance de travail ;
+  - on peut enregistrer des **versions nommées** (par exemple « Montage validé ») ;
+  - **« Revenir à cette version »** copie d'abord le montage actuel : rien n'est perdu ;
+  - les 30 copies automatiques les plus récentes sont gardées, et toutes les versions nommées.
+- **Verrou : une seule personne modifie à la fois.**
+  - Le verrou est renouvelé toutes les 25 s et expire après 75 s sans nouvelles (onglet fermé, ordinateur en veille).
+  - **Les autres voient le projet en lecture seule**, mis à jour toutes les 10 s, avec « Lecture seule : X modifie ce projet (depuis …) ».
+  - Le même compte dans un autre onglet obtient « Modifier ici ».
+  - L'administrateur peut **« Reprendre la main »** : l'autre personne passe en lecture seule, avec un message, et ses changements déjà enregistrés sont gardés. Cette reprise est inscrite au journal d'audit.
+  - Si deux onglets écrivent quand même, le second reçoit le montage à jour en lecture seule : rien n'est écrasé sans qu'on le sache.
+- **Studio → Contenus** : l'étape **« Montée »** devient « en cours » dès qu'un montage existe. Elle passera à « fait » avec le rendu (étape E4).
+- **Liens** :
+  - tableau de bord : « Ouvrir l'éditeur », et « Modifier dans l'éditeur » sur la dernière conférence si c'est une vidéo envoyée ;
+  - Audio et doublage : onglet « Montage » (vidéos envoyées seulement) ;
+  - ces liens disparaissent si le module est désactivé.
+- **La vidéo publiée ne change pas** : le montage n'est qu'un document. Le rendu et le remplacement de la vidéo arrivent à l'étape E4.
+- **Technique :**
+  - module API `api/src/modules/editor/` : `module.json`, `migrations/001_editor.sql` (tables `editor_projects` et `editor_versions`), `timeline.js` (document de montage v1 et sa vérification), `routes.js`, `index.js` ;
+  - partie web `web/modules/editor/` : `Editor.js`, `Timeline.js`, `Preview.js`, `Versions.js`, `EditorHome.js`, `ops.js`. Les opérations de montage sont du code sans React, testées seules ;
+  - pages dans `web/app/studio/(module-editor)/editor/` ;
+  - événement `editor.media` : le module Doublage (version **0.6.0**) y ajoute les phrases de la voix française ;
+  - les sauvegardes automatiques et le renouvellement du verrou ne remplissent pas le journal d'audit ;
+  - le tableau de bord reçoit la source de la dernière conférence (`/studio/overview`).
+- Le **document de montage** (`timeline`, version 1) est `{ v: 1, duration, clips: [{ id, in, out }], ui }`, en secondes de la vidéo d'origine. Le moteur FFmpeg de l'étape E4 le lira, et E2 et E3 y ajouteront leurs pistes.
+
+### Prérequis
+- Étapes S1 à S3 en place, vidéos converties (HLS, avec la qualité 360p `v0`).
+- Aucune variable d'environnement à ajouter. `CSP_STORAGE_ORIGINS` (site web) doit contenir l'adresse du stockage, comme pour les miniatures. C'est déjà le cas en ligne.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull**.
+2. DockPanel → Git Deploy :
+   1. **Redeploy `majlistv-api`** : la migration du module, `editor/001_editor.sql`, s'applique au démarrage ;
+   2. **Redeploy `majlistv-web`**.
+   Le worker, le transcripteur, le traducteur et `majlistv-dubbing` n'ont **pas** changé.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 120 dockpanel-git-majlistv-api 2>&1 | grep -i "module editor"
+```
+La dernière commande doit afficher « Module editor : migration appliquée 001_editor.sql ».
+4. Admin → Modules → **Éditeur de montage** → **Activer**.
+
+### Exemples d'utilisation
+- **Recette** :
+  1. Studio → Éditeur → **Monter** sur une conférence envoyée.
+  2. Place la tête de lecture, puis **Couper**. Coupe encore, clique l'extrait du milieu, puis **Supprimer le passage**.
+  3. **Glisse** un extrait à une autre place, puis **Annuler** et **Rétablir**.
+  4. Le titre affiche « enregistré automatiquement ». Recharge la page : le montage est là.
+  5. Ouvre le même projet avec un autre compte (ou en navigation privée avec le compte administrateur) : **lecture seule**, outils grisés.
+- **Voir les montages en base** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT p.id, t.title, p.rev, jsonb_array_length(p.timeline->'clips') AS extraits, p.updated_at,
+       (p.lock_until > now()) AS verrou_actif, u.name AS modifie_par
+  FROM editor_projects p JOIN talks t ON t.id = p.talk_id LEFT JOIN users u ON u.id = p.lock_user ORDER BY p.updated_at DESC LIMIT 20;
+SELECT project_id, n, label, auto, created_at FROM editor_versions ORDER BY created_at DESC LIMIT 20;
+SQL
+```
+- **Libérer un verrou bloqué** (ne devrait pas servir : il expire seul après 75 s) :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE editor_projects SET lock_until = NULL;"'
+```
+
+### Debug
+- **« Studio → Éditeur » dit que le module est désactivé** : Admin → Modules → Éditeur de montage → Activer.
+- **« L'aperçu 360p ne se charge pas »** :
+  - la conférence doit être convertie, avec la playlist `hls/<id>/v0/index.m3u8` dans Garage ;
+  - `CSP_STORAGE_ORIGINS` du site doit contenir l'adresse du stockage ;
+  - la console du navigateur (F12) affiche les erreurs « Content Security Policy » ou CORS ;
+  - le petit temps de chargement aux raccords est normal : c'est un aperçu.
+- **« Monter » refusé** : vidéo YouTube, Vimeo ou archive.org (non hébergée), ou vidéo pas encore convertie (Studio → Activité).
+- **Toujours en lecture seule** : une autre personne ou un autre onglet modifie (le bandeau dit qui). Sans nouvelles pendant 75 s, le verrou expire et « Modifier » apparaît.
+- **« Enregistrement impossible »** : regarder le journal de l'API :
+```bash
+docker logs --tail 100 dockpanel-git-majlistv-api 2>&1 | grep -i "editor"
+```
+
+### Tests
+- API : `python3 api/tests/test_editor_e1.py` (61 contrôles). Ils couvrent :
+  - les droits, la création, le refus des vidéos externes et en conversion ;
+  - l'aperçu 360p réellement lu (vraie vidéo HLS fabriquée par FFmpeg) ;
+  - les sous-titres et la voix française liés ;
+  - le verrou (autre onglet, autre personne, reprise par l'administrateur, expiration) ;
+  - la sauvegarde, le conflit (409), les montages invalides refusés ;
+  - les versions (copie automatique, nommée, retour en arrière, limite de 30) ;
+  - le journal d'audit, Studio → Contenus, la suppression, le module désactivé.
+- Opérations de montage : `node web/tests/e1_ops.mjs` (22 contrôles : couper, supprimer, déplacer, raccourcir, pistes liées, aimant, temps).
+- Navigateur : `python3 web/tests/e1_editor.py [dossier]` (49 contrôles). Le parcours complet est fait à la souris et au clavier, avec deux comptes et deux onglets, en fr/ar, à 1440, 1024 et 390 px. Le Chromium de test ne lit pas le H.264 : la vidéo de test y est en VP9, par le même chemin HLS et le même lecteur.
+- Non-régression : `test_studio_s3.py`, `test_dubbing_d1b.py`, `test_dubbing_d2.py`, `test_moderation.py`, `s1_dubbing.py`, `s3_studio.py`, `etape_d.py`, retrait du module (API et construction du site sans `editor`).
+
+### Testé / non testé
+**Testé ici** : tout ce qui précède, avec la base de test, un S3 de test et de vraies vidéos HLS fabriquées par FFmpeg.
+
+**Non testé** :
+- une vraie conférence d'une heure (nombre de phrases réel, fluidité de la timeline) ;
+- la lecture H.264 dans un vrai Chrome, Firefox ou Safari : elle passe par le même lecteur hls.js que le site, mais le navigateur de test ne lit que le VP9 ;
+- un écran tactile (tablette) ;
+- le VPS.
+- Retrait du module de l'API : le contrôle « Stripe : remboursement traité » échoue (503) pour tous les modules, même ceux qu'E1 n'a pas touchés. La base de test locale n'a pas les prix Stripe réglés ; ce n'est pas lié à E1.

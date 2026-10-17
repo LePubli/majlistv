@@ -8,7 +8,12 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // Routes éditoriales : seules les actions de l'administrateur y sont journalisées (une conférence d'un autre, une série, un import…).
 const EDITORIAL = ['/talks', '/series', '/categories', '/studio', '/imports', '/uploads', '/books'];
 // …hors gestes de simple spectateur.
-const VIEWER = [/^\/talks\/:id\/notes/, /^\/talks\/:id\/practice\/commitments/, /^\/talks\/:id\/report/, /^\/books\/:id\/download-link/];
+const VIEWER = [/^\/talks\/:id\/notes/, /^\/talks\/:id\/practice\/commitments/, /^\/talks\/:id\/report/, /^\/books\/:id\/download-link/,
+  // Éditeur de montage (étape E1) : renouvellement du verrou (toutes les 25 s).
+  /^\/studio\/editor\/projects\/:id\/(lock|unlock)$/];
+// Gestes répétés trop souvent pour le journal : sauvegarde automatique de l'éditeur (la suppression d'un projet reste inscrite).
+// Restent au journal pour l'éditeur : reprise de la main (takeover), versions, retour à une version, suppression d'un projet.
+const SILENT = [['PUT', /^\/studio\/editor\/projects\/:id$/]];
 
 export function shouldLog(role, method, route) {
   if (!MUTATING.has(method) || !route) return false;
@@ -16,6 +21,7 @@ export function shouldLog(role, method, route) {
   if (route.startsWith('/admin/') || route.startsWith('/moderation/') || route.startsWith('/studio/collections') || route.startsWith('/studio/channels')) return true; // le modérateur gère aussi les collections et les chaînes
   if (role !== 'admin') return false;
   if (VIEWER.some((re) => re.test(route))) return false;
+  if (SILENT.some(([m, re]) => m === method && re.test(route))) return false;
   return EDITORIAL.some((p) => route === p || route.startsWith(p + '/'));
 }
 

@@ -86,3 +86,14 @@ export async function overview(out, { organizerId, days, talkId }) {
   }
   out.dubbing = { frPct: share(per), lastFrPct: talkId ? share(last) : null, todo: { reviews, segments, requests, firstReview, firstSegments } };
 }
+
+// Étape E1 (module « Éditeur de montage ») : la piste « Voix française » de l'éditeur suit les phrases du doublage.
+// Chaque phrase garde ses temps dans la vidéo d'origine ; l'éditeur les place selon le montage (pistes liées).
+export async function editorMedia(out, { talkId }) {
+  const segs = (await pool.query(
+    `SELECT s.start_ms / 1000.0 AS s, s.end_ms / 1000.0 AS e, ${KEPT} AS keep FROM ${SEGS_FROM}
+      WHERE s.talk_id = $1 AND s.lang = 'fr' ORDER BY s.idx LIMIT 6000`, [talkId])).rows;
+  const track = (await pool.query('SELECT 1 FROM dub_tracks WHERE talk_id = $1', [talkId])).rowCount > 0;
+  if (!segs.length && !track) return;
+  out.dub = { track, segments: segs.map((x) => ({ s: Number(x.s), e: Number(x.e), keep: Boolean(x.keep) })), link: `/studio/dubbing/${talkId}` };
+}

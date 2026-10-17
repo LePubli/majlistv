@@ -62,6 +62,7 @@ FEATURE_ROUTE = {  # une route propre à chaque module, qui doit disparaître (4
     "follow": "/me/notifications", "gifts": "/gifts/options", "kids": "/me/kids", "learning": "/me/learning", "lists": "/me/lists",
     "notes": "/me/notes", "practice": "/me/practice", "quiz": "/studio/quiz/review", "revenue": "/admin/revenue", "revision": "/studio/reminders",
     "selfcheck": "/me/selfcheck", "series": "/series", "showcase": "/showcase", "stats": "/admin/stats", "dubbing": "/studio/dubbing/state",
+    "editor": "/studio/editor/projects",
 }
 
 

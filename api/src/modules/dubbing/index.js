@@ -4,7 +4,7 @@ import routes from './routes.js';
 import publicRoutes, { notifyReady } from './public.js';
 import { recordListening, collectWorkFiles } from './lib.js';
 import { enqueueForUser } from '../../mailer.js';
-import { collectTasks, pauseRunning, production, overview } from './studio.js';
+import { collectTasks, pauseRunning, production, overview, editorMedia } from './studio.js';
 
 export default async function register(app, ctx) {
   // Temps d'écoute par langue de l'audio, à chaque reprise de lecture (seulement quand le module est activé).
@@ -17,6 +17,8 @@ export default async function register(app, ctx) {
   ctx.on('activity.pause', (task) => pauseRunning(task));
   ctx.on('studio.production', (out, opts) => production(out, opts));
   ctx.on('studio.overview', (out, opts) => overview(out, opts));
+  // Étape E1 : phrases de la voix française affichées dans l'éditeur de montage (piste liée).
+  ctx.on('editor.media', (out, opts) => editorMedia(out, opts));
   await app.register(async (scope) => routes(scope, ctx));
   await app.register(publicRoutes); // étape D2 : version française côté spectateurs
 }

@@ -1,7 +1,7 @@
 // Étape S3 — parcours de production d'une conférence (Studio → Contenus, maquette « Studio v2 », écran 2) :
 //   Importée › Transcrite › Traduite › Relue › Montée › Doublée › Publiée
 // Chaque étape vaut : ok | run | todo | err | na (sans objet : conférence en français, éditeur pas encore livré, module absent).
-// x = ligne de GET /me/talks enrichie (steps, kind de lib/talkState.js) ; p = état venu de GET /studio/production ({ views, dub }).
+// x = ligne de GET /me/talks enrichie (steps, kind de lib/talkState.js) ; p = état venu de GET /studio/production ({ views, dub, editor }).
 export const STAGES = ['imported', 'transcribed', 'translated', 'reviewed', 'edited', 'dubbed', 'published'];
 
 const isFr = (l) => String(l || '').toLowerCase().startsWith('fr');
@@ -19,7 +19,8 @@ export function production(x, p = {}) {
     st.translated = dub?.hasFrench || fr?.status === 'ready' ? 'ok' : fr?.status === 'failed' ? 'err' : fr ? 'run' : 'todo';
   }
   st.reviewed = french || !dub ? 'na' : dub.review === 'validated' ? 'ok' : 'todo';
-  st.edited = 'na'; // éditeur : étapes E1 à E5
+  // Éditeur de montage (étape E1) : « en cours » dès qu'un montage existe ; « fait » viendra avec le rendu (étape E4).
+  st.edited = p.editor?.project ? 'run' : 'na';
   const fullJob = dub?.job && dub.job.kind === 'full' ? dub.job : null;
   st.dubbed = french || !dub ? 'na' : dub.track ? 'ok' : fullJob ? 'run' : 'todo';
   st.published = x.kind === 'live' ? 'ok' : 'todo';

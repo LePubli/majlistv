@@ -1,0 +1,381 @@
+'use client';
+// Studio → Éditeur → un projet (étape E1, maquette « Studio v2 », écran 4) : éditeur multipiste plein écran.
+//   En-tête : retour Studio, titre, « Version N · enregistré automatiquement », aperçu 360p, Annuler, Rétablir, Versions,
+//             Rendre la vidéo (étape E4).
+//   Gauche  : Ajouter (titres, bandeau, logo, musique, intro / fin, transitions : étapes E2 et E3), modèles de la chaîne.
+//   Centre  : aperçu 360p qui suit le montage. Droite : réglages de la piste sélectionnée.
+//   Bas     : outils (Couper, Supprimer le passage, Aimanter, Zoom) et timeline.
+// Une seule personne modifie (verrou renouvelé toutes les 25 s) ; les autres voient le projet en lecture seule, mis à jour
+// toutes les 10 s. Chaque changement est enregistré tout seul ~1 s après.
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useApp } from '../../components/Providers';
+import Preview from './Preview';
+import Timeline from './Timeline';
+import Versions from './Versions';
+import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime } from './ops';
+import { ago } from '../../lib/format';
+
+const HISTORY = 200;
+function historyReducer(st, a) {
+  switch (a.type) {
+    case 'reset': return { past: [], present: a.clips, future: [] };
+    case 'commit': return { past: [...st.past, st.present].slice(-HISTORY), present: a.clips, future: [] };
+    case 'undo': return st.past.length ? { past: st.past.slice(0, -1), present: st.past.at(-1), future: [st.present, ...st.future] } : st;
+    case 'redo': return st.future.length ? { past: [...st.past, st.present], present: st.future[0], future: st.future.slice(1) } : st;
+    default: return st;
+  }
+}
+function tabSession(id) {
+  const k = `mt-session-${id}`;
+  try {
+    const old = sessionStorage.getItem(k);
+    if (old) return old;
+    const s = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    sessionStorage.setItem(k, s);
+    return s;
+  } catch { return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`; }
+}
+const ZOOM_STEPS = 100;
+
+export default function Editor({ id }) {
+  const { t, call, locale } = useApp();
+  const session = useMemo(() => (typeof window === 'undefined' ? 'ssr-session' : tabSession(id)), [id]);
+  const [data, setData] = useState(null); // { project, media, editable }
+  const [error, setError] = useState(null);
+  const [h, dispatch] = useReducer(historyReducer, { past: [], present: [], future: [] });
+  const clips = h.present;
+  const [mode, setMode] = useState('loading'); // loading | edit | read
+  const [lock, setLock] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [save, setSave] = useState({ state: 'saved', at: null, version: 1 });
+  const [T, setT] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [sel, setSel] = useState({ track: 'video', id: null });
+  const [zoomStep, setZoomStep] = useState(0);
+  const [magnet, setMagnet] = useState(true);
+  const [showVersions, setShowVersions] = useState(false);
+  const [, tick] = useState(0);
+  const rev = useRef(1);
+  const savedClips = useRef(null);
+  const saving = useRef(false);
+  const modeRef = useRef(mode); modeRef.current = mode;
+  const clipsRef = useRef(clips); clipsRef.current = clips;
+
+  const duration = data?.project?.timeline?.duration || 0;
+  const totalS = total(clips);
+  const maxZoom = Math.max(1, totalS / 20);
+  const zoom = Math.exp((zoomStep / ZOOM_STEPS) * Math.log(maxZoom));
+  const cues = data?.media?.subtitles?.cues || [];
+  const dub = data?.media?.dub || null;
+
+  // --- Chargement, verrou
+  const applyProject = useCallback((p) => {
+    rev.current = p.rev;
+    savedClips.current = JSON.stringify(p.timeline.clips);
+    dispatch({ type: 'reset', clips: p.timeline.clips });
+    setSave({ state: 'saved', at: p.updatedAt, version: p.versionNumber });
+    if (p.timeline.ui?.magnet === false) setMagnet(false);
+  }, []);
+
+  const load = useCallback(async () => {
+    const r = await call(`/studio/editor/projects/${id}?session=${session}`);
+    if (!r.ok) { setError(r.data?.code === 'module_off' ? t('mtModuleOff') : r.data?.error || t('dbError')); return null; }
+    setData(r.data);
+    return r.data;
+  }, [call, id, session, t]);
+
+  const tryLock = useCallback(async () => {
+    const r = await call(`/studio/editor/projects/${id}/lock`, { method: 'POST', body: JSON.stringify({ session }) });
+    if (!r.ok) return false;
+    setLock(r.data.lock);
+    setMode(r.data.acquired ? 'edit' : 'read');
+    return r.data.acquired;
+  }, [call, id, session]);
+
+  useEffect(() => {
+    (async () => {
+      const d = await load();
+      if (!d) return;
+      applyProject(d.project);
+      setSel({ track: 'video', id: d.project.timeline.clips[0]?.id || null });
+      if (!d.editable) { setMode('read'); setLock(d.project.lock); return; }
+      await tryLock();
+    })();
+  }, [load, applyProject, tryLock]);
+
+  // --- Sauvegarde automatique
+  const doSave = useCallback(async ({ keepalive = false } = {}) => {
+    const now = clipsRef.current;
+    const body = JSON.stringify(now);
+    if (modeRef.current !== 'edit' || body === savedClips.current || saving.current) return;
+    saving.current = true;
+    setSave((s) => ({ ...s, state: 'saving' }));
+    const tl = { v: 1, duration, clips: now, ui: { magnet } };
+    const r = await call(`/studio/editor/projects/${id}`, { method: 'PUT', keepalive, body: JSON.stringify({ timeline: tl, rev: rev.current, session }) });
+    saving.current = false;
+    if (r.ok) {
+      rev.current = r.data.rev; savedClips.current = body;
+      setSave({ state: JSON.stringify(clipsRef.current) === body ? 'saved' : 'dirty', at: r.data.savedAt, version: r.data.versionNumber });
+      return;
+    }
+    if (r.status === 409 || r.status === 423) {
+      // Quelqu'un d'autre écrit : lecture seule avec le montage à jour (nos changements non enregistrés restent annulables : non).
+      setMode('read');
+      setNotice({ kind: 'warn', text: r.status === 409 ? t('mtConflict') : t('mtLost').replace('{n}', r.data?.lock?.by || '—') });
+      const d = await load();
+      if (d) { applyProject(d.project); setLock(d.project.lock); }
+      return;
+    }
+    setSave((s) => ({ ...s, state: 'error' }));
+    setNotice({ kind: 'err', text: r.data?.error || t('mtSaveError') });
+  }, [call, duration, id, load, applyProject, magnet, session, t]);
+
+  useEffect(() => {
+    if (mode !== 'edit') return undefined;
+    if (JSON.stringify(clips) === savedClips.current) return undefined;
+    setSave((s) => (s.state === 'saving' ? s : { ...s, state: 'dirty' }));
+    const h1 = setTimeout(() => doSave(), 1000);
+    return () => clearTimeout(h1);
+  }, [clips, mode, doSave]);
+  // Un enregistrement est arrivé pendant qu'on modifiait encore : on renvoie la suite.
+  useEffect(() => { if (save.state === 'dirty' && !saving.current && mode === 'edit') { const h2 = setTimeout(() => doSave(), 1000); return () => clearTimeout(h2); } return undefined; }, [save.state, mode, doSave]);
+
+  // --- Verrou renouvelé (édition) / montage rafraîchi (lecture seule)
+  useEffect(() => {
+    if (mode === 'edit') {
+      const hb = setInterval(async () => {
+        const r = await call(`/studio/editor/projects/${id}/lock`, { method: 'POST', body: JSON.stringify({ session }) });
+        if (r.ok && !r.data.acquired) {
+          setMode('read'); setLock(r.data.lock);
+          setNotice({ kind: 'warn', text: t('mtLost').replace('{n}', r.data.lock.by || '—') });
+          const d = await load(); if (d) applyProject(d.project);
+        }
+      }, 25000);
+      return () => clearInterval(hb);
+    }
+    if (mode === 'read' && data?.editable) {
+      const poll = setInterval(async () => {
+        const d = await load();
+        if (!d) return;
+        setLock(d.project.lock);
+        if (d.project.rev !== rev.current) applyProject(d.project);
+      }, 10000);
+      return () => clearInterval(poll);
+    }
+    return undefined;
+  }, [mode, call, id, session, load, applyProject, data?.editable, t]);
+
+  // Fermeture de l'onglet ou retour au Studio : dernier enregistrement puis on rend la main.
+  const doSaveRef = useRef(doSave); doSaveRef.current = doSave;
+  useEffect(() => {
+    const leave = () => {
+      if (modeRef.current !== 'edit') return;
+      doSaveRef.current({ keepalive: true });
+      call(`/studio/editor/projects/${id}/unlock`, { method: 'POST', keepalive: true, body: JSON.stringify({ session }) });
+    };
+    window.addEventListener('pagehide', leave);
+    return () => { window.removeEventListener('pagehide', leave); leave(); };
+  }, [call, id, session]);
+
+  useEffect(() => { const h3 = setInterval(() => tick((x) => x + 1), 15000); return () => clearInterval(h3); }, []);
+
+  const takeOver = async () => {
+    if (lock && !lock.otherTab && !window.confirm(t('mtTakeConfirm').replace('{n}', lock.by || '—'))) return;
+    const r = await call(`/studio/editor/projects/${id}/takeover`, { method: 'POST', body: JSON.stringify({ session }) });
+    if (!r.ok) { setNotice({ kind: 'err', text: r.data?.error || t('dbError') }); return; }
+    const d = await load(); if (d) applyProject(d.project);
+    setLock(r.data.lock); setMode('edit'); setNotice(null);
+  };
+  const editHere = async () => { const got = await tryLock(); if (got) { setNotice(null); const d = await load(); if (d) applyProject(d.project); } };
+
+  // --- Gestes de montage
+  const canEdit = mode === 'edit';
+  const commit = useCallback((next) => { if (canEdit) dispatch({ type: 'commit', clips: next }); }, [canEdit]);
+  const selIndex = clips.findIndex((c) => c.id === sel.id);
+  const targets = useMemo(() => snapTargets(clips, cues), [clips, cues]);
+
+  const doCut = () => {
+    const at = magnet ? snap(T, targets, 0.25) : T;
+    const r = splitAt(clips, at);
+    if (!r.done) { setNotice({ kind: 'info', text: t('mtCutEdge') }); return; }
+    commit(r.clips); setSel({ track: 'video', id: r.clips[r.index].id }); setT(at); setNotice(null);
+  };
+  const doDelete = () => {
+    const i = selIndex >= 0 ? selIndex : locate(clips, T)?.index ?? -1;
+    const r = removeClip(clips, i);
+    if (!r.done) { setNotice({ kind: 'info', text: t('mtLastClip') }); return; }
+    const start = layout(clips)[i].start;
+    commit(r.clips); setT(Math.min(start, total(r.clips))); setSel({ track: 'video', id: r.clips[Math.min(i, r.clips.length - 1)].id }); setNotice(null);
+  };
+  const doMove = (from, to) => { const r = moveClip(clips, from, to); if (r.done) { commit(r.clips); setT(layout(r.clips)[r.index].start); } };
+  const doTrim = (i, edge, value) => { const r = trimClip(clips, i, edge, value, duration); if (r.done) commit(r.clips); };
+  const undo = () => canEdit && dispatch({ type: 'undo' });
+  const redo = () => canEdit && dispatch({ type: 'redo' });
+
+  // Raccourcis clavier (hors champs de saisie).
+  useEffect(() => {
+    const key = (e) => {
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+      if (mod) return;
+      if (e.key === ' ') { e.preventDefault(); setPlaying((p) => !p); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const d = (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 10 : 1);
+        if (e.altKey && canEdit && selIndex >= 0) { doMove(selIndex, selIndex + (d > 0 ? 1 : -1)); return; }
+        setT((x) => Math.max(0, Math.min(totalS, x + d)));
+        return;
+      }
+      if (!canEdit) return;
+      if (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 's') { e.preventDefault(); doCut(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); doDelete(); }
+      else if (e.key.toLowerCase() === 'm') setMagnet((m) => !m);
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  });
+
+  if (error) return <main className="studio-page"><p className="error" role="alert">{error}</p><Link href="/studio/editor" className="btn ghost">{t('mtBack')}</Link></main>;
+  if (!data) return <main className="studio-page"><p className="meta">{t('dbLoading')}</p></main>;
+
+  const p = data.project;
+  const loc = locate(clips, T);
+  const caption = mapItems(clips, cues).find((m) => T >= m.ts && T < m.te)?.text || '';
+  const statusText = mode === 'read' ? t('mtReadOnly')
+    : save.state === 'saving' ? t('mtSaving') : save.state === 'dirty' ? t('mtDirty') : save.state === 'error' ? t('mtSaveError')
+      : t('mtSavedAgo').replace('{d}', ago(save.at || p.updatedAt, locale));
+  const cutS = Math.max(0, duration - totalS);
+  const selClip = selIndex >= 0 ? layout(clips)[selIndex] : null;
+
+  return (
+    <div className="mt-editor-wrap">
+      <div className="mt-small">
+        <p>{t('mtDesktopOnly')}</p>
+        <Link href="/studio/editor" className="btn ghost">{t('mtBack')}</Link>
+      </div>
+      <div className="mt-editor">
+        <header className="mt-top">
+          <Link href="/studio/editor" className="btn ghost mt-backbtn"><span aria-hidden="true" className="mt-chev">‹</span> {t('dbStudio')}</Link>
+          <div className="mt-titles">
+            <h1 dir="auto">{p.talk.title}</h1>
+            <small className="meta" role="status">{t('mtVersionN').replace('{n}', save.version)} · {statusText}</small>
+          </div>
+          <span className="mt-badge">{t('mtPreviewBadge')}</span>
+          <div className="mt-top-actions">
+            <button type="button" className="btn ghost sd-pill" onClick={undo} disabled={!canEdit || !h.past.length} title="Ctrl+Z">{t('mtUndo')}</button>
+            <button type="button" className="btn ghost sd-pill" onClick={redo} disabled={!canEdit || !h.future.length} title="Ctrl+Maj+Z">{t('mtRedo')}</button>
+            <button type="button" className="btn ghost sd-pill mt-gold" onClick={async () => { await doSave(); setShowVersions(true); }}>{t('mtVersions')}</button>
+            <button type="button" className="btn sd-pill" disabled title={t('mtRenderSoon')} aria-describedby="mt-render-note">{t('mtRender')}</button>
+            <span id="mt-render-note" className="sr-only">{t('mtRenderSoon')}</span>
+          </div>
+        </header>
+
+        {mode === 'read' && (
+          <div className="mt-readonly" role="status">
+            <span>{!data.editable ? t('mtNotEditable') : lock?.active ? (lock.otherTab ? t('mtOtherTab') : t('mtLockedBySince').replace('{n}', lock.by || '—').replace('{d}', ago(lock.since, locale))) : t('mtFree')}</span>
+            {data.editable && lock?.active && lock.canTake && <button type="button" className="btn sd-pill" onClick={takeOver}>{lock.otherTab ? t('mtEditHere') : t('mtTakeOver')}</button>}
+            {data.editable && !lock?.active && <button type="button" className="btn sd-pill" onClick={editHere}>{t('mtEdit')}</button>}
+          </div>
+        )}
+        {notice && <p className={`mt-notice ${notice.kind}`} role={notice.kind === 'err' ? 'alert' : 'status'}>{notice.text}</p>}
+
+        <div className="mt-main">
+          <aside className="mt-left" aria-label={t('mtAdd')}>
+            <h2 className="mt-cap">{t('mtAdd')}</h2>
+            {[['mtAddTitle', 'E3'], ['mtAddBanner', 'E3'], ['mtAddLogo', 'E3'], ['mtAddMusic', 'E2'], ['mtAddIntro', 'E3'], ['mtAddTransition', 'E3']].map(([k, step]) => (
+              <button key={k} type="button" className="mt-add" disabled title={t('mtComesAt').replace('{s}', step)}>
+                <span>{t(k)}</span><em>{step}</em>
+              </button>
+            ))}
+            <h2 className="mt-cap">{t('mtTemplates')}</h2>
+            {['mtTplStandard', 'mtTplIntro'].map((k) => (
+              <button key={k} type="button" className="mt-add tpl" disabled title={t('mtComesAt').replace('{s}', 'E3')}><span>{t(k)}</span><em>E3</em></button>
+            ))}
+          </aside>
+
+          <section className="mt-center" aria-label={t('mtPreview')}>
+            {data.media
+              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} />
+              : <p className="meta">{t('mtNotEditable')}</p>}
+          </section>
+
+          <aside className="mt-right" aria-labelledby="mt-sel-title">
+            <h2 className="mt-cap">{t('mtSelTrack')}</h2>
+            <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />
+          </aside>
+        </div>
+
+        <div className="mt-bottom">
+          <div className="mt-tools">
+            <button type="button" className="btn ghost sd-pill" onClick={doCut} disabled={!canEdit} title="C">{t('mtCut')}</button>
+            <button type="button" className="btn ghost sd-pill" onClick={doDelete} disabled={!canEdit || clips.length < 2} title={t('mtDeleteKey')}>{t('mtDelete')}</button>
+            <button type="button" className={`btn ghost sd-pill${magnet ? ' mt-on' : ''}`} aria-pressed={magnet} onClick={() => setMagnet((m) => !m)} title="M">{t('mtMagnet')}</button>
+            <span className="mt-sum meta small">{t('mtSum').replace('{e}', fmtTime(totalS)).replace('{s}', fmtTime(duration)).replace('{n}', clips.length)}{loc ? ` · ${t('mtAtSource').replace('{s}', fmtTime(loc.src, { tenths: true }))}` : ''}</span>
+            <label className="mt-zoom">
+              <span>{t('mtZoom')}</span>
+              <input type="range" min={0} max={ZOOM_STEPS} value={zoomStep} onChange={(e) => setZoomStep(Number(e.target.value))} aria-valuetext={`× ${zoom.toFixed(1)}`} />
+            </label>
+          </div>
+          <Timeline clips={clips} duration={duration} T={T} onSeek={(v) => { setT(v); }} sel={sel} onSelect={setSel} onMove={doMove} onTrim={doTrim}
+            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0} />
+        </div>
+      </div>
+      {showVersions && <Versions projectId={id} session={session} canEdit={canEdit} onClose={() => setShowVersions(false)} beforeAction={() => doSave()}
+        onRestored={(res, version) => {
+          if (res) { rev.current = res.rev; savedClips.current = JSON.stringify(res.timeline.clips); dispatch({ type: 'reset', clips: res.timeline.clips }); setT(0); setSel({ track: 'video', id: res.timeline.clips[0]?.id }); }
+          setSave((s) => ({ ...s, state: 'saved', at: res?.savedAt || s.at, version }));
+        }} />}
+    </div>
+  );
+}
+
+// Panneau de droite : réglages de la piste ou de l'extrait sélectionné.
+function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub, canEdit, doTrim, doDelete, setT, subsLang }) {
+  const [inV, setInV] = useState(''); const [outV, setOutV] = useState('');
+  useEffect(() => { if (selClip) { setInV(fmtTime(selClip.in, { tenths: true })); setOutV(fmtTime(selClip.out, { tenths: true })); } }, [selClip?.id, selClip?.in, selClip?.out]); // eslint-disable-line react-hooks/exhaustive-deps
+  const apply = (edge, str) => { const v = parseTime(str); if (Number.isNaN(v)) return; doTrim(selIndex, edge, v); };
+  const inMontage = mapItems(clips, cues).length;
+
+  if (sel.track === 'video' && selClip) {
+    return (
+      <div className="mt-panel">
+        <h3 id="mt-sel-title">{t('mtTrVideo')}</h3>
+        <p className="meta">{t('mtClipN').replace('{n}', selIndex + 1).replace('{c}', clips.length)}</p>
+        <div className="mt-field">
+          <label htmlFor="mt-in">{t('mtClipIn')}</label>
+          <input id="mt-in" dir="ltr" value={inV} disabled={!canEdit} onChange={(e) => setInV(e.target.value)} onBlur={(e) => apply('in', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply('in', e.currentTarget.value); }} />
+        </div>
+        <div className="mt-field">
+          <label htmlFor="mt-out">{t('mtClipOut')}</label>
+          <input id="mt-out" dir="ltr" value={outV} disabled={!canEdit} onChange={(e) => setOutV(e.target.value)} onBlur={(e) => apply('out', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply('out', e.currentTarget.value); }} />
+        </div>
+        <div className="mt-kv"><span>{t('mtClipLen')}</span><b dir="ltr">{fmtTime(selClip.out - selClip.in, { tenths: true })}</b></div>
+        <div className="mt-kv"><span>{t('mtClipAt')}</span><b dir="ltr">{fmtTime(selClip.start, { tenths: true })}</b></div>
+        <div className="mt-actions">
+          <button type="button" className="btn ghost sd-pill" onClick={() => setT(selClip.start)}>{t('mtGoStart')}</button>
+          <button type="button" className="btn ghost sd-pill" onClick={doDelete} disabled={!canEdit || clips.length < 2}>{t('mtDelete')}</button>
+        </div>
+        <p className="mt-hint">{t('mtVideoHint').replace('{e}', fmtTime(totalS)).replace('{c}', fmtTime(cutS))}</p>
+      </div>
+    );
+  }
+  const blocks = {
+    orig: [t('mtTrOrig'), t('mtOrigHint'), t('mtStepE2Audio')],
+    dub: [t('mtTrDub'), dub ? t('mtDubHint').replace('{n}', dub.segments.length).replace('{k}', dub.segments.filter((s) => s.keep).length) : t('mtNoDubHint'), t('mtStepE2Audio')],
+    music: [t('mtTrMusic'), t('mtMusicHint'), null],
+    titles: [t('mtTrTitles'), t('mtTitlesHint'), null],
+    subs: [t('mtTrSubs'), cues.length ? t('mtSubsHint').replace('{l}', String(subsLang || '').toUpperCase()).replace('{n}', inMontage).replace('{c}', cues.length) : t('mtNoSubsHint'), t('mtSubsBurn')],
+    video: [t('mtTrVideo'), t('mtPickClip'), null],
+  }[sel.track] || [t('mtTrVideo'), t('mtPickClip'), null];
+  return (
+    <div className="mt-panel">
+      <h3 id="mt-sel-title">{blocks[0]}</h3>
+      <p className="mt-hint">{blocks[1]}</p>
+      {sel.track === 'dub' && dub?.link && <a className="btn ghost sd-pill" href={dub.link}>{t('mtOpenDub')}</a>}
+      {blocks[2] && <p className="meta small">{blocks[2]}</p>}
+    </div>
+  );
+}

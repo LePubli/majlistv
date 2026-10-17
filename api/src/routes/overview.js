@@ -18,7 +18,7 @@ export default async function overviewRoutes(app) {
     const isAdmin = req.user.role === 'admin';
     // Dernière conférence publiée, visible et lisible (vidéo convertie) de la personne.
     const last = (await pool.query(
-      `SELECT t.id, t.title, t.duration_seconds AS "durationSeconds", COALESCE(t.publish_at, t.created_at) AS "publishedAt"
+      `SELECT t.id, t.title, t.source, t.duration_seconds AS "durationSeconds", COALESCE(t.publish_at, t.created_at) AS "publishedAt"
          FROM talks t WHERE t.organizer_id = $1 AND t.publication = 'published' AND ${visibleSql('t')} AND (t.source <> 'upload' OR t.video_status = 'ready')
         ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 1`, [organizerId])).rows[0] || null;
     const out = { days, last, channel: null, stats: null, dubbing: null, storage: null };

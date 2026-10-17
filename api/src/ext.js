@@ -34,6 +34,7 @@ export const CATALOG = {
   'activity.pause': 'Événement : une tâche en cours a été mise en pause ({ queue, ref }) : le module l’arrête et la remet dans la file',
   'studio.production': 'Événement : chaque module ajoute l’état de production de conférences (vues, doublage…) — Studio → Contenus (objet par conférence, { ids })',
   'studio.overview': 'Événement : chaque module ajoute ses chiffres au tableau de bord du Studio (objet, { organizerId, days, talkId, isAdmin })',
+  'editor.media': 'Événement : chaque module ajoute ses pistes liées à un projet de l’éditeur de montage (ex. segments de la voix française) — module Éditeur (objet, { talkId })',
 };
 
 export function provide(name, fn, { owner = 'socle', active = always } = {}) {

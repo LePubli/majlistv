@@ -49,7 +49,7 @@ with sync_playwright() as p:
             ok(ov(pg) <= 1, f'{tag} tableau de bord sans débordement')
             if w == 1440: pg.screenshot(path=str(OUT / f'studio-tableau-{lang}.png'))
             for path, sel, label in (('/studio/contents', '.st-tabs', 'contenus'), ('/studio/subtitles', '.studio-search', 'sous-titres'), ('/studio/activity', '.sd-h2', 'activité'),
-                                     ('/studio/settings', '.sd-tools', 'paramètres'), ('/studio/dubbing', '.sd-card', 'doublage'), ('/studio/editor', '.sd-card', 'éditeur')):
+                                     ('/studio/settings', '.sd-tools', 'paramètres'), ('/studio/dubbing', '.sd-card', 'doublage'), ('/studio/editor', '.mt-home .sd-h2, .mt-off', 'éditeur')):
                 pg.goto(WEB + path); pg.wait_for_selector(sel, timeout=20000); pg.wait_for_timeout(400)
                 ok(pg.locator('.studio-nav a.on').count() == 1, f'{tag} {label} : une seule entrée allumée ({pg.locator(".studio-nav a.on").first.get_attribute("href")})')
                 ok(ov(pg) <= 1, f'{tag} {label} sans débordement')
