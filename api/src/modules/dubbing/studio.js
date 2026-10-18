@@ -3,6 +3,8 @@
 //   tableau de bord : écoute en français, choses à faire ; Studio → Contenus : état du doublage de chaque conférence.
 import { pool } from '../../db.js';
 import { KEPT, SEGS_FROM, TEXT_HASH } from './routes.js';
+import { getDefaults, getTalkParams } from './lib.js';
+import { presignGet } from '../../storage.js';
 
 // Tâches de doublage (en cours, en attente, en échec depuis moins de 30 jours).
 export async function collectTasks(out, { organizerId }) {
@@ -89,11 +91,19 @@ export async function overview(out, { organizerId, days, talkId }) {
 
 // Étape E1 (module « Éditeur de montage ») : la piste « Voix française » de l'éditeur suit les phrases du doublage.
 // Chaque phrase garde ses temps dans la vidéo d'origine ; l'éditeur les place selon le montage (pistes liées).
+// Étape E2 : + lien de la piste « voix seule » (écoute dans l'aperçu, forme d'onde), identifiant de la piste (une nouvelle
+// piste périme la forme d'onde) et volume de la voix d'origine sous la voix française réglé pour le doublage (%).
 export async function editorMedia(out, { talkId }) {
   const segs = (await pool.query(
     `SELECT s.start_ms / 1000.0 AS s, s.end_ms / 1000.0 AS e, ${KEPT} AS keep FROM ${SEGS_FROM}
       WHERE s.talk_id = $1 AND s.lang = 'fr' ORDER BY s.idx LIMIT 6000`, [talkId])).rows;
-  const track = (await pool.query('SELECT 1 FROM dub_tracks WHERE talk_id = $1', [talkId])).rowCount > 0;
+  const track = (await pool.query('SELECT job_id, voice_key, created_at FROM dub_tracks WHERE talk_id = $1', [talkId])).rows[0] || null;
   if (!segs.length && !track) return;
-  out.dub = { track, segments: segs.map((x) => ({ s: Number(x.s), e: Number(x.e), keep: Boolean(x.keep) })), link: `/studio/dubbing/${talkId}` };
+  const duck = Number({ ...(await getDefaults()), ...((await getTalkParams(talkId)) || {}) }.duck);
+  let voiceUrl = null;
+  if (track?.voice_key) { try { voiceUrl = await presignGet(track.voice_key); } catch { voiceUrl = null; } }
+  out.dub = {
+    track: Boolean(track), segments: segs.map((x) => ({ s: Number(x.s), e: Number(x.e), keep: Boolean(x.keep) })), link: `/studio/dubbing/${talkId}`,
+    trackId: track ? `${track.job_id || 'x'}:${new Date(track.created_at).getTime()}` : null, voiceUrl, duck: Number.isFinite(duck) ? duck : 15,
+  };
 }

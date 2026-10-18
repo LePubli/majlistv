@@ -127,11 +127,24 @@ def check(mid):
         p.terminate(); p.wait(timeout=10); shutil.rmtree(tmp, ignore_errors=True)
 
 
-# Réglages Stripe de test (le webhook doit pouvoir être vérifié)
+# Réglages Stripe de test (le webhook doit pouvoir être vérifié).
+# Registre des problèmes, point 1 (étape E2) : sans prix Stripe réglés, l'API répond « Le paiement n'est pas configuré » (503)
+# et le contrôle du remboursement ne vérifiait plus rien. Le test règle des prix factices (connus du faux serveur Stripe)
+# et remet les réglages d'avant à la fin.
+import atexit
+PRICE_KEYS = ("stripe_price_monthly", "stripe_price_yearly")
+cur.execute("select key, value, is_secret from app_settings where key = any(%s)", (list(PRICE_KEYS),)); SAVED_PRICES = cur.fetchall()
+def restore_prices():
+    cur.execute("delete from app_settings where key = any(%s)", (list(PRICE_KEYS),))
+    for k, v, sec in SAVED_PRICES: cur.execute("insert into app_settings(key, value, is_secret) values (%s, %s, %s)", (k, v, sec))
+atexit.register(restore_prices)
 cur.execute("delete from app_settings where key in ('stripe_webhook_secret')")
 p, up = start(API_DIR)
 try:
-    requests.put(B + "/admin/settings", headers=ADMIN, json={"values": {"stripe_secret_key": "sk_test_A", "stripe_webhook_secret": SECRET}, "confirmStripeReset": True})
+    requests.put(B + "/admin/settings", headers=ADMIN, json={"values": {"stripe_secret_key": "sk_test_A", "stripe_webhook_secret": SECRET,
+                                                                        "stripe_price_monthly": "price_m", "stripe_price_yearly": "price_y"}, "confirmStripeReset": True})
+    cur.execute("select count(*) from app_settings where key = any(%s) and value <> ''", (list(PRICE_KEYS),))
+    ok(cur.fetchone()[0] == 2, "prix Stripe factices réglés pour le test du remboursement")
     lst = requests.get(B + "/talks").json()
     lst = lst.get("talks", lst.get("items", [])) if isinstance(lst, dict) else lst
     TALK = lst[0]["id"] if lst else None

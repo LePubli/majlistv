@@ -41,7 +41,7 @@ try:
     rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": True})
     mods = rq("GET", "/admin/modules", headers=A).json()
     m = next((x for x in (mods.get("modules") if isinstance(mods, dict) else mods) if x["id"] == "editor"), None)
-    ok(m and m["version"] == "0.1.0" and not m.get("error"), "fiche du module valide (version 0.1.0)")
+    ok(m and m["version"] == "0.2.0" and not m.get("error"), "fiche du module valide (version 0.2.0)")
 
     O, oid = user("orga", "organizer"); O2, oid2 = user("autre", "organizer"); M, _ = user("modo", "moderator")
     t1 = talk("montage", oid); t_yt = talk("youtube", oid, source="youtube"); t_proc = talk("conversion", oid, video="processing"); t_other = talk("autrui", oid2)

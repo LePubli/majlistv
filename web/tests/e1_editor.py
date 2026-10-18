@@ -82,7 +82,8 @@ try:
         ok(pg.locator('.mt-row').count() == 7, 'règle + 6 pistes (Vidéo, Voix d\'origine, Voix française, Musique, Titres et logo, Sous-titres)')
         ok('Version 1' in pg.locator('.mt-titles').inner_text() and 'Aperçu 360p' in pg.locator('.mt-badge').inner_text(), 'en-tête : « Version 1 », badge « Aperçu 360p »')
         ok(pg.locator('.mt-row-subs .mt-block').count() >= 10 and pg.locator('.mt-row-dub .mt-block.dub.keep').count() == 1, 'sous-titres liés et voix française (un passage en voix d\'origine)')
-        ok(pg.locator('.mt-add:disabled').count() == 8, 'Ajouter / Modèles : annoncés pour les étapes E2 et E3 (désactivés)')
+        # Depuis E2, « Musique de fond » est actif ; le reste arrive avec E3.
+        ok(pg.locator('.mt-add:disabled').count() == 7 and pg.locator('.mt-add.on', has_text='Musique de fond').count() == 1, 'Ajouter / Modèles : musique active (E2), le reste annoncé pour E3')
         ok(pg.locator('button', has_text='Rendre la vidéo').is_disabled(), '« Rendre la vidéo » désactivé (étape E4)')
 
         # --- aperçu 360p

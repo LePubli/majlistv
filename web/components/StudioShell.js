@@ -37,7 +37,7 @@ export function studioSection(path) {
 }
 
 export default function StudioShell({ children }) {
-  const { t, user, ready, feat, locale } = useApp();
+  const { t, user, ready, feat, locale, modUsable } = useApp();
   const path = usePathname();
   const router = useRouter();
 
@@ -102,7 +102,7 @@ export default function StudioShell({ children }) {
   // Une entrée disparaît si sa fonction est coupée ou si la partie web de son module est absente.
   const visible = (href) => {
     const mod = MODULE_OF_HREF[href];
-    if (mod) return hasWebModule(mod) && feat(mod);
+    if (mod) return hasWebModule(mod) && modUsable(mod);
     const id = featureForPath(href);
     return !id || feat(id);
   };

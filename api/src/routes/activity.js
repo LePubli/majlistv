@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
 import * as ext from '../ext.js';
 
-export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive'];
+export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor']; // editor : analyses du son (étape E2)
 const HEAVY = ['video', 'transcript', 'dubbing'];
 
 // Réglages de la plage horaire et de la pause générale.

@@ -2,11 +2,14 @@
 // Éditeur de montage (étape E1) — aperçu dans le navigateur : la qualité 360p déjà produite par la conversion (hls.js),
 // jouée en suivant le montage. À la fin d'un extrait, le lecteur saute au début de l'extrait suivant : c'est un aperçu
 // (petit temps de chargement possible aux raccords) ; le rendu final de l'étape E4 sera continu et en haute qualité.
+// Étape E2 : le son suit les réglages — volume de la voix d'origine (baissée sous la voix française), voix française
+// (piste « voix seule » du doublage, calée sur la vidéo d'origine) et musiques de fond, avec fondus et baisse automatique.
+// Les volumes passent par l'élément audio/vidéo (0 à 100 %) : un gain au-dessus de 0 dB n'est entendu qu'au rendu final.
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useApp } from '../../components/Providers';
-import { layout, locate, clock } from './ops';
+import { layout, locate, clock, musicTime } from './ops';
 
-const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, setPlaying, caption, poster }, ref) {
+const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, setPlaying, caption, poster, sound }, ref) {
   const { t } = useApp();
   const video = useRef(null);
   const clipsRef = useRef(clips);
@@ -15,6 +18,33 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
   const [state, setState] = useState('loading'); // loading | ready | error
   const Tref = useRef(T); const playRef = useRef(playing);
   clipsRef.current = clips; Tref.current = T; playRef.current = playing;
+  const soundRef = useRef(sound); soundRef.current = sound;
+  const dubEl = useRef(null);
+  const musicEls = useRef(new Map()); // id de la musique → élément <audio>
+
+  // Son : volumes et positions de la voix française et des musiques au temps tt du montage (srcT = temps de la vidéo d'origine).
+  const syncSound = (tt, srcT, isPlaying) => {
+    const snd = soundRef.current; const v = video.current;
+    if (!snd || !v) return;
+    const mix = snd.getMix(tt);
+    v.volume = mix.orig; v.dataset.vol = mix.orig.toFixed(3);
+    const follow = (el, want, vol) => {
+      if (!el) return;
+      el.volume = vol; el.dataset.vol = vol.toFixed(3);
+      if (!isPlaying || want == null || vol <= 0) { if (!el.paused) el.pause(); if (want != null && Math.abs(el.currentTime - want) > 0.3) { try { el.currentTime = want; } catch { /* rien */ } } return; }
+      if (Math.abs(el.currentTime - want) > 0.3) { try { el.currentTime = want; } catch { /* rien */ } }
+      if (el.paused) el.play().catch(() => {});
+    };
+    follow(dubEl.current, srcT, mix.dub);
+    for (const m of snd.music || []) follow(musicEls.current.get(m.item.id), musicTime(m.item, tt, m.assetDur), mix.music[m.item.id] || 0);
+  };
+  const syncRef = useRef(syncSound); syncRef.current = syncSound;
+  // À l'arrêt ou quand les réglages changent : volumes à jour, sons en pause.
+  useEffect(() => {
+    if (playing) return;
+    const loc = locate(clips, T);
+    syncRef.current(T, loc ? loc.src : null, false);
+  }, [T, clips, playing, sound]);
 
   // Chargement du flux 360p.
   useEffect(() => {
@@ -85,12 +115,17 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
         } else {
           const tt = c.start + Math.max(0, s - c.in);
           lastSet.current = tt; onTime(tt);
+          syncRef.current(tt, s, true);
         }
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); v.removeEventListener('seeked', onSeeked); v.pause(); };
+    return () => {
+      cancelAnimationFrame(raf); v.removeEventListener('seeked', onSeeked); v.pause();
+      if (dubEl.current) dubEl.current.pause();
+      for (const el of musicEls.current.values()) el.pause();
+    };
     // T n'est lu qu'au démarrage de la lecture
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, state]);
@@ -103,6 +138,11 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
       <div className="mt-screen">
         <video ref={video} playsInline preload="auto" poster={poster || undefined} aria-label={t('mtPreviewAria')} onClick={() => setPlaying(!playing)} />
         {caption && <p className="mt-caption" dir="auto">{caption}</p>}
+        {sound?.dubUrl && <audio ref={dubEl} src={sound.dubUrl} preload="auto" className="mt-hidden-audio" data-role="dub" />}
+        {(sound?.music || []).map((m) => (
+          <audio key={m.item.id} src={m.url} preload="auto" loop={false} className="mt-hidden-audio" data-role="music" data-id={m.item.id}
+            ref={(el) => { if (el) musicEls.current.set(m.item.id, el); else musicEls.current.delete(m.item.id); }} />
+        ))}
         {state === 'loading' && <p className="mt-screen-msg">{t('dbLoading')}</p>}
         {state === 'error' && <p className="mt-screen-msg error" role="alert">{t('mtPreviewError')}</p>}
         {!playing && state === 'ready' && (

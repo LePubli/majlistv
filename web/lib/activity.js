@@ -1,8 +1,9 @@
 // Étape S3 — libellés des tâches de Studio → Activité (aussi utilisés par le tableau de bord).
-// Une tâche : { queue: video | transcript | translation | dubbing | archive, kind?, lang?, status, progress, blockedBy? }
+// Une tâche : { queue: video | transcript | translation | dubbing | archive | editor, kind?, lang?, status, progress, blockedBy? }
 export function taskName(x, t) {
   if (x.queue === 'dubbing') return t(x.kind === 'preview' ? 'tqPreview' : 'tqDubbing');
   if (x.queue === 'archive') return t(x.kind === 'restore' ? 'tqRestore' : 'tqArchive');
+  if (x.queue === 'editor') return t(x.kind === 'music' ? 'tqWaveMusic' : x.kind === 'dub' ? 'tqWaveDub' : 'tqWaveOrig'); // étape E2 : analyses du son
   if (x.queue === 'translation') return `${t('tqTranslation')}${x.lang ? ` (${String(x.lang).toUpperCase()})` : ''}`;
   return t(x.queue === 'video' ? 'tqVideo' : 'tqTranscript');
 }

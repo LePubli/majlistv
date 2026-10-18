@@ -1,10 +1,12 @@
-// Module « Éditeur de montage » (étape E1) : projets de montage des vidéos envoyées, timeline multipiste, sauvegarde
-// automatique, versions, verrou d'édition (un seul éditeur à la fois, les autres en lecture seule), aperçu 360p.
-//   Événement émis : editor.media (les modules ajoutent leurs pistes liées, ex. le doublage : segments de la voix française).
-//   Événement écouté : studio.production (Studio → Contenus : étape « Montée »).
+// Module « Éditeur de montage » : projets de montage des vidéos envoyées, timeline multipiste, sauvegarde automatique,
+// versions, verrou d'édition, aperçu 360p (étape E1) ; audio pro : réglages du son, formes d'onde et niveaux mesurés,
+// musiques de fond, écoute de la réduction du bruit (étape E2).
+//   Événement émis : editor.media (les modules ajoutent leurs pistes liées, ex. le doublage : voix française).
+//   Événements écoutés : studio.production (Studio → Contenus : étape « Montée »), activity.collect (analyses du son).
 import routes from './routes.js';
 import { pool } from '../../db.js';
 import { isEdited } from './timeline.js';
+import { processQueue, recover, collectTasks } from './audio.js';
 
 export default async function register(app, ctx) {
   ctx.on('studio.production', async (out, { ids }) => {
@@ -12,5 +14,17 @@ export default async function register(app, ctx) {
     const { rows } = await pool.query("SELECT talk_id, timeline, updated_at FROM editor_projects WHERE kind = 'main' AND talk_id = ANY($1::uuid[])", [ids]);
     for (const r of rows) if (out[r.talk_id]) out[r.talk_id].editor = { project: true, edited: isEdited(r.timeline), updatedAt: r.updated_at };
   });
+  // Étape E2 : les analyses du son (formes d'onde) apparaissent dans Studio → Activité.
+  ctx.on('activity.collect', (out, opts) => collectTasks(out, opts));
   await app.register(async (scope) => routes(scope, ctx));
+}
+
+// File des analyses du son : vérifiée toutes les 10 s (les routes la lancent aussi tout de suite).
+export async function start(app, ctx) {
+  await recover();
+  const tick = async () => {
+    try { if (await ctx.enabled()) await processQueue(app.log); } catch (err) { app.log.warn(`Éditeur : ${err.message}`); }
+  };
+  setInterval(tick, 10_000).unref();
+  setTimeout(tick, 8_000).unref();
 }

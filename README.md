@@ -3738,3 +3738,133 @@ docker logs --tail 100 dockpanel-git-majlistv-api 2>&1 | grep -i "editor"
 - un écran tactile (tablette) ;
 - le VPS.
 - Retrait du module de l'API : le contrôle « Stripe : remboursement traité » échoue (503) pour tous les modules, même ceux qu'E1 n'a pas touchés. La base de test locale n'a pas les prix Stripe réglés ; ce n'est pas lié à E1.
+
+## Étape E2 — Éditeur de montage : audio pro
+
+### Description
+- **Réglages du son**, dans le panneau de droite (« Piste sélectionnée »), selon la maquette « Studio v2 », écran 4. On clique sur le nom d'une piste pour l'ouvrir.
+  - **Voix d'origine** :
+    - volume (−40 à +12 dB) et case « Couper la voix d'origine » ;
+    - **fondu aux raccords** (30 ms par défaut, contre les « clics » aux coupes) ;
+    - **réduction du bruit** (désactivée, légère, forte) ;
+    - **niveau sonore mesuré** (LUFS) ;
+    - boutons **« Sans réduction » / « Avec réduction »** : 10 s de la voix d'origine à l'endroit de la tête de lecture, préparées par l'API avec FFmpeg, pour comparer à l'oreille.
+  - **Voix française** (piste liée au doublage) :
+    - « Utiliser la voix française dans ce montage » ;
+    - volume ;
+    - **voix d'origine sous la voix française** (15 % par défaut, repris des réglages du doublage de la conférence) ;
+    - **fondu d'entrée / sortie** (0,5 s) ;
+    - niveau mesuré.
+  - **Musique** :
+    - liste des musiques du montage et bouton « Ajouter une musique » ;
+    - pour une musique : volume (−12 dB par défaut), début et durée (saisie au clavier), fondus d'entrée et de sortie, **en boucle**, **baisse automatique sous la voix** (−12 dB) et « Retirer du montage ».
+  - **Mixage final**, visible dans chaque panneau son : **niveau sonore homogène** (−14, −16 recommandé, −18 ou −23 LUFS).
+  - Un réglage tiré au curseur compte pour **un seul geste** dans Annuler / Rétablir.
+- **Timeline** :
+  - **formes d'onde** de la voix d'origine (placées selon le montage), de la voix française (dans ses phrases) et des musiques ;
+  - **courbe or du volume de la voix d'origine**, qui descend sous la voix française et à chaque raccord ;
+  - la piste Musique accepte de **déplacer** une musique, de la **raccourcir ou rallonger par ses bords** (l'aimant colle aux raccords et à la tête de lecture), de la sélectionner, et de la supprimer avec Suppr ;
+  - en-têtes des pistes : « 15 % » (voix d'origine baissée), « Coupée », « Liée » ou « Non utilisée », « Baisse auto ».
+  - **Supprimer un passage de la vidéo supprime ses blocs de voix française** (pistes liées depuis E1) ; les musiques restent à leur place dans le temps du montage.
+- **Aperçu** : le son suit les réglages.
+  - La voix d'origine est baissée sous la voix française, avec les fondus. La voix française (piste « voix seule » du doublage) joue calée sur la vidéo d'origine. Les musiques jouent avec leurs fondus, leur boucle et leur baisse automatique.
+  - Limite : l'aperçu ne monte pas au-dessus de 100 % (un gain positif ne s'entend qu'au rendu).
+  - La réduction du bruit et le niveau homogène s'appliquent au rendu final (étape E4), sauf l'écoute de 10 s.
+- **Bibliothèque de musiques**, bouton « Musique de fond » à gauche :
+  - commune à tous les montages ;
+  - **l'administrateur importe** (mp3, m4a, aac, wav, ogg, flac, webm ; 60 Mo au plus), avec un titre et la source ou la licence. Le fichier va directement dans le stockage ;
+  - l'API analyse chaque musique : durée, forme d'onde, niveau ;
+  - tout le monde écoute et **ajoute au montage** à la tête de lecture : jusqu'à la fin du montage, en boucle si la musique est plus courte ;
+  - une musique utilisée par un montage, ou par une de ses versions, ne peut pas être supprimée.
+- **Analyses du son** (formes d'onde, LUFS) : une file dans l'API, une analyse à la fois, avec FFmpeg.
+  - Sources : voix d'origine = son de la qualité 360p ; voix française = piste du doublage ; musiques.
+  - Une nouvelle piste française est réanalysée toute seule.
+  - Les analyses apparaissent dans **Studio → Activité** (« Analyse du son… », tâches légères : pause et priorité possibles).
+- **Registre des problèmes réglés avec cette étape** (`docs/PROBLEMES-A-REGLER.md`) :
+  1. **Test de retrait des modules** : il règle des prix Stripe factices puis les remet ; le contrôle du remboursement vérifie de nouveau quelque chose.
+  2. **`test_stats.py`** : les statistiques de quiz Kids sont mesurées en écart avant / après, sans dépendre des anciennes données de la base de test.
+  3. Point 4 du registre : **un module sans fonction associée (Doublage, Stockage, Éditeur) désactivé disparaît des menus et des liens des organisateurs**. L'administrateur garde l'entrée, et la page l'invite à activer le module.
+- **Technique :**
+  - module `editor` **0.2.0** : migration `editor/002_audio.sql` (`editor_assets`, `editor_waveforms`), `audio.js` (analyse FFmpeg, file, extraits), document de montage étendu (`audio`), routes `/studio/editor/projects/:id/audio`, `…/audio/retry`, `…/denoise-sample`, `/studio/editor/music` (+ `upload-url`, `:id`) ;
+  - module doublage **0.7.0** (lien de la voix française et réglage de la baisse pour l'éditeur) ;
+  - file `editor` ajoutée à Studio → Activité ;
+  - **FFmpeg ajouté à l'image de l'API** (Dockerfile racine et `api/Dockerfile`) ;
+  - partie web : `AudioPanel.js`, `MusicLibrary.js`, calculs du son dans `ops.js` (`mixAt`, enveloppes, musiques), formes d'onde dans `Timeline.js`, son de l'aperçu dans `Preview.js`.
+
+### Prérequis
+- Étape E1 en place, module « Éditeur de montage » activé. Aucune variable d'environnement à ajouter.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull**.
+2. DockPanel → Git Deploy :
+   1. **Redeploy `majlistv-api`** : l'image reçoit FFmpeg (construction un peu plus longue), et la migration `editor/002_audio.sql` s'applique ;
+   2. **Redeploy `majlistv-web`**.
+   Ni le worker, ni le transcripteur, ni le traducteur, ni `majlistv-dubbing` n'ont changé.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker exec dockpanel-git-majlistv-api ffmpeg -hide_banner -version | head -1
+docker logs --tail 150 dockpanel-git-majlistv-api 2>&1 | grep -i "module editor"
+```
+- La commande `ffmpeg` doit afficher « ffmpeg version … ».
+- La dernière doit afficher « Module editor : migration appliquée 002_audio.sql ».
+
+### Exemples d'utilisation
+- **Recette** :
+  1. Ouvre le montage d'une conférence qui a une version française.
+  2. Clique sur la piste **Voix française** : sous la voix française, la courbe or de la voix d'origine descend à 15 %. Écoute l'aperçu : la voix d'origine baisse quand la voix française parle.
+  3. Coupe un passage puis « Supprimer le passage » : ses blocs de voix française disparaissent.
+  4. « Musique de fond » → importe une musique (administrateur), puis « Ajouter au montage » : elle baisse toute seule sous la voix.
+- **Voir les analyses et les musiques en base** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT kind, talk_id, asset_id, status, round(duration_s, 1) AS secondes, lufs, error, updated_at FROM editor_waveforms ORDER BY updated_at DESC LIMIT 20;
+SELECT id, title, license, round(bytes / 1048576.0, 1) AS mo, created_at FROM editor_assets ORDER BY created_at DESC;
+SQL
+```
+- **Relancer toutes les analyses en échec** :
+```bash
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE editor_waveforms SET status = '"'"'queued'"'"', attempts = 0, error = NULL WHERE status = '"'"'failed'"'"';"'
+```
+
+### Debug
+- **« Analyse du son en cours… » qui ne finit jamais** :
+  - Studio → Activité : la tâche est-elle en pause ?
+  - FFmpeg est-il dans l'image ? Lance `docker exec dockpanel-git-majlistv-api ffmpeg -version` ; s'il manque, redéploie `majlistv-api`.
+  - Regarde le journal :
+```bash
+docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i "forme d'onde\|Éditeur"
+```
+- **« Analyse du son impossible »** : le message donne la raison (fichier illisible, piste française supprimée…). Le bouton de relance est dans l'API (`…/audio/retry`), ou utilise la commande SQL ci-dessus.
+- **L'import d'une musique échoue (« L'envoi du fichier a échoué »)** : le stockage doit autoriser l'adresse du site (CORS, réglé au démarrage de l'API avec `CORS_ORIGIN`). Comme pour l'envoi des vidéos, `CORS_ORIGIN` doit contenir `https://majlisstv.le-publicitaire.fr`.
+- **Pas de voix française dans l'aperçu** : il faut un doublage complet terminé (piste « voix seule »). La piste Voix française indique « Aucune » sinon.
+- **Les écoutes « avec / sans réduction » répondent « FFmpeg est absent »** : redéploie `majlistv-api`.
+
+### Tests
+- API : `python3 api/tests/test_editor_e2.py` (41 contrôles). Il couvre :
+  - de vraies analyses FFmpeg : forme d'onde à 100 ms, LUFS, voix française parlée ou silencieuse ;
+  - la nouvelle piste française réanalysée ;
+  - les écoutes avec et sans réduction ;
+  - la bibliothèque (droits, formats, taille, import, analyse, licence, suppression refusée si utilisée) ;
+  - les réglages enregistrés et les réglages invalides refusés ;
+  - Studio → Activité et le journal.
+- Calculs du son : `node web/tests/e2_mix.mjs` (20 contrôles : baisse, fondus, raccords, musiques, boucle, formes d'onde).
+- Navigateur : `python3 web/tests/e2_audio.py [dossier]` (32 contrôles). Il vérifie :
+  - le volume réel de la vidéo dans l'aperçu (15 % puis 20 % sous la voix française) ;
+  - un seul « Annuler » pour un réglage au curseur ;
+  - la voix d'origine coupée, l'écoute de la réduction du bruit ;
+  - l'import d'une musique à travers l'écran, la musique plus basse sous la voix, le déplacement à la souris, Suppr puis Ctrl+Z ;
+  - la sauvegarde, la lecture de la voix française avec la vidéo ;
+  - l'arabe, 1024 px, et les menus d'un module désactivé.
+- Non-régression : `test_editor_e1.py`, `e1_editor.py`, `e1_ops.mjs`, `test_studio_s3.py`, `test_dubbing_d1b.py`, `test_dubbing_d2.py`, `test_stats.py`, `s1_dubbing.py`, `s3_studio.py`, `etape_d.py`, retrait des modules `editor` et `dubbing` (API, désormais sans échec Stripe) et construction du site sans `editor`.
+
+### Testé / non testé
+**Testé ici** : tout ce qui précède, avec la base de test, un S3 de test, FFmpeg 6.1 et de vrais fichiers son.
+
+**Non testé** :
+- la construction de l'image de l'API avec FFmpeg (pas de Docker ici ; paquet `ffmpeg` d'Alpine) ;
+- l'analyse d'une vraie conférence d'une heure : environ 1 min de calcul attendue, non mesurée sur le VPS ;
+- la réduction du bruit sur une vraie voix bruitée : les réglages d'afftdn sont à juger à l'oreille avec les boutons d'écoute ;
+- le son dans un vrai Chrome, Firefox ou Safari avec la vidéo H.264/AAC : le navigateur de test ne lit que VP9/Opus.

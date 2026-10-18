@@ -152,3 +152,136 @@ export function rulerStep(pxPerSec) {
   const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
   return steps.find((s) => s * pxPerSec >= 90) || 3600;
 }
+
+// ===== Étape E2 — son =====
+// Réglages du son : mêmes valeurs par défaut que l'API (api/src/modules/editor/timeline.js).
+export const MUSIC_DEF = { offset: 0, gainDb: -12, fadeIn: 2, fadeOut: 3, loop: false, duck: true, duckDb: -12 };
+export const AUDIO_DEF = {
+  orig: { gainDb: 0, mute: false, joinFadeMs: 30, denoise: 'off' },
+  dub: { use: true, gainDb: 0, duck: 15, fade: 0.5 },
+  music: [],
+  loudness: { on: true, target: -16 },
+};
+export function withAudio(a, defaults = AUDIO_DEF) {
+  const d = defaults || AUDIO_DEF;
+  return {
+    orig: { ...d.orig, ...(a?.orig || {}) },
+    dub: { ...d.dub, ...(a?.dub || {}) },
+    music: (a?.music || []).map((m) => ({ ...MUSIC_DEF, ...m })),
+    loudness: { ...d.loudness, ...(a?.loudness || {}) },
+  };
+}
+export const dbToLin = (db) => 10 ** ((Number(db) || 0) / 20);
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+// Moments où la voix française parle, en temps du montage (phrases non gardées en voix d'origine).
+export function dubSpans(clips, segments) {
+  return mapItems(clips, (segments || []).filter((s) => !s.keep)).map((m) => ({ ts: m.ts, te: m.te })).sort((a, b) => a.ts - b.ts);
+}
+// Moments où quelqu'un parle dans la vidéo d'origine (phrases des sous-titres), en temps du montage.
+export const speechSpans = (clips, cues) => mapItems(clips, cues || []).map((m) => ({ ts: m.ts, te: m.te })).sort((a, b) => a.ts - b.ts);
+
+// 0 hors des passages, 1 dedans, avec une rampe de « fade » secondes avant et après (baisse progressive).
+export function envelope(T, spans, fade) {
+  let best = 0;
+  for (const s of spans) {
+    if (s.ts - fade > T) break;
+    if (T >= s.ts && T <= s.te) return 1;
+    const d = T < s.ts ? s.ts - T : T - s.te;
+    if (fade > 0 && d < fade) best = Math.max(best, 1 - d / fade);
+  }
+  return best;
+}
+
+// Temps dans le fichier d'une musique au temps T du montage (null si la musique ne joue pas).
+export function musicTime(m, T, assetDur) {
+  if (T < m.start || T >= m.start + m.len) return null;
+  let s = m.offset + (T - m.start);
+  if (m.loop && assetDur > 0) s %= assetDur;
+  else if (assetDur > 0 && s >= assetDur) return null;
+  return s;
+}
+
+// Volumes (0-1) de chaque source au temps T : voix d'origine, voix française, musiques. ctx = { clips, dubSp, speechSp, hasDub }.
+export function mixAt(T, audio, ctx) {
+  const a = audio;
+  const useDub = Boolean(ctx.hasDub && a.dub.use);
+  const ev = useDub ? envelope(T, ctx.dubSp, a.dub.fade) : 0;
+  // Petit fondu aux raccords : le son descend puis remonte sur joinFadeMs autour de chaque raccord.
+  let jf = 1;
+  if (a.orig.joinFadeMs > 0 && ctx.joins) {
+    const half = a.orig.joinFadeMs / 2000;
+    for (const j of ctx.joins) { const d = Math.abs(T - j); if (d < half) jf = Math.min(jf, d / half); }
+  }
+  const orig = a.orig.mute ? 0 : clamp01(dbToLin(a.orig.gainDb) * (1 - ev * (1 - a.dub.duck / 100)) * jf);
+  const dub = useDub ? clamp01(dbToLin(a.dub.gainDb)) : 0;
+  const voice = useDub ? ctx.dubSp : ctx.speechSp;
+  const music = {};
+  for (const m of a.music) {
+    if (T < m.start || T >= m.start + m.len) { music[m.id] = 0; continue; }
+    const into = T - m.start; const left = m.start + m.len - T;
+    let g = dbToLin(m.gainDb);
+    if (m.fadeIn > 0 && into < m.fadeIn) g *= into / m.fadeIn;
+    if (m.fadeOut > 0 && left < m.fadeOut) g *= left / m.fadeOut;
+    if (m.duck) g *= 1 - envelope(T, voice, 0.3) * (1 - dbToLin(m.duckDb));
+    music[m.id] = clamp01(g);
+  }
+  return { orig, dub, music, ducked: ev > 0.5 };
+}
+
+// Nouvel identifiant de musique (m1, m2, …).
+export function newMusicId(items) {
+  const ids = new Set(items.map((m) => m.id));
+  let n = items.length + 1;
+  while (ids.has(`m${n}`)) n += 1;
+  return `m${n}`;
+}
+// Ajouter une musique au temps T : jusqu'à la fin du montage (en boucle si le fichier est plus court).
+export function addMusic(items, asset, T, assetDur, totalS) {
+  const start = round3(Math.max(0, Math.min(T, Math.max(0, totalS - MIN_CLIP))));
+  const room = Math.max(MIN_CLIP, totalS - start);
+  const loop = assetDur > 0 && assetDur < room;
+  const len = round3(loop ? room : Math.min(room, assetDur || room));
+  const fadeIn = Math.min(MUSIC_DEF.fadeIn, len / 4); const fadeOut = Math.min(MUSIC_DEF.fadeOut, len / 4);
+  const m = { ...MUSIC_DEF, id: newMusicId(items), asset, start, len, loop, fadeIn: round3(fadeIn), fadeOut: round3(fadeOut) };
+  return { items: [...items, m], id: m.id };
+}
+// Déplacer une musique (nouveau début, en temps du montage).
+export const moveMusic = (items, id, start) => items.map((m) => (m.id === id ? { ...m, start: round3(Math.max(0, start)) } : m));
+// Raccourcir / rallonger une musique par son bord gauche (edge 'in', valeur = nouveau début) ou droit ('out', valeur = nouvelle fin).
+export function trimMusic(items, id, edge, value, assetDur) {
+  return items.map((m) => {
+    if (m.id !== id) return m;
+    const end = m.start + m.len;
+    if (edge === 'in') {
+      let s = Math.max(0, Math.min(value, end - MIN_CLIP));
+      let off = m.offset + (s - m.start);
+      if (!m.loop) { if (off < 0) { s -= off; off = 0; } if (assetDur > 0 && off > assetDur - MIN_CLIP) { off = assetDur - MIN_CLIP; s = m.start + (off - m.offset); } }
+      else if (assetDur > 0) off = ((off % assetDur) + assetDur) % assetDur;
+      const len = end - s;
+      return { ...m, start: round3(s), offset: round3(off), len: round3(len), fadeIn: Math.min(m.fadeIn, round3(len / 2)), fadeOut: Math.min(m.fadeOut, round3(len / 2)) };
+    }
+    let len = Math.max(MIN_CLIP, value - m.start);
+    if (!m.loop && assetDur > 0) len = Math.min(len, assetDur - m.offset);
+    return { ...m, len: round3(len), fadeIn: Math.min(m.fadeIn, round3(len / 2)), fadeOut: Math.min(m.fadeOut, round3(len / 2)) };
+  });
+}
+
+// Base64 → octets (formes d'onde de l'API : un pic 0-255 toutes les stepMs).
+export function decodePeaks(b64) {
+  if (!b64) return null;
+  const bin = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+  return out;
+}
+// Pic maximal (0-1) entre deux temps d'un fichier analysé.
+export function peakBetween(peaks, stepMs, s0, s1) {
+  if (!peaks || !peaks.length) return 0;
+  const k = 1000 / stepMs;
+  let i0 = Math.max(0, Math.floor(s0 * k)); const i1 = Math.min(peaks.length - 1, Math.floor(s1 * k));
+  if (i0 > i1) i0 = i1;
+  let mx = 0;
+  for (let i = i0; i <= i1; i += 1) if (peaks[i] > mx) mx = peaks[i];
+  return mx / 255;
+}

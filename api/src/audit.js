@@ -13,7 +13,7 @@ const VIEWER = [/^\/talks\/:id\/notes/, /^\/talks\/:id\/practice\/commitments/, 
   /^\/studio\/editor\/projects\/:id\/(lock|unlock)$/];
 // Gestes répétés trop souvent pour le journal : sauvegarde automatique de l'éditeur (la suppression d'un projet reste inscrite).
 // Restent au journal pour l'éditeur : reprise de la main (takeover), versions, retour à une version, suppression d'un projet.
-const SILENT = [['PUT', /^\/studio\/editor\/projects\/:id$/]];
+const SILENT = [['PUT', /^\/studio\/editor\/projects\/:id$/], ['POST', /^\/studio\/editor\/projects\/:id\/denoise-sample$/]];
 
 export function shouldLog(role, method, route) {
   if (!MUTATING.has(method) || !route) return false;

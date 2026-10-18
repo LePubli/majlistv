@@ -1,8 +1,8 @@
 {
   "id": "editor",
   "name": "Éditeur de montage",
-  "version": "0.1.0",
-  "description": "Montage des vidéos envoyées dans Studio → Éditeur (étape E1) : timeline multipiste (vidéo, voix d'origine, voix française, musique, titres et logo, sous-titres), couper, supprimer un passage, déplacer, raccourcir, aimanter, zoom, annuler et rétablir, aperçu 360p dans le navigateur. Sauvegarde automatique, versions (automatiques et nommées), verrou d'édition : une personne modifie, les autres voient en lecture seule. Le rendu final arrive à l'étape E4.",
+  "version": "0.2.0",
+  "description": "Montage des vidéos envoyées dans Studio → Éditeur. E1 : timeline multipiste (vidéo, voix d'origine, voix française, musique, titres et logo, sous-titres), couper, supprimer, déplacer, raccourcir, aimant, zoom, annuler/rétablir, aperçu 360p, sauvegarde automatique, versions, verrou d'édition. E2 : audio pro — volumes, fondus, formes d'onde et niveau sonore mesuré, voix d'origine baissée sous la voix française, musiques de fond (bibliothèque), réduction du bruit à écouter, niveau sonore homogène. Rendu final : étape E4.",
   "requires": [],
   "defaultEnabled": false,
   "settings": []

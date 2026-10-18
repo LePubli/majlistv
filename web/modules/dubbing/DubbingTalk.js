@@ -137,7 +137,7 @@ function SegRow({ s, cellLen, onPatch }) {
 }
 
 export default function DubbingTalk() {
-  const { t, locale, user, call, feat } = useApp();
+  const { t, locale, user, call, feat, modUsable } = useApp();
   const { id } = useParams();
   const st = useDubbing('/studio/dubbing/state');
   const tk = useDubbing(`/studio/dubbing/talks/${id}`);
@@ -230,7 +230,7 @@ export default function DubbingTalk() {
             <nav className="st-tabs" aria-label={d.talk.title}>
               <Link href={`/studio/${id}`}>{t('dbTabDetails')}</Link>
               <Link href={`/studio/dubbing/${id}`} className="on" aria-current="page">{t('sdDub')}</Link>
-              {hasWebModule('editor') && feat('editor') && d.talk?.source === 'upload' && <Link href={`/studio/editor?talk=${id}`}>{t('dbTabEditing')}</Link>}
+              {hasWebModule('editor') && feat('editor') && modUsable('editor') && d.talk?.source === 'upload' && <Link href={`/studio/editor?talk=${id}`}>{t('dbTabEditing')}</Link>}
             </nav>
             <EngineNote engine={d.engine} />
             {mustReview && d.phrases > 0 && <p className="db-note" role="note">{t('dbNeedReview')}</p>}

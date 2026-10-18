@@ -2,27 +2,38 @@
 // Studio → Éditeur → un projet (étape E1, maquette « Studio v2 », écran 4) : éditeur multipiste plein écran.
 //   En-tête : retour Studio, titre, « Version N · enregistré automatiquement », aperçu 360p, Annuler, Rétablir, Versions,
 //             Rendre la vidéo (étape E4).
-//   Gauche  : Ajouter (titres, bandeau, logo, musique, intro / fin, transitions : étapes E2 et E3), modèles de la chaîne.
+//   Gauche  : Ajouter (musique de fond : étape E2 ; titres, bandeau, logo, intro / fin, transitions : étape E3), modèles.
 //   Centre  : aperçu 360p qui suit le montage. Droite : réglages de la piste sélectionnée.
 //   Bas     : outils (Couper, Supprimer le passage, Aimanter, Zoom) et timeline.
 // Une seule personne modifie (verrou renouvelé toutes les 25 s) ; les autres voient le projet en lecture seule, mis à jour
 // toutes les 10 s. Chaque changement est enregistré tout seul ~1 s après.
+// Étape E2 : le document de travail est { clips, audio } ; réglages du son dans le panneau de droite (AudioPanel.js),
+// bibliothèque de musiques (MusicLibrary.js), formes d'onde et niveaux mesurés par l'API.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import Preview from './Preview';
 import Timeline from './Timeline';
 import Versions from './Versions';
-import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime } from './ops';
+import AudioPanel from './AudioPanel';
+import MusicLibrary from './MusicLibrary';
+import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
+  withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic } from './ops';
 import { ago } from '../../lib/format';
 
 const HISTORY = 200;
+// Historique des gestes. present = { clips, audio }. Un réglage tiré au curseur (même « key » à moins de 1,5 s) ne compte
+// que pour un seul geste à annuler.
 function historyReducer(st, a) {
   switch (a.type) {
-    case 'reset': return { past: [], present: a.clips, future: [] };
-    case 'commit': return { past: [...st.past, st.present].slice(-HISTORY), present: a.clips, future: [] };
-    case 'undo': return st.past.length ? { past: st.past.slice(0, -1), present: st.past.at(-1), future: [st.present, ...st.future] } : st;
-    case 'redo': return st.future.length ? { past: [...st.past, st.present], present: st.future[0], future: st.future.slice(1) } : st;
+    case 'reset': return { past: [], present: a.doc, future: [], key: null, at: 0 };
+    case 'commit': {
+      const now = Date.now();
+      if (a.key && st.key === a.key && now - st.at < 1500) return { ...st, present: a.doc, future: [], at: now };
+      return { past: [...st.past, st.present].slice(-HISTORY), present: a.doc, future: [], key: a.key || null, at: now };
+    }
+    case 'undo': return st.past.length ? { past: st.past.slice(0, -1), present: st.past.at(-1), future: [st.present, ...st.future], key: null, at: 0 } : st;
+    case 'redo': return st.future.length ? { past: [...st.past, st.present], present: st.future[0], future: st.future.slice(1), key: null, at: 0 } : st;
     default: return st;
   }
 }
@@ -43,8 +54,13 @@ export default function Editor({ id }) {
   const session = useMemo(() => (typeof window === 'undefined' ? 'ssr-session' : tabSession(id)), [id]);
   const [data, setData] = useState(null); // { project, media, editable }
   const [error, setError] = useState(null);
-  const [h, dispatch] = useReducer(historyReducer, { past: [], present: [], future: [] });
-  const clips = h.present;
+  const [h, dispatch] = useReducer(historyReducer, { past: [], present: { clips: [], audio: withAudio(null) }, future: [], key: null, at: 0 });
+  const doc = h.present;
+  const clips = doc.clips;
+  const audio = doc.audio;
+  const [waves, setWaves] = useState({ orig: null, dub: null });
+  const [musicInfo, setMusicInfo] = useState({}); // id → { title, url, durationS, peaks, stepMs, status, lufs }
+  const [showMusic, setShowMusic] = useState(false);
   const [mode, setMode] = useState('loading'); // loading | edit | read
   const [lock, setLock] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -60,7 +76,7 @@ export default function Editor({ id }) {
   const savedClips = useRef(null);
   const saving = useRef(false);
   const modeRef = useRef(mode); modeRef.current = mode;
-  const clipsRef = useRef(clips); clipsRef.current = clips;
+  const docRef = useRef(doc); docRef.current = doc;
 
   const duration = data?.project?.timeline?.duration || 0;
   const totalS = total(clips);
@@ -70,10 +86,13 @@ export default function Editor({ id }) {
   const dub = data?.media?.dub || null;
 
   // --- Chargement, verrou
+  const defaultsRef = useRef(null);
+  const toDoc = (tl) => ({ clips: tl.clips, audio: withAudio(tl.audio, defaultsRef.current) });
   const applyProject = useCallback((p) => {
     rev.current = p.rev;
-    savedClips.current = JSON.stringify(p.timeline.clips);
-    dispatch({ type: 'reset', clips: p.timeline.clips });
+    const d = toDoc(p.timeline);
+    savedClips.current = JSON.stringify(d);
+    dispatch({ type: 'reset', doc: d });
     setSave({ state: 'saved', at: p.updatedAt, version: p.versionNumber });
     if (p.timeline.ui?.magnet === false) setMagnet(false);
   }, []);
@@ -81,6 +100,7 @@ export default function Editor({ id }) {
   const load = useCallback(async () => {
     const r = await call(`/studio/editor/projects/${id}?session=${session}`);
     if (!r.ok) { setError(r.data?.code === 'module_off' ? t('mtModuleOff') : r.data?.error || t('dbError')); return null; }
+    if (r.data.media?.audioDefaults) defaultsRef.current = r.data.media.audioDefaults;
     setData(r.data);
     return r.data;
   }, [call, id, session, t]);
@@ -106,17 +126,17 @@ export default function Editor({ id }) {
 
   // --- Sauvegarde automatique
   const doSave = useCallback(async ({ keepalive = false } = {}) => {
-    const now = clipsRef.current;
+    const now = docRef.current;
     const body = JSON.stringify(now);
     if (modeRef.current !== 'edit' || body === savedClips.current || saving.current) return;
     saving.current = true;
     setSave((s) => ({ ...s, state: 'saving' }));
-    const tl = { v: 1, duration, clips: now, ui: { magnet } };
+    const tl = { v: 1, duration, clips: now.clips, audio: now.audio, ui: { magnet } };
     const r = await call(`/studio/editor/projects/${id}`, { method: 'PUT', keepalive, body: JSON.stringify({ timeline: tl, rev: rev.current, session }) });
     saving.current = false;
     if (r.ok) {
       rev.current = r.data.rev; savedClips.current = body;
-      setSave({ state: JSON.stringify(clipsRef.current) === body ? 'saved' : 'dirty', at: r.data.savedAt, version: r.data.versionNumber });
+      setSave({ state: JSON.stringify(docRef.current) === body ? 'saved' : 'dirty', at: r.data.savedAt, version: r.data.versionNumber });
       return;
     }
     if (r.status === 409 || r.status === 423) {
@@ -133,11 +153,11 @@ export default function Editor({ id }) {
 
   useEffect(() => {
     if (mode !== 'edit') return undefined;
-    if (JSON.stringify(clips) === savedClips.current) return undefined;
+    if (JSON.stringify(doc) === savedClips.current) return undefined;
     setSave((s) => (s.state === 'saving' ? s : { ...s, state: 'dirty' }));
     const h1 = setTimeout(() => doSave(), 1000);
     return () => clearTimeout(h1);
-  }, [clips, mode, doSave]);
+  }, [doc, mode, doSave]);
   // Un enregistrement est arrivé pendant qu'on modifiait encore : on renvoie la suite.
   useEffect(() => { if (save.state === 'dirty' && !saving.current && mode === 'edit') { const h2 = setTimeout(() => doSave(), 1000); return () => clearTimeout(h2); } return undefined; }, [save.state, mode, doSave]);
 
@@ -180,6 +200,49 @@ export default function Editor({ id }) {
 
   useEffect(() => { const h3 = setInterval(() => tick((x) => x + 1), 15000); return () => clearInterval(h3); }, []);
 
+  // --- Étape E2 : formes d'onde et niveaux mesurés (l'API les calcule ; on revient voir toutes les 4 s tant que ce n'est pas prêt)
+  const loadAudio = useCallback(async () => {
+    const r = await call(`/studio/editor/projects/${id}/audio`);
+    if (!r.ok) return true;
+    const w = (x) => (x ? { ...x, peaks: decodePeaks(x.peaks) } : null);
+    setWaves({ orig: w(r.data.orig), dub: w(r.data.dub), ffmpeg: r.data.ffmpeg });
+    setMusicInfo((old) => {
+      const n = { ...old };
+      for (const [k, m] of Object.entries(r.data.music || {})) n[k] = { ...m, peaks: decodePeaks(m.wave?.peaks), stepMs: m.wave?.stepMs || 100, status: m.status };
+      return n;
+    });
+    const pending = (x) => x && ['queued', 'running'].includes(x.status);
+    return !(pending(r.data.orig) || pending(r.data.dub));
+  }, [call, id]);
+  useEffect(() => {
+    if (!data?.editable) return undefined;
+    let alive = true; let h4 = null;
+    const go = async () => { const done = await loadAudio(); if (alive && !done) h4 = setTimeout(go, 4000); };
+    go();
+    return () => { alive = false; clearTimeout(h4); };
+  }, [data?.editable, loadAudio]);
+  // Une musique du montage pas encore connue (ajoutée, ou version restaurée) : on lit sa fiche et sa forme d'onde.
+  const fetchMusic = useCallback(async (mid) => {
+    const r = await call(`/studio/editor/music/${mid}`);
+    setMusicInfo((old) => ({ ...old, [mid]: r.ok ? { ...r.data.music, peaks: decodePeaks(r.data.music.wave?.peaks), stepMs: r.data.music.wave?.stepMs || 100 } : { missing: true, title: '?' } }));
+    return r.ok && r.data.music.status !== 'ready';
+  }, [call]);
+  useEffect(() => {
+    const missing = audio.music.map((m) => m.asset).filter((a, i, all) => all.indexOf(a) === i && !musicInfo[a]);
+    for (const a of missing) fetchMusic(a);
+  }, [audio.music, musicInfo, fetchMusic]);
+
+  // Contexte du mixage (aperçu et courbe de volume).
+  const hasDub = Boolean(data?.media?.dub?.track && data?.media?.dub?.voiceUrl);
+  const mixCtx = useMemo(() => ({ hasDub, dubSp: dubSpans(clips, data?.media?.dub?.segments), speechSp: speechSpans(clips, data?.media?.subtitles?.cues), joins: joins(clips).map((j) => j.t) }),
+    [clips, hasDub, data?.media?.dub?.segments, data?.media?.subtitles?.cues]);
+  const getMix = useCallback((tt) => mixAt(tt, audio, mixCtx), [audio, mixCtx]);
+  const sound = useMemo(() => ({
+    getMix,
+    dubUrl: hasDub ? data.media.dub.voiceUrl : null,
+    music: audio.music.filter((m) => musicInfo[m.asset]?.url).map((m) => ({ item: m, url: musicInfo[m.asset].url, assetDur: musicInfo[m.asset].durationS || 0 })),
+  }), [getMix, hasDub, data?.media?.dub?.voiceUrl, audio.music, musicInfo]);
+
   const takeOver = async () => {
     if (lock && !lock.otherTab && !window.confirm(t('mtTakeConfirm').replace('{n}', lock.by || '—'))) return;
     const r = await call(`/studio/editor/projects/${id}/takeover`, { method: 'POST', body: JSON.stringify({ session }) });
@@ -191,7 +254,8 @@ export default function Editor({ id }) {
 
   // --- Gestes de montage
   const canEdit = mode === 'edit';
-  const commit = useCallback((next) => { if (canEdit) dispatch({ type: 'commit', clips: next }); }, [canEdit]);
+  const commit = useCallback((next) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, clips: next } }); }, [canEdit]);
+  const setAudio = useCallback((next, key) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, audio: next }, key }); }, [canEdit]);
   const selIndex = clips.findIndex((c) => c.id === sel.id);
   const targets = useMemo(() => snapTargets(clips, cues), [clips, cues]);
 
@@ -210,13 +274,19 @@ export default function Editor({ id }) {
   };
   const doMove = (from, to) => { const r = moveClip(clips, from, to); if (r.done) { commit(r.clips); setT(layout(r.clips)[r.index].start); } };
   const doTrim = (i, edge, value) => { const r = trimClip(clips, i, edge, value, duration); if (r.done) commit(r.clips); };
+  const addMusicAt = (m) => {
+    setMusicInfo((old) => ({ ...old, [m.id]: { ...m, peaks: decodePeaks(m.wave?.peaks), stepMs: m.wave?.stepMs || 100 } }));
+    const r = addMusic(audio.music, m.id, Math.min(T, Math.max(0, totalS - 1)), m.durationS || 0, totalS);
+    setAudio({ ...audio, music: r.items });
+    setSel({ track: 'music', id: r.id }); setShowMusic(false);
+  };
   const undo = () => canEdit && dispatch({ type: 'undo' });
   const redo = () => canEdit && dispatch({ type: 'redo' });
 
   // Raccourcis clavier (hors champs de saisie).
   useEffect(() => {
     const key = (e) => {
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions || showMusic) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -231,7 +301,11 @@ export default function Editor({ id }) {
       }
       if (!canEdit) return;
       if (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 's') { e.preventDefault(); doCut(); }
-      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); doDelete(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (sel.track === 'music' && sel.id) { setAudio({ ...audio, music: audio.music.filter((m) => m.id !== sel.id) }); setSel({ track: 'music', id: null }); }
+        else doDelete();
+      }
       else if (e.key.toLowerCase() === 'm') setMagnet((m) => !m);
     };
     window.addEventListener('keydown', key);
@@ -285,10 +359,10 @@ export default function Editor({ id }) {
         <div className="mt-main">
           <aside className="mt-left" aria-label={t('mtAdd')}>
             <h2 className="mt-cap">{t('mtAdd')}</h2>
-            {[['mtAddTitle', 'E3'], ['mtAddBanner', 'E3'], ['mtAddLogo', 'E3'], ['mtAddMusic', 'E2'], ['mtAddIntro', 'E3'], ['mtAddTransition', 'E3']].map(([k, step]) => (
-              <button key={k} type="button" className="mt-add" disabled title={t('mtComesAt').replace('{s}', step)}>
-                <span>{t(k)}</span><em>{step}</em>
-              </button>
+            {[['mtAddTitle', 'E3'], ['mtAddBanner', 'E3'], ['mtAddLogo', 'E3'], ['mtAddMusic', null], ['mtAddIntro', 'E3'], ['mtAddTransition', 'E3']].map(([k, step]) => (
+              step
+                ? <button key={k} type="button" className="mt-add" disabled title={t('mtComesAt').replace('{s}', step)}><span>{t(k)}</span><em>{step}</em></button>
+                : <button key={k} type="button" className="mt-add on" onClick={() => setShowMusic(true)} disabled={!data.editable}><span>{t(k)}</span><b aria-hidden="true">+</b></button>
             ))}
             <h2 className="mt-cap">{t('mtTemplates')}</h2>
             {['mtTplStandard', 'mtTplIntro'].map((k) => (
@@ -298,13 +372,15 @@ export default function Editor({ id }) {
 
           <section className="mt-center" aria-label={t('mtPreview')}>
             {data.media
-              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} />
+              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} />
               : <p className="meta">{t('mtNotEditable')}</p>}
           </section>
 
           <aside className="mt-right" aria-labelledby="mt-sel-title">
             <h2 className="mt-cap">{t('mtSelTrack')}</h2>
-            <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />
+            {['orig', 'dub', 'music'].includes(sel.track)
+              ? <AudioPanel {...{ sel, setSel, audio, setAudio, canEdit, dub, hasDub, waves, musicInfo, T, setT, totalS, projectId: id, srcAt: loc ? loc.src : 0, onAddMusic: () => setShowMusic(true) }} />
+              : <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />}
           </aside>
         </div>
 
@@ -320,12 +396,14 @@ export default function Editor({ id }) {
             </label>
           </div>
           <Timeline clips={clips} duration={duration} T={T} onSeek={(v) => { setT(v); }} sel={sel} onSelect={setSel} onMove={doMove} onTrim={doTrim}
-            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0} />
+            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0}
+            audio={audio} waves={waves} musicInfo={musicInfo} getMix={getMix} onMusic={(items) => setAudio({ ...audio, music: items })} />
         </div>
       </div>
+      {showMusic && <MusicLibrary canEdit={canEdit} onClose={() => setShowMusic(false)} onAdd={addMusicAt} atLabel={fmtTime(Math.min(T, Math.max(0, totalS - 1)))} />}
       {showVersions && <Versions projectId={id} session={session} canEdit={canEdit} onClose={() => setShowVersions(false)} beforeAction={() => doSave()}
         onRestored={(res, version) => {
-          if (res) { rev.current = res.rev; savedClips.current = JSON.stringify(res.timeline.clips); dispatch({ type: 'reset', clips: res.timeline.clips }); setT(0); setSel({ track: 'video', id: res.timeline.clips[0]?.id }); }
+          if (res) { rev.current = res.rev; const d = toDoc(res.timeline); savedClips.current = JSON.stringify(d); dispatch({ type: 'reset', doc: d }); setT(0); setSel({ track: 'video', id: res.timeline.clips[0]?.id }); }
           setSave((s) => ({ ...s, state: 'saved', at: res?.savedAt || s.at, version }));
         }} />}
     </div>
@@ -333,7 +411,7 @@ export default function Editor({ id }) {
 }
 
 // Panneau de droite : réglages de la piste ou de l'extrait sélectionné.
-function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub, canEdit, doTrim, doDelete, setT, subsLang }) {
+function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, subsLang }) {
   const [inV, setInV] = useState(''); const [outV, setOutV] = useState('');
   useEffect(() => { if (selClip) { setInV(fmtTime(selClip.in, { tenths: true })); setOutV(fmtTime(selClip.out, { tenths: true })); } }, [selClip?.id, selClip?.in, selClip?.out]); // eslint-disable-line react-hooks/exhaustive-deps
   const apply = (edge, str) => { const v = parseTime(str); if (Number.isNaN(v)) return; doTrim(selIndex, edge, v); };
@@ -363,9 +441,6 @@ function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub,
     );
   }
   const blocks = {
-    orig: [t('mtTrOrig'), t('mtOrigHint'), t('mtStepE2Audio')],
-    dub: [t('mtTrDub'), dub ? t('mtDubHint').replace('{n}', dub.segments.length).replace('{k}', dub.segments.filter((s) => s.keep).length) : t('mtNoDubHint'), t('mtStepE2Audio')],
-    music: [t('mtTrMusic'), t('mtMusicHint'), null],
     titles: [t('mtTrTitles'), t('mtTitlesHint'), null],
     subs: [t('mtTrSubs'), cues.length ? t('mtSubsHint').replace('{l}', String(subsLang || '').toUpperCase()).replace('{n}', inMontage).replace('{c}', cues.length) : t('mtNoSubsHint'), t('mtSubsBurn')],
     video: [t('mtTrVideo'), t('mtPickClip'), null],
@@ -374,7 +449,6 @@ function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, dub,
     <div className="mt-panel">
       <h3 id="mt-sel-title">{blocks[0]}</h3>
       <p className="mt-hint">{blocks[1]}</p>
-      {sel.track === 'dub' && dub?.link && <a className="btn ghost sd-pill" href={dub.link}>{t('mtOpenDub')}</a>}
       {blocks[2] && <p className="meta small">{blocks[2]}</p>}
     </div>
   );

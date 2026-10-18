@@ -26,7 +26,7 @@ function Stages({ p, t }) {
 }
 
 export default function StudioTalks() {
-  const { t, call, locale, feat } = useApp();
+  const { t, call, locale, feat, modUsable } = useApp();
   const [mine, setMine] = useState(null);
   const [prod, setProd] = useState({});
   const [q, setQ] = useState('');
@@ -45,7 +45,7 @@ export default function StudioTalks() {
   ]), [call]);
   useEffect(() => { load(); }, [load]);
 
-  const dubOn = hasWebModule('dubbing') && feat('dubbing');
+  const dubOn = hasWebModule('dubbing') && feat('dubbing') && modUsable('dubbing');
   const rows = useMemo(() => (mine || []).map((x) => {
     const steps = talkSteps(x);
     const r = { ...x, steps, kind: talkKind(x, steps) };

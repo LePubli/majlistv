@@ -13,10 +13,32 @@
 // et une copie avant chaque restauration. Les 30 copies automatiques les plus récentes sont gardées (les nommées, toutes).
 import { z } from 'zod';
 import { pool } from '../../db.js';
-import { presignGet } from '../../storage.js';
+import crypto from 'node:crypto';
+import { storage, presignGet, presignPut, headObject, deleteObject } from '../../storage.js';
 import { makePlaybackToken } from '../../playback.js';
 import * as ext from '../../ext.js';
-import { checkTimeline, initialTimeline, editedDuration, isEdited } from './timeline.js';
+import { checkTimeline, initialTimeline, editedDuration, isEdited, musicAssets, audioDefaults, DENOISE } from './timeline.js';
+import { ensureTalkWaveforms, ensureAssetWaveform, waveView, processQueue, denoiseSample, hasFfmpeg, STEP_MS } from './audio.js';
+
+const MUSIC_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
+  'audio/wave': 'wav', 'audio/ogg': 'ogg', 'audio/flac': 'flac', 'audio/x-flac': 'flac', 'audio/webm': 'webm' };
+const MUSIC_MAX_MB = 60;
+
+// Musiques prêtes (analysées) : Map(id → durée en secondes), pour vérifier les montages.
+async function readyAssets(ids) {
+  if (!ids.length) return new Map();
+  const { rows } = await pool.query(
+    `SELECT a.id, w.duration_s FROM editor_assets a JOIN editor_waveforms w ON w.asset_id = a.id AND w.status = 'ready' WHERE a.id = ANY($1::uuid[])`, [ids]);
+  return new Map(rows.map((r) => [r.id, Number(r.duration_s)]));
+}
+async function musicView(row) {
+  let url = null;
+  try { url = await presignGet(row.key); } catch { url = null; }
+  return { id: row.id, title: row.title, license: row.license, bytes: Number(row.bytes), createdAt: row.created_at, createdBy: row.created_name || null,
+    status: row.status || 'queued', durationS: row.duration_s == null ? null : Number(row.duration_s), lufs: row.lufs == null ? null : Number(row.lufs), error: row.error || null, url };
+}
+const MUSIC_SQL = `SELECT a.*, u.name AS created_name, w.status, w.duration_s, w.lufs, w.error, w.peaks, w.step_ms FROM editor_assets a
+  LEFT JOIN editor_waveforms w ON w.asset_id = a.id LEFT JOIN users u ON u.id = a.created_by`;
 
 export const LOCK_TTL_S = 75;
 const AUTO_KEEP = 30;
@@ -101,6 +123,10 @@ async function mediaOf(row) {
     dub: null, // rempli par le module « Doublage français » (événement editor.media)
   };
   await ext.emit('editor.media', out, { talkId: row.talk_id });
+  if (out.dub) delete out.dub.trackId; // sert seulement à savoir si la forme d'onde est périmée
+  // Étape E2 : réglages du son par défaut (le volume de la voix d'origine sous la voix française vient du doublage).
+  out.audioDefaults = audioDefaults(null, { duck: out.dub?.duck });
+  out.denoiseLevels = DENOISE;
   return out;
 }
 
@@ -209,7 +235,7 @@ export default async function routes(app) {
     // Verrou expiré sans que personne ne l'ait pris (veille de l'ordinateur…) : on le reprend en silence.
     if (!v.mine && v.active) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked', lock: v });
     if (body.rev !== row.rev) return reply.code(409).send({ error: 'Le montage a été modifié ailleurs entre-temps.', code: 'conflict', rev: row.rev, timeline: row.timeline });
-    const chk = checkTimeline(body.timeline, row.duration_seconds);
+    const chk = checkTimeline(body.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(body.timeline)) });
     if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
     const c = await pool.connect();
     try {
@@ -260,7 +286,7 @@ export default async function routes(app) {
     if (!lockView(row, req.user, sess).mine) return reply.code(423).send({ error: 'Prenez la main sur le projet pour revenir à une version.', code: 'locked' });
     const ver = (await pool.query('SELECT timeline FROM editor_versions WHERE project_id = $1 AND n = $2', [row.id, n])).rows[0];
     if (!ver) return reply.code(404).send({ error: 'Version introuvable' });
-    const chk = checkTimeline(ver.timeline, row.duration_seconds);
+    const chk = checkTimeline(ver.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(ver.timeline)) });
     if (!chk.ok) return reply.code(409).send({ error: `Cette version ne correspond plus à la vidéo : ${chk.error}` });
     const c = await pool.connect();
     try {
@@ -273,6 +299,113 @@ export default async function routes(app) {
       const last = await lastVersion(row.id);
       return { rev: u.rows[0].rev, savedAt: u.rows[0].updated_at, timeline: chk.timeline, versionNumber: (last?.n || 0) + 1 };
     } catch (err) { await c.query('ROLLBACK').catch(() => {}); throw err; } finally { c.release(); }
+  });
+
+  // --- Étape E2 : son
+
+  const kick = () => setImmediate(() => processQueue(app.log).catch((e) => app.log.warn(`Éditeur : ${e.message}`)));
+
+  // Formes d'onde et niveaux mesurés du projet : voix d'origine, voix française, musiques utilisées. Met en file ce qui manque.
+  app.get('/studio/editor/projects/:id/audio', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    if (!editable(row)) return { orig: null, dub: null, music: {}, ffmpeg: await hasFfmpeg(), stepMs: STEP_MS };
+    await ensureTalkWaveforms(row.talk_id);
+    const w = (await pool.query("SELECT * FROM editor_waveforms WHERE talk_id = $1", [row.talk_id])).rows;
+    const ids = musicAssets(row.timeline);
+    const music = {};
+    if (ids.length) for (const m of (await pool.query(`${MUSIC_SQL} WHERE a.id = ANY($1::uuid[])`, [ids])).rows) music[m.id] = { ...(await musicView(m)), wave: m.status ? waveView(m) : null };
+    if (w.some((x) => x.status === 'queued')) kick();
+    return { orig: waveView(w.find((x) => x.kind === 'orig')), dub: waveView(w.find((x) => x.kind === 'dub')), music, ffmpeg: await hasFfmpeg(), stepMs: STEP_MS };
+  });
+
+  // Relancer une analyse en échec.
+  app.post('/studio/editor/projects/:id/audio/retry', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    const r = await pool.query("UPDATE editor_waveforms SET status = 'queued', attempts = 0, error = NULL, updated_at = now() WHERE talk_id = $1 AND status = 'failed'", [row.talk_id]);
+    kick();
+    return { requeued: r.rowCount };
+  });
+
+  // Écouter 10 s de la voix d'origine avec la réduction du bruit choisie (ou sans), à un endroit de la vidéo d'origine.
+  let sampling = 0;
+  app.post('/studio/editor/projects/:id/denoise-sample', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    const { at, level } = z.object({ at: z.number().min(0), level: z.enum(DENOISE) }).parse(req.body ?? {});
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
+    if (sampling >= 2) return reply.code(429).send({ error: 'Un extrait est déjà en préparation : réessayez dans quelques secondes.' });
+    sampling += 1;
+    try {
+      const buf = await denoiseSample(row.talk_id, Math.min(at, Math.max(0, Number(row.duration_seconds) - 10)), level);
+      return reply.header('content-type', 'audio/mp4').header('cache-control', 'no-store').send(buf);
+    } catch (err) {
+      return reply.code(502).send({ error: err.message });
+    } finally { sampling -= 1; }
+  });
+
+  // --- Bibliothèque de musiques (commune à tous les montages ; l'administrateur importe, tout le monde utilise)
+  app.get('/studio/editor/music', viewer, async (req) => {
+    const { rows } = await pool.query(`${MUSIC_SQL} ORDER BY a.created_at DESC LIMIT 500`);
+    const out = [];
+    for (const r of rows) out.push(await musicView(r));
+    if (rows.some((r) => r.status === 'queued')) kick();
+    return { music: out, canImport: req.user.role === 'admin', maxMb: MUSIC_MAX_MB };
+  });
+
+  app.get('/studio/editor/music/:id', viewer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const r = (await pool.query(`${MUSIC_SQL} WHERE a.id = $1`, [id])).rows[0];
+    if (!r) return reply.code(404).send({ error: 'Musique introuvable' });
+    return { music: { ...(await musicView(r)), wave: r.status ? waveView(r) : null } };
+  });
+
+  const admin = { preHandler: app.requireRole('admin') };
+  app.post('/studio/editor/music/upload-url', admin, async (req, reply) => {
+    if (!storage) return reply.code(503).send({ error: 'Stockage non configuré', code: 'storage_off' });
+    const { contentType, size } = z.object({ contentType: z.string(), size: z.number().int().positive().optional() }).parse(req.body ?? {});
+    const ext0 = MUSIC_TYPES[contentType.toLowerCase()];
+    if (!ext0) return reply.code(400).send({ error: 'Format audio non accepté (mp3, m4a, aac, wav, ogg, flac, webm)', code: 'bad_type' });
+    if (size && size > MUSIC_MAX_MB * 1048576) return reply.code(400).send({ error: `Fichier trop lourd (${MUSIC_MAX_MB} Mo maximum)`, code: 'too_big' });
+    const key = `editor/music/${crypto.randomUUID()}.${ext0}`;
+    return { key, url: await presignPut(key, contentType.toLowerCase()), maxBytes: MUSIC_MAX_MB * 1048576 };
+  });
+
+  app.post('/studio/editor/music', admin, async (req, reply) => {
+    const b = z.object({ key: z.string().regex(/^editor\/music\/[0-9a-f-]{36}\.(mp3|m4a|aac|wav|ogg|flac|webm)$/, 'Fichier inattendu'),
+      title: z.string().trim().min(1, 'Donnez un titre').max(120), license: z.string().trim().max(300).default(''),
+      contentType: z.string().max(60) }).parse(req.body ?? {});
+    let size;
+    try { size = Number((await headObject(b.key)).ContentLength); } catch { return reply.code(400).send({ error: "La musique n'a pas été reçue : recommencez l'envoi", code: 'missing' }); }
+    if (size > MUSIC_MAX_MB * 1048576) { await deleteObject(b.key).catch(() => {}); return reply.code(400).send({ error: `Fichier trop lourd (${MUSIC_MAX_MB} Mo maximum)`, code: 'too_big' }); }
+    const r = await pool.query('INSERT INTO editor_assets(title, license, key, mime, bytes, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [b.title, b.license, b.key, b.contentType.toLowerCase(), size, req.user.sub]);
+    await ensureAssetWaveform(r.rows[0].id, b.key);
+    kick();
+    const row = (await pool.query(`${MUSIC_SQL} WHERE a.id = $1`, [r.rows[0].id])).rows[0];
+    return reply.code(201).send({ music: await musicView(row) });
+  });
+
+  app.patch('/studio/editor/music/:id', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const b = z.object({ title: z.string().trim().min(1).max(120).optional(), license: z.string().trim().max(300).optional() }).parse(req.body ?? {});
+    const r = await pool.query('UPDATE editor_assets SET title = COALESCE($2, title), license = COALESCE($3, license) WHERE id = $1 RETURNING id', [id, b.title ?? null, b.license ?? null]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Musique introuvable' });
+    return { music: await musicView((await pool.query(`${MUSIC_SQL} WHERE a.id = $1`, [id])).rows[0]) };
+  });
+
+  // Supprimer une musique : refusé tant qu'un montage (ou une de ses versions) l'utilise.
+  app.delete('/studio/editor/music/:id', admin, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const a = (await pool.query('SELECT key, title FROM editor_assets WHERE id = $1', [id])).rows[0];
+    if (!a) return reply.code(404).send({ error: 'Musique introuvable' });
+    const used = (await pool.query(
+      `SELECT count(DISTINCT p.id)::int AS n FROM editor_projects p LEFT JOIN editor_versions v ON v.project_id = p.id
+        WHERE p.timeline->'audio'->'music' @> $1::jsonb OR v.timeline->'audio'->'music' @> $1::jsonb`, [JSON.stringify([{ asset: id }])])).rows[0].n;
+    if (used) return reply.code(409).send({ error: `Musique utilisée par ${used} montage(s) (ou leurs versions) : retirez-la d'abord.`, code: 'used', count: used });
+    await pool.query('DELETE FROM editor_assets WHERE id = $1', [id]);
+    await deleteObject(a.key).catch(() => {});
+    req.auditSummary = `Éditeur : musique supprimée (« ${a.title} »)`;
+    return { deleted: true };
   });
 
   // Supprimer un projet (le montage seulement : la conférence et sa vidéo ne changent pas).

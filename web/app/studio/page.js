@@ -18,13 +18,13 @@ function Row({ label, value, extra }) {
 }
 
 export default function StudioDash() {
-  const { t, call, feat, locale } = useApp();
+  const { t, call, feat, locale, modUsable } = useApp();
   const { rows, loaded } = useMyTalks();
   const [ov, setOv] = useState(null);
   useEffect(() => { call('/studio/overview?days=28').then((r) => r.ok && setOv(r.data)); }, [call]);
 
   const nf = new Intl.NumberFormat(locale);
-  const on = (id) => hasWebModule(id) && feat(id);
+  const on = (id) => hasWebModule(id) && feat(id) && modUsable(id);
   const lastRow = ov?.last ? rows.find((r) => r.id === ov.last.id) : null;
   const last = ov?.last || null;
   const st = ov?.stats; const ch = ov?.channel; const dub = ov?.dubbing; const sto = ov?.storage;

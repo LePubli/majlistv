@@ -145,11 +145,18 @@ ks({"type": "view", "talkId": TK}); ks({"type": "play", "talkId": TK}); ks({"typ
 ks({"type": "view", "talkId": TA})                                         # pas une conférence Kids : ignorée
 ok(requests.post(B + "/kids/stats", json={"type": "view", "talkId": TK}).status_code == 401, "kids/stats sans jeton : 401")
 ok(requests.post(B + "/kids/stats", json={"type": "view", "talkId": TK}, headers=PAR).status_code in (204, 403), "jeton du parent : pas de comptage enfant")
+# Registre des problèmes, point 2 (étape E2) : les statistiques Kids de l'administrateur comptent TOUS les essais de quiz
+# de la période, y compris ceux laissés par d'autres tests dans la base locale. On mesure donc l'écart avant / après.
+q0 = rep("/admin/stats", ADM, days=7, audience="kids").json()["kids"]["quiz"]
+n0 = q0.get("attempts") or 0; p0 = q0.get("avgPercent") or 0; s0 = q0.get("avgStars") or 0
 cur.execute("insert into kid_quiz_attempts(profile_id,talk_id,score,total,percent,stars) values (%s,%s,4,5,80,2),(%s,%s,5,5,100,3)", (kid, TK, kid, TK))
 cur.execute("insert into kid_usage(profile_id,day,seconds) values (%s,(now() at time zone 'Europe/Paris')::date,600) on conflict (profile_id,day) do update set seconds=600", (kid,))
 ka = rep("/admin/stats", ADM, days=7, audience="kids").json()
 ok(ka["totals"]["views"] == 2 and ka["totals"]["viewers"] == 1 and ka["totals"]["plays"] == 1 and ka["totals"]["completes"] == 1, f"kids admin : ouvertures/spectateur/lecture/fin {ka['totals']}")
-ok(ka["kids"]["quiz"]["attempts"] == 2 and ka["kids"]["quiz"]["avgPercent"] == 90 and ka["kids"]["quiz"]["avgStars"] == 2.5, "quiz : 2 essais, 90 %, 2,5 étoiles")
+kq = ka["kids"]["quiz"]
+exp_p = (n0 * p0 + 180) / (n0 + 2); exp_s = (n0 * s0 + 5) / (n0 + 2)
+ok(kq["attempts"] == n0 + 2 and abs(kq["avgPercent"] - exp_p) <= 1 and abs(kq["avgStars"] - exp_s) <= 0.1,
+   f"quiz : 2 essais de plus ({n0} → {kq['attempts']}), moyennes recalculées ({kq['avgPercent']} %, {kq['avgStars']} étoiles ; seuls : 90 %, 2,5)")
 ok(ka["kids"]["usage"]["activeKids"] >= 1 and ka["kids"]["usage"]["minutes"] >= 10 and any(b["band"] == "7-10" for b in ka["kids"]["usage"]["bands"]), "usage Kids (enfants actifs, minutes, tranches)")
 ok(ka["top"][0]["title"] == "Conf Kids" and ka["top"][0]["quizAttempts"] == 2, "top Kids avec quiz")
 ko = rep("/studio/stats", ORG1, days=7, audience="kids").json()

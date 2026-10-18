@@ -12,7 +12,7 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, layout = null, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -91,5 +91,9 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ formats, formatName, cats, features, feat: (id) => features[id] !== false, locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ formats, formatName, cats, features, feat: (id) => features[id] !== false,
+    // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
+    // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
+    modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
+    locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }
