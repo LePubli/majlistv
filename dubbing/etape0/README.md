@@ -56,6 +56,9 @@ head -12 /root/dubbing-test/in/arabe1.vtt
 ```
 Le fichier doit commencer par `WEBVTT` suivi de blocs `00:00:01.000 --> 00:00:03.500` puis le texte. S'il est vide, cette conférence n'a pas de texte français : traduis-la d'abord (Studio → Sous-titres).
 
+## Étape D3a (nouvelles voix)
+Le banc gagne le moteur `qwen` (Qwen3-TTS, image séparée `majlis-dub-d3`) et l'option `--synthetic` (échantillon de voix de synthèse créé dans Voicebox : pas de consentement à fournir). Mode d'emploi : `dubbing/d3bench/README.md`.
+
 ## Lancement
 ```bash
 cd /root/dubbing-test/src/dubbing/etape0

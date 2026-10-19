@@ -4323,3 +4323,59 @@ python3 api/tests/test_editor_e5c.py       # route : demande, suivi, refus (exte
 cd web && python3 tests/e5c_align.py       # navigateur : bouton, attente, calcul, mise à jour automatique, coupe d'un mot, arabe
 ```
 **Non testé** (étape F, registre 25) : le vrai Whisper (le faux entend exactement le texte) et une conférence d'une heure.
+
+## Étape D3a — Doublage : banc d'essai des nouvelles voix (Voicebox, Qwen3-TTS)
+
+### Description
+Première partie de l'étape D3 (voix variées). Décisions d'Epok (19/10) : **banc d'essai d'abord**, voix voulues : **femme adulte, fille, garçon, autre homme (âgé ou jeune)** ; les échantillons sont fabriqués par Epok avec **Voicebox** sur son PC.
+
+Recherche (licences, français, vitesse sans carte graphique) :
+
+| Outil / moteur | Licence | Français | Sans carte graphique |
+|---|---|---|---|
+| Voicebox (voicebox.sh, studio de voix) | MIT | selon le moteur | oui, plus lent |
+| Qwen3-TTS 0.6B / 1.7B (clonage) | Apache 2.0 | oui | ~2,5 à 3 s de calcul par seconde de voix (chiffre publié, 4 cœurs) |
+| Qwen VoiceDesign 1.7B (voix par description) | Apache 2.0 | oui (moins précis qu'en anglais) | lent, 16 à 32 Go de mémoire : sur un PC, pas sur le VPS |
+| Chatterbox Multilingual | MIT | oui | trop lent (11 à 34, mesuré à l'étape 0) |
+
+Le banc (dossier `dubbing/d3bench/`, rien n'est branché au site) compare pour chaque échantillon la **méthode actuelle** (Tom + conversion ChatterboxVC) et **Qwen3-TTS** (clonage direct), sur 40 phrases d'une conférence, et écrit un tableau (vitesse, mémoire, débordements) + les fichiers à écouter. Le banc de l'étape 0 gagne le moteur `qwen` et l'option `--synthetic` (voix de synthèse : pas de consentement à fournir, noté dans le rapport).
+
+Tout le mode d'emploi (descriptions des voix à coller dans Voicebox, texte à faire lire, commandes) est dans **`dubbing/d3bench/README.md`**.
+
+### Prérequis
+- Banc de l'étape 0 sur le VPS (`/root/dubbing-test`), Voicebox sur le PC d'Epok.
+
+### Déploiement
+Rien à redéployer dans DockPanel (le site, l'API et le service de doublage n'ont pas changé). Sur le VPS :
+```
+cd /root/dubbing-test
+(cd src && git pull)
+docker build -t majlis-dub-test src/dubbing/etape0
+docker build -t majlis-dub-d3 -f src/dubbing/d3bench/Dockerfile src/dubbing
+docker run --rm --entrypoint python majlis-dub-d3 test_d3.py
+mkdir -p /root/dubbing-test/in/voix
+cp src/dubbing/d3bench/texte-reference.txt /root/dubbing-test/in/voix/texte.txt
+```
+Puis déposer les échantillons dans `/root/dubbing-test/in/voix/` (WinSCP) et lancer :
+```
+cd /root/dubbing-test
+src/dubbing/d3bench/run_d3.sh arabe1 40
+cat /root/dubbing-test/out/arabe1/d3/comparaison.md
+```
+
+### Exemples
+- Voir `dubbing/d3bench/README.md` (une seule voix à la main, grand modèle 1.7B, refaire le tableau).
+
+### Debug
+- Journal d'un essai : `tail -40 /root/dubbing-test/out/arabe1/d3/<voix>-<méthode>.log`.
+- `Killed` (code 137) : mémoire insuffisante (modèle 1.7B) → rester sur 0.6B.
+
+### Tests
+```
+python3 dubbing/d3bench/test_d3.py         # faux Qwen : moteur, --synthetic, refus, tableau (17 contrôles)
+python3 dubbing/etape0/test_pipeline.py    # banc de l'étape 0 inchangé
+```
+**Non testé** : le vrai Qwen3-TTS, l'image Docker, Voicebox (rien ne se télécharge depuis mon environnement). Registre : point 29.
+
+### Suite
+D3b : intégrer au service de doublage la méthode choisie à l'écoute (nouvelles voix dans Studio → Audio et doublage → Voix), puis D3c : détection automatique des intervenants.

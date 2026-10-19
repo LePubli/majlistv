@@ -173,7 +173,33 @@ class VoiceConverter:
             return to_np(self.vc.generate(src))
 
 
-ENGINES = {"fake": FakeEngine, "chatterbox": ChatterboxEngine, "piper": PiperEngine, "kokoro": KokoroEngine}
+class QwenEngine:
+    """Étape D3 : Qwen3-TTS (Apache 2.0), clonage direct d'un échantillon de voix (10 à 30 s), sans conversion.
+    Image séparée (dubbing/d3bench) : qwen-tts exige transformers 4.57, incompatible avec chatterbox-tts 0.1.7.
+    Avec le texte lu dans l'échantillon (--ref-text) : mode « ICL », le plus fidèle ; sans lui : empreinte de voix seule."""
+    name = "qwen"
+    def __init__(self, voice=None, device="cpu", qwen_model="Qwen/Qwen3-TTS-12Hz-0.6B-Base", ref_text=None, qwen_lang="French", **_):
+        if not voice:
+            raise RuntimeError("qwen : --voice (échantillon de 10 à 30 s) est obligatoire")
+        import torch
+        from qwen_tts import Qwen3TTSModel  # import tardif : lourd
+        self.model = Qwen3TTSModel.from_pretrained(qwen_model, device_map=device, dtype=torch.float32)
+        self.lang = qwen_lang
+        self.name = "qwen-" + qwen_model.rsplit("-", 2)[-2].lower() if "-" in qwen_model else "qwen"
+        self.prompt = self.model.create_voice_clone_prompt(ref_audio=voice, ref_text=ref_text or None, x_vector_only_mode=not ref_text)
+    def synth(self, text):
+        wavs, sr = self.model.generate_voice_clone(text=text, language=self.lang, voice_clone_prompt=self.prompt)
+        wav = to_np(wavs[0])
+        if sr != SR:
+            with tempfile.TemporaryDirectory() as d:
+                a, b = os.path.join(d, "a.wav"), os.path.join(d, "b.wav")
+                write_wav(a, wav, sr)
+                resample_file(a, b)
+                wav = read_wav(b)[0]
+        return wav
+
+
+ENGINES = {"fake": FakeEngine, "chatterbox": ChatterboxEngine, "piper": PiperEngine, "kokoro": KokoroEngine, "qwen": QwenEngine}
 
 
 def main(argv=None):
@@ -193,6 +219,9 @@ def main(argv=None):
     ap.add_argument("--piper-speaker", type=int, default=None, help="numéro de locuteur (voix à plusieurs locuteurs, ex. upmc : 0 puis 1)")
     ap.add_argument("--kokoro-voice", default="ff_siwis")
     ap.add_argument("--voice", help="échantillon de voix (wav/mp3, 10–30 s) ; sans lui, voix par défaut du modèle")
+    ap.add_argument("--ref-text", help="qwen : fichier texte contenant EXACTEMENT ce qui est lu dans l'échantillon --voice (plus fidèle)")
+    ap.add_argument("--qwen-model", default="Qwen/Qwen3-TTS-12Hz-0.6B-Base", help="qwen : modèle (0.6B-Base ou 1.7B-Base)")
+    ap.add_argument("--synthetic", action="store_true", help="l'échantillon est une voix de synthèse (Voicebox, voix créée par description) : aucune personne réelle, pas de consentement à fournir")
     ap.add_argument("--consent-date", help="AAAA-MM-JJ : date du consentement de la personne dont la voix est clonée")
     ap.add_argument("--consent-by", help="nom de la personne qui a consenti")
     ap.add_argument("--lang", default="fr")
@@ -206,11 +235,15 @@ def main(argv=None):
     clone = a.voice or a.vc_voice
     if a.vc_chunk and (a.vc_chunk > 25 or not a.vc_voice):
         sys.exit("ERREUR : --vc-chunk s'utilise avec --vc-voice et vaut au plus 25 secondes.")
+    if a.engine == "qwen" and not a.voice:
+        sys.exit("ERREUR : --engine qwen exige --voice (échantillon de 10 à 30 s).")
+    if a.ref_text and not os.path.isfile(a.ref_text):
+        sys.exit(f"ERREUR : fichier introuvable : {a.ref_text}")
     if a.voice and a.engine in ("piper", "kokoro"):
         sys.exit("ERREUR : --voice s'utilise avec --engine chatterbox ; pour piper/kokoro utilise --vc-voice.")
     if a.vc_voice and a.engine in ("chatterbox", "fake"):
         sys.exit("ERREUR : --vc-voice s'utilise avec --engine piper ou kokoro.")
-    if a.engine != "fake":
+    if a.engine != "fake" and not a.synthetic:
         if clone and not (a.consent_date and a.consent_by):
             sys.exit("ERREUR : un clonage de voix exige --consent-date AAAA-MM-JJ et --consent-by \"Nom\".")
         if a.consent_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.consent_date):
@@ -229,7 +262,8 @@ def main(argv=None):
     for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ[k] = str(a.threads)
     t0 = time.time()
-    eng = ENGINES[a.engine](device=a.device, voice=a.voice, lang=a.lang, cfg_weight=a.cfg_weight, exaggeration=a.exaggeration,
+    ref_text = open(a.ref_text, encoding="utf-8").read().strip() if a.ref_text else None
+    eng = ENGINES[a.engine](device=a.device, voice=a.voice, lang=a.lang, cfg_weight=a.cfg_weight, exaggeration=a.exaggeration, ref_text=ref_text, qwen_model=a.qwen_model,
                             piper_voice=a.piper_voice, piper_dir=a.piper_dir, piper_speaker=a.piper_speaker, kokoro_voice=a.kokoro_voice)
     vc = VoiceConverter(a.vc_voice, a.device, a.vc_steps) if a.vc_voice else None
     try:
@@ -316,7 +350,8 @@ def main(argv=None):
     ram_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024
     rep = {
         "engine": eng.name + ("+vc" if vc else ""), "threads": a.threads, "vc_steps": a.vc_steps or None, "cfg_weight": a.cfg_weight if a.engine == "chatterbox" else None, "lang": a.lang, "device": a.device, "voice": os.path.basename(clone) if clone else None,
-        "consent": {"date": a.consent_date, "by": a.consent_by} if clone else None,
+        "consent": ({"synthetic": True} if a.synthetic else {"date": a.consent_date, "by": a.consent_by}) if clone else None,
+        "ref_text": bool(a.ref_text) if a.engine == "qwen" else None,
         "model_load_s": round(load_s, 1), "segments": len(segs), "protected_segments": len(segs) - len(spoken),
         "audio_total_s": round(total, 1),
         "rtf_median": round(statistics.median(rtfs), 2) if rtfs else None,

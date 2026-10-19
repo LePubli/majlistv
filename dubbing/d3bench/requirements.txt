@@ -1,0 +1,4 @@
+# torch et torchaudio sont installés dans le Dockerfile (version processeur).
+# qwen-tts 0.1.1 (Apache 2.0) impose transformers 4.57.3 et accelerate 1.12.0.
+qwen-tts==0.1.1
+numpy<2
