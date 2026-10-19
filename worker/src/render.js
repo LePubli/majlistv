@@ -231,10 +231,12 @@ export async function processRender({ job, pool, s3, bucket, workDir, threads = 
   }
 }
 
-// Polices des textes (DejaVu Sans, copiées dans l'image du worker) : FONTS_DIR, sinon worker/fonts, sinon celles du dépôt (développement).
+// Polices des textes (DejaVu Sans) : FONTS_DIR, sinon worker/fonts, sinon celles du dépôt (développement), sinon celles du système
+// (paquet font-dejavu installé dans l'image du worker : indépendant du contexte de construction choisi dans DockPanel).
 export function fontsDir() {
   const here = path.dirname(new URL(import.meta.url).pathname);
-  const list = [process.env.FONTS_DIR, path.join(here, '..', 'fonts'), path.join(here, '..', '..', 'api', 'src', 'modules', 'editor', 'fonts')].filter(Boolean);
+  const list = [process.env.FONTS_DIR, path.join(here, '..', 'fonts'), path.join(here, '..', '..', 'api', 'src', 'modules', 'editor', 'fonts'),
+    '/usr/share/fonts/dejavu', '/usr/share/fonts/truetype/dejavu'].filter(Boolean); // paquet font-dejavu (Alpine) / fonts-dejavu (Debian, Ubuntu)
   return list.find((d) => fs.existsSync(path.join(d, 'DejaVuSans.ttf'))) || list[0];
 }
 

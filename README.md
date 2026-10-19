@@ -3957,7 +3957,7 @@ Le bouton **« Rendre la vidéo »** de l'éditeur fabrique enfin le vrai fichie
 - Versions :
   - module `editor` **0.4.0** (migration `editor/004_render.sql`, table `editor_renders`) ;
   - module `dubbing` **0.7.1** (la clé du fichier de la voix française est donnée au rendu, jamais au navigateur) ;
-  - worker : `render.js` et les polices DejaVu dans son image.
+  - worker : `render.js` et les polices DejaVu dans son image (paquet Alpine `font-dejavu`).
 
 ### Prérequis
 - Étapes E1 à E3 déployées, module « Éditeur de montage » actif.
@@ -3979,10 +3979,10 @@ nginx -t && systemctl reload nginx
 ```
 5. Vérifier que le worker a bien les polices et FFmpeg :
 ```
-docker exec dockpanel-git-majlistv-worker ls /app/fonts
+docker exec dockpanel-git-majlistv-worker ls /usr/share/fonts/dejavu
 docker exec dockpanel-git-majlistv-worker sh -c "ffmpeg -hide_banner -filters | grep -E ' (ass|amultiply|loudnorm|afftdn) '"
 ```
-La première commande doit lister `DejaVuSans.ttf` et `DejaVuSans-Bold.ttf`, la seconde quatre lignes.
+La première commande doit lister `DejaVuSans.ttf` et `DejaVuSans-Bold.ttf` (paquet `font-dejavu` de l'image du worker, depuis le correctif du 19/10), la seconde quatre lignes.
 
 ### Exemples d'utilisation
 - Ouvrir un montage → **Rendre la vidéo** → **Aperçu rapide** → **Lancer le rendu**. La ligne passe à « Prêt » toute seule → **Regarder**.
@@ -3996,7 +3996,7 @@ La première commande doit lister `DejaVuSans.ttf` et `DejaVuSans-Bold.ttf`, la 
 - « En échec » : le message de FFmpeg est affiché sous la ligne. Le journal complet est visible avec `docker logs dockpanel-git-majlistv-worker | grep rendu`.
 - « Trop d’extraits pour un rendu » : plus de 120 passages. Supprimez ou regroupez quelques coupes.
 - « Une musique du montage n’est plus dans la bibliothèque » : retirez-la du montage ou choisissez-en une autre.
-- Texte en carrés ou arabe non lié : les polices manquent dans le worker (voir la commande de vérification ci-dessus).
+- Texte en carrés ou arabe non lié : les polices manquent dans le worker (voir la commande de vérification ci-dessus ; le worker cherche dans `FONTS_DIR`, `/app/fonts`, puis `/usr/share/fonts/dejavu`).
 - Le worker a été redéployé pendant un rendu : le rendu repart du début tout seul.
 
 ### Tests
