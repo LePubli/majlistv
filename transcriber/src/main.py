@@ -25,6 +25,7 @@ from botocore.config import Config
 
 from settings import Settings
 import external
+import align
 
 
 def env(key, default=None, required=False):
@@ -131,6 +132,25 @@ def claim():
         CONTROLS["on"] = False
         log("Pause et priorité indisponibles (migration 055 de l'API absente) : file simple")
         return claim()
+    return rows[0] if rows else None
+
+
+def claim_align():
+    """Étape E5c : prochaine demande « Préciser la place des mots » (table créée par la migration 058 de l'API)."""
+    cond = "AND activity_allows('transcript')" if CONTROLS["on"] else ""
+    try:
+        rows = query(
+            f"""UPDATE word_align_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
+               WHERE talk_id = (SELECT talk_id FROM word_align_jobs WHERE status = 'pending' {cond}
+                                ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING talk_id, lang""",
+            fetch=True,
+        )
+    except psycopg2.errors.UndefinedTable:
+        return None
+    except psycopg2.errors.UndefinedFunction:
+        CONTROLS["on"] = False
+        return claim_align()
     return rows[0] if rows else None
 
 
@@ -278,6 +298,66 @@ def store_words(talk_id, lang, words):
             log(f"[{talk_id}] {len(words)} mots horodatés")
     except psycopg2.errors.UndefinedTable:
         log(f"[{talk_id}] mots horodatés non enregistrés (migration 057 de l'API absente)")
+
+
+def process_align(job):
+    """Étape E5c : réécoute l'audio d'une conférence déjà transcrite et donne à chaque mot du texte existant son moment exact.
+    Le texte et les traductions ne changent pas ; les phrases qui ne se retrouvent pas dans l'audio gardent leur place d'avant."""
+    talk_id, lang = str(job["talk_id"]), job["lang"]
+    work = os.path.join(WORK_DIR, "align-" + talk_id)
+    try:
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work)
+        talk = query("SELECT source, video_ref FROM talks WHERE id = %s", (talk_id,), fetch=True)
+        if not talk or talk[0]["source"] != "upload":
+            raise RuntimeError("seules les vidéos envoyées sur le site peuvent être réécoutées")
+        segs = query("SELECT idx, start_ms, end_ms, text FROM transcript_segments WHERE talk_id = %s AND lang = %s ORDER BY idx", (talk_id, lang), fetch=True)
+        if not segs:
+            raise RuntimeError("pas de texte à préciser")
+        src, wav = os.path.join(work, "source"), os.path.join(work, "audio.wav")
+        log(f"[{talk_id}] place des mots : téléchargement")
+        s3.download_file(BUCKET, talk[0]["video_ref"], src)
+        if not has_audio(src):
+            raise RuntimeError("la vidéo n'a pas de piste audio")
+        extract_audio(src, wav)
+        os.remove(src)
+        duration = audio_duration(wav)
+        language = lang.split("-")[0].lower()
+        model = get_model()
+        log(f"[{talk_id}] place des mots : écoute de {duration:.0f} s (langue : {language})")
+        segments, _info = model.transcribe(wav, language=language if language in WHISPER_LANGS else None, beam_size=BEAM,
+                                           vad_filter=True, condition_on_previous_text=False, word_timestamps=True)
+        heard, last, last_write = [], 0, 0.0
+        for seg in segments:
+            if stopping:
+                raise Stop()
+            for w in (getattr(seg, "words", None) or []):
+                if w.word.strip():
+                    heard.append((int(w.start * 1000), int(w.end * 1000), w.word.strip()))
+            pct = min(95, int(seg.end / duration * 95)) if duration else 0
+            if pct > last and time.time() - last_write > 4:
+                last, last_write = pct, time.time()
+                query("UPDATE word_align_jobs SET progress = %s, updated_at = now() WHERE talk_id = %s", (pct, talk_id))
+        heard.sort(key=lambda h: h[0])
+        done, total = align.align_all([(r["idx"], r["start_ms"], r["end_ms"], r["text"]) for r in segs], heard)
+        old = {}
+        for r in query("SELECT seg_idx, idx, start_ms, end_ms, word FROM transcript_words WHERE talk_id = %s AND lang = %s ORDER BY seg_idx, idx", (talk_id, lang), fetch=True):
+            old.setdefault(r["seg_idx"], []).append((r["start_ms"], r["end_ms"], r["word"]))
+        rows = []
+        for r in segs:
+            ws = done.get(r["idx"]) or old.get(r["idx"]) or []
+            rows += [(talk_id, lang, r["idx"], k, w[0], w[1], w[2]) for k, w in enumerate(ws)]
+        store_words(talk_id, lang, rows)
+        query("UPDATE word_align_jobs SET status = 'done', progress = 100, aligned = %s, total = %s, error = NULL, updated_at = now() WHERE talk_id = %s",
+              (len(done), total, talk_id))
+        log(f"[{talk_id}] place des mots : {len(done)} phrases précisées sur {total}")
+    except Stop:
+        raise
+    except Exception as err:  # noqa: BLE001
+        log(f"[{talk_id}] place des mots : échec : {err}")
+        query("UPDATE word_align_jobs SET status = 'failed', error = %s, updated_at = now() WHERE talk_id = %s", (str(err)[:500], talk_id))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def no_speech(talk_id):
@@ -546,6 +626,10 @@ def main():
         except Exception as err:  # noqa: BLE001
             log("Base pas prête (migration 005 appliquée ?) :", err)
             time.sleep(POLL)
+    try:
+        query("UPDATE word_align_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les demandes interrompues (E5c)
+    except Exception:  # noqa: BLE001
+        pass
     apply_settings()
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
@@ -559,6 +643,18 @@ def main():
         except Exception as err:  # noqa: BLE001
             log("Erreur base :", err)
         if not job:
+            try:
+                job2 = claim_align()
+            except Exception as err:  # noqa: BLE001
+                log("Erreur base (place des mots) :", err)
+                job2 = None
+            if job2:
+                current = None
+                try:
+                    process_align(job2)
+                except Stop:
+                    pass
+                continue
             time.sleep(POLL)
             continue
         current = str(job["id"])

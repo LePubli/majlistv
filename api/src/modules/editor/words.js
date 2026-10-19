@@ -71,6 +71,14 @@ export async function wordsOf(talkId, origin, wanted) {
   return { lang, langs, origin: origin || null, ...buildWords(segs, words) };
 }
 
+// Étape E5c : demande « Préciser la place des mots » (table word_align_jobs, traitée par le service de transcription).
+const alignView = (r) => (r ? { status: r.status, progress: r.progress, error: r.error || null, aligned: r.aligned, total: r.total, lang: r.lang, updatedAt: r.updated_at } : null);
+export async function alignInfo(talkId) {
+  const t = (await pool.query('SELECT source, transcript_status FROM talks WHERE id = $1', [talkId])).rows[0];
+  const job = (await pool.query('SELECT * FROM word_align_jobs WHERE talk_id = $1', [talkId])).rows[0];
+  return { alignable: Boolean(t && t.source === 'upload' && t.transcript_status === 'ready'), align: alignView(job) };
+}
+
 export default async function wordRoutes(app, { guard, viewer }) {
   const q = z.object({ lang: z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/).optional() });
   // Texte de la conférence, mot à mot, en temps source.
@@ -78,6 +86,25 @@ export default async function wordRoutes(app, { guard, viewer }) {
     const row = await guard(req, reply); if (!row) return reply;
     const { lang } = q.parse(req.query || {});
     const origin = (await pool.query('SELECT transcript_language FROM talks WHERE id = $1', [row.talk_id])).rows[0]?.transcript_language || row.lang || null;
-    return wordsOf(row.talk_id, origin, lang);
+    return { ...(await wordsOf(row.talk_id, origin, lang)), ...(await alignInfo(row.talk_id)) };
+  });
+
+  // Recalculer la place exacte des mots de la langue parlée (le texte et les traductions ne changent pas).
+  app.post('/studio/editor/projects/:id/words/align', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    const info = await alignInfo(row.talk_id);
+    if (!info.alignable) return reply.code(409).send({ code: 'unsupported', error: 'Seules les conférences envoyées sur le site et déjà transcrites peuvent être précisées.' });
+    if (['pending', 'processing'].includes(info.align?.status)) return reply.code(409).send({ code: 'busy', error: 'Le calcul est déjà demandé.', align: info.align });
+    const origin = (await pool.query('SELECT transcript_language FROM talks WHERE id = $1', [row.talk_id])).rows[0]?.transcript_language || row.lang || null;
+    const langs = (await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1', [row.talk_id])).rows.map((r) => r.lang);
+    const lang = pickLang(langs, origin, null);
+    if (!lang) return reply.code(409).send({ code: 'no_text', error: 'Pas encore de texte pour cette conférence.' });
+    const { rows } = await pool.query(
+      `INSERT INTO word_align_jobs (talk_id, lang, status, progress, attempts, error, aligned, total, requested_by, created_at, updated_at)
+       VALUES ($1, $2, 'pending', 0, 0, NULL, NULL, NULL, $3, now(), now())
+       ON CONFLICT (talk_id) DO UPDATE SET lang = EXCLUDED.lang, status = 'pending', progress = 0, attempts = 0, error = NULL, aligned = NULL, total = NULL,
+         requested_by = EXCLUDED.requested_by, created_at = now(), updated_at = now()
+       RETURNING *`, [row.talk_id, lang, req.user.sub]);
+    return reply.code(202).send({ align: alignView(rows[0]) });
   });
 }

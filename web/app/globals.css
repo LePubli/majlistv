@@ -3398,3 +3398,7 @@ a.ac-title:hover { color: var(--accent-hover); }
   .mts-main { grid-template-columns: 1fr; }
   .mts-phone, .mts-form, .mts-text { grid-column: 1; grid-row: auto; }
 }
+
+/* ===== Étape E5c — « Préciser la place des mots » ===== */
+.mtw-align { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 8px 0; }
+.mtw-align .btn { min-height: 36px; padding: 6px 14px; font-size: 13px; }

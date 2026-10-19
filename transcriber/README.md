@@ -105,3 +105,6 @@ docker exec dockpanel-git-majlistv-transcriber python -m yt_dlp --version
 docker exec dockpanel-git-majlistv-transcriber python -m yt_dlp --skip-download --list-subs "https://www.youtube.com/watch?v=IDENTIFIANT"
 ```
 
+
+## Place des mots à la demande (étape E5c)
+Le bouton « Préciser la place des mots » de l'éditeur crée une ligne dans `word_align_jobs` (migration `058_word_align.sql` de l'API). Quand aucune transcription n'attend, le service la prend (`claim_align`), télécharge la vidéo, réécoute l'audio avec Whisper (mots horodatés) et **aligne les mots du texte existant** sur ce qu'il entend (`src/align.py`, fonctions pures). Le texte et les traductions ne changent pas ; une phrase retrouvée à moins de 50 % garde ses mots d'avant. Réservé aux vidéos envoyées sur le site. Une demande interrompue (redémarrage) repasse en attente au démarrage. Journaux : `grep "place des mots"`. Test : `python3 transcriber/tests/test_align.py`.

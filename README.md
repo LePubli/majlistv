@@ -4265,3 +4265,61 @@ python3 api/tests/test_editor_e5b.py       # routes, révisions, droits, rendu p
 cd web && python3 tests/e5b_shorts.py     # navigateur : création, cadre glissé, texte, titre, sous-titres, rendu, suppression, arabe, 390 / 1024 / 1440 px
 ```
 **Testé** : tout ce qui précède (FFmpeg, S3 de test, Chromium). **Non testé** (étape F) : image Docker du worker (police, FFmpeg d'Alpine), vraie vidéo H.264 du VPS, lecture sur les réseaux (registre 26, 27).
+
+## Étape E5c — Éditeur de montage : « Préciser la place des mots »
+
+### Description
+Dans l'éditeur → onglet **Texte**, quand la place des mots est seulement **estimée** (conférence transcrite avant l'étape E5a, texte corrigé à la main), un bouton **« Préciser la place des mots »** apparaît sous le texte :
+- le serveur **réécoute l'audio** de la conférence (même Whisper que pour la transcription) ;
+- pour chaque phrase, il retrouve **les mots du texte existant** dans ce que Whisper entend (sans tenir compte des accents, des majuscules, de la ponctuation, ni des voyelles arabes) et note le **moment exact** de chacun ;
+- **le texte et les traductions ne changent jamais** (même les phrases corrigées à la main) ;
+- un mot que Whisper n'a pas entendu (un « euh » supprimé, par exemple) est placé entre ses voisins ;
+- une phrase dont **moins de la moitié des mots** sont retrouvés (texte trop différent de ce qui est dit) n'est **pas touchée** : elle garde sa place d'avant ;
+- la page se met à jour toute seule à la fin (suivi toutes les 4 secondes) : « Terminé : N phrases précisées sur M. » ; le calcul continue si on quitte la page.
+
+Réservé aux conférences **envoyées sur le site** et déjà transcrites (les vidéos YouTube / Vimeo ne sont pas hébergées : le serveur n'a pas leur son). Compter quelques minutes (même ordre de grandeur que la transcription, sans le texte à produire). Le calcul passe après les transcriptions en attente et respecte la pause du Studio → Activité.
+
+Versions : module `editor` **0.7.1** ; migration du socle `058_word_align.sql` (table `word_align_jobs`) ; **service de transcription** modifié (`align.py`, tâche `process_align`).
+
+### Prérequis
+- Étapes E1 à E5b déployées.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est déjà poussé). Ou bien décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy, dans cet ordre :
+   - **`majlistv-api`** (migration `058_word_align.sql`) ;
+   - **`majlistv-web`** ;
+   - **`majlistv-transcriber`** (calcul des mots).
+   - Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Vérifier la migration :
+```
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\d word_align_jobs"'
+```
+
+### Exemples d'utilisation
+- Studio → Éditeur → un projet → onglet **Texte** → en bas : **Préciser la place des mots** → attendre « Terminé » → le pied de page indique « place de chaque mot précise ».
+- Ensuite, couper un mot isolé (« euh ») est exact au dixième de seconde.
+
+### Debug
+- Voir les demandes en cours ou échouées :
+```
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT t.title, j.status, j.progress, j.aligned, j.total, j.error, j.updated_at FROM word_align_jobs j JOIN talks t ON t.id = j.talk_id ORDER BY j.updated_at DESC LIMIT 20;"'
+```
+- Journaux du service : `docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | grep "place des mots"`.
+- Une demande reste « en attente » : une transcription est en cours (elle passe d'abord), ou la file est en pause (Studio → Activité).
+- « Terminé : 0 phrases précisées » : le texte ne ressemble pas à ce que Whisper entend (mauvaise langue déclarée, texte très corrigé).
+- Demande interrompue (redémarrage du service) : elle est remise en attente toute seule au démarrage.
+
+### Tests
+```
+python3 transcriber/tests/test_align.py    # alignement (accents, arabe, mots non entendus), tâche complète avec faux Whisper et vraie base
+python3 api/tests/test_editor_e5c.py       # route : demande, suivi, refus (externe, pas de texte, droits), migration
+cd web && python3 tests/e5c_align.py       # navigateur : bouton, attente, calcul, mise à jour automatique, coupe d'un mot, arabe
+```
+**Non testé** (étape F, registre 25) : le vrai Whisper (le faux entend exactement le texte) et une conférence d'une heure.

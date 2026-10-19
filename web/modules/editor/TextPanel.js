@@ -66,6 +66,29 @@ export default function TextPanel({ projectId, clips, commit, canEdit, srcAt, se
   }, [call, projectId, t]);
   useEffect(() => { load(''); }, [load]);
 
+  // Étape E5c : « Préciser la place des mots » — demande au serveur, puis suivi (toutes les 4 s) jusqu'à la fin.
+  const [align, setAlign] = useState(null);
+  const [alignErr, setAlignErr] = useState('');
+  const alignStatus = (align || data?.align)?.status;
+  const alignNow = align || data?.align || null;
+  const busyAlign = alignStatus === 'pending' || alignStatus === 'processing';
+  const askAlign = async () => {
+    setAlignErr('');
+    const r = await call(`/studio/editor/projects/${projectId}/words/align`, { method: 'POST', body: '{}' });
+    if (r.ok || r.data?.align) setAlign(r.data.align); else setAlignErr(r.data?.error || t('dbError'));
+  };
+  useEffect(() => {
+    if (!busyAlign) return undefined;
+    const h = setTimeout(async () => {
+      const r = await call(`/studio/editor/projects/${projectId}/words${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`);
+      if (!r.ok) return;
+      if (r.data.align?.status === 'done') { setAlign(null); setData(r.data); setLang(r.data.lang || ''); return; }
+      setAlign(r.data.align);
+      if (r.data.align?.status === 'failed') setData((d) => ({ ...d, align: r.data.align }));
+    }, 4000);
+    return () => clearTimeout(h);
+  }, [busyAlign, align, call, projectId, lang]);
+
   // Langue parlée : mot à mot. Traduction : phrase par phrase.
   const spoken = Boolean(data?.lang && data?.origin && (data.lang === data.origin || String(data.origin).startsWith(data.lang)));
   const wordMode = spoken || (data?.langs?.length === 1);
@@ -226,6 +249,18 @@ export default function TextPanel({ projectId, clips, commit, canEdit, srcAt, se
                 hits={hitSet} rtl={rtl} onDown={onDown} onEnter={onEnter} />
             ))}
           </div>
+          {wordMode && data.alignable && (data.precise < data.total || alignNow) && (
+            <div className="mtw-align" data-align={alignStatus || 'none'}>
+              <button type="button" className="btn ghost sd-pill" onClick={askAlign} disabled={!canEdit || busyAlign} data-act="text-align" title={t('mtwAlignHelp')}>{t('mtwAlign')}</button>
+              <small className="meta" role="status">
+                {alignErr || (alignStatus === 'pending' ? t('mtwAlignPending')
+                  : alignStatus === 'processing' ? t('mtwAlignRunning').replace('{n}', alignNow.progress || 0)
+                    : alignStatus === 'failed' ? t('mtwAlignFailed').replace('{e}', alignNow.error || '')
+                      : alignStatus === 'done' ? t('mtwAlignDone').replace('{n}', alignNow.aligned ?? 0).replace('{c}', alignNow.total ?? 0)
+                        : t('mtwAlignHelp'))}
+              </small>
+            </div>
+          )}
           <p className="meta small mtw-foot">{t('mtwStats').replace('{n}', cutCount).replace('{c}', units.length)} · {precision}</p>
           <p className="mt-hint">{canEdit ? t('mtwHelp') : t('mtwReadOnly')}</p>
         </>
