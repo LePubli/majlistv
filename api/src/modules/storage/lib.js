@@ -88,7 +88,7 @@ const ITEM_COLS = `a.id, a.source_key AS "key", a.kind, a.label, a.talk_id AS "t
 export const ITEMS_FROM = 'archive_items a LEFT JOIN talks t ON t.id = a.talk_id';
 export async function getItem(id) { return (await pool.query(`SELECT ${ITEM_COLS} FROM ${ITEMS_FROM} WHERE a.id = $1`, [id])).rows[0] || null; }
 export async function listItems({ status = 'live', limit = 200 } = {}) {
-  const where = status === 'live' ? "a.status NOT IN ('restored')" : status === 'history' ? "a.status = 'restored'" : 'true';
+  const where = status === 'live' ? "a.status NOT IN ('restored', 'deleted')" : status === 'history' ? "a.status IN ('restored', 'deleted')" : 'true';
   return (await pool.query(`SELECT ${ITEM_COLS} FROM ${ITEMS_FROM} WHERE ${where} ORDER BY a.updated_at DESC LIMIT $1`, [limit])).rows;
 }
 export async function totals() {
@@ -101,7 +101,7 @@ export async function totals() {
 }
 // Archive « vivante » d'un fichier de Garage (point d'extension archive.lookup).
 export async function lookup(key) {
-  const r = (await pool.query(`SELECT ${ITEM_COLS} FROM ${ITEMS_FROM} WHERE a.source_key = $1 AND a.status NOT IN ('restored', 'failed') ORDER BY a.created_at DESC LIMIT 1`, [key])).rows[0];
+  const r = (await pool.query(`SELECT ${ITEM_COLS} FROM ${ITEMS_FROM} WHERE a.source_key = $1 AND a.status NOT IN ('restored', 'failed', 'deleted', 'delete_queued') ORDER BY a.created_at DESC LIMIT 1`, [key])).rows[0];
   return r || null;
 }
 
@@ -123,10 +123,19 @@ export async function enqueueRestore(id) {
   return rows[0] ? getItem(id) : null;
 }
 
+// Point d'extension archive.restore (étape E4b) : faire revenir dans Garage le fichier archivé d'une clé.
+export async function restoreKey(key) {
+  const live = await lookup(key);
+  if (!live) return null;
+  if (['restore_queued', 'restoring'].includes(live.status)) return live;
+  return enqueueRestore(live.id);
+}
+
 // Après un arrêt brutal de l'API, les opérations « en cours » repartent.
 export async function recover() {
   await pool.query(`UPDATE archive_items SET status = 'queued', updated_at = now() WHERE status = 'archiving'`);
   await pool.query(`UPDATE archive_items SET status = 'restore_queued', updated_at = now() WHERE status = 'restoring'`);
+  await pool.query(`UPDATE archive_items SET status = 'delete_queued', updated_at = now() WHERE status = 'deleting'`);
 }
 
 // Étape S3 : pause et priorité réglées dans Studio → Activité (fonctions SQL de la migration 055 de l'API).
@@ -140,8 +149,8 @@ async function claim() {
   const PAUSED = ctl ? "activity_paused('archive', id::text)" : 'false';
   const PRIORITY = ctl ? "activity_priority('archive', id::text)" : '0';
   const { rows } = await pool.query(
-    `UPDATE archive_items SET status = CASE status WHEN 'queued' THEN 'archiving' ELSE 'restoring' END, attempts = attempts + 1, updated_at = now()
-     WHERE id = (SELECT id FROM archive_items WHERE status IN ('queued', 'restore_queued') AND NOT ${PAUSED}
+    `UPDATE archive_items SET status = CASE status WHEN 'queued' THEN 'archiving' WHEN 'delete_queued' THEN 'deleting' ELSE 'restoring' END, attempts = attempts + 1, updated_at = now()
+     WHERE id = (SELECT id FROM archive_items WHERE status IN ('queued', 'restore_queued', 'delete_queued') AND NOT ${PAUSED}
                  ORDER BY ${PRIORITY} DESC, updated_at LIMIT 1 FOR UPDATE SKIP LOCKED)
      RETURNING *`);
   return rows[0] || null;
@@ -198,6 +207,20 @@ async function doRestore(item, s, log) {
   return true;
 }
 
+// Registre, point 3 (réglé à l'étape E4b) : un fichier de travail effacé de Garage par son module (ex. ancienne écoute du doublage)
+// alors qu'il était archivé : sa copie chez le fournisseur n'a plus d'usage. Le module marque l'archive « delete_queued » ; on l'efface ici.
+async function doDelete(item, s, log) {
+  let r; let g;
+  try { r = await remoteEnv(s); g = garageEnv(); } catch (e) { return fail(item, 'delete', e.message); }
+  const env = { ...g.env, ...r.env }; const secrets = [...g.secrets, ...r.secrets];
+  const d = await run(['deletefile', join(r.remote, item.remote_path || item.source_key)], { env, secrets, timeoutMs: 300_000 });
+  // Déjà absent chez le fournisseur : rien à faire.
+  if (d.code !== 0 && !/not found|doesn't exist|object not found|no such file/i.test(d.stderr || '')) return fail(item, 'delete', `Effacement : ${d.stderr || d.code}`);
+  await pool.query(`UPDATE archive_items SET status = 'deleted', error = NULL, failed_op = NULL, updated_at = now() WHERE id = $1`, [item.id]);
+  log?.info?.(`Archivage : copie d'archive effacée (${item.source_key})`);
+  return true;
+}
+
 // Traite la file jusqu'à ce qu'elle soit vide. `busy` empêche deux passages simultanés.
 let busy = false;
 export async function processQueue(ctx, log) {
@@ -208,7 +231,9 @@ export async function processQueue(ctx, log) {
       const item = await claim();
       if (!item) break;
       const s = await readSettings(ctx);
-      if (item.status === 'archiving') await doArchive(item, s, log); else await doRestore(item, s, log);
+      if (item.status === 'archiving') await doArchive(item, s, log);
+      else if (item.status === 'deleting') await doDelete(item, s, log);
+      else await doRestore(item, s, log);
       n += 1;
     }
   } finally { busy = false; }
@@ -228,15 +253,17 @@ export async function testFile(userId) {
 // --- Archivage automatique : chaque module annonce ses fichiers de travail (événement archive.collect) ---
 export async function autoArchive(ctx, log, { force = false } = {}) {
   const s = await readSettings(ctx);
-  if (s.provider === 'none' || !(s.work_audio_days > 0)) return { queued: 0, skipped: 'off' };
+  if (s.provider === 'none' || (!(s.work_audio_days > 0) && !(s.keep_original_days >= 0))) return { queued: 0, skipped: 'off' };
   const last = await getState('auto_last_run');
   if (!force && last && Date.now() - new Date(last.updated_at).getTime() < 20 * 3600_000) return { queued: 0, skipped: 'recent' };
   const out = [];
-  await ext.emit('archive.collect', out, { kind: 'work_audio', olderThanDays: s.work_audio_days });
+  if (s.work_audio_days > 0) await ext.emit('archive.collect', out, { kind: 'work_audio', olderThanDays: s.work_audio_days });
+  // Étape E4b : vidéos d'origine remplacées par un montage, gardées N jours dans Garage puis archivées.
+  if (s.keep_original_days >= 0) await ext.emit('archive.collect', out, { kind: 'original', olderThanDays: s.keep_original_days });
   let queued = 0;
   // Un fichier restauré récemment (moins de N jours) n'est pas renvoyé tout de suite aux archives.
   const recent = new Set((await pool.query(
-    `SELECT source_key FROM archive_items WHERE status = 'restored' AND restored_at > now() - make_interval(days => $1)`, [s.work_audio_days])).rows.map((r) => r.source_key));
+    `SELECT source_key FROM archive_items WHERE status = 'restored' AND restored_at > now() - make_interval(days => $1)`, [Math.max(1, s.work_audio_days || 0)])).rows.map((r) => r.source_key));
   for (const c of out) {
     if (!c?.key || recent.has(c.key)) continue;
     try { await headObject(c.key); } catch { continue; } // fichier déjà absent de Garage : rien à archiver

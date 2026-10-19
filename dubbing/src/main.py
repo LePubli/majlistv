@@ -30,7 +30,7 @@ import pipeline as pl
 from glossary import apply as apply_glossary, compile_entries
 from settings import Settings
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 TZ = ZoneInfo("Europe/Paris")
 
 
@@ -114,12 +114,29 @@ s3 = boto3.client(
 
 
 def s3_delete(*keys):
+    gone = []
     for k in keys:
         if k:
             try:
                 s3.delete_object(Bucket=BUCKET, Key=k)
+                gone.append(k)
             except Exception as err:  # noqa: BLE001
                 log(f"Suppression impossible de {k} : {err}")
+    forget_archives(gone)
+
+
+def forget_archives(keys):
+    """Registre, point 3 (étape E4b) : un fichier déjà archivé chez le fournisseur (module « Stockage et archivage ») et que l'on
+    efface ici n'a plus d'usage. L'API effacera aussi sa copie d'archive. Sans le module (table absente), rien à faire."""
+    if not keys:
+        return
+    try:
+        n = query("""UPDATE archive_items SET status = 'delete_queued', updated_at = now()
+                     WHERE source_key = ANY(%s) AND status = 'archived'""", (list(keys),))
+        if n:
+            log(f"{n} copie(s) d'archive à effacer chez le fournisseur")
+    except psycopg2.Error as err:
+        log(f"Archives non signalées ({err.pgerror or err})")
 
 
 # --- Moteurs (chargés à la demande, gardés en mémoire) -------------------------------------------

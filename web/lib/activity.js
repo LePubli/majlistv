@@ -3,6 +3,7 @@
 export function taskName(x, t) {
   if (x.queue === 'dubbing') return t(x.kind === 'preview' ? 'tqPreview' : 'tqDubbing');
   if (x.queue === 'archive') return t(x.kind === 'restore' ? 'tqRestore' : 'tqArchive');
+  if (x.queue === 'replace') return t(x.kind === 'restore' ? 'tqRestoreVideo' : 'tqReplace'); // étape E4b : nouvelle version de la vidéo
   if (x.queue === 'render') return t(x.kind === 'preview' ? 'tqRenderPreview' : 'tqRenderFinal'); // étape E4a : rendus du montage
   if (x.queue === 'editor') return t(x.kind === 'music' ? 'tqWaveMusic' : x.kind === 'dub' ? 'tqWaveDub' : 'tqWaveOrig'); // étape E2 : analyses du son
   if (x.queue === 'translation') return `${t('tqTranslation')}${x.lang ? ` (${String(x.lang).toUpperCase()})` : ''}`;

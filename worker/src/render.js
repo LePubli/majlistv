@@ -194,7 +194,7 @@ export async function processRender({ job, pool, s3, bucket, workDir, threads = 
 
     // 1. Fichiers : la source (l'original envoyé, sinon la meilleure qualité convertie), la voix française, les musiques, le logo.
     await progress('download', 0, true);
-    const talk = (await pool.query('SELECT video_ref, source FROM talks WHERE id = $1', [job.talk_id])).rows[0];
+    const talk = (await pool.query("SELECT video_ref, source, COALESCE(media_prefix, 'hls/' || id || '/') AS prefix FROM talks WHERE id = $1", [job.talk_id])).rows[0];
     if (!talk) throw new Error('Conférence introuvable');
     const files = { music: {}, curves: {} };
     files.source = await fetchSource({ s3, bucket, talk, talkId: job.talk_id, dir, download, log });
@@ -300,8 +300,8 @@ async function fetchSource({ s3, bucket, talk, talkId, dir, download, log }) {
   const found = new Set();
   let token;
   do {
-    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `hls/${talkId}/v`, ContinuationToken: token }));
-    for (const o of page.Contents || []) { const m = o.Key.match(/\/hls\/[^/]+\/(v\d+)\//) || o.Key.match(/^hls\/[^/]+\/(v\d+)\//); if (m) found.add(m[1]); }
+    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `${talk.prefix || `hls/${talkId}/`}v`, ContinuationToken: token }));
+    for (const o of page.Contents || []) { const m = o.Key.slice((talk.prefix || `hls/${talkId}/`).length).match(/^(v\d+)\//); if (m) found.add(m[1]); }
     token = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (token);
   if (!found.size) throw new Error('La vidéo n’est plus disponible dans le stockage (ni l’original, ni les versions converties)');
@@ -309,7 +309,7 @@ async function fetchSource({ s3, bucket, talk, talkId, dir, download, log }) {
   const hdir = path.join(dir, 'hls'); await fsp.mkdir(hdir, { recursive: true });
   token = undefined;
   do {
-    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `hls/${talkId}/${best}/`, ContinuationToken: token }));
+    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: `${talk.prefix || `hls/${talkId}/`}${best}/`, ContinuationToken: token }));
     for (const o of page.Contents || []) await download(o.Key, path.join(hdir, path.basename(o.Key)));
     token = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (token);

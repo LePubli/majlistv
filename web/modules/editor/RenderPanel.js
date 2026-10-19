@@ -3,15 +3,16 @@
 // voix française, musiques, titres, logo, transitions, sous-titres incrustés, écrans d'ouverture et de fin).
 // Deux choix : aperçu rapide (640 × 360) ou rendu final (qualité de la source, jusqu'à 1080p, niveau sonore homogène en deux passes).
 // Le calcul continue si on ferme l'éditeur ; la liste se met à jour toute seule. Les 3 derniers rendus sont gardés.
-// Remplacer la vidéo publiée par un rendu : étape E4b.
+// Un rendu final prêt peut remplacer la vidéo publiée : « Remplacer la vidéo publiée » (étape E4b, ReplacePage.js).
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { fmtTime } from './ops';
 
 const minutes = (s, t) => (s < 90 ? t('mtrSec').replace('{n}', Math.max(5, Math.round(s / 5) * 5)) : t('mtrMin').replace('{n}', Math.round(s / 60)));
 const mb = (b, locale) => (b / 1048576).toLocaleString(locale, { maximumFractionDigits: b > 104857600 ? 0 : 1 });
 
-export default function RenderPanel({ projectId, getRev, beforeAction, durationFinal, readOnly, onClose, onChange }) {
+export default function RenderPanel({ projectId, getRev, beforeAction, durationFinal, readOnly, onClose, onChange, readOnlyReplace = false }) {
   const { t, call, locale } = useApp();
   const [d, setD] = useState(null);
   const [kind, setKind] = useState('preview');
@@ -127,6 +128,7 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
                   {['queued', 'running'].includes(r.status) && !r.cancelRequested && <button type="button" className="btn ghost sd-pill" onClick={() => cancel(r)} data-act="render-cancel">{t('mtrCancel')}</button>}
                   {r.status === 'ready' && r.url && <button type="button" className="btn ghost sd-pill" aria-expanded={watch === r.id} onClick={() => setWatch(watch === r.id ? null : r.id)} data-act="render-watch">{watch === r.id ? t('mtrHide') : t('mtrWatch')}</button>}
                   {r.status === 'ready' && r.downloadUrl && <a className="btn sd-pill" href={r.downloadUrl} download data-act="render-download">{t('mtrDownload')}</a>}
+                  {r.status === 'ready' && r.kind === 'final' && !readOnlyReplace && <Link className="btn sd-pill" href={`/studio/editor/${projectId}/replace?render=${r.id}`} data-act="render-replace">{t('mtrReplace')}</Link>}
                   {!['queued', 'running'].includes(r.status) && <button type="button" className="btn ghost sd-pill" onClick={() => remove(r)} data-act="render-delete">{t('mtrDelete')}</button>}
                 </div>
                 {watch === r.id && r.url && (

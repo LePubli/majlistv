@@ -5,6 +5,7 @@ import publicRoutes, { notifyReady } from './public.js';
 import { recordListening, collectWorkFiles } from './lib.js';
 import { enqueueForUser } from '../../mailer.js';
 import { collectTasks, pauseRunning, production, overview, editorMedia } from './studio.js';
+import { onReplaced, onRestored } from './replaced.js';
 
 export default async function register(app, ctx) {
   // Temps d'écoute par langue de l'audio, à chaque reprise de lecture (seulement quand le module est activé).
@@ -19,6 +20,9 @@ export default async function register(app, ctx) {
   ctx.on('studio.overview', (out, opts) => overview(out, opts));
   // Étape E1 : phrases de la voix française affichées dans l'éditeur de montage (piste liée).
   ctx.on('editor.media', (out, opts) => editorMedia(out, opts));
+  // Étape E4b : vidéo publiée remplacée par un montage (piste française retirée, à refaire) ou original restauré (piste remise).
+  ctx.on('editor.replaced', (snap, opts) => onReplaced(snap, opts));
+  ctx.on('editor.restored', (data, opts) => onRestored(data, opts));
   await app.register(async (scope) => routes(scope, ctx));
   await app.register(publicRoutes); // étape D2 : version française côté spectateurs
 }

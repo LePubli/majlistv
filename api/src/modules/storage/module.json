@@ -1,29 +1,139 @@
 {
   "id": "storage",
   "name": "Stockage et archivage",
-  "version": "0.2.0",
-  "description": "Espace utilisé sur Garage (stockage des vidéos servies aux spectateurs) et archivage des fichiers froids chez un fournisseur au choix : PlanetHoster en SFTP (par défaut), stockage compatible S3 (Backblaze B2, Wasabi, Scaleway, Cloudflare R2, AWS) ou WebDAV, avec rclone. Test de la connexion, fichier d'essai archivé puis restauré, restauration en un clic, archivage automatique des pistes audio de travail du doublage (étape S2). Tâches d'archivage dans Studio → Activité et espace de stockage sur le tableau de bord (S3).",
+  "version": "0.3.0",
+  "description": "Espace utilisé sur Garage et archivage des fichiers froids chez un fournisseur au choix (PlanetHoster en SFTP par défaut, S3 compatible ou WebDAV, avec rclone) : test de connexion, fichier d'essai, restauration en un clic, archivage automatique des pistes de travail du doublage (S2). Tâches dans Studio → Activité, espace sur le tableau de bord (S3). Originaux des vidéos remplacées gardés N jours puis archivés, restauration demandée par l'éditeur, copies d'archive des fichiers effacés supprimées (E4b).",
   "requires": [],
   "defaultEnabled": false,
   "settings": [
-    { "key": "provider", "type": "select", "label": "Fournisseur d'archivage", "help": "planethoster : SFTP (hébergement PlanetHoster par défaut) ; s3 : stockage compatible S3 ; webdav : Nextcloud et autres ; none : rien n'est archivé, tout reste sur le serveur.", "def": "planethoster", "options": ["planethoster", "s3", "webdav", "none"] },
-    { "key": "sftp_host", "type": "text", "label": "SFTP : adresse du serveur", "help": "Ex. node228-eu.n0c.com (le serveur de la sauvegarde nocturne, voir /root/.ssh/config sur le VPS)." },
-    { "key": "sftp_port", "type": "number", "label": "SFTP : port", "def": "5022", "min": 1, "max": 65535 },
-    { "key": "sftp_user", "type": "text", "label": "SFTP : identifiant" },
-    { "key": "sftp_secret", "type": "secret_text", "label": "SFTP : mot de passe ou clé privée", "help": "Un mot de passe, ou une clé privée complète (-----BEGIN OPENSSH PRIVATE KEY----- …). Chiffré avant d'être enregistré." },
-    { "key": "s3_endpoint", "type": "url", "label": "S3 : adresse (endpoint)", "help": "Ex. https://s3.eu-central-003.backblazeb2.com, https://s3.fr-par.scw.cloud, https://<compte>.r2.cloudflarestorage.com" },
-    { "key": "s3_region", "type": "text", "label": "S3 : région", "def": "auto" },
-    { "key": "s3_bucket", "type": "text", "label": "S3 : nom du bucket" },
-    { "key": "s3_access_key", "type": "text", "label": "S3 : clé d'accès (access key)" },
-    { "key": "s3_secret_key", "type": "secret", "label": "S3 : clé secrète" },
-    { "key": "webdav_url", "type": "url", "label": "WebDAV : adresse", "help": "Ex. https://cloud.exemple.fr/remote.php/dav/files/<utilisateur>" },
-    { "key": "webdav_user", "type": "text", "label": "WebDAV : identifiant" },
-    { "key": "webdav_pass", "type": "secret_text", "label": "WebDAV : mot de passe" },
-    { "key": "folder", "type": "text", "label": "Dossier des archives chez le fournisseur", "help": "Dossier séparé de la sauvegarde nocturne.", "def": "studio" },
-    { "key": "encrypt_pass", "type": "secret_text", "label": "Phrase de chiffrement des archives (facultatif)", "help": "Si elle est renseignée, les fichiers sont chiffrés avant l'envoi. À conserver aussi dans un gestionnaire de mots de passe : sans elle, les archives chiffrées sont illisibles. Ne pas la changer tant que des archives chiffrées existent." },
-    { "key": "work_audio_days", "type": "number", "label": "Archiver les pistes audio de travail après (jours)", "help": "Écoutes de 60 secondes et « voix française seule » des vidéos envoyées (la piste servie aux spectateurs n'est jamais archivée). 0 = jamais.", "def": "30", "min": 0, "max": 3650 },
-    { "key": "keep_original_days", "type": "number", "label": "Garder l'original après un remplacement (jours)", "help": "Appliqué par le remplacement de vidéo (étape E4).", "def": "7", "min": 1, "max": 365 },
-    { "key": "alert_free_pct", "type": "number", "label": "Alerte quand l'espace libre de Garage passe sous (%)", "def": "15", "min": 0, "max": 90 },
-    { "key": "garage_capacity_gb", "type": "number", "label": "Capacité de Garage (Go)", "help": "Place réservée aux vidéos sur le VPS. À vérifier avec « df -h / » sur le serveur.", "def": "30", "min": 1, "max": 100000 }
+    {
+      "key": "provider",
+      "type": "select",
+      "label": "Fournisseur d'archivage",
+      "help": "planethoster : SFTP (hébergement PlanetHoster par défaut) ; s3 : stockage compatible S3 ; webdav : Nextcloud et autres ; none : rien n'est archivé, tout reste sur le serveur.",
+      "def": "planethoster",
+      "options": [
+        "planethoster",
+        "s3",
+        "webdav",
+        "none"
+      ]
+    },
+    {
+      "key": "sftp_host",
+      "type": "text",
+      "label": "SFTP : adresse du serveur",
+      "help": "Ex. node228-eu.n0c.com (le serveur de la sauvegarde nocturne, voir /root/.ssh/config sur le VPS)."
+    },
+    {
+      "key": "sftp_port",
+      "type": "number",
+      "label": "SFTP : port",
+      "def": "5022",
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "key": "sftp_user",
+      "type": "text",
+      "label": "SFTP : identifiant"
+    },
+    {
+      "key": "sftp_secret",
+      "type": "secret_text",
+      "label": "SFTP : mot de passe ou clé privée",
+      "help": "Un mot de passe, ou une clé privée complète (-----BEGIN OPENSSH PRIVATE KEY----- …). Chiffré avant d'être enregistré."
+    },
+    {
+      "key": "s3_endpoint",
+      "type": "url",
+      "label": "S3 : adresse (endpoint)",
+      "help": "Ex. https://s3.eu-central-003.backblazeb2.com, https://s3.fr-par.scw.cloud, https://<compte>.r2.cloudflarestorage.com"
+    },
+    {
+      "key": "s3_region",
+      "type": "text",
+      "label": "S3 : région",
+      "def": "auto"
+    },
+    {
+      "key": "s3_bucket",
+      "type": "text",
+      "label": "S3 : nom du bucket"
+    },
+    {
+      "key": "s3_access_key",
+      "type": "text",
+      "label": "S3 : clé d'accès (access key)"
+    },
+    {
+      "key": "s3_secret_key",
+      "type": "secret",
+      "label": "S3 : clé secrète"
+    },
+    {
+      "key": "webdav_url",
+      "type": "url",
+      "label": "WebDAV : adresse",
+      "help": "Ex. https://cloud.exemple.fr/remote.php/dav/files/<utilisateur>"
+    },
+    {
+      "key": "webdav_user",
+      "type": "text",
+      "label": "WebDAV : identifiant"
+    },
+    {
+      "key": "webdav_pass",
+      "type": "secret_text",
+      "label": "WebDAV : mot de passe"
+    },
+    {
+      "key": "folder",
+      "type": "text",
+      "label": "Dossier des archives chez le fournisseur",
+      "help": "Dossier séparé de la sauvegarde nocturne.",
+      "def": "studio"
+    },
+    {
+      "key": "encrypt_pass",
+      "type": "secret_text",
+      "label": "Phrase de chiffrement des archives (facultatif)",
+      "help": "Si elle est renseignée, les fichiers sont chiffrés avant l'envoi. À conserver aussi dans un gestionnaire de mots de passe : sans elle, les archives chiffrées sont illisibles. Ne pas la changer tant que des archives chiffrées existent."
+    },
+    {
+      "key": "work_audio_days",
+      "type": "number",
+      "label": "Archiver les pistes audio de travail après (jours)",
+      "help": "Écoutes de 60 secondes et « voix française seule » des vidéos envoyées (la piste servie aux spectateurs n'est jamais archivée). 0 = jamais.",
+      "def": "30",
+      "min": 0,
+      "max": 3650
+    },
+    {
+      "key": "keep_original_days",
+      "type": "number",
+      "label": "Garder l'original après un remplacement (jours)",
+      "help": "Appliqué par le remplacement de vidéo (étape E4).",
+      "def": "7",
+      "min": 1,
+      "max": 365
+    },
+    {
+      "key": "alert_free_pct",
+      "type": "number",
+      "label": "Alerte quand l'espace libre de Garage passe sous (%)",
+      "def": "15",
+      "min": 0,
+      "max": 90
+    },
+    {
+      "key": "garage_capacity_gb",
+      "type": "number",
+      "label": "Capacité de Garage (Go)",
+      "help": "Place réservée aux vidéos sur le VPS. À vérifier avec « df -h / » sur le serveur.",
+      "def": "30",
+      "min": 1,
+      "max": 100000
+    }
   ]
 }

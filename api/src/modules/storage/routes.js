@@ -1,5 +1,6 @@
 // Module « Stockage et archivage » — routes du Studio (administrateurs), étape S2.
 import { z } from 'zod';
+import * as ext from '../../ext.js';
 import { describeSettings, saveSettings } from '../../settings.js';
 import { storage } from '../../storage.js';
 import {
@@ -11,6 +12,13 @@ import { PROVIDERS } from './rclone.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const PROVIDER_NAMES = { planethoster: 'PlanetHoster (SFTP)', s3: 'Stockage S3', webdav: 'WebDAV', none: 'Aucun' };
+
+async function pendingOriginals(s) {
+  const out = [];
+  await ext.emit('archive.collect', out, { kind: 'original', olderThanDays: 0 }).catch(() => {});
+  const list = out.filter((x) => x.kind === 'original');
+  return { available: ext.has('archive.restore'), count: list.length, bytes: list.reduce((a, x) => a + (Number(x.bytes) || 0), 0), days: s.keep_original_days };
+}
 
 export default async function routes(app, ctx) {
   const admin = { preHandler: app.requireRole('admin') };
@@ -34,8 +42,8 @@ export default async function routes(app, ctx) {
     return {
       settings, secret, encryptionReady: Boolean(desc.encryption), providers: PROVIDERS.map((id) => ({ id, name: PROVIDER_NAMES[id] })),
       space: await space(s), archives: await totals(),
-      // Remplacement de vidéo (étape E4) : rien en attente tant qu'il n'existe pas.
-      pendingOriginals: { available: false, count: 0, bytes: 0, days: s.keep_original_days },
+      // Étape E4b : originaux des vidéos remplacées, gardés dans Garage avant archivage (annoncés par l'éditeur de montage).
+      pendingOriginals: await pendingOriginals(s),
       lastTest: lastTest ? { ...lastTest.v, at: lastTest.updated_at } : null,
       autoLast: autoLast ? { ...autoLast.v, at: autoLast.updated_at } : null,
       items: await listItems({ status: 'live' }), history: await listItems({ status: 'history', limit: 20 }),
@@ -113,7 +121,8 @@ export default async function routes(app, ctx) {
   app.post('/studio/storage/archives/:id/retry', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { rows } = await pool.query(
-      `UPDATE archive_items SET status = 'queued', error = NULL, failed_op = NULL, updated_at = now() WHERE id = $1 AND status = 'failed' AND failed_op = 'archive' RETURNING id`, [id]);
+      `UPDATE archive_items SET status = CASE failed_op WHEN 'delete' THEN 'delete_queued' ELSE 'queued' END, error = NULL, failed_op = NULL, updated_at = now()
+        WHERE id = $1 AND status = 'failed' AND failed_op IN ('archive', 'delete') RETURNING id`, [id]);
     if (!rows[0]) return reply.code(409).send({ error: 'Seul un archivage en échec peut être relancé', code: 'not_failed' });
     kick();
     req.auditSummary = 'Stockage et archivage : archivage relancé';

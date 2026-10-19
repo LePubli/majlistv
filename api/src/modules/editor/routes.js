@@ -21,6 +21,7 @@ import { checkTimeline, initialTimeline, editedDuration, isEdited, musicAssets, 
 import { dressDefaults, checkDress, renderFrame, probeImage } from './dress.js';
 import { speakerSlug } from '../../speakers.js';
 import renderRoutes, { deleteProjectRenders } from './render.js';
+import replaceRoutes from './replace.js';
 import { ensureTalkWaveforms, ensureAssetWaveform, waveView, processQueue, denoiseSample, hasFfmpeg, STEP_MS } from './audio.js';
 
 const MUSIC_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
@@ -579,4 +580,6 @@ export default async function routes(app) {
 
   // Étape E4a : rendu de la vidéo montée (render.js).
   await renderRoutes(app, { guard, editable, cuesOf, viewer });
+  // Étape E4b : remplacer la vidéo publiée, restaurer l'original (replace.js).
+  await replaceRoutes(app, { viewer, editable });
 }

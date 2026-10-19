@@ -101,11 +101,12 @@ export function denoiseSample(talkId, at, level, seconds = 10) {
 
 // Ce qu'il faut analyser pour une conférence : voix d'origine (playlist v0) et, s'il y en a une, voix française.
 async function sourcesOf(talkId) {
-  const t = (await pool.query("SELECT id, source, video_status FROM talks WHERE id = $1", [talkId])).rows[0];
+  const t = (await pool.query("SELECT id, source, video_status, media_prefix FROM talks WHERE id = $1", [talkId])).rows[0];
   if (!t || t.source !== 'upload' || t.video_status !== 'ready') return {};
   const media = { dub: null };
   await ext.emit('editor.media', media, { talkId });
-  return { orig: `hls:${talkId}:v0`, dub: media.dub?.trackId ? `dub:${media.dub.trackId}` : null };
+  return { orig: t.media_prefix ? `hls:${talkId}:${t.media_prefix}:v0` : `hls:${talkId}:v0`, // nouvelle version publiée (E4b) : forme d'onde recalculée
+    dub: media.dub?.trackId ? `dub:${media.dub.trackId}` : null };
 }
 
 // Met en file les analyses manquantes ou périmées d'une conférence. Renvoie les lignes à jour.

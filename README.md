@@ -4021,3 +4021,104 @@ Les tests E1 à E3 sont mis à jour : module 0.4.0, bouton « Rendre la vidéo �
 - un rendu d'une vraie conférence d'une heure sur le VPS (temps, disque, mémoire) ;
 - la lecture du fichier rendu (H.264) dans un vrai navigateur : le Chromium de test ne lit pas le H.264 ;
 - un vrai téléphone (l'éditeur reste réservé à l'ordinateur).
+
+
+## Étape E4b — Éditeur de montage : remplacer la vidéo publiée
+
+### Description
+Un **rendu final** prêt (étape E4a) peut maintenant **remplacer la vidéo publiée**. Le bouton « Remplacer la vidéo publiée » se trouve dans la fenêtre « Rendre la vidéo », à côté du rendu. Il ouvre l'écran de la maquette (« Studio v2 », écran 5) :
+- **Avant / après** : durée (avec la différence), son, habillage, aperçu du rendu.
+- **Ce qui sera mis à jour** :
+  - transcription, traductions, résumé et chapitres ;
+  - index de recherche ;
+  - notes et reprises de lecture des spectateurs (comptées) ;
+  - **version française à refaire** si la conférence a une piste de doublage ;
+  - **quiz à revoir** : les questions dont le passage cité a été coupé, avec le lien « Voir les questions ».
+- La case **« Conserver mes corrections de traduction au lieu de tout relancer »** évite de relancer quoi que ce soit : tout est seulement recalé.
+- **Votre original est protégé** : l'ancienne vidéo est gardée 7 jours (réglage du module Stockage et archivage), puis archivée. L'écran affiche la place qu'elle occupe.
+- **Étapes du remplacement**, suivies en direct (on peut fermer la page) :
+  1. rendu ;
+  2. préparation de la nouvelle version (qualités, miniatures) par le worker ;
+  3. **bascule** ;
+  4. nouvelle transcription ;
+  5. traductions, résumé, chapitres, recherche.
+
+**Choix d'Epok (19/10)** : la bascule a lieu dès que la nouvelle vidéo est prête, sans attendre la nouvelle transcription. À cet instant, tout est recalé d'un seul coup grâce à la **carte du temps** :
+- les sous-titres de toutes les langues (phrase coupée : retirée ; intro : décalage) ;
+- les chapitres ;
+- les quiz, les actions « Et maintenant ? » et les rappels (passage coupé : « à revoir », donc dépublié) ;
+- les notes et les reprises de lecture (instant coupé : début du passage suivant).
+
+La nouvelle transcription, les traductions et les résumés arrivent ensuite et remplacent le texte recalé. Les quiz sont alors rattachés au texte de leur passage dans la nouvelle transcription.
+
+Les spectateurs déjà en lecture gardent l'ancienne version jusqu'au bout : elle reste servie **6 heures**, puis elle est effacée.
+
+Autres effets du remplacement :
+- **Doublage** : la piste française suit l'ancienne vidéo, elle est donc retirée et à refaire dans Audio et doublage. Les demandes de doublage en cours sont annulées.
+- **Montage** : le montage d'avant est rangé en version nommée (« Montage publié le … »). Le projet repart de la nouvelle vidéo entière, qui contient déjà les coupes et l'habillage.
+- **Restaurer l'original** (sur le même écran, après la bascule) annule le dernier remplacement :
+  - l'original est reconverti ; s'il a été archivé, le module Stockage et archivage le fait d'abord revenir des archives ;
+  - tout revient comme avant : vidéo, phrases, traductions, résumés, quiz, actions, rappels, notes, piste française et montage ;
+  - ce qui a été créé entre-temps (nouvelles notes…) est recalé.
+- **Studio → Activité** : « Nouvelle version de la vidéo » ou « Restauration de l'original » (tâche lourde : pause, priorité, plage horaire).
+- **Studio → Contenus** : l'étape « Montée » passe à « faite » après un remplacement.
+- **Stockage et archivage** : la carte « Originaux en attente » affiche les originaux gardés. Ils sont archivés automatiquement après N jours.
+- **Registre, point 3 réglé** : quand le doublage efface un fichier de travail déjà archivé, sa copie chez le fournisseur est maintenant effacée elle aussi (statut « copie d'archive effacée », relançable en cas d'échec).
+
+Versions :
+- `editor` **0.5.0** (migration `editor/005_replace.sql`) ;
+- `dubbing` **0.8.0** et service de doublage 0.4.1 ;
+- `storage` **0.3.0** (migration `storage/002_cleanup.sql`) ;
+- migration du socle `056_media_prefix.sql` (dossier HLS de la version publiée) ;
+- worker : `replace.js`.
+
+### Prérequis
+- Étape E4a déployée (le worker calcule les rendus).
+- Pour l'archivage de l'original : le module « Stockage et archivage » doit être actif et son fournisseur réglé. Sans cela, l'original est gardé dans Garage, sans limite.
+- Place sur Garage : l'original reste N jours en plus de la nouvelle version (l'écran affiche sa taille). L'ancienne version HLS est effacée 6 h après la bascule.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est déjà poussé). Ou bien décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy, dans cet ordre :
+   - **`majlistv-api`** (migrations `056_media_prefix.sql`, `editor/005_replace.sql`, `storage/002_cleanup.sql`) ;
+   - **`majlistv-web`** ;
+   - **`majlistv-worker`** ;
+   - **`majlistv-dubbing`** (petit changement : copies d'archive signalées).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Exemples d'utilisation
+- Éditeur → **Rendre la vidéo** → **Rendu final** → attendre « Prêt » → **Remplacer la vidéo publiée**. Vérifier l'écran avant / après, puis cliquer sur **Remplacer la vidéo publiée** et confirmer.
+- Pour garder des sous-titres corrigés à la main, cocher **« Conserver mes corrections »** avant de remplacer.
+- Après la bascule, revoir les questions signalées (**Voir les questions**) et relancer le doublage (Audio et doublage).
+- Pour revenir en arrière : Éditeur → projet → `/replace` (ou le même écran) → **Restaurer l'original**.
+
+### Debug
+- Le remplacement reste à « Préparation » : vérifier que le worker tourne (`docker logs --tail 50 dockpanel-git-majlistv-worker | grep "nouvelle version"`) et que les tâches lourdes ne sont pas en pause (Studio → Activité).
+- La bascule n'arrive pas alors que la préparation est finie : l'API attend qu'une transcription ou une traduction en cours d'écriture se termine (pour ne pas mélanger l'ancienne et la nouvelle vidéo). Voir `docker logs dockpanel-git-majlistv-api | grep -i remplacement`.
+- « L'original n'est ni dans le stockage ni dans les archives » : le fichier a été supprimé à la main ; la restauration n'est plus possible.
+- Restauration « en attente de l'archive » : la suite dépend du module Stockage et archivage (Studio → Paramètres → Stockage et archivage, ligne de l'original).
+
+### Tests
+```
+cd api && node tests/test_timemap.mjs            # carte du temps : instants, phrases, chapitres, carte inverse, passages cités
+cd .. && python3 api/tests/test_editor_e4b.py    # API + worker : remplacement complet, suite, nettoyage, restauration, archives, annulation, registre 3
+python3 api/tests/test_storage_e4b.py            # avec un vrai serveur SFTP de test : copie d'archive effacée, original archivé puis restauré
+cd web && python3 tests/e4b_replace.py           # navigateur : écran avant/après, remplacement, suivi, restauration, arabe, 1440 / 1024 / 390 px
+```
+Les tests E1 à E4a, `test_modules.py` et `test_module_removal.py` (modules editor, dubbing, storage) sont à jour et passent.
+
+### Testé / non testé
+**Testé** :
+- les tests ci-dessus, avec le vrai FFmpeg, le vrai code du worker et un vrai serveur SFTP de test ;
+- les régressions de l'éditeur, du lecteur (version française), du doublage (service avec moteurs factices) et du stockage.
+
+**Non testé** :
+- les images Docker (worker, API) ;
+- un remplacement d'une vraie conférence d'une heure sur le VPS (temps de conversion, puis Whisper et traductions) ;
+- la lecture d'un spectateur réel pendant la bascule (le mécanisme v= est testé, pas un vrai lecteur en cours) ;
+- un vrai fournisseur PlanetHoster (seulement le serveur SFTP de test).

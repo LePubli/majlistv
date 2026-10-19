@@ -1,6 +1,6 @@
 // Client S3 (Garage) : liens temporaires, suppression, CORS du bucket.
 import {
-  S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command, PutBucketCorsCommand,
+  S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command, PutBucketCorsCommand, CopyObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from './config.js';
@@ -35,6 +35,31 @@ export const headObject = (key) => storage.send(new HeadObjectCommand({ Bucket: 
 export async function getObjectBuffer(key) {
   const r = await storage.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
   return Buffer.from(await r.Body.transformToByteArray());
+}
+
+// Copie d'un fichier dans le même bucket, sans le télécharger (étape E4b : rendu → nouvelle vidéo de la conférence).
+export const copyObject = (from, to, contentType) => storage.send(new CopyObjectCommand({
+  Bucket: bucket, Key: to, CopySource: `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
+  ...(contentType ? { ContentType: contentType, MetadataDirective: 'REPLACE' } : {}),
+}));
+
+// Clés d'un préfixe (avec leur taille).
+export async function listKeys(prefix) {
+  const out = []; let token;
+  do {
+    const page = await storage.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }));
+    for (const o of page.Contents || []) out.push({ key: o.Key, size: Number(o.Size) || 0 });
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
+
+// Supprime une liste de clés (par paquets de 1000).
+export async function deleteKeys(keys) {
+  for (let i = 0; i < keys.length; i += 1000) {
+    const objs = keys.slice(i, i + 1000).map((k) => ({ Key: k }));
+    if (objs.length) await storage.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objs, Quiet: true } }));
+  }
 }
 
 export const deleteObject = (key) => storage.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

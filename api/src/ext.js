@@ -34,6 +34,9 @@ export const CATALOG = {
   'activity.pause': 'Événement : une tâche en cours a été mise en pause ({ queue, ref }) : le module l’arrête et la remet dans la file',
   'studio.production': 'Événement : chaque module ajoute l’état de production de conférences (vues, doublage…) — Studio → Contenus (objet par conférence, { ids })',
   'studio.overview': 'Événement : chaque module ajoute ses chiffres au tableau de bord du Studio (objet, { organizerId, days, talkId, isAdmin })',
+  'archive.restore': 'Faire revenir dans Garage un fichier archivé (clé) : { id, status } ou null si rien à restaurer (module Stockage et archivage)',
+  'editor.replaced': 'Événement : la vidéo publiée d’une conférence a été remplacée par un montage (snapshot, { talkId, map }) : chaque module range ce qu’il retire dans snapshot (module Éditeur, étape E4b)',
+  'editor.restored': 'Événement : la version d’avant un remplacement est revenue (snapshot rangé lors du remplacement, { talkId }) (module Éditeur, étape E4b)',
   'editor.media': 'Événement : chaque module ajoute ses pistes liées à un projet de l’éditeur de montage (ex. segments de la voix française) — module Éditeur (objet, { talkId })',
 };
 

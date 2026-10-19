@@ -19,8 +19,8 @@ export function production(x, p = {}) {
     st.translated = dub?.hasFrench || fr?.status === 'ready' ? 'ok' : fr?.status === 'failed' ? 'err' : fr ? 'run' : 'todo';
   }
   st.reviewed = french || !dub ? 'na' : dub.review === 'validated' ? 'ok' : 'todo';
-  // Éditeur de montage (étape E1) : « en cours » dès qu'un montage existe ; « fait » viendra avec le rendu (étape E4).
-  st.edited = p.editor?.project ? 'run' : 'na';
+  // Éditeur de montage : « en cours » dès qu'un montage existe (E1) ; « fait » quand la vidéo publiée a été remplacée par le montage (E4b).
+  st.edited = p.editor?.replaced ? 'ok' : p.editor?.project ? 'run' : 'na';
   const fullJob = dub?.job && dub.job.kind === 'full' ? dub.job : null;
   st.dubbed = french || !dub ? 'na' : dub.track ? 'ok' : fullJob ? 'run' : 'todo';
   st.published = x.kind === 'live' ? 'ok' : 'todo';

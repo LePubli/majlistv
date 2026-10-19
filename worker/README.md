@@ -72,3 +72,10 @@ Le worker calcule aussi les **rendus** demandés dans l'éditeur (« Rendre la v
 - Polices des textes : `api/src/modules/editor/fonts` copié dans l'image (`/app/fonts`, ou variable `FONTS_DIR`).
 - Disque : prévoir l'original + le fichier rendu dans `/work` pendant le calcul (effacés ensuite).
 - Test local : `node tests/run_render_once.mjs` (prend un rendu en attente et le calcule) avec les variables `DATABASE_URL`, `S3_*`.
+
+
+## Étape E4b — nouvelles versions des vidéos publiées
+Quand une vidéo publiée est remplacée par un montage (ou que l'original est restauré), le worker prépare la nouvelle version : il convertit le fichier (copie du rendu final, ou original) comme une vidéo envoyée (qualités HLS, miniatures, audio seul) dans un **dossier à part** `hls/<conférence>/r/<remplacement>/`. La version publiée ne bouge pas ; la bascule est faite ensuite par l'API. Code : `src/replace.js` (fichiers du stockage : `src/files.js`).
+- Ordre de passage : conversions des vidéos envoyées, puis nouvelles versions (quelqu'un attend la bascule), puis rendus, puis versions audio.
+- Pause, priorité, plage horaire : Studio → Activité (file « replace », tâche lourde). Annulation possible avant la bascule.
+- Test local : `node tests/run_replace_once.mjs` (mêmes variables que `run_render_once.mjs`).

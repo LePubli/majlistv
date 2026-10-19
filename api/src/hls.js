@@ -1,9 +1,23 @@
 // Réécriture des playlists HLS : le master pointe vers l'API, les variantes vers des liens S3 signés.
 export const HLS_PATH = /^(master\.m3u8|v\d+\/index\.m3u8|audio\/index\.m3u8)$/;
 
-// Master : les lignes d'URI (variantes) reçoivent le jeton de lecture.
-export function rewriteMaster(text, token) {
-  return text.split('\n').map((l) => (l && !l.startsWith('#') ? `${l.trim()}?t=${encodeURIComponent(token)}` : l)).join('\n');
+// Master : les lignes d'URI (variantes) reçoivent le jeton de lecture, et la version (v) : un spectateur qui a commencé à regarder
+// garde la même version jusqu'au bout, même si la vidéo est remplacée entre-temps (étape E4b).
+export function rewriteMaster(text, token, version) {
+  const v = version ? `&v=${encodeURIComponent(version)}` : '';
+  return text.split('\n').map((l) => (l && !l.startsWith('#') ? `${l.trim()}?t=${encodeURIComponent(token)}${v}` : l)).join('\n');
+}
+
+// Versions des fichiers HLS d'une conférence : « 0 » = dossier d'origine hls/<id>/, <uuid> = remplacement hls/<id>/r/<uuid>/.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function prefixOf(id, v) {
+  if (v === '0') return `hls/${id}/`;
+  return UUID.test(String(v)) ? `hls/${id}/r/${String(v).toLowerCase()}/` : null;
+}
+export function versionOf(id, prefix) {
+  if (!prefix || prefix === `hls/${id}/`) return '0';
+  const m = prefix.match(/\/r\/([0-9a-f-]{36})\/$/i);
+  return m ? m[1] : null;
 }
 
 // Variante : init et segments deviennent des liens signés (signUrl(chemin relatif) -> URL).

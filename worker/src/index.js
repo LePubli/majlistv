@@ -1,17 +1,19 @@
 // Worker Mejliss TV : convertit les vidéos envoyées (talks.video_status = 'pending') en HLS,
-// et calcule les rendus des montages de l'éditeur (étape E4a, voir render.js).
+// calcule les rendus des montages de l'éditeur (étape E4a, voir render.js) et prépare les nouvelles versions des vidéos
+// remplacées par un montage ou restaurées (étape E4b, voir replace.js).
 import http from 'node:http';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import pg from 'pg';
 import {
-  S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand,
+  S3Client, ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { probe, transcode, makeAudio, killCurrent } from './transcode.js';
 import { makeClaim } from './claim.js';
 import { makeRenderClaim, processRender, requeueRunning, killRender } from './render.js';
+import { makeReplaceClaim, processReplace, requeueReplace } from './replace.js';
+import { makeFiles } from './files.js';
 
 const env = (k, d) => process.env[k] ?? d;
 const need = (k) => { const v = process.env[k]; if (!v) { console.error(`Variable manquante : ${k}`); process.exit(1); } return v; };
@@ -34,7 +36,6 @@ const s3 = new S3Client({
   responseChecksumValidation: 'WHEN_REQUIRED',
 });
 
-const TYPES = { '.m3u8': 'application/vnd.apple.mpegurl', '.m4s': 'video/iso.segment', '.mp4': 'video/mp4', '.jpg': 'image/jpeg' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
@@ -46,48 +47,11 @@ let lastOk = null;
 const claim = makeClaim(pool, log);
 // Étape E4a : rendus des montages de l'éditeur (après les conversions, avant les versions audio).
 const claimRender = makeRenderClaim(pool, log);
+// Étape E4b : nouvelles versions des vidéos publiées (remplacement par un montage, restauration de l'original).
+const claimReplace = makeReplaceClaim(pool, log);
 
-async function download(key, file) {
-  const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-  await pipeline(obj.Body, fs.createWriteStream(file));
-}
-
-async function* walk(dir, base = dir) {
-  for (const e of await fsp.readdir(dir, { withFileTypes: true })) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) yield* walk(full, base);
-    else yield path.relative(base, full);
-  }
-}
-
-async function uploadDir(dir, prefix) {
-  const files = [];
-  for await (const f of walk(dir)) files.push(f);
-  let next = 0;
-  const worker = async () => {
-    while (next < files.length) {
-      const rel = files[next++];
-      const full = path.join(dir, rel);
-      const { size } = await fsp.stat(full);
-      await s3.send(new PutObjectCommand({
-        Bucket: BUCKET, Key: prefix + rel.split(path.sep).join('/'), Body: fs.createReadStream(full),
-        ContentLength: size, ContentType: TYPES[path.extname(rel)] || 'application/octet-stream',
-      }));
-    }
-  };
-  await Promise.all(Array.from({ length: 4 }, worker));
-  return files.length;
-}
-
-async function deletePrefix(prefix) {
-  let token;
-  do {
-    const page = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
-    const objs = (page.Contents || []).map((o) => ({ Key: o.Key }));
-    if (objs.length) await s3.send(new DeleteObjectsCommand({ Bucket: BUCKET, Delete: { Objects: objs, Quiet: true } }));
-    token = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (token);
-}
+// Fichiers du stockage (téléchargement, envoi d'un dossier, suppression d'un préfixe) : files.js (partagé avec les tests).
+const { download, uploadDir, deletePrefix } = makeFiles(s3, BUCKET);
 
 async function processJob(job) {
   const dir = path.join(WORK_DIR, job.id);
@@ -150,13 +114,13 @@ async function claimAudio() {
     `UPDATE talks SET audio_attempts = audio_attempts + 1
      WHERE id = (SELECT id FROM talks WHERE source = 'upload' AND video_status = 'ready' AND audio_status = 'pending' AND audio_attempts < $1
                  ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-     RETURNING id, audio_attempts`, [MAX_AUDIO_ATTEMPTS]);
+     RETURNING id, audio_attempts, COALESCE(media_prefix, 'hls/' || id || '/') AS prefix`, [MAX_AUDIO_ATTEMPTS]);
   return rows[0];
 }
 
 async function processAudio(job) {
   const dir = path.join(WORK_DIR, `${job.id}-audio`);
-  const prefix = `hls/${job.id}/`;
+  const prefix = job.prefix || `hls/${job.id}/`; // étape E4b : dossier de la version publiée
   try {
     await fsp.rm(dir, { recursive: true, force: true });
     await fsp.mkdir(path.join(dir, 'v0'), { recursive: true });
@@ -202,6 +166,7 @@ async function main() {
     try {
       await pool.query(`UPDATE talks SET video_status = 'pending' WHERE video_status = 'processing'`);
       await requeueRunning(pool); // rendus interrompus (redéploiement) : ils repartent du début
+      await requeueReplace(pool); // nouvelles versions interrompues : idem
       break;
     } catch (err) { log('Base pas prête (migration 004 appliquée ?) :', err.message); await sleep(POLL_MS); }
   }
@@ -210,7 +175,16 @@ async function main() {
     let job;
     try { job = await claim(); } catch (err) { log('Erreur base :', err.message); }
     if (!job) {
-      // Pas de vidéo à convertir : un rendu de montage en attente ?
+      // Pas de vidéo à convertir : une nouvelle version à préparer (quelqu'un attend la bascule) ?
+      let nv;
+      try { nv = await claimReplace(); } catch (err) { log('Erreur base (nouvelle version) :', err.message); }
+      if (nv) {
+        current = { id: nv.id, replace: true };
+        await processReplace({ job: nv, pool, workDir: WORK_DIR, threads: THREADS, log, download, uploadDir, deletePrefix, stopping: () => stopping });
+        current = null;
+        continue;
+      }
+      // Puis un rendu de montage en attente ?
       let r;
       try { r = await claimRender(); } catch (err) { log('Erreur base (rendu) :', err.message); }
       if (r) {
@@ -240,6 +214,7 @@ const shutdown = async () => {
   killCurrent();
   killRender();
   if (current?.render) await requeueRunning(pool);
+  if (current?.replace) await requeueReplace(pool);
   if (current?.video_ref) await pool.query(`UPDATE talks SET video_status = 'pending' WHERE id = $1`, [current.id]).catch(() => {});
   process.exit(0);
 };

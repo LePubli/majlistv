@@ -5,7 +5,8 @@ import { config } from '../config.js';
 import { getNumber } from '../settings.js';
 import { storage, presignGet } from '../storage.js';
 import { playbackLevel } from '../playback.js';
-import { HLS_PATH, rewriteMaster, rewriteVariant, truncateVariant } from '../hls.js';
+import { HLS_PATH, rewriteMaster, rewriteVariant, truncateVariant, prefixOf, versionOf } from '../hls.js';
+import { pool } from '../db.js';
 
 export default async function hlsRoutes(app) {
   app.get('/hls/:id/*', async (req, reply) => {
@@ -16,17 +17,21 @@ export default async function hlsRoutes(app) {
     const level = playbackLevel(id, token); // 'full' | 'preview' | null
     if (!storage || !level) return reply.code(403).send({ error: 'Accès refusé' });
 
+    // Dossier de la version : celle demandée par le lien (v, posé dans le master), sinon la version publiée (étape E4b).
+    let prefix;
+    if (typeof req.query.v === 'string') prefix = prefixOf(id, req.query.v);
+    if (!prefix) prefix = (await pool.query('SELECT media_prefix FROM talks WHERE id = $1', [id])).rows[0]?.media_prefix || `hls/${id}/`;
     let text;
     try {
-      const obj = await storage.send(new GetObjectCommand({ Bucket: config.s3.bucket, Key: `hls/${id}/${path}` }));
+      const obj = await storage.send(new GetObjectCommand({ Bucket: config.s3.bucket, Key: `${prefix}${path}` }));
       text = await obj.Body.transformToString();
     } catch {
       return reply.code(404).send({ error: 'Introuvable' });
     }
     const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
     const body = path === 'master.m3u8'
-      ? rewriteMaster(text, token)
-      : await rewriteVariant(level === 'preview' ? truncateVariant(text, await getNumber('preview_seconds')) : text, (rel) => presignGet(`hls/${id}/${dir}${rel}`));
+      ? rewriteMaster(text, token, versionOf(id, prefix))
+      : await rewriteVariant(level === 'preview' ? truncateVariant(text, await getNumber('preview_seconds')) : text, (rel) => presignGet(`${prefix}${dir}${rel}`));
     return reply.header('content-type', 'application/vnd.apple.mpegurl').header('cache-control', 'private, no-store').send(body);
   });
 }

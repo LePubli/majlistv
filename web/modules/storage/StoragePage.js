@@ -11,7 +11,7 @@ import { fmtBytes, ago, unitsFor } from '../../lib/format';
 export { fmtBytes };
 
 const tf = (s, vars = {}) => Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), s || '');
-const BUSY = ['queued', 'archiving', 'restore_queued', 'restoring'];
+const BUSY = ['queued', 'archiving', 'restore_queued', 'restoring', 'delete_queued', 'deleting'];
 const PLAIN = ['provider', 'sftp_host', 'sftp_port', 'sftp_user', 's3_endpoint', 's3_region', 's3_bucket', 's3_access_key', 'webdav_url', 'webdav_user', 'folder',
   'work_audio_days', 'keep_original_days', 'alert_free_pct', 'garage_capacity_gb'];
 const SECRETS = ['sftp_secret', 's3_secret_key', 'webdav_pass', 'encrypt_pass'];
@@ -57,14 +57,15 @@ function Item({ it, onAct, busyId }) {
       <div className="sg-item-main">
         <strong dir="auto">{name}</strong>
         <small className="meta">{meta}</small>
-        {it.status === 'failed' && <small className="error">{t(it.failedOp === 'restore' ? 'sgFailRestore' : 'sgFailArchive')} {it.error}</small>}
+        {it.status === 'failed' && <small className="error">{t(it.failedOp === 'restore' ? 'sgFailRestore' : it.failedOp === 'delete' ? 'sgFailDelete' : 'sgFailArchive')} {it.error}</small>}
       </div>
       <div className="sg-item-act">
         {BUSY.includes(it.status) && <span className="db-tag on">{t(`sgSt_${it.status}`)}</span>}
         {it.status === 'archived' && <button type="button" className="sg-link" disabled={busyId === it.id} onClick={() => onAct(it, 'restore')}>{t('sgRestore')}</button>}
         {it.status === 'failed' && it.failedOp === 'restore' && <button type="button" className="sg-link" disabled={busyId === it.id} onClick={() => onAct(it, 'restore')}>{t('sgRetry')}</button>}
-        {it.status === 'failed' && it.failedOp === 'archive' && <button type="button" className="sg-link" disabled={busyId === it.id} onClick={() => onAct(it, 'retry')}>{t('sgRetry')}</button>}
+        {it.status === 'failed' && ['archive', 'delete'].includes(it.failedOp) && <button type="button" className="sg-link" disabled={busyId === it.id} onClick={() => onAct(it, 'retry')}>{t('sgRetry')}</button>}
         {it.status === 'restored' && <span className="db-tag ok">{t('sgSt_restored')}</span>}
+        {it.status === 'deleted' && <span className="db-tag">{t('sgSt_deleted')}</span>}
       </div>
     </li>
   );
@@ -184,7 +185,8 @@ export default function StoragePage() {
         <Kpi title={t('sgKpiGarage')} value={sp.usedBytes == null ? '—' : fmtBytes(sp.usedBytes, locale)} pct={sp.usedPct} warn={sp.alert}
           sub={sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) })} />
         <Kpi title={t('sgKpiArchives')} value={fmtBytes(ar.bytes, locale)} sub={arSub} />
-        <Kpi title={tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days })} value="—" sub={t('sgKpiOriginalsSub')} />
+        <Kpi title={tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days })} value={d.pendingOriginals.available ? fmtBytes(d.pendingOriginals.bytes, locale) : '—'}
+          sub={tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count })} />
       </div>
       {sp.alert && <p className="sg-alert" role="alert">{tf(t('sgSpaceAlert'), { p: sp.freePct.toLocaleString(locale), s: sp.alertPct })}</p>}
       {sp.measuredAt && <p className="meta small sg-measured">{tf(t('sgMeasured'), { d: ago(sp.measuredAt, locale), n: (sp.objects || 0).toLocaleString(locale) })} <button type="button" className="sg-link" onClick={refreshSpace}>{t('sgRefresh')}</button></p>}

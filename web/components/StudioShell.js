@@ -65,10 +65,12 @@ export default function StudioShell({ children }) {
   if (!['organizer', 'moderator', 'admin'].includes(user.role)) return <main className="card"><p>{t('noAccess')}</p></main>;
 
   // Étape E1 : un projet de l'éditeur de montage s'ouvre en plein écran (sans le menu du Studio), comme sur la maquette.
-  if (/^\/studio\/editor\/[0-9a-f-]{36}/i.test(path)) {
+  // L'écran « Remplacer la vidéo publiée » (étape E4b) garde le menu du Studio (maquette, écran 5).
+  if (/^\/studio\/editor\/[0-9a-f-]{36}\/?$/i.test(path)) {
     return user.role === 'moderator' ? <main className="card"><p>{t('noAccess')}</p></main> : <div className="mt-full">{children}</div>;
   }
 
+  if (/^\/studio\/editor\//.test(path) && user.role === 'moderator') return <main className="card"><p>{t('noAccess')}</p></main>;
   const isAdmin = user.role === 'admin';
   const isModOnly = user.role === 'moderator';
   const sec = studioSection(path);
