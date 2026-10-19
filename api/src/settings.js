@@ -210,6 +210,8 @@ export const FIELDS = [
     help: 'Plus gros = plus précis mais plus lent. Un nouveau modèle est téléchargé au premier usage.' },
   { key: 'whisper_threads', group: 'transcription', type: 'number', label: 'Cœurs CPU utilisés', env: 'WHISPER_THREADS', def: '4', min: 1, max: 32 },
   { key: 'whisper_beam', group: 'transcription', type: 'number', label: 'Précision de recherche (beam)', env: 'WHISPER_BEAM', def: '3', min: 1, max: 10 },
+  { key: 'whisper_word_timestamps', group: 'transcription', type: 'bool', label: 'Horodater chaque mot (montage par le texte)', env: 'WHISPER_WORD_TIMESTAMPS', def: 'true',
+    help: 'Nécessaire pour couper la vidéo mot à mot dans l\'éditeur de montage. Environ 10 à 20 % de calcul en plus. Désactivé : l\'éditeur estime la place des mots dans chaque phrase.' },
 
   { key: 'external_mode', group: 'external', type: 'select', options: ['subtitles_then_audio', 'audio_only', 'subtitles_only'], label: 'Méthode de transcription',
     env: 'EXTERNAL_MODE', def: 'subtitles_then_audio',

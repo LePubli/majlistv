@@ -27,6 +27,13 @@ Ces vitesses sont des ordres de grandeur, pas des mesures sur ton VPS : après c
 
 > **Réglages dans le site (étape 5)** : toutes les variables de moteurs, clés et modèles ci-dessous se règlent désormais dans **Admin → Paramètres** (prise en compte en moins de 10 s, sans redéploiement). Seule `SETTINGS_KEY` (identique à l'API) et `DATABASE_URL` restent obligatoires ici. Les variables listées servent de valeur de secours.
 
+## Mots horodatés (étape E5a, montage par le texte)
+Depuis l'étape E5a, Whisper donne aussi la place de **chaque mot** (`word_timestamps=True`). Les mots sont rangés dans la table `transcript_words` (migration `057_transcript_words.sql` de l'API) et servent à l'éditeur de montage : supprimer des mots dans le texte coupe la vidéo.
+- Réglage : Admin → Paramètres → Transcription → **« Horodater chaque mot »** (activé par défaut ; variable `WHISPER_WORD_TIMESTAMPS`). Environ 10 à 20 % de calcul en plus.
+- Sous-titres de l'auteur (YouTube, Vimeo) : pas de mots ; l'éditeur estime leur place dans chaque phrase.
+- Sans la migration 057 (API pas encore redéployée), la transcription marche comme avant : les mots ne sont simplement pas enregistrés (ligne « mots horodatés non enregistrés » dans les journaux).
+- Test : `python3 transcriber/tests/test_words.py` (faux Whisper, vraie base de test).
+
 ## Installation (DockPanel Git Deploy)
 Nouveau déploiement :
 - Nom : `majlistv-transcriber` (minuscules)

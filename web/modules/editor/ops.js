@@ -401,3 +401,109 @@ export function builtinTemplates(txt) {
   };
   return [{ id: 'builtin-standard', name: txt.standard, builtin: true, dress: standard }, { id: 'builtin-intro', name: txt.intro, builtin: true, dress: withIntro }];
 }
+
+// ===== Étape E5a — montage par le texte =====
+// Le texte est rangé dans l'ordre de la vidéo source ; un mot est « gardé » si un extrait du montage le contient.
+// Couper des mots retire leur passage (temps source) de TOUS les extraits ; « Rétablir » le remet en rallongeant l'extrait voisin
+// (ou en ajoutant un extrait à sa place). Comme les autres gestes, tout s'annule avec Ctrl+Z.
+const JOIN_TOL = 0.011; // deux bords à moins de 11 ms se touchent (les temps sont arrondis à la milliseconde)
+
+// Le temps source s est-il dans le montage ?
+export const covered = (clips, s) => clips.some((c) => s >= c.in - EPS && s < c.out - EPS);
+
+// Temps du montage où l'on entend le temps source s (première fois), ou null s'il est coupé.
+export function srcToT(clips, s) {
+  for (const c of layout(clips)) if (s >= c.in - EPS && s < c.out - EPS) return round3(c.start + (s - c.in));
+  return null;
+}
+
+// Passage source à retirer pour les mots i → j (liste à plat, ordre source) : du début du premier mot au début du mot suivant
+// si le silence entre les deux fait moins d'une seconde (pas de « trou » laissé), sinon 0,1 s après le dernier mot.
+export function wordSpan(words, i, j) {
+  const a = Math.min(i, j); const b = Math.max(i, j);
+  const first = words[a]; const last = words[b]; const next = words[b + 1];
+  if (!first || !last) return null;
+  let e = last.e + 0.1;
+  if (next) e = next.s - last.e < 1 ? next.s : Math.min(e, next.s);
+  return { s: round3(first.s), e: round3(Math.max(e, first.s + 0.05)) };
+}
+
+// Mot gardé si son milieu est dans le montage.
+export const wordKept = (clips, w) => covered(clips, (w.s + w.e) / 2);
+
+// Retirer le passage source [s, e] du montage. Les bouts restants de moins de MIN_CLIP disparaissent aussi.
+// Le montage garde toujours au moins un extrait : sinon rien n'est fait (reason = 'all').
+export function cutRange(clips, s, e) {
+  if (!(e > s)) return { clips, done: false };
+  const ids = new Set(clips.map((c) => c.id));
+  const fresh = () => { let n = ids.size + 1; while (ids.has(`c${n}`)) n += 1; ids.add(`c${n}`); return `c${n}`; };
+  const out = []; let changed = false; let removed = 0;
+  for (const c of clips) {
+    if (c.out <= s + EPS || c.in >= e - EPS) { out.push(c); continue; }
+    changed = true;
+    const parts = [];
+    if (c.in < s - EPS && s - c.in >= MIN_CLIP - EPS) parts.push({ in: c.in, out: round3(s) });
+    if (c.out > e + EPS && c.out - e >= MIN_CLIP - EPS) parts.push({ in: round3(e), out: c.out });
+    removed += (c.out - c.in) - parts.reduce((x, p) => x + (p.out - p.in), 0);
+    parts.forEach((p, k) => out.push({ id: k === 0 ? c.id : fresh(), in: p.in, out: p.out }));
+  }
+  if (!changed) return { clips, done: false };
+  if (!out.length) return { clips, done: false, reason: 'all' };
+  return { clips: out, done: true, removed: round3(removed) };
+}
+
+// Remettre le passage source [s, e] dans le montage (ce qui en manque seulement).
+export function restoreRange(clips, s, e, duration = Infinity) {
+  const a0 = Math.max(0, s); const b0 = Math.min(duration, e);
+  if (!(b0 > a0)) return { clips, done: false };
+  // Parties de [a0, b0] qu'aucun extrait ne contient.
+  const spans = clips.map((c) => [c.in, c.out]).sort((x, y) => x[0] - y[0]);
+  const gaps = []; let at = a0;
+  for (const [i, o] of spans) {
+    if (o <= at) continue;
+    if (i >= b0) break;
+    if (i > at) gaps.push([at, Math.min(i, b0)]);
+    at = Math.max(at, o);
+    if (at >= b0) break;
+  }
+  if (at < b0) gaps.push([at, b0]);
+  let out = clips.map((c) => ({ ...c }));
+  let done = false;
+  for (const [ga, gb] of gaps.filter(([x, y]) => y - x >= 0.02)) {
+    const a = round3(ga); const b = round3(gb);
+    const before = out.findIndex((c) => Math.abs(c.out - a) < JOIN_TOL);
+    const after = out.findIndex((c) => Math.abs(c.in - b) < JOIN_TOL);
+    if (before >= 0) {
+      out[before].out = b;
+      // L'extrait suivant dans le montage reprend juste là : les deux n'en font plus qu'un.
+      if (after === before + 1) { out[before].out = out[after].out; out.splice(after, 1); }
+    } else if (after >= 0) {
+      out[after].in = a;
+    } else {
+      const ids = new Set(out.map((c) => c.id)); let n = out.length + 1; while (ids.has(`c${n}`)) n += 1;
+      // Placé après l'extrait qui finit juste avant dans la source (sinon avant celui qui commence après).
+      let pos = -1; let best = -Infinity;
+      out.forEach((c, k) => { if (c.out <= a + EPS && c.out >= best) { best = c.out; pos = k; } });
+      let idx = pos + 1;
+      if (pos < 0) { const k = out.findIndex((c) => c.in >= b - EPS); idx = k < 0 ? out.length : k; }
+      out.splice(idx, 0, { id: `c${n}`, in: a, out: b });
+    }
+    done = true;
+  }
+  return done ? { clips: out, done: true } : { clips, done: false };
+}
+
+// Recherche dans le texte : indices des mots (liste à plat) où commence chaque occurrence (sans accents ni majuscules).
+export const foldText = (s) => String(s || '').normalize('NFD').replace(/[̀-ًͯ-ْ]/g, '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '');
+export function findWords(words, query) {
+  const q = foldText(query).split(/\s+/).filter(Boolean);
+  if (!q.length) return [];
+  const f = words.map((w) => foldText(w.w));
+  const hits = [];
+  for (let i = 0; i + q.length <= f.length; i += 1) {
+    let ok = true;
+    for (let k = 0; k < q.length && ok; k += 1) ok = k === q.length - 1 ? f[i + k].startsWith(q[k]) : f[i + k] === q[k];
+    if (ok) hits.push({ i, j: i + q.length - 1 });
+  }
+  return hits;
+}

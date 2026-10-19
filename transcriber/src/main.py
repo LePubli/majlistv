@@ -177,12 +177,14 @@ def audio_duration(wav):
 
 def apply_settings():
     """Relit les paramètres (base de données puis variables d'environnement)."""
-    global MODEL_NAME, THREADS, BEAM, LANG_MODE
+    global MODEL_NAME, THREADS, BEAM, LANG_MODE, WORDS
     settings.refresh()
     MODEL_NAME = settings.get("whisper_model", "WHISPER_MODEL", "small")
     THREADS = max(1, settings.get_int("whisper_threads", "WHISPER_THREADS", 4))
     BEAM = max(1, settings.get_int("whisper_beam", "WHISPER_BEAM", 3))
     LANG_MODE = settings.get("whisper_language_mode", "WHISPER_LANGUAGE_MODE", "declared")
+    # Étape E5a (montage par le texte) : horodatage de chaque mot (environ 10 à 20 % de calcul en plus).
+    WORDS = settings.get_bool("whisper_word_timestamps", "WHISPER_WORD_TIMESTAMPS", True)
 
 
 def get_model():
@@ -215,7 +217,7 @@ def transcribe_wav(talk_id, wav, declared):
     log(f"[{talk_id}] transcription de {duration:.0f} s (langue : {language or 'détection auto'})")
     started = time.time()
     segments, info = model.transcribe(
-        wav, language=language, beam_size=BEAM, vad_filter=True, condition_on_previous_text=False,
+        wav, language=language, beam_size=BEAM, vad_filter=True, condition_on_previous_text=False, word_timestamps=WORDS,
     )
     rows, last, last_write = [], 0, 0.0
     for seg in segments:
@@ -223,7 +225,8 @@ def transcribe_wav(talk_id, wav, declared):
             raise Stop()
         text = seg.text.strip()
         if text:
-            rows.append((int(seg.start * 1000), int(seg.end * 1000), text))
+            words = [(int(w.start * 1000), int(w.end * 1000), w.word.strip()) for w in (getattr(seg, "words", None) or []) if w.word.strip()]
+            rows.append((int(seg.start * 1000), int(seg.end * 1000), text, words))
         pct = min(99, int(seg.end / duration * 100)) if duration else 0
         if pct > last and time.time() - last_write > 4:
             last, last_write = pct, time.time()
@@ -235,9 +238,11 @@ def transcribe_wav(talk_id, wav, declared):
 
 
 def store(talk_id, cues, lang, method):
-    """Enregistre les segments [(début_ms, fin_ms, texte)] et passe la transcription à « prête »."""
+    """Enregistre les segments [(début_ms, fin_ms, texte[, mots])] et passe la transcription à « prête ».
+    Étape E5a : les mots horodatés [(début_ms, fin_ms, mot)] de Whisper vont dans transcript_words (montage par le texte)."""
     global last_ok
-    rows = [(talk_id, lang, i, start, end, text) for i, (start, end, text) in enumerate(cues)]
+    rows = [(talk_id, lang, i, c[0], c[1], c[2]) for i, c in enumerate(cues)]
+    words = [(talk_id, lang, i, k, w[0], w[1], w[2]) for i, c in enumerate(cues) if len(c) > 3 for k, w in enumerate(c[3])]
     full_text = " ".join(r[5] for r in rows)
     try:
         with db().cursor() as cur:
@@ -247,6 +252,7 @@ def store(talk_id, cues, lang, method):
                 "INSERT INTO transcript_segments (talk_id, lang, idx, start_ms, end_ms, text) VALUES %s",
                 rows, page_size=500,
             )
+        store_words(talk_id, lang, words)
     except psycopg2.errors.ForeignKeyViolation:
         log(f"[{talk_id}] conférence supprimée entre-temps, abandon")
         return
@@ -257,6 +263,21 @@ def store(talk_id, cues, lang, method):
     )
     log(f"[{talk_id}] terminé : {len(rows)} segments, langue {lang}, méthode {method}")
     last_ok = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def store_words(talk_id, lang, words):
+    """Mots horodatés (étape E5a). Table créée par l'API (migration 057) : sans elle, rien n'est perdu (le montage par le texte
+    estime alors la place des mots dans chaque phrase)."""
+    try:
+        with db().cursor() as cur:
+            cur.execute("DELETE FROM transcript_words WHERE talk_id = %s AND lang = %s", (talk_id, lang))
+            if words:
+                psycopg2.extras.execute_values(
+                    cur, "INSERT INTO transcript_words (talk_id, lang, seg_idx, idx, start_ms, end_ms, word) VALUES %s", words, page_size=1000)
+        if words:
+            log(f"[{talk_id}] {len(words)} mots horodatés")
+    except psycopg2.errors.UndefinedTable:
+        log(f"[{talk_id}] mots horodatés non enregistrés (migration 057 de l'API absente)")
 
 
 def no_speech(talk_id):

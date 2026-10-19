@@ -319,6 +319,8 @@ export async function switchOver(rep, log) {
       const byLang = {};
       for (const s of all) (byLang[s.lang] ||= []).push(s);
       await c.query('DELETE FROM transcript_segments WHERE talk_id = $1', [talk.id]);
+      // Étape E5a : les mots horodatés suivent l'ancienne vidéo ; la nouvelle transcription les refait (sinon : place estimée).
+      await c.query('DELETE FROM transcript_words WHERE talk_id = $1', [talk.id]);
       let kept = 0;
       for (const [lang, segs] of Object.entries(byLang)) {
         const m = mapSegments(rep.map, segs); kept += m.length; await insertSegments(c, talk.id, lang, m);
@@ -355,6 +357,7 @@ export async function switchOver(rep, log) {
       await c.query('DELETE FROM transcript_segments WHERE talk_id = $1', [talk.id]);
       await c.query(`INSERT INTO transcript_segments(talk_id, lang, idx, start_ms, end_ms, text)
                      SELECT $1, lang, idx, start_ms, end_ms, text FROM editor_replace_segments WHERE replacement_id = $2`, [talk.id, T.id]);
+      await c.query('DELETE FROM transcript_words WHERE talk_id = $1', [talk.id]); // étape E5a : place des mots estimée après une restauration
       const langsBefore = new Set(P.translations.map((x) => x.lang));
       for (const x of P.translations) {
         await c.query(`INSERT INTO transcript_translations(talk_id, lang, status, progress, error) VALUES ($1, $2, $3, $4, $5)

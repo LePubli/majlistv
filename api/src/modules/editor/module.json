@@ -1,8 +1,8 @@
 {
   "id": "editor",
   "name": "Éditeur de montage",
-  "version": "0.5.0",
-  "description": "Montage des vidéos envoyées (Studio → Éditeur). E1 : timeline multipiste, coupes, aperçu, sauvegarde, versions, verrou. E2 : audio pro (volumes, fondus, formes d'onde, voix française, musiques, réduction du bruit, niveau homogène). E3 : habillage (titres, bandeau, logo, intro et fin, transitions, sous-titres incrustés, modèles, image finale). E4a : rendu par le worker (aperçu ou final). E4b : remplacement de la vidéo publiée (sous-titres, quiz, notes recalés ; original gardé puis archivé ; restauration).",
+  "version": "0.6.0",
+  "description": "Montage des vidéos envoyées (Studio → Éditeur). E1 : timeline multipiste, coupes, aperçu, sauvegarde, versions, verrou. E2 : audio pro (volumes, fondus, formes d'onde, voix française, musiques, réduction du bruit, niveau homogène). E3 : habillage (titres, bandeau, logo, intro et fin, transitions, sous-titres incrustés, modèles, image finale). E4a : rendu par le worker (aperçu ou final). E4b : remplacement de la vidéo publiée (sous-titres, quiz, notes recalés ; original gardé puis archivé ; restauration). E5a : montage par le texte (supprimer des mots coupe la vidéo).",
   "requires": [],
   "defaultEnabled": false,
   "settings": []

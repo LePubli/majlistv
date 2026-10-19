@@ -11,6 +11,7 @@
 // bibliothèque de musiques (MusicLibrary.js), formes d'onde et niveaux mesurés par l'API.
 // Étape E3 : le document est { clips, audio, dress } ; habillage (DressPanel.js, DressOverlay.js sur l'aperçu), logos (LogoLibrary.js),
 // modèles de chaîne (Templates.js), « Voir l'image finale » (FrameView.js, composée par FFmpeg côté API).
+// Étape E5a : onglet « Texte » de la colonne de droite (TextPanel.js) — couper la vidéo en supprimant des mots de la transcription.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
@@ -25,6 +26,7 @@ import LogoLibrary from './LogoLibrary';
 import FrameView from './FrameView';
 import RenderPanel from './RenderPanel';
 import Templates from './Templates';
+import TextPanel from './TextPanel';
 import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
   withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition } from './ops';
 import { ago } from '../../lib/format';
@@ -85,6 +87,10 @@ export default function Editor({ id }) {
   const [zoomStep, setZoomStep] = useState(0);
   const [magnet, setMagnet] = useState(true);
   const [showVersions, setShowVersions] = useState(false);
+  // Étape E5a : colonne de droite « Réglages » ou « Texte » (choix gardé dans ce navigateur).
+  const [rightTab, setRightTab] = useState(() => { try { return localStorage.getItem('mt-right-tab') === 'text' ? 'text' : 'settings'; } catch { return 'settings'; } });
+  const pickTab = (v) => { setRightTab(v); try { localStorage.setItem('mt-right-tab', v); } catch { /* navigation privée */ } };
+  const textApi = useRef(null);
   const [, tick] = useState(0);
   const rev = useRef(1);
   const savedClips = useRef(null);
@@ -354,7 +360,10 @@ export default function Editor({ id }) {
         setT((x) => Math.max(0, Math.min(totalS, x + d)));
         return;
       }
+      if (e.key === 'Escape' && rightTab === 'text' && textApi.current?.hasSel) { textApi.current.clear(); return; }
       if (!canEdit) return;
+      // Étape E5a : des mots sont sélectionnés dans le texte → Suppr coupe ce passage.
+      if ((e.key === 'Delete' || e.key === 'Backspace') && rightTab === 'text' && textApi.current?.hasSel) { e.preventDefault(); textApi.current.cut(); return; }
       if (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 's') { e.preventDefault(); doCut(); }
       else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
@@ -411,7 +420,7 @@ export default function Editor({ id }) {
         )}
         {notice && <p className={`mt-notice ${notice.kind}`} role={notice.kind === 'err' ? 'alert' : 'status'}>{notice.text}</p>}
 
-        <div className="mt-main">
+        <div className={`mt-main${rightTab === 'text' ? ' mt-textmode' : ''}`}>
           <aside className="mt-left" aria-label={t('mtAdd')}>
             <h2 className="mt-cap">{t('mtAdd')}</h2>
             {[['mtAddTitle', () => addItemAt('title')], ['mtAddBanner', () => addItemAt('banner')], ['mtAddLogo', addLogo], ['mtAddMusic', () => setShowMusic(true)],
@@ -431,6 +440,14 @@ export default function Editor({ id }) {
           </section>
 
           <aside className="mt-right" aria-labelledby="mt-sel-title">
+            <div className="mtw-tabs" role="tablist" aria-label={t('mtwTabs')}>
+              {[['settings', 'mtwTabSettings'], ['text', 'mtwTabText']].map(([v, k]) => (
+                <button key={v} type="button" role="tab" aria-selected={rightTab === v} className={rightTab === v ? 'on' : ''} onClick={() => pickTab(v)} data-tab={v}>{t(k)}</button>
+              ))}
+            </div>
+            {rightTab === 'text'
+              ? <TextPanel projectId={id} clips={clips} commit={commit} canEdit={canEdit && data.editable} srcAt={loc ? loc.src : null} setT={setT} duration={duration} apiRef={textApi} />
+              : <>
             <h2 className="mt-cap">{t('mtSelTrack')}</h2>
             {['orig', 'dub', 'music'].includes(sel.track)
               ? <AudioPanel {...{ sel, setSel, audio, setAudio, canEdit, dub, hasDub, waves, musicInfo, T, setT, totalS, projectId: id, srcAt: loc ? loc.src : 0, onAddMusic: () => setShowMusic(true) }} />
@@ -438,6 +455,7 @@ export default function Editor({ id }) {
                 ? <DressPanel {...{ sel, setSel, dress, setDress, canEdit, clips, totalS, T, setT, vars, channel, logos, durationFinal, onPickLogo: () => setShowLogos(true), onShowCard: setCard, onFrame: showFrame, onAddItem: addItemAt,
                   subsInfo: cues.length ? t('mtSubsHint').replace('{l}', String(data.media?.subtitles?.lang || '').toUpperCase()).replace('{n}', mapItems(clips, cues).length).replace('{c}', cues.length) : t('mtNoSubsHint') }} />
               : <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />}
+            </>}
           </aside>
         </div>
 

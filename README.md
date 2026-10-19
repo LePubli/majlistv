@@ -4122,3 +4122,85 @@ Les tests E1 à E4a, `test_modules.py` et `test_module_removal.py` (modules edit
 - un remplacement d'une vraie conférence d'une heure sur le VPS (temps de conversion, puis Whisper et traductions) ;
 - la lecture d'un spectateur réel pendant la bascule (le mécanisme v= est testé, pas un vrai lecteur en cours) ;
 - un vrai fournisseur PlanetHoster (seulement le serveur SFTP de test).
+
+## Étape E5a — Éditeur de montage : montage par le texte
+
+### Description
+Dans l'éditeur, la colonne de droite a maintenant deux onglets : **Réglages** (comme avant) et **Texte**. L'onglet Texte élargit la colonne et affiche la transcription de la conférence, dans l'ordre de la vidéo d'origine :
+- **clic sur un mot** : la vidéo y va (le mot lu est surligné pendant la lecture, le texte défile tout seul) ;
+- **glisser** sur des mots, ou **Maj + clic**, pour sélectionner ;
+- **« Couper la sélection »** ou la touche **Suppr** : le passage est retiré de la vidéo (les mots coupés sont **barrés**, la timeline montre les nouveaux extraits) ;
+- **« Rétablir »** sur des mots barrés : le passage revient (l'extrait voisin est rallongé) ;
+- **Ctrl+Z / Ctrl+Maj+Z** annulent et rétablissent comme les autres gestes ; **Échap** efface la sélection ;
+- **recherche** dans le texte (sans accents ni majuscules, arabe sans voyelles) : Entrée sélectionne le résultat suivant, prêt à être coupé (pratique pour les « euh ») ;
+- **langue** : la langue parlée se coupe **mot à mot** ; une traduction (ex. le français d'une conférence en arabe) se coupe **phrase par phrase**.
+
+Ce que l'on coupe : du début du premier mot au début du mot suivant (si le silence fait moins d'une seconde), sinon jusqu'à 0,1 s après le dernier mot. Un passage repris deux fois dans le montage est coupé partout. Le montage garde toujours au moins un passage.
+
+**Place des mots** (affichée sous le texte) :
+- **précise** : la transcription Whisper horodate désormais chaque mot (nouveau réglage Admin → Paramètres → Transcription → « Horodater chaque mot », activé par défaut, environ 10 à 20 % de calcul en plus) ;
+- **estimée** : conférences transcrites avant cette étape, sous-titres de l'auteur (YouTube, Vimeo), phrase corrigée à la main, traduction. La durée de la phrase est alors répartie entre ses mots selon leur longueur. Couper une phrase entière reste exact ; couper un mot isolé peut être décalé de quelques dixièmes de seconde.
+- Après un remplacement de la vidéo (E4b), les mots horodatés de l'ancienne vidéo sont effacés ; la nouvelle transcription les refait.
+
+**Registre** :
+- point 23 réglé : à la restauration de l'original, une version française faite entre-temps sur la vidéo remplacée est retirée et ses fichiers effacés (copies d'archive comprises) ;
+- point 24 ouvert (décision d'Epok) : place exacte des mots pour les conférences déjà transcrites ;
+- point 25 : essai réel avec le vrai Whisper à l'étape F.
+
+Versions : module `editor` **0.6.0** ; module `dubbing` (correctif du point 23, même version 0.8.0) ; migration du socle `057_transcript_words.sql` ; service de transcription (mots horodatés).
+Pas de maquette pour cet écran dans « Studio v2 » : il reprend le style de l'éditeur (cartes arrondies, accents or, texte blanc).
+
+### Prérequis
+- Étapes E1 à E4b déployées.
+- Rien à installer : faster-whisper sait déjà horodater les mots.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est déjà poussé). Ou bien décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy, dans cet ordre :
+   - **`majlistv-api`** (migration `057_transcript_words.sql`) ;
+   - **`majlistv-web`** ;
+   - **`majlistv-transcriber`** (mots horodatés).
+   - Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Vérifier la migration :
+```
+docker logs dockpanel-git-majlistv-api 2>&1 | grep 057
+```
+
+### Exemples d'utilisation
+- Studio → Éditeur → un projet → onglet **Texte** → glisser sur « euh… » → **Suppr**.
+- Rechercher « euh » → **Entrée** → **Couper la sélection** → **Entrée** (résultat suivant) → **Couper la sélection**…
+- Couper toute une digression : clic sur le premier mot, **Maj + clic** sur le dernier, **Suppr**.
+- Se tromper : **Ctrl+Z**, ou sélectionner les mots barrés puis **Rétablir**.
+
+### Debug
+- « Pas encore de texte » : la transcription de la conférence n'est pas prête (Studio → Contenus, étape « Transcrite »).
+- Place des mots toujours « estimée » sur une nouvelle conférence : vérifier le réglage « Horodater chaque mot », puis la ligne « … mots horodatés » dans les journaux :
+```
+docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | grep "mots horodatés"
+```
+- Voir quelles conférences ont des mots horodatés (20 dernières par nombre de mots) :
+```
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT t.title, w.lang, count(*) AS mots FROM transcript_words w JOIN talks t ON t.id = w.talk_id GROUP BY t.title, w.lang ORDER BY 3 DESC LIMIT 20"'
+```
+
+### Tests
+```
+node web/tests/e5a_ops.mjs                 # couper / rétablir un passage, passage d'un mot, recherche (arabe compris)
+python3 transcriber/tests/test_words.py    # faux Whisper + vraie base : mots enregistrés, réglage, sous-titres de l'auteur
+python3 api/tests/test_editor_e5a.py       # route des mots : précis / estimés, traduction, droits
+cd web && python3 tests/e5a_text.py        # navigateur : onglet Texte, couper, annuler, rétablir, recherche, phrase par phrase, lecture seule, arabe, 1024 px
+```
+Les tests E1 à E4b sont à jour (version 0.6.0) et passent ; `test_editor_e4b.py` vérifie aussi l'effacement des mots à la bascule et à la restauration.
+
+### Testé / non testé
+**Testé** : les tests ci-dessus (vraie base, vraie API, vrai site dans Chromium, Whisper simulé).
+**Non testé** :
+- le vrai faster-whisper avec `word_timestamps=True` (le modèle ne peut pas être téléchargé ici) : à vérifier sur le VPS à l'étape F ;
+- une vraie conférence d'une heure (environ 8 000 mots) : la page est prévue pour (seule la phrase lue est redessinée), mais pas mesurée sur un vrai poste ;
+- Safari et Firefox (Chromium seulement).

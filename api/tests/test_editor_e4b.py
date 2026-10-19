@@ -66,6 +66,8 @@ try:
     make_hls(s3, T, 40); n_fr = add_transcript(cur, T, 40)
     cur.execute("insert into transcript_segments(talk_id, lang, idx, start_ms, end_ms, text) select talk_id, 'en', idx, start_ms, end_ms, 'EN ' || text from transcript_segments where talk_id=%s and lang='fr'", (T,))
     cur.execute("insert into transcript_translations(talk_id, lang, status, progress) values (%s,'en','ready',100)", (T,))
+    # Étape E5a : mots horodatés de la première phrase (ils suivent l'ancienne vidéo : effacés à la bascule).
+    cur.execute("insert into transcript_words(talk_id, lang, seg_idx, idx, start_ms, end_ms, word) values (%s,'fr',0,0,0,500,'Phrase'),(%s,'fr',0,1,600,900,'1')", (T, T))
     cur.execute("""insert into talk_insights(talk_id, lang, status, summary, key_points, chapters) values (%s,'fr','ready','Résumé','[]',%s)""",
                 (T, json.dumps([{"ms": 0, "title": "Début"}, {"ms": 15000, "title": "Passage coupé"}, {"ms": 30000, "title": "Suite"}])))
     def quiz(ms, status, quote):
@@ -128,6 +130,8 @@ try:
     t = one("select row_to_json(t) from talks t where id=%s", T)
     ok(t["media_prefix"] == f"hls/{T}/r/{X}/" and t["video_ref"] == newkey and t["duration_seconds"] == 32 and t["poster_key"].startswith(f"hls/{T}/r/{X}/"), "conférence : nouvelle vidéo, nouveau dossier, 32 s, miniature")
     ok(t["transcript_status"] == "pending" and one("select status from transcript_translations where talk_id=%s and lang='en'", T) == "pending", "nouvelle transcription et traductions relancées")
+    ok(one("select count(*) from transcript_words where talk_id=%s", T) == 0, "E5a : mots horodatés de l’ancienne vidéo effacés")
+    cur.execute("insert into transcript_words(talk_id, lang, seg_idx, idx, start_ms, end_ms, word) values (%s,'fr',0,0,0,500,'Nouveau')", (T,))
     fr = [r for r in (cur.execute("select idx, start_ms, end_ms, text from transcript_segments where talk_id=%s and lang='fr' order by idx", (T,)) or cur.fetchall())]
     en = one("select count(*) from transcript_segments where talk_id=%s and lang='en'", T)
     ok(fr[0][1] == 2000 and all("de 12 à" not in x[3] for x in fr) and len(fr) == en and len(fr) < n_fr, f"sous-titres recalés (+2 s d’intro, phrase coupée retirée) : {len(fr)} / {n_fr}, en alignées")
@@ -176,6 +180,9 @@ try:
     ok(left and all(k.startswith(f"hls/{T}/r/") for k in left), "le dossier d’origine est vidé, la nouvelle version reste")
     ok(rq("GET", f"/hls/{T}/v0/index.m3u8?t={t0}&v=0").status_code == 404, "lien de l’ancienne version : introuvable")
 
+    # Registre, point 23 : une version française faite sur la nouvelle vidéo, avant la restauration.
+    vkey2 = f"dubbing/tracks/{T}/after-replace.m4a"; s3.put_object(Bucket=BUCKET, Key=vkey2, Body=b"y"); keys.append(vkey2)
+    cur.execute("insert into dub_tracks(talk_id, job_id, voice_key, duration_s) values (%s,%s,%s,32)", (T, jd, vkey2))
     # --- Restaurer l'original : une note ajoutée après la bascule doit être recalée.
     cur.execute("insert into talk_notes(user_id, talk_id, position_ms, body) values (%s,%s,17000,'après') returning id", (mid, T)); n3 = str(cur.fetchone()[0])
     ok(rq("POST", f"/studio/editor/replacements/{X}/restore", headers=O2).status_code == 404, "restaurer l’original d’un autre : 404")
@@ -188,12 +195,16 @@ try:
     ok(t["video_ref"] == f"talks/{tag}-orig" and t["duration_seconds"] == 40 and t["media_prefix"] == f"hls/{T}/r/{Y}/" and t["transcript_status"] == "ready", "conférence : original de 40 s, transcription d’avant")
     ok(one("select count(*) from transcript_segments where talk_id=%s and lang='fr'", T) == n_fr and one("select start_ms from transcript_segments where talk_id=%s and lang='fr' and idx=0", T) == 0
        and one("select status from transcript_translations where talk_id=%s and lang='en'", T) == "ready", "phrases et traductions d’avant")
+    ok(one("select count(*) from transcript_words where talk_id=%s", T) == 0, "E5a : restauration, mots de la vidéo remplacée effacés (place estimée)")
     ok([c["ms"] for c in one("select chapters from talk_insights where talk_id=%s and lang='fr'", T)] == [0, 15000, 30000] and one("select status from talk_insights where talk_id=%s and lang='fr'", T) == "ready", "résumé et chapitres d’avant")
     ok(one("select row(status, evidence_ms)::text from quiz_questions where id=%s", q2) == "(approved,15000)" and one("select evidence_ms from quiz_questions where id=%s", q1) == 3000, "quiz d’avant (validé de nouveau)")
     ok(one("select position_ms from talk_notes where id=%s", n1) == 3000 and one("select position_ms from talk_notes where id=%s", n2) == 15000 and one("select position_ms from talk_notes where id=%s", n3) == 25000,
        "notes d’avant ; note ajoutée entre-temps recalée (17 s → 25 s)")
+    # Le doublage suit juste après la bascule (événement editor.restored, envoyé après l'enregistrement) : on attend un instant.
+    until(lambda: one("select voice_key from dub_tracks where talk_id=%s", T) == vkey, 10)
     ok(one("select voice_key from dub_tracks where talk_id=%s", T) == vkey and one("select count(*) from dub_segments where talk_id=%s and keep_original", T) == 1 and one("select count(*) from dub_reviews where talk_id=%s", T) == 1,
-       "piste française, cases et relecture d’avant")
+       f"piste française, cases et relecture d’avant ({one('select voice_key from dub_tracks where talk_id=%s', T)}, {one('select count(*) from dub_segments where talk_id=%s and keep_original', T)}, {one('select count(*) from dub_reviews where talk_id=%s', T)})")
+    ok(until(lambda: not keys_of(vkey2), 10) and keys_of(vkey), "registre 23 : voix française faite sur la vidéo remplacée effacée, celle d’avant gardée")
     ptl = one("select timeline from editor_projects where id=%s", pid)
     ok([c["out"] for c in ptl["clips"]] == [10, 40], "montage d’avant le remplacement de retour")
     reps = rq("GET", f"/studio/editor/talks/{T}/replacements", headers=O).json()
@@ -233,7 +244,7 @@ try:
 
     mods = rq("GET", "/admin/modules", headers=A).json(); mods = mods.get("modules", mods)
     v = {m["id"]: m["version"] for m in mods}
-    ok(v.get("editor") == "0.5.0" and v.get("dubbing") == "0.8.0" and v.get("storage") == "0.3.0", f"versions : {v.get('editor')}, {v.get('dubbing')}, {v.get('storage')}")
+    ok(v.get("editor") == "0.6.0" and v.get("dubbing") == "0.8.0" and v.get("storage") == "0.3.0", f"versions : {v.get('editor')}, {v.get('dubbing')}, {v.get('storage')}")
 finally:
     for t in talks:
         for k in keys_of(f"hls/{t}/"): keys.append(k)
