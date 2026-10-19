@@ -13,6 +13,7 @@ import { config } from '../../config.js';
 import { presignGet } from '../../storage.js';
 import { makePlaybackToken } from '../../playback.js';
 import * as ext from '../../ext.js';
+import { DENOISE_FILTER } from './denoise.js';
 
 export const STEP_MS = 100;
 const RATE = 8000; // échantillons par seconde pour l'analyse (largement assez pour une forme d'onde)
@@ -73,7 +74,7 @@ export function analyse(input, { timeoutS = MAX_SECONDS } = {}) {
 }
 
 // Réduction du bruit : réglages d'afftdn (FFmpeg). Les mêmes seront utilisés par le rendu final (étape E4).
-export const DENOISE_FILTER = { off: null, light: 'afftdn=nr=10:nf=-40:tn=1', strong: 'afftdn=nr=24:nf=-30:tn=1' };
+export { DENOISE_FILTER };
 
 // Extrait de 10 s de la voix d'origine, avec ou sans réduction du bruit, pour comparer à l'oreille (AAC dans un conteneur MP4).
 export function denoiseSample(talkId, at, level, seconds = 10) {

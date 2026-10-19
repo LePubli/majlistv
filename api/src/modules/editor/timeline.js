@@ -30,7 +30,8 @@ import { dressSchema, checkDress, dressIsEmpty } from './dress.js';
 export const MIN_CLIP = 0.2;   // durée minimale d'un extrait (secondes)
 export const MAX_CLIPS = 2000;
 export const MAX_MUSIC = 50;
-export const DENOISE = ['off', 'light', 'strong'];
+import { DENOISE, DENOISE_FILTER } from './denoise.js';
+export { DENOISE, DENOISE_FILTER };
 
 const num = z.number().finite();
 // Nombre borné avec un message en français (« Volume : entre -40 et 12 »).

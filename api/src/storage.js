@@ -19,8 +19,11 @@ export const storage = endpoint && accessKey && secretKey
     })
   : null;
 
-export const presignGet = (key) =>
-  getSignedUrl(storage, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: 4 * 3600 });
+// download : nom de fichier proposé au téléchargement (en-tête Content-Disposition: attachment), facultatif.
+export const presignGet = (key, { download } = {}) =>
+  getSignedUrl(storage, new GetObjectCommand({ Bucket: bucket, Key: key,
+    ...(download ? { ResponseContentDisposition: `attachment; filename="${String(download).replace(/[^\w.\- ]+/g, '_')}"; filename*=UTF-8''${encodeURIComponent(download)}` } : {}) }),
+  { expiresIn: 4 * 3600 });
 
 export const putObject = (key, body, contentType) =>
   storage.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType, ContentLength: body.length }));

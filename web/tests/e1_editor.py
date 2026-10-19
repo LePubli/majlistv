@@ -84,7 +84,7 @@ try:
         ok(pg.locator('.mt-row-subs .mt-block').count() >= 10 and pg.locator('.mt-row-dub .mt-block.dub.keep').count() == 1, 'sous-titres liés et voix française (un passage en voix d\'origine)')
         # Depuis E3, les six boutons « Ajouter » et les modèles sont actifs.
         ok(pg.locator('.mt-add:disabled').count() == 0 and pg.locator('.mt-add.on', has_text='Musique de fond').count() == 1, 'Ajouter / Modèles : tout est actif (musique E2, habillage E3)')
-        ok(pg.locator('button', has_text='Rendre la vidéo').is_disabled(), '« Rendre la vidéo » désactivé (étape E4)')
+        ok(pg.locator('button', has_text='Rendre la vidéo').is_enabled(), '« Rendre la vidéo » actif (étape E4a)')
 
         # --- aperçu 360p
         ok(until(lambda: pg.evaluate("document.querySelector('.mt-screen video').readyState") >= 2, 25), 'aperçu : la vidéo 360p se charge (hls.js)')

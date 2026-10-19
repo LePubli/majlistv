@@ -1,4 +1,5 @@
-// Worker Mejliss TV : convertit les vidéos envoyées (talks.video_status = 'pending') en HLS.
+// Worker Mejliss TV : convertit les vidéos envoyées (talks.video_status = 'pending') en HLS,
+// et calcule les rendus des montages de l'éditeur (étape E4a, voir render.js).
 import http from 'node:http';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -10,6 +11,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { probe, transcode, makeAudio, killCurrent } from './transcode.js';
 import { makeClaim } from './claim.js';
+import { makeRenderClaim, processRender, requeueRunning, killRender } from './render.js';
 
 const env = (k, d) => process.env[k] ?? d;
 const need = (k) => { const v = process.env[k]; if (!v) { console.error(`Variable manquante : ${k}`); process.exit(1); } return v; };
@@ -42,6 +44,8 @@ let lastOk = null;
 
 // Réserve la vidéo en attente suivante (pause, priorité et plage horaire : voir claim.js, étape S3).
 const claim = makeClaim(pool, log);
+// Étape E4a : rendus des montages de l'éditeur (après les conversions, avant les versions audio).
+const claimRender = makeRenderClaim(pool, log);
 
 async function download(key, file) {
   const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
@@ -197,6 +201,7 @@ async function main() {
   for (;;) {
     try {
       await pool.query(`UPDATE talks SET video_status = 'pending' WHERE video_status = 'processing'`);
+      await requeueRunning(pool); // rendus interrompus (redéploiement) : ils repartent du début
       break;
     } catch (err) { log('Base pas prête (migration 004 appliquée ?) :', err.message); await sleep(POLL_MS); }
   }
@@ -205,7 +210,16 @@ async function main() {
     let job;
     try { job = await claim(); } catch (err) { log('Erreur base :', err.message); }
     if (!job) {
-      // Pas de vidéo à convertir : on prépare les versions audio manquantes (une à la fois).
+      // Pas de vidéo à convertir : un rendu de montage en attente ?
+      let r;
+      try { r = await claimRender(); } catch (err) { log('Erreur base (rendu) :', err.message); }
+      if (r) {
+        current = { id: r.id, render: true };
+        await processRender({ job: r, pool, s3, bucket: BUCKET, workDir: WORK_DIR, threads: THREADS, log, stopping: () => stopping });
+        current = null;
+        continue;
+      }
+      // Sinon : on prépare les versions audio manquantes (une à la fois).
       let a;
       try { a = await claimAudio(); } catch (err) { log('Erreur base (audio) :', err.message); }
       if (!a) { await sleep(POLL_MS); continue; }
@@ -224,6 +238,8 @@ async function main() {
 const shutdown = async () => {
   stopping = true;
   killCurrent();
+  killRender();
+  if (current?.render) await requeueRunning(pool);
   if (current?.video_ref) await pool.query(`UPDATE talks SET video_status = 'pending' WHERE id = $1`, [current.id]).catch(() => {});
   process.exit(0);
 };

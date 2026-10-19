@@ -3250,3 +3250,29 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mt-tplrow .mt-del { flex: none; width: 38px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
 .mt-savetpl { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; border: 1px dashed var(--line); }
 .mt-savetpl input[type="text"], .mt-savetpl input:not([type]) { min-height: 38px; }
+
+/* ===== Étape E4a — éditeur : « Rendre la vidéo » ===== */
+.mt-render-box { width: min(720px, 100%); }
+.mt-render-kinds { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mt-render-kind { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); cursor: pointer; background: var(--bg); }
+.mt-render-kind.on { border-color: var(--accent); background: var(--gold-soft); }
+.mt-render-kind input { accent-color: var(--accent); margin: 4px 0 0; width: auto; min-height: 0; flex: none; }
+.mt-render-kind span { display: flex; flex-direction: column; gap: 4px; }
+.mt-render-kinds:disabled .mt-render-kind { opacity: .6; cursor: default; }
+.mt-render-go { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.mt-render-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mt-render-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg); }
+.mt-render-line { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.mt-render-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mt-render-st { flex: none; font-size: .85rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.mt-render-st.st-ready { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.mt-render-st.st-running { color: var(--text); border-color: var(--accent); }
+.mt-render-st.st-failed { color: #ff8a80; border-color: #ff8a80; }
+.mt-render-bar { max-width: none; }
+.mt-render-warn { margin: 0; padding-inline-start: 18px; }
+.mt-render-old { color: var(--accent); }
+.mt-render-video { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; background: #000; }
+@media (max-width: 640px) {
+  .mt-render-kinds { grid-template-columns: 1fr; }
+  .mt-render-line { flex-direction: column; }
+}

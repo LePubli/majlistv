@@ -20,6 +20,7 @@ import * as ext from '../../ext.js';
 import { checkTimeline, initialTimeline, editedDuration, isEdited, musicAssets, logoAssets, audioDefaults, DENOISE } from './timeline.js';
 import { dressDefaults, checkDress, renderFrame, probeImage } from './dress.js';
 import { speakerSlug } from '../../speakers.js';
+import renderRoutes, { deleteProjectRenders } from './render.js';
 import { ensureTalkWaveforms, ensureAssetWaveform, waveView, processQueue, denoiseSample, hasFfmpeg, STEP_MS } from './audio.js';
 
 const MUSIC_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
@@ -149,7 +150,7 @@ async function mediaOf(row) {
     dub: null, // rempli par le module « Doublage français » (événement editor.media)
   };
   await ext.emit('editor.media', out, { talkId: row.talk_id });
-  if (out.dub) delete out.dub.trackId; // sert seulement à savoir si la forme d'onde est périmée
+  if (out.dub) { delete out.dub.trackId; delete out.dub.voiceKey; } // servent à l'API seulement (forme d'onde périmée, rendu)
   // Étape E2 : réglages du son par défaut (le volume de la voix d'origine sous la voix française vient du doublage).
   out.audioDefaults = audioDefaults(null, { duck: out.dub?.duck });
   out.denoiseLevels = DENOISE;
@@ -571,7 +572,11 @@ export default async function routes(app) {
     const v = lockView(row, req.user, sess);
     if (v.active && !v.mine) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked' });
     await pool.query('DELETE FROM editor_projects WHERE id = $1', [row.id]);
+    await deleteProjectRenders(row.id); // étape E4a : fichiers des rendus du projet
     req.auditSummary = `Éditeur : projet de montage supprimé (« ${row.talk_title} »)`;
     return { deleted: true };
   });
+
+  // Étape E4a : rendu de la vidéo montée (render.js).
+  await renderRoutes(app, { guard, editable, cuesOf, viewer });
 }

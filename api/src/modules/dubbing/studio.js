@@ -104,6 +104,8 @@ export async function editorMedia(out, { talkId }) {
   if (track?.voice_key) { try { voiceUrl = await presignGet(track.voice_key); } catch { voiceUrl = null; } }
   out.dub = {
     track: Boolean(track), segments: segs.map((x) => ({ s: Number(x.s), e: Number(x.e), keep: Boolean(x.keep) })), link: `/studio/dubbing/${talkId}`,
-    trackId: track ? `${track.job_id || 'x'}:${new Date(track.created_at).getTime()}` : null, voiceUrl, duck: Number.isFinite(duck) ? duck : 15,
+    trackId: track ? `${track.job_id || 'x'}:${new Date(track.created_at).getTime()}` : null, voiceUrl,
+    // Étape E4a : le rendu du montage lit la voix française dans le stockage (retiré avant l'envoi au site).
+    voiceKey: track?.voice_key || null, duck: Number.isFinite(duck) ? duck : 15,
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 // Studio → Éditeur → un projet (étape E1, maquette « Studio v2 », écran 4) : éditeur multipiste plein écran.
 //   En-tête : retour Studio, titre, « Version N · enregistré automatiquement », aperçu 360p, Annuler, Rétablir, Versions,
-//             Rendre la vidéo (étape E4).
+//             Rendre la vidéo (étape E4a : RenderPanel.js, calcul par le worker).
 //   Gauche  : Ajouter (musique de fond : étape E2 ; titres, bandeau, logo, intro / fin, transitions : étape E3), modèles.
 //   Centre  : aperçu 360p qui suit le montage. Droite : réglages de la piste sélectionnée.
 //   Bas     : outils (Couper, Supprimer le passage, Aimanter, Zoom) et timeline.
@@ -23,6 +23,7 @@ import DressPanel from './DressPanel';
 import DressOverlay from './DressOverlay';
 import LogoLibrary from './LogoLibrary';
 import FrameView from './FrameView';
+import RenderPanel from './RenderPanel';
 import Templates from './Templates';
 import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
   withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition } from './ops';
@@ -72,6 +73,7 @@ export default function Editor({ id }) {
   const [showLogos, setShowLogos] = useState(false);
   const [logos, setLogos] = useState([]);   // logos importés visibles par moi
   const [card, setCard] = useState(null);    // 'intro' | 'outro' : écran montré dans l'aperçu
+  const [showRender, setShowRender] = useState(false); // étape E4a : « Rendre la vidéo »
   const [frameAt, setFrameAt] = useState(null); // instant (ou 'intro' / 'outro') de l'image finale demandée
   const [mode, setMode] = useState('loading'); // loading | edit | read
   const [lock, setLock] = useState(null);
@@ -339,7 +341,7 @@ export default function Editor({ id }) {
   // Raccourcis clavier (hors champs de saisie).
   useEffect(() => {
     const key = (e) => {
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions || showMusic || showLogos || frameAt) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions || showMusic || showLogos || frameAt || showRender) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -396,8 +398,7 @@ export default function Editor({ id }) {
             <button type="button" className="btn ghost sd-pill" onClick={undo} disabled={!canEdit || !h.past.length} title="Ctrl+Z">{t('mtUndo')}</button>
             <button type="button" className="btn ghost sd-pill" onClick={redo} disabled={!canEdit || !h.future.length} title="Ctrl+Maj+Z">{t('mtRedo')}</button>
             <button type="button" className="btn ghost sd-pill mt-gold" onClick={async () => { await doSave(); setShowVersions(true); }}>{t('mtVersions')}</button>
-            <button type="button" className="btn sd-pill" disabled title={t('mtRenderSoon')} aria-describedby="mt-render-note">{t('mtRender')}</button>
-            <span id="mt-render-note" className="sr-only">{t('mtRenderSoon')}</span>
+            <button type="button" className="btn sd-pill" disabled={!data.editable} onClick={async () => { await doSave(); setShowRender(true); }} data-act="render">{t('mtRender')}</button>
           </div>
         </header>
 
@@ -458,6 +459,7 @@ export default function Editor({ id }) {
       </div>
       {showLogos && <LogoLibrary canEdit={canEdit} current={dress.logo.asset} onClose={() => setShowLogos(false)} onChanged={setLogos}
         onPick={(l) => { setDress({ ...dress, logo: { ...dress.logo, on: true, asset: l.id } }); setShowLogos(false); setSel({ track: 'logo', id: null }); }} />}
+      {showRender && <RenderPanel projectId={id} getRev={() => rev.current} beforeAction={() => doSave()} durationFinal={durationFinal} readOnly={!canEdit} onClose={() => setShowRender(false)} />}
       {frameAt && <FrameView key={frameAt.n} projectId={id} getTimeline={getTimeline} at={frameAt.at} onClose={() => setFrameAt(null)} />}
       {showMusic && <MusicLibrary canEdit={canEdit} onClose={() => setShowMusic(false)} onAdd={addMusicAt} atLabel={fmtTime(Math.min(T, Math.max(0, totalS - 1)))} />}
       {showVersions && <Versions projectId={id} session={session} canEdit={canEdit} onClose={() => setShowVersions(false)} beforeAction={() => doSave()}

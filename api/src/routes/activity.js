@@ -7,8 +7,8 @@ import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
 import * as ext from '../ext.js';
 
-export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor']; // editor : analyses du son (étape E2)
-const HEAVY = ['video', 'transcript', 'dubbing'];
+export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render']; // editor : analyses du son (E2) ; render : rendus du montage (E4a)
+const HEAVY = ['video', 'transcript', 'dubbing', 'render']; // le rendu suit la pause générale et la plage horaire des conversions
 
 // Réglages de la plage horaire et de la pause générale.
 export async function activitySettings() {

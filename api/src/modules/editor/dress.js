@@ -257,7 +257,7 @@ async function sourceUrl(talkId) {
   return `${base}/v0/index.m3u8?t=${tok}`;
 }
 
-const LOGO_XY = (pos, m) => ({ tl: [`${m}`, `${m}`], tr: [`W-w-${m}`, `${m}`], bl: [`${m}`, `H-h-${m}`], br: [`W-w-${m}`, `H-h-${m}`] }[pos] || [`W-w-${m}`, `${m}`]);
+export const LOGO_XY = (pos, m) => ({ tl: [`${m}`, `${m}`], tr: [`W-w-${m}`, `${m}`], bl: [`${m}`, `H-h-${m}`], br: [`W-w-${m}`, `H-h-${m}`] }[pos] || [`W-w-${m}`, `${m}`]);
 
 // Compose l'image finale. at : temps du montage (nombre) ou 'intro' / 'outro'.
 // row : { talk_id, … } ; timeline : montage vérifié ; ctx : { vars, cues (temps source), logoUrl }

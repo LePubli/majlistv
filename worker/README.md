@@ -63,3 +63,12 @@ cd worker && npm install
 DATABASE_URL=... S3_ENDPOINT=... S3_ACCESS_KEY=... S3_SECRET_KEY=... WORK_DIR=/tmp/work node src/index.js
 ```
 (ffmpeg et ffprobe doivent être installés sur la machine.)
+
+
+## Étape E4a — rendu des montages de l'éditeur
+Le worker calcule aussi les **rendus** demandés dans l'éditeur (« Rendre la vidéo ») : quand aucune vidéo n'attend sa conversion, il prend le rendu suivant (`editor_renders`, table créée par l'API), télécharge l'original (ou la meilleure qualité convertie s'il n'existe plus), la voix française, les musiques et le logo, mesure le son (première passe), encode le MP4 (H.264/AAC) et le range dans `editor/renders/<projet>/`. Code : `src/render.js` ; le plan (graphe FFmpeg, textes, courbes) est préparé par l'API (`api/src/modules/editor/plan.js`).
+- Pause, priorité, pause générale et plage horaire : Studio → Activité (le rendu est une tâche lourde, comme la conversion).
+- Un rendu interrompu par un redéploiement repart du début ; 2 essais puis « en échec ».
+- Polices des textes : `api/src/modules/editor/fonts` copié dans l'image (`/app/fonts`, ou variable `FONTS_DIR`).
+- Disque : prévoir l'original + le fichier rendu dans `/work` pendant le calcul (effacés ensuite).
+- Test local : `node tests/run_render_once.mjs` (prend un rendu en attente et le calcule) avec les variables `DATABASE_URL`, `S3_*`.

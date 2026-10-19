@@ -3923,3 +3923,101 @@ Les tests E1 et E2 sont mis à jour (module 0.3.0 ; tous les boutons « Ajouter 
 ### Testé / non testé
 **Testé** : tests ci-dessus (API, calculs, navigateur Chromium avec vidéo VP9), arabe et RTL, 1024 et 1440 px, lecture seule, rendu visuel vérifié sur planche de captures.
 **Non testé** : construction de l'image Docker (polices, FFmpeg) ; conférence réelle d'une heure ; image finale depuis une vidéo H.264 réelle sur le VPS ; téléphone réel ; transition en dissolution (non faite) ; écrans d'ouverture/fin dans une vidéo (E4) ; différences de lettres entre l'aperçu navigateur et FFmpeg.
+
+
+## Étape E4a — Éditeur de montage : rendu de la vidéo
+
+### Description
+Le bouton **« Rendre la vidéo »** de l'éditeur fabrique enfin le vrai fichier MP4 du montage. Remplacer la vidéo publiée par ce fichier sera l'étape **E4b**.
+- **Deux choix** :
+  - **Aperçu rapide** : 640 × 360, pour vérifier le montage, environ 0,3 × la durée de calcul ;
+  - **Rendu final** : qualité de la source (360p, 720p ou 1080p selon l'original, en 16:9), H.264 + AAC, niveau sonore homogène en deux passes, environ 1 × la durée sur le VPS.
+- **Ce qui est rendu** : le montage **enregistré**, avec :
+  - les coupes ;
+  - la voix d'origine (volume, coupure, petit fondu à chaque raccord, réduction du bruit, baisse sous la voix française) ;
+  - la voix française ;
+  - les musiques (boucle, fondus, baisse sous la voix) ;
+  - les titres et bandeaux, le logo, les écrans d'ouverture et de fin, les fondus au noir et au blanc, les sous-titres incrustés (arabe compris).
+- Ces réglages sont les mêmes que l'aperçu du site et « Voir l'image finale ». Seule différence assumée : le rendu applique un volume au-dessus de 100 %, ce que l'aperçu du navigateur ne sait pas faire.
+- **Qui calcule** : le **worker** (`majlistv-worker`), un rendu à la fois, après les conversions de vidéos envoyées.
+  - L'API prépare un **plan de rendu** (`api/src/modules/editor/plan.js`) : fichiers à lire, graphe FFmpeg, textes, courbes de volume.
+  - Le worker (`worker/src/render.js`) télécharge les fichiers, mesure le son puis encode.
+  - Source : l'original envoyé, ou, s'il n'existe plus, la meilleure qualité convertie.
+- **Suivi** :
+  - dans la fenêtre : en attente (place dans la file), préparation, mesure du son, encodage (%), envoi, puis « Prêt » ;
+  - « Regarder », « Télécharger » (le fichier porte le titre et la date), « Effacer », « Annuler » (en attente ou en cours) ;
+  - « Le montage a changé depuis ce rendu » quand on a modifié le montage après.
+- **Studio → Activité** : « Aperçu du montage » / « Rendu du montage », avec priorité et pause (en attente). Le rendu est une **tâche lourde** : il suit la pause générale et la plage horaire des conversions, et la fenêtre de rendu prévient quand c'est le cas.
+- **Limites** :
+  - un rendu à la fois par montage ;
+  - les 3 plus récents sont gardés (fichiers compris) ;
+  - au plus 120 passages (les extraits qui se suivent sans transition sont regroupés) ;
+  - 2 essais puis « en échec » avec le message de FFmpeg.
+- **Registre des problèmes réglé** : la pause d'une analyse du son (file « editor », étape E2) échouait dans la base. La contrainte accepte maintenant « editor » et « render ».
+- Versions :
+  - module `editor` **0.4.0** (migration `editor/004_render.sql`, table `editor_renders`) ;
+  - module `dubbing` **0.7.1** (la clé du fichier de la voix française est donnée au rendu, jamais au navigateur) ;
+  - worker : `render.js` et les polices DejaVu dans son image.
+
+### Prérequis
+- Étapes E1 à E3 déployées, module « Éditeur de montage » actif.
+- **Le worker doit être redéployé** : il contient le moteur de rendu et les polices. Aucune variable nouvelle. `FFMPEG_THREADS` (déjà prévu) limite les cœurs utilisés.
+- Disque du VPS : pendant un rendu, le worker télécharge l'original (≈ 4 Go par heure en 1080p) et écrit le fichier rendu (≈ 1 à 2 Go par heure). Ces fichiers temporaires sont effacés à la fin.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers), ou faire **Fetch origin** puis **Pull** (le commit est déjà poussé).
+2. Si vous avez décompressé le zip : GitHub Desktop → **Commit to main**, puis **Push origin**.
+3. DockPanel → Git Deploy, dans cet ordre :
+   - **Redeploy `majlistv-api`** (la migration `004_render.sql` s'applique au démarrage) ;
+   - puis **`majlistv-web`** ;
+   - puis **`majlistv-worker`** (obligatoire pour cette étape).
+4. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+5. Vérifier que le worker a bien les polices et FFmpeg :
+```
+docker exec dockpanel-git-majlistv-worker ls /app/fonts
+docker exec dockpanel-git-majlistv-worker sh -c "ffmpeg -hide_banner -filters | grep -E ' (ass|amultiply|loudnorm|afftdn) '"
+```
+La première commande doit lister `DejaVuSans.ttf` et `DejaVuSans-Bold.ttf`, la seconde quatre lignes.
+
+### Exemples d'utilisation
+- Ouvrir un montage → **Rendre la vidéo** → **Aperçu rapide** → **Lancer le rendu**. La ligne passe à « Prêt » toute seule → **Regarder**.
+- Satisfait ? **Rendu final** → **Lancer le rendu**, puis **Télécharger**. Vous pouvez fermer l'éditeur pendant le calcul.
+- Pour suivre de l'extérieur : Studio → Activité.
+
+### Debug
+- Le rendu reste « En attente » :
+  - le worker est arrêté ou occupé par une conversion : `docker logs --tail 50 dockpanel-git-majlistv-worker` ;
+  - ou les tâches lourdes sont en pause, ou hors de leur plage horaire : Studio → Activité.
+- « En échec » : le message de FFmpeg est affiché sous la ligne. Le journal complet est visible avec `docker logs dockpanel-git-majlistv-worker | grep rendu`.
+- « Trop d’extraits pour un rendu » : plus de 120 passages. Supprimez ou regroupez quelques coupes.
+- « Une musique du montage n’est plus dans la bibliothèque » : retirez-la du montage ou choisissez-en une autre.
+- Texte en carrés ou arabe non lié : les polices manquent dans le worker (voir la commande de vérification ci-dessus).
+- Le worker a été redéployé pendant un rendu : le rendu repart du début tout seul.
+
+### Tests
+```
+cd api && node tests/test_render_plan.mjs        # plan + moteur avec le vrai FFmpeg : durées, fondu au noir, logo, textes, baisses du son mesurées, LUFS
+cd api && python3 tests/test_editor_e4a.py       # API + worker : file, annulation (en attente / en cours), source de secours, 2 essais, 3 gardés, Activité, droits, audit
+cd web && python3 tests/e4a_render.py            # navigateur : fenêtre, progression, prêt, télécharger, annuler, lecture seule, arabe, 1024 px
+```
+Les tests E1 à E3 sont mis à jour : module 0.4.0, bouton « Rendre la vidéo » actif.
+
+### Testé / non testé
+**Testé** :
+- les trois tests ci-dessus et les régressions E1 à E3 (API, calculs, navigateur), plus le test du worker ;
+- mesures sur un rendu de synthèse :
+  - voix d'origine baissée de 14,9 dB sous la voix française (16,5 attendus, fenêtre de mesure de 1 s) ;
+  - musique baissée de 10,3 dB sous la voix (12 attendus) ;
+  - niveau final −17,3 LUFS pour une cible de −16 ;
+  - durée exacte, fondu au noir au raccord, logo aux bons endroits.
+
+**Non testé** :
+- l'image Docker du worker (FFmpeg d'Alpine avec libass et amultiply, polices copiées) ;
+- un rendu d'une vraie conférence d'une heure sur le VPS (temps, disque, mémoire) ;
+- la lecture du fichier rendu (H.264) dans un vrai navigateur : le Chromium de test ne lit pas le H.264 ;
+- un vrai téléphone (l'éditeur reste réservé à l'ordinateur).
