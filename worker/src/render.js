@@ -19,7 +19,14 @@ const MAX_ATTEMPTS = 2;
 // --- Fonctions pures (testées) ----------------------------------------------------------------------------------------------
 
 // Taille de l'image : aperçu 640×360 ; rendu final à la hauteur de la meilleure qualité de la source (360, 720 ou 1080), en 16:9.
-export function outputSize({ preview, srcHeight }) {
+// Extrait court 9:16 (étape E5b, plan.vertical) : aperçu 360 × 640 ; rendu final 1080 × 1920, 720 × 1280 ou 360 × 640 selon la hauteur de la source
+// (le cadre vertical garde toute la hauteur de la source : inutile de dépasser sa qualité).
+export function outputSize({ preview, srcHeight, vertical = false }) {
+  if (vertical) {
+    if (preview) return { W: 360, H: 640 };
+    const h = srcHeight || 0;
+    return h >= 1072 ? { W: 1080, H: 1920 } : h >= 712 ? { W: 720, H: 1280 } : { W: 360, H: 640 };
+  }
   if (preview) return { W: 640, H: 360 };
   const list = RENDITIONS.filter((r) => r.h <= (srcHeight || 0) + 8);
   const H = list.length ? list[list.length - 1].h : 360;
@@ -243,7 +250,7 @@ export function fontsDir() {
 // Rendu à partir de fichiers locaux (utilisé par processRender et par les tests). files : voir inputArgs.
 export async function renderFiles({ plan, files, dir, threads = 0, log = () => {}, onProgress = () => {} }) {
   const info = await probeSource(files.source);
-  const { W, H } = outputSize({ preview: plan.preview, srcHeight: info.height });
+  const { W, H } = outputSize({ preview: plan.preview, srcHeight: info.height, vertical: Boolean(plan.vertical) });
   const FPS = outputFps(info.fps);
   log(`source ${info.width}x${info.height}, ${Math.round(info.duration)} s, audio=${info.hasAudio} → ${W}x${H} @${FPS}, ${plan.outDur} s`);
 

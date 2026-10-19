@@ -244,7 +244,7 @@ try:
 
     mods = rq("GET", "/admin/modules", headers=A).json(); mods = mods.get("modules", mods)
     v = {m["id"]: m["version"] for m in mods}
-    ok(v.get("editor") == "0.6.0" and v.get("dubbing") == "0.8.0" and v.get("storage") == "0.3.0", f"versions : {v.get('editor')}, {v.get('dubbing')}, {v.get('storage')}")
+    ok(v.get("editor") == "0.7.0" and v.get("dubbing") == "0.8.0" and v.get("storage") == "0.3.0", f"versions : {v.get('editor')}, {v.get('dubbing')}, {v.get('storage')}")
 finally:
     for t in talks:
         for k in keys_of(f"hls/{t}/"): keys.append(k)

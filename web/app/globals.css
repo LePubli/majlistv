@@ -3356,3 +3356,45 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mtw-w.sel { background: var(--accent); color: var(--on-accent); opacity: 1; }
 .mtw-w.sel.cut { color: var(--on-accent); }
 .mtw-foot { margin: 0; }
+
+/* ===== Étape E5b — « Extraits 9:16 » ===== */
+.mts { display: flex; flex-direction: column; gap: 14px; }
+.mts h1 { margin: 0; font-size: 1.5rem; }
+.mts h2 { margin: 0; font-size: 1.05rem; }
+.mts-empty { padding: 28px; border-radius: 18px; border: 1px dashed var(--line); text-align: center; color: var(--muted); }
+.mts-tabs { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; overflow-x: auto; }
+.mts-tab { display: flex; flex-direction: column; gap: 2px; text-align: start; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; min-width: 150px; }
+.mts-tab.on { border-color: var(--accent); background: var(--gold-soft); }
+.mts-main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 280px); gap: 18px; align-items: start; }
+.mts-video, .mts-phone, .mts-form, .mts-text { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); }
+.mts-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; touch-action: none; direction: ltr; }
+.mts-src { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.mts-shade { position: absolute; top: 0; bottom: 0; background: rgba(0, 0, 0, .62); pointer-events: none; }
+.mts-shade:first-of-type { left: 0; }
+.mts-frame { position: absolute; top: 0; bottom: 0; border: 2px solid var(--accent); box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); cursor: ew-resize; border-radius: 6px; }
+.mts-frame:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.mts-transport { display: flex; gap: 12px; align-items: center; }
+.mts-transport input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.mts-clock { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mts-phone { align-items: center; grid-column: 2; grid-row: 1; }
+.mts-screen { position: relative; width: 100%; max-width: 270px; aspect-ratio: 9 / 16; background: #000; border-radius: 22px; overflow: hidden; border: 2px solid var(--line); direction: ltr; }
+.mts-screen canvas { width: 100%; height: 100%; display: block; }
+.mts-title { position: absolute; top: 7%; left: 50%; transform: translateX(-50%); max-width: 86%; padding: 5px 10px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: .8rem; text-align: center; }
+.mts-cap { position: absolute; left: 6%; right: 6%; bottom: 22%; text-align: center; color: #fff; font-weight: 800; font-size: 1.05rem; text-shadow: 0 2px 4px #000, 0 0 3px #000; }
+.mts-form { grid-column: 1; }
+.mts-form label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.mts-form .mts-check { flex-direction: row; align-items: center; gap: 8px; }
+.mts-form .mts-check input { width: auto; min-height: 0; accent-color: var(--accent); }
+.mts-times { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.mts-times label { flex: 1; min-width: 110px; }
+.mts-len.bad { color: #ff8a80; }
+.mts-text { grid-column: 1 / -1; }
+.mts-segs { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.mts-seg { width: 100%; text-align: start; padding: 6px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; font: inherit; }
+.mts-seg:hover { border-color: var(--line); }
+.mts-seg.in { background: var(--gold-soft); border-color: var(--accent); }
+.mt-render-video.vertical { aspect-ratio: 9 / 16; max-width: 270px; margin-inline: auto; display: block; }
+@media (max-width: 860px) {
+  .mts-main { grid-template-columns: 1fr; }
+  .mts-phone, .mts-form, .mts-text { grid-column: 1; grid-row: auto; }
+}

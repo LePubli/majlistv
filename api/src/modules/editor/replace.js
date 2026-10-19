@@ -101,6 +101,7 @@ export default async function replaceRoutes(app, { viewer, editable }) {
   }
   const refuse = (r) => {
     if (r.status !== 'ready' || !r.output_key) return { code: 'not_ready', error: 'Ce rendu n’est pas prêt.' };
+    if (r.plan?.vertical) return { code: 'vertical', error: 'Un extrait court 9:16 ne peut pas remplacer la vidéo publiée (il est pour les réseaux).' };
     if (r.kind !== 'final') return { code: 'preview', error: 'Un aperçu rapide (640 × 360) ne peut pas remplacer la vidéo : lancez un rendu final.' };
     if (!editable(r)) return { code: 'not_editable', error: 'Cette conférence ne peut pas être remplacée (vidéo externe ou non convertie).' };
     return null;

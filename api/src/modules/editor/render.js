@@ -15,6 +15,8 @@ import { dressDefaults } from './dress.js';
 import { buildPlan, estimateSeconds } from './plan.js';
 import * as ext from '../../ext.js';
 import { speakerSlug } from '../../speakers.js';
+import { shortDefaults } from './short.js';
+import { shortChunks } from './shorts.js';
 
 export const KEEP_RENDERS = 3;
 const KINDS = ['preview', 'final'];
@@ -101,14 +103,20 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
     let plan;
     try {
       const inp = await planInputs(row, chk.timeline, { cuesOf });
+      // Étape E5b : un extrait court est rendu en 9:16 (cadre, sous-titres courts, titre).
+      let short = null;
+      if (row.kind === 'short') {
+        const cfg = shortDefaults(row.short); const c = chk.timeline.clips[0];
+        short = { cropX: cfg.cropX, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '' };
+      }
       plan = buildPlan({ timeline: chk.timeline, vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, ...inp,
-        preview: b.kind === 'preview', title: row.talk_title || '' });
+        preview: b.kind === 'preview', title: row.kind === 'short' ? `${row.talk_title || ''} ${row.title || ''}`.trim() : row.talk_title || '', short });
     } catch (err) { return reply.code(400).send({ error: err.message, code: 'plan' }); }
     const r = (await pool.query(
       `INSERT INTO editor_renders(project_id, talk_id, kind, rev, timeline, plan, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [row.id, row.talk_id, b.kind, row.rev, chk.timeline, plan, req.user.sub])).rows[0];
     await prune(row.id, app.log);
-    req.auditSummary = `Éditeur : ${b.kind === 'preview' ? 'aperçu rapide' : 'rendu final'} demandé (« ${row.talk_title} », ${Math.round(plan.outDur)} s)`;
+    req.auditSummary = `Éditeur : ${row.kind === 'short' ? 'extrait 9:16 — ' : ''}${b.kind === 'preview' ? 'aperçu rapide' : 'rendu final'} demandé (« ${row.talk_title} », ${Math.round(plan.outDur)} s)`;
     return reply.code(201).send({ render: await renderView(r, row.talk_title), heavyAllowed: await heavyAllowed() });
   });
 
@@ -159,13 +167,15 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
 // Studio → Activité : rendus en attente, en cours, et en échec (30 derniers jours).
 export async function collectRenders(out, { organizerId }) {
   const { rows } = await pool.query(
-    `SELECT r.id, r.kind, r.status, r.progress, r.stage, r.error, r.created_at, r.talk_id, r.project_id, t.title
-       FROM editor_renders r JOIN talks t ON t.id = r.talk_id
+    `SELECT r.id, r.kind, r.status, r.progress, r.stage, r.error, r.created_at, r.talk_id, r.project_id, t.title, p.kind AS pkind,
+            (SELECT m.id FROM editor_projects m WHERE m.talk_id = r.talk_id AND m.kind = 'main') AS main_id
+       FROM editor_renders r JOIN talks t ON t.id = r.talk_id JOIN editor_projects p ON p.id = r.project_id
       WHERE (r.status IN ('queued', 'running') OR (r.status = 'failed' AND r.updated_at > now() - interval '30 days'))
         AND ($1::uuid IS NULL OR t.organizer_id = $1)`, [organizerId]);
   for (const r of rows) {
     out.push({ queue: 'render', ref: r.id, talkId: r.talk_id, title: r.title || '', kind: r.kind,
       status: r.status === 'running' ? 'running' : r.status === 'failed' ? 'failed' : 'waiting', progress: r.status === 'running' ? r.progress : null,
-      error: r.error, createdAt: r.created_at, link: `/studio/editor/${r.project_id}` });
+      error: r.error, createdAt: r.created_at, shortVideo: r.pkind === 'short',
+      link: r.pkind === 'short' ? (r.main_id ? `/studio/editor/${r.main_id}/shorts?s=${r.project_id}` : '/studio/editor') : `/studio/editor/${r.project_id}` });
   }
 }

@@ -4204,3 +4204,64 @@ Les tests E1 à E4b sont à jour (version 0.6.0) et passent ; `test_editor_e4b.p
 - le vrai faster-whisper avec `word_timestamps=True` (le modèle ne peut pas être téléchargé ici) : à vérifier sur le VPS à l'étape F ;
 - une vraie conférence d'une heure (environ 8 000 mots) : la page est prévue pour (seule la phrase lue est redessinée), mais pas mesurée sur un vrai poste ;
 - Safari et Firefox (Chromium seulement).
+
+## Étape E5b — Éditeur de montage : extraits courts 9:16
+
+### Description
+Nouvelle page **Studio → Éditeur → un projet → « Extraits 9:16 »** (bouton doré dans l'en-tête de l'éditeur, adresse `/studio/editor/<projet>/shorts`). Elle fabrique de courts extraits **verticaux 1080 × 1920** pour les réseaux sociaux (Reels, Shorts, TikTok) :
+- **« Nouvel extrait »** : crée un extrait de 30 s à l'endroit de la lecture (de 1 s à 3 min, 30 extraits au plus par conférence) ; chaque extrait est un petit projet à part (le montage principal n'est pas touché) ;
+- **passage** : début et fin en secondes, ou **clic dans le texte** de la conférence (1er clic = phrase de début, 2e clic = phrase de fin) ;
+- **cadre vertical** : un cadre doré, à faire glisser sur la vidéo 16:9 (ou flèches du clavier), choisit la partie de l'image gardée ; un aperçu vertical (téléphone) le montre en direct ;
+- **titre** affiché en haut pendant les 4 premières secondes (peut être masqué) ;
+- **sous-titres courts** : 5 mots au plus par groupe, grosse police blanche, d'après l'horodatage des mots (E5a) ; langue parlée ou traduction ;
+- **voix française** (si un doublage existe) à la place de la voix d'origine ;
+- **enregistrement automatique** des réglages (0,7 s après le dernier geste) ;
+- **« Rendre l'extrait »** : aperçu rapide **360 × 640** ou rendu final **1080 × 1920** (720 × 1280 si la source est en 720p, 360 × 640 si elle est plus petite), niveau sonore −14 LUFS (réseaux sociaux), MP4 à télécharger. Le calcul se fait sur le serveur (worker) et continue si on quitte la page ; il apparaît dans Studio → Activité ; les 3 derniers rendus sont gardés.
+
+Un extrait vertical **ne peut pas remplacer la vidéo publiée** (le lien « Remplacer » n'existe pas pour lui, et le serveur le refuse). Supprimer le montage d'une conférence supprime ses extraits.
+
+Versions : module `editor` **0.7.0** ; migration du module `006_shorts.sql` (colonne `short`) ; le **worker change** (formats verticaux). Pas de maquette dans « Studio v2 » : style de l'éditeur (cartes arrondies, accents or, texte blanc), responsive 390 → 1440 px, arabe en RTL.
+
+### Prérequis
+- Étapes E1 à E5a déployées. Les sous-titres courts sont les plus justes avec des mots horodatés (E5a) ; sinon la place des mots est estimée.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est déjà poussé). Ou bien décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy, dans cet ordre :
+   - **`majlistv-api`** (migration du module `006_shorts.sql`) ;
+   - **`majlistv-web`** ;
+   - **`majlistv-worker`** (rendu vertical).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Vérifier la migration :
+```
+docker logs dockpanel-git-majlistv-api 2>&1 | grep -i "editor" | grep -i 006
+```
+
+### Exemples d'utilisation
+- Éditeur → **Extraits 9:16** → **Nouvel extrait** → régler début/fin → faire glisser le cadre sur le visage du conférencier → **Rendre l'extrait** → **Aperçu rapide** → regarder → **Rendu final** → **Télécharger**.
+- Choisir une citation : clic sur la première phrase dans « Choisir le passage dans le texte », puis sur la dernière.
+- Sous-titres en français pour une conférence arabe : « Langue des sous-titres » → FR (traduction, place estimée).
+
+### Debug
+- Rendu « échoué » : le message est dans la fenêtre de rendu ; journaux :
+```
+docker logs --tail 100 dockpanel-git-majlistv-worker 2>&1 | grep -i render
+```
+- Pas de sous-titres dans le rendu : la case « Sous-titres courts » est décochée, ou la conférence n'a pas de transcription.
+- Liste des extraits d'une conférence (base) :
+```
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT title, short->>'"'"'lang'"'"' AS langue, updated_at FROM editor_projects WHERE kind = '"'"'short'"'"' ORDER BY updated_at DESC LIMIT 20;"'
+```
+
+### Tests
+```
+node api/tests/test_short.mjs              # moteur : passage, sous-titres courts, cadre, rendu FFmpeg réel (moitié rouge / moitié bleue, pixels vérifiés)
+python3 api/tests/test_editor_e5b.py       # routes, révisions, droits, rendu par le worker 360×640 puis 720×1280, remplacement refusé, suppression, activité
+cd web && python3 tests/e5b_shorts.py     # navigateur : création, cadre glissé, texte, titre, sous-titres, rendu, suppression, arabe, 390 / 1024 / 1440 px
+```
+**Testé** : tout ce qui précède (FFmpeg, S3 de test, Chromium). **Non testé** (étape F) : image Docker du worker (police, FFmpeg d'Alpine), vraie vidéo H.264 du VPS, lecture sur les réseaux (registre 26, 27).

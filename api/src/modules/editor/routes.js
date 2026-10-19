@@ -23,6 +23,7 @@ import { speakerSlug } from '../../speakers.js';
 import renderRoutes, { deleteProjectRenders } from './render.js';
 import replaceRoutes from './replace.js';
 import wordRoutes from './words.js';
+import shortRoutes from './shorts.js';
 import { ensureTalkWaveforms, ensureAssetWaveform, waveView, processQueue, denoiseSample, hasFfmpeg, STEP_MS } from './audio.js';
 
 const MUSIC_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
@@ -174,7 +175,7 @@ export default async function routes(app) {
   // Liste : mes projets (tous pour l'administrateur) et les conférences qu'on peut monter.
   app.get('/studio/editor/projects', viewer, async (req) => {
     const admin = req.user.role === 'admin';
-    const { rows } = await pool.query(`${PROJECT_SQL} WHERE ($1::uuid IS NULL OR t.organizer_id = $1) ORDER BY p.updated_at DESC LIMIT 300`, [admin ? null : req.user.sub]);
+    const { rows } = await pool.query(`${PROJECT_SQL} WHERE p.kind = 'main' AND ($1::uuid IS NULL OR t.organizer_id = $1) ORDER BY p.updated_at DESC LIMIT 300`, [admin ? null : req.user.sub]);
     const projects = [];
     for (const r of rows) {
       projects.push({
@@ -573,8 +574,11 @@ export default async function routes(app) {
     const sess = typeof req.query.session === 'string' ? req.query.session : null;
     const v = lockView(row, req.user, sess);
     if (v.active && !v.mine) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked' });
+    // Étape E5b : les extraits courts de la conférence partent avec son montage (ils se gèrent depuis lui).
+    const shorts = row.kind === 'main' ? (await pool.query("SELECT id FROM editor_projects WHERE talk_id = $1 AND kind = 'short'", [row.talk_id])).rows : [];
     await pool.query('DELETE FROM editor_projects WHERE id = $1', [row.id]);
     await deleteProjectRenders(row.id); // étape E4a : fichiers des rendus du projet
+    for (const s of shorts) { await pool.query('DELETE FROM editor_projects WHERE id = $1', [s.id]); await deleteProjectRenders(s.id); }
     req.auditSummary = `Éditeur : projet de montage supprimé (« ${row.talk_title} »)`;
     return { deleted: true };
   });
@@ -584,4 +588,5 @@ export default async function routes(app) {
   // Étape E4b : remplacer la vidéo publiée, restaurer l'original (replace.js).
   await replaceRoutes(app, { viewer, editable });
   await wordRoutes(app, { guard, viewer }); // étape E5a : montage par le texte
+  await shortRoutes(app, { guard, viewer, editable, mediaOf }); // étape E5b : extraits courts 9:16
 }

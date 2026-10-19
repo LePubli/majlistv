@@ -407,6 +407,7 @@ export default function Editor({ id }) {
             <button type="button" className="btn ghost sd-pill" onClick={undo} disabled={!canEdit || !h.past.length} title="Ctrl+Z">{t('mtUndo')}</button>
             <button type="button" className="btn ghost sd-pill" onClick={redo} disabled={!canEdit || !h.future.length} title="Ctrl+Maj+Z">{t('mtRedo')}</button>
             <button type="button" className="btn ghost sd-pill mt-gold" onClick={async () => { await doSave(); setShowVersions(true); }}>{t('mtVersions')}</button>
+            <Link href={`/studio/editor/${id}/shorts`} className="btn ghost sd-pill mt-gold" onClick={() => { doSave(); }} data-act="shorts">{t('mtsOpen')}</Link>
             <button type="button" className="btn sd-pill" disabled={!data.editable} onClick={async () => { await doSave(); setShowRender(true); }} data-act="render">{t('mtRender')}</button>
           </div>
         </header>

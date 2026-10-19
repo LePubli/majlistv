@@ -12,7 +12,7 @@ import { fmtTime } from './ops';
 const minutes = (s, t) => (s < 90 ? t('mtrSec').replace('{n}', Math.max(5, Math.round(s / 5) * 5)) : t('mtrMin').replace('{n}', Math.round(s / 60)));
 const mb = (b, locale) => (b / 1048576).toLocaleString(locale, { maximumFractionDigits: b > 104857600 ? 0 : 1 });
 
-export default function RenderPanel({ projectId, getRev, beforeAction, durationFinal, readOnly, onClose, onChange, readOnlyReplace = false }) {
+export default function RenderPanel({ projectId, getRev, beforeAction, durationFinal, readOnly, onClose, onChange, readOnlyReplace = false, vertical = false }) {
   const { t, call, locale } = useApp();
   const [d, setD] = useState(null);
   const [kind, setKind] = useState('preview');
@@ -76,14 +76,14 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
     <div className="mt-modal" role="dialog" aria-modal="true" aria-labelledby="mt-render-title" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="mt-modal-box mt-render-box" ref={box} tabIndex={-1}>
         <div className="sd-card-head">
-          <h2 id="mt-render-title">{t('mtrTitle')}</h2>
+          <h2 id="mt-render-title">{t(vertical ? 'mtsRenderTitle' : 'mtrTitle')}</h2>
           <button type="button" className="btn ghost sd-pill" onClick={onClose}>{t('mtClose')}</button>
         </div>
-        <p className="meta small">{t('mtrIntro')}</p>
+        <p className="meta small">{t(vertical ? 'mtsRenderIntro' : 'mtrIntro')}</p>
 
         <fieldset className="mt-render-kinds" disabled={Boolean(active) || busy}>
           <legend className="sr-only">{t('mtrKind')}</legend>
-          {[['preview', 'mtrPreview', 'mtrPreviewHelp', 0.3], ['final', 'mtrFinal', 'mtrFinalHelp', 1]].map(([k, title, help, f]) => (
+          {[['preview', 'mtrPreview', vertical ? 'mtsPreviewHelp' : 'mtrPreviewHelp', 0.3], ['final', 'mtrFinal', vertical ? 'mtsFinalHelp' : 'mtrFinalHelp', 1]].map(([k, title, help, f]) => (
             <label key={k} className={`mt-render-kind${kind === k ? ' on' : ''}`} data-kind={k}>
               <input type="radio" name="mt-render-kind" value={k} checked={kind === k} onChange={() => setKind(k)} />
               <span><b>{t(title)}</b><small className="meta">{t(help).replace('{m}', minutes(durationFinal * f, t)).replace('{d}', fmtTime(durationFinal))}</small></span>
@@ -133,7 +133,7 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
                 </div>
                 {watch === r.id && r.url && (
                   // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video className="mt-render-video" src={r.url} controls playsInline preload="metadata" aria-label={t('mtrVideo')} />
+                  <video className={`mt-render-video${vertical ? ' vertical' : ''}`} src={r.url} controls playsInline preload="metadata" aria-label={t('mtrVideo')} />
                 )}
               </li>
             ))}
