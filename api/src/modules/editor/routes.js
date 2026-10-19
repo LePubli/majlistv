@@ -17,7 +17,9 @@ import crypto from 'node:crypto';
 import { storage, presignGet, presignPut, headObject, deleteObject } from '../../storage.js';
 import { makePlaybackToken } from '../../playback.js';
 import * as ext from '../../ext.js';
-import { checkTimeline, initialTimeline, editedDuration, isEdited, musicAssets, audioDefaults, DENOISE } from './timeline.js';
+import { checkTimeline, initialTimeline, editedDuration, isEdited, musicAssets, logoAssets, audioDefaults, DENOISE } from './timeline.js';
+import { dressDefaults, checkDress, renderFrame, probeImage } from './dress.js';
+import { speakerSlug } from '../../speakers.js';
 import { ensureTalkWaveforms, ensureAssetWaveform, waveView, processQueue, denoiseSample, hasFfmpeg, STEP_MS } from './audio.js';
 
 const MUSIC_TYPES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav',
@@ -31,6 +33,11 @@ async function readyAssets(ids) {
     `SELECT a.id, w.duration_s FROM editor_assets a JOIN editor_waveforms w ON w.asset_id = a.id AND w.status = 'ready' WHERE a.id = ANY($1::uuid[])`, [ids]);
   return new Map(rows.map((r) => [r.id, Number(r.duration_s)]));
 }
+// Logos importés qui existent encore : Set d'identifiants.
+async function knownLogos(ids) {
+  if (!ids.length) return new Set();
+  return new Set((await pool.query("SELECT id FROM editor_assets WHERE kind = 'logo' AND id = ANY($1::uuid[])", [ids])).rows.map((r) => r.id));
+}
 async function musicView(row) {
   let url = null;
   try { url = await presignGet(row.key); } catch { url = null; }
@@ -39,6 +46,7 @@ async function musicView(row) {
 }
 const MUSIC_SQL = `SELECT a.*, u.name AS created_name, w.status, w.duration_s, w.lufs, w.error, w.peaks, w.step_ms FROM editor_assets a
   LEFT JOIN editor_waveforms w ON w.asset_id = a.id LEFT JOIN users u ON u.id = a.created_by`;
+const MUSIC_ONLY = "a.kind = 'music'";
 
 export const LOCK_TTL_S = 75;
 const AUTO_KEEP = 30;
@@ -80,7 +88,9 @@ async function lastVersion(projectId) {
 // Copie du montage actuel en version (sauf si elle est identique à la dernière version).
 async function snapshot(client, projectId, timeline, userId, { label = '', auto = true, force = false } = {}) {
   const last = (await client.query('SELECT n, timeline FROM editor_versions WHERE project_id = $1 ORDER BY n DESC LIMIT 1', [projectId])).rows[0];
-  if (!force && last && JSON.stringify(last.timeline.clips) === JSON.stringify(timeline.clips)) return last.n;
+  // Identique à la dernière version (extraits, son et habillage) : rien à copier.
+  const same = (a, b) => JSON.stringify([a.clips, a.audio ?? null, a.dress ?? null]) === JSON.stringify([b.clips, b.audio ?? null, b.dress ?? null]);
+  if (!force && last && same(last.timeline, timeline)) return last.n;
   const n = (last?.n || 0) + 1;
   await client.query('INSERT INTO editor_versions(project_id, n, label, auto, timeline, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
     [projectId, n, label.slice(0, 120), auto, timeline, userId]);
@@ -108,14 +118,30 @@ async function projectView(row, user, sess) {
   };
 }
 
-// Pistes liées montrées sous la vidéo : sous-titres (français si possible), et ce que les modules ajoutent (doublage).
-async function mediaOf(row) {
-  const token = makePlaybackToken(row.talk_id, 8 * 3600);
+// Sous-titres de la conférence (français si possible) : { lang, cues: [{ s, e, text }] } en temps source.
+async function cuesOf(row) {
   const langs = (await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1', [row.talk_id])).rows.map((r) => r.lang);
   const lang = langs.includes('fr') ? 'fr' : langs.find((l) => String(row.lang || '').startsWith(l)) || langs[0] || null;
   const cues = lang ? (await pool.query(
     'SELECT start_ms / 1000.0 AS s, end_ms / 1000.0 AS e, text FROM transcript_segments WHERE talk_id = $1 AND lang = $2 ORDER BY idx LIMIT 6000',
     [row.talk_id, lang])).rows.map((c) => ({ s: Number(c.s), e: Number(c.e), text: c.text })) : [];
+  return { lang, cues };
+}
+
+// Chaîne de la conférence (étape C : speakers) : nom, adresse stable, image de la chaîne (avatar) servant de logo par défaut.
+async function channelOf(row) {
+  const slug = speakerSlug(row.speaker);
+  if (!slug) return null;
+  const c = (await pool.query('SELECT slug, name, avatar_key FROM speakers WHERE slug = $1', [slug])).rows[0];
+  let avatarUrl = null;
+  try { avatarUrl = c?.avatar_key ? await presignGet(c.avatar_key) : null; } catch { avatarUrl = null; }
+  return { slug, name: c?.name || String(row.speaker).trim(), avatarUrl };
+}
+
+// Pistes liées montrées sous la vidéo : sous-titres (français si possible), et ce que les modules ajoutent (doublage).
+async function mediaOf(row) {
+  const token = makePlaybackToken(row.talk_id, 8 * 3600);
+  const { lang, cues } = await cuesOf(row);
   const out = {
     // Aperçu : la qualité 360p déjà produite par la conversion (playlist v0), lue par le navigateur.
     preview: { hls: `/hls/${row.talk_id}/v0/index.m3u8?t=${encodeURIComponent(token)}`, quality: '360p' },
@@ -127,6 +153,8 @@ async function mediaOf(row) {
   // Étape E2 : réglages du son par défaut (le volume de la voix d'origine sous la voix française vient du doublage).
   out.audioDefaults = audioDefaults(null, { duck: out.dub?.duck });
   out.denoiseLevels = DENOISE;
+  // Étape E3 : habillage — chaîne (logo par défaut), valeurs des variables {titre} et {intervenant}, réglages par défaut.
+  out.dress = { channel: await channelOf(row), vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, defaults: dressDefaults(null) };
   return out;
 }
 
@@ -235,7 +263,7 @@ export default async function routes(app) {
     // Verrou expiré sans que personne ne l'ait pris (veille de l'ordinateur…) : on le reprend en silence.
     if (!v.mine && v.active) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked', lock: v });
     if (body.rev !== row.rev) return reply.code(409).send({ error: 'Le montage a été modifié ailleurs entre-temps.', code: 'conflict', rev: row.rev, timeline: row.timeline });
-    const chk = checkTimeline(body.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(body.timeline)) });
+    const chk = checkTimeline(body.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(body.timeline)), logos: await knownLogos(logoAssets(body.timeline)) });
     if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
     const c = await pool.connect();
     try {
@@ -286,7 +314,7 @@ export default async function routes(app) {
     if (!lockView(row, req.user, sess).mine) return reply.code(423).send({ error: 'Prenez la main sur le projet pour revenir à une version.', code: 'locked' });
     const ver = (await pool.query('SELECT timeline FROM editor_versions WHERE project_id = $1 AND n = $2', [row.id, n])).rows[0];
     if (!ver) return reply.code(404).send({ error: 'Version introuvable' });
-    const chk = checkTimeline(ver.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(ver.timeline)) });
+    const chk = checkTimeline(ver.timeline, row.duration_seconds, { assets: await readyAssets(musicAssets(ver.timeline)), logos: await knownLogos(logoAssets(ver.timeline)) });
     if (!chk.ok) return reply.code(409).send({ error: `Cette version ne correspond plus à la vidéo : ${chk.error}` });
     const c = await pool.connect();
     try {
@@ -345,7 +373,7 @@ export default async function routes(app) {
 
   // --- Bibliothèque de musiques (commune à tous les montages ; l'administrateur importe, tout le monde utilise)
   app.get('/studio/editor/music', viewer, async (req) => {
-    const { rows } = await pool.query(`${MUSIC_SQL} ORDER BY a.created_at DESC LIMIT 500`);
+    const { rows } = await pool.query(`${MUSIC_SQL} WHERE ${MUSIC_ONLY} ORDER BY a.created_at DESC LIMIT 500`);
     const out = [];
     for (const r of rows) out.push(await musicView(r));
     if (rows.some((r) => r.status === 'queued')) kick();
@@ -354,7 +382,7 @@ export default async function routes(app) {
 
   app.get('/studio/editor/music/:id', viewer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const r = (await pool.query(`${MUSIC_SQL} WHERE a.id = $1`, [id])).rows[0];
+    const r = (await pool.query(`${MUSIC_SQL} WHERE a.id = $1 AND ${MUSIC_ONLY}`, [id])).rows[0];
     if (!r) return reply.code(404).send({ error: 'Musique introuvable' });
     return { music: { ...(await musicView(r)), wave: r.status ? waveView(r) : null } };
   });
@@ -388,7 +416,7 @@ export default async function routes(app) {
   app.patch('/studio/editor/music/:id', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = z.object({ title: z.string().trim().min(1).max(120).optional(), license: z.string().trim().max(300).optional() }).parse(req.body ?? {});
-    const r = await pool.query('UPDATE editor_assets SET title = COALESCE($2, title), license = COALESCE($3, license) WHERE id = $1 RETURNING id', [id, b.title ?? null, b.license ?? null]);
+    const r = await pool.query('UPDATE editor_assets SET title = COALESCE($2, title), license = COALESCE($3, license) WHERE id = $1 AND kind = \'music\' RETURNING id', [id, b.title ?? null, b.license ?? null]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Musique introuvable' });
     return { music: await musicView((await pool.query(`${MUSIC_SQL} WHERE a.id = $1`, [id])).rows[0]) };
   });
@@ -396,7 +424,7 @@ export default async function routes(app) {
   // Supprimer une musique : refusé tant qu'un montage (ou une de ses versions) l'utilise.
   app.delete('/studio/editor/music/:id', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const a = (await pool.query('SELECT key, title FROM editor_assets WHERE id = $1', [id])).rows[0];
+    const a = (await pool.query("SELECT key, title FROM editor_assets WHERE id = $1 AND kind = 'music'", [id])).rows[0];
     if (!a) return reply.code(404).send({ error: 'Musique introuvable' });
     const used = (await pool.query(
       `SELECT count(DISTINCT p.id)::int AS n FROM editor_projects p LEFT JOIN editor_versions v ON v.project_id = p.id
@@ -406,6 +434,134 @@ export default async function routes(app) {
     await deleteObject(a.key).catch(() => {});
     req.auditSummary = `Éditeur : musique supprimée (« ${a.title} »)`;
     return { deleted: true };
+  });
+
+  // --- Étape E3 : habillage
+
+  // Logos importés (png, jpeg, webp ; 3 Mo) : l'administrateur et les organisateurs importent ; un organisateur voit ses logos et ceux de
+  // l'administrateur. L'image de la chaîne (« channel ») sert de logo par défaut sans rien importer.
+  const LOGO_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+  const LOGO_MAX_MB = 3;
+  const LOGO_SQL = `SELECT a.*, u.name AS created_name, u.role AS created_role FROM editor_assets a LEFT JOIN users u ON u.id = a.created_by WHERE a.kind = 'logo'`;
+  const logoVisible = (user, r) => user.role === 'admin' || r.created_by === user.sub || r.created_role === 'admin';
+  async function logoView(r, user) {
+    let url = null;
+    try { url = await presignGet(r.key); } catch { url = null; }
+    return { id: r.id, title: r.title, url, w: r.meta?.w || null, h: r.meta?.h || null, bytes: Number(r.bytes), createdBy: r.created_name || null, createdAt: r.created_at,
+      mine: r.created_by === user.sub, canDelete: user.role === 'admin' || r.created_by === user.sub };
+  }
+  app.get('/studio/editor/logos', viewer, async (req) => {
+    const rows = (await pool.query(`${LOGO_SQL} ORDER BY a.created_at DESC LIMIT 300`)).rows.filter((r) => logoVisible(req.user, r));
+    const logos = [];
+    for (const r of rows) logos.push(await logoView(r, req.user));
+    return { logos, maxMb: LOGO_MAX_MB };
+  });
+  app.post('/studio/editor/logos/upload-url', viewer, async (req, reply) => {
+    if (!storage) return reply.code(503).send({ error: 'Stockage non configuré', code: 'storage_off' });
+    const { contentType, size } = z.object({ contentType: z.string(), size: z.number().int().positive().optional() }).parse(req.body ?? {});
+    const e = LOGO_TYPES[contentType.toLowerCase()];
+    if (!e) return reply.code(400).send({ error: 'Format d’image non accepté (png, jpeg ou webp)', code: 'bad_type' });
+    if (size && size > LOGO_MAX_MB * 1048576) return reply.code(400).send({ error: `Image trop lourde (${LOGO_MAX_MB} Mo maximum)`, code: 'too_big' });
+    const key = `editor/logo/${crypto.randomUUID()}.${e}`;
+    return { key, url: await presignPut(key, contentType.toLowerCase()), maxBytes: LOGO_MAX_MB * 1048576 };
+  });
+  app.post('/studio/editor/logos', viewer, async (req, reply) => {
+    const b = z.object({ key: z.string().regex(/^editor\/logo\/[0-9a-f-]{36}\.(png|jpg|webp)$/, 'Fichier inattendu'),
+      title: z.string().trim().min(1, 'Donnez un nom au logo').max(120), contentType: z.string().max(60) }).parse(req.body ?? {});
+    let size;
+    try { size = Number((await headObject(b.key)).ContentLength); } catch { return reply.code(400).send({ error: "L'image n'a pas été reçue : recommencez l'envoi", code: 'missing' }); }
+    const fail = async (error, code) => { await deleteObject(b.key).catch(() => {}); return reply.code(400).send({ error, code }); };
+    if (size > LOGO_MAX_MB * 1048576) return fail(`Image trop lourde (${LOGO_MAX_MB} Mo maximum)`, 'too_big');
+    if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
+    let meta;
+    try { meta = await probeImage(await presignGet(b.key)); } catch (err) { return fail(err.message, 'unreadable'); }
+    const r = await pool.query("INSERT INTO editor_assets(kind, title, key, mime, bytes, meta, created_by) VALUES ('logo', $1, $2, $3, $4, $5, $6) RETURNING id",
+      [b.title, b.key, b.contentType.toLowerCase(), size, meta, req.user.sub]);
+    const row = (await pool.query(`${LOGO_SQL} AND a.id = $1`, [r.rows[0].id])).rows[0];
+    return reply.code(201).send({ logo: await logoView(row, req.user) });
+  });
+  app.delete('/studio/editor/logos/:id', viewer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const a = (await pool.query(`${LOGO_SQL} AND a.id = $1`, [id])).rows[0];
+    if (!a || !logoVisible(req.user, a)) return reply.code(404).send({ error: 'Logo introuvable' });
+    if (req.user.role !== 'admin' && a.created_by !== req.user.sub) return reply.code(403).send({ error: 'Seul son auteur ou un administrateur supprime ce logo.' });
+    const probe = JSON.stringify({ logo: { asset: id } });
+    const used = (await pool.query(
+      `SELECT (SELECT count(DISTINCT p.id) FROM editor_projects p LEFT JOIN editor_versions v ON v.project_id = p.id
+                WHERE p.timeline->'dress' @> $1::jsonb OR v.timeline->'dress' @> $1::jsonb)::int AS n,
+              (SELECT count(*) FROM editor_templates WHERE dress @> $1::jsonb)::int AS m`, [probe])).rows[0];
+    if (used.n || used.m) return reply.code(409).send({ error: `Logo utilisé par ${used.n} montage(s) (ou leurs versions) et ${used.m} modèle(s) : retirez-le d'abord.`, code: 'used', count: used.n + used.m });
+    await pool.query('DELETE FROM editor_assets WHERE id = $1', [id]);
+    await deleteObject(a.key).catch(() => {});
+    return { deleted: true };
+  });
+
+  // Modèles de chaîne : un habillage réutilisable (sans les transitions propres à chaque extrait). Pour la chaîne du montage
+  // (l'organisateur de la chaîne et l'administrateur), ou pour toutes les chaînes (administrateur).
+  const tplDress = (d) => { const x = dressDefaults(d); return { ...x, transitions: { all: x.transitions.all, byClip: {} } }; };
+  const tplView = (r, user) => ({ id: r.id, name: r.name, scope: r.channel_slug ? 'channel' : 'all', channel: r.channel_slug, dress: r.dress, createdBy: r.created_name || null,
+    canDelete: user.role === 'admin' || r.created_by === user.sub });
+  app.get('/studio/editor/templates', viewer, async (req, reply) => {
+    const { project } = z.object({ project: z.string().uuid() }).parse(req.query ?? {});
+    const row = await loadProject(project);
+    if (!row || !canSee(req.user, row)) return reply.code(404).send({ error: 'Projet introuvable' });
+    const slug = speakerSlug(row.speaker);
+    const { rows } = await pool.query(
+      `SELECT t.*, u.name AS created_name FROM editor_templates t LEFT JOIN users u ON u.id = t.created_by
+        WHERE t.channel_slug IS NULL OR t.channel_slug = $1 ORDER BY (t.channel_slug IS NULL), lower(t.name)`, [slug]);
+    return { templates: rows.map((r) => tplView(r, req.user)), channel: slug };
+  });
+  app.post('/studio/editor/templates', viewer, async (req, reply) => {
+    const b = z.object({ projectId: z.string().uuid(), name: z.string().trim().min(1, 'Donnez un nom au modèle').max(80), scope: z.enum(['channel', 'all']).default('channel'), dress: z.unknown() }).parse(req.body ?? {});
+    const row = await loadProject(b.projectId);
+    if (!row || !canSee(req.user, row)) return reply.code(404).send({ error: 'Projet introuvable' });
+    if (b.scope === 'all' && req.user.role !== 'admin') return reply.code(403).send({ error: 'Seul un administrateur crée un modèle pour toutes les chaînes.' });
+    const slug = b.scope === 'all' ? null : speakerSlug(row.speaker);
+    if (b.scope === 'channel' && !slug) return reply.code(400).send({ error: 'Cette conférence n’a pas de chaîne (nom d’intervenant vide).', code: 'no_channel' });
+    const chk = checkDress(b.dress, { logos: await knownLogos(logoAssets({ dress: b.dress })) });
+    if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
+    try {
+      const r = await pool.query('INSERT INTO editor_templates(channel_slug, name, dress, created_by) VALUES ($1, $2, $3, $4) RETURNING id', [slug, b.name, tplDress(chk.dress), req.user.sub]);
+      const t = (await pool.query('SELECT t.*, u.name AS created_name FROM editor_templates t LEFT JOIN users u ON u.id = t.created_by WHERE t.id = $1', [r.rows[0].id])).rows[0];
+      return reply.code(201).send({ template: tplView(t, req.user) });
+    } catch (err) {
+      if (err.code === '23505') return reply.code(409).send({ error: 'Un modèle porte déjà ce nom pour cette chaîne.', code: 'exists' });
+      throw err;
+    }
+  });
+  app.delete('/studio/editor/templates/:id', viewer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const t = (await pool.query('SELECT * FROM editor_templates WHERE id = $1', [id])).rows[0];
+    if (!t) return reply.code(404).send({ error: 'Modèle introuvable' });
+    if (req.user.role !== 'admin' && t.created_by !== req.user.sub) return reply.code(403).send({ error: 'Seul son auteur ou un administrateur supprime ce modèle.' });
+    await pool.query('DELETE FROM editor_templates WHERE id = $1', [id]);
+    return { deleted: true };
+  });
+
+  // « Voir l'image finale » : FFmpeg compose la vraie image d'un instant du montage (ou de l'intro / de la fin) avec les réglages
+  // actuels, même non enregistrés, pour vérifier textes, polices (arabe compris), logo et fondu avant le rendu.
+  let framing = 0;
+  app.post('/studio/editor/projects/:id/frame', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    const b = z.object({ timeline: z.unknown(), at: z.union([z.number().min(0), z.enum(['intro', 'outro'])]) }).parse(req.body ?? {});
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
+    const chk = checkTimeline(b.timeline, row.duration_seconds, { logos: await knownLogos(logoAssets(b.timeline)) });
+    if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
+    if (framing >= 2) return reply.code(429).send({ error: 'Une image est déjà en préparation : réessayez dans quelques secondes.' });
+    // Logo : celui de la chaîne ou un logo importé.
+    const d = dressDefaults(chk.timeline.dress);
+    let logoUrl = null;
+    try {
+      if (d.logo.on && d.logo.asset === 'channel') logoUrl = (await channelOf(row))?.avatarUrl || null;
+      else if (d.logo.on && d.logo.asset) { const a = (await pool.query("SELECT key FROM editor_assets WHERE id = $1 AND kind = 'logo'", [d.logo.asset])).rows[0]; logoUrl = a ? await presignGet(a.key) : null; }
+    } catch { logoUrl = null; }
+    framing += 1;
+    try {
+      const png = await renderFrame({ talkId: row.talk_id, timeline: chk.timeline, at: b.at, logoUrl,
+        vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, cues: (await cuesOf(row)).cues });
+      return reply.header('content-type', 'image/png').header('cache-control', 'no-store').send(png);
+    } catch (err) { app.log.warn(`Éditeur : image finale impossible : ${err.message}`); return reply.code(502).send({ error: err.message }); } finally { framing -= 1; }
   });
 
   // Supprimer un projet (le montage seulement : la conférence et sa vidéo ne changent pas).

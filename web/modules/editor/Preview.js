@@ -9,7 +9,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { useApp } from '../../components/Providers';
 import { layout, locate, clock, musicTime } from './ops';
 
-const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, setPlaying, caption, poster, sound }, ref) {
+const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, setPlaying, caption, poster, sound, children, hideCaption }, ref) {
   const { t } = useApp();
   const video = useRef(null);
   const clipsRef = useRef(clips);
@@ -137,7 +137,8 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
     <div className="mt-preview">
       <div className="mt-screen">
         <video ref={video} playsInline preload="auto" poster={poster || undefined} aria-label={t('mtPreviewAria')} onClick={() => setPlaying(!playing)} />
-        {caption && <p className="mt-caption" dir="auto">{caption}</p>}
+        {caption && !hideCaption && <p className="mt-caption" dir="auto">{caption}</p>}
+        {children}
         {sound?.dubUrl && <audio ref={dubEl} src={sound.dubUrl} preload="auto" className="mt-hidden-audio" data-role="dub" />}
         {(sound?.music || []).map((m) => (
           <audio key={m.item.id} src={m.url} preload="auto" loop={false} className="mt-hidden-audio" data-role="music" data-id={m.item.id}

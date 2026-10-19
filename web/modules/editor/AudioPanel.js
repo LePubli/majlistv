@@ -11,7 +11,7 @@ import { fmtTime, parseTime, trimMusic, moveMusic } from './ops';
 
 const fmtDb = (v, locale) => `${v > 0 ? '+' : ''}${Number(v).toLocaleString(locale, { maximumFractionDigits: 1 })} dB`;
 
-function Slider({ id, label, value, min, max, step = 1, shown, onChange, disabled }) {
+export function Slider({ id, label, value, min, max, step = 1, shown, onChange, disabled }) {
   return (
     <div className="mt-slider">
       <label htmlFor={id}><span>{label}</span><b dir="ltr">{shown}</b></label>
@@ -20,7 +20,7 @@ function Slider({ id, label, value, min, max, step = 1, shown, onChange, disable
     </div>
   );
 }
-function Check({ id, label, checked, onChange, disabled }) {
+export function Check({ id, label, checked, onChange, disabled }) {
   return <label className="db-check mt-check" htmlFor={id}><input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} /><span>{label}</span></label>;
 }
 

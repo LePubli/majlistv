@@ -7,9 +7,11 @@
 // La timeline se lit toujours de gauche à droite, y compris en arabe (le temps avance vers la droite).
 // Étape E2 : formes d'onde (voix d'origine, voix française, musiques), courbe du volume de la voix d'origine (baisse sous
 // la voix française, en or), piste Musique (déplacer, raccourcir, sélectionner).
+// Étape E3 : piste « Titres et logo » (titres et bandeaux à déplacer / raccourcir, bande du logo) et losanges de transition
+// à chaque raccord de la piste Vidéo.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../components/Providers';
-import { layout, joins, mapItems, snap, snapSource, rulerStep, fmtTime, trimClip, moveClip, locate, peakBetween, musicTime, moveMusic, trimMusic } from './ops';
+import { layout, joins, mapItems, snap, snapSource, rulerStep, fmtTime, trimClip, moveClip, locate, peakBetween, musicTime, moveMusic, trimMusic, moveItem, trimItem, transitionFor, fillVars } from './ops';
 
 // Forme d'onde dessinée sur la partie visible d'une piste. sample(t0, t1) → 0-1 (ou null : rien à cet endroit) ;
 // level(t) → volume 0-1 (courbe facultative). sig change quand le dessin doit être refait.
@@ -51,7 +53,7 @@ const HEAD = 168; // largeur de la colonne des noms de pistes (px)
 const SNAP_PX = 8;
 
 export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, onMove, onTrim, cues, dub, zoom, magnet, readOnly, subsLang, titlesCount,
-  audio, waves, musicInfo, onMusic, getMix }) {
+  audio, waves, musicInfo, onMusic, getMix, dress, onItems, vars }) {
   const { t } = useApp();
   const scroller = useRef(null);
   const [width, setWidth] = useState(900);
@@ -59,6 +61,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
   const [drag, setDrag] = useState(null); // { kind: 'move'|'in'|'out'|'seek', index, clips (aperçu), to }
   const live = drag?.clips || clips;
   const liveMusic = drag?.music || audio?.music || [];
+  const liveItems = drag?.items || dress?.items || [];
   const L = useMemo(() => layout(live), [live]);
   const totalS = L.at(-1)?.end || 0;
 
@@ -183,6 +186,38 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
   };
 
+  // Titres et bandeaux : glisser pour déplacer, tirer un bord pour changer le début ou la fin (l'aimant colle aux raccords et à la tête).
+  const startItem = (e, item, kind) => {
+    if (e.button !== 0) return;
+    e.stopPropagation(); e.preventDefault();
+    onSelect({ track: 'item', id: item.id });
+    if (readOnly) { onSeek(tAt(e.clientX)); return; }
+    const x0 = e.clientX; const base = dress.items;
+    const mt = [...targets, T];
+    let moved = false; let last = null;
+    const move = (ev) => {
+      const dx = ev.clientX - x0;
+      if (!moved && Math.abs(dx) < 4) return;
+      moved = true;
+      const ds = dx / pps;
+      const sn = (v) => (magnet ? snap(v, mt, SNAP_PX / pps) : v);
+      if (kind === 'move') {
+        let st = sn(item.start + ds);
+        const endSn = sn(item.start + item.len + ds);
+        if (endSn !== item.start + item.len + ds) st = endSn - item.len;
+        last = moveItem(base, item.id, st);
+      } else last = trimItem(base, item.id, kind, sn(kind === 'in' ? item.start + ds : item.start + item.len + ds));
+      setDrag({ kind: 'item', items: last });
+    };
+    const up = (ev) => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      setDrag(null);
+      if (!moved) { onSeek(snapT(tAt(ev.clientX))); return; }
+      if (last) onItems(last);
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+
   // Formes d'onde : échantillonneurs en temps du montage.
   const laneVisW = Math.max(0, view.w - HEAD);
   const waveLeft = Math.max(0, view.left);
@@ -225,10 +260,10 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
     { key: 'orig', name: t('mtTrOrig'), info: audio?.orig.mute ? t('mtMuted') : dub && audio?.dub.use ? `${Math.round(audio.dub.duck)} %` : t('mtTrLinked') },
     { key: 'dub', name: t('mtTrDub'), info: dub ? (audio?.dub.use ? t('mtTrLinked') : t('mtNotUsed')) : t('mtTrNone'), hot: Boolean(dub) && audio?.dub.use !== false },
     { key: 'music', name: t('mtTrMusic'), info: liveMusic.length ? (liveMusic.some((m) => m.duck) ? t('mtAutoDuck') : t('mtItems').replace('{n}', liveMusic.length)) : t('mtTrNone') },
-    { key: 'titles', name: t('mtTrTitles'), info: t('mtItems').replace('{n}', titlesCount || 0) },
-    { key: 'subs', name: t('mtTrSubs'), info: subsLang || t('mtTrNone') },
+    { key: 'titles', name: t('mtTrTitles'), info: [liveItems.length ? t('mtItems').replace('{n}', liveItems.length) : '', dress?.logo.on ? t('mtdLogoShort') : '', dress?.intro.on || dress?.outro.on ? t('mtdCardsShort') : ''].filter(Boolean).join(' · ') || t('mtTrNone') },
+    { key: 'subs', name: t('mtTrSubs'), info: subsLang ? `${subsLang}${dress?.subs.burn ? ` · ${t('mtdBurned')}` : ''}` : t('mtTrNone') },
   ];
-  const selected = (k) => sel?.track === k;
+  const selected = (k) => (k === 'titles' ? ['titles', 'item', 'logo', 'cards'].includes(sel?.track) : k === 'video' ? ['video', 'join'].includes(sel?.track) : sel?.track === k);
 
   const clipLabel = (c, i) => t('mtClipAria').replace('{n}', i + 1).replace('{a}', fmtTime(c.in, { tenths: true })).replace('{b}', fmtTime(c.out, { tenths: true }));
 
@@ -265,6 +300,19 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                   </div>
                 ))}
                 {tr.key === 'video' && J.map((j) => <span key={`j${j.t}`} className={`mt-join${j.moved ? ' moved' : ''}`} style={{ left: x(j.t) - 4 }} title={j.moved ? t('mtJoinMoved') : t('mtJoinCut').replace('{s}', fmtTime(j.removed, { tenths: true }))} />)}
+                {tr.key === 'video' && dress && L.map((c, i) => {
+                  if (i < 1) return null;
+                  const trn = transitionFor(dress, live, i);
+                  return (
+                    <span key={`tr${c.id}`}>
+                      {trn && <span className="mt-tr-span" style={{ left: x(c.start - trn.len / 2), width: x(trn.len) }} />}
+                      <button type="button" className={`mt-trbtn${trn ? ' on' : ''}${sel?.track === 'join' && sel.id === c.id ? ' sel' : ''}`} style={{ left: x(c.start) }} data-join={c.id}
+                        aria-label={t('mtdJoinAria').replace('{a}', fmtTime(c.start, { tenths: true })).replace('{s}', trn ? t(trn.type === 'dipwhite' ? 'mtdTrWhite' : 'mtdTrDip') : t('mtdTrCut'))}
+                        title={t('mtAddTransition')} onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onSelect({ track: 'join', id: c.id }); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') onSelect({ track: 'join', id: c.id }); }} />
+                    </span>
+                  );
+                })}
                 {tr.key === 'orig' && L.map((c) => <div key={c.id} className={`mt-block orig${audio?.orig.mute ? ' muted' : ''}`} style={{ left: x(c.start), width: Math.max(2, x(c.end - c.start)) }} />)}
                 {tr.key === 'orig' && (origWave || getMix) && laneVisW > 0 && (
                   <Wave left={waveLeft} width={Math.min(laneVisW, contentW - waveLeft)} height={46} pps={pps} sig={`${sig}|${audioSig}|${Boolean(origWave)}`}
@@ -295,7 +343,26 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                   })}
                   {laneVisW > 0 && <Wave left={waveLeft} width={Math.min(laneVisW, contentW - waveLeft)} height={46} pps={pps} sig={musicSig} sample={sampleMusic} color="rgba(120,200,210,.6)" className="music" />}
                 </> : <span className="mt-empty">{t('mtNoMusic')}</span>)}
-                {tr.key === 'titles' && <span className="mt-empty">{t('mtSoonTitles')}</span>}
+                {tr.key === 'titles' && (liveItems.length || dress?.logo.on ? <>
+                  {dress?.logo.on && (
+                    <button type="button" className={`mt-logostrip${sel?.track === 'logo' ? ' sel' : ''}`} data-logo-strip="1" aria-label={t('mtdLogoAria')} title={t('mtAddLogo')}
+                      style={{ left: x(Math.min(dress.logo.from, totalS)), width: Math.max(6, x(Math.max(0, Math.min(dress.logo.to ?? totalS, totalS) - Math.min(dress.logo.from, totalS)))) }}
+                      onPointerDown={(e) => { e.stopPropagation(); onSelect({ track: 'logo', id: null }); }} />
+                  )}
+                  {liveItems.map((it) => (
+                    <div key={it.id} className={`mt-tclip ${it.kind}${sel?.track === 'item' && sel.id === it.id ? ' sel' : ''}`} style={{ left: x(it.start), width: Math.max(4, x(it.len)) }}>
+                      <button type="button" className="mt-clip-body" onPointerDown={(e) => startItem(e, it, 'move')} onClick={(e) => e.preventDefault()} data-item={it.id}
+                        onFocus={() => onSelect({ track: 'item', id: it.id })}
+                        aria-label={t('mtdItemAria').replace('{t}', fillVars(it.text, vars) || fillVars(it.sub, vars) || '…').replace('{a}', fmtTime(it.start, { tenths: true })).replace('{b}', fmtTime(it.start + it.len, { tenths: true }))}>
+                        {x(it.len) > 50 && <span dir="auto">{it.kind === 'banner' ? '▭ ' : ''}{fillVars(it.text, vars) || fillVars(it.sub, vars) || '…'}</span>}
+                      </button>
+                      {!readOnly && x(it.len) > 18 && <>
+                        <span className="mt-handle in" onPointerDown={(e) => startItem(e, it, 'in')} aria-hidden="true" title={t('mtTrimIn')} />
+                        <span className="mt-handle out" onPointerDown={(e) => startItem(e, it, 'out')} aria-hidden="true" title={t('mtTrimOut')} />
+                      </>}
+                    </div>
+                  ))}
+                </> : <span className="mt-empty">{t('mtdNoTitles')}</span>)}
                 {tr.key === 'subs' && (mapped.length
                   ? mapped.filter(visible).map((m, i) => <div key={`${m.clipId}-${m.s}-${i}`} className={`mt-block sub${m.part ? ' part' : ''}`} style={{ left: x(m.ts), width: Math.max(2, x(m.te - m.ts)) }} title={m.text} />)
                   : <span className="mt-empty">{t('mtNoSubs')}</span>)}

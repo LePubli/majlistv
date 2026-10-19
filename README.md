@@ -3868,3 +3868,58 @@ docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i "forme d'onde\|
 - l'analyse d'une vraie conférence d'une heure : environ 1 min de calcul attendue, non mesurée sur le VPS ;
 - la réduction du bruit sur une vraie voix bruitée : les réglages d'afftdn sont à juger à l'oreille avec les boutons d'écoute ;
 - le son dans un vrai Chrome, Firefox ou Safari avec la vidéo H.264/AAC : le navigateur de test ne lit que VP9/Opus.
+
+
+## Étape E3 — Éditeur de montage : habillage
+
+### Description
+Tout se règle dans l'éditeur (Studio → Éditeur), avec les boutons **« Ajouter »** à gauche et le panneau de droite. L'habillage se calcule dans le temps du **montage** (il suit donc les coupes) et s'affiche en direct sur l'aperçu.
+- **Titres et bandeaux** (« Ajouter un titre » / « Ajouter un bandeau ») : texte, sous-titre, début, durée (0,5 s à 10 min), position (centre, haut, bas), côté du bandeau, taille (50 à 200 %). Les mots `{titre}` et `{intervenant}` sont remplacés par ceux de la conférence. Ils se déplacent et se raccourcissent à la souris sur la piste « Titres et logo ». Jusqu'à 100 par montage.
+- **Logo** : bibliothèque de logos (PNG, JPEG ou WebP, 3 Mo) ou image de la chaîne ; coin, taille (4 à 40 %), opacité, de… à…. Un logo utilisé par un montage, une version ou un modèle ne peut pas être supprimé.
+- **Écran d'ouverture et écran de fin** : durée (1 à 15 s), titre, sous-titre (fond noir, filet or). Ils ne sont ajoutés à la vidéo qu'au rendu (étape E4).
+- **Transitions** entre extraits : « Coupe », « Fondu au noir », « Fondu au blanc » (0,2 à 3 s), pour tous les raccords ou raccord par raccord (losange sur la piste vidéo). Le fondu en dissolution n'existe pas encore.
+- **Sous-titres incrustés** : dessinés dans l'image au rendu (taille, haut/bas, fond sombre). Texte français ou arabe (écriture de droite à gauche, lettres liées).
+- **Modèles** : « Habillage standard » et « Conférence avec intro » fournis ; l'organisateur enregistre un modèle pour sa chaîne, l'administrateur aussi pour toutes les chaînes. Appliquer un modèle remplace l'habillage (un seul « Annuler » le rétablit).
+- **« Voir l'image finale »** : l'API compose avec FFmpeg l'image exacte du rendu à l'instant de la tête de lecture (ou de l'écran d'ouverture / de fin). C'est la référence ; l'aperçu du navigateur peut différer de quelques pixels (formes des lettres).
+- Module `editor` **0.3.0**, migration `editor/003_dress.sql` (table `editor_templates`, colonne `meta` des logos). Police : DejaVu Sans, fournie avec le code (`api/src/modules/editor/fonts/`).
+- Registre des problèmes : un défaut ancien est réglé (les versions automatiques ignoraient les changements de son et d'habillage).
+
+### Prérequis
+- Étape E2 déployée, module « Éditeur » actif. FFmpeg est déjà dans l'image de l'API (E2). Aucune variable `.env` nouvelle.
+- Pour les logos importés : le stockage Garage doit accepter le dépôt depuis le navigateur (comme pour les musiques).
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv` (remplacer les fichiers).
+2. GitHub Desktop : **Commit to main**, puis **Push origin**.
+3. DockPanel → Git Deploy → **Redeploy `majlistv-api`** (la migration `003_dress.sql` s'applique au démarrage), puis **`majlistv-web`**. Le worker ne change pas.
+4. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Exemples d'utilisation
+- Ouvrir un montage, placer la tête de lecture à 0:05, **Ajouter un titre**, écrire `{titre}`, régler la durée à 5 s.
+- **Ajouter un bandeau** avec `{intervenant}` en texte et la chaîne en sous-titre, côté gauche.
+- **Ajouter un logo** → importer le logo de l'agence (ou « Image de la chaîne »), coin bas gauche, 12 %.
+- **Ajouter une transition** → « Fondu au noir » 0,8 s pour tous les raccords.
+- **Voir l'image finale** pour contrôler le résultat, puis **Enregistrer comme modèle**.
+
+### Debug
+- « Image impossible » (502) à « Voir l'image finale » : voir `docker logs` de `majlistv-api` (ligne « Éditeur : image finale impossible »). Au plus 2 images à la fois (sinon 429, réessayer).
+- Logo « illisible » : le fichier n'est pas une image PNG/JPEG/WebP décodable par FFmpeg.
+- Texte arabe sans lettres liées : la police n'est pas trouvée ; vérifier la présence de `api/src/modules/editor/fonts/*.ttf` dans l'image.
+- Conflit 409 / 423 : le montage a été modifié ailleurs ou est pris par un autre éditeur (comme E1).
+
+### Tests
+```
+cd api && python3 tests/test_editor_e3.py        # API : validation, droits, logos, modèles, images (FFmpeg)
+cd web && node tests/e3_dress.mjs                # calculs de l'habillage (39 contrôles)
+cd web && python3 tests/e3_dress.py              # navigateur : panneaux, timeline, image finale, modèles, lecture seule, arabe, 1024 px
+```
+Les tests E1 et E2 sont mis à jour (module 0.3.0 ; tous les boutons « Ajouter » sont actifs).
+
+### Testé / non testé
+**Testé** : tests ci-dessus (API, calculs, navigateur Chromium avec vidéo VP9), arabe et RTL, 1024 et 1440 px, lecture seule, rendu visuel vérifié sur planche de captures.
+**Non testé** : construction de l'image Docker (polices, FFmpeg) ; conférence réelle d'une heure ; image finale depuis une vidéo H.264 réelle sur le VPS ; téléphone réel ; transition en dissolution (non faite) ; écrans d'ouverture/fin dans une vidéo (E4) ; différences de lettres entre l'aperçu navigateur et FFmpeg.

@@ -285,3 +285,119 @@ export function peakBetween(peaks, stepMs, s0, s1) {
   for (let i = i0; i <= i1; i += 1) if (peaks[i] > mx) mx = peaks[i];
   return mx / 255;
 }
+
+// ===== Étape E3 — habillage =====
+// Mêmes valeurs par défaut et mêmes règles que l'API (api/src/modules/editor/dress.js). Temps du montage partout.
+export const DRESS_DEF = {
+  items: [],
+  logo: { on: false, asset: 'channel', pos: 'tr', size: 12, opacity: 90, from: 0, to: null },
+  intro: { on: false, len: 4, title: '', sub: '' },
+  outro: { on: false, len: 5, title: '', sub: '' },
+  transitions: { all: null, byClip: {} },
+  subs: { burn: false, scale: 100, pos: 'bottom', box: true },
+};
+export const ITEM_DEF = { pos: 'center', side: 'left', scale: 100 };
+export const TRANSITION_TYPES = ['cut', 'dip', 'dipwhite'];
+export const ITEM_FADE = 0.3; // fondu d'entrée et de sortie des titres (s), comme au rendu
+
+export function withDress(d) {
+  return {
+    items: (d?.items || []).map((i) => ({ ...ITEM_DEF, text: '', sub: '', ...i })),
+    logo: { ...DRESS_DEF.logo, ...(d?.logo || {}) },
+    intro: { ...DRESS_DEF.intro, ...(d?.intro || {}) },
+    outro: { ...DRESS_DEF.outro, ...(d?.outro || {}) },
+    transitions: { all: d?.transitions?.all || null, byClip: { ...(d?.transitions?.byClip || {}) } },
+    subs: { ...DRESS_DEF.subs, ...(d?.subs || {}) },
+  };
+}
+// Habillage vide ? (rien à montrer ni à rendre)
+export const dressEmpty = (d) => !d.items.length && !d.logo.on && !d.intro.on && !d.outro.on && !d.transitions.all
+  && !Object.keys(d.transitions.byClip).length && !d.subs.burn;
+
+// {titre} et {intervenant}
+export const fillVars = (s, vars = {}) => String(s ?? '').replace(/\{(titre|intervenant)\}/g, (_, k) => vars[k] ?? '');
+
+export function newItemId(items) {
+  const ids = new Set(items.map((i) => i.id));
+  let n = items.length + 1;
+  while (ids.has(`t${n}`)) n += 1;
+  return `t${n}`;
+}
+// Ajouter un titre (kind 'title') ou un bandeau de nom (kind 'banner') au temps T ; reste dans le montage.
+export function addItem(items, kind, T, totalS) {
+  const room = Math.max(0.5, totalS - T);
+  const start = round3(Math.max(0, Math.min(T, Math.max(0, totalS - 0.5))));
+  const len = round3(Math.min(kind === 'banner' ? 6 : 5, Math.max(0.5, totalS - start), room));
+  const it = kind === 'banner'
+    ? { ...ITEM_DEF, id: newItemId(items), kind, text: '{intervenant}', sub: '{titre}', start, len }
+    : { ...ITEM_DEF, id: newItemId(items), kind, text: '', sub: '', start, len };
+  return { items: [...items, it], id: it.id };
+}
+export const patchItem = (items, id, patch) => items.map((i) => (i.id === id ? { ...i, ...patch } : i));
+export const moveItem = (items, id, start) => items.map((i) => (i.id === id ? { ...i, start: round3(Math.max(0, start)) } : i));
+// Bord gauche (edge 'in', valeur = nouveau début) ou droit ('out', valeur = nouvelle fin) d'un titre.
+export function trimItem(items, id, edge, value) {
+  const MIN = 0.5;
+  return items.map((i) => {
+    if (i.id !== id) return i;
+    const end = i.start + i.len;
+    if (edge === 'in') { const s = Math.max(0, Math.min(value, end - MIN)); return { ...i, start: round3(s), len: round3(end - s) }; }
+    return { ...i, len: round3(Math.max(MIN, value - i.start)) };
+  });
+}
+// Titres visibles au temps T, avec leur opacité (fondu de 0,3 s).
+export function activeItems(dress, T, totalS) {
+  const out = [];
+  for (const it of dress.items) {
+    const end = Math.min(it.start + it.len, totalS);
+    if (T < it.start || T >= end) continue;
+    const a = Math.min(1, (T - it.start) / ITEM_FADE, (end - T) / ITEM_FADE);
+    out.push({ item: it, alpha: Math.max(0, Math.min(1, a)) });
+  }
+  return out;
+}
+// Le logo est-il visible au temps T ?
+export const logoOn = (dress, T) => dress.logo.on && T >= dress.logo.from && (dress.logo.to == null || T < dress.logo.to);
+
+// Transition à l'entrée de l'extrait d'indice i (≥ 1) : { type, len } ou null (coupure franche).
+export function transitionFor(dress, clips, i) {
+  if (i < 1 || i >= clips.length) return null;
+  const t = dress.transitions.byClip[clips[i].id] || dress.transitions.all;
+  return t && t.type !== 'cut' ? t : null;
+}
+// Voile du fondu au temps T : { alpha 0-1, color } — il monte jusqu'au raccord puis redescend (len / 2 de chaque côté).
+export function dipAt(dress, clips, T) {
+  const L = layout(clips);
+  for (let i = 1; i < L.length; i += 1) {
+    const tr = transitionFor(dress, clips, i);
+    if (!tr) continue;
+    const half = tr.len / 2; const d = Math.abs(T - L[i].start);
+    if (d < half) return { alpha: 1 - d / half, color: tr.type === 'dipwhite' ? '#fff' : '#000' };
+  }
+  return { alpha: 0, color: '#000' };
+}
+// Régler la transition d'un extrait (clipId) ou de tous les raccords ('all'). type 'none' = effacer le réglage propre à l'extrait.
+export function setTransition(dress, clipId, tr) {
+  const t = dress.transitions;
+  if (clipId === 'all') return { ...dress, transitions: { ...t, all: tr && tr.type !== 'cut' ? tr : null } };
+  const byClip = { ...t.byClip };
+  if (!tr) delete byClip[clipId]; else byClip[clipId] = tr;
+  return { ...dress, transitions: { ...t, byClip } };
+}
+
+// Modèles prêts à l'emploi (textes dans la langue du site). Les modèles enregistrés viennent de l'API.
+export function builtinTemplates(txt) {
+  const base = withDress(null);
+  const standard = {
+    ...base,
+    items: [{ ...ITEM_DEF, id: 't1', kind: 'banner', text: '{intervenant}', sub: '{titre}', start: 3, len: 6 }],
+    logo: { ...base.logo, on: true, asset: 'channel', pos: 'tr', size: 10, opacity: 85 },
+    transitions: { all: { type: 'dip', len: 0.6 }, byClip: {} },
+  };
+  const withIntro = {
+    ...standard,
+    intro: { on: true, len: 4, title: '{titre}', sub: '{intervenant}' },
+    outro: { on: true, len: 5, title: txt.outroTitle, sub: txt.outroSub },
+  };
+  return [{ id: 'builtin-standard', name: txt.standard, builtin: true, dress: standard }, { id: 'builtin-intro', name: txt.intro, builtin: true, dress: withIntro }];
+}

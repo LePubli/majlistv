@@ -9,6 +9,8 @@
 // toutes les 10 s. Chaque changement est enregistré tout seul ~1 s après.
 // Étape E2 : le document de travail est { clips, audio } ; réglages du son dans le panneau de droite (AudioPanel.js),
 // bibliothèque de musiques (MusicLibrary.js), formes d'onde et niveaux mesurés par l'API.
+// Étape E3 : le document est { clips, audio, dress } ; habillage (DressPanel.js, DressOverlay.js sur l'aperçu), logos (LogoLibrary.js),
+// modèles de chaîne (Templates.js), « Voir l'image finale » (FrameView.js, composée par FFmpeg côté API).
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
@@ -17,8 +19,13 @@ import Timeline from './Timeline';
 import Versions from './Versions';
 import AudioPanel from './AudioPanel';
 import MusicLibrary from './MusicLibrary';
+import DressPanel from './DressPanel';
+import DressOverlay from './DressOverlay';
+import LogoLibrary from './LogoLibrary';
+import FrameView from './FrameView';
+import Templates from './Templates';
 import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
-  withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic } from './ops';
+  withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition } from './ops';
 import { ago } from '../../lib/format';
 
 const HISTORY = 200;
@@ -54,13 +61,18 @@ export default function Editor({ id }) {
   const session = useMemo(() => (typeof window === 'undefined' ? 'ssr-session' : tabSession(id)), [id]);
   const [data, setData] = useState(null); // { project, media, editable }
   const [error, setError] = useState(null);
-  const [h, dispatch] = useReducer(historyReducer, { past: [], present: { clips: [], audio: withAudio(null) }, future: [], key: null, at: 0 });
+  const [h, dispatch] = useReducer(historyReducer, { past: [], present: { clips: [], audio: withAudio(null), dress: withDress(null) }, future: [], key: null, at: 0 });
   const doc = h.present;
   const clips = doc.clips;
   const audio = doc.audio;
+  const dress = doc.dress;
   const [waves, setWaves] = useState({ orig: null, dub: null });
   const [musicInfo, setMusicInfo] = useState({}); // id → { title, url, durationS, peaks, stepMs, status, lufs }
   const [showMusic, setShowMusic] = useState(false);
+  const [showLogos, setShowLogos] = useState(false);
+  const [logos, setLogos] = useState([]);   // logos importés visibles par moi
+  const [card, setCard] = useState(null);    // 'intro' | 'outro' : écran montré dans l'aperçu
+  const [frameAt, setFrameAt] = useState(null); // instant (ou 'intro' / 'outro') de l'image finale demandée
   const [mode, setMode] = useState('loading'); // loading | edit | read
   const [lock, setLock] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -87,7 +99,7 @@ export default function Editor({ id }) {
 
   // --- Chargement, verrou
   const defaultsRef = useRef(null);
-  const toDoc = (tl) => ({ clips: tl.clips, audio: withAudio(tl.audio, defaultsRef.current) });
+  const toDoc = (tl) => ({ clips: tl.clips, audio: withAudio(tl.audio, defaultsRef.current), dress: withDress(tl.dress) });
   const applyProject = useCallback((p) => {
     rev.current = p.rev;
     const d = toDoc(p.timeline);
@@ -131,7 +143,7 @@ export default function Editor({ id }) {
     if (modeRef.current !== 'edit' || body === savedClips.current || saving.current) return;
     saving.current = true;
     setSave((s) => ({ ...s, state: 'saving' }));
-    const tl = { v: 1, duration, clips: now.clips, audio: now.audio, ui: { magnet } };
+    const tl = { v: 1, duration, clips: now.clips, audio: now.audio, dress: now.dress, ui: { magnet } };
     const r = await call(`/studio/editor/projects/${id}`, { method: 'PUT', keepalive, body: JSON.stringify({ timeline: tl, rev: rev.current, session }) });
     saving.current = false;
     if (r.ok) {
@@ -243,6 +255,18 @@ export default function Editor({ id }) {
     music: audio.music.filter((m) => musicInfo[m.asset]?.url).map((m) => ({ item: m, url: musicInfo[m.asset].url, assetDur: musicInfo[m.asset].durationS || 0 })),
   }), [getMix, hasDub, data?.media?.dub?.voiceUrl, audio.music, musicInfo]);
 
+  // --- Étape E3 : habillage
+  const vars = data?.media?.dress?.vars || {};
+  const channel = data?.media?.dress?.channel || null;
+  useEffect(() => {
+    if (!data?.editable) return;
+    call('/studio/editor/logos').then((r) => { if (r.ok) setLogos(r.data.logos); });
+  }, [data?.editable, call]);
+  const logoUrl = dress.logo.asset === 'channel' ? channel?.avatarUrl || null : logos.find((l) => l.id === dress.logo.asset)?.url || null;
+  const durationFinal = totalS + (dress.intro.on ? dress.intro.len : 0) + (dress.outro.on ? dress.outro.len : 0);
+  useEffect(() => { if (playing) setCard(null); }, [playing]);
+  useEffect(() => { setCard(null); }, [T]);
+
   const takeOver = async () => {
     if (lock && !lock.otherTab && !window.confirm(t('mtTakeConfirm').replace('{n}', lock.by || '—'))) return;
     const r = await call(`/studio/editor/projects/${id}/takeover`, { method: 'POST', body: JSON.stringify({ session }) });
@@ -256,6 +280,7 @@ export default function Editor({ id }) {
   const canEdit = mode === 'edit';
   const commit = useCallback((next) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, clips: next } }); }, [canEdit]);
   const setAudio = useCallback((next, key) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, audio: next }, key }); }, [canEdit]);
+  const setDress = useCallback((next, key) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, dress: next }, key }); }, [canEdit]);
   const selIndex = clips.findIndex((c) => c.id === sel.id);
   const targets = useMemo(() => snapTargets(clips, cues), [clips, cues]);
 
@@ -280,13 +305,41 @@ export default function Editor({ id }) {
     setAudio({ ...audio, music: r.items });
     setSel({ track: 'music', id: r.id }); setShowMusic(false);
   };
+  const addItemAt = (kind) => {
+    const r = addItem(dress.items, kind, Math.min(T, Math.max(0, totalS - 0.5)), totalS);
+    setDress({ ...dress, items: r.items }); setSel({ track: 'item', id: r.id }); setNotice(null);
+  };
+  const addLogo = () => {
+    const hasChannel = Boolean(channel?.avatarUrl);
+    setDress({ ...dress, logo: { ...dress.logo, on: true, asset: dress.logo.asset === 'channel' && !hasChannel && logos.length ? logos[0].id : dress.logo.asset } });
+    setSel({ track: 'logo', id: null });
+    if (!hasChannel && !logos.length) setShowLogos(true);
+  };
+  const addCards = () => {
+    const i = dress.intro; const o = dress.outro;
+    setDress({ ...dress, intro: { ...i, on: true, title: i.title || '{titre}', sub: i.sub || '{intervenant}' }, outro: { ...o, on: true, title: o.title || t('mtdOutroTitle') } });
+    setSel({ track: 'cards', id: null });
+  };
+  const addTransition = () => {
+    if (clips.length < 2) { setNotice({ kind: 'info', text: t('mtdNeedCut') }); return; }
+    setNotice(null);
+    if (!dress.transitions.all) setDress(setTransition(dress, 'all', { type: 'dip', len: 0.8 }));
+    setSel({ track: 'join', id: 'all' });
+  };
+  const applyTemplate = (d) => {
+    const x = withDress(d);
+    setDress({ ...x, transitions: { all: x.transitions.all, byClip: dress.transitions.byClip } });
+    setSel({ track: 'titles', id: null });
+  };
+  const getTimeline = () => ({ v: 1, duration, clips: docRef.current.clips, audio: docRef.current.audio, dress: docRef.current.dress, ui: { magnet } });
+  const showFrame = (at) => setFrameAt({ at, n: Date.now() });
   const undo = () => canEdit && dispatch({ type: 'undo' });
   const redo = () => canEdit && dispatch({ type: 'redo' });
 
   // Raccourcis clavier (hors champs de saisie).
   useEffect(() => {
     const key = (e) => {
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions || showMusic) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]') || showVersions || showMusic || showLogos || frameAt) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
       if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
@@ -304,6 +357,7 @@ export default function Editor({ id }) {
       else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         if (sel.track === 'music' && sel.id) { setAudio({ ...audio, music: audio.music.filter((m) => m.id !== sel.id) }); setSel({ track: 'music', id: null }); }
+        else if (sel.track === 'item' && sel.id) { setDress({ ...dress, items: dress.items.filter((i) => i.id !== sel.id) }); setSel({ track: 'titles', id: null }); }
         else doDelete();
       }
       else if (e.key.toLowerCase() === 'm') setMagnet((m) => !m);
@@ -359,20 +413,19 @@ export default function Editor({ id }) {
         <div className="mt-main">
           <aside className="mt-left" aria-label={t('mtAdd')}>
             <h2 className="mt-cap">{t('mtAdd')}</h2>
-            {[['mtAddTitle', 'E3'], ['mtAddBanner', 'E3'], ['mtAddLogo', 'E3'], ['mtAddMusic', null], ['mtAddIntro', 'E3'], ['mtAddTransition', 'E3']].map(([k, step]) => (
-              step
-                ? <button key={k} type="button" className="mt-add" disabled title={t('mtComesAt').replace('{s}', step)}><span>{t(k)}</span><em>{step}</em></button>
-                : <button key={k} type="button" className="mt-add on" onClick={() => setShowMusic(true)} disabled={!data.editable}><span>{t(k)}</span><b aria-hidden="true">+</b></button>
+            {[['mtAddTitle', () => addItemAt('title')], ['mtAddBanner', () => addItemAt('banner')], ['mtAddLogo', addLogo], ['mtAddMusic', () => setShowMusic(true)],
+              ['mtAddIntro', addCards], ['mtAddTransition', addTransition]].map(([k, fn]) => (
+              <button key={k} type="button" className="mt-add on" onClick={fn} disabled={!data.editable || (!canEdit && k !== 'mtAddMusic')} data-add={k}><span>{t(k)}</span><b aria-hidden="true">+</b></button>
             ))}
             <h2 className="mt-cap">{t('mtTemplates')}</h2>
-            {['mtTplStandard', 'mtTplIntro'].map((k) => (
-              <button key={k} type="button" className="mt-add tpl" disabled title={t('mtComesAt').replace('{s}', 'E3')}><span>{t(k)}</span><em>E3</em></button>
-            ))}
+            <Templates projectId={id} canEdit={canEdit} dress={dress} onApply={applyTemplate} channelName={channel?.name} />
           </aside>
 
           <section className="mt-center" aria-label={t('mtPreview')}>
             {data.media
-              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} />
+              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} hideCaption={dress.subs.burn}>
+                <DressOverlay dress={dress} T={T} totalS={totalS} clips={clips} vars={vars} logoUrl={logoUrl} caption={caption} card={card} cardText={card ? dress[card] : null} />
+              </Preview>
               : <p className="meta">{t('mtNotEditable')}</p>}
           </section>
 
@@ -380,6 +433,9 @@ export default function Editor({ id }) {
             <h2 className="mt-cap">{t('mtSelTrack')}</h2>
             {['orig', 'dub', 'music'].includes(sel.track)
               ? <AudioPanel {...{ sel, setSel, audio, setAudio, canEdit, dub, hasDub, waves, musicInfo, T, setT, totalS, projectId: id, srcAt: loc ? loc.src : 0, onAddMusic: () => setShowMusic(true) }} />
+              : ['titles', 'item', 'logo', 'cards', 'join', 'subs'].includes(sel.track)
+                ? <DressPanel {...{ sel, setSel, dress, setDress, canEdit, clips, totalS, T, setT, vars, channel, logos, durationFinal, onPickLogo: () => setShowLogos(true), onShowCard: setCard, onFrame: showFrame, onAddItem: addItemAt,
+                  subsInfo: cues.length ? t('mtSubsHint').replace('{l}', String(data.media?.subtitles?.lang || '').toUpperCase()).replace('{n}', mapItems(clips, cues).length).replace('{c}', cues.length) : t('mtNoSubsHint') }} />
               : <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />}
           </aside>
         </div>
@@ -396,10 +452,13 @@ export default function Editor({ id }) {
             </label>
           </div>
           <Timeline clips={clips} duration={duration} T={T} onSeek={(v) => { setT(v); }} sel={sel} onSelect={setSel} onMove={doMove} onTrim={doTrim}
-            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0}
+            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0} dress={dress} vars={vars} onItems={(items) => setDress({ ...dress, items })}
             audio={audio} waves={waves} musicInfo={musicInfo} getMix={getMix} onMusic={(items) => setAudio({ ...audio, music: items })} />
         </div>
       </div>
+      {showLogos && <LogoLibrary canEdit={canEdit} current={dress.logo.asset} onClose={() => setShowLogos(false)} onChanged={setLogos}
+        onPick={(l) => { setDress({ ...dress, logo: { ...dress.logo, on: true, asset: l.id } }); setShowLogos(false); setSel({ track: 'logo', id: null }); }} />}
+      {frameAt && <FrameView key={frameAt.n} projectId={id} getTimeline={getTimeline} at={frameAt.at} onClose={() => setFrameAt(null)} />}
       {showMusic && <MusicLibrary canEdit={canEdit} onClose={() => setShowMusic(false)} onAdd={addMusicAt} atLabel={fmtTime(Math.min(T, Math.max(0, totalS - 1)))} />}
       {showVersions && <Versions projectId={id} session={session} canEdit={canEdit} onClose={() => setShowVersions(false)} beforeAction={() => doSave()}
         onRestored={(res, version) => {

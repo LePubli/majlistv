@@ -20,9 +20,12 @@
 //     "ui": { "zoom": 1, "magnet": true }      préférences d'affichage du projet (facultatif)
 //   }
 //
-// L'étape E3 ajoute titres, logo, intro, fin et transitions. Le moteur de rendu de l'étape E4 (FFmpeg piloté par notre
-// code, choisi en E0) lira ce document : réduction du bruit (afftdn), ducking, fondus et loudnorm y sont appliqués.
+//     "dress": { items, logo, intro, outro, transitions, subs }   habillage (étape E3), facultatif : voir dress.js
+//
+// Le moteur de rendu de l'étape E4 (FFmpeg piloté par notre code, choisi en E0) lira ce document : réduction du bruit
+// (afftdn), ducking, fondus, loudnorm, textes (ASS), logo et transitions y sont appliqués.
 import { z } from 'zod';
+import { dressSchema, checkDress, dressIsEmpty } from './dress.js';
 
 export const MIN_CLIP = 0.2;   // durée minimale d'un extrait (secondes)
 export const MAX_CLIPS = 2000;
@@ -72,6 +75,7 @@ export const timelineSchema = z.object({
   duration: num.positive(),
   clips: z.array(clip).min(1, 'Le montage doit garder au moins un extrait').max(MAX_CLIPS),
   audio: audioSchema.optional(),
+  dress: dressSchema.optional(),
   ui: z.object({ zoom: num.min(0.05).max(400).optional(), magnet: z.boolean().optional() }).optional(),
 });
 
@@ -87,7 +91,7 @@ export function audioDefaults(audio, { duck } = {}) {
 // Vérifie le montage par rapport à la vraie durée de la vidéo et aux musiques de la bibliothèque.
 // assets : Map(id → durée en secondes) des musiques prêtes ; omis = pas de vérification des musiques.
 // Renvoie { ok, timeline } ou { ok: false, error }.
-export function checkTimeline(input, sourceDuration, { assets } = {}) {
+export function checkTimeline(input, sourceDuration, { assets, logos } = {}) {
   const p = timelineSchema.safeParse(input);
   if (!p.success) return { ok: false, error: p.error.issues[0]?.message || 'Montage invalide' };
   const tl = p.data;
@@ -122,9 +126,17 @@ export function checkTimeline(input, sourceDuration, { assets } = {}) {
       music: a.music.map((m) => ({ ...m, start: round(m.start), len: round(m.len), offset: round(m.offset) })),
     };
   }
+  if (tl.dress) {
+    const d = checkDress(tl.dress, { clipIds: ids, logos });
+    if (!d.ok) return d;
+    if (!dressIsEmpty(d.dress)) out.dress = d.dress;
+  }
   if (tl.ui) out.ui = tl.ui;
   return { ok: true, timeline: out };
 }
+
+// Logos importés utilisés par un montage (le logo « channel » est celui de la chaîne : rien à vérifier).
+export const logoAssets = (tl) => (tl?.dress?.logo?.asset && tl.dress.logo.asset !== 'channel' ? [tl.dress.logo.asset] : []);
 
 // Musiques utilisées par un montage.
 export const musicAssets = (tl) => [...new Set((tl?.audio?.music || []).map((m) => m.asset))];

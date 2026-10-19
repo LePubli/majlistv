@@ -3195,3 +3195,58 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mt-upload small { grid-column: 1 / -1; }
 .mt-music-row .mt-actions { flex-wrap: nowrap; }
 @media (max-width: 640px) { .mt-upload { grid-template-columns: 1fr; } .mt-music-row { flex-wrap: wrap; } .mt-music-row .mt-actions { flex-wrap: wrap; } }
+
+/* ===== Éditeur de montage — étape E3 : habillage ===== */
+.mt-dress { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; font-family: 'DejaVu Sans', 'Segoe UI', system-ui, sans-serif; }
+.mt-dress-dip { position: absolute; inset: 0; }
+.mt-dress-banner { position: absolute; display: flex; flex-direction: column; align-items: flex-start; max-width: 80%; }
+.mt-dress-banner.right { align-items: flex-end; }
+.mt-dress-banner b, .mt-dress-banner span { background: rgba(18, 13, 6, .75); color: #fff; line-height: 1.15; font-weight: 800; }
+.mt-dress-banner span { color: #E6A739; font-weight: 400; }
+.mt-dress-title { position: absolute; inset-inline: 6%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .2em; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.85), 0 0 2px #000; }
+.mt-dress-title b { line-height: 1.12; font-weight: 800; }
+.mt-dress-title span { color: #E6A739; line-height: 1.2; }
+.mt-dress-subs { position: absolute; inset-inline: 10%; margin: 0; text-align: center; color: #fff; line-height: 1.25; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+.mt-dress-subs.box { background: rgba(18, 13, 6, .65); inset-inline: auto; left: 50%; transform: translateX(-50%); max-width: 80%; text-shadow: none; }
+.mt-dress-logo { position: absolute; height: auto; }
+.mt-dress-card { position: absolute; inset: 0; background: #0B0906; display: grid; place-items: center; }
+.mt-dress-card-in { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .35em; padding: 0 8%; }
+.mt-dress-card-in b { color: #fff; line-height: 1.1; font-weight: 800; }
+.mt-dress-card-in i { display: block; background: #E6A739; border-radius: 2px; }
+.mt-dress-card-in span { color: #E6A739; }
+.mt-card-show { position: absolute; inset-inline-end: 10px; top: 10px; z-index: 5; pointer-events: auto; }
+
+/* Titres, logo et transitions sur la timeline */
+.mt-tclip { position: absolute; top: 6px; height: 26px; border-radius: 8px; background: #3a2a0e; border: 1px solid var(--accent); overflow: hidden; z-index: 2; }
+.mt-tclip.banner { background: #2c2210; border-color: #BD7E2A; }
+.mt-tclip.sel { box-shadow: 0 0 0 2px var(--text); }
+.mt-tclip .mt-clip-body { color: #FFE7A8; font-size: 12px; text-shadow: none; }
+.mt-logostrip { position: absolute; bottom: 5px; height: 9px; border-radius: 5px; background: repeating-linear-gradient(90deg, #5a4628 0 6px, #7a5f35 6px 12px); border: 1px solid #8a6a38; z-index: 2; cursor: pointer; padding: 0; }
+.mt-logostrip.sel { box-shadow: 0 0 0 2px var(--text); }
+.mt-trbtn { position: absolute; bottom: 3px; width: 16px; height: 16px; margin-left: -8px; padding: 0; border-radius: 3px; transform: rotate(45deg) scale(.75); border: 1px solid var(--line-strong); background: var(--bg); z-index: 4; cursor: pointer; }
+.mt-trbtn.on { background: var(--accent); border-color: var(--accent); }
+.mt-trbtn.sel { box-shadow: 0 0 0 2px var(--text); }
+.mt-trbtn:focus-visible { outline: 2px solid var(--text); }
+.mt-tr-span { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,.55) 50%, transparent); pointer-events: none; z-index: 3; }
+
+/* Panneau d'habillage */
+.mt-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.mt-seg button { min-height: 38px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text-2); font-size: 13px; cursor: pointer; }
+.mt-seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: var(--gold-soft); }
+.mt-field textarea, .mt-field select { min-height: 42px; width: 100%; }
+.mt-field textarea { resize: vertical; min-height: 64px; }
+.mt-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mt-items li button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: start; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line-soft); background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px; }
+.mt-items li button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-items li button small { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.mt-logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.mt-logo-card { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; border: 1px solid var(--line-soft); background: var(--bg); }
+.mt-logo-card img { width: 100%; height: 72px; object-fit: contain; background: repeating-conic-gradient(#201810 0 25%, #17120b 0 50%) 0 0 / 14px 14px; border-radius: 8px; }
+.mt-logo-card .mt-actions { flex-wrap: wrap; }
+.mt-frame-box { width: min(980px, 100%); }
+.mt-frame-box img { width: 100%; height: auto; border-radius: 12px; display: block; background: #000; }
+.mt-tplrow { display: flex; gap: 6px; align-items: stretch; }
+.mt-tplrow .mt-add { flex: 1; }
+.mt-tplrow .mt-del { flex: none; width: 38px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.mt-savetpl { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; border: 1px dashed var(--line); }
+.mt-savetpl input[type="text"], .mt-savetpl input:not([type]) { min-height: 38px; }
