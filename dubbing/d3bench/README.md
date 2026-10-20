@@ -49,6 +49,10 @@ echo "2026-10-01|Marie Dupont (mère)" > /root/dubbing-test/in/voix/fille.consen
 - Texte lu dans l'enregistrement (facultatif mais plus fidèle) : un fichier `<voix>.txt` à côté (`fille.txt`), avec **exactement** ce qui est dit. Sans lui, Qwen n'utilise que l'empreinte de la voix (un peu moins ressemblant). Le `texte.txt` commun ne sert que pour les voix de synthèse.
 - L'autorisation est inscrite dans le rapport de chaque essai.
 
+**Important si vos voix ne lisent PAS le texte de référence** : ne copiez pas `texte.txt` dans `in/voix/` (étape ci-dessous) : sans lui, Qwen n'utilise que l'empreinte de la voix, ce qui est correct. Avec un `texte.txt` qui ne correspond pas à ce que dit l'échantillon, le résultat serait faussé.
+
+**Lancer seulement certaines voix ou seulement Qwen** (variables devant la commande) : `METHODS=qwen` (sans refaire la conversion Tom), `ONLY="fille-6ans femme-1"` (noms de fichiers sans extension).
+
 ## 2. Préparer le VPS
 ```bash
 # Mettre à jour le code et reconstruire les deux images (10 à 15 minutes la première fois)

@@ -4381,3 +4381,5 @@ python3 dubbing/etape0/test_pipeline.py    # banc de l'étape 0 inchangé
 D3b : intégrer au service de doublage la méthode choisie à l'écoute (nouvelles voix dans Studio → Audio et doublage → Voix), puis D3c : détection automatique des intervenants.
 
 **Complément D3a (20/10)** : le banc accepte aussi de **vraies voix déjà enregistrées** (sans Voicebox). Pour chacune : un fichier `<voix>.consent` d'une ligne `AAAA-MM-JJ|Nom` (autorisation, obligatoire pour une vraie personne ; sans lui la voix est traitée comme une voix de synthèse), et si possible `<voix>.txt` avec le texte exact lu. Détails : `dubbing/d3bench/README.md` §1 bis.
+
+**Complément D3a (20/10, après écoute)** : Epok a essayé ses voix de femmes et d'enfants avec la méthode actuelle (Tom + conversion) : « on n'entend que Tom ». Constat : la conversion garde le rythme et l'intonation de Tom et ne convient qu'à une voix d'homme proche. Le banc se lance donc avec Qwen seul : `METHODS=qwen ONLY="…" src/dubbing/d3bench/run_d3.sh arabe1 40`. Voix reçues : 9 fichiers (3 enfants sur 5 annoncés, 3 hommes, 3 femmes), convertis en WAV 24 kHz mono.
