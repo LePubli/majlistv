@@ -30,7 +30,7 @@ export const paramsSchema = z.object({
 }).strict();
 
 const VOICE_COLS = `id, slug, kind, name, engine, model, speaker, gender, license, notes, (sample_key IS NOT NULL) AS "hasSample", sample_bytes::int AS "sampleBytes",
-  consent_date::text AS "consentDate", consent_by AS "consentBy", consent_recorded_at AS "consentRecordedAt", active, created_at AS "createdAt"`;
+  synthetic, consent_date::text AS "consentDate", consent_by AS "consentBy", consent_recorded_at AS "consentRecordedAt", active, created_at AS "createdAt"`;
 export async function listVoices({ all = false } = {}) {
   const { rows } = await pool.query(`SELECT ${VOICE_COLS} FROM dub_voices ${all ? '' : 'WHERE active'} ORDER BY kind DESC, (slug = 'tom') DESC, created_at, name`);
   return rows;

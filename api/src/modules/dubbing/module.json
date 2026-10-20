@@ -1,7 +1,7 @@
 {
   "id": "dubbing",
   "name": "Doublage français",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Doublage français des conférences : voix de base (Piper, « Tom ») puis, au choix, conversion vers une voix autorisée (consentement daté). Réglages, voix, estimation, langue d'écoute (S1) ; file du service dubbing/, écoute de 60 s, piste française (D1a) ; langue de l'audio dans le lecteur, demandes des abonnés (D2) ; relecture, voix d'origine, glossaire (D1b) ; fichiers archivables (S2) ; Activité, tableau de bord, contenus (S3) ; voix française dans l'éditeur et le rendu (E1-E4a) ; piste retirée quand la vidéo est remplacée, remise si l'original revient (E4b).",
   "requires": [],
   "defaultEnabled": false,

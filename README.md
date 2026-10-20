@@ -4491,3 +4491,49 @@ Les essais des anciens extraits (`test_short.mjs`, `test_editor_e5b.py`, `e5b_sh
 - **Non testé** (étape F, registre 30) : une vraie conférence (éclairage, barbe, voile, profil, plusieurs personnes, changements de plan), l'image Docker du transcripteur avec OpenCV, le temps d'analyse sur le serveur, la qualité du résultat vu avec vos yeux.
 - Limites connues : le cadre bouge seulement de gauche à droite (pas de zoom) ; un changement de plan de caméra fait « sauter » le cadre vers la personne la plus présente ; l'analyse n'apparaît pas dans Studio → Activité (registre 31).
 
+
+
+## Étape D3b — Doublage : voix de synthèse, catégories, choix de la voix de conversion
+
+### Description
+Décision d'Epok du 20/10 : **on garde la méthode actuelle** (voix de base Piper, puis conversion de voix ChatterboxVC) ; Qwen3-TTS est abandonné (inutilisable sur processeur seul, registre 29). Cette étape ajoute, dans **Studio → Audio et doublage** :
+- **Voix → Ajouter une voix cible** : case **« Voix de synthèse »** (voix fabriquée avec Voicebox ou un outil du même genre, **aucune personne réelle**). Cochée, la date et le nom du consentement ne sont plus demandés ; **décochée, tout reste obligatoire comme avant** (case de consentement, date, nom). Qui a déclaré la voix et quand est toujours enregistré ;
+- la liste des voix affiche l'étiquette **« Synthèse »** et, pour une vraie voix, la ligne « Consentement du … » comme avant ;
+- **filtre par catégorie** (Femme, Homme, Enfant) au-dessus de la liste ; la catégorie « Enfant » couvre fille et garçon ;
+- **Réglages par défaut** et réglages d'une conférence : la voix de conversion est **rangée par catégorie**, avec un bouton **« Écouter »** (échantillon) et un rappel que la conversion allonge le calcul (l'estimation s'appuie sur les doublages déjà faits avec la même configuration).
+
+Rien ne change côté service de doublage : une voix de synthèse sert d'échantillon exactement comme une voix autorisée.
+
+Vitesse (mesures réelles du VPS, `dub_jobs`) : voix de base seule **0,18 à 0,32** (une heure de conférence ≈ 11 à 20 min). Avec conversion de voix : **jamais encore mesurée en service** ; le banc D3a (3 phrases, 2 cœurs) donnait 7,05, chiffre trop pessimiste (coûts fixes sur un échantillon court) ; l'estimation de l'écran utilise le modèle 2,0 + 0,3 + 0,42 × étapes (≈ 3,6 à 4,4) tant qu'aucun vrai doublage avec conversion n'a été fait. Le premier aperçu avec voix cible donnera la vraie valeur.
+
+Versions : module `dubbing` **0.9.0** ; migration du module **`005_synthetic_voices.sql`** (colonne `synthetic`, contraintes : une voix cible a un consentement **ou** est une voix de synthèse ; une voix de base n'est jamais « synthèse »).
+
+### Prérequis
+- Module « Doublage français » actif (étapes S1 à D2 déployées).
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est poussé). Ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → Redeploy : **`majlistv-api`** (migration 005), puis **`majlistv-web`**. Le worker, le transcripteur et le service de doublage ne changent pas.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Vérifier la migration :
+```
+docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i "005_synthetic"
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\d dub_voices"' | grep -i -E "synthetic|target_ok"
+```
+
+### Debug
+- « Cochez la case de consentement… » en ajoutant une voix : c'est une vraie personne → saisir date et nom ; ou cocher « Voix de synthèse » si personne réelle n'est derrière.
+- « L'envoi du fichier a échoué » : l'envoi direct vers le stockage a été refusé (CORS du bucket ou `CSP_STORAGE_ORIGINS` du site) ; même cause que pour les logos.
+- Migration non appliquée : relancer `majlistv-api` et relire ses journaux (commande ci-dessus).
+
+### Exemples d'utilisation
+- Studio → Audio et doublage → **Voix** → remplir le nom, choisir l'échantillon (wav/mp3/m4a), catégorie **Enfant**, cocher **Voix de synthèse** → **Ajouter**.
+- **Réglages par défaut** (ou une conférence) → **Voix de conversion** → groupe **Enfant** → la voix ajoutée → **Écouter** pour contrôler l'échantillon → **Écouter 60 secondes** pour un essai (le temps réel de la conversion apparaît ensuite dans l'estimation).
+- Les 4 échantillons d'Epok (femme-victoire, homme-hugo, fille-6ans, garçon) s'ajoutent de la même façon ; pour une vraie personne : décocher « Voix de synthèse » et saisir le consentement.
+
+Tests : `api/tests/test_dubbing.py` (14 contrôles ajoutés : synthèse sans consentement, organisateur refusé, consentement toujours exigé sinon, contraintes de la base), `web/tests/d3b_voices.py` (formulaire, étiquettes, filtre, choix par catégorie, FR + AR, 390 / 1440 px).

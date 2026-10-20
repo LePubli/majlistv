@@ -33,12 +33,14 @@ function VoiceRow({ v, onChanged, setMsg }) {
           <input aria-label={t('dbVoiceName')} value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== v.name && save({ name })} />
           <span className="db-tag">{t(v.kind === 'base' ? 'dbKindBase' : 'dbKindTarget')}</span>
           {v.gender && <span className="db-tag">{t('dbG_' + v.gender)}</span>}
+          {v.synthetic && <span className="db-tag">{t('dbSyntheticTag')}</span>}
           {!v.active && <span className="db-tag warn">{t('dbInactive')}</span>}
         </div>
         <p className="meta small">
           {v.kind === 'base'
             ? [v.model, v.speaker != null ? tf(t('dbSpeakerN'), { n: v.speaker }) : ''].filter(Boolean).join(' · ')
-            : tf(t('dbConsentLine'), { d: fmtDay(v.consentDate, locale), n: v.consentBy })}
+            : v.synthetic ? tf(t('dbSyntheticLine'), { d: fmtDay(String(v.createdAt).slice(0, 10), locale) })
+              : tf(t('dbConsentLine'), { d: fmtDay(v.consentDate, locale), n: v.consentBy })}
         </p>
         {(v.license || v.notes) && <p className="meta small">{[v.license && `${t('dbLicense')} : ${v.license}`, v.notes].filter(Boolean).join(' — ')}</p>}
         {audio && <audio controls src={audio} className="db-audio" />}
@@ -82,7 +84,7 @@ function AddBase({ onDone, setMsg }) {
 function AddTarget({ maxMb, onDone, setMsg }) {
   const { t, call } = useApp();
   const today = new Date().toISOString().slice(0, 10);
-  const empty = { name: '', file: null, consentDate: today, consentBy: '', consentConfirmed: false, gender: '', license: '' };
+  const empty = { name: '', file: null, synthetic: false, consentDate: today, consentBy: '', consentConfirmed: false, gender: '', license: '' };
   const [f, setF] = useState(empty);
   const [busy, setBusy] = useState(false);
   const submit = async (e) => {
@@ -96,7 +98,7 @@ function AddTarget({ maxMb, onDone, setMsg }) {
       if (!u.ok) { setMsg({ ok: false, text: u.data?.error || t('dbError') }); return; }
       const put = await fetch(u.data.url, { method: 'PUT', body: f.file, headers: { 'content-type': type } });
       if (!put.ok) { setMsg({ ok: false, text: t('dbUploadFailed') }); return; }
-      const r = await call('/studio/dubbing/voices', { method: 'POST', body: JSON.stringify({ kind: 'target', name: f.name, sampleKey: u.data.key, consentDate: f.consentDate, consentBy: f.consentBy, consentConfirmed: f.consentConfirmed, gender: f.gender, license: f.license }) });
+      const r = await call('/studio/dubbing/voices', { method: 'POST', body: JSON.stringify({ kind: 'target', name: f.name, sampleKey: u.data.key, synthetic: f.synthetic, ...(f.synthetic ? {} : { consentDate: f.consentDate, consentBy: f.consentBy, consentConfirmed: f.consentConfirmed }), gender: f.gender, license: f.license }) });
       setMsg(r.ok ? { ok: true, text: t('dbVoiceAdded') } : { ok: false, text: r.data?.error || t('dbError') });
       if (r.ok) { setF(empty); e.target.reset(); onDone(); }
     } catch {
@@ -110,11 +112,12 @@ function AddTarget({ maxMb, onDone, setMsg }) {
       <div className="db-add-grid">
         <label className="fld"><span>{t('dbVoiceName')}</span><input required maxLength={80} placeholder={t('dbMyVoice')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label className="fld"><span>{t('dbSample')}</span><input required type="file" accept="audio/*" onChange={(e) => setF({ ...f, file: e.target.files?.[0] || null })} /></label>
-        <label className="fld"><span>{t('dbConsentDate')}</span><input required type="date" max={today} value={f.consentDate} onChange={(e) => setF({ ...f, consentDate: e.target.value })} /></label>
-        <label className="fld"><span>{t('dbConsentBy')}</span><input required minLength={2} maxLength={120} value={f.consentBy} onChange={(e) => setF({ ...f, consentBy: e.target.value })} /></label>
+        {!f.synthetic && <label className="fld"><span>{t('dbConsentDate')}</span><input required type="date" max={today} value={f.consentDate} onChange={(e) => setF({ ...f, consentDate: e.target.value })} /></label>}
+        {!f.synthetic && <label className="fld"><span>{t('dbConsentBy')}</span><input required minLength={2} maxLength={120} value={f.consentBy} onChange={(e) => setF({ ...f, consentBy: e.target.value })} /></label>}
         <label className="fld"><span>{t('dbGender')}</span><select value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}>{GENDERS.map((g) => <option key={g} value={g}>{g ? t('dbG_' + g) : t('dbGUnknown')}</option>)}</select></label>
       </div>
-      <label className="db-check"><input type="checkbox" required checked={f.consentConfirmed} onChange={(e) => setF({ ...f, consentConfirmed: e.target.checked })} /> <span>{t('dbConsentCheck')}</span></label>
+      <label className="db-check"><input type="checkbox" name="synthetic" checked={f.synthetic} onChange={(e) => setF({ ...f, synthetic: e.target.checked })} /> <span>{t('dbSynthetic')}</span></label>
+      {!f.synthetic && <label className="db-check"><input type="checkbox" required checked={f.consentConfirmed} onChange={(e) => setF({ ...f, consentConfirmed: e.target.checked })} /> <span>{t('dbConsentCheck')}</span></label>}
       <button className="btn" disabled={busy}>{busy ? t('dbUploading') : t('dbAdd')}</button>
     </form>
   );
@@ -125,11 +128,18 @@ export default function Voices({ state, reload }) {
   const [all, setAll] = useState(null);
   const [msg, setMsg] = useState(null);
   const refresh = async () => { await reload(); const r = await call('/studio/dubbing/voices?all=1'); if (r.ok) setAll(r.data.voices); };
-  const list = all || state.voices;
+  const [cat, setCat] = useState('');
+  const list = (all || state.voices).filter((v) => !cat || v.gender === cat);
   return (
     <div className="db-voices">
       <p className="meta">{t('dbVoicesIntro')}</p>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      <label className="fld db-filter"><span>{t('dbFilterLabel')}</span>
+        <select value={cat} onChange={(e) => setCat(e.target.value)}>
+          <option value="">{t('dbFilterAll')}</option>
+          {GENDERS.filter(Boolean).map((g) => <option key={g} value={g}>{t('dbG_' + g)}</option>)}
+        </select>
+      </label>
       <ul className="db-voice-list">{list.map((v) => <VoiceRow key={v.id + String(v.active)} v={v} onChanged={refresh} setMsg={setMsg} />)}</ul>
       {!all && <button type="button" className="btn ghost" onClick={refresh}>{t('dbShowInactive')}</button>}
       <div className="db-add-wrap">

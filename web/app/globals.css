@@ -3412,3 +3412,8 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mts-manual-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: end; }
 .mts-manual-row input { width: 100%; min-width: 0; }
 @media (max-width: 480px) { .mts-manual-row { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; } }
+
+/* Doublage D3b : filtre par catégorie, choix de la voix de conversion */
+.db-filter { max-width: 260px; margin: 8px 0; }
+.db-target-pick { display: grid; gap: 8px; align-content: start; }
+.db-target-pick .db-audio { width: 100%; max-width: 360px; }

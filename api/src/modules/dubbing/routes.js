@@ -82,7 +82,8 @@ export default async function routes(app, ctx) {
   const common = { name: z.string().trim().min(1).max(80), gender: z.enum(GENDERS).default(''), license: z.string().trim().max(200).default(''), notes: z.string().trim().max(1000).default('') };
   const createSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('base'), ...common, model: z.string().regex(PIPER_MODEL, 'Nom de modèle Piper attendu (ex. fr_FR-tom-medium)'), speaker: z.number().int().min(0).max(999).nullable().default(null) }).strict(),
-    z.object({ kind: z.literal('target'), ...common, sampleKey: z.string().max(200), consentDate: isoDay, consentBy: z.string().trim().min(2).max(120), consentConfirmed: z.boolean() }).strict(),
+    z.object({ kind: z.literal('target'), ...common, sampleKey: z.string().max(200), synthetic: z.boolean().default(false),
+      consentDate: isoDay.optional(), consentBy: z.string().trim().min(2).max(120).optional(), consentConfirmed: z.boolean().default(false) }).strict(),
   ]);
 
   app.post('/studio/dubbing/voices', admin, async (req, reply) => {
@@ -93,8 +94,12 @@ export default async function routes(app, ctx) {
         [b.name, b.model, b.speaker, b.gender, b.license, b.notes, req.user.sub]);
       return reply.code(201).send(await getVoice(r.rows[0].id).then(({ sample_key: _k, ...v }) => v));
     }
-    if (!b.consentConfirmed) return reply.code(400).send({ error: 'Cochez la case de consentement : la personne doit avoir accepté que sa voix soit utilisée', code: 'consent_required' });
-    if (b.consentDate > new Date().toISOString().slice(0, 10)) return reply.code(400).send({ error: 'La date du consentement ne peut pas être dans le futur', code: 'consent_future' });
+    // Voix de synthèse (aucune personne réelle) : pas de consentement. Vraie personne : case cochée, date et nom obligatoires.
+    if (!b.synthetic) {
+      if (!b.consentConfirmed) return reply.code(400).send({ error: 'Cochez la case de consentement : la personne doit avoir accepté que sa voix soit utilisée', code: 'consent_required' });
+      if (!b.consentDate || !b.consentBy) return reply.code(400).send({ error: 'Date du consentement et nom de la personne obligatoires', code: 'consent_required' });
+      if (b.consentDate > new Date().toISOString().slice(0, 10)) return reply.code(400).send({ error: 'La date du consentement ne peut pas être dans le futur', code: 'consent_future' });
+    }
     if (!storage) return reply.code(503).send({ error: 'Stockage non configuré', code: 'storage_off' });
     if (!/^dubbing\/voices\/[0-9a-f-]{36}\.(wav|mp3|m4a|ogg|webm|flac)$/.test(b.sampleKey)) return reply.code(400).send({ error: 'Fichier inattendu' });
     let size;
@@ -102,9 +107,9 @@ export default async function routes(app, ctx) {
     const max = await maxBytes();
     if (size > max) { await deleteObject(b.sampleKey).catch(() => {}); return reply.code(400).send({ error: `Fichier trop lourd (${Math.round(max / 1048576)} Mo maximum)`, code: 'too_big' }); }
     const r = await pool.query(
-      `INSERT INTO dub_voices(kind, name, engine, gender, license, notes, sample_key, sample_bytes, consent_date, consent_by, consent_recorded_by, consent_recorded_at, created_by)
-       VALUES ('target', $1, 'chatterbox-vc', $2, $3, $4, $5, $6, $7, $8, $9, now(), $9) RETURNING id`,
-      [b.name, b.gender, b.license, b.notes, b.sampleKey, size, b.consentDate, b.consentBy, req.user.sub]);
+      `INSERT INTO dub_voices(kind, name, engine, gender, license, notes, sample_key, sample_bytes, synthetic, consent_date, consent_by, consent_recorded_by, consent_recorded_at, created_by)
+       VALUES ('target', $1, 'chatterbox-vc', $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), $10) RETURNING id`,
+      [b.name, b.gender, b.license, b.notes, b.sampleKey, size, b.synthetic, b.synthetic ? null : b.consentDate, b.synthetic ? null : b.consentBy, req.user.sub]);
     const { sample_key: _k, ...v } = await getVoice(r.rows[0].id);
     return reply.code(201).send(v);
   });

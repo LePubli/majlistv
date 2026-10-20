@@ -35,8 +35,8 @@ byid0 = {m["id"]: m for m in mods if m["id"]}
 ok(all(m["version"] == "1.0.0" and m["feature"] == m["id"] for m in mods if m["status"] != "absent" and m["id"] not in ("dubbing", "storage", "stats", "channels", "editor")), "anciens modules : tous en v1.0.0 et liés à la fonction du même nom")
 ok(byid0["stats"]["version"] == "1.1.0" and byid0["channels"]["version"] == "1.1.0" and "studio.overview" in byid0["stats"]["listens"] and "studio.production" in byid0["stats"]["listens"] and "studio.overview" in byid0["channels"]["listens"], "étape S3 : statistiques et chaînes en v1.1.0, chiffres du tableau de bord et des contenus")
 dub = next(m for m in mods if m["id"] == "dubbing")
-ok(dub["version"] == "0.8.0" and dub["feature"] is None and sorted(dub["listens"]) == ["activity.collect", "activity.pause", "archive.collect", "editor.media", "editor.replaced", "editor.restored", "studio.overview", "studio.production", "watch.progress"],
-   f"doublage : module autonome v0.8.0, sans fonction liée, écoute reprise de lecture, archivage, activité, tableau de bord, éditeur ({dub['version']}, {sorted(dub['listens'])})")
+ok(dub["version"] == "0.9.0" and dub["feature"] is None and sorted(dub["listens"]) == ["activity.collect", "activity.pause", "archive.collect", "editor.media", "editor.replaced", "editor.restored", "studio.overview", "studio.production", "watch.progress"],
+   f"doublage : module autonome v0.9.0, sans fonction liée, écoute reprise de lecture, archivage, activité, tableau de bord, éditeur ({dub['version']}, {sorted(dub['listens'])})")
 st = next(m for m in mods if m["id"] == "storage")
 ok(st["version"] == "0.3.0" and st["feature"] is None and "archive.lookup" in st["provides"] and any(f["type"] == "secret_text" for f in st["fields"]) and sorted(st["listens"]) == ["activity.collect", "studio.overview"], "stockage : module autonome v0.2.0, fournit archive.lookup, réglage secret sur plusieurs lignes, activité et tableau de bord")
 byid = {m["id"]: m for m in mods}

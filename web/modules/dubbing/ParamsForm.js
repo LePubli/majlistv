@@ -1,6 +1,7 @@
 'use client';
 // Module « Doublage français » — curseurs de réglages (voix, préréglages, volume, accélération, réglages avancés).
 // Utilisé pour les réglages par défaut (tout le site) et pour une conférence.
+import { useState } from 'react';
 import { useApp } from '../../components/Providers';
 import { fmtNum } from './shared';
 
@@ -29,6 +30,34 @@ export function Slider({ k, value, def, params, onChange, disabled = false }) {
   );
 }
 
+// Choix de la voix de conversion, rangée par catégorie, avec écoute de l'échantillon.
+function TargetPicker({ targets, value, onChange }) {
+  const { t, call } = useApp();
+  const [url, setUrl] = useState(null);
+  const groups = ['female', 'male', 'child', ''].map((g) => [g, targets.filter((v) => (v.gender || '') === g)]).filter(([, l]) => l.length);
+  const listen = async () => {
+    const r = await call(`/studio/dubbing/voices/${value}/sample`);
+    setUrl(r.ok ? r.data.url : null);
+  };
+  return (
+    <div className="db-target-pick">
+      <label className="fld"><span>{t('dbTargetVoice')}</span>
+        <select value={value || ''} onChange={(e) => { setUrl(null); onChange({ targetVoice: e.target.value || null }); }}>
+          <option value="">{t('dbNoTarget')}</option>
+          {groups.map(([g, l]) => (
+            <optgroup key={g || 'x'} label={g ? t('dbG_' + g) : t('dbGUnknown')}>
+              {l.map((v) => <option key={v.id} value={v.id}>{v.name}{v.synthetic ? ` · ${t('dbSyntheticTag')}` : ''}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      {value && <button type="button" className="btn ghost" onClick={listen}>{t('dbListen')}</button>}
+      {url && <audio controls autoPlay src={url} className="db-audio" />}
+      {value && <small className="meta">{t('dbSlowWarn')}</small>}
+    </div>
+  );
+}
+
 // value : réglages affichés ; reference : valeurs de référence (réglages par défaut pour une conférence, valeurs d'origine sinon)
 export default function ParamsForm({ state, value, reference, onChange, showVoices = true }) {
   const { t } = useApp();
@@ -47,12 +76,7 @@ export default function ParamsForm({ state, value, reference, onChange, showVoic
               {base.map((v) => <option key={v.id} value={v.id}>{v.name}{v.gender ? ` · ${t('dbG_' + v.gender)}` : ''}</option>)}
             </select>
           </label>
-          <label className="fld"><span>{t('dbTargetVoice')}</span>
-            <select value={value.targetVoice || ''} onChange={(e) => onChange({ targetVoice: e.target.value || null })}>
-              <option value="">{t('dbNoTarget')}</option>
-              {targets.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </label>
+          <TargetPicker targets={targets} value={value.targetVoice} onChange={onChange} />
         </div>
       )}
       <div className="db-presets" role="group" aria-label={t('dbPresets')}>

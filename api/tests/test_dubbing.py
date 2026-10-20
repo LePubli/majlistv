@@ -42,7 +42,7 @@ a_id, A = mk("admin", "admin"); o_id, O = mk("organizer", "orga"); u_id, U = mk(
 rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": False})
 r = rq("GET", "/studio/dubbing/state", headers=A); ok(r.status_code == 404 and r.json().get("code") == "module_off", "module désactivé : routes fermées (404 module_off)")
 mods = {m["id"]: m for m in rq("GET", "/admin/modules", headers=A).json()["modules"]}
-ok("dubbing" in mods and mods["dubbing"]["status"] == "off" and mods["dubbing"]["version"] == "0.5.0", "Admin → Modules : « Doublage français » présent, inactif")
+ok("dubbing" in mods and mods["dubbing"]["status"] == "off", "Admin → Modules : « Doublage français » présent, inactif")
 ok(any(f["key"] == "mod_dubbing_rtf_base" for f in mods["dubbing"]["fields"]), "réglages du module dans Admin → Modules (coefficients d'estimation)")
 ok(rq("PUT", "/admin/modules/dubbing", headers=A, json={"enabled": True}).status_code == 200, "activation par l'administrateur")
 ok(rq("GET", "/studio/dubbing/state", headers=O).status_code == 403, "organisateur : refusé (administration seulement à l'étape S1)")
@@ -98,6 +98,34 @@ ok("sample_key" not in r.json(), "la clé interne du fichier n'est jamais renvoy
 smp = rq("GET", f"/studio/dubbing/voices/{vt}/sample", headers=A)
 ok(smp.status_code == 200 and requests.get(smp.json()["url"]).content.startswith(b"RIFF"), "échantillon réécoutable (lien temporaire)")
 cur.execute("select consent_recorded_by from dub_voices where id=%s", (vt,)); ok(str(cur.fetchone()[0]) == str(a_id), "qui a enregistré le consentement est conservé")
+
+# --- Étape D3b : voix de synthèse (aucune personne réelle) : sans consentement ; vraie personne : consentement toujours exigé
+up2 = rq("POST", "/studio/dubbing/voices/upload-url", headers=A, json={"contentType": "audio/wav", "size": 2048}).json()
+requests.put(up2["url"], data=b"RIFF" + b"\0" * 2044, headers={"content-type": "audio/wav"})
+syn = {"kind": "target", "name": f"Fille {tag}", "sampleKey": up2["key"], "synthetic": True, "gender": "child"}
+ok(rq("POST", "/studio/dubbing/voices", headers=O, json=syn).status_code == 403, "voix de synthèse : organisateur refusé")
+r = rq("POST", "/studio/dubbing/voices", headers=A, json=syn)
+ok(r.status_code == 201 and r.json()["synthetic"] is True and r.json()["consentDate"] is None and r.json()["consentBy"] is None and r.json()["gender"] == "child",
+   "voix de synthèse créée sans consentement, catégorie « enfant »")
+vs = r.json()["id"]; voices.append(vs)
+cur.execute("select consent_recorded_by is not null, consent_recorded_at is not null from dub_voices where id=%s", (vs,))
+ok(cur.fetchone() == (True, True), "qui a déclaré la voix de synthèse, et quand, est conservé")
+up3 = rq("POST", "/studio/dubbing/voices/upload-url", headers=A, json={"contentType": "audio/wav", "size": 2048}).json()
+requests.put(up3["url"], data=b"RIFF" + b"\0" * 2044, headers={"content-type": "audio/wav"})
+ok(rq("POST", "/studio/dubbing/voices", headers=A, json={"kind": "target", "name": "x", "sampleKey": up3["key"]}).json().get("code") == "consent_required", "sans « synthèse » : le consentement reste exigé")
+ok(rq("POST", "/studio/dubbing/voices", headers=A, json={"kind": "target", "name": "x", "sampleKey": up3["key"], "consentConfirmed": True}).json().get("code") == "consent_required", "case cochée mais sans date ni nom : refusé")
+ok(any(v["id"] == vs and v["synthetic"] for v in rq("GET", "/studio/dubbing/voices", headers=A).json()["voices"]), "la liste indique les voix de synthèse")
+ok(any(v["id"] == vt and v["synthetic"] is False for v in rq("GET", "/studio/dubbing/voices", headers=A).json()["voices"]), "une vraie voix n'est pas marquée synthèse")
+try:
+    cur.execute("insert into dub_voices(kind,name,model,synthetic) values ('base','bad','fr_FR-x',true)"); bad = False
+except Exception:
+    bad = True
+ok(bad, "base de données : une voix de base ne peut pas être « synthétique »")
+try:
+    cur.execute("insert into dub_voices(kind,name,sample_key,synthetic) values ('target','bad2','k',false)"); bad = False
+except Exception:
+    bad = True
+ok(bad, "base de données : une voix cible sans consentement ni synthèse est refusée")
 
 # --- conférences
 cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,language,transcript_language) values (%s,'d','Cheikh','youtube',%s,%s,'published','ready','free',600,'ar','ar') returning id",

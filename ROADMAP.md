@@ -313,3 +313,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Correctif 20/10 — aperçu de l'éditeur
 - L'aperçu 360p (éditeur et page Shorts) utilise maintenant hls.js d'abord ; la lecture native du navigateur n'est qu'un secours (les Chrome récents l'annoncent mais échouent sur nos segments fMP4). Fichiers : `web/modules/editor/Preview.js`, `ShortsPage.js`. À confirmer sur le VPS avec arab1.
+
+
+## Étape D3b (20/10) — voix de synthèse et catégories
+- Méthode actuelle gardée (Piper + ChatterboxVC) ; Qwen abandonné. Module `dubbing` 0.9.0, migration `005_synthetic_voices.sql`. Case « Voix de synthèse » (sans consentement), filtre par catégorie, choix de la voix de conversion par catégorie avec écoute. Reste D3c (détection automatique des intervenants), puis E6, puis le plan du 20/10 (fiche vidéo, chaînes, Kids catalogue, Shorts, Créateur), puis F.
