@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fiche vidéo — proposition B (choisie par Epok le 20/10).
 Vérifie : lecteur dans le bandeau sombre, barre de 5 actions en icônes (Favori, Ma liste, Partager, Marque-page, Plus), anciens
-boutons disparus (vitesses, mode cinéma, signaler hors du menu), menu « Plus » (vitesses, mode cinéma, signaler, Échap),
+boutons disparus (vitesses, mode cinéma, signaler hors du menu), Résumé ouvert à l'arrivée, « Chapitres et extrait » au-dessus de « À suivre », réglages de lecture posés sur le lecteur (vitesse), menu « Plus » (mode cinéma, signaler, Échap),
 favori enregistré, liste, carte « Apprendre avec cette conférence » (quiz, révision, action) qui ouvre le quiz et la mise en
 pratique sur la vidéo, lien « Mes notes », onglets (sans « Quiz »), téléphone (carte Apprendre avant les onglets, 5 actions sur
 une ligne), arabe (RTL), 390 / 1024 / 1440 px sans débordement.
@@ -31,6 +31,11 @@ cur.execute("""insert into talks(title,description,speaker,source,video_ref,orga
 T = str(cur.fetchone()[0]); talks.append(T); make_hls(s3, T, 60, codec='vp9'); add_transcript(cur, T, 60)
 cur.execute("insert into quiz_questions(talk_id,lang,question,options,correct_index,status) select %s,'fr','Question '||g,'[\"A\",\"B\",\"C\"]',0,'approved' from generate_series(1,3) g", (T,))
 cur.execute("insert into practice_suggestions(talk_id,lang,text,status) values (%s,'fr','Une petite action de patience','approved')", (T,))
+cur.execute("""insert into talk_insights(talk_id,lang,status,summary,chapters) values (%s,'fr','ready','Résumé de test : la patience a trois degrés.','[{"ms":0,"title":"Introduction"},{"ms":30000,"title":"Les degrés"}]')""", (T,))
+# une autre conférence pour remplir « À suivre »
+cur.execute("""insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,language)
+               values (%s,'d','Cheikh Test','upload','y',(select id from users where email='admin@test.local'),'published','ready','free',600,'ar') returning id""", (f'Autre {tag}',))
+talks.append(str(cur.fetchone()[0]))
 def ov(pg): return pg.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
 def until(fn, timeout=10):
     t0 = time.time()
@@ -61,18 +66,30 @@ try:
         # liste
         pg.locator('[data-act="list"]').click(); ok(until(lambda: pg.locator('.ls-menu').is_visible()), 'Ma liste : le choix des listes s\'ouvre')
         pg.keyboard.press('Escape')
-        # menu Plus
+        # onglet ouvert à l'arrivée : le Résumé (demande d'Epok du 20/10)
+        ok(until(lambda: pg.locator('#tab-summary').get_attribute('aria-selected') == 'true', 15) and 'trois degrés' in pg.locator('#panel-insights').inner_text(), 'à l\'arrivée, l\'onglet « Résumé » est ouvert')
+        # « Chapitres et extrait » au-dessus de « À suivre »
+        ok(pg.locator('.seo-extra').count() == 1, 'bloc « Chapitres et extrait » présent')
+        ok(until(lambda: pg.locator('.wb-next').count() == 1, 10) and pg.locator('.seo-extra').bounding_box()['y'] < pg.locator('.wb-next').bounding_box()['y'], '« Chapitres et extrait » au-dessus de « À suivre »')
+        # réglages de lecture SUR le lecteur (comme la maquette B) ; menu Plus : cinéma, signaler
+        pb = pg.locator('.wb-hero .player-stage').bounding_box(); sb = pg.locator('[data-act="player-settings"]').bounding_box()
+        ok(sb['x'] > pb['x'] + pb['width'] / 2 and sb['y'] < pb['y'] + 60, 'bouton « Réglages de lecture » posé sur le lecteur (coin haut)')
+        ok(pg.locator('[data-act="player-settings"]').inner_text().strip() == '1×', 'il affiche la vitesse en cours (1×)')
+        pg.locator('[data-act="player-settings"]').click(); pg.wait_for_selector('.wb-pset-menu', timeout=5000)
+        ok(pg.locator('.wb-pset-menu .speed-pill').count() == 6, 'réglages : les 6 vitesses')
+        pg.locator('.wb-pset-menu .speed-pill', has_text='1.5×').click()
+        ok(pg.evaluate("document.querySelector('.wb-hero video').playbackRate") == 1.5 and pg.locator('[data-act="player-settings"]').inner_text().strip() == '1,5×', 'vitesse 1,5× appliquée et affichée sur le lecteur')
+        pg.screenshot(path=str(OUT / 'reglages-lecteur.png'))
+        pg.keyboard.press('Escape'); ok(until(lambda: pg.locator('.wb-pset-menu').count() == 0, 3), 'Échap referme les réglages')
         pg.locator('[data-act="more"]').click(); pg.wait_for_selector('.wb-menu', timeout=5000)
-        ok(pg.locator('.wb-menu .speed-pill').count() == 6 and pg.locator('.wb-menu [data-act="cinema"]').count() == 1 and pg.locator('.wb-menu .rp').count() == 1, 'menu « Plus » : vitesses, mode cinéma, signaler')
-        pg.locator('.wb-menu .speed-pill', has_text='1.5×').click()
-        ok(pg.evaluate("document.querySelector('.wb-hero video').playbackRate") == 1.5, 'vitesse 1,5× appliquée au lecteur')
+        ok(pg.locator('.wb-menu .speed-pill').count() == 0 and pg.locator('.wb-menu [data-act="cinema"]').count() == 1 and pg.locator('.wb-menu .rp').count() == 1, 'menu « Plus » : mode cinéma et signaler (plus de vitesses en double)')
         pg.screenshot(path=str(OUT / 'menu-plus.png'))
         pg.keyboard.press('Escape'); ok(until(lambda: pg.locator('.wb-menu').count() == 0, 3), 'Échap referme le menu')
         # carte Apprendre
         steps = pg.locator('.wb-learn .wb-step').evaluate_all('els => els.map(e => e.dataset.step)')
         ok(steps == ['quiz', 'revision', 'practice'], f'carte « Apprendre » : comprendre, retenir, agir ({steps})')
         tabs = pg.locator('.tablist [role=tab]').all_inner_texts()
-        ok(not any('Quiz' in x for x in tabs) and tabs[-1] == 'À propos', f'onglets sans « Quiz », « À propos » en dernier : {tabs}')
+        ok(not any('Quiz' in x for x in tabs) and tabs[0] == 'Résumé' and tabs[-1] == 'À propos', f'onglets : Résumé en premier, sans « Quiz », « À propos » en dernier : {tabs}')
         pg.locator('.wb-learn [data-act="quiz"]').click()
         ok(until(lambda: pg.locator('.wb-hero .quiz-overlay').count() == 1), 'Commencer : le quiz s\'ouvre sur la vidéo')
         pg.screenshot(path=str(OUT / 'quiz.png'))
@@ -88,7 +105,8 @@ try:
         for lang, w, hh in (('fr', 390, 900), ('ar', 390, 900), ('fr', 1024, 900), ('ar', 1440, 1000)):
             ctx, pg = page(w, hh, lang)
             pg.goto(WEB + f'/talks/{T}'); pg.wait_for_selector('.wb-bar', timeout=25000); pg.wait_for_timeout(1200)
-            ok(ov(pg) <= 1, f'[{lang} {w} px] sans débordement')
+            o = ov(pg)
+            ok(o <= 1, f'[{lang} {w} px] sans débordement (dépassement {o} px)')
             if lang == 'ar': ok(pg.evaluate("document.documentElement.dir") == 'rtl', f'[{lang} {w} px] RTL')
             if w == 390:
                 tops = pg.evaluate("[...document.querySelectorAll('.wb-bar .wb-ico')].map(e => Math.round(e.getBoundingClientRect().top))")

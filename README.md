@@ -4699,3 +4699,10 @@ nginx -t && systemctl reload nginx
 - Partager à la minute en cours : **Partager** (lien copié avec le moment).
 
 Tests : `web/tests/fiche_b.py` (barre d'actions, menu Plus, vitesse appliquée, favori enregistré, listes, carte Apprendre, quiz et mise en pratique ouverts sur la vidéo, notes, onglets, téléphone, arabe, 390 / 1024 / 1440 px) ; `retours_16oct.py` adapté ; `d2_player.py`, `s1_dubbing.py`, `s3_studio.py`, `kids_actions.py` relancés : bons.
+
+### Ajustements de la fiche vidéo B (20/10)
+- **Réglages de lecture sur le lecteur** : bouton engrenage (affiche la vitesse, ex. « 1,5× ») en haut du lecteur → 6 vitesses et « écouter sans l'image ». Le menu « Plus » garde mode cinéma, épisode précédent/suivant, signaler.
+- **Résumé** est l'onglet ouvert par défaut (puis Chapitres, Transcription, Mes notes, À propos).
+- Le bloc « Chapitres et extrait » est placé **au-dessus** de « À suivre ».
+- Correction mobile : plus de débordement horizontal à 390 px (onglets défilables).
+- Déploiement : Redeploy de **majlistv-web** uniquement. Test : `python3 web/tests/fiche_b.py`.

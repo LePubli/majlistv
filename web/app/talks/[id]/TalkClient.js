@@ -19,7 +19,7 @@ import ReportButton from '../../../components/ReportButton';
 import ListButton from '../../../components/ListButton';
 import Crumbs from '../../../components/Crumbs';
 import FollowButton from '../../../components/FollowButton';
-import { ActionTile, MoreMenu, ICONS } from '../../../components/WatchBar';
+import { ActionTile, MoreMenu, PlayerSettings, ICONS } from '../../../components/WatchBar';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -27,7 +27,8 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
 // `initial` : titre, intervenant et description lus côté serveur. Ils sont dans le HTML dès le premier octet (moteurs de recherche,
 // partage de lien) et affichés pendant le chargement de la page complète, sans jamais montrer l'invitation « premium » par erreur.
-export default function TalkPage({ initial = null, talkId = null }) {
+// `extra` : bloc « Chapitres et extrait » préparé côté serveur (moteurs de recherche), placé au-dessus de « À suivre ».
+export default function TalkPage({ initial = null, talkId = null, extra = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
   const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName } = useApp();
@@ -54,7 +55,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
   const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette conférence
   const [bmFlash, setBmFlash] = useState(false);
-  const [tab, setTab] = useState('about');          // onglet affiché sous le lecteur
+  const [tab, setTab] = useState('summary');        // onglet affiché sous le lecteur : le Résumé d'abord (demande d'Epok du 20/10), sinon le premier disponible
   const [cinema, setCinema] = useState(false); // mode cinéma : lecteur pleine largeur, menus masqués (Échap pour sortir)
   const [ins, setIns] = useState({ summary: false, chapters: false, list: [] }); // ce que contient l'analyse (résumé, chapitres)
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
@@ -105,7 +106,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
 
   // Arrivée avec ?t= (clic sur un résultat de recherche) : on ouvre la transcription, là où se trouve le passage.
   const hasTracks = Boolean(talk && talk.tracks && talk.tracks.length);
-  useEffect(() => { setTab('about'); }, [id]);
+  useEffect(() => { setTab('summary'); }, [id]);
   useEffect(() => {
     setNotes([]);
     if (user) call(`/talks/${id}/notes`).then((r) => r.ok && setNotes(r.data));
@@ -278,6 +279,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
             {initial.description && <p className="about-text">{initial.description}</p>}
           </div>
         </div>
+        {extra}
       </main>
     );
   }
@@ -406,6 +408,18 @@ export default function TalkPage({ initial = null, talkId = null }) {
         <div className="player-wrap" ref={stageRef}>
           <div className={quizOpen || practiceOpen ? 'player-stage quiz-on' : 'player-stage'}>
             {player}
+            {(talk.hlsPath || talk.fileUrl || embed) && !quizOpen && !practiceOpen && (
+              <PlayerSettings label={t('wbPlayerSettings')} rateLabel={`${String(rate).replace('.', locale === 'fr' ? ',' : '.')}×`}>
+                <div className="wb-speeds" role="group" aria-label={t('spdLabel')}>
+                  <span className="meta small">{t('spdLabel')}</span>
+                  <div>{SPEEDS.map((r) => <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>)}</div>
+                </div>
+                {(talk.audioPath || dubAudio) && (
+                  <button type="button" className={`wb-item${audioMode ? ' on' : ''}`} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')} data-act="audio">{ICONS.headphones}<span>{audioMode ? t('audBackVideo') : t('audMode')}</span></button>
+                )}
+                <p className="meta small wb-pset-note">{t('wbSubsHint')}</p>
+              </PlayerSettings>
+            )}
             {practiceOpen && practiceOn && (
               <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('pzTitle')}>
                 <div>
@@ -485,15 +499,6 @@ export default function TalkPage({ initial = null, talkId = null }) {
             <ActionTile icon={ICONS.share} label={t('wbShare')} onClick={share} act="share" />
             {user && hasPlayer && !talk.locked && <ActionTile icon={ICONS.bookmark} label={bmFlash ? t('ntBookmarked') : t('wbBookmark')} onClick={() => addNote('')} title={t('ntBookmarkHelp')} act="bookmark" />}
             <MoreMenu label={t('wbMore')}>
-              {(talk.hlsPath || talk.fileUrl || embed) && (
-                <div className="wb-speeds" role="group" aria-label={t('spdLabel')}>
-                  <span className="meta small">{t('spdLabel')}</span>
-                  <div>{SPEEDS.map((r) => <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>)}</div>
-                </div>
-              )}
-              {(talk.audioPath || dubAudio) && (
-                <button type="button" className={`wb-item${audioMode ? ' on' : ''}`} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')} data-act="audio">{ICONS.headphones}<span>{audioMode ? t('audBackVideo') : t('audMode')}</span></button>
-              )}
               {hasPlayer && <button type="button" className={`wb-item${cinema ? ' on' : ''}`} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')} data-act="cinema">{ICONS.cinema}<span>{cinema ? t('cnOff') : t('cnOn')}</span></button>}
               {ctx && ctx.prev && <Link className="wb-item" href={`/talks/${ctx.prev.id}`}>{locale === 'ar' ? ICONS.next : ICONS.prev}<span>{t('prevEp')}</span></Link>}
               {ctx && ctx.next && <Link className="wb-item" href={`/talks/${ctx.next.id}`}>{locale === 'ar' ? ICONS.prev : ICONS.next}<span>{t('nextEp')}</span></Link>}
@@ -620,6 +625,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
         )}
       </div>
 
+      {extra}
       {similar.length > 0 && (
         <section className="wb-next" aria-labelledby="wb-next-title">
           <h2 id="wb-next-title">{ctx ? t('sameVein') : t('nextTitle')}</h2>

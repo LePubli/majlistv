@@ -53,8 +53,8 @@ with sync_playwright() as p:
             # Fiche vidéo proposition B (20/10) : barre d'icônes de même taille, vitesses dans le menu « Plus »
             hs = pg.evaluate("[...document.querySelectorAll('.wb-bar .wb-ico')].map(e => Math.round(e.getBoundingClientRect().height))")
             ok(len(hs) >= 3 and len(set(hs)) == 1, f'{tag} fiche : icônes d\'action de même taille {set(hs)}')
-            pg.locator('[data-act="more"]').click(); pg.wait_for_selector('.wb-menu', timeout=5000)
-            ok(pg.locator('.wb-menu .speed-pill').count() == 6, f'{tag} fiche : vitesses dans le menu « Plus »')
+            pg.locator('[data-act="player-settings"]').click(); pg.wait_for_selector('.wb-pset-menu', timeout=5000)
+            ok(pg.locator('.wb-pset-menu .speed-pill').count() == 6, f'{tag} fiche : vitesses dans les réglages posés sur le lecteur')
             pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
             ok(pg.locator('.crumbs').count() == 1, f'{tag} fiche : fil d\'Ariane')
             ok(ov(pg) <= 1, f'{tag} fiche sans débordement')

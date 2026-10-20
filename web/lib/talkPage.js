@@ -56,20 +56,21 @@ export function TalkView({ t, routeId }) {
   return (
     <>
       {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
-      <TalkClient talkId={t?.id || routeId} initial={t ? { title: t.title, speaker: t.speaker, category: t.category, description: t.description } : null} />
-      {more && (
-        <details className="seo-extra">
-          <summary>{t.chapters?.length ? 'Chapitres et extrait' : 'Résumé et extrait'}</summary>
-          {t.summary && <p>{t.summary}</p>}
-          {t.chapters?.length > 0 && (
-            <>
-              <h2>Chapitres</h2>
-              <ol>{t.chapters.map((c) => <li key={c.ms}><a href={`/conferences/${t.slug}?t=${Math.floor(c.ms / 1000)}`}>{stamp(c.ms)}</a> {c.title}</li>)}</ol>
-            </>
-          )}
-          {t.excerpt && <><h2>Extrait de la transcription</h2><p lang={t.language || undefined}>{t.excerpt}</p></>}
-        </details>
-      )}
+      {/* Chapitres et extrait (HTML lisible par les moteurs de recherche) : affichés par TalkClient AU-DESSUS de « À suivre » (demande d'Epok du 20/10). */}
+      <TalkClient talkId={t?.id || routeId} initial={t ? { title: t.title, speaker: t.speaker, category: t.category, description: t.description } : null}
+        extra={more ? (
+          <details className="seo-extra">
+            <summary>{t.chapters?.length ? 'Chapitres et extrait' : 'Résumé et extrait'}</summary>
+            {t.summary && <p>{t.summary}</p>}
+            {t.chapters?.length > 0 && (
+              <>
+                <h2>Chapitres</h2>
+                <ol>{t.chapters.map((c) => <li key={c.ms}><a href={`/conferences/${t.slug}?t=${Math.floor(c.ms / 1000)}`}>{stamp(c.ms)}</a> {c.title}</li>)}</ol>
+              </>
+            )}
+            {t.excerpt && <><h2>Extrait de la transcription</h2><p lang={t.language || undefined}>{t.excerpt}</p></>}
+          </details>
+        ) : null} />
     </>
   );
 }

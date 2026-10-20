@@ -16,6 +16,7 @@ export const ICONS = {
   speed: <svg {...S}><path d="M12 13l4-4M4.5 18a9 9 0 1 1 15 0" /></svg>,
   prev: <svg {...S}><path d="M15 6l-6 6 6 6" /></svg>,
   next: <svg {...S}><path d="M9 6l6 6-6 6" /></svg>,
+  gear: <svg {...S}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>,
 };
 
 // Une action : rond avec l'icône, nom dessous (≥ 44 px de cible).
@@ -43,6 +44,28 @@ export function MoreMenu({ label, children }) {
     <div className="wb-more" ref={box}>
       <ActionTile icon={ICONS.more} label={label} expanded={open} onClick={() => setOpen((v) => !v)} act="more" />
       {open && <div className="wb-menu" role="dialog" aria-label={label}>{children}</div>}
+    </div>
+  );
+}
+
+// Réglages de lecture posés SUR le lecteur (coin haut, côté fin de ligne), comme sur la maquette B : vitesse, écoute sans l'image.
+// Les contrôles du lecteur (lecture, son, plein écran, sous-titres) restent ceux du navigateur.
+export function PlayerSettings({ label, rateLabel, children }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const off = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  return (
+    <div className={`wb-pset${open ? ' open' : ''}`} ref={box}>
+      <button type="button" className="wb-pset-btn" aria-expanded={open} aria-label={`${label} : ${rateLabel}`} onClick={() => setOpen((v) => !v)} data-act="player-settings">
+        {ICONS.gear}<span>{rateLabel}</span>
+      </button>
+      {open && <div className="wb-pset-menu" role="dialog" aria-label={label}>{children}</div>}
     </div>
   );
 }
