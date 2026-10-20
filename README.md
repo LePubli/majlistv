@@ -4658,3 +4658,44 @@ docker logs --tail 50 dockpanel-git-majlistv-worker 2>&1 | tail -5
 - Une version carrée légère : **1:1** → **Recadrer au centre** → **720p**.
 
 Tests : `api/tests/test_format_e6c.mjs` (tailles, plafond à la source, plan, rendu réel par le moteur du worker : 720 × 1280 sans bande noire, titre à 20,0 % de la hauteur, 360 × 360, 1280 × 720), `api/tests/test_editor_e6c.py` (API : valeurs refusées, qualité de la source, avertissement, plan enregistré), `web/tests/e6c_render.py` (panneau, qualités grisées, demande envoyée, liste, arabe) ; relancés : tests de rendu E4a, extraits E5b/E5d, placement E6b.
+
+
+## Fiche vidéo — proposition B (20/10)
+
+### Description
+Retour d'Epok : la fiche vidéo avait trop de boutons (6 vitesses, marque-page, cinéma, favoris, partager, liste, signaler, grande carte de version française). Deux maquettes ont été proposées (artifact « Mejliss TV – Fiche vidéo (2 propositions) ») ; **Epok a choisi la B**. La page devient :
+- **un bandeau sombre** avec le lecteur, le titre, le niveau, la langue, la durée, la reprise (« Reprise à 26:04 · Depuis le début »), la chaîne et **Suivre** ;
+- **5 actions en icônes avec leur nom** : **Favori**, **Ma liste**, **Partager**, **Marque-page**, **Plus**. Le menu **Plus** contient la **vitesse**, **Écouter sans l'image**, le **mode cinéma**, les **épisodes précédent / suivant** (séries) et **Signaler** ;
+- une carte **« Apprendre avec cette conférence »** : **Comprendre** (quiz, score), **Retenir** (révision), **Agir** (mise en pratique, ouverte sur la vidéo) et le lien **Mes notes** ;
+- des **onglets réduits** : Résumé · Chapitres · Transcription · Mes notes · À propos ;
+- **« À suivre »** en rangée de vignettes en bas de page (défilement horizontal sur téléphone) ; la liste des épisodes d'une série reste à droite ;
+- la demande de **version française** devient une ligne discrète.
+Sur téléphone, la carte « Apprendre » passe avant les onglets et les 5 actions tiennent sur une ligne. Arabe : tout s'inverse (RTL).
+
+Fichiers : `web/app/talks/[id]/TalkClient.js`, nouveau `web/components/WatchBar.js`, `web/components/ListButton.js` (bouton en icône), `web/app/globals.css`, `web/lib/i18n.js` (clés `wb*`). Ni API ni base de données.
+
+### Prérequis
+- Rien de nouveau.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est poussé), ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy de `majlistv-web`** uniquement.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Ouvrir une conférence avec **Ctrl + Maj + R**.
+
+### Debug
+- La carte « Apprendre » n'apparaît pas : la conférence n'a ni quiz validé ni action de mise en pratique validée (Studio), et le membre n'est pas connecté (notes).
+- « Ma liste » ou « Marque-page » absents : réservés aux membres connectés ; Favori / Ma liste dépendent aussi des fonctions activées (Admin → Fonctions).
+- Ancien affichage : cache du navigateur (Ctrl + Maj + R).
+
+### Exemples d'utilisation
+- Changer la vitesse : **Plus** → 1,5×.
+- Passer le quiz : carte **Apprendre** → **Commencer** (le quiz s'ouvre sur la vidéo).
+- Partager à la minute en cours : **Partager** (lien copié avec le moment).
+
+Tests : `web/tests/fiche_b.py` (barre d'actions, menu Plus, vitesse appliquée, favori enregistré, listes, carte Apprendre, quiz et mise en pratique ouverts sur la vidéo, notes, onglets, téléphone, arabe, 390 / 1024 / 1440 px) ; `retours_16oct.py` adapté ; `d2_player.py`, `s1_dubbing.py`, `s3_studio.py`, `kids_actions.py` relancés : bons.

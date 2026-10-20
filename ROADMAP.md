@@ -329,3 +329,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Étape E6c (20/10) — format et qualité du rendu
 - 16:9 / 9:16 / 1:1 (fond flouté ou recadrage), qualité 360 / 720 / 1080 plafonnée à la source. E6 terminée. Suite proposée : fiche vidéo allégée (2 maquettes), chaînes riches + multi-chaînes, Kids catalogue, Shorts publics, Créateur, D3c (+ hauteur de voix), F.
+
+
+## Fiche vidéo B (20/10)
+- Proposition B choisie et codée (bandeau, 5 actions, menu Plus, carte Apprendre, À suivre en vignettes). Suite : chaînes riches + multi-chaînes, Kids catalogue, Shorts publics, Créateur, D3c, F.

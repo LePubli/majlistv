@@ -49,21 +49,23 @@ with sync_playwright() as p:
             if w == 1440 and lang == 'fr':
                 pg.locator('.vt-kidsban').scroll_into_view_if_needed(); pg.wait_for_timeout(800); pg.screenshot(path=str(OUT / 'visiteur-kids.png'))
             ctx.close()
-            ctx, pg = page(adm, w, h, lang); pg.goto(WEB + f'/talks/{talk}'); pg.wait_for_selector('.player-tools', timeout=20000); pg.wait_for_timeout(1500)
-            hs = pg.evaluate("[...document.querySelectorAll('.player-tools .speed-pill')].map(e => Math.round(e.getBoundingClientRect().height))")
-            ok(len(set(hs)) == 1, f'{tag} fiche : boutons du lecteur de même hauteur {set(hs)}')
-            tops = pg.evaluate("(() => { const r=[...document.querySelectorAll('.pt-speeds .speed-pill')].map(e=>Math.round(e.getBoundingClientRect().top)); return [...new Set(r)]; })()")
-            if w >= 700: ok(len(tops) == 1, f'{tag} fiche : vitesses sur une seule ligne {tops}')
+            ctx, pg = page(adm, w, h, lang); pg.goto(WEB + f'/talks/{talk}'); pg.wait_for_selector('.wb-bar', timeout=20000); pg.wait_for_timeout(1500)
+            # Fiche vidéo proposition B (20/10) : barre d'icônes de même taille, vitesses dans le menu « Plus »
+            hs = pg.evaluate("[...document.querySelectorAll('.wb-bar .wb-ico')].map(e => Math.round(e.getBoundingClientRect().height))")
+            ok(len(hs) >= 3 and len(set(hs)) == 1, f'{tag} fiche : icônes d\'action de même taille {set(hs)}')
+            pg.locator('[data-act="more"]').click(); pg.wait_for_selector('.wb-menu', timeout=5000)
+            ok(pg.locator('.wb-menu .speed-pill').count() == 6, f'{tag} fiche : vitesses dans le menu « Plus »')
+            pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
             ok(pg.locator('.crumbs').count() == 1, f'{tag} fiche : fil d\'Ariane')
             ok(ov(pg) <= 1, f'{tag} fiche sans débordement')
             if w >= 1000:
                 pw = pg.locator('.player-wrap').bounding_box()['width']
                 pg.screenshot(path=str(OUT / f'fiche-{w}-{lang}.png'))
-                pg.locator('.cinema-toggle').click(); pg.wait_for_timeout(500)
+                pg.locator('[data-act="more"]').click(); pg.locator('[data-act="cinema"]').click(); pg.wait_for_timeout(500)
                 ok(pg.evaluate("document.body.classList.contains('cinema-on')"), f'{tag} mode cinéma activé')
                 pw2 = pg.locator('.player-wrap').bounding_box()['width']
                 ok(pw2 > pw, f'{tag} cinéma : lecteur plus large ({pw:.0f} → {pw2:.0f})')
-                ok(not pg.locator('.ms-side').is_visible() and not pg.locator('.watch-side').is_visible(), f'{tag} cinéma : menus et colonne masqués')
+                ok(not pg.locator('.ms-side').is_visible() and not pg.locator('.wb-grid').is_visible(), f'{tag} cinéma : menus et colonne masqués')
                 ok(ov(pg) <= 1, f'{tag} cinéma sans débordement')
                 pg.screenshot(path=str(OUT / f'cinema-{w}-{lang}.png'))
                 pg.keyboard.press('Escape'); pg.wait_for_timeout(300)

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
-export default function ListButton({ talkId, t, call, user }) {
+export default function ListButton({ talkId, t, call, user, tile = null }) {
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState(null);
   const [inIds, setInIds] = useState([]);
@@ -38,7 +38,8 @@ export default function ListButton({ talkId, t, call, user }) {
   };
   return (
     <div className="ls-pop" ref={box}>
-      <button type="button" className="fav" aria-expanded={open} onClick={() => setOpen(!open)}><span aria-hidden="true">＋</span> {t('lsAddBtn')}</button>
+      {tile ? tile({ open, toggle: () => setOpen(!open) }) /* fiche vidéo : bouton en icône (WatchBar) */
+        : <button type="button" className="fav" aria-expanded={open} onClick={() => setOpen(!open)}><span aria-hidden="true">＋</span> {t('lsAddBtn')}</button>}
       {open && (
         <div className="ls-menu" role="dialog" aria-label={t('lsAddBtn')}>
           {lists === null && <p className="meta small">…</p>}

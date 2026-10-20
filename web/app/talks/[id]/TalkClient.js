@@ -18,6 +18,8 @@ import PracticeBlock from '../../../components/PracticeBlock';
 import ReportButton from '../../../components/ReportButton';
 import ListButton from '../../../components/ListButton';
 import Crumbs from '../../../components/Crumbs';
+import FollowButton from '../../../components/FollowButton';
+import { ActionTile, MoreMenu, ICONS } from '../../../components/WatchBar';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 
@@ -362,12 +364,12 @@ export default function TalkPage({ initial = null, talkId = null }) {
   const clockS = (sec) => clock(sec * 1000);
 
   // Onglets : seuls ceux qui ont du contenu apparaissent (À propos est toujours là).
-  // Ordre de la maquette : Résumé · Transcription · Mes notes, puis Chapitres et À propos. L'onglet d'arrivée est le premier disponible.
+  // Ordre de la proposition B : Résumé · Chapitres · Transcription · Mes notes · À propos. L'onglet d'arrivée est le premier disponible.
   const tabs = [
     ...(hasInsights && ins.summary ? [{ key: 'summary', label: t('summary') }] : []),
+    ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
     ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(feat('notes') && user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
-    ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
     { key: 'about', label: t('tabAbout') },
   ];
   const current = tabs.some((x) => x.key === tab) ? tab : tabs[0].key;
@@ -389,14 +391,21 @@ export default function TalkPage({ initial = null, talkId = null }) {
     [t('dDuration'), minutes], [t('dAccess'), t(talk.access)], [t('dSubs'), (talk.tracks || []).map((l) => langName(l, locale)).join(' · ')],
   ].filter(([, v]) => v);
 
+  // Fiche vidéo, proposition B (validée par Epok le 20/10) : lecteur sur un bandeau sombre, barre d'actions en icônes,
+  // carte « Apprendre avec cette conférence » (comprendre, retenir, agir), onglets réduits, « À suivre » en rangée de vignettes.
+  const learnOn = quizOn || practiceOn;
+  const notesOn = feat('notes') && user && hasPlayer && !talk.locked;
+  const revisionOn = Boolean(user && feat('revision'));
+  const openNotes = () => { setTab('notes'); setTimeout(() => document.getElementById('tab-notes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 40); };
+
   return (
-    <main className="page watch">
+    <main className="page watch watch-b">
       <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
-      <div className="watch-grid">
-        <div className="watch-main">
-          <div className="player-wrap" ref={stageRef}>
-            <div className={quizOpen || practiceOpen ? 'player-stage quiz-on' : 'player-stage'}>
-              {player}
+
+      <section className="wb-hero" aria-label={t('wbStage')}>
+        <div className="player-wrap" ref={stageRef}>
+          <div className={quizOpen || practiceOpen ? 'player-stage quiz-on' : 'player-stage'}>
+            {player}
             {practiceOpen && practiceOn && (
               <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('pzTitle')}>
                 <div>
@@ -411,129 +420,113 @@ export default function TalkPage({ initial = null, talkId = null }) {
                   nextHref={canChain ? `/talks/${next.id}?autoplay=1` : null} onNext={(res) => { if (!res.passed) addPending({ id, title: talk.title }); }} />
               </div>
             )}
-            </div>
-            {(talk.hlsPath || talk.fileUrl || embed) && (
-              <div className="player-tools">
-                <div className="pt-speeds" role="group" aria-label={t('spdLabel')}>
-                  <span className="meta">{t('spdLabel')}</span>
-                  {SPEEDS.map((r) => (
-                    <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>
-                  ))}
-                </div>
-                <div className="pt-actions">
-                  {user && hasPlayer && !talk.locked && (
-                    <button type="button" className="speed-pill bm-btn" onClick={() => addNote('')} title={t('ntBookmarkHelp')}>🔖 {bmFlash ? t('ntBookmarked') : t('ntBookmark')}</button>
-                  )}
-                  {(talk.audioPath || dubAudio) && (
-                    <button type="button" className={'speed-pill audio-toggle' + (audioMode ? ' on' : '')} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')}>
-                      🎧 {audioMode ? t('audBackVideo') : t('audMode')}
-                    </button>
-                  )}
-                  <button type="button" className={'speed-pill cinema-toggle' + (cinema ? ' on' : '')} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')}>
-                    ▭ {cinema ? t('cnOff') : t('cnOn')}
-                  </button>
-                </div>
-              </div>
-            )}
-            {dubLang === 'fr' && <span className="dub-badge">{t('dbBadge')}</span>}
-            {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
-            {upNext !== null && next && (
-              <div className="upnext" role="status" aria-live="polite">
-                <p className="meta">{t('upNextIn').replace('{n}', Math.max(0, upNext))}</p>
-                <strong>{next.seasonNumber ? `${t('seasonN').replace('{n}', next.seasonNumber)} · ` : ''}{t('epN').replace('{n}', next.number)} — {next.title}</strong>
-                <div className="upnext-btns">
-                  <button type="button" className="btn" onClick={() => setUpNext(0)}>{t('playNow')}</button>
-                  <button type="button" className="btn ghost" onClick={() => setUpNext(null)}>{t('cancelBtn')}</button>
-                </div>
-              </div>
-            )}
-            {quizOffer && (
-              <div className="upnext quiz-offer" role="status" aria-live="polite">
-                <strong>{t('qpOfferTitle')}</strong>
-                <p className="meta">{t('qpOfferText').replace('{n}', talk.quiz.count).replace('{m}', Math.max(1, Math.round(talk.quiz.count / 2)))}</p>
-                <div className="upnext-btns">
-                  <button type="button" className="btn" onClick={openQuiz}>{t('qpStart')}</button>
-                  <button type="button" className="btn ghost" onClick={laterQuiz}>{t('qpLater')}</button>
-                </div>
-              </div>
-            )}
-            {practiceOffer && (
-              <div className="upnext quiz-offer" role="status" aria-live="polite">
-                <strong>{t('pzTitle')}</strong>
-                <p className="meta">{t('pzOfferText')}</p>
-                <div className="upnext-btns">
-                  <button type="button" className="btn" onClick={goPractice}>{t('pzOfferBtn')}</button>
-                  <button type="button" className="btn ghost" onClick={() => setPracticeOffer(false)}>{t('qpLater')}</button>
-                </div>
-              </div>
-            )}
-            {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
           </div>
-          {!previewEnded && lock}
-          {talk.visible === false && (
-            <p className="notice" role="status">
-              {talk.publication === 'scheduled' && talk.publishAt
-                ? t('schedBanner').replace('{d}', new Date(talk.publishAt).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' }))
-                : t('draftBanner')}
-            </p>
+          {dubLang === 'fr' && <span className="dub-badge">{t('dbBadge')}</span>}
+          {talk.locked && talk.preview && !previewEnded && <span className="preview-tag">{t('pvTag').replace('{n}', Math.max(1, Math.round((talk.previewSeconds || 120) / 60)))}</span>}
+          {upNext !== null && next && (
+            <div className="upnext" role="status" aria-live="polite">
+              <p className="meta">{t('upNextIn').replace('{n}', Math.max(0, upNext))}</p>
+              <strong>{next.seasonNumber ? `${t('seasonN').replace('{n}', next.seasonNumber)} · ` : ''}{t('epN').replace('{n}', next.number)} — {next.title}</strong>
+              <div className="upnext-btns">
+                <button type="button" className="btn" onClick={() => setUpNext(0)}>{t('playNow')}</button>
+                <button type="button" className="btn ghost" onClick={() => setUpNext(null)}>{t('cancelBtn')}</button>
+              </div>
+            </div>
           )}
+          {quizOffer && (
+            <div className="upnext quiz-offer" role="status" aria-live="polite">
+              <strong>{t('qpOfferTitle')}</strong>
+              <p className="meta">{t('qpOfferText').replace('{n}', talk.quiz.count).replace('{m}', Math.max(1, Math.round(talk.quiz.count / 2)))}</p>
+              <div className="upnext-btns">
+                <button type="button" className="btn" onClick={openQuiz}>{t('qpStart')}</button>
+                <button type="button" className="btn ghost" onClick={laterQuiz}>{t('qpLater')}</button>
+              </div>
+            </div>
+          )}
+          {practiceOffer && (
+            <div className="upnext quiz-offer" role="status" aria-live="polite">
+              <strong>{t('pzTitle')}</strong>
+              <p className="meta">{t('pzOfferText')}</p>
+              <div className="upnext-btns">
+                <button type="button" className="btn" onClick={goPractice}>{t('pzOfferBtn')}</button>
+                <button type="button" className="btn ghost" onClick={() => setPracticeOffer(false)}>{t('qpLater')}</button>
+              </div>
+            </div>
+          )}
+          {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
+        </div>
 
-          {pending.length > 0 && !pendingHidden && (
-            <p className="quiz-banner" role="status">
-              <span>{t('qpBanner').replace('{title}', pending[0].title)}</span>
-              <Link className="link u" href={`/talks/${pending[0].id}?quiz=1`}>{t('qpBannerGo')}</Link>
-              <button type="button" className="link" onClick={() => setPendingHidden(true)} aria-label={t('qpClose')}>✕</button>
-            </p>
-          )}
-          {quizOn && (
-            <div className="quiz-slot" ref={quizRef}>
-              {!quizOpen && (
-                <div className="quiz-card">
-                  <div>
-                    <strong>{t('qpTitle')}</strong>
-                    <p className="meta small">{t('qpIntro').replace('{n}', talk.quiz.count)}{qres ? ` · ${qres.passed ? t('qpPassedChip') : t('qpToRevise')} ${qres.percent} %` : ''}</p>
-                  </div>
-                  <button type="button" className={qres && qres.passed ? 'btn ghost' : 'btn'} onClick={openQuiz}>{qres ? t('qpRetry') : t('qpStart')}</button>
+        <div className="wb-info">
+          <header className="talk-head">
+            {(talk.format || ctx || talk.category) && (
+              <p className="eyebrow">
+                {talk.format && <span className="fmt-chip">{formatName(talk.format)}</span>}
+                {ctx ? (
+                  <>
+                    <Link href={`/series/${ctx.id}`}>{ctx.title}</Link>
+                    {ctx.season ? ` · ${t('seasonN').replace('{n}', ctx.season.number)}` : ''}{ctx.number ? ` · ${t('epN').replace('{n}', ctx.number)}` : ''}
+                  </>
+                ) : talk.category}
+              </p>
+            )}
+            <h1>{talk.title}</h1>
+            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{[audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}{trackable && resumeMs > 0 && !jumpMs && <> · {t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></>}</p>
+            {talk.speaker && (
+              <div className="wb-channel">
+                {talk.speakerSlug ? <Link href={`/chaines/${talk.speakerSlug}`} className="wb-chan-name">{talk.speaker}</Link> : <span className="wb-chan-name">{talk.speaker}</span>}
+                {talk.speakerSlug && <FollowButton slug={talk.speakerSlug} t={t} call={call} user={user} />}
+              </div>
+            )}
+          </header>
+
+          <div className="wb-bar" role="toolbar" aria-label={t('wbActions')}>
+            {feat('favorites') && <ActionTile icon={fav ? ICONS.heartOn : ICONS.heart} label={t('wbFav')} pressed={fav} onClick={toggleFav} title={fav ? t('removeFav') : t('addFav')} act="fav" />}
+            {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.plus} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
+            <ActionTile icon={ICONS.share} label={t('wbShare')} onClick={share} act="share" />
+            {user && hasPlayer && !talk.locked && <ActionTile icon={ICONS.bookmark} label={bmFlash ? t('ntBookmarked') : t('wbBookmark')} onClick={() => addNote('')} title={t('ntBookmarkHelp')} act="bookmark" />}
+            <MoreMenu label={t('wbMore')}>
+              {(talk.hlsPath || talk.fileUrl || embed) && (
+                <div className="wb-speeds" role="group" aria-label={t('spdLabel')}>
+                  <span className="meta small">{t('spdLabel')}</span>
+                  <div>{SPEEDS.map((r) => <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>)}</div>
                 </div>
               )}
-            </div>
-          )}
-
-          <div className="talk-head-row">
-          <header className="talk-head">
-            <p className="eyebrow">
-              {talk.format && <span className="fmt-chip">{formatName(talk.format)}</span>}
-              {ctx ? (
-                <>
-                  <Link href={`/series/${ctx.id}`}>{ctx.title}</Link>
-                  {ctx.season ? ` · ${t('seasonN').replace('{n}', ctx.season.number)}` : ''}{ctx.number ? ` · ${t('epN').replace('{n}', ctx.number)}` : ''}
-                </>
-              ) : talk.category}
-            </p>
-            <h1>{talk.title}</h1>
-            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{talk.speaker && talk.speakerSlug && <><Link href={`/chaines/${talk.speakerSlug}`} className="link u">{talk.speaker}</Link>{' · '}</>}{[talk.speakerSlug ? '' : talk.speaker, audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</p>
-            {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
-            <div className="talk-actions">
-              {feat('favorites') && <button type="button" className={`fav${fav ? ' on' : ''}`} onClick={toggleFav} aria-pressed={fav} title={fav ? t('removeFav') : t('addFav')}>
-                <span aria-hidden="true">{fav ? '♥' : '♡'}</span> {fav ? t('inFavorites') : t('addFav')}
-              </button>}
-              {ctx && ctx.prev && <Link className="fav" href={`/talks/${ctx.prev.id}`}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {t('prevEp')}</Link>}
-              {ctx && ctx.next && <Link className="fav next" href={`/talks/${ctx.next.id}`}>{t('nextEp')} <span aria-hidden="true">{locale === 'ar' ? '←' : '→'}</span></Link>}
-              <button type="button" className="fav" onClick={share}><span aria-hidden="true">↗</span> {t('shareBtn')}</button>
-              {feat('lists') && <ListButton talkId={id} t={t} call={call} user={user} />}
+              {(talk.audioPath || dubAudio) && (
+                <button type="button" className={`wb-item${audioMode ? ' on' : ''}`} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')} data-act="audio">{ICONS.headphones}<span>{audioMode ? t('audBackVideo') : t('audMode')}</span></button>
+              )}
+              {hasPlayer && <button type="button" className={`wb-item${cinema ? ' on' : ''}`} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')} data-act="cinema">{ICONS.cinema}<span>{cinema ? t('cnOff') : t('cnOn')}</span></button>}
+              {ctx && ctx.prev && <Link className="wb-item" href={`/talks/${ctx.prev.id}`}>{locale === 'ar' ? ICONS.next : ICONS.prev}<span>{t('prevEp')}</span></Link>}
+              {ctx && ctx.next && <Link className="wb-item" href={`/talks/${ctx.next.id}`}>{locale === 'ar' ? ICONS.prev : ICONS.next}<span>{t('nextEp')}</span></Link>}
               <ReportButton talkId={id} t={t} call={call} />
-              <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
-            </div>
-            {trackable && resumeMs > 0 && !jumpMs && (
-              <p className="meta resume">{t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></p>
-            )}
-            {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
-            {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
-          </header>
+            </MoreMenu>
+            <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
+          </div>
+        </div>
+      </section>
+
+      {!previewEnded && lock}
+      {talk.visible === false && (
+        <p className="notice" role="status">
+          {talk.publication === 'scheduled' && talk.publishAt
+            ? t('schedBanner').replace('{d}', new Date(talk.publishAt).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' }))
+            : t('draftBanner')}
+        </p>
+      )}
+      {pending.length > 0 && !pendingHidden && (
+        <p className="quiz-banner" role="status">
+          <span>{t('qpBanner').replace('{title}', pending[0].title)}</span>
+          <Link className="link u" href={`/talks/${pending[0].id}?quiz=1`}>{t('qpBannerGo')}</Link>
+          <button type="button" className="link" onClick={() => setPendingHidden(true)} aria-label={t('qpClose')}>✕</button>
+        </p>
+      )}
+      {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
+      {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
+
+      <div className="wb-grid">
+        <div className="wb-main">
           {/* Panneaux des modules (étape D2 : « Langue de l'audio » du module Doublage) */}
           {hasPlayer && !talk.locked && <ModulePanels talk={talk} talkId={id} videoRef={videoRef} audioMode={audioMode} setAudioMode={pickAudio} onAudioLang={setDubLang} setAudioOverride={setDubAudio} spokenLang={audioLang} />}
-          </div>
-
+          {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
           <div className="talk-tabs">
             <div className="tablist" role="tablist" aria-label={t('tabsLabel')} onKeyDown={onTabKey}>
               {tabs.map((x) => (
@@ -545,7 +538,7 @@ export default function TalkPage({ initial = null, talkId = null }) {
               {talk.description && <p className="about-text">{talk.description}</p>}
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
             </div>
-            {feat('notes') && user && hasPlayer && !talk.locked && (
+            {notesOn && (
               <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden={current !== 'notes'} className="tpanel">
                 <NotesPanel notes={notes} onAdd={addNote} onSave={saveNote} onDelete={dropNote} onSeek={seekTo} getPos={() => curSec() * 1000} t={t} />
               </div>
@@ -562,17 +555,37 @@ export default function TalkPage({ initial = null, talkId = null }) {
               </div>
             )}
           </div>
-          {practiceOn && !practiceOpen && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
+          {/* Sans lecteur (vidéo non disponible), la mise en pratique reste affichée sous les onglets ; avec lecteur, elle s'ouvre sur la vidéo. */}
+          {practiceOn && !practiceOpen && !hasPlayer && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
-        {(ctx || similar.length > 0 || ins.list?.length > 0) && (
-          <aside className="watch-side" aria-labelledby="side-title" ref={sideRef}>
-            {ins.list?.length > 0 && (
-              <section className="side-chapters" aria-label={t('chapters')}>
-                <h2>{t('chapters')}</h2>
-                <ol>
-                  {ins.list.map((c) => <li key={c.s}><button type="button" onClick={() => seekTo(Math.floor(c.s / 1000))}><span className="ts">{clock(c.s)}</span> {c.t}</button></li>)}
-                </ol>
+        {(learnOn || notesOn || ctx) && (
+          <aside className="wb-side" aria-label={t('wbSide')} ref={sideRef}>
+            {(learnOn || notesOn) && (
+              <section className="wb-learn" aria-labelledby="wb-learn-title" ref={quizRef}>
+                <h2 id="wb-learn-title">{t('wbLearn')}</h2>
+                {quizOn && (
+                  <div className="wb-step" data-step="quiz">
+                    <span className={`wb-num${quizPassed ? ' done' : ''}`} aria-hidden="true">{quizPassed ? '✓' : '1'}</span>
+                    <span className="wb-txt"><b>{t('wbStep1')}</b><span>{t('wbStep1Sub').replace('{n}', talk.quiz.count)}{qres ? ` · ${qres.percent} %` : ''}</span></span>
+                    <button type="button" className={quizPassed ? 'btn ghost sm' : 'btn sm'} onClick={openQuiz} data-act="quiz">{qres ? t('qpRetry') : t('wbStart')}</button>
+                  </div>
+                )}
+                {quizOn && revisionOn && (
+                  <div className="wb-step" data-step="revision">
+                    <span className="wb-num" aria-hidden="true">2</span>
+                    <span className="wb-txt"><b>{t('wbStep2')}</b><span>{t('wbStep2Sub')}</span></span>
+                    <Link className="btn ghost sm" href="/learning?tab=rev">{t('wbStep2Go')}</Link>
+                  </div>
+                )}
+                {practiceOn && (
+                  <div className="wb-step" data-step="practice">
+                    <span className="wb-num" aria-hidden="true">{quizOn ? (revisionOn ? '3' : '2') : '1'}</span>
+                    <span className="wb-txt"><b>{t('wbStep3')}</b><span>{t('wbStep3Sub')}</span></span>
+                    <button type="button" className="btn ghost sm" onClick={goPractice} data-act="practice">{t('wbStep3Go')}</button>
+                  </div>
+                )}
+                {notesOn && <button type="button" className="link wb-notes" onClick={openNotes} data-act="notes">{t('wbNotes').replace('{n}', notes.length)} →</button>}
               </section>
             )}
             {ctx && (
@@ -603,29 +616,31 @@ export default function TalkPage({ initial = null, talkId = null }) {
                 </ul>
               </section>
             )}
-            {similar.length > 0 && (
-              <section className="side-similar">
-                <h2 id={ctx ? undefined : 'side-title'}>{ctx ? t('sameVein') : t('nextTitle')}</h2>
-                <ul className="side-list">
-                  {similar.slice(0, ctx ? 4 : 8).map((x) => {
-                    const th = thumbOf(x);
-                    return (
-                      <li key={x.id}>
-                        <Link href={`/talks/${x.id}`} className="side-item">
-                          <span className="side-thumb" style={th ? { backgroundImage: `url(${th})` } : undefined}>
-                            {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
-                          </span>
-                          <span className="side-info"><strong>{x.title}</strong><span className="meta">{[x.speaker, t(x.access)].filter(Boolean).join(' · ')}</span></span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            )}
           </aside>
         )}
       </div>
+
+      {similar.length > 0 && (
+        <section className="wb-next" aria-labelledby="wb-next-title">
+          <h2 id="wb-next-title">{ctx ? t('sameVein') : t('nextTitle')}</h2>
+          <ul className="wb-row">
+            {similar.slice(0, 8).map((x) => {
+              const th = thumbOf(x);
+              return (
+                <li key={x.id}>
+                  <Link href={`/talks/${x.id}`} className="wb-card">
+                    <span className="wb-thumb" style={th ? { backgroundImage: `url(${th})` } : undefined}>
+                      {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
+                    </span>
+                    <strong>{x.title}</strong>
+                    <span className="meta small">{[x.speaker, t(x.access)].filter(Boolean).join(' · ')}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <BooksBlock kind="talks" id={id} />
     </main>
   );
