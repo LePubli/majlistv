@@ -61,7 +61,7 @@ try:
     ok(md["dress"]["vars"] == {"titre": f"E3 a {tag}", "intervenant": spk} and md["dress"]["channel"]["name"] and md["dress"]["channel"]["slug"], "ouverture : variables {titre} / {intervenant} et chaîne de la conférence")
     d0 = md["dress"]["defaults"]
     ok(d0["items"] == [] and d0["logo"]["on"] is False and d0["logo"]["pos"] == "tr" and d0["intro"]["len"] == 4 and d0["outro"]["len"] == 5
-       and d0["subs"] == {"burn": False, "scale": 100, "pos": "bottom", "box": True} and d0["transitions"] == {"all": None, "byClip": {}}, "habillage par défaut")
+       and d0["subs"] == {"burn": False, "scale": 100, "pos": "bottom", "box": True, "y": None} and d0["logo"]["x"] is None and d0["transitions"] == {"all": None, "byClip": {}}, "habillage par défaut")
     lock = rq("POST", f"/studio/editor/projects/{pid}/lock", headers=O, json={"session": S}).json(); rev = lock["rev"]
     def save(tl, r=None):
         nonlocal_rev = save.rev if r is None else r
@@ -250,7 +250,7 @@ try:
     r = rq("GET", f"/studio/editor/music/{l3['id']}", headers=A); ok(r.status_code == 404, "un logo n'est pas une musique")
     mv = rq("GET", "/studio/modules", headers=A) if False else None
     mod = [m for m in rq("GET", "/admin/modules", headers=A).json()["modules"] if m["id"] == "editor"][0]
-    ok(mod["version"] == "0.8.0" and "E3" in mod["description"] and len(mod["description"]) <= 600, f"module editor 0.8.0 ({mod['version']})")
+    ok(mod["version"] == "0.9.0" and "E3" in mod["description"] and len(mod["description"]) <= 600, f"module editor 0.9.0 ({mod['version']})")
 finally:
     for t in templates: cur.execute("delete from editor_templates where id = %s", (t,))
     cur.execute("delete from speakers where slug = %s", (f"cheikh-test-{tag}",))

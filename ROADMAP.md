@@ -321,3 +321,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Étape E6a (20/10) — timeline lisible et zoom
 - Bandeau `.banner` corrigé, pistes colorées, titres sur lignes séparées, logo sur sa ligne, zoom frise (boutons, Ctrl + molette, jusqu'à 5 s) et aperçu (150/200 %). Reste E6b (placer sur la vidéo), E6c (format et qualité), puis fiche vidéo, chaînes, Kids catalogue, Shorts, Créateur, D3c (+ hauteur de voix), F.
+
+
+## Étape E6b (20/10) — placer les éléments sur la vidéo
+- Titres, bandeaux, logo, sous-titres glissés à la souris (aimant, zone de sécurité, flèches, Ctrl+Z), positions en % de l'image respectées par le rendu et l'image finale. Module editor 0.9.0. Reste E6c (format et qualité du rendu).

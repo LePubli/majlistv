@@ -3444,3 +3444,19 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mt-pz .mt-preview { width: min(100% * var(--pz, 1), var(--pzb) * var(--pz, 1)); max-width: none; margin-inline: auto; }
 /* Le bandeau de nom de la timeline portait aussi la classe « .banner » du bandeau d'accueil (hauteur de 380 à 640 px) : il recouvrait les pistes voisines. */
 .mt-tclip.banner { min-height: 0; display: block; padding: 0; overflow: hidden; }
+
+/* Étape E6b : placer les éléments directement sur la vidéo */
+.mt-dress.editable .drag { pointer-events: auto; cursor: move; touch-action: none; user-select: none; outline: none; }
+.mt-dress.editable .drag:hover { outline: 1px dashed rgba(230, 167, 57, .75); outline-offset: 3px; }
+.mt-dress.editable .drag.sel, .mt-dress.editable .drag:focus-visible { outline: 2px dashed #E6A739; outline-offset: 3px; }
+.mt-dress .drag.moving { outline: 2px solid #E6A739; outline-offset: 3px; }
+.mt-dress-title.free { inset-inline: auto; width: max-content; max-width: 88%; }
+.mt-dress-banner.free { align-items: flex-start; }
+.mt-dress-subs.free:not(.box) { inset-inline: 10%; }
+.mt-dress-subs.box.free { left: 50%; }
+.mt-safe { position: absolute; inset: 5%; border: 1px dashed rgba(255, 255, 255, .35); border-radius: 4px; pointer-events: none; }
+.mt-guide { position: absolute; background: #E6A739; pointer-events: none; box-shadow: 0 0 4px rgba(0,0,0,.6); }
+.mt-guide.x { top: 0; bottom: 0; width: 1px; margin-left: -.5px; }
+.mt-guide.y { left: 0; right: 0; height: 1px; margin-top: -.5px; }
+.mt-free { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.mt-free p { margin: 0; }

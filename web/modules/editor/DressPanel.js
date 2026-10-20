@@ -6,7 +6,7 @@
 // Les réglages passent par setDress(nouvelHabillage, clé) ; une clé identique à moins de 1,5 s = un seul geste à annuler.
 import { useEffect, useState } from 'react';
 import { useApp } from '../../components/Providers';
-import { fmtTime, parseTime, patchItem, moveItem, trimItem, setTransition, layout, TRANSITION_TYPES, fillVars } from './ops';
+import { fmtTime, parseTime, patchItem, moveItem, trimItem, setTransition, layout, TRANSITION_TYPES, fillVars, isFree } from './ops';
 import { Slider, Check } from './AudioPanel';
 
 function TimeField({ id, label, value, onCommit, disabled, empty }) {
@@ -25,6 +25,17 @@ function TimeField({ id, label, value, onCommit, disabled, empty }) {
     </div>
   );
 }
+// Étape E6b : rappel « glisser sur la vidéo » et retour à la position prédéfinie.
+function FreePos({ free, disabled, onReset }) {
+  const { t } = useApp();
+  return (
+    <div className="mt-free" data-free={free ? '1' : '0'}>
+      <p className="meta small">{free ? t('mtpFree') : t('mtpHint')}</p>
+      {free && <button type="button" className="btn ghost sd-pill" disabled={disabled} onClick={onReset} data-act="preset">{t('mtpReset')}</button>}
+    </div>
+  );
+}
+
 function Seg({ value, options, onChange, disabled, label }) {
   return (
     <div className="mt-seg" role="group" aria-label={label}>
@@ -60,8 +71,9 @@ export default function DressPanel({ sel, setSel, dress, setDress, canEdit, clip
         <TimeField id="mtd-start" label={t('mtdStart')} value={it.start} disabled={dis} onCommit={(v) => setDress({ ...dress, items: moveItem(dress.items, it.id, Math.min(v, Math.max(0, totalS - 0.5))) })} />
         <TimeField id="mtd-end" label={t('mtdEnd')} value={it.start + it.len} disabled={dis} onCommit={(v) => setDress({ ...dress, items: trimItem(dress.items, it.id, 'out', Math.min(v, totalS)) })} />
         {it.kind === 'title'
-          ? <div className="mt-field"><label>{t('mtdPlace')}</label><Seg label={t('mtdPlace')} disabled={dis} value={it.pos} onChange={(v) => upd({ pos: v })} options={[['top', t('mtdTop')], ['center', t('mtdCenter')], ['bottom', t('mtdBottom')]]} /></div>
-          : <div className="mt-field"><label>{t('mtdSide')}</label><Seg label={t('mtdSide')} disabled={dis} value={it.side} onChange={(v) => upd({ side: v })} options={[['left', t('mtdLeft')], ['right', t('mtdRight')]]} /></div>}
+          ? <div className="mt-field"><label>{t('mtdPlace')}</label><Seg label={t('mtdPlace')} disabled={dis} value={isFree(it) ? '' : it.pos} onChange={(v) => upd({ pos: v, x: null, y: null })} options={[['top', t('mtdTop')], ['center', t('mtdCenter')], ['bottom', t('mtdBottom')]]} /></div>
+          : <div className="mt-field"><label>{t('mtdSide')}</label><Seg label={t('mtdSide')} disabled={dis} value={isFree(it) ? '' : it.side} onChange={(v) => upd({ side: v, x: null, y: null })} options={[['left', t('mtdLeft')], ['right', t('mtdRight')]]} /></div>}
+        <FreePos free={isFree(it)} disabled={dis} onReset={() => upd({ x: null, y: null })} />
         <Slider id="mtd-scale" label={t('mtdSize')} value={it.scale} min={50} max={200} step={5} shown={`${it.scale} %`} disabled={dis} onChange={(v) => upd({ scale: v }, 'scale')} />
         <div className="mt-actions">
           <button type="button" className="btn ghost sd-pill" onClick={() => setT(it.start)}>{t('mtGoStart')}</button>
@@ -91,7 +103,8 @@ export default function DressPanel({ sel, setSel, dress, setDress, canEdit, clip
           : <p className="meta small" dir="auto">{chosen ? chosen.title : lg.asset ? t('mtdLogoMissing') : t('mtdLogoNone')}{chosen?.w ? ` · ${chosen.w}×${chosen.h}` : ''}</p>}
         {lg.asset !== 'channel' && <button type="button" className="btn ghost sd-pill" disabled={dis} onClick={onPickLogo}>{t('mtdLogoChoose')}</button>}
         <div className="mt-field"><label>{t('mtdCorner')}</label>
-          <Seg label={t('mtdCorner')} disabled={dis} value={lg.pos} onChange={(v) => upd({ pos: v })} options={[['tl', '↖'], ['tr', '↗'], ['bl', '↙'], ['br', '↘']]} /></div>
+          <Seg label={t('mtdCorner')} disabled={dis} value={isFree(lg) ? '' : lg.pos} onChange={(v) => upd({ pos: v, x: null, y: null })} options={[['tl', '↖'], ['tr', '↗'], ['bl', '↙'], ['br', '↘']]} /></div>
+        <FreePos free={isFree(lg)} disabled={dis} onReset={() => upd({ x: null, y: null })} />
         <Slider id="mtd-logo-size" label={t('mtdLogoSize')} value={lg.size} min={4} max={40} step={1} shown={`${lg.size} %`} disabled={dis} onChange={(v) => upd({ size: v }, 'size')} />
         <Slider id="mtd-logo-op" label={t('mtdOpacity')} value={lg.opacity} min={10} max={100} step={5} shown={`${lg.opacity} %`} disabled={dis} onChange={(v) => upd({ opacity: v }, 'op')} />
         <TimeField id="mtd-logo-from" label={t('mtdFrom')} value={lg.from} disabled={dis} onCommit={(v) => upd({ from: Math.min(v, totalS), to: lg.to != null && lg.to <= v ? null : lg.to })} />
@@ -172,7 +185,8 @@ export default function DressPanel({ sel, setSel, dress, setDress, canEdit, clip
         <Check id="mtd-burn" label={t('mtdBurn')} checked={sb.burn} disabled={dis} onChange={(v) => upd({ burn: v })} />
         <p className="meta small">{sb.burn ? t('mtdBurnOn') : t('mtSubsBurn')}</p>
         {sb.burn && <>
-          <div className="mt-field"><label>{t('mtdPlace')}</label><Seg label={t('mtdPlace')} disabled={dis} value={sb.pos} onChange={(v) => upd({ pos: v })} options={[['top', t('mtdTop')], ['bottom', t('mtdBottom')]]} /></div>
+          <div className="mt-field"><label>{t('mtdPlace')}</label><Seg label={t('mtdPlace')} disabled={dis} value={sb.y != null ? '' : sb.pos} onChange={(v) => upd({ pos: v, y: null })} options={[['top', t('mtdTop')], ['bottom', t('mtdBottom')]]} /></div>
+          <FreePos free={sb.y != null} disabled={dis} onReset={() => upd({ y: null })} />
           <Slider id="mtd-subs-size" label={t('mtdSize')} value={sb.scale} min={50} max={200} step={5} shown={`${sb.scale} %`} disabled={dis} onChange={(v) => upd({ scale: v }, 'size')} />
           <Check id="mtd-subs-box" label={t('mtdBox')} checked={sb.box} disabled={dis} onChange={(v) => upd({ box: v })} />
           <div className="mt-actions"><button type="button" className="btn ghost sd-pill" onClick={() => onFrame(Math.max(0, Math.min(T, totalS)))} data-act="frame">{t('mtdFrame')}</button></div>

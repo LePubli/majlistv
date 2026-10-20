@@ -15,7 +15,9 @@
 //     transitions: { all: { type, len } | null, byClip: { <id d'extrait>: { type, len } } },
 //                 transition AVANT l'extrait (au raccord avec le précédent) ; type : 'cut' | 'dip' (fondu au noir) | 'dipwhite' (fondu au blanc).
 //                 Un fondu n'empiète jamais sur le temps : il assombrit len/2 avant le raccord et len/2 après. Le son ne bouge pas.
-//     subs:   { burn, scale: 50-200, pos: 'bottom'|'top', box }   sous-titres incrustés dans l'image (à la place des sous-titres du lecteur)
+//     subs:   { burn, scale: 50-200, pos: 'bottom'|'top', box, y }   sous-titres incrustés dans l'image (à la place des sous-titres du lecteur)
+//   Étape E6b : positions libres, en % de l'image (null = position prédéfinie ci-dessus). Point de repère :
+//     titre = centre du texte ; bandeau = bord gauche, milieu en hauteur ; logo = coin haut-gauche ; sous-titres = milieu (y seul, centrés).
 //   }
 //   Variables dans les textes : {titre} (titre de la conférence), {intervenant} (nom de l'intervenant).
 import { z } from 'zod';
@@ -35,6 +37,7 @@ export const LOGO_POS = ['tl', 'tr', 'bl', 'br'];
 const FONTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fonts');
 
 const num = z.number().finite();
+const pct = (label) => num.min(0, `${label} : entre 0 et 100 %`).max(100, `${label} : entre 0 et 100 %`).nullable().default(null);
 const rng = (label, min, max) => num.min(min, `${label} : entre ${min} et ${max}`).max(max, `${label} : entre ${min} et ${max}`);
 const text = (label, max) => z.string().max(max, `${label} : ${max} caractères au plus`).default('');
 const id = (what) => z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, `Identifiant de ${what} invalide`);
@@ -52,6 +55,8 @@ const item = z.object({
   pos: z.enum(['center', 'top', 'bottom']).default('center'),
   side: z.enum(['left', 'right']).default('left'),
   scale: rng('Taille du texte (%)', 50, 200).default(100),
+  x: pct('Position horizontale du titre'),
+  y: pct('Position verticale du titre'),
 });
 const card = (len) => z.object({
   on: z.boolean().default(false),
@@ -67,6 +72,8 @@ export const dressSchema = z.object({
     pos: z.enum(LOGO_POS).default('tr'),
     size: rng('Taille du logo (%)', 4, 40).default(12),
     opacity: rng('Opacité du logo (%)', 10, 100).default(90),
+    x: pct('Position horizontale du logo'),
+    y: pct('Position verticale du logo'),
     from: num.min(0).default(0),
     to: num.min(0).nullable().default(null),
   }).default({}),
@@ -81,6 +88,7 @@ export const dressSchema = z.object({
     scale: rng('Taille des sous-titres (%)', 50, 200).default(100),
     pos: z.enum(['bottom', 'top']).default('bottom'),
     box: z.boolean().default(true),
+    y: pct('Position verticale des sous-titres'),
   }).default({}),
 });
 
@@ -161,7 +169,9 @@ const LAYER = { Title: 2, Banner: 1, Card: 2, Subs: 0, SubsBox: 0 };
 // Événements d'habillage en temps du montage + décalage « offset » (durée de l'intro quand on rend toute la vidéo).
 // ctx : { vars, total (durée du montage), cues (sous-titres en temps du montage : [{ ts, te, text }]), fade (fondu d'entrée / sortie des titres) }
 export function dressEvents(dress, ctx) {
-  const { vars = {}, total, cues = [], fade = true, offset = 0 } = ctx;
+  const { vars = {}, total, cues = [], fade = true, offset = 0, w = 1920, h = 1080 } = ctx;
+  const free = (o) => o.x != null && o.y != null;
+  const P = (x, y) => `\\pos(${Math.round(x * w / 100)},${Math.round(y * h / 100)})`;
   const ev = [];
   const fad = fade ? '{\\fad(300,300)}' : '';
   const push = (a, b, style, body, mv = 0) => { if (b - a > 0.01 && a < total + 1e-6) ev.push({ a: a + offset, b: Math.min(b, total) + offset, style, body, mv }); };
@@ -171,24 +181,28 @@ export function dressEvents(dress, ctx) {
     if (!main && !sub) continue;
     const k = it.scale / 100;
     if (it.kind === 'title') {
-      const an = { center: 5, top: 8, bottom: 2 }[it.pos] || 5;
-      const mv = { center: 0, top: 110, bottom: 190 }[it.pos] || 0;
+      const an = free(it) ? 5 : ({ center: 5, top: 8, bottom: 2 }[it.pos] || 5);
+      const mv = free(it) ? 0 : ({ center: 0, top: 110, bottom: 190 }[it.pos] || 0);
+      const at = free(it) ? P(it.x, it.y) : '';
       const first = main ? `{\\an${an}\\fs${Math.round(96 * k)}\\b1\\c${WHITE}}${main}` : '';
       const second = sub ? `${main ? '\\N' : `{\\an${an}}`}{\\fs${Math.round(46 * k)}\\b0\\c${GOLD}}${sub}` : '';
-      push(a, b, 'Title', `${fad}{\\an${an}}${first}${second}`, mv);
+      push(a, b, 'Title', `${fad}{\\an${an}${at}}${first}${second}`, mv);
     } else {
-      const an = it.side === 'right' ? 3 : 1;
+      const an = free(it) ? 4 : (it.side === 'right' ? 3 : 1);
+      const at = free(it) ? P(it.x, it.y) : '';
       const first = main ? `{\\an${an}\\fs${Math.round(54 * k)}\\b1\\c${WHITE}}${main}` : '';
       const second = sub ? `${main ? '\\N' : `{\\an${an}}`}{\\fs${Math.round(38 * k)}\\b0\\c${GOLD}}${sub}` : '';
-      push(a, b, 'Banner', `${fad}{\\an${an}}${first}${second}`);
+      push(a, b, 'Banner', `${fad}{\\an${an}${at}}${first}${second}`);
     }
   }
   if (dress.subs.burn) {
     const k = dress.subs.scale / 100;
-    const an = dress.subs.pos === 'top' ? 8 : 2;
+    const fy = dress.subs.y;
+    const an = fy != null ? 5 : (dress.subs.pos === 'top' ? 8 : 2);
+    const at = fy != null ? P(50, fy) : '';
     for (const c of cues) {
       const body = esc(c.text);
-      if (body) push(c.ts, c.te, dress.subs.box ? 'SubsBox' : 'Subs', `{\\an${an}\\fs${Math.round(50 * k)}}${body}`);
+      if (body) push(c.ts, c.te, dress.subs.box ? 'SubsBox' : 'Subs', `{\\an${an}${at}\\fs${Math.round(50 * k)}}${body}`);
     }
   }
   return ev;
@@ -257,6 +271,14 @@ async function sourceUrl(talkId) {
   return `${base}/v0/index.m3u8?t=${tok}`;
 }
 
+// Étape E6b : logo placé à la main (x, y = coin haut-gauche en % de l'image), gardé dans l'image ; sinon un des 4 coins.
+export function logoXY(logo, m) {
+  if (logo?.x != null && logo?.y != null) {
+    const fx = Math.round(logo.x * 100) / 10000; const fy = Math.round(logo.y * 100) / 10000;
+    return [`'min(W*${fx},W-w)'`, `'min(H*${fy},H-h)'`];
+  }
+  return LOGO_XY(logo?.pos, m);
+}
 export const LOGO_XY = (pos, m) => ({ tl: [`${m}`, `${m}`], tr: [`W-w-${m}`, `${m}`], bl: [`${m}`, `H-h-${m}`], br: [`W-w-${m}`, `H-h-${m}`] }[pos] || [`W-w-${m}`, `${m}`]);
 
 // Compose l'image finale. at : temps du montage (nombre) ou 'intro' / 'outro'.
@@ -299,7 +321,7 @@ export async function renderFrame({ talkId, timeline, at, vars, cues, logoUrl })
     if (logo) {
       const lw = Math.round(W * (isCard ? 0.14 : dress.logo.size / 100));
       f.push(`[1:v]scale=${lw}:-1,format=rgba,colorchannelmixer=aa=${(isCard ? 1 : dress.logo.opacity / 100).toFixed(2)}[lg]`);
-      const [x, y] = isCard ? ['(W-w)/2', `${Math.round(H * 0.18)}`] : LOGO_XY(dress.logo.pos, Math.round(W * 0.021));
+      const [x, y] = isCard ? ['(W-w)/2', `${Math.round(H * 0.18)}`] : logoXY(dress.logo, Math.round(W * 0.021));
       f.push(`[${cur}][lg]overlay=x=${x}:y=${y}[o]`); cur = 'o';
     }
     args.push('-filter_complex', f.join(';'), '-map', `[${cur}]`, '-frames:v', '1', '-f', 'image2pipe', '-c:v', 'png', 'pipe:1');

@@ -82,7 +82,7 @@ try:
     cur.execute("select count(*) from word_align_jobs where talk_id=%s", (T2,)); ok(cur.fetchone()[0] == 0, "conférence supprimée : sa demande aussi")
     mods = rq("GET", "/admin/modules", headers=A).json(); mods = mods.get("modules", mods)
     ed = next((m for m in mods if m["id"] == "editor"), {}) if isinstance(mods, list) else mods.get("editor", {})
-    ok(ed.get("version") == "0.8.0" and "E5c" in ed.get("description", "") and len(ed.get("description", "")) <= 600, f"module editor 0.8.0 ({ed.get('version')})")
+    ok(ed.get("version") == "0.9.0" and "E5c" in ed.get("description", "") and len(ed.get("description", "")) <= 600, f"module editor 0.9.0 ({ed.get('version')})")
 finally:
     for t in talks: cur.execute("delete from talks where id=%s", (t,))
     for u in users: cur.execute("delete from users where id=%s", (u,))

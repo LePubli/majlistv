@@ -28,7 +28,7 @@ import RenderPanel from './RenderPanel';
 import Templates from './Templates';
 import TextPanel from './TextPanel';
 import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
-  withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition } from './ops';
+  withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition, patchItem } from './ops';
 import { ago } from '../../lib/format';
 
 const HISTORY = 200;
@@ -291,6 +291,13 @@ export default function Editor({ id }) {
   const commit = useCallback((next) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, clips: next } }); }, [canEdit]);
   const setAudio = useCallback((next, key) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, audio: next }, key }); }, [canEdit]);
   const setDress = useCallback((next, key) => { if (canEdit) dispatch({ type: 'commit', doc: { ...docRef.current, dress: next }, key }); }, [canEdit]);
+  // Étape E6b : élément glissé (ou déplacé aux flèches) sur l'aperçu → position libre enregistrée (une étape d'annulation par geste).
+  const placeOnVideo = (key, pos) => {
+    const d = docRef.current.dress;
+    if (key === 'logo') setDress({ ...d, logo: { ...d.logo, x: pos.x, y: pos.y } });
+    else if (key === 'subs') setDress({ ...d, subs: { ...d.subs, y: pos.y } });
+    else setDress({ ...d, items: patchItem(d.items, key.slice(5), { x: pos.x, y: pos.y }) });
+  };
   const selIndex = clips.findIndex((c) => c.id === sel.id);
   const targets = useMemo(() => snapTargets(clips, cues), [clips, cues]);
 
@@ -444,7 +451,8 @@ export default function Editor({ id }) {
             )}
             {data.media
               ? <div className="mt-pz" style={{ '--pz': pz }}><Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} hideCaption={dress.subs.burn}>
-                <DressOverlay dress={dress} T={T} totalS={totalS} clips={clips} vars={vars} logoUrl={logoUrl} caption={caption} card={card} cardText={card ? dress[card] : null} />
+                <DressOverlay dress={dress} T={T} totalS={totalS} clips={clips} vars={vars} logoUrl={logoUrl} caption={caption} card={card} cardText={card ? dress[card] : null}
+                  editable={canEdit} sel={sel} onSelect={(v) => { setSel(v); if (rightTab !== 'settings') pickTab('settings'); }} onPlace={placeOnVideo} />
               </Preview></div>
               : <p className="meta">{t('mtNotEditable')}</p>}
           </section>

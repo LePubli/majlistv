@@ -17,7 +17,7 @@
 //   - transitions : « fondu au noir / blanc » centré sur le raccord, len/2 avant et len/2 après (fondu appliqué à chaque extrait) ;
 //   - textes, bandeaux, sous-titres incrustés, logo, écrans d'ouverture et de fin : dress.js (mêmes réglages que « Voir l'image finale »).
 // Différence assumée : l'aperçu du navigateur ne dépasse pas 100 % de volume ; le rendu applique le volume demandé (jusqu'à +12 dB).
-import { layout, mapItems, transitionAt, dressEvents, buildAss, fillVars, dressDefaults, LOGO_XY } from './dress.js';
+import { layout, mapItems, transitionAt, dressEvents, buildAss, fillVars, dressDefaults, logoXY } from './dress.js';
 import { audioDefaults } from './timeline.js';
 import { DENOISE_FILTER } from './denoise.js';
 import { cropFilter, buildShortAss } from './short.js';
@@ -178,7 +178,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   if (useLogo) {
     const lg = addInput('logo', ['-loop', '1', '-t', fmt(outDur + 1)], 'v');
     const op = (dress.logo.opacity / 100).toFixed(2);
-    const [x, y] = LOGO_XY(dress.logo.pos, '@LM@');
+    const [x, y] = logoXY(dress.logo, '@LM@');
     const from = r3(I + dress.logo.from); const to = r3(I + Math.min(dress.logo.to ?? total, total));
     const wantCards = Boolean(I || O);
     V.push(`[${lg}:v]format=rgba,colorchannelmixer=aa=${op}${wantCards ? ',split=2[lga][lgb]' : '[lga]'}`);

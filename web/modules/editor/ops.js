@@ -290,13 +290,36 @@ export function peakBetween(peaks, stepMs, s0, s1) {
 // Mêmes valeurs par défaut et mêmes règles que l'API (api/src/modules/editor/dress.js). Temps du montage partout.
 export const DRESS_DEF = {
   items: [],
-  logo: { on: false, asset: 'channel', pos: 'tr', size: 12, opacity: 90, from: 0, to: null },
+  logo: { on: false, asset: 'channel', pos: 'tr', size: 12, opacity: 90, from: 0, to: null, x: null, y: null },
   intro: { on: false, len: 4, title: '', sub: '' },
   outro: { on: false, len: 5, title: '', sub: '' },
   transitions: { all: null, byClip: {} },
-  subs: { burn: false, scale: 100, pos: 'bottom', box: true },
+  subs: { burn: false, scale: 100, pos: 'bottom', box: true, y: null },
 };
-export const ITEM_DEF = { pos: 'center', side: 'left', scale: 100 };
+export const ITEM_DEF = { pos: 'center', side: 'left', scale: 100, x: null, y: null };
+// Étape E6b : positions libres en % de l'image (null = position prédéfinie). Repères : titre = centre ; bandeau = bord gauche, milieu ;
+// logo = coin haut-gauche ; sous-titres = milieu (y seul). Mêmes repères que le rendu (dress.js côté API).
+export const isFree = (o) => o?.x != null && o?.y != null;
+const clampPct = (v, lo, hi) => Math.round(Math.max(lo, Math.min(hi, v)) * 10) / 10;
+// Nouvelle position d'un élément glissé. box : taille de l'élément en % de l'image { w, h } ; renvoie { x, y, guides }.
+export function placeAt(kind, x, y, box, snapPct = 1.5) {
+  const guides = [];
+  const sn = (v, target, axis) => { if (Math.abs(v - target) <= snapPct) { guides.push({ axis, at: target }); return target; } return v; };
+  if (kind === 'title') {
+    let cx = sn(x, 50, 'x'); let cy = sn(y, 50, 'y');
+    cx = clampPct(cx, box.w / 2, 100 - box.w / 2); cy = clampPct(cy, box.h / 2, 100 - box.h / 2);
+    return { x: cx, y: cy, guides };
+  }
+  if (kind === 'subs') return { x: 50, y: clampPct(sn(y, 50, 'y'), box.h / 2, 100 - box.h / 2), guides };
+  if (kind === 'banner') {
+    let lx = sn(x, 5, 'x'); if (lx === x) { const r = sn(x + box.w, 95, 'x'); if (r !== x + box.w) lx = 95 - box.w; }
+    return { x: clampPct(lx, 0, 100 - box.w), y: clampPct(y, box.h / 2, 100 - box.h / 2), guides };
+  }
+  // logo : coin haut-gauche ; aimanté aux marges de 2 %
+  let lx = sn(x, 2, 'x'); if (lx === x) { const r = sn(x + box.w, 98, 'x'); if (r !== x + box.w) lx = 98 - box.w; }
+  let ty = sn(y, 3.7, 'y'); if (ty === y) { const b = sn(y + box.h, 96.3, 'y'); if (b !== y + box.h) ty = 96.3 - box.h; }
+  return { x: clampPct(lx, 0, 100 - box.w), y: clampPct(ty, 0, 100 - box.h), guides };
+}
 export const TRANSITION_TYPES = ['cut', 'dip', 'dipwhite'];
 export const ITEM_FADE = 0.3; // fondu d'entrée et de sortie des titres (s), comme au rendu
 

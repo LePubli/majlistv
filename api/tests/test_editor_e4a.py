@@ -189,7 +189,7 @@ try:
     mods = rq("GET", "/admin/modules", headers=A).json()
     mods = mods.get("modules", mods)
     ed = next(m for m in mods if m["id"] == "editor"); du = next(m for m in mods if m["id"] == "dubbing")
-    ok(ed["version"] == "0.8.0" and du["version"] == "0.8.0", f"versions : éditeur {ed['version']}, doublage {du['version']}")
+    ok(ed["version"] == "0.9.0" and du["version"] == "0.9.0", f"versions : éditeur {ed['version']}, doublage {du['version']}")
 finally:
     for t in talks:
         cur.execute("delete from activity_controls where queue='render' and ref in (select id::text from editor_renders where talk_id=%s)", (t,))

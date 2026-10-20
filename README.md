@@ -4576,3 +4576,45 @@ nginx -t && systemctl reload nginx
 - Vérifier la netteté d'un bandeau de nom : aperçu **200 %**.
 
 Tests : `web/tests/e6a_timeline.py` (lignes séparées, logo, couleurs, zoom bouton et molette centré, aperçu 200 %, FR + AR, 1024 / 1440 px) ; `e1_editor.py`, `e2_audio.py`, `e3_dress.py` relancés : « Tout est bon ».
+
+
+## Étape E6b — Éditeur : placer les éléments directement sur la vidéo
+
+### Description
+Retour d'Epok du 20/10 : placer et déplacer les éléments **sur la vidéo**, pas seulement avec les boutons haut / bas / coins.
+- Dans l'aperçu de l'éditeur, **titres, bandeaux de nom, logo et sous-titres incrustés se prennent à la souris** et se posent où l'on veut. Un clic sur l'élément ouvre ses réglages à droite.
+- Pendant le glissé : **zone de sécurité** (pointillés à 5 % des bords) et **repères dorés** ; **aimant** au centre de l'image (titres, sous-titres) et aux marges (bandeaux, logo).
+- **Clavier** : cliquer l'élément puis **flèches** (0,5 %), **Maj + flèches** (5 %). **Ctrl+Z** annule chaque déplacement.
+- Panneau de droite : « **Position libre** » et bouton **Revenir à la position prédéfinie** ; choisir Haut / Centre / Bas (ou un coin pour le logo) revient aussi au placement prédéfini.
+- La position est enregistrée en **% de l'image** (indépendante de la taille de l'aperçu et de la qualité du rendu) ; **le rendu final et « Voir l'image finale » la respectent** (mêmes repères : centre du titre, bord gauche du bandeau, coin haut-gauche du logo, milieu des sous-titres). Le logo reste toujours entier dans l'image.
+- Les montages existants ne changent pas (sans position libre = placement prédéfini comme avant).
+
+Versions : module `editor` **0.9.0** (document « dress » : `x`, `y` pour les titres et le logo, `y` pour les sous-titres ; aucune migration SQL : le montage est un document JSON). Fichiers : `api/src/modules/editor/dress.js` (validation 0–100 %, `\pos` dans l'ASS, `logoXY`), `plan.js` (rendu du worker), `web/modules/editor/DressOverlay.js`, `DressPanel.js`, `Editor.js`, `ops.js`. Worker inchangé (il reçoit le plan).
+
+### Prérequis
+- Étapes E1 à E6a déployées.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est poussé), ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → Redeploy : **`majlistv-api`** puis **`majlistv-web`**. Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i -E "module editor|fiche invalide"
+```
+La dernière commande ne doit afficher **aucune** ligne « fiche invalide ».
+4. Dans l'éditeur : **Ctrl + Maj + R**.
+
+### Debug
+- L'élément ne bouge pas : vous êtes en lecture seule (un autre onglet ou une autre personne a la main : « Reprendre la main »).
+- Le texte du rendu dépasse légèrement par rapport à l'aperçu : polices différentes (navigateur / DejaVu Sans) ; contrôler avec **Voir l'image finale**.
+- Revenir au placement d'avant : bouton **Revenir à la position prédéfinie**.
+
+### Exemples d'utilisation
+- Mettre un bandeau de nom en haut à droite : le glisser sur la vidéo jusqu'à la zone voulue ; ajuster aux flèches.
+- Remonter les sous-titres incrustés au-dessus d'un bandeau : cocher « Incruster les sous-titres », puis glisser la phrase affichée vers le haut.
+- Poser le logo dans un coin non standard : le glisser ; il se cale aux marges de 2 % à l'approche des bords.
+
+Tests : `api/tests/test_editor_e6b.py` (validation, relecture, image finale du vrai FFmpeg : titre trouvé à 25,2 % / 29,5 % pour 25 / 30, logo exactement à 40 / 55, sous-titres à 19,9 % pour 20), `api/tests/test_place_e6b.mjs` (plan + moteur du worker : fichier rendu, titre à 69,7 / 25,0 pour 70 / 25, logo à 10,0 / 60,0), `web/tests/e6b_place.py` (glisser, aimant, clavier, Ctrl+Z, panneau, logo, sous-titres, rechargement, arabe, 1024 px) ; tous les tests de l'éditeur (API E1 à E5d, navigateur E1, E3, E5b, E6a) relancés : bons.
