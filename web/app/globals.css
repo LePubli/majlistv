@@ -3460,3 +3460,9 @@ a.ac-title:hover { color: var(--accent-hover); }
 .mt-guide.y { left: 0; right: 0; height: 1px; margin-top: -.5px; }
 .mt-free { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .mt-free p { margin: 0; }
+
+/* Étape E6c : format et qualité du rendu */
+.mt-render-opts { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.mt-render-opts .mt-seg button:disabled { opacity: .45; cursor: not-allowed; }
+.mt-render-video.square { aspect-ratio: 1 / 1; max-width: 420px; margin-inline: auto; display: block; }
+@media (max-width: 520px) { .mt-render-opts .mt-seg { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } }

@@ -21,16 +21,18 @@ const MAX_ATTEMPTS = 2;
 // Taille de l'image : aperçu 640×360 ; rendu final à la hauteur de la meilleure qualité de la source (360, 720 ou 1080), en 16:9.
 // Extrait court 9:16 (étape E5b, plan.vertical) : aperçu 360 × 640 ; rendu final 1080 × 1920, 720 × 1280 ou 360 × 640 selon la hauteur de la source
 // (le cadre vertical garde toute la hauteur de la source : inutile de dépasser sa qualité).
-export function outputSize({ preview, srcHeight, vertical = false }) {
-  if (vertical) {
-    if (preview) return { W: 360, H: 640 };
-    const h = srcHeight || 0;
-    return h >= 1072 ? { W: 1080, H: 1920 } : h >= 712 ? { W: 720, H: 1280 } : { W: 360, H: 640 };
-  }
-  if (preview) return { W: 640, H: 360 };
-  const list = RENDITIONS.filter((r) => r.h <= (srcHeight || 0) + 8);
-  const H = list.length ? list[list.length - 1].h : 360;
-  return { W: Math.round((H * 16) / 9 / 2) * 2, H };
+// Étape E6c : format (16:9, 9:16, 1:1) et qualité demandée (360, 720, 1080 = côté court de l'image ; null = la meilleure possible).
+// La qualité ne dépasse jamais celle de la source (les qualités produites à la conversion : 360, 720, 1080) ; l'aperçu rapide reste en 360.
+export const FORMATS = ['16:9', '9:16', '1:1'];
+export function outputSize({ preview, srcHeight, vertical = false, format = null, quality = null }) {
+  const f = FORMATS.includes(format) ? format : vertical ? '9:16' : '16:9';
+  const avail = RENDITIONS.filter((r) => r.h <= (srcHeight || 0) + 8).map((r) => r.h);
+  const best = avail.length ? Math.max(...avail) : 360;
+  const q = preview ? 360 : Math.min(best, Number(quality) > 0 ? Number(quality) : best);
+  const even = (v) => Math.round(v / 2) * 2;
+  if (f === '9:16') return { W: q, H: even((q * 16) / 9) };
+  if (f === '1:1') return { W: q, H: q };
+  return { W: even((q * 16) / 9), H: q };
 }
 
 // Cadence : celle de la source, entre 24 et 30 images par seconde (25 si inconnue).
@@ -250,7 +252,7 @@ export function fontsDir() {
 // Rendu à partir de fichiers locaux (utilisé par processRender et par les tests). files : voir inputArgs.
 export async function renderFiles({ plan, files, dir, threads = 0, log = () => {}, onProgress = () => {} }) {
   const info = await probeSource(files.source);
-  const { W, H } = outputSize({ preview: plan.preview, srcHeight: info.height, vertical: Boolean(plan.vertical) });
+  const { W, H } = outputSize({ preview: plan.preview, srcHeight: info.height, vertical: Boolean(plan.vertical), format: plan.format, quality: plan.quality });
   const FPS = outputFps(info.fps);
   log(`source ${info.width}x${info.height}, ${Math.round(info.duration)} s, audio=${info.hasAudio} → ${W}x${H} @${FPS}, ${plan.outDur} s`);
 

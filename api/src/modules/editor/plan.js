@@ -106,7 +106,15 @@ const fmt = (x) => String(r3(x));
 //   short    : null, ou (étape E5b, extrait court 9:16) { cropX, captions: [{ s, e, text }] (temps source, déjà regroupés), titleText,
 //              path (E5d, facultatif) : [{ t, x }] trajectoire du cadre (suivi du visage et corrections), notes (E5d) : avertissements à afficher }.
 //              Image verticale recadrée sur la source ; pas d'habillage (titre et sous-titres courts seulement).
-export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = {}, logo = null, preview = false, title = '', short = null }) {
+//   format   : (étape E6c) '16:9' (défaut), '9:16' ou '1:1' ; fit : 'blur' (image entière sur fond flouté) ou 'crop' (recadrée au centre) ;
+//   quality  : 360, 720, 1080 (côté court) ou null = la meilleure possible (le worker ne dépasse jamais la source).
+export const FORMATS = ['16:9', '9:16', '1:1'];
+export const QUALITIES = [360, 720, 1080];
+const ASS_DIMS = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080] };
+export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = {}, logo = null, preview = false, title = '', short = null, format = '16:9', fit = 'blur', quality = null }) {
+  const fmtOut = short ? '9:16' : FORMATS.includes(format) ? format : '16:9';
+  const fitOut = fit === 'crop' ? 'crop' : 'blur';
+  const [AW, AH] = ASS_DIMS[fmtOut];
   const dress = dressDefaults(short ? null : timeline.dress);
   const au = audioDefaults(timeline.audio, { duck: dub?.duck });
   const clips = timeline.clips;
@@ -140,9 +148,18 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   const nextTr = (j) => (j + 1 < parts.length ? parts[j + 1].tr : null);
   parts.forEach((p) => {
     const k = addInput('source', ['-ss', fmt(p.in), '-t', fmt(p.d)], 'v');
-    const chain = short
-      ? [`[${k}:v]setpts=PTS-STARTPTS`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`] // extrait 9:16 : cadre vertical sur la source
-      : [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
+    const tail = ['setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
+    let chain;
+    if (short) chain = [`[${k}:v]setpts=PTS-STARTPTS`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), ...tail]; // extrait 9:16 : cadre vertical sur la source
+    else if (fmtOut === '16:9') chain = [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', ...tail];
+    else if (fitOut === 'crop') chain = [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=increase', 'crop=@W@:@H@', ...tail]; // étape E6c : recadrée au centre
+    else {
+      // Étape E6c : image entière, sur la même image agrandie, floutée et assombrie (pas de bandes noires).
+      V.push(`[${k}:v]setpts=PTS-STARTPTS,split=2[sb${p.j}][sf${p.j}]`);
+      V.push(`[sb${p.j}]scale=@W@:@H@:force_original_aspect_ratio=increase,crop=@W@:@H@,boxblur=20:2,eq=brightness=-0.12[bb${p.j}]`);
+      V.push(`[sf${p.j}]scale=@W@:@H@:force_original_aspect_ratio=decrease[ff${p.j}]`);
+      chain = [`[bb${p.j}][ff${p.j}]overlay=(W-w)/2:(H-h)/2`, ...tail];
+    }
     // Fondu au noir / au blanc : la moitié avant le raccord (fin de l'extrait précédent), la moitié après (début de celui-ci).
     if (p.tr) { const h = Math.min(p.tr.len / 2, p.d / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
     const nt = nextTr(p.j);
@@ -167,11 +184,11 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
     for (const n of short.notes || []) warnings.push(n);
     ass = buildShortAss({ chunks: caps, title: short.titleText || '', total });
   } else {
-    const events = dressEvents(dress, { vars, total, cues: cueMap, fade: true, offset: I });
+    const events = dressEvents(dress, { vars, total, cues: cueMap, fade: true, offset: I, w: AW, h: AH });
     const cards = [];
     if (I) cards.push({ a: 0, b: I, title: fillVars(dress.intro.title, vars), sub: fillVars(dress.intro.sub, vars) });
     if (O) cards.push({ a: I + total, b: I + total + O, title: fillVars(dress.outro.title, vars), sub: fillVars(dress.outro.sub, vars) });
-    ass = buildAss(events, { cards, fade: true });
+    ass = buildAss(events, { cards, fade: true, w: AW, h: AH });
   }
   V.push('[vcat]ass=filename=@ASS@:fontsdir=@FONTS@[vt]');
   let cur = 'vt';
@@ -284,6 +301,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
 
   return {
     v: 1, preview, title, total, introLen: I, outroLen: O, outDur, vertical: Boolean(short),
+    format: fmtOut, fit: fmtOut === '16:9' ? null : fitOut, quality: preview ? 360 : (QUALITIES.includes(Number(quality)) ? Number(quality) : null),
     loudness: { on: Boolean(au.loudness.on), target: au.loudness.target },
     inputs, refs: { ...refs, ...(useLogo ? { logo: { key: logo.key } } : {}) },
     curves, envelopes,
@@ -296,7 +314,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
     },
     summary: {
       parts: parts.length, clips: clips.length, items: dress.items.length, music: au.music.length, dub: useDub, denoise: au.orig.denoise,
-      logo: useLogo, subs: short ? Boolean((short.captions || []).length) : Boolean(dress.subs.burn && cueMap.length), vertical: Boolean(short), transitions: parts.filter((p) => p.tr).length, intro: I, outro: O,
+      logo: useLogo, subs: short ? Boolean((short.captions || []).length) : Boolean(dress.subs.burn && cueMap.length), vertical: Boolean(short), format: fmtOut, transitions: parts.filter((p) => p.tr).length, intro: I, outro: O,
     },
     warnings,
   };

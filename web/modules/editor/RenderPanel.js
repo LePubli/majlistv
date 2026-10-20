@@ -16,6 +16,10 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
   const { t, call, locale } = useApp();
   const [d, setD] = useState(null);
   const [kind, setKind] = useState('preview');
+  // Étape E6c : format et qualité du rendu (un extrait court reste en 9:16).
+  const [format, setFormat] = useState('16:9');
+  const [fit, setFit] = useState('blur');
+  const [quality, setQuality] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [watch, setWatch] = useState(null);
@@ -42,7 +46,7 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
   const start = async () => {
     setBusy(true); setMsg(null);
     await beforeAction?.();
-    const send = (rev) => call(`/studio/editor/projects/${projectId}/render`, { method: 'POST', body: JSON.stringify({ kind, rev }) });
+    const send = (rev) => call(`/studio/editor/projects/${projectId}/render`, { method: 'POST', body: JSON.stringify({ kind, rev, format: vertical ? '9:16' : format, fit, quality: kind === 'final' ? quality : null }) });
     let r = await send(getRev());
     // Lecture seule : le montage a pu être enregistré par la personne qui le modifie ; on rend la dernière version enregistrée.
     if (!r.ok && r.data?.code === 'not_saved' && readOnly && r.data.rev) r = await send(r.data.rev);
@@ -86,10 +90,43 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
           {[['preview', 'mtrPreview', vertical ? 'mtsPreviewHelp' : 'mtrPreviewHelp', 0.3], ['final', 'mtrFinal', vertical ? 'mtsFinalHelp' : 'mtrFinalHelp', 1]].map(([k, title, help, f]) => (
             <label key={k} className={`mt-render-kind${kind === k ? ' on' : ''}`} data-kind={k}>
               <input type="radio" name="mt-render-kind" value={k} checked={kind === k} onChange={() => setKind(k)} />
-              <span><b>{t(title)}</b><small className="meta">{t(help).replace('{m}', minutes(durationFinal * f, t)).replace('{d}', fmtTime(durationFinal))}</small></span>
+              <span><b>{t(title)}</b><small className="meta">{t(help).replace('{m}', minutes(durationFinal * f, t)).replace('{d}', fmtTime(durationFinal)).replace('640 × 360', !vertical && format === '9:16' ? '360 × 640' : !vertical && format === '1:1' ? '360 × 360' : '640 × 360')}</small></span>
             </label>
           ))}
         </fieldset>
+        <div className="mt-render-opts">
+          {!vertical && (
+            <div className="mt-field"><label id="mtr-fmt-l">{t('mtrFormat')}</label>
+              <div className="mt-seg" role="group" aria-labelledby="mtr-fmt-l">
+                {[['16:9', 'mtrF169'], ['9:16', 'mtrF916'], ['1:1', 'mtrF11']].map(([v, k]) => (
+                  <button key={v} type="button" aria-pressed={format === v} onClick={() => setFormat(v)} disabled={Boolean(active) || busy} data-format={v}>{t(k)}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {!vertical && format !== '16:9' && <>
+            <div className="mt-field"><label id="mtr-fit-l">{t('mtrFit')}</label>
+              <div className="mt-seg" role="group" aria-labelledby="mtr-fit-l">
+                {[['blur', 'mtrFitBlur'], ['crop', 'mtrFitCrop']].map(([v, k]) => (
+                  <button key={v} type="button" aria-pressed={fit === v} onClick={() => setFit(v)} disabled={Boolean(active) || busy} data-fit={v}>{t(k)}</button>
+                ))}
+              </div>
+            </div>
+            <p className="meta small" data-note="format">{t('mtrFmtNote')}</p>
+          </>}
+          <div className="mt-field"><label id="mtr-q-l">{t('mtrQuality')}</label>
+            {kind === 'preview'
+              ? <p className="meta small" data-note="preview-q">{t('mtrQPreview')}</p>
+              : <div className="mt-seg" role="group" aria-labelledby="mtr-q-l">
+                {[[null, t('mtrQAuto')], [360, '360p'], [720, '720p'], [1080, '1080p']].map(([v, l]) => {
+                  const over = v && d?.maxQuality && v > d.maxQuality;
+                  return <button key={String(v)} type="button" aria-pressed={quality === v} onClick={() => setQuality(v)} disabled={Boolean(active) || busy || over}
+                    title={over ? t('mtrQOver').replace('{m}', d.maxQuality) : undefined} data-quality={String(v)}>{l}</button>;
+                })}
+              </div>}
+            {d?.maxQuality && <small className="meta" data-note="src-q">{t('mtrSrcQ').replace('{m}', d.maxQuality)}</small>}
+          </div>
+        </div>
         {d && d.heavyAllowed === false && <p className="mt-notice warn" role="status">{t('mtrHeavyOff')}</p>}
         <div className="mt-render-go">
           <button type="button" className="btn sd-pill" onClick={start} disabled={busy || Boolean(active) || !d} data-act="render-start">{busy ? t('mtrStarting') : t('mtrStart')}</button>
@@ -106,7 +143,7 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
               <li key={r.id} className={`mt-render-row st-${r.status}`} data-render={r.id} data-status={r.status}>
                 <div className="mt-render-line">
                   <span className="mt-render-what">
-                    <b>{t(r.kind === 'preview' ? 'mtrPreview' : 'mtrFinal')}</b>
+                    <b>{t(r.kind === 'preview' ? 'mtrPreview' : 'mtrFinal')}{r.format && r.format !== '16:9' ? ` · ${r.format}${r.fit ? ` · ${t(r.fit === 'crop' ? 'mtrFitCropS' : 'mtrFitBlurS')}` : ''}` : ''}{r.kind === 'final' && r.quality ? ` · ${r.quality}p` : ''}</b>
                     <small className="meta">
                       {when(r.createdAt)}{r.createdBy ? ` · ${r.createdBy}` : ''}{r.duration ? ` · ${fmtTime(r.duration)}` : ''}
                       {r.status === 'ready' && r.bytes ? ` · ${t('mtrSize').replace('{n}', mb(r.bytes, locale))}` : ''}
@@ -133,7 +170,7 @@ export default function RenderPanel({ projectId, getRev, beforeAction, durationF
                 </div>
                 {watch === r.id && r.url && (
                   // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video className={`mt-render-video${vertical ? ' vertical' : ''}`} src={r.url} controls playsInline preload="metadata" aria-label={t('mtrVideo')} />
+                  <video className={`mt-render-video${vertical || r.format === '9:16' ? ' vertical' : r.format === '1:1' ? ' square' : ''}`} src={r.url} controls playsInline preload="metadata" aria-label={t('mtrVideo')} />
                 )}
               </li>
             ))}

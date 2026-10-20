@@ -9,16 +9,29 @@
 // environ 1 × la durée sur le VPS, deux passes pour le niveau sonore). Un seul rendu à la fois par projet ; les 3 derniers sont gardés.
 import { z } from 'zod';
 import { pool } from '../../db.js';
-import { presignGet, deleteObject, deletePrefix } from '../../storage.js';
+import { presignGet, deleteObject, deletePrefix, getObjectBuffer } from '../../storage.js';
 import { checkTimeline, musicAssets, logoAssets, editedDuration } from './timeline.js';
 import { dressDefaults } from './dress.js';
-import { buildPlan, estimateSeconds } from './plan.js';
+import { buildPlan, estimateSeconds, FORMATS, QUALITIES } from './plan.js';
 import * as ext from '../../ext.js';
 import { speakerSlug } from '../../speakers.js';
 import { shortDefaults } from './short.js';
 import { shortChunks, trackJobOf, pathOf } from './shorts.js';
 
 export const KEEP_RENDERS = 3;
+
+// Étape E6c : meilleure qualité disponible pour un rendu (côté court : 360, 720 ou 1080), lue dans la liste des qualités converties
+// (master.m3u8 de la version publiée). null si illisible (le worker plafonne de toute façon à la qualité de la source).
+export async function maxQualityOf(talkId) {
+  try {
+    const pre = (await pool.query('SELECT media_prefix FROM talks WHERE id = $1', [talkId])).rows[0]?.media_prefix || `hls/${talkId}/`;
+    const text = (await getObjectBuffer(`${pre}master.m3u8`)).toString('utf8');
+    const hs = [...text.matchAll(/RESOLUTION=(\d+)x(\d+)/g)].map((m) => Math.min(Number(m[1]), Number(m[2])));
+    if (!hs.length) return null;
+    const top = Math.max(...hs);
+    return QUALITIES.filter((q) => q <= top + 8).at(-1) || 360;
+  } catch { return null; }
+}
 const KINDS = ['preview', 'final'];
 
 const safeName = (s) => String(s || 'montage').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\w\- ]+/g, ' ').trim().replace(/\s+/g, '-').slice(0, 60) || 'montage';
@@ -56,6 +69,7 @@ async function renderView(r, title) {
     id: r.id, kind: r.kind, status: r.status, stage: r.stage, progress: r.progress, rev: r.rev, error: r.error || null,
     createdAt: r.created_at, startedAt: r.started_at, finishedAt: r.finished_at, createdBy: r.created_name || null,
     duration: r.out_duration_s != null ? Number(r.out_duration_s) : Number(r.plan?.outDur) || null,
+    format: r.plan?.format || (r.plan?.vertical ? '9:16' : '16:9'), fit: r.plan?.fit || null, quality: r.plan?.quality ?? null,
     bytes: r.bytes != null ? Number(r.bytes) : null, report: r.report || null, warnings: r.plan?.warnings || [], summary: r.plan?.summary || null,
     estimateS: estimateSeconds(Number(r.plan?.outDur) || 0, r.kind === 'preview'), cancelRequested: r.cancel_requested, url: null, downloadUrl: null,
   };
@@ -63,7 +77,8 @@ async function renderView(r, title) {
     try {
       view.url = await presignGet(r.output_key);
       const day = new Date(r.finished_at || r.created_at).toISOString().slice(0, 10);
-      view.downloadUrl = await presignGet(r.output_key, { download: `${safeName(title)}-${r.kind === 'preview' ? 'apercu' : 'final'}-${day}.mp4` });
+      const fmt = view.format !== '16:9' ? `-${view.format.replace(':', 'x')}` : '';
+      view.downloadUrl = await presignGet(r.output_key, { download: `${safeName(title)}-${r.kind === 'preview' ? 'apercu' : 'final'}${fmt}-${day}.mp4` });
     } catch { /* stockage indisponible */ }
   }
   return view;
@@ -88,7 +103,11 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
   // Lancer un rendu du montage enregistré (rev = révision vue par le site : le montage doit être enregistré).
   app.post('/studio/editor/projects/:id/render', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
-    const b = z.object({ kind: z.enum(KINDS), rev: z.number().int().min(1) }).parse(req.body ?? {});
+    const b = z.object({
+      kind: z.enum(KINDS), rev: z.number().int().min(1),
+      format: z.enum(FORMATS).default('16:9'), fit: z.enum(['blur', 'crop']).default('blur'),
+      quality: z.union([z.literal(360), z.literal(720), z.literal(1080), z.null()]).default(null),
+    }).parse(req.body ?? {});
     if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
     if (b.rev !== row.rev) return reply.code(409).send({ error: 'Le montage n’est pas encore enregistré : réessayez dans un instant.', code: 'not_saved', rev: row.rev });
     const busy = (await pool.query("SELECT id FROM editor_renders WHERE project_id = $1 AND status IN ('queued', 'running') LIMIT 1", [row.id])).rows[0];
@@ -111,13 +130,17 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
         short = { cropX: cfg.cropX, path: framePath, notes, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '' };
       }
       plan = buildPlan({ timeline: chk.timeline, vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, ...inp,
-        preview: b.kind === 'preview', title: row.kind === 'short' ? `${row.talk_title || ''} ${row.title || ''}`.trim() : row.talk_title || '', short });
+        preview: b.kind === 'preview', title: row.kind === 'short' ? `${row.talk_title || ''} ${row.title || ''}`.trim() : row.talk_title || '', short,
+        format: b.format, fit: b.fit, quality: b.quality });
+      // Étape E6c : qualité demandée au-dessus de la source → on prévient (le rendu se fait dans la meilleure qualité disponible).
+      const maxQ = b.kind === 'final' && b.quality ? await maxQualityOf(row.talk_id) : null;
+      if (maxQ && b.quality > maxQ) plan.warnings.push(`Qualité ${b.quality}p demandée, mais la vidéo d’origine ne dépasse pas ${maxQ}p : le rendu est fait en ${maxQ}p (on ne peut pas inventer de détails).`);
     } catch (err) { return reply.code(400).send({ error: err.message, code: 'plan' }); }
     const r = (await pool.query(
       `INSERT INTO editor_renders(project_id, talk_id, kind, rev, timeline, plan, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [row.id, row.talk_id, b.kind, row.rev, chk.timeline, plan, req.user.sub])).rows[0];
     await prune(row.id, app.log);
-    req.auditSummary = `Éditeur : ${row.kind === 'short' ? 'extrait 9:16 — ' : ''}${b.kind === 'preview' ? 'aperçu rapide' : 'rendu final'} demandé (« ${row.talk_title} », ${Math.round(plan.outDur)} s)`;
+    req.auditSummary = `Éditeur : ${row.kind === 'short' ? 'extrait 9:16 — ' : plan.format !== '16:9' ? `format ${plan.format} — ` : ''}${b.kind === 'preview' ? 'aperçu rapide' : 'rendu final'}${plan.quality && b.kind === 'final' ? ` ${plan.quality}p` : ''} demandé (« ${row.talk_title} », ${Math.round(plan.outDur)} s)`;
     return reply.code(201).send({ render: await renderView(r, row.talk_title), heavyAllowed: await heavyAllowed() });
   });
 
@@ -133,7 +156,7 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
     let position = null;
     if (waiting) position = Number((await pool.query("SELECT count(*) AS n FROM editor_renders WHERE status = 'queued' AND created_at <= (SELECT created_at FROM editor_renders WHERE id = $1)", [waiting.id])).rows[0].n);
     const running = Number((await pool.query("SELECT count(*) AS n FROM editor_renders WHERE status = 'running'")).rows[0].n);
-    return { renders, rev: row.rev, editedDuration: editedDuration(row.timeline), heavyAllowed: await heavyAllowed(), position, workerBusy: running > 0, keep: KEEP_RENDERS };
+    return { renders, rev: row.rev, editedDuration: editedDuration(row.timeline), heavyAllowed: await heavyAllowed(), position, workerBusy: running > 0, keep: KEEP_RENDERS, maxQuality: await maxQualityOf(row.talk_id) };
   });
 
   async function loadRender(req, reply) {

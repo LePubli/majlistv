@@ -4618,3 +4618,43 @@ La dernière commande ne doit afficher **aucune** ligne « fiche invalide ».
 - Poser le logo dans un coin non standard : le glisser ; il se cale aux marges de 2 % à l'approche des bords.
 
 Tests : `api/tests/test_editor_e6b.py` (validation, relecture, image finale du vrai FFmpeg : titre trouvé à 25,2 % / 29,5 % pour 25 / 30, logo exactement à 40 / 55, sous-titres à 19,9 % pour 20), `api/tests/test_place_e6b.mjs` (plan + moteur du worker : fichier rendu, titre à 69,7 / 25,0 pour 70 / 25, logo à 10,0 / 60,0), `web/tests/e6b_place.py` (glisser, aimant, clavier, Ctrl+Z, panneau, logo, sous-titres, rechargement, arabe, 1024 px) ; tous les tests de l'éditeur (API E1 à E5d, navigateur E1, E3, E5b, E6a) relancés : bons.
+
+
+## Étape E6c — Éditeur : format et qualité du rendu
+
+### Description
+Retour d'Epok du 20/10 : choisir le format et la qualité du rendu. Dans **Rendre la vidéo** :
+- **Format** : **16:9** (paysage, par défaut), **9:16** (vertical : Shorts, Reels, TikTok), **1:1** (carré : Instagram, Facebook).
+- Hors 16:9, **Remplissage** : **Image entière, fond flouté** (par défaut : toute la conférence reste visible, au-dessus d'une copie agrandie, floutée et assombrie ; pas de bandes noires) ou **Recadrer au centre** (l'image remplit le cadre, les côtés sont coupés).
+- **Qualité** (rendu final) : **Auto (la meilleure)**, **360p**, **720p**, **1080p** (côté court de l'image : 9:16 en 1080p = 1080 × 1920). Les qualités au-dessus de la vidéo d'origine sont **grisées** (« Vidéo d'origine : 360p au mieux ») ; si elles sont demandées quand même (API), le rendu se fait dans la meilleure qualité possible avec un avertissement. L'**aperçu rapide** reste en 360p, dans le format choisi.
+- Les titres, le logo et les sous-titres gardent leur place **en % de l'image** et leur taille suit le format (textes calculés pour 1920 × 1080, 1080 × 1920 ou 1080 × 1080).
+- La liste des rendus affiche le format et la qualité (« Rendu final · 9:16 · recadré · 360p ») ; le fichier téléchargé porte le format dans son nom.
+- Les extraits 9:16 (page Extraits) ne changent pas.
+
+Fichiers : `api/src/modules/editor/plan.js` (format, remplissage, textes), `render.js` (choix reçus, qualité de la source lue dans `master.m3u8`, avertissement, affichage), **`worker/src/render.js`** (taille de l'image), `web/modules/editor/RenderPanel.js`. Aucune migration (le choix est rangé dans le plan du rendu).
+
+### Prérequis
+- Étapes E4a à E6b déployées.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est poussé), ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → Redeploy : **`majlistv-api`**, puis **`majlistv-web`**, puis **`majlistv-worker`** (il a changé : taille de l'image selon le format).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+docker logs --tail 50 dockpanel-git-majlistv-worker 2>&1 | tail -5
+```
+
+### Debug
+- 720p / 1080p grisés : la vidéo d'origine n'existe qu'en qualité plus basse (on ne peut pas inventer de détails).
+- Le titre tombe mal en 9:16 : l'habillage est placé pour le 16:9 de l'éditeur ; le déplacer (E6b) puis refaire un aperçu rapide en 9:16.
+- Un rendu reste « en attente » : le worker fait d'abord les conversions de vidéos ; Studio → Activité montre la file.
+- Journal du worker pendant un rendu : `docker logs -f dockpanel-git-majlistv-worker` (ligne « source … → 720x1280 »).
+
+### Exemples d'utilisation
+- Un extrait vertical d'une conférence entière pour les réseaux : Rendre la vidéo → **9:16** → **Image entière, fond flouté** → Aperçu rapide pour vérifier → Rendu final **1080p**.
+- Une version carrée légère : **1:1** → **Recadrer au centre** → **720p**.
+
+Tests : `api/tests/test_format_e6c.mjs` (tailles, plafond à la source, plan, rendu réel par le moteur du worker : 720 × 1280 sans bande noire, titre à 20,0 % de la hauteur, 360 × 360, 1280 × 720), `api/tests/test_editor_e6c.py` (API : valeurs refusées, qualité de la source, avertissement, plan enregistré), `web/tests/e6c_render.py` (panneau, qualités grisées, demande envoyée, liste, arabe) ; relancés : tests de rendu E4a, extraits E5b/E5d, placement E6b.

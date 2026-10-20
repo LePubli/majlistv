@@ -325,3 +325,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Étape E6b (20/10) — placer les éléments sur la vidéo
 - Titres, bandeaux, logo, sous-titres glissés à la souris (aimant, zone de sécurité, flèches, Ctrl+Z), positions en % de l'image respectées par le rendu et l'image finale. Module editor 0.9.0. Reste E6c (format et qualité du rendu).
+
+
+## Étape E6c (20/10) — format et qualité du rendu
+- 16:9 / 9:16 / 1:1 (fond flouté ou recadrage), qualité 360 / 720 / 1080 plafonnée à la source. E6 terminée. Suite proposée : fiche vidéo allégée (2 maquettes), chaînes riches + multi-chaînes, Kids catalogue, Shorts publics, Créateur, D3c (+ hauteur de voix), F.
