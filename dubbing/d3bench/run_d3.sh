@@ -7,6 +7,7 @@
 #   - VRAIE PERSONNE (autorisation obligatoire) : <voix>.consent contenant une seule ligne « AAAA-MM-JJ|Nom de la personne (ou de son représentant légal) » ;
 #   - VOIX DE SYNTHÈSE (Voicebox) : pas de fichier .consent ;
 #   - texte lu dans l'échantillon (facultatif, plus fidèle) : <voix>.txt ; pour les voix de synthèse, texte.txt à défaut ; sinon empreinte de voix seule.
+# D3_CPUS=2 D3_MEM=6g : limites plus basses (4 cœurs et 8 Go par défaut)
 # Écrit dans /root/dubbing-test/out/<conférence>/d3/ : un dossier par essai + comparaison.md
 set -euo pipefail
 TALK="${1:?Usage: ./run_d3.sh <conférence> [phrases]}"
@@ -23,7 +24,10 @@ VOICES=$(ls "$BASE"/in/voix/*.{wav,mp3,m4a} 2>/dev/null || true)
 [ -n "$VOICES" ] || { echo "Aucun échantillon dans $BASE/in/voix/ (femme.wav, fille.wav…)"; exit 1; }
 OUT="$BASE/out/$TALK/d3"; mkdir -p "$OUT" "$BASE/models"
 # Limites : 4 cœurs et 8 Go au plus, pour ne pas gêner les autres sites du serveur
-RUN=(docker run --rm --cpus 4 --memory 8g -e OMP_NUM_THREADS=4 -v "$BASE/in:/in:ro" -v "$BASE/out:/out" -v "$BASE/models:/models")
+# D3_CPUS / D3_MEM abaissent ces limites (essai prudent) ; le conteneur est nommé et supprimé si le script est interrompu.
+CPUS="${D3_CPUS:-4}"; MEM="${D3_MEM:-8g}"
+trap 'docker rm -f majlis-d3-run >/dev/null 2>&1 || true' EXIT INT TERM
+RUN=(docker run --rm --name majlis-d3-run --cpus "$CPUS" --memory "$MEM" -e OMP_NUM_THREADS="$CPUS" -v "$BASE/in:/in:ro" -v "$BASE/out:/out" -v "$BASE/models:/models")
 for V in $VOICES; do
   NAME=$(basename "${V%.*}")
   if [ -n "$ONLY" ] && [[ " $ONLY " != *" $NAME "* ]]; then continue; fi
