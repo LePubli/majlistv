@@ -101,8 +101,9 @@ export default function ShortsPage({ projectId }) {
     let hls = null; let alive = true;
     const meta = () => alive && setVw({ w: v.videoWidth || 16, h: v.videoHeight || 9 });
     v.addEventListener('loadedmetadata', meta);
-    if (v.canPlayType('application/vnd.apple.mpegurl')) v.src = src;
-    else import('hls.js').then(({ default: Hls }) => { if (!alive || !Hls.isSupported()) return; hls = new Hls({ maxBufferLength: 20 }); hls.loadSource(src); hls.attachMedia(v); }).catch(() => {});
+    // hls.js d'abord ; lecture native seulement sans MSE (voir Preview.js).
+    const native = () => { if (alive && v.canPlayType('application/vnd.apple.mpegurl')) v.src = src; };
+    import('hls.js').then(({ default: Hls }) => { if (!alive) return; if (!Hls.isSupported()) { native(); return; } hls = new Hls({ maxBufferLength: 20 }); hls.loadSource(src); hls.attachMedia(v); }).catch(native);
     return () => { alive = false; v.removeEventListener('loadedmetadata', meta); if (hls) hls.destroy(); };
   }, [src]);
   // Suivi du temps, boucle sur le passage, aperçu vertical dessiné dans un canvas.

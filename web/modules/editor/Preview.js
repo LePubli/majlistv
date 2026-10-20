@@ -54,16 +54,16 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
     const ready = () => alive && setState('ready');
     const failed = () => alive && setState('error');
     v.addEventListener('loadedmetadata', ready);
-    if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.addEventListener('error', failed); }
-    else {
-      import('hls.js').then(({ default: Hls }) => {
-        if (!alive) return;
-        if (!Hls.isSupported()) { failed(); return; }
-        hls = new Hls({ maxBufferLength: 20, startPosition: 0 });
-        hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) failed(); });
-        hls.loadSource(src); hls.attachMedia(v);
-      }).catch(failed);
-    }
+    // hls.js d'abord (comme le lecteur du site) ; lecture native seulement si le navigateur n'a pas MSE (ancien iPhone).
+    // Les Chrome récents annoncent savoir lire le HLS « nativement » mais échouent sur nos segments : on ne s'y fie plus.
+    const native = () => { if (!alive) return; v.src = src; v.addEventListener('error', failed); };
+    import('hls.js').then(({ default: Hls }) => {
+      if (!alive) return;
+      if (!Hls.isSupported()) { if (v.canPlayType('application/vnd.apple.mpegurl')) native(); else failed(); return; }
+      hls = new Hls({ maxBufferLength: 20, startPosition: 0 });
+      hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) failed(); });
+      hls.loadSource(src); hls.attachMedia(v);
+    }).catch(() => { if (v.canPlayType('application/vnd.apple.mpegurl')) native(); else failed(); });
     return () => { alive = false; v.removeEventListener('loadedmetadata', ready); v.removeEventListener('error', failed); if (hls) hls.destroy(); };
   }, [src]);
 

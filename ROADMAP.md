@@ -309,3 +309,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 - TriMaint (port 7001) n'est jamais touché.
 - Après chaque redéploiement : `/root/apply-limits.sh`, puis vérifier le port nginx de l'API (7000).
 - Les clés ne passent jamais par un chat : DockPanel ou Admin → Paramètres uniquement.
+
+
+## Correctif 20/10 — aperçu de l'éditeur
+- L'aperçu 360p (éditeur et page Shorts) utilise maintenant hls.js d'abord ; la lecture native du navigateur n'est qu'un secours (les Chrome récents l'annoncent mais échouent sur nos segments fMP4). Fichiers : `web/modules/editor/Preview.js`, `ShortsPage.js`. À confirmer sur le VPS avec arab1.
