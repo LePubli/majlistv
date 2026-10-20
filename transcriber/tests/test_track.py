@@ -92,6 +92,32 @@ d = [10, 20, 100, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.9]
 f = track.pick_face([d, [0, 0, 0, 5] + [0] * 10 + [0.9]], 1000, 500)
 ok(len(f) == 1 and abs(f[0][0] - 0.06) < 1e-9 and abs(f[0][1] - 0.024) < 1e-9 and f[0][2] == 0.9, "détection brute → (centre, surface, confiance) ; largeur nulle ignorée")
 
+# 9) Registre n°32 : deux personnes de même taille, le cadre suit celle qui parle (bouche qui bouge d'une image à l'autre)
+import random
+rnd = random.Random(7)
+still = [rnd.uniform(-1, 1) for _ in range(40)]
+def mouth(talking):
+    return [v + (rnd.uniform(-1.2, 1.2) if talking else rnd.uniform(-0.03, 0.03)) for v in still]
+def duo(left_talks):
+    return lambda t: [(0.25, 0.05, 0.95, mouth(left_talks(t))), (0.75, 0.05, 0.95, mouth(not left_talks(t)))]
+r = run(20, duo(lambda t: t < 10))
+ks = r["keys"]
+ok(r["mode"] == "speaker" and r["switches"] == 1, f"deux personnes : mode « celle qui parle », un seul changement ({r['mode']}, {r['switches']})")
+ok(at(ks, 6) < 20 and at(ks, 19.5) > 80, f"la gauche parle puis la droite : cadre à gauche ({at(ks, 6):.0f}) puis à droite ({at(ks, 19.5):.0f})")
+r = run(20, duo(lambda t: not (t >= 12)) if False else duo(lambda t: not (12 <= t < 12.5)))
+ok(r["switches"] == 0 and max(k["x"] for k in r["keys"]) < 20, f"la droite parle une demi-seconde : le cadre ne bouge pas ({r['switches']} changement)")
+r = run(30, duo(lambda t: (t // 5) % 2 == 0))
+ok(r["switches"] == 5, f"dialogue (5 s chacun) : un changement à chaque prise de parole ({r['switches']})")
+quiet = lambda t: [(0.25, 0.06, 0.95, mouth(False)), (0.75, 0.04, 0.95, mouth(False))]
+r = run(20, quiet)
+ok(max(k["x"] for k in r["keys"]) < 20, "personne ne parle : on reste sur la plus grande")
+r = run(20, lambda t: [(0.35, 0.06, 0.95, mouth(True)), (0.9, 0.004, 0.9, mouth(True))])
+ok(r["mode"] == "main" and all(k["x"] < 40 for k in r["keys"]), "petit visage du public qui parle : ne prend jamais le cadre")
+r = run(20, lambda t: [(0.5, 0.05, 0.95, mouth(True))])
+ok(r["mode"] == "main" and r["switches"] == 0, "une seule personne : comme avant")
+r = run(20, lambda t: [(0.25, 0.05, 0.95), (0.75, 0.05, 0.95)])
+ok(r["mode"] == "main", "bouches inconnues : règle « personne principale »")
+
 import json
 ok(json.dumps(r["keys"]) and all(type(k["t"]) is float and type(k["x"]) is float for k in r["keys"]), "points clés en nombres Python purs (enregistrables en JSON)")
 

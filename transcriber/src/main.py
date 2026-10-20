@@ -452,7 +452,8 @@ def process_track(job):
             return fail("Aucun visage repéré dans ce passage : le cadre reste fixe.")
         query("""UPDATE face_track_jobs SET status = 'done', progress = 100, error = NULL, keys = %s, coverage = %s, faces = %s, samples = %s, updated_at = now()
                  WHERE project_id = %s""", (psycopg2.extras.Json(res["keys"]), res["coverage"], res["faces"], res["samples"], pid))
-        log(f"[{pid}] suivi du visage : {len(res['keys'])} points clés, visage vu {res['coverage'] * 100:.0f} % du temps")
+        log(f"[{pid}] suivi du visage : {len(res['keys'])} points clés, visage vu {res['coverage'] * 100:.0f} % du temps"
+            + (f", suit la personne qui parle ({res['switches']} changement(s))" if res.get("mode") == "speaker" else ""))
     except Canceled:
         mark_canceled("face_track_jobs", "project_id", pid)
         log(f"[{pid}] suivi du visage : annulé à la demande")

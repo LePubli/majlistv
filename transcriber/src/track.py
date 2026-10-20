@@ -7,6 +7,9 @@ la même échelle que « cropX » d'un extrait (étape E5b).
 
 Règles (décision d'Epok du 20/10) : on suit le visage le plus grand et le plus stable ; le cadre bouge comme un cadreur :
 il reste immobile tant que le visage reste dans une zone centrale, puis le rattrape en douceur, sans secousses.
+Registre n°32 (décision d'Epok du 20/10) : quand plusieurs personnes comptent à l'image, le cadre suit CELLE QUI PARLE.
+On le devine au mouvement de la bouche (petite image de la bouche, comparée d'une image examinée à la suivante) ; on ne change
+de personne que si l'autre parle nettement plus pendant un moment (pas de va-et-vient). Une seule personne : rien ne change.
 """
 import math
 
@@ -20,6 +23,11 @@ FILL_GAP = 2.0          # secondes : on comble un trou de détection plus court 
 DEAD_ZONE = 0.12        # part de la largeur du cadre où le visage peut bouger sans que le cadre ne bouge
 FOLLOW_RATE = 3.0       # « raideur » du rattrapage (par seconde)
 MAX_SPEED = 0.25        # vitesse maxi du cadre, en parts de la largeur de l'image par seconde
+# Registre n°32 : suivre la personne qui parle.
+TALK_WINDOW = 1.0       # secondes de part et d'autre pour lisser l'activité de la bouche
+TALK_MIN = 0.12         # activité de bouche en dessous de laquelle on considère que personne ne parle (écart moyen normalisé)
+SWITCH_RATIO = 1.4      # l'autre personne doit bouger la bouche 1,4 fois plus que celle suivie…
+SWITCH_HOLD = 1.0       # …pendant au moins 1 seconde avant que le cadre ne change de personne
 
 
 def frame_share(width, height):
@@ -35,7 +43,9 @@ def link_faces(samples):
     tracks = []
     for t, faces in samples:
         used = set()
-        for cx, area, score in sorted(faces, key=lambda f: -f[1]):
+        for face in sorted(faces, key=lambda f: -f[1]):
+            cx, area, score = face[0], face[1], face[2]
+            mouth = face[3] if len(face) > 3 else None  # petite image de la bouche (liste de nombres), si le détecteur l'a fournie
             best, best_d = None, None
             for k, tr in enumerate(tracks):
                 if k in used:
@@ -47,13 +57,66 @@ def link_faces(samples):
                 if d <= LINK_JUMP * max(1.0, (t - lt) * SAMPLE_FPS) and (best_d is None or d < best_d):
                     best, best_d = k, d
             if best is None:
-                tracks.append({"pts": [(t, cx)], "weight": area * score})
+                tracks.append({"pts": [(t, cx)], "weight": area * score, "mouth": {t: mouth}})
                 used.add(len(tracks) - 1)
             else:
                 tracks[best]["pts"].append((t, cx))
                 tracks[best]["weight"] += area * score
+                tracks[best]["mouth"][t] = mouth
                 used.add(best)
     return tracks
+
+
+def mouth_activity(tr):
+    """Activité de la bouche d'une personne à chaque image où on la voit : écart moyen entre sa bouche et celle de l'image d'avant
+    (images normalisées : l'éclairage ne compte pas). {t: activité} ; vide si les bouches ne sont pas connues."""
+    out, prev_t, prev_m = {}, None, None
+    for t, _ in tr["pts"]:
+        m = tr["mouth"].get(t)
+        if m is not None and prev_m is not None and len(m) == len(prev_m) and t - prev_t <= 1.6 / SAMPLE_FPS:
+            out[t] = sum(abs(a - b) for a, b in zip(m, prev_m)) / len(m)
+        prev_t, prev_m = (t, m) if m is not None else (None, None)
+    return out
+
+
+def speaker_series(samples, keep_tracks):
+    """Registre n°32 : position de la personne qui parle à chaque image (None si personne n'est vu), et nombre de changements.
+    Renvoie None si on ne peut pas savoir qui parle (une seule personne, ou bouches inconnues) : on garde alors la règle « personne principale »."""
+    if len(keep_tracks) < 2:
+        return None
+    acts = [mouth_activity(tr) for tr in keep_tracks]
+    if sum(1 for a in acts if a) < 2:
+        return None
+    seen = [dict(tr["pts"]) for tr in keep_tracks]
+    times = [t for t, _ in samples]
+
+    def score(k, t):
+        vals = [v for tt, v in acts[k].items() if abs(tt - t) <= TALK_WINDOW]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    # Au départ : la personne qui parle dans la première seconde (sinon la plus grande et la plus présente).
+    t0 = next((t for t in times if any(t in sn for sn in seen)), times[0])
+    first = [k for k in range(len(keep_tracks)) if any(abs(t - t0) <= TALK_WINDOW for t in seen[k])] or list(range(len(keep_tracks)))
+    talker = max(first, key=lambda k: score(k, t0 + TALK_WINDOW / 2))
+    cur = talker if score(talker, t0 + TALK_WINDOW / 2) >= TALK_MIN else max(first, key=lambda k: keep_tracks[k]["weight"])
+    since, switches, series = None, 0, []
+    for t in times:
+        present = [k for k in range(len(keep_tracks)) if t in seen[k]]
+        if present:
+            best = max(present, key=lambda k: score(k, t))
+            if cur not in present:
+                # La personne suivie n'est plus à l'image : on prend celle qui parle (ou la plus grande si personne ne parle).
+                nxt = best if score(best, t) >= TALK_MIN else max(present, key=lambda k: keep_tracks[k]["weight"])
+                if nxt != cur:
+                    cur, switches, since = nxt, switches + 1, None
+            elif best != cur and score(best, t) >= TALK_MIN and score(best, t) >= SWITCH_RATIO * score(cur, t):
+                since = t if since is None else since
+                if t - since >= SWITCH_HOLD:
+                    cur, switches, since = best, switches + 1, None
+            else:
+                since = None
+        series.append(seen[cur].get(t))
+    return series, switches
 
 
 def main_series(samples):
@@ -65,11 +128,19 @@ def main_series(samples):
     if not tracks:
         return [None] * len(samples), 0.0
     tracks.sort(key=lambda tr: -tr["weight"])
-    keep = [dict(tr["pts"]) for tr in tracks if tr["weight"] >= SECOND_RATIO * tracks[0]["weight"]]
-    series = []
-    for t, _ in samples:
-        series.append(next((seen[t] for seen in keep if t in seen), None))
+    kept = [tr for tr in tracks if tr["weight"] >= SECOND_RATIO * tracks[0]["weight"]]
+    talk = speaker_series(samples, kept)
+    if talk is not None:
+        series = talk[0]
+        main_series.last = {"mode": "speaker", "switches": talk[1]}
+    else:
+        keep = [dict(tr["pts"]) for tr in kept]
+        series = [next((seen[t] for seen in keep if t in seen), None) for t, _ in samples]
+        main_series.last = {"mode": "main", "switches": 0}
     return series, (sum(1 for v in series if v is not None) / len(series) if series else 0.0)
+
+
+main_series.last = {"mode": "main", "switches": 0}
 
 
 def fill_gaps(times, series):
@@ -176,15 +247,21 @@ def build_track(samples, width, height, start=0.0):
     path = operator_path(times, target, share)
     keys = keyframes([start + t for t in times], [to_percent(p, share) for p in path])
     tracks = [tr for tr in link_faces(samples) if len(tr["pts"]) >= 3]
-    return {"keys": keys, "coverage": round(coverage, 3), "faces": max(1, len(tracks)), "samples": len(samples)}
+    info = dict(main_series.last)
+    return {"keys": keys, "coverage": round(coverage, 3), "faces": max(1, len(tracks)), "samples": len(samples),
+            "mode": info["mode"], "switches": info["switches"]}
 
 
-def pick_face(detections, width, height):
-    """Convertit les détections brutes d'OpenCV (x, y, largeur, hauteur, …, confiance) en (centre, surface, confiance)."""
+def pick_face(detections, width, height, mouth_of=None):
+    """Convertit les détections brutes d'OpenCV (x, y, largeur, hauteur, 5 repères, confiance) en (centre, surface, confiance[, bouche]).
+    mouth_of(détection) : petite image normalisée de la bouche (liste de nombres) ou None — fournie par faces.py (registre n°32)."""
     out = []
     for d in detections:
         x, y, w, h, score = (float(v) for v in (d[0], d[1], d[2], d[3], d[14] if len(d) > 14 else d[-1]))  # nombres Python purs (JSON)
         if w <= 0 or h <= 0:
             continue
-        out.append(((x + w / 2) / width, (w * h) / (width * height), float(score)))
+        face = ((x + w / 2) / width, (w * h) / (width * height), float(score))
+        if mouth_of is not None:
+            face = face + (mouth_of(d),)
+        out.append(face)
     return out

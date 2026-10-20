@@ -4808,3 +4808,15 @@ nginx -t && systemctl reload nginx
 - Essais réels sur le VPS (n°18, 19, 21, 25, 26, 30) : étape F.
 - Décisions : n°15 (un organisateur peut-il supprimer un logo commun ?), n°32 (zoom / suivi de celui qui parle, après essai réel).
 - À surveiller : n°14 (charge de « Voir l'image finale »), n°20 (limite de 120 passages par rendu).
+
+## Registre : décisions d'Epok du 20/10 (n°9, 15, 32)
+- **n°9** : seul le nouveau Studio existe (déjà le cas depuis l'étape D). Rien à déployer.
+- **n°15** : un organisateur peut supprimer un logo qu'il a lui-même importé : gardé tel quel.
+- **n°32 — le cadre suit la personne qui parle** (extraits 9:16, case « Le cadre suit le visage ») : avec plusieurs personnes, le service de transcription compare la bouche de chacune d'une image examinée à l'autre (3 images par seconde) et suit celle qui parle ; il ne change de personne que si l'autre parle nettement plus pendant au moins 1 seconde. Une seule personne, ou personne qui ne parle : comportement d'avant. Code : `transcriber/src/track.py`, `transcriber/src/faces.py`. Tests : `cd transcriber && python3 tests/test_track.py && python3 tests/test_speaker_faces.py`.
+- **Déploiement** : Redeploy du service **transcriber** (et **majlistv-web** pour le texte d'aide). Commandes VPS habituelles :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+- **Debug** : `docker logs <conteneur transcriber> 2>&1 | grep "suivi du visage"` affiche « suit la personne qui parle (n changement(s)) » quand ce mode a servi.
