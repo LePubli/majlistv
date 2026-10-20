@@ -3402,3 +3402,13 @@ a.ac-title:hover { color: var(--accent-hover); }
 /* ===== Étape E5c — « Préciser la place des mots » ===== */
 .mtw-align { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 8px 0; }
 .mtw-align .btn { min-height: 36px; padding: 6px 14px; font-size: 13px; }
+
+/* Étape E5d : le cadre vertical suit le visage ; corrections à la main */
+.mts-follow, .mts-manual { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg, transparent); }
+.mts-manual h3 { margin: 0; font-size: .95rem; }
+.mts-track { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: .9rem; }
+.mts-track[data-track="done"] > span { color: var(--gold, #e6a93a); }
+.mts-track[data-track="failed"] > span { color: var(--danger, #ff8a80); }
+.mts-manual-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: end; }
+.mts-manual-row input { width: 100%; min-width: 0; }
+@media (max-width: 480px) { .mts-manual-row { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; } }

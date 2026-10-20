@@ -75,7 +75,7 @@ try:
 
     mods = rq("GET", "/admin/modules", headers=A).json(); mods = mods.get("modules", mods)
     ed = next((m for m in mods if m["id"] == "editor"), {}) if isinstance(mods, list) else mods.get("editor", {})
-    ok(ed.get("version") == "0.7.1" and "E5a" in ed.get("description", ""), f"module editor 0.7.1 ({ed.get('version')})")
+    ok(ed.get("version") == "0.8.0" and "E5a" in ed.get("description", ""), f"module editor 0.8.0 ({ed.get('version')})")
 
     # Conférence supprimée : les mots partent avec elle.
     cur.execute("delete from talks where id=%s", (T,))

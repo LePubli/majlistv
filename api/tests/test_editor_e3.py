@@ -250,7 +250,7 @@ try:
     r = rq("GET", f"/studio/editor/music/{l3['id']}", headers=A); ok(r.status_code == 404, "un logo n'est pas une musique")
     mv = rq("GET", "/studio/modules", headers=A) if False else None
     mod = [m for m in rq("GET", "/admin/modules", headers=A).json()["modules"] if m["id"] == "editor"][0]
-    ok(mod["version"] == "0.7.1" and "E3" in mod["description"] and len(mod["description"]) <= 600, f"module editor 0.7.1 ({mod['version']})")
+    ok(mod["version"] == "0.8.0" and "E3" in mod["description"] and len(mod["description"]) <= 600, f"module editor 0.8.0 ({mod['version']})")
 finally:
     for t in templates: cur.execute("delete from editor_templates where id = %s", (t,))
     cur.execute("delete from speakers where slug = %s", (f"cheikh-test-{tag}",))

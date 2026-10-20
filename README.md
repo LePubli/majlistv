@@ -4416,3 +4416,78 @@ python3 api/tests/test_studio_vtt.py     # API : format, échappement, droits, l
 cd web && npx next build && python3 tests/vtt_export.py   # navigateur : téléchargement réel FR/EN/AR, 390 px
 ```
 Testé : les deux (voir ci-dessus). **Non testé** : sur le serveur réel.
+
+## Étape E5d — Extraits 9:16 : le cadre suit le visage
+
+### Description
+Décision d'Epok du 20/10 : dans un extrait vertical, **le cadre doit suivre le conférencier** au lieu de rester fixe. Sur la page **Studio → Éditeur → Extraits 9:16** :
+- une case **« Le cadre suit le visage »** : en la cochant, l'extrait demande une **analyse** au serveur (le service de transcription lit les images du passage, repère les visages, et garde **le plus grand et le plus présent**, comme décidé) ;
+- l'avancement s'affiche tout seul (« en attente », « en cours : 40 % », « terminée : visage repéré 90 % du temps ») ; on peut quitter la page, le calcul continue ;
+- le cadre doré se **déplace avec la vidéo** dans la fenêtre de lecture, et l'aperçu vertical aussi ; le rendu (aperçu rapide ou final) utilise la même trajectoire ;
+- le cadre bouge comme un cadreur : il **reste immobile** tant que le visage reste dans la zone centrale, puis le rattrape **en douceur** (vitesse limitée, pas de secousse) ;
+- **corrections à la main** (choisies par Epok) : quand le suivi se trompe sur un passage, on **met en pause et on glisse le cadre doré** : une correction de 3 s est créée à cet endroit, le cadre y reste à la position choisie et glisse en 0,4 s avant et après. Les corrections se règlent dans une liste (début, fin, position en %), se suppriment, et le bouton « Ajouter une correction ici » en crée une à l'instant de la vidéo. Elles marchent aussi **sans suivi** (par-dessus un cadre fixe) ;
+- si l'on **change le passage** de l'extrait, l'analyse n'est plus à jour : « à refaire » (en attendant, le rendu garde le cadre fixe et affiche un avertissement) ; les corrections sont recoupées au nouveau passage ;
+- si aucun visage n'est trouvé : message clair, le cadre reste fixe.
+
+Réservé aux vidéos **envoyées sur le site** (comme tout l'éditeur). Détection : modèle **YuNet** (OpenCV, licence MIT, 230 Ko, sur processeur, sans réseau ni carte graphique) ; environ 3 images par seconde de passage, réduites à 640 px de large. Le cadre ne bouge que **horizontalement** (il garde toute la hauteur de l'image, pas de zoom).
+
+Versions : module `editor` **0.8.0** ; migration du socle `059_face_track.sql` (table `face_track_jobs`) ; **service de transcription** modifié (`track.py`, `faces.py`, modèle `models/face_detection_yunet_2023mar.onnx`, dépendance `opencv-python-headless`). Le worker n'a **pas** changé (il lit la trajectoire dans le plan envoyé par l'API).
+
+### Prérequis
+- Étapes E1 à E5c déployées.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est déjà poussé). Ou bien décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → Redeploy, dans cet ordre :
+   - **`majlistv-api`** (migration `059_face_track.sql`) ;
+   - **`majlistv-web`** ;
+   - **`majlistv-transcriber`** : l'image est reconstruite (OpenCV s'installe : la première fois, quelques minutes de plus).
+   - Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Vérifier la migration et le service :
+```
+docker logs --tail 80 dockpanel-git-majlistv-api 2>&1 | grep -i 059
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\d face_track_jobs"'
+docker exec dockpanel-git-majlistv-transcriber python -c "import cv2; print('OpenCV', cv2.__version__)"
+docker exec dockpanel-git-majlistv-transcriber ls -la /app/models
+```
+Le dernier doit lister `face_detection_yunet_2023mar.onnx` (232 589 octets).
+
+### Exemples d'utilisation
+- Studio → Éditeur → un projet → **Extraits 9:16** → ouvrir un extrait → cocher **Le cadre suit le visage** → attendre « Analyse terminée » → lire le passage : le cadre doré suit le conférencier → **Rendre l'extrait**.
+- Corriger un moment : mettre la vidéo en pause à l'endroit où le cadre se trompe → glisser le cadre doré sur la bonne personne → une correction de 3 s apparaît dans la liste ; ajuster début / fin / position si besoin.
+- Changer le passage de l'extrait → cliquer **Refaire l'analyse**.
+
+### Debug
+- Voir les analyses :
+```
+docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT t.title, j.status, j.progress, j.from_s, j.to_s, j.coverage, j.faces, j.error, j.updated_at FROM face_track_jobs j JOIN talks t ON t.id = j.talk_id ORDER BY j.updated_at DESC LIMIT 10;"'
+```
+- Journaux du service : `docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | grep "suivi du visage"`.
+- « En attente » longtemps : le service traite d'abord les transcriptions, puis « Préciser la place des mots », puis le suivi du visage (une demande à la fois).
+- « Aucun visage repéré » : le conférencier est trop petit, de dos, ou la scène trop sombre ; le cadre reste fixe, utiliser les corrections à la main.
+- « seules les vidéos envoyées sur le site… » : vidéo YouTube / Vimeo, non analysable.
+- Le cadre saute d'une personne à l'autre : corriger à la main le passage (une correction garde le cadre en place), ou choisir un passage où une seule personne est à l'image.
+- Le rendu affiche « Le suivi du visage n'est pas prêt pour ce passage » : analyse absente, en cours ou périmée (passage changé) → la relancer ; le rendu a utilisé le cadre fixe.
+
+### Tests
+```
+python3 transcriber/tests/test_track.py      # calcul de la trajectoire (visages → points clés) : 26 contrôles
+python3 transcriber/tests/test_faces.py      # vraie détection OpenCV + YuNet sur une vidéo d'essai (vrai visage qui marche), de bout en bout
+python3 transcriber/tests/test_track_job.py  # le service traite une vraie demande : base, stockage, vidéo, échecs, reprise
+cd api && node tests/test_follow.mjs         # trajectoire, corrections, expression FFmpeg, rendu réel (vrai FFmpeg) : le cadre avance
+python3 api/tests/test_editor_e5d.py         # routes (analyse, corrections, périmée), rendu du worker, suppression
+cd web && python3 tests/e5d_follow.py        # navigateur : case, avancement, cadre qui bouge, glisser = correction, arabe, 390 px
+```
+Les essais des anciens extraits (`test_short.mjs`, `test_editor_e5b.py`, `e5b_shorts.py`) passent toujours : sans suivi, le cadre fixe donne exactement le même rendu qu'avant.
+
+### Testé / non testé
+- **Testé** : tout ce qui précède, avec un **vrai visage** (photo de l'astronaute de scikit-image, domaine public) déplacé sur un fond, de vraies images lues par FFmpeg depuis le stockage de test, la vraie détection YuNet, un vrai rendu FFmpeg (le rouge au centre de l'image verticale suit la trajectoire).
+- **Non testé** (étape F, registre 30) : une vraie conférence (éclairage, barbe, voile, profil, plusieurs personnes, changements de plan), l'image Docker du transcripteur avec OpenCV, le temps d'analyse sur le serveur, la qualité du résultat vu avec vos yeux.
+- Limites connues : le cadre bouge seulement de gauche à droite (pas de zoom) ; un changement de plan de caméra fait « sauter » le cadre vers la personne la plus présente ; l'analyse n'apparaît pas dans Studio → Activité (registre 31).
+

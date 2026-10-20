@@ -8,3 +8,5 @@ cryptography>=44,<51
 # Vidéos YouTube / Vimeo (étape 9 bis) : yt-dlp + Deno (moteur JavaScript exigé par yt-dlp pour YouTube)
 yt-dlp[default]==2026.8.19
 deno==2.5.6
+# Étape E5d : détection de visages (modèle YuNet, processeur) pour que le cadre vertical suive le conférencier
+opencv-python-headless>=4.10,<6

@@ -9,6 +9,7 @@ import { pool } from '../../db.js';
 import { checkTimeline } from './timeline.js';
 import { wordsOf } from './words.js';
 import { deleteProjectRenders } from './render.js';
+import { buildPath, checkManual, manualSchema } from './follow.js';
 import { shortConfigSchema, shortDefaults, checkPassage, shortTimeline, chunkCaptions, MIN_SHORT, MAX_SHORT, MAX_SHORTS } from './short.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -32,15 +33,36 @@ export async function shortChunks(row, cfg, from, to) {
 
 const clipOf = (row) => row.timeline.clips[0];
 
+// Étape E5d : analyse du visage de l'extrait (table face_track_jobs, remplie par le service de transcription).
+export async function trackJobOf(projectId) {
+  return (await pool.query('SELECT status, progress, error, keys, coverage, faces, samples, from_s, to_s, updated_at FROM face_track_jobs WHERE project_id = $1', [projectId])).rows[0] || null;
+}
+// L'analyse ne vaut que pour le passage sur lequel elle a été faite.
+export const jobFresh = (job, from, to) => Boolean(job) && Math.abs(Number(job.from_s) - from) < 0.01 && Math.abs(Number(job.to_s) - to) < 0.01;
+// Trajectoire du cadre de l'extrait (suivi prêt et à jour, sinon cadre fixe) + avertissement si le suivi est demandé mais pas utilisable.
+export function pathOf(cfg, job, from, to) {
+  const usable = job?.status === 'done' && jobFresh(job, from, to) && Array.isArray(job.keys);
+  const manual = checkManual(cfg.manual, from, to);
+  return {
+    path: buildPath({ follow: cfg.follow, keys: usable ? job.keys : null, cropX: cfg.cropX, manual: manual.ok ? manual.manual : [], from, to }),
+    notes: cfg.follow && !usable ? ['Le suivi du visage n’est pas prêt pour ce passage : le cadre reste fixe (ou suit seulement vos corrections).'] : [],
+  };
+}
+
+
 async function shortView(row, { chunks = false } = {}) {
   const cfg = shortDefaults(row.short);
   const c = clipOf(row);
+  const job = await trackJobOf(row.id);
+  const fresh = jobFresh(job, c.in, c.out);
   const last = (await pool.query(
     `SELECT id, kind, status, progress, created_at, out_duration_s, plan->>'vertical' AS vertical FROM editor_renders WHERE project_id = $1 ORDER BY created_at DESC LIMIT 1`, [row.id])).rows[0];
   return {
     id: row.id, talkId: row.talk_id, title: row.title || '', from: c.in, to: c.out, length: Math.round((c.out - c.in) * 1000) / 1000, rev: row.rev, ...cfg,
     updatedAt: row.updated_at, sourceDuration: Number(row.duration_seconds) || null,
     lastRender: last ? { id: last.id, kind: last.kind, status: last.status, progress: last.progress, createdAt: last.created_at, duration: last.out_duration_s != null ? Number(last.out_duration_s) : null } : null,
+    track: job ? { status: job.status, progress: job.progress, error: job.error, fresh, coverage: job.coverage != null ? Number(job.coverage) : null, faces: job.faces, updatedAt: job.updated_at } : null,
+    path: pathOf(cfg, job, c.in, c.out).path,
     ...(chunks ? { chunks: await shortChunks(row, cfg, c.in, c.out) } : {}),
   };
 }
@@ -95,13 +117,17 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
     const row = await loadShort(req, reply); if (!row) return reply;
     const b = z.object({
       rev: z.number().int().min(1), title: z.string().trim().max(90).optional(), from: z.number().finite().optional(), to: z.number().finite().optional(),
-      cropX: shortConfigSchema.shape.cropX.optional(), captions: z.boolean().optional(), lang: shortConfigSchema.shape.lang.optional(), dub: z.boolean().optional(), showTitle: z.boolean().optional(),
+      cropX: shortConfigSchema.shape.cropX.optional(), follow: z.boolean().optional(), manual: manualSchema.optional(), captions: z.boolean().optional(), lang: shortConfigSchema.shape.lang.optional(), dub: z.boolean().optional(), showTitle: z.boolean().optional(),
     }).parse(req.body ?? {});
     if (b.rev !== row.rev) return reply.code(409).send({ error: 'Cet extrait a été modifié ailleurs : la page se met à jour.', code: 'conflict', short: await shortView(row, { chunks: true }) });
     const c = clipOf(row);
     const p = checkPassage(b.from ?? c.in, b.to ?? c.out, row.duration_seconds);
     if (!p.ok) return reply.code(400).send({ error: p.error, code: 'passage' });
-    const cfg = shortDefaults({ ...shortDefaults(row.short), ...Object.fromEntries(['cropX', 'captions', 'lang', 'dub', 'showTitle'].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])) });
+    const cfg = shortDefaults({ ...shortDefaults(row.short), ...Object.fromEntries(['cropX', 'follow', 'manual', 'captions', 'lang', 'dub', 'showTitle'].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])) });
+    if (cfg.follow && !editable(row)) return reply.code(409).send({ error: 'Le suivi du visage n’est possible que pour les vidéos envoyées sur le site.', code: 'not_editable' });
+    const man = checkManual(cfg.manual, p.from, p.to); // corrections recoupées au passage (passage raccourci) ; refusées si elles se chevauchent
+    if (!man.ok) return reply.code(400).send({ error: man.error, code: 'manual' });
+    cfg.manual = man.manual;
     const chk = checkTimeline(shortTimeline(p.from, p.to, row.duration_seconds, cfg), row.duration_seconds);
     if (!chk.ok) return reply.code(400).send({ error: chk.error });
     const u = await pool.query(
@@ -112,12 +138,31 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
     return { short: await shortView(fresh, { chunks: true }) };
   });
 
+  // Étape E5d : lancer (ou refaire) l'analyse du visage sur le passage actuel de l'extrait. Le service de transcription la traite
+  // (lecture des images du passage, détection des visages, trajectoire du cadre) ; la page suit l'avancement.
+  app.post('/studio/editor/shorts/:id/track', viewer, async (req, reply) => {
+    const row = await loadShort(req, reply); if (!row) return reply;
+    if (!editable(row)) return reply.code(409).send({ error: 'Le suivi du visage n’est possible que pour les vidéos envoyées sur le site.', code: 'not_editable' });
+    const c = clipOf(row);
+    const busy = (await pool.query("SELECT 1 FROM face_track_jobs WHERE project_id = $1 AND status = 'processing'", [row.id])).rows[0];
+    if (busy) return reply.code(409).send({ error: 'L’analyse est déjà en cours.', code: 'busy' });
+    await pool.query(
+      `INSERT INTO face_track_jobs(project_id, talk_id, from_s, to_s, status, progress, attempts, error, keys, coverage, faces, samples, requested_by)
+       VALUES ($1, $2, $3, $4, 'pending', 0, 0, NULL, NULL, NULL, NULL, NULL, $5)
+       ON CONFLICT (project_id) DO UPDATE SET talk_id = EXCLUDED.talk_id, from_s = EXCLUDED.from_s, to_s = EXCLUDED.to_s, status = 'pending', progress = 0, attempts = 0,
+         error = NULL, keys = NULL, coverage = NULL, faces = NULL, samples = NULL, requested_by = EXCLUDED.requested_by, created_at = now(), updated_at = now()`,
+      [row.id, row.talk_id, c.in, c.out, req.user.sub]);
+    req.auditSummary = `Éditeur : analyse du visage demandée (« ${row.talk_title} », extrait de ${Math.round(c.out - c.in)} s)`;
+    return reply.code(202).send({ short: await shortView(row) });
+  });
+
   // Supprimer un extrait (et ses fichiers de rendu).
   app.delete('/studio/editor/shorts/:id', viewer, async (req, reply) => {
     const row = await loadShort(req, reply); if (!row) return reply;
     const busy = (await pool.query("SELECT 1 FROM editor_renders WHERE project_id = $1 AND status IN ('queued', 'running')", [row.id])).rows[0];
     if (busy) return reply.code(409).send({ error: 'Un rendu de cet extrait est en cours : annulez-le d’abord.', code: 'running' });
     await pool.query('DELETE FROM editor_projects WHERE id = $1', [row.id]);
+    await pool.query('DELETE FROM face_track_jobs WHERE project_id = $1', [row.id]);
     await deleteProjectRenders(row.id);
     req.auditSummary = `Éditeur : extrait court supprimé (« ${row.talk_title} »)`;
     return { deleted: true };

@@ -21,6 +21,7 @@ import { layout, mapItems, transitionAt, dressEvents, buildAss, fillVars, dressD
 import { audioDefaults } from './timeline.js';
 import { DENOISE_FILTER } from './denoise.js';
 import { cropFilter, buildShortAss } from './short.js';
+import { cropFilterPath, isConstant } from './follow.js';
 
 export const MAX_PARTS = 120;       // extraits (après regroupement des extraits qui se suivent) : un fichier source ouvert par extrait
 export const CURVE_HZ = 1000;       // cadence des courbes de baisse du volume lues par FFmpeg
@@ -102,7 +103,8 @@ const fmt = (x) => String(r3(x));
 //   logo     : { key } | null
 //   preview  : true = petit fichier rapide (aperçu), false = rendu final
 //   title    : titre de la conférence (pour le nom du fichier)
-//   short    : null, ou (étape E5b, extrait court 9:16) { cropX, captions: [{ s, e, text }] (temps source, déjà regroupés), titleText }.
+//   short    : null, ou (étape E5b, extrait court 9:16) { cropX, captions: [{ s, e, text }] (temps source, déjà regroupés), titleText,
+//              path (E5d, facultatif) : [{ t, x }] trajectoire du cadre (suivi du visage et corrections), notes (E5d) : avertissements à afficher }.
 //              Image verticale recadrée sur la source ; pas d'habillage (titre et sous-titres courts seulement).
 export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = {}, logo = null, preview = false, title = '', short = null }) {
   const dress = dressDefaults(short ? null : timeline.dress);
@@ -139,7 +141,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   parts.forEach((p) => {
     const k = addInput('source', ['-ss', fmt(p.in), '-t', fmt(p.d)], 'v');
     const chain = short
-      ? [`[${k}:v]setpts=PTS-STARTPTS`, cropFilter(short.cropX), 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`] // extrait 9:16 : cadre vertical sur la source
+      ? [`[${k}:v]setpts=PTS-STARTPTS`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`] // extrait 9:16 : cadre vertical sur la source
       : [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
     // Fondu au noir / au blanc : la moitié avant le raccord (fin de l'extrait précédent), la moitié après (début de celui-ci).
     if (p.tr) { const h = Math.min(p.tr.len / 2, p.d / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
@@ -162,6 +164,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
     // Extrait court : sous-titres déjà regroupés (temps source → temps de l'extrait) et titre du début.
     const caps = mapItems(clips, short.captions || []).map((m) => ({ s: m.ts, e: m.te, text: m.text }));
     if (short.wantCaptions && !caps.length) warnings.push('Sous-titres demandés, mais ce passage n’a pas de texte : rien n’est incrusté.');
+    for (const n of short.notes || []) warnings.push(n);
     ass = buildShortAss({ chunks: caps, title: short.titleText || '', total });
   } else {
     const events = dressEvents(dress, { vars, total, cues: cueMap, fade: true, offset: I });

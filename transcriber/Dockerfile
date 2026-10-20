@@ -7,6 +7,7 @@ COPY transcriber/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     && chmod +x /usr/local/bin/deno && deno --version  # le paquet pip de Deno n'est pas exécutable par défaut
 COPY transcriber/src ./src
+COPY transcriber/models ./models
 RUN useradd -m app && mkdir /models /work && chown app /models /work
 USER app
 ENV PYTHONUNBUFFERED=1 HF_HOME=/models MODELS_DIR=/models WORK_DIR=/work PATH=/home/app/.local/bin:$PATH

@@ -5,6 +5,7 @@
 // Sous-titres : mots regroupés en petits groupes (5 mots au plus) pour les lire d'un coup d'œil sur un téléphone.
 // Titre : affiché en haut pendant les premières secondes.
 import { z } from 'zod';
+import { manualSchema } from './follow.js';
 
 export const MIN_SHORT = 1;       // secondes
 export const MAX_SHORT = 180;     // 3 minutes : limite des formats courts des réseaux
@@ -20,6 +21,9 @@ export const shortConfigSchema = z.object({
   lang: z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/, 'Langue invalide').nullable().default(null),
   dub: z.boolean().default(false),
   showTitle: z.boolean().default(true),
+  // Étape E5d : le cadre suit le visage (analyse faite par le service de transcription) ; corrections à la main (temps de la vidéo d'origine).
+  follow: z.boolean().default(false),
+  manual: manualSchema,
 });
 export const shortDefaults = (c) => shortConfigSchema.parse(c || {});
 

@@ -1,0 +1,5 @@
+Modèle de détection de visages YuNet (face_detection_yunet_2023mar.onnx), 232 589 octets.
+Auteur : Shiqi Yu et al. (YuNet) ; fichier publié dans le dépôt OpenCV Zoo (https://github.com/opencv/opencv_zoo, dossier models/face_detection_yunet).
+Licence : MIT (voir le fichier LICENSE du dossier du modèle dans OpenCV Zoo).
+Empreinte SHA-256 : 8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4
+Utilisé par l'étape E5d (cadre qui suit le visage). Le modèle tourne sur le processeur, sans réseau.

@@ -154,6 +154,20 @@ def claim_align():
     return rows[0] if rows else None
 
 
+def claim_track():
+    """Étape E5d : prochaine demande « Le cadre suit le visage » (table créée par la migration 059 de l'API)."""
+    try:
+        rows = query(
+            """UPDATE face_track_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
+               WHERE project_id = (SELECT project_id FROM face_track_jobs WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING project_id, talk_id, from_s, to_s""",
+            fetch=True,
+        )
+    except psycopg2.errors.UndefinedTable:
+        return None
+    return rows[0] if rows else None
+
+
 # --- Stockage ----------------------------------------------------------------------------------
 s3 = boto3.client(
     "s3",
@@ -356,6 +370,56 @@ def process_align(job):
     except Exception as err:  # noqa: BLE001
         log(f"[{talk_id}] place des mots : échec : {err}")
         query("UPDATE word_align_jobs SET status = 'failed', error = %s, updated_at = now() WHERE talk_id = %s", (str(err)[:500], talk_id))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def process_track(job):
+    """Étape E5d : lit les images d'un extrait, repère les visages et calcule la trajectoire du cadre vertical (points clés).
+    Seules les vidéos envoyées sur le site sont analysées (les vidéos YouTube / Vimeo ne sont pas chez nous)."""
+    import faces  # OpenCV n'est chargé que pour ce travail : le reste du service n'en dépend pas
+    import track
+    pid, talk_id = str(job["project_id"]), str(job["talk_id"])
+    start, end = float(job["from_s"]), float(job["to_s"])
+    work = os.path.join(WORK_DIR, "track-" + pid)
+
+    def fail(msg):
+        query("UPDATE face_track_jobs SET status = 'failed', error = %s, updated_at = now() WHERE project_id = %s", (msg[:500], pid))
+        log(f"[{pid}] suivi du visage : {msg}")
+
+    try:
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work)
+        talk = query("SELECT source, video_ref FROM talks WHERE id = %s", (talk_id,), fetch=True)
+        if not talk or talk[0]["source"] != "upload":
+            return fail("seules les vidéos envoyées sur le site peuvent être analysées")
+        if not (0 <= start < end <= start + 600):
+            return fail("passage invalide")
+        url = s3.generate_presigned_url("get_object", Params={"Bucket": BUCKET, "Key": talk[0]["video_ref"]}, ExpiresIn=3600)
+        log(f"[{pid}] suivi du visage : lecture des images ({end - start:.0f} s)")
+        paths = faces.extract_frames(url, start, end - start, os.path.join(work, "img"))
+        if len(paths) < 2:
+            return fail("la vidéo n'a pas d'image à cet endroit")
+        last = {"t": 0.0}
+
+        def progress(p):
+            if time.time() - last["t"] > 4:
+                last["t"] = time.time()
+                query("UPDATE face_track_jobs SET progress = %s, updated_at = now() WHERE project_id = %s", (min(95, p), pid))
+
+        samples, w, h = faces.detect(paths, progress=progress, should_stop=lambda: stopping)
+        res = track.build_track(samples, w, h, start)
+        if not res:
+            return fail("Aucun visage repéré dans ce passage : le cadre reste fixe.")
+        query("""UPDATE face_track_jobs SET status = 'done', progress = 100, error = NULL, keys = %s, coverage = %s, faces = %s, samples = %s, updated_at = now()
+                 WHERE project_id = %s""", (psycopg2.extras.Json(res["keys"]), res["coverage"], res["faces"], res["samples"], pid))
+        log(f"[{pid}] suivi du visage : {len(res['keys'])} points clés, visage vu {res['coverage'] * 100:.0f} % du temps")
+    except InterruptedError:
+        raise Stop()
+    except Stop:
+        raise
+    except Exception as err:  # noqa: BLE001
+        fail(f"échec : {err}")
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -630,6 +694,10 @@ def main():
         query("UPDATE word_align_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les demandes interrompues (E5c)
     except Exception:  # noqa: BLE001
         pass
+    try:
+        query("UPDATE face_track_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les analyses de visage interrompues (E5d)
+    except Exception:  # noqa: BLE001
+        pass
     apply_settings()
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
@@ -652,6 +720,18 @@ def main():
                 current = None
                 try:
                     process_align(job2)
+                except Stop:
+                    pass
+                continue
+            try:
+                job3 = claim_track()
+            except Exception as err:  # noqa: BLE001
+                log("Erreur base (suivi du visage) :", err)
+                job3 = None
+            if job3:
+                current = None
+                try:
+                    process_track(job3)
                 except Stop:
                     pass
                 continue

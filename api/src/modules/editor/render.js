@@ -16,7 +16,7 @@ import { buildPlan, estimateSeconds } from './plan.js';
 import * as ext from '../../ext.js';
 import { speakerSlug } from '../../speakers.js';
 import { shortDefaults } from './short.js';
-import { shortChunks } from './shorts.js';
+import { shortChunks, trackJobOf, pathOf } from './shorts.js';
 
 export const KEEP_RENDERS = 3;
 const KINDS = ['preview', 'final'];
@@ -107,7 +107,8 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
       let short = null;
       if (row.kind === 'short') {
         const cfg = shortDefaults(row.short); const c = chk.timeline.clips[0];
-        short = { cropX: cfg.cropX, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '' };
+        const { path: framePath, notes } = pathOf(cfg, await trackJobOf(row.id), c.in, c.out); // étape E5d : le cadre suit le visage / corrections à la main
+        short = { cropX: cfg.cropX, path: framePath, notes, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '' };
       }
       plan = buildPlan({ timeline: chk.timeline, vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, ...inp,
         preview: b.kind === 'preview', title: row.kind === 'short' ? `${row.talk_title || ''} ${row.title || ''}`.trim() : row.talk_title || '', short });
