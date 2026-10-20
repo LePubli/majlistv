@@ -270,9 +270,13 @@ Règles transversales :
 
 ### Phase D — Au-delà du site
 
-**22. Applications**
-- Android (Kotlin) : catalogue, lecture, mode audio, **téléchargement hors ligne**, reprise synchronisée, notifications.
-- Android TV : navigation à la télécommande, lecture, reprise.
+**22. Applications** (décision d'Epok du 20/10 : après l'étape F, dans cet ordre)
+- *22a — Site installable (PWA)* : icône sur l'écran d'accueil (téléphone, tablette, ordinateur), ouverture en plein écran, page « hors connexion ». Petite étape. Limites sur iPhone : pas de téléchargement hors ligne fiable des vidéos, notifications limitées.
+- *22b — Application Android + iPhone/iPad* en **React Native (Expo)**, un seul code pour les deux (choix fait plutôt que Kotlin + Swift pour ne maintenir qu'une application ; l'application iPhone est fabriquée et envoyée sur l'App Store par les serveurs d'Expo, sans Mac). Lecteur vidéo du téléphone (HLS), plein écran, image dans l'image, son écran éteint (mode audio), reprise synchronisée avec le site, **téléchargement hors ligne**, notifications, espace Kids, **diffusion vers la télé (Chromecast et AirPlay)**. Branchée sur l'API actuelle.
+  À vérifier au moment de l'étape (règles des magasins qui changent) : abonnement payé sur le site et application de connexion et de lecture, ou achat dans l'application (commission Apple / Google) ; compte développeur Apple et Google Play à ouvrir par Epok.
+- *22c — Android TV / Google TV* : même base de code, navigation à la télécommande, lecture, reprise.
+- *22d — Apple TV* : seulement si la demande est là (même base de code).
+- Plus tard, si besoin : applications Samsung (Tizen) et LG (webOS), chacune à part.
 
 **23. Diffusion à grande échelle** (déclencheur : bande passante du VPS proche de la limite)
 - CDN pour les vidéos (par exemple Bunny), avec les jetons d'accès premium conservés.
