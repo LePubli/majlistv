@@ -4383,3 +4383,36 @@ D3b : intégrer au service de doublage la méthode choisie à l'écoute (nouvell
 **Complément D3a (20/10)** : le banc accepte aussi de **vraies voix déjà enregistrées** (sans Voicebox). Pour chacune : un fichier `<voix>.consent` d'une ligne `AAAA-MM-JJ|Nom` (autorisation, obligatoire pour une vraie personne ; sans lui la voix est traitée comme une voix de synthèse), et si possible `<voix>.txt` avec le texte exact lu. Détails : `dubbing/d3bench/README.md` §1 bis.
 
 **Complément D3a (20/10, après écoute)** : Epok a essayé ses voix de femmes et d'enfants avec la méthode actuelle (Tom + conversion) : « on n'entend que Tom ». Constat : la conversion garde le rythme et l'intonation de Tom et ne convient qu'à une voix d'homme proche. Le banc se lance donc avec Qwen seul : `METHODS=qwen ONLY="…" src/dubbing/d3bench/run_d3.sh arabe1 40`. Voix reçues : 9 fichiers (3 enfants sur 5 annoncés, 3 hommes, 3 femmes), convertis en WAV 24 kHz mono.
+
+## Complément (20/10) — Télécharger les sous-titres (.vtt) depuis le Studio
+
+### Description
+Studio → Contenu → onglet Transcription : à côté du choix de la langue, le bouton **« Télécharger les sous-titres (.vtt) »** enregistre sur votre ordinateur les sous-titres de la langue affichée, au format WebVTT (`sous-titres-fr.vtt`). C'est la version **enregistrée** : le bouton est grisé tant que des corrections ne sont pas enregistrées. Il remplace la commande de base de données utilisée pour préparer le banc d'essai du doublage.
+
+Côté API : `GET /talks/:id/studio/subs/<langue>.vtt` (connexion obligatoire ; réservé à l'organisateur de la conférence ou à l'administrateur ; 404 si la langue n'a pas de sous-titres).
+
+### Prérequis
+Aucun (pas de migration, pas de nouveau réglage).
+
+### Déploiement
+GitHub Desktop (Commit to main, Push origin), puis DockPanel → Git Deploy → Redeploy : **majlistv-api**, puis **majlistv-web**. Pas besoin du worker ni des autres services. Ensuite sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Exemples d'utilisation
+- Récupérer le français d'une conférence pour le banc d'essai : bouton, puis déposer le fichier dans `/root/dubbing-test/in/` sous le même nom que la vidéo (`ma-conf.vtt` + `ma-conf.mp4`).
+- Relire ou corriger les sous-titres dans un autre outil.
+
+### Debug
+- Le bouton est grisé : enregistrer ou annuler les corrections en cours.
+- Message « Impossible de télécharger les sous-titres » : session expirée (se reconnecter) ou langue sans sous-titres.
+
+### Tests
+```
+python3 api/tests/test_studio_vtt.py     # API : format, échappement, droits, langues (12 contrôles)
+cd web && npx next build && python3 tests/vtt_export.py   # navigateur : téléchargement réel FR/EN/AR, 390 px
+```
+Testé : les deux (voir ci-dessus). **Non testé** : sur le serveur réel.

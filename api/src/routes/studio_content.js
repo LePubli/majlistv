@@ -3,6 +3,7 @@
 // le service translator les reprend tout seul. La recherche se réindexe seule (signature d'indexation).
 import { z } from 'zod';
 import { pool } from '../db.js';
+import { toVtt } from '../vtt.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
@@ -36,6 +37,24 @@ export default async function studioContentRoutes(app) {
       pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]),
     ]);
     return { lang: code, sourceLang: sourceOf(t), languages: langs.rows.map((r) => r.lang), segments: seg.rows };
+  });
+
+  // Téléchargement des sous-titres d'une langue au format WebVTT (version enregistrée), pour l'organisateur de la conférence.
+  // Sert aussi de fichier d'entrée au banc d'essai du doublage (dubbing/d3bench).
+  app.get('/talks/:id/studio/subs/:file', organizer, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const m = String(req.params.file).match(/^(.+)\.vtt$/);
+    if (!m || !langRe.test(m[1])) return reply.code(404).send({ error: 'Introuvable' });
+    const t = await owned(req, reply, id);
+    if (!t) return;
+    const { rows } = await pool.query(
+      'SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1 AND lang = $2 ORDER BY idx', [id, m[1]]);
+    if (!rows.length) return reply.code(404).send({ error: 'Aucun sous-titre dans cette langue' });
+    return reply
+      .header('content-type', 'text/vtt; charset=utf-8')
+      .header('content-disposition', `attachment; filename="sous-titres-${m[1]}.vtt"`)
+      .header('cache-control', 'private, no-store')
+      .send(toVtt(rows));
   });
 
   const putTranscript = z.object({

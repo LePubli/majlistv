@@ -39,6 +39,20 @@ function TranscriptEditor({ id, t, call, locale, onDirty }) {
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Télécharge les sous-titres enregistrés de la langue affichée (fichier .vtt).
+  const exportVtt = async () => {
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/talks/${id}/studio/subs/${data.lang}.vtt`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+      if (!res.ok) throw new Error('http ' + res.status);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(await res.blob());
+      a.download = `sous-titres-${data.lang}.vtt`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } catch { setMsg({ ok: false, text: t("ctExportVttErr") }); }
+  };
+
   const load = useCallback(async (lang) => {
     setState('loading');
     const r = await call(`/talks/${id}/studio/transcript${lang ? `?lang=${lang}` : ''}`);
@@ -93,6 +107,7 @@ function TranscriptEditor({ id, t, call, locale, onDirty }) {
             {data.languages.map((l) => <option key={l} value={l}>{langName(l, locale)}{l === data.sourceLang ? ` (${t('ctOrigin')})` : ''}</option>)}
           </select>
         </label>
+        <button type="button" className="btn ghost" data-act="export-vtt" disabled={changed.length > 0} title={t('ctExportVttHint')} onClick={exportVtt}>{t('ctExportVtt')}</button>
         <label className="fld"><span>{t('ctSearchLbl')}</span>
           <input type="search" placeholder={t('ctSearch')} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} /></label>
         <div className="ct-replace">

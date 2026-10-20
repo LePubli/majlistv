@@ -1,0 +1,76 @@
+# Étape F — liste de vérification sur le VPS (E4a → E5c)
+
+Préparée le 20/10/2026. À dérouler **une seule fois**, quand toutes les étapes de code sont déployées (décision d'Epok du 19/10 : les essais réels à partir d'E4 se font à la fin). Chaque ligne se coche (`[ ]` → `[x]`) ; en cas d'écart, copier le message affiché à Claude.
+Les noms de conteneurs ci-dessous sont ceux déjà utilisés dans le README (`dockpanel-git-majlistv-*`, `dockpanel-app-postgres-majlisstv`). En cas de doute : `docker ps --format '{{.Names}}' | grep -i majlis`.
+
+## 0. Avant de commencer
+- [ ] Tout est poussé sur GitHub (GitHub Desktop : « Push origin » sans rien en attente).
+- [ ] DockPanel → Git Deploy → Redeploy dans l'ordre : **majlistv-api**, **majlistv-web**, puis **majlistv-worker**, **transcriber** (et le service de doublage s'il a changé).
+- [ ] Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+- [ ] Les migrations sont passées (la dernière de l'API et celles du module éditeur) :
+```
+docker logs dockpanel-git-majlistv-api 2>&1 | grep -i "migrat" | tail -15
+```
+- [ ] Une **conférence de test** non mise en avant existe (de préférence une vraie, d'environ 1 h, hébergée par Mejliss et non YouTube). Elle sert à tout ce qui suit.
+
+## 1. Worker : FFmpeg et polices (registre 18, 26)
+```
+docker exec dockpanel-git-majlistv-worker ls /usr/share/fonts/dejavu
+docker exec dockpanel-git-majlistv-worker sh -c "ffmpeg -hide_banner -filters | grep -E ' (ass|amultiply|loudnorm|afftdn) '"
+```
+- [ ] La première commande liste des polices DejaVu ; la seconde affiche les 4 filtres `ass`, `amultiply`, `loudnorm`, `afftdn`.
+
+## 2. Éditeur (E1) — registre 7, 5, 6
+- [ ] Studio → Éditeur sur la conférence d'une heure : la timeline reste fluide (défilement, zoom, couper un extrait).
+- [ ] Lecture de l'aperçu dans **Chrome, Firefox et Safari** (registre 5).
+- [ ] Essai sur **téléphone** (iPhone notamment) et **tablette** (registre 6).
+
+## 3. Son (E2) — registre 10, 11
+- [ ] Lancer une analyse du son pendant que l'on surveille : `docker stats dockpanel-git-majlistv-api` (l'API ne doit pas ralentir de façon gênante ; registre 11).
+- [ ] Essai à l'oreille « Sans / Avec réduction de bruit » sur une voix bruitée, réglage « légère » puis « forte » (registre 10) ; noter si c'est trop faible ou trop fort.
+
+## 4. Image finale et habillage (E3) — registre 12, 14
+- [ ] « Voir l'image finale » sur la vraie conférence : l'image n'est pas vide, les lettres arabes sont bien liées.
+- [ ] Pendant 3 ou 4 images de suite : `docker stats` pour surveiller l'API (registre 14).
+
+## 5. Rendu (E4a) — registre 18, 19
+- [ ] Aperçu rapide d'un montage de 2–3 extraits : fichier produit, lisible.
+- [ ] Rendu final de la conférence entière : noter le temps affiché (« calculé en … »), l'espace disque utilisé dans `/work`, la mémoire du worker :
+```
+docker stats --no-stream dockpanel-git-majlistv-worker
+docker exec dockpanel-git-majlistv-worker df -h /work
+docker logs dockpanel-git-majlistv-worker 2>&1 | grep -i rendu | tail -20
+```
+- [ ] « Regarder » puis « Télécharger » le fichier rendu dans un vrai navigateur (registre 19).
+
+## 6. Remplacement de la vidéo (E4b) — registre 21
+- [ ] Sur la conférence de test (jamais une conférence en service) : remplacer la vidéo, attendre la bascule, vérifier le lecteur, les sous-titres et la nouvelle transcription.
+- [ ] « Restaurer l'original » : retour à l'état d'avant (vidéo, texte, version française).
+- [ ] Le fournisseur de stockage d'archive (PlanetHoster) a bien reçu puis effacé la copie.
+
+## 7. Montage par le texte (E5a, E5c) — registre 25, 28
+- [ ] Nouvelle transcription de la conférence de test avec le vrai Whisper, puis onglet **Texte** : la page reste fluide avec environ 8 000 mots.
+- [ ] Bouton **« Préciser la place des mots »** : la demande passe à « terminée » ; texte et traductions inchangés. Journal :
+```
+docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
+```
+  (si le nom diffère : `docker ps --format '{{.Names}}' | grep -i transcri`)
+- [ ] Noter si l'absence du travail dans Studio → Activité gêne (registre 28).
+
+## 8. Extraits 9:16 (E5b) — registre 26, 27
+- [ ] Un extrait de 30 s : aperçu puis rendu final ; regarder le fichier (cadre, sous-titres bien placés, titre, police).
+- [ ] Publier l'extrait en test sur Instagram, TikTok, YouTube Shorts : accepté ?
+- [ ] Noter les cas où le conférencier sort du cadre (sert de cas d'essai pour l'étape E5d, « cadre qui suit le visage »).
+
+## 9. Doublage — voix (D3) — registre 29
+- [ ] Résultat de l'écoute du banc Qwen (voir `dubbing/d3bench/README.md`) enregistré et méthode retenue décidée.
+
+## 10. Après tout
+- [ ] `docker ps` : aucun conteneur en erreur ni redémarrant en boucle.
+- [ ] Charge du VPS partagé acceptable pour Miel & Co et TriMaint (`uptime`, `docker stats --no-stream`).
+- [ ] Mettre à jour `docs/PROBLEMES-A-REGLER.md` : passer en ✅ les points confirmés, noter les écarts.
