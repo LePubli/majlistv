@@ -7,9 +7,11 @@ os.environ.update({"DATABASE_URL": "postgres://majlis:pw@127.0.0.1:5544/majlis",
 os.makedirs("/tmp/claude-0/work", exist_ok=True)
 W = lambda s, e, w: types.SimpleNamespace(start=s, end=e, word=w)
 class FakeModel:
+    talk = None
     def __init__(self, *a, **k): pass
     def transcribe(self, wav, language=None, **k):
-        cur = main.db().cursor(); cur.execute("select start_ms, text from transcript_segments where lang = %s order by talk_id, idx", (language,))
+        # Seulement le texte de la conférence traitée (les autres conférences de la base de test ne doivent pas brouiller l'écoute).
+        cur = main.db().cursor(); cur.execute("select start_ms, text from transcript_segments where lang = %s and talk_id = %s order by idx", (language, FakeModel.talk))
         segs = []
         for s, text in cur.fetchall():
             segs.append(types.SimpleNamespace(start=s / 1000, end=s / 1000 + 1, words=[W(s / 1000 + 0.1 + 0.3 * k, s / 1000 + 0.35 + 0.3 * k, " " + w) for k, w in enumerate(text.split())]))
@@ -22,5 +24,7 @@ src = "/tmp/claude-0/work/align-src.mp4"
 subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=300:duration=3", "-c:a", "aac", src], check=True)
 main.s3.download_file = lambda bucket, key, dest: shutil.copy(src, dest)
 job = main.claim_align()
-if job: main.process_align(job)
+if job:
+    FakeModel.talk = str(job['talk_id'])
+    main.process_align(job)
 print(json.dumps({"claimed": bool(job)}))
