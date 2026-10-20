@@ -355,3 +355,7 @@ Module `shorts` : publier un extrait vertical de l'éditeur (copie du rendu), br
 
 ## Points du registre réglés (20/10, soir)
 n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Studio → Activité (pause, priorité, annulation) · n°33 mot dit en or dans les shorts · n°47 recherche Kids sans accents ni petites fautes · n°48 fichiers effacés avec la conférence · n°49 lien Shorts dans les menus et affiche tirée de la vidéo. Restent : essais réels sur le VPS (étape F) et décisions d'Epok (15, 32 ; 14 et 20 à surveiller).
+
+### Décision d'Epok (20/10, 20 h 58) : Créateur en dernier
+- Le Créateur sera disponible en version web uniquement (pas dans les applications) : il passe en toute fin de plan, après D3c (+ hauteur de voix), l'étape F et les applications (étape 22).
+- Ordre actuel : D3c (+ hauteur de voix) → F (vérifications sur le VPS) → 22 (applications) → Créateur.
