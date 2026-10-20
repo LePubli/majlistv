@@ -340,3 +340,6 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Kids catalogue (20/10)
 - Rubriques Kids (Admin), classement (fiche + lot), rangées de suggestions, recherche enfant, filtre d'âge. Suite : Shorts publics, Créateur, D3c (+ hauteur de voix), F.
+
+## Shorts publics (20/10)
+Module `shorts` : publier un extrait vertical de l'éditeur (copie du rendu), brouillon / publié, vues à part (une par personne et par jour), fil vertical `/shorts`, rangée d'accueil (bloc « Shorts »), onglet « Shorts » de la chaîne, Studio → Shorts. Espace Kids : `/kids/shorts` (conférences Kids de son âge). Défilement au doigt et boutons sur téléphone et tablette. Registre n°38 réglé ; n°48 et 49 ouverts.

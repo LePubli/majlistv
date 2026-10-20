@@ -9,6 +9,7 @@ import { useKidTime, leftMin } from '../lib/kidTime';
 import KidsBanner from './KidsBanner';
 import { KidActions } from './KidsActions';
 import KidCatalog from './KidCatalog';
+import KidShorts from './KidShorts';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -100,6 +101,7 @@ export default function KidsHome() {
             {d && d.resume.length > 0 && (
               <section aria-labelledby="kd-cont"><h2 id="kd-cont">{t('kdContinue')}</h2><ul className="kd-grid">{d.resume.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
             )}
+            <KidShorts />
             <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
               {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.slice(0, 8).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}
               {talks.length > 8 && <p><Link href="/kids?tab=watch" className="btn ghost">{t('kdMAll')}</Link></p>}
@@ -107,7 +109,7 @@ export default function KidsHome() {
           </>
         )}
 
-        {tab === 'watch' && <KidCatalog />}
+        {tab === 'watch' && <><KidShorts /><KidCatalog /></>}
 
         {tab === 'act' && (
           <section aria-labelledby="kd-act"><h2 id="kd-act">{t('kaTitle')}</h2><KidActions /></section>

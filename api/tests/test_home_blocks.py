@@ -40,14 +40,14 @@ ok(r.status_code == 201 and r.json()["path"] == "/_home" and r.json()["kind"] ==
 H = r.json()["id"]
 main = r.json()["content"]["zones"]["main"]
 types = [b["type"] for b in main]
-ok(types == ["featured", "mine", "mine", "talks", "channels", "collections", "series", "catrows", "kids", "dayquote"], f"modèle de départ : {types}")
+ok(types == ["featured", "mine", "mine", "talks", "channels", "shorts", "collections", "series", "catrows", "kids", "dayquote"], f"modèle de départ : {types}")
 ok(requests.post(B + "/admin/pages", headers=A, json={"kind": "home"}).status_code == 409, "un seul accueil : 409")
 ok(requests.get(B + "/pages/view", params={"path": "/_home"}).status_code == 404, "brouillon : invisible du public")
 # Le brouillon du modèle est publiable tel quel
 r = requests.post(B + f"/admin/pages/{H}/publish", headers=A)
-ok(r.status_code == 200 and r.json()["live"] is True and len(r.json()["published"]["zones"]["main"]) == 10, "le modèle se publie sans erreur")
+ok(r.status_code == 200 and r.json()["live"] is True and len(r.json()["published"]["zones"]["main"]) == 11, "le modèle se publie sans erreur")
 v = requests.get(B + "/pages/view", params={"path": "/_home"})
-ok(v.status_code == 200 and v.json()["kind"] == "home" and len(v.json()["zones"]["main"]) == 10, "visiteur : l'accueil en blocs est servi")
+ok(v.status_code == 200 and v.json()["kind"] == "home" and len(v.json()["zones"]["main"]) == 11, "visiteur : l'accueil en blocs est servi")
 ok(any(b["type"] == "talks" and b["props"]["title"]["ar"] for b in v.json()["zones"]["main"]), "le titre « Nouveautés » existe en 3 langues")
 
 # --- L'accueil n'apparaît ni dans les emplacements ni dans le plan du site

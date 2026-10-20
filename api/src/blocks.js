@@ -109,6 +109,10 @@ export const BLOCK_TYPES = {
       S('order', 'Ordre', [['new', 'Celles que la personne ne suit pas encore, d’abord'], ['popular', 'Les plus suivies'], ['alpha', 'Ordre alphabétique']], 'new')],
     sample: {},
   },
+  shorts: {
+    label: 'Shorts', hint: 'Une rangée des derniers extraits verticaux publiés par les chaînes. Invisible s’il n’y en a aucun ou si la fonction Shorts est coupée.',
+    fields: [T('title', 'Titre (à défaut : « Shorts »)'), N('limit', 'Nombre de shorts', 2, 20, 8)], sample: {},
+  },
   collections: {
     label: 'Collections', hint: 'Cycles, séries d’un intervenant et thèmes du moment (Studio → Collections).',
     fields: [T('title', 'Titre (à défaut : « Collections »)'), N('limit', 'Nombre de collections', 1, 12, 3)], sample: {},
@@ -131,9 +135,9 @@ export const BLOCK_TYPES = {
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'spacer', 'divider'];
 // Types qui lisent les données du site (l'éditeur les range à part).
-export const DATA_TYPES = ['featured', 'mine', 'channels', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
+export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
@@ -329,6 +333,7 @@ export function homeTemplate() {
         mk('mine', { what: 'quiz' }),
         mk('talks', { title: { fr: 'Nouveautés', en: 'New releases', ar: 'الجديد' }, limit: 8 }),
         mk('channels'),
+        mk('shorts'),
         mk('collections'),
         mk('series'),
         mk('catrows'),

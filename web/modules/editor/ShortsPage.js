@@ -18,7 +18,7 @@ const NOOP = () => {};
 const num = (v) => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 10) / 10 : null; };
 
 export default function ShortsPage({ projectId }) {
-  const { t, call } = useApp();
+  const { t, call, feat } = useApp();
   const [list, setList] = useState(null);
   const [sel, setSel] = useState(null); // id de l'extrait ouvert
   const [data, setData] = useState(null); // { short, media, editable }
@@ -337,6 +337,7 @@ export default function ShortsPage({ projectId }) {
             {data.media?.hasDub && <label className="mts-check"><input type="checkbox" checked={form.dub} disabled={!editable} onChange={(e) => change({ dub: e.target.checked })} data-f="dub" /> {t('mtsDub')}</label>}
             <div className="mt-actions">
               <button type="button" className="btn sd-pill" disabled={!editable || len < lim.min || len > lim.max} onClick={async () => { if (await flush()) setShowRender(true); }} data-act="short-render">{t('mtsRender')}</button>
+              {feat('shorts') && sel && <Link href={`/studio/shorts?extrait=${sel}`} className="btn ghost sd-pill" data-act="short-to-channel">{t('shrFromEditor')}</Link>}
               <button type="button" className="btn ghost sd-pill" disabled={!editable} onClick={remove} data-act="short-delete">{t('mtsDelete')}</button>
               <small className="meta mt-status" role="status">{stText}</small>
             </div>

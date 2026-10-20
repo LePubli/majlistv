@@ -47,6 +47,8 @@ export const FEATURES = [
     rules: [{ re: '^/(me/lists|lists/shared)(/|$)' }] },
   { id: 'channels', group: 'catalog', label: 'Chaînes', hint: 'Pages de chaînes (ex-intervenants), propriétaire organisateur, Studio « Ma chaîne »',
     rules: [{ re: '^/(channels|studio/channels|studio/channel-owners)(/|$)' }] },
+  { id: 'shorts', group: 'catalog', label: 'Shorts', hint: 'Extraits verticaux publiés par les chaînes : fil vertical, accueil, page de la chaîne ; l\'espace Kids n\'en montre que pour ses conférences',
+    rules: [{ re: '^/(shorts|studio/shorts)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre et alertes par e-mail',
     rules: [{ re: '^/me/notifications(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',
@@ -72,7 +74,7 @@ export const FEATURES = [
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' };
 const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
-  'channels', 'follow', 'citations', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
+  'channels', 'shorts', 'follow', 'citations', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 
 export const BY_ID = Object.fromEntries(FEATURES.map((f) => [f.id, f]));

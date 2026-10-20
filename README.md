@@ -4739,3 +4739,41 @@ Le propriétaire d'une chaîne et ses éditeurs gèrent aussi les conférences q
 **Debug** : une rubrique n'apparaît pas chez l'enfant = elle est cachée, ou aucune vidéo visible pour ce profil n'y est classée ; « Les plus regardés » absent = moins de 3 vidéos regardées ces 30 jours ; recherche vide = vérifier la tranche d'âge du profil et le catalogue autorisé par le parent.
 
 **Tests** : `python3 api/tests/test_kids_catalog.py` (API 3055) et `python3 web/tests/kids_catalog.py` (site 3001, captures dans /tmp/shots-kc). Non testé : vrai téléphone, grand volume (le catalogue enfant renvoie 200 vidéos au plus).
+
+## Shorts publics (20/10)
+
+### Description
+Une chaîne publie des **shorts** : des extraits verticaux 9:16 montés dans l'éditeur (Studio → Éditeur → Extraits 9:16). Publier **copie** le dernier rendu vers `shorts/<id>.mp4` : le short reste en ligne même si l'extrait est retouché ou le rendu nettoyé.
+- Fil vertical : `/shorts` (tous), `/shorts?channel=<chaîne>`, `/shorts/<id>` (ce short, puis la suite).
+- Accueil : bloc **Shorts** (Admin → Pages → Accueil des membres). Page de la chaîne : onglet **Shorts**.
+- Studio → **Shorts** : « Prêts à publier » (extraits dont le rendu est terminé), « Mes shorts » (titre, brouillon / publié, copier le lien, mettre à jour la vidéo, supprimer). Depuis l'éditeur, le bouton « Publier sur la chaîne » y mène.
+- Vues : comptées à part, après 2 s sur un short, une par personne et par jour.
+- **Espace Kids** : `/kids/shorts` et rangée sur l'accueil et l'onglet Regarder, avec les mêmes règles que le catalogue Kids (conférence classée Kids pour sa tranche d'âge, catalogue choisi par le parent, gratuites sans abonnement, temps du jour). Une conférence réservée aux adultes n'apparaît jamais côté enfant ; une conférence Kids seule n'apparaît jamais côté adultes. Pas de lien vers les chaînes côté enfant.
+- Téléphone et tablette : on glisse au doigt ; des boutons ▲ ▼ sont aussi là. Ordinateur : molette, touches ↑ ↓ (ou J / K), M coupe ou rétablit le son.
+- Droits Studio : créateur de la conférence, propriétaire et éditeurs de la chaîne, modérateurs, administrateurs. Une conférence premium peut avoir des shorts publics (aperçu).
+
+### Prérequis
+Modules « Éditeur de montage » (pour fabriquer les extraits) et fonction « Shorts » active (Admin → Fonctions). Aucune variable d'environnement nouvelle. Migration automatique `api/src/modules/shorts/migrations/001_shorts.sql`.
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, GitHub Desktop → Commit to main → Push origin.
+2. DockPanel → Git Deploy → Redeploy **majlistv-api** (la migration s'applique), puis **majlistv-web**. Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Navigateur : Ctrl + Maj + R.
+
+### Utilisation
+Studio → Éditeur → ouvrir une conférence → Extraits 9:16 → régler et lancer le rendu → « Publier sur la chaîne » → Publier. Pour l'accueil : Admin → Pages → Accueil des membres → ajouter le bloc « Shorts » (présent dans le modèle de départ ; un accueil déjà publié ne change pas tout seul).
+
+### Debug
+- Rien dans la rangée : aucun short publié, ou conférence non visible (brouillon, relecture) : Studio → Shorts indique « Publié, mais la conférence n'est pas visible ».
+- Vidéo qui ne se lit pas : vérifier `CSP_STORAGE_ORIGINS` côté web (adresse du stockage) ; liens temporaires de 4 h.
+- Enfant : rien ? Vérifier la tranche d'âge de la conférence (Studio → Kids), le catalogue du profil et le temps du jour.
+- Tests : `python3 api/tests/test_shorts.py` (API) et, depuis `web/`, `python3 tests/shorts_publics.py` (Playwright : téléphone, tablette, ordinateur, français, arabe, Kids, glissement tactile).
+
+### Limites connues
+Registre n°48 (fichiers non effacés à la suppression d'une conférence) et n°49 (pas d'entrée de menu, affiche = miniature de la conférence).

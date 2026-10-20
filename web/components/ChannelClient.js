@@ -9,6 +9,7 @@ import FollowButton from './FollowButton';
 import Crumbs from './Crumbs';
 import ChannelAvatar from './ChannelAvatar';
 import { TabBar, TabPanel, useTab } from './Tabs';
+import { ShortsGrid } from './ShortsRail';
 
 const SOCIAL_LABELS = [['youtube', 'YouTube'], ['instagram', 'Instagram'], ['x', 'X'], ['facebook', 'Facebook'], ['tiktok', 'TikTok']];
 const langName = (code, locale) => { try { return new Intl.DisplayNames([locale], { type: 'language' }).of(code); } catch { return code; } };
@@ -17,13 +18,16 @@ export default function ChannelClient({ slug, initial }) {
   const { t, call, ready, user, feat, locale } = useApp();
   const [talks, setTalks] = useState(null);
   const [info, setInfo] = useState(null); // { series, followers }
+  const [shorts, setShorts] = useState([]);
+  const shortsOn = feat('shorts');
   useEffect(() => {
     if (!ready) return;
     call(`/talks?speaker=${slug}&limit=100`).then((r) => setTalks(r.ok ? r.data : []));
     call(`/channels/${slug}`, {}, null).then((r) => setInfo(r.ok ? r.data : { series: [], followers: 0 }));
-  }, [slug, call, ready, user]);
+    if (shortsOn) call(`/shorts?channel=${slug}&limit=30`).then((r) => setShorts(r.ok && Array.isArray(r.data) ? r.data : []));
+  }, [slug, call, ready, user, shortsOn]);
   const series = info?.series ?? [];
-  const tabs = [{ id: 'talks', label: t('spTalks') }, ...(series.length > 0 ? [{ id: 'series', label: t('spSeries') }] : [])];
+  const tabs = [{ id: 'talks', label: t('spTalks') }, ...(shorts.length > 0 ? [{ id: 'shorts', label: t('shrTitle') }] : []), ...(series.length > 0 ? [{ id: 'series', label: t('spSeries') }] : [])];
   const [tab, go] = useTab(tabs);
   const followers = info?.followers || 0;
   const socialLinks = SOCIAL_LABELS.filter(([k]) => initial.socials?.[k]).map(([k, label]) => [k, label, initial.socials[k]]);
@@ -66,6 +70,9 @@ export default function ChannelClient({ slug, initial }) {
         ) : (
           <div className="grid">{talks.map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
         )}
+      </TabPanel>
+      <TabPanel id="shorts" current={tab}>
+        <ShortsGrid list={shorts} channel={slug} />
       </TabPanel>
       <TabPanel id="series" current={tab}>
         <div className="grid">{series.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>

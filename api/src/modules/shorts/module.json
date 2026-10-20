@@ -1,0 +1,9 @@
+{
+  "id": "shorts",
+  "name": "Shorts publics",
+  "version": "1.0.0",
+  "description": "Extraits verticaux 9:16 publiés par les chaînes : fil vertical, encarts sur l'accueil et la page de la chaîne, brouillon / publié, vues comptées à part. Dans l'espace Kids : seulement les shorts des conférences classées Kids, selon l'âge et le catalogue choisi par le parent.",
+  "feature": "shorts",
+  "requires": [],
+  "settings": []
+}

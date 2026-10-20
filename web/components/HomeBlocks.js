@@ -5,6 +5,7 @@
 //   featured     À la une (conférences mises en avant) + carte « Reprendre »
 //   mine         une rangée personnelle (à réviser, quiz à rattraper, conférences en cours)
 //   channels     chaînes à suivre, avec le bouton « Suivre »
+//   shorts       rangée des derniers shorts publiés par les chaînes
 //   collections  cycles, séries d'un intervenant, thèmes du moment
 //   dayquote     citation du jour
 //   series       rangée de séries
@@ -20,6 +21,7 @@ import Row from './Row';
 import SeriesCard from './SeriesCard';
 import CitationCard from './CitationCard';
 import ChannelAvatar from './ChannelAvatar';
+import { ShortsRail } from './ShortsRail';
 import { KidsBand } from './KidsBanner';
 import { useReducedMotion } from './HomeHero';
 import { authPath } from '../lib/nav';
@@ -200,6 +202,28 @@ function ChannelsBlock({ p, lang }) {
   );
 }
 
+/* ------------------------------------------------------------------ Shorts */
+function ShortsBlock({ p, lang }) {
+  const { t, call, feat } = useApp();
+  const title = useTitle(p, lang, 'shrTitle');
+  const [list, setList] = useState(null);
+  const limit = Number(p.limit) || 8;
+  const on = feat('shorts');
+  useEffect(() => {
+    let dead = false;
+    if (!on) return undefined;
+    call(`/shorts?limit=${limit}`).then((r) => { if (!dead) setList(r.ok && Array.isArray(r.data) ? r.data : []); });
+    return () => { dead = true; };
+  }, [call, limit, on]);
+  if (!on || !list?.length) return null;
+  return (
+    <section aria-labelledby="hb-shorts">
+      <Head id="hb-shorts" title={title} href="/shorts" label={t('shrAll')} />
+      <ShortsRail list={list} />
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ Collections */
 function CollectionsBlock({ p, lang }) {
   const { t, call } = useApp();
@@ -279,6 +303,7 @@ export function DataBlock({ b, lang }) {
     case 'featured': return <FeaturedBlock p={p} />;
     case 'mine': return <MineBlock p={p} />;
     case 'channels': return <ChannelsBlock p={p} lang={lang} />;
+    case 'shorts': return <ShortsBlock p={p} lang={lang} />;
     case 'collections': return <CollectionsBlock p={p} lang={lang} />;
     case 'dayquote': return <DayQuoteBlock p={p} />;
     case 'series': return <SeriesBlock p={p} lang={lang} />;
