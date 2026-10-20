@@ -4706,3 +4706,17 @@ Tests : `web/tests/fiche_b.py` (barre d'actions, menu Plus, vitesse appliquée, 
 - Le bloc « Chapitres et extrait » est placé **au-dessus** de « À suivre ».
 - Correction mobile : plus de débordement horizontal à 390 px (onglets défilables).
 - Déploiement : Redeploy de **majlistv-web** uniquement. Test : `python3 web/tests/fiche_b.py`.
+
+## Chaînes riches et plusieurs chaînes (20/10)
+
+**Ce que ça fait** : une personne peut gérer plusieurs chaînes (sélecteur en haut de Studio → Ma chaîne), en créer de nouvelles (même vides), et remplir une page riche : accroche, présentation, images, site web, e-mail de contact (public), YouTube / Instagram / X / Facebook / TikTok, pays, langue, conférence à la une. Un propriétaire peut ajouter des **éditeurs** (comptes organisateurs) qui modifient la page de la chaîne. **Une vidéo n'a jamais l'obligation d'avoir une chaîne** : le sélecteur de chaîne des formulaires est facultatif (« Aucune chaîne »), la saisie libre de l'intervenant reste possible.
+
+**Prérequis** : étapes précédentes déployées. **Migration** : `060_channels_rich.sql` (colonnes ajoutées avec valeur par défaut + table `channel_members`), appliquée au démarrage de l'API. Rien n'est supprimé ni déplacé.
+
+**Déploiement** (DockPanel + GitHub Desktop) : décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, Commit to main, Push origin ; Redeploy **majlistv-api** puis **majlistv-web** (pas le worker) ; sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx`.
+
+**Droits** : propriétaire = tout (équipe, suppression d'une chaîne vide) et reçoit les revenus ; éditeur = page de la chaîne seulement ; modérateur/administrateur = toutes les chaînes. Un organisateur peut posséder 10 chaînes au plus.
+
+**Debug** : « Une chaîne porte déjà ce nom » = le nom donne le même identifiant qu'une chaîne existante ; une chaîne vide n'apparaît pas dans le catalogue public tant qu'aucune conférence publiée ne porte son nom (la ligne « Pour rattacher une conférence : … » indique le texte exact) ; adresses https:// uniquement.
+
+**Tests** : `python3 api/tests/test_channels_rich.py` (API 3055) et `python3 web/tests/chaines_riches.py` (site 3001 ; captures dans /tmp). Non testé : envoi réel d'images vers le stockage de production, vrai téléphone.

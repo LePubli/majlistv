@@ -3,6 +3,7 @@
 // 1) analyse de l'adresse (le serveur liste les vidéos), 2) choix des vidéos et des réglages communs, 3) création.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import ChannelPicker from './ChannelPicker';
 import { langName } from './Transcript';
 
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
@@ -91,6 +92,7 @@ export default function ImportPanel({ cats, onImported }) {
           </ul>
           <div className="import-opts">
             <label>{t('language')}<input required pattern="[a-z]{2}(-[A-Z]{2})?" value={o.language} onChange={(e) => setO({ ...o, language: e.target.value })} /></label>
+            <ChannelPicker value={o.speaker} onChange={(v) => setO({ ...o, speaker: v })} t={t} call={call} />
             <label>{t('speaker')}<input value={o.speaker} onChange={(e) => setO({ ...o, speaker: e.target.value })} /></label>
             <label>{t('category')}
               <select value={o.categoryId} onChange={(e) => setO({ ...o, categoryId: e.target.value })}>

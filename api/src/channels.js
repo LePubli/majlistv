@@ -4,6 +4,9 @@
 import { pool } from './db.js';
 import { speakerSlug } from './speakers.js';
 import { presignGet } from './storage.js';
+import { ensureSlug } from './slugs.js';
+import { visibleSql } from './visibility.js';
+import { adultSql } from './taxonomy.js';
 
 let lastSync = 0;
 
@@ -49,4 +52,25 @@ export async function channelImages(slugs) {
   const { rows } = await pool.query('SELECT slug, avatar_key, banner_key FROM speakers WHERE slug = ANY($1) AND (avatar_key IS NOT NULL OR banner_key IS NOT NULL)', [slugs]);
   for (const r of rows) out.set(r.slug, { avatarUrl: r.avatar_key ? await presignGet(r.avatar_key) : null, bannerUrl: r.banner_key ? await presignGet(r.banner_key) : null });
   return out;
+}
+
+// Réseaux acceptés sur une chaîne (adresses https uniquement).
+export const SOCIAL_KEYS = ['youtube', 'instagram', 'x', 'facebook', 'tiktok'];
+
+// Champs « riches » publics d'une chaîne : accroche, site, contact, réseaux, pays, langue, conférence à la une (seulement si visible).
+export async function channelProfile(slug) {
+  const r = (await pool.query(
+    `SELECT tagline, website, contact_email AS "contactEmail", socials, country, main_language AS "mainLanguage", featured_talk_id AS "featuredId"
+       FROM speakers WHERE slug = $1`, [slug])).rows[0];
+  const base = { tagline: '', website: '', contactEmail: '', socials: {}, country: '', mainLanguage: '', featured: null };
+  if (!r) return base;
+  let featured = null;
+  if (r.featuredId) {
+    const t = (await pool.query(
+      `SELECT t.id, t.title, t.duration_seconds AS "durationSeconds" FROM talks t
+        WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}`, [r.featuredId])).rows[0];
+    if (t) featured = { id: t.id, title: t.title, durationSeconds: t.durationSeconds, slug: await ensureSlug('talks', t.id) };
+  }
+  const { featuredId, ...rest } = r;
+  return { ...base, ...rest, socials: rest.socials || {}, featured };
 }

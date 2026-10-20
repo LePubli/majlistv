@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
+import ChannelPicker from '../../../components/ChannelPicker';
 import { uploadFile } from '../../../lib/upload';
 import { langName } from '../../../components/Transcript';
 import ImportPanel from '../../../components/ImportPanel';
@@ -178,6 +179,7 @@ export default function NewTalk() {
 
             <label className="fld"><span>{t('talkTitle')}</span>
               <input required maxLength={200} placeholder={t('nwTitlePh')} value={f.title} onChange={(e) => patch({ title: e.target.value })} /></label>
+            <ChannelPicker value={f.speaker} onChange={(v) => patch({ speaker: v })} t={t} call={call} />
             <label className="fld"><span>{t('speaker')}</span>
               <input placeholder={t('nwSpeakerPh')} value={f.speaker} onChange={(e) => patch({ speaker: e.target.value })} /></label>
             <label className="fld"><span>{t('description')}</span>

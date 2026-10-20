@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
+import ChannelPicker from '../../../../../components/ChannelPicker';
 import { LEVELS, levelLabel } from '../../../../../lib/levels';
 
 const clock = (s) => {
@@ -224,6 +225,7 @@ export default function SeriesEditor() {
       <form className="panel" onSubmit={saveInfo}>
         <h2 className="panel-title">{t('srInfo')}</h2>
         <label className="fld"><span>{t('srName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+        <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
         <label className="fld"><span>{t('speaker')}</span><input maxLength={200} value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} /></label>
         <label className="fld"><span>{t('srDesc')}</span><textarea rows={4} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
         <div className="fld" role="group" aria-label={t('category')}>

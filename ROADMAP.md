@@ -334,3 +334,6 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 ## Fiche vidéo B (20/10)
 - Proposition B choisie et codée (bandeau, 5 actions, menu Plus, carte Apprendre, À suivre en vignettes). Suite : chaînes riches + multi-chaînes, Kids catalogue, Shorts publics, Créateur, D3c, F.
 - Ajustements (20/10) : réglages de lecture (vitesse, écoute sans l'image) sur le lecteur ; onglet Résumé ouvert par défaut ; « Chapitres et extrait » au-dessus de « À suivre » ; fiche sans débordement à 390 px.
+
+## Chaînes riches + multi-chaînes (20/10)
+- Migration 060 : champs riches, équipe d'éditeurs, création de chaînes vides, sélecteur de chaîne facultatif (conférence, import, série). Suite : Kids catalogue, Shorts publics, Créateur, D3c, F.

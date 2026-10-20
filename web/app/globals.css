@@ -3553,3 +3553,25 @@ body.cinema-on .wb-pset { top: 16px; }
 .watch-b .tablist { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
 .watch-b .tablist::-webkit-scrollbar { display: none; }
 .watch-b .tablist .tab { flex: none; }
+
+/* Chaînes riches : sélecteur, sections du Studio, page publique (accroche, liens, à la une) */
+.ch-bar { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; margin-top: 14px; }
+.ch-pick { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; flex: 1 1 260px; min-width: 0; } .ch-pick .fld { flex: 1 1 220px; min-width: 0; }
+.ch-new { display: flex; gap: 10px; align-items: end; flex: 1 1 280px; min-width: 0; } .ch-new .fld { flex: 1; min-width: 0; }
+.ch-sec { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line-soft); min-width: 0; }
+.ch-sec > h2 { margin: 0; font-size: 1.05rem; }
+.ch-socials { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.ch-socials legend { padding: 0; margin-bottom: 6px; font-size: 14px; color: var(--text-2); font-weight: 600; }
+.ch-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.ch-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ch-team li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ch-team li .btn { margin-inline-start: auto; }
+.ch-picker select { max-width: 100%; }
+.ch-tagline { margin: 0 0 4px; font-size: 1.05rem; color: var(--text-2); }
+.ch-facts { margin: 0 0 6px; }
+.ch-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
+.ch-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; }
+.ch-chip:hover { border-color: var(--accent); }
+.ch-featured { margin: 6px 0 18px; } .ch-featured h2 { margin: 0 0 10px; font-size: 1.1rem; } .ch-featured .grid { max-width: 360px; }
+.ch-studio .ch-card, .ch-studio .ch-form { min-width: 0; }
+.btn.danger { color: var(--danger, #ff8a80); border-color: currentColor; }

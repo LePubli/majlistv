@@ -5,6 +5,7 @@ import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
 import { BANDS, bandLabel } from '../lib/kids';
 import { useApp } from './Providers';
+import ChannelPicker from './ChannelPicker';
 const MAX_EXTRA = 2;
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
@@ -133,6 +134,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
         <h2 className="panel-title">{t('sectInfo')}</h2>
         <label className="fld"><span>{t('talkTitle')}</span>
           <input required maxLength={200} value={f.title} onChange={(e) => patch({ title: e.target.value })} /></label>
+        <ChannelPicker value={f.speaker} onChange={(v) => patch({ speaker: v })} t={t} call={call} />
         <label className="fld"><span>{t('speaker')}</span>
           <input maxLength={200} value={f.speaker} onChange={(e) => patch({ speaker: e.target.value })} /></label>
         <label className="fld"><span>{t('description')}</span>
