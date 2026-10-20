@@ -40,6 +40,15 @@ Conseils :
 - Si Voicebox n'arrive pas à enregistrer en WAV, un MP3 convient aussi.
 - Ne pas mettre de musique ni d'écho ; 20 à 30 s suffisent (le texte de référence en fait environ 25).
 
+## 1 bis. Si vous avez déjà de vraies voix enregistrées (sans Voicebox)
+Les mêmes commandes marchent avec vos fichiers (`.wav` ou `.mp3`, 10 à 30 s, une seule voix, sans musique ni écho). Pour **chaque vraie personne**, l'autorisation est **obligatoire** (comme pour votre voix à l'étape 0). Pour une voix `fille.wav`, créez à côté un fichier `fille.consent` d'**une seule ligne** : `AAAA-MM-JJ|Nom de la personne` (pour un enfant : le nom du parent ou représentant légal qui autorise), par exemple :
+```bash
+echo "2026-10-01|Marie Dupont (mère)" > /root/dubbing-test/in/voix/fille.consent
+```
+- Sans fichier `.consent`, la voix est traitée comme une **voix de synthèse** (aucune personne réelle) : ne l'oubliez pas pour une vraie voix. Le script écrit une ligne `voix de synthèse` ou `vraie voix, autorisation …` pour chaque voix : vérifiez-la.
+- Texte lu dans l'enregistrement (facultatif mais plus fidèle) : un fichier `<voix>.txt` à côté (`fille.txt`), avec **exactement** ce qui est dit. Sans lui, Qwen n'utilise que l'empreinte de la voix (un peu moins ressemblant). Le `texte.txt` commun ne sert que pour les voix de synthèse.
+- L'autorisation est inscrite dans le rapport de chaque essai.
+
 ## 2. Préparer le VPS
 ```bash
 # Mettre à jour le code et reconstruire les deux images (10 à 15 minutes la première fois)
@@ -53,7 +62,7 @@ docker run --rm --entrypoint python majlis-dub-d3 test_d3.py
 
 # Dossier des échantillons + texte de référence
 mkdir -p /root/dubbing-test/in/voix
-cp src/dubbing/d3bench/texte-reference.txt /root/dubbing-test/in/voix/texte.txt
+cp src/dubbing/d3bench/texte-reference.txt /root/dubbing-test/in/voix/texte.txt   # utile seulement pour les voix Voicebox
 ```
 Puis copier vos fichiers (`femme.wav`, `fille.wav`, `garcon.wav`, `homme-age.wav`, `homme-jeune.wav`) dans `/root/dubbing-test/in/voix/` avec WinSCP.
 

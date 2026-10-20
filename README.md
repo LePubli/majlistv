@@ -4379,3 +4379,5 @@ python3 dubbing/etape0/test_pipeline.py    # banc de l'étape 0 inchangé
 
 ### Suite
 D3b : intégrer au service de doublage la méthode choisie à l'écoute (nouvelles voix dans Studio → Audio et doublage → Voix), puis D3c : détection automatique des intervenants.
+
+**Complément D3a (20/10)** : le banc accepte aussi de **vraies voix déjà enregistrées** (sans Voicebox). Pour chacune : un fichier `<voix>.consent` d'une ligne `AAAA-MM-JJ|Nom` (autorisation, obligatoire pour une vraie personne ; sans lui la voix est traitée comme une voix de synthèse), et si possible `<voix>.txt` avec le texte exact lu. Détails : `dubbing/d3bench/README.md` §1 bis.
