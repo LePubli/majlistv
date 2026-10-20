@@ -6,7 +6,7 @@
 //   GET/POST/DELETE /studio/channels/:slug/members   équipe d'éditeurs : propriétaire, modérateur, administrateur
 //   PUT  /studio/channels/:slug/owner    attribuer / retirer le propriétaire : modérateur ou administrateur
 //   GET  /studio/channel-owners          personnes à qui une chaîne peut être attribuée : modérateur ou administrateur
-// Les conférences, séries et épisodes restent gérés par l'organisateur qui les a créés (organizer_id) ; la chaîne porte la présentation.
+// Les séries restent gérées par leur créateur ; les conférences qui portent le nom de la chaîne sont gérées aussi par le propriétaire et les éditeurs (src/channelAccess.js).
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { publicSpeakers, speakerBio, speakerSlug } from '../../speakers.js';

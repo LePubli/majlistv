@@ -6,6 +6,7 @@
 // Tout arrive en « brouillon » ; seuls les rappels validés par un humain sont diffusés.
 import { z } from 'zod';
 import { pool } from '../../db.js';
+import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 
 const idSchema = z.object({ id: z.string().uuid() });
 const ridSchema = z.object({ rid: z.string().uuid() });
@@ -21,7 +22,7 @@ export default async function reminderRoutes(app) {
   async function ownedTalk(req, reply, id) {
     const { rows } = await pool.query('SELECT id, organizer_id, transcript_status, transcript_language, language FROM talks WHERE id = $1', [id]);
     const t = rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) {
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
       reply.code(404).send({ error: 'Conférence introuvable' });
       return null;
     }

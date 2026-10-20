@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { toVtt } from '../vtt.js';
+import { viaChannel, managedSpeakers } from '../channelAccess.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
@@ -16,7 +17,7 @@ export default async function studioContentRoutes(app) {
     const { rows } = await pool.query(
       `SELECT id, organizer_id, transcript_status, transcript_language, language, duration_seconds FROM talks WHERE id = $1`, [id]);
     const t = rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) {
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
       reply.code(404).send({ error: 'Conférence introuvable' });
       return null;
     }

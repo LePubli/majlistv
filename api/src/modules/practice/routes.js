@@ -9,6 +9,7 @@ import { pool } from '../../db.js';
 import { getSetting, getNumber, isOn } from '../../settings.js';
 import { visibleSql } from '../../visibility.js';
 import { hasLearningTier } from '../../access.js';
+import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 import { sealText, openText, practiceKeyReady } from '../../practiceCrypto.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -71,13 +72,13 @@ export default async function practiceRoutes(app) {
   async function ownedTalk(req, reply, id) {
     const { rows } = await pool.query('SELECT id, organizer_id, title, transcript_status, transcript_language, language FROM talks WHERE id = $1', [id]);
     const t = rows[0];
-    if (!t || (!STAFF.has(req.user.role) && t.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (!STAFF.has(req.user.role) && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
     return t;
   }
   async function ownedSuggestion(req, reply, sid) {
     const { rows } = await pool.query('SELECT s.*, t.organizer_id FROM practice_suggestions s JOIN talks t ON t.id = s.talk_id WHERE s.id = $1', [sid]);
     const s = rows[0];
-    if (!s || (!STAFF.has(req.user.role) && s.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Proposition introuvable' }); return null; }
+    if (!s || (!STAFF.has(req.user.role) && s.organizer_id !== req.user.sub && !(await viaChannel(req.user, s.talk_id)))) { reply.code(404).send({ error: 'Proposition introuvable' }); return null; }
     return s;
   }
   // Une proposition n'est validable que complète et sans citation inventée.

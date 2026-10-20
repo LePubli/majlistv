@@ -7,6 +7,7 @@ import { pool } from '../../db.js';
 import { getSetting, getNumber, isOn } from '../../settings.js';
 import { visibleSql } from '../../visibility.js';
 import { hasLearningTier } from '../../access.js';
+import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 import { learningBrief } from '../../learning.js';
 import { recordAttempt } from '../../revision.js';
 import { featureOn } from '../../features.js';
@@ -68,7 +69,7 @@ export default async function quizRoutes(app) {
     const { rows } = await pool.query(
       `SELECT id, organizer_id, title, transcript_status, transcript_language, language, quiz_enabled FROM talks WHERE id = $1`, [id]);
     const t = rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) {
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
       reply.code(404).send({ error: 'Conférence introuvable' });
       return null;
     }
@@ -80,7 +81,7 @@ export default async function quizRoutes(app) {
     const { rows } = await pool.query(
       `SELECT q.*, t.organizer_id, t.transcript_language, t.language AS talk_language FROM quiz_questions q JOIN talks t ON t.id = q.talk_id WHERE q.id = $1`, [qid]);
     const q = rows[0];
-    if (!q || (req.user.role !== 'admin' && q.organizer_id !== req.user.sub)) {
+    if (!q || (req.user.role !== 'admin' && q.organizer_id !== req.user.sub && !(await viaChannel(req.user, q.talk_id)))) {
       reply.code(404).send({ error: 'Question introuvable' });
       return null;
     }

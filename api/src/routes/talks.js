@@ -13,6 +13,7 @@ import { hasActiveSubscription } from '../access.js';
 import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
+import { viaChannel, managedSpeakers } from '../channelAccess.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo ou archive.org.
 export function parseVideoUrl(raw) {
@@ -258,7 +259,7 @@ export default async function talksRoutes(app) {
     if (kv && (await timeState(kv.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
-    const isOwner = viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === owner.rows[0].organizer_id); // le modérateur relit les conférences en attente
+    const isOwner = viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === owner.rows[0].organizer_id || await viaChannel(viewer, id)); // le modérateur relit les conférences en attente
     // Brouillon ou publication programmée à venir : invisible pour tout le monde sauf le propriétaire et les admins.
     if (!talk.visible && !isOwner) return reply.code(404).send({ error: 'Conférence introuvable' });
     if (kv) {
@@ -341,8 +342,8 @@ export default async function talksRoutes(app) {
             FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations,
          (SELECT COALESCE(json_agg(json_build_object('lang', i.lang, 'status', i.status, 'error', i.error) ORDER BY i.lang), '[]'::json)
             FROM talk_insights i WHERE i.talk_id = t.id) AS insights
-       ${FROM} WHERE t.organizer_id = $1 ORDER BY t.created_at DESC`,
-      [req.user.sub]
+       ${FROM} WHERE (t.organizer_id = $1 OR lower(trim(t.speaker)) = ANY($2::text[])) ORDER BY t.created_at DESC`,
+      [req.user.sub, await managedSpeakers(req.user.sub)]
     );
     // Les 3 images proposées pour la miniature (vidéos envoyées) et celle qui est choisie.
     for (const r of rows) {
@@ -414,8 +415,8 @@ export default async function talksRoutes(app) {
     const { ids, changes: b, bandsMode } = bulkSchema.parse(req.body ?? {});
     if (!Object.keys(b).length) return reply.code(400).send({ error: 'Choisissez au moins une modification' });
     const own = (await pool.query(
-      'SELECT id, kids_bands, category_id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3)',
-      [ids, req.user.role === 'admin', req.user.sub])).rows;
+      'SELECT id, kids_bands, category_id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3 OR lower(trim(speaker)) = ANY($4::text[]))',
+      [ids, req.user.role === 'admin', req.user.sub, await managedSpeakers(req.user.sub)])).rows;
     if (own.length !== new Set(ids).size) return reply.code(404).send({ error: 'Certaines conférences sont introuvables' });
     const client = await pool.connect();
     try {
@@ -463,7 +464,7 @@ export default async function talksRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const b = patchSchema.parse(req.body ?? {});
     const cur = (await pool.query('SELECT organizer_id, source, publication, publish_at, poster_key, poster_candidates, category_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
 
     const sets = [];
     const vals = [id];
@@ -535,7 +536,7 @@ export default async function talksRoutes(app) {
       || (m[1] === 'image/webp' && buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP');
     if (!magic || buf.length > 2.5 * 1024 * 1024) return reply.code(400).send({ error: 'Image invalide ou trop lourde (2,5 Mo maximum)' });
     const cur = (await pool.query('SELECT organizer_id, poster_key FROM talks WHERE id = $1', [id])).rows[0];
-    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
     const key = `posters/${id}/custom-${Date.now()}.${POSTER_TYPES[m[1]]}`;
     await putObject(key, buf, m[1]);
     await pool.query('UPDATE talks SET poster_key = $2 WHERE id = $1', [id, key]);
@@ -548,7 +549,7 @@ export default async function talksRoutes(app) {
   async function ownedUpload(req, reply, id) {
     const { rows } = await pool.query('SELECT organizer_id, source, language, transcript_language, rights_confirmed FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
-    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) {
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
       reply.code(404).send({ error: 'Conférence introuvable' });
       return null;
     }
@@ -565,7 +566,7 @@ export default async function talksRoutes(app) {
     const { rightsConfirmed } = z.object({ rightsConfirmed: z.boolean().optional() }).parse(req.body ?? {});
     const { rows } = await pool.query('SELECT organizer_id, source, transcript_status FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
-    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
     if (talk.source !== 'upload' && rightsConfirmed !== true) {
       return reply.code(400).send({ error: "Confirmez avoir l'accord de l'auteur pour transcrire cette vidéo", code: 'rights_required' });
     }
@@ -601,7 +602,7 @@ export default async function talksRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const { rows } = await pool.query('SELECT organizer_id, source, video_status FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
-    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
     if (talk.source !== 'upload') return reply.code(400).send({ error: 'Cette vidéo est lue depuis sa plateforme : rien à convertir' });
     if (talk.video_status !== 'failed') return reply.code(409).send({ error: 'La conversion n\'a pas échoué' });
     await pool.query("UPDATE talks SET video_status = 'pending', video_progress = 0, video_error = NULL, transcode_attempts = 0 WHERE id = $1", [id]);

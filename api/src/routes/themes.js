@@ -11,6 +11,7 @@ import { sealText, openText, practiceKeyReady } from '../practiceCrypto.js';
 import { THEMES, THEME_BY_ID, MAX_TALK_THEMES, themesOn, themeCard, talksOfTheme } from '../themes.js';
 import { dueOn, DUE_KINDS } from '../dueDates.js';
 import { visibleSql } from '../visibility.js';
+import { viaChannel, managedSpeakers } from '../channelAccess.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const themeIdSchema = z.string().regex(/^[QDA]\d{1,2}$/);
@@ -46,7 +47,7 @@ export default async function themesRoutes(app) {
   // ------------------------------------------------------------------ Studio : étiquettes
   async function ownedTalk(req, reply, id) {
     const t = (await pool.query('SELECT id, organizer_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
     return t;
   }
   app.get('/studio/talks/:id/themes', organizer, async (req, reply) => {
