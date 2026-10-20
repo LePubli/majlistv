@@ -52,7 +52,7 @@ export default function ShortsPage({ projectId }) {
 
   const apply = useCallback((s) => {
     rev.current = s.rev;
-    setForm({ title: s.title, from: s.from, to: s.to, cropX: s.cropX, follow: Boolean(s.follow), manual: s.manual || [], captions: s.captions, lang: s.lang, dub: s.dub, showTitle: s.showTitle });
+    setForm({ title: s.title, from: s.from, to: s.to, cropX: s.cropX, follow: Boolean(s.follow), manual: s.manual || [], captions: s.captions, lang: s.lang, dub: s.dub, showTitle: s.showTitle, karaoke: s.karaoke !== false });
   }, []);
   useEffect(() => {
     if (!sel) { setData(null); setForm(null); return; }
@@ -176,6 +176,13 @@ export default function ShortsPage({ projectId }) {
       else setMsg({ ok: false, text: r.data?.error || t('dbError') });
     } finally { setStarting(false); }
   };
+  // Registre n°31 : annuler l'analyse du visage.
+  const cancelTrack = async () => {
+    setMsg(null);
+    const r = await call(`/studio/editor/shorts/${sel}/track/cancel`, { method: 'POST' });
+    if (r.ok) setData((d) => ({ ...d, short: { ...d.short, track: r.data.short.track, path: r.data.short.path } }));
+    else setMsg({ ok: false, text: r.data?.error || t('dbError') });
+  };
   const toggleFollow = async (on) => {
     const f = { ...formRef.current, follow: on }; formRef.current = f; setForm(f); setSave('dirty'); setMsg(null);
     const tr = data?.short?.track;
@@ -274,7 +281,13 @@ export default function ShortsPage({ projectId }) {
             <div className="mts-screen" data-preview="vertical">
               <canvas ref={canvas} width={270} height={480} />
               {form.showTitle && time - form.from < 4 && <div className="mts-title" dir="auto">{form.title}</div>}
-              {form.captions && chunk && <div className="mts-cap" dir="auto">{chunk.text}</div>}
+              {form.captions && chunk && (
+                <div className="mts-cap" dir="auto">
+                  {form.karaoke && chunk.words?.length > 1
+                    ? chunk.words.map((w, i) => { const nx = chunk.words[i + 1]; const on = time >= w.s && (nx ? time < nx.s : true); return <span key={i} className={on ? 'on' : ''}>{i ? ' ' : ''}{w.w}</span>; })
+                    : chunk.text}
+                </div>
+              )}
             </div>
             <small className="meta">{t('mtsPhoneHelp')}</small>
           </section>
@@ -303,8 +316,13 @@ export default function ShortsPage({ projectId }) {
                     {tr?.status === 'processing' && t('mtsTrackRunning').replace('{n}', tr.progress)}
                     {tr?.status === 'done' && (tr.fresh ? t('mtsTrackDone').replace('{n}', Math.round((tr.coverage || 0) * 100)) : t('mtsTrackStale'))}
                     {tr?.status === 'failed' && t('mtsTrackFailed').replace('{e}', tr.error || '')}
+                    {tr?.status === 'canceled' && t('jbCanceled')}
+                    {tr?.canceling && ` · ${t('jbCanceling')}`}
                   </span>
-                  {(!tr || tr.status === 'failed' || tr.status === 'done') && (
+                  {(tr?.status === 'pending' || tr?.status === 'processing') && !tr.canceling && editable && (
+                    <button type="button" className="btn ghost sd-pill" onClick={cancelTrack} data-act="track-cancel">{t('jbCancel')}</button>
+                  )}
+                  {(!tr || tr.status === 'failed' || tr.status === 'done' || tr.status === 'canceled') && (
                     <button type="button" className="btn ghost sd-pill" disabled={!editable || starting} onClick={startTrack} data-act="track-start">{tr ? t('mtsTrackAgain') : t('mtsTrackStart')}</button>
                   )}
                 </div>
@@ -326,6 +344,7 @@ export default function ShortsPage({ projectId }) {
             </div>
             <label className="mts-check"><input type="checkbox" checked={form.showTitle} disabled={!editable} onChange={(e) => change({ showTitle: e.target.checked })} data-f="showTitle" /> {t('mtsShowTitle')}</label>
             <label className="mts-check"><input type="checkbox" checked={form.captions} disabled={!editable} onChange={(e) => change({ captions: e.target.checked })} data-f="captions" /> {t('mtsCaptions')}</label>
+            {form.captions && <label className="mts-check"><input type="checkbox" checked={form.karaoke} disabled={!editable} onChange={(e) => change({ karaoke: e.target.checked })} data-f="karaoke" /> {t('mtsKaraoke')}</label>}
             {form.captions && words?.langs?.length > 1 && (
               <label>{t('mtsCapLang')}
                 <select value={form.lang || ''} disabled={!editable} onChange={(e) => change({ lang: e.target.value || null })} data-f="lang">

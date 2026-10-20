@@ -31,6 +31,8 @@ function Task({ x, can, onAct, busy, pos }) {
       </div>
       <div className="ac-side">
         <span className={`ac-state ${st}`}>{st === 'running' && x.progress != null ? `${x.progress} %` : t(`acSt_${st}`)}</span>
+        {x.canceling && <small className="meta">{t('jbCanceling')}</small>}
+        {x.canCancel && st !== 'failed' && <button type="button" className="btn ghost ac-btn" disabled={busy} onClick={() => onAct(x, 'cancel', {})} data-act="task-cancel">{t('jbCancel')}</button>}
         {can && st !== 'failed' && (
           <div className="ac-actions">
             {st === 'paused'
@@ -97,7 +99,7 @@ export default function StudioActivity() {
     setBusy(true);
     const r = await call(`/studio/activity/${x.queue}/${encodeURIComponent(x.ref)}/${what}`, { method: 'POST', body: JSON.stringify(body) });
     setBusy(false);
-    setMsg(r.ok ? { ok: true, text: t(what === 'pause' ? (body.paused ? 'acPausedMsg' : 'acResumedMsg') : (body.priority ? 'acPrioMsg' : 'acPrioOffMsg')) } : { ok: false, text: r.data?.error || t('dbError') });
+    setMsg(r.ok ? { ok: true, text: t(what === 'cancel' ? 'jbCanceledMsg' : what === 'pause' ? (body.paused ? 'acPausedMsg' : 'acResumedMsg') : (body.priority ? 'acPrioMsg' : 'acPrioOffMsg')) } : { ok: false, text: r.data?.error || t('dbError') });
     load();
   };
   const saveSettings = async (body) => {

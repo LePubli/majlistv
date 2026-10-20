@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
 import * as ext from '../ext.js';
 
-export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace']; // editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b)
+export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face']; // editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b) ; align : place des mots (E5c) ; face : suivi du visage (E5d)
 const HEAVY = ['video', 'transcript', 'dubbing', 'render', 'replace']; // le rendu suit la pause générale et la plage horaire des conversions
 
 // Réglages de la plage horaire et de la pause générale.
@@ -121,6 +121,21 @@ export default async function activityRoutes(app) {
     await tidy();
     req.auditSummary = `Activité : ${paused ? 'pause' : 'reprise'} — ${task.label || queue} « ${task.title} »`;
     return { task: (await listTasks(null)).find((t) => t.queue === queue && t.ref === ref) || null };
+  });
+
+  // Annuler une tâche (registre n°28 / 31) : seulement les tâches marquées canCancel (le module qui la porte fait le travail,
+  // événement « activity.cancel »). L'administrateur annule tout ; un organisateur, les tâches de ses conférences.
+  app.post('/studio/activity/:queue/:ref/cancel', viewer, async (req, reply) => {
+    const { queue, ref } = qp.parse(req.params);
+    const task = (await listTasks(scope(req))).find((t) => t.queue === queue && t.ref === ref);
+    if (!task) return reply.code(404).send({ error: 'Tâche introuvable', code: 'not_found' });
+    if (!task.canCancel || !['running', 'waiting', 'paused', 'blocked'].includes(task.status)) return reply.code(409).send({ error: 'Cette tâche ne peut pas être annulée.', code: 'not_cancelable' });
+    const out = { done: false };
+    await ext.emit('activity.cancel', out, { queue, ref });
+    if (!out.done) return reply.code(409).send({ error: 'Cette tâche ne peut pas être annulée.', code: 'not_cancelable' });
+    await pool.query('DELETE FROM activity_controls WHERE queue = $1 AND ref = $2', [queue, ref]);
+    req.auditSummary = `Activité : annulation — ${queue} « ${task.title} »`;
+    return { canceled: true, running: task.status === 'running' };
   });
 
   // Priorité : « passer en premier » (10) ou normale (0).

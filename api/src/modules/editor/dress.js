@@ -32,7 +32,7 @@ import { FFMPEG } from './audio.js';
 
 export const MAX_ITEMS = 100;
 export const MIN_ITEM = 0.5;
-export const TRANSITIONS = ['cut', 'dip', 'dipwhite'];
+export const TRANSITIONS = ['cut', 'dip', 'dipwhite', 'dissolve']; // dissolve (registre n°13) : fondu enchaîné d'une image à l'autre
 export const LOGO_POS = ['tl', 'tr', 'bl', 'br'];
 const FONTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fonts');
 
@@ -42,7 +42,7 @@ const rng = (label, min, max) => num.min(min, `${label} : entre ${min} et ${max}
 const text = (label, max) => z.string().max(max, `${label} : ${max} caractères au plus`).default('');
 const id = (what) => z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, `Identifiant de ${what} invalide`);
 const trans = z.object({
-  type: z.enum(TRANSITIONS, { errorMap: () => ({ message: 'Transition : cut, dip ou dipwhite' }) }),
+  type: z.enum(TRANSITIONS, { errorMap: () => ({ message: 'Transition : cut, dip, dipwhite ou dissolve' }) }),
   len: rng('Durée de la transition (s)', 0.2, 3).default(0.8),
 });
 const item = z.object({
@@ -151,7 +151,7 @@ export function dipAt(dress, clips, T) {
   const L = layout(clips);
   for (let i = 1; i < L.length; i += 1) {
     const tr = transitionAt(dress, clips, i);
-    if (!tr) continue;
+    if (!tr || tr.type === 'dissolve') continue; // fondu enchaîné : pas de voile de couleur
     const half = tr.len / 2; const d = Math.abs(T - L[i].start);
     if (d < half) return { alpha: 1 - d / half, color: tr.type === 'dipwhite' ? 'white' : 'black' };
   }

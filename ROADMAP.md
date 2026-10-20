@@ -343,3 +343,6 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Shorts publics (20/10)
 Module `shorts` : publier un extrait vertical de l'éditeur (copie du rendu), brouillon / publié, vues à part (une par personne et par jour), fil vertical `/shorts`, rangée d'accueil (bloc « Shorts »), onglet « Shorts » de la chaîne, Studio → Shorts. Espace Kids : `/kids/shorts` (conférences Kids de son âge). Défilement au doigt et boutons sur téléphone et tablette. Registre n°38 réglé ; n°48 et 49 ouverts.
+
+## Points du registre réglés (20/10, soir)
+n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Studio → Activité (pause, priorité, annulation) · n°33 mot dit en or dans les shorts · n°47 recherche Kids sans accents ni petites fautes · n°48 fichiers effacés avec la conférence · n°49 lien Shorts dans les menus et affiche tirée de la vidéo. Restent : essais réels sur le VPS (étape F) et décisions d'Epok (15, 32 ; 14 et 20 à surveiller).

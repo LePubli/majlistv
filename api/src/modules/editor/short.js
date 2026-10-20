@@ -21,6 +21,8 @@ export const shortConfigSchema = z.object({
   lang: z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/, 'Langue invalide').nullable().default(null),
   dub: z.boolean().default(false),
   showTitle: z.boolean().default(true),
+  // Registre n°33 : le mot prononcé s'affiche en or dans les sous-titres courts (les mots sont déjà horodatés).
+  karaoke: z.boolean().default(true),
   // Étape E5d : le cadre suit le visage (analyse faite par le service de transcription) ; corrections à la main (temps de la vidéo d'origine).
   follow: z.boolean().default(false),
   manual: manualSchema,
@@ -56,7 +58,8 @@ export function chunkCaptions(words, from, to) {
   let cur = [];
   const flush = () => {
     if (!cur.length) return;
-    chunks.push({ s: Math.max(from, cur[0].s), e: Math.min(to, cur[cur.length - 1].e + 0.2), text: cur.map((x) => String(x.w).trim()).join(' ') });
+    chunks.push({ s: Math.max(from, cur[0].s), e: Math.min(to, cur[cur.length - 1].e + 0.2), text: cur.map((x) => String(x.w).trim()).join(' '),
+      words: cur.map((x) => ({ s: r3(x.s), e: r3(x.e), w: String(x.w).trim() })) }); // mots horodatés (mot dit en couleur)
     cur = [];
   };
   inside.forEach((w, i) => {
@@ -87,11 +90,23 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\{/g, '(').re
 export const SHORT_W = 1080; export const SHORT_H = 1920;
 
 // chunks : sous-titres en temps de l'extrait (0 = début) ; title : texte du début ; total : durée de l'extrait.
-export function buildShortAss({ chunks = [], title = '', total = 0 } = {}) {
+export function buildShortAss({ chunks = [], title = '', total = 0, karaoke = false } = {}) {
   const lines = [];
   const t = esc(String(title).trim());
   if (t) lines.push(`Dialogue: 2,${ts(0.2)},${ts(Math.min(TITLE_SECS, Math.max(1, total - 0.2)))},ShortTitle,,0,0,0,,{\\fad(300,400)}${t}`);
-  for (const c of chunks) lines.push(`Dialogue: 1,${ts(c.s)},${ts(c.e)},ShortCap,,0,0,0,,${esc(c.text)}`);
+  for (const c of chunks) {
+    const ws = karaoke && Array.isArray(c.words) ? c.words.filter((w) => w.w) : [];
+    if (ws.length < 2) { lines.push(`Dialogue: 1,${ts(c.s)},${ts(c.e)},ShortCap,,0,0,0,,${esc(c.text)}`); continue; }
+    // Registre n°33 : une ligne par mot ; le mot en cours est en or, les autres en blanc (même texte, même place : pas de saut).
+    const line = (k) => ws.map((w, i) => (i === k ? `{\\c&H39A7E6&}${esc(w.w)}{\\c&HFFFFFF&}` : esc(w.w))).join(' ');
+    const start = Math.max(c.s, ws[0].s);
+    if (start - c.s > 0.02) lines.push(`Dialogue: 1,${ts(c.s)},${ts(start)},ShortCap,,0,0,0,,${line(-1)}`);
+    ws.forEach((w, k) => {
+      const a = k === 0 ? start : Math.max(c.s, w.s);
+      const b = k + 1 < ws.length ? Math.max(a + 0.02, Math.min(c.e, ws[k + 1].s)) : c.e;
+      if (b > a) lines.push(`Dialogue: 1,${ts(a)},${ts(b)},ShortCap,,0,0,0,,${line(k)}`);
+    });
+  }
   return `[Script Info]
 ScriptType: v4.00+
 PlayResX: ${SHORT_W}

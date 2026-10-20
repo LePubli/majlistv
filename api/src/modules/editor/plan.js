@@ -15,6 +15,9 @@
 //   - musiques : placées dans le temps du montage, boucle, fondus, volume, baisse sous la voix (rampe de 0,3 s) ;
 //   - niveau sonore homogène : loudnorm (deux passes), cible en LUFS ;
 //   - transitions : « fondu au noir / blanc » centré sur le raccord, len/2 avant et len/2 après (fondu appliqué à chaque extrait) ;
+//     « fondu enchaîné » (registre n°13) : les deux images se mélangent pendant len, centré sur le raccord. Pour garder la durée
+//     du montage, l'extrait d'avant est prolongé de len/2 dans la source et celui d'après commence len/2 plus tôt (xfade) ;
+//     s'il n'y a pas assez d'image autour du raccord, la durée du fondu est réduite (en dessous de 0,08 s : coupure franche).
 //   - textes, bandeaux, sous-titres incrustés, logo, écrans d'ouverture et de fin : dress.js (mêmes réglages que « Voir l'image finale »).
 // Différence assumée : l'aperçu du navigateur ne dépasse pas 100 % de volume ; le rendu applique le volume demandé (jusqu'à +12 dB).
 import { layout, mapItems, transitionAt, dressEvents, buildAss, fillVars, dressDefaults, logoXY } from './dress.js';
@@ -104,7 +107,7 @@ const fmt = (x) => String(r3(x));
 //   preview  : true = petit fichier rapide (aperçu), false = rendu final
 //   title    : titre de la conférence (pour le nom du fichier)
 //   short    : null, ou (étape E5b, extrait court 9:16) { cropX, captions: [{ s, e, text }] (temps source, déjà regroupés), titleText,
-//              path (E5d, facultatif) : [{ t, x }] trajectoire du cadre (suivi du visage et corrections), notes (E5d) : avertissements à afficher }.
+//              karaoke (registre n°33) : mot dit en or ; path (E5d, facultatif) : [{ t, x }] trajectoire du cadre (suivi du visage et corrections), notes (E5d) : avertissements à afficher }.
 //              Image verticale recadrée sur la source ; pas d'habillage (titre et sous-titres courts seulement).
 //   format   : (étape E6c) '16:9' (défaut), '9:16' ou '1:1' ; fit : 'blur' (image entière sur fond flouté) ou 'crop' (recadrée au centre) ;
 //   quality  : 360, 720, 1080 (côté court) ou null = la meilleure possible (le worker ne dépasse jamais la source).
@@ -129,6 +132,14 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
     throw new Error(`Trop d’extraits pour un rendu : ${parts.length} (au plus ${MAX_PARTS}). Les extraits qui se suivent sans transition sont déjà regroupés ; supprimez ou regroupez quelques coupes.`);
   }
 
+  // Fondus enchaînés : demi-durée h au raccord avant l'extrait j (prolongements dans la source : post de j-1, pre de j).
+  parts.forEach((p) => { p.pre = 0; p.post = 0; });
+  parts.forEach((p, j) => {
+    if (j < 1 || p.tr?.type !== 'dissolve') return;
+    const h = r3(Math.min(p.tr.len / 2, parts[j - 1].d / 2, p.d / 2, p.in));
+    if (h < 0.04) { p.tr = null; return; } // pas la place : coupure franche
+    p.pre = h; parts[j - 1].post = h;
+  });
   const useDub = Boolean(dub?.voiceKey && au.dub.use);
   const useLogo = Boolean(dress.logo.on && logo?.key);
   if (dress.logo.on && !logo?.key) warnings.push('Logo choisi mais introuvable : il n’est pas incrusté.');
@@ -141,14 +152,18 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   const V = [];
   const FPS = '@FPS@';
   const segLabels = [];
+  const segInfo = {}; // longueur de chaque morceau et fondu enchaîné à son entrée (xh = demi-durée)
   if (I) {
     V.push(`color=c=${CARD_HEX}:s=@W@x@H@:r=${FPS}:d=${I},format=yuv420p,setsar=1,drawbox=x=(iw-@BARW@)/2:y=@BARY@:w=@BARW@:h=@BARH@:color=${GOLD_HEX}:t=fill,fps=${FPS},settb=1/${FPS}[vi]`);
     segLabels.push('vi');
   }
   const nextTr = (j) => (j + 1 < parts.length ? parts[j + 1].tr : null);
   parts.forEach((p) => {
-    const k = addInput('source', ['-ss', fmt(p.in), '-t', fmt(p.d)], 'v');
+    const vlen = r3(p.d + p.pre + p.post); // avec les prolongements des fondus enchaînés
+    const k = addInput('source', ['-ss', fmt(p.in - p.pre), '-t', fmt(vlen)], 'v');
     const tail = ['setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
+    // Longueur exacte (fin de source trop proche : on fige la dernière image) : indispensable au calage des fondus enchaînés.
+    if (p.pre || p.post) tail.push(`tpad=stop_mode=clone:stop_duration=${fmt(p.post + 0.5)}`, `trim=duration=${fmt(vlen)}`, 'setpts=PTS-STARTPTS');
     let chain;
     if (short) chain = [`[${k}:v]setpts=PTS-STARTPTS`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), ...tail]; // extrait 9:16 : cadre vertical sur la source
     else if (fmtOut === '16:9') chain = [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', ...tail];
@@ -161,17 +176,31 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
       chain = [`[bb${p.j}][ff${p.j}]overlay=(W-w)/2:(H-h)/2`, ...tail];
     }
     // Fondu au noir / au blanc : la moitié avant le raccord (fin de l'extrait précédent), la moitié après (début de celui-ci).
-    if (p.tr) { const h = Math.min(p.tr.len / 2, p.d / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
+    if (p.tr && p.tr.type !== 'dissolve') { const h = Math.min(p.tr.len / 2, p.d / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
     const nt = nextTr(p.j);
-    if (nt) { const h = Math.min(nt.len / 2, p.d / 2); chain.push(`fade=t=out:st=${fmt(p.d - h)}:d=${fmt(h)}:color=${nt.type === 'dipwhite' ? 'white' : 'black'}`); }
+    if (nt && nt.type !== 'dissolve') { const h = Math.min(nt.len / 2, p.d / 2); chain.push(`fade=t=out:st=${fmt(p.d - h)}:d=${fmt(h)}:color=${nt.type === 'dipwhite' ? 'white' : 'black'}`); }
     V.push(`${chain.join(',')}[v${p.j}]`);
     segLabels.push(`v${p.j}`);
+    segInfo[`v${p.j}`] = { len: vlen, xh: p.pre };
   });
   if (O) {
     V.push(`color=c=${CARD_HEX}:s=@W@x@H@:r=${FPS}:d=${O},format=yuv420p,setsar=1,drawbox=x=(iw-@BARW@)/2:y=@BARY@:w=@BARW@:h=@BARH@:color=${GOLD_HEX}:t=fill,fps=${FPS},settb=1/${FPS}[vo]`);
     segLabels.push('vo');
   }
-  V.push(segLabels.length === 1 ? `[${segLabels[0]}]null[vcat]` : `${segLabels.map((l) => `[${l}]`).join('')}concat=n=${segLabels.length}:v=1:a=0,settb=1/${FPS}[vcat]`);
+  if (!segLabels.some((l) => segInfo[l]?.xh > 0)) {
+    V.push(segLabels.length === 1 ? `[${segLabels[0]}]null[vcat]` : `${segLabels.map((l) => `[${l}]`).join('')}concat=n=${segLabels.length}:v=1:a=0,settb=1/${FPS}[vcat]`);
+  } else {
+    // Morceau par morceau : fondu enchaîné (xfade, chevauchement de 2h) ou simple mise bout à bout.
+    const lenOf = (l) => (l === 'vi' ? I : l === 'vo' ? O : segInfo[l].len);
+    let cur = segLabels[0]; let curLen = lenOf(cur);
+    segLabels.slice(1).forEach((l, n) => {
+      const xh = segInfo[l]?.xh || 0; const out = `xc${n}`;
+      if (xh > 0) { V.push(`[${cur}][${l}]xfade=transition=fade:duration=${fmt(2 * xh)}:offset=${fmt(curLen - 2 * xh)}[${out}]`); curLen = r3(curLen + lenOf(l) - 2 * xh); }
+      else { V.push(`[${cur}][${l}]concat=n=2:v=1:a=0[${out}]`); curLen = r3(curLen + lenOf(l)); }
+      cur = out;
+    });
+    V.push(`[${cur}]settb=1/${FPS}[vcat]`);
+  }
 
   // Textes (ASS) : titres, bandeaux, sous-titres incrustés, écrans d'ouverture et de fin. Temps décalés de la durée de l'intro.
   const cueMap = mapItems(clips, cues).map((m) => ({ ts: m.ts, te: m.te, text: m.text }));
@@ -179,10 +208,13 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   let ass;
   if (short) {
     // Extrait court : sous-titres déjà regroupés (temps source → temps de l'extrait) et titre du début.
-    const caps = mapItems(clips, short.captions || []).map((m) => ({ s: m.ts, e: m.te, text: m.text }));
+    const caps = mapItems(clips, short.captions || []).map((m) => {
+      const d = m.ts - Math.max(m.s, clips[0].in); // décalage temps source → temps de l'extrait
+      return { s: m.ts, e: m.te, text: m.text, words: (m.words || []).map((w) => ({ s: r3(w.s + d), e: r3(w.e + d), w: w.w })) };
+    });
     if (short.wantCaptions && !caps.length) warnings.push('Sous-titres demandés, mais ce passage n’a pas de texte : rien n’est incrusté.');
     for (const n of short.notes || []) warnings.push(n);
-    ass = buildShortAss({ chunks: caps, title: short.titleText || '', total });
+    ass = buildShortAss({ chunks: caps, title: short.titleText || '', total, karaoke: Boolean(short.karaoke) });
   } else {
     const events = dressEvents(dress, { vars, total, cues: cueMap, fade: true, offset: I, w: AW, h: AH });
     const cards = [];

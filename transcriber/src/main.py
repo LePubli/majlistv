@@ -137,12 +137,14 @@ def claim():
 
 def claim_align():
     """Étape E5c : prochaine demande « Préciser la place des mots » (table créée par la migration 058 de l'API)."""
-    cond = "AND activity_allows('transcript')" if CONTROLS["on"] else ""
+    # Registre n°28 : pause et priorité par demande (file « align » de Studio → Activité).
+    cond = "AND activity_allows('transcript') AND NOT activity_paused('align', talk_id::text)" if CONTROLS["on"] else ""
+    order = "activity_priority('align', talk_id::text) DESC, created_at" if CONTROLS["on"] else "created_at"
     try:
         rows = query(
             f"""UPDATE word_align_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
                WHERE talk_id = (SELECT talk_id FROM word_align_jobs WHERE status = 'pending' {cond}
-                                ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+                                ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
                RETURNING talk_id, lang""",
             fetch=True,
         )
@@ -156,16 +158,40 @@ def claim_align():
 
 def claim_track():
     """Étape E5d : prochaine demande « Le cadre suit le visage » (table créée par la migration 059 de l'API)."""
+    # Registre n°31 : pause et priorité par extrait (file « face » de Studio → Activité).
+    cond = "AND NOT activity_paused('face', project_id::text)" if CONTROLS["on"] else ""
+    order = "activity_priority('face', project_id::text) DESC, created_at" if CONTROLS["on"] else "created_at"
     try:
         rows = query(
-            """UPDATE face_track_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
-               WHERE project_id = (SELECT project_id FROM face_track_jobs WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+            f"""UPDATE face_track_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
+               WHERE project_id = (SELECT project_id FROM face_track_jobs WHERE status = 'pending' {cond}
+                                   ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
                RETURNING project_id, talk_id, from_s, to_s""",
             fetch=True,
         )
     except psycopg2.errors.UndefinedTable:
         return None
+    except psycopg2.errors.UndefinedFunction:
+        CONTROLS["on"] = False
+        return claim_track()
     return rows[0] if rows else None
+
+
+class Canceled(Exception):
+    """Demande annulée depuis le site (Studio → Activité, onglet Texte, page des extraits)."""
+
+
+def cancel_asked(table, key, ref):
+    """Registre n°28 / 31 : la personne a-t-elle demandé l'annulation ? (colonne cancel_requested, migration 007 du module éditeur)"""
+    try:
+        rows = query(f"SELECT cancel_requested FROM {table} WHERE {key} = %s", (ref,), fetch=True)
+    except (psycopg2.errors.UndefinedColumn, psycopg2.errors.InFailedSqlTransaction):
+        return False
+    return bool(rows and rows[0]["cancel_requested"])
+
+
+def mark_canceled(table, key, ref):
+    query(f"UPDATE {table} SET status = 'canceled', progress = 0, cancel_requested = false, updated_at = now() WHERE {key} = %s", (ref,))
 
 
 # --- Stockage ----------------------------------------------------------------------------------
@@ -337,6 +363,8 @@ def process_align(job):
         os.remove(src)
         duration = audio_duration(wav)
         language = lang.split("-")[0].lower()
+        if cancel_asked("word_align_jobs", "talk_id", talk_id):
+            raise Canceled()
         model = get_model()
         log(f"[{talk_id}] place des mots : écoute de {duration:.0f} s (langue : {language})")
         segments, _info = model.transcribe(wav, language=language if language in WHISPER_LANGS else None, beam_size=BEAM,
@@ -349,9 +377,13 @@ def process_align(job):
                 if w.word.strip():
                     heard.append((int(w.start * 1000), int(w.end * 1000), w.word.strip()))
             pct = min(95, int(seg.end / duration * 95)) if duration else 0
-            if pct > last and time.time() - last_write > 4:
-                last, last_write = pct, time.time()
-                query("UPDATE word_align_jobs SET progress = %s, updated_at = now() WHERE talk_id = %s", (pct, talk_id))
+            if time.time() - last_write > 4:
+                last_write = time.time()
+                if cancel_asked("word_align_jobs", "talk_id", talk_id):
+                    raise Canceled()
+                if pct > last:
+                    last = pct
+                    query("UPDATE word_align_jobs SET progress = %s, updated_at = now() WHERE talk_id = %s", (pct, talk_id))
         heard.sort(key=lambda h: h[0])
         done, total = align.align_all([(r["idx"], r["start_ms"], r["end_ms"], r["text"]) for r in segs], heard)
         old = {}
@@ -365,6 +397,9 @@ def process_align(job):
         query("UPDATE word_align_jobs SET status = 'done', progress = 100, aligned = %s, total = %s, error = NULL, updated_at = now() WHERE talk_id = %s",
               (len(done), total, talk_id))
         log(f"[{talk_id}] place des mots : {len(done)} phrases précisées sur {total}")
+    except Canceled:
+        mark_canceled("word_align_jobs", "talk_id", talk_id)
+        log(f"[{talk_id}] place des mots : annulé à la demande (rien n'est changé)")
     except Stop:
         raise
     except Exception as err:  # noqa: BLE001
@@ -382,6 +417,7 @@ def process_track(job):
     pid, talk_id = str(job["project_id"]), str(job["talk_id"])
     start, end = float(job["from_s"]), float(job["to_s"])
     work = os.path.join(WORK_DIR, "track-" + pid)
+    last = {"t": 0.0, "cancel": False}  # dernier point de contrôle ; annulation demandée (registre n°31)
 
     def fail(msg):
         query("UPDATE face_track_jobs SET status = 'failed', error = %s, updated_at = now() WHERE project_id = %s", (msg[:500], pid))
@@ -400,21 +436,31 @@ def process_track(job):
         paths = faces.extract_frames(url, start, end - start, os.path.join(work, "img"))
         if len(paths) < 2:
             return fail("la vidéo n'a pas d'image à cet endroit")
-        last = {"t": 0.0}
-
         def progress(p):
             if time.time() - last["t"] > 4:
                 last["t"] = time.time()
+                last["cancel"] = cancel_asked("face_track_jobs", "project_id", pid)
                 query("UPDATE face_track_jobs SET progress = %s, updated_at = now() WHERE project_id = %s", (min(95, p), pid))
 
-        samples, w, h = faces.detect(paths, progress=progress, should_stop=lambda: stopping)
+        if cancel_asked("face_track_jobs", "project_id", pid):
+            raise Canceled()
+        samples, w, h = faces.detect(paths, progress=progress, should_stop=lambda: stopping or last["cancel"])
+        if last["cancel"]:
+            raise Canceled()
         res = track.build_track(samples, w, h, start)
         if not res:
             return fail("Aucun visage repéré dans ce passage : le cadre reste fixe.")
         query("""UPDATE face_track_jobs SET status = 'done', progress = 100, error = NULL, keys = %s, coverage = %s, faces = %s, samples = %s, updated_at = now()
                  WHERE project_id = %s""", (psycopg2.extras.Json(res["keys"]), res["coverage"], res["faces"], res["samples"], pid))
         log(f"[{pid}] suivi du visage : {len(res['keys'])} points clés, visage vu {res['coverage'] * 100:.0f} % du temps")
+    except Canceled:
+        mark_canceled("face_track_jobs", "project_id", pid)
+        log(f"[{pid}] suivi du visage : annulé à la demande")
     except InterruptedError:
+        if last.get("cancel") and not stopping:
+            mark_canceled("face_track_jobs", "project_id", pid)
+            log(f"[{pid}] suivi du visage : annulé à la demande")
+            return
         raise Stop()
     except Stop:
         raise
@@ -691,11 +737,17 @@ def main():
             log("Base pas prête (migration 005 appliquée ?) :", err)
             time.sleep(POLL)
     try:
-        query("UPDATE word_align_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les demandes interrompues (E5c)
+        try:  # registre n°28 / 31 : une demande annulée pendant l'arrêt ne repart pas
+            query("UPDATE word_align_jobs SET status = CASE WHEN cancel_requested THEN 'canceled' ELSE 'pending' END, cancel_requested = false WHERE status = 'processing'")
+        except psycopg2.errors.UndefinedColumn:
+            query("UPDATE word_align_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les demandes interrompues (E5c)
     except Exception:  # noqa: BLE001
         pass
     try:
-        query("UPDATE face_track_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les analyses de visage interrompues (E5d)
+        try:  # registre n°28 / 31 : une demande annulée pendant l'arrêt ne repart pas
+            query("UPDATE face_track_jobs SET status = CASE WHEN cancel_requested THEN 'canceled' ELSE 'pending' END, cancel_requested = false WHERE status = 'processing'")
+        except psycopg2.errors.UndefinedColumn:
+            query("UPDATE face_track_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les analyses de visage interrompues (E5d)
     except Exception:  # noqa: BLE001
         pass
     apply_settings()

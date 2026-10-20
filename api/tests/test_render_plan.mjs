@@ -139,6 +139,31 @@ const rd3 = path.join(dir, 'work3'); fs.mkdirSync(rd3);
 const r3 = await W.renderFiles({ plan: pplan, files: { ...files, source: P('mute.mp4'), curves: {} }, dir: rd3 });
 ok(r3.info.hasAudio === false && r3.W === 640, 'source sans son : rendu quand même');
 
+// --- Registre n°13 : fondu enchaîné (dissolve) — durée gardée, pas de voile noir, images bien calées après le raccord.
+const xraw = { v: 1, duration: 40, clips: [{ id: 'd1', in: 0, out: 10 }, { id: 'd2', in: 15, out: 25 }, { id: 'd3', in: 25.2, out: 30 }],
+  dress: { transitions: { all: null, byClip: { d2: { type: 'dissolve', len: 1 }, d3: { type: 'dissolve', len: 3 } } } } };
+const xchk = checkTimeline(xraw, 40); ok(xchk.ok, `fondu enchaîné accepté${xchk.ok ? '' : ` (${xchk.error})`}`);
+const xplan = buildPlan({ timeline: xchk.timeline, preview: true });
+ok(/xfade=transition=fade:duration=1:offset=9\.5/.test(xplan.script.video), 'fondu enchaîné : 1 s centré sur le raccord (début à 9,5 s)');
+ok(/xfade=transition=fade:duration=3:offset=18\.5/.test(xplan.script.video), 'deuxième fondu de 3 s (prolongements de 1,5 s de part et d’autre)');
+const shortRoom = buildPlan({ timeline: checkTimeline({ v: 1, duration: 40, clips: [{ id: 'e1', in: 5, out: 10 }, { id: 'e2', in: 0.2, out: 4 }],
+  dress: { transitions: { all: { type: 'dissolve', len: 1 }, byClip: {} } } }, 40).timeline, preview: true });
+ok(/xfade=transition=fade:duration=0\.4:offset=4\.8/.test(shortRoom.script.video), 'pas assez d’image avant le 2e extrait (0,2 s de source) : fondu raccourci à 0,4 s');
+ok(!/fade=t=(in|out)[^,]*color=black/.test(xplan.script.video), 'pas de fondu au noir');
+ok(xplan.inputs.filter((i) => i.ref === 'source' && i.use === 'v').length === 3, 'un passage par extrait');
+const xd = path.join(dir, 'workx'); fs.mkdirSync(xd);
+const xr = await W.renderFiles({ plan: xplan, files: { source: P('source.mp4'), curves: {} }, dir: xd, threads: 2 });
+const xpr = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_format', xr.out]).toString());
+ok(Math.abs(Number(xpr.format.duration) - 24.8) < 0.3, `fondu enchaîné : durée gardée ${Number(xpr.format.duration).toFixed(2)} s (24,8 attendues)`);
+const xf = (t, file) => execFileSync('ffmpeg', ['-v', 'error', '-ss', String(t), '-i', file, '-frames:v', '1', '-vf', 'scale=64:36,format=rgb24', '-f', 'rawvideo', '-']);
+const diff = (a, b) => { let d = 0; for (let i = 0; i < a.length; i += 1) d += Math.abs(a[i] - b[i]); return d / a.length; };
+ok(mean(xf(10, xr.out)) > 60, `au raccord : image mélangée, pas noire (luminance ${mean(xf(10, xr.out)).toFixed(1)})`);
+ok(diff(xf(13, xr.out), xf(18, P('source.mp4'))) < 12, `après le raccord : image calée sur la source (écart ${diff(xf(13, xr.out), xf(18, P('source.mp4'))).toFixed(1)})`);
+ok(diff(xf(5, xr.out), xf(5, P('source.mp4'))) < 12, 'avant le raccord : image calée');
+const mix = xf(10, xr.out), a10 = xf(10, P('source.mp4')), b15 = xf(15, P('source.mp4'));
+const dAB = diff(a10, b15);
+ok(dAB > 3 && diff(mix, a10) < 0.85 * dAB && diff(mix, b15) < 0.85 * dAB, `au milieu du fondu : mélange des deux images (${diff(mix, a10).toFixed(1)} / ${diff(mix, b15).toFixed(1)}, écart entre elles ${dAB.toFixed(1)})`);
+
 fs.copyFileSync(shot, '/tmp/e4-render-titre.png'); fs.copyFileSync(bannerShot, '/tmp/e4-render-bandeau.png');
 console.log(fails ? `\nÉCHECS : ${fails}` : '\nTout est bon');
 process.exit(fails ? 1 : 0);

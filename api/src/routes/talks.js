@@ -638,6 +638,10 @@ export default async function talksRoutes(app) {
   app.delete('/talks/:id', { preHandler: app.authenticate }, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const admin = req.user.role === 'admin';
+    // Les modules effacent d'abord leurs fichiers liés (shorts publiés, rendus de l'éditeur) : la base les supprime en cascade,
+    // mais pas le stockage (registre n°48).
+    const own = (await pool.query('SELECT 1 FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2)', [id, req.user.sub, admin])).rowCount;
+    if (own) await ext.emit('talk.deleting', { talkId: id }).catch((e) => req.log.warn(`Suppression : fichiers liés non effacés (${e.message})`));
     const { rows } = await pool.query(
       'DELETE FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2) RETURNING id, source, video_ref',
       [id, req.user.sub, admin]

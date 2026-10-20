@@ -48,6 +48,13 @@ const ass = S.buildShortAss({ chunks: [{ s: 1, e: 2.5, text: 'Bonjour {à} tous'
 ok(/PlayResX: 1080/.test(ass) && /PlayResY: 1920/.test(ass) && /Style: ShortCap,DejaVu Sans,72/.test(ass), 'ASS : repère 1080 × 1920, police DejaVu');
 ok(/Dialogue: 1,0:00:01.00,0:00:02.50,ShortCap,,0,0,0,,Bonjour \(à\) tous/.test(ass) && /ShortTitle,,0,0,0,,\{\\fad\(300,400\)\}Ma \(citation\)\\Nsuite/.test(ass), 'ASS : accolades neutralisées, retour à la ligne, fondu du titre');
 ok(!/ShortTitle,,/.test(S.buildShortAss({ chunks: [], title: '  ', total: 10 }).split('[Events]')[1]), 'ASS : pas de titre vide');
+// Registre n°33 : mot dit en or.
+const kch = [{ s: 1, e: 3, text: 'UN DEUX', words: [{ s: 1, e: 1.5, w: 'UN' }, { s: 1.8, e: 2.4, w: 'DEUX' }] }];
+const kass = S.buildShortAss({ chunks: kch, karaoke: true, total: 10 });
+ok(/Dialogue: 1,0:00:01.00,0:00:01.80,ShortCap,,0,0,0,,\{\\c&H39A7E6&\}UN\{\\c&HFFFFFF&\} DEUX/.test(kass) && /Dialogue: 1,0:00:01.80,0:00:03.00,ShortCap,,0,0,0,,UN \{\\c&H39A7E6&\}DEUX\{\\c&HFFFFFF&\}/.test(kass), 'ASS karaoké : une ligne par mot, le mot dit en or');
+ok(!/H39A7E6/.test(S.buildShortAss({ chunks: kch, karaoke: false })), 'karaoké coupé : texte simple');
+ok(S.chunkCaptions(mk('un deux trois', 0), 0, 10)[0].words.length === 3, 'groupes : mots horodatés gardés');
+ok(S.shortDefaults({}).karaoke === true, 'mot dit en couleur : activé par défaut');
 
 // --- Plan
 const raw = S.shortTimeline(2, 12, 20, S.shortDefaults({ cropX: 100 }));
@@ -60,6 +67,8 @@ ok(/Dialogue: 1,0:00:01.00,0:00:03.00,ShortCap,,0,0,0,,UN DEUX TROIS/.test(plan.
 const empty = buildPlan({ timeline: tlc, short: { cropX: 50, captions: [], wantCaptions: true, titleText: '' } });
 ok(empty.warnings.some((w) => /Sous-titres demandés/.test(w)), 'plan : avertissement si le passage n’a pas de texte');
 ok(buildPlan({ timeline: tlc }).vertical === false, 'plan d’un montage normal : pas vertical');
+const kplan = buildPlan({ timeline: tlc, short: { cropX: 100, captions: [{ s: 3, e: 5, text: 'UN DEUX', words: [{ s: 3, e: 3.5, w: 'UN' }, { s: 4, e: 4.6, w: 'DEUX' }] }], wantCaptions: true, titleText: '', karaoke: true } });
+ok(/0:00:01.00,0:00:02.00,ShortCap,,0,0,0,,\{\\c&H39A7E6&\}UN/.test(kplan.ass) && /0:00:02.00,0:00:03.00,ShortCap,,0,0,0,,UN \{\\c&H39A7E6&\}DEUX/.test(kplan.ass), 'plan karaoké : mots recalés sur l’extrait (3 s source → 1 s)');
 
 // --- Tailles de sortie
 ok(J(W.outputSize({ preview: true, srcHeight: 1080, vertical: true })) === J({ W: 360, H: 640 }), 'aperçu vertical 360 × 640');
@@ -102,6 +111,15 @@ const w1 = lightCount(left.out, 2, ...capBand, true); const w0 = lightCount(left
 ok(w1 > 300 && w0 < 30 && w3 < 30, `sous-titre blanc visible à 2 s (${w1} pixels), absent avant (${w0}) et après (${w3})`);
 const t1 = lightCount(left.out, 1.5, ...titleBand, false); const t6 = lightCount(left.out, 6, ...titleBand, false);
 ok(t1 > 300 && t6 < 30, `titre doré visible à 1,5 s (${t1} pixels), disparu à 6 s (${t6})`);
+// Rendu réel du mot dit en or (fond bleu) : doré pendant « UN », puis pendant « DEUX », jamais tout blanc pendant le groupe.
+{
+  const kp = buildPlan({ timeline: tlc, short: { cropX: 100, captions: [{ s: 3, e: 7, text: 'UN DEUX', words: [{ s: 3, e: 4.5, w: 'UN' }, { s: 5, e: 6.5, w: 'DEUX' }] }], wantCaptions: true, titleText: '', karaoke: true } });
+  const kd = path.join(dir, 'wkar'); fs.mkdirSync(kd);
+  const kr = await W.renderFiles({ plan: kp, files: { source: P('source.mp4'), curves: {} }, dir: kd, threads: 2 });
+  const g1 = lightCount(kr.out, 1.7, ...capBand, false); const g2 = lightCount(kr.out, 3.7, ...capBand, false);
+  const w1k = lightCount(kr.out, 1.7, ...capBand, true); const w2k = lightCount(kr.out, 3.7, ...capBand, true);
+  ok(g1 > 200 && g2 > 200 && w1k > 200 && w2k > 200, `rendu : un mot en or et l’autre en blanc, à 1,7 s (or ${g1}, blanc ${w1k}) et à 3,7 s (or ${g2}, blanc ${w2k})`);
+}
 const prev = await render(50, true);
 const pv = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_streams', prev.out]).toString()).streams.find((s) => s.codec_type === 'video');
 ok(pv.width === 360 && pv.height === 640, `aperçu rapide ${pv.width}x${pv.height}`);

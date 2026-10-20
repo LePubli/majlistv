@@ -320,7 +320,7 @@ export function placeAt(kind, x, y, box, snapPct = 1.5) {
   let ty = sn(y, 3.7, 'y'); if (ty === y) { const b = sn(y + box.h, 96.3, 'y'); if (b !== y + box.h) ty = 96.3 - box.h; }
   return { x: clampPct(lx, 0, 100 - box.w), y: clampPct(ty, 0, 100 - box.h), guides };
 }
-export const TRANSITION_TYPES = ['cut', 'dip', 'dipwhite'];
+export const TRANSITION_TYPES = ['cut', 'dip', 'dipwhite', 'dissolve']; // dissolve : fondu enchaîné (registre n°13)
 export const ITEM_FADE = 0.3; // fondu d'entrée et de sortie des titres (s), comme au rendu
 
 export function withDress(d) {
@@ -393,7 +393,7 @@ export function dipAt(dress, clips, T) {
   const L = layout(clips);
   for (let i = 1; i < L.length; i += 1) {
     const tr = transitionFor(dress, clips, i);
-    if (!tr) continue;
+    if (!tr || tr.type === 'dissolve') continue; // fondu enchaîné : visible au rendu, pas de voile dans l'aperçu
     const half = tr.len / 2; const d = Math.abs(T - L[i].start);
     if (d < half) return { alpha: 1 - d / half, color: tr.type === 'dipwhite' ? '#fff' : '#000' };
   }

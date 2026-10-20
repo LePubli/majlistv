@@ -127,7 +127,7 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
       if (row.kind === 'short') {
         const cfg = shortDefaults(row.short); const c = chk.timeline.clips[0];
         const { path: framePath, notes } = pathOf(cfg, await trackJobOf(row.id), c.in, c.out); // étape E5d : le cadre suit le visage / corrections à la main
-        short = { cropX: cfg.cropX, path: framePath, notes, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '' };
+        short = { cropX: cfg.cropX, path: framePath, notes, wantCaptions: cfg.captions, captions: await shortChunks(row, cfg, c.in, c.out), titleText: cfg.showTitle ? row.title || '' : '', karaoke: cfg.karaoke };
       }
       plan = buildPlan({ timeline: chk.timeline, vars: { titre: row.talk_title || '', intervenant: String(row.speaker || '').trim() }, ...inp,
         preview: b.kind === 'preview', title: row.kind === 'short' ? `${row.talk_title || ''} ${row.title || ''}`.trim() : row.talk_title || '', short,

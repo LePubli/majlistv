@@ -10,6 +10,7 @@ import { checkTimeline } from './timeline.js';
 import { wordsOf } from './words.js';
 import { deleteProjectRenders } from './render.js';
 import { buildPath, checkManual, manualSchema } from './follow.js';
+import { cancelTrack } from './jobs.js';
 import { shortConfigSchema, shortDefaults, checkPassage, shortTimeline, chunkCaptions, MIN_SHORT, MAX_SHORT, MAX_SHORTS } from './short.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -35,7 +36,7 @@ const clipOf = (row) => row.timeline.clips[0];
 
 // Étape E5d : analyse du visage de l'extrait (table face_track_jobs, remplie par le service de transcription).
 export async function trackJobOf(projectId) {
-  return (await pool.query('SELECT status, progress, error, keys, coverage, faces, samples, from_s, to_s, updated_at FROM face_track_jobs WHERE project_id = $1', [projectId])).rows[0] || null;
+  return (await pool.query('SELECT status, progress, error, keys, coverage, faces, samples, from_s, to_s, updated_at, cancel_requested FROM face_track_jobs WHERE project_id = $1', [projectId])).rows[0] || null;
 }
 // L'analyse ne vaut que pour le passage sur lequel elle a été faite.
 export const jobFresh = (job, from, to) => Boolean(job) && Math.abs(Number(job.from_s) - from) < 0.01 && Math.abs(Number(job.to_s) - to) < 0.01;
@@ -61,7 +62,7 @@ async function shortView(row, { chunks = false } = {}) {
     id: row.id, talkId: row.talk_id, title: row.title || '', from: c.in, to: c.out, length: Math.round((c.out - c.in) * 1000) / 1000, rev: row.rev, ...cfg,
     updatedAt: row.updated_at, sourceDuration: Number(row.duration_seconds) || null,
     lastRender: last ? { id: last.id, kind: last.kind, status: last.status, progress: last.progress, createdAt: last.created_at, duration: last.out_duration_s != null ? Number(last.out_duration_s) : null } : null,
-    track: job ? { status: job.status, progress: job.progress, error: job.error, fresh, coverage: job.coverage != null ? Number(job.coverage) : null, faces: job.faces, updatedAt: job.updated_at } : null,
+    track: job ? { status: job.status, canceling: Boolean(job.cancel_requested), progress: job.progress, error: job.error, fresh, coverage: job.coverage != null ? Number(job.coverage) : null, faces: job.faces, updatedAt: job.updated_at } : null,
     path: pathOf(cfg, job, c.in, c.out).path,
     ...(chunks ? { chunks: await shortChunks(row, cfg, c.in, c.out) } : {}),
   };
@@ -117,13 +118,13 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
     const row = await loadShort(req, reply); if (!row) return reply;
     const b = z.object({
       rev: z.number().int().min(1), title: z.string().trim().max(90).optional(), from: z.number().finite().optional(), to: z.number().finite().optional(),
-      cropX: shortConfigSchema.shape.cropX.optional(), follow: z.boolean().optional(), manual: manualSchema.optional(), captions: z.boolean().optional(), lang: shortConfigSchema.shape.lang.optional(), dub: z.boolean().optional(), showTitle: z.boolean().optional(),
+      cropX: shortConfigSchema.shape.cropX.optional(), follow: z.boolean().optional(), manual: manualSchema.optional(), captions: z.boolean().optional(), lang: shortConfigSchema.shape.lang.optional(), dub: z.boolean().optional(), showTitle: z.boolean().optional(), karaoke: z.boolean().optional(),
     }).parse(req.body ?? {});
     if (b.rev !== row.rev) return reply.code(409).send({ error: 'Cet extrait a été modifié ailleurs : la page se met à jour.', code: 'conflict', short: await shortView(row, { chunks: true }) });
     const c = clipOf(row);
     const p = checkPassage(b.from ?? c.in, b.to ?? c.out, row.duration_seconds);
     if (!p.ok) return reply.code(400).send({ error: p.error, code: 'passage' });
-    const cfg = shortDefaults({ ...shortDefaults(row.short), ...Object.fromEntries(['cropX', 'follow', 'manual', 'captions', 'lang', 'dub', 'showTitle'].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])) });
+    const cfg = shortDefaults({ ...shortDefaults(row.short), ...Object.fromEntries(['cropX', 'follow', 'manual', 'captions', 'lang', 'dub', 'showTitle', 'karaoke'].filter((k) => b[k] !== undefined).map((k) => [k, b[k]])) });
     if (cfg.follow && !editable(row)) return reply.code(409).send({ error: 'Le suivi du visage n’est possible que pour les vidéos envoyées sur le site.', code: 'not_editable' });
     const man = checkManual(cfg.manual, p.from, p.to); // corrections recoupées au passage (passage raccourci) ; refusées si elles se chevauchent
     if (!man.ok) return reply.code(400).send({ error: man.error, code: 'manual' });
@@ -150,10 +151,18 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
       `INSERT INTO face_track_jobs(project_id, talk_id, from_s, to_s, status, progress, attempts, error, keys, coverage, faces, samples, requested_by)
        VALUES ($1, $2, $3, $4, 'pending', 0, 0, NULL, NULL, NULL, NULL, NULL, $5)
        ON CONFLICT (project_id) DO UPDATE SET talk_id = EXCLUDED.talk_id, from_s = EXCLUDED.from_s, to_s = EXCLUDED.to_s, status = 'pending', progress = 0, attempts = 0,
-         error = NULL, keys = NULL, coverage = NULL, faces = NULL, samples = NULL, requested_by = EXCLUDED.requested_by, created_at = now(), updated_at = now()`,
+         error = NULL, keys = NULL, coverage = NULL, faces = NULL, samples = NULL, cancel_requested = false, requested_by = EXCLUDED.requested_by, created_at = now(), updated_at = now()`,
       [row.id, row.talk_id, c.in, c.out, req.user.sub]);
     req.auditSummary = `Éditeur : analyse du visage demandée (« ${row.talk_title} », extrait de ${Math.round(c.out - c.in)} s)`;
     return reply.code(202).send({ short: await shortView(row) });
+  });
+
+  // Registre n°31 : annuler l'analyse du visage de l'extrait.
+  app.post('/studio/editor/shorts/:id/track/cancel', viewer, async (req, reply) => {
+    const row = await loadShort(req, reply); if (!row) return reply;
+    if (!(await cancelTrack(row.id))) return reply.code(409).send({ error: 'Aucune analyse en cours à annuler.', code: 'idle' });
+    req.auditSummary = `Éditeur : analyse du visage annulée (« ${row.talk_title} »)`;
+    return { short: await shortView(row) };
   });
 
   // Supprimer un extrait (et ses fichiers de rendu).

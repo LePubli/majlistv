@@ -22,6 +22,7 @@ import { getSetting, isOn } from '../../settings.js';
 import { speakerNames, speakerSlug } from '../../speakers.js';
 import { channelImages } from '../../channels.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
+import { makePoster } from './poster.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const listSchema = z.object({
@@ -37,7 +38,7 @@ const BASE_WHERE = `s.status = 'published' AND t.video_status = 'ready' AND ${vi
 const ADULT_WHERE = `${BASE_WHERE} AND ${adultSql('t')}`;
 const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')`;
 const PUBLIC_SELECT = `
-  SELECT s.id, s.title, s.duration_s, s.views, s.published_at, s.video_key,
+  SELECT s.id, s.title, s.duration_s, s.views, s.published_at, s.video_key, s.poster_key AS short_poster,
          t.id AS talk_id, t.title AS talk_title, t.speaker, t.access, t.poster_key, t.external_thumb
     FROM public_shorts s JOIN talks t ON t.id = s.talk_id`;
 
@@ -52,7 +53,8 @@ async function publicView(rows, { kid = false } = {}) {
     out.push({
       id: r.id, title: r.title || r.talk_title, duration: r.duration_s != null ? Number(r.duration_s) : null, views: r.views, publishedAt: r.published_at,
       videoUrl: await presignGet(r.video_key).catch(() => null),
-      posterUrl: r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.external_thumb || null),
+      posterUrl: r.short_poster ? await presignGet(r.short_poster).catch(() => null)
+        : r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.external_thumb || null),
       talk: { id: r.talk_id, title: r.talk_title, premium: r.access === 'premium' },
       channel: slug && !kid ? { slug, name: named.get(slug) || String(r.speaker).trim(), avatarUrl: imgs.get(slug)?.avatarUrl || null } : null,
     });
@@ -130,6 +132,7 @@ export default async function shortsRoutes(app) {
     publishedAt: r.published_at, createdAt: r.created_at, updatedAt: r.updated_at, projectId: r.project_id,
     talk: { id: r.talk_id, title: r.talk_title, visible: r.visible }, channel: speakerSlug(r.speaker),
     videoUrl: await presignGet(r.video_key).catch(() => null),
+    posterUrl: r.poster_key ? await presignGet(r.poster_key).catch(() => null) : null,
   });
 
   // Mes shorts + extraits de l'éditeur dont un rendu vertical est prêt (avec le short déjà publié à partir d'eux, s'il y en a un).
@@ -180,6 +183,8 @@ export default async function shortsRoutes(app) {
       `INSERT INTO public_shorts(id, talk_id, project_id, title, video_key, duration_s, bytes, status, published_at, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 = 'published' THEN now() END, $9)`,
       [id, src.talk_id, src.id, b.title || src.title || src.talk_title, key, src.out_duration_s, src.bytes, b.status, req.user.sub]);
+    const poster = await makePoster(id, key, src.out_duration_s, app.log);
+    if (poster) await pool.query('UPDATE public_shorts SET poster_key = $2 WHERE id = $1', [id, poster]);
     req.auditSummary = `Shorts : ${b.status === 'published' ? 'publié' : 'brouillon créé'} (« ${src.talk_title} »)`;
     return reply.code(201).send({ id, status: b.status });
   });
@@ -202,7 +207,8 @@ export default async function shortsRoutes(app) {
     const src = row.project_id ? await sourceOf(req, row.project_id) : null;
     if (!src) return reply.code(409).send({ error: 'L’extrait de l’éditeur n’existe plus ou n’a pas de rendu prêt.', code: 'no_render' });
     try { await copyObject(src.output_key, row.video_key, 'video/mp4'); } catch (err) { return reply.code(502).send({ error: `Copie de la vidéo impossible : ${err.message}`, code: 'copy' }); }
-    await pool.query('UPDATE public_shorts SET duration_s = $2, bytes = $3, updated_at = now() WHERE id = $1', [row.id, src.out_duration_s, src.bytes]);
+    const poster = await makePoster(row.id, row.video_key, src.out_duration_s, app.log);
+    await pool.query('UPDATE public_shorts SET duration_s = $2, bytes = $3, poster_key = COALESCE($4, poster_key), updated_at = now() WHERE id = $1', [row.id, src.out_duration_s, src.bytes, poster]);
     return { refreshed: true, duration: src.out_duration_s != null ? Number(src.out_duration_s) : null };
   });
 
@@ -210,6 +216,7 @@ export default async function shortsRoutes(app) {
     const row = await loadOwn(req, reply); if (!row) return reply;
     await pool.query('DELETE FROM public_shorts WHERE id = $1', [row.id]);
     await deleteObject(row.video_key).catch((e) => app.log.warn(`Shorts : fichier non effacé (${e.message})`));
+    if (row.poster_key) await deleteObject(row.poster_key).catch(() => {});
     req.auditSummary = `Shorts : supprimé (« ${row.talk_title} »)`;
     return { deleted: true };
   });

@@ -8,6 +8,7 @@
 //     après la transcription, ou traduction : la durée de la phrase est répartie entre ses mots selon leur longueur.
 // Une phrase dont le texte a été corrigé ne correspond plus aux mots de Whisper : elle passe d'elle-même en « estimé ».
 import { z } from 'zod';
+import { cancelAlign } from './jobs.js';
 import { pool } from '../../db.js';
 
 export const MAX_SEGMENTS = 6000;
@@ -72,7 +73,7 @@ export async function wordsOf(talkId, origin, wanted) {
 }
 
 // Étape E5c : demande « Préciser la place des mots » (table word_align_jobs, traitée par le service de transcription).
-const alignView = (r) => (r ? { status: r.status, progress: r.progress, error: r.error || null, aligned: r.aligned, total: r.total, lang: r.lang, updatedAt: r.updated_at } : null);
+const alignView = (r) => (r ? { status: r.status, canceling: Boolean(r.cancel_requested), progress: r.progress, error: r.error || null, aligned: r.aligned, total: r.total, lang: r.lang, updatedAt: r.updated_at } : null);
 export async function alignInfo(talkId) {
   const t = (await pool.query('SELECT source, transcript_status FROM talks WHERE id = $1', [talkId])).rows[0];
   const job = (await pool.query('SELECT * FROM word_align_jobs WHERE talk_id = $1', [talkId])).rows[0];
@@ -102,9 +103,17 @@ export default async function wordRoutes(app, { guard, viewer }) {
     const { rows } = await pool.query(
       `INSERT INTO word_align_jobs (talk_id, lang, status, progress, attempts, error, aligned, total, requested_by, created_at, updated_at)
        VALUES ($1, $2, 'pending', 0, 0, NULL, NULL, NULL, $3, now(), now())
-       ON CONFLICT (talk_id) DO UPDATE SET lang = EXCLUDED.lang, status = 'pending', progress = 0, attempts = 0, error = NULL, aligned = NULL, total = NULL,
+       ON CONFLICT (talk_id) DO UPDATE SET lang = EXCLUDED.lang, status = 'pending', cancel_requested = false, progress = 0, attempts = 0, error = NULL, aligned = NULL, total = NULL,
          requested_by = EXCLUDED.requested_by, created_at = now(), updated_at = now()
        RETURNING *`, [row.talk_id, lang, req.user.sub]);
     return reply.code(202).send({ align: alignView(rows[0]) });
+  });
+
+  // Registre n°28 : annuler la demande (en attente : tout de suite ; en cours : le service s'arrête au prochain point de contrôle).
+  app.post('/studio/editor/projects/:id/words/align/cancel', viewer, async (req, reply) => {
+    const row = await guard(req, reply); if (!row) return reply;
+    if (!(await cancelAlign(row.talk_id))) return reply.code(409).send({ code: 'idle', error: 'Aucun calcul en cours à annuler.' });
+    req.auditSummary = `Éditeur : place des mots annulée (« ${row.talk_title} »)`;
+    return (await alignInfo(row.talk_id));
   });
 }

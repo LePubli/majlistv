@@ -155,7 +155,7 @@ export default function DressPanel({ sel, setSel, dress, setDress, canEdit, clip
     const eff = own || dress.transitions.all;
     const type = eff?.type || 'cut'; const len = eff?.len || 0.8;
     const apply = (tr, key) => setDress(setTransition(dress, sel.id, tr), key ? `tr-${sel.id}-${key}` : undefined);
-    const names = { cut: t('mtdTrCut'), dip: t('mtdTrDip'), dipwhite: t('mtdTrWhite') };
+    const names = { cut: t('mtdTrCut'), dip: t('mtdTrDip'), dipwhite: t('mtdTrWhite'), dissolve: t('mtdTrDissolve') };
     return (
       <div className="mt-panel" data-panel="join">
         <h3 id="mt-sel-title">{t('mtAddTransition')}</h3>
@@ -164,6 +164,7 @@ export default function DressPanel({ sel, setSel, dress, setDress, canEdit, clip
           <Seg label={t('mtdTrType')} disabled={dis} value={type} onChange={(v) => apply({ type: v, len })} options={TRANSITION_TYPES.map((k) => [k, names[k]])} /></div>
         {type !== 'cut' && <Slider id="mtd-tr-len" label={t('mtdTrLen')} value={len} min={0.2} max={3} step={0.1} shown={`${len.toLocaleString(undefined, { maximumFractionDigits: 1 })} s`} disabled={dis} onChange={(v) => apply({ type, len: v }, 'len')} />}
         <p className="mt-hint">{t('mtdTrHint')}</p>
+        {type === 'dissolve' && <p className="mt-hint">{t('mtdTrDissolveHint')}</p>}
         <div className="mt-actions">
           {!all && own && <button type="button" className="btn ghost sd-pill" disabled={dis} onClick={() => apply(null)}>{t('mtdTrDefault')}</button>}
           {!all && <button type="button" className="btn ghost sd-pill" disabled={dis || type === 'cut'} onClick={() => setDress({ ...dress, transitions: { all: { type, len }, byClip: {} } })} data-act="all">{t('mtdTrAll')}</button>}

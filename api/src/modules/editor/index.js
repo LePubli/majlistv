@@ -8,7 +8,8 @@ import routes from './routes.js';
 import { pool } from '../../db.js';
 import { isEdited } from './timeline.js';
 import { processQueue, recover, collectTasks } from './audio.js';
-import { collectRenders } from './render.js';
+import { collectRenders, deleteProjectRenders } from './render.js';
+import { collectJobs, cancelJob } from './jobs.js';
 import { tick as replaceTick, collectReplacements, collectOriginals, onArchived, onRestored } from './replace.js';
 
 export default async function register(app, ctx) {
@@ -24,7 +25,13 @@ export default async function register(app, ctx) {
   // Étape E2 : les analyses du son (formes d'onde) apparaissent dans Studio → Activité.
   // Étape E4a : les rendus (calculés par le worker) aussi.
   // Étape E4b : les préparations de nouvelle version (remplacement, restauration) aussi.
-  ctx.on('activity.collect', async (out, opts) => { await collectTasks(out, opts); await collectRenders(out, opts); await collectReplacements(out, opts); });
+  // Conférence supprimée : fichiers des rendus de ses montages et extraits (registre n°48 ; la base les supprime en cascade).
+  ctx.on('talk.deleting', async ({ talkId }) => {
+    const { rows } = await pool.query('SELECT id FROM editor_projects WHERE talk_id = $1', [talkId]);
+    for (const r of rows) await deleteProjectRenders(r.id);
+  });
+  ctx.on('activity.collect', async (out, opts) => { await collectTasks(out, opts); await collectRenders(out, opts); await collectReplacements(out, opts); await collectJobs(out, opts); });
+  ctx.on('activity.cancel', (out, task) => cancelJob(out, task)); // registre n°28 / 31
   // Étape E4b : originaux remplacés gardés N jours, puis proposés au module « Stockage et archivage ».
   ctx.on('archive.collect', (out, opts) => collectOriginals(out, opts));
   ctx.on('archive.archived', (ev) => onArchived(ev));

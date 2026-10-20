@@ -77,6 +77,12 @@ export default function TextPanel({ projectId, clips, commit, canEdit, srcAt, se
     const r = await call(`/studio/editor/projects/${projectId}/words/align`, { method: 'POST', body: '{}' });
     if (r.ok || r.data?.align) setAlign(r.data.align); else setAlignErr(r.data?.error || t('dbError'));
   };
+  // Registre n°28 : annuler le calcul (en attente : tout de suite ; en cours : le service s'arrête dans les secondes qui suivent).
+  const cancelAlign = async () => {
+    setAlignErr('');
+    const r = await call(`/studio/editor/projects/${projectId}/words/align/cancel`, { method: 'POST', body: '{}' });
+    if (r.ok) setAlign(r.data.align); else setAlignErr(r.data?.error || t('dbError'));
+  };
   useEffect(() => {
     if (!busyAlign) return undefined;
     const h = setTimeout(async () => {
@@ -252,8 +258,9 @@ export default function TextPanel({ projectId, clips, commit, canEdit, srcAt, se
           {wordMode && data.alignable && (data.precise < data.total || alignNow) && (
             <div className="mtw-align" data-align={alignStatus || 'none'}>
               <button type="button" className="btn ghost sd-pill" onClick={askAlign} disabled={!canEdit || busyAlign} data-act="text-align" title={t('mtwAlignHelp')}>{t('mtwAlign')}</button>
+              {busyAlign && canEdit && !alignNow?.canceling && <button type="button" className="btn ghost sd-pill" onClick={cancelAlign} data-act="text-align-cancel">{t('jbCancel')}</button>}
               <small className="meta" role="status">
-                {alignErr || (alignStatus === 'pending' ? t('mtwAlignPending')
+                {alignErr || (alignNow?.canceling ? t('jbCanceling') : alignStatus === 'canceled' ? t('jbCanceled') : alignStatus === 'pending' ? t('mtwAlignPending')
                   : alignStatus === 'processing' ? t('mtwAlignRunning').replace('{n}', alignNow.progress || 0)
                     : alignStatus === 'failed' ? t('mtwAlignFailed').replace('{e}', alignNow.error || '')
                       : alignStatus === 'done' ? t('mtwAlignDone').replace('{n}', alignNow.aligned ?? 0).replace('{c}', alignNow.total ?? 0)

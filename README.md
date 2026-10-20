@@ -4777,3 +4777,34 @@ Studio → Éditeur → ouvrir une conférence → Extraits 9:16 → régler et 
 
 ### Limites connues
 Registre n°48 (fichiers non effacés à la suppression d'une conférence) et n°49 (pas d'entrée de menu, affiche = miniature de la conférence).
+
+## Registre : points réglés le 20/10 (soir)
+
+### Description
+- **n°47 — Recherche Kids** : sans accents ni majuscules (« deuxieme » trouve « Deuxième »), arabe sans voyelles courtes (harakat), alif avec ou sans hamza, tâ marbûta = hâ. Si rien n'est trouvé, nouvel essai sur le début des mots (« histoirr » trouve « Histoire »). Code : `api/src/fold.js` (aucune extension Postgres).
+- **n°48 — Suppression d'une conférence** : les fichiers des shorts (vidéo + affiche) et des rendus de l'éditeur sont effacés du stockage (événement `talk.deleting`).
+- **n°49 — Shorts** : lien « Shorts » dans le menu principal et le menu latéral (barre du bas : disponible, masqué par défaut, Admin → Pages → Menus) ; affiche tirée de la vidéo (`shorts/<id>.jpg`, image à 1 s).
+- **n°28 / n°31 — Studio → Activité** : nouvelles files « Place des mots » et « Suivi du visage », avec pause, priorité et **Annuler** (aussi dans l'onglet Texte et la page des extraits). En attente : annulé tout de suite ; en cours : le service de transcription s'arrête dans les secondes qui suivent sans rien changer.
+- **n°13 — Fondu enchaîné** : nouvelle transition. Les deux images se mélangent et la durée du montage ne change pas. Le fondu est raccourci s'il manque de l'image autour du raccord. L'aperçu du navigateur montre une coupure : le fondu se voit au rendu.
+- **n°33 — Mot dit en or** dans les sous-titres des shorts, activé par défaut, décochable (« Mot prononcé en couleur »).
+
+### Déploiement (DockPanel + GitHub Desktop)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, GitHub Desktop → Commit to main → Push origin.
+2. DockPanel → Git Deploy → Redeploy **majlistv-api** (migrations : module éditeur 007, module shorts 002), puis **majlistv-web**, puis **majlistv-worker** (fondu enchaîné et mot dit en or passent par le rendu), puis le service **transcriber** (annulation et pause de la place des mots et du suivi du visage).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Navigateur : Ctrl + Maj + R.
+
+### Debug
+- Annuler ne fait rien sur une tâche en cours : le service de transcription n'a pas été redéployé (il ignore la demande et va au bout).
+- Pas d'affiche sur un short : FFmpeg absent de l'image de l'API (il y est depuis l'étape E2) ; la miniature de la conférence est utilisée à la place.
+- Tests : `python3 api/tests/test_shorts.py`, `python3 api/tests/test_kids_catalog.py`, `python3 api/tests/test_jobs_activity.py`, `cd api && node tests/test_render_plan.mjs && node tests/test_short.mjs`, `cd transcriber && python3 tests/test_track_job.py`, depuis `web/` : `python3 tests/shorts_publics.py` et `python3 tests/activite_annuler.py`.
+
+### Ce qui reste ouvert
+- Essais réels sur le VPS (n°18, 19, 21, 25, 26, 30) : étape F.
+- Décisions : n°15 (un organisateur peut-il supprimer un logo commun ?), n°32 (zoom / suivi de celui qui parle, après essai réel).
+- À surveiller : n°14 (charge de « Voir l'image finale »), n°20 (limite de 120 passages par rendu).

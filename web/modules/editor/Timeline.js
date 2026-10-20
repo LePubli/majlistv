@@ -346,7 +346,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                     <span key={`tr${c.id}`}>
                       {trn && <span className="mt-tr-span" style={{ left: x(c.start - trn.len / 2), width: x(trn.len) }} />}
                       <button type="button" className={`mt-trbtn${trn ? ' on' : ''}${sel?.track === 'join' && sel.id === c.id ? ' sel' : ''}`} style={{ left: x(c.start) }} data-join={c.id}
-                        aria-label={t('mtdJoinAria').replace('{a}', fmtTime(c.start, { tenths: true })).replace('{s}', trn ? t(trn.type === 'dipwhite' ? 'mtdTrWhite' : 'mtdTrDip') : t('mtdTrCut'))}
+                        aria-label={t('mtdJoinAria').replace('{a}', fmtTime(c.start, { tenths: true })).replace('{s}', trn ? t(trn.type === 'dipwhite' ? 'mtdTrWhite' : trn.type === 'dissolve' ? 'mtdTrDissolve' : 'mtdTrDip') : t('mtdTrCut'))}
                         title={t('mtAddTransition')} onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onSelect({ track: 'join', id: c.id }); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') onSelect({ track: 'join', id: c.id }); }} />
                     </span>

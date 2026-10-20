@@ -76,7 +76,7 @@ export default function StudioShorts() {
               <ul className="sh-list">
                 {d.shorts.map((s) => (
                   <li key={s.id} className="sh-li sh-li-short" data-short={s.id}>
-                    {s.videoUrl && <video className="sh-thumb" src={s.videoUrl} preload="metadata" muted playsInline controls aria-label={s.title} />}
+                    {s.videoUrl && <video className="sh-thumb" src={s.videoUrl} poster={s.posterUrl || undefined} preload="metadata" muted playsInline controls aria-label={s.title} />}
                     <div className="sh-li-text">
                       <label className="sh-title-edit">
                         <span className="meta">{t('shrTitleField')}</span>

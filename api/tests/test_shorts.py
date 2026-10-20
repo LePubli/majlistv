@@ -8,7 +8,9 @@ db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis
 s3 = boto3.client("s3", endpoint_url="http://127.0.0.1:5599", aws_access_key_id="test", aws_secret_access_key="test", region_name="garage")
 BUCKET = "majlis-videos"
 tag = uuid.uuid4().hex[:6]; users, talks, keys = [], [], []
-MP4 = os.environ.get("TEST_MP4", "/tmp/x.mp4")
+MP4 = os.path.join(__import__("tempfile").mkdtemp(prefix="shv-"), "short.mp4")  # vidéo verticale 9:16 de 3 s (image + son)
+__import__("subprocess").run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=360x640:r=25:d=3", "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                              "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "-movflags", "+faststart", MP4], check=True)
 
 
 def cleanup():
@@ -89,6 +91,8 @@ cur.execute("select video_key, status, published_at from public_shorts where id=
 ok(vk == f"shorts/{S1}.mp4" and st == "draft" and pa is None, "fichier copié sous shorts/<id>.mp4, pas de date de publication")
 keys.append(vk)
 ok(s3.head_object(Bucket=BUCKET, Key=vk)["ContentLength"] == os.path.getsize(MP4), "copie identique au rendu")
+cur.execute("select poster_key from public_shorts where id=%s", (S1,)); pk1 = cur.fetchone()[0]; keys.append(f"shorts/{S1}.jpg")
+ok(pk1 == f"shorts/{S1}.jpg" and s3.get_object(Bucket=BUCKET, Key=pk1)["Body"].read()[:2] == b"\xff\xd8", "affiche JPEG tirée de la vidéo (registre 49)")
 ok(requests.get(f"{B}/shorts/{S1}").status_code == 404, "brouillon : invisible du public")
 ok(S1 not in [x["id"] for x in requests.get(B + "/shorts").json()], "brouillon : absent du fil")
 r = requests.get(B + "/studio/shorts", headers=ORG).json(); ok(any(x["id"] == S1 and x["videoUrl"] for x in r["shorts"]) and [c for c in r["candidates"] if c["projectId"] == P1][0]["shortId"] == S1, "Studio : short listé avec aperçu, extrait marqué publié")
@@ -105,6 +109,7 @@ ok(S1 in ids and S2 in ids, "fil de la chaîne : shorts publiés, dont celui d'u
 ok(S3 not in ids, "conférence en brouillon : short masqué du public")
 ok(SK not in ids, "conférence Kids (hors catalogue adulte) : short masqué")
 x = [i for i in feed if i["id"] == S1][0]
+ok(f"shorts/{S1}.jpg" in x["posterUrl"], "fiche publique : affiche du short, pas la miniature de la conférence")
 ok(x["videoUrl"] and x["title"] == f"La patience {tag}" and x["talk"]["id"] == T1 and x["channel"]["slug"] == SLUG and x["views"] == 0 and x["duration"] == 12.5, "fiche publique complète")
 ok([i["id"] for i in feed][:2] == [S2, S1], "plus récents d'abord")
 ok(len(requests.get(B + "/shorts", params={"channel": SLUG, "limit": 1}).json()) == 1 and requests.get(B + "/shorts", params={"channel": SLUG, "limit": 1, "offset": 1}).json()[0]["id"] == S1, "pagination")
@@ -182,6 +187,19 @@ ok(requests.delete(f"{B}/studio/shorts/{S2}", headers=ORG).json()["deleted"] is 
 try: s3.head_object(Bucket=BUCKET, Key=f"shorts/{S2}.mp4"); gone = False
 except Exception: gone = True
 ok(gone, "fichier effacé du stockage")
+try: s3.head_object(Bucket=BUCKET, Key=f"shorts/{S2}.jpg"); pgone = False
+except Exception: pgone = True
+ok(pgone, "affiche effacée aussi")
+# Suppression de la conférence par son créateur (route du site) : shorts ET fichiers effacés (registre n°48)
+k1 = f"shorts/{S1}.mp4"; cur.execute("select output_key from editor_renders where talk_id=%s", (T3_ := TDRAFT,)); rk = [r[0] for r in cur.fetchall()]
+ok(requests.delete(f"{B}/talks/{TDRAFT}", headers=ORG2).status_code == 404, "suppression de la conférence d'autrui refusée (fichiers gardés)")
+ok(s3.head_object(Bucket=BUCKET, Key=f"shorts/{S3}.mp4")["ContentLength"] > 0, "…le fichier du short est toujours là")
+ok(requests.delete(f"{B}/talks/{TDRAFT}", headers=ORG).status_code == 204, "conférence supprimée par son créateur"); talks.remove(TDRAFT)
+def gone_key(k):
+    try: s3.head_object(Bucket=BUCKET, Key=k); return False
+    except Exception: return True
+ok(gone_key(f"shorts/{S3}.mp4"), "fichier du short effacé du stockage")
+ok(rk and all(gone_key(k) for k in rk), "fichiers des rendus de l'éditeur effacés aussi")
 cur.execute("delete from talks where id=%s", (T1,)); talks.remove(T1)
 cur.execute("select count(*) from public_shorts where id=%s", (S1,)); ok(cur.fetchone()[0] == 0, "conférence supprimée : ses shorts partent avec")
 

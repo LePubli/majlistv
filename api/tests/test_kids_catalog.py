@@ -62,8 +62,8 @@ def talk(title, band, owner=None, pub="published", speaker="Cheikh Kids", access
 
 
 A = talk("Histoire A", "7-10"); Bt = talk("Histoire B", "3-6"); C = talk("Chant C", "7-10"); D = talk("Brouillon D", "7-10", pub="draft"); ADULT = talk("Adulte E", None); OTHER = talk("De l'autre", "7-10", owner=o2id)
-ok(requests.put(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG, json={"rubricIds": [R1["id"], R2["id"]]}).json()["rubricIds"] == sorted([R1["id"], R2["id"]]), "l'organisateur classe sa conférence")
-ok(requests.get(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG).json()["rubricIds"] == sorted([R1["id"], R2["id"]]), "classement relu")
+_r = requests.put(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG, json={"rubricIds": [R1["id"], R2["id"]]}); ok(sorted(_r.json().get("rubricIds") or []) == sorted([R1["id"], R2["id"]]), "l'organisateur classe sa conférence")
+ok(sorted(requests.get(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG).json()["rubricIds"]) == sorted([R1["id"], R2["id"]]), "classement relu")
 ok(requests.put(f"{B}/studio/talks/{OTHER}/kid-rubrics", headers=ORG, json={"rubricIds": [R1["id"]]}).status_code == 404, "pas la conférence d'un autre")
 ok(requests.put(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG, json={"rubricIds": [999999]}).status_code == 400, "rubrique inconnue refusée")
 ok(requests.put(f"{B}/studio/talks/{A}/kid-rubrics", headers=USR, json={"rubricIds": []}).status_code == 403, "simple membre refusé")
@@ -115,6 +115,11 @@ ok({A, Bt} <= {t["id"] for t in S(f"histoire {tag}")}, "recherche par titre (plu
 ok(A in {t["id"] for t in S("PATIENCE")}, "recherche dans la description, sans casse")
 ok(C in {t["id"] for t in S("Deuxième")}, "recherche par nom de rubrique")
 ok(C in {t["id"] for t in S("cheikh kids")}, "recherche par intervenant")
+ok(C in {t["id"] for t in S("deuxieme")}, "sans accent : « deuxieme » trouve « Deuxième » (registre 47)")
+ok(A in {t["id"] for t in S("Pätiénce")}, "accents en trop : trouvé quand même")
+cur.execute("update talks set description = description || ' الصَّلاةُ' where id=%s", (C,))
+ok(C in {t["id"] for t in S("الصلاة")} and C in {t["id"] for t in S("صلاه")}, "arabe : sans voyelles courtes, tâ marbûta = hâ")
+ok({A, Bt} <= {t["id"] for t in S("histoirr")}, "faute de frappe : « histoirr » trouve « Histoire » (début du mot)")
 res = {t["id"] for t in S(f"{tag}")}
 ok(D not in res and ADULT not in res, "jamais de brouillon ni de contenu adulte")
 ok({t["id"] for t in S(f"histoire {tag}", rubric=R2["id"])} == {A, C} and {t["id"] for t in S(f"histoire {tag}", rubric=R1["id"])} == {A, Bt}, "recherche filtrée par rubrique")

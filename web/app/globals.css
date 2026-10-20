@@ -3665,3 +3665,5 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .sh-title-edit input { width: 100%; max-width: 420px; }
 .sh-state { align-self: flex-start; padding: 1px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
 .sh-state.published { border-color: var(--ok); color: var(--ok); }
+.mt-seg button { overflow-wrap: anywhere; line-height: 1.2; }
+.mts-cap span.on { color: var(--accent); } /* registre n°33 : mot dit en or (aperçu) */

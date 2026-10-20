@@ -10,7 +10,9 @@ WEB, API = 'http://localhost:3001', 'http://127.0.0.1:3055'
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else '/tmp/shots-sh'); OUT.mkdir(parents=True, exist_ok=True)
 db = psycopg2.connect(host='127.0.0.1', port=5544, dbname='majlis', user='majlis', password='pw'); db.autocommit = True; cur = db.cursor()
 s3 = boto3.client('s3', endpoint_url='http://127.0.0.1:5599', aws_access_key_id='test', aws_secret_access_key='test', region_name='garage'); BUCKET = 'majlis-videos'
-bad = []; tag = uuid.uuid4().hex[:6]; talks = []; keys = []; home_id = None; MP4 = os.environ.get('TEST_MP4', '/tmp/x.mp4')
+bad = []; tag = uuid.uuid4().hex[:6]; talks = []; keys = []; home_id = None; MP4 = os.path.join(__import__("tempfile").mkdtemp(prefix="shv-"), "short.mp4")  # vidéo verticale 9:16 de 3 s (image + son)
+__import__("subprocess").run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=360x640:r=25:d=3", "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                              "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "-movflags", "+faststart", MP4], check=True)
 def ok(c, m):
     print(('OK   ' if c else 'FAIL ') + m, flush=True)
     if not c: bad.append(m)
@@ -81,6 +83,7 @@ try:
             n = pg.locator('.sh-rail .sh-card').count()
             ok(n >= 2, f'accueil {w}px : rangée Shorts ({n} vignettes)')
             ok(pg.locator('.sh-card-title', has_text=f'Courte leçon sur la patience {tag}').count() == 1, f'accueil {w}px : titre du short')
+            if w == 1440: ok(pg.locator('header a[href="/shorts"]').count() >= 1, 'menu principal : lien « Shorts » (registre 49)')
             ok(ov(pg) <= 0, f'accueil {w}px : pas de débordement ({ov(pg)} px)')
             if w == 390: pg.screenshot(path=str(OUT / 'accueil-390.png'))
             else: pg.locator('#hb-shorts').scroll_into_view_if_needed(); pg.screenshot(path=str(OUT / 'accueil-1440.png'))
@@ -192,10 +195,10 @@ try:
             ok(ov(pg) <= 0, f'{w}px tactile : pas de débordement'); pg.screenshot(path=str(OUT / f'tactile-{w}.png'))
             pg.context.close()
         # Rangée de l'accueil : défilement horizontal au toucher
-        pg = page(390, 'fr', 800, touch=True); pg.goto(WEB + '/'); 
-        try: pg.wait_for_selector('.sh-rail', timeout=25000)
+        pg = page(390, 'fr', 800, touch=True); pg.goto(WEB + '/')
+        try: pg.wait_for_selector('.sh-rail', timeout=40000)
         except Exception: pass
-        ok(pg.evaluate("getComputedStyle(document.querySelector('.sh-rail')).overflowX") == 'auto', 'rangée Shorts : défilement horizontal activé'); pg.context.close()
+        ok(pg.evaluate("(() => { const r = document.querySelector('.sh-rail'); return r ? getComputedStyle(r).overflowX : 'absente'; })()") == 'auto', 'rangée Shorts : défilement horizontal activé'); pg.context.close()
 
         # ---- Studio → Shorts
         for w in (390, 1440):

@@ -14,6 +14,7 @@ import { getNumber, getSetting, isOn } from '../../settings.js';
 import { bandOkSql } from '../../taxonomy.js';
 import { catalogSql, timeState } from '../../kidsControl.js';
 import { slugify } from '../../slugs.js';
+import { fold, foldSql } from '../../fold.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { parentAllowed } from './routes.js';
 
@@ -191,19 +192,26 @@ export default async function kidCatalogRoutes(app) {
     const time = await timeState(c.profile);
     if (time.timeUp) return { talks: [] };
     const open = await parentAllowed(c.parent.sub, c.parent.role);
-    const words = [...new Set(p.q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, 5).map((w) => `%${w.replace(/[\\%_]/g, '').slice(0, 40)}%`).filter((w) => w.length > 2);
-    if (!words.length) return { talks: [] };
-    const vals = [c.profile.id, c.profile.band, open, c.profile.catalog_mode];
-    const conds = words.map((w) => {
-      vals.push(w); const n = vals.length;
-      return `(t.title ILIKE $${n} OR t.speaker ILIKE $${n} OR t.description ILIKE $${n}
-               OR EXISTS (SELECT 1 FROM talk_kid_rubrics x JOIN kid_rubrics r ON r.id = x.rubric_id AND r.active WHERE x.talk_id = t.id AND r.names::text ILIKE $${n}))`;
-    });
-    if (p.rubric) { vals.push(p.rubric); conds.push(`EXISTS (SELECT 1 FROM talk_kid_rubrics x WHERE x.talk_id = t.id AND x.rubric_id = $${vals.length})`); }
-    const { rows } = await pool.query(
-      `SELECT ${CARD} ${BASE} AND ${conds.join(' AND ')}
-        ORDER BY (t.title ILIKE $${vals.length + 1}) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 40`,
-      [...vals, words[0]]);
+    // Mots tapés, sans accents ni majuscules (registre n°47) ; comparés aux colonnes « repliées » de la même façon.
+    const clean = [...new Set(fold(p.q).split(/\s+/).filter(Boolean))].slice(0, 5).map((w) => w.replace(/[\\%_]/g, '').slice(0, 40)).filter((w) => w.length > 0);
+    const run = async (terms) => {
+      const words = terms.map((w) => `%${w}%`).filter((w) => w.length > 2);
+      if (!words.length) return [];
+      const vals = [c.profile.id, c.profile.band, open, c.profile.catalog_mode];
+      const conds = words.map((w) => {
+        vals.push(w); const n = vals.length;
+        return `(${foldSql('t.title')} LIKE $${n} OR ${foldSql("coalesce(t.speaker, '')")} LIKE $${n} OR ${foldSql("coalesce(t.description, '')")} LIKE $${n}
+                 OR EXISTS (SELECT 1 FROM talk_kid_rubrics x JOIN kid_rubrics r ON r.id = x.rubric_id AND r.active WHERE x.talk_id = t.id AND ${foldSql('r.names::text')} LIKE $${n}))`;
+      });
+      if (p.rubric) { vals.push(p.rubric); conds.push(`EXISTS (SELECT 1 FROM talk_kid_rubrics x WHERE x.talk_id = t.id AND x.rubric_id = $${vals.length})`); }
+      return (await pool.query(
+        `SELECT ${CARD} ${BASE} AND ${conds.join(' AND ')}
+          ORDER BY (${foldSql('t.title')} LIKE $${vals.length + 1}) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 40`,
+        [...vals, words[0]])).rows;
+    };
+    let rows = await run(clean);
+    // Faute de frappe : rien trouvé ? On réessaie avec le début de chaque mot (4 premières lettres des mots de 5 lettres et plus).
+    if (!rows.length && clean.some((w) => w.length >= 5)) rows = await run(clean.map((w) => (w.length >= 5 ? w.slice(0, 4) : w)));
     return { talks: await withPosters(rows) };
   });
 }

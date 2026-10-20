@@ -6,6 +6,8 @@ export function taskName(x, t) {
   if (x.queue === 'replace') return t(x.kind === 'restore' ? 'tqRestoreVideo' : 'tqReplace'); // étape E4b : nouvelle version de la vidéo
   if (x.queue === 'render') return t(x.kind === 'preview' ? 'tqRenderPreview' : 'tqRenderFinal'); // étape E4a : rendus du montage
   if (x.queue === 'editor') return t(x.kind === 'music' ? 'tqWaveMusic' : x.kind === 'dub' ? 'tqWaveDub' : 'tqWaveOrig'); // étape E2 : analyses du son
+  if (x.queue === 'align') return t('tqAlign'); // registre n°28 : place des mots
+  if (x.queue === 'face') return t('tqFace'); // registre n°31 : suivi du visage
   if (x.queue === 'translation') return `${t('tqTranslation')}${x.lang ? ` (${String(x.lang).toUpperCase()})` : ''}`;
   return t(x.queue === 'video' ? 'tqVideo' : 'tqTranscript');
 }
