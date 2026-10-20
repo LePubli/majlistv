@@ -9,7 +9,7 @@ COPY d3bench/requirements.txt .
 # PyTorch version processeur (sans CUDA) : beaucoup plus léger
 RUN pip install --no-cache-dir torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
-COPY etape0/bench.py etape0/test_pipeline.py d3bench/compare.py d3bench/test_d3.py ./
+COPY etape0/bench.py etape0/test_pipeline.py d3bench/compare.py d3bench/test_d3.py d3bench/texte-reference.txt ./
 ENV PYTHONUNBUFFERED=1 HF_HOME=/models
 VOLUME ["/models"]
 ENTRYPOINT ["python", "bench.py"]
