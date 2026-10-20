@@ -3417,3 +3417,30 @@ a.ac-title:hover { color: var(--accent-hover); }
 .db-filter { max-width: 260px; margin: 8px 0; }
 .db-target-pick { display: grid; gap: 8px; align-content: start; }
 .db-target-pick .db-audio { width: 100%; max-width: 360px; }
+
+/* Étape E6a : timeline lisible (une couleur par piste, titres sur des lignes séparées), zoom de la frise et de l'aperçu */
+.mt-row { border-bottom-color: var(--line); }
+.mt-row:nth-child(even) .mt-lane { background: rgba(255,255,255,.025); }
+.mt-head { position: sticky; }
+.mt-head::before { content: ''; position: absolute; inset-inline-start: 0; top: 9px; bottom: 9px; width: 4px; border-radius: 0 3px 3px 0; background: var(--trk, transparent); }
+.mt-row-video { --trk: #E6A739; }
+.mt-row-orig { --trk: #9a7b4d; }
+.mt-row-dub { --trk: #f3f3f3; }
+.mt-row-music { --trk: #4fb3bf; }
+.mt-row-titles { --trk: #9a8cf0; }
+.mt-row-subs { --trk: #4fbf8a; }
+.mt-tclip { background: #2a2350; border-color: #8f82e6; }
+.mt-tclip.banner { background: #1c2c52; border-color: #6f9be8; }
+.mt-tclip .mt-clip-body { color: #e4defc; }
+.mt-tclip.banner .mt-clip-body { color: #d9e6ff; }
+.mt-logostrip { background: repeating-linear-gradient(90deg, #4a4390 0 6px, #5f57b0 6px 12px); border-color: #8f82e6; }
+.mt-block.sub { background: #1d3a2c; border: 0; border-right: 2px solid #0E0B07; }
+.mt-block.sub.alt { background: #27553d; }
+.mt-block.sub.part { background: #2e5a3c; }
+.mt-zoom-btns { display: inline-flex; gap: 6px; }
+.mt-zoom-btns .btn { min-width: 40px; }
+.mt-pzbar { display: flex; gap: 6px; margin-bottom: 8px; }
+.mt-pz { --pzb: clamp(320px, calc((100vh - 640px) * 1.7778), 640px); width: 100%; overflow: auto; max-height: calc(100vh - 340px); }
+.mt-pz .mt-preview { width: min(100% * var(--pz, 1), var(--pzb) * var(--pz, 1)); max-width: none; margin-inline: auto; }
+/* Le bandeau de nom de la timeline portait aussi la classe « .banner » du bandeau d'accueil (hauteur de 380 à 640 px) : il recouvrait les pistes voisines. */
+.mt-tclip.banner { min-height: 0; display: block; padding: 0; overflow: hidden; }

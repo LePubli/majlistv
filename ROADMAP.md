@@ -317,3 +317,7 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Étape D3b (20/10) — voix de synthèse et catégories
 - Méthode actuelle gardée (Piper + ChatterboxVC) ; Qwen abandonné. Module `dubbing` 0.9.0, migration `005_synthetic_voices.sql`. Case « Voix de synthèse » (sans consentement), filtre par catégorie, choix de la voix de conversion par catégorie avec écoute. Reste D3c (détection automatique des intervenants), puis E6, puis le plan du 20/10 (fiche vidéo, chaînes, Kids catalogue, Shorts, Créateur), puis F.
+
+
+## Étape E6a (20/10) — timeline lisible et zoom
+- Bandeau `.banner` corrigé, pistes colorées, titres sur lignes séparées, logo sur sa ligne, zoom frise (boutons, Ctrl + molette, jusqu'à 5 s) et aperçu (150/200 %). Reste E6b (placer sur la vidéo), E6c (format et qualité), puis fiche vidéo, chaînes, Kids catalogue, Shorts, Créateur, D3c (+ hauteur de voix), F.

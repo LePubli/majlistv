@@ -49,11 +49,23 @@ function Wave({ left, width, height, pps, sample, level, sig, color = 'rgba(230,
   return <canvas ref={ref} className={`mt-wave ${className}`} style={{ left, width, height }} aria-hidden="true" />;
 }
 
+// Étape E6a : range les titres/bandeaux sur des lignes séparées quand ils se chevauchent dans le temps (au lieu de s'empiler).
+export function packRows(items) {
+  const ends = []; const rows = new Map();
+  for (const it of [...items].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id))) {
+    let r = ends.findIndex((e) => e <= it.start + 0.001);
+    if (r < 0) { r = ends.length; ends.push(0); }
+    ends[r] = it.start + it.len; rows.set(it.id, r);
+  }
+  return { rows, count: Math.max(1, ends.length) };
+}
+const ROW_H = 48; const SUB_H = 30;
+
 const HEAD = 168; // largeur de la colonne des noms de pistes (px)
 const SNAP_PX = 8;
 
 export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, onMove, onTrim, cues, dub, zoom, magnet, readOnly, subsLang, titlesCount,
-  audio, waves, musicInfo, onMusic, getMix, dress, onItems, vars }) {
+  audio, waves, musicInfo, onMusic, getMix, dress, onItems, vars, onZoomBy }) {
   const { t } = useApp();
   const scroller = useRef(null);
   const [width, setWidth] = useState(900);
@@ -82,10 +94,35 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
     return Math.max(0, Math.min(totalS, (clientX - r.left - HEAD + el.scrollLeft) / pps));
   };
 
+  // Zoom à la molette (Ctrl + molette, ou pincement sur un pavé tactile) : le point sous le curseur reste en place.
+  const anchor = useRef(null); const skipFollow = useRef(false);
+  const pxRef = useRef(pps); pxRef.current = pps;
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !onZoomBy) return undefined;
+    const wheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const off = e.clientX - r.left;
+      anchor.current = { t: (off - HEAD + el.scrollLeft) / pxRef.current, off };
+      onZoomBy(e.deltaY < 0 ? 6 : -6);
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, [onZoomBy]);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !anchor.current) return;
+    el.scrollLeft = Math.max(0, anchor.current.t * pps + HEAD - anchor.current.off);
+    anchor.current = null; skipFollow.current = true; // la tête de lecture ne doit pas reprendre la main juste après un zoom
+  }, [pps]);
+
   // La tête de lecture reste visible pendant la lecture.
   useEffect(() => {
     const el = scroller.current;
-    if (!el || drag) return;
+    if (skipFollow.current) { skipFollow.current = false; return; }
+    if (!el || drag || anchor.current) return;
     const px = x(T) + HEAD;
     if (px < el.scrollLeft + HEAD || px > el.scrollLeft + el.clientWidth - 40) el.scrollLeft = Math.max(0, px - HEAD - 60);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,6 +283,8 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
     }
     return best;
   };
+  const pack = useMemo(() => packRows(liveItems), [liveItems]);
+  const titlesH = Math.max(ROW_H, 12 + pack.count * SUB_H + (dress?.logo.on ? 18 : 0));
   const sig = `${live.length}:${live.map((c) => `${c.in}-${c.out}`).join(',')}`;
   const audioSig = JSON.stringify(audio ? { o: audio.orig, d: audio.dub } : null);
   const musicSig = JSON.stringify(liveMusic.map((m) => [m.start, m.len, m.offset, m.loop])) + Object.keys(musicInfo || {}).join(',');
@@ -281,7 +320,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
           </div>
 
           {tracks.map((tr) => (
-            <div key={tr.key} className={`mt-row mt-row-${tr.key}${selected(tr.key) ? ' on' : ''}`}>
+            <div key={tr.key} className={`mt-row mt-row-${tr.key}${selected(tr.key) ? ' on' : ''}`} style={tr.key === 'titles' ? { height: titlesH } : undefined}>
               <button type="button" className={`mt-head${tr.hot ? ' hot' : ''}`} onClick={() => onSelect({ track: tr.key, id: tr.key === 'video' ? sel?.id : null })} aria-pressed={selected(tr.key)}>
                 <b>{tr.name}</b><small>{tr.info}</small>
               </button>
@@ -350,7 +389,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                       onPointerDown={(e) => { e.stopPropagation(); onSelect({ track: 'logo', id: null }); }} />
                   )}
                   {liveItems.map((it) => (
-                    <div key={it.id} className={`mt-tclip ${it.kind}${sel?.track === 'item' && sel.id === it.id ? ' sel' : ''}`} style={{ left: x(it.start), width: Math.max(4, x(it.len)) }}>
+                    <div key={it.id} className={`mt-tclip ${it.kind}${sel?.track === 'item' && sel.id === it.id ? ' sel' : ''}`} style={{ left: x(it.start), width: Math.max(4, x(it.len)), top: 6 + (pack.rows.get(it.id) || 0) * SUB_H }}>
                       <button type="button" className="mt-clip-body" onPointerDown={(e) => startItem(e, it, 'move')} onClick={(e) => e.preventDefault()} data-item={it.id}
                         onFocus={() => onSelect({ track: 'item', id: it.id })}
                         aria-label={t('mtdItemAria').replace('{t}', fillVars(it.text, vars) || fillVars(it.sub, vars) || '…').replace('{a}', fmtTime(it.start, { tenths: true })).replace('{b}', fmtTime(it.start + it.len, { tenths: true }))}>
@@ -364,7 +403,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                   ))}
                 </> : <span className="mt-empty">{t('mtdNoTitles')}</span>)}
                 {tr.key === 'subs' && (mapped.length
-                  ? mapped.filter(visible).map((m, i) => <div key={`${m.clipId}-${m.s}-${i}`} className={`mt-block sub${m.part ? ' part' : ''}`} style={{ left: x(m.ts), width: Math.max(2, x(m.te - m.ts)) }} title={m.text} />)
+                  ? mapped.filter(visible).map((m, i) => <div key={`${m.clipId}-${m.s}-${i}`} className={`mt-block sub${m.part ? ' part' : ''}${i % 2 ? ' alt' : ''}`} style={{ left: x(m.ts), width: Math.max(2, x(m.te - m.ts)) }} title={m.text} />)
                   : <span className="mt-empty">{t('mtNoSubs')}</span>)}
               </div>
             </div>

@@ -86,6 +86,8 @@ export default function Editor({ id }) {
   const [sel, setSel] = useState({ track: 'video', id: null });
   const [zoomStep, setZoomStep] = useState(0);
   const [magnet, setMagnet] = useState(true);
+  const [pz, setPz] = useState(1); // Étape E6a : taille de l'aperçu (1 = ajusté, 1,5, 2)
+  const zoomBy = (d) => setZoomStep((v) => Math.max(0, Math.min(ZOOM_STEPS, v + d)));
   const [showVersions, setShowVersions] = useState(false);
   // Étape E5a : colonne de droite « Réglages » ou « Texte » (choix gardé dans ce navigateur).
   const [rightTab, setRightTab] = useState(() => { try { return localStorage.getItem('mt-right-tab') === 'text' ? 'text' : 'settings'; } catch { return 'settings'; } });
@@ -100,7 +102,7 @@ export default function Editor({ id }) {
 
   const duration = data?.project?.timeline?.duration || 0;
   const totalS = total(clips);
-  const maxZoom = Math.max(1, totalS / 20);
+  const maxZoom = Math.max(1, totalS / 5);
   const zoom = Math.exp((zoomStep / ZOOM_STEPS) * Math.log(maxZoom));
   const cues = data?.media?.subtitles?.cues || [];
   const dub = data?.media?.dub || null;
@@ -433,10 +435,17 @@ export default function Editor({ id }) {
           </aside>
 
           <section className="mt-center" aria-label={t('mtPreview')}>
+            {data.media && (
+              <div className="mt-pzbar" role="group" aria-label={t('mtPzLabel')}>
+                {[[1, t('mtPzFit')], [1.5, '150 %'], [2, '200 %']].map(([v, l]) => (
+                  <button key={v} type="button" className={`pill${pz === v ? ' on' : ''}`} aria-pressed={pz === v} onClick={() => setPz(v)} data-pz={v}>{l}</button>
+                ))}
+              </div>
+            )}
             {data.media
-              ? <Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} hideCaption={dress.subs.burn}>
+              ? <div className="mt-pz" style={{ '--pz': pz }}><Preview src={`/api${data.media.preview.hls}`} clips={clips} T={T} onTime={setT} playing={playing} setPlaying={setPlaying} caption={caption} poster={p.talk.posterUrl} sound={sound} hideCaption={dress.subs.burn}>
                 <DressOverlay dress={dress} T={T} totalS={totalS} clips={clips} vars={vars} logoUrl={logoUrl} caption={caption} card={card} cardText={card ? dress[card] : null} />
-              </Preview>
+              </Preview></div>
               : <p className="meta">{t('mtNotEditable')}</p>}
           </section>
 
@@ -466,13 +475,18 @@ export default function Editor({ id }) {
             <button type="button" className="btn ghost sd-pill" onClick={doDelete} disabled={!canEdit || clips.length < 2} title={t('mtDeleteKey')}>{t('mtDelete')}</button>
             <button type="button" className={`btn ghost sd-pill${magnet ? ' mt-on' : ''}`} aria-pressed={magnet} onClick={() => setMagnet((m) => !m)} title="M">{t('mtMagnet')}</button>
             <span className="mt-sum meta small">{t('mtSum').replace('{e}', fmtTime(totalS)).replace('{s}', fmtTime(duration)).replace('{n}', clips.length)}{loc ? ` · ${t('mtAtSource').replace('{s}', fmtTime(loc.src, { tenths: true }))}` : ''}</span>
+            <span className="mt-zoom-btns" role="group" aria-label={t('mtZoom')}>
+              <button type="button" className="btn ghost sd-pill" onClick={() => zoomBy(-15)} aria-label={t('mtZoomOut')} title={t('mtZoomOut')} data-zoom="out">−</button>
+              <button type="button" className="btn ghost sd-pill" onClick={() => zoomBy(15)} aria-label={t('mtZoomIn')} title={t('mtZoomIn')} data-zoom="in">+</button>
+              <button type="button" className="btn ghost sd-pill" onClick={() => setZoomStep(0)} disabled={zoomStep === 0} data-zoom="all">{t('mtZoomAll')}</button>
+            </span>
             <label className="mt-zoom">
               <span>{t('mtZoom')}</span>
               <input type="range" min={0} max={ZOOM_STEPS} value={zoomStep} onChange={(e) => setZoomStep(Number(e.target.value))} aria-valuetext={`× ${zoom.toFixed(1)}`} />
             </label>
           </div>
           <Timeline clips={clips} duration={duration} T={T} onSeek={(v) => { setT(v); }} sel={sel} onSelect={setSel} onMove={doMove} onTrim={doTrim}
-            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0} dress={dress} vars={vars} onItems={(items) => setDress({ ...dress, items })}
+            cues={cues} dub={dub} zoom={zoom} magnet={magnet} readOnly={!canEdit} subsLang={data.media?.subtitles?.lang ? data.media.subtitles.lang.toUpperCase() : ''} titlesCount={0} dress={dress} vars={vars} onZoomBy={zoomBy} onItems={(items) => setDress({ ...dress, items })}
             audio={audio} waves={waves} musicInfo={musicInfo} getMix={getMix} onMusic={(items) => setAudio({ ...audio, music: items })} />
         </div>
       </div>

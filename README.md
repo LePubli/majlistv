@@ -4537,3 +4537,42 @@ docker exec -i dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" 
 - Les 4 échantillons d'Epok (femme-victoire, homme-hugo, fille-6ans, garçon) s'ajoutent de la même façon ; pour une vraie personne : décocher « Voix de synthèse » et saisir le consentement.
 
 Tests : `api/tests/test_dubbing.py` (14 contrôles ajoutés : synthèse sans consentement, organisateur refusé, consentement toujours exigé sinon, contraintes de la base), `web/tests/d3b_voices.py` (formulaire, étiquettes, filtre, choix par catégorie, FR + AR, 390 / 1440 px).
+
+
+## Étape E6a — Éditeur : timeline lisible, zoom de la frise et de l'aperçu
+
+### Description
+Retours d'Epok du 20/10 : les éléments de la timeline « se confondent », la vidéo n'est pas zoomable. **E6a** (la partie d'affichage ; E6b = placer les éléments sur la vidéo, E6c = format et qualité du rendu) :
+- **Cause d'un vrai défaut trouvée** : le bandeau de nom de la timeline portait aussi la classe `.banner` du bandeau d'accueil du site (hauteur 380 à 640 px) : il recouvrait les pistes voisines. Corrigé.
+- **Une couleur par piste** (repère coloré à gauche du nom) : Vidéo or, Voix d'origine brun, Voix française blanc cassé, Musique turquoise, Titres et logo violet (bandeaux en bleu), Sous-titres vert ; les phrases voisines des sous-titres alternent deux teintes.
+- **Titres qui se chevauchent dans le temps** : rangés sur des **lignes séparées** (la piste grandit) ; le **logo a sa propre ligne** en bas de la piste.
+- **Zoom de la timeline** : boutons **−** / **+**, **Tout voir**, curseur (jusqu'à 5 secondes visibles, au lieu de 20), et **Ctrl + molette** (ou pincement sur pavé tactile) : le point sous le curseur reste en place.
+- **Zoom de l'aperçu** : **Ajusté / 150 % / 200 %** au-dessus de la vidéo ; l'habillage (titres, logo, sous-titres incrustés) grandit avec l'image ; la zone défile si elle dépasse.
+
+Aucune donnée ni service modifié : seulement le site (web). Module `editor` inchangé (0.8.0).
+
+### Prérequis
+- Étapes E1 à E5d déployées.
+
+### Déploiement (GitHub Desktop + DockPanel)
+1. GitHub Desktop : **Fetch origin** puis **Pull** (le commit est poussé), ou décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, puis **Commit to main** et **Push origin**.
+2. DockPanel → Git Deploy → **Redeploy de `majlistv-web`** uniquement (ni API, ni worker).
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+4. Dans le navigateur : **Ctrl + Maj + R** sur l'éditeur pour vider le cache de la page.
+
+### Debug
+- Les anciennes couleurs persistent : cache du navigateur (Ctrl + Maj + R).
+- Ctrl + molette zoome la page entière au lieu de la timeline : pointer d'abord la timeline (zone des pistes) ; les boutons + / − fonctionnent partout.
+- Aperçu à 200 % coupé : c'est voulu, la zone défile ; revenir à « Ajusté ».
+
+### Exemples d'utilisation
+- Ajouter deux titres qui se chevauchent (Ajouter → Titre, à deux moments proches) : ils s'affichent l'un sous l'autre, le logo reste en bas.
+- Zoomer sur 10 secondes pour caler un titre au mot près : **Ctrl + molette** sur la timeline, ou **+** ; revenir avec **Tout voir**.
+- Vérifier la netteté d'un bandeau de nom : aperçu **200 %**.
+
+Tests : `web/tests/e6a_timeline.py` (lignes séparées, logo, couleurs, zoom bouton et molette centré, aperçu 200 %, FR + AR, 1024 / 1440 px) ; `e1_editor.py`, `e2_audio.py`, `e3_dress.py` relancés : « Tout est bon ».
