@@ -3667,3 +3667,22 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .sh-state.published { border-color: var(--ok); color: var(--ok); }
 .mt-seg button { overflow-wrap: anywhere; line-height: 1.2; }
 .mts-cap span.on { color: var(--accent); } /* registre n°33 : mot dit en or (aperçu) */
+
+/* Étape D3c — Intervenants du doublage */
+.spk-panel .db-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.spk-max { min-width: 120px; }
+.spk-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.spk-card { border: 1px solid var(--line-soft); border-inline-start: 4px solid var(--spk, var(--accent)); border-radius: 16px; padding: 14px 16px; background: var(--surface-2, var(--bg)); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.spk-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.spk-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--spk, var(--accent)); flex: none; }
+.spk-name { flex: 1 1 140px; min-width: 0; margin: 0; }
+.spk-name input { width: 100%; }
+.spk-voices { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.spk-final { margin: 0; overflow-wrap: anywhere; }
+.spk-pitch-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.spk-range { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.spk-range-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.spk-range-row .fld input { width: 110px; }
+.spk-pick { border-inline-start: 4px solid var(--spk, var(--line-soft)); border-radius: 8px; max-width: 100%; }
+.db-segs .sd-card-head { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 520px) { .spk-list { grid-template-columns: 1fr; } .spk-range-row .fld input { width: 100%; } }

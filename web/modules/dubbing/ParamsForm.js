@@ -6,10 +6,11 @@ import { useApp } from '../../components/Providers';
 import { fmtNum } from './shared';
 
 // Affichage d'une valeur selon le réglage
-function show(key, v, locale) {
+function show(key, v, locale, t) {
   if (key === 'duck') return `${fmtNum(v, locale, 0)} %`;
   if (key === 'maxSpeedup') return `× ${fmtNum(v, locale, 2)}`;
   if (key === 'vcChunk' || key === 'borrow') return `${fmtNum(v, locale, 1)} s`;
+  if (key === 'pitch') return `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtNum(Math.abs(v), locale, 1)} ${t('dbUnitSemi')}`;
   return fmtNum(v, locale, 3);
 }
 
@@ -21,11 +22,11 @@ export function Slider({ k, value, def, params, onChange, disabled = false }) {
     <div className={`db-slider${disabled ? ' off' : ''}`}>
       <div className="db-slider-top">
         <label htmlFor={id}>{t(`dbP_${k}`)}</label>
-        <output htmlFor={id}>{show(k, value, locale)}</output>
+        <output htmlFor={id}>{show(k, value, locale, t)}</output>
       </div>
       <input id={id} type="range" min={p.min} max={p.max} step={p.step} value={value} disabled={disabled}
         onChange={(e) => onChange({ [k]: Number(e.target.value) })} />
-      <small className="meta">{t(`dbH_${k}`)}{def != null && Number(def) !== Number(value) ? ` · ${t('dbDefaultIs')} ${show(k, def, locale)}` : ''}</small>
+      <small className="meta">{t(`dbH_${k}`)}{def != null && Number(def) !== Number(value) ? ` · ${t('dbDefaultIs')} ${show(k, def, locale, t)}` : ''}</small>
     </div>
   );
 }
@@ -89,6 +90,7 @@ export default function ParamsForm({ state, value, reference, onChange, showVoic
       </div>
       {sl('duck')}
       {sl('maxSpeedup')}
+      {params.pitch && sl('pitch')}
       <details className="db-adv">
         <summary>{t('dbAdvanced')}</summary>
         <div className="db-adv-body">

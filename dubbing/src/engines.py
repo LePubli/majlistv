@@ -26,7 +26,9 @@ class FakeBase:
             time.sleep(float(os.environ["DUB_FAKE_DELAY"]))
         dur = 0.06 * len(text) * float(p.get("lengthScale") or 1)
         t = np.arange(int(dur * SR)) / SR
-        return (0.2 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+        # Un son différent par voix de base (essais : on retrouve quelle voix a lu quelle phrase) ; 220 Hz si le modèle est « tom ».
+        freq = 220 if not model or "tom" in str(model) else 150 + (sum(map(ord, str(model))) * 7 + int(speaker or 0) * 53) % 300
+        return (0.2 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
 
 
 class FakeVC:
@@ -38,6 +40,7 @@ class FakeVC:
 
     def set_target(self, path, steps):
         self.target, self.steps = path, steps
+        self.targets = getattr(self, "targets", []) + [os.path.basename(path)]
 
     def convert(self, wav):
         self.calls += 1

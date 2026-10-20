@@ -8,6 +8,7 @@ import {
 } from './lib.js';
 import { compile as compileGlossary, apply as applyGlossary } from './glossary.js';
 import * as ext from '../../ext.js';
+import speakerRoutes, { loadSpeakers, speakerJob, resolveSpeaker, freezeSpeakers, speechBySpeaker, refreshTotals } from './speakers.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 // Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
@@ -26,10 +27,15 @@ const JOB_COLS = `id, talk_id AS "talkId", kind, status, cancel_requested AS "ca
 function publicJob(j) {
   if (!j) return null;
   const { params = {}, result, ...rest } = j;
-  const { target, ...p } = params;
+  const { target, speakers, ...p } = params;
   const r = result ? { ...result } : null;
   if (r) { r.hasMix = Boolean(r.mixKey); r.hasVoice = Boolean(r.voiceKey); delete r.mixKey; delete r.voiceKey; }
-  return { ...rest, params: { ...p, target: target ? { id: target.id, name: target.name } : null }, result: r };
+  return {
+    ...rest,
+    params: { ...p, target: target ? { id: target.id, name: target.name } : null,
+      ...(Array.isArray(speakers) ? { speakers: speakers.map((s) => ({ n: s.n, label: s.label, base: s.base?.name || null, target: s.target?.name || null, pitch: s.pitch })) } : {}) },
+    result: r,
+  };
 }
 
 export default async function routes(app, ctx) {
@@ -51,6 +57,7 @@ export default async function routes(app, ctx) {
   }
 
   app.get('/studio/dubbing/state', admin, async () => state());
+  speakerRoutes(app, { admin }); // étape D3c : plusieurs intervenants
 
   // Réglages par défaut (tout le site) : remplacés par les valeurs envoyées.
   app.put('/studio/dubbing/defaults', admin, async (req, reply) => {
@@ -208,15 +215,32 @@ export default async function routes(app, ctx) {
     const sp = await speech(id);
     const gl = compileGlossary(await glossaryRows(true));
     const segs = (await pool.query(
-      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted
-       FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr' ORDER BY s.idx LIMIT 3000`, [id])).rows
+      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted,
+              ps.speaker, COALESCE(ps.manual, false) AS "speakerManual"
+       FROM ${SEGS_FROM} LEFT JOIN dub_phrase_speakers ps ON ps.talk_id = s.talk_id AND ps.idx = s.idx
+       WHERE s.talk_id = $1 AND s.lang = 'fr' ORDER BY s.idx LIMIT 3000`, [id])).rows
       .map((x) => ({ ...x, say: x.keep ? [] : applyGlossary(x.text, gl).hits }));
     const jobs = (await pool.query(`SELECT ${JOB_COLS} FROM dub_jobs WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 10`, [id])).rows.map(publicJob);
     const track = (await pool.query(`SELECT job_id AS "jobId", (mix_key IS NOT NULL) AS "hasMix", duration_s::float AS "durationS", created_at AS "createdAt" FROM dub_tracks WHERE talk_id = $1`, [id])).rows[0] || null;
     // État de chaque phrase : celui du dernier doublage complet réussi, sinon de la dernière écoute de 60 s.
     const lastDone = jobs.find((j) => j.status === 'done' && j.kind === 'full') || jobs.find((j) => j.status === 'done' && j.kind === 'preview') || null;
+    // Étape D3c : intervenants. Le temps de calcul tient compte de la voix de chacun (avec ou sans conversion).
+    const coefs = await coefficients(ctx); const measured = await measuredRtf();
+    const speakers = await loadSpeakers(id);
+    let est = estimate(eff, sp.speechSeconds, coefs, measured);
+    if (speakers.length) {
+      const by = await speechBySpeaker(id, KEPT, SEGS_FROM);
+      let secs = 0; let speech = 0;
+      for (const s of speakers) {
+        const sec = by.get(s.n) || 0;
+        secs += estimate({ ...eff, targetVoice: resolveSpeaker(eff, s).targetVoice }, sec, coefs, measured).seconds || 0;
+        speech += sec;
+      }
+      est = { ...est, seconds: Math.round(secs), speechSeconds: Math.round(speech), rtf: speech ? Math.round((secs / speech) * 100) / 100 : null };
+    }
     return {
-      talk: t, override: override || {}, effective: eff, estimate: estimate(eff, sp.speechSeconds, await coefficients(ctx), await measuredRtf()),
+      talk: t, override: override || {}, effective: eff, estimate: est,
+      speakers: { list: speakers, job: await speakerJob(id), canDetect: t.source === 'upload' },
       phrases: sp.phrases, kept: sp.kept, segments: segs, engine: await engineState(), jobs, track,
       requests: (await pool.query('SELECT count(*)::int AS n FROM dub_requests WHERE talk_id = $1', [id])).rows[0].n,
       review: await reviewState(id), glossaryCount: gl.length, requireReview: await requireReview(),
@@ -251,8 +275,8 @@ export default async function routes(app, ctx) {
   app.patch('/studio/dubbing/talks/:id/segments/:idx', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const idx = z.coerce.number().int().min(0).parse(req.params.idx);
-    const b = z.object({ text: z.string().trim().min(1, 'Texte vide').max(2000).optional(), keepOriginal: z.boolean().optional(), accepted: z.boolean().optional() })
-      .strict().parse(req.body ?? {});
+    const b = z.object({ text: z.string().trim().min(1, 'Texte vide').max(2000).optional(), keepOriginal: z.boolean().optional(), accepted: z.boolean().optional(),
+      speaker: z.number().int().min(1).max(10).optional() }).strict().parse(req.body ?? {});
     const seg = (await pool.query("SELECT text FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr' AND idx = $2", [id, idx])).rows[0];
     if (!seg) return reply.code(404).send({ error: 'Phrase introuvable' });
     if (b.text !== undefined && b.text !== seg.text) {
@@ -266,15 +290,26 @@ export default async function routes(app, ctx) {
          ON CONFLICT (talk_id, idx) DO UPDATE SET keep_original = COALESCE($3, dub_segments.keep_original), accepted = COALESCE($4, dub_segments.accepted),
            updated_by = EXCLUDED.updated_by, updated_at = now()`, [id, idx, b.keepOriginal ?? null, b.accepted ?? null, req.user.sub]);
     }
+    // Étape D3c : phrase attribuée à la main à un autre intervenant.
+    if (b.speaker !== undefined) {
+      if (!(await pool.query('SELECT 1 FROM dub_speakers WHERE talk_id = $1 AND n = $2', [id, b.speaker])).rowCount) return reply.code(404).send({ error: 'Intervenant introuvable' });
+      await pool.query(
+        `INSERT INTO dub_phrase_speakers(talk_id, idx, speaker, manual) VALUES ($1, $2, $3, true)
+         ON CONFLICT (talk_id, idx) DO UPDATE SET speaker = EXCLUDED.speaker, manual = true`, [id, idx, b.speaker]);
+      await refreshTotals(id);
+    }
     // Ancienne convention « # » : retirer la case « voix d'origine » retire aussi le « # » du texte.
     if (b.keepOriginal === false && /^\s*#/.test(b.text ?? seg.text)) {
       await pool.query("UPDATE transcript_segments SET text = regexp_replace(text, '^\\s*#\\s*', '') WHERE talk_id = $1 AND lang = 'fr' AND idx = $2", [id, idx]);
     }
     const gl = compileGlossary(await glossaryRows(true));
     const row = (await pool.query(
-      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted
-       FROM ${SEGS_FROM} WHERE s.talk_id = $1 AND s.lang = 'fr' AND s.idx = $2`, [id, idx])).rows[0];
-    return { segment: { ...row, say: row.keep ? [] : applyGlossary(row.text, gl).hits }, review: await reviewState(id), ...(await speech(id)) };
+      `SELECT s.idx, s.start_ms AS "startMs", s.end_ms AS "endMs", s.text, ${KEPT} AS keep, COALESCE(f.accepted, false) AS accepted,
+              ps.speaker, COALESCE(ps.manual, false) AS "speakerManual"
+       FROM ${SEGS_FROM} LEFT JOIN dub_phrase_speakers ps ON ps.talk_id = s.talk_id AND ps.idx = s.idx
+       WHERE s.talk_id = $1 AND s.lang = 'fr' AND s.idx = $2`, [id, idx])).rows[0];
+    return { segment: { ...row, say: row.keep ? [] : applyGlossary(row.text, gl).hits }, review: await reviewState(id), ...(await speech(id)),
+      ...(b.speaker !== undefined ? { speakerList: await loadSpeakers(id) } : {}) };
   });
 
   // Valider (ou annuler) la relecture du texte français.
@@ -362,6 +397,10 @@ export default async function routes(app, ctx) {
       base: { id: base.id, name: base.name, model: base.model, speaker: base.speaker },
       target: target ? { id: target.id, name: target.name, sampleKey: target.sample_key } : null,
     };
+    // Étape D3c : une voix et une hauteur par intervenant (figées ici ; l'attribution des phrases est lue par le service au moment du calcul).
+    const frozen = await freezeSpeakers(id, eff);
+    if (frozen.error) return reply.code(400).send({ error: frozen.error, code: frozen.code });
+    if (frozen.speakers.length) params.speakers = frozen.speakers;
     try {
       const r = await pool.query(`INSERT INTO dub_jobs(talk_id, kind, params, created_by) VALUES ($1, $2, $3, $4) RETURNING ${JOB_COLS}`, [id, kind, params, req.user.sub]);
       return reply.code(201).send(publicJob(r.rows[0]));

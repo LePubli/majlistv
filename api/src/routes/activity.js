@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
 import * as ext from '../ext.js';
 
-export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face']; // editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b) ; align : place des mots (E5c) ; face : suivi du visage (E5d)
+export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers']; // speakers : détection des intervenants (D3c) ; editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b) ; align : place des mots (E5c) ; face : suivi du visage (E5d)
 const HEAVY = ['video', 'transcript', 'dubbing', 'render', 'replace']; // le rendu suit la pause générale et la plage horaire des conversions
 
 // Réglages de la plage horaire et de la pause générale.

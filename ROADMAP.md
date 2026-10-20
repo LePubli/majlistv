@@ -359,3 +359,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ### Décision d'Epok (20/10, 20 h 58) : Créateur en dernier
 - Le Créateur sera disponible en version web uniquement (pas dans les applications) : il passe en toute fin de plan, après D3c (+ hauteur de voix), l'étape F et les applications (étape 22).
 - Ordre actuel : D3c (+ hauteur de voix) → F (vérifications sur le VPS) → 22 (applications) → Créateur.
+
+## Étape D3c (21/10) — intervenants et hauteur de voix
+- Détection des intervenants par la voix (transcripteur, modèle libre sherpa-onnx), voix + hauteur (±4 demi-tons) par intervenant, corrections de phrases, propositions de voix, aperçu rapide d'une hauteur, file dans Studio → Activité. Module doublage 0.10.0 (migration 006), service de doublage 0.5.0. Voir README « Étape D3c ». Reste : essais réels (étape F). Ordre : F → 22 (applications) → Créateur.

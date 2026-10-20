@@ -21,6 +21,7 @@ from urllib.parse import unquote, urlsplit
 from zoneinfo import ZoneInfo
 
 import boto3
+import numpy as np
 import psycopg2
 import psycopg2.errors
 import psycopg2.extras
@@ -30,7 +31,7 @@ import pipeline as pl
 from glossary import apply as apply_glossary, compile_entries
 from settings import Settings
 
-VERSION = "0.4.1"
+VERSION = "0.5.0"
 TZ = ZoneInfo("Europe/Paris")
 
 
@@ -168,7 +169,7 @@ def vc_engine():
 def heartbeat():
     info = {"engine": ENGINE, "threads": threads(), "job": current, "queueMode": setting("queue_mode", "night"),
             "night": [int(setting_num("night_start", 1)), int(setting_num("night_end", 7))], "lastOk": last_ok,
-            "piperVoices": sorted(getattr(_base, "voices", {}) or []), "vcLoaded": _vc is not None}
+            "piperVoices": sorted(getattr(_base, "voices", {}) or []), "vcLoaded": _vc is not None, "pitchEngine": pl.pitch_engine()}
     query("""INSERT INTO dub_engine(id, last_seen, version, info) VALUES (1, now(), %s, %s)
              ON CONFLICT (id) DO UPDATE SET last_seen = now(), version = EXCLUDED.version, info = EXCLUDED.info""",
           (VERSION, psycopg2.extras.Json(info)))
@@ -306,6 +307,34 @@ def load_cues(talk_id):
     return out
 
 
+def load_phrase_speakers(talk_id):
+    """Étape D3c : intervenant de chaque phrase française {idx: n}. Table absente ou vide : un seul intervenant."""
+    try:
+        rows = query("SELECT idx, speaker FROM dub_phrase_speakers WHERE talk_id = %s", (talk_id,), fetch=True)
+    except psycopg2.Error:
+        return {}
+    return {r["idx"]: r["speaker"] for r in rows}
+
+
+def plan_speakers(p, cues, smap):
+    """Regroupe les phrases par intervenant. Retourne [{n, base, target, pitch, cues, idx}] (un par intervenant ayant des phrases).
+    Sans intervenants figés dans la demande : un seul groupe, voix de la demande (comportement d'avant). Un intervenant inconnu de la demande
+    (détection refaite depuis) prend les voix de la demande. Les phrases sans intervenant comptent pour l'intervenant 1."""
+    frozen = {s["n"]: s for s in (p.get("speakers") or [])}
+    default = {"base": p["base"], "target": p.get("target"), "pitch": float(p.get("pitch") or 0)}
+    if not frozen:
+        return [{"n": 1, **default, "cues": cues, "idx": {c["idx"] for c in cues}, "dub": True}]
+    by = {}
+    for c in cues:
+        by.setdefault(smap.get(c["idx"], 1), []).append(c)
+    out = []
+    for n in sorted(by):
+        s = frozen.get(n)
+        v = {"base": s["base"], "target": s.get("target"), "pitch": float(s.get("pitch") or 0)} if s else default
+        out.append({"n": n, **v, "cues": by[n], "idx": {c["idx"] for c in by[n]}, "dub": any(not pl.kept(c) for c in by[n])})
+    return out
+
+
 def run(job, work):
     p = job.p
     talk = query("SELECT id, source, video_ref, duration_seconds FROM talks WHERE id = %s", (job.talk,), fetch=True)
@@ -333,32 +362,60 @@ def run(job, work):
         total = max(last + 1.0, float(talk["duration_seconds"] or 0), len(orig) / pl.SR if orig is not None else 0)
     n = int(total * pl.SR) + pl.SR // 2
 
-    # 2. Voix de base + calage. Les modèles sont chargés AVANT de mesurer : la vitesse enregistrée (reprise par l'estimation
-    #    du Studio) ne compte que le calcul, pas le téléchargement ni le chargement des modèles.
-    has_vc = bool(p.get("target"))
+    # 2-3. Une passe par intervenant (étape D3c ; un seul intervenant = comportement d'avant) : voix de base + calage de ses phrases,
+    #      conversion vers sa voix cible par blocs (si choisie), hauteur de voix, puis addition des pistes. Les modèles sont chargés AVANT
+    #      de mesurer : la vitesse enregistrée (reprise par l'estimation du Studio) ne compte que le calcul.
     base = base_engine()
-    model, speaker = p["base"]["model"], p["base"].get("speaker")
-    if hasattr(base, "voice"):
-        base.voice(model)
-    if has_vc:
-        sample = os.path.join(work, "target" + os.path.splitext(p["target"]["sampleKey"])[1])
-        s3.download_file(BUCKET, p["target"]["sampleKey"], sample)
-        vc = vc_engine()
-        vc.set_target(sample, int(p.get("vcSteps") or 3))
+    smap = load_phrase_speakers(job.talk)
+    groups = plan_speakers(p, cues, smap)
+    has_vc = any(g["target"] and g["dub"] for g in groups)   # un intervenant dont toutes les phrases sont gardées n'a besoin d'aucun modèle
+    vc = vc_engine() if has_vc else None
+    samples = {}
+    for g in groups:
+        if not g["dub"]:
+            continue
+        if hasattr(base, "voice"):
+            base.voice(g["base"]["model"])
+        if g["target"] and g["target"]["id"] not in samples:
+            sample = os.path.join(work, f"target-{len(samples)}" + os.path.splitext(g["target"]["sampleKey"])[1])
+            s3.download_file(BUCKET, g["target"]["sampleKey"], sample)
+            samples[g["target"]["id"]] = sample
     t0 = time.time()
-    synth = lambda text: base.synth(text, model, speaker, p)  # noqa: E731
-    hi = 45 if has_vc else 90
-    placed, report = pl.fit_cues(cues, synth, p, offset=offset, total=total,
-                                 on_progress=lambda f: job.progress("voice", f, 5, hi), should_stop=job.should_stop)
-    voice_s = time.time() - t0
-
-    # 3. Conversion vers la voix cible, par blocs
-    blocks = 0
-    if has_vc:
-        voice, blocks = pl.convert_blocks(placed, n, vc.convert, float(p.get("vcChunk") or 20),
-                                          on_progress=lambda f: job.progress("convert", f, 45, 90), should_stop=job.should_stop)
-    else:
-        voice = pl.assemble(placed, n)
+    weights = [max(0.001, sum(c["end"] - c["start"] for c in g["cues"] if not pl.kept(c))) for g in groups if g["dub"]]
+    total_w = sum(weights)
+    voice = np.zeros(n, dtype=np.float32)
+    report, placed, blocks, at = [], [], 0, 5.0
+    voice_s = 0.0
+    todo = iter(weights)
+    for g in groups:
+        w = next(todo) if g["dub"] else 0.0
+        span = 85.0 * w / total_w
+        lo, hi = at, at + span
+        at = hi
+        if not g["dub"]:  # toutes ses phrases sont gardées en voix d'origine : on les signale seulement
+            report += pl.fit_cues(cues, None, p, offset=offset, total=total, only=lambda c, g=g: c["idx"] in g["idx"])[1]
+            continue
+        model, speaker = g["base"]["model"], g["base"].get("speaker")
+        synth = lambda text, model=model, speaker=speaker: base.synth(text, model, speaker, p)  # noqa: E731
+        gv = (lambda cue, g=g: cue["idx"] in g["idx"])
+        mid = lo + span * (0.5 if g["target"] else 1.0)
+        tv = time.time()
+        got, rep = pl.fit_cues(cues, synth, p, offset=offset, total=total, on_progress=lambda f, lo=lo, mid=mid: job.progress("voice", f, lo, mid),
+                               should_stop=job.should_stop, only=gv)
+        voice_s += time.time() - tv
+        report += rep
+        placed += got
+        pitch = float(g.get("pitch") or 0)
+        if g["target"]:
+            vc.set_target(samples[g["target"]["id"]], int(p.get("vcSteps") or 3))
+            conv = (lambda wav, pitch=pitch: pl.shift_pitch(vc.convert(wav), pitch)) if pitch else vc.convert
+            track, nb = pl.convert_blocks(got, n, conv, float(p.get("vcChunk") or 20),
+                                          on_progress=lambda f, mid=mid, hi=hi: job.progress("convert", f, mid, hi), should_stop=job.should_stop)
+            blocks += nb
+        else:
+            track = pl.assemble([(s0, pl.shift_pitch(w_, pitch)) for s0, w_ in got] if pitch else got, n)
+        voice += track
+    report.sort(key=lambda r: r["idx"])
     voice = pl.normalize(voice)
     compute_s = time.time() - t0
 
@@ -383,6 +440,9 @@ def run(job, work):
         "voiceS": round(voice_s, 1), "rtf": round(compute_s / speech_s, 2) if speech_s else None, "blocks": blocks,
         "window": [round(window[0], 2), round(window[1], 2)] if window else None, "segments": report, "summary": pl.summarize(report),
         "engine": ENGINE, "originalMixed": orig is not None,
+        "speakers": [{"n": g["n"], "label": next((x.get("label") for x in (p.get("speakers") or []) if x["n"] == g["n"]), None),
+                      "base": g["base"].get("name"), "target": (g["target"] or {}).get("name"), "pitch": g["pitch"]} for g in groups],
+        "pitchEngine": pl.pitch_engine() if any(g["pitch"] for g in groups) else None,
     }
     return result
 

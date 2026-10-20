@@ -26,6 +26,7 @@ from botocore.config import Config
 from settings import Settings
 import external
 import align
+import speakers
 
 
 def env(key, default=None, required=False):
@@ -153,6 +154,26 @@ def claim_align():
     except psycopg2.errors.UndefinedFunction:
         CONTROLS["on"] = False
         return claim_align()
+    return rows[0] if rows else None
+
+
+def claim_speakers():
+    """Étape D3c : prochaine demande « Détecter les intervenants » (table créée par la migration 006 du module doublage de l'API)."""
+    cond = "AND activity_allows('transcript') AND NOT activity_paused('speakers', talk_id::text)" if CONTROLS["on"] else ""
+    order = "activity_priority('speakers', talk_id::text) DESC, created_at" if CONTROLS["on"] else "created_at"
+    try:
+        rows = query(
+            f"""UPDATE dub_speaker_jobs SET status = 'processing', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
+               WHERE talk_id = (SELECT talk_id FROM dub_speaker_jobs WHERE status = 'pending' {cond}
+                                ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING talk_id, max_speakers""",
+            fetch=True,
+        )
+    except psycopg2.errors.UndefinedTable:
+        return None
+    except psycopg2.errors.UndefinedFunction:
+        CONTROLS["on"] = False
+        return claim_speakers()
     return rows[0] if rows else None
 
 
@@ -405,6 +426,112 @@ def process_align(job):
     except Exception as err:  # noqa: BLE001
         log(f"[{talk_id}] place des mots : échec : {err}")
         query("UPDATE word_align_jobs SET status = 'failed', error = %s, updated_at = now() WHERE talk_id = %s", (str(err)[:500], talk_id))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def read_wav16(path):
+    """WAV 16 kHz mono 16 bits en entiers (gardés ainsi : une conférence d'une heure = 115 Mo)."""
+    import wave
+    import numpy as np
+    with wave.open(path, "rb") as w:
+        if w.getframerate() != 16000 or w.getnchannels() != 1 or w.getsampwidth() != 2:
+            raise RuntimeError("audio de travail inattendu")
+        return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2")
+
+
+def process_speakers(job):
+    """Étape D3c : écoute la voix de chaque phrase française (table transcript_segments, lang = 'fr') et regroupe les phrases par intervenant.
+    Résultat : dub_speakers (un par voix, avec hauteur estimée et catégorie SUGGÉRÉE) et dub_phrase_speakers. Une nouvelle détection remplace tout
+    (corrections manuelles comprises). Seules les vidéos envoyées sur le site ont un audio ici."""
+    import numpy as np
+    talk_id, max_speakers = str(job["talk_id"]), int(job["max_speakers"])
+    work = os.path.join(WORK_DIR, "speakers-" + talk_id)
+    table = "dub_speaker_jobs"
+    try:
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work)
+        talk = query("SELECT source, video_ref FROM talks WHERE id = %s", (talk_id,), fetch=True)
+        if not talk or talk[0]["source"] != "upload":
+            raise RuntimeError("seules les vidéos envoyées sur le site peuvent être écoutées pour détecter les intervenants")
+        segs = query("SELECT idx, start_ms, end_ms FROM transcript_segments WHERE talk_id = %s AND lang = 'fr' ORDER BY idx", (talk_id,), fetch=True)
+        if not segs:
+            raise RuntimeError("pas de texte français : les phrases à attribuer sont celles du doublage")
+        src, wav = os.path.join(work, "source"), os.path.join(work, "audio.wav")
+        log(f"[{talk_id}] intervenants : téléchargement")
+        s3.download_file(BUCKET, talk[0]["video_ref"], src)
+        if not has_audio(src):
+            raise RuntimeError("la vidéo n'a pas de piste audio")
+        extract_audio(src, wav)
+        os.remove(src)
+        pcm = read_wav16(wav)
+        os.remove(wav)
+        if cancel_asked(table, "talk_id", talk_id):
+            raise Canceled()
+        emb = speakers.Embedder(speakers.ensure_model(log), threads=max(1, THREADS // 2))
+        threshold = float(env("SPEAKER_THRESHOLD", "0.5"))
+        sr = speakers.SR
+        embs, last_write, last_pct = {}, 0.0, -1
+        for k, r in enumerate(segs):
+            if stopping:
+                raise Stop()
+            a, b = int(r["start_ms"] * sr / 1000), int(r["end_ms"] * sr / 1000)
+            if b - a >= int(speakers.MIN_EMBED_S * sr):
+                e = emb.embed(pcm[a:b].astype(np.float32) / 32768.0, sr)
+                if e is not None:
+                    embs[r["idx"]] = e
+            pct = int(90 * (k + 1) / len(segs))
+            if time.time() - last_write > 4 and pct != last_pct:
+                last_write, last_pct = time.time(), pct
+                if cancel_asked(table, "talk_id", talk_id):
+                    raise Canceled()
+                query(f"UPDATE {table} SET progress = %s, updated_at = now() WHERE talk_id = %s", (pct, talk_id))
+        labels, rows = speakers.detect([(r["idx"], r["start_ms"], r["end_ms"]) for r in segs], embs, threshold, max_speakers)
+        # hauteur de chaque voix : ses phrases les plus longues (jusqu'à 30 s)
+        info = []
+        for sp in rows:
+            mine = sorted((r for r in segs if labels[r["idx"]] == sp["n"]), key=lambda r: -(r["end_ms"] - r["start_ms"]))
+            parts, got = [], 0.0
+            for r in mine:
+                if got >= 30.0:
+                    break
+                a, b = int(r["start_ms"] * sr / 1000), int(r["end_ms"] * sr / 1000)
+                parts.append(pcm[a:b].astype(np.float32) / 32768.0)
+                got += (b - a) / sr
+            hz = speakers.f0(np.concatenate(parts), sr) if parts else None
+            info.append((talk_id, sp["n"], round(sp["seconds"], 1), sp["phrases"], round(hz, 1) if hz else None, speakers.guess_category(hz)))
+        if cancel_asked(table, "talk_id", talk_id):
+            raise Canceled()
+        conn = db()
+        conn.autocommit = False
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM dub_phrase_speakers WHERE talk_id = %s", (talk_id,))
+                cur.execute("DELETE FROM dub_speakers WHERE talk_id = %s", (talk_id,))
+                psycopg2.extras.execute_values(
+                    cur, "INSERT INTO dub_speakers (talk_id, n, label, seconds, phrases, f0, guess) VALUES %s",
+                    [(t, n, f"Intervenant {n}", sec, ph, hz, g) for t, n, sec, ph, hz, g in info])
+                psycopg2.extras.execute_values(
+                    cur, "INSERT INTO dub_phrase_speakers (talk_id, idx, speaker) VALUES %s",
+                    [(talk_id, idx, n) for idx, n in labels.items()], page_size=1000)
+                cur.execute("UPDATE dub_speaker_jobs SET status = 'done', progress = 100, found = %s, error = NULL, updated_at = now() WHERE talk_id = %s",
+                            (len(rows), talk_id))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.autocommit = True
+        detail = ", ".join("%s=%s s" % (r["n"], r["seconds"]) for r in rows)
+        log(f"[{talk_id}] intervenants : {len(rows)} voix trouvées ({detail})")
+    except Canceled:
+        mark_canceled(table, "talk_id", talk_id)
+        log(f"[{talk_id}] intervenants : annulé à la demande (rien n'est changé)")
+    except Stop:
+        raise
+    except Exception as err:  # noqa: BLE001
+        log(f"[{talk_id}] intervenants : échec : {err}")
+        query(f"UPDATE {table} SET status = 'failed', error = %s, updated_at = now() WHERE talk_id = %s", (str(err)[:500], talk_id))
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -751,6 +878,10 @@ def main():
             query("UPDATE face_track_jobs SET status = 'pending' WHERE status = 'processing'")  # reprend les analyses de visage interrompues (E5d)
     except Exception:  # noqa: BLE001
         pass
+    try:  # D3c : une détection interrompue repart (sauf si elle a été annulée pendant l'arrêt)
+        query("UPDATE dub_speaker_jobs SET status = CASE WHEN cancel_requested THEN 'canceled' ELSE 'pending' END, cancel_requested = false WHERE status = 'processing'")
+    except Exception:  # noqa: BLE001
+        pass
     apply_settings()
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
@@ -773,6 +904,18 @@ def main():
                 current = None
                 try:
                     process_align(job2)
+                except Stop:
+                    pass
+                continue
+            try:
+                job4 = claim_speakers()
+            except Exception as err:  # noqa: BLE001
+                log("Erreur base (intervenants) :", err)
+                job4 = None
+            if job4:
+                current = None
+                try:
+                    process_speakers(job4)
                 except Stop:
                     pass
                 continue

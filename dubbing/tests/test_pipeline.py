@@ -80,5 +80,30 @@ sy = [dict(c) for c in cues[1:2]]; sy[0]["say"] = sy[0]["text"] + " et une longu
 _, r1 = pl.fit_cues(cues[1:2], synth, P, total=40.0); _, r2 = pl.fit_cues(sy, synth, P, total=40.0)
 ok(r2[0]["raw"] > r1[0]["raw"], "la voix lit la prononciation du glossaire (« say »), pas le texte des sous-titres")
 ok(len(pl.resample(np.zeros(22050, dtype=np.float32), 22050)) == 24000, "rééchantillonnage 22,05 → 24 kHz")
+# --- étape D3c : hauteur de voix (durée conservée) et un intervenant à la fois
+def peak_hz(a):
+    w = a[int(0.2 * pl.SR): int(1.8 * pl.SR)] * np.hanning(int(1.6 * pl.SR))
+    sp = np.abs(np.fft.rfft(w, 1 << 18)); k = int(np.argmax(sp))
+    return k * pl.SR / (1 << 18)
+# signal « voix » : 120 Hz + harmoniques (un sinus pur fait vaciller l'estimation du filtre, ce qui n'arrive pas avec une voix)
+tone = (0.15 * sum(np.sin(2 * np.pi * 120 * k * np.arange(2 * pl.SR) / pl.SR) / k for k in range(1, 12))).astype(np.float32)
+ok(pl.shift_pitch(tone, 0) is tone, "hauteur 0 : voix inchangée (même objet)")
+for engine in ("rubberband", "atempo"):
+    pl._PITCH_ENGINE = engine
+    if engine == "rubberband" and "rubberband" not in subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout:
+        print("SKIP rubberband : absent de ce FFmpeg (la méthode de secours est testée)"); continue
+    for st in (-4, -2, 2, 4):
+        out = pl.shift_pitch(tone, st)
+        want = 120 * 2 ** (st / 12)
+        ok(len(out) == len(tone) and abs(peak_hz(out) - want) / want < 0.02, f"{engine} : {st:+d} demi-tons → {peak_hz(out):.0f} Hz (attendu {want:.0f}), durée conservée")
+pl._PITCH_ENGINE = None
+ok(pl.pitch_engine() in ("rubberband", "atempo"), f"moteur de hauteur détecté : {pl.pitch_engine()}")
+A = {"idx": 0, "start": 0.0, "end": 3.0, "text": "Première voix ici.", "spk": 1}
+B = {"idx": 1, "start": 3.5, "end": 6.0, "text": "Deuxième voix ici.", "spk": 2}
+C = {"idx": 2, "start": 6.5, "end": 9.0, "text": "Encore la première.", "spk": 1}
+pa, ra = pl.fit_cues([A, B, C], synth, P, total=10.0, only=lambda c: c["spk"] == 1)
+ok([r["idx"] for r in ra] == [0, 2] and len(pa) == 2, "un intervenant à la fois : seules ses phrases sont traitées")
+pb, rb = pl.fit_cues([A, B, C], synth, P, total=10.0, only=lambda c: c["spk"] == 2)
+ok([r["idx"] for r in rb] == [1] and pb[0][0] == int(3.5 * pl.SR), "l'autre intervenant : sa phrase est à sa place")
 print(f"\n{len(fails)} échec(s)")
 sys.exit(1 if fails else 0)

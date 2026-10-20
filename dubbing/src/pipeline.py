@@ -90,6 +90,35 @@ def speed_up(arr, factor):
         return read_wav(b)[0]
 
 
+_PITCH_ENGINE = None
+
+
+def pitch_engine():
+    """« rubberband » si ce FFmpeg a le filtre (qualité du changement de hauteur à durée constante), sinon « atempo » (méthode de secours :
+    on change la fréquence d'échantillonnage puis on rattrape la durée). Vérifié une fois."""
+    global _PITCH_ENGINE
+    if _PITCH_ENGINE is None:
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True)
+        _PITCH_ENGINE = "rubberband" if "rubberband" in (r.stdout or "") else "atempo"
+    return _PITCH_ENGINE
+
+
+def shift_pitch(arr, semitones):
+    """Change la hauteur de la voix de `semitones` demi-tons (> 0 plus aigu), sans changer la durée. 0 : inchangé.
+    Même longueur en sortie (rembourrée ou coupée de quelques échantillons)."""
+    if abs(semitones) < 0.01 or len(arr) == 0:
+        return arr
+    ratio = 2.0 ** (float(semitones) / 12.0)
+    flt = (f"rubberband=pitch={ratio:.6f}:pitchq=quality" if pitch_engine() == "rubberband"
+           else f"asetrate={SR * ratio:.2f},aresample={SR},atempo={1.0 / ratio:.6f}")
+    with tempfile.TemporaryDirectory() as d:
+        a, b = os.path.join(d, "a.wav"), os.path.join(d, "b.wav")
+        write_wav(a, arr)
+        ffmpeg("-i", a, "-filter:a", flt, "-ar", str(SR), b)
+        out = read_wav(b)[0]
+    return np.pad(out, (0, max(0, len(arr) - len(out))))[: len(arr)]
+
+
 def select_cues(cues, kind, preview_s):
     """Phrases à traiter et fenêtre (début, fin) en secondes. Écoute rapide : `preview_s` secondes à partir de la
     première phrase à doubler (0,5 s avant). Doublage complet : toutes les phrases, fenêtre = None."""
@@ -103,14 +132,18 @@ def select_cues(cues, kind, preview_s):
     return [c for c in cues if w0 <= c["start"] < w1], (w0, w1)
 
 
-def fit_cues(cues, synth, p, offset=0.0, total=None, on_progress=None, should_stop=None):
+def fit_cues(cues, synth, p, offset=0.0, total=None, on_progress=None, should_stop=None, only=None):
     """Voix de base + calage de chaque phrase. Renvoie (pistes placées [(échantillon de départ, audio)], rapport).
-    `offset` : début de la fenêtre (secondes) ; `total` : fin de la piste (secondes, relative à la fenêtre)."""
+    `offset` : début de la fenêtre (secondes) ; `total` : fin de la piste (secondes, relative à la fenêtre).
+    `only` (étape D3c) : fonction qui dit si la phrase est à traiter ici (un intervenant à la fois) ; les autres phrases restent pourtant
+    comptées pour savoir où commence la phrase suivante."""
     placed, report = [], []
     n = len(cues)
     for i, c in enumerate(cues):
         if should_stop and should_stop():
             raise InterruptedError()
+        if only and not only(c):
+            continue
         start, end = c["start"] - offset, c["end"] - offset
         slot = max(0.0, end - start)
         row = {"idx": c["idx"], "slot": round(slot, 2)}

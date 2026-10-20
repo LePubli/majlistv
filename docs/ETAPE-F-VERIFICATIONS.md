@@ -70,6 +70,13 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 ## 9. Doublage — voix (D3) — registre 29
 - [ ] Résultat de l'écoute du banc Qwen (voir `dubbing/d3bench/README.md`) enregistré et méthode retenue décidée.
 
+## 9 bis. Doublage — intervenants et hauteur (D3c) — registre 41
+- [ ] Transcripteur redéployé : le modèle de voix se télécharge (`/models/speakers/…onnx`, ~40 Mo) ; sinon le déposer à la main.
+- [ ] Détection sur une VRAIE conférence à 2 voix (conférencier + question de la salle) : nombre d'intervenants juste ? sinon essayer `SPEAKER_THRESHOLD` 0,4 / 0,6. Idem avec une voix de femme ou d'enfant, et en arabe.
+- [ ] Catégorie suggérée (homme/femme/enfant) cohérente avec ce qu'on entend.
+- [ ] Hauteur : écouter −2, −1, +1, +2 sur une voix convertie ; noter la plage agréable. Vérifier `result.pitchEngine` = `rubberband` dans l'image du service de doublage (sinon la méthode de secours est utilisée : qualité à juger).
+- [ ] Temps de calcul d'un doublage à plusieurs intervenants (conversion par intervenant) acceptable.
+
 ## 10. Après tout
 - [ ] `docker ps` : aucun conteneur en erreur ni redémarrant en boucle.
 - [ ] Charge du VPS partagé acceptable pour Miel & Co et TriMaint (`uptime`, `docker stats --no-stream`).

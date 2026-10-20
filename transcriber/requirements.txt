@@ -10,3 +10,5 @@ yt-dlp[default]==2026.8.19
 deno==2.5.6
 # Étape E5d : détection de visages (modèle YuNet, processeur) pour que le cadre vertical suive le conférencier
 opencv-python-headless>=4.10,<6
+# Étape D3c : détection des intervenants (empreintes de voix, ONNX, processeur seul)
+sherpa-onnx==1.13.8

@@ -8,6 +8,7 @@ export function taskName(x, t) {
   if (x.queue === 'editor') return t(x.kind === 'music' ? 'tqWaveMusic' : x.kind === 'dub' ? 'tqWaveDub' : 'tqWaveOrig'); // étape E2 : analyses du son
   if (x.queue === 'align') return t('tqAlign'); // registre n°28 : place des mots
   if (x.queue === 'face') return t('tqFace'); // registre n°31 : suivi du visage
+  if (x.queue === 'speakers') return t('tqSpeakers'); // étape D3c : détection des intervenants
   if (x.queue === 'translation') return `${t('tqTranslation')}${x.lang ? ` (${String(x.lang).toUpperCase()})` : ''}`;
   return t(x.queue === 'video' ? 'tqVideo' : 'tqTranscript');
 }

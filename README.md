@@ -4820,3 +4820,44 @@ grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
 nginx -t && systemctl reload nginx
 ```
 - **Debug** : `docker logs <conteneur transcriber> 2>&1 | grep "suivi du visage"` affiche « suit la personne qui parle (n changement(s)) » quand ce mode a servi.
+
+
+## Étape D3c — Plusieurs intervenants et hauteur de la voix (21/10)
+
+### Ce que ça fait
+- **Détection des intervenants** : le service de transcription écoute la voix de chaque phrase française, calcule une « empreinte de voix » (petit modèle libre, processeur seul) et regroupe les phrases qui se ressemblent. Chaque groupe est un intervenant (jusqu'à 10, 6 par défaut). Il estime aussi la hauteur moyenne de chaque voix et **suggère** une catégorie (homme, femme, enfant) : c'est une suggestion, à vérifier à l'oreille.
+- **Une voix et une hauteur par intervenant** (Studio → Contenus → [conférence] → Audio et doublage → carte « Intervenants »). Règle : un intervenant qui n'a rien choisi garde les voix de la conférence ; dès qu'il a choisi une voix de base OU une voix cible, il a SA voix (voix de base manquante = celle de la conférence, voix cible manquante = aucune conversion).
+- **Hauteur de la voix** : curseur de −4 à +4 demi-tons (pas de 0,5), durée inchangée. Réglage par défaut (tout le site), par conférence, et par intervenant. FFmpeg « rubberband » si présent, sinon méthode de secours (les deux testées). Un vrai changement (femme → homme) passe par la voix cible, pas par ce curseur.
+- **Corrections** : intervenant de chaque phrase modifiable (liste dans le tableau des phrases, filtre par intervenant), plage de phrases (« de 12:30 à 15:10 → intervenant 2 »), noms modifiables, « Proposer des voix » (une voix cible de la catégorie suggérée pour les femmes et les enfants ; les hommes gardent la voix de la conférence ; jamais de voix déjà choisie écrasée).
+- **Aperçu rapide d'une hauteur** : rejoue la voix déjà fabriquée (piste en service, sinon dernière écoute de 60 s) en changeant la vitesse de lecture sans garder la hauteur : approximatif (la vitesse change aussi). L'écoute de 60 secondes donne le rendu exact.
+- Studio → Activité : la file « Détection des intervenants » (pause, priorité, annulation).
+
+### Prérequis
+API (module doublage 0.10.0, migration `006_speakers.sql`), transcripteur (nouveau paquet `sherpa-onnx`, redéploiement de l'image), service de doublage 0.5.0. Texte français (traduction) présent ; **vidéos envoyées sur le site seulement** (YouTube, Vimeo, archive.org : une seule voix).
+Le modèle d'empreinte (~40 Mo, `3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx`, publié avec sherpa-onnx sur GitHub) est téléchargé une seule fois dans `/models/speakers` au premier usage. Variables facultatives du transcripteur : `SPEAKER_THRESHOLD` (0,5 : plus bas = moins de voix distinctes), `SPEAKER_MODEL_URL`, `SPEAKER_MODEL_FILE`.
+
+### Déploiement (workflow habituel)
+1. Décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, GitHub Desktop → Commit to main → Push origin.
+2. DockPanel → Git Deploy → Redeploy : **majlistv-api** d'abord (migrations), puis **majlistv-web**, puis **transcriber** (nouvelle image), puis **dubbing** (service de doublage). Le worker n'a pas changé.
+3. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+
+### Utilisation
+1. Ouvrir la conférence → Audio et doublage → carte **Intervenants** → « Détecter les intervenants » (le service la prend dans les minutes qui suivent ; suivi dans Studio → Activité).
+2. Renommer, « Proposer des voix », régler voix et hauteur de chacun, corriger les phrases mal attribuées.
+3. « Écouter 60 secondes » pour juger, puis « Lancer le doublage ».
+Une nouvelle détection **remplace** noms, voix choisies et corrections (une confirmation est demandée). « Revenir à une seule voix » efface tout.
+
+### Debug
+- Détection bloquée « en attente » : le service de transcription traite les files dans l'ordre (transcription d'abord) ; regarder `docker logs` du transcripteur (lignes « intervenants : … »).
+- « modèle de voix téléchargé incomplet » : le conteneur n'atteint pas GitHub ; déposer le fichier `.onnx` dans `/models/speakers/` à la main.
+- Trop ou pas assez de voix : régler « Nombre maximal de voix », ou `SPEAKER_THRESHOLD` (0,4–0,6).
+- Résultat d'un doublage : `result.speakers` (voix et hauteur de chaque intervenant) et `result.pitchEngine` (`rubberband` ou `atempo`) dans la fiche de la demande.
+
+### Ce qui a été testé (21/10) — et ce qui ne l'a pas été
+Testé : calcul de regroupement (voix factices, 1800 phrases), **vrai modèle** sur 3 voix de synthèse (espeak-ng, flite) : 91/91 paires de phrases bien rapprochées ou séparées ; hauteur F0 ; ~60 contrôles API ; service de doublage avec faux moteurs (un son par voix : les phrases sortent avec la bonne voix et la bonne hauteur, ±4 demi-tons mesurés par analyse du son) ; écran dans Chromium (1440, 820, 390 px, arabe RTL, clavier).
+**Non testé** : conférences réelles (voix humaines, bruit de salle, arabe, chevauchements) ; qualité à l'oreille de rubberband sur la voix convertie ; FFmpeg de l'image de doublage (le moteur est détecté et la méthode de secours existe) ; télécharger le modèle depuis le VPS. → étape F.

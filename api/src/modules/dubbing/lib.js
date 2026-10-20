@@ -12,6 +12,7 @@ export const PARAMS = {
   lengthScale: { min: 0.7, max: 1.5, step: 0.05, def: 1 }, // voix de base : durée des sons (> 1 = plus lent)
   noiseScale: { min: 0, max: 1, step: 0.05, def: 0.667 }, // voix de base : variation de la voix (valeur habituelle de Piper)
   noiseW: { min: 0, max: 1, step: 0.05, def: 0.8 },       // voix de base : variation du rythme (valeur habituelle de Piper)
+  pitch: { min: -4, max: 4, step: 0.5, def: 0 },          // étape D3c : hauteur de la voix en demi-tons (< 0 plus grave, > 0 plus aiguë), durée conservée
 };
 export const PRESETS = {
   fast: { vcSteps: 2, vcChunk: 25 },
@@ -78,7 +79,7 @@ export const configKey = (p) => (p.targetVoice ? `vc${p.vcSteps}` : 'base');
 export async function measuredRtf() {
   const { rows } = await pool.query(
     `SELECT CASE WHEN params->>'targetVoice' IS NULL THEN 'base' ELSE 'vc' || (params->>'vcSteps') END AS k, (result->>'rtf')::float AS rtf
-     FROM dub_jobs WHERE status = 'done' AND result ? 'rtf' AND (result->>'rtf')::float > 0 AND COALESCE((result->>'engine') <> 'fake', true) AND (result->>'speechS')::float >= 20 ORDER BY finished_at DESC LIMIT 200`);
+     FROM dub_jobs WHERE status = 'done' AND result ? 'rtf' AND NOT (params ? 'speakers') AND (result->>'rtf')::float > 0 AND COALESCE((result->>'engine') <> 'fake', true) AND (result->>'speechS')::float >= 20 ORDER BY finished_at DESC LIMIT 200`);
   const by = new Map();
   for (const r of rows) { const a = by.get(r.k) || []; if (a.length < 5) a.push(r.rtf); by.set(r.k, a); }
   const out = new Map();

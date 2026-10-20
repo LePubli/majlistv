@@ -5,6 +5,7 @@ import publicRoutes, { notifyReady } from './public.js';
 import { recordListening, collectWorkFiles } from './lib.js';
 import { enqueueForUser } from '../../mailer.js';
 import { collectTasks, pauseRunning, production, overview, editorMedia } from './studio.js';
+import { collectTasks as collectSpeakerTasks, cancelTask as cancelSpeakerTask } from './speakers.js';
 import { onReplaced, onRestored } from './replaced.js';
 
 export default async function register(app, ctx) {
@@ -14,7 +15,8 @@ export default async function register(app, ctx) {
   // La piste servie aux spectateurs (mélange des vidéos envoyées, voix seule des vidéos externes) n'est jamais proposée.
   ctx.on('archive.collect', (out, opts) => collectWorkFiles(out, opts));
   // Étape S3 : Studio → Activité (tâches, pause d'une demande en cours), tableau de bord et Studio → Contenus.
-  ctx.on('activity.collect', (out, opts) => collectTasks(out, opts));
+  ctx.on('activity.collect', async (out, opts) => { await collectTasks(out, opts); await collectSpeakerTasks(out, opts); });
+  ctx.on('activity.cancel', (out, task) => cancelSpeakerTask(out, task)); // étape D3c : détection des intervenants
   ctx.on('activity.pause', (task) => pauseRunning(task));
   ctx.on('studio.production', (out, opts) => production(out, opts));
   ctx.on('studio.overview', (out, opts) => overview(out, opts));

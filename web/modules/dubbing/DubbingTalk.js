@@ -11,6 +11,7 @@ import { useApp } from '../../components/Providers';
 import { langName } from '../../components/Transcript';
 import { hasWebModule } from '../../lib/modules';
 import ParamsForm from './ParamsForm';
+import Speakers, { spkColor } from './Speakers';
 import { useDubbing, Gate, EngineNote, jobLabel, fmtDuration, fmtNum, fmtClock, fmtDay, tf } from './shared';
 
 const PAGE = 200;
@@ -79,7 +80,7 @@ function Player({ jobId, which = 'mix', label }) {
 const STATE_KEY = { fit: 'dbStFit', sped: 'dbStSped', review: 'dbStReview', kept: 'dbStKept', accepted: 'dbStAccepted' };
 
 // Une ligne du tableau des phrases : texte modifiable, case « voix d'origine », prononciation, contrôle qualité.
-function SegRow({ s, cellLen, onPatch }) {
+function SegRow({ s, cellLen, onPatch, speakers }) {
   const { t } = useApp();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(s.text);
@@ -120,6 +121,15 @@ function SegRow({ s, cellLen, onPatch }) {
         ) : '—'}
       </td>
       <td className="db-mono">{cellLen(s)}</td>
+      {speakers.length > 0 && (
+        <td>
+          <select className="spk-pick" style={{ '--spk': spkColor(s.speaker || 1) }} value={s.speaker || 1} disabled={busy}
+            aria-label={tf(t('dbEditAria'), { t: fmtClock(s.startMs) })} onChange={(e) => run({ speaker: Number(e.target.value) })}>
+            {speakers.map((x) => <option key={x.n} value={x.n}>{x.label}</option>)}
+          </select>
+          {s.speakerManual && <small className="meta"> ✎ <span className="sr-only">{t('spkManual')}</span></small>}
+        </td>
+      )}
       <td>
         <label className="db-check db-keep">
           <input type="checkbox" checked={s.keep} disabled={busy} onChange={(e) => run({ keepOriginal: e.target.checked })} />
@@ -146,12 +156,13 @@ export default function DubbingTalk() {
   const [jobMsg, setJobMsg] = useState(null);
   const [filter, setFilter] = useState('all');
   const [limit, setLimit] = useState(PAGE);
+  const [spkFilter, setSpkFilter] = useState(0);
   const d = tk.d; const state = st.d;
   const value = edit || d?.effective;
   const rep = useMemo(() => new Map((d?.report?.segments || []).map((r) => [r.idx, r])), [d]);
   const segs = useMemo(() => (d?.segments || []).map((s) => ({ ...s, r: rep.get(s.idx) })), [d, rep]);
   const toReview = (s) => !s.keep && s.r?.state === 'review' && !s.accepted;
-  const shown = segs.filter((s) => filter === 'all' || (filter === 'kept' ? s.keep : filter === 'review' ? toReview(s) : !s.keep));
+  const shown = segs.filter((s) => (filter === 'all' || (filter === 'kept' ? s.keep : filter === 'review' ? toReview(s) : !s.keep)) && (!spkFilter || (s.speaker || 1) === spkFilter));
   const jobs = d?.jobs || [];
   const active = jobs.filter((j) => ACTIVE.includes(j.status));
   const busy = (kind) => active.some((j) => j.kind === kind);
@@ -162,11 +173,12 @@ export default function DubbingTalk() {
 
   // Pendant qu'une demande attend ou tourne, la page se met à jour toute seule.
   const { load } = tk;
+  const spkRunning = ['pending', 'processing'].includes(d?.speakers?.job?.status);
   useEffect(() => {
-    if (!active.length) return undefined;
+    if (!active.length && !spkRunning) return undefined;
     const h = setInterval(load, 5000);
     return () => clearInterval(h);
-  }, [active.length, load]);
+  }, [active.length, spkRunning, load]);
 
   const change = (p) => { setEdit({ ...(edit || d.effective), ...p }); setMsg(null); };
   const save = async (params) => {
@@ -184,8 +196,9 @@ export default function DubbingTalk() {
   const patchSeg = async (idx, body) => {
     const r = await call(`/studio/dubbing/talks/${id}/segments/${idx}`, { method: 'PATCH', body: JSON.stringify(body) });
     if (r.ok) {
-      const { segment, review, ...sp } = r.data;
-      tk.setD((cur) => ({ ...cur, ...sp, review, segments: cur.segments.map((x) => (x.idx === idx ? segment : x)) }));
+      const { segment, review, speakerList, ...sp } = r.data;
+      tk.setD((cur) => ({ ...cur, ...sp, review, speakers: speakerList ? { ...cur.speakers, list: speakerList } : cur.speakers,
+        segments: cur.segments.map((x) => (x.idx === idx ? segment : x)) }));
     }
     return r;
   };
@@ -207,6 +220,10 @@ export default function DubbingTalk() {
   const fullDone = d?.track ? jobs.find((j) => j.id === d.track.jobId) : null;
   const status = active.find((j) => j.kind === 'full') ? jobLabel(active.find((j) => j.kind === 'full'), t)
     : d?.track ? tf(t('dbTrackDone'), { d: fmtDuration(d.track.durationS, t), n: fullDone?.result?.summary?.review ?? 0 }) : t('dbNoTrack');
+  // Étape D3c : voix déjà fabriquée servant à l'aperçu rapide d'une hauteur (piste en service, sinon dernière écoute de 60 s).
+  const audioJob = fullDone?.result?.hasVoice ? fullDone : (lastPreview?.result?.hasVoice ? lastPreview : null);
+  const audio = audioJob ? { jobId: audioJob.id, offsetS: audioJob.result?.window?.[0] || 0,
+    pitchOf: (n) => Number(audioJob.params?.speakers?.find((x) => x.n === n)?.pitch ?? audioJob.params?.pitch ?? 0) } : null;
   const cellLen = (s) => {
     const slot = `${fmtNum((s.endMs - s.startMs) / 1000, locale, 1)} s`;
     return s.r?.speedup ? `${slot} · ×${Number(s.r.speedup).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}` : slot;
@@ -275,6 +292,8 @@ export default function DubbingTalk() {
               </section>
             </div>
 
+            {state.voices && <Speakers id={id} d={d} state={state} setD={tk.setD} load={tk.load} segs={segs} audio={audio} />}
+
             <section className="sd-card db-track">
               <div className="sd-card-head"><h2>{t('dbTrackTitle')}</h2><span className="db-status">{status}</span></div>
               {active.map((j) => (
@@ -317,13 +336,19 @@ export default function DubbingTalk() {
                       <button key={k} type="button" className={`pill${filter === k ? ' on' : ''}`} aria-pressed={filter === k} onClick={() => { setFilter(k); setLimit(PAGE); }}>{t(`dbSeg_${k}`)} ({n})</button>
                     ))}
                   </div>
+                  {d.speakers.list.length > 0 && (
+                    <select className="spk-pick" value={spkFilter} aria-label={t('spkFilterAll')} onChange={(e) => { setSpkFilter(Number(e.target.value)); setLimit(PAGE); }}>
+                      <option value={0}>{t('spkFilterAll')}</option>
+                      {d.speakers.list.map((x) => <option key={x.n} value={x.n}>{x.label}</option>)}
+                    </select>
+                  )}
                 </div>
                 {d.report && <p className="meta small">{t(d.report.kind === 'full' ? 'dbReportFull' : 'dbReportPreview')}</p>}
                 <div className="studio-table-wrap">
                   <table className="studio-table db-table">
-                    <thead><tr><th>{t('dbColStart')}</th><th>{t('dbColText')}</th><th>{t('dbColPron')}</th><th>{t('dbColSlot')}</th><th>{t('dbColKeep')}</th><th>{t('dbColState')}</th></tr></thead>
+                    <thead><tr><th>{t('dbColStart')}</th><th>{t('dbColText')}</th><th>{t('dbColPron')}</th><th>{t('dbColSlot')}</th>{d.speakers.list.length > 0 && <th>{t('spkColSpeaker')}</th>}<th>{t('dbColKeep')}</th><th>{t('dbColState')}</th></tr></thead>
                     <tbody>
-                      {shown.slice(0, limit).map((s) => <SegRow key={s.idx} s={s} cellLen={cellLen} onPatch={patchSeg} />)}
+                      {shown.slice(0, limit).map((s) => <SegRow key={s.idx} s={s} cellLen={cellLen} onPatch={patchSeg} speakers={d.speakers.list} />)}
                     </tbody>
                   </table>
                 </div>
