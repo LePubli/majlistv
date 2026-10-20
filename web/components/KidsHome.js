@@ -8,6 +8,7 @@ import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
 import { useKidTime, leftMin } from '../lib/kidTime';
 import KidsBanner from './KidsBanner';
 import { KidActions } from './KidsActions';
+import KidCatalog from './KidCatalog';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -106,16 +107,7 @@ export default function KidsHome() {
           </>
         )}
 
-        {tab === 'watch' && (
-          <>
-            {d && d.resume.length > 0 && (
-              <section aria-labelledby="kd-cont"><h2 id="kd-cont">{t('kdContinue')}</h2><ul className="kd-grid">{d.resume.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
-            )}
-            <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
-              {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}
-            </section>
-          </>
-        )}
+        {tab === 'watch' && <KidCatalog />}
 
         {tab === 'act' && (
           <section aria-labelledby="kd-act"><h2 id="kd-act">{t('kaTitle')}</h2><KidActions /></section>

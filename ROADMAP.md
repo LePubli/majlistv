@@ -337,3 +337,6 @@ Socle no-code en cours : I1 (apparence), I2 (textes) et I3 (pages en blocs) et H
 
 ## Chaînes riches + multi-chaînes (20/10)
 - Migration 060 : champs riches, équipe d'éditeurs, création de chaînes vides, sélecteur de chaîne facultatif (conférence, import, série). Suite : Kids catalogue, Shorts publics, Créateur, D3c, F.
+
+## Kids catalogue (20/10)
+- Rubriques Kids (Admin), classement (fiche + lot), rangées de suggestions, recherche enfant, filtre d'âge. Suite : Shorts publics, Créateur, D3c (+ hauteur de voix), F.

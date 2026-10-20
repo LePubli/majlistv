@@ -5,11 +5,14 @@ import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { BANDS, bandLabel } from '../lib/kids';
 import { LEVELS, levelLabel } from '../lib/levels';
+import { useRubrics, rubricName } from './KidRubricsPicker';
 
 export default function BulkEdit({ ids, onDone, onCancel }) {
   const { t, call, formats, locale } = useApp();
   const fmtLabel = (f) => f['name' + locale[0].toUpperCase() + locale.slice(1)] || f.nameFr;
   const [cats, setCats] = useState([]);
+  const rubrics = useRubrics(call);
+  const [kr, setKr] = useState({ ids: [], mode: 'add' }); // rubriques Kids à ajouter / remplacer / retirer
   const [on, setOn] = useState({});            // champs à modifier
   const [v, setV] = useState({ access: 'free', categoryId: '', formatId: '', level: '', publication: 'published', speaker: '', kidsBands: [], bandsMode: 'replace', showAdults: true });
   const [busy, setBusy] = useState(false);
@@ -28,12 +31,15 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
     if (on.speaker) changes.speaker = v.speaker.trim();
     if (on.kidsBands) changes.kidsBands = v.kidsBands;
     if (on.showAdults) changes.showAdults = v.showAdults;
-    if (!Object.keys(changes).length) { setErr(t('bkNothing')); return; }
+    const rubricChange = on.kidRubrics && kr.ids.length > 0;
+    if (!Object.keys(changes).length && !rubricChange) { setErr(t('bkNothing')); return; }
     if (!window.confirm(t('bkConfirm').replace('{n}', ids.length))) return;
     setBusy(true); setErr('');
-    const r = await call('/talks/bulk', { method: 'POST', body: JSON.stringify({ ids, changes, bandsMode: v.bandsMode }) });
+    let r = { ok: true, data: { updated: ids.length } };
+    if (Object.keys(changes).length) r = await call('/talks/bulk', { method: 'POST', body: JSON.stringify({ ids, changes, bandsMode: v.bandsMode }) });
+    if (r.ok && rubricChange) { const x = await call('/studio/kids/rubrics/bulk', { method: 'POST', body: JSON.stringify({ ids, rubricIds: kr.ids, mode: kr.mode }) }); if (!x.ok) r = x; }
     setBusy(false);
-    if (r.ok) onDone(r.data.updated); else setErr(r.data?.error || t('errGeneric'));
+    if (r.ok) onDone(r.data.updated ?? ids.length); else setErr(r.data?.error || t('errGeneric'));
   };
 
   const row = (k, label, control) => (
@@ -81,6 +87,17 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
             return <button key={b} type="button" className={sel ? 'pill on' : 'pill'} aria-pressed={sel}
               onClick={() => set('kidsBands', BANDS.filter((x) => (x === b ? !sel : v.kidsBands.includes(x))))}>{sel ? '✓ ' : ''}{bandLabel(b, t)}</button>;
           })}
+        </div>
+      ))}
+      {rubrics && rubrics.length > 0 && row('kidRubrics', t('krPick'), (
+        <div className="bk-kids">
+          <select value={kr.mode} onChange={(e) => { setKr({ ...kr, mode: e.target.value }); setOn((o) => ({ ...o, kidRubrics: true })); }}>
+            <option value="add">{t('krBulkAdd')}</option><option value="replace">{t('krBulkReplace')}</option><option value="remove">{t('krBulkRemove')}</option>
+          </select>
+          {rubrics.map((r) => { const sel = kr.ids.includes(r.id); return (
+            <button key={r.id} type="button" className={sel ? 'pill on' : 'pill'} aria-pressed={sel}
+              onClick={() => { setKr({ ...kr, ids: sel ? kr.ids.filter((x) => x !== r.id) : [...kr.ids, r.id] }); setOn((o) => ({ ...o, kidRubrics: true })); }}>{sel ? '✓ ' : ''}{r.emoji} {rubricName(r, locale)}</button>
+          ); })}
         </div>
       ))}
       {row('showAdults', t('txShowAdults'), (

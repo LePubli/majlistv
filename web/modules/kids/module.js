@@ -6,5 +6,6 @@ const mod = {
   paths: [
     /^\/kids(\/|$)/,
   ],
+  admin: [{ tab: 'kidrubrics', title: 'Rubriques Kids', label: 'krAdminNav', icon: 'tag', load: () => import('./RubricsAdmin') }],
 };
 export default mod;

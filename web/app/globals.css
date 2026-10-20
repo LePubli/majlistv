@@ -3575,3 +3575,30 @@ body.cinema-on .wb-pset { top: 16px; }
 .ch-featured { margin: 6px 0 18px; } .ch-featured h2 { margin: 0 0 10px; font-size: 1.1rem; } .ch-featured .grid { max-width: 360px; }
 .ch-studio .ch-card, .ch-studio .ch-form { min-width: 0; }
 .btn.danger { color: var(--danger, #ff8a80); border-color: currentColor; }
+
+/* Mejliss Kids : catalogue (recherche, rubriques, rangées) et administration des rubriques */
+.kc { display: grid; gap: 18px; }
+.kc-search { position: relative; max-width: 640px; }
+.kc-search input { width: 100%; min-height: 56px; padding: 0 18px 0 52px; font-size: 1.15rem; border-radius: 999px; border: 2px solid var(--line-soft); background: var(--surface); color: var(--text); }
+.kc-search input:focus { outline: none; border-color: var(--gold, #E6A739); }
+.kc-glass { position: absolute; inset-inline-start: 18px; top: 50%; transform: translateY(-50%); font-size: 1.3rem; }
+html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
+.kc-chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; align-items: center; scrollbar-width: thin; }
+.kc-chip { flex: none; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 2px solid var(--line-soft); background: var(--surface); color: var(--text); font-size: 1rem; font-weight: 700; cursor: pointer; }
+.kc-chip.on { background: var(--gold, #E6A739); color: #120D06; border-color: var(--gold, #E6A739); }
+.kc-age { justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 8px; font-weight: 600; cursor: pointer; }
+.kc-age input { width: 22px; height: 22px; }
+.kc-shelf h2 { margin: 6px 0 12px; font-size: 1.3rem; }
+.kc-row { list-style: none; margin: 0; padding: 0 0 10px; display: flex; flex-wrap: nowrap; gap: 16px; overflow-x: auto; scroll-snap-type: x proximity; }
+.kc-row > li { flex: none; width: min(260px, 72vw); scroll-snap-align: start; }
+.kr-list { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 14px; }
+.kr-row { padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); }
+.kr-row.off { opacity: .6; }
+.kr-form { display: grid; grid-template-columns: 80px repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.kr-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.kr-new { margin-top: 18px; padding: 14px; border: 1px dashed var(--line-soft); border-radius: var(--radius); }
+.kr-new .panel-title { grid-column: 1 / -1; margin: 0; }
+.kr-pick .pills { flex-wrap: wrap; }
+@media (max-width: 760px) { .kr-form { grid-template-columns: 1fr; } }
+.kc, .kc-shelf, .kc-row, .kc-chips { min-width: 0; max-width: 100%; }
+.kd-home .kc { overflow: hidden; }

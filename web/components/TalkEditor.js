@@ -6,6 +6,7 @@ import { LEVELS, levelLabel } from '../lib/levels';
 import { BANDS, bandLabel } from '../lib/kids';
 import { useApp } from './Providers';
 import ChannelPicker from './ChannelPicker';
+import KidRubricsPicker from './KidRubricsPicker';
 const MAX_EXTRA = 2;
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
@@ -197,6 +198,8 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
             <label className="kd-check"><input type="checkbox" checked={f.showAdults} onChange={(e) => patch({ showAdults: e.target.checked })} /> <span>{t('txShowAdults')}</span></label>
           )}
         </div>
+
+        {f.kidsBands.length > 0 && <KidRubricsPicker talkId={x.id} />}
 
         {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
         <div className="panel-actions">

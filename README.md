@@ -4723,3 +4723,19 @@ Tests : `web/tests/fiche_b.py` (barre d'actions, menu Plus, vitesse appliquée, 
 
 ### Droits des éditeurs sur les conférences d'une chaîne (20/10)
 Le propriétaire d'une chaîne et ses éditeurs gèrent aussi les conférences qui portent le nom de la chaîne, même créées par quelqu'un d'autre : liste Studio « Contenus », modification (infos, accès, publication, miniature), modification en lot, transcription, traduction, relance de conversion, étiquettes, quiz, pratique, révision, aperçu des brouillons. **Suppression** : créateur et administrateur seulement. Une conférence **sans chaîne** reste visible et modifiable par son seul créateur. **Pas encore couvert** (restent au créateur) : séries, statistiques, éditeur vidéo, doublage, livres, citations. Code : `api/src/channelAccess.js`. Test : `python3 api/tests/test_channel_editors.py`. Déploiement : Redeploy **majlistv-api** puis **majlistv-web**.
+
+## Kids : un vrai catalogue (20/10)
+
+**Ce que ça fait** : l'espace enfant (Regarder) devient un catalogue : barre de recherche, pastilles de **rubriques Kids**, case « seulement pour mon âge », et des rangées : *Reprendre*, *Parce que tu as aimé « … »*, *Pour ton âge*, *Nouveautés*, *Les plus regardés* (à partir de 3 vidéos regardées, totaux anonymes, aucun enfant comparé) et une rangée par rubrique. L'accueil enfant existant (héros, progression, actions) est conservé.
+
+**Rubriques** : Admin → Rubriques Kids (créer, renommer en fr/en/ar, pictogramme, cacher, ordonner, supprimer — supprimer une rubrique ne supprime aucune vidéo). 8 rubriques de départ : Histoires, Les prophètes, Valeurs et bonne conduite, Coran et invocations, Sciences et nature, Chants et comptines, Jeux et créativité, Apprendre l'arabe. **Classer les vidéos** : Studio → fiche d'une conférence (visible dès qu'une tranche Kids est cochée, enregistrement immédiat) ou, pour beaucoup à la fois, Studio → Contenus → cocher → modification en lot → « Rubriques Kids » (ajouter / remplacer / retirer). Tant qu'une vidéo n'est dans aucune rubrique, elle apparaît dans Nouveautés / Pour ton âge mais dans aucune rangée de rubrique.
+
+**Règles** : un enfant ne voit que ce qu'il voyait déjà (prête, publiée, sa tranche d'âge, catalogue choisi par le parent, gratuites sans abonnement, limite de temps). La recherche enfant est une recherche SQL simple (titre, intervenant, description, rubrique) : pas de Meilisearch, jamais d'extrait de transcription ni de contenu adulte.
+
+**Prérequis / migration** : module Kids 1.1.0, migration de module `001_rubrics.sql` (2 tables, 8 rubriques), appliquée au démarrage de l'API ; rien n'est supprimé.
+
+**Déploiement** (DockPanel + GitHub Desktop) : décompresser le zip dans `C:\Users\agenc\Documents\GitHub\majlistv`, Commit to main, Push origin ; Redeploy **majlistv-api** puis **majlistv-web** (pas le worker) ; sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss`, `nginx -t && systemctl reload nginx` ; Ctrl+Maj+R dans le navigateur.
+
+**Debug** : une rubrique n'apparaît pas chez l'enfant = elle est cachée, ou aucune vidéo visible pour ce profil n'y est classée ; « Les plus regardés » absent = moins de 3 vidéos regardées ces 30 jours ; recherche vide = vérifier la tranche d'âge du profil et le catalogue autorisé par le parent.
+
+**Tests** : `python3 api/tests/test_kids_catalog.py` (API 3055) et `python3 web/tests/kids_catalog.py` (site 3001, captures dans /tmp/shots-kc). Non testé : vrai téléphone, grand volume (le catalogue enfant renvoie 200 vidéos au plus).
