@@ -93,7 +93,7 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [x] (21/10) Écran : lecture, mode audio et journal des imports vérifiés par Epok.
 - [ ] Une conférence archive.org du catalogue → « Importer chez nous » : reste lisible pendant la copie, puis devient hébergée.
 - [x] (21/10) Vimeo public, puis YouTube : importés depuis le VPS **sans cookies**.
-- [x] (21/10) Annuler un import en cours : OK. Journal : OK. (Relance d'un import en échec : pas encore rencontrée.)
+- [x] (21/10) Annuler un import en cours : OK. Journal : OK. Relance d'un import en échec : OK sur le VPS (`ops/verify/test-import-retry.sh`, « TOUT EST OK », 21/10).
 - [x] (21/10) Adresse interne (http://127.0.0.1:7001/…) refusée.
 - [ ] Espace disque du VPS (`df -h`) et stockage Garage après l'import d'une vidéo de 1 h.
 
