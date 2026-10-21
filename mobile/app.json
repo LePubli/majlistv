@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Mejliss TV",
+    "slug": "majlistv",
+    "scheme": "mejlisstv",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0906",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "fr.lepublicitaire.mejlisstv",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "package": "fr.lepublicitaire.mejlisstv",
+      "versionCode": 1,
+      "supportsRtl": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0906",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0906"
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false,
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false
+          }
+        }
+      ],
+      "expo-system-ui"
+    ],
+    "extra": {
+      "apiUrl": "https://api-majlisstv.le-publicitaire.fr",
+      "siteUrl": "https://majlisstv.le-publicitaire.fr"
+    }
+  }
+}

@@ -5023,3 +5023,30 @@ curl -sI https://majlisstv.le-publicitaire.fr/sw.js | grep -iE "^HTTP|cache-cont
 ### Tests (21/10)
 `python3 web/tests/pwa_22a.py` (site en production local, API, base de test) : manifeste et icônes (tailles réelles), service worker actif et servi sans cache, **Chromium juge le site installable** (seule réserve : navigation privée du robot de test), contenu des caches (fichiers du site, ni API ni pages), page hors connexion en coupant vraiment le serveur (français 1440 px, arabe 390 px RTL), page /application (fr 1440, ar 390 iPhone, Android), lien du pied de page, fonction coupée (service worker retiré, caches effacés, page et lien fermés). Variable facultative `WEB_URL` (adresse du site testé).
 **Non testé** : vraie installation sur un vrai iPhone, un vrai Android et un ordinateur (le robot ne peut pas cliquer l'invite du navigateur) → à faire par Epok après déploiement.
+
+## Étape 22b-1 — Application Android + iPhone/iPad : socle et lecture (21/10)
+
+### Ce que ça fait
+Première tranche de l'application **Mejliss TV** en React Native (Expo SDK 58), dossier `mobile/`, un seul code pour Android, iPhone et iPad. Décisions d'Epok : APK fabriqué par **GitHub Actions**, identifiant `fr.lepublicitaire.mejlisstv`, première livraison « socle + lecture », **paiement jamais dans l'application** (abonnement géré sur le site).
+- Connexion / création de compte (jeton dans le coffre sécurisé), parcours visiteur (aperçu de 2 min).
+- Accueil (bannière, « Continuer à regarder », rangées du catalogue), Conférences (recherche, catégories, défilement infini), Compte (langue FR / EN / AR en RTL, état de l'abonnement, lien vers la gestion sur le site).
+- Lecteur : HLS, plein écran, incrustation, ±10 s, vitesse, **audio seul**, **son écran éteint** (notification de lecture), **reprise synchronisée avec le site**, résumé, points clés, chapitres, favori.
+- **Aucun changement de l'API, de la base ni du site** : pas de migration, pas de redéploiement DockPanel.
+
+### Fichiers
+`mobile/` (voir `mobile/README.md` : architecture, tests, debug), `.github/workflows/mobile-android.yml` (fabrication de l'APK), `.gitignore` (dossiers générés).
+
+### Prérequis
+Aucun sur le VPS. Pour installer : un téléphone Android (64 bits) autorisant l'installation d'applications inconnues.
+
+### Fabriquer et installer l'APK
+GitHub → `LePubli/majlistv` → Actions → « Application Android (APK) » → Run workflow (ou automatique à chaque push sur `main` touchant `mobile/`) → en bas de l'exécution, télécharger l'artifact `mejliss-tv-android` → copier l'APK sur le téléphone et l'ouvrir. Signé avec la clé de test d'Android : installable à la main, **pas publiable sur Google Play** (clé de publication : étape « magasins »).
+
+### Tests (21/10)
+- `cd mobile && npm run check` : typage TypeScript (0 erreur) + **26 tests** (client d'API : jeton, erreurs, délai, 401 ; reprise : cadence 10 s, pause, aperçu, réseau coupé ; choix de la source : HLS, audio, archive.org, YouTube/Vimeo ; langues : mêmes clés et variables en fr/en/ar ; formats).
+- `API_TEST_URL=… npx tsx mobile/tests/api_contract.ts` : essai de bout en bout contre une **vraie API** locale : inscription, connexion, accueil, catégories, catalogue, recherche, fiche, résumé, progression → « Continuer à regarder » → reprise relue (125 000 ms), favori, abonnement, session expirée (401 → déconnexion), conférence inconnue (404). « TOUT EST OK ».
+- `npm run bundle` : le paquet Android complet se compile (Metro + Hermes, 3 Mo) ; `expo prebuild` génère un projet Android contenant : service de lecture en arrière-plan, incrustation, RTL, trafic non chiffré interdit, signature de l'APK.
+- **Non testé** : l'application sur un téléphone ou un émulateur, la fabrication Gradle de l'APK (elle se fait chez GitHub), l'iPhone. → registre n° 60 à 63.
+
+### Debug
+Voir `mobile/README.md` (APK qui ne s'installe pas, « impossible de charger », vidéo qui ne démarre pas, son coupé écran éteint, échec du workflow).

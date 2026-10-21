@@ -377,3 +377,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 22a (21/10) — site installable (PWA)
 - Manifeste, icônes (dont « maskable »), service worker (fichiers du site gardés, page hors connexion FR/EN/AR, jamais de page, d'API ni de vidéo), page « Télécharger l'application » (/application : bouton d'installation, explications iPhone / Android / ordinateur), lien du pied de page, fonction `app_install` (Admin → Fonctions). Voir README « Étape 22a ». Reste : essai sur vrais appareils (Epok). Suite : 22b (application React Native / Expo) sur « go ».
+
+## Étape 22b-1 (21/10) — application Android + iPhone/iPad : socle et lecture
+- Dossier `mobile/` (Expo SDK 58, React Native, TypeScript) : connexion, accueil, conférences, lecteur (HLS, plein écran, incrustation, audio seul et son écran éteint, reprise synchronisée, résumé, chapitres, favori), compte (langue FR/EN/AR en RTL, lien vers l'abonnement sur le site). APK fabriqué par GitHub Actions. API et site inchangés. Voir README « Étape 22b-1 » et `mobile/README.md`. Reste (tranche 2, sur « go ») : téléchargement hors connexion, Apprendre, Bibliothèque, Kids, notifications, Chromecast / AirPlay, séries ; puis page « Télécharger l'application » avec l'APK, 22c Android TV, 22d Apple TV.

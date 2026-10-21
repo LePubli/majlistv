@@ -1,0 +1,107 @@
+// Session de l'utilisateur (jeton gardé dans le coffre sécurisé du téléphone) et langue de l'application.
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { getLocales } from 'expo-localization';
+import { createApi, Api, ApiError } from './api';
+import { API_URL } from './config';
+import { DIR, Key, Locale, pickLocale, translate } from './i18n';
+import type { User } from './types';
+
+const TOKEN_KEY = 'mejliss.token';
+const LOCALE_KEY = 'mejliss.locale';
+
+// Le coffre peut être indisponible (rare) : on ne bloque jamais l'application pour ça.
+const read = async (k: string) => { try { return await SecureStore.getItemAsync(k); } catch { return null; } };
+const write = async (k: string, v: string) => { try { await SecureStore.setItemAsync(k, v); } catch { /* ignoré */ } };
+const remove = async (k: string) => { try { await SecureStore.deleteItemAsync(k); } catch { /* ignoré */ } };
+
+type Session = {
+  ready: boolean;
+  user: User | null;
+  api: Api;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: (key: Key, vars?: Record<string, string | number>) => string;
+  isRTL: boolean;
+  /** À mettre sur la vue racine de chaque écran : fait basculer la mise en page pour l'arabe. */
+  dirStyle: { direction: 'ltr' | 'rtl' };
+};
+
+const Ctx = createContext<Session | null>(null);
+
+export function SessionProvider({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [locale, setLocaleState] = useState<Locale>('fr');
+  const tokenRef = useRef<string | null>(null);
+
+  const logout = useCallback(async () => {
+    tokenRef.current = null;
+    setUser(null);
+    await remove(TOKEN_KEY);
+  }, []);
+
+  const api = useMemo(
+    () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, onUnauthorized: () => { void logout(); } }),
+    [logout],
+  );
+
+  // Démarrage : langue enregistrée (sinon celle du téléphone), puis session enregistrée.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const savedLocale = await read(LOCALE_KEY);
+      const l = savedLocale ? pickLocale(savedLocale) : pickLocale(getLocales()[0]?.languageCode);
+      if (alive) setLocaleState(l);
+      const token = await read(TOKEN_KEY);
+      if (token) {
+        tokenRef.current = token;
+        try {
+          const me = await api.get<User>('/auth/me');
+          if (alive) setUser(me);
+        } catch (err) {
+          // 401 : le jeton est expiré, onUnauthorized a déjà déconnecté. Hors connexion : on garde le jeton pour la prochaine fois.
+          if (err instanceof ApiError && err.status === 401) tokenRef.current = null;
+        }
+      }
+      if (alive) setReady(true);
+    })();
+    return () => { alive = false; };
+  }, [api]);
+
+  const finish = useCallback(async (res: { token: string; user: User }) => {
+    tokenRef.current = res.token;
+    await write(TOKEN_KEY, res.token);
+    setUser(res.user);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    await finish(await api.post<{ token: string; user: User }>('/auth/login', { email: email.trim(), password }));
+  }, [api, finish]);
+
+  const register = useCallback(async (email: string, password: string, name?: string) => {
+    const body: Record<string, string> = { email: email.trim(), password, locale: locale };
+    if (name?.trim()) body.name = name.trim();
+    await finish(await api.post<{ token: string; user: User }>('/auth/register', body));
+  }, [api, finish, locale]);
+
+  const setLocale = useCallback((l: Locale) => { setLocaleState(l); void write(LOCALE_KEY, l); }, []);
+  const t = useCallback((key: Key, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
+
+  const value = useMemo<Session>(() => ({
+    ready, user, api, login, register, logout, locale, setLocale, t,
+    isRTL: DIR[locale] === 'rtl',
+    dirStyle: { direction: DIR[locale] },
+  }), [ready, user, api, login, register, logout, locale, setLocale, t]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useSession(): Session {
+  const v = useContext(Ctx);
+  if (!v) throw new Error('useSession doit être utilisé dans <SessionProvider>');
+  return v;
+}
