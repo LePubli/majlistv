@@ -5050,3 +5050,32 @@ GitHub → `LePubli/majlistv` → Actions → « Application Android (APK) » �
 
 ### Debug
 Voir `mobile/README.md` (APK qui ne s'installe pas, « impossible de charger », vidéo qui ne démarre pas, son coupé écran éteint, échec du workflow).
+## Étape 22b-2a — Application : Bibliothèque, Apprendre, quiz, mise en pratique (21/10)
+
+### Ce que ça fait
+Deuxième tranche de l'application (dossier `mobile/`), première moitié : tout ce qui relie la vidéo à l'apprentissage. **Aucun changement de l'API, de la base ni du site** : l'application utilise les routes existantes (pas de migration, pas de redéploiement DockPanel).
+- **Barre du bas à 5 onglets** : Accueil, Conférences, **Apprendre**, **Bibliothèque**, Compte.
+- **Bibliothèque** : mes favoris ; mes listes (création, ouverture, retrait d'une conférence, suppression). Sur la fiche d'une conférence : bouton **« Ajouter à une liste »** (coche / décoche, création d'une liste à la volée).
+- **Quiz** : bouton « Passer le quiz » sur la fiche (visible seulement si la conférence a un quiz) ; une question à la fois, correction détaillée à la fin (bonne réponse, explication de l'intervenant), seuil de réussite du site, « Refaire le quiz » ; en visiteur : corrigé mais « Connectez-vous pour enregistrer votre résultat ».
+- **Mise en pratique** (« Et maintenant, que faire ? ») : propositions d'action de la conférence, action écrite par le membre, intention, échéance (aujourd'hui / cette semaine / ce mois-ci / sans), accord d'enregistrement chiffré (une seule fois). Offre Apprentissage requise : sinon message et lien vers le site.
+- **Apprendre** : « À réviser aujourd'hui » (révision espacée) + rappel du jour, « Quiz à passer / à revoir » (ouvert à tout membre), **score et 8 badges**, **mes engagements** (statut : à faire / en cours / fait / pas encore ; en retard en premier). Pour un membre sans l'offre Apprentissage : un seul encadré « fait partie de l'offre Mejliss Apprentissage » + lien vers le site (l'application ne vend rien).
+- Tout en français, anglais et arabe (RTL) ; les nouveaux textes sont contrôlés par le test des langues.
+
+### Fichiers
+`mobile/src/app/(tabs)/learn.tsx`, `(tabs)/library.tsx`, `list/[id].tsx`, `quiz/[id].tsx`, `practice/[id].tsx`, `mobile/src/components/AddToListModal.tsx`, `mobile/src/lib/learn.ts` (fonctions pures testées), types et textes ajoutés, méthode `patch` du client d'API.
+
+### Prérequis et déploiement
+Aucun sur le VPS, rien à redéployer. Pour essayer : refabriquer l'APK (GitHub → Actions → « Application Android (APK) » → Run workflow, ou automatique au push) puis l'installer par-dessus l'ancien. Pour voir les écrans Apprendre en entier : un compte avec l'offre **Apprentissage**, un quiz et des propositions d'action validés dans le Studio sur au moins une conférence.
+
+### Tests (21/10)
+- `cd mobile && npm run check` : typage (0 erreur) + **32 tests** (dont : fonctions du quiz, des engagements, erreur « offre requise », libellés des 8 badges dans les 3 langues, méthode PATCH).
+- `API_TEST_URL=… npx tsx mobile/tests/api_contract.ts` contre une **vraie API** locale (base et stockage de test, `PRACTICE_KEY` définie) : listes (création, ajout, « contient », détail, retrait, suppression) ; quiz (3 questions créées et validées par le Studio, bonnes réponses non envoyées avant validation, tout faux → 0 %, tout juste → 100 %, visiteur non enregistré) ; membre sans offre → 403 `learning_required` sur `/me/revision`, `/me/learning`, `/me/practice` et « Je m'engage », **sans déconnexion** ; compte avec offre : révision, score, badge « first_quiz », accord exigé (409), engagement avec proposition, texte libre, changement de statut, compteurs, suppression. « TOUT EST OK ».
+- `npm run bundle` : le paquet Android se compile.
+- **Non testé** : les écrans sur un téléphone, l'arabe de droite à gauche sur ces écrans, un compte réellement abonné à l'offre Apprentissage (l'essai utilise le compte administrateur, qui a l'accès complet), la révision espacée avec des échéances réelles (liste vide dans l'essai). → registre n° 64 et 65.
+
+### Debug
+- Onglet Apprendre vide ou encadré « offre Apprentissage » alors que le compte l'a : `GET /me/learning` avec le jeton doit répondre 200 (sinon `learning_required` = abonnement de palier « learning » non actif).
+- « Mettre en pratique » répond `no_key` / 503 : `PRACTICE_KEY` n'est pas définie sur `majlistv-api` (ne jamais la changer ensuite : les engagements deviendraient illisibles).
+- Pas de bouton « Passer le quiz » : la conférence n'a pas assez de questions validées (réglage « minimum de questions », 3 par défaut) ou le quiz est coupé (Admin → Fonctions).
+- Autres cas : `mobile/README.md`.
+

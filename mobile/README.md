@@ -3,7 +3,7 @@
 Une seule application pour Android, iPhone et iPad, branchée sur l'API existante (aucune modification du serveur).
 Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
-## Ce que fait la version 0.1 (étape 22b, tranche 1 : « socle + lecture »)
+## Ce que fait l'application (étape 22b : tranche 1 « socle + lecture », tranche 2a « apprendre »)
 
 - **Connexion / création de compte** (le jeton est gardé dans le coffre sécurisé du téléphone) ; parcours visiteur possible (aperçu de 2 minutes, comme sur le site).
 - **Accueil** : bannière, « Continuer à regarder », rangées du catalogue (mêmes réglages que le site : nouveautés, pour commencer, catégories, thèmes préférés).
@@ -12,7 +12,13 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 - **Compte** : langue (français / anglais / arabe en **RTL**), état de l'abonnement, bouton vers la gestion de l'abonnement **sur le site**.
 - Paiement : **jamais dans l'application** (décision d'Epok) ; l'abonnement se prend et se gère sur le site.
 
-**Pas encore là (tranche 2)** : téléchargement hors connexion, onglet Apprendre (quiz, révision, engagements, bilan), Bibliothèque, espace Mejliss TV Kids, notifications, diffusion Chromecast / AirPlay, séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
+**Tranche 2a (ajoutée)** :
+- **Bibliothèque** : favoris et listes personnelles (création, retrait, suppression) ; bouton « Ajouter à une liste » sur la fiche d'une conférence.
+- **Quiz** : une question à la fois, correction détaillée, badges gagnés ; bouton visible seulement si la conférence a un quiz.
+- **Mise en pratique** : propositions d'action ou action personnelle, intention, échéance, accord chiffré (offre Apprentissage).
+- **Apprendre** : à réviser aujourd'hui + rappel du jour, quiz à passer / à revoir, score et 8 badges, engagements avec changement de statut. Sans l'offre Apprentissage : encadré + lien vers le site (rien ne se vend dans l'application).
+
+**Pas encore là (tranche 2, suite)** : téléchargement hors connexion (2b), espace Mejliss TV Kids (2c), notifications, diffusion Chromecast / AirPlay (2d), séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
 
 ## Architecture
 
@@ -24,12 +30,15 @@ mobile/
 ├─ src/
 │  ├─ app/                  écrans (Expo Router : un fichier = un écran)
 │  │  ├─ _layout.tsx        polices, session, navigation
-│  │  ├─ (tabs)/            Accueil, Conférences, Compte
+│  │  ├─ (tabs)/            Accueil, Conférences, Apprendre, Bibliothèque, Compte
 │  │  ├─ login.tsx          connexion / création de compte
-│  │  └─ talk/[id].tsx      fiche + lecteur
-│  ├─ components/           ui.tsx (boutons, texte), TalkCard.tsx (vignette)
+│  │  ├─ talk/[id].tsx      fiche + lecteur
+│  │  ├─ list/[id].tsx      contenu d'une liste
+│  │  ├─ quiz/[id].tsx      quiz
+│  │  └─ practice/[id].tsx  mise en pratique
+│  ├─ components/           ui.tsx (boutons, champs, cartes), TalkCard.tsx (vignette), AddToListModal.tsx
 │  └─ lib/                  api.ts (client), session.tsx (jeton + langue), i18n.ts (FR/EN/AR),
-│                           progress.ts (reprise), playback.ts (choix de la source), format.ts, theme.ts, config.ts
+│                           progress.ts (reprise), playback.ts (choix de la source), learn.ts (quiz, engagements), format.ts, theme.ts, config.ts
 └─ tests/                   tests automatiques (Node) + essai contre une vraie API
 ```
 
@@ -79,14 +88,15 @@ npx expo run:android                      # fabrique et lance sur un téléphone
 
 ```bash
 cd mobile
-npm test             # 26 tests : client d'API, reprise de lecture, choix de la source, langues
-# Essai contre une vraie API (base de données et stockage de test lancés) :
+npm test             # 32 tests : client d'API, reprise de lecture, choix de la source, langues, quiz et engagements
+# Essai contre une vraie API (base de données et stockage de test lancés ; l'API de test doit avoir PRACTICE_KEY) :
+# attention : il crée des questions de quiz et des propositions sur une conférence de la base de test (ne jamais le lancer contre la production).
 API_TEST_URL=http://127.0.0.1:3055 ADMIN_EMAIL=admin@test.local ADMIN_PASSWORD=… npx tsx tests/api_contract.ts
 ```
 
-Ce qui est testé : requêtes et erreurs de l'API, cadence d'envoi de la progression, reprise (≥ 5 s, hors fin), URL de lecture (HLS, audio, archive.org, YouTube/Vimeo), chapitre en cours, traductions (mêmes clés et variables en fr/en/ar), et — contre une vraie API — inscription, connexion, accueil, catalogue, recherche, fiche, résumé, progression → « Continuer à regarder » → reprise relue, favori, abonnement, session expirée.
+Ce qui est testé : requêtes et erreurs de l'API, cadence d'envoi de la progression, reprise (≥ 5 s, hors fin), URL de lecture (HLS, audio, archive.org, YouTube/Vimeo), chapitre en cours, traductions (mêmes clés et variables en fr/en/ar), fonctions du quiz et des engagements, et — contre une vraie API — inscription, connexion, accueil, catalogue, recherche, fiche, résumé, progression → « Continuer à regarder » → reprise relue, favori, abonnement, listes, quiz (correction, visiteur), offre Apprentissage requise (403), révision, score et badges, engagements, session expirée.
 
-**Non testé** : l'application elle-même sur un téléphone ou un émulateur (écrans, lecteur, plein écran, incrustation, écran éteint, arabe de droite à gauche), la fabrication Gradle de l'APK, et iPhone. Voir le registre `docs/PROBLEMES-A-REGLER.md` (n° 60 à 63).
+**Non testé** : l'application elle-même sur un téléphone ou un émulateur (écrans, lecteur, plein écran, incrustation, écran éteint, arabe de droite à gauche), la fabrication Gradle de l'APK, et iPhone. Voir le registre `docs/PROBLEMES-A-REGLER.md` (n° 60 à 65).
 
 ## Debug
 

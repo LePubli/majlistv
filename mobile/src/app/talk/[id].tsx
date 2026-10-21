@@ -14,10 +14,11 @@ import { API_URL, SITE_URL } from '@/lib/config';
 import { formatClock, formatDuration } from '@/lib/format';
 import { ProgressTracker, resumeStartMs } from '@/lib/progress';
 import { currentChapter, nextSpeed, pickSource, platformName } from '@/lib/playback';
-import type { Insights, Talk } from '@/lib/types';
+import type { Insights, PracticeTalk, QuizData, Talk } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { Button, ErrorBox, IconButton, Loading, Txt, screenStyle } from '@/components/ui';
 import { Poster } from '@/components/TalkCard';
+import { AddToListModal } from '@/components/AddToListModal';
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -58,6 +59,7 @@ function TalkView({ talk }: { talk: Talk }) {
   const [failed, setFailed] = useState(false);
   const [fav, setFav] = useState(!!talk.favorite);
   const [tab, setTab] = useState<'summary' | 'chapters'>('summary');
+  const [listOpen, setListOpen] = useState(false);
 
   // Lecture en arrière-plan et notification de lecture : l'écran peut s'éteindre, le son continue.
   const player = useVideoPlayer(sourceObj, (p) => {
@@ -113,6 +115,10 @@ function TalkView({ talk }: { talk: Talk }) {
     [talk.id, locale],
   );
 
+  // Quiz et mise en pratique : les boutons n'apparaissent que si la conférence en a (le serveur répond 404 sinon).
+  const quiz = useAsync(async () => (locked ? null : await api.get<QuizData>(`/talks/${talk.id}/quiz`).catch(() => null)), [talk.id, locked]);
+  const practice = useAsync(async () => (locked ? null : await api.get<PracticeTalk>(`/talks/${talk.id}/practice`).catch(() => null)), [talk.id, locked]);
+
   async function switchMode(audio: boolean) {
     const target = audio ? src.audioUri : src.uri;
     if (!target) return;
@@ -136,6 +142,8 @@ function TalkView({ talk }: { talk: Talk }) {
       if (next) await api.put(`/me/favorites/${talk.id}`); else await api.del(`/me/favorites/${talk.id}`);
     } catch { setFav(!next); }
   }
+
+  function needLogin(go: () => void) { if (!user) router.push('/login'); else go(); }
 
   const chapters = insights.data?.chapters ?? [];
   const activeChapter = currentChapter(chapters, pos * 1000);
@@ -227,6 +235,12 @@ function TalkView({ talk }: { talk: Talk }) {
           <ActionTile icon="bookmark" label={fav ? t('talk.unfav') : t('talk.fav')} active={fav} onPress={toggleFav} />
         </View>
 
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <ActionTile icon="list" label={t('lib.addToList')} onPress={() => needLogin(() => setListOpen(true))} />
+          {quiz.data ? <ActionTile icon="check-circle" label={t('quiz.openQuiz')} onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: talk.id } })} /> : null}
+          {practice.data ? <ActionTile icon="target" label={t('practice.open')} onPress={() => router.push({ pathname: '/practice/[id]', params: { id: talk.id } })} /> : null}
+        </View>
+
         {locked ? (
           <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.goldTint, borderWidth: 1, borderColor: colors.goldLine, gap: 10 }}>
             <Txt weight="extrabold" size={15} color={colors.goldLight}>{t('talk.preview', { min: Math.round((talk.previewSeconds || 120) / 60) })}</Txt>
@@ -268,6 +282,7 @@ function TalkView({ talk }: { talk: Talk }) {
           </View>
         )}
       </ScrollView>
+      <AddToListModal talkId={talk.id} visible={listOpen} onClose={() => setListOpen(false)} />
     </SafeAreaView>
   );
 }

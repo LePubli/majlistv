@@ -1,6 +1,8 @@
 // Éléments d'interface réutilisables : texte, bouton, pastille, message d'erreur, indicateur de chargement.
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleProp, Text, TextProps, TextStyle, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleProp, Text, TextInput, TextInputProps, TextProps, TextStyle, View, ViewStyle } from 'react-native';
+import { router } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { colors, fonts, radius } from '@/lib/theme';
 import { useSession } from '@/lib/session';
 
@@ -95,3 +97,44 @@ export function ErrorBox({ message, onRetry }: { message?: string; onRetry?: () 
 
 export const screenStyle: ViewStyle = { flex: 1, backgroundColor: colors.bg };
 export const titleStyle: TextStyle = { fontFamily: fonts.extrabold, fontSize: 24, color: colors.text };
+
+/** Carte arrondie de la maquette (fond « panel », bordure fine). */
+export function Panel({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 10 }, style]}>{children}</View>;
+}
+
+/** Petit titre de section en capitales (comme sur l'écran Compte). */
+export function Eyebrow({ children }: { children: string }) {
+  return <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{children}</Txt>;
+}
+
+/** Champ de saisie : texte aligné selon la langue (arabe : à droite). */
+export function Field({ label, style, ...rest }: TextInputProps & { label: string }) {
+  const { isRTL } = useSession();
+  return (
+    <TextInput
+      accessibilityLabel={label}
+      placeholder={label}
+      placeholderTextColor={colors.muted}
+      {...rest}
+      style={[{
+        minHeight: 50, borderRadius: radius.input, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel2,
+        paddingHorizontal: 16, paddingVertical: 12, color: colors.text, fontFamily: fonts.medium, fontSize: 15,
+        textAlign: isRTL ? 'right' : 'left',
+      }, style]}
+    />
+  );
+}
+
+/** En-tête des écrans ouverts par-dessus les onglets : retour + titre. */
+export function ScreenHeader({ title }: { title: string }) {
+  const { t, isRTL } = useSession();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 10 }}>
+      <IconButton label={t('common.close')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+        <Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} />
+      </IconButton>
+      <Txt weight="extrabold" size={18} numberOfLines={1} style={{ flex: 1 }}>{title}</Txt>
+    </View>
+  );
+}

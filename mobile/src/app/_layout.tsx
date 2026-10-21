@@ -30,6 +30,9 @@ function Shell() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="talk/[id]" />
+        <Stack.Screen name="list/[id]" />
+        <Stack.Screen name="quiz/[id]" />
+        <Stack.Screen name="practice/[id]" />
       </Stack>
     </>
   );

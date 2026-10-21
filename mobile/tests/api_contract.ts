@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 import { ApiError, createApi } from '../src/lib/api';
 import { pickSource } from '../src/lib/playback';
 import { ProgressTracker } from '../src/lib/progress';
-import type { Card, Category, Home, Insights, Talk, User, BillingStatus } from '../src/lib/types';
+import { canCommit, commitBody, isLearningRequired, submitBody } from '../src/lib/learn';
+import type {
+  Card, Category, Home, Insights, Talk, User, BillingStatus, ListsResponse, ListDetail, QuizData, QuizResult, PracticeTalk,
+  Commitment, PracticeMine, RevisionResponse, LearningResponse, QuizTodoCard,
+} from '../src/lib/types';
 
 const URL_ = process.env.API_TEST_URL;
 if (!URL_) { console.log('API_TEST_URL absent : essai ignoré'); process.exit(0); }
@@ -94,6 +98,94 @@ async function main() {
   // --- abonnement (lecture seule) ---
   const b = await api.get<BillingStatus>('/billing/status');
   assert.equal(typeof b.active, 'boolean'); step('GET /billing/status : actif = ' + b.active);
+
+  // --- tranche 2a : listes personnelles ---
+  const created1 = await api.post<{ id: string; title: string; items: number }>('/me/lists', { title: 'Ma liste de test' });
+  assert.equal(created1.items, 0);
+  await api.put(`/me/lists/${created1.id}/items/${talkId}`);
+  const inList = await api.get<string[]>(`/me/lists/containing/${talkId}`);
+  assert.deepEqual(inList, [created1.id]);
+  const detail = await api.get<ListDetail>(`/me/lists/${created1.id}`);
+  assert.equal(detail.talks.length, 1); assert.equal(detail.talks[0].id, talkId);
+  const all = await api.get<ListsResponse>('/me/lists');
+  assert.equal(all.lists.find((l) => l.id === created1.id)?.items, 1); assert.ok(all.limit >= 1);
+  step('listes : création, ajout, « contient », détail, compteur');
+  await api.del(`/me/lists/${created1.id}/items/${talkId}`);
+  assert.equal((await api.get<ListDetail>(`/me/lists/${created1.id}`)).talks.length, 0);
+  await api.del(`/me/lists/${created1.id}`);
+  await assert.rejects(api.get(`/me/lists/${created1.id}`), (e: ApiError) => e.status === 404); step('listes : retrait de la conférence puis suppression');
+
+  // --- tranche 2a : quiz et mise en pratique (contenu créé par l'administrateur) ---
+  const qids: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const q = await adminApi.post<{ id: string }>(`/talks/${talkId}/studio/quiz/questions`, {
+      question: `Question de test numéro ${i + 1} ?`, options: ['Bonne réponse', 'Mauvaise A', 'Mauvaise B', 'Mauvaise C'], correctIndex: 0,
+      explanation: `Parce que l'intervenant le dit (${i + 1}).`, evidenceMs: 1000 * (i + 1),
+    });
+    await adminApi.patch(`/studio/quiz/questions/${q.id}`, { status: 'approved' });
+    qids.push(q.id);
+  }
+  const sids: string[] = [];
+  for (let i = 0; i < 2; i++) {
+    const sg = await adminApi.post<{ id: string }>(`/talks/${talkId}/studio/practice/suggestions`, { text: `Action de test numéro ${i + 1} à faire`, size: i + 1 });
+    await adminApi.patch(`/studio/practice/suggestions/${sg.id}`, { status: 'approved' });
+    sids.push(sg.id);
+  }
+  step('contenu de test : 3 questions de quiz et 2 propositions d’action validées (API Studio)');
+
+  const quiz = await api.get<QuizData>(`/talks/${talkId}/quiz`);
+  assert.equal(quiz.questions.length, 3); assert.ok(quiz.passPercent > 0);
+  assert.ok(!JSON.stringify(quiz).includes('correctIndex'), 'les bonnes réponses ne sont pas envoyées avant la validation');
+  assert.ok(quiz.questions.every((q) => q.options.length >= 2));
+  step('GET /talks/:id/quiz : 3 questions, sans les bonnes réponses');
+  const wrong = await api.post<QuizResult>(`/talks/${talkId}/quiz/submit`, submitBody(quiz.questions, Object.fromEntries(quiz.questions.map((q) => [q.id, 3]))));
+  assert.equal(wrong.passed, false); assert.equal(wrong.percent, 0); assert.equal(wrong.saved, true); assert.equal(wrong.learning, null);
+  assert.ok(wrong.results.every((r) => r.correct === false && r.correctIndex === 0 && !!r.explanation));
+  const right = await api.post<QuizResult>(`/talks/${talkId}/quiz/submit`, submitBody(quiz.questions, Object.fromEntries(quiz.questions.map((q) => [q.id, 0]))));
+  assert.equal(right.passed, true); assert.equal(right.percent, 100); assert.equal(right.best, 100);
+  step('POST /quiz/submit : tout faux → 0 % (corrections), tout juste → 100 % réussi, enregistré');
+  const guestApi = createApi({ baseUrl: URL_, getToken: () => null });
+  const g = await guestApi.post<QuizResult>(`/talks/${talkId}/quiz/submit`, submitBody(quiz.questions, { [quiz.questions[0].id]: 0 }));
+  assert.equal(g.saved, false); assert.equal(g.score, 1); step('quiz en visiteur : corrigé mais non enregistré (saved = false)');
+  const todo = await api.get<QuizTodoCard[]>('/me/quiz/todo');
+  assert.ok(Array.isArray(todo)); step('GET /me/quiz/todo : ' + todo.length + ' à passer');
+
+  // Membre sans l'offre Apprentissage : 403 « learning_required » partout où c'est réservé.
+  for (const path of ['/me/revision', '/me/learning', '/me/practice']) {
+    await assert.rejects(api.get(path), (e: ApiError) => isLearningRequired(e), path);
+  }
+  const pub = await api.get<PracticeTalk>(`/talks/${talkId}/practice`);
+  assert.equal(pub.suggestions.length, 2); assert.equal(pub.tier, false); assert.equal(pub.signedIn, true); assert.deepEqual(pub.mine, []);
+  await assert.rejects(api.post(`/talks/${talkId}/practice/commitments`, commitBody({ suggestionId: sids[0], text: '', niyya: '', due: null, consent: true, consentGiven: false })), (e: ApiError) => isLearningRequired(e));
+  assert.equal(loggedOut, 0);
+  step('sans offre Apprentissage : /me/revision, /me/learning, /me/practice et « Je m’engage » → 403 learning_required (sans déconnexion)');
+
+  // Compte avec l'offre (administrateur = accès complet) : révision, score, engagements.
+  const rev = await adminApi.get<RevisionResponse>('/me/revision');
+  assert.ok(Array.isArray(rev.items) && typeof rev.total === 'number'); step('GET /me/revision (offre) : ' + rev.items.length + ' à réviser');
+  const aq = await adminApi.get<QuizData>(`/talks/${talkId}/quiz`);
+  const ar = await adminApi.post<QuizResult>(`/talks/${talkId}/quiz/submit`, submitBody(aq.questions, Object.fromEntries(aq.questions.map((q) => [q.id, 0]))));
+  assert.ok(ar.learning && ar.learning.newBadges.includes('first_quiz'), 'premier quiz → badge first_quiz');
+  const learn = await adminApi.get<LearningResponse>('/me/learning');
+  assert.equal(learn.badges.length, 8); assert.ok(learn.score >= 1); assert.ok(learn.badges.find((b) => b.id === 'first_quiz')?.earned);
+  step('quiz (offre) : score et badge « first_quiz » gagné ; GET /me/learning : 8 badges, score ' + learn.score);
+
+  await assert.rejects(adminApi.post(`/talks/${talkId}/practice/commitments`, { suggestionId: sids[0], niyya: '', due: null }), (e: ApiError) => e.status === 409 && e.code === 'consent_required');
+  assert.equal(canCommit({ suggestionId: sids[0], text: '', consent: false, consentGiven: false }), false);
+  const com = await adminApi.post<Commitment>(`/talks/${talkId}/practice/commitments`, commitBody({ suggestionId: sids[0], text: '', niyya: 'Pour progresser', due: 'week', consent: true, consentGiven: false }));
+  assert.equal(com.status, 'todo'); assert.equal(com.niyya, 'Pour progresser'); assert.ok(com.text.startsWith('Action de test')); assert.ok(com.dueOn);
+  const own = await adminApi.post<Commitment>(`/talks/${talkId}/practice/commitments`, commitBody({ suggestionId: null, text: ' Ma propre action ', niyya: '', due: null, consent: false, consentGiven: true }));
+  assert.equal(own.text, 'Ma propre action'); assert.equal(own.dueOn, null);
+  step('engagements : accord exigé (409), proposition + intention + échéance, texte libre');
+  const pub2 = await adminApi.get<PracticeTalk>(`/talks/${talkId}/practice`);
+  assert.equal(pub2.tier, true); assert.equal(pub2.consent, true); assert.equal(pub2.mine.length, 2);
+  const upd = await adminApi.patch<Commitment>(`/me/practice/${com.id}`, { status: 'done' });
+  assert.equal(upd.status, 'done'); assert.ok(upd.doneAt);
+  const myPractice = await adminApi.get<PracticeMine>('/me/practice');
+  assert.equal(myPractice.counts.done, 1); assert.equal(myPractice.counts.todo, 1); assert.equal(myPractice.items.length, 2);
+  step('PATCH /me/practice/:id (statut « fait ») ; GET /me/practice : compteurs fait 1 / à faire 1');
+  await adminApi.del(`/me/practice/${com.id}`); await adminApi.del(`/me/practice/${own.id}`);
+  assert.equal((await adminApi.get<PracticeMine>('/me/practice')).items.length, 0); step('nettoyage : engagements supprimés');
 
   // --- session expirée ---
   token = 'jeton.invalide';

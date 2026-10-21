@@ -92,3 +92,11 @@ test('réponse non JSON en erreur : message HTTP par défaut', async () => {
   const api = createApi({ baseUrl: 'https://a', getToken: () => null, fetchImpl: impl });
   await assert.rejects(api.get('/home'), (e: ApiError) => e.status === 502 && e.message === 'HTTP 502');
 });
+
+test('PATCH : méthode et corps JSON (changer le statut d’un engagement)', async () => {
+  const f = fakeFetch([{ status: 200, body: { status: 'done' } }]);
+  const api = createApi({ baseUrl: 'https://a', getToken: () => 'tok', fetchImpl: f.impl });
+  assert.deepEqual(await api.patch('/me/practice/1', { status: 'done' }), { status: 'done' });
+  assert.equal(f.calls[0].init.method, 'PATCH');
+  assert.equal(f.calls[0].init.body, JSON.stringify({ status: 'done' }));
+});

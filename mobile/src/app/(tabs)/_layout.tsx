@@ -1,4 +1,4 @@
-// Barre de navigation du bas : Accueil, Conférences, Compte (Apprendre et Bibliothèque arrivent à la tranche 2).
+// Barre de navigation du bas : Accueil, Conférences, Apprendre, Bibliothèque, Compte.
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -26,6 +26,8 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color as string} /> }} />
       <Tabs.Screen name="talks" options={{ title: t('tabs.talks'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color as string} /> }} />
       <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color as string} /> }} />
     </Tabs>
   );
