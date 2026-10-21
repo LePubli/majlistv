@@ -30,11 +30,11 @@ INFRASTRUCTURE (NE PAS SE TROMPER)
 - Base : PostgreSQL en Docker App DockPanel (postgres-majlisstv).
 - Domaines : site https://majlisstv.le-publicitaire.fr ; API https://api-majlisstv.le-publicitaire.fr ;
   stockage S3 https://s3-majlisstv.le-publicitaire.fr (bucket majlis-videos, région garage).
-- Ports hôte : 7000 = API Mejliss ; 7010 = web Mejliss ; 7001 = trimaint_frontend (NE PAS TOUCHER).
+- Ports hôte de l'API et du site : choisis par DockPanel (vhosts nginx automatiques) ; 7001 = TriMaint (NE PAS TOUCHER).
 - Ne jamais mettre de docker-compose.yml à la racine du dépôt (DockPanel passerait en mode Compose).
 - Après chaque redéploiement, sur le VPS :
     /root/apply-limits.sh
-    grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
     nginx -t && systemctl reload nginx
 
 WORKFLOW DE MISE À JOUR D'EPOK (sans terminal pour git/npm)
@@ -139,7 +139,7 @@ Commence par me proposer le plan de l'étape suivante (point 1) et attends mon �
 | API | https://api-majlisstv.le-publicitaire.fr (`/health` → `{"status":"ok"}`) |
 | Stockage | https://s3-majlisstv.le-publicitaire.fr — bucket `majlis-videos` |
 | Déploiements DockPanel | `majlistv-api`, `majlistv-web`, `majlistv-worker`, `majlistv-storage`, transcriber, translator, search |
-| Ports hôte | 7000 API · 7010 web · 7001 TriMaint (ne pas toucher) |
+| Ports hôte | API et site : choisis par DockPanel (43435 et 34455 le 21/10) · 7001 TriMaint (ne pas toucher) |
 | Dernière migration | `046_channel_images.sql` |
 | Logs | `docker logs --tail 50 dockpanel-git-majlistv-api` (même forme pour `-web`, `-worker`) |
 | Maquette | https://claude.ai/artifact/6f1jq8YPiFRh5MY44HeUfA |
