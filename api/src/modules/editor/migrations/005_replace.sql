@@ -57,4 +57,4 @@ CREATE TABLE IF NOT EXISTS editor_replace_segments (
 -- Studio → Activité : la préparation d'une nouvelle version (file « replace ») se met en pause et passe en priorité comme les autres.
 ALTER TABLE activity_controls DROP CONSTRAINT IF EXISTS activity_controls_queue_check;
 ALTER TABLE activity_controls ADD CONSTRAINT activity_controls_queue_check
-  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace'));
+  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'import'));

@@ -44,4 +44,4 @@ CREATE TABLE dub_phrase_speakers (
 -- La file « speakers » apparaît dans Studio → Activité (pause, priorité, annulation).
 ALTER TABLE activity_controls DROP CONSTRAINT IF EXISTS activity_controls_queue_check;
 ALTER TABLE activity_controls ADD CONSTRAINT activity_controls_queue_check
-  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers'));
+  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers', 'import'));

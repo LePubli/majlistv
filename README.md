@@ -4861,3 +4861,49 @@ Une nouvelle détection **remplace** noms, voix choisies et corrections (une con
 ### Ce qui a été testé (21/10) — et ce qui ne l'a pas été
 Testé : calcul de regroupement (voix factices, 1800 phrases), **vrai modèle** sur 3 voix de synthèse (espeak-ng, flite) : 91/91 paires de phrases bien rapprochées ou séparées ; hauteur F0 ; ~60 contrôles API ; service de doublage avec faux moteurs (un son par voix : les phrases sortent avec la bonne voix et la bonne hauteur, ±4 demi-tons mesurés par analyse du son) ; écran dans Chromium (1440, 820, 390 px, arabe RTL, clavier).
 **Non testé** : conférences réelles (voix humaines, bruit de salle, arabe, chevauchements) ; qualité à l'oreille de rubberband sur la voix convertie ; FFmpeg de l'image de doublage (le moteur est détecté et la méthode de secours existe) ; télécharger le modèle depuis le VPS. → étape F.
+
+## Étape Import — copier une vidéo externe chez nous (21/10)
+
+### Ce que ça fait
+- Une vidéo qui vit ailleurs (**YouTube, Vimeo, archive.org, n'importe quel site contenant une vidéo, ou un lien direct vers un fichier .mp4/.webm/…**) peut être **copiée dans notre stockage Garage**. Elle devient alors une vidéo hébergée comme une vidéo envoyée : lecture HLS multi-qualités, mode audio, éditeur, doublage mixte, extraits 9:16.
+- **Facultatif pour chaque vidéo** : sans copie, la vidéo reste lue depuis sa plateforme (comportement d'avant).
+- **Deux chemins** :
+  - *Nouvelle conférence* (Studio → Nouvelle conférence → coller le lien) : pour YouTube / Vimeo / archive.org, une case « Importer la vidéo chez nous » (facultative) ; pour tout autre site ou lien direct, la copie est obligatoire. La conférence reste invisible (état « importing ») jusqu'à la fin.
+  - *Conférence déjà au catalogue* (YouTube / Vimeo / archive.org) : fiche → carte Traitement → « Importer chez nous ». La conférence reste lisible depuis sa plateforme pendant la copie, puis bascule d'un seul coup en vidéo hébergée.
+- **Garde-fou des droits** : case d'attestation obligatoire (texte versionné « v1 ») + **journal** (Studio → Activité → « Journal des imports » : qui, quand, adresse, texte de la déclaration). Réservé aux organisateurs et administrateurs ; un organisateur ne voit que ses imports, l'administrateur voit tout. La déclaration vaut aussi accord pour la transcription et la traduction.
+- Suivi dans Studio → Activité (files « Téléchargement de la vidéo » et « Conversion de la vidéo importée » : pause, priorité, annulation) ; annulation possible tant que la conversion n'a pas démarré.
+- Réglages (Admin → Paramètres) : `import_max_gb` (8 Go par défaut) et `import_max_height` (1080 p). Fonction désactivable : Admin → Fonctions → « Import de vidéos externes ».
+
+### Comment ça marche
+1. L'API (`POST /talks` avec `importVideo`, ou `POST /talks/:id/import`) vérifie l'adresse (http/https, pas de réseau interne), l'attestation, la place libre du stockage, puis ouvre une demande dans `media_imports` (migration 061).
+2. Le **transcripteur** (`transcriber/src/importer.py`, boucle `media_import_loop`) la prend : contrôle DNS anti-SSRF, téléchargement (archive.org et liens directs : téléchargement direct avec redirections contrôlées ; autres sites : yt-dlp, qualité ≤ `import_max_height`, une seule vidéo), contrôle ffprobe, envoi dans Garage (`talks/<uuid>`).
+3. Le **worker** (`worker/src/importconv.js`) convertit en HLS (`hls/<conférence>/`), puis bascule la conférence (`source='upload'`, prête) dans une transaction.
+4. La suppression d'une conférence efface aussi le fichier copié et les conversions.
+
+### Prérequis
+API (migration `061_media_import.sql`), transcripteur (déjà muni de yt-dlp, boto3, ffprobe), worker (FFmpeg). Place libre : ≥ 2 Go dans le dossier de travail du transcripteur et du worker, et dans Garage (~30 Go au total : une vidéo 1080p d'1 h pèse ~1 à 3 Go + sa version HLS).
+
+### Déploiement (DockPanel + GitHub Desktop)
+Les modifications sont poussées directement sur `main` (LePubli/majlistv). Dans DockPanel → Git Deploy → Redeploy, **dans cet ordre** : **majlistv-api** (migration), **majlistv-web**, **majlistv-worker**, **transcriber**. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+```
+Aucune nouvelle variable obligatoire. Si YouTube refuse (« confirmez que vous n'êtes pas un robot ») : Admin → Paramètres → cookies YouTube (réglage existant).
+
+### Utilisation
+1. Studio → Nouvelle conférence → coller l'adresse (ou une page contenant une vidéo, ou un lien direct) → cocher la déclaration des droits → remplir les informations → Publier.
+2. Ouvrir la fiche : l'avancement s'affiche (téléchargement → envoi → conversion) ; « Annuler l'import » tant que la conversion n'a pas démarré.
+3. Conférence YouTube / Vimeo / archive.org existante : fiche → « Importer chez nous » (cocher la déclaration).
+4. Voir le journal : Studio → Activité, en bas de la liste des tâches.
+
+### Debug
+- Import « en attente » longtemps : le transcripteur traite les demandes une par une, après ses autres tâches ; `docker logs` du transcripteur (lignes `[import …]`). Pause générale ou plage horaire : Studio → Activité.
+- « En attente de conversion » : c'est le worker ; `docker logs` du worker (`[import …]`). Une conversion échouée est retentée une fois, puis la demande passe en échec avec le message.
+- Messages d'erreur : « adresse n'est pas un site public » (réseau interne refusé), « page web, pas un fichier vidéo », « plus que la limite de N Go », « plus assez de place disque », « stockage presque plein ».
+- Requêtes utiles : `SELECT id, status, stage, progress, error FROM media_imports ORDER BY created_at DESC LIMIT 10;`
+
+### Ce qui a été testé (21/10) — et ce qui ne l'a pas été
+Testé : `api/tests/test_media_import.py` (création, refus, droits d'accès, annulation, relance, journal, suppression, fonction désactivée), `transcriber/tests/test_importer.py` (anti-SSRF avec 10 types d'adresses, redirections, taille maximale, annulation, yt-dlp simulé, ffprobe, envoi S3), `api/tests/test_media_import_e2e.py` (de bout en bout avec un serveur vidéo local, le vrai transcripteur et le vrai worker FFmpeg : HLS, audio, bascule, échecs, nettoyage), `web/tests/import_studio.py` (interface en français 1440 px et arabe 390 px).
+**Non testé** : un vrai téléchargement depuis YouTube / Vimeo / un site depuis le VPS (réseau externe indisponible ici ; yt-dlp simulé) → étape F. Limites connues : YouTube bloque souvent les serveurs, et ses conditions d'utilisation interdisent de télécharger une vidéo dont on n'a pas les droits (d'où l'attestation) ; la protection contre l'accès au réseau interne pour yt-dlp contrôle l'adresse de départ et celles des flux choisis (au mieux).

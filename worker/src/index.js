@@ -13,6 +13,7 @@ import { probe, transcode, makeAudio, killCurrent } from './transcode.js';
 import { makeClaim } from './claim.js';
 import { makeRenderClaim, processRender, requeueRunning, killRender } from './render.js';
 import { makeReplaceClaim, processReplace, requeueReplace } from './replace.js';
+import { makeImportClaim, processImport, requeueImport } from './importconv.js';
 import { makeFiles } from './files.js';
 
 const env = (k, d) => process.env[k] ?? d;
@@ -49,6 +50,8 @@ const claim = makeClaim(pool, log);
 const claimRender = makeRenderClaim(pool, log);
 // Étape E4b : nouvelles versions des vidéos publiées (remplacement par un montage, restauration de l'original).
 const claimReplace = makeReplaceClaim(pool, log);
+// Étape Import : vidéos copiées chez nous par le transcripteur (talks/<uuid>), à convertir puis à basculer en vidéo hébergée.
+const claimImport = makeImportClaim(pool, log);
 
 // Fichiers du stockage (téléchargement, envoi d'un dossier, suppression d'un préfixe) : files.js (partagé avec les tests).
 const { download, uploadDir, deletePrefix } = makeFiles(s3, BUCKET);
@@ -167,6 +170,7 @@ async function main() {
       await pool.query(`UPDATE talks SET video_status = 'pending' WHERE video_status = 'processing'`);
       await requeueRunning(pool); // rendus interrompus (redéploiement) : ils repartent du début
       await requeueReplace(pool); // nouvelles versions interrompues : idem
+      await requeueImport(pool); // conversions d'imports interrompues : idem
       break;
     } catch (err) { log('Base pas prête (migration 004 appliquée ?) :', err.message); await sleep(POLL_MS); }
   }
@@ -181,6 +185,15 @@ async function main() {
       if (nv) {
         current = { id: nv.id, replace: true };
         await processReplace({ job: nv, pool, workDir: WORK_DIR, threads: THREADS, log, download, uploadDir, deletePrefix, stopping: () => stopping });
+        current = null;
+        continue;
+      }
+      // Une vidéo copiée chez nous (import) à convertir ?
+      let im;
+      try { im = await claimImport(); } catch (err) { log('Erreur base (import) :', err.message); }
+      if (im) {
+        current = { id: im.id, import: true };
+        await processImport({ job: im, pool, workDir: WORK_DIR, threads: THREADS, log, download, uploadDir, deletePrefix, stopping: () => stopping });
         current = null;
         continue;
       }
@@ -215,6 +228,7 @@ const shutdown = async () => {
   killRender();
   if (current?.render) await requeueRunning(pool);
   if (current?.replace) await requeueReplace(pool);
+  if (current?.import) await requeueImport(pool);
   if (current?.video_ref) await pool.query(`UPDATE talks SET video_status = 'pending' WHERE id = $1`, [current.id]).catch(() => {});
   process.exit(0);
 };

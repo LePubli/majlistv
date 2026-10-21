@@ -49,6 +49,8 @@ export const FEATURES = [
     rules: [{ re: '^/(channels|studio/channels|studio/channel-owners)(/|$)' }] },
   { id: 'shorts', group: 'catalog', label: 'Shorts', hint: 'Extraits verticaux publiés par les chaînes : fil vertical, accueil, page de la chaîne ; l\'espace Kids n\'en montre que pour ses conférences',
     rules: [{ re: '^/(shorts|studio/shorts)(/|$)' }] },
+  { id: 'media_import', group: 'catalog', label: 'Import de vidéos externes', hint: 'Copier chez nous une vidéo YouTube, Vimeo, archive.org ou d\'un autre site (déclaration des droits obligatoire, journal) pour la monter, la doubler et la mettre en extraits',
+    rules: [{ re: '^/(talks/[^/]+/import|studio/imports)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre et alertes par e-mail',
     rules: [{ re: '^/me/notifications(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',

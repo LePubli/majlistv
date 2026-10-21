@@ -77,6 +77,15 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [ ] Hauteur : écouter −2, −1, +1, +2 sur une voix convertie ; noter la plage agréable. Vérifier `result.pitchEngine` = `rubberband` dans l'image du service de doublage (sinon la méthode de secours est utilisée : qualité à juger).
 - [ ] Temps de calcul d'un doublage à plusieurs intervenants (conversion par intervenant) acceptable.
 
+## 9 ter. Import de vidéos externes — registre 51
+- [ ] Migration 061 appliquée (API redéployée) ; transcripteur et worker redéployés (ordre : api → web → worker → transcriber).
+- [ ] Lien direct vers un petit fichier .mp4 public : Studio → Nouvelle conférence → coller le lien → cocher la déclaration → publier ; suivre dans Studio → Activité (téléchargement, conversion) ; la conférence devient lisible, mode audio disponible.
+- [ ] Une conférence archive.org du catalogue → « Importer chez nous » : reste lisible pendant la copie, puis devient hébergée.
+- [ ] Vimeo public, puis YouTube : noter ce qui marche (YouTube peut exiger des cookies : Admin → Paramètres).
+- [ ] Annuler un import en cours ; relancer un import en échec ; vérifier le journal (qui, quand, adresse, déclaration).
+- [ ] Une adresse interne (http://127.0.0.1…, http://garage:3900…) est refusée.
+- [ ] Espace disque du VPS (`df -h`) et stockage Garage après l'import d'une vidéo de 1 h.
+
 ## 10. Après tout
 - [ ] `docker ps` : aucun conteneur en erreur ni redémarrant en boucle.
 - [ ] Charge du VPS partagé acceptable pour Miel & Co et TriMaint (`uptime`, `docker stats --no-stream`).

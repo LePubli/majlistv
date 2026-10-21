@@ -11,4 +11,4 @@ ALTER TABLE face_track_jobs ADD CONSTRAINT face_track_jobs_status_check CHECK (s
 
 ALTER TABLE activity_controls DROP CONSTRAINT IF EXISTS activity_controls_queue_check;
 ALTER TABLE activity_controls ADD CONSTRAINT activity_controls_queue_check
-  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers'));
+  CHECK (queue IN ('video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers', 'import'));

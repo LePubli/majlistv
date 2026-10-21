@@ -8,6 +8,7 @@ import { useApp } from '../../../components/Providers';
 import useMyTalks from '../../../components/useMyTalks';
 import TalkSteps from '../../../components/TalkSteps';
 import { taskName } from '../../../lib/activity';
+import { importLabel } from '../../../components/ImportVideoPanel';
 
 const SECTIONS = [['running', 'acRunning'], ['waiting', 'acWaiting'], ['paused', 'acPaused'], ['failed', 'acFailed']];
 
@@ -45,6 +46,39 @@ function Task({ x, can, onAct, busy, pos }) {
         )}
       </div>
     </li>
+  );
+}
+
+// Journal des imports (étape Import) : qui a copié quelle vidéo, quand, depuis quelle adresse, avec quelle déclaration des droits.
+function ImportJournal() {
+  const { t, locale, call } = useApp();
+  const [list, setList] = useState(null);
+  useEffect(() => { call('/studio/imports').then((r) => setList(r.ok ? r.data.imports : false)); }, [call]);
+  if (list === false || list === null) return null; // fonction désactivée ou chargement
+  const when = (x) => new Date(x).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return (
+    <section aria-labelledby="ac-imports" className="ac-section">
+      <h2 id="ac-imports" className="sd-h2">{t('impJournal')} <span className="ac-count">{list.length}</span></h2>
+      <p className="meta small">{t('impJournalHelp')}</p>
+      {list.length === 0 && <p className="meta">{t('impJournalEmpty')}</p>}
+      <ul className="ac-list">
+        {list.map((m) => (
+          <li key={m.id} className={`ac-task ${m.status === 'failed' ? 'failed' : ''}`}>
+            <div className="ac-main">
+              <Link href={`/studio/${m.talkId}`} className="ac-title" dir="auto">{m.title}</Link>
+              <small className="meta" dir="auto">{m.sourceUrl}</small>
+              <small className="meta">{when(m.createdAt)} · {t('impBy')} {m.requestedByName}</small>
+              {m.error && <small className="error" dir="auto">{m.error}</small>}
+              <details>
+                <summary className="meta small">{t('impDeclaration')} ({when(m.rightsConfirmedAt)})</summary>
+                <small className="meta" dir="auto">{m.rightsText}</small>
+              </details>
+            </div>
+            <div className="ac-side"><span className={`ac-state ${m.status}`}>{m.active ? importLabel(m, t) : t(`impSt_${m.status}`)}</span></div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -133,6 +167,7 @@ export default function StudioActivity() {
           </section>
         );
       })}
+      <ImportJournal />
       <section aria-labelledby="act-recent" className="ac-section">
         <h2 id="act-recent" className="sd-h2">{t('sdActRecent')}</h2>
         {loaded && recent.length === 0 && <p className="meta">{t('sdLastNone')}</p>}

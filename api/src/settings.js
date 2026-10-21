@@ -222,6 +222,11 @@ export const FIELDS = [
     help: 'Contenu d\'un fichier cookies.txt (format Netscape) exporté depuis un navigateur connecté à un compte Google dédié. Laisser vide si tout fonctionne.' },
   { key: 'ytdlp_proxy', group: 'external', type: 'secret', label: 'Proxy de sortie (facultatif)', env: 'YTDLP_PROXY', help: 'Ex. http://utilisateur:motdepasse@proxy:port. Pour contourner un blocage par adresse IP.' },
   { key: 'import_max_videos', group: 'external', type: 'number', label: 'Nombre maximum de vidéos par import de playlist ou de chaîne', env: 'IMPORT_MAX_VIDEOS', def: '200', min: 1, max: 2000 },
+  // Étape Import : copie d'une vidéo externe chez nous (lus par le transcripteur, qui télécharge).
+  { key: 'import_max_gb', group: 'external', type: 'number', label: 'Taille maximale d\'une vidéo importée (Go)', env: 'IMPORT_MAX_GB', def: '8', min: 1, max: 100,
+    help: 'Au-delà, l\'import est arrêté. Une heure de conférence en 1080p pèse en général 1 à 3 Go.' },
+  { key: 'import_max_height', group: 'external', type: 'number', label: 'Qualité maximale importée (hauteur en pixels)', env: 'IMPORT_MAX_HEIGHT', def: '1080', min: 360, max: 2160,
+    help: 'On télécharge la meilleure qualité qui ne dépasse pas cette hauteur (1080 = Full HD, la qualité maximale servie aux spectateurs).' },
 
   { key: 'meili_url', group: 'search', type: 'url', label: 'Adresse du serveur Meilisearch', env: 'MEILI_URL',
     help: 'Vide = recherche simple intégrée (sans tolérance aux fautes). Sur le VPS : http://IP_DU_CONTENEUR:3000 (docker inspect du service majlistv-search, comme pour la base de données).' },

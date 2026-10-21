@@ -59,7 +59,7 @@ export default async function dashboardRoutes(app) {
               FROM subscriptions GROUP BY 1, 2, 3`),
       one(`SELECT count(*)::int AS total,
                   count(*) FILTER (WHERE video_status = 'ready' AND publication = 'published' AND review_status IN ('none', 'approved'))::int AS live,
-                  count(*) FILTER (WHERE video_status IN ('pending', 'processing'))::int AS processing,
+                  count(*) FILTER (WHERE video_status IN ('pending', 'processing', 'importing'))::int AS processing,
                   count(*) FILTER (WHERE video_status = 'failed')::int AS failed,
                   count(*) FILTER (WHERE publication = 'draft')::int AS draft,
                   count(*) FILTER (WHERE publication = 'scheduled')::int AS scheduled,

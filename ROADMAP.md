@@ -362,3 +362,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape D3c (21/10) — intervenants et hauteur de voix
 - Détection des intervenants par la voix (transcripteur, modèle libre sherpa-onnx), voix + hauteur (±4 demi-tons) par intervenant, corrections de phrases, propositions de voix, aperçu rapide d'une hauteur, file dans Studio → Activité. Module doublage 0.10.0 (migration 006), service de doublage 0.5.0. Voir README « Étape D3c ». Reste : essais réels (étape F). Ordre : F → 22 (applications) → Créateur.
+
+## Étape Import (21/10) — copier une vidéo externe chez nous
+- Une vidéo YouTube / Vimeo / archive.org (ou de n'importe quel site, ou un lien direct) peut être copiée dans Garage et devient une vidéo hébergée (HLS, mode audio, éditeur, doublage mixte, shorts 9:16). Facultatif pour chaque vidéo ; case d'attestation des droits + journal (Studio → Activité). Organisateurs et administrateurs. Migration 061 (table `media_imports`), fonction `media_import` (Admin → Fonctions), réglages `import_max_gb` et `import_max_height`. Voir README « Étape Import ». Reste : essais réels sur le VPS (étape F). Aide en images / module d'aide avec moteur de recherche : plus tard (registre n°52). Ordre : F → 22 (applications) → Créateur.

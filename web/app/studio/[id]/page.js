@@ -10,6 +10,7 @@ import { talkSteps, talkKind, talkProgress, sourceLabel } from '../../../lib/tal
 import TalkEditor from '../../../components/TalkEditor';
 import { hasWebModule } from '../../../lib/modules';
 import Timeline from '../../../components/Timeline';
+import ImportVideoPanel from '../../../components/ImportVideoPanel';
 
 // Encart « Quiz » : état et lien vers l'onglet de gestion.
 function QuizPanel({ id, t, call }) {
@@ -49,8 +50,10 @@ export default function ManageTalk() {
   const router = useRouter();
   const [x, setX] = useState(undefined);
   const [msg, setMsg] = useState(null);
+  const [imp, setImp] = useState(null); // dernière demande d'import de la conférence (étape Import)
   const load = useCallback(() => call('/me/talks').then((r) => { if (r.ok) setX(r.data.find((d) => d.id === id) || null); }), [call, id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { call(`/talks/${id}/import`).then((r) => r.ok && setImp(r.data.import || null)); }, [call, id]);
 
   const steps = x ? talkSteps(x) : null;
   const kind = x ? talkKind(x, steps) : null;
@@ -128,9 +131,12 @@ export default function ManageTalk() {
         <Row letter="V" state={steps.video} title={t('stepVideo')}>
           <p className="meta small">
             {external ? t('videoExternal').replace('{s}', sourceLabel(x.source))
+              : x.status === 'importing' ? t('impRunning')
+              : steps.video === 'err' && imp?.newTalk ? `${t('impFailed')}${x.videoError ? ` : ${x.videoError}` : ''}`
               : steps.video === 'err' ? <>{t('convFailed')}{x.videoError ? ` : ${x.videoError}` : ''} <button className="link u" onClick={reconvert}>{t('retryConv')}</button></>
               : steps.video === 'run' ? `${t('converting')}${steps.videoPct != null ? ` ${steps.videoPct} %` : ''}` : t('videoReady')}
           </p>
+          <ImportVideoPanel talk={x} imp={imp} setImp={setImp} reload={load} t={t} call={call} sourceName={sourceLabel(x.source)} />
         </Row>
         <Row letter="T" state={steps.transcript} title={t('stepTranscript')}>
           {external && !x.rightsConfirmed ? (

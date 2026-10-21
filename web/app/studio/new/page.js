@@ -1,6 +1,7 @@
 'use client';
 // Studio → Nouvelle conférence, en 2 étapes :
-//   1. Vidéo : glisser-déposer un fichier (l'envoi démarre aussitôt) ou coller un lien YouTube / Vimeo / archive.org.
+//   1. Vidéo : glisser-déposer un fichier (l'envoi démarre aussitôt) ou coller un lien (YouTube / Vimeo / archive.org, ou tout autre site / lien direct :
+//      dans ce dernier cas la vidéo est copiée chez nous — étape Import ; pour YouTube / Vimeo / archive.org la copie est une option).
 //   2. Informations : titre, intervenant, langue, catégorie, accès… avec l'aperçu de la carte telle qu'elle apparaîtra.
 // Pendant l'envoi du fichier, on remplit déjà les informations ; « Publier » attend la fin de l'envoi.
 import { useEffect, useRef, useState } from 'react';
@@ -32,6 +33,8 @@ function parseLink(raw) {
   if (host === 'archive.org') return /^\/details\/[^/]+/.test(u.pathname) ? { source: 'archive', ref: u.pathname.split('/')[2] } : null;
   return null;
 }
+// Adresse http(s) quelconque (l'API refuse les adresses privées et refait tous les contrôles).
+const isWebUrl = (raw) => { try { const u = new URL(raw.trim()); return ['http:', 'https:'].includes(u.protocol) && u.hostname.includes('.'); } catch { return false; } };
 const cleanName = (name) => name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 // Image de la vidéo envoyée (une image prise à 2 s), uniquement pour l'aperçu local.
@@ -73,6 +76,8 @@ export default function NewTalk() {
   const fileInput = useRef(null);
   const parsed = link ? parseLink(link) : null;
   const mode = file ? 'file' : 'link';
+  const [importIt, setImportIt] = useState(false); // copier la vidéo chez nous (facultatif pour YouTube / Vimeo / archive.org)
+  const wantImport = mode === 'link' && (importIt || (Boolean(link) && !parsed));
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   const patch = (o) => setF((x) => ({ ...x, ...o }));
@@ -98,25 +103,27 @@ export default function NewTalk() {
   };
   const useLink = (e) => {
     e.preventDefault();
-    if (!parsed) { setLinkErr(t('nwBadLink')); return; }
-    setLinkErr(''); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setStep(2);
+    if (!parsed && !isWebUrl(link)) { setLinkErr(t('impBadUrl')); return; }
+    setLinkErr(''); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setImportIt(false); setStep(2);
   };
   const back = () => { token.current++; setStep(1); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setErr(''); };
 
   const toggleLang = (code) => patch({ translateTo: f.translateTo.includes(code) ? f.translateTo.filter((c) => c !== code) : [...f.translateTo, code] });
-  const canTranslate = mode === 'file' || f.rightsConfirmed;
+  const canTranslate = mode === 'file' || f.rightsConfirmed; // importer = déclarer les droits : la transcription et la traduction sont alors permises
 
   const submit = async (e, publication = 'published') => {
     e?.preventDefault();
     if (saving || (mode === 'file' && up.state !== 'done')) return;
-    setErr(''); setSaving(true);
+    setErr('');
+    if (wantImport && !f.rightsConfirmed) { setErr(t('impRightsNeeded')); return; }
+    setSaving(true);
     const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, formatId: f.formatId ? Number(f.formatId) : undefined, level: f.level || undefined };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
-    if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else body.videoUrl = link.trim();
+    if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else { body.videoUrl = link.trim(); if (wantImport) body.importVideo = true; }
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
     if (r.ok) { router.push(`/studio/${r.data.id}`); return; }
     setSaving(false);
-    setErr(r.status === 409 ? t('errDuplicate') : r.data?.code === 'archive' ? r.data.error : t('errVideo'));
+    setErr(r.data?.code === 'duplicate' || (r.status === 409 && !r.data?.code) ? t('errDuplicate') : ['archive', 'private_url', 'bad_url', 'storage_full', 'feature_off', 'rights_required'].includes(r.data?.code) ? r.data.error : t('errVideo'));
   };
 
   // Aperçu de la carte (même rendu que le catalogue).
@@ -158,6 +165,7 @@ export default function NewTalk() {
             </label>
           </form>
           {linkErr && <p className="error">{linkErr}</p>}
+          <p className="meta small">{t('impAnyLink')}</p>
           <ImportPanel cats={cats} onImported={() => router.push('/studio/contents')} />
         </>
       )}
@@ -239,8 +247,15 @@ export default function NewTalk() {
               <span className="meta small">{t('lvHelp')}</span>
             </div>
 
+            {mode === 'link' && parsed && (
+              <div className="fld">
+                <label className="check"><input type="checkbox" checked={importIt} onChange={(e) => setImportIt(e.target.checked)} /> {t('impNewLabel')}</label>
+                {!importIt && <span className="meta small">{t('impNewHelp')}</span>}
+              </div>
+            )}
+            {wantImport && !parsed && <p className="meta small">{t('impNewForced')}</p>}
             {mode === 'link' && (
-              <label className="check rights"><input type="checkbox" checked={f.rightsConfirmed} onChange={(e) => patch({ rightsConfirmed: e.target.checked })} /> {t('rightsConfirm')}</label>
+              <label className="check rights"><input type="checkbox" checked={f.rightsConfirmed} onChange={(e) => patch({ rightsConfirmed: e.target.checked })} /> {wantImport ? t('impRights') : t('rightsConfirm')}</label>
             )}
             {canTranslate && (
               <fieldset className="langs">

@@ -25,6 +25,7 @@ from botocore.config import Config
 
 from settings import Settings
 import external
+import importer
 import align
 import speakers
 
@@ -803,6 +804,138 @@ def import_loop():
             time.sleep(10)
 
 
+# --- Étape Import : copie chez nous d'une vidéo externe (fil séparé, sa propre connexion à la base) ---------------------------------
+# Le fil télécharge la vidéo (yt-dlp, archive.org, lien direct), vérifie qu'elle est lisible, l'envoie dans Garage (talks/<uuid>),
+# puis passe la demande à « converting » : le worker la convertit en HLS et bascule la conférence (voir worker/src/importconv.js).
+MEDIA_MAX_ATTEMPTS = 3
+
+
+def claim_media_import(conn, use_controls):
+    cond = "AND NOT activity_paused('import', id::text)" if use_controls else ""
+    order = "activity_priority('import', id::text) DESC, created_at" if use_controls else "created_at"
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            f"""UPDATE media_imports SET status = 'downloading', stage = 'download', progress = 0, error = NULL, attempts = attempts + 1, updated_at = now()
+               WHERE id = (SELECT id FROM media_imports
+                           WHERE status = 'pending' AND NOT cancel_requested AND attempts < {MEDIA_MAX_ATTEMPTS}
+                             AND updated_at < now() - make_interval(secs => 30 * attempts) {cond}
+                           ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
+               RETURNING id, talk_id, source_url, origin, archive_file, object_key, new_talk, attempts"""
+        )
+        return cur.fetchone()
+
+
+def run_media_import(job, conn, conf):
+    """Une demande d'import : téléchargement, contrôle, envoi dans Garage. Les erreurs sont notées sur la demande (jamais levées)."""
+    jid = str(job["id"])
+    work = os.path.join(WORK_DIR, "mimport-" + jid)
+    max_bytes = max(1, conf.get_int("import_max_gb", "IMPORT_MAX_GB", 8)) * 1024 ** 3
+    max_height = max(360, conf.get_int("import_max_height", "IMPORT_MAX_HEIGHT", 1080))
+    last = {"t": 0.0}
+
+    def q(sql, params=None, fetch=False):
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return cur.fetchall() if fetch else cur.rowcount
+
+    def touch(stage, done, total):
+        if stopping:
+            raise importer.Stopped()
+        now = time.time()
+        if now - last["t"] < 3:
+            return
+        last["t"] = now
+        pct = min(99, int(done * 100 / total)) if total else 0
+        rows = q("UPDATE media_imports SET stage = %s, progress = %s, bytes = %s, updated_at = now() WHERE id = %s AND status = 'downloading' RETURNING cancel_requested",
+                 (stage, pct, done, job["id"]), fetch=True)
+        if not rows or rows[0]["cancel_requested"]:  # annulée, ou conférence supprimée (la demande est effacée avec elle)
+            raise importer.Canceled()
+
+    def drop_object():
+        try:
+            s3.delete_object(Bucket=BUCKET, Key=job["object_key"])
+        except Exception:  # noqa: BLE001
+            pass
+
+    try:
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work)
+        if shutil.disk_usage(work).free < 2 * 1024 ** 3:
+            raise RuntimeError("Plus assez de place disque sur le serveur de conversion (moins de 2 Go libres)")
+        log(f"[import {jid}] {job['origin']} : {job['source_url']}")
+        path = importer.fetch(job, work, external_options(work, conf), max_bytes, max_height, lambda d, t: touch("download", d, t))
+        info = importer.check_video(path)
+        size = os.path.getsize(path)
+        if size > max_bytes:
+            raise importer.TooBig(f"La vidéo pèse {round(size / 1024 ** 3, 1)} Go : plus que la limite de {round(max_bytes / 1024 ** 3)} Go.")
+        log(f"[import {jid}] téléchargée : {round(size / 1024 ** 2)} Mo, {round(info['duration'])} s, {info['height']}p : envoi dans le stockage")
+        last["t"] = 0.0
+        importer.upload(s3, BUCKET, path, job["object_key"], lambda d, t: touch("upload", d, t))
+        ok = q("UPDATE media_imports SET status = 'converting', stage = NULL, progress = 0, bytes = %s, error = NULL, updated_at = now() "
+               "WHERE id = %s AND status = 'downloading' AND NOT cancel_requested RETURNING id", (size, job["id"]), fetch=True)
+        if not ok:
+            raise importer.Canceled()
+        log(f"[import {jid}] fichier dans le stockage : en attente de conversion par le worker")
+    except importer.Stopped:
+        drop_object()
+        q("UPDATE media_imports SET status = 'pending', stage = NULL, progress = 0, attempts = GREATEST(attempts - 1, 0), updated_at = now() WHERE id = %s AND status = 'downloading'", (job["id"],))
+    except importer.Canceled:
+        drop_object()
+        q("UPDATE media_imports SET status = 'canceled', stage = NULL, cancel_requested = false, finished_at = now(), updated_at = now() WHERE id = %s AND status = 'downloading'", (job["id"],))
+        if job["new_talk"]:
+            q("UPDATE talks SET video_status = 'failed', video_error = 'Import annulé' WHERE id = %s AND video_status = 'importing'", (job["talk_id"],))
+        log(f"[import {jid}] annulé")
+    except Exception as err:  # noqa: BLE001
+        final = job["attempts"] >= MEDIA_MAX_ATTEMPTS or isinstance(err, external.Blocked)
+        message = str(err)[:800]
+        log(f"[import {jid}] échec ({job['attempts']}/{MEDIA_MAX_ATTEMPTS}) : {message}")
+        drop_object()
+        q("UPDATE media_imports SET status = %s, stage = NULL, progress = 0, error = %s, finished_at = CASE WHEN %s THEN now() ELSE NULL END, updated_at = now() "
+          "WHERE id = %s AND status = 'downloading'", ("failed" if final else "pending", message, final, job["id"]))
+        if final and job["new_talk"]:
+            q("UPDATE talks SET video_status = 'failed', video_error = %s WHERE id = %s AND video_status = 'importing'", (message[:500], job["talk_id"]))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def media_import_loop():
+    conn = None
+    use_controls = True
+
+    def local_query(sql, params=None, fetch=False):
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return cur.fetchall() if fetch else cur.rowcount
+
+    conf = Settings(local_query, lambda *a: log(*a))
+    requeued = False
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+            if not requeued:  # un redéploiement a interrompu un téléchargement : il repart du début
+                local_query("UPDATE media_imports SET status = 'pending', stage = NULL, progress = 0, updated_at = now() WHERE status = 'downloading'")
+                requeued = True
+            conf.refresh()
+            try:
+                job = claim_media_import(conn, use_controls)
+            except psycopg2.errors.UndefinedFunction:
+                use_controls = False
+                log("Imports : pause et priorité indisponibles (migration 055 de l'API absente) : file simple")
+                continue
+            if not job:
+                time.sleep(5)
+                continue
+            run_media_import(job, conn, conf)
+        except psycopg2.errors.UndefinedTable:
+            time.sleep(30)  # migration 061 de l'API pas encore passée
+        except Exception as err:  # noqa: BLE001
+            log("Imports de vidéos : erreur base :", err)
+            conn = None
+            time.sleep(10)
+
+
 def update_ytdlp():
     """yt-dlp doit suivre les changements de YouTube : mise à jour au démarrage (désactivable : YTDLP_AUTO_UPDATE=0)."""
     if env("YTDLP_AUTO_UPDATE", "1") != "1":
@@ -885,6 +1018,7 @@ def main():
     apply_settings()
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
+    threading.Thread(target=media_import_loop, daemon=True).start()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 
     while not stopping:

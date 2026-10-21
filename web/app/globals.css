@@ -3686,3 +3686,9 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .spk-pick { border-inline-start: 4px solid var(--spk, var(--line-soft)); border-radius: 8px; max-width: 100%; }
 .db-segs .sd-card-head { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 520px) { .spk-list { grid-template-columns: 1fr; } .spk-range-row .fld input { width: 100%; } }
+
+/* Étape Import : panneau « Copier cette vidéo chez nous » (fiche d'une conférence) */
+.imp-panel { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid rgba(255, 255, 255, .08); display: grid; gap: .5rem; }
+.imp-panel progress { width: 100%; height: 8px; accent-color: var(--gold, #d4a84b); }
+.imp-panel .check.rights { align-items: flex-start; line-height: 1.4; }
+.imp-panel .btn { justify-self: start; }

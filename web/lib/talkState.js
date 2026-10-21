@@ -7,12 +7,13 @@ export const sourceLabel = (s) => SOURCES[s] || '';
 
 export function talkSteps(x) {
   const external = x.source !== 'upload';
-  const busy = (st) => ['pending', 'processing'].includes(st);
+  const busy = (st) => ['pending', 'processing', 'importing'].includes(st);
 
   // V : conversion HLS (vidéos envoyées) ; YouTube / Vimeo / archive.org : rien à convertir.
   let video = 'ok';
   let videoPct = null;
   if (!external) {
+    // 'importing' : vidéo copiée depuis un autre site (étape Import), pas encore convertie.
     if (x.status === 'failed') video = 'err';
     else if (busy(x.status)) { video = 'run'; videoPct = x.status === 'processing' ? x.progress : null; }
   }

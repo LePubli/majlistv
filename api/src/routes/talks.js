@@ -14,6 +14,8 @@ import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
+import { featureOn } from '../features.js';
+import { classifyUrl, insertImport, newObjectKey, storageProblem } from '../mediaImport.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo ou archive.org.
 export function parseVideoUrl(raw) {
@@ -68,6 +70,8 @@ const talkSchema = z.object({
   translateTo: z.array(z.enum(TRANSLATION_LANGS)).max(TRANSLATION_LANGS.length).default([]),
   // YouTube / Vimeo : l'organisateur déclare avoir l'accord de l'auteur -> transcription, traductions, résumé, recherche.
   rightsConfirmed: z.boolean().default(false),
+  // Étape Import : copier la vidéo chez nous (déclaration des droits obligatoire). Une adresse d'un autre site que YouTube / Vimeo / archive.org n'est acceptée qu'ainsi.
+  importVideo: z.boolean().default(false),
   // Étape 10.4 : brouillon ou publication programmée.
   publication: z.enum(['draft', 'scheduled', 'published']).default('published'),
   publishAt: z.string().datetime({ offset: true }).optional(),
@@ -357,6 +361,7 @@ export default async function talksRoutes(app) {
   app.post('/talks', organizer, async (req, reply) => {
     const b = talkSchema.parse(req.body);
     let video;
+    let importReq = null; // étape Import : { url, origin, archiveFile } si la vidéo doit être copiée chez nous
     if (b.uploadId) {
       // Vidéo envoyée : doit appartenir à l'organisateur, être terminée et pas déjà utilisée.
       const up = await pool.query(
@@ -368,8 +373,26 @@ export default async function talksRoutes(app) {
       video = { source: 'upload', ref: up.rows[0].object_key };
     } else {
       video = b.videoUrl ? parseVideoUrl(b.videoUrl) : null;
-      if (!video) return reply.code(400).send({ error: 'Lien YouTube, Vimeo ou archive.org non reconnu' });
-      const dup = await pool.query('SELECT id FROM talks WHERE source = $1 AND video_ref = $2 LIMIT 1', [video.source, video.ref]);
+      if (b.importVideo) {
+        // Étape Import : copie chez nous. Déclaration des droits obligatoire ; adresse publique seulement.
+        if (!(await featureOn('media_import'))) return reply.code(403).send({ error: 'L\'import de vidéos est désactivé', code: 'feature_off' });
+        if (!b.videoUrl) return reply.code(400).send({ error: 'Indiquez l\'adresse de la vidéo à importer', code: 'bad_url' });
+        if (!b.rightsConfirmed) return reply.code(400).send({ error: 'Confirmez détenir les droits sur cette vidéo', code: 'rights_required' });
+        const c = classifyUrl(b.videoUrl);
+        if (c.error) return reply.code(400).send({ error: c.error, code: c.code });
+        const full = await storageProblem();
+        if (full) return reply.code(409).send({ error: full, code: 'storage_full' });
+        importReq = { url: c.url, origin: c.origin, archiveFile: null };
+        if (!video) {
+          // Autre site, lien direct : conférence hébergée dès le départ, vidéo « importing » jusqu'à la fin de la copie.
+          const again = await pool.query(
+            `SELECT talk_id FROM media_imports WHERE source_url = $1 AND status IN ('pending', 'downloading', 'converting', 'done') LIMIT 1`, [c.url]);
+          if (again.rows[0]) return reply.code(409).send({ error: 'Cette adresse est déjà importée', code: 'duplicate', id: again.rows[0].talk_id });
+          video = { source: 'upload', ref: newObjectKey(), importing: true };
+        }
+      }
+      if (!video) return reply.code(400).send({ error: 'Lien YouTube, Vimeo ou archive.org non reconnu : pour un autre site, cochez « Importer la vidéo chez nous »', code: 'bad_url' });
+      const dup = video.importing ? { rows: [] } : await pool.query('SELECT id FROM talks WHERE source = $1 AND video_ref = $2 LIMIT 1', [video.source, video.ref]);
       if (dup.rows[0]) return reply.code(409).send({ error: 'Cette vidéo est déjà dans le catalogue', code: 'duplicate', id: dup.rows[0].id });
       if (video.source === 'archive') {
         // archive.org : on vérifie tout de suite qu'un fichier vidéo lisible existe (titre, durée, miniature récupérés au passage).
@@ -379,6 +402,7 @@ export default async function talksRoutes(app) {
           if (err instanceof ArchiveError) return reply.code(400).send({ error: err.message, code: 'archive' });
           throw err;
         }
+        if (importReq) importReq.archiveFile = video.meta?.file ?? video.file ?? null;
       }
     }
     const pub = checkPublication(b.publication, b.publishAt);
@@ -391,10 +415,22 @@ export default async function talksRoutes(app) {
                            external_file, external_thumb, duration_seconds, publication, publish_at, level, kids_bands, show_adults, format_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, COALESCE($21::int, (SELECT id FROM formats WHERE slug = 'conference'))) RETURNING id`,
         [req.user.sub, b.title, b.description || m.description || '', b.speaker, b.language, b.categoryId ?? null, b.access, video.source, video.ref,
-          video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
+          video.importing ? 'importing' : video.source === 'upload' ? 'pending' : 'ready', transcribable ? 'pending' : 'unavailable', video.source !== 'upload' && b.rightsConfirmed,
           m.file ?? null, m.thumb ?? null, m.duration ?? null, pub.publication, pub.publishAt, b.level ?? null,
           cleanBands(b.kidsBands), b.showAdults ?? cleanBands(b.kidsBands).length === 0, b.formatId ?? null]
       );
+      if (importReq) {
+        try {
+          await insertImport(pool, {
+            talkId: rows[0].id, userId: req.user.sub, url: importReq.url, origin: importReq.origin, archiveFile: importReq.archiveFile,
+            newTalk: Boolean(video.importing), prevSource: video.importing ? null : video.source, objectKey: video.importing ? video.ref : newObjectKey(),
+          });
+        } catch (err) {
+          await pool.query('DELETE FROM talks WHERE id = $1', [rows[0].id]).catch(() => {});
+          throw err;
+        }
+        req.auditSummary = `Import de la vidéo (${importReq.origin}) : ${importReq.url}`;
+      }
       const extras = cleanExtras(b.extraCategoryIds, b.categoryId ?? null);
       if (extras.length) await saveExtras(pool, rows[0].id, extras);
       if (transcribable && b.translateTo.length) {
@@ -605,6 +641,9 @@ export default async function talksRoutes(app) {
     if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
     if (talk.source !== 'upload') return reply.code(400).send({ error: 'Cette vidéo est lue depuis sa plateforme : rien à convertir' });
     if (talk.video_status !== 'failed') return reply.code(409).send({ error: 'La conversion n\'a pas échoué' });
+    // Étape Import : si c'est la copie de la vidéo qui a échoué, il n'y a pas encore de fichier à convertir : on relance l'import.
+    const imp = (await pool.query('SELECT new_talk, status FROM media_imports WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 1', [id])).rows[0];
+    if (imp?.new_talk && imp.status !== 'done') return reply.code(409).send({ error: 'La copie de la vidéo n\'est pas terminée : relancez l\'import', code: 'import_failed' });
     await pool.query("UPDATE talks SET video_status = 'pending', video_progress = 0, video_error = NULL, transcode_attempts = 0 WHERE id = $1", [id]);
     return reply.code(202).send({ status: 'pending' });
   });
@@ -642,11 +681,15 @@ export default async function talksRoutes(app) {
     // mais pas le stockage (registre n°48).
     const own = (await pool.query('SELECT 1 FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2)', [id, req.user.sub, admin])).rowCount;
     if (own) await ext.emit('talk.deleting', { talkId: id }).catch((e) => req.log.warn(`Suppression : fichiers liés non effacés (${e.message})`));
+    // Étape Import : fichiers copiés chez nous (la demande est effacée avec la conférence : on relève les clés avant).
+    const importKeys = own ? (await pool.query('SELECT object_key FROM media_imports WHERE talk_id = $1', [id])).rows.map((r) => r.object_key) : [];
     const { rows } = await pool.query(
       'DELETE FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2) RETURNING id, source, video_ref',
       [id, req.user.sub, admin]
     );
     if (!rows[0]) return reply.code(404).send({ error: 'Conférence introuvable' });
+    for (const k of importKeys) await deleteObject(k).catch(() => {});
+    if (importKeys.length && rows[0].source !== 'upload') await deletePrefix(`hls/${rows[0].id}/`).catch(() => {});
     await deletePrefix(`posters/${rows[0].id}/`).catch(() => {});
     if (rows[0].source === 'upload') {
       await deleteObject(rows[0].video_ref).catch(() => {});

@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import talksRoutes from './routes/talks.js';
 import uploadRoutes from './routes/uploads.js';
+import mediaImportRoutes from './routes/mediaImport.js'; // étape Import : copier une vidéo externe chez nous
 import hlsRoutes from './routes/hls.js';
 import transcriptRoutes from './routes/transcripts.js';
 import billingRoutes from './routes/billing.js';
@@ -133,6 +134,7 @@ await app.register(adminRoutes);
 await app.register(talksRoutes);
 await app.register(formatRoutes);
 await app.register(uploadRoutes);
+await app.register(mediaImportRoutes);
 await app.register(hlsRoutes);
 await app.register(transcriptRoutes);
 await app.register(billingRoutes);

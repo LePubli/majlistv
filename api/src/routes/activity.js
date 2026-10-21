@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
 import * as ext from '../ext.js';
+import { cancelImport } from '../mediaImport.js';
 
-export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers']; // speakers : détection des intervenants (D3c) ; editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b) ; align : place des mots (E5c) ; face : suivi du visage (E5d)
+export const QUEUES = ['video', 'transcript', 'translation', 'dubbing', 'archive', 'editor', 'render', 'replace', 'align', 'face', 'speakers', 'import']; // import : copie d'une vidéo externe chez nous (étape Import) ; speakers : détection des intervenants (D3c) ; editor : analyses du son (E2) ; render : rendus (E4a) ; replace : nouvelles versions (E4b) ; align : place des mots (E5c) ; face : suivi du visage (E5d)
 const HEAVY = ['video', 'transcript', 'dubbing', 'render', 'replace']; // le rendu suit la pause générale et la plage horaire des conversions
 
 // Réglages de la plage horaire et de la pause générale.
@@ -58,6 +59,18 @@ async function coreTasks(organizerId) {
     out.push({ queue: 'translation', ref: `${r.id}:${r.lang}`, talkId: r.id, title: r.title, lang: r.lang,
       status: r.st === 'processing' ? 'running' : r.st === 'failed' ? 'failed' : blocked ? 'blocked' : 'waiting',
       blockedBy: blocked ? 'transcript' : null, progress: r.st === 'processing' ? r.pct : null, error: r.err, createdAt: r.created_at });
+  }
+  // Étape Import : copie d'une vidéo externe chez nous. Téléchargement et envoi (transcripteur), puis conversion HLS (worker).
+  const imp = await pool.query(
+    `SELECT m.id, m.talk_id, t.title, m.status, m.stage, m.progress, m.error, m.created_at, m.cancel_requested
+       FROM media_imports m JOIN talks t ON t.id = m.talk_id
+      WHERE (m.status IN ('pending', 'downloading', 'converting') OR (m.status = 'failed' AND m.finished_at > now() - interval '30 days')) ${own}
+      ORDER BY m.created_at`, P);
+  for (const r of imp.rows) {
+    const running = r.status === 'downloading' || (r.status === 'converting' && r.stage);
+    out.push({ queue: 'import', ref: r.id, talkId: r.talk_id, title: r.title, kind: r.status === 'converting' ? 'convert' : 'download',
+      status: r.status === 'failed' ? 'failed' : running ? 'running' : 'waiting', progress: running ? r.progress : null, error: r.error,
+      canCancel: ['pending', 'downloading'].includes(r.status) || (r.status === 'converting' && !r.stage), canceling: r.cancel_requested, createdAt: r.created_at });
   }
   return out;
 }
@@ -131,7 +144,8 @@ export default async function activityRoutes(app) {
     if (!task) return reply.code(404).send({ error: 'Tâche introuvable', code: 'not_found' });
     if (!task.canCancel || !['running', 'waiting', 'paused', 'blocked'].includes(task.status)) return reply.code(409).send({ error: 'Cette tâche ne peut pas être annulée.', code: 'not_cancelable' });
     const out = { done: false };
-    await ext.emit('activity.cancel', out, { queue, ref });
+    if (queue === 'import') out.done = (await cancelImport(ref)).done; // étape Import (socle)
+    else await ext.emit('activity.cancel', out, { queue, ref });
     if (!out.done) return reply.code(409).send({ error: 'Cette tâche ne peut pas être annulée.', code: 'not_cancelable' });
     await pool.query('DELETE FROM activity_controls WHERE queue = $1 AND ref = $2', [queue, ref]);
     req.auditSummary = `Activité : annulation — ${queue} « ${task.title} »`;
