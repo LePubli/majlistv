@@ -368,3 +368,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape F (21/10) — contrôle du VPS et reconstruction
 - Script de contrôle après déploiement `ops/verify/verify-deploy.sh` (conteneurs, ports, nginx, limites, migrations, FFmpeg, yt-dlp, Garage, disque, sauvegarde, charge, journaux), guide `docs/RECONSTRUIRE-DE-ZERO.md`, liste `docs/ETAPE-F-VERIFICATIONS.md` mise à jour. Les essais réels (conférence d'une heure, doublage, import, rendu, téléphone) se déroulent sur le VPS avec Epok : la liste se coche au fur et à mesure. Ordre : F → 22 (applications) → Créateur.
+
+## Correctif stockage (21/10) — débit des qualités plafonné par la source
+- Le worker ne convertit plus une vidéo à un débit supérieur à celui de sa source (registre n°57) : une conférence de 48 min passe de ≈ 3,4 Go à ≈ 1,1 Go (original compris). Worker seul à redéployer. Voir README « Correctif stockage ».

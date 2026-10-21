@@ -3,7 +3,8 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-// Qualités possibles (hauteur, débit vidéo, débit audio). Seules celles <= à la source sont produites.
+// Qualités possibles (hauteur, débit vidéo maximal, débit audio). Seules celles <= à la source sont produites.
+// Le débit vidéo de chaque qualité est en plus plafonné par celui de la source (voir videoKbpsFor) : on ne grossit jamais le fichier.
 export const RENDITIONS = [
   { h: 360, v: 800, a: 96, profile: 'main' },
   { h: 720, v: 2800, a: 128, profile: 'high' },
@@ -40,7 +41,28 @@ export async function probe(file) {
   if (!video) throw new Error('Aucune piste vidéo dans le fichier');
   const duration = Number(json.format.duration || video.duration || 0);
   if (!duration) throw new Error('Durée de la vidéo illisible');
-  return { duration, height: video.height, hasAudio: json.streams.some((s) => s.codec_type === 'audio') };
+  const hasAudio = json.streams.some((s) => s.codec_type === 'audio');
+  return { duration, height: video.height, hasAudio, videoKbps: sourceVideoKbps(json, video, duration) };
+}
+
+// Débit vidéo de la source en kbit/s (0 = inconnu). Ordre : débit de la piste vidéo ; sinon débit total (ou taille / durée) moins l'audio.
+export function sourceVideoKbps(json, video, duration) {
+  const v = Number(video?.bit_rate || video?.tags?.BPS || 0);
+  if (v > 0) return Math.round(v / 1000);
+  const audio = (json.streams || []).filter((s) => s.codec_type === 'audio').reduce((t, s) => t + Number(s.bit_rate || s.tags?.BPS || 128000), 0);
+  let total = Number(json.format?.bit_rate || 0);
+  if (!total && json.format?.size && duration) total = (Number(json.format.size) * 8) / duration;
+  return total > audio ? Math.round((total - audio) / 1000) : 0;
+}
+
+// Débit vidéo d'une qualité : jamais plus que son maximum, ni (en proportion de la hauteur) plus que la source.
+// Plancher par qualité pour garder une image correcte, mais jamais au-dessus du débit de la source.
+const FLOOR = { 360: 250, 720: 500, 1080: 800 };
+export function videoKbpsFor(r, srcHeight, srcKbps) {
+  if (!srcKbps || !srcHeight) return r.v; // débit de la source inconnu : réglage d'avant
+  const scaled = Math.round((srcKbps * r.h) / srcHeight);
+  const floor = Math.min(FLOOR[r.h] ?? 250, srcKbps);
+  return Math.max(150, Math.min(r.v, Math.max(scaled, floor)));
 }
 
 // Choisit les qualités à produire pour une hauteur source donnée.
@@ -58,8 +80,9 @@ export function buildArgs({ input, outDir, info, threads = 0 }) {
   const scales = rends.map((r, i) => `[s${i}]scale=-2:${r.h}[v${i}]`);
   const args = ['-y', '-nostdin', '-v', 'error', '-i', input, '-filter_complex', [split, ...scales].join(';')];
   rends.forEach((r, i) => {
+    const kb = videoKbpsFor(r, info.height, info.videoKbps);
     args.push('-map', `[v${i}]`, `-c:v:${i}`, 'libx264', '-preset', 'veryfast', `-profile:v:${i}`, r.profile,
-      `-b:v:${i}`, `${r.v}k`, `-maxrate:v:${i}`, `${Math.round(r.v * 1.07)}k`, `-bufsize:v:${i}`, `${Math.round(r.v * 1.5)}k`,
+      `-b:v:${i}`, `${kb}k`, `-maxrate:v:${i}`, `${Math.round(kb * 1.07)}k`, `-bufsize:v:${i}`, `${Math.round(kb * 1.5)}k`,
       `-pix_fmt:v:${i}`, 'yuv420p');
   });
   if (info.hasAudio) {

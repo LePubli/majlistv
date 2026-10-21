@@ -4940,3 +4940,38 @@ Testé : `bash ops/verify/test-verify.sh` (faux `docker`, `curl`, `nginx` + la v
 **Non testé** : le script sur le vrai VPS (noms de conteneurs, ports hôte, volumes, sorties réelles de `docker`) ; le guide de reconstruction sur un VPS vierge. Tout se découvre lors de la première exécution : copier les lignes ÉCHEC / ATTENTION à Claude.
 
 > **Mise à jour du 21/10 (après le premier passage sur le VPS)** : les ports hôte de l'API et du site sont choisis par DockPanel (43435 et 34455 le 21/10) et ses vhosts nginx suivent ; il ne faut plus compter sur 7000 / 7010. La commande de routine devient `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*` (l'ancienne, `… | grep -i mejliss`, ne trouvait rien). Premier passage : 60 OK, 0 échec, après `apply-limits.sh` à jour (règle du doublage ajoutée) et nettoyage du disque (80 % → 63 %).
+
+## Correctif stockage — débit des qualités plafonné par la source (21/10)
+
+### Ce que ça change
+Le worker convertissait chaque qualité à un débit fixe (360p : 800, 720p : 2 800, 1080p : 5 000 kbit/s). Une conférence YouTube de 48 min (source ≈ 0,95 Mbit/s) devenait ainsi 3,1 Go de vidéo convertie (+ 342 Mo d'original), cinq fois plus que la source, sans gain d'image (registre n°57). Désormais :
+- le worker lit le débit vidéo de la source (`probe` → `videoKbps` : débit de la piste, sinon débit total moins l'audio, sinon taille / durée) ;
+- chaque qualité reçoit au plus son débit d'avant ET au plus le débit de la source en proportion de sa hauteur (1080p d'une source 1080p : débit de la source ; 720p : × 720/1080 ; 360p : × 360/1080), avec un plancher (250 / 500 / 800 kbit/s) qui ne dépasse jamais le débit de la source ;
+- une source de bonne qualité garde exactement les débits d'avant ; débit illisible : réglages d'avant.
+Pour la conférence de 48 min : 1080p 820, 720p 547, 360p 273 kbit/s ≈ 0,7 Go converti au lieu de 3,1 Go. Concerne toutes les conversions (envois, imports, reconversions). Le rendu de l'éditeur et l'audio seul ne changent pas.
+
+### Déploiement
+DockPanel → Git Deploy → Redeploy **majlistv-worker** seulement (ni l'API ni le site ne changent). Puis :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+### Réduire une conférence déjà convertie
+La conférence est **indisponible pendant sa reconversion** (≈ durée de la vidéo ou plus) ; l'original est gardé, et en cas d'échec le worker réessaie. Exemple pour la conférence de test :
+```
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE talks SET video_status = '"'"'pending'"'"', video_progress = 0, video_error = NULL, transcode_attempts = 0 WHERE id = '"'"'e6ad96de-4744-43a6-86ae-13aa13ae7a7e'"'"' AND source = '"'"'upload'"'"';"'
+```
+Suivi : `docker logs -f dockpanel-git-majlistv-worker` (« terminé »), puis la taille :
+```
+docker exec dockpanel-git-majlistv-storage /garage bucket info majlis-videos | grep -iE "size|objects"
+```
+
+### Debug
+- Journal du worker : la ligne « … s, 1080p, audio=true : conversion » précède la conversion ; les débits utilisés sont dans les arguments FFmpeg (`worker/src/transcode.js`, `videoKbpsFor`).
+- Image trop dégradée sur une source très compressée : relever les planchers (`FLOOR` dans `worker/src/transcode.js`).
+
+### Tests (21/10)
+`node worker/tests/test_bitrate_cap.mjs` : règle de calcul (source pauvre, riche, inconnue ; cas des 48 min) + vraie conversion FFmpeg d'une source 720p à 400 kbit/s (720p convertie pas plus grosse que la source). Non-régression : `node worker/tests/test_audio.mjs`, `python3 api/tests/test_media_import_e2e.py` (import complet avec le vrai worker). **Non testé** : la qualité à l'œil sur une vraie conférence, et le gain réel sur le VPS (à mesurer après reconversion).
