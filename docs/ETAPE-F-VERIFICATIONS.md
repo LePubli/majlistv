@@ -90,10 +90,11 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [ ] Migration 061 appliquée (API redéployée) ; transcripteur et worker redéployés (ordre : api → web → worker → transcriber).
 - [x] (21/10, 13 h 30) Lien archive.org direct vers un .mp4 (Big Buck Bunny, 9 min 56) : reconnu comme archive.org, copié et converti en 2 min (téléchargement → Garage → HLS), conférence hébergée, audio prêt, durée 596 s. Restent à confirmer à l'écran : lecture, mode audio, journal.
 - [ ] Lien direct vers un petit fichier .mp4 public : Studio → Nouvelle conférence → coller le lien → cocher la déclaration → publier ; suivre dans Studio → Activité (téléchargement, conversion) ; la conférence devient lisible, mode audio disponible.
+- [x] (21/10) Écran : lecture, mode audio et journal des imports vérifiés par Epok.
 - [ ] Une conférence archive.org du catalogue → « Importer chez nous » : reste lisible pendant la copie, puis devient hébergée.
-- [ ] Vimeo public, puis YouTube : noter ce qui marche (YouTube peut exiger des cookies : Admin → Paramètres).
-- [ ] Annuler un import en cours ; relancer un import en échec ; vérifier le journal (qui, quand, adresse, déclaration).
-- [ ] Une adresse interne (http://127.0.0.1…, http://garage:3900…) est refusée.
+- [x] (21/10) Vimeo public, puis YouTube : importés depuis le VPS **sans cookies**.
+- [x] (21/10) Annuler un import en cours : OK. Journal : OK. (Relance d'un import en échec : pas encore rencontrée.)
+- [x] (21/10) Adresse interne (http://127.0.0.1:7001/…) refusée.
 - [ ] Espace disque du VPS (`df -h`) et stockage Garage après l'import d'une vidéo de 1 h.
 
 ## 10. Après tout
