@@ -32,7 +32,7 @@ bash /root/verify-deploy.sh
 docker exec dockpanel-git-majlistv-worker ls /usr/share/fonts/dejavu
 docker exec dockpanel-git-majlistv-worker sh -c "ffmpeg -hide_banner -filters | grep -E ' (ass|amultiply|loudnorm|afftdn) '"
 ```
-- [ ] La première commande liste des polices DejaVu ; la seconde affiche les 4 filtres `ass`, `amultiply`, `loudnorm`, `afftdn`.
+- [x] (21/10, script de contrôle) Polices DejaVu présentes ; filtres `ass`, `amultiply`, `loudnorm`, `afftdn` présents.
 
 ## 2. Éditeur (E1) — registre 7, 5, 6
 - [ ] Studio → Éditeur sur la conférence d'une heure : la timeline reste fluide (défilement, zoom, couper un extrait).
@@ -77,7 +77,7 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [ ] Noter les cas où le conférencier sort du cadre (sert de cas d'essai pour l'étape E5d, « cadre qui suit le visage »).
 
 ## 9. Doublage — voix (D3) — registre 29
-- [ ] Résultat de l'écoute du banc Qwen (voir `dubbing/d3bench/README.md`) enregistré et méthode retenue décidée.
+- [x] Banc Qwen : abandonné, méthode actuelle (Piper + ChatterboxVC) gardée — décision d'Epok du 20/10 (registre 29).
 
 ## 9 bis. Doublage — intervenants et hauteur (D3c) — registre 41
 - [ ] Transcripteur redéployé : le modèle de voix se télécharge (`/models/speakers/…onnx`, ~40 Mo) ; sinon le déposer à la main.
@@ -98,6 +98,6 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [x] (21/10) Conférence de test « L'héritage des savants, une richesse à découvrir » (48 min, français, 2 voix, id e6ad96de-4744-43a6-86ae-13aa13ae7a7e) importée : **1 h 46** de la demande à la fin ; Garage 208 Mo → **3,6 Go** (≈ 3,4 Go pour cette seule conférence) ; disque du VPS 59 % ; transcription Whisper prête. Détail du temps et de la taille : à mesurer (registre 57).
 
 ## 10. Après tout
-- [ ] `docker ps` : aucun conteneur en erreur ni redémarrant en boucle.
-- [ ] Charge du VPS partagé acceptable pour Miel & Co et TriMaint (`uptime`, `docker stats --no-stream`).
+- [x] (21/10, script de contrôle) aucun conteneur en erreur ni en boucle.
+- [x] (21/10, script de contrôle) charge 2 à 4 pour 6 cœurs au repos ; à revoir pendant un rendu et un doublage.
 - [ ] Mettre à jour `docs/PROBLEMES-A-REGLER.md` : passer en ✅ les points confirmés, noter les écarts.
