@@ -50,8 +50,8 @@ cp ops/verify/verify-deploy.sh /root/verify-deploy.sh && chmod 700 /root/verify-
 |---|---|---|---|---|---|---|---|
 | 1 | `postgres-majlisstv` | (Docker App PostgreSQL de DockPanel) | | 5432 | non | celui de l'app | — |
 | 2 | `majlistv-storage` | `garage/Dockerfile` | `.` | 3900 | `s3-majlisstv…` (HTTPS) | `/var/lib/garage/meta`, `/var/lib/garage/data` | automatique (vérifier) |
-| 3 | `majlistv-api` | `Dockerfile` (racine : construit `./api`) | `.` | 3000 | `api-majlisstv…` (HTTPS) | aucun | **7000** |
-| 4 | `majlistv-web` | `web/Dockerfile` | `.` | 3000 | `majlisstv…` (HTTPS) | aucun | **7010** |
+| 3 | `majlistv-api` | `Dockerfile` (racine : construit `./api`) | `.` | 3000 | `api-majlisstv…` (HTTPS) | aucun | attribué par DockPanel |
+| 4 | `majlistv-web` | `web/Dockerfile` | `.` | 3000 | `majlisstv…` (HTTPS) | aucun | attribué par DockPanel |
 | 5 | `majlistv-worker` | `worker/Dockerfile` | `.` | 3000 | non | aucun | ex. 7030 |
 | 6 | `majlistv-transcriber` | `transcriber/Dockerfile` | `.` | 3000 | non | `/models` | ex. 7040 |
 | 7 | `majlistv-translator` | `translator/Dockerfile` | `.` | 3000 | non | aucun | ex. 7050 |
@@ -63,7 +63,11 @@ Si DockPanel répond « port is already allocated », imposer le port hôte (exe
 ss -ltn | grep ':7030 ' || echo "7030 libre"
 docker exec dockpanel-postgres sh -c 'psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-${POSTGRES_USER:-postgres}}" -c "UPDATE git_deploys SET host_port=7030 WHERE name='"'"'majlistv-worker'"'"';"'
 ```
-(puis « Deploy Now »). Les ports 7000 / 7010 sont ceux que nginx attend pour l'API et le site.
+(puis « Deploy Now »). Pour l'API et le site, **ne rien imposer** : DockPanel choisit le port hôte et écrit lui-même le vhost nginx (constaté le 21/10 : API 43435, site 34455, stockage 7020). Vérifier qu'ils concordent :
+```bash
+docker port dockpanel-git-majlistv-api 3000/tcp; docker port dockpanel-git-majlistv-web 3000/tcp
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+```
 
 ### Étape 1 — PostgreSQL
 DockPanel → Docker Apps → PostgreSQL (`postgres-majlisstv`). Noter utilisateur, base, mot de passe, puis l'adresse du conteneur (elle sert dans `DATABASE_URL`, et **change si le conteneur est recréé**) :
@@ -109,7 +113,7 @@ S3_ACCESS_KEY=<Key ID de majlis-api>
 S3_SECRET_KEY=<secret de majlis-api>
 MEILI_MASTER_KEY=<la même que le service search>
 ```
-Contrôle : `https://api-majlisstv.le-publicitaire.fr/health` → `{"status":"ok"}` ; journaux : `docker logs dockpanel-git-majlistv-api 2>&1 | grep -i migrat | tail` (« Migration appliquée : … » jusqu'à `061_media_import.sql`). Si le port hôte n'est pas 7000, voir plus haut.
+Contrôle : `https://api-majlisstv.le-publicitaire.fr/health` → `{"status":"ok"}` ; journaux : `docker logs dockpanel-git-majlistv-api 2>&1 | grep -i migrat | tail` (« Migration appliquée : … » jusqu'à `061_media_import.sql`). Port hôte : voir plus haut (DockPanel le choisit).
 
 ### Étape 4 — Site (`majlistv-web`)
 Variables : `API_URL` (adresse de l'API : **reprendre exactement la valeur de `/root/env-majlistv.txt`** — le README historique du site cite l'adresse du site, la valeur réellement utilisée est celle de la sauvegarde des variables), `APP_NAME=Mejliss TV`, `CSP_STORAGE_ORIGINS=https://s3-majlisstv.le-publicitaire.fr` (indispensable : sans lui, miniatures, images de chaînes et envois de fichiers sont bloqués par la politique de sécurité du navigateur). Facultatives : `CSP_MODE`, `CSP_EXTRA_FRAME`.
@@ -136,7 +140,7 @@ Variables : `DATABASE_URL`, `SETTINGS_KEY`, `S3_*`, `DUB_THREADS=4`. Volume `/mo
 ### Après chaque déploiement (toujours)
 ```bash
 /root/apply-limits.sh
-grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
 nginx -t && systemctl reload nginx
 bash /root/verify-deploy.sh
 ```

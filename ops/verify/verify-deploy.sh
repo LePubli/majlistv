@@ -17,7 +17,9 @@ API_URL_PUBLIC=${API_URL_PUBLIC:-https://api-majlisstv.le-publicitaire.fr}
 S3_URL_PUBLIC=${S3_URL_PUBLIC:-https://s3-majlisstv.le-publicitaire.fr}
 PREFIX=dockpanel-git-majlistv
 PG=dockpanel-app-postgres-majlisstv
-API_PORT=7000; WEB_PORT=7010; FOREIGN_PORT=7001   # 7001 = trimaint_frontend : ne jamais y toucher
+# Ports hôte de l'API et du site : choisis par DockPanel (constaté le 21/10 : 43435 et 34455), qui écrit aussi le vhost nginx.
+# On ne suppose donc aucun port : on lit le port réel (docker port) et on vérifie que nginx pointe dessus. 7000 / 7010 = anciens ports, valeurs de secours.
+API_PORT=7000; WEB_PORT=7010; FOREIGN_PORT=7001   # 7001 : TriMaint, ne jamais y toucher
 
 N_OK=0; N_WARN=0; N_FAIL=0
 ok()   { N_OK=$((N_OK + 1));     printf '  \033[32mOK\033[0m     %s\n' "$*"; }
@@ -62,12 +64,12 @@ host_port() { docker port "$1" 3000/tcp 2>/dev/null | head -1 | sed 's/.*://'; }
 API_HP=$(host_port "$PREFIX-api"); WEB_HP=$(host_port "$PREFIX-web")
 if [ -z "$API_HP" ]; then fail "API : aucun port hôte publié pour $PREFIX-api (docker port $PREFIX-api)"
 else
-  [ "$API_HP" = "$API_PORT" ] && ok "API : port hôte $API_HP (attendu)" || warn "API : port hôte $API_HP au lieu de $API_PORT (DockPanel l'a changé ? nginx doit suivre)"
+  info "API : port hôte $API_HP (attribué par DockPanel)"
   code=$(http_code "http://127.0.0.1:$API_HP/health"); [ "$code" = 200 ] && ok "API : http://127.0.0.1:$API_HP/health → 200" || fail "API : /health répond $code sur le port hôte $API_HP"
 fi
 if [ -z "$WEB_HP" ]; then fail "Site : aucun port hôte publié pour $PREFIX-web (docker port $PREFIX-web)"
 else
-  [ "$WEB_HP" = "$WEB_PORT" ] && ok "Site : port hôte $WEB_HP (attendu)" || warn "Site : port hôte $WEB_HP au lieu de $WEB_PORT (DockPanel l'a changé ? nginx doit suivre)"
+  info "Site : port hôte $WEB_HP (attribué par DockPanel)"
   code=$(http_code "http://127.0.0.1:$WEB_HP/"); case "$code" in 200|301|302|307|308) ok "Site : http://127.0.0.1:$WEB_HP/ → $code";; *) fail "Site : répond $code sur le port hôte $WEB_HP";; esac
 fi
 for svc in worker transcriber translator dubbing; do

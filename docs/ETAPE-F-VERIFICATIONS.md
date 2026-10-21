@@ -9,7 +9,7 @@ Les noms de conteneurs ci-dessous sont ceux déjà utilisés dans le README (`do
 - [ ] Sur le VPS :
 ```
 /root/apply-limits.sh
-grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
 nginx -t && systemctl reload nginx
 ```
 - [ ] Les migrations sont passées (la dernière de l'API et celles du module éditeur) :
@@ -19,13 +19,13 @@ docker logs dockpanel-git-majlistv-api 2>&1 | grep -i "migrat" | tail -15
 - [ ] Une **conférence de test** non mise en avant existe (de préférence une vraie, d'environ 1 h, hébergée par Mejliss et non YouTube). Elle sert à tout ce qui suit.
 
 ## 0 bis. Contrôle automatique (à lancer d'abord)
-Le script `ops/verify/verify-deploy.sh` fait en une minute les contrôles « mécaniques » des sections 0, 1 et 10 (conteneurs, ports 7000 / 7010 / 7001, santé, nginx, limites, migrations jusqu'à la 061, polices et filtres FFmpeg, yt-dlp, volumes, Garage, disque, sauvegarde, charge, journaux). Il ne modifie rien. Sur le VPS (à copier une seule fois) :
+Le script `ops/verify/verify-deploy.sh` fait en une minute les contrôles « mécaniques » des sections 0, 1 et 10 (conteneurs, ports réels et vhosts nginx, 7001 = TriMaint, santé, nginx, limites, migrations jusqu'à la 061, polices et filtres FFmpeg, yt-dlp, volumes, Garage, disque, sauvegarde, charge, journaux). Il ne modifie rien. Sur le VPS (à copier une seule fois) :
 ```
 cd /root && curl -fsSL https://raw.githubusercontent.com/LePubli/majlistv/main/ops/verify/verify-deploy.sh -o verify-deploy.sh && chmod 700 verify-deploy.sh
 bash /root/verify-deploy.sh
 ```
 (si le dépôt est privé, copier le fichier à la main depuis GitHub Desktop vers le VPS). Résultat attendu : « 0 échec » ; copier à Claude toute ligne ÉCHEC ou ATTENTION. Les sections suivantes restent à faire à la main (essais à l'oreille, au navigateur, sur téléphone) : un script ne peut pas les juger.
-- [ ] `bash /root/verify-deploy.sh` → 0 échec.
+- [x] `bash /root/verify-deploy.sh` → 0 échec (21/10, 13 h 22 : 60 OK, 0 échec, après correction du script, `apply-limits.sh` à jour et nettoyage du disque).
 
 ## 1. Worker : FFmpeg et polices (registre 18, 26)
 ```
