@@ -95,7 +95,7 @@ docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 - [x] (21/10) Vimeo public, puis YouTube : importés depuis le VPS **sans cookies**.
 - [x] (21/10) Annuler un import en cours : OK. Journal : OK. Relance d'un import en échec : OK sur le VPS (`ops/verify/test-import-retry.sh`, « TOUT EST OK », 21/10).
 - [x] (21/10) Adresse interne (http://127.0.0.1:7001/…) refusée.
-- [ ] Espace disque du VPS (`df -h`) et stockage Garage après l'import d'une vidéo de 1 h.
+- [x] (21/10) Conférence de test « L'héritage des savants, une richesse à découvrir » (48 min, français, 2 voix, id e6ad96de-4744-43a6-86ae-13aa13ae7a7e) importée : **1 h 46** de la demande à la fin ; Garage 208 Mo → **3,6 Go** (≈ 3,4 Go pour cette seule conférence) ; disque du VPS 59 % ; transcription Whisper prête. Détail du temps et de la taille : à mesurer (registre 57).
 
 ## 10. Après tout
 - [ ] `docker ps` : aucun conteneur en erreur ni redémarrant en boucle.
