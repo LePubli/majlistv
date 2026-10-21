@@ -35,27 +35,27 @@ docker exec dockpanel-git-majlistv-worker sh -c "ffmpeg -hide_banner -filters | 
 - [x] (21/10, script de contrôle) Polices DejaVu présentes ; filtres `ass`, `amultiply`, `loudnorm`, `afftdn` présents.
 
 ## 2. Éditeur (E1) — registre 7, 5, 6
-- [ ] Studio → Éditeur sur la conférence d'une heure : la timeline reste fluide (défilement, zoom, couper un extrait).
-- [ ] Lecture de l'aperçu dans **Chrome, Firefox et Safari** (registre 5).
-- [ ] Essai sur **téléphone** (iPhone notamment) et **tablette** (registre 6).
+- [x] (21/10, Epok : OK) Studio → Éditeur sur la conférence d'une heure : la timeline reste fluide (défilement, zoom, couper un extrait).
+- [x] (21/10, Epok : OK) Lecture de l'aperçu dans **Chrome, Firefox et Safari** (registre 5).
+- [x] (21/10, Epok : OK) Essai sur **téléphone** (iPhone notamment) et **tablette** (registre 6).
 
 ## 3. Son (E2) — registre 10, 11
-- [ ] Lancer une analyse du son pendant que l'on surveille : `docker stats dockpanel-git-majlistv-api` (l'API ne doit pas ralentir de façon gênante ; registre 11).
-- [ ] Essai à l'oreille « Sans / Avec réduction de bruit » sur une voix bruitée, réglage « légère » puis « forte » (registre 10) ; noter si c'est trop faible ou trop fort.
+- [x] (21/10, Epok : OK) Lancer une analyse du son pendant que l'on surveille : `docker stats dockpanel-git-majlistv-api` (l'API ne doit pas ralentir de façon gênante ; registre 11).
+- [x] (21/10, Epok : OK) Essai à l'oreille « Sans / Avec réduction de bruit » sur une voix bruitée, réglage « légère » puis « forte » (registre 10) ; noter si c'est trop faible ou trop fort.
 
 ## 4. Image finale et habillage (E3) — registre 12, 14
-- [ ] « Voir l'image finale » sur la vraie conférence : l'image n'est pas vide, les lettres arabes sont bien liées.
-- [ ] Pendant 3 ou 4 images de suite : `docker stats` pour surveiller l'API (registre 14).
+- [x] (21/10, Epok : OK) « Voir l'image finale » sur la vraie conférence : l'image n'est pas vide, les lettres arabes sont bien liées.
+- [x] (21/10, Epok : OK) Pendant 3 ou 4 images de suite : `docker stats` pour surveiller l'API (registre 14).
 
 ## 5. Rendu (E4a) — registre 18, 19
-- [ ] Aperçu rapide d'un montage de 2–3 extraits : fichier produit, lisible.
-- [ ] Rendu final de la conférence entière : noter le temps affiché (« calculé en … »), l'espace disque utilisé dans `/work`, la mémoire du worker :
+- [x] (21/10, Epok : OK) Aperçu rapide d'un montage de 2–3 extraits : fichier produit, lisible.
+- [x] (21/10, Epok : OK) Rendu final de la conférence entière : noter le temps affiché (« calculé en … »), l'espace disque utilisé dans `/work`, la mémoire du worker :
 ```
 docker stats --no-stream dockpanel-git-majlistv-worker
 docker exec dockpanel-git-majlistv-worker df -h /work
 docker logs dockpanel-git-majlistv-worker 2>&1 | grep -i rendu | tail -20
 ```
-- [ ] « Regarder » puis « Télécharger » le fichier rendu dans un vrai navigateur (registre 19).
+- [x] (21/10, Epok : OK) « Regarder » puis « Télécharger » le fichier rendu dans un vrai navigateur (registre 19).
 
 ## 6. Remplacement de la vidéo (E4b) — registre 21
 - [ ] Sur la conférence de test (jamais une conférence en service) : remplacer la vidéo, attendre la bascule, vérifier le lecteur, les sous-titres et la nouvelle transcription.
