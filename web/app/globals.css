@@ -3692,3 +3692,21 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .imp-panel progress { width: 100%; height: 8px; accent-color: var(--gold, #d4a84b); }
 .imp-panel .check.rights { align-items: flex-start; line-height: 1.4; }
 .imp-panel .btn { justify-self: start; }
+
+/* Étape 22a : page « Télécharger l'application » */
+.pwa-page { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; display: grid; gap: 20px; }
+.pwa-hero { display: flex; gap: 20px; align-items: center; }
+.pwa-hero h1 { margin: 0 0 6px; color: var(--text); }
+.pwa-icon { border-radius: 22px; flex: none; box-shadow: 0 6px 24px rgba(0, 0, 0, .4); }
+.pwa-perks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pwa-perks li { position: relative; padding-inline-start: 26px; color: var(--text-2); }
+.pwa-perks li::before { content: '✓'; position: absolute; inset-inline-start: 0; color: var(--accent); font-weight: 700; }
+.pwa-card { display: grid; gap: 12px; border-radius: 18px; }
+.pwa-card h2 { margin: 0; font-size: 1.1rem; color: var(--text); }
+.pwa-btn { justify-self: start; min-width: 160px; }
+.pwa-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pwa-steps li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-2); }
+.pwa-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+.pwa-soon { opacity: .85; }
+.pwa-installed { margin: 0; }
+@media (max-width: 520px) { .pwa-hero { flex-direction: column; text-align: center; } .pwa-btn { justify-self: stretch; } }

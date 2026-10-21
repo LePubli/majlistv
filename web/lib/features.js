@@ -5,6 +5,7 @@ import { featureForModulePath } from './modules';
 
 const CORE_RULES = [
   [/^\/register(\/|$)/, 'registration'],
+  [/^\/application(\/|$)/, 'app_install'], // étape 22a
 ];
 
 // Fonction dont dépend ce chemin (ou null).

@@ -4975,3 +4975,51 @@ docker exec dockpanel-git-majlistv-storage /garage bucket info majlis-videos | g
 
 ### Tests (21/10)
 `node worker/tests/test_bitrate_cap.mjs` : règle de calcul (source pauvre, riche, inconnue ; cas des 48 min) + vraie conversion FFmpeg d'une source 720p à 400 kbit/s (720p convertie pas plus grosse que la source). Non-régression : `node worker/tests/test_audio.mjs`, `python3 api/tests/test_media_import_e2e.py` (import complet avec le vrai worker). **Non testé** : la qualité à l'œil sur une vraie conférence, et le gain réel sur le VPS (à mesurer après reconversion).
+
+## Étape 22a — Site installable (PWA) (21/10)
+
+### Ce que ça fait
+- **Installer Mejliss TV comme une application**, sans magasin : icône sur l'écran d'accueil (téléphone, tablette, ordinateur), ouverture en plein écran sans la barre du navigateur.
+  - Chrome, Edge, Android : bouton « Installer » (invite du navigateur) sur la page **/application** (« Télécharger l'application », lien dans le pied de page).
+  - iPhone / iPad : la page explique les 3 gestes dans Safari (Partager → « Sur l'écran d'accueil » → Ajouter) ; hors Safari, elle demande d'ouvrir la page dans Safari (seul navigateur qui installe sur iOS).
+  - Ordinateur : explications Chrome / Edge et Safari (Mac).
+- **Page « Vous êtes hors connexion »** (FR / EN / AR, sens RTL en arabe) quand le réseau manque, avec un bouton « Réessayer ».
+- **Ouverture plus rapide** : les fichiers du site qui ne changent jamais (scripts, styles, polices), les icônes et le logo sont gardés par le téléphone.
+- **Rien de privé n'est gardé** : jamais une page, jamais une réponse de l'API, jamais une vidéo ni un fichier du stockage S3 (vérifié par le test). Le visionnage hors connexion (téléchargement) viendra avec l'application Android/iPhone (étape 22b).
+- Fonction activable : Admin → Fonctions → « Application installable » (`app_install`, activée par défaut). Coupée : la page /application et le lien disparaissent, et le service worker déjà installé chez les visiteurs est retiré à leur visite suivante (fichiers gardés effacés).
+- Couleurs de l'icône et de la barre du téléphone : thème publié (Admin → Apparence) ; nom : Admin → Paramètres.
+- Paiement : uniquement sur le site (rappel sur la page).
+
+### Fichiers
+`web/app/manifest.js` (manifeste, servi à `/manifest.webmanifest`), `web/public/sw.js` (service worker), `web/components/PwaRegister.js` (enregistrement / retrait, invite d'installation), `web/lib/pwa.js`, `web/app/application/page.js`, icônes `web/public/icon-192.png`, `icon-maskable-192.png`, `icon-maskable-512.png` (version « maskable » d'Android, logo réduit à 78 % sur le fond du thème), traductions `pwa*` (FR / EN / AR) ; `api/src/featuresList.js` (fonction `app_install`), menus du pied de page (`api/src/navcfg.js` = `web/lib/navcfg.js`, élément « Télécharger l'application »).
+
+### Prérequis
+Site servi en HTTPS (déjà le cas). Aucune variable à ajouter, aucune migration.
+
+### Déploiement
+DockPanel → Git Deploy → Redeploy : **majlistv-api** (nouvelle fonction dans Admin → Fonctions), puis **majlistv-web**. Le worker et les autres services ne changent pas. Puis :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Contrôle rapide :
+```
+curl -s https://majlisstv.le-publicitaire.fr/manifest.webmanifest | head -c 300; echo
+curl -sI https://majlisstv.le-publicitaire.fr/sw.js | grep -iE "^HTTP|cache-control"
+```
+
+### Utilisation
+- Android (Chrome) : ouvrir le site → pied de page « Télécharger l'application » → « Installer » (ou menu ⋮ → « Installer l'application »).
+- iPhone (Safari) : Partager → « Sur l'écran d'accueil » → Ajouter.
+- Ordinateur (Chrome / Edge) : icône d'installation dans la barre d'adresse.
+
+### Debug
+- Le bouton « Installer » n'apparaît pas : le navigateur ne propose l'invite que s'il juge le site installable et pas déjà installé ; les explications pas à pas s'affichent à la place. Chrome : Outils de développement → Application → Manifest (erreurs d'installabilité).
+- Une mise à jour du site tarde : le service worker est relu à chaque visite (`Cache-Control: no-cache`) ; les fichiers gardés portent une empreinte dans leur nom, une nouvelle version les remplace d'elle-même. En dernier recours : couper puis rallumer la fonction (Admin → Fonctions) retire le service worker chez tout le monde.
+- Page hors connexion vide de logo : `/brand/emblem.png` est gardé à l'installation ; il manque si la première visite a été interrompue.
+
+### Tests (21/10)
+`python3 web/tests/pwa_22a.py` (site en production local, API, base de test) : manifeste et icônes (tailles réelles), service worker actif et servi sans cache, **Chromium juge le site installable** (seule réserve : navigation privée du robot de test), contenu des caches (fichiers du site, ni API ni pages), page hors connexion en coupant vraiment le serveur (français 1440 px, arabe 390 px RTL), page /application (fr 1440, ar 390 iPhone, Android), lien du pied de page, fonction coupée (service worker retiré, caches effacés, page et lien fermés). Variable facultative `WEB_URL` (adresse du site testé).
+**Non testé** : vraie installation sur un vrai iPhone, un vrai Android et un ordinateur (le robot ne peut pas cliquer l'invite du navigateur) → à faire par Epok après déploiement.

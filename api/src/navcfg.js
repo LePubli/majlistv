@@ -45,7 +45,7 @@ export const MENUS = {
   },
   footer: {
     label: 'Liens du pied de page', hint: 'Les trois liens légaux sont obligatoires : on peut les déplacer ou les renommer, pas les retirer.',
-    builtin: [['channels', 'Chaînes'], ['mentions', 'Mentions légales'], ['cgv', 'Conditions générales de vente'], ['privacy', 'Politique de confidentialité']],
+    builtin: [['channels', 'Chaînes'], ['app', 'Télécharger l’application'], ['mentions', 'Mentions légales'], ['cgv', 'Conditions générales de vente'], ['privacy', 'Politique de confidentialité']],
     required: ['mentions', 'cgv', 'privacy'],
   },
 };

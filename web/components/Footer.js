@@ -18,6 +18,7 @@ export default function Footer() {
   const fz = nav?.footer || defaultFooter();
   const links = resolveList(nav?.menus?.footer, [
     { key: 'channels', href: '/chaines', label: t('spTitle'), on: feat('channels') },
+    { key: 'app', href: '/application', label: t('pwaNav'), on: feat('app_install') }, // étape 22a
     { key: 'mentions', href: '/legal/mentions-legales', label: t('legalNotice'), on: true },
     { key: 'cgv', href: '/legal/cgv', label: t('legalTerms'), on: true },
     { key: 'privacy', href: '/legal/confidentialite', label: t('legalPrivacy'), on: true },

@@ -374,3 +374,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape F — bilan (21/10, 17 h)
 - Liste de vérification déroulée sur le VPS : contrôle automatique (0 échec), import (archive.org, Vimeo, YouTube sans cookies, annulation, relance, adresse interne refusée), conférence de test de 48 min importée, éditeur, son, image finale, rendu, remplacement, montage par le texte, extraits 9:16, intervenants : validés par Epok. Restent au registre : n°57 (gain de stockage à mesurer après reconversion), n°58 (fichier archive.org), n°50 (arabe, voix de femme / d'enfant, licence). Suite : étape 22 (applications) sur le « go » d'Epok.
+
+## Étape 22a (21/10) — site installable (PWA)
+- Manifeste, icônes (dont « maskable »), service worker (fichiers du site gardés, page hors connexion FR/EN/AR, jamais de page, d'API ni de vidéo), page « Télécharger l'application » (/application : bouton d'installation, explications iPhone / Android / ordinateur), lien du pied de page, fonction `app_install` (Admin → Fonctions). Voir README « Étape 22a ». Reste : essai sur vrais appareils (Epok). Suite : 22b (application React Native / Expo) sur « go ».

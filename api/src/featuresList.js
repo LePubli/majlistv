@@ -55,6 +55,8 @@ export const FEATURES = [
     rules: [{ re: '^/me/notifications(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',
     rules: [{ re: '^/citation/today$' }] },
+  // Étape 22a : site installable (manifeste, service worker, page « Télécharger l'application »). Partie web seulement : aucune route d'API.
+  { id: 'app_install', group: 'access', label: 'Application installable', hint: 'Icône sur l’écran d’accueil, plein écran, page hors connexion, page « Télécharger l’application »' },
   { id: 'kids', group: 'community', label: 'Mejliss Kids', hint: 'Univers enfants séparé', setting: 'kids_enabled' },
   { id: 'showcase', group: 'access', label: 'Vitrine visiteur', hint: 'Page d\'accueil des visiteurs non connectés : méthode, exemple de conférence avec quiz, tarifs',
     rules: [{ re: '^/showcase$' }] },

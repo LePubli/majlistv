@@ -23,6 +23,7 @@ import { PageSlots } from '../components/PageBlocks';
 import EditMode from '../components/EditMode';
 import { webFeatures, hasWebModule } from '../lib/modules'; // étape M3b : fonctions dont la partie web du module est présente
 import TopBar from '../components/TopBar';
+import PwaRegister from '../components/PwaRegister'; // étape 22a : site installable
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -48,6 +49,9 @@ export const generateMetadata = async () => {
     openGraph: { type: 'website', siteName: name, title: name, description: site.description || undefined, images: ['/icon-512.png'] },
     twitter: { card: 'summary', title: name, description: site.description || undefined },
     icons: { icon: [{ url: '/favicon.png', type: 'image/png' }], apple: '/apple-touch-icon.png' },
+    // Étape 22a : site installable (écran d'accueil, plein écran). iPhone / iPad : ouverture sans la barre de Safari.
+    manifest: '/manifest.webmanifest',
+    appleWebApp: { capable: true, title: name, statusBarStyle: 'black' },
   };
 };
 // Couleur de la barre d'adresse des téléphones : le fond du thème publié (Admin → Apparence).
@@ -64,6 +68,7 @@ export default async function RootLayout({ children }) {
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
         <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
           <StatsBeacon />
+          <PwaRegister />
           <ResponsiveTables />
           <SkipLink />
           <TopBar />
