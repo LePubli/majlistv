@@ -371,3 +371,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Correctif stockage (21/10) — débit des qualités plafonné par la source
 - Le worker ne convertit plus une vidéo à un débit supérieur à celui de sa source (registre n°57) : une conférence de 48 min passe de ≈ 3,4 Go à ≈ 1,1 Go (original compris). Worker seul à redéployer. Voir README « Correctif stockage ».
+
+## Étape F — bilan (21/10, 17 h)
+- Liste de vérification déroulée sur le VPS : contrôle automatique (0 échec), import (archive.org, Vimeo, YouTube sans cookies, annulation, relance, adresse interne refusée), conférence de test de 48 min importée, éditeur, son, image finale, rendu, remplacement, montage par le texte, extraits 9:16, intervenants : validés par Epok. Restent au registre : n°57 (gain de stockage à mesurer après reconversion), n°58 (fichier archive.org), n°50 (arabe, voix de femme / d'enfant, licence). Suite : étape 22 (applications) sur le « go » d'Epok.

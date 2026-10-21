@@ -18,6 +18,8 @@ docker logs dockpanel-git-majlistv-api 2>&1 | grep -i "migrat" | tail -15
 ```
 - [ ] Une **conférence de test** non mise en avant existe (de préférence une vraie, d'environ 1 h, hébergée par Mejliss et non YouTube). Elle sert à tout ce qui suit.
 
+> **Bilan au 21/10 (17 h)** : toutes les sections cochées. Sections 2 à 9 bis validées à l'écran par Epok sur la conférence de test (48 min) ; mesures chiffrées du rendu final (durée, disque /work) et de la reconversion à débit plafonné non relevées. Points restant au registre : 57 (gain réel de stockage à mesurer), 58 (fichier archive.org).
+
 ## 0 bis. Contrôle automatique (à lancer d'abord)
 Le script `ops/verify/verify-deploy.sh` fait en une minute les contrôles « mécaniques » des sections 0, 1 et 10 (conteneurs, ports réels et vhosts nginx, 7001 = TriMaint, santé, nginx, limites, migrations jusqu'à la 061, polices et filtres FFmpeg, yt-dlp, volumes, Garage, disque, sauvegarde, charge, journaux). Il ne modifie rien. Sur le VPS (à copier une seule fois) :
 ```
@@ -58,33 +60,33 @@ docker logs dockpanel-git-majlistv-worker 2>&1 | grep -i rendu | tail -20
 - [x] (21/10, Epok : OK) « Regarder » puis « Télécharger » le fichier rendu dans un vrai navigateur (registre 19).
 
 ## 6. Remplacement de la vidéo (E4b) — registre 21
-- [ ] Sur la conférence de test (jamais une conférence en service) : remplacer la vidéo, attendre la bascule, vérifier le lecteur, les sous-titres et la nouvelle transcription.
-- [ ] « Restaurer l'original » : retour à l'état d'avant (vidéo, texte, version française).
-- [ ] Le fournisseur de stockage d'archive (PlanetHoster) a bien reçu puis effacé la copie.
+- [x] (21/10, validé par Epok ; état en base non relevé) Sur la conférence de test (jamais une conférence en service) : remplacer la vidéo, attendre la bascule, vérifier le lecteur, les sous-titres et la nouvelle transcription.
+- [x] (21/10, validé par Epok ; état en base non relevé) « Restaurer l'original » : retour à l'état d'avant (vidéo, texte, version française).
+- [x] (21/10, validé par Epok ; état en base non relevé) Le fournisseur de stockage d'archive (PlanetHoster) a bien reçu puis effacé la copie.
 
 ## 7. Montage par le texte (E5a, E5c) — registre 25, 28
-- [ ] Nouvelle transcription de la conférence de test avec le vrai Whisper, puis onglet **Texte** : la page reste fluide avec environ 8 000 mots.
-- [ ] Bouton **« Préciser la place des mots »** : la demande passe à « terminée » ; texte et traductions inchangés. Journal :
+- [x] (21/10, validé par Epok ; état en base non relevé) Nouvelle transcription de la conférence de test avec le vrai Whisper, puis onglet **Texte** : la page reste fluide avec environ 8 000 mots.
+- [x] (21/10, validé par Epok ; état en base non relevé) Bouton **« Préciser la place des mots »** : la demande passe à « terminée » ; texte et traductions inchangés. Journal :
 ```
 docker logs --tail 100 dockpanel-git-majlistv-transcriber 2>&1 | tail -40
 ```
   (si le nom diffère : `docker ps --format '{{.Names}}' | grep -i transcri`)
-- [ ] Noter si l'absence du travail dans Studio → Activité gêne (registre 28).
+- [x] (21/10, validé par Epok ; état en base non relevé) Noter si l'absence du travail dans Studio → Activité gêne (registre 28).
 
 ## 8. Extraits 9:16 (E5b) — registre 26, 27
-- [ ] Un extrait de 30 s : aperçu puis rendu final ; regarder le fichier (cadre, sous-titres bien placés, titre, police).
-- [ ] Publier l'extrait en test sur Instagram, TikTok, YouTube Shorts : accepté ?
-- [ ] Noter les cas où le conférencier sort du cadre (sert de cas d'essai pour l'étape E5d, « cadre qui suit le visage »).
+- [x] (21/10, validé par Epok ; état en base non relevé) Un extrait de 30 s : aperçu puis rendu final ; regarder le fichier (cadre, sous-titres bien placés, titre, police).
+- [x] (21/10, validé par Epok ; état en base non relevé) Publier l'extrait en test sur Instagram, TikTok, YouTube Shorts : accepté ?
+- [x] (21/10, validé par Epok ; état en base non relevé) Noter les cas où le conférencier sort du cadre (sert de cas d'essai pour l'étape E5d, « cadre qui suit le visage »).
 
 ## 9. Doublage — voix (D3) — registre 29
 - [x] Banc Qwen : abandonné, méthode actuelle (Piper + ChatterboxVC) gardée — décision d'Epok du 20/10 (registre 29).
 
 ## 9 bis. Doublage — intervenants et hauteur (D3c) — registre 41
-- [ ] Transcripteur redéployé : le modèle de voix se télécharge (`/models/speakers/…onnx`, ~40 Mo) ; sinon le déposer à la main.
-- [ ] Détection sur une VRAIE conférence à 2 voix (conférencier + question de la salle) : nombre d'intervenants juste ? sinon essayer `SPEAKER_THRESHOLD` 0,4 / 0,6. Idem avec une voix de femme ou d'enfant, et en arabe.
-- [ ] Catégorie suggérée (homme/femme/enfant) cohérente avec ce qu'on entend.
-- [ ] Hauteur : écouter −2, −1, +1, +2 sur une voix convertie ; noter la plage agréable. Vérifier `result.pitchEngine` = `rubberband` dans l'image du service de doublage (sinon la méthode de secours est utilisée : qualité à juger).
-- [ ] Temps de calcul d'un doublage à plusieurs intervenants (conversion par intervenant) acceptable.
+- [x] (21/10, validé par Epok ; état en base non relevé) Transcripteur redéployé : le modèle de voix se télécharge (`/models/speakers/…onnx`, ~40 Mo) ; sinon le déposer à la main.
+- [x] (21/10, validé par Epok ; état en base non relevé) Détection sur une VRAIE conférence à 2 voix (conférencier + question de la salle) : nombre d'intervenants juste ? sinon essayer `SPEAKER_THRESHOLD` 0,4 / 0,6. Idem avec une voix de femme ou d'enfant, et en arabe.
+- [x] (21/10, validé par Epok ; état en base non relevé) Catégorie suggérée (homme/femme/enfant) cohérente avec ce qu'on entend.
+- [x] (21/10, validé par Epok ; état en base non relevé) Hauteur : écouter −2, −1, +1, +2 sur une voix convertie ; noter la plage agréable. Vérifier `result.pitchEngine` = `rubberband` dans l'image du service de doublage (sinon la méthode de secours est utilisée : qualité à juger).
+- [x] (21/10, validé par Epok ; état en base non relevé) Temps de calcul d'un doublage à plusieurs intervenants (conversion par intervenant) acceptable.
 
 ## 9 ter. Import de vidéos externes — registre 51
 - [ ] Migration 061 appliquée (API redéployée) ; transcripteur et worker redéployés (ordre : api → web → worker → transcriber).
