@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# faux docker pour tester verify-deploy.sh
+sub=$1; shift
+case "$sub" in
+  inspect)
+    fmt=""; [ "$1" = -f ] && { fmt=$2; shift 2; }
+    name=$1
+    case "$name" in dockpanel-git-majlistv-dubbing) exit 1;; esac
+    case "$fmt" in
+      '{{.State.Running}}') echo true;;
+      '{{.State.Restarting}} {{.RestartCount}} {{.State.OOMKilled}}') echo "false 0 false";;
+      '{{.State.StartedAt}}') echo "2026-10-21T10:00:00Z";;
+      '{{.HostConfig.Memory}}') echo 268435456;;
+      '{{.HostConfig.NanoCpus}}') echo 500000000;;
+      *NetworkSettings*) echo 127.0.0.1;;
+      *) echo true;;
+    esac;;
+  ps) case "$*" in *restarting*) ;; *) echo "dockpanel-git-majlistv-api 127.0.0.1:7000->3000/tcp"; echo "trimaint_frontend 127.0.0.1:7001->3000/tcp";; esac;;
+  port) echo "127.0.0.1:3055";;
+  exec)
+    c=$1; shift
+    if [ "$c" = dockpanel-app-postgres-majlisstv ]; then PGPASSWORD=pw psql -h 127.0.0.1 -p 5544 -U majlis -d majlis -At -c "$5"; exit; fi
+    case "$*" in
+      "ls /usr/share/fonts/dejavu") echo DejaVuSans.ttf;;
+      *ffmpeg*filters*) echo " ass  amultiply loudnorm afftdn ";;
+      df*) printf 'Filesystem 1K-blocks Used Available Use%% Mounted\nx 100 1 20971520 1%% /work\n';;
+      "python -m yt_dlp --version") echo 2026.8.19;;
+      "deno --version") echo deno 2;;
+      *"ls /models"*) echo 3;;
+      */garage*status*) echo ok;;
+      */garage*bucket*) echo "Size: 1 GiB"; echo "Objects: 10";;
+      *) echo ok;;
+    esac;;
+  logs) echo "all good";;
+  stats) echo "  dockpanel-git-majlistv-api  UC 1%  mémoire 100MiB / 1GiB";;
+esac

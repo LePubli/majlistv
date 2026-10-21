@@ -365,3 +365,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape Import (21/10) — copier une vidéo externe chez nous
 - Une vidéo YouTube / Vimeo / archive.org (ou de n'importe quel site, ou un lien direct) peut être copiée dans Garage et devient une vidéo hébergée (HLS, mode audio, éditeur, doublage mixte, shorts 9:16). Facultatif pour chaque vidéo ; case d'attestation des droits + journal (Studio → Activité). Organisateurs et administrateurs. Migration 061 (table `media_imports`), fonction `media_import` (Admin → Fonctions), réglages `import_max_gb` et `import_max_height`. Voir README « Étape Import ». Reste : essais réels sur le VPS (étape F). Aide en images / module d'aide avec moteur de recherche : plus tard (registre n°52). Ordre : F → 22 (applications) → Créateur.
+
+## Étape F (21/10) — contrôle du VPS et reconstruction
+- Script de contrôle après déploiement `ops/verify/verify-deploy.sh` (conteneurs, ports, nginx, limites, migrations, FFmpeg, yt-dlp, Garage, disque, sauvegarde, charge, journaux), guide `docs/RECONSTRUIRE-DE-ZERO.md`, liste `docs/ETAPE-F-VERIFICATIONS.md` mise à jour. Les essais réels (conférence d'une heure, doublage, import, rendu, téléphone) se déroulent sur le VPS avec Epok : la liste se coche au fur et à mesure. Ordre : F → 22 (applications) → Créateur.

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+for a in "$@"; do u=$a; done
+case "$u" in *127.0.0.1:7000/*) u=${u/7000/3055};; *127.0.0.1:7010/*) u=${u/7010/3001};; esac
+exec /usr/bin/curl "${@:1:$(($#-1))}" "$u"

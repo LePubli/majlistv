@@ -4907,3 +4907,34 @@ Aucune nouvelle variable obligatoire. Si YouTube refuse (« confirmez que vous n
 ### Ce qui a été testé (21/10) — et ce qui ne l'a pas été
 Testé : `api/tests/test_media_import.py` (création, refus, droits d'accès, annulation, relance, journal, suppression, fonction désactivée), `transcriber/tests/test_importer.py` (anti-SSRF avec 10 types d'adresses, redirections, taille maximale, annulation, yt-dlp simulé, ffprobe, envoi S3), `api/tests/test_media_import_e2e.py` (de bout en bout avec un serveur vidéo local, le vrai transcripteur et le vrai worker FFmpeg : HLS, audio, bascule, échecs, nettoyage), `web/tests/import_studio.py` (interface en français 1440 px et arabe 390 px).
 **Non testé** : un vrai téléchargement depuis YouTube / Vimeo / un site depuis le VPS (réseau externe indisponible ici ; yt-dlp simulé) → étape F. Limites connues : YouTube bloque souvent les serveurs, et ses conditions d'utilisation interdisent de télécharger une vidéo dont on n'a pas les droits (d'où l'attestation) ; la protection contre l'accès au réseau interne pour yt-dlp contrôle l'adresse de départ et celles des flux choisis (au mieux).
+
+## Étape F — Contrôle du VPS et reconstruction (21/10)
+
+### Ce que c'est
+- `ops/verify/verify-deploy.sh` : **script de contrôle après déploiement**, à lancer sur le VPS (root). Il ne modifie rien. Il vérifie : les conteneurs (en marche, pas en boucle, pas tués par manque de mémoire), les ports (7000 API, 7010 site, 7001 = TriMaint intact), la santé de chaque service et des adresses publiques, nginx (`nginx -t`, `proxy_pass`), les limites de ressources, les migrations de la base (jusqu'à la 061), les conversions ou imports en échec ou bloqués, les polices et filtres FFmpeg du worker, yt-dlp / deno / modèles du transcripteur, Garage (cluster, bucket), le disque, la sauvegarde nocturne, la charge du VPS et les journaux récents. Sortie : OK / ATTENTION / ÉCHEC et un résumé ; code de sortie 1 s'il y a un ÉCHEC.
+- `docs/RECONSTRUIRE-DE-ZERO.md` : guide pour tout remonter sur un VPS vierge (secrets à avoir, ordre des services, variables, volumes, ports, Garage, restauration des sauvegardes, réglages après coup, pièges).
+- `docs/ETAPE-F-VERIFICATIONS.md` : la liste des essais réels à cocher avec Claude.
+
+### Prérequis
+VPS Ubuntu 24.04 avec Docker et les conteneurs nommés `dockpanel-git-majlistv-*` et `dockpanel-app-postgres-majlisstv` (noms de DockPanel déjà utilisés dans tout le dépôt).
+
+### Utilisation (commandes complètes)
+```
+# une seule fois, sur le VPS :
+cd /root && curl -fsSL https://raw.githubusercontent.com/LePubli/majlistv/main/ops/verify/verify-deploy.sh -o verify-deploy.sh && chmod 700 verify-deploy.sh
+# après chaque redéploiement (avec les 3 commandes habituelles) :
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/* | grep -i mejliss
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh            # complet ; options : --quick (sans charge ni journaux), --no-public (sans les adresses publiques)
+```
+Variables facultatives : `EXPECT_MIGRATION` (dernière migration attendue, défaut `061_media_import.sql`), `SITE_URL`, `API_URL_PUBLIC`, `S3_URL_PUBLIC`.
+
+### Debug
+- Un ÉCHEC « port hôte ≠ 7000 » : DockPanel a attribué un autre port ; voir la commande `UPDATE git_deploys SET host_port=…` du guide de reconstruction, puis corriger nginx.
+- « dernière migration appliquée » trop ancienne : redéployer `majlistv-api` et lire `docker logs dockpanel-git-majlistv-api 2>&1 | grep -i migrat`.
+- Le script suppose les noms de conteneurs ci-dessus ; en cas de doute : `docker ps --format '{{.Names}}' | grep -i majlis`.
+
+### Ce qui a été testé (21/10) — et ce qui ne l'a pas été
+Testé : `bash ops/verify/test-verify.sh` (faux `docker`, `curl`, `nginx` + la vraie base de test locale : les requêtes SQL sont valides sur le vrai schéma, les échecs réels sont détectés — conversions et imports en échec de nos tests —, une migration manquante est signalée). Syntaxe vérifiée par `bash -n`.
+**Non testé** : le script sur le vrai VPS (noms de conteneurs, ports hôte, volumes, sorties réelles de `docker`) ; le guide de reconstruction sur un VPS vierge. Tout se découvre lors de la première exécution : copier les lignes ÉCHEC / ATTENTION à Claude.
