@@ -16,13 +16,13 @@ case "$sub" in
       *) echo true;;
     esac;;
   ps) case "$*" in *restarting*) ;; *) echo "dockpanel-git-majlistv-api 127.0.0.1:7000->3000/tcp"; echo "trimaint_frontend 127.0.0.1:7001->3000/tcp";; esac;;
-  port) echo "127.0.0.1:3055";;
+  port) case "$1" in *-api) echo "0.0.0.0:7000";; *-web) echo "0.0.0.0:7010";; *) echo "127.0.0.1:3055";; esac;;
   exec)
     c=$1; shift
     if [ "$c" = dockpanel-app-postgres-majlisstv ]; then PGPASSWORD=pw psql -h 127.0.0.1 -p 5544 -U majlis -d majlis -At -c "$5"; exit; fi
     case "$*" in
       "ls /usr/share/fonts/dejavu") echo DejaVuSans.ttf;;
-      *ffmpeg*filters*) echo " ass  amultiply loudnorm afftdn ";;
+      *ffmpeg*filters*) echo " ... ass V->V x"; for i in $(seq 1 6000); do echo " ... filler$i A->A padding padding padding padding padding"; done; echo " ... amultiply AA->A x"; echo " ... loudnorm A->A x"; echo " TSC afftdn A->A x";;
       df*) printf 'Filesystem 1K-blocks Used Available Use%% Mounted\nx 100 1 20971520 1%% /work\n';;
       "python -m yt_dlp --version") echo 2026.8.19;;
       "deno --version") echo deno 2;;

@@ -58,8 +58,18 @@ if running "$PG"; then ok "$PG en marche"; else fail "$PG arrêté ou absent (ba
 title "2. Ports et santé des services"
 owner=$(docker ps --format '{{.Names}} {{.Ports}}' | grep -E "(:|->)${FOREIGN_PORT}->" | awk '{print $1}' | head -1)
 case "$owner" in "") info "port $FOREIGN_PORT : non publié (rien à signaler)";; *trimaint*) ok "port $FOREIGN_PORT : $owner (TriMaint, intact)";; *) fail "port $FOREIGN_PORT utilisé par $owner : il doit rester à TriMaint";; esac
-code=$(http_code "http://127.0.0.1:$API_PORT/health"); [ "$code" = 200 ] && ok "API : http://127.0.0.1:$API_PORT/health → 200" || fail "API : /health répond $code sur le port $API_PORT (conteneur $PREFIX-api : port hôte ≠ $API_PORT ?)"
-code=$(http_code "http://127.0.0.1:$WEB_PORT/"); case "$code" in 200|301|302|307|308) ok "Site : http://127.0.0.1:$WEB_PORT/ → $code";; *) fail "Site : répond $code sur le port $WEB_PORT";; esac
+host_port() { docker port "$1" 3000/tcp 2>/dev/null | head -1 | sed 's/.*://'; }
+API_HP=$(host_port "$PREFIX-api"); WEB_HP=$(host_port "$PREFIX-web")
+if [ -z "$API_HP" ]; then fail "API : aucun port hôte publié pour $PREFIX-api (docker port $PREFIX-api)"
+else
+  [ "$API_HP" = "$API_PORT" ] && ok "API : port hôte $API_HP (attendu)" || warn "API : port hôte $API_HP au lieu de $API_PORT (DockPanel l'a changé ? nginx doit suivre)"
+  code=$(http_code "http://127.0.0.1:$API_HP/health"); [ "$code" = 200 ] && ok "API : http://127.0.0.1:$API_HP/health → 200" || fail "API : /health répond $code sur le port hôte $API_HP"
+fi
+if [ -z "$WEB_HP" ]; then fail "Site : aucun port hôte publié pour $PREFIX-web (docker port $PREFIX-web)"
+else
+  [ "$WEB_HP" = "$WEB_PORT" ] && ok "Site : port hôte $WEB_HP (attendu)" || warn "Site : port hôte $WEB_HP au lieu de $WEB_PORT (DockPanel l'a changé ? nginx doit suivre)"
+  code=$(http_code "http://127.0.0.1:$WEB_HP/"); case "$code" in 200|301|302|307|308) ok "Site : http://127.0.0.1:$WEB_HP/ → $code";; *) fail "Site : répond $code sur le port hôte $WEB_HP";; esac
+fi
 for svc in worker transcriber translator dubbing; do
   c=$PREFIX-$svc; running "$c" || continue
   hp=$(docker port "$c" 3000/tcp 2>/dev/null | head -1 | sed 's/.*://')
@@ -81,13 +91,16 @@ fi
 title "3. nginx et limites de ressources"
 if have nginx; then
   nginx -t >/dev/null 2>&1 && ok "nginx -t : configuration valide" || fail "nginx -t échoue : nginx -t (lire le message) — ne pas recharger nginx tant que ce n'est pas corrigé"
-  lines=$(grep -n proxy_pass /etc/nginx/sites-enabled/* 2>/dev/null | grep -i mejliss)
-  if [ -z "$lines" ]; then warn "aucune ligne proxy_pass « mejliss » dans /etc/nginx/sites-enabled"
+  # Vhosts de Mejliss TV : fichiers qui citent le nom de domaine du site, de l'API ou du stockage (le nom de fichier ne contient pas forcément « mejliss »).
+  files=$(grep -l -E "majlisstv|mejliss" /etc/nginx/sites-enabled/* /etc/nginx/conf.d/* 2>/dev/null)
+  lines=""; [ -n "$files" ] && lines=$(grep -n proxy_pass $files 2>/dev/null)
+  if [ -z "$lines" ]; then warn "aucun vhost nginx citant « majlisstv » (voir : grep -rn proxy_pass /etc/nginx/ | head -30)"
   else
-    info "$(echo "$lines" | sed 's/^/ /' | tr '\n' ';')"
-    echo "$lines" | grep -qE "127\.0\.0\.1:$API_PORT" && ok "nginx : l'API pointe sur le port $API_PORT" || fail "nginx : aucun proxy_pass vers le port $API_PORT pour l'API (DockPanel a changé le port ? corriger le vhost, puis nginx -t && systemctl reload nginx)"
-    echo "$lines" | grep -qE "127\.0\.0\.1:$WEB_PORT" && ok "nginx : le site pointe sur le port $WEB_PORT" || fail "nginx : aucun proxy_pass vers le port $WEB_PORT pour le site"
-    echo "$lines" | grep -qE "127\.0\.0\.1:$FOREIGN_PORT" && fail "nginx : un vhost Mejliss pointe sur $FOREIGN_PORT (TriMaint)"
+    info "$(sed 's/^/ /' <<<"$lines" | tr '\n' ';')"
+    api_p=${API_HP:-$API_PORT}; web_p=${WEB_HP:-$WEB_PORT}
+    grep -qE ":$api_p\b" <<<"$lines" && ok "nginx : un vhost Mejliss pointe sur le port de l'API ($api_p)" || fail "nginx : aucun vhost Mejliss ne pointe sur le port de l'API ($api_p) — corriger le vhost, puis nginx -t && systemctl reload nginx"
+    grep -qE ":$web_p\b" <<<"$lines" && ok "nginx : un vhost Mejliss pointe sur le port du site ($web_p)" || fail "nginx : aucun vhost Mejliss ne pointe sur le port du site ($web_p)"
+    grep -qE ":$FOREIGN_PORT\b" <<<"$lines" && fail "nginx : un vhost Mejliss pointe sur $FOREIGN_PORT (TriMaint)"
   fi
 else warn "nginx absent de cette machine"; fi
 [ -x /root/apply-limits.sh ] && ok "/root/apply-limits.sh présent" || warn "/root/apply-limits.sh absent ou non exécutable"
@@ -119,7 +132,8 @@ w=$PREFIX-worker
 if running "$w"; then
   dx "$w" ls /usr/share/fonts/dejavu 2>/dev/null | grep -qi dejavu && ok "worker : polices DejaVu présentes" || fail "worker : polices DejaVu absentes (image du worker à reconstruire)"
   filt=$(dx "$w" sh -c "ffmpeg -hide_banner -filters" 2>/dev/null); missing=""
-  for f in ass amultiply loudnorm afftdn; do echo "$filt" | grep -qE " $f " || missing="$missing $f"; done
+  # here-string (et non « echo | grep -q ») : avec pipefail, grep -q qui s'arrête tôt faisait échouer le tube (faux « filtre manquant »)
+  for f in ass amultiply loudnorm afftdn; do grep -qE " $f " <<<"$filt" || missing="$missing $f"; done
   [ -z "$missing" ] && ok "worker : FFmpeg a les filtres ass, amultiply, loudnorm, afftdn" || fail "worker : filtres FFmpeg manquants :$missing"
   free=$(dx "$w" df -Pk /work 2>/dev/null | awk 'NR==2{print int($4/1048576)}')
   [ -z "$free" ] && info "worker : /work illisible" || { [ "$free" -ge 5 ] && ok "worker : ${free} Go libres dans /work" || warn "worker : seulement ${free} Go libres dans /work (un rendu ou un import peut échouer)"; }
@@ -144,7 +158,7 @@ s=$PREFIX-storage
 if running "$s"; then
   dx "$s" /garage status >/dev/null 2>&1 && ok "Garage : cluster en état" || fail "Garage : « /garage status » échoue ($s)"
   b=$(dx "$s" /garage bucket info majlis-videos 2>/dev/null)
-  if [ -n "$b" ] && ! echo "$b" | grep -qi "error"; then ok "Garage : bucket majlis-videos présent"; echo "$b" | grep -iE "size|objects|quota" | head -4 | sed 's/^/         /'; else fail "Garage : bucket majlis-videos introuvable"; fi
+  if [ -n "$b" ] && ! grep -qi "error" <<<"$b"; then ok "Garage : bucket majlis-videos présent"; echo "$b" | grep -iE "size|objects|quota" | head -4 | sed 's/^/         /'; else fail "Garage : bucket majlis-videos introuvable"; fi
 fi
 use=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
 if [ -n "$use" ]; then if [ "$use" -ge 90 ]; then fail "disque du VPS plein à ${use} %"; elif [ "$use" -ge 80 ]; then warn "disque du VPS plein à ${use} %"; else ok "disque du VPS : ${use} % utilisé"; fi; fi
