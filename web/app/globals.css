@@ -1338,7 +1338,6 @@ body.kd-theme .panel, body.kd-theme .kd-form { border-radius: 22px; }
   .hd-burger { display: inline-flex; }
   .hd .logo { margin-inline: auto; }
   .hd-right { margin-inline-start: 0; }
-  .hd .logo .logo-word { display: none; }
 }
 @media (min-width: 901px) { .dr-backdrop { display: none; } }
 
@@ -3734,7 +3733,7 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
   .pry-pill { padding: 0 10px; gap: 6px; font-size: 12.5px; }
   .pry-pop { position: fixed; top: 64px; inset-inline: 12px; width: auto; max-width: none; }
 }
-@media (max-width: 340px) { .pry-name { display: none; } }
+@media (max-width: 460px) { .pry-name { display: none; } } /* petit écran : le logo complet garde sa place, la pastille ne montre que le compte à rebours */
 
 .pry-backdrop { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; padding: 20px; background: rgba(5, 4, 3, .82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: pry-in .25s ease-out; }
 .pry-card { width: min(440px, 100%); padding: 34px 28px 28px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 30px 80px rgba(0, 0, 0, .6); text-align: center; display: grid; gap: 6px; justify-items: center; }
