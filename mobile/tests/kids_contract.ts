@@ -1,14 +1,14 @@
-// 22b-9a : essai du client Kids contre une vraie API (lancé à la main, pas par « npm test »).
+// 22b-9a/9b : essai du client Kids contre une vraie API (lancé à la main, pas par « npm test »).
 //   KIDS_FIXTURE="$(python3 api/tests/kids_fixture.py | tail -1)" API_URL=http://127.0.0.1:3055 npx tsx tests/kids_contract.ts   (depuis mobile/)
 // Parcours de l'application : état parent → code parental → profil → entrée (jeton enfant) → catalogue → recherche → lecture + reprise → temps → sortie par code.
 import assert from 'node:assert/strict';
 import { createApi, ApiError } from '../src/lib/api';
 import { DICT, translate } from '../src/lib/i18n';
-import { exitMessage, leftMin, parseKidSession, progressBody, resolveShelves, searchTerm, serializeKidSession, shelfTitle, validPin } from '../src/lib/kids';
+import { actionStateKey, actionsOpenCount, exitMessage, leftMin, openActions, playableShorts, quizAnswers, starsMessageKey, parseKidSession, progressBody, resolveShelves, searchTerm, serializeKidSession, shelfTitle, validPin } from '../src/lib/kids';
 import { pickSource } from '../src/lib/playback';
-import type { KidCatalog, KidCard, KidProfile, KidsState, KidTime, Talk } from '../src/lib/types';
+import type { KidAction, KidActionCounts, KidCatalog, KidCard, KidProfile, KidQuizQuestion, KidQuizResult, KidShort, KidSummary, KidsState, KidTime, Talk } from '../src/lib/types';
 
-const fx = JSON.parse(process.env.KIDS_FIXTURE || '{}') as { token: string; talkId: string; rubricId: number };
+const fx = JSON.parse(process.env.KIDS_FIXTURE || '{}') as { token: string; talkId: string; rubricId: number; shortId: string };
 const base = process.env.API_URL || 'http://127.0.0.1:3055';
 const parent = createApi({ baseUrl: base, getToken: () => fx.token });
 const t = (k: string, v?: Record<string, string | number>) => translate('fr', k as never, v);
@@ -64,6 +64,35 @@ async function main() {
   await parent.put(`/me/kids/profiles/${p.id}/controls`, { dailyLimitMin: 15 });
   const tm2 = await kid.post<KidTime>('/kids/ping'); assert.ok((leftMin(tm2) ?? 99) <= 15 && !tm2.timeUp);
   console.log('temps OK : reste', leftMin(tm2), 'min');
+
+  // 22b-9b : quiz (réponses jamais envoyées avec les questions), étoiles, petites actions, courts.
+  const qz = await kid.get<{ questions: KidQuizQuestion[] }>(`/kids/talks/${fx.talkId}/quiz`);
+  assert.equal(qz.questions.length, 5); assert.ok(qz.questions.every((x) => !('correct_index' in x) && !('correctIndex' in x) && x.options.length === 3), 'pas de réponse dans les questions');
+  assert.equal(quizAnswers(qz.questions, [1, 1, 1, 1]), null, 'envoi incomplet refusé côté application');
+  const good = quizAnswers(qz.questions, qz.questions.map(() => 1))!; assert.equal(good.length, 5);
+  const bad = await kid.post<KidQuizResult>(`/kids/talks/${fx.talkId}/quiz/submit`, { answers: quizAnswers(qz.questions, qz.questions.map(() => 0))! });
+  assert.equal(bad.stars, 1); assert.equal(starsMessageKey(bad.stars), 'kdStars1'); assert.equal(bad.score, 0);
+  const win = await kid.post<KidQuizResult>(`/kids/talks/${fx.talkId}/quiz/submit`, { answers: good });
+  assert.equal(win.stars, 3); assert.equal(win.score, 5); assert.equal(win.totalStars, 3, 'la meilleure note compte, rejouer ne fait pas baisser');
+  assert.ok(win.results.every((r) => r.correct && r.correctIndex === 1));
+  const sm = await kid.get<KidSummary>('/kids/summary'); assert.equal(sm.stars, 3); assert.equal(sm.quizzes, 2);
+  assert.equal((await kid.get<KidCatalog>('/kids/catalog')).talks.find((x) => x.id === fx.talkId)!.stars, 3);
+  assert.equal((await kid.get<Talk>(`/talks/${fx.talkId}`)).quiz?.available, true);
+  console.log('quiz + étoiles OK (', win.stars, 'étoiles ; badges', sm.badges.length, ')');
+
+  const act = await parent.post<{ id: string }>(`/me/kids/profiles/${p.id}/actions`, { title: 'Ranger ma chambre' });
+  let acts = await kid.get<{ actions: KidAction[]; counts: KidActionCounts }>('/kids/actions');
+  assert.equal(acts.actions[0].status, 'todo'); assert.equal(actionsOpenCount(acts.counts), 1); assert.equal(actionStateKey(acts.actions[0].status), 'kaStTodo');
+  await kid.post(`/kids/actions/${act.id}/claim`);
+  acts = await kid.get('/kids/actions'); assert.equal(acts.actions[0].status, 'claimed'); assert.equal(actionStateKey('claimed'), 'kaStClaimed');
+  await parent.post(`/me/kids/profiles/${p.id}/actions/${act.id}/validate`);
+  acts = await kid.get('/kids/actions'); assert.equal(acts.actions[0].status, 'validated'); assert.equal(openActions(acts.actions).length, 0);
+  console.log('petites actions OK');
+
+  const shorts = playableShorts(await kid.get<KidShort[]>('/shorts', { limit: 20 }));
+  assert.equal(shorts.length, 1); assert.equal(shorts[0].id, fx.shortId); assert.equal(shorts[0].talk.id, fx.talkId);
+  await kid.post(`/shorts/${fx.shortId}/view`);
+  console.log('courts OK');
 
   // Sortie : mauvais code (essais restants) puis bon code (jeton du parent).
   let wrong: ApiError | null = null;

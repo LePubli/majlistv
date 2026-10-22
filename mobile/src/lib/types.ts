@@ -171,3 +171,18 @@ export type KidCard = {
 };
 export type KidShelf = { kind: 'resume' | 'because' | 'age' | 'new' | 'popular' | 'rubric'; ids: string[]; rubricId?: number; basedOn?: { id: string; title: string } };
 export type KidCatalog = { rubrics: KidRubric[]; shelves: KidShelf[]; talks: KidCard[]; time: KidTime };
+
+// ---- Mejliss Kids (22b-9b) : quiz, étoiles, badges, petites actions, courts ----
+export type KidQuizQuestion = { id: string; question: string; options: string[] };
+export type KidQuizResult = {
+  score: number; total: number; percent: number; stars: number; totalStars: number; previousStars: number; newBadges: string[]; nextReview: string | null;
+  results: { questionId: string; chosen: number; correct: boolean; correctIndex: number; explanation: string | null; evidenceMs: number | null }[];
+};
+export type KidActionStatus = 'todo' | 'claimed' | 'validated';
+export type KidAction = { id: string; title: string; status: KidActionStatus; createdAt: string; claimedAt: string | null; validatedAt: string | null };
+export type KidActionCounts = { todo: number; claimed: number; validated: number };
+export type KidSummary = {
+  time: KidTime; learning: boolean; stars: number; quizzes: number; watched: number; badges: { code: string; earnedAt: string }[]; allBadges: string[];
+  due: { id: string; title: string; speaker: string | null; source: string; durationSeconds: number | null; posterUrl: string | null }[]; actions?: KidActionCounts;
+};
+export type KidShort = { id: string; title: string; duration: number | null; views: number; publishedAt: string; videoUrl: string | null; posterUrl: string | null; talk: { id: string; title: string; premium: boolean } };

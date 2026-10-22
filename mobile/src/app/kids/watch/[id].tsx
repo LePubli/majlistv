@@ -2,7 +2,7 @@
 // à la pause et en quittant), temps du jour compté par le « ping » du serveur, message sympa quand la durée est écoulée. Pas d'incrustation, pas de
 // lecture en arrière-plan, pas de téléchargement ni de diffusion : l'enfant reste dans l'espace.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useEvent, useEventListener } from 'expo';
@@ -16,10 +16,11 @@ import { formatDuration } from '@/lib/format';
 import { pickSource } from '@/lib/playback';
 import { registerMedia } from '@/lib/mediaRegistry';
 import type { EmbedMessage } from '@/lib/embed';
-import { KC, PROGRESS_EVERY_MS, avatarEmoji, bandKey, isTimeUp, leftMin, progressBody } from '@/lib/kids';
+import { KC, PROGRESS_EVERY_MS, avatarEmoji, bandKey, clampStars, isTimeUp, leftMin, progressBody } from '@/lib/kids';
 import type { KidCard, Talk } from '@/lib/types';
 import { ExternalVideo, PlayerHandle } from '@/components/ExternalVideo';
 import { KButton, KScreen, KTxt, KidVideoCard, starsText } from '@/components/kids/KidUi';
+import { KidQuiz } from '@/components/kids/KidQuiz';
 
 const back = () => { if (router.canGoBack()) router.back(); else router.replace('/kids/home'); };
 
@@ -69,6 +70,9 @@ function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; ne
   const embedRef = useRef<PlayerHandle>(null);
   const [failed, setFailed] = useState(false);
   const [ended, setEnded] = useState(false);
+  const [quiz, setQuiz] = useState(false);
+  const [gotStars, setGotStars] = useState(0);
+  const hasQuiz = !!talk.quiz?.available;
   const sourceObj = useMemo(() => (src.uri ? { uri: src.uri, metadata: { title: talk.title } } : null), [src.uri]); // eslint-disable-line react-hooks/exhaustive-deps
   const player = useVideoPlayer(sourceObj, (p) => { p.staysActiveInBackground = false; p.showNowPlayingNotification = false; p.timeUpdateEventInterval = 1; });
   const { isPlaying: nativePlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
@@ -115,7 +119,8 @@ function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; ne
   const left = leftMin(time);
   const playable = !!src.uri || !!src.embed;
   const dur = formatDuration(talk.durationSeconds || 0);
-  const got = starsText(stars);
+  const got = starsText(Math.max(clampStars(stars), gotStars) || null);
+  const openQuiz = () => { try { if (src.embed) embedRef.current?.pause(); else player.pause(); } catch { /* lecteur pas prêt */ } setQuiz(true); };
   return (
     <KScreen>
       {topBar}
@@ -139,10 +144,22 @@ function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; ne
             <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(7,11,39,0.92)', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
               <KTxt size={40} style={{ lineHeight: 50 }}>{avatarEmoji(kid?.profile.avatar ?? 'star')}</KTxt>
               <KTxt weight="extrabold" size={18} style={{ textAlign: 'center' }}>{t('kids.done')}</KTxt>
-              <KButton label={t('kdBack').replace('← ', '')} onPress={back} />
+              {hasQuiz ? <KButton label={t('kdQuizPlay')} onPress={openQuiz} /> : null}
+              <KButton label={t('kdBack').replace('← ', '')} variant={hasQuiz ? 'soft' : 'accent'} onPress={back} />
             </View>
           ) : null}
         </View>
+
+        {hasQuiz ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, padding: 16, borderRadius: 22, backgroundColor: KC.surface2, borderWidth: 2, borderColor: KC.accent }}>
+            <KTxt size={34} style={{ lineHeight: 44 }}>🎯</KTxt>
+            <View style={{ flex: 1 }}>
+              <KTxt weight="extrabold" size={17}>{t('kdQuizCardTitle')}</KTxt>
+              <KTxt size={13} color={KC.text2}>{got && Math.max(clampStars(stars), gotStars) > 0 ? t('kdQuizCardMore') : t('kdQuizCardText')}</KTxt>
+            </View>
+            <KButton label={Math.max(clampStars(stars), gotStars) > 0 ? t('kdReplay') : t('kdQuizPlay')} onPress={openQuiz} style={{ minHeight: 48, paddingHorizontal: 16 }} />
+          </View>
+        ) : null}
 
         <View style={{ paddingHorizontal: 20, gap: 8 }}>
           <KTxt weight="extrabold" size={22} accessibilityRole="header">{talk.title}</KTxt>
@@ -168,6 +185,9 @@ function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; ne
             </View>
           </View>
         ) : null}
+        <Modal visible={quiz} animationType="slide" onRequestClose={() => setQuiz(false)} statusBarTranslucent>
+          <KScreen>{quiz ? <KidQuiz talkId={talk.id} onClose={() => setQuiz(false)} onDone={(r) => setGotStars(Math.max(clampStars(r.stars), 0))} /> : null}</KScreen>
+        </Modal>
         <KTxt size={12} color={KC.muted} style={{ textAlign: 'center', paddingHorizontal: 20 }}>{kidName ? `${avatarEmoji(kid?.profile.avatar ?? 'star')} ${kidName} · ` : ''}{t('kids.lockHint')}</KTxt>
       </ScrollView>
     </KScreen>

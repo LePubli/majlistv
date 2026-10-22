@@ -5555,3 +5555,23 @@ curl -sI -H "Origin: https://www.gstatic.com" "https://api-majlisstv.le-publicit
 **Tests.** `cd mobile && npm run check` (types + 103 tests dont `tests/kids.test.ts`). Contrat réel contre l'API : `export KIDS_FIXTURE="$(python3 api/tests/kids_fixture.py | tail -1)"; cd mobile && API_URL=http://127.0.0.1:3055 npx tsx tests/kids_contract.ts` (état parent, code, profil, entrée + verrou, catalogue, recherche, lecture + reprise, temps, sortie).
 
 **Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Metro Android. **Non testé** : les écrans sur un vrai téléphone (affichage, lecture vidéo, bouton retour, arabe). Reste (sur « go ») : 9b (quiz et étoiles, courts Kids, petites actions, pause de prière) et 9c (espace parent : limite, sélection du catalogue, validation des actions, rapport, changement de code, modification de profil).
+
+## Étape 22b-9b — Espace Kids natif : quiz et étoiles, courts, petites actions, pause de prière (22/10, application 0.10.0)
+
+**Description.** Suite de 22b-9a dans l'application :
+- **Quiz** : sur la page d'une vidéo (carte « Teste-toi ») et à la fin de la lecture (bouton sur l'écran de fin). Une question à la fois, gros boutons, sans chronomètre, 5 questions tirées par le serveur (jamais les réponses avant l'envoi). Résultat en **1 à 3 étoiles** (jamais « raté »), bonnes réponses et explications, **badges** gagnés, prochaine révision (formule Apprentissage). Rejouer ne fait jamais baisser les étoiles. L'accueil affiche le total d'étoiles, les badges, les vidéos « à revoir » (Apprentissage).
+- **Courts** : bouton « 🎬 Shorts » sur l'accueil (si la fonction est activée dans Admin → Fonctions) → file verticale, glisser vers le haut pour le suivant, toucher pour pause/lecture, bouton « Regarder » vers la conférence complète. Le serveur ne propose que les courts de l'âge de l'enfant et du catalogue choisi par le parent.
+- **Petites actions** : le parent propose (depuis le site), l'enfant touche « Je l'ai fait » (accueil ou fin de quiz), le parent valide.
+- **Pause de prière** : la pause existante s'applique aussi à l'espace enfant (vidéos et courts), avec un écran bleu nuit et de gros boutons.
+
+**Prérequis.** Aucun changement API ni site. Les quiz doivent exister et être approuvés (Admin → Quiz) ; sans quiz, la carte n'apparaît pas.
+
+**Déploiement.** Pousser sur `main` → le workflow fabrique l'APK/OTA 0.10.0 (pas de nouveau module natif). Aucun redéploiement DockPanel.
+
+**Essai sur téléphone.** Kids → profil → ouvrir une vidéo avec quiz → « Teste-toi » → répondre → voir étoiles + explications → retour à l'accueil (étoiles mises à jour). Accueil → « Shorts » → glisser. Ajouter une action côté parent (site), la voir sur l'accueil, « Je l'ai fait », la valider côté parent. Heure de prière : la lecture se met en pause.
+
+**Debug.** Pas de carte quiz : la vidéo n'a pas assez de questions approuvées (réglage « quiz_min_questions »). « Shorts » absent : fonction coupée ou aucun court publié pour l'âge. Courts qui ne se lisent pas : adresse temporaire expirée → quitter/rouvrir l'écran.
+
+**Tests.** `cd mobile && npm run check` (types + 111 tests). Contrat réel : `export KIDS_FIXTURE="$(python3 api/tests/kids_fixture.py | tail -1)"; cd mobile && API_URL=http://127.0.0.1:3055 npx tsx tests/kids_contract.ts` (ajouts : questions sans réponses, 1 puis 3 étoiles, total non décroissant, actions todo → claimed → validated, courts + vue).
+
+**Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Android. **Non testé** : tout l'affichage sur un vrai téléphone (quiz, glissement vertical des courts, lecture vidéo des courts, pause de prière version enfant, arabe). Le temps du jour continue de compter pendant la pause de prière. Reste : 9c (espace parent dans l'application).

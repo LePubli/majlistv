@@ -7,6 +7,9 @@ import { Modal, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { usePrayer } from '@/lib/prayerStore';
+import { useKid } from '@/lib/kidSession';
+import { KC } from '@/lib/kids';
+import { KButton, KTxt } from '@/components/kids/KidUi';
 import { useNow } from '@/lib/useNow';
 import { countdown, statusAt } from '@/lib/prayer/prayerLogic';
 import { fmtTime } from '@/lib/prayer/prayerTimes';
@@ -18,6 +21,7 @@ import { prayerNameKey } from '@/components/PrayerPill';
 export function PrayerGate() {
   const { t, locale, dirStyle } = useSession();
   const prayer = usePrayer();
+  const { kid } = useKid();
   const active = prayer.on && prayer.ready && prayer.prefs.enabled && prayer.items.length > 0;
   const now = useNow(1000, active);
   const [blocked, setBlocked] = useState<string | null>(null); // clé de la prière qui a interrompu la lecture
@@ -48,6 +52,26 @@ export function PrayerGate() {
 
   if (!visible || !cur || now == null) return null;
   const name = t(prayerNameKey(cur.id));
+  // Espace enfant : même pause, mais en bleu nuit, avec de gros boutons et sans aller-retour vers un autre écran.
+  if (kid) {
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={() => finish(true)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(7,11,39,0.94)', justifyContent: 'center', padding: 22 }}>
+          <View accessibilityViewIsModal style={[{ borderRadius: 28, backgroundColor: KC.surface, borderWidth: 2, borderColor: KC.accent, padding: 24, gap: 10, alignItems: 'center' }, dirStyle]}>
+            <KTxt size={52} style={{ lineHeight: 64 }}>🌙</KTxt>
+            <KTxt weight="bold" size={13} color={KC.muted}>{t('pryNow')}</KTxt>
+            <KTxt weight="extrabold" size={34} color={KC.accent} accessibilityRole="header">{name}</KTxt>
+            <KTxt color={KC.text2} style={{ textAlign: 'center' }}>{t('pryHelp', { n: prayer.prefs.blockMinutes })}</KTxt>
+            <KTxt size={13} color={KC.muted} style={{ writingDirection: 'ltr' }} accessibilityRole="timer">{t('pryRemaining', { time: countdown(cur.endsAt - now) })}</KTxt>
+            <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 8 }}>
+              <KButton label={t('pryPrayed')} onPress={() => finish(true)} />
+              <KButton label={t('pryContinue')} variant="soft" onPress={() => finish(true)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => finish(true)}>
       <View style={{ flex: 1, backgroundColor: 'rgba(5,4,3,0.86)', justifyContent: 'center', padding: 22 }}>

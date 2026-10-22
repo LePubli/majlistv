@@ -7,14 +7,15 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { useAsync } from '@/lib/useAsync';
-import { KC, ageFilter, avatarEmoji, leftMin, resolveShelves, rubricName, searchTerm, shelfTitle } from '@/lib/kids';
-import type { KidCard, KidCatalog } from '@/lib/types';
+import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, badgeIcon, dueCards, leftMin, resolveShelves, rubricName, searchTerm, shelfTitle } from '@/lib/kids';
+import type { KidCard, KidCatalog, KidSummary } from '@/lib/types';
 import { KButton, KChip, KScreen, KTxt, KidVideoCard } from '@/components/kids/KidUi';
+import { KidActionsList } from '@/components/kids/KidActionsList';
 
 const open = (id: string) => router.push({ pathname: '/kids/watch/[id]', params: { id } });
 
 export default function KidsHome() {
-  const { t, locale, isRTL } = useSession();
+  const { t, locale, isRTL, feat } = useSession();
   const { kid, kidApi, epoch, time, setTime } = useKid();
   const { width } = useWindowDimensions();
   const cardW = Math.round(Math.min(280, Math.max(160, (width - 40) / (width >= 700 ? 3.2 : 1.7))));
@@ -23,6 +24,8 @@ export default function KidsHome() {
     if (d.time) setTime(d.time);
     return d;
   }, [kid?.profile.id, epoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Étoiles, badges, à revoir, petites actions (résumé de l'enfant) : s'il manque, l'accueil fonctionne sans.
+  const sum = useAsync(() => kidApi.get<KidSummary>('/kids/summary').catch(() => null), [kid?.profile.id, epoch]); // eslint-disable-line react-hooks/exhaustive-deps
   const [q, setQ] = useState('');
   const [found, setFound] = useState<KidCard[] | null>(null);
   const [rubric, setRubric] = useState<number | null>(null);
@@ -43,6 +46,7 @@ export default function KidsHome() {
 
   const d = cat.data;
   const band = kid?.profile.band ?? '';
+  const sm = sum.data;
   const rows = useMemo(() => (d ? resolveShelves(d.shelves, d.talks, mine, band) : []), [d, mine, band]);
   if (!kid) return <Redirect href="/kids" />;
 
@@ -99,8 +103,11 @@ export default function KidsHome() {
               ? <KChip label={`${r.emoji} ${rubricName(r, locale)}`} active={rubric === r.id} onPress={() => setRubric(rubric === r.id ? null : r.id)} />
               : <KChip label={t('kcAll')} active={rubric === null} onPress={() => setRubric(null)} />} />
         ) : null}
-        <View style={{ paddingHorizontal: 20, flexDirection: 'row' }}>
+        <View style={{ paddingHorizontal: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <KChip label={`${mine ? '✓ ' : ''}${t('kcOnlyMyAge')}`} active={mine} onPress={() => setMine(!mine)} />
+          {feat('shorts') ? <KChip label={`🎬 ${t('shrTitle')}`} onPress={() => router.push('/kids/shorts')} /> : null}
+          {sm ? <View style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center', backgroundColor: KC.surface2, borderWidth: 2, borderColor: KC.accent }} accessibilityLabel={t('kdStarsTotal', { n: sm.stars })}>
+            <KTxt weight="extrabold" size={15} color={KC.accent}>⭐ {t('kdStarsTotal', { n: sm.stars })}</KTxt></View> : null}
         </View>
 
         {cat.loading && !d ? <KTxt style={{ paddingHorizontal: 20 }} color={KC.text2}>…</KTxt> : null}
@@ -125,6 +132,31 @@ export default function KidsHome() {
                 renderItem={({ item }) => <KidVideoCard x={item} width={cardW} onPress={() => open(item.id)} />} />
             </View>
           ))
+        ) : null}
+        {!searching && !chosen && sm ? (
+          <>
+            {sm.learning && sm.due.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                <KTxt weight="extrabold" size={20} accessibilityRole="header" style={{ paddingHorizontal: 20 }}>🧠 {t('kdDue')}</KTxt>
+                <FlatList horizontal data={dueCards(sm.due)} keyExtractor={(x) => x.id} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 20 }}
+                  renderItem={({ item }) => <KidVideoCard x={item} width={cardW} onPress={() => open(item.id)} />} />
+              </View>
+            ) : null}
+            {actionsOpenCount(sm.actions) > 0 ? <View style={{ paddingHorizontal: 20 }}><KidActionsList limit={5} onlyOpen hideEmpty title={`🌱 ${t('kaTitle')}`} onChange={sum.reload} /></View> : null}
+            {sm.learning && sm.badges.length > 0 ? (
+              <View style={{ gap: 10, paddingHorizontal: 20 }}>
+                <KTxt weight="extrabold" size={20} accessibilityRole="header">{t('kdBadges')}</KTxt>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  {BADGE_CODES.map((c) => { const got = sm.badges.some((b) => b.code === c); return (
+                    <View key={c} accessibilityLabel={`${t(`kdB_${c}` as never)}${got ? '' : ' — ' + t(`kdBd_${c}` as never)}`}
+                      style={{ width: 92, alignItems: 'center', gap: 4, padding: 10, borderRadius: 18, backgroundColor: KC.surface, borderWidth: 2, borderColor: got ? KC.accent : KC.line, opacity: got ? 1 : 0.45 }}>
+                      <KTxt size={28} style={{ lineHeight: 36 }}>{badgeIcon(c)}</KTxt>
+                      <KTxt size={11} weight="bold" numberOfLines={2} style={{ textAlign: 'center' }} color={got ? KC.text : KC.muted}>{t(`kdB_${c}` as never)}</KTxt>
+                    </View>); })}
+                </View>
+              </View>
+            ) : null}
+          </>
         ) : null}
         <KTxt size={12} color={KC.muted} style={{ paddingHorizontal: 20, textAlign: 'center' }}>{t('kids.lockHint')}</KTxt>
       </ScrollView>

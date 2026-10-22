@@ -1,5 +1,5 @@
 // 22b-9a : Mejliss Kids natif. Logique pure (aucune bibliothèque native) : testable avec Node.
-import type { KidCard, KidProfile, KidRubric, KidShelf, KidTime } from './types';
+import type { KidAction, KidActionCounts, KidCard, KidProfile, KidQuizQuestion, KidRubric, KidShelf, KidShort, KidTime } from './types';
 
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'] as const;
 export const AVATAR_EMOJI: Record<string, string> = { lion: '🦁', owl: '🦉', fox: '🦊', turtle: '🐢', rabbit: '🐰', bear: '🐻', camel: '🐪', star: '⭐' };
@@ -95,3 +95,42 @@ export function progressBody(positionSec: number, durationSec: number): { positi
 /** Une réponse d'erreur « session enfant expirée » ou « refus du mode enfant ». */
 export const isKidExpired = (err: { status?: number; code?: string } | null) => !!err && (err.code === 'kid_expired' || err.status === 401);
 export const isTimeUp = (err: { code?: string } | null) => !!err && err.code === 'kid_time_up';
+
+// ---------------------------------------------------------------- 22b-9b : quiz, étoiles, badges, petites actions, courts
+
+export const BADGE_ICON: Record<string, string> = { first_quiz: '🎯', three_stars: '🌟', quizzes_5: '🏅', explorer: '🧭', watcher_3: '📺', retry_better: '🚀', stars_10: '✨' };
+export const BADGE_CODES = Object.keys(BADGE_ICON);
+export const badgeIcon = (code: string) => BADGE_ICON[code] ?? '🏅';
+export const QUIZ_OPTIONS_MAX = 4;
+
+/** Réponses à envoyer au serveur ; null tant qu'une question n'a pas de réponse (jamais d'envoi incomplet). */
+export function quizAnswers(questions: KidQuizQuestion[], picks: (number | undefined)[]): { questionId: string; index: number }[] | null {
+  if (!questions.length) return null;
+  const out: { questionId: string; index: number }[] = [];
+  for (let i = 0; i < questions.length; i += 1) {
+    const p = picks[i];
+    if (p == null || !Number.isInteger(p) || p < 0 || p >= Math.min(QUIZ_OPTIONS_MAX, questions[i].options.length)) return null;
+    out.push({ questionId: questions[i].id, index: p });
+  }
+  return out;
+}
+/** Message de fin de quiz : jamais « raté », toujours au moins une étoile. */
+export const starsMessageKey = (stars: number) => (stars >= 3 ? 'kdStars3' : stars === 2 ? 'kdStars2' : 'kdStars1');
+export const clampStars = (n: number | null | undefined) => Math.max(0, Math.min(3, Math.round(Number(n) || 0)));
+
+/** Actions encore à traiter (la liste de l'accueil et de la fin de quiz masque les validées). */
+export const openActions = (list: KidAction[], limit = 100) => list.filter((a) => a.status !== 'validated').slice(0, limit);
+export const actionsOpenCount = (c?: KidActionCounts | null) => (c ? c.todo + c.claimed : 0);
+export const actionStateKey = (s: KidAction['status']) => (s === 'validated' ? 'kaStValidated' : s === 'claimed' ? 'kaStClaimed' : 'kaStTodo');
+
+/** Courts : seulement ceux qu'on peut lire (adresse présente), jamais plus de `max`. */
+export const playableShorts = (list: unknown, max = 20): KidShort[] =>
+  (Array.isArray(list) ? (list as KidShort[]) : []).filter((s) => s && typeof s.id === 'string' && !!s.videoUrl).slice(0, max);
+/** Dans une file de courts, l'indice voisin (boucle sans fin désactivée : on s'arrête aux bords). */
+export const neighbourShort = (i: number, n: number, dir: 1 | -1) => Math.min(n - 1, Math.max(0, i + dir));
+/** Date « 2026-10-22 » en lecture locale (révision espacée). */
+export const reviewDate = (d: string, locale: string) => { const x = new Date(`${d}T12:00:00`); return Number.isNaN(x.getTime()) ? '' : x.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }); };
+
+/** Vidéos « à revoir » du résumé → cartes de vidéo (les champs absents prennent des valeurs neutres). */
+export const dueCards = (due: { id: string; title: string; speaker: string | null; source: string; durationSeconds: number | null; posterUrl: string | null }[]): KidCard[] =>
+  due.map((d) => ({ id: d.id, title: d.title, speaker: d.speaker, access: 'free', source: d.source, kidsBands: [], durationSeconds: d.durationSeconds, completed: false, positionMs: 0, rubricIds: [], stars: null, posterUrl: d.posterUrl }));
