@@ -5203,7 +5203,7 @@ API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/api_contract.ts   # application
 L'application Android n'a plus besoin d'être retéléchargée à la main. Au démarrage (et au retour dans l'application, au plus toutes les 6 h), elle demande à **notre serveur** quelle est la dernière version publiée. Si elle est plus récente, un bandeau « Nouvelle version disponible » apparaît ; un toucher ouvre les nouveautés, puis **Mettre à jour** télécharge l'APK depuis notre stockage (Garage), vérifie son empreinte SHA-256 et lance l'installation. **Android demande toujours de confirmer l'installation**, et, une seule fois, d'autoriser « Installer des applications inconnues » pour Mejliss TV (bouton « Autoriser l'installation » dans l'écran). Les données et la connexion sont conservées (c'est une mise à jour par-dessus).
 Le GitHub workflow publie lui-même chaque nouvel APK sur le serveur (secret `APP_PUBLISH_TOKEN`) : plus aucun téléchargement manuel.
 Un réglage « version minimale » (Admin → Paramètres) permet de rendre une mise à jour **obligatoire** pour les très anciennes versions.
-La **partie 2** (mise à jour du *contenu* sans réinstaller, via `expo-updates` hébergé sur notre serveur) est livrée dans un second commit de la même étape (voir plus bas, s'il y a une section « Partie 2 »).
+La **partie 2** (mise à jour du *contenu* sans réinstaller, via `expo-updates` hébergé sur notre serveur) est décrite en fin de section (« Partie 2 »).
 
 ### Ce qui a été ajouté
 - **API** : module `appupdates` (fonction activable Admin → Fonctions « Mises à jour de l'application », réglages `mod_appupdates_*`), migration `001_app_releases.sql`.
@@ -5265,3 +5265,35 @@ curl -s -H "Authorization: Bearer VOTRE_JETON" https://api-majlisstv.le-publicit
 - **Jamais essayé sur un téléphone** : le bandeau, le téléchargement dans l'application et surtout **l'ouverture de l'installateur d'Android** (le lien vers le fichier et les droits de lecture sont écrits d'après la documentation d'Expo et d'Android, pas vérifiés). Si l'installateur ne s'ouvre pas, le téléchargement manuel de l'APK reste possible.
 - **Limite d'Android** : l'installation demande toujours un geste de confirmation ; certaines marques ajoutent leurs propres avertissements. Aucune mise à jour silencieuse sans un appareil géré (hors sujet ici).
 - **Limite de la clé de signature** : l'APK reste signé avec la clé de test d'Android (non publiable sur Google Play). À l'étape « magasins », changer de clé obligera une réinstallation manuelle une fois.
+
+### Partie 2 — le contenu se met à jour sans réinstaller (expo-updates, sur notre serveur)
+**Principe.** Une grande partie des changements (textes, écrans, corrections de code) ne touche pas au « code natif » d'Android. Pour ceux-là, le workflow publie aussi le *contenu* de l'application sur notre serveur ; chaque application installée le télécharge en arrière-plan au démarrage et l'applique au démarrage suivant. Un bandeau « Une mise à jour du contenu est prête — Redémarrer » permet de l'appliquer tout de suite. Rien à toucher, aucune confirmation d'Android.
+**Ce qui ne passe PAS par là** : tout ce qui change le code natif (nouvelle bibliothèque, nouvelle permission, nouveau plugin, changement de `version`). Il faut alors un nouvel APK, que la partie 1 propose à l'application (« Nouvelle version disponible »).
+**Sécurité de compatibilité.** `mobile/runtimeVersion.js` calcule une « version d'exécution » = version + empreinte (dépendances, permissions, plugins), par exemple `0.5.0-bee48835`. Une application ne reçoit que le contenu publié pour *sa* version d'exécution : ajouter une bibliothèque change l'empreinte, donc les anciennes applications ne reçoivent plus un contenu qui ne leur convient pas.
+
+**Ce qui a été ajouté** : `expo-updates` (app.json : adresse `…/app/updates/manifest`, vérification au démarrage, démarrage sans attente) ; `src/components/OtaBanner.tsx` ; `mobile/scripts/publish-update.mjs` (export Android → envoi des fichiers manquants au stockage → publication) ; étape « Publier la mise à jour du contenu » du workflow (même secret `APP_PUBLISH_TOKEN`) ; côté serveur, `GET /app/updates/manifest` (protocole d'Expo : multipart, directive de retour arrière) et `GET /app/updates/assets/:sha256` (fichiers à adresse stable, cache illimité) — déjà livrés avec la partie 1.
+
+**Déploiement** : aucun supplémentaire si la partie 1 est en place (API déjà redéployée, jeton créé). Il faut seulement **installer une fois l'APK de cette version** (il contient `expo-updates`) ; ensuite, chaque push qui change uniquement du contenu arrive sans réinstaller.
+
+**Exemples**
+```bash
+# Voir ce qui est publié (remplacer le jeton)
+curl -s -H "Authorization: Bearer VOTRE_JETON" https://api-majlisstv.le-publicitaire.fr/app/publish/releases
+# Ce que reçoit une application (version d'exécution à adapter : voir le journal du workflow)
+curl -s -H "expo-protocol-version: 1" -H "expo-platform: android" -H "expo-runtime-version: 0.5.0-bee48835" -H "accept: application/expo+json" https://api-majlisstv.le-publicitaire.fr/app/updates/manifest
+# Revenir au contenu intégré à l'APK (retour arrière, remplacer la version d'exécution)
+curl -s -X POST -H "Authorization: Bearer VOTRE_JETON" -H "content-type: application/json" -d '{"runtimeVersion":"0.5.0-bee48835"}' https://api-majlisstv.le-publicitaire.fr/app/publish/update/rollback
+```
+
+**Debug**
+- Rien ne change sur le téléphone : l'application ne reçoit le contenu qu'au démarrage, l'applique au démarrage suivant (ou via le bandeau). Vérifier que le journal du workflow affiche « Publié : mise à jour … » et que la version d'exécution est la même que celle de l'APK installé (elle change si une bibliothèque, une permission ou un plugin change).
+- Aucune mise à jour dans l'application de développement (`expo start`) : normal, `expo-updates` y est désactivé.
+- Publication refusée (401 / 503) : voir « Debug » de la partie 1 (jeton).
+- Retour arrière : voir l'exemple `rollback` ci-dessus ; la prochaine ouverture revient au contenu de l'APK.
+
+**Honnêteté sur les essais (partie 2)**
+- Vérifié : export Android réel (101 fichiers + bundle Hermes de 3,4 Mo) publié sur le serveur de test, manifeste servi dans les deux formats, **empreintes SHA-256 de tous les fichiers recontrôlées**, deuxième publication sans renvoi des fichiers déjà présents, génération du projet natif (`expo prebuild` : adresse du serveur et version d'exécution bien écrites dans le manifeste Android).
+- **Jamais essayé** : la fabrication de l'APK avec `expo-updates` par Gradle (GitHub Actions) et la réception d'une mise à jour par une vraie application. Si le workflow échoue à cause d'`expo-updates`, me donner le message : le retrait de la partie 2 n'affecte pas la partie 1.
+- Le premier démarrage après une mise à jour peut afficher un instant l'ancien contenu (démarrage sans attente, voulu pour ne pas ralentir l'ouverture).
+- Chaque fabrication publie aussi son contenu : une application qui vient d'installer cet APK peut télécharger une fois un contenu identique à ce qu'elle contient déjà (sans effet visible).
+

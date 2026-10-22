@@ -3,6 +3,7 @@
 # Résultat : un fichier « mejliss-tv-android » téléchargeable en bas de la page de l'exécution (conservé 30 jours).
 # Mises à jour de l'application (étape 22b-5) : si le secret APP_PUBLISH_TOKEN existe, l'APK est aussi publié sur notre serveur
 # (l'application installée propose alors « Nouvelle version disponible »). Variable facultative APP_API_URL (défaut : https://api-majlisstv.le-publicitaire.fr).
+# Le contenu de l'application (écrans, textes, code JavaScript) est publié de la même façon (mise à jour sans réinstaller).
 # L'APK est signé avec la clé de test d'Android : installable directement sur un téléphone, mais PAS publiable sur Google Play
 # (la clé de publication sera créée à l'étape « magasins »).
 name: Application Android (APK)
@@ -100,3 +101,20 @@ jobs:
           fi
           VERSION=$(node -p "require('./app.json').expo.version")
           node scripts/publish-release.mjs "$(basename '${{ steps.name.outputs.file }}')" "$VERSION" "$((1000 + GITHUB_RUN_NUMBER))"
+
+      # Mise à jour du CONTENU (partie 2) : les applications déjà installées avec le même code natif (même « version d'exécution »)
+      # reçoivent le nouveau contenu en arrière-plan, sans réinstaller. Ignorée sans le secret APP_PUBLISH_TOKEN.
+      - name: Publier la mise à jour du contenu
+        env:
+          APP_PUBLISH_TOKEN: ${{ secrets.APP_PUBLISH_TOKEN }}
+          APP_API_URL: ${{ vars.APP_API_URL }}
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          if [ -z "$APP_PUBLISH_TOKEN" ]; then
+            echo "Pas de secret APP_PUBLISH_TOKEN : contenu non publié."
+            exit 0
+          fi
+          npx expo export --platform android --output-dir dist
+          node scripts/publish-update.mjs dist
+

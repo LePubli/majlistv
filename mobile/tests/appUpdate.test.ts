@@ -99,3 +99,31 @@ test('configuration : permission d\'installation, numéro de build et notes de v
   assert.equal(cfg({ config: app }).android.versionCode, app.android.versionCode);
   if (prev) process.env.GITHUB_RUN_NUMBER = prev;
 });
+
+// ---- Partie 2 : mises à jour du contenu (expo-updates)
+test('runtimeVersion : stable, change avec le natif, pas avec le reste', () => {
+  const { runtimeVersionFor, nativeFingerprint } = require('../runtimeVersion.js');
+  const app = { version: '0.5.0', android: { package: 'x.y', permissions: ['B', 'A'] }, plugins: ['p'] };
+  const pkg = { dependencies: { b: '1', a: '2' } };
+  const rv = runtimeVersionFor(pkg, app);
+  assert.match(rv, /^0\.5\.0-[0-9a-f]{8}$/);
+  assert.equal(runtimeVersionFor({ dependencies: { a: '2', b: '1' } }, { ...app, android: { ...app.android, permissions: ['A', 'B'] } }), rv, "l'ordre ne compte pas");
+  assert.notEqual(runtimeVersionFor({ dependencies: { a: '2', b: '1', c: '1' } }, app), rv, 'nouvelle bibliothèque');
+  assert.notEqual(runtimeVersionFor(pkg, { ...app, android: { ...app.android, permissions: ['A', 'B', 'C'] } }), rv, 'nouvelle permission');
+  assert.notEqual(runtimeVersionFor(pkg, { ...app, plugins: ['p', 'q'] }), rv, 'nouveau plugin');
+  assert.equal(nativeFingerprint({ dependencies: {}, devDependencies: { z: '1' } }, app), nativeFingerprint({ dependencies: {} }, app), 'devDependencies ignorées');
+  assert.match(rv, /^\d{1,3}\.\d{1,3}\.\d{1,3}(-[0-9A-Za-z.]{1,20})?$/, 'accepté par le serveur');
+});
+
+test('configuration expo-updates : adresse du serveur, démarrage sans attente, version d\'exécution calculée', () => {
+  const app = JSON.parse(readFileSync(join(__dirname, '..', 'app.json'), 'utf8')).expo;
+  assert.equal(app.updates.url, `${app.extra.apiUrl}/app/updates/manifest`);
+  assert.equal(app.updates.checkAutomatically, 'ON_LOAD'); assert.equal(app.updates.fallbackToCacheTimeout, 0);
+  const cfg = require('../app.config.js')({ config: app });
+  assert.match(cfg.runtimeVersion, /^0\.\d+\.\d+-[0-9a-f]{8}$/);
+  assert.equal(JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')).dependencies['expo-updates'] !== undefined, true);
+});
+
+test('textes du bandeau « contenu prêt » en trois langues', () => {
+  for (const l of ['fr', 'en', 'ar'] as const) for (const k of ['au.otaReady', 'au.otaRestart']) assert.ok((APP_DICT[l] as Record<string, string>)[k], `${l}:${k}`);
+});

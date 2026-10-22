@@ -86,6 +86,12 @@
     "extra": {
       "apiUrl": "https://api-majlisstv.le-publicitaire.fr",
       "siteUrl": "https://majlisstv.le-publicitaire.fr"
+    },
+    "updates": {
+      "url": "https://api-majlisstv.le-publicitaire.fr/app/updates/manifest",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }
