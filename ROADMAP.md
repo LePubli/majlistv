@@ -405,3 +405,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ## Étape 22b-7 (22/10) — page « Télécharger l'application » avec l'APK
 - La page `/application` du site affiche la dernière version de l'APK publiée (version, taille, nouveautés, bouton de téléchargement, étapes d'installation, empreinte), mise à jour automatiquement à chaque publication GitHub. Déploiement : `majlistv-web` seulement. Voir README « Étape 22b-7 ». Reste (sur « go ») : réglage des horaires de prière (écart avec la mosquée, laissé de côté), Kids natif, Chromecast / AirPlay, 22c Android TV, 22d Apple TV.
 
+
+## Étape 22b-8 (22/10) — encart « Télécharger l'application » dans le menu
+- Encart avec logos (application, Android, iPhone) dans le menu latéral et le menu ☰, vers `/application`. Déploiement : `majlistv-web` seulement. Voir README « Étape 22b-8 ».

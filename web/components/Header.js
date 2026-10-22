@@ -1,4 +1,5 @@
 'use client';
+import AppPromo from './AppPromo';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -223,6 +224,7 @@ function MainHeader() {
               )}
             </nav>
             <div className="dr-foot">
+              <AppPromo variant="drawer" />
               {user ? (
                 <>
                   <Link href="/account"><Ico d={ICONS.user} />{t('account')}</Link>

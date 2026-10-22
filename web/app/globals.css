@@ -3771,3 +3771,26 @@ a.btn.pwa-btn { display: inline-flex; align-items: center; justify-content: cent
 /* Espace enfant : la pastille reste lisible sur le thème coloré. */
 body.kd-theme .pry-pill { background: rgba(255, 255, 255, .2); border-color: rgba(255, 255, 255, .5); color: #fff; }
 body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
+
+
+/* ===== Étape 22b-8 — Encart « Télécharger l'application » (menu latéral et menu ☰) ===== */
+.app-promo { margin: 18px 0 4px; }
+.ms-side .app-promo-link, .app-promo-link { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 14px; border-radius: 16px; background: var(--gold-soft, rgba(230, 167, 57, .1)); border: 1px solid var(--accent, #e6a739); color: var(--text); text-decoration: none; }
+.ms-side .app-promo-link:hover { background: var(--gold-soft, rgba(230, 167, 57, .16)); color: var(--text); }
+.app-promo-logo { grid-row: span 2; width: 34px; height: 36px; object-fit: contain; }
+.app-promo-text { display: grid; gap: 2px; min-width: 0; }
+.app-promo-text b { font-size: 14px; color: var(--text); line-height: 1.25; }
+.app-promo-text small { font-size: 12px; color: var(--text-2, var(--muted)); font-weight: 500; line-height: 1.3; }
+.app-promo-os-row { display: inline-flex; gap: 10px; color: var(--accent); grid-column: 1 / -1; padding-top: 4px; }
+.app-promo-cta { grid-column: 1 / -1; display: block; text-align: center; margin-top: 6px; padding: 9px 12px; border-radius: 12px; background: var(--accent, #e6a739); color: var(--on-accent, #1a1204); font-weight: 800; font-size: 14px; }
+.app-promo-drawer { margin: 0 0 8px; }
+.dr-foot .app-promo-link, .dr-foot a.app-promo-link:not(.btn) { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; padding: 14px; font-size: 14px; font-weight: 600; color: var(--text); border-radius: 16px; }
+.app-promo-text b, .app-promo-text small { overflow-wrap: anywhere; }
+/* Menu latéral : l'encart reste visible en bas, même quand la liste défile. */
+.ms-side .app-promo { position: sticky; bottom: -24px; margin: 18px -4px 0; padding: 10px 4px 24px; background: var(--bg); }
+.ms-side .app-promo-link { background: linear-gradient(var(--gold-soft, rgba(230,167,57,.1)), var(--gold-soft, rgba(230,167,57,.1))), var(--bg); }
+.ms.col .ms-side .app-promo { margin-inline: -4px; }
+/* Menu replié : seul le logo reste, avec les logos des appareils en infobulle. */
+.ms.col .app-promo-link { grid-template-columns: 1fr; justify-items: center; padding: 10px 0; }
+.ms.col .app-promo-text, .ms.col .app-promo-os-row, .ms.col .app-promo-cta { display: none; }
+.ms.col .app-promo-logo { grid-row: auto; }

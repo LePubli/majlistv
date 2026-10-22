@@ -11,6 +11,7 @@ import { resolveList, withHid } from '../lib/menus';
 import { MENUS } from '../lib/navcfg';
 import { NAV_ICON_PATHS } from '../lib/navicons';
 import { tx } from '../lib/blocks';
+import AppPromo from './AppPromo';
 
 const ICONS = {
   shorts: 'M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5z',
@@ -141,6 +142,7 @@ export default function MemberShell({ children }) {
             </div>
           ))}
         </nav>
+        <AppPromo variant="side" />
       </aside>
       <div className="ms-main">{children}</div>
       {bar}

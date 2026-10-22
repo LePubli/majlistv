@@ -5455,3 +5455,29 @@ Ouvrir https://majlisstv.le-publicitaire.fr/application : la carte « Applicatio
 ### Honnêteté sur les essais
 Vérifié : compilation du site (`next build`), page lue dans un vrai navigateur (Playwright) contre l'API de test : sans version → « Bientôt » ; avec une version → version, taille, nouveautés, bouton, étapes, empreinte, lien `/app/download/<build>`, pas de défilement horizontal à 390 px ; iPhone → avertissement Android. **Non vérifié** : le téléchargement réel de l'APK depuis le navigateur d'un téléphone et l'installation (dépend du VPS et d'Android) ; l'affichage arabe n'a pas été relu visuellement.
 
+
+
+## Étape 22b-8 — Encart « Télécharger l'application » dans le menu (22/10, site)
+
+**Description.** Sur le site et dans le site installé (PWA), un encart doré « Télécharger l'application » (logo Mejliss TV, logos Android et iPhone, bouton « Télécharger ») s'affiche :
+- en bas du menu latéral (ordinateur / tablette large), toujours visible même quand la liste défile ; menu replié : seul le logo reste ;
+- en bas du menu ☰ (téléphone).
+Il renvoie vers `/application`. Il est masqué : sur la page `/application` elle-même, pour les enfants (Mejliss TV Kids), si la fonction « Application » est coupée (Admin → Fonctions), et dans l'application native (qui n'affiche pas ce menu).
+
+**Fichiers.** `web/components/AppPromo.js` (nouveau), `MemberShell.js`, `Header.js`, `web/lib/i18n.js` (`promoTitle`, `promoText`, `promoCta` en fr/en/ar), `web/app/globals.css` (bloc « Étape 22b-8 »).
+
+**Prérequis.** Aucun (pas de migration, pas de variable).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web` seulement, puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Encart absent : vérifier Admin → Fonctions → « Application » (`app_install`), ne pas être sur `/application`, ni en session enfant ; vider le cache du navigateur / recharger le site installé.
+
+**Exemples.** Ordinateur : bas du menu de gauche. Téléphone : ☰ puis bas du menu. Clic → page `/application`.
+
+**Testé / non testé.** Testé (navigateur Chromium automatisé) : 1440 px (menu ouvert et replié), 390 px (menu ☰), pas de débordement horizontal, absence sur `/application`. Non testé : sur un vrai téléphone, en arabe (RTL) visuellement, site installé (PWA) réel.
