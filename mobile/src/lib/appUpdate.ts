@@ -80,3 +80,17 @@ export function progressRatio(written: number, total: number, announced: number)
 
 export type StepKind = 'idle' | 'downloading' | 'verifying' | 'ready' | 'error';
 export type ErrorKind = 'network' | 'integrity' | 'install' | 'unsupported';
+
+/** Résultat d'une vérification manuelle (écran Compte) : la cause d'un échec est affichée, jamais avalée. */
+export type UpdateCheckResult =
+  | { kind: 'current' }
+  | { kind: 'available'; version: string }
+  | { kind: 'error'; detail: string }
+  | { kind: 'unsupported' };
+
+/** Cause lisible d'un échec de vérification : code HTTP du serveur, réponse invalide ou réseau. */
+export function checkErrorDetail(e: unknown): string {
+  const x = e as { status?: number; message?: string } | null;
+  if (x && typeof x.status === 'number' && x.status > 0) return `serveur HTTP ${x.status}${x.message ? ` — ${String(x.message).slice(0, 120)}` : ''}`;
+  return `réseau : ${String(x?.message ?? e).slice(0, 120)}`;
+}

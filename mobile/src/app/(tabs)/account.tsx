@@ -12,6 +12,7 @@ import type { BillingStatus } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Txt, screenStyle, Title } from '@/components/ui';
 import { usePrayer } from '@/lib/prayerStore';
+import { UpdateStatus } from '@/components/UpdateStatus';
 
 export default function AccountScreen() {
   const { user, api, t, locale, setLocale, logout, dirStyle } = useSession();
@@ -75,6 +76,8 @@ export default function AccountScreen() {
             ))}
           </View>
         </View>
+
+        <UpdateStatus />
 
         {user ? <Button label={t('account.logout')} variant="dark" onPress={() => { void logout(); }} /> : null}
         <Txt size={12} color={colors.muted} style={{ textAlign: 'center' }}>{t('account.version', { v: Constants.expoConfig?.version ?? '' })}</Txt>

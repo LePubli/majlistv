@@ -15,9 +15,10 @@ import { API_URL } from '@/lib/config';
 import { colors, radius } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
 import {
-  LatestRelease, ErrorKind, StepKind, bannerHidden, formatSize, installedCode, notesFor, parseLatest, progressRatio, shouldCheck,
+  LatestRelease, ErrorKind, StepKind, UpdateCheckResult, bannerHidden, checkErrorDetail, formatSize, installedCode, notesFor, parseLatest, progressRatio, shouldCheck,
 } from '@/lib/appUpdate';
 import { OtaBanner } from '@/components/OtaBanner';
+import { registerUpdateChecker } from '@/lib/hooks';
 
 const K_DISMISSED = 'mejliss.updDismissed';
 const PACKAGE = 'fr.lepublicitaire.mejlisstv';
@@ -44,21 +45,26 @@ export function AppUpdate() {
     SecureStore.getItemAsync(K_DISMISSED).then((v) => { const n = Number(v); if (Number.isInteger(n) && n > 0) setDismissed(n); }).catch(() => {});
   }, []);
 
-  const check = useCallback(async (force = false) => {
-    if (!supported || !current) return; // développement / web : pas de numéro de build installé
+  const check = useCallback(async (force = false): Promise<UpdateCheckResult> => {
+    if (!supported) return { kind: 'unsupported' };
+    if (!current) return { kind: 'error', detail: 'numéro de build introuvable (application de développement ?)' };
     const now = Date.now();
-    if (!shouldCheck(lastCheck.current, now, force)) return;
+    if (!shouldCheck(lastCheck.current, now, force)) return { kind: 'current' };
     lastCheck.current = now;
     try {
       const raw = await api.get<unknown>('/app/latest', { platform: 'android', versionCode: current }, false);
       const res = parseLatest(raw, API_URL);
-      if (!res || !res.latest || !res.updateAvailable || res.latest.versionCode <= current) { setLatest(null); setRequired(false); return; }
+      if (!res) return { kind: 'error', detail: 'réponse du serveur invalide (adresse publique de l\'API mal réglée dans Admin → Paramètres → Mises à jour ?)' };
+      if (!res.latest) { setLatest(null); setRequired(false); return { kind: 'error', detail: 'aucune version publiée sur le serveur' }; }
+      if (!res.updateAvailable || res.latest.versionCode <= current) { setLatest(null); setRequired(false); return { kind: 'current' }; }
       setLatest(res.latest);
       setRequired(res.required);
-      if (res.required) setOpen(true);
-    } catch { /* serveur injoignable ou fonction coupée : on réessaiera plus tard, sans bruit */ }
+      if (res.required || force) { setDismissed(null); setOpen(true); }
+      return { kind: 'available', version: res.latest.version };
+    } catch (e) { return { kind: 'error', detail: checkErrorDetail(e) }; } // au démarrage : sans bruit, on réessaiera ; le bouton du Compte affiche la cause
   }, [api, current, supported]);
 
+  useEffect(() => registerUpdateChecker(() => check(true)), [check]);
   useEffect(() => { if (ready) void check(); }, [ready, check]);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => { if (s === 'active') void check(); });

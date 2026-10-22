@@ -1,5 +1,5 @@
 // 22b-5 : logique pure de la mise à jour de l'application + cohérence de la configuration.
-import { test } from 'node:test';
+import { checkErrorDetail, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -126,4 +126,11 @@ test('configuration expo-updates : adresse du serveur, démarrage sans attente, 
 
 test('textes du bandeau « contenu prêt » en trois langues', () => {
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of ['au.otaReady', 'au.otaRestart']) assert.ok((APP_DICT[l] as Record<string, string>)[k], `${l}:${k}`);
+});
+
+test('checkErrorDetail : cause lisible d\'un échec de vérification', () => {
+  assert.match(checkErrorDetail({ status: 503, message: 'Stockage non configuré' }), /HTTP 503.*Stockage/);
+  assert.match(checkErrorDetail({ status: 0, message: 'Network request failed' }), /^réseau : Network request failed/);
+  assert.match(checkErrorDetail(new Error('boom')), /réseau : boom/);
+  assert.match(checkErrorDetail(null), /réseau/);
 });

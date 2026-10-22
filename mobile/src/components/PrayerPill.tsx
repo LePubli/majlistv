@@ -37,7 +37,7 @@ export function PrayerPill({ compact = false }: { compact?: boolean }) {
   const left = st.next.at - now;
   const soon = left <= 10 * 60_000 || nowPrayer;
   const name = t(prayerNameKey(nowPrayer && st.current ? st.current.id : st.next.id));
-  const time = countdown(left);
+  const time = countdown(left).replace(/ /g, '\u00A0'); // espaces insécables : « 2 h 28 » ne se coupe jamais sur deux lignes
   const place = prefs.loc.mode === 'geo' ? t('pryMyPos') : prefs.loc.name;
   const rows = todayRows(items, now, prefs.loc.tz);
   const fg = soon ? colors.onGold : colors.goldLight;
@@ -48,12 +48,12 @@ export function PrayerPill({ compact = false }: { compact?: boolean }) {
         accessibilityRole="button"
         accessibilityLabel={nowPrayer ? t('pryAriaNow', { name }) : t('pryAria', { name, time })}
         onPress={() => setOpen(true)}
-        style={{ height: 36, paddingHorizontal: 11, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: 6,
+        style={{ height: 36, paddingHorizontal: 11, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0,
           backgroundColor: soon ? colors.gold : colors.goldTint, borderWidth: 1, borderColor: soon ? colors.gold : colors.goldLine }}
       >
         <Feather name="moon" size={14} color={fg} />
-        {!compact ? <Txt weight="bold" size={12} color={fg} numberOfLines={1}>{name}</Txt> : null}
-        <Txt weight="extrabold" size={12} color={fg} style={{ writingDirection: 'ltr' }}>{nowPrayer ? '●' : time}</Txt>
+        {!compact ? <Txt weight="bold" size={12} color={fg} numberOfLines={1} maxFontSizeMultiplier={1.1}>{name}</Txt> : null}
+        <Txt weight="extrabold" size={12} color={fg} numberOfLines={1} maxFontSizeMultiplier={1.1} style={{ writingDirection: 'ltr' }}>{nowPrayer ? '●' : time}</Txt>
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 22 }} onPress={() => setOpen(false)} accessibilityLabel={t('common.close')}>

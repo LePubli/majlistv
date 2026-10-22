@@ -5414,3 +5414,11 @@ Attendu : 0 échec.
 - **Jamais essayé sur un téléphone** : les nouveautés natives (`expo-screen-capture`, coffre sécurisé pour l'horloge, lecture des onglets, quiz local, envoi à la reconnexion). Voir le registre, point 84.
 - Le pack contient les bonnes réponses du quiz (nécessaire pour corriger sans réseau) : il n'est servi qu'aux abonnés, mais un téléphone « rooté » pourrait les lire dans le fichier du pack.
 - La date de la tentative de quiz enregistrée sur le serveur est celle de l'envoi (reconnexion), pas celle du moment où le quiz a été passé.
+
+### Complément (22/10) — vérifier les mises à jour depuis l'application
+Écran **Compte → Mises à jour** : affiche la version installée (et son numéro de build), la version du contenu, et le bouton **Rechercher une mise à jour**. Il vérifie l'APK (serveur `GET /app/latest`) puis le contenu (`expo-updates`) et **affiche la cause exacte d'un échec** (code HTTP du serveur, réponse invalide, aucune version publiée, réseau). Si une nouvelle version existe, la fenêtre « Nouvelle version disponible » s'ouvre aussitôt. Rappel : Android impose toujours une confirmation de l'utilisateur pour installer un APK (aucune application ne peut s'installer seule) ; seule la mise à jour du **contenu** (JavaScript) s'applique sans confirmation, au redémarrage.
+Contrôle côté serveur (remplacer 5 par le numéro de build affiché dans l'application) :
+```bash
+curl -s "https://api-majlisstv.le-publicitaire.fr/app/latest?platform=android&versionCode=5"
+```
+
