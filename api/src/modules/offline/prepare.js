@@ -117,3 +117,31 @@ export async function removeFiles(talkId) {
   const { rows } = await pool.query('SELECT object_key FROM offline_files WHERE talk_id = $1 AND object_key IS NOT NULL', [talkId]);
   for (const r of rows) await deleteObject(r.object_key).catch(() => {});
 }
+
+// ---- Fichiers temporaires : le serveur ne garde pas les fichiers préparés (ils restent sur le téléphone de l'abonné). ----
+export const FILE_TTL_MIN = Math.max(15, Number(process.env.OFFLINE_FILE_TTL_MIN) || 180);   // durée de vie d'un fichier prêt, depuis le dernier envoi d'un lien
+export const DONE_GRACE_MIN = 10;                                                             // après « téléchargement terminé »
+let lastSweep = 0;
+
+/** Efface les fichiers prêts non réclamés depuis FILE_TTL_MIN minutes (objet + ligne) et les échecs de plus d'une heure. Au plus une fois par minute. */
+export async function sweep(log, { force = false } = {}) {
+  if (!force && Date.now() - lastSweep < 60000) return 0;
+  lastSweep = Date.now();
+  let n = 0;
+  try {
+    const { rows } = await pool.query(
+      `SELECT id FROM offline_files
+        WHERE (status = 'ready' AND updated_at < now() - make_interval(mins => $1))
+           OR (status = 'failed' AND updated_at < now() - interval '1 hour')`, [FILE_TTL_MIN]);
+    for (const r of rows) {
+      // Suppression conditionnelle : si un abonné vient de redemander le fichier (updated_at rafraîchi), on le garde.
+      const del = await pool.query(
+        `DELETE FROM offline_files WHERE id = $1 AND ((status = 'ready' AND updated_at < now() - make_interval(mins => $2)) OR (status = 'failed' AND updated_at < now() - interval '1 hour')) RETURNING object_key`,
+        [r.id, FILE_TTL_MIN]);
+      if (!del.rowCount) continue;
+      n += 1;
+      if (del.rows[0].object_key) await deleteObject(del.rows[0].object_key).catch(() => {});
+    }
+  } catch (e) { log?.warn?.(`Hors connexion : ménage impossible (${e.message})`); }
+  return n;
+}

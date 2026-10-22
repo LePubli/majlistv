@@ -1,5 +1,5 @@
 {
-  "fr": "Hors connexion : téléchargez une conférence (audio seul ou vidéo) pour la regarder sans réseau, valable 30 jours et renouvelée automatiquement. Nouvel écran « Mes téléchargements ».",
-  "en": "Offline: download a talk (audio only or video) to watch without a network, valid for 30 days and renewed automatically. New “My downloads” screen.",
-  "ar": "المشاهدة بدون اتصال: نزّل محاضرة (صوت فقط أو فيديو) لمشاهدتها بلا شبكة، صالحة 30 يومًا وتتجدد تلقائيًا. شاشة جديدة «تنزيلاتي»."
+  "fr": "Hors connexion complet : en plus de la vidéo ou de l'audio, le résumé, les chapitres, la transcription et le quiz fonctionnent sans réseau (le résultat du quiz est envoyé à la reconnexion). Téléchargement réservé aux abonnés, licence protégée contre le recul de la date du téléphone.",
+  "en": "Full offline mode: besides the video or audio, the summary, chapters, transcript and quiz work without a network (quiz results are sent when you reconnect). Downloads are for subscribers only, with a licence protected against setting the phone's date back.",
+  "ar": "وضع كامل بدون اتصال: إضافة إلى الفيديو أو الصوت، يعمل الملخص والفصول والنص والاختبار بلا شبكة (تُرسل نتيجة الاختبار عند عودة الاتصال). التنزيل للمشتركين فقط مع ترخيص محمي ضد إرجاع تاريخ الهاتف."
 }

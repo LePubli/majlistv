@@ -1,16 +1,19 @@
 // Lecteur hors connexion (22b-6) : lit le fichier téléchargé, sans réseau. Reprise là où on s'était arrêté (envoyée au serveur à la reconnexion),
 // vitesse, son en arrière-plan. Un téléchargement expiré ne se lit pas : il se renouvelle à la reconnexion.
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import { useEvent, useEventListener } from 'expo';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSession } from '@/lib/session';
 import { useDownloads } from '@/lib/downloadStore';
-import { isExpired, resumeFor } from '@/lib/downloads';
+import { resumeFor } from '@/lib/downloads';
+import type { OfflinePack } from '@/lib/offlinePack';
+import { OfflineTabs } from '@/components/OfflineTabs';
 import { nextSpeed } from '@/lib/playback';
 import { registerMedia } from '@/lib/mediaRegistry';
 import { colors } from '@/lib/theme';
@@ -19,6 +22,7 @@ import { Button, IconButton, Txt, screenStyle } from '@/components/ui';
 function goBack() { if (router.canGoBack()) router.back(); else router.replace('/downloads'); }
 
 export default function OfflineScreen() {
+  usePreventScreenCapture('offline');   // pas de capture ni d'enregistrement d'écran pendant la lecture d'un fichier téléchargé
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, isRTL, dirStyle } = useSession();
   const dl = useDownloads();
@@ -30,13 +34,15 @@ export default function OfflineScreen() {
   );
   if (!dl.loaded) return <SafeAreaView style={[screenStyle, dirStyle]}>{header}</SafeAreaView>;
   if (!rec) return <SafeAreaView style={[screenStyle, dirStyle]}>{header}<View style={{ padding: 18 }}><Txt color={colors.text2}>{t('dl.notFound')}</Txt></View></SafeAreaView>;
-  if (isExpired(rec, Date.now())) {
+  const status = dl.statusOf(rec);
+  if (!status.playable) {
     return (
       <SafeAreaView style={[screenStyle, dirStyle]}>
         {header}
         <View style={{ padding: 18, gap: 14 }}>
           <Txt weight="extrabold" size={20}>{rec.title}</Txt>
-          <Txt color={colors.text2}>{t('dl.expiredHelp')}</Txt>
+          <Txt color={colors.text2}>{status.state === 'expired' ? t('dl.expiredHelp') : t('dl.licenceBad')}</Txt>
+          {dl.clockWarn ? <Txt size={13} color="#FF8A7A">{t('dl.clockWarn')}</Txt> : null}
           {dl.online ? <Button label={t('dl.renew')} onPress={() => { void dl.renew(true); }} /> : <Txt size={13} color={colors.muted}>{t('dl.offline')}</Txt>}
         </View>
       </SafeAreaView>
@@ -54,6 +60,8 @@ function OfflinePlayer({ talkId }: { talkId: string }) {
   const [speed, setSpeed] = useState(1);
   const [pos, setPos] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [pack, setPack] = useState<OfflinePack | null>(null);
+  useEffect(() => { void dl.packOf(talkId).then(setPack); }, [talkId, rec.packAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const started = useRef(false);
   const startMs = useRef(resumeFor(rec));
   const player = useVideoPlayer({ uri, metadata: { title: rec.title, artist: rec.speaker, artwork: poster ?? undefined } }, (p) => {
@@ -93,7 +101,7 @@ function OfflinePlayer({ talkId }: { talkId: string }) {
           </View>
         </View>
       </View>
-      <View style={{ padding: 16, gap: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
           <IconButton label={t('talk.back10')} size={52} onPress={() => { player.currentTime = Math.max(0, pos - 10); }}><Feather name="rotate-ccw" size={22} color={colors.text} /></IconButton>
           <Pressable accessibilityRole="button" accessibilityLabel={isPlaying ? t('talk.pause') : t('talk.play')} onPress={() => (isPlaying ? player.pause() : player.play())}
@@ -110,7 +118,8 @@ function OfflinePlayer({ talkId }: { talkId: string }) {
           <Txt weight="extrabold" size={22} accessibilityRole="header">{rec.title}</Txt>
           {rec.speaker ? <Txt weight="bold" size={14} color={colors.goldLight}>{rec.speaker}</Txt> : null}
         </View>
-      </View>
+        <OfflineTabs talkId={talkId} pack={pack} positionMs={pos * 1000} onSeek={(ms) => { player.currentTime = ms / 1000; }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -8,7 +8,7 @@ import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { ApiError } from '@/lib/api';
 import { useDownloads } from '@/lib/downloadStore';
-import { DlErrorCode, daysLeft, errorCodeFor } from '@/lib/downloads';
+import { DlErrorCode, errorCodeFor } from '@/lib/downloads';
 import { formatSize } from '@/lib/appUpdate';
 import { colors, radius } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
@@ -74,7 +74,7 @@ export function DownloadSheet({ talk, visible, onClose }: { talk: Talk; visible:
               <Txt weight="bold" style={{ textAlign: 'center' }}>
                 {t('dl.done')} · {rec.kind === 'audio' ? t('dl.audio') : t('dl.video', { height: rec.height })} · {formatSize(rec.size, locale)}
               </Txt>
-              <Txt size={13} color={colors.text2} style={{ textAlign: 'center' }}>{t('dl.daysLeft', { n: daysLeft(rec, Date.now()) })}</Txt>
+              <Txt size={13} color={colors.text2} style={{ textAlign: 'center' }}>{dl.statusOf(rec).playable ? t('dl.daysLeft', { n: dl.statusOf(rec).daysLeft }) : t('dl.licenceBad')}</Txt>
               <Button label={t('dl.watch')} icon={<Feather name="play" size={18} color={colors.onGold} />} onPress={() => { onClose(); router.push({ pathname: '/offline/[id]', params: { id: talk.id } }); }} />
               <Button variant="dark" label={t('dl.remove')} onPress={() => { void dl.remove(talk.id); }} />
             </>

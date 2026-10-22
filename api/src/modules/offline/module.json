@@ -1,8 +1,8 @@
 {
   "id": "offline",
   "name": "Hors connexion",
-  "version": "1.0.0",
-  "description": "L'application Android télécharge une conférence (audio seul ou vidéo en une qualité) pour la regarder sans connexion. Réservé aux abonnés ; le fichier est lisible pendant une durée réglable et se renouvelle à la reconnexion.",
+  "version": "1.1.0",
+  "description": "L'application Android télécharge une conférence (audio seul ou vidéo en une qualité) pour la regarder sans connexion. Réservé aux abonnés (même conférences libres) ; le fichier est lisible pendant une durée réglable (licence signée) et se renouvelle à la reconnexion. Le serveur n'en garde qu'une copie temporaire ; résumé, chapitres, transcription et quiz suivent dans un « pack ».",
   "feature": "offline",
   "requires": [],
   "settings": [

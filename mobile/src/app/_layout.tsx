@@ -70,6 +70,7 @@ function Shell() {
         <Stack.Screen name="prayer" />
         <Stack.Screen name="downloads" />
         <Stack.Screen name="offline/[id]" />
+        <Stack.Screen name="offline/quiz/[id]" />
       </Stack>
     </>
   );

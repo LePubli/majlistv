@@ -1,6 +1,6 @@
 """22b-6 : hors connexion. Vrai FFmpeg (HLS fMP4 2 qualités + audio, comme le worker) déposé dans le S3 de test, préparation MP4 / M4A,
 droits (abonné, libre, visiteur, externe), renouvellement, suppression. Prérequis : API (3055), PG (5544), S3 (moto 5599), ffmpeg, ffprobe."""
-import sys, os, uuid, time, hashlib, subprocess, tempfile, requests, psycopg2, boto3
+import sys, os, uuid, time, calendar, hashlib, subprocess, tempfile, requests, psycopg2, boto3
 
 B = "http://127.0.0.1:3055"
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
@@ -115,16 +115,76 @@ cur.execute("select count(*), count(*) filter (where status='ready') from offlin
 t0 = time.time(); r = requests.post(f"{B}/me/offline/{T}", headers=sub, json={"kind": "video", "height": 720}); ok(r.status_code == 200 and time.time() - t0 < 3, "deuxième téléchargement : fichier déjà prêt, immédiat")
 ok(requests.get(r.json()["url"], headers={"Range": "bytes=0-99"}).status_code == 206, "lien signé : lecture partielle (Range) acceptée")
 
-# Libre : tout compte connecté ; premium : jamais un visiteur
+# Conférence en accès libre : le téléchargement reste réservé aux abonnés
 fr = make_talk(access="free"); make_hls(fr)
-ok(prepare(free_user, fr, {"kind": "audio"}).json()["status"] == "ready", "conférence en accès libre : téléchargeable par un compte connecté")
+ok(requests.post(f"{B}/me/offline/{fr}", headers=free_user, json={"kind": "audio"}).status_code == 403, "conférence en accès libre : refusée sans abonnement")
+ok(requests.get(f"{B}/me/offline/{fr}/pack", headers=free_user).status_code == 403, "pack hors ligne : refusé sans abonnement")
+ok(prepare(sub, fr, {"kind": "audio"}).json()["status"] == "ready", "conférence en accès libre : téléchargeable par un abonné")
 
 # Renouvellement
 rn = requests.post(B + "/me/offline/renew", headers=sub, json={"talkIds": [str(T), str(uuid.uuid4())]}).json()["items"]
 ok(rn[0]["ok"] and rn[0]["expiresAt"] and rn[1]["ok"] is False, "renouvellement : accordé pour l'une, refusé pour l'inconnue")
 rn = requests.post(B + "/me/offline/renew", headers=free_user, json={"talkIds": [str(T), str(fr)]}).json()["items"]
-ok(rn[0]["ok"] is False and rn[0]["reason"] == "subscription" and rn[1]["ok"], "renouvellement : abonnement terminé → refusé (premium), libre → accordé")
+ok(rn[0]["ok"] is False and rn[0]["reason"] == "subscription" and rn[1]["ok"] is False and rn[1]["reason"] == "subscription", "renouvellement : abonnement terminé → refusé, même pour une conférence libre")
 ok(requests.post(B + "/me/offline/renew", headers=sub, json={"talkIds": []}).status_code == 400, "liste vide : 400")
+
+# Licence signée (Ed25519) : vérifiée comme le fera l'application
+import base64, json
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
+def b64u(x): return base64.urlsafe_b64decode(x + "=" * (-len(x) % 4))
+def check_licence(lic, pub, **want):
+    body, sig = lic.split("."); body, sig = b64u(body), b64u(sig)
+    Ed25519PublicKey.from_public_bytes(base64.b64decode(pub)).verify(sig, body)   # lève InvalidSignature si faux
+    p = json.loads(body)
+    return all(p[k] == v for k, v in want.items()), p
+j = prepare(sub, T, {"kind": "audio"}).json()
+good, pl = check_licence(j["licence"], j["publicKey"], talk=str(T), kind="audio", sha=j["sha256"])
+ok(good and pl["exp"] > time.time() + 25 * 86400 and abs(pl["iat"] - time.time()) < 60 and abs(calendar.timegm(time.strptime(j["serverTime"][:19], "%Y-%m-%dT%H:%M:%S")) - time.time()) < 60, "licence : signature valide, bon fichier, ~30 jours, heure serveur fournie")
+bad = j["licence"].split(".")[0][:-2] + "AA." + j["licence"].split(".")[1]
+try: check_licence(bad, j["publicKey"]); forged = False
+except (InvalidSignature, Exception): forged = True
+ok(forged, "licence modifiée (date changée) : signature invalide")
+j2 = prepare(sub, T, {"kind": "video", "height": 720}).json()
+ok(j2["publicKey"] == j["publicKey"] and j2["licence"] != j["licence"], "même clé publique, licence propre à chaque fichier")
+rf = requests.post(B + "/me/offline/renew", headers=sub, json={"files": [{"talkId": str(T), "kind": "audio", "height": 0, "sha256": j["sha256"]}, {"talkId": str(uuid.uuid4()), "kind": "audio", "height": 0, "sha256": j["sha256"]}]}).json()
+good, pl = check_licence(rf["items"][0]["licence"], rf["items"][0]["publicKey"], talk=str(T), sha=j["sha256"])
+ok(good and rf["items"][1]["ok"] is False and rf["serverTime"], "renouvellement par fichier : nouvelle licence signée ; conférence inconnue refusée")
+ok(requests.post(B + "/me/offline/renew", headers=sub, json={"files": [{"talkId": str(T), "kind": "audio", "height": 0, "sha256": "zz"}]}).status_code == 400, "renouvellement : empreinte invalide → 400")
+
+# Pack hors connexion : résumé, chapitres, transcription, quiz avec réponses
+cur.execute("insert into talk_insights(talk_id, lang, status, summary, key_points, chapters) values (%s,'fr','ready','Résumé test','[\"Point A\",\"Point B\"]','[{\"ms\":0,\"title\":\"Introduction\"},{\"ms\":9000,\"title\":\"Suite\"}]')", (T,))
+for lang, txt in (("fr", "Bonjour à tous"), ("en", "Hello everyone")):
+    cur.execute("insert into transcript_segments(talk_id, lang, idx, start_ms, end_ms, text) values (%s,%s,0,0,4000,%s),(%s,%s,1,4000,9000,%s)", (T, lang, txt, T, lang, txt + " !"))
+cur.execute("update talks set transcript_language='fr' where id=%s", (T,))
+for i in range(5):
+    cur.execute("insert into quiz_questions(talk_id,lang,question,options,correct_index,explanation,evidence_ms,origin,status) values (%s,'fr',%s,'[\"a\",\"b\",\"c\"]',1,'parce que',%s,'manual','approved')", (T, f"Question {i}", i * 1000))
+pk = requests.get(f"{B}/me/offline/{T}/pack", headers=sub).json()
+ok(pk["insights"][0]["summary"] == "Résumé test" and pk["insights"][0]["keyPoints"] == ["Point A", "Point B"] and pk["insights"][0]["chapters"][1] == {"s": 9000, "t": "Suite"}, "pack : résumé, points clés, chapitres")
+ok(sorted(t["lang"] for t in pk["transcripts"]) == ["en", "fr"] and pk["transcripts"][0]["segments"][1]["t"].endswith("!"), "pack : transcription dans chaque langue")
+ok(pk["quiz"] and len(pk["quiz"]["questions"]) == 5 and pk["quiz"]["questions"][0]["correctIndex"] == 1 and pk["quiz"]["questions"][0]["explanation"] == "parce que" and pk["quiz"]["passPercent"] > 0, "pack : quiz avec bonnes réponses et explications")
+ok(requests.get(f"{B}/me/offline/{T}/pack").status_code == 401, "pack : visiteur refusé")
+pk2 = requests.get(f"{B}/me/offline/{na}/pack", headers=sub).json()
+ok(pk2["insights"] == [] and pk2["transcripts"] == [] and pk2["quiz"] is None, "pack d'une conférence sans contenu : listes vides, pas de quiz")
+
+# Fichiers temporaires : « done » raccourcit la durée de vie, le ménage efface objet + ligne sans toucher aux fichiers récents
+cur.execute("select object_key from offline_files where talk_id=%s and kind='audio'", (T,)); k_audio = cur.fetchone()[0]
+cur.execute("select object_key from offline_files where talk_id=%s and kind='video' and height=360", (T,)); k_360 = cur.fetchone()[0]
+ok(requests.post(f"{B}/me/offline/{T}/done", headers=sub, json={"kind": "video", "height": 360}).json()["ok"], "done : accepté")
+cur.execute("select updated_at < now() - interval '2 hours' from offline_files where talk_id=%s and kind='video' and height=360", (T,)); ok(cur.fetchone()[0], "done : le fichier n'a plus que quelques minutes à vivre")
+cur.execute("update offline_files set updated_at = updated_at - interval '11 minutes' where talk_id=%s and kind='video' and height=360", (T,))   # la grâce de 10 min est écoulée
+cur.execute("update offline_files set updated_at = now() - interval '5 hours' where talk_id=%s and kind='audio'", (T,))
+cur.execute("update offline_files set status='failed', updated_at = now() - interval '3 hours' where talk_id=%s and height=720", (T,))
+deadline = time.time() + 90
+while time.time() < deadline:
+    requests.post(f"{B}/me/offline/{fr}", headers=sub, json={"kind": "audio"})   # chaque appel déclenche un ménage (au plus 1 / minute)
+    cur.execute("select count(*) from offline_files where talk_id=%s", (T,))
+    if cur.fetchone()[0] == 0: break
+    time.sleep(5)
+cur.execute("select count(*) from offline_files where talk_id=%s", (T,)); ok(cur.fetchone()[0] == 0, "ménage : fichiers périmés et échecs anciens effacés de la base")
+gone = lambda k: "Contents" not in s3.list_objects_v2(Bucket=BUCKET, Prefix=k)
+ok(gone(k_audio) and gone(k_360), "ménage : objets effacés du stockage (rien ne s'accumule)")
+r = prepare(sub, T, {"kind": "audio"}); ok(r.status_code == 200 and requests.get(r.json()["url"]).status_code == 200, "après ménage : un nouveau téléchargement re-prépare le fichier")
 
 # Échec FFmpeg : le message remonte, puis nouvel essai possible
 cur.execute("update talks set audio_status='ready' where id=%s", (na,))
@@ -144,7 +204,7 @@ requests.put(B + "/admin/features", headers=admin, json={"values": {"offline": T
 
 # Suppression de la conférence : fichiers préparés effacés
 keys = [o["Key"] for o in s3.list_objects_v2(Bucket=BUCKET, Prefix=f"offline/{T}/").get("Contents", [])]
-ok(len(keys) == 3, "3 fichiers dans le stockage")
+ok(len(keys) == 1, "fichier re-préparé présent dans le stockage")
 ok(requests.delete(f"{B}/talks/{T}", headers=admin).status_code == 204, "conférence supprimée")
 ok(not s3.list_objects_v2(Bucket=BUCKET, Prefix=f"offline/{T}/").get("Contents"), "fichiers hors connexion effacés avec la conférence")
 print("TOUT OK")

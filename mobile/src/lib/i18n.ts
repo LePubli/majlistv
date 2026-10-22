@@ -217,6 +217,13 @@ const fr = {
   'dl.expiredHelp': "Ce téléchargement a expiré. Reconnectez-vous à Internet pour le renouveler (abonnement actif nécessaire).",
   'dl.renew': 'Renouveler maintenant',
   'dl.playerError': 'La lecture a échoué. Supprimez le téléchargement puis téléchargez-le de nouveau.',
+  'dl.licenceBad': 'Licence à renouveler — reconnectez-vous à Internet',
+  'dl.clockWarn': "La date de ce téléphone a été reculée : la validité des téléchargements est calculée d'après la dernière date connue.",
+  'dl.tabNotice': 'Disponible hors connexion',
+  'dl.noPack': "Résumé, transcription et quiz ne sont pas encore sur ce téléphone. Reconnectez-vous une fois pour les recevoir.",
+  'dl.noQuiz': "Pas de quiz pour cette conférence.",
+  'dl.quizSaved': "Résultat gardé sur le téléphone : il sera envoyé à votre prochaine connexion (badges et révision espacée compris).",
+  'dl.quizPending': '{n} quiz en attente d\'envoi',
 };
 
 export type AppKey = keyof typeof fr;
@@ -434,6 +441,13 @@ const en: Record<AppKey, string> = {
   'dl.expiredHelp': 'This download has expired. Reconnect to the Internet to renew it (an active subscription is required).',
   'dl.renew': 'Renew now',
   'dl.playerError': 'Playback failed. Delete the download and download it again.',
+  'dl.licenceBad': 'Licence to renew — reconnect to the Internet',
+  'dl.clockWarn': "This phone's date was set back: download validity is calculated from the last known date.",
+  'dl.tabNotice': 'Available offline',
+  'dl.noPack': 'Summary, transcript and quiz are not on this phone yet. Reconnect once to receive them.',
+  'dl.noQuiz': 'No quiz for this talk.',
+  'dl.quizSaved': 'Result kept on this phone: it will be sent at your next connection (badges and spaced review included).',
+  'dl.quizPending': '{n} quiz waiting to be sent',
 };
 
 const ar: Record<AppKey, string> = {
@@ -647,6 +661,13 @@ const ar: Record<AppKey, string> = {
   'dl.expiredHelp': 'انتهت صلاحية هذا التنزيل. اتصل بالإنترنت لتجديده (يلزم اشتراك فعّال).',
   'dl.renew': 'جدّد الآن',
   'dl.playerError': 'فشل التشغيل. احذف التنزيل ثم نزّله من جديد.',
+  'dl.licenceBad': 'الترخيص يحتاج إلى تجديد — اتصل بالإنترنت',
+  'dl.clockWarn': 'تم إرجاع تاريخ هذا الهاتف: تُحسب صلاحية التنزيلات من آخر تاريخ معروف.',
+  'dl.tabNotice': 'متاح دون اتصال',
+  'dl.noPack': 'الملخص والنص والاختبار غير موجودة بعد على هذا الهاتف. اتصل مرة واحدة لتلقيها.',
+  'dl.noQuiz': 'لا يوجد اختبار لهذه المحاضرة.',
+  'dl.quizSaved': 'النتيجة محفوظة على الهاتف وسترسل عند اتصالك التالي (بما في ذلك الشارات والمراجعة المتباعدة).',
+  'dl.quizPending': '{n} اختبار في انتظار الإرسال',
 };
 
 export const APP_DICT: Record<Locale, Record<AppKey, string>> = { fr, en, ar };

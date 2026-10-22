@@ -2,7 +2,10 @@
 //   GET  /me/offline/:id/options   ce qui peut être téléchargé pour cette conférence (audio, qualités vidéo, tailles estimées)
 //   POST /me/offline/:id           { kind: 'audio'|'video', height?: 360|720, retry?: true } → 202 « preparing » (à rappeler), 200 « ready » + lien signé, taille, empreinte, fin de validité, ou 502 « failed » + message (retry: true relance)
 //   POST /me/offline/renew         { talkIds: [...] } → pour chacune : toujours autorisée ? nouvelle fin de validité
-// Droit : abonnement en cours (ou accès offert), propriétaire/modérateur/administrateur ; une conférence en accès libre est téléchargeable par tout compte connecté.
+//   POST /me/offline/:id/done      { kind, height? } → l'application a bien reçu le fichier : le serveur l'efface dans quelques minutes
+//   GET  /me/offline/:id/pack      résumé, chapitres, transcription, quiz (avec réponses) pour la lecture hors connexion
+// Droit : abonnement en cours (ou accès offert), propriétaire/modérateur/administrateur. Une conférence en accès libre n'est PAS téléchargeable sans abonnement.
+// Les fichiers préparés sont temporaires sur le serveur (ménage automatique) : ils s'accumulent sur le téléphone, pas dans le stockage.
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { getNumber } from '../../settings.js';
@@ -14,7 +17,9 @@ import { viaChannel } from '../../channelAccess.js';
 import { visibleSql } from '../../visibility.js';
 import { versionOf } from '../../hls.js';
 import { parseMaster, offeredHeights, estimateBytes, AUDIO_BANDWIDTH, expiresAt, OFFLINE_KIND, OFFLINE_HEIGHTS } from './lib.js';
-import { enqueue, isRunning } from './prepare.js';
+import { enqueue, isRunning, sweep, FILE_TTL_MIN, DONE_GRACE_MIN } from './prepare.js';
+import { issueLicense } from './license.js';
+import { buildPack } from './pack.js';
 
 const idParam = z.object({ id: z.string().uuid() });
 const rate = { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } };
@@ -30,7 +35,7 @@ async function check(user, talkId) {
   if (!t.visible && !owner) return { code: 404, error: 'Conférence introuvable' };
   if (t.source !== 'upload') return { code: 409, error: "Cette vidéo est lue depuis une autre plateforme : elle n'est pas téléchargeable.", reason: 'external' };
   if (t.video_status !== 'ready') return { code: 409, error: "La vidéo n'est pas encore prête.", reason: 'not_ready' };
-  const allowed = t.access === 'free' || owner || await hasActiveSubscription(user.sub);
+  const allowed = owner || await hasActiveSubscription(user.sub);   // abonnés seulement, même pour une conférence en accès libre
   if (!allowed) return { code: 403, error: "Le téléchargement est réservé aux abonnés.", reason: 'subscription' };
   return { talk: { ...t, prefix: t.media_prefix || `hls/${t.id}/` } };
 }
@@ -74,16 +79,21 @@ export default async function offlineRoutes(app) {
     if (row.status === 'failed') {
       row = (await pool.query(`UPDATE offline_files SET status = 'preparing', error = NULL, updated_at = now() WHERE id = $1 RETURNING *`, [row.id])).rows[0];
     }
+    void sweep(req.log);
     if (row.status === 'preparing') {
       if (!isRunning(row.id)) void enqueue(row, req.log);
       return reply.code(202).send({ status: 'preparing' });
     }
-    // Fichier prêt : lien signé court (1 h), l'application le télécharge tout de suite.
+    // Fichier prêt : lien signé court (1 h), l'application le télécharge tout de suite. Le fichier reste sur le serveur le temps du ménage (FILE_TTL_MIN).
+    await pool.query('UPDATE offline_files SET updated_at = now() WHERE id = $1', [row.id]);
+    const now = Date.now();
+    const until = expiresAt(now, await getNumber('mod_offline_valid_days'));
+    const lic = await issueLicense({ userId: req.user.sub, talkId: id, kind: row.kind, height: row.height, sha256: row.sha256, now, expiresAt: until });
     return {
       status: 'ready', kind: row.kind, height: row.height, size: Number(row.size), sha256: row.sha256,
       url: await presignGet(row.object_key, { download: row.kind === 'audio' ? 'conference.m4a' : 'conference.mp4' }),
       version: versionOf(id, t.prefix) || '0',
-      expiresAt: expiresAt(Date.now(), await getNumber('mod_offline_valid_days')),
+      expiresAt: until, serverTime: new Date(now).toISOString(), licence: lic.licence, publicKey: lic.publicKey,
     };
   });
 
@@ -95,14 +105,50 @@ export default async function offlineRoutes(app) {
     return { status: row?.status ?? 'none', error: row?.status === 'failed' ? row.error : null };
   });
 
+  // L'application a reçu le fichier : il n'a plus besoin de rester sur le serveur (effacé après quelques minutes de grâce).
+  app.post('/me/offline/:id/done', auth, async (req) => {
+    const { id } = idParam.parse(req.params);
+    const b = z.object({ kind: z.enum(OFFLINE_KIND), height: z.number().int().optional() }).strict().parse(req.body ?? {});
+    await pool.query(
+      `UPDATE offline_files SET updated_at = LEAST(updated_at, now() - make_interval(mins => $4))
+        WHERE talk_id = $1 AND kind = $2 AND height = $3 AND status = 'ready'`,
+      [id, b.kind, b.kind === 'audio' ? 0 : (b.height ?? 0), Math.max(1, FILE_TTL_MIN - DONE_GRACE_MIN)]);
+    return { ok: true };
+  });
+
+  // Pack hors connexion : résumé, chapitres, transcription, quiz.
+  app.get('/me/offline/:id/pack', auth, async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const c = await check(req.user, id);
+    if (!c.talk) return reply.code(c.code).send({ error: c.error, reason: c.reason, code: c.reason });
+    return buildPack(id);
+  });
+
+  // Renouvellement. Ancienne forme : { talkIds } (sans licence). Forme actuelle : { files: [{ talkId, kind, height, sha256 }] } → une licence neuve par fichier.
   app.post('/me/offline/renew', auth, async (req) => {
-    const b = z.object({ talkIds: z.array(z.string().uuid()).min(1).max(50) }).strict().parse(req.body ?? {});
+    const b = z.object({
+      talkIds: z.array(z.string().uuid()).min(1).max(50).optional(),
+      files: z.array(z.object({ talkId: z.string().uuid(), kind: z.enum(OFFLINE_KIND), height: z.number().int().min(0).max(4320).default(0), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).strict()).min(1).max(100).optional(),
+    }).strict().refine((v) => v.talkIds || v.files, { message: 'talkIds ou files requis' }).parse(req.body ?? {});
     const days = await getNumber('mod_offline_valid_days');
+    const now = Date.now();
+    const until = expiresAt(now, days);
     const items = [];
-    for (const talkId of b.talkIds) {
-      const c = await check(req.user, talkId);
-      items.push(c.talk ? { talkId, ok: true, expiresAt: expiresAt(Date.now(), days) } : { talkId, ok: false, reason: c.reason ?? 'gone' });
+    const cache = new Map();
+    const verdict = async (talkId) => { if (!cache.has(talkId)) cache.set(talkId, await check(req.user, talkId)); return cache.get(talkId); };
+    if (b.files) {
+      for (const f of b.files) {
+        const c = await verdict(f.talkId);
+        if (!c.talk) { items.push({ talkId: f.talkId, kind: f.kind, height: f.height, ok: false, reason: c.reason ?? 'gone' }); continue; }
+        const lic = await issueLicense({ userId: req.user.sub, talkId: f.talkId, kind: f.kind, height: f.kind === 'audio' ? 0 : f.height, sha256: f.sha256, now, expiresAt: until });
+        items.push({ talkId: f.talkId, kind: f.kind, height: f.height, ok: true, expiresAt: until, licence: lic.licence, publicKey: lic.publicKey });
+      }
+    } else {
+      for (const talkId of b.talkIds) {
+        const c = await verdict(talkId);
+        items.push(c.talk ? { talkId, ok: true, expiresAt: until } : { talkId, ok: false, reason: c.reason ?? 'gone' });
+      }
     }
-    return { items };
+    return { items, serverTime: new Date(now).toISOString() };
   });
 }

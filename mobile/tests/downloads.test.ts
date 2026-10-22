@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DownloadRecord, applyRenewal, daysLeft, errorCodeFor, fileNameFor, isExpired, isSafeFile, parseIndex, parsePrepare, pollDelay, resumeFor, shouldRenew, totalBytes, upsert, RENEW_EVERY_MS,
+  DownloadRecord, applyRenewal, daysLeftUntil, errorCodeFor, fileNameFor, isSafeFile, isSafePack, packNameFor, packStale, PACK_REFRESH_MS, parseIndex, parsePrepare, pollDelay, resumeFor, shouldRenew, totalBytes, upsert, RENEW_EVERY_MS,
 } from '../src/lib/downloads';
 import { APP_DICT } from '../src/lib/i18n';
 
@@ -11,7 +11,7 @@ const T2 = '4f2a1b9c-1111-4222-8333-444455556666';
 const NOW = Date.UTC(2026, 9, 22, 12);
 const rec = (over: Partial<DownloadRecord> = {}): DownloadRecord => ({
   talkId: T1, userId: 'u1', title: 'T', speaker: 'S', durationSeconds: 3000, kind: 'video', height: 720, size: 100, sha256: 'a'.repeat(64), file: fileNameFor(T1, 'video', 720),
-  poster: null, downloadedAt: NOW, expiresAt: NOW + 30 * 86400000, positionMs: 0, synced: true, version: '0', ...over,
+  poster: null, downloadedAt: NOW, expiresAt: NOW + 30 * 86400000, licence: 'lic.old', pack: null, packAt: 0, positionMs: 0, synced: true, version: '0', ...over,
 });
 
 test('fileNameFor / isSafeFile : jamais de chemin libre', () => {
@@ -37,8 +37,7 @@ test('parseIndex : valeurs étranges ramenées à des valeurs sûres', () => {
 
 test('expiration et jours restants', () => {
   const r = rec();
-  assert.equal(isExpired(r, NOW), false); assert.equal(isExpired(r, r.expiresAt), true); assert.equal(isExpired(r, r.expiresAt + 1), true);
-  assert.equal(daysLeft(r, NOW), 30); assert.equal(daysLeft(r, NOW + 29.5 * 86400000), 1); assert.equal(daysLeft(r, r.expiresAt + 5), 0);
+  assert.equal(daysLeftUntil(r.expiresAt, NOW), 30); assert.equal(daysLeftUntil(r.expiresAt, NOW + 29.5 * 86400000), 1); assert.equal(daysLeftUntil(r.expiresAt, r.expiresAt + 5), 0);
 });
 
 test('applyRenewal : prolongé, supprimé (abonnement fini / conférence retirée), gardé (autre refus)', () => {
@@ -71,12 +70,34 @@ test('parsePrepare : réponses du serveur validées', () => {
   const sha = 'b'.repeat(64);
   assert.deepEqual(parsePrepare({ status: 'preparing' }), { kind: 'preparing' });
   assert.deepEqual(parsePrepare({ status: 'failed', error: 'boom' }), { kind: 'failed', error: 'boom' });
-  const ok = parsePrepare({ status: 'ready', url: 'https://s3.example/x', size: 1234, sha256: sha, expiresAt: '2026-11-21T12:00:00.000Z', version: '0', height: 720 });
-  assert.equal(ok?.kind, 'ready'); if (ok?.kind === 'ready') { assert.equal(ok.size, 1234); assert.equal(ok.expiresAt, Date.parse('2026-11-21T12:00:00.000Z')); }
+  const ok = parsePrepare({ status: 'ready', url: 'https://s3.example/x', size: 1234, sha256: sha, expiresAt: '2026-11-21T12:00:00.000Z', version: '0', height: 720, licence: 'a.b', publicKey: 'KEY', serverTime: '2026-10-22T12:00:00.000Z' });
+  assert.equal(ok?.kind, 'ready'); if (ok?.kind === 'ready') { assert.equal(ok.size, 1234); assert.equal(ok.expiresAt, Date.parse('2026-11-21T12:00:00.000Z')); assert.equal(ok.licence, 'a.b'); assert.equal(ok.publicKey, 'KEY'); assert.equal(ok.serverTime, Date.parse('2026-10-22T12:00:00.000Z')); }
+  assert.equal(parsePrepare({ status: 'ready', url: 'https://x', size: 1, sha256: sha, expiresAt: '2026-11-21T12:00:00Z' }), null, 'sans licence : refusé');
   for (const bad of [null, 'x', {}, { status: 'ready' }, { status: 'ready', url: 'ftp://x', size: 1, sha256: sha, expiresAt: '2026-11-21T12:00:00Z' }, { status: 'ready', url: 'https://x', size: 0, sha256: sha, expiresAt: '2026-11-21T12:00:00Z' },
     { status: 'ready', url: 'https://x', size: 1, sha256: 'zz', expiresAt: '2026-11-21T12:00:00Z' }, { status: 'ready', url: 'https://x', size: 1, sha256: sha, expiresAt: 'jamais' }, { status: 'autre' }]) {
     assert.equal(parsePrepare(bad), null, JSON.stringify(bad)?.slice(0, 40));
   }
+});
+
+test('renouvellement avec licence : la nouvelle licence remplace l\'ancienne ; sans licence, l\'ancienne reste', () => {
+  const later = new Date(NOW + 60 * 86400000).toISOString();
+  let r = applyRenewal([rec()], [{ talkId: T1, ok: true, expiresAt: later, kind: 'video', licence: 'lic.new' }], NOW);
+  assert.equal(r.records[0].licence, 'lic.new'); assert.equal(r.records[0].expiresAt, Date.parse(later));
+  r = applyRenewal([rec()], [{ talkId: T1, ok: true, expiresAt: later }], NOW);
+  assert.equal(r.records[0].licence, 'lic.old');
+  r = applyRenewal([rec()], [{ talkId: T1, ok: true, expiresAt: later, kind: 'audio', licence: 'lic.autre' }], NOW);
+  assert.equal(r.records[0].licence, 'lic.old', 'licence d\'un autre type de fichier ignorée');
+});
+
+test('pack : nom de fichier sûr, mise à jour quotidienne, index', () => {
+  assert.equal(packNameFor(T1), `pack-${T1}.json`); assert.ok(isSafePack(packNameFor(T1)));
+  for (const bad of ['../pack.json', 'pack-x.json', `${T1}.json`, `pack-${T1}.json/../x`, null]) assert.equal(isSafePack(bad), false, String(bad));
+  assert.equal(packStale({ pack: null, packAt: 0 }, NOW), true);
+  assert.equal(packStale({ pack: packNameFor(T1), packAt: NOW - 1000 }, NOW), false);
+  assert.equal(packStale({ pack: packNameFor(T1), packAt: NOW - PACK_REFRESH_MS }, NOW), true);
+  assert.equal(packStale({ pack: packNameFor(T1), packAt: NOW + 5000 }, NOW), true, 'horloge reculée');
+  const r = parseIndex(JSON.stringify([{ ...rec(), pack: packNameFor(T1), packAt: 5 }, { ...rec({ talkId: T2, file: fileNameFor(T2, 'audio', 0), kind: 'audio', height: 0 }), pack: '../evil' }]));
+  assert.equal(r.find((x) => x.talkId === T1)!.pack, packNameFor(T1)); assert.equal(r.find((x) => x.talkId === T2)!.pack, null);
 });
 
 test('errorCodeFor', () => {

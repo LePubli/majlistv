@@ -1,6 +1,7 @@
 // Hors connexion (22b-6) : logique pure, sans dépendance native (testée avec Node, voir tests/downloads.test.ts).
 // Un téléchargement = un fichier (MP4 vidéo ou M4A audio) préparé par le serveur, gardé dans le stockage privé de l'application,
-// lisible jusqu'à une date de fin que le serveur renouvelle à la reconnexion si l'abonnement est actif.
+// lisible jusqu'à la date de fin de sa licence signée (voir license.ts) que le serveur renouvelle à la reconnexion si l'abonnement est actif.
+// Le serveur ne garde pas le fichier : il vit sur le téléphone de l'abonné (pack hors connexion à côté : résumé, chapitres, transcription, quiz).
 
 export type DlKind = 'audio' | 'video';
 
@@ -9,18 +10,29 @@ export type DownloadRecord = {
   kind: DlKind; height: number; size: number; sha256: string;
   /** Nom du fichier dans le dossier « offline » de l'application. */
   file: string; poster: string | null;
-  downloadedAt: number; expiresAt: number;
+  downloadedAt: number;
+  /** Fin de validité (copie de la date signée dans la licence, pour l'affichage ; la licence fait foi). */
+  expiresAt: number;
+  /** Licence signée par le serveur (lie compte, fichier et date de fin). */
+  licence: string;
+  /** Pack hors connexion : nom du fichier et date de la dernière mise à jour (0 = pas encore reçu). */
+  pack: string | null; packAt: number;
   /** Dernière position regardée hors connexion (ms) et envoyée ou non au serveur. */
   positionMs: number; synced: boolean; version: string;
 };
 
-export type RenewItem = { talkId: string; ok: boolean; expiresAt?: string; reason?: string };
+export type RenewItem = { talkId: string; ok: boolean; expiresAt?: string; reason?: string; kind?: DlKind; height?: number; licence?: string; publicKey?: string };
 
 export const RENEW_EVERY_MS = 12 * 3600 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID.test(s);
 const SAFE_FILE = /^[0-9a-f-]{36}-(audio\.m4a|video-\d{3,4}\.mp4)$/i;
 export const isSafeFile = (s: unknown): s is string => typeof s === 'string' && SAFE_FILE.test(s);
+const SAFE_PACK = /^pack-[0-9a-f-]{36}\.json$/i;
+export const isSafePack = (s: unknown): s is string => typeof s === 'string' && SAFE_PACK.test(s);
+export const packNameFor = (talkId: string) => `pack-${talkId}.json`;
+export const QUEUE_FILE = 'quiz-queue.json';
+export const PACK_REFRESH_MS = 24 * 3600 * 1000;
 
 export const fileNameFor = (talkId: string, kind: DlKind, height: number) =>
   `${talkId}-${kind === 'audio' ? 'audio.m4a' : `video-${Math.round(height)}.mp4`}`;
@@ -42,7 +54,8 @@ export function parseIndex(raw: string | null | undefined): DownloadRecord[] {
       talkId: r.talkId, userId: str(r.userId, 64), title: str(r.title), speaker: str(r.speaker), durationSeconds: Math.max(0, num(r.durationSeconds)),
       kind: r.kind, height: Math.max(0, num(r.height)), size: Math.max(0, num(r.size)), sha256: str(r.sha256, 64),
       file: r.file, poster: isSafeFile(r.poster) || (typeof r.poster === 'string' && /^[0-9a-f-]{36}\.jpg$/i.test(r.poster)) ? (r.poster as string) : null,
-      downloadedAt: num(r.downloadedAt), expiresAt: num(r.expiresAt), positionMs: Math.max(0, num(r.positionMs)), synced: r.synced !== false, version: str(r.version, 40) || '0',
+      downloadedAt: num(r.downloadedAt), expiresAt: num(r.expiresAt), licence: str(r.licence, 2000),
+      pack: isSafePack(r.pack) ? r.pack : null, packAt: num(r.packAt), positionMs: Math.max(0, num(r.positionMs)), synced: r.synced !== false, version: str(r.version, 40) || '0',
     };
     const prev = byTalk.get(rec.talkId);
     if (!prev || rec.downloadedAt >= prev.downloadedAt) byTalk.set(rec.talkId, rec);
@@ -50,8 +63,9 @@ export function parseIndex(raw: string | null | undefined): DownloadRecord[] {
   return [...byTalk.values()].sort((a, b) => b.downloadedAt - a.downloadedAt);
 }
 
-export const isExpired = (r: DownloadRecord, now: number) => now >= r.expiresAt;
-export const daysLeft = (r: DownloadRecord, now: number) => Math.max(0, Math.ceil((r.expiresAt - now) / 86400000));
+export const daysLeftUntil = (expiresAt: number, now: number) => Math.max(0, Math.ceil((expiresAt - now) / 86400000));
+/** Le pack doit-il être (re)téléchargé ? absent, ou plus récent que 24 h seulement s'il date. */
+export const packStale = (r: Pick<DownloadRecord, 'pack' | 'packAt'>, now: number) => !r.pack || now - r.packAt >= PACK_REFRESH_MS || now < r.packAt;
 export const totalBytes = (rs: DownloadRecord[]) => rs.reduce((n, r) => n + r.size, 0);
 
 /** Ajoute ou remplace (une conférence = un téléchargement). */
@@ -71,7 +85,9 @@ export function applyRenewal(rs: DownloadRecord[], items: RenewItem[], now: numb
     if (!it) { records.push(r); continue; }
     if (it.ok) {
       const t = it.expiresAt ? Date.parse(it.expiresAt) : NaN;
-      records.push(Number.isFinite(t) && t > now ? { ...r, expiresAt: t } : r);
+      // Nouvelle licence uniquement si elle concerne bien ce fichier (même type de fichier) ; sans licence (ancien serveur), la licence actuelle reste.
+      const lic = it.licence && (!it.kind || it.kind === r.kind) ? it.licence : r.licence;
+      records.push(Number.isFinite(t) && t > now ? { ...r, expiresAt: t, licence: lic } : r);
     } else if (it.reason === 'subscription' || it.reason === 'gone') removed.push(r);
     else records.push(r);
   }
@@ -97,7 +113,7 @@ export const MAX_POLL_MS = 25 * 60 * 1000;
 
 export type PrepareResult =
   | { kind: 'preparing' }
-  | { kind: 'ready'; url: string; size: number; sha256: string; expiresAt: number; version: string; height: number }
+  | { kind: 'ready'; url: string; size: number; sha256: string; expiresAt: number; version: string; height: number; licence: string; publicKey: string; serverTime: number }
   | { kind: 'failed'; error: string };
 
 /** Réponse de POST /me/offline/:id, validée. */
@@ -109,7 +125,10 @@ export function parsePrepare(body: unknown): PrepareResult | null {
   if (b.status !== 'ready') return null;
   const size = num(b.size); const exp = typeof b.expiresAt === 'string' ? Date.parse(b.expiresAt) : NaN;
   if (typeof b.url !== 'string' || !/^https?:\/\//.test(b.url) || size < 1 || typeof b.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(b.sha256) || !Number.isFinite(exp)) return null;
-  return { kind: 'ready', url: b.url, size, sha256: b.sha256, expiresAt: exp, version: str(b.version, 40) || '0', height: num(b.height) };
+  const licence = str(b.licence, 2000); const publicKey = str(b.publicKey, 100);
+  if (!licence || !publicKey) return null;
+  const st = typeof b.serverTime === 'string' ? Date.parse(b.serverTime) : NaN;
+  return { kind: 'ready', url: b.url, size, sha256: b.sha256, expiresAt: exp, version: str(b.version, 40) || '0', height: num(b.height), licence, publicKey, serverTime: Number.isFinite(st) ? st : 0 };
 }
 
 export type DlErrorCode = 'network' | 'integrity' | 'subscription' | 'external' | 'not_ready' | 'no_audio' | 'space' | 'generic';

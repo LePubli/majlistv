@@ -5302,12 +5302,12 @@ curl -s -X POST -H "Authorization: Bearer VOTRE_JETON" -H "content-type: applica
 
 ### Description
 Dans la fiche d'une conférence hébergée chez nous, le bouton **Télécharger** propose : **audio seul** (≈ 28 Mo par heure), **vidéo 360p** ou **vidéo 720p**, avec la taille estimée. Le serveur prépare **un seul fichier** (MP4 pour la vidéo, M4A pour l'audio) en recopiant la conférence sans la reconvertir (quelques secondes à quelques minutes la première fois, immédiat ensuite) ; l'application le télécharge, **contrôle son empreinte SHA-256**, le garde dans son stockage privé et le relit **sans réseau** depuis l'écran **Mes téléchargements** (menu ☰ → « Mes téléchargements », aussi proposé sur l'accueil quand le réseau manque).
-- **Réservé aux abonnés** (abonnement en cours, accès offert, propriétaire / modérateur / administrateur). Une conférence en **accès libre** est téléchargeable par tout compte connecté (choix de ma part, à confirmer : le visionnage libre est déjà gratuit).
+- **Réservé aux abonnés** (abonnement en cours, accès offert, propriétaire / modérateur / administrateur), **même pour une conférence en accès libre** (précisé à l'étape 22b-6 bis).
 - **Valable 30 jours** (réglable : Admin → Paramètres → « Durée de validité d'un téléchargement »). Dès que le téléphone se reconnecte, l'application **renouvelle** les téléchargements dont l'abonnement est toujours actif (au plus toutes les 12 h) ; si l'abonnement est terminé ou si la conférence a été retirée, le téléchargement est **supprimé**.
 - **Pas de limite de nombre** (décision d'Epok) : seulement l'espace libre du téléphone. L'écran « Mes téléchargements » montre l'espace utilisé, les jours restants et permet de supprimer.
 - Reprise de lecture : la position regardée hors connexion est gardée sur le téléphone et **envoyée au serveur à la reconnexion** (même reprise que sur le site).
 - Déconnexion voulue : tous les téléchargements du compte sont effacés ; un autre compte qui se connecte sur le téléphone efface ceux du précédent. Hors connexion (jeton gardé, session non vérifiée), rien n'est effacé.
-- **Pas disponible** : vidéos YouTube / Vimeo / archive.org lues depuis leur plateforme (message clair), 1080p. Transcription, chapitres et quiz ne sont pas encore disponibles hors connexion (seul le lecteur l'est).
+- **Pas disponible** : vidéos YouTube / Vimeo / archive.org lues depuis leur plateforme (message clair), 1080p. (Résumé, chapitres, transcription et quiz : disponibles hors connexion depuis l'étape 22b-6 bis.)
 
 ### Ce qui a été ajouté
 - **API** : module `offline` (fonction activable Admin → Fonctions « Hors connexion (application) », réglage `mod_offline_valid_days`), migration `001_offline_files.sql` (table `offline_files`).
@@ -5355,6 +5355,62 @@ curl -s -X POST -H "Authorization: Bearer JETON" -H "content-type: application/j
 ### Honnêteté sur les essais
 - **Vérifié** : le serveur avec un **vrai FFmpeg** (HLS fMP4 à 2 qualités + audio fabriqué comme le worker) contre un stockage S3 de test : audio M4A, vidéo 360p et 720p relus par FFprobe (hauteur, son, durée), empreinte et taille, lecture partielle (Range) du lien signé, droits (visiteur, sans abonnement, libre, externe, pas prêt, pas d'audio), renouvellement accordé / refusé, échec signalé sans boucle puis nouvel essai, suppression avec la conférence, fonction coupée ; la logique de l'application (index, expiration, renouvellement, réponses du serveur, textes FR/EN/AR) avec 72 tests ; **le client contre une vraie API** (`mobile/tests/offline_contract.ts` : options, attente de préparation, téléchargement, empreinte, renouvellement, refus) ; typage, compilation du paquet Android, génération du projet natif.
 - **Jamais essayé sur un téléphone** : le téléchargement par `expo-file-system` (progression, annulation, redirection du lien signé, déplacement du fichier), le **lecteur `expo-video` sur un fichier local**, la détection du réseau (`expo-network`), les écrans, le mode avion réel, le comportement après un redémarrage du téléphone. Les noms d'API d'Expo ont été vérifiés dans leurs définitions de types, pas à l'usage.
-- **Pas de protection contre la copie (pas de DRM)** : le fichier est dans le stockage privé de l'application (invisible dans la galerie), mais un téléphone « rooté » pourrait l'extraire. La durée de validité se contrôle avec l'horloge du téléphone : reculer la date peut prolonger la lecture hors connexion jusqu'à la reconnexion suivante.
-- **Stockage serveur** : chaque fichier préparé est gardé dans Garage (`offline/…`) et compte dans le plafond de 30 Go (audio ≈ 28 Mo / h, 360p ≈ 0,2 Go / h, 720p ≈ 0,4 Go / h au débit de la source) ; pas de ménage automatique des fichiers peu demandés (voir registre).
+- **Protection** : voir l'étape 22b-6 bis (licence signée, horloge de confiance) et ses limites sur un téléphone « rooté ».
+- **Stockage serveur** : les fichiers préparés sont temporaires depuis l'étape 22b-6 bis (ménage automatique).
 - Profils enfants (Kids) : le téléchargement n'est pas prévu (étape « Kids natif »).
+
+## Étape 22b-6 bis — Hors connexion complet et protégé (22/10, application 0.7.0)
+
+### Description
+Suite à vos remarques sur l'étape 22b-6 :
+1. **Abonnés seulement, sans exception** : même une conférence en accès libre ne se télécharge qu'avec un abonnement actif (ou en tant que propriétaire / modérateur / administrateur). Mon choix précédent (« libre = tout compte connecté ») est retiré.
+2. **Les fichiers s'accumulent sur le téléphone, pas dans Garage** : le serveur ne garde un fichier préparé que **3 heures** (réglable : variable `OFFLINE_FILE_TTL_MIN`, minimum 15 min). Quand l'application confirme avoir bien reçu le fichier (`POST /me/offline/:id/done`), il est effacé du stockage **10 minutes** plus tard. Un ménage tourne au démarrage de l'API, toutes les 30 minutes et à chaque demande (au plus 1 fois par minute) ; les préparations en échec de plus d'1 h sont aussi effacées. Un nouveau téléchargement re-prépare simplement le fichier. Les téléchargements s'accumulent donc sur le téléphone de l'abonné (pas de limite de nombre), sans compter dans le plafond de 30 Go.
+3. **Résumé, chapitres, transcription et quiz fonctionnent hors connexion.** À chaque téléchargement, l'application reçoit un **pack** (`GET /me/offline/:id/pack`, abonnés seulement) : résumé + points clés + chapitres, transcription dans **toutes** les langues disponibles, quiz avec **bonnes réponses et explications**. Il est enregistré à côté du fichier et **mis à jour une fois par jour** quand le téléphone est en ligne. Le lecteur hors connexion a 4 onglets : Résumé, Chapitres (toucher = aller à ce passage), Transcription (suivie pendant la lecture, toucher = aller à ce passage, choix de la langue), Quiz.
+   - **Quiz hors connexion** : corrigé sur le téléphone (même calcul que le serveur : vérifié par un test contre la vraie API). Le résultat est **mis en file** puis **envoyé au serveur à la reconnexion** (`POST /talks/:id/quiz/submit`) : il compte alors pour les badges, le score Apprentissage et la révision espacée (la date enregistrée est celle de l'envoi). Si le réseau est disponible au moment de terminer, l'envoi est immédiat et le résultat affiché est celui du serveur.
+4. **Protection** (voir « Limites » ci-dessous, soyons précis sur ce qu'elle fait et ne fait pas) :
+   - **Licence signée** : à chaque téléchargement et à chaque renouvellement, le serveur signe (Ed25519) un petit document qui lie **le compte, la conférence, l'empreinte du fichier et la date de fin**. L'application ne lit un fichier que si la signature est valide, que c'est le bon compte, le bon fichier et que la date de fin n'est pas passée. Modifier à la main la date de fin dans les fichiers de l'application ne sert donc à rien (la signature ne correspond plus).
+   - **Horloge de confiance** : l'application retient la **plus haute heure vue** (téléphone et serveur) dans le coffre sécurisé d'Android (Keystore, `expo-secure-store`). La date de fin est comparée à cette heure et non à l'heure affichée par le téléphone : **reculer la date du téléphone ne prolonge plus rien**, et un message l'indique dans « Mes téléchargements ». Seule l'heure du serveur, reçue en ligne, peut corriger cette heure (par exemple si le téléphone avait été réglé par erreur très loin dans le futur).
+   - **Pas de capture ni d'enregistrement d'écran** pendant la lecture hors connexion et le quiz (`expo-screen-capture`, drapeau Android « sécurisé »).
+   - **Sauvegarde Android désactivée** (`allowBackup: false`) : le dossier de l'application n'est plus extractible par `adb backup` ni par la sauvegarde Google.
+   - Les téléchargements faits avec l'application 0.6.0 n'ont pas de licence : après la mise à jour, ils demandent de se reconnecter une fois (renouvellement automatique) puis fonctionnent.
+
+### Ce qui a été ajouté
+- **API** (module `offline`) : migration `002_offline_license.sql` (table `offline_keys`, une ligne : paire de clés Ed25519 créée au premier besoin, clé privée chiffrée avec `SETTINGS_KEY`) ; `license.js` (signature), `pack.js` (construction du pack), `prepare.js` (`sweep()` : ménage) ; routes `GET /me/offline/:id/pack`, `POST /me/offline/:id/done`, `POST /me/offline/:id` (réponse « ready » : + `licence`, `publicKey`, `serverTime`), `POST /me/offline/renew` (forme `{ files: [{ talkId, kind, height, sha256 }] }` → licence neuve par fichier + `serverTime` ; l'ancienne forme `{ talkIds }` reste acceptée, sans licence).
+- **Application** : `src/lib/license.ts` (vérification de la signature avec `tweetnacl`, états `ok / expired / invalid / wrong_user / wrong_file`, horloge de confiance), `src/lib/offlineGuard.ts` (coffre sécurisé : plus haute heure vue, clé publique), `src/lib/offlinePack.ts` (pack, correction locale du quiz, file d'attente), `src/components/OfflineTabs.tsx`, `src/app/offline/quiz/[id].tsx`, `downloadStore.tsx` / `downloads.ts` mis à jour. Nouvelles dépendances : `expo-screen-capture`, `tweetnacl` (la première est native : **nouvel APK obligatoire**, pas de mise à jour du contenu seule depuis 0.6.0).
+- **Tests** : serveur `api/tests/test_offline.py` (53 vérifications : abonné seulement même en accès libre, licence vérifiée avec une vraie bibliothèque Ed25519 et falsification refusée, pack, `done`, ménage des objets et des lignes) ; application `npm test` (84 tests dont `tests/license.test.ts` et `tests/offlinePack.test.ts`, licences signées par Node et vérifiées par `tweetnacl`) ; essai contre une vraie API `tests/offline_contract.ts` (licence signée par le serveur acceptée par l'application, pack, **quiz corrigé localement = quiz corrigé par le serveur**, refus d'un compte sans abonnement sur une conférence libre).
+
+### Prérequis
+Étape 22b-6 en place. Aucune nouvelle variable obligatoire ; `SETTINGS_KEY` doit rester inchangée (elle chiffre la clé de signature : si elle changeait, la clé deviendrait illisible, les licences existantes seraient refusées et il faudrait recréer la ligne `offline_keys`).
+
+### Déploiement (dans cet ordre)
+1. **DockPanel** → Git Deploy → **Redeploy `majlistv-api`** (la migration `offline_keys` s'applique au démarrage). Le site (`majlistv-web`) n'est pas concerné.
+2. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Attendu : 0 échec.
+3. **Application 0.7.0** : le workflow GitHub fabrique l'APK et le publie (étape 22b-5). Sur le téléphone : « Nouvelle version disponible » → Mettre à jour. **Important** : l'application 0.6.0 ne peut pas recevoir 0.7.0 par mise à jour du contenu seule (nouvelle bibliothèque native) ; passer par l'APK.
+4. Nettoyage des anciens fichiers de l'étape 22b-6 déjà dans Garage : ils seront effacés tout seuls par le ménage (3 h après leur dernière utilisation ; au premier démarrage de l'API, ceux des 3 dernières heures restent un peu plus longtemps). Pour vérifier : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select kind, height, status, updated_at from offline_files order by updated_at desc limit 20;"`.
+
+### Utilisation
+1. Abonné : ouvrir une conférence → **Télécharger** → choisir audio / 360p / 720p. Quand c'est terminé, le fichier **et** le pack sont sur le téléphone.
+2. Mode avion → ☰ → **Mes téléchargements** → toucher la conférence : lecture, puis onglets **Résumé / Chapitres / Transcription / Quiz**.
+3. Passer le quiz hors connexion : le résultat s'affiche avec les explications ; à la prochaine connexion il est envoyé (le nombre de quiz en attente est visible dans l'onglet Quiz).
+4. Changer la durée de vie des fichiers sur le serveur (facultatif) : variable `OFFLINE_FILE_TTL_MIN` de `majlistv-api` (minutes, défaut 180).
+
+### Debug
+- **« Licence à renouveler »** dans la liste : téléchargement de l'ancienne version ou clé de signature changée ; se connecter à Internet (renouvellement automatique) ou toucher « Renouveler maintenant ».
+- **Message « La date de ce téléphone a été reculée »** : l'horloge du téléphone est en arrière de la dernière heure connue. Se connecter à Internet une fois remet l'heure du serveur.
+- **Onglets vides (« Résumé, transcription et quiz ne sont pas encore sur ce téléphone »)** : le pack n'a pas pu être téléchargé (réseau coupé juste après le fichier) ; il arrive à la prochaine connexion.
+- **Voir ce que le serveur garde** : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select talk_id, kind, height, status, updated_at from offline_files;"` et, côté Garage, le dossier `offline/` du bucket `majlis-videos`.
+- **Journal du ménage** : `docker logs --tail 100 dockpanel-git-majlistv-api 2>&1 | grep -i "Hors connexion"`.
+
+### Limites (honnêtes)
+- **Ce qui n'est PAS empêché** : un téléphone « rooté » (accès administrateur) peut copier le fichier MP4 lui-même hors de l'application, pendant qu'il est valide, et le lire ailleurs. Seule une protection par chiffrement et DRM (Widevine, magasins d'applications) l'empêcherait réellement ; ce n'est pas fait. Sur un téléphone « rooté », le coffre sécurisé et l'application elle-même peuvent aussi être contournés. La protection ajoutée vise le cas courant : un abonné ordinaire qui recule la date ou modifie les fichiers.
+- Un abonné dont l'abonnement se termine garde ses fichiers **jusqu'à la date de fin de la licence en cours** (30 jours au plus) s'il ne se reconnecte jamais ; à la reconnexion, ils sont supprimés (voulu).
+- **Jamais essayé sur un téléphone** : les nouveautés natives (`expo-screen-capture`, coffre sécurisé pour l'horloge, lecture des onglets, quiz local, envoi à la reconnexion). Voir le registre, point 84.
+- Le pack contient les bonnes réponses du quiz (nécessaire pour corriger sans réseau) : il n'est servi qu'aux abonnés, mais un téléphone « rooté » pourrait les lire dans le fichier du pack.
+- La date de la tentative de quiz enregistrée sur le serveur est celle de l'envoi (reconnexion), pas celle du moment où le quiz a été passé.

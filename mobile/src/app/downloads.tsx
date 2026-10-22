@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSession } from '@/lib/session';
 import { useDownloads } from '@/lib/downloadStore';
-import { DownloadRecord, daysLeft, isExpired } from '@/lib/downloads';
+import { DownloadRecord } from '@/lib/downloads';
 import { formatSize } from '@/lib/appUpdate';
 import { formatDuration } from '@/lib/format';
 import { colors, radius } from '@/lib/theme';
@@ -18,7 +18,8 @@ function goBack() { if (router.canGoBack()) router.back(); else router.replace('
 function Row({ rec }: { rec: DownloadRecord }) {
   const { t, locale, dirStyle } = useSession();
   const dl = useDownloads();
-  const expired = isExpired(rec, Date.now());
+  const st = dl.statusOf(rec);
+  const expired = !st.playable;
   const poster = dl.posterUriOf(rec);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={rec.title} onPress={() => router.push({ pathname: '/offline/[id]', params: { id: rec.talkId } })}
@@ -32,7 +33,7 @@ function Row({ rec }: { rec: DownloadRecord }) {
         <Txt size={12} color={colors.muted}>
           {rec.kind === 'audio' ? t('dl.audio') : `${rec.height}p`} · {formatSize(rec.size, locale)}{rec.durationSeconds ? ` · ${formatDuration(rec.durationSeconds)}` : ''}
         </Txt>
-        <Txt size={12} color={expired ? '#FF8A7A' : colors.text2}>{expired ? t('dl.expired') : t('dl.daysLeft', { n: daysLeft(rec, Date.now()) })}</Txt>
+        <Txt size={12} color={expired ? '#FF8A7A' : colors.text2}>{!expired ? t('dl.daysLeft', { n: st.daysLeft }) : st.state === 'expired' ? t('dl.expired') : t('dl.licenceBad')}</Txt>
       </View>
       <IconButton label={t('dl.remove')} size={40} onPress={() => { void dl.remove(rec.talkId); }}><Feather name="trash-2" size={18} color={colors.text} /></IconButton>
     </Pressable>
@@ -48,6 +49,7 @@ export default function DownloadsScreen() {
         <IconButton label={t('common.close')} onPress={goBack}><Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} /></IconButton>
         <Txt weight="extrabold" size={22} accessibilityRole="header" style={{ flex: 1 }}>{t('dl.listTitle')}</Txt>
       </View>
+      {dl.clockWarn ? <View style={{ paddingHorizontal: 18, paddingBottom: 6 }}><Txt size={13} color="#FF8A7A" accessibilityRole="alert">{t('dl.clockWarn')}</Txt></View> : null}
       {dl.active ? <View style={{ paddingHorizontal: 18 }}><Txt size={13} color={colors.goldLight}>{t('dl.downloading', { percent: Math.round(dl.active.ratio * 100) })}</Txt></View> : null}
       <FlatList
         data={dl.records}
@@ -58,7 +60,7 @@ export default function DownloadsScreen() {
         renderItem={({ item }) => <Row rec={item} />}
       />
       {!dl.online && dl.records.length ? <View style={{ padding: 18 }}><Txt size={13} color={colors.muted} style={{ textAlign: 'center' }}>{t('dl.offline')}</Txt></View> : null}
-      {dl.online && dl.records.some((r) => isExpired(r, Date.now())) ? <View style={{ padding: 18 }}><Button variant="dark" label={t('dl.renew')} onPress={() => { void dl.renew(true); }} /></View> : null}
+      {dl.online && dl.records.some((r) => !dl.statusOf(r).playable) ? <View style={{ padding: 18 }}><Button variant="dark" label={t('dl.renew')} onPress={() => { void dl.renew(true); }} /></View> : null}
     </SafeAreaView>
   );
 }
