@@ -3707,6 +3707,11 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .pwa-steps li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-2); }
 .pwa-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
 .pwa-soon { opacity: .85; }
+.pwa-apkmeta { margin: 0; color: var(--text); }
+.pwa-apknotes { margin: 0; white-space: pre-line; }
+.pwa-h3 { margin: 6px 0 0; font-size: 1rem; color: var(--text); }
+.pwa-sha code { word-break: break-all; font-size: .75rem; }
+a.btn.pwa-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .pwa-installed { margin: 0; }
 @media (max-width: 520px) { .pwa-hero { flex-direction: column; text-align: center; } .pwa-btn { justify-self: stretch; } }
 

@@ -5422,3 +5422,36 @@ Contrôle côté serveur (remplacer 5 par le numéro de build affiché dans l'ap
 curl -s "https://api-majlisstv.le-publicitaire.fr/app/latest?platform=android&versionCode=5"
 ```
 
+## Étape 22b-7 — Page « Télécharger l'application » avec l'APK (22/10, site)
+
+### Description
+La page du site `/application` (lien « Télécharger l'application » du pied de page) propose maintenant, sous l'installation du site (PWA), une carte **Application Android** : version, taille, date, nouveautés (dans la langue de la personne), bouton **Télécharger l'application (APK)**, 4 étapes d'installation et empreinte SHA-256 du fichier. Les données viennent de `GET /app/latest` (la dernière version publiée par le workflow GitHub, étape 22b-5) : à chaque nouvelle publication, la page est à jour sans toucher au site. Le bouton pointe vers `/app/download/<build>` de l'API, qui redirige vers un lien signé du stockage. Sans version publiée (ou si la fonction « Mises à jour de l'application » est coupée), l'ancien message « Bientôt » reste affiché. Sur iPhone et ordinateur, une phrase précise que le fichier est pour Android. Français, anglais et arabe (RTL) ; sans défilement horizontal à 390 px. Aucun achat : l'abonnement reste sur le site.
+
+### Ce qui a été ajouté
+`web/app/application/page.js` (carte APK), `web/lib/i18n.js` (clés `pwaApk*` en fr / en / ar), `web/app/globals.css` (quelques styles). Aucune modification de l'API.
+
+### Prérequis
+Étape 22b-5 en place et au moins une version publiée (workflow GitHub vert à l'étape « Publier l'APK sur notre serveur »).
+
+### Déploiement
+1. DockPanel → Git Deploy → **Redeploy `majlistv-web`** (l'API n'est pas concernée).
+2. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Attendu : 0 échec.
+
+### Utilisation / vérification
+Ouvrir https://majlisstv.le-publicitaire.fr/application : la carte « Application Android » doit afficher la dernière version. Contrôle de la source : `curl -s "https://api-majlisstv.le-publicitaire.fr/app/latest?platform=android&versionCode=0"`.
+
+### Debug
+- Carte « Bientôt » alors qu'une version est publiée : la commande `curl` ci-dessus ne renvoie pas `latest` (fonction coupée : Admin → Fonctions → « Mises à jour de l'application », ou aucune version publiée) ; ou le site n'a pas été redéployé.
+- Le téléchargement échoue (404) : la version a été retirée ; republier depuis GitHub Actions.
+- Android refuse l'installation : autoriser une fois le navigateur à installer des applications (étape 3 affichée sur la page).
+
+### Honnêteté sur les essais
+Vérifié : compilation du site (`next build`), page lue dans un vrai navigateur (Playwright) contre l'API de test : sans version → « Bientôt » ; avec une version → version, taille, nouveautés, bouton, étapes, empreinte, lien `/app/download/<build>`, pas de défilement horizontal à 390 px ; iPhone → avertissement Android. **Non vérifié** : le téléchargement réel de l'APK depuis le navigateur d'un téléphone et l'installation (dépend du VPS et d'Android) ; l'affichage arabe n'a pas été relu visuellement.
+

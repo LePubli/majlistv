@@ -401,3 +401,7 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 22b-6 bis (22/10) — hors connexion complet et protégé (0.7.0)
 - Téléchargement réservé aux abonnés (même conférences libres) ; fichiers préparés temporaires sur le serveur (ménage 3 h, effacés 10 min après réception) et conservés sur le téléphone ; pack hors connexion (résumé, chapitres, transcription multilingue, quiz avec explications) avec onglets dans le lecteur et quiz corrigé localement puis envoyé à la reconnexion ; licence signée Ed25519 (compte + fichier + fin de validité), horloge de confiance (plus haute heure vue, coffre sécurisé), capture d'écran bloquée, sauvegarde Android désactivée. Limite assumée : pas de DRM (un téléphone « rooté » peut copier le fichier). Déploiement : API, puis nouvel APK 0.7.0 (module natif ajouté : pas de mise à jour du contenu seule). Voir README « Étape 22b-6 bis ». Reste (sur « go ») : Kids natif, Chromecast / AirPlay, page « Télécharger l'application », 22c Android TV, 22d Apple TV.
+
+## Étape 22b-7 (22/10) — page « Télécharger l'application » avec l'APK
+- La page `/application` du site affiche la dernière version de l'APK publiée (version, taille, nouveautés, bouton de téléchargement, étapes d'installation, empreinte), mise à jour automatiquement à chaque publication GitHub. Déploiement : `majlistv-web` seulement. Voir README « Étape 22b-7 ». Reste (sur « go ») : réglage des horaires de prière (écart avec la mosquée, laissé de côté), Kids natif, Chromecast / AirPlay, 22c Android TV, 22d Apple TV.
+
