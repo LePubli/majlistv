@@ -15,6 +15,8 @@ import { formatDuration } from '@/lib/format';
 import { ProgressTracker, resumeStartMs } from '@/lib/progress';
 import { registerMedia } from '@/lib/mediaRegistry';
 import { nextSpeed, pickSource, platformName } from '@/lib/playback';
+import { canCast, type CastState } from '@/lib/cast';
+import { CastBridge } from '@/components/CastBridge';
 import { levelLabel, LEVEL_COLOR } from '@/lib/media';
 import type { EmbedMessage } from '@/lib/embed';
 import type { Card, Insights, SeriesCtx, Talk } from '@/lib/types';
@@ -83,7 +85,9 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
     p.timeUpdateEventInterval = 1;
   });
   const { isPlaying: nativePlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-  const isPlaying = src.embed ? embedPlaying : nativePlaying;
+  // Diffusion sur la télévision (Chromecast / AirPlay) : pendant ce temps, les boutons commandent le téléviseur.
+  const [cast, setCast] = useState<CastState | null>(null);
+  const isPlaying = cast ? cast.playing : src.embed ? embedPlaying : nativePlaying;
 
   const started = useRef(false);
   const pendingSeek = useRef<number | null>(null);
@@ -140,7 +144,8 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
 
   const seekMs = (ms: number) => {
     setEnded(false);
-    if (src.embed) { embedRef.current?.seek(ms / 1000); embedRef.current?.play(); } else { player.currentTime = ms / 1000; player.play(); }
+    if (cast) cast.seek(ms / 1000);
+    else if (src.embed) { embedRef.current?.seek(ms / 1000); embedRef.current?.play(); } else { player.currentTime = ms / 1000; player.play(); }
   };
   // L'écran de pause de la prière peut mettre ce lecteur en pause puis le reprendre (sans toucher à un lecteur muet).
   const live = useRef({ playing: false, embed: false });
@@ -150,8 +155,14 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
     pause: () => { if (live.current.embed) embedRef.current?.pause(); else player.pause(); },
     play: () => { if (live.current.embed) embedRef.current?.play(); else player.play(); },
   }), [player]);
-  const play = () => (src.embed ? embedRef.current?.play() : player.play());
-  const pause = () => (src.embed ? embedRef.current?.pause() : player.pause());
+  const play = () => (cast ? cast.play() : src.embed ? embedRef.current?.play() : player.play());
+  const pause = () => (cast ? cast.pause() : src.embed ? embedRef.current?.pause() : player.pause());
+  // Position du téléviseur : suit la lecture et la reprise comme sur le téléphone.
+  useEffect(() => {
+    if (!cast) return;
+    setPos(cast.position);
+    tracker.update(cast.position * 1000, (player.duration || talk.durationSeconds || 0) * 1000, cast.playing);
+  }, [cast?.position]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function switchMode(audio: boolean) {
     const target = audio ? src.audioUri : src.uri;
@@ -202,6 +213,12 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
               </View>
             </View>
           )}
+          {cast ? (
+            <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.82)', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }}>
+              <Feather name="cast" size={36} color={colors.goldLight} />
+              <Txt weight="bold" style={{ textAlign: 'center' }}>{t('cast.on', { device: cast.device })}</Txt>
+            </View>
+          ) : null}
           {failed ? (
             <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.88)', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
               <Txt style={{ textAlign: 'center' }}>{t('talk.playerError')}</Txt>
@@ -264,6 +281,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
           <ActionTile icon="bookmark" label={fav ? t('removeFav') : t('addFav')} active={fav} onPress={() => needLogin(() => { void toggleFav(talk.id); })} />
           <ActionTile icon="list" label={t('wbList')} onPress={() => needLogin(() => setListOpen(true))} />
           <ActionTile icon="share-2" label={t('wbShare')} onPress={() => { void Share.share({ message: `${talk.title} — ${SITE_URL}/talks/${talk.id}` }); }} />
+          {canCast(src) && src.uri ? <CastBridge player={player} uri={src.uri} title={talk.title} speaker={talk.speaker} posterUrl={talk.posterUrl} durationSec={talk.durationSeconds ?? undefined} onCast={setCast} /> : null}
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <ActionTile icon="headphones" label={audioMode ? t('audBackVideo') : t('audMode')} active={audioMode} disabled={!src.audioUri} onPress={() => switchMode(!audioMode)} />

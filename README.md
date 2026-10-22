@@ -5481,3 +5481,42 @@ bash /root/verify-deploy.sh
 **Exemples.** Ordinateur : bas du menu de gauche. Téléphone : ☰ puis bas du menu. Clic → page `/application`.
 
 **Testé / non testé.** Testé (navigateur Chromium automatisé) : 1440 px (menu ouvert et replié), 390 px (menu ☰), pas de débordement horizontal, absence sur `/application`. Non testé : sur un vrai téléphone, en arabe (RTL) visuellement, site installé (PWA) réel.
+
+
+## Étape 22b-10 — Diffusion sur la télévision : Chromecast et AirPlay (22/10, application 0.8.0 + API)
+
+**Description.** Sur la fiche d'une conférence de l'application, une case « Diffuser » (4ᵉ case de la première rangée d'actions) :
+- **Android → Chromecast** (bibliothèque `react-native-google-cast` 4.9.1, récepteur multimédia par défaut de Google `CC1AD845`, pas de compte développeur Google à créer). On touche l'icône, on choisit l'appareil : le téléphone met sa lecture en pause, le téléviseur charge le même flux HLS (avec le jeton de lecture) à la même position. Pendant la diffusion, l'écran de lecture affiche « Diffusion en cours sur <appareil> » et les boutons lecture / pause / −10 s / +10 s commandent le téléviseur ; la progression continue d'être enregistrée (reprise identique au site). À la déconnexion, le téléphone reprend à la dernière position du téléviseur.
+- **iPhone / iPad → AirPlay** (bouton système `VideoAirPlayButton` d'`expo-video`) : la lecture est transmise par le système, rien à gérer.
+- **Pas de diffusion** pour : YouTube / Vimeo (lus depuis leur plateforme), une vidéo hors connexion (fichier sur le téléphone, protégé par licence), une conférence pas encore convertie. Une conférence verrouillée (non abonné) diffuse seulement l'aperçu, coupé par le serveur comme sur le téléphone.
+- **Serveur** : le téléviseur lit lui-même les playlists depuis un autre domaine, donc (1) les playlists HLS (`/hls/…`) répondent `Access-Control-Allow-Origin: *` (l'accès reste porté par le jeton dans l'adresse, aucun cookie) ; (2) le bucket S3 reçoit au démarrage de l'API une 2ᵉ règle CORS en lecture seule (GET, HEAD) ouverte à toute origine, l'envoi (PUT) restant limité au site. Les liens de segments sont signés et valables 4 h.
+
+**Fichiers.** API : `api/src/routes/hls.js`, `api/src/storage.js`, test `api/tests/test_cast.py`. Application : `mobile/src/lib/cast.ts` (logique pure), `components/CastBridge.android.tsx` / `.ios.tsx` / `.tsx` (pont par plateforme), `CastTile.tsx`, `app/talk/[id].tsx`, `lib/i18n.ts` (`cast.*` fr/en/ar), `app.json` (plugin, version 0.8.0, déclarations réseau local iOS), `release-notes.json`, `package.json`, test `mobile/tests/cast.test.ts`.
+
+**Prérequis.** Un Chromecast (ou téléviseur avec Chromecast intégré) sur le **même réseau Wi-Fi** que le téléphone ; pour AirPlay, une Apple TV ou un téléviseur compatible. Aucune variable, aucune migration.
+
+**Déploiement.**
+1. DockPanel → Git Deploy → Redeploy `majlistv-api` (en-tête CORS + règle du bucket, appliquée au démarrage). Le site (`majlistv-web`) n'a pas changé.
+2. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+3. Contrôle de l'en-tête (remplacer l'identifiant par celui d'une conférence prête ; l'adresse complète avec jeton se lit dans la réponse de `GET /talks/<id>`) :
+```
+curl -sI -H "Origin: https://www.gstatic.com" "https://api-majlisstv.le-publicitaire.fr/hls/<id>/master.m3u8?t=<jeton>" | grep -i access-control
+```
+4. L'application : le workflow GitHub fabrique l'APK 0.8.0 (nouvelle bibliothèque native : **pas** de mise à jour du contenu seule, il faut installer le nouvel APK ; la bannière « Nouvelle version disponible » le propose).
+
+**Debug.**
+- Pas d'icône Cast : la bibliothèque n'est présente que dans l'APK 0.8.0 ou plus ; la case n'apparaît que pour une vidéo du serveur (pas YouTube / Vimeo, pas hors connexion).
+- L'appareil n'apparaît pas : même Wi-Fi, pas de « isolation des appareils » sur la box ou le Wi-Fi invité, Chromecast allumé.
+- Le téléviseur affiche une erreur au chargement : vérifier l'en-tête CORS (commande ci-dessus) et que le bucket a bien reçu la règle (journal de l'API au démarrage : « CORS du bucket configuré. »). Si le stockage Garage refuse une règle CORS à origine `*`, le journal affiche « CORS du bucket non configuré ».
+- Le son passe mais pas l'image / flux refusé : le récepteur par défaut lit du HLS H.264 / AAC ; un fichier d'une autre nature (codec rare) ne passera pas.
+- Journal du téléphone : `adb logcat | grep -i cast`.
+
+**Exemples.** Ouvrir une conférence → case « Diffuser » → choisir « Salon » → la vidéo démarre sur la télévision à la position du téléphone → « +10 s » avance la télévision → toucher de nouveau l'icône → « Arrêter la diffusion » : le téléphone reprend où la télévision s'est arrêtée.
+
+**Testé / non testé (honnêteté).** Testé : logique pure (`canCast`, requête de chargement HLS, reprise, cohérence de la configuration : 5 tests ajoutés, 90 au total), typage, génération du projet Android (`expo prebuild` : le plugin ajoute bien le fournisseur d'options Cast, l'identifiant du récepteur et l'initialisation dans `MainActivity`), API : en-têtes CORS des playlists et règle du bucket (test_cast.py, test_offline.py toujours vert). **Non testé** : la compilation Gradle de l'APK avec la nouvelle bibliothèque native (bibliothèque 4.9.x en « mode de compatibilité » avec la nouvelle architecture de React Native 0.88 — à confirmer par le workflow GitHub), la diffusion réelle sur un Chromecast, le pont lecture / pause / reprise sur un vrai téléphone, AirPlay (aucune version iPhone n'est encore fabriquée : code écrit, jamais exécuté), la règle CORS `*` sur le vrai Garage (testée seulement sur le S3 de test), et l'arabe visuellement. Limites : la vitesse de lecture (×1,25 …) ne s'applique qu'au téléphone ; pas de sous-titres sur le téléviseur ; la version de la bibliothèque Google Cast côté Android n'est pas figée (`+`).

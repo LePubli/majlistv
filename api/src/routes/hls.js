@@ -32,6 +32,7 @@ export default async function hlsRoutes(app) {
     const body = path === 'master.m3u8'
       ? rewriteMaster(text, token, versionOf(id, prefix))
       : await rewriteVariant(level === 'preview' ? truncateVariant(text, await getNumber('preview_seconds')) : text, (rel) => presignGet(`${prefix}${dir}${rel}`));
-    return reply.header('content-type', 'application/vnd.apple.mpegurl').header('cache-control', 'private, no-store').send(body);
+    // CORS ouvert : le récepteur Chromecast du téléviseur lit lui-même ces playlists depuis un autre domaine (22b-10). Aucun cookie, l'accès est porté par le jeton dans l'adresse.
+    return reply.header('content-type', 'application/vnd.apple.mpegurl').header('cache-control', 'private, no-store').header('access-control-allow-origin', '*').send(body);
   });
 }

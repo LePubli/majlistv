@@ -3,7 +3,7 @@
     "name": "Mejliss TV",
     "slug": "majlistv",
     "scheme": "mejlisstv",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,12 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSBonjourServices": [
+          "_googlecast._tcp",
+          "_CC1AD845._googlecast._tcp"
+        ],
+        "NSLocalNetworkUsageDescription": "Mejliss TV cherche les téléviseurs et enceintes du réseau pour y diffuser la vidéo."
       }
     },
     "android": {
@@ -80,6 +85,14 @@
             "enableMinifyInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false
           }
+        }
+      ],
+      [
+        "react-native-google-cast",
+        {
+          "receiverAppId": "CC1AD845",
+          "expandedController": false,
+          "iosStartDiscoveryAfterFirstTapOnCastButton": true
         }
       ],
       "expo-system-ui"

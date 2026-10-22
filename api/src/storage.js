@@ -91,6 +91,12 @@ export async function ensureCors() {
           AllowedHeaders: ['*'],
           ExposeHeaders: ['ETag'],
           MaxAgeSeconds: 3600,
+        }, {
+          // Lecture seule ouverte : le récepteur Chromecast du téléviseur télécharge les segments vidéo (liens signés, à durée limitée) depuis un autre domaine.
+          AllowedOrigins: ['*'],
+          AllowedMethods: ['GET', 'HEAD'],
+          AllowedHeaders: ['*'],
+          MaxAgeSeconds: 3600,
         }],
       },
     }));

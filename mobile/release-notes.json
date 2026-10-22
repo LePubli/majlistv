@@ -1,5 +1,5 @@
 {
-  "fr": "Hors connexion complet : en plus de la vidéo ou de l'audio, le résumé, les chapitres, la transcription et le quiz fonctionnent sans réseau (le résultat du quiz est envoyé à la reconnexion). Téléchargement réservé aux abonnés, licence protégée contre le recul de la date du téléphone.",
-  "en": "Full offline mode: besides the video or audio, the summary, chapters, transcript and quiz work without a network (quiz results are sent when you reconnect). Downloads are for subscribers only, with a licence protected against setting the phone's date back.",
-  "ar": "وضع كامل بدون اتصال: إضافة إلى الفيديو أو الصوت، يعمل الملخص والفصول والنص والاختبار بلا شبكة (تُرسل نتيجة الاختبار عند عودة الاتصال). التنزيل للمشتركين فقط مع ترخيص محمي ضد إرجاع تاريخ الهاتف."
+  "fr": "Diffusion sur la télévision : un bouton « Diffuser » sur la fiche d'une conférence envoie la vidéo sur un Chromecast ou un téléviseur compatible ; le téléphone sert de télécommande (lecture, pause, ±10 s) et la reprise est conservée.",
+  "en": "Cast to your TV: a « Cast » button on the talk page sends the video to a Chromecast or compatible TV; the phone acts as the remote (play, pause, ±10 s) and your resume point is kept.",
+  "ar": "البث على التلفاز: زر «بث» في صفحة المحاضرة يرسل الفيديو إلى Chromecast أو تلفاز متوافق؛ يعمل الهاتف كجهاز تحكم (تشغيل، إيقاف، ±10 ثوانٍ) ويُحفظ موضع المتابعة."
 }

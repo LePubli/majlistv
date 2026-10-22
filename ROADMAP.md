@@ -408,3 +408,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 22b-8 (22/10) — encart « Télécharger l'application » dans le menu
 - Encart avec logos (application, Android, iPhone) dans le menu latéral et le menu ☰, vers `/application`. Déploiement : `majlistv-web` seulement. Voir README « Étape 22b-8 ».
+
+## Étape 22b-10 (22/10) — diffusion Chromecast / AirPlay
+- Case « Diffuser » sur la fiche : Chromecast (Android, bibliothèque Google Cast, récepteur par défaut), AirPlay (iPhone, bouton système) ; le téléphone devient télécommande, la reprise est conservée. API : CORS ouvert sur les playlists HLS et en lecture sur le bucket (le téléviseur lit depuis un autre domaine). Déploiement : `majlistv-api`, puis nouvel APK 0.8.0 (module natif ajouté). Voir README « Étape 22b-10 ». Reste (sur « go ») : Kids natif, réglage des horaires de prière, 22c Android TV, 22d Apple TV.
