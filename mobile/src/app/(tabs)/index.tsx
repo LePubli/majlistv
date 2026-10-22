@@ -1,109 +1,84 @@
-// Accueil : bannière, « Continuer à regarder », rangées du catalogue (mêmes réglages que le site).
+// Accueil : comme celui du site. Bannière, « À réviser » / « Quiz à rattraper » / « Continuer à regarder », explorer par format,
+// rangées du catalogue (séries comprises), bande Kids, citation du jour. Visiteur : même accueil avec invitation à créer un compte.
 import React, { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
-import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
-import type { Card, Home, HomeRow } from '@/lib/types';
-import { colors, gradientFor, radius } from '@/lib/theme';
-import { formatClock } from '@/lib/format';
-import { Button, ErrorBox, Loading, Txt, screenStyle } from '@/components/ui';
-import { TalkCard, openTalk } from '@/components/TalkCard';
-import type { Key } from '@/lib/i18n';
-
-const ROW_TITLES: Record<string, Key> = { new: 'home.new', beginner: 'home.beginner' };
-
-function Hero({ home, cont }: { home: Home; cont: Card | null }) {
-  const { t } = useSession();
-  // Priorité : la conférence à reprendre ; sinon la première mise en avant ; sinon le texte d'accueil.
-  const featured = home.hero.mode === 'featured' ? home.hero.items[0] : null;
-  const talk = cont ?? featured;
-  const custom = home.hero.mode === 'custom' ? home.hero : null;
-  const title = talk?.title ?? custom?.title ?? t('tagline');
-  const poster = talk?.posterUrl ?? custom?.imageUrl ?? null;
-  const g = gradientFor(talk?.id ?? 'hero');
-  return (
-    <View style={{ marginHorizontal: 18, borderRadius: radius.panel, overflow: 'hidden', height: 210, backgroundColor: colors.panel }}>
-      <LinearGradient colors={[g[0], g[1]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
-      {poster ? <Image source={{ uri: poster }} style={{ position: 'absolute', inset: 0 }} contentFit="cover" /> : null}
-      <LinearGradient colors={['transparent', 'rgba(11,9,6,0.88)']} style={{ position: 'absolute', start: 0, end: 0, bottom: 0, height: 150 }} />
-      <View style={{ position: 'absolute', start: 16, end: 16, bottom: 14, gap: 8 }}>
-        {cont ? <Txt weight="bold" size={12} color={colors.goldLight} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('home.continue')}</Txt> : null}
-        <Txt weight="extrabold" size={19} numberOfLines={2}>{title}</Txt>
-        {cont?.positionMs ? (
-          <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(243,235,221,0.3)' }}>
-            <View style={{ width: `${Math.min(100, Math.round((cont.positionMs / (cont.durationMs || (cont.durationSeconds ?? 1) * 1000 || 1)) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.gold }} />
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function Row({ row, title }: { row: HomeRow; title: string }) {
-  const talks = row.talks ?? [];
-  if (!talks.length) return null;
-  return (
-    <View style={{ gap: 10 }}>
-      <Txt weight="extrabold" size={18} style={{ paddingHorizontal: 18 }}>{title}</Txt>
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={talks}
-        keyExtractor={(x) => x.id}
-        contentContainerStyle={{ paddingHorizontal: 18, gap: 12 }}
-        renderItem={({ item }) => <TalkCard talk={item} width={210} />}
-      />
-    </View>
-  );
-}
+import { progressOf } from '@/lib/media';
+import { isLearningRequired } from '@/lib/learn';
+import type { Card, Citation, Home, KidsHome, RevisionResponse } from '@/lib/types';
+import { colors } from '@/lib/theme';
+import { Button, ErrorBox, Loading, Panel, Txt, screenStyle } from '@/components/ui';
+import { Hero } from '@/components/Hero';
+import { Rail } from '@/components/Rail';
+import { SeriesCard } from '@/components/SeriesCard';
+import { TalkCard } from '@/components/TalkCard';
+import { CitationCard } from '@/components/CitationCard';
+import { FormatTiles, KidsBand } from '@/components/HomeBands';
 
 export default function HomeScreen() {
-  const { api, user, t, dirStyle } = useSession();
-  const [refreshing, setRefreshing] = useState(false);
+  const { api, user, t, config, feat, dirStyle } = useSession();
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
+  const review = useAsync(async () => (user ? await api.get<RevisionResponse>('/me/revision').then((r) => r.items).catch((e) => (isLearningRequired(e) ? [] : [])) : []), [user?.id]);
+  const todo = useAsync(async () => (user ? await api.get<Card[]>('/me/quiz/todo').catch(() => []) : []), [user?.id]);
+  const kids = useAsync(async () => (feat('kids') ? await api.get<KidsHome>('/home/kids', undefined, false).catch(() => null) : null), [feat('kids')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cit = useAsync(async () => (feat('citations') ? await api.get<Citation>('/citation/today', undefined, false).catch(() => null) : null), [feat('citations')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Au retour du lecteur, la progression a changé : on actualise « Continuer à regarder ».
-  useFocusEffect(useCallback(() => { if (user) void cont.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
+  // Au retour sur l'accueil (après avoir regardé), « Continuer à regarder » se met à jour.
+  useFocusEffect(useCallback(() => { void cont.reload(); void todo.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onRefresh = async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload()]); setRefreshing(false); };
+  if (home.loading && !home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}><Loading /></SafeAreaView>;
+  if (!home.data) return <SafeAreaView style={[screenStyle, dirStyle]}><ErrorBox onRetry={home.reload} /></SafeAreaView>;
+  const rows = home.data.rows ?? [];
+  const trial = config?.trialDays ?? 0;
 
-  if (home.loading && !home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}><Loading /></SafeAreaView>;
-  if (!home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}><ErrorBox onRetry={home.reload} /></SafeAreaView>;
-
-  const first = (cont.data ?? [])[0] ?? null;
-  const rows = home.data.rows.filter((r) => r.talks?.length);
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <View style={[screenStyle, dirStyle]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 28, gap: 20 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+        contentContainerStyle={{ paddingBottom: 40, gap: 22 }}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), review.reload(), todo.reload()]); setRefreshing(false); }} />}
       >
-        <View style={{ paddingHorizontal: 18, paddingTop: 12, gap: 4 }}>
-          <Txt weight="extrabold" size={22}>Mejliss<Txt weight="extrabold" size={22} color={colors.gold}>TV</Txt></Txt>
-          <Txt weight="semibold" size={13} color={colors.muted}>{t('tagline')}</Txt>
-        </View>
-        <Hero home={home.data} cont={first} />
-        {first ? (
-          <View style={{ paddingHorizontal: 18 }}>
-            <Button
-              label={first.positionMs ? t('talk.resumeAt', { time: formatClock(first.positionMs / 1000) }) : t('home.watch')}
-              icon={<Feather name="play" size={18} color={colors.onGold} />}
-              onPress={() => openTalk(first.id)}
-            />
-          </View>
-        ) : null}
-        {(cont.data ?? []).length > 1 ? <Row row={{ key: 'continue', title: null, talks: (cont.data ?? []).slice(1) }} title={t('home.continue')} /> : null}
-        {rows.length === 0 ? <Txt color={colors.muted} style={{ paddingHorizontal: 18 }}>{t('home.empty')}</Txt> : null}
-        {rows.map((r) => (
-          <Row key={r.key} row={r} title={r.title ?? (ROW_TITLES[r.key] ? t(ROW_TITLES[r.key]) : r.key)} />
+        <Hero hero={home.data.hero} />
+
+        {(review.data ?? []).length > 0 ? <Rail title={<>{t('revRow')}</>} items={review.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('lrTitle')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
+        {(todo.data ?? []).length > 0 ? <Rail title={t('qpTodoRow')} items={todo.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('navLearn')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
+        {(cont.data ?? []).length > 0 ? <Rail title={t('continueWatching')} items={cont.data ?? []} onSeeAll={() => router.navigate('/library')} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
+
+        {user ? <FormatTiles /> : null}
+
+        {rows.length === 0 ? <Txt color={colors.muted} style={{ paddingHorizontal: 16 }}>{t('noTalks')}</Txt> : null}
+        {rows.map((r, i) => (
+          <React.Fragment key={r.key}>
+            {r.key === 'series' ? (
+              <Rail title={t('rowSeries')} items={r.series ?? []} onSeeAll={() => router.navigate('/series')} render={(x, w) => <SeriesCard series={x} width={w} />} />
+            ) : (
+              <Rail
+                title={r.key === 'new' ? t('rowNew') : r.key === 'beginner' ? t('rowBeginner') : (r.title ?? '')}
+                badge={r.forYou ? `★ ${t('forYou')}` : null}
+                items={r.talks ?? []}
+                onSeeAll={r.categoryId && (r.total ?? 0) > (r.talks?.length ?? 0) ? () => router.navigate({ pathname: '/talks', params: { cat: String(r.categoryId) } }) : undefined}
+                render={(x, w) => <TalkCard talk={x} width={w} />}
+              />
+            )}
+            {i === 0 ? <KidsBand data={kids.data} /> : null}
+          </React.Fragment>
         ))}
+        {rows.length === 0 ? <KidsBand data={kids.data} /> : null}
+
+        <CitationCard c={cit.data} />
+
+        {!user ? (
+          <Panel style={{ marginHorizontal: 16, gap: 12 }}>
+            <Txt weight="bold" size={16}>{t('heroEyebrow')}</Txt>
+            <Button label={trial > 0 ? t('heroCta') : t('register')} onPress={() => router.push({ pathname: '/login', params: { mode: 'register' } })} />
+            {trial > 0 ? <Txt size={12} color={colors.muted}>{t('heroNote', { n: trial })}</Txt> : null}
+          </Panel>
+        ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

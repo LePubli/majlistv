@@ -10,17 +10,16 @@ import { LOCALES, Locale } from '@/lib/i18n';
 import { SITE_URL } from '@/lib/config';
 import type { BillingStatus } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
-import { Button, Chip, Txt, screenStyle, titleStyle } from '@/components/ui';
-import { Text } from 'react-native';
+import { Button, Chip, Txt, screenStyle, Title } from '@/components/ui';
 
 export default function AccountScreen() {
   const { user, api, t, locale, setLocale, logout, dirStyle } = useSession();
   const billing = useAsync(async () => (user ? await api.get<BillingStatus>('/billing/status').catch(() => null) : null), [user?.id]);
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
       <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }}>
-        <Text style={titleStyle}>{t('account.title')}</Text>
+        <Title>{t('account.title')}</Title>
 
         {user ? (
           <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 4 }}>

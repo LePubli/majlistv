@@ -13,14 +13,27 @@ export type Card = {
   durationSeconds?: number | null;
   posterUrl?: string | null;
   summary?: string;
+  level?: 'beginner' | 'intermediate' | 'advanced' | null;
+  format?: string | null;
+  video_ref?: string;
   /** « Continuer à regarder » seulement */
   positionMs?: number;
   durationMs?: number;
+  /** Rangées Apprendre : à passer / à revoir / à réviser. */
+  quizState?: 'todo' | 'retry' | 'review';
+  bestPercent?: number | null;
+  nextUp?: boolean;
+  /** Épisode de série : « Titre · S1 É3 ». */
+  series?: { id?: string; title: string; number: number; seasonNumber?: number | null } | null;
 };
 
-export type HomeRow = { key: string; title: string | null; categoryId?: number; talks?: Card[]; series?: unknown[]; forYou?: boolean };
+export type SeriesItem = {
+  id: string; title: string; speaker?: string; posterUrl?: string | null; access: 'free' | 'premium' | 'mixed'; level?: string | null;
+  episodeCount: number; seasonCount?: number; hasSeasons?: boolean; watched?: number;
+};
+export type HomeRow = { key: string; title: string | null; categoryId?: number; total?: number; talks?: Card[]; series?: SeriesItem[]; forYou?: boolean };
 export type Home = {
-  hero: { mode: 'text' } | { mode: 'featured'; items: Card[] } | { mode: 'custom'; title: string; subtitle: string; imageUrl: string | null };
+  hero: { mode: 'text' } | { mode: 'featured'; items: Card[] } | { mode: 'custom'; title: string; subtitle: string; imageUrl: string | null; ctaLabel?: string; ctaUrl?: string };
   rows: HomeRow[];
 };
 
@@ -42,7 +55,36 @@ export type Talk = Card & {
   resumeMs?: number;
   favorite?: boolean;
   playerError?: string;
+  tracks?: string[];
+  themes?: { id: number | string; name: string }[];
+  speakerSlug?: string | null;
+  transcriptStatus?: string;
+  insightsPending?: boolean;
+  quiz?: { available: boolean; count: number };
+  practice?: { available: boolean };
 };
+
+export type AppConfig = {
+  features: Record<string, boolean>;
+  hasSeries: boolean;
+  hasBooks: boolean;
+  appName: string;
+  trialDays: number;
+  cards?: { show: Record<string, boolean> };
+};
+
+export type Citation = { text: string; textAr?: string | null; attribution: string } | null;
+export type KidsHome = { enabled: boolean; talks: Card[] } | null;
+export type FormatItem = { id: number; slug: string; nameFr: string; nameEn: string; nameAr: string; count: number };
+
+export type SeriesCtx = {
+  id: string; title: string; number?: number | null; total: number; season?: { number: number } | null;
+  prev?: { id: string } | null; next?: { id: string; title: string; number: number; seasonNumber?: number | null } | null;
+  episodes: { id: string; title: string; number: number; seasonNumber?: number | null; durationSeconds?: number; positionMs?: number; completed?: boolean; current?: boolean; posterUrl?: string | null; access?: string }[];
+};
+
+export type TranscriptData = { lang: string; languages: string[]; segments: { s: number; e: number; t: string }[] };
+export type Note = { id: string; positionMs: number; body: string };
 
 export type Insights = {
   lang: string | null;
@@ -97,3 +139,17 @@ export type QuizResult = {
 
 export type PracticeSuggestion = { id: string; text: string; size: number; reference: string };
 export type PracticeTalk = { suggestions: PracticeSuggestion[]; signedIn: boolean; tier: boolean; consent: boolean; mine: Commitment[] };
+
+// ---- Tranche 3b : séries, collections, thèmes, intervenants, recherche ----
+export type SeriesEpisode = { id: string; title: string; number: number; durationSeconds?: number; positionMs?: number; completed?: boolean; posterUrl?: string | null; access?: string };
+export type SeriesDetail = SeriesItem & {
+  description?: string; category?: string | null; episodes: SeriesEpisode[];
+  seasons?: { id: string | null; number: number | null; title: string; episodes: SeriesEpisode[] }[] | null;
+  resume?: { talkId: string; positionMs: number; number: number; started: boolean } | null;
+};
+export type CollectionItem = { id: string; title: string; description: string; kind?: string; talks: number; posterUrl?: string | null };
+export type CollectionDetail = { id: string; title: string; description: string; talks: Card[] };
+export type ThemeDetail = { id: string; title: string; translit?: string; ar?: string; desc?: string; steps?: { size: number; text: string }[]; talks: { id: string; title: string; speaker?: string; durationSeconds?: number; language?: string }[] };
+export type SpeakerDetail = { slug: string; name: string; bio?: string; talks: number; seriesCount: number; series: SeriesItem[]; followers?: number };
+export type SearchHit = Card & { snippet?: string | null; moments?: { ms: number; text: string }[] };
+export type SearchResult = { total: number; hits: SearchHit[]; series: SeriesItem[]; markers: [string, string] };

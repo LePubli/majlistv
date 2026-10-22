@@ -2,17 +2,18 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
 import { SITE_URL } from '@/lib/config';
 import { colors, fonts, radius } from '@/lib/theme';
-import { Button, IconButton, Txt, screenStyle, titleStyle } from '@/components/ui';
+import { Button, IconButton, Txt, screenStyle, Title } from '@/components/ui';
 
 export default function LoginScreen() {
   const { login, register, t, dirStyle, isRTL } = useSession();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<'login' | 'register'>(params.mode === 'register' ? 'register' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -36,7 +37,7 @@ export default function LoginScreen() {
       setError(
         e.status === 0 ? t('auth.network')
         : e.status === 401 ? t('auth.invalid')
-        : e.status === 403 ? t('auth.suspended')
+        : e.status === 403 ? (e.code === 'feature_off' && e.message ? e.message : t('auth.suspended'))
         : e.status === 409 ? t('auth.exists')
         : e.status === 400 ? t('auth.bad')
         : e.message,
@@ -51,7 +52,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 18, gap: 16 }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={titleStyle}>{mode === 'login' ? t('auth.login') : t('auth.register')}</Text>
+            <Title>{mode === 'login' ? t('auth.login') : t('auth.register')}</Title>
             <IconButton label={t('common.close')} onPress={() => router.back()}><Feather name="x" size={20} color={colors.text} /></IconButton>
           </View>
 

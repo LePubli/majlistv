@@ -1,5 +1,6 @@
 // Langues de l'application : français, anglais, arabe (écriture de droite à gauche).
 // Ajouter une langue = ajouter une entrée dans LOCALES, DIR et DICT (toutes les clés de « fr »).
+import { WEB, type WebKey } from './webTexts';
 
 export type Locale = 'fr' | 'en' | 'ar';
 export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English', ar: 'العربية' };
@@ -13,6 +14,7 @@ const fr = {
   'common.loading': 'Chargement…',
   'common.error': 'Impossible de charger. Vérifiez votre connexion.',
   'common.retry': 'Réessayer',
+  'common.delete': 'Supprimer',
   'common.close': 'Fermer',
   'home.continue': 'Continuer à regarder',
   'home.new': 'Nouveautés',
@@ -150,9 +152,11 @@ const fr = {
   'badge.series_done': "Série terminée",
 };
 
-export type Key = keyof typeof fr;
+export type AppKey = keyof typeof fr;
+/** Textes de l'application + textes repris du site (voir webTexts.ts). */
+export type Key = AppKey | WebKey;
 
-const en: Record<Key, string> = {
+const en: Record<AppKey, string> = {
   tagline: 'Talks that enlighten',
   'tabs.home': 'Home',
   'tabs.talks': 'Talks',
@@ -160,6 +164,7 @@ const en: Record<Key, string> = {
   'common.loading': 'Loading…',
   'common.error': 'Could not load. Check your connection.',
   'common.retry': 'Try again',
+  'common.delete': 'Delete',
   'common.close': 'Close',
   'home.continue': 'Continue watching',
   'home.new': 'New',
@@ -297,7 +302,7 @@ const en: Record<Key, string> = {
   'badge.series_done': "Series completed",
 };
 
-const ar: Record<Key, string> = {
+const ar: Record<AppKey, string> = {
   tagline: 'محاضرات تنير الطريق',
   'tabs.home': 'الرئيسية',
   'tabs.talks': 'المحاضرات',
@@ -305,6 +310,7 @@ const ar: Record<Key, string> = {
   'common.loading': 'جارٍ التحميل…',
   'common.error': 'تعذّر التحميل. تحقق من اتصالك.',
   'common.retry': 'إعادة المحاولة',
+  'common.delete': 'حذف',
   'common.close': 'إغلاق',
   'home.continue': 'تابع المشاهدة',
   'home.new': 'الجديد',
@@ -442,7 +448,10 @@ const ar: Record<Key, string> = {
   'badge.series_done': "سلسلة مكتملة",
 };
 
-export const DICT: Record<Locale, Record<Key, string>> = { fr, en, ar };
+export const APP_DICT: Record<Locale, Record<AppKey, string>> = { fr, en, ar };
+export const DICT: Record<Locale, Record<Key, string>> = {
+  fr: { ...WEB.fr, ...fr }, en: { ...WEB.en, ...en }, ar: { ...WEB.ar, ...ar },
+};
 
 /** Texte traduit ; « {nom} » est remplacé par vars.nom. Repli sur le français puis sur la clé. */
 export function translate(locale: Locale, key: Key, vars?: Record<string, string | number>): string {

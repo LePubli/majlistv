@@ -3,14 +3,13 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleProp, Text, TextInput, TextInputProps, TextProps, TextStyle, View, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { colors, fonts, radius } from '@/lib/theme';
+import { colors, fontFamily, fonts, radius, Weight } from '@/lib/theme';
 import { useSession } from '@/lib/session';
-
-type Weight = keyof typeof fonts;
 
 export function Txt({ weight = 'regular', size = 15, color = colors.text, style, ...rest }:
   TextProps & { weight?: Weight; size?: number; color?: string }) {
-  return <Text {...rest} style={[{ fontFamily: fonts[weight], fontSize: size, color, lineHeight: Math.round(size * 1.4) }, style]} />;
+  const { isRTL } = useSession();
+  return <Text {...rest} style={[{ fontFamily: fontFamily(weight, size, isRTL), fontSize: size, color, lineHeight: Math.round(size * (isRTL ? 1.6 : 1.4)) }, style]} />;
 }
 
 export function Button({ label, onPress, variant = 'gold', icon, disabled, loading, style, accessibilityLabel }: {
@@ -137,4 +136,9 @@ export function ScreenHeader({ title }: { title: string }) {
       <Txt weight="extrabold" size={18} numberOfLines={1} style={{ flex: 1 }}>{title}</Txt>
     </View>
   );
+}
+
+/** Grand titre d'écran (police des titres du site, compatible arabe). */
+export function Title({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+  return <Txt weight="extrabold" size={24} accessibilityRole="header" style={style}>{children}</Txt>;
 }

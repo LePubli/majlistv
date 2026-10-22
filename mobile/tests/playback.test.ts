@@ -32,6 +32,16 @@ test('archive.org : fichier public lu directement ; YouTube / Vimeo : externe', 
   assert.equal(platformName('vimeo'), 'Vimeo');
 });
 
+test('YouTube / Vimeo avec identifiant valide : lecteur intégré ; identifiant douteux : repli', () => {
+  const yt = pickSource({ ...base, source: 'youtube', video_ref: 'dQw4w9WgXcQ' } as Talk, API);
+  assert.deepEqual(yt.embed, { kind: 'youtube', id: 'dQw4w9WgXcQ' });
+  assert.equal(yt.external, false);
+  assert.deepEqual(pickSource({ ...base, source: 'vimeo', video_ref: '76979871' } as Talk, API).embed, { kind: 'vimeo', id: '76979871' });
+  const bad = pickSource({ ...base, source: 'youtube', video_ref: "x');evil()" } as Talk, API);
+  assert.equal(bad.embed, null);
+  assert.equal(bad.external, true);
+});
+
 test('vitesses : cycle complet et retour au début', () => {
   let s = 1;
   const seen: number[] = [];

@@ -5,7 +5,6 @@ import { Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Text } from 'react-native';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { SITE_URL } from '@/lib/config';
@@ -13,16 +12,16 @@ import { STATUSES, isBadgeId, isLearningRequired, sortCommitments } from '@/lib/
 import type { Commitment, LearningResponse, PracticeMine, PracticeStatus, QuizTodoCard, RevisionResponse } from '@/lib/types';
 import type { Key } from '@/lib/i18n';
 import { colors } from '@/lib/theme';
-import { Button, Chip, Eyebrow, Loading, Panel, Txt, screenStyle, titleStyle } from '@/components/ui';
+import { Button, Chip, Eyebrow, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
 
 export default function LearnScreen() {
   const { user, t, dirStyle } = useSession();
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
       {!user ? (
         <View style={{ padding: 18, gap: 14 }}>
-          <Text style={titleStyle}>{t('learn.title')}</Text>
+          <Title>{t('learn.title')}</Title>
           <Panel style={{ gap: 14 }}>
             <Txt color={colors.text2}>{t('learn.guest')}</Txt>
             <Button label={t('account.signin')} onPress={() => router.push('/login')} />
@@ -64,7 +63,7 @@ function LearnBody() {
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await reloadAll(); setRefreshing(false); }} />}
     >
       <View style={{ gap: 4 }}>
-        <Text style={titleStyle}>{t('learn.title')}</Text>
+        <Title>{t('learn.title')}</Title>
         <Txt size={14} color={colors.muted}>{t('learn.subtitle')}</Txt>
       </View>
 

@@ -5079,3 +5079,28 @@ Aucun sur le VPS, rien à redéployer. Pour essayer : refabriquer l'APK (GitHub 
 - Pas de bouton « Passer le quiz » : la conférence n'a pas assez de questions validées (réglage « minimum de questions », 3 par défaut) ou le quiz est coupé (Admin → Fonctions).
 - Autres cas : `mobile/README.md`.
 
+## Étape 22b-3 — Application : refonte fidèle à la PWA (22/10)
+
+**Ce que c'est.** L'application reprend le design et le contenu de la PWA, en natif : mêmes couleurs (noir chaud, or, texte blanc pur), mêmes polices (Montserrat, DM Sans, Noto Kufi / Noto Sans Arabic en arabe), mêmes textes FR / EN / AR (573 textes du site importés tels quels par `mobile/scripts/import-web-texts.mjs`).
+
+**Ce qui change pour l'utilisateur**
+- En-tête avec logo, recherche et menu latéral (accueil, catalogue, séries, collections, catégories, apprendre, bibliothèque, compte, langue).
+- Accueil : bannière, rangées (révision, quiz à rattraper, reprise), formats, rangées du site (séries incluses), bandeau Kids, citation du jour.
+- Fiche conférence : lecteur (vidéo du serveur, archive.org, **YouTube et Vimeo lus dans l'application**, plus de renvoi vers le site), actions (favori, liste, partager, audio seul, incrustation), « Apprendre avec cette conférence » (quiz, mise en pratique), onglets Résumé / Chapitres / Transcription cliquable / Mes notes / À propos, thèmes, suivre l'intervenant, panneau de la série, « Dans la même veine », carte d'aperçu verrouillé (l'abonnement se prend sur le site).
+- Catalogue (catégories, formats, niveau, grille), recherche (titres, passages de transcription, séries), séries, collections, thèmes, page intervenant.
+- **Inscription** : l'écran de création de compte s'ouvre depuis les boutons « Essai gratuit » ; si les inscriptions sont fermées (Admin → Fonctions → « Inscription ouverte »), le message du serveur s'affiche au lieu d'un texte trompeur.
+
+**Prérequis.** Aucun changement serveur : ne rien redéployer (API, site, worker inchangés). Seule l'application est refabriquée.
+
+**Refabriquer l'APK.** GitHub → Actions → « Application Android (APK) » → Run workflow (branche `main`) → télécharger l'artifact `mejliss-tv-android` → installer par-dessus (version 0.3.0).
+
+**Vérifications faites (environnement de développement).** `npm run check` (typage + 38 tests, dont le lecteur intégré : identifiants refusés s'ils sont douteux, page générée, messages), essai contre une vraie API (inscription, connexion, routes séries / collections / thèmes / chaînes / recherche / formats / catégories), compilation du paquet Android (`npm run bundle`).
+
+**Non vérifié (aucun téléphone ici).** Lecteur YouTube / Vimeo (WebView), affichage réel des polices et de l'arabe, mise en page sur téléphone et tablette.
+
+**Debug.**
+- YouTube affiche « erreur 153 » ou une vidéo grise : l'origine envoyée au lecteur est `SITE_URL` (réglable par `EXPO_PUBLIC_SITE_URL`) ; vérifier que la vidéo autorise l'intégration.
+- Inscription refusée : lire le message affiché ; « Les inscriptions sont fermées » = fonction désactivée côté Admin.
+- Un texte manquant : relancer `node scripts/import-web-texts.mjs` dans `mobile/` après avoir ajouté un `t('clé')`.
+
+**Exemples.** Ouvrir une conférence YouTube → elle se lit dans la fiche ; toucher un passage de la transcription → le lecteur y saute ; menu ☰ → Catalogue → filtrer par format.

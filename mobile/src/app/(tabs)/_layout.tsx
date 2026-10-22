@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { colors, fonts } from '@/lib/theme';
+import { AppHeader } from '@/components/AppHeader';
 
 export default function TabsLayout() {
   const { t, dirStyle } = useSession();
@@ -12,7 +13,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        header: () => <AppHeader />,
         tabBarActiveTintColor: colors.goldLight,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 12 },
@@ -25,7 +27,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color as string} /> }} />
-      <Tabs.Screen name="talks" options={{ title: t('tabs.talks'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="talks" options={{ title: t('navCatalogue'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
       <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
       <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color as string} /> }} />
       <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color as string} /> }} />

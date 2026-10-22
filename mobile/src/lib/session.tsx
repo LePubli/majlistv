@@ -5,7 +5,7 @@ import { getLocales } from 'expo-localization';
 import { createApi, Api, ApiError } from './api';
 import { API_URL } from './config';
 import { DIR, Key, Locale, pickLocale, translate } from './i18n';
-import type { User } from './types';
+import type { AppConfig, User } from './types';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
@@ -26,6 +26,13 @@ type Session = {
   setLocale: (l: Locale) => void;
   t: (key: Key, vars?: Record<string, string | number>) => string;
   isRTL: boolean;
+  /** Configuration publique du site (fonctions activées, essai gratuit, nom) ; null tant qu'elle n'est pas lue. */
+  config: AppConfig | null;
+  /** Une fonction est-elle activée sur le site ? (Admin → Fonctions). Vrai par défaut tant que la configuration n'est pas lue. */
+  feat: (id: string) => boolean;
+  /** Favoris du membre (identifiants) et bascule. */
+  favs: Set<string>;
+  toggleFav: (talkId: string) => Promise<void>;
   /** À mettre sur la vue racine de chaque écran : fait basculer la mise en page pour l'arabe. */
   dirStyle: { direction: 'ltr' | 'rtl' };
 };
@@ -36,6 +43,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [locale, setLocaleState] = useState<Locale>('fr');
+  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [favs, setFavs] = useState<Set<string>>(new Set());
   const tokenRef = useRef<string | null>(null);
 
   const logout = useCallback(async () => {
@@ -48,6 +57,32 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, onUnauthorized: () => { void logout(); } }),
     [logout],
   );
+
+  // Configuration publique du site (une fois, sans jeton) : l'application suit les mêmes réglages que le site.
+  useEffect(() => {
+    let alive = true;
+    api.get<AppConfig>('/config', undefined, false).then((c) => { if (alive) setConfig(c); }).catch(() => { /* hors connexion : valeurs par défaut */ });
+    return () => { alive = false; };
+  }, [api]);
+
+  // Favoris du membre : chargés à la connexion, vidés à la déconnexion.
+  useEffect(() => {
+    if (!user) { setFavs(new Set()); return undefined; }
+    let alive = true;
+    api.get<{ id: string }[]>('/me/favorites').then((l) => { if (alive) setFavs(new Set(l.map((x) => x.id))); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleFav = useCallback(async (talkId: string) => {
+    const has = favs.has(talkId);
+    const next = new Set(favs);
+    if (has) next.delete(talkId); else next.add(talkId);
+    setFavs(next); // immédiat, annulé si le serveur refuse
+    try { if (has) await api.del(`/me/favorites/${talkId}`); else await api.put(`/me/favorites/${talkId}`); }
+    catch { setFavs(favs); }
+  }, [api, favs]);
+
+  const feat = useCallback((id: string) => (config ? config.features[id] !== false : true), [config]);
 
   // Démarrage : langue enregistrée (sinon celle du téléphone), puis session enregistrée.
   useEffect(() => {
@@ -92,10 +127,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback((key: Key, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
 
   const value = useMemo<Session>(() => ({
-    ready, user, api, login, register, logout, locale, setLocale, t,
+    ready, user, api, login, register, logout, locale, setLocale, t, config, feat, favs, toggleFav,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, register, logout, locale, setLocale, t]);
+  }), [ready, user, api, login, register, logout, locale, setLocale, t, config, feat, favs, toggleFav]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

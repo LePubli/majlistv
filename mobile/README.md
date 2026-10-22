@@ -3,7 +3,7 @@
 Une seule application pour Android, iPhone et iPad, branchée sur l'API existante (aucune modification du serveur).
 Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
-## Ce que fait l'application (étape 22b : tranche 1 « socle + lecture », tranche 2a « apprendre »)
+## Ce que fait l'application (étape 22b : tranche 1 « socle + lecture », tranche 2a « apprendre », tranche 3 « refonte fidèle à la PWA »)
 
 - **Connexion / création de compte** (le jeton est gardé dans le coffre sécurisé du téléphone) ; parcours visiteur possible (aperçu de 2 minutes, comme sur le site).
 - **Accueil** : bannière, « Continuer à regarder », rangées du catalogue (mêmes réglages que le site : nouveautés, pour commencer, catégories, thèmes préférés).
@@ -17,6 +17,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 - **Quiz** : une question à la fois, correction détaillée, badges gagnés ; bouton visible seulement si la conférence a un quiz.
 - **Mise en pratique** : propositions d'action ou action personnelle, intention, échéance, accord chiffré (offre Apprentissage).
 - **Apprendre** : à réviser aujourd'hui + rappel du jour, quiz à passer / à revoir, score et 8 badges, engagements avec changement de statut. Sans l'offre Apprentissage : encadré + lien vers le site (rien ne se vend dans l'application).
+
+**Tranche 3 (22b-3, version 0.3.0)** : design, polices et textes de la PWA ; en-tête + menu latéral ; accueil complet ; fiche conférence complète (YouTube / Vimeo lus dans l'application grâce à une page intégrée pilotée par messages — `src/lib/embed.ts`, `src/components/ExternalVideo.tsx` —, onglets, apprendre, série, « dans la même veine », aperçu verrouillé) ; catalogue (catégories, formats, niveau) ; recherche ; séries ; collections ; thèmes ; page intervenant ; écran de création de compte (message du serveur si inscriptions fermées). Les textes viennent du site : `node scripts/import-web-texts.mjs` régénère `src/lib/webTexts.ts` (à relancer après tout nouveau `t('clé')`). Voir le README racine « Étape 22b-3 ».
 
 **Pas encore là (tranche 2, suite)** : téléchargement hors connexion (2b), espace Mejliss TV Kids (2c), notifications, diffusion Chromecast / AirPlay (2d), séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
 

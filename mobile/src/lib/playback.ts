@@ -1,6 +1,7 @@
 // Choix de la source de lecture d'une conférence, selon ce que renvoie GET /talks/:id. Pur, testable avec Node.
 import { absoluteUrl } from './api';
 import type { Talk } from './types';
+import { validEmbedId, type EmbedKind } from './embed';
 
 export type PlaySource = {
   /** Adresse de la vidéo (HLS multi-qualités du serveur, fichier archive.org, ou fichier d'origine pour le propriétaire). */
@@ -9,6 +10,8 @@ export type PlaySource = {
   audioUri: string | null;
   /** Vidéo YouTube / Vimeo : lue depuis leur plateforme, donc sur le site (pas dans le lecteur natif). */
   external: boolean;
+  /** Lecteur intégré (YouTube / Vimeo) : plateforme et identifiant validés, sinon null. */
+  embed: { kind: EmbedKind; id: string } | null;
   /** Vidéo envoyée mais pas encore convertie. */
   notReady: boolean;
 };
@@ -16,12 +19,15 @@ export type PlaySource = {
 export function pickSource(talk: Talk, baseUrl: string): PlaySource {
   const abs = (p?: string) => (p ? absoluteUrl(baseUrl, p) : null);
   if (talk.source !== 'upload') {
-    if (talk.fileUrl) return { uri: talk.fileUrl, audioUri: null, external: false, notReady: false };
-    return { uri: null, audioUri: null, external: true, notReady: false };
+    if (talk.fileUrl) return { uri: talk.fileUrl, audioUri: null, external: false, embed: null, notReady: false };
+    if ((talk.source === 'youtube' || talk.source === 'vimeo') && validEmbedId(talk.source, talk.video_ref)) {
+      return { uri: null, audioUri: null, external: false, embed: { kind: talk.source, id: talk.video_ref as string }, notReady: false };
+    }
+    return { uri: null, audioUri: null, external: true, embed: null, notReady: false };
   }
-  if (talk.hlsPath) return { uri: abs(talk.hlsPath), audioUri: abs(talk.audioPath), external: false, notReady: false };
-  if (talk.videoUrl) return { uri: talk.videoUrl, audioUri: null, external: false, notReady: false };
-  return { uri: null, audioUri: null, external: false, notReady: true };
+  if (talk.hlsPath) return { uri: abs(talk.hlsPath), audioUri: abs(talk.audioPath), external: false, embed: null, notReady: false };
+  if (talk.videoUrl) return { uri: talk.videoUrl, audioUri: null, external: false, embed: null, notReady: false };
+  return { uri: null, audioUri: null, external: false, embed: null, notReady: true };
 }
 
 /** Nom de la plateforme d'une vidéo externe, pour le message affiché. */

@@ -4,13 +4,12 @@ import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Text } from 'react-native';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { ApiError } from '@/lib/api';
 import type { Card, ListsResponse } from '@/lib/types';
 import { colors } from '@/lib/theme';
-import { Button, Chip, ErrorBox, Field, Loading, Panel, Txt, screenStyle, titleStyle } from '@/components/ui';
+import { Button, Chip, ErrorBox, Field, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
 
 export default function LibraryScreen() {
@@ -18,9 +17,9 @@ export default function LibraryScreen() {
   const [tab, setTab] = useState<'fav' | 'lists'>('fav');
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
       <View style={{ padding: 18, paddingBottom: 8, gap: 14 }}>
-        <Text style={titleStyle}>{t('lib.title')}</Text>
+        <Title>{t('lib.title')}</Title>
         {user ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip label={t('lib.favorites')} active={tab === 'fav'} onPress={() => setTab('fav')} />
