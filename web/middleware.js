@@ -30,14 +30,14 @@ export function buildCsp(nonce, { https, dev }) {
     'default-src': ["'self'"],
     // strict-dynamic : les scripts chargés par un script de confiance (API YouTube / Vimeo) sont autorisés ;
     // les adresses listées ne servent qu'aux très vieux navigateurs qui ignorent strict-dynamic.
-    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", 'https://www.youtube.com', 'https://player.vimeo.com', ...(dev ? ["'unsafe-eval'"] : [])],
+    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", 'https://www.youtube.com', 'https://player.vimeo.com', 'https://www.gstatic.com', ...(dev ? ["'unsafe-eval'"] : [])],
     // Les attributs style="…" de React ne peuvent pas porter de nonce : 'unsafe-inline' reste nécessaire pour les styles
     // (risque faible comparé aux scripts).
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', ...stor],
     'media-src': ["'self'", 'blob:', ...stor],
     'font-src': ["'self'", 'data:'],
-    'connect-src': ["'self'", ...stor],
+    'connect-src': ["'self'", 'https://www.gstatic.com', ...stor],
     'frame-src': frames,
     'worker-src': ["'self'", 'blob:'],
     'object-src': ["'none'"],

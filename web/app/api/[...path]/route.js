@@ -30,7 +30,8 @@ async function handler(req, { params }) {
     const noBody = [204, 205, 304].includes(res.status);
     // Corps relayé en octets (PDF des ouvrages) ; le nom de fichier du téléchargement et l'interdiction de cache sont conservés.
     const out = { 'content-type': res.headers.get('content-type') || 'application/json' };
-    for (const h of ['content-disposition', 'cache-control']) if (res.headers.get(h)) out[h] = res.headers.get(h);
+    // access-control-allow-origin : le récepteur Chromecast lit les playlists /api/hls/… depuis un autre domaine (22b-10).
+    for (const h of ['content-disposition', 'cache-control', 'access-control-allow-origin']) if (res.headers.get(h)) out[h] = res.headers.get(h);
     return new Response(noBody ? null : await res.arrayBuffer(), { status: res.status, headers: out });
   } catch {
     return Response.json({ error: 'API indisponible' }, { status: 502 });

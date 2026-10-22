@@ -112,7 +112,7 @@ export default function VideoPlayer({ src, audioSrc = '', audioMode = false, rat
     );
   }
   return (
-    <video key="v" ref={videoRef} controls playsInline controlsList="nodownload" preload="metadata" poster={poster || undefined}>
+    <video key="v" ref={videoRef} controls playsInline x-webkit-airplay="allow" controlsList="nodownload" preload="metadata" poster={poster || undefined}>
       {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.src} default={tr.isDefault || undefined} />)}
     </video>
   );

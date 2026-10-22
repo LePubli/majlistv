@@ -56,6 +56,8 @@ test('configuration : plugin Cast, récepteur par défaut, textes fr/en/ar', () 
   const plugin = app.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'react-native-google-cast');
   assert.ok(plugin, 'plugin react-native-google-cast déclaré');
   assert.equal(plugin[1].receiverAppId, 'CC1AD845', 'récepteur multimédia par défaut de Google');
+  // Version figée : la 23.0.0 (19/10/2026) est compilée avec Kotlin 2.4 et fait échouer la fabrication (Kotlin 2.2 attendu).
+  assert.equal(plugin[1].androidPlayServicesCastFrameworkVersion, '22.3.1');
   assert.ok(app.ios.infoPlist.NSBonjourServices.includes('_googlecast._tcp'));
   assert.ok(app.ios.infoPlist.NSLocalNetworkUsageDescription);
   const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));

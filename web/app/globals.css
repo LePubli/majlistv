@@ -3794,3 +3794,12 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .ms.col .app-promo-link { grid-template-columns: 1fr; justify-items: center; padding: 10px 0; }
 .ms.col .app-promo-text, .ms.col .app-promo-os-row, .ms.col .app-promo-cta { display: none; }
 .ms.col .app-promo-logo { grid-row: auto; }
+
+/* ===== Étape 22b-10 — Diffusion Chromecast (site et PWA) ===== */
+.wb-cast { position: absolute; top: 12px; inset-inline-start: 12px; z-index: 6; width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.45); background: rgba(5,4,3,.62); backdrop-filter: blur(4px); display: grid; place-items: center; opacity: .85; --connected-color: var(--accent); --disconnected-color: #fff; }
+.wb-cast google-cast-launcher { display: block; width: 24px; height: 24px; cursor: pointer; }
+.player-stage:hover .wb-cast, .wb-cast:focus-within { opacity: 1; border-color: var(--accent); }
+.cast-panel { position: absolute; inset: 0; z-index: 5; display: grid; align-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; background: rgba(11,9,6,.94); color: #fff; border-radius: 16px; }
+.cast-panel strong { font-size: 18px; }
+.cast-ctl { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+@media (max-width: 640px) { .wb-cast { top: 8px; width: 36px; height: 36px; } .cast-panel { padding: 16px; border-radius: 0; } }

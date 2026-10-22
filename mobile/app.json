@@ -92,7 +92,8 @@
         {
           "receiverAppId": "CC1AD845",
           "expandedController": false,
-          "iosStartDiscoveryAfterFirstTapOnCastButton": true
+          "iosStartDiscoveryAfterFirstTapOnCastButton": true,
+          "androidPlayServicesCastFrameworkVersion": "22.3.1"
         }
       ],
       "expo-system-ui"

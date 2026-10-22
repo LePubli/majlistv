@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import VideoPlayer from '../../../components/VideoPlayer';
+import CastButton from '../../../components/CastButton';
+import { castableTalk } from '../../../lib/cast';
 import ExternalPlayer from '../../../components/ExternalPlayer';
 import ModulePanels from '../../../components/ModulePanels';
 import Transcript, { langName } from '../../../components/Transcript';
@@ -419,6 +421,9 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                 )}
                 <p className="meta small wb-pset-note">{t('wbSubsHint')}</p>
               </PlayerSettings>
+            )}
+            {castableTalk(talk) && !quizOpen && !practiceOpen && (
+              <CastButton videoRef={videoRef} src={'/api' + talk.hlsPath} title={talk.title} poster={talk.posterUrl} duration={talk.durationSeconds || 0} t={t} />
             )}
             {practiceOpen && practiceOn && (
               <div className="quiz-overlay" role="dialog" aria-modal="false" aria-label={t('pzTitle')}>
