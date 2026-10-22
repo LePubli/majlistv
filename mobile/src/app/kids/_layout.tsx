@@ -22,6 +22,7 @@ export default function KidsLayout() {
       <Stack.Screen name="home" options={{ gestureEnabled: false }} />
       <Stack.Screen name="watch/[id]" />
       <Stack.Screen name="shorts" />
+      <Stack.Screen name="parent" />
       <Stack.Screen name="exit" options={{ presentation: 'modal' }} />
     </Stack>
   );

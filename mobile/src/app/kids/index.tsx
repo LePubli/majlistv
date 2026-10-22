@@ -119,6 +119,7 @@ export default function KidsHub() {
         ))}
       </View>
       {msg ? <KTxt color={KC.danger}>{msg}</KTxt> : null}
+      <KButton label={`⚙️ ${t('kdManage')}`} variant="soft" onPress={() => router.push('/kids/parent')} />
       {!adding ? (
         s.profiles.length < s.max ? <KButton label={`+ ${t('kdAdd')}`} variant="soft" onPress={() => { setAdding(true); setMsg(''); }} /> : <KTxt size={13} color={KC.muted}>{t('kdLimitReached', { n: s.max, s: s.max > 1 ? 's' : '' })} {t('kdLimitUpgrade')}</KTxt>
       ) : (

@@ -420,3 +420,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ## Étape 22b-9b (22/10) — Kids natif : quiz/étoiles, courts, petites actions, prière
 - Application 0.10.0 : quiz + étoiles + badges, courts verticaux, petites actions, pause de prière aux couleurs Kids. API et site inchangés. Voir README « Étape 22b-9b ». Reste (sur « go ») : 9c (espace parent), 22c Android TV, 22d Apple TV.
 
+## Étape 22b-9c (22/10) — Kids natif : espace parents
+- Application 0.11.0 : rapport, temps, catalogue, petites actions, profils, code parental depuis l'application. API et site inchangés. Voir README « Étape 22b-9c ». Kids natif complet. Reste (sur « go ») : 22c Android TV, 22d Apple TV.
+

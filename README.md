@@ -5575,3 +5575,22 @@ curl -sI -H "Origin: https://www.gstatic.com" "https://api-majlisstv.le-publicit
 **Tests.** `cd mobile && npm run check` (types + 111 tests). Contrat réel : `export KIDS_FIXTURE="$(python3 api/tests/kids_fixture.py | tail -1)"; cd mobile && API_URL=http://127.0.0.1:3055 npx tsx tests/kids_contract.ts` (ajouts : questions sans réponses, 1 puis 3 étoiles, total non décroissant, actions todo → claimed → validated, courts + vue).
 
 **Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Android. **Non testé** : tout l'affichage sur un vrai téléphone (quiz, glissement vertical des courts, lecture vidéo des courts, pause de prière version enfant, arabe). Le temps du jour continue de compter pendant la pause de prière. Reste : 9c (espace parent dans l'application).
+
+## Étape 22b-9c — Espace Kids natif : espace parents (22/10, application 0.11.0)
+
+**Description.** Tout ce que le parent faisait sur le site se fait maintenant dans l'application (Kids → « Espace parents : gérer les profils »), avec son compte normal (jamais avec le jeton enfant ; l'écran renvoie à l'accueil enfant si un enfant est dans l'espace) :
+- **Rapport** de progression (7 ou 30 jours) : temps, vidéos terminées, quiz, moyenne, étoiles gagnées, graphique par jour, badges, vidéos à reprendre, limite en place. Sans classement ni comparaison. Case « rapport par e-mail » et bouton « Envoyer maintenant ».
+- **Par profil** : temps par jour (aucune limite, 15 à 180 min), catalogue (tout le catalogue de l'âge, ou sélection vidéo par vidéo, tout autoriser / tout bloquer ; changer de mode garde ce que l'enfant voit déjà), petites actions (proposer, valider, supprimer), modification du prénom / avatar / tranche d'âge, suppression.
+- **Code parental** : changement avec l'ancien code (blocage de 10 min après 5 erreurs, règle du serveur).
+
+**Prérequis.** Aucun changement API ni site. L'e-mail du rapport dépend de l'envoi d'e-mails déjà réglé sur le serveur.
+
+**Déploiement.** Pousser sur `main` → APK/OTA 0.11.0 (pas de nouveau module natif). Aucun redéploiement DockPanel.
+
+**Essai sur téléphone.** Kids → « Espace parents » → ouvrir un profil → Temps : choisir 15 min → entrer dans le profil, le temps restant s'affiche. Catalogue : passer en sélection, bloquer une vidéo → l'enfant ne la voit plus. Actions : proposer, l'enfant touche « Je l'ai fait », valider ici. Code : changer, puis vérifier la sortie de l'espace enfant avec le nouveau code.
+
+**Debug.** Liste vide dans « Catalogue » : aucune vidéo Kids prête pour cette tranche d'âge. Changement de code refusé : ancien code faux (ou blocage 10 min). « Envoyer maintenant » en erreur : aucun profil, ou e-mail du serveur non réglé.
+
+**Tests.** `cd mobile && npm run check` (types + 117 tests). Contrat réel (`tests/kids_contract.ts`, voir 22b-9a) : ajouts rapport, limite (valeurs refusées hors 5–480), mode catalogue + blocage visible côté enfant, modification de profil, changement de code (mauvais ancien code refusé) puis sortie avec le nouveau code.
+
+**Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Android. **Non testé** : l'affichage sur un vrai téléphone (graphique, listes longues du catalogue, clavier sur les champs de code, arabe) et l'envoi réel de l'e-mail du rapport. Avec 9c, l'espace Kids natif est complet ; restent 22c (Android TV) et 22d (Apple TV).

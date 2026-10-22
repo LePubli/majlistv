@@ -186,3 +186,13 @@ export type KidSummary = {
   due: { id: string; title: string; speaker: string | null; source: string; durationSeconds: number | null; posterUrl: string | null }[]; actions?: KidActionCounts;
 };
 export type KidShort = { id: string; title: string; duration: number | null; views: number; publishedAt: string; videoUrl: string | null; posterUrl: string | null; talk: { id: string; title: string; premium: boolean } };
+
+// ---- Mejliss Kids (22b-9c) : espace parent ----
+export type KidControls = { dailyLimitMin: number | null; catalogMode: 'all' | 'selected'; usedSec: number; leftSec: number | null; min: number; max: number };
+export type KidCatalogTalk = { id: string; title: string; speaker: string | null; kidsBands: string[]; durationSeconds: number | null; access: string; allowed: boolean };
+export type KidParentCatalog = { mode: 'all' | 'selected'; talks: KidCatalogTalk[] };
+export type KidReportProfile = {
+  id: string; name: string; avatar: string; band: string; dailyLimitMin: number | null; catalogMode: string; usage: { day: string; seconds: number }[];
+  minutes: number; activeDays: number; watched: number; watchedTitles: string[]; quizzes: number; avgPercent: number | null; starsGained: number; stars: number; badges: string[]; retry: string[]; active: boolean;
+};
+export type KidReport = { days: number; since: string; profiles: KidReportProfile[]; learning: boolean; email: boolean };

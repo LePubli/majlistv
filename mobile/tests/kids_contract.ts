@@ -4,9 +4,9 @@
 import assert from 'node:assert/strict';
 import { createApi, ApiError } from '../src/lib/api';
 import { DICT, translate } from '../src/lib/i18n';
-import { actionStateKey, actionsOpenCount, exitMessage, leftMin, openActions, playableShorts, quizAnswers, starsMessageKey, parseKidSession, progressBody, resolveShelves, searchTerm, serializeKidSession, shelfTitle, validPin } from '../src/lib/kids';
+import { actionStateKey, LIMIT_CHOICES, allowedCount, catalogIds, fmtMinutes, limitLabel, pinChangeError, profilePatch, usageBars, withAllowed, actionsOpenCount, exitMessage, leftMin, openActions, playableShorts, quizAnswers, starsMessageKey, parseKidSession, progressBody, resolveShelves, searchTerm, serializeKidSession, shelfTitle, validPin } from '../src/lib/kids';
 import { pickSource } from '../src/lib/playback';
-import type { KidAction, KidActionCounts, KidCatalog, KidCard, KidProfile, KidQuizQuestion, KidQuizResult, KidShort, KidSummary, KidsState, KidTime, Talk } from '../src/lib/types';
+import type { KidAction, KidActionCounts, KidCatalog, KidControls, KidParentCatalog, KidReport, KidCard, KidProfile, KidQuizQuestion, KidQuizResult, KidShort, KidSummary, KidsState, KidTime, Talk } from '../src/lib/types';
 
 const fx = JSON.parse(process.env.KIDS_FIXTURE || '{}') as { token: string; talkId: string; rubricId: number; shortId: string };
 const base = process.env.API_URL || 'http://127.0.0.1:3055';
@@ -90,16 +90,51 @@ async function main() {
   console.log('petites actions OK');
 
   const shorts = playableShorts(await kid.get<KidShort[]>('/shorts', { limit: 20 }));
-  assert.equal(shorts.length, 1); assert.equal(shorts[0].id, fx.shortId); assert.equal(shorts[0].talk.id, fx.talkId);
+  const mine = shorts.find((x) => x.id === fx.shortId); assert.ok(mine, 'notre court est proposé'); assert.equal(mine!.talk.id, fx.talkId);
   await kid.post(`/shorts/${fx.shortId}/view`);
   console.log('courts OK');
+
+  // 22b-9c : espace parent (rapport, temps, catalogue, profil, code).
+  const rep = await parent.get<KidReport>('/me/kids/report', { days: 7 });
+  const me = rep.profiles.find((x) => x.id === p.id)!;
+  assert.equal(me.active, true); assert.equal(me.stars, 3); assert.equal(me.quizzes, 2); assert.equal(me.usage.length, 7);
+  const bars = usageBars(me.usage); assert.equal(bars.length, 7); assert.ok(bars.every((b) => b.pct >= 0 && b.pct <= 100)); assert.equal(Math.max(...bars.map((b) => b.pct)), 100);
+  assert.equal(fmtMinutes(75, t), '1 h 15'); assert.equal(limitLabel(null, t), t('kcNoLimit'));
+  assert.equal((await parent.put<{ ok: boolean; email: boolean }>('/me/kids/report-prefs', { email: true })).email, true);
+  assert.equal((await parent.get<KidReport>('/me/kids/report')).email, true);
+  console.log('rapport OK');
+
+  const ctl = await parent.get<KidControls>(`/me/kids/profiles/${p.id}/controls`); assert.equal(ctl.dailyLimitMin, 15); assert.ok(LIMIT_CHOICES.every((m) => m === null || (m >= ctl.min && m <= ctl.max)));
+  await parent.put(`/me/kids/profiles/${p.id}/controls`, { dailyLimitMin: null });
+  assert.equal((await parent.get<KidControls>(`/me/kids/profiles/${p.id}/controls`)).dailyLimitMin, null);
+  await assert.rejects(() => parent.put(`/me/kids/profiles/${p.id}/controls`, { dailyLimitMin: 2 }), (e: ApiError) => e.status === 400);
+  await parent.put(`/me/kids/profiles/${p.id}/controls`, { catalogMode: 'selected' });
+  let pc = await parent.get<KidParentCatalog>(`/me/kids/profiles/${p.id}/catalog`);
+  assert.equal(pc.mode, 'selected'); assert.ok(pc.talks.find((x) => x.id === fx.talkId)!.allowed, 'ce que l\'enfant voyait reste visible');
+  await parent.put(`/me/kids/profiles/${p.id}/catalog`, { talkIds: catalogIds(withAllowed(pc.talks, [], false)), allowed: false });
+  assert.equal((await kid.get<KidCatalog>('/kids/catalog')).talks.some((x) => x.id === fx.talkId), false, 'vidéo bloquée : invisible pour l\'enfant');
+  await parent.put(`/me/kids/profiles/${p.id}/catalog`, { talkIds: [fx.talkId], allowed: true });
+  pc = await parent.get<KidParentCatalog>(`/me/kids/profiles/${p.id}/catalog`); assert.equal(allowedCount(pc.talks) >= 1, true);
+  assert.equal((await kid.get<KidCatalog>('/kids/catalog')).talks.some((x) => x.id === fx.talkId), true);
+  await parent.put(`/me/kids/profiles/${p.id}/controls`, { catalogMode: 'all' });
+  console.log('temps + catalogue OK');
+
+  assert.equal(profilePatch({ name: 'Yacine', avatar: 'fox', band: '7-10' }, { name: ' Yacine ', avatar: 'fox', band: '7-10' }), null);
+  const patch = profilePatch({ name: 'Yacine', avatar: 'fox', band: '7-10' }, { name: 'Yacine B', avatar: 'owl', band: '7-10' })!; assert.deepEqual(patch, { name: 'Yacine B', avatar: 'owl' });
+  const edited = await parent.patch<KidProfile>(`/me/kids/profiles/${p.id}`, patch); assert.equal(edited.name, 'Yacine B'); assert.equal(edited.avatar, 'owl');
+  assert.equal(pinChangeError('2468', '1357', '1357'), null); assert.equal(pinChangeError('2468', '1357', '1358'), 'kids.pinMismatch'); assert.equal(pinChangeError('24', '1357', '1357'), 'kdPinBad');
+  let wrongPin: ApiError | null = null;
+  try { await parent.put('/me/kids/pin', { code: '1357', current: '0000' }); } catch (e) { wrongPin = e as ApiError; }
+  assert.equal(wrongPin?.code, 'bad_pin');
+  await parent.put('/me/kids/pin', { code: '1357', current: '2468' });
+  console.log('profil + code parental OK');
 
   // Sortie : mauvais code (essais restants) puis bon code (jeton du parent).
   let wrong: ApiError | null = null;
   try { await kid.post('/kids/exit', { code: '0000' }); } catch (e) { wrong = e as ApiError; }
   assert.equal(wrong?.code, 'bad_pin'); assert.equal(wrong?.data?.left, 4);
   assert.equal(exitMessage({ status: wrong!.status, code: wrong!.code, data: wrong!.data, message: wrong!.message }, t), 'Ce n\'est pas le bon code. Il reste 4 essai(s).');
-  const out = await kid.post<{ token: string; user: { id: string } }>('/kids/exit', { code: '2468' });
+  const out = await kid.post<{ token: string; user: { id: string } }>('/kids/exit', { code: '1357' });
   assert.ok(out.token && out.user.id);
   const back = createApi({ baseUrl: base, getToken: () => out.token });
   assert.equal((await back.get<KidsState>('/me/kids')).profiles.length, 1);

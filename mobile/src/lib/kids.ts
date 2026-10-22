@@ -1,5 +1,5 @@
 // 22b-9a : Mejliss Kids natif. Logique pure (aucune bibliothèque native) : testable avec Node.
-import type { KidAction, KidActionCounts, KidCard, KidProfile, KidQuizQuestion, KidRubric, KidShelf, KidShort, KidTime } from './types';
+import type { KidAction, KidActionCounts, KidCard, KidCatalogTalk, KidReportProfile, KidProfile, KidQuizQuestion, KidRubric, KidShelf, KidShort, KidTime } from './types';
 
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'] as const;
 export const AVATAR_EMOJI: Record<string, string> = { lion: '🦁', owl: '🦉', fox: '🦊', turtle: '🐢', rabbit: '🐰', bear: '🐻', camel: '🐪', star: '⭐' };
@@ -134,3 +134,47 @@ export const reviewDate = (d: string, locale: string) => { const x = new Date(`$
 /** Vidéos « à revoir » du résumé → cartes de vidéo (les champs absents prennent des valeurs neutres). */
 export const dueCards = (due: { id: string; title: string; speaker: string | null; source: string; durationSeconds: number | null; posterUrl: string | null }[]): KidCard[] =>
   due.map((d) => ({ id: d.id, title: d.title, speaker: d.speaker, access: 'free', source: d.source, kidsBands: [], durationSeconds: d.durationSeconds, completed: false, positionMs: 0, rubricIds: [], stars: null, posterUrl: d.posterUrl }));
+
+// ---------------------------------------------------------------- 22b-9c : espace parent
+
+/** Durées proposées (minutes) ; null = pas de limite. Le serveur accepte de 5 à 480. */
+export const LIMIT_CHOICES: (number | null)[] = [null, 15, 30, 45, 60, 90, 120, 180];
+export const limitLabel = (m: number | null, t: (k: string, v?: Record<string, string | number>) => string) => (m == null ? t('kcNoLimit') : t('kcMin', { n: m }));
+/** « 1 h 05 » à partir de 60 min, sinon « 25 min ». */
+export const fmtMinutes = (m: number, t: (k: string, v?: Record<string, string | number>) => string) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : t('kcMin', { n: m }));
+/** Hauteur (0 à 100) de chaque barre du graphique « minutes par jour » ; la plus haute journée = 100. */
+export const usageBars = (usage: { day: string; seconds: number }[]): { day: string; pct: number; min: number }[] => {
+  const peak = Math.max(1, ...usage.map((u) => u.seconds));
+  return usage.map((u) => ({ day: u.day, pct: Math.round((100 * u.seconds) / peak), min: Math.round(u.seconds / 60) }));
+};
+/** Lettre du jour (« L », « M »…) d'une date « 2026-10-22 », selon la langue. */
+export const dayLetter = (iso: string, locale: string) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : locale === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'narrow', timeZone: 'UTC' }).format(d);
+};
+export const reportDays = [7, 30] as const;
+
+/** Changement de code parental : renvoie la clé du message d'erreur, ou null si tout est bon. */
+export function pinChangeError(current: string, next: string, confirm: string, hasCurrent = true): 'kdPinBad' | 'kids.pinMismatch' | null {
+  if (hasCurrent && !validPin(current)) return 'kdPinBad';
+  if (!validPin(next)) return 'kdPinBad';
+  if (next !== confirm) return 'kids.pinMismatch';
+  return null;
+}
+/** Corps de la requête de modification d'un profil : seulement ce qui change (le serveur refuse un corps vide). */
+export function profilePatch(cur: { name: string; avatar: string; band: string }, next: { name: string; avatar: string; band: string }): Partial<{ name: string; avatar: string; band: string }> | null {
+  const out: Partial<{ name: string; avatar: string; band: string }> = {};
+  const name = next.name.trim();
+  if (!name || name.length > 30) return null;
+  if (name !== cur.name) out.name = name;
+  if (next.avatar !== cur.avatar) out.avatar = next.avatar;
+  if (next.band !== cur.band) out.band = next.band;
+  return Object.keys(out).length ? out : null;
+}
+/** Catalogue : nombre de vidéos autorisées / total. */
+export const allowedCount = (talks: KidCatalogTalk[]) => talks.filter((x) => x.allowed).length;
+/** Change l'état « autorisé » de certaines vidéos (affichage immédiat, avant la réponse du serveur). */
+export const withAllowed = (talks: KidCatalogTalk[], ids: string[], allowed: boolean): KidCatalogTalk[] => talks.map((x) => (ids.includes(x.id) ? { ...x, allowed } : x));
+export const catalogIds = (talks: KidCatalogTalk[], max = 200) => talks.slice(0, max).map((x) => x.id);
+/** Un enfant du rapport a-t-il quelque chose à montrer ? (sinon : « pas d'activité ») */
+export const hasActivity = (p: KidReportProfile) => p.active;

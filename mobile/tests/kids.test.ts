@@ -4,13 +4,14 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  LIMIT_CHOICES, allowedCount, catalogIds, dayLetter, fmtMinutes, hasActivity, limitLabel, pinChangeError, profilePatch, usageBars, withAllowed, reportDays,
   BADGE_CODES, BADGE_ICON, actionStateKey, actionsOpenCount, badgeIcon, clampStars, dueCards, neighbourShort, openActions, playableShorts, quizAnswers, reviewDate, starsMessageKey,
   AVATARS, AVATAR_EMOJI, BANDS, KC, KID_RENEW_AFTER_MS, ageFilter, avatarEmoji, bandKey, exitMessage, isKidExpired, isTimeUp, leftMin, needsRenew,
   parseKidSession, progressBody, resolveShelves, rubricName, searchTerm, serializeKidSession, shelfTitle, validPin,
 } from '../src/lib/kids';
 import { APP_DICT, DICT, translate } from '../src/lib/i18n';
 import { ApiError, createApi } from '../src/lib/api';
-import type { KidAction, KidCard, KidQuizQuestion, KidRubric, KidShelf } from '../src/lib/types';
+import type { KidCatalogTalk, KidAction, KidCard, KidQuizQuestion, KidRubric, KidShelf } from '../src/lib/types';
 
 const t = (k: string, v?: Record<string, string | number>) => translate('fr', k as never, v);
 const card = (id: string, band: string, extra: Partial<KidCard> = {}): KidCard => ({ id, title: id, speaker: null, access: 'free', source: 'upload', kidsBands: [band], durationSeconds: 600, completed: false, positionMs: 0, rubricIds: [], stars: null, posterUrl: null, ...extra });
@@ -188,4 +189,61 @@ test('écrans 9b présents, déclarés et fermés à l\'extérieur', () => {
   const shorts = readFileSync(join(root, 'app/kids/shorts.tsx'), 'utf8'); assert.match(shorts, /registerMedia/, 'la prière met les courts en pause'); assert.doesNotMatch(shorts, /CastBridge|DownloadSheet/);
   assert.match(readFileSync(join(root, 'components/PrayerGate.tsx'), 'utf8'), /if \(kid\)/, 'pause de prière version enfant');
   assert.match(readFileSync(join(root, 'app/kids/home.tsx'), 'utf8'), /\/kids\/shorts/);
+});
+
+// ---------------------------------------------------------------- 22b-9c
+test('temps : choix proposés dans les limites du serveur (5 à 480 min)', () => {
+  assert.equal(LIMIT_CHOICES[0], null);
+  for (const m of LIMIT_CHOICES) if (m !== null) assert.ok(m >= 5 && m <= 480 && Number.isInteger(m));
+  assert.deepEqual([...LIMIT_CHOICES].sort((a, b) => (a ?? 0) - (b ?? 0)), [...LIMIT_CHOICES], 'ordre croissant');
+  assert.equal(limitLabel(null, t), t('kcNoLimit')); assert.equal(limitLabel(30, t), t('kcMin', { n: 30 }));
+  assert.equal(fmtMinutes(25, t), t('kcMin', { n: 25 })); assert.equal(fmtMinutes(60, t), '1 h 00'); assert.equal(fmtMinutes(125, t), '2 h 05');
+});
+
+test('rapport : barres, lettres des jours, activité', () => {
+  assert.deepEqual(usageBars([]), []);
+  assert.deepEqual(usageBars([{ day: '2026-10-21', seconds: 0 }, { day: '2026-10-22', seconds: 0 }]).map((b) => b.pct), [0, 0], 'aucune division par zéro');
+  const b = usageBars([{ day: 'a', seconds: 600 }, { day: 'b', seconds: 300 }, { day: 'c', seconds: 0 }]);
+  assert.deepEqual(b.map((x) => [x.pct, x.min]), [[100, 10], [50, 5], [0, 0]]);
+  assert.equal(dayLetter('2026-10-22', 'fr'), 'J'); assert.equal(dayLetter('nimporte', 'fr'), '');
+  assert.deepEqual([...reportDays], [7, 30]);
+  assert.equal(hasActivity({ active: true } as never), true);
+});
+
+test('code parental : changement validé avant l\'envoi', () => {
+  assert.equal(pinChangeError('1234', '5678', '5678'), null);
+  assert.equal(pinChangeError('12', '5678', '5678'), 'kdPinBad');
+  assert.equal(pinChangeError('1234', '56', '56'), 'kdPinBad');
+  assert.equal(pinChangeError('1234', '5678', '5679'), 'kids.pinMismatch');
+  assert.equal(pinChangeError('', '5678', '5678', false), null, 'première création : pas d\'ancien code');
+});
+
+test('profil : on n\'envoie que ce qui change', () => {
+  const cur = { name: 'Yacine', avatar: 'fox', band: '7-10' };
+  assert.equal(profilePatch(cur, cur), null);
+  assert.equal(profilePatch(cur, { ...cur, name: '   ' }), null);
+  assert.equal(profilePatch(cur, { ...cur, name: 'x'.repeat(31) }), null);
+  assert.equal(profilePatch(cur, { ...cur, name: ' Yacine ' }), null);
+  assert.deepEqual(profilePatch(cur, { name: 'Sami', avatar: 'owl', band: '7-10' }), { name: 'Sami', avatar: 'owl' });
+  assert.deepEqual(profilePatch(cur, { ...cur, band: '3-6' }), { band: '3-6' });
+});
+
+test('catalogue : bascule immédiate, jamais plus de 200 identifiants', () => {
+  const talks: KidCatalogTalk[] = Array.from({ length: 250 }, (_, i) => ({ id: `t${i}`, title: `T${i}`, speaker: null, kidsBands: ['7-10'], durationSeconds: 60, access: 'free', allowed: i % 2 === 0 }));
+  assert.equal(allowedCount(talks), 125); assert.equal(catalogIds(talks).length, 200);
+  const off = withAllowed(talks, ['t0', 't1'], false); assert.equal(off[0].allowed, false); assert.equal(off[1].allowed, false); assert.equal(talks[0].allowed, true, 'copie : l\'original ne change pas');
+  assert.equal(allowedCount(withAllowed(talks, catalogIds(talks), true)), 225, 'les 50 au-delà de 200 gardent leur état (25 autorisées)');
+});
+
+test('textes et écrans de l\'espace parent', () => {
+  const keys = ['kcTitle', 'kcTime', 'kcNoLimit', 'kcMin', 'kcTimeHelp', 'kcUsedToday', 'kcCatalog', 'kcModeAll', 'kcModeSel', 'kcHelpAll', 'kcHelpSel', 'kcAllowAll', 'kcBlockAll', 'kcEmpty', 'kcSaved',
+    'kaParentHelp', 'kaPropose', 'kaAdd', 'kaPlaceholder', 'kaValidate', 'kaParentNone', 'kaStTodo', 'kaStClaimed', 'kaStValidated', 'krTitle', 'krDays7', 'krDays30', 'krNoRank', 'krNoActivity', 'krTime', 'krVideos', 'krQuizzes',
+    'krAvg', 'krStars', 'krPerDay', 'krBadges', 'krRetry', 'krLimit', 'krNoLimit', 'krEmailOn', 'krSendNow', 'krSent', 'kdPinCur', 'kdPinNew', 'kdPinBad', 'kdPinSaved', 'kdEdit', 'kdManage', 'kdProfiles', 'save'];
+  for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l} ${k}`);
+  const root = join(__dirname, '..', 'src');
+  for (const f of ['app/kids/parent.tsx', 'components/kids/parent/ParentReport.tsx', 'components/kids/parent/ParentProfile.tsx', 'components/kids/parent/ParentPin.tsx']) assert.ok(existsSync(join(root, f)), f);
+  assert.match(readFileSync(join(root, 'app/kids/_layout.tsx'), 'utf8'), /name="parent"/);
+  assert.match(readFileSync(join(root, 'app/kids/index.tsx'), 'utf8'), /\/kids\/parent/);
+  const parent = readFileSync(join(root, 'app/kids/parent.tsx'), 'utf8'); assert.match(parent, /if \(kid\) return <Redirect href="\/kids\/home" \/>/, 'jamais accessible depuis l\'espace enfant');
+  assert.doesNotMatch(parent, /kidApi/, 'utilise le jeton du parent, jamais celui de l\'enfant');
 });
