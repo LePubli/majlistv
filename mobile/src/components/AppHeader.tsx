@@ -1,6 +1,6 @@
 // En-tête de l'application : logo (emblème + nom), recherche, menu. Même rôle que l'en-tête du site.
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -8,18 +8,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { colors } from '@/lib/theme';
 import { MenuDrawer } from './MenuDrawer';
+import { PrayerPill } from './PrayerPill';
+import { usePrayer } from '@/lib/prayerStore';
 
 export function AppHeader() {
   const { t, dirStyle } = useSession();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const { width } = useWindowDimensions();
+  const prayer = usePrayer();
+  const pillOn = prayer.on && prayer.ready && prayer.prefs.pill;
+  const narrow = pillOn && width < 400; // petit écran : le nom de la marque cède la place à la pastille de prière
   return (
     <View style={[{ paddingTop: insets.top + 6, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: 'rgba(11,9,6,0.96)', borderBottomWidth: 1, borderBottomColor: colors.borderSoft,
       flexDirection: 'row', alignItems: 'center', gap: 10 }, dirStyle]}>
       <Pressable accessibilityRole="link" accessibilityLabel="Mejliss TV" onPress={() => router.navigate('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
         <Image source={require('../../assets/brand/emblem.png')} style={{ width: 32, height: 34 }} contentFit="contain" />
-        <Image source={require('../../assets/brand/wordmark.png')} style={{ width: 88, height: 18 }} contentFit="contain" />
+        {narrow ? null : <Image source={require('../../assets/brand/wordmark.png')} style={{ width: 88, height: 18 }} contentFit="contain" />}
       </Pressable>
+      <PrayerPill compact={width < 340} />
       <Pressable accessibilityRole="button" accessibilityLabel={t('hmSearch')} onPress={() => router.push('/search')} hitSlop={8}
         style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border }}>
         <Feather name="search" size={19} color={colors.text} />

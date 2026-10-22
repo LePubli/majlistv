@@ -187,6 +187,20 @@ async function main() {
   await adminApi.del(`/me/practice/${com.id}`); await adminApi.del(`/me/practice/${own.id}`);
   assert.equal((await adminApi.get<PracticeMine>('/me/practice')).items.length, 0); step('nettoyage : engagements supprimés');
 
+  // --- 22b-4 : téléphone (jeton Firebase) et réglages de prière du compte, tels que l'application les envoie ---
+  const dev = 'contract' + 'x'.repeat(40) + Date.now();
+  await adminApi.put('/me/push-token', { token: dev, platform: 'android', locale: 'ar' });
+  const nset = await adminApi.get<{ prefs: { push: boolean }; devices: number; available: { push: boolean } }>('/me/notifications');
+  assert.ok(nset.devices >= 1 && nset.prefs.push === true && typeof nset.available.push === 'boolean'); step('PUT /me/push-token puis GET /me/notifications : appareil enregistré, interrupteur actif');
+  await adminApi.del('/me/push-token', { token: dev });
+  assert.equal((await adminApi.get<{ devices: number }>('/me/notifications')).devices, nset.devices - 1); step('DELETE /me/push-token avec corps JSON : appareil retiré (déconnexion)');
+  const cfgNow = await api.get<{ prayer?: { city: string } | null }>('/config', undefined, false);
+  assert.ok(cfgNow.prayer && typeof cfgNow.prayer.city === 'string'); step('GET /config : réglages de la prière présents');
+  const stored = { enabled: true, pill: true, method: 'uoif', asr: 'standard', highLat: 'angle', blockMinutes: 10, prayers: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true }, loc: { mode: 'city', city: 'lille' } };
+  await adminApi.put('/me/prayer', { prefs: stored });
+  const back = await adminApi.get<{ prefs: { loc: { city: string } } | null }>('/me/prayer');
+  assert.equal(back.prefs?.loc.city, 'lille'); step('PUT puis GET /me/prayer : réglages de prière du compte');
+
   // --- session expirée ---
   token = 'jeton.invalide';
   await assert.rejects(api.get('/me/continue'), (e: ApiError) => e.status === 401);

@@ -5,6 +5,7 @@ import { pool } from './db.js';
 import { getSetting, isOn } from './settings.js';
 import { featureOn } from './features.js';
 import { enqueueForUser, smtpConf } from './mailer.js';
+import { pushConfigured, pushToUser } from './push.js';
 import { dueTalks, reminderOfTheDay, parisHour, todayParis } from './revision.js';
 
 const LOCALE_LANG = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
@@ -20,7 +21,7 @@ export async function candidates(today) {
 }
 
 // Prépare l'e-mail d'un membre ; renvoie false s'il n'y a rien à réviser.
-async function sendFor(userId, today) {
+async function sendFor(userId, today, mailOn = true, pushOn = false) {
   const { items, total } = await dueTalks(userId);
   if (!items.length) return false;
   const { rows: talks } = await pool.query('SELECT id, title FROM talks WHERE id = ANY($1::uuid[])', [items.map((x) => x.id)]);
@@ -28,22 +29,26 @@ async function sendFor(userId, today) {
   const lines = items.map((x) => `• ${title.get(x.id)}`);
   if (total > items.length) lines.push(`+ ${total - items.length}`);
   const rem = await reminderOfTheDay(userId);
-  await enqueueForUser(pool, userId, 'revision_daily', {
-    count: total, titles: lines.join('\n'), reminder: rem ? rem.text : '', source: rem ? [rem.attribution, rem.talkTitle].filter(Boolean).join(' · ') : '', path: '/learning',
-  }, `revision:${userId}:${today}`);
+  if (mailOn) {
+    await enqueueForUser(pool, userId, 'revision_daily', {
+      count: total, titles: lines.join('\n'), reminder: rem ? rem.text : '', source: rem ? [rem.attribution, rem.talkTitle].filter(Boolean).join(' · ') : '', path: '/learning',
+    }, `revision:${userId}:${today}`);
+  }
+  if (pushOn) await pushToUser(userId, 'revision_daily', { count: total }, '/learning');
   return true;
 }
 
 export async function runDaily(log) {
   if (!isOn(await getSetting('revision_email_enabled')) || !(await featureOn('revision'))) return 0;
-  if (!(await smtpConf())) return 0; // envoi non configuré : rien n'est mis en file
+  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  if (!mailOn && !pushOn) return 0; // aucun canal configuré : rien n'est mis en file
   const hour = Number(await getSetting('revision_email_hour'));
   if ((await parisHour()) < (Number.isFinite(hour) ? hour : 8)) return 0;
   const today = await todayParis();
   let sent = 0;
   for (const id of await candidates(today)) {
     try {
-      if (await sendFor(id, today)) sent += 1;
+      if (await sendFor(id, today, mailOn, pushOn)) sent += 1;
       // Que l'e-mail parte ou non (rien à réviser), on ne recalcule pas ce membre avant demain.
       await pool.query(
         `INSERT INTO learning_prefs(user_id, last_emailed_on) VALUES ($1, $2::date) ON CONFLICT (user_id) DO UPDATE SET last_emailed_on = $2::date`, [id, today]);

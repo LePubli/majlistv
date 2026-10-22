@@ -13,6 +13,7 @@ import { ApiError } from '@/lib/api';
 import { API_URL, SITE_URL } from '@/lib/config';
 import { formatDuration } from '@/lib/format';
 import { ProgressTracker, resumeStartMs } from '@/lib/progress';
+import { registerMedia } from '@/lib/mediaRegistry';
 import { nextSpeed, pickSource, platformName } from '@/lib/playback';
 import { levelLabel, LEVEL_COLOR } from '@/lib/media';
 import type { EmbedMessage } from '@/lib/embed';
@@ -137,6 +138,14 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
     setEnded(false);
     if (src.embed) { embedRef.current?.seek(ms / 1000); embedRef.current?.play(); } else { player.currentTime = ms / 1000; player.play(); }
   };
+  // L'écran de pause de la prière peut mettre ce lecteur en pause puis le reprendre (sans toucher à un lecteur muet).
+  const live = useRef({ playing: false, embed: false });
+  live.current = { playing: isPlaying, embed: !!src.embed };
+  useEffect(() => registerMedia({
+    isPlaying: () => live.current.playing && (live.current.embed || !player.muted),
+    pause: () => { if (live.current.embed) embedRef.current?.pause(); else player.pause(); },
+    play: () => { if (live.current.embed) embedRef.current?.play(); else player.play(); },
+  }), [player]);
   const play = () => (src.embed ? embedRef.current?.play() : player.play());
   const pause = () => (src.embed ? embedRef.current?.pause() : player.pause());
 

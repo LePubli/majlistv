@@ -20,7 +20,9 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Tranche 3 (22b-3, version 0.3.0)** : design, polices et textes de la PWA ; en-tête + menu latéral ; accueil complet ; fiche conférence complète (YouTube / Vimeo lus dans l'application grâce à une page intégrée pilotée par messages — `src/lib/embed.ts`, `src/components/ExternalVideo.tsx` —, onglets, apprendre, série, « dans la même veine », aperçu verrouillé) ; catalogue (catégories, formats, niveau) ; recherche ; séries ; collections ; thèmes ; page intervenant ; écran de création de compte (message du serveur si inscriptions fermées). Les textes viennent du site : `node scripts/import-web-texts.mjs` régénère `src/lib/webTexts.ts` (à relancer après tout nouveau `t('clé')`). Voir le README racine « Étape 22b-3 ».
 
-**Pas encore là (tranche 2, suite)** : téléchargement hors connexion (2b), espace Mejliss TV Kids (2c), notifications, diffusion Chromecast / AirPlay (2d), séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
+**Tranche 4 (22b-4, version 0.4.0)** : prière (pastille, pause souple, réglages, rappel programmé sur le téléphone — calcul copié du site : `node scripts/import-prayer.mjs`) et notifications du serveur par Firebase (`src/lib/notifications.ts`, `src/lib/prayerStore.tsx`, `app.config.js` : Firebase facultatif via le secret GitHub `GOOGLE_SERVICES_JSON`). Voir le README racine « Étape 22b-4 ».
+
+**Pas encore là (tranche 2, suite)** : téléchargement hors connexion (2b), espace Mejliss TV Kids (2c), diffusion Chromecast / AirPlay (2d), séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
 
 ## Architecture
 

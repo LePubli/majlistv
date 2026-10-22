@@ -150,6 +150,19 @@ const fr = {
   'badge.streak_3': "3 jours de suite",
   'badge.explorer': "Explorateur",
   'badge.series_done': "Série terminée",
+  'np.title': 'Notifications',
+  'np.prayer': "Rappel à l'heure de la prière",
+  'np.prayerHelp': "Une notification à l'heure de chaque prière cochée, même application fermée. Calculée sur le téléphone.",
+  'np.push': 'Actualités de Mejliss TV',
+  'np.pushHelp': 'Nouvelles conférences des intervenants suivis, sélection de la semaine, révision du jour.',
+  'np.denied': 'Les notifications sont bloquées pour cette application.',
+  'np.openSettings': 'Ouvrir les réglages du téléphone',
+  'np.exact': "Heure exacte",
+  'np.exactHelp': "Android peut retarder les rappels de quelques minutes. Autorisez les alarmes exactes pour qu'ils sonnent à la minute.",
+  'np.exactBtn': 'Autoriser',
+  'np.prayerTitle': "C'est l'heure de la prière",
+  'np.prayerBody': '{name} · {time}',
+  'np.prayerSettings': 'Réglages de la prière',
 };
 
 export type AppKey = keyof typeof fr;
@@ -300,6 +313,19 @@ const en: Record<AppKey, string> = {
   'badge.streak_3': "3 days in a row",
   'badge.explorer': "Explorer",
   'badge.series_done': "Series completed",
+  'np.title': 'Notifications',
+  'np.prayer': 'Prayer time reminder',
+  'np.prayerHelp': 'A notification at the time of each selected prayer, even with the app closed. Calculated on your phone.',
+  'np.push': 'Mejliss TV news',
+  'np.pushHelp': 'New talks from speakers you follow, the weekly selection, today’s review.',
+  'np.denied': 'Notifications are blocked for this app.',
+  'np.openSettings': 'Open phone settings',
+  'np.exact': 'Exact time',
+  'np.exactHelp': 'Android may delay reminders by a few minutes. Allow exact alarms so they ring on the minute.',
+  'np.exactBtn': 'Allow',
+  'np.prayerTitle': 'It is time for prayer',
+  'np.prayerBody': '{name} · {time}',
+  'np.prayerSettings': 'Prayer settings',
 };
 
 const ar: Record<AppKey, string> = {
@@ -446,6 +472,19 @@ const ar: Record<AppKey, string> = {
   'badge.streak_3': "3 أيام متتالية",
   'badge.explorer': "مستكشف",
   'badge.series_done': "سلسلة مكتملة",
+  'np.title': 'الإشعارات',
+  'np.prayer': 'تذكير عند وقت الصلاة',
+  'np.prayerHelp': 'إشعار عند وقت كل صلاة مختارة، حتى مع إغلاق التطبيق. يُحسب على هاتفك.',
+  'np.push': 'أخبار مجلس TV',
+  'np.pushHelp': 'محاضرات جديدة للمحاضرين الذين تتابعهم، اختيارات الأسبوع، مراجعة اليوم.',
+  'np.denied': 'الإشعارات محظورة لهذا التطبيق.',
+  'np.openSettings': 'فتح إعدادات الهاتف',
+  'np.exact': 'الوقت الدقيق',
+  'np.exactHelp': 'قد يؤخر أندرويد التذكيرات بضع دقائق. اسمح بالمنبهات الدقيقة لتصلك في الدقيقة المحددة.',
+  'np.exactBtn': 'السماح',
+  'np.prayerTitle': 'حان وقت الصلاة',
+  'np.prayerBody': '{name} · {time}',
+  'np.prayerSettings': 'إعدادات الصلاة',
 };
 
 export const APP_DICT: Record<Locale, Record<AppKey, string>> = { fr, en, ar };

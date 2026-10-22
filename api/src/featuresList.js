@@ -51,8 +51,8 @@ export const FEATURES = [
     rules: [{ re: '^/(shorts|studio/shorts)(/|$)' }] },
   { id: 'media_import', group: 'catalog', label: 'Import de vidéos externes', hint: 'Copier chez nous une vidéo YouTube, Vimeo, archive.org ou d\'un autre site (déclaration des droits obligatoire, journal) pour la monter, la doubler et la mettre en extraits',
     rules: [{ re: '^/(talks/[^/]+/import|studio/imports)(/|$)' }] },
-  { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre et alertes par e-mail',
-    rules: [{ re: '^/me/notifications(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
+  { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre, alertes par e-mail et notifications sur téléphone',
+    rules: [{ re: '^/me/(notifications|push-token)(/|$)' }, { re: '^/speakers/[^/]+/follow$' }] },
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',
     rules: [{ re: '^/citation/today$' }] },
   // Étape 22a : site installable (manifeste, service worker, page « Télécharger l'application »). Partie web seulement : aucune route d'API.

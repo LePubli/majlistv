@@ -6,6 +6,7 @@ import { createApi, Api, ApiError } from './api';
 import { API_URL } from './config';
 import { DIR, Key, Locale, pickLocale, translate } from './i18n';
 import type { AppConfig, User } from './types';
+import { unregisterPush } from './notifications';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
@@ -47,16 +48,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const tokenRef = useRef<string | null>(null);
 
-  const logout = useCallback(async () => {
+  // Session effacée (jeton expiré : le serveur n'accepte déjà plus rien, inutile de lui parler).
+  const clear = useCallback(async () => {
     tokenRef.current = null;
     setUser(null);
     await remove(TOKEN_KEY);
   }, []);
 
   const api = useMemo(
-    () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, onUnauthorized: () => { void logout(); } }),
-    [logout],
+    () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, onUnauthorized: () => { void clear(); } }),
+    [clear],
   );
+
+  // Déconnexion voulue : le serveur cesse d'écrire à ce téléphone pour ce compte, puis la session est effacée.
+  const logout = useCallback(async () => {
+    await unregisterPush(api);
+    await clear();
+  }, [api, clear]);
 
   // Configuration publique du site (une fois, sans jeton) : l'application suit les mêmes réglages que le site.
   useEffect(() => {

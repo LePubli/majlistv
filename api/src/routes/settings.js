@@ -6,6 +6,7 @@ import { makeStripe, stripeContext } from './billing.js';
 import { INDEX, meili, meiliConf, resetIndex, searchStatus } from '../search.js';
 import { sendNow, baseVars } from '../mailer.js';
 import { renderEmail } from '../emails.js';
+import { testPush } from '../push.js';
 
 // Mode (test/live) et compte d'une clé Stripe : sert à détecter un changement de compte.
 const stripeMode = (key) => (/^(sk|rk)_live_/.test(key) ? 'live' : 'test');
@@ -26,6 +27,7 @@ async function post(url, headers, body, timeout = 20000) {
 
 // Un test par moteur : une toute petite requête réelle avec les réglages enregistrés. Renvoie { ok, message }.
 const TESTS = {
+  async push(req) { return testPush(req.user.sub); },
   async stripe() {
     const ctx = await stripeContext();
     if (!ctx) return { ok: false, message: 'Clé secrète et identifiants de prix à renseigner (et enregistrer) avant le test.' };
@@ -129,7 +131,7 @@ export default async function settingsRoutes(app) {
   });
 
   app.post('/admin/settings/test', { preHandler: app.requireRole('admin'), config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude', 'meili', 'smtp']) }).parse(req.body);
+    const { target } = z.object({ target: z.enum(['stripe', 'azure', 'deepseek', 'claude', 'meili', 'smtp', 'push']) }).parse(req.body);
     try {
       return await TESTS[target](req);
     } catch (err) {

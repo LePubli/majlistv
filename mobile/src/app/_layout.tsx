@@ -9,10 +9,32 @@ import { Montserrat_700Bold, Montserrat_800ExtraBold } from '@expo-google-fonts/
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic';
 import { NotoKufiArabic_700Bold, NotoKufiArabic_800ExtraBold } from '@expo-google-fonts/noto-kufi-arabic';
+import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { SessionProvider, useSession } from '@/lib/session';
+import { PrayerProvider } from '@/lib/prayerStore';
+import { routeForPath } from '@/lib/notifRoute';
+import { PrayerGate } from '@/components/PrayerGate';
 import { colors } from '@/lib/theme';
 
 void SplashScreen.preventAutoHideAsync();
+
+// Toucher une notification (application fermée, en arrière-plan ou ouverte) mène à la bonne page.
+function NotificationRouter() {
+  const response = Notifications.useLastNotificationResponse();
+  const handled = React.useRef<string | null>(null);
+  const { ready } = useSession();
+  useEffect(() => {
+    if (!ready || !response) return;
+    const id = response.notification.request.identifier + ':' + response.notification.date;
+    if (handled.current === id || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    handled.current = id;
+    const data = (response.notification.request.content.data ?? {}) as { path?: unknown; kind?: unknown };
+    const target = routeForPath(data.path);
+    if (target !== '/') router.push(target as never);
+  }, [ready, response]);
+  return null;
+}
 
 function Shell() {
   const { ready, dirStyle } = useSession();
@@ -26,6 +48,8 @@ function Shell() {
   return (
     <>
       <StatusBar style="light" />
+      <NotificationRouter />
+      <PrayerGate />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
@@ -40,6 +64,7 @@ function Shell() {
         <Stack.Screen name="collections/[id]" />
         <Stack.Screen name="theme/[id]" />
         <Stack.Screen name="speaker/[slug]" />
+        <Stack.Screen name="prayer" />
       </Stack>
     </>
   );
@@ -49,7 +74,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <Shell />
+        <PrayerProvider>
+          <Shell />
+        </PrayerProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

@@ -71,6 +71,8 @@ export type AppConfig = {
   appName: string;
   trialDays: number;
   cards?: { show: Record<string, boolean> };
+  /** Réglages de la fonction Prière (Admin → Paramètres) ; absent si la fonction est désactivée. */
+  prayer?: { defaultEnabled: boolean; pill: boolean; method: string; asr: string; blockMinutes: number; maxBlockMinutes: number; city: string } | null;
 };
 
 export type Citation = { text: string; textAr?: string | null; attribution: string } | null;

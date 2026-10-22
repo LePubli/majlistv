@@ -11,3 +11,5 @@ ios/
 .env
 .env.local
 npm-debug.*
+google-services.json
+GoogleService-Info.plist

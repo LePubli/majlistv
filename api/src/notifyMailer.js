@@ -2,7 +2,8 @@
 //  1. Nouvelles conférences des intervenants suivis : toutes les 10 min, chaque conférence nouvellement visible est « annoncée » UNE fois
 //     (talks.announced_at) ; chaque abonné reçoit UN e-mail groupé par passage, jamais un par conférence.
 //  2. Sélection de la semaine : un e-mail par semaine, au jour et à l'heure réglés, aux seuls membres qui l'ont demandée.
-// Rien n'est mis en file tant que l'envoi d'e-mails n'est pas configuré (ni annoncé, pour ne rien perdre).
+// Étape 22b-4 : chaque envoi part aussi en notification sur téléphone (si la clé Firebase est enregistrée et si le membre a un téléphone enregistré).
+// Rien n'est mis en file tant qu'aucun canal (e-mail ou téléphone) n'est configuré (ni annoncé, pour ne rien perdre).
 import { pool } from './db.js';
 import { getSetting, isOn, getNumber } from './settings.js';
 import { featureOn } from './features.js';
@@ -11,6 +12,7 @@ import { speakerSlug } from './speakers.js';
 import { visibleSql } from './visibility.js';
 import { adultSql } from './taxonomy.js';
 import { parisHour } from './revision.js';
+import { pushConfigured, pushToUser } from './push.js';
 
 const TZ = 'Europe/Paris';
 const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adultSql(t)}`;
@@ -19,7 +21,8 @@ const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.
 // --- 1. Intervenants suivis
 export async function runSpeakers(log) {
   if (!isOn(await getSetting('notify_speakers_enabled')) || !(await featureOn('follow'))) return 0;
-  if (!(await smtpConf())) return 0;
+  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  if (!mailOn && !pushOn) return 0;
   const talks = (await pool.query(
     `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, t.language FROM talks t
       WHERE t.announced_at IS NULL AND trim(t.speaker) <> '' AND ${READY('t')} ORDER BY t.created_at LIMIT 200`)).rows;
@@ -41,6 +44,7 @@ export async function runSpeakers(log) {
   }
   const client = await pool.connect();
   let sent = 0;
+  const pushes = []; // envoyés après la validation de la transaction
   try {
     await client.query('BEGIN');
     for (const e of perUser.values()) {
@@ -48,9 +52,12 @@ export async function runSpeakers(log) {
       const names = [...new Set(list.map((x) => x.speaker))].join(', ');
       const ids = e.talks.map((x) => x.id).sort().join(',');
       const path = e.talks.length === 1 ? `/conferences/${e.talks[0].slug || e.talks[0].id}` : '/';
-      await enqueueEmail(client, { userId: e.user_id, to: e.email, locale: e.locale, kind: 'speaker_new',
-        vars: { name: e.name, titles: bullet(list) + (e.talks.length > list.length ? `\n… +${e.talks.length - list.length}` : ''), speakers: names, count: String(e.talks.length), path },
-        dedupeKey: `spk:${e.user_id}:${ids.length > 200 ? ids.slice(0, 200) : ids}` });
+      if (mailOn) {
+        await enqueueEmail(client, { userId: e.user_id, to: e.email, locale: e.locale, kind: 'speaker_new',
+          vars: { name: e.name, titles: bullet(list) + (e.talks.length > list.length ? `\n… +${e.talks.length - list.length}` : ''), speakers: names, count: String(e.talks.length), path },
+          dedupeKey: `spk:${e.user_id}:${ids.length > 200 ? ids.slice(0, 200) : ids}` });
+      }
+      if (pushOn) pushes.push({ userId: e.user_id, vars: { count: e.talks.length, titles: list.map((x) => x.title), speakers: names }, path: e.talks.length === 1 ? `/conferences/${e.talks[0].id}` : '/' }); // l'application ouvre la conférence par son identifiant
       sent += 1;
     }
     await client.query('UPDATE talks SET announced_at = now() WHERE id = ANY($1)', [talks.map((t) => t.id)]);
@@ -61,6 +68,7 @@ export async function runSpeakers(log) {
   } finally {
     client.release();
   }
+  for (const p of pushes) await pushToUser(p.userId, 'speaker_new', p.vars, p.path, log);
   if (sent) log?.info(`Alertes d'intervenants mises en file : ${sent}`);
   return sent;
 }
@@ -83,7 +91,8 @@ export async function weeklySelection() {
 
 export async function runWeekly(log) {
   if (!isOn(await getSetting('weekly_enabled'))) return 0;
-  if (!(await smtpConf())) return 0;
+  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  if (!mailOn && !pushOn) return 0;
   const now = (await pool.query(
     `SELECT extract(isodow FROM now() AT TIME ZONE '${TZ}')::int AS dow, to_char(date_trunc('week', now() AT TIME ZONE '${TZ}'), 'YYYY-MM-DD') AS wk`)).rows[0];
   if (now.dow !== (await getNumber('weekly_weekday'))) return 0;
@@ -96,8 +105,11 @@ export async function runWeekly(log) {
   let sent = 0;
   for (const u of users) {
     try {
-      await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind: 'weekly_selection',
-        vars: { name: u.name, titles: bullet(sel.items), path: sel.path }, dedupeKey: `weekly:${u.id}:${now.wk}` });
+      if (mailOn) {
+        await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind: 'weekly_selection',
+          vars: { name: u.name, titles: bullet(sel.items), path: sel.path }, dedupeKey: `weekly:${u.id}:${now.wk}` });
+      }
+      if (pushOn) await pushToUser(u.id, 'weekly_selection', { titles: sel.items.map((x) => x.title) }, sel.path, log);
       await pool.query('UPDATE users SET weekly_last_week = $2::date WHERE id = $1', [u.id, now.wk]);
       sent += 1;
     } catch (err) {

@@ -5141,3 +5141,58 @@ Attendu : « TOUT EST OK » (écart maximal 1,4 min avec adhan sur 6 méthodes �
 **Exemples.** Paris le 22/10/2026 : Fajr 07:12, Chourouk 08:21, Dhuhr 13:35, Asr 16:17, Maghrib 18:47, Isha 19:56 (UOIF). Pour essayer : choisir une prière dont l'heure est proche, lancer une conférence avec le son, attendre l'heure.
 
 **Honnêteté sur les essais.** Vérifié : 40+ tests du calcul, API (GET vide, PUT borné et arrondi, corps invalide → 400, sans jeton → 401), compilation du site, essai Playwright (Chromium, horloge simulée) en ordinateur, mobile 390 px et arabe : pastille, fenêtre, pause de la vidéo, reprise après « J'ai prié », aucune seconde interruption. **Non essayé** : téléphone réel, Safari / Firefox, boîte de dialogue de géolocalisation, lecteurs YouTube / Vimeo réels (testés via l'adaptateur seulement). Règles pour les latitudes élevées : réglage `highLat` sans interface, « angle » par défaut. Pas encore dans l'application mobile ni la TV.
+
+## Étape 22b-4 — Notifications et prière dans l'application (22/10, application 0.4.0)
+
+**Description.** Trois choses, sur le téléphone :
+1. **Rappel à l'heure de la prière, application fermée.** Les horaires sont calculés SUR le téléphone (même calcul que le site, copie de `web/lib/prayer*.js` dans `mobile/src/lib/prayer/`) ; l'application programme les rappels des 7 prochains jours à chaque ouverture. Aucun serveur, aucune clé, aucune connexion nécessaire.
+2. **Prière dans l'application** : pastille « prochaine prière + compte à rebours » dans l'en-tête, pause souple de la lecture (vidéo du serveur, YouTube, Vimeo) avec « J'ai prié » / « Continuer quand même », écran de réglages (Compte → « Réglages de la prière ») : lieu (ville, position approximative), méthode, école Asr, durée de pause, prières concernées, rappel on/off. Mêmes réglages que le site, enregistrés sur le compte.
+3. **Notifications du serveur** (Firebase Cloud Messaging) : nouvelles conférences des intervenants suivis, sélection de la semaine, révision du jour. Elles partent EN PLUS des e-mails (mêmes réglages, mêmes déclencheurs). Un interrupteur « Actualités de Mejliss TV » dans Compte → Notifications.
+Toucher une notification ouvre la bonne page (la conférence, la collection, « Apprendre »).
+
+**Prérequis.** Rien de nouveau pour les rappels de prière. Pour les notifications du serveur : un projet Firebase gratuit (voir ci-dessous). Sans Firebase, tout le reste marche.
+
+### Mettre en place Firebase (une seule fois, environ 15 minutes)
+1. Aller sur https://console.firebase.google.com → **Ajouter un projet** → nom « Mejliss TV » → (Google Analytics : inutile, on peut le refuser) → Créer.
+2. Dans le projet : **Ajouter une application → Android**. Nom du package Android : `fr.lepublicitaire.mejlisstv` (exactement). Surnom : « Mejliss TV ». Cliquer **Enregistrer l'application**, puis **Télécharger google-services.json**. Les étapes suivantes (SDK, Gradle) sont à passer : **Suivant → Suivant → Continuer vers la console**.
+3. Sur GitHub, dépôt `LePubli/majlistv` → **Settings → Secrets and variables → Actions → New repository secret**. Nom : `GOOGLE_SERVICES_JSON`. Valeur : tout le contenu du fichier `google-services.json` (ouvrir le fichier avec le Bloc-notes, tout sélectionner, copier, coller).
+4. Dans Firebase : roue dentée ⚙ → **Paramètres du projet → Comptes de service → Générer une nouvelle clé privée → Générer la clé**. Un second fichier .json se télécharge. **C'est un secret : ne l'envoyer à personne, pas même dans une conversation.** (Si le bouton parle d'activer l'« API Firebase Cloud Messaging (V1) », elle l'est par défaut dans un nouveau projet ; sinon l'activer dans Paramètres du projet → Cloud Messaging.)
+5. Sur le site : **Admin → Paramètres → Notifications (e-mails et téléphone)** → champ « Notifications sur téléphone : fichier de clé Firebase (JSON) » → coller tout le contenu du second fichier → **Enregistrer** → bouton **Tester** (la clé est vérifiée auprès de Google ; si votre téléphone est déjà enregistré, il reçoit une notification de test).
+6. GitHub → **Actions → « Application Android (APK) » → Run workflow** (environ 14 min) → télécharger l'APK (version **0.4.0**) → l'installer par-dessus la version précédente.
+7. Sur le téléphone : ouvrir l'application, accepter les notifications quand Android le demande, se connecter. Retourner dans Admin → Paramètres → **Tester** : la réponse doit être « Notification envoyée à 1 appareil ».
+
+**Déploiement (DockPanel).** Seule l'API change côté serveur : Git Deploy → Redeploy **`majlistv-api`** (migration `062_push_devices.sql` au démarrage : table `device_tokens`, colonne `users.notify_push`). Le site n'est pas modifié. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Résultat attendu : 0 échec.
+
+**Nouvelles routes API.** `PUT /me/push-token` `{ token, platform?, locale? }` (enregistre ce téléphone ; un téléphone = un seul compte ; 10 appareils maximum par compte), `DELETE /me/push-token` `{ token }` (déconnexion), `GET/PUT /me/notifications` (+ `push`, `devices`, `available.push`), `POST /admin/settings/test` `{ target: "push" }`. Nouveau réglage `fcm_service_account` (secret chiffré, Admin → Paramètres). Variable d'environnement facultative : `FCM_SERVICE_ACCOUNT` (même contenu, à la place du réglage de l'admin).
+
+**Tests (poste de développement).**
+```
+cd api && set -a; . /var/tmp/api-test.env; set +a
+node tests/test_push.mjs          # faux serveur Google : signature, envoi, textes fr/en/ar, jeton périmé, 3 boucles → « TOUT EST OK »
+python3 tests/test_push_api.py    # routes téléphone → « TOUT EST OK »
+cd ../mobile
+npm run check                      # typage + 47 tests
+API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/api_contract.ts   # application ↔ vraie API
+```
+
+**Debug.**
+- Le test de l'admin dit « Google a refusé la clé Firebase » : le fichier collé n'est pas celui du **compte de service** (celui qui contient `private_key`), ou la clé a été supprimée dans Firebase.
+- « Aucun téléphone enregistré » : l'APK n'a pas été fabriqué avec le secret `GOOGLE_SERVICES_JSON` (regarder le journal du workflow : « Firebase : projet … »), ou les notifications sont refusées dans Android (Réglages → Applications → Mejliss TV → Notifications).
+- Le rappel de prière arrive en retard de quelques minutes : Android 12+ doit autoriser les « alarmes exactes » (Compte → Réglages de la prière → « Heure exacte » → Autoriser) ; certaines marques (Xiaomi, Huawei, Oppo…) tuent aussi les applications en arrière-plan : désactiver l'« économie de batterie » pour Mejliss TV.
+- Aucun rappel de prière : Compte → Réglages de la prière → « Rappel à l'heure de la prière » activé ? Notifications autorisées ? Au moins une prière cochée ? Les rappels sont reprogrammés à chaque ouverture : ouvrir l'application une fois.
+- Pas de notification du serveur alors que tout est en place : la fonction « Suivre un intervenant » est-elle active (Admin → Fonctions) ? L'interrupteur « Actualités » du compte est-il actif ? Les boucles tournent toutes les 10 minutes (alertes d'intervenants) ou à l'heure réglée (sélection de la semaine, révision).
+
+**Exemples.** Un membre suit un intervenant, vous publiez une conférence de cet intervenant → dans les 10 minutes : un e-mail ET une notification « Nouvelle conférence — titre — intervenant » ; un toucher ouvre la fiche. Rappel de prière : « C'est l'heure de la prière — Dhuhr · 13:35 ».
+
+**Honnêteté sur les essais.**
+- Vérifié : serveur contre un faux Firebase (signature RS256 du jeton, envoi, jeton périmé supprimé, textes fr/en/ar, les 3 boucles, interrupteurs) ; routes ; typage ; 47 tests de l'application dont le planning des rappels (5 prières × 7 jours, heure d'été, prières cochées) et la correspondance des chemins de notification ; essai de l'application contre la vraie API ; compilation du paquet Android ; génération du projet natif avec et sans `google-services.json`.
+- **Jamais essayé sur un vrai téléphone** : ni l'invite d'autorisation, ni le rappel de prière application fermée, ni une notification réelle de Firebase, ni les écrans (pastille, pause, réglages) vus à l'écran. Calcul des dates dans Hermes (`Intl` avec fuseau horaire) non vérifié sur appareil.
+- **Pas fait** : iPhone (il faudrait un compte développeur Apple et la clé APNs dans Firebase : traité avec les magasins), pause à l'heure de la prière dans les lecteurs externes autres que YouTube / Vimeo, son d'adhan. Les rappels de prière n'existent pas dans la version « installable » du site (PWA) : réservés à l'application.
+- Les notifications du serveur n'envoient rien tant que la clé Firebase n'est pas enregistrée ; les e-mails continuent comme avant.

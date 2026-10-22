@@ -1,6 +1,6 @@
 // Compte : connexion, langue, état de l'abonnement. L'abonnement se prend et se gère uniquement sur le site.
 import React from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { Linking, ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
@@ -11,9 +11,15 @@ import { SITE_URL } from '@/lib/config';
 import type { BillingStatus } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Txt, screenStyle, Title } from '@/components/ui';
+import { usePrayer } from '@/lib/prayerStore';
 
 export default function AccountScreen() {
   const { user, api, t, locale, setLocale, logout, dirStyle } = useSession();
+  const prayer = usePrayer();
+  // Notifications du serveur (nouvelles conférences des intervenants suivis, sélection de la semaine, révision) : interrupteur du compte.
+  const notif = useAsync(async () => (user ? await api.get<{ prefs: { push: boolean }; available: { push: boolean } }>('/me/notifications').catch(() => null) : null), [user?.id]);
+  const [pushOn, setPushOn] = React.useState<boolean | null>(null);
+  const pushValue = pushOn ?? notif.data?.prefs.push ?? true;
   const billing = useAsync(async () => (user ? await api.get<BillingStatus>('/billing/status').catch(() => null) : null), [user?.id]);
 
   return (
@@ -40,6 +46,24 @@ export default function AccountScreen() {
               {billing.data?.active ? t('account.active') : t('account.inactive')}
             </Txt>
             <Button label={t('account.manage')} variant="dark" onPress={() => Linking.openURL(`${SITE_URL}/account`)} />
+          </View>
+        ) : null}
+
+        {prayer.on || notif.data?.available.push ? (
+          <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 12 }}>
+            <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('np.title')}</Txt>
+            {notif.data?.available.push ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt weight="bold">{t('np.push')}</Txt>
+                  <Txt size={12} color={colors.muted}>{t('np.pushHelp')}</Txt>
+                </View>
+                <Switch value={pushValue} accessibilityLabel={t('np.push')} trackColor={{ false: colors.border, true: colors.goldLine }} thumbColor={pushValue ? colors.gold : colors.muted}
+                  onValueChange={(v) => { setPushOn(v); api.put('/me/notifications', { push: v }).catch(() => setPushOn(!v)); }} />
+              </View>
+            ) : null}
+            {prayer.on ? <Txt size={13} color={colors.text2}>{t('np.prayerHelp')}</Txt> : null}
+            {prayer.on ? <Button label={t('np.prayerSettings')} variant="dark" onPress={() => router.push('/prayer')} /> : null}
           </View>
         ) : null}
 
