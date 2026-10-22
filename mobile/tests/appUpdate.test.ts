@@ -1,9 +1,9 @@
 // 22b-5 : logique pure de la mise à jour de l'application + cohérence de la configuration.
-import { checkErrorDetail, test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseLatest, notesFor, formatSize, shouldCheck, bannerHidden, installedCode, progressRatio, isTrustedDownload, CHECK_EVERY_MS } from '../src/lib/appUpdate';
+import { checkErrorDetail, parseLatest, notesFor, formatSize, shouldCheck, bannerHidden, installedCode, progressRatio, isTrustedDownload, CHECK_EVERY_MS } from '../src/lib/appUpdate';
 import { APP_DICT } from '../src/lib/i18n';
 
 const API = 'https://api-majlisstv.le-publicitaire.fr';
