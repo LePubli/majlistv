@@ -20,7 +20,7 @@ const notesFile = process.env.RELEASE_NOTES_FILE || 'release-notes.json';
 const notes = existsSync(notesFile) ? JSON.parse(readFileSync(notesFile, 'utf8')) : {};
 
 async function call(path, body) {
-  const r = await fetch(api + path, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetchRetry(api + path, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const txt = await r.text();
   let json; try { json = JSON.parse(txt); } catch { json = { error: txt.slice(0, 300) }; }
   if (!r.ok) throw Object.assign(new Error(`${path} → ${r.status} ${json.error || ''}`), { status: r.status });
@@ -45,7 +45,7 @@ try {
     let etag = null;
     for (let attempt = 1; attempt <= 3 && !etag; attempt += 1) {
       try {
-        const r = await fetch(p.url, { method: 'PUT', body: buf });
+        const r = await fetchRetry(p.url, { method: 'PUT', body: buf });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         etag = r.headers.get('etag');
         if (!etag) throw new Error('ETag absent (CORS du stockage ?)');

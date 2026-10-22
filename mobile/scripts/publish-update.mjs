@@ -41,7 +41,7 @@ for (const a of meta.assets || []) {
 }
 
 async function call(path, body) {
-  const r = await fetch(api + path, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetchRetry(api + path, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const txt = await r.text(); let json; try { json = JSON.parse(txt); } catch { json = { error: txt.slice(0, 300) }; }
   if (!r.ok) throw new Error(`${path} → ${r.status} ${json.error || ''}`);
   return json;
@@ -53,7 +53,7 @@ for (const u of init.uploads) {
   const f = files.get(u.sha256);
   let ok = false;
   for (let attempt = 1; attempt <= 3 && !ok; attempt += 1) {
-    const r = await fetch(u.url, { method: 'PUT', body: f.buf, headers: { 'content-type': u.contentType } }).catch(() => null);
+    const r = await fetchRetry(u.url, { method: 'PUT', body: f.buf, headers: { 'content-type': u.contentType } }, 2).catch(() => null);
     ok = Boolean(r && r.ok);
     if (!ok && attempt < 3) await new Promise((res) => setTimeout(res, 2000 * attempt));
   }
