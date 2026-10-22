@@ -1,6 +1,8 @@
 # Fabrique l'APK Android de l'application Mejliss TV (dossier mobile/) sur les serveurs de GitHub.
 # Lancement : à chaque push sur main qui touche mobile/, ou à la main (Actions → « Application Android (APK) » → Run workflow).
 # Résultat : un fichier « mejliss-tv-android » téléchargeable en bas de la page de l'exécution (conservé 30 jours).
+# Mises à jour de l'application (étape 22b-5) : si le secret APP_PUBLISH_TOKEN existe, l'APK est aussi publié sur notre serveur
+# (l'application installée propose alors « Nouvelle version disponible »). Variable facultative APP_API_URL (défaut : https://api-majlisstv.le-publicitaire.fr).
 # L'APK est signé avec la clé de test d'Android : installable directement sur un téléphone, mais PAS publiable sur Google Play
 # (la clé de publication sera créée à l'étape « magasins »).
 name: Application Android (APK)
@@ -84,3 +86,17 @@ jobs:
           path: ${{ steps.name.outputs.file }}
           if-no-files-found: error
           retention-days: 30
+
+      # Publication sur notre serveur (facultative : sans le secret APP_PUBLISH_TOKEN, cette étape est ignorée).
+      # Le numéro de build (1000 + numéro d'exécution) est le même que celui écrit dans l'APK par app.config.js.
+      - name: Publier l'APK sur notre serveur
+        env:
+          APP_PUBLISH_TOKEN: ${{ secrets.APP_PUBLISH_TOKEN }}
+          APP_API_URL: ${{ vars.APP_API_URL }}
+        run: |
+          if [ -z "$APP_PUBLISH_TOKEN" ]; then
+            echo "Pas de secret APP_PUBLISH_TOKEN : APK non publié sur le serveur."
+            exit 0
+          fi
+          VERSION=$(node -p "require('./app.json').expo.version")
+          node scripts/publish-release.mjs "$(basename '${{ steps.name.outputs.file }}')" "$VERSION" "$((1000 + GITHUB_RUN_NUMBER))"

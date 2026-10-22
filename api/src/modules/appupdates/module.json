@@ -1,0 +1,16 @@
+{
+  "id": "appupdates",
+  "name": "Mises à jour de l'application",
+  "version": "1.0.0",
+  "description": "L'application Android demande au serveur la dernière version : elle propose de télécharger et d'installer le nouvel APK, et reçoit les mises à jour de son contenu sans réinstallation (protocole expo-updates, hébergé ici).",
+  "feature": "appupdates",
+  "requires": [],
+  "settings": [
+    { "key": "publish_token", "type": "secret", "label": "Jeton de publication (GitHub Actions)",
+      "help": "Mot de passe long qui autorise la fabrication de l'application sur GitHub à publier une nouvelle version ici. La même valeur doit être dans le secret GitHub APP_PUBLISH_TOKEN. Générer : openssl rand -hex 32. Vide = publication impossible." },
+    { "key": "min_version_code", "type": "number", "label": "Version minimale obligatoire (numéro de build)", "def": "0", "min": 0, "max": 100000000,
+      "help": "Les applications dont le numéro de build est plus ancien doivent se mettre à jour avant de continuer (écran bloquant). 0 = aucune obligation." },
+    { "key": "api_url", "type": "url", "label": "Adresse publique de l'API", "def": "https://api-majlisstv.le-publicitaire.fr",
+      "help": "Utilisée pour écrire les adresses de téléchargement données à l'application." }
+  ]
+}

@@ -69,6 +69,9 @@ EXPO_PUBLIC_SITE_URL=https://majlisstv.le-publicitaire.fr
 
 Aucun secret dans l'application (tout ce qui s'y trouve est lisible par un utilisateur).
 
+## Mises à jour de l'application (22b-5)
+Au démarrage, l'application interroge `GET /app/latest` sur l'API ; si un APK plus récent est publié, bandeau « Nouvelle version disponible » → téléchargement (expo-file-system) → contrôle SHA-256 → installateur Android (expo-intent-launcher). Code : `src/lib/appUpdate.ts` (logique, testée dans `tests/appUpdate.test.ts`) et `src/components/AppUpdate.tsx`. Le workflow publie chaque APK avec `scripts/publish-release.mjs` (secret `APP_PUBLISH_TOKEN`) ; les nouveautés affichées viennent de `release-notes.json`. Le numéro de build installé est `1000 + numéro d'exécution du workflow` (voir `app.config.js`). Procédure complète : README racine, « Étape 22b-5 ».
+
 ## Fabriquer l'APK (sans rien installer)
 
 1. GitHub → dépôt `LePubli/majlistv` → onglet **Actions** → « Application Android (APK) » → **Run workflow** (ou automatiquement à chaque push sur `main` qui touche `mobile/`).

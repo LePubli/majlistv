@@ -15,6 +15,7 @@ import { SessionProvider, useSession } from '@/lib/session';
 import { PrayerProvider } from '@/lib/prayerStore';
 import { routeForPath } from '@/lib/notifRoute';
 import { PrayerGate } from '@/components/PrayerGate';
+import { AppUpdate } from '@/components/AppUpdate';
 import { colors } from '@/lib/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -50,6 +51,7 @@ function Shell() {
       <StatusBar style="light" />
       <NotificationRouter />
       <PrayerGate />
+      <AppUpdate />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />

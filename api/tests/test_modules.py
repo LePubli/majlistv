@@ -29,7 +29,7 @@ mods = requests.get(N + "/admin/modules", headers=A).json()["modules"]
 g = next(m for m in mods if m["id"] == "gifts")
 ok(g["version"] == "1.0.0" and g["installedVersion"] == "1.0.0" and g["feature"] == "gifts", "gifts : version 1.0.0 lue et installée, liée à la fonction « gifts »")
 ok([f["key"] for f in g["fields"]] == ["gift_price_1", "gift_price_3", "gift_price_12"], "gifts : 3 réglages de prix")
-ok(sorted(m["id"] for m in mods if m["status"] != "absent") == sorted(["books", "channels", "citations", "collections", "dubbing", "editor", "favorites", "follow", "gifts", "kids", "learning", "lists", "notes", "practice", "prayer", "quiz", "revenue", "revision", "selfcheck", "series", "shorts", "showcase", "stats", "storage"]), "API normale : 24 modules présents dans le code (les autres, connus de la base, sont « absent »)")
+ok(sorted(m["id"] for m in mods if m["status"] != "absent") == sorted(["appupdates", "books", "channels", "citations", "collections", "dubbing", "editor", "favorites", "follow", "gifts", "kids", "learning", "lists", "notes", "practice", "prayer", "quiz", "revenue", "revision", "selfcheck", "series", "shorts", "showcase", "stats", "storage"]), "API normale : 25 modules présents dans le code (les autres, connus de la base, sont « absent »)")
 ok(not [m["id"] for m in mods if m["status"] == "error"], "aucun module en erreur (chargement, migrations, démarrage des tâches de fond)")
 byid0 = {m["id"]: m for m in mods if m["id"]}
 ok(all(m["version"] == "1.0.0" and m["feature"] == m["id"] for m in mods if m["status"] != "absent" and m["id"] not in ("dubbing", "storage", "stats", "channels", "editor", "shorts", "kids")), "anciens modules : tous en v1.0.0 et liés à la fonction du même nom")

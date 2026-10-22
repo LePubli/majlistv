@@ -5196,3 +5196,72 @@ API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/api_contract.ts   # application
 - **Jamais essayé sur un vrai téléphone** : ni l'invite d'autorisation, ni le rappel de prière application fermée, ni une notification réelle de Firebase, ni les écrans (pastille, pause, réglages) vus à l'écran. Calcul des dates dans Hermes (`Intl` avec fuseau horaire) non vérifié sur appareil.
 - **Pas fait** : iPhone (il faudrait un compte développeur Apple et la clé APNs dans Firebase : traité avec les magasins), pause à l'heure de la prière dans les lecteurs externes autres que YouTube / Vimeo, son d'adhan. Les rappels de prière n'existent pas dans la version « installable » du site (PWA) : réservés à l'application.
 - Les notifications du serveur n'envoient rien tant que la clé Firebase n'est pas enregistrée ; les e-mails continuent comme avant.
+
+## Étape 22b-5 — Mises à jour de l'application depuis notre serveur (22/10, application 0.5.0)
+
+### Description
+L'application Android n'a plus besoin d'être retéléchargée à la main. Au démarrage (et au retour dans l'application, au plus toutes les 6 h), elle demande à **notre serveur** quelle est la dernière version publiée. Si elle est plus récente, un bandeau « Nouvelle version disponible » apparaît ; un toucher ouvre les nouveautés, puis **Mettre à jour** télécharge l'APK depuis notre stockage (Garage), vérifie son empreinte SHA-256 et lance l'installation. **Android demande toujours de confirmer l'installation**, et, une seule fois, d'autoriser « Installer des applications inconnues » pour Mejliss TV (bouton « Autoriser l'installation » dans l'écran). Les données et la connexion sont conservées (c'est une mise à jour par-dessus).
+Le GitHub workflow publie lui-même chaque nouvel APK sur le serveur (secret `APP_PUBLISH_TOKEN`) : plus aucun téléchargement manuel.
+Un réglage « version minimale » (Admin → Paramètres) permet de rendre une mise à jour **obligatoire** pour les très anciennes versions.
+La **partie 2** (mise à jour du *contenu* sans réinstaller, via `expo-updates` hébergé sur notre serveur) est livrée dans un second commit de la même étape (voir plus bas, s'il y a une section « Partie 2 »).
+
+### Ce qui a été ajouté
+- **API** : module `appupdates` (fonction activable Admin → Fonctions « Mises à jour de l'application », réglages `mod_appupdates_*`), migration `001_app_releases.sql`.
+  - Public : `GET /app/latest?platform=android&versionCode=N`, `GET /app/download/:versionCode` (ou `latest`, redirection signée), `GET /app/updates/manifest` et `GET /app/updates/assets/:sha256` (protocole `expo-updates`, partie 2).
+  - Publication (jeton) : `POST /app/publish/apk/init` + `/commit`, `POST /app/publish/update/init` + `/commit` + `/rollback`, `GET /app/publish/releases`.
+  - Le serveur refuse un numéro de build inférieur ou égal au dernier publié, contrôle taille et SHA-256 du fichier réellement stocké (sinon il l'efface), garde les 5 dernières versions.
+- **Application** : `src/lib/appUpdate.ts` (logique pure), `src/components/AppUpdate.tsx` (bandeau + écran), permission Android `REQUEST_INSTALL_PACKAGES`, textes FR/EN/AR (`au.*`), version 0.5.0 / build 3.
+- **Numéro de build** : sur GitHub, `versionCode = 1000 + numéro d'exécution du workflow` (`mobile/app.config.js`) ; toujours croissant.
+- **Workflow** : étape « Publier l'APK sur notre serveur » (ignorée sans le secret) ; script `mobile/scripts/publish-release.mjs` ; nouveautés dans `mobile/release-notes.json` (fr / en / ar, à modifier avant un push pour changer le texte affiché).
+
+### Prérequis
+- Étape 22b-4 déployée (module de notifications, workflow APK qui fonctionne).
+- Stockage Garage opérationnel (variables `S3_*` de l'API déjà en place) et lien `https://api-majlisstv.le-publicitaire.fr` joignable depuis les téléphones.
+- Le téléchargement de l'APK passe par un lien signé vers `https://s3-majlisstv.le-publicitaire.fr` (déjà utilisé pour les vidéos).
+
+### Déploiement (dans cet ordre)
+1. **GitHub** : rien à faire pour pousser (c'est fait par Claude sur `main`). L'exécution du workflow APK démarre toute seule.
+2. **DockPanel** → Git Deploy → **Redeploy `majlistv-api`** (la migration `app_releases` / `app_updates` s'applique au démarrage). Le site (`majlistv-web`) n'est pas concerné.
+3. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Attendu : 0 échec.
+4. **Créer le jeton de publication** (une seule fois) :
+```bash
+openssl rand -hex 32
+```
+   - Copier le résultat dans **Admin → Paramètres → Mises à jour de l'application → Jeton de publication (GitHub Actions)** → Enregistrer.
+   - Le coller aussi dans **GitHub → dépôt → Settings → Secrets and variables → Actions → New repository secret** : nom `APP_PUBLISH_TOKEN`.
+   - Ne le collez jamais dans une conversation : c'est un secret, comme la clé Firebase.
+5. **Relancer le workflow** : GitHub → Actions → « Application Android (APK) » → Run workflow. À la fin, le journal de l'étape « Publier l'APK sur notre serveur » doit afficher « Publié : version 0.5.0 (build 10xx) ».
+6. **Installer ce premier APK à la main** (téléchargé depuis Artifacts, comme d'habitude) : c'est le **dernier téléchargement manuel**. Il contient le mécanisme de mise à jour. Les APK suivants se proposent tout seuls.
+7. Vérifier côté serveur (remplacer le jeton) :
+```bash
+curl -s "https://api-majlisstv.le-publicitaire.fr/app/latest?versionCode=3"
+curl -s -H "Authorization: Bearer VOTRE_JETON" https://api-majlisstv.le-publicitaire.fr/app/publish/releases
+```
+
+### Utilisation au quotidien
+1. Claude pousse une modification de `mobile/` sur `main` → le workflow fabrique l'APK et le publie.
+2. Sur le téléphone, au prochain démarrage de l'application : bandeau « Nouvelle version disponible » → **Mettre à jour** → **Installer** → confirmer dans la fenêtre d'Android.
+3. Rendre une mise à jour obligatoire : Admin → Paramètres → Mises à jour de l'application → « Version minimale obligatoire (numéro de build) » = le numéro de build à exiger (visible dans la réponse de `/app/latest`, champ `versionCode`). Les applications plus anciennes affichent un écran sans bouton « Plus tard ».
+4. Couper la fonction : Admin → Fonctions → « Mises à jour de l'application » (les téléphones ne voient plus rien ; l'APK du site et les téléchargements manuels restent possibles).
+
+### Debug
+- **Le bandeau n'apparaît pas** : `curl -s "https://api-majlisstv.le-publicitaire.fr/app/latest?versionCode=3"` — si `latest` est `null`, rien n'est publié (secret `APP_PUBLISH_TOKEN` absent ou différent du réglage ; lire le journal du workflow). L'application ne vérifie qu'une fois toutes les 6 h : fermer complètement puis rouvrir ne suffit pas toujours ; vider les données de l'application force la vérification.
+- **Workflow : « Jeton de publication invalide » (401)** : le secret GitHub et le réglage Admin ne sont pas identiques. **503** : réglage vide.
+- **Workflow : « déjà publié ou dépassé »** : normal si le numéro de build n'est pas supérieur au dernier publié (relancer le workflow donne un nouveau numéro).
+- **Téléchargement en échec** : vérifier que `https://s3-majlisstv.le-publicitaire.fr` répond ; le champ « Adresse publique de l'API » (réglage `mod_appupdates_api_url`) doit avoir **le même domaine** que l'API utilisée par l'application, sinon l'application refuse le lien (protection).
+- **« Le fichier reçu ne correspond pas »** : téléchargement tronqué (réessayer) ; si cela se répète, republier l'APK.
+- **Android refuse d'installer (« application non installée / signature différente »)** : l'APK est signé avec la clé de test d'Android, la même à chaque fabrication ; si une ancienne version a été signée autrement, il faut la désinstaller une fois. La mise à jour par-dessus conserve les données seulement quand la signature est identique.
+- **L'installation ne démarre pas** : toucher « Autoriser l'installation », activer l'option pour Mejliss TV, revenir, toucher « Installer ».
+
+### Honnêteté sur les essais
+- **Vérifié** : le serveur de bout en bout contre un stockage S3 de test (publication en 3 morceaux d'un fichier de 70 Mo, empreinte, refus d'un fichier altéré, numéros de build non croissants, ménage, version minimale, redirection de téléchargement, jeton, fonction coupée) ; le script de publication ; la logique de l'application (validation de la réponse, refus des liens d'un autre serveur, fréquence de vérification, textes FR/EN/AR) ; le typage ; la génération du projet Android (permission `REQUEST_INSTALL_PACKAGES`, numéro de build).
+- **Jamais essayé sur un téléphone** : le bandeau, le téléchargement dans l'application et surtout **l'ouverture de l'installateur d'Android** (le lien vers le fichier et les droits de lecture sont écrits d'après la documentation d'Expo et d'Android, pas vérifiés). Si l'installateur ne s'ouvre pas, le téléchargement manuel de l'APK reste possible.
+- **Limite d'Android** : l'installation demande toujours un geste de confirmation ; certaines marques ajoutent leurs propres avertissements. Aucune mise à jour silencieuse sans un appareil géré (hors sujet ici).
+- **Limite de la clé de signature** : l'APK reste signé avec la clé de test d'Android (non publiable sur Google Play). À l'étape « magasins », changer de clé obligera une réinstallation manuelle une fois.
