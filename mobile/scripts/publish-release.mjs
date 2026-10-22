@@ -4,6 +4,7 @@
 // Variables : APP_PUBLISH_TOKEN (obligatoire), APP_API_URL (défaut : https://api-majlisstv.le-publicitaire.fr), RELEASE_NOTES_FILE (défaut : release-notes.json).
 // Envoi en morceaux de 32 Mo directement vers le stockage (liens signés), puis le serveur contrôle taille et empreinte SHA-256 avant de publier.
 import { createHash } from 'node:crypto';
+import { fetchRetry } from './http-retry.mjs';
 import { createReadStream, readFileSync, statSync, openSync, readSync, closeSync, existsSync } from 'node:fs';
 
 const [file, version, code] = process.argv.slice(2);

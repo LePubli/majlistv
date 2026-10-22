@@ -90,6 +90,15 @@ jobs:
 
       # Publication sur notre serveur (facultative : sans le secret APP_PUBLISH_TOKEN, cette étape est ignorée).
       # Le numéro de build (1000 + numéro d'exécution) est le même que celui écrit dans l'APK par app.config.js.
+      - name: Tester la liaison avec notre serveur (diagnostic)
+        continue-on-error: true
+        env:
+          APP_API_URL: ${{ vars.APP_API_URL }}
+        run: |
+          API="${APP_API_URL:-https://api-majlisstv.le-publicitaire.fr}"
+          echo "GitHub → $API"
+          for v in 4 6; do curl -$v -sS -m 20 -o /dev/null -w "IPv$v : HTTP %{http_code} depuis %{local_ip} vers %{remote_ip} en %{time_total}s\n" "$API/health" || echo "IPv$v : échec"; done
+
       - name: Publier l'APK sur notre serveur
         env:
           APP_PUBLISH_TOKEN: ${{ secrets.APP_PUBLISH_TOKEN }}

@@ -4,6 +4,7 @@
 // Prérequis : `npx expo export --platform android --output-dir dist` déjà lancé. Variables : APP_PUBLISH_TOKEN (obligatoire), APP_API_URL.
 // Les fichiers sont envoyés directement au stockage (liens signés) ; seuls les fichiers absents du stockage sont envoyés.
 import { createHash } from 'node:crypto';
+import { fetchRetry } from './http-retry.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
