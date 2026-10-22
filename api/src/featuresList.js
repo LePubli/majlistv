@@ -61,6 +61,8 @@ export const FEATURES = [
     rules: [{ re: '^/me/prayer(/|$)' }] },
   { id: 'appupdates', group: 'access', label: "Mises à jour de l'application", hint: "L'application Android propose le nouvel APK et reçoit les mises à jour de son contenu depuis le serveur (la fabrication sur GitHub publie ici)",
     rules: [{ re: '^/app/(latest|download|updates|publish)(/|$)' }] },
+  { id: 'offline', group: 'access', label: 'Hors connexion (application)', hint: "L'application Android permet de télécharger une conférence (audio ou vidéo) pour la regarder sans connexion ; réservé aux abonnés, valable une durée réglable",
+    rules: [{ re: '^/me/offline(/|$)' }] },
   { id: 'kids', group: 'community', label: 'Mejliss Kids', hint: 'Univers enfants séparé', setting: 'kids_enabled' },
   { id: 'showcase', group: 'access', label: 'Vitrine visiteur', hint: 'Page d\'accueil des visiteurs non connectés : méthode, exemple de conférence avec quiz, tarifs',
     rules: [{ re: '^/showcase$' }] },
@@ -82,7 +84,7 @@ export const FEATURES = [
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' };
 const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
-  'channels', 'shorts', 'follow', 'citations', 'prayer', 'appupdates', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
+  'channels', 'shorts', 'follow', 'citations', 'prayer', 'appupdates', 'offline', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 
 export const BY_ID = Object.fromEntries(FEATURES.map((f) => [f.id, f]));

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
+import { useDownloads } from '@/lib/downloadStore';
 import { progressOf } from '@/lib/media';
 import { isLearningRequired } from '@/lib/learn';
 import type { Card, Citation, Home, KidsHome, RevisionResponse } from '@/lib/types';
@@ -20,6 +21,7 @@ import { FormatTiles, KidsBand } from '@/components/HomeBands';
 
 export default function HomeScreen() {
   const { api, user, t, config, feat, dirStyle } = useSession();
+  const dls = useDownloads();
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   const review = useAsync(async () => (user ? await api.get<RevisionResponse>('/me/revision').then((r) => r.items).catch((e) => (isLearningRequired(e) ? [] : [])) : []), [user?.id]);
@@ -32,7 +34,15 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => { void cont.reload(); void todo.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (home.loading && !home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}><Loading /></SafeAreaView>;
-  if (!home.data) return <SafeAreaView style={[screenStyle, dirStyle]}><ErrorBox onRetry={home.reload} /></SafeAreaView>;
+  if (!home.data) {
+    // Hors connexion : l'accueil ne peut pas se charger, mais les téléchargements restent accessibles (22b-6).
+    return (
+      <SafeAreaView style={[screenStyle, dirStyle]}>
+        <ErrorBox onRetry={home.reload} />
+        {dls.records.length ? <View style={{ padding: 18 }}><Button label={t('dl.open')} onPress={() => router.push('/downloads')} /></View> : null}
+      </SafeAreaView>
+    );
+  }
   const rows = home.data.rows ?? [];
   const trial = config?.trialDays ?? 0;
 

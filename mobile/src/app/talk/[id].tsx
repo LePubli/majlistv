@@ -23,6 +23,8 @@ import { Button, ErrorBox, IconButton, Loading, Txt, screenStyle } from '@/compo
 import { Poster, TalkCard } from '@/components/TalkCard';
 import { Rail } from '@/components/Rail';
 import { AddToListModal } from '@/components/AddToListModal';
+import { DownloadSheet } from '@/components/DownloadSheet';
+import { useDownloads } from '@/lib/downloadStore';
 import { ExternalVideo, PlayerHandle } from '@/components/ExternalVideo';
 import { TalkTabs } from '@/components/talk/TalkTabs';
 import { ActionTile, LearnCard, LockCard, SeriesPanel } from '@/components/talk/Panels';
@@ -52,7 +54,9 @@ export default function TalkScreen() {
 }
 
 function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
-  const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, config } = useSession();
+  const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, config, feat } = useSession();
+  const dls = useDownloads();
+  const [dlOpen, setDlOpen] = useState(false);
   const src = useMemo(() => pickSource(talk, API_URL), [talk]);
   const locked = !!talk.locked;
   const startMs = locked ? 0 : atMs ?? resumeStartMs(talk.resumeMs, talk.durationSeconds);
@@ -264,6 +268,11 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <ActionTile icon="headphones" label={audioMode ? t('audBackVideo') : t('audMode')} active={audioMode} disabled={!src.audioUri} onPress={() => switchMode(!audioMode)} />
           <ActionTile icon="minimize-2" label={t('talk.pip')} disabled={!pip} onPress={() => { void videoRef.current?.startPictureInPicture(); }} />
+          {feat('offline') && !locked && talk.source === 'upload' && talk.hlsPath ? (
+            <ActionTile icon={dls.get(talk.id) ? 'check-circle' : 'download'} active={!!dls.get(talk.id) || dls.active?.talkId === talk.id}
+              label={dls.active?.talkId === talk.id ? t('dl.tileBusy', { percent: Math.round(dls.active.ratio * 100) }) : dls.get(talk.id) ? t('dl.tileDone') : t('dl.tile')}
+              onPress={() => setDlOpen(true)} />
+          ) : null}
         </View>
 
         {locked ? <LockCard talk={talk} /> : <LearnCard talk={talk} />}
@@ -278,6 +287,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
         </View>
       ) : null}
       <AddToListModal talkId={talk.id} visible={listOpen} onClose={() => setListOpen(false)} />
+      <DownloadSheet talk={talk} visible={dlOpen} onClose={() => setDlOpen(false)} />
     </SafeAreaView>
   );
 }

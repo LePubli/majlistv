@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { SessionProvider, useSession } from '@/lib/session';
 import { PrayerProvider } from '@/lib/prayerStore';
+import { DownloadProvider } from '@/lib/downloadStore';
 import { routeForPath } from '@/lib/notifRoute';
 import { PrayerGate } from '@/components/PrayerGate';
 import { AppUpdate } from '@/components/AppUpdate';
@@ -67,6 +68,8 @@ function Shell() {
         <Stack.Screen name="theme/[id]" />
         <Stack.Screen name="speaker/[slug]" />
         <Stack.Screen name="prayer" />
+        <Stack.Screen name="downloads" />
+        <Stack.Screen name="offline/[id]" />
       </Stack>
     </>
   );
@@ -77,7 +80,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <PrayerProvider>
-          <Shell />
+          <DownloadProvider>
+            <Shell />
+          </DownloadProvider>
         </PrayerProvider>
       </SessionProvider>
     </SafeAreaProvider>

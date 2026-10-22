@@ -5297,3 +5297,64 @@ curl -s -X POST -H "Authorization: Bearer VOTRE_JETON" -H "content-type: applica
 - Le premier démarrage après une mise à jour peut afficher un instant l'ancien contenu (démarrage sans attente, voulu pour ne pas ralentir l'ouverture).
 - Chaque fabrication publie aussi son contenu : une application qui vient d'installer cet APK peut télécharger une fois un contenu identique à ce qu'elle contient déjà (sans effet visible).
 
+
+## Étape 22b-6 — Hors connexion : télécharger une conférence dans l'application (22/10, application 0.6.0)
+
+### Description
+Dans la fiche d'une conférence hébergée chez nous, le bouton **Télécharger** propose : **audio seul** (≈ 28 Mo par heure), **vidéo 360p** ou **vidéo 720p**, avec la taille estimée. Le serveur prépare **un seul fichier** (MP4 pour la vidéo, M4A pour l'audio) en recopiant la conférence sans la reconvertir (quelques secondes à quelques minutes la première fois, immédiat ensuite) ; l'application le télécharge, **contrôle son empreinte SHA-256**, le garde dans son stockage privé et le relit **sans réseau** depuis l'écran **Mes téléchargements** (menu ☰ → « Mes téléchargements », aussi proposé sur l'accueil quand le réseau manque).
+- **Réservé aux abonnés** (abonnement en cours, accès offert, propriétaire / modérateur / administrateur). Une conférence en **accès libre** est téléchargeable par tout compte connecté (choix de ma part, à confirmer : le visionnage libre est déjà gratuit).
+- **Valable 30 jours** (réglable : Admin → Paramètres → « Durée de validité d'un téléchargement »). Dès que le téléphone se reconnecte, l'application **renouvelle** les téléchargements dont l'abonnement est toujours actif (au plus toutes les 12 h) ; si l'abonnement est terminé ou si la conférence a été retirée, le téléchargement est **supprimé**.
+- **Pas de limite de nombre** (décision d'Epok) : seulement l'espace libre du téléphone. L'écran « Mes téléchargements » montre l'espace utilisé, les jours restants et permet de supprimer.
+- Reprise de lecture : la position regardée hors connexion est gardée sur le téléphone et **envoyée au serveur à la reconnexion** (même reprise que sur le site).
+- Déconnexion voulue : tous les téléchargements du compte sont effacés ; un autre compte qui se connecte sur le téléphone efface ceux du précédent. Hors connexion (jeton gardé, session non vérifiée), rien n'est effacé.
+- **Pas disponible** : vidéos YouTube / Vimeo / archive.org lues depuis leur plateforme (message clair), 1080p. Transcription, chapitres et quiz ne sont pas encore disponibles hors connexion (seul le lecteur l'est).
+
+### Ce qui a été ajouté
+- **API** : module `offline` (fonction activable Admin → Fonctions « Hors connexion (application) », réglage `mod_offline_valid_days`), migration `001_offline_files.sql` (table `offline_files`).
+  - `GET /me/offline/:id/options` (audio, qualités, tailles estimées), `POST /me/offline/:id` (`{kind, height?, retry?}` → 202 « preparing » à rappeler, 200 « ready » + lien signé / taille / empreinte / fin de validité, 502 « failed » + message), `GET /me/offline/:id/status`, `POST /me/offline/renew` (`{talkIds}` → accordé / refusé).
+  - Préparation : FFmpeg copie la playlist HLS (variante 360p ou 720p, ou piste audio) vers un MP4 / M4A (`-c copy`, aucune reconversion), 2 préparations en parallèle au plus, fichier gardé dans le stockage (`offline/<conférence>/<version>/…`) et réutilisé ; effacé avec la conférence.
+- **Application** : `src/lib/downloads.ts` (logique pure), `src/lib/downloadStore.tsx` (téléchargement, index, renouvellement), `src/components/DownloadSheet.tsx` (fenêtre « Regarder sans connexion »), `src/app/downloads.tsx` (liste), `src/app/offline/[id].tsx` (lecteur hors connexion), bouton dans la fiche, entrée du menu, accueil hors connexion ; textes FR/EN/AR (`dl.*`) ; dépendance `expo-network` ; version 0.6.0 / build 4.
+
+### Prérequis
+- Étape 22b-5 en place (publication des APK) ; stockage Garage opérationnel ; l'API contient FFmpeg (déjà le cas : image Alpine avec `ffmpeg`).
+- **Espace disque de l'API** : la préparation écrit un fichier temporaire (jusqu'à ≈ 0,5 Go pour une heure en 720p) dans le dossier temporaire du conteneur, effacé aussitôt.
+
+### Déploiement (dans cet ordre)
+1. **DockPanel** → Git Deploy → **Redeploy `majlistv-api`** (la migration `offline_files` s'applique au démarrage). Le site (`majlistv-web`) n'est pas concerné.
+2. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Attendu : 0 échec.
+3. **Application** : le workflow GitHub fabrique l'APK 0.6.0 et le publie sur le serveur (étape 22b-5) ; sur le téléphone, « Nouvelle version disponible » → Mettre à jour (ou installer l'APK du workflow à la main). `expo-network` est une nouvelle bibliothèque native : **le contenu ne se met pas à jour tout seul de 0.5.0 à 0.6.0, il faut installer ce nouvel APK**.
+4. Vérifier côté serveur : Admin → Fonctions → « Hors connexion (application) » activée ; Admin → Paramètres → « Durée de validité d'un téléchargement » = 30.
+
+### Utilisation
+1. Compte abonné → ouvrir une conférence hébergée chez nous → **Télécharger** → choisir audio / 360p / 720p → attendre la préparation puis le téléchargement (barre de progression ; **Annuler** possible).
+2. **Regarder hors connexion** (même fenêtre) ou ☰ → **Mes téléchargements** → toucher la conférence. Mettre le téléphone en mode avion pour l'essayer.
+3. Supprimer : corbeille dans la liste, ou « Supprimer le téléchargement » dans la fenêtre de la conférence.
+4. Renouvellement : automatique à la reconnexion ; bouton « Renouveler maintenant » dans la liste si un téléchargement est expiré.
+5. Changer la durée de validité : Admin → Paramètres → « Durée de validité d'un téléchargement (jours) ».
+Exemples serveur (remplacer le jeton d'un abonné et l'identifiant de la conférence) :
+```bash
+curl -s -H "Authorization: Bearer JETON" https://api-majlisstv.le-publicitaire.fr/me/offline/ID_CONFERENCE/options
+curl -s -X POST -H "Authorization: Bearer JETON" -H "content-type: application/json" -d '{"kind":"audio"}' https://api-majlisstv.le-publicitaire.fr/me/offline/ID_CONFERENCE
+```
+
+### Debug
+- **« Préparation sur le serveur… » qui dure** : FFmpeg lit la conférence dans Garage ; compter quelques minutes pour une longue vidéo. Journal : `docker logs --tail 100 dockpanel-git-majlistv-api 2>&1 | grep -i "hors connexion"`. Le bouton Annuler arrête l'attente.
+- **Échec de préparation (message affiché)** : voir la ligne `Hors connexion : préparation impossible (…)` du journal ; cause fréquente : disque temporaire plein ou playlist absente. État en base : `docker exec -it dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select talk_id, kind, height, status, error from offline_files order by updated_at desc limit 10;"`. Pour forcer une nouvelle préparation d'un fichier : supprimer la ligne concernée (la prochaine demande repart de zéro).
+- **« Le fichier reçu est incomplet »** : téléchargement tronqué (réseau) : réessayer.
+- **« Réservé aux abonnés »** : le compte n'a pas d'abonnement actif (Admin → Utilisateurs / abonnements).
+- **Un téléchargement a disparu après une reconnexion** : l'abonnement est terminé ou la conférence a été retirée (voulu).
+- **Lecture impossible hors connexion** : « Supprimez le téléchargement puis téléchargez-le de nouveau » ; me donner l'écran et la marque du téléphone.
+
+### Honnêteté sur les essais
+- **Vérifié** : le serveur avec un **vrai FFmpeg** (HLS fMP4 à 2 qualités + audio fabriqué comme le worker) contre un stockage S3 de test : audio M4A, vidéo 360p et 720p relus par FFprobe (hauteur, son, durée), empreinte et taille, lecture partielle (Range) du lien signé, droits (visiteur, sans abonnement, libre, externe, pas prêt, pas d'audio), renouvellement accordé / refusé, échec signalé sans boucle puis nouvel essai, suppression avec la conférence, fonction coupée ; la logique de l'application (index, expiration, renouvellement, réponses du serveur, textes FR/EN/AR) avec 72 tests ; **le client contre une vraie API** (`mobile/tests/offline_contract.ts` : options, attente de préparation, téléchargement, empreinte, renouvellement, refus) ; typage, compilation du paquet Android, génération du projet natif.
+- **Jamais essayé sur un téléphone** : le téléchargement par `expo-file-system` (progression, annulation, redirection du lien signé, déplacement du fichier), le **lecteur `expo-video` sur un fichier local**, la détection du réseau (`expo-network`), les écrans, le mode avion réel, le comportement après un redémarrage du téléphone. Les noms d'API d'Expo ont été vérifiés dans leurs définitions de types, pas à l'usage.
+- **Pas de protection contre la copie (pas de DRM)** : le fichier est dans le stockage privé de l'application (invisible dans la galerie), mais un téléphone « rooté » pourrait l'extraire. La durée de validité se contrôle avec l'horloge du téléphone : reculer la date peut prolonger la lecture hors connexion jusqu'à la reconnexion suivante.
+- **Stockage serveur** : chaque fichier préparé est gardé dans Garage (`offline/…`) et compte dans le plafond de 30 Go (audio ≈ 28 Mo / h, 360p ≈ 0,2 Go / h, 720p ≈ 0,4 Go / h au débit de la source) ; pas de ménage automatique des fichiers peu demandés (voir registre).
+- Profils enfants (Kids) : le téléchargement n'est pas prévu (étape « Kids natif »).

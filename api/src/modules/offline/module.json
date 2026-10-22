@@ -1,0 +1,12 @@
+{
+  "id": "offline",
+  "name": "Hors connexion",
+  "version": "1.0.0",
+  "description": "L'application Android télécharge une conférence (audio seul ou vidéo en une qualité) pour la regarder sans connexion. Réservé aux abonnés ; le fichier est lisible pendant une durée réglable et se renouvelle à la reconnexion.",
+  "feature": "offline",
+  "requires": [],
+  "settings": [
+    { "key": "valid_days", "type": "number", "label": "Durée de validité d'un téléchargement (jours)", "def": "30", "min": 1, "max": 365,
+      "help": "Un fichier téléchargé reste lisible hors connexion pendant ce nombre de jours ; l'application le renouvelle dès qu'elle se reconnecte et que l'abonnement est actif. Passé ce délai sans connexion, il faut se reconnecter pour le relire." }
+  ]
+}

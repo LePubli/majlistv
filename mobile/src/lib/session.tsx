@@ -7,6 +7,7 @@ import { API_URL } from './config';
 import { DIR, Key, Locale, pickLocale, translate } from './i18n';
 import type { AppConfig, User } from './types';
 import { unregisterPush } from './notifications';
+import { runLogoutHooks } from './hooks';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
@@ -63,6 +64,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Déconnexion voulue : le serveur cesse d'écrire à ce téléphone pour ce compte, puis la session est effacée.
   const logout = useCallback(async () => {
     await unregisterPush(api);
+    await runLogoutHooks(); // efface les téléchargements de ce compte (22b-6)
     await clear();
   }, [api, clear]);
 
