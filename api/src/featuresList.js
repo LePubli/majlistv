@@ -57,6 +57,8 @@ export const FEATURES = [
     rules: [{ re: '^/citation/today$' }] },
   // Étape 22a : site installable (manifeste, service worker, page « Télécharger l'application »). Partie web seulement : aucune route d'API.
   { id: 'app_install', group: 'access', label: 'Application installable', hint: 'Icône sur l’écran d’accueil, plein écran, page hors connexion, page « Télécharger l’application »' },
+  { id: 'prayer', group: 'community', label: 'Prière : pause et horaires', hint: 'Pastille « Prochaine prière » dans l\'en-tête, pause de la lecture à l\'heure de la prière (blocage souple de 10 minutes), horaires calculés par le site selon l\'endroit où se trouve la personne',
+    rules: [{ re: '^/me/prayer(/|$)' }] },
   { id: 'kids', group: 'community', label: 'Mejliss Kids', hint: 'Univers enfants séparé', setting: 'kids_enabled' },
   { id: 'showcase', group: 'access', label: 'Vitrine visiteur', hint: 'Page d\'accueil des visiteurs non connectés : méthode, exemple de conférence avec quiz, tarifs',
     rules: [{ re: '^/showcase$' }] },
@@ -78,7 +80,7 @@ export const FEATURES = [
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' };
 const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
-  'channels', 'shorts', 'follow', 'citations', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
+  'channels', 'shorts', 'follow', 'citations', 'prayer', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 
 export const BY_ID = Object.fromEntries(FEATURES.map((f) => [f.id, f]));

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { KidsWord } from './KidsBanner';
 import SearchPanel from './SearchPanel';
+import PrayerPill from './PrayerPill';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
@@ -41,6 +42,7 @@ function KidHeader() {
         <span className="kd-brand"><span className="kd-brand-name">{appName}</span> <KidsWord /></span>
       </Link>
       <nav aria-label={t('mainNav')}>
+        <PrayerPill />
         <span className="kd-me"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {kid.name}</span>
         <button type="button" className="btn ghost" onClick={() => { setOpen(true); setErr(''); setCode(''); }}>{t('kdLeave')}</button>
       </nav>
@@ -166,10 +168,14 @@ function MainHeader() {
           {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}</NavLink>)}
         </nav>
       );
+      // Étape 23a : la pastille « Prochaine prière » se place juste à côté de la loupe, où que l'administrateur la mette.
       case 'search': return (
-        <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
-        </button>
+        <span className="hd-search-wrap">
+          <PrayerPill />
+          <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+          </button>
+        </span>
       );
       case 'lang': return ready ? <span className="hd-lang">{langSelect}</span> : null;
       case 'account': return accountEl;

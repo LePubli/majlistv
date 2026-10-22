@@ -4,6 +4,7 @@
 // transcription cliquable, chapitres, reprise de lecture et liens « ?t= » fonctionnent donc comme pour une vidéo envoyée.
 // Les sous-titres traduits sont affichés par-dessus la vidéo (on ne peut pas les injecter dans le lecteur YouTube).
 import { useEffect, useRef, useState } from 'react';
+import { registerMedia } from '../lib/mediaRegistry';
 
 const scripts = {};
 function loadScript(src, ready) {
@@ -66,6 +67,7 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
   const auto = useRef(autoPlay); // lancement automatique (épisode suivant d'une série)
   const [adapter] = useState(() => new MediaAdapter());
   if (videoRef) videoRef.current = adapter; // disponible avant les effets des composants parents
+  useEffect(() => registerMedia(adapter), [adapter]); // la pause de prière peut ainsi l'arrêter (étape 23a)
   const host = useRef(null);
   // Vitesse : appliquée au changement, puis à chaque démarrage (le lecteur distant peut l'ignorer avant d'être prêt).
   useEffect(() => {

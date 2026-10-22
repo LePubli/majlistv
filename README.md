@@ -5104,3 +5104,40 @@ Aucun sur le VPS, rien à redéployer. Pour essayer : refabriquer l'APK (GitHub 
 - Un texte manquant : relancer `node scripts/import-web-texts.mjs` dans `mobile/` après avoir ajouté un `t('clé')`.
 
 **Exemples.** Ouvrir une conférence YouTube → elle se lit dans la fiche ; toucher un passage de la transcription → le lecteur y saute ; menu ☰ → Catalogue → filtrer par format.
+
+## Étape 23a — Prière : horaires internes, pastille d'en-tête, pause souple (22/10)
+
+**Description.** À l'heure de chaque prière cochée, la lecture en cours (vidéo ou audio avec son, y compris YouTube / Vimeo) se met en pause et un écran propose « J'ai prié » ou « Continuer quand même ». Le blocage est **souple** : on peut toujours continuer, et la pause s'arrête d'elle-même après la durée choisie (10 min par défaut). Une **pastille** à côté de la loupe affiche « prochaine prière + compte à rebours » (dorée quand il reste ≤ 10 min). Elle s'applique aussi à Mejliss TV Kids. Les horaires sont **calculés dans le navigateur** (aucun service externe, aucune clé) ; Mawaqit viendra à l'étape 23b.
+
+**Réglages.**
+- Visiteur : `/priere` ou la pastille → « Tous les réglages ». Membre : Compte → onglet « Prière ». Les choix sont enregistrés sur le compte (`GET/PUT /me/prayer`), ou dans le navigateur pour un visiteur ou l'espace Kids.
+- Lieu : automatique (ville du fuseau horaire de l'appareil, sinon ville par défaut), ville choisie (97 villes intégrées) ou « Me localiser » (position arrondie à 0,1° ≈ 11 km, demandée seulement au clic).
+- Méthode : UOIF 12°/12° (défaut), Ligue islamique mondiale, Umm al-Qura, Égypte, Turquie (Diyanet), ISNA. École Asr : standard ou hanafite. Durée de pause, prières concernées, pastille on/off, pause on/off.
+- Admin : Admin → Fonctions → « Prière » (active/désactive tout) ; Admin → Paramètres → « Module : Prière » (activée par défaut, pastille, méthode, école, durée et durée maximale, ville par défaut).
+
+**Prérequis.** Aucun nouveau service, aucune variable d'environnement. Migration `api/src/modules/prayer/migrations/001_prayer.sql` (table `user_prayer_prefs`) appliquée au démarrage de l'API.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (migration), puis `majlistv-web`. Rien d'autre. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Tests (poste de développement).**
+```
+node web/tests/prayer.mjs
+# comparaison facultative avec la bibliothèque adhan :
+# mkdir /tmp/pt && cd /tmp/pt && npm i adhan && cd - && ADHAN_PATH=/tmp/pt/node_modules/adhan/lib/esm/Adhan.js node web/tests/prayer.mjs
+```
+Attendu : « TOUT EST OK » (écart maximal 1,4 min avec adhan sur 6 méthodes × 97 villes).
+
+**Debug.**
+- Pas de pastille : Admin → Fonctions → « Prière » est-elle active ? `curl https://api-majlisstv.le-publicitaire.fr/config` doit contenir `"prayer"`.
+- Horaire décalé : vérifier la ville et la méthode dans `/priere` ; l'heure affichée suit le fuseau de la ville choisie.
+- Pas de pause : la pause ne touche que la lecture **avec son** ; une vidéo muette ou en boucle est ignorée. Elle n'a lieu que dans la fenêtre [heure, heure + durée] et une seule fois par prière (mémorisée dans le navigateur, clé `prayerDone`).
+
+**Exemples.** Paris le 22/10/2026 : Fajr 07:12, Chourouk 08:21, Dhuhr 13:35, Asr 16:17, Maghrib 18:47, Isha 19:56 (UOIF). Pour essayer : choisir une prière dont l'heure est proche, lancer une conférence avec le son, attendre l'heure.
+
+**Honnêteté sur les essais.** Vérifié : 40+ tests du calcul, API (GET vide, PUT borné et arrondi, corps invalide → 400, sans jeton → 401), compilation du site, essai Playwright (Chromium, horloge simulée) en ordinateur, mobile 390 px et arabe : pastille, fenêtre, pause de la vidéo, reprise après « J'ai prié », aucune seconde interruption. **Non essayé** : téléphone réel, Safari / Firefox, boîte de dialogue de géolocalisation, lecteurs YouTube / Vimeo réels (testés via l'adaptateur seulement). Règles pour les latitudes élevées : réglage `highLat` sans interface, « angle » par défaut. Pas encore dans l'application mobile ni la TV.

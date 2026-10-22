@@ -6,6 +6,7 @@ import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
+import PrayerSettings from '../../components/PrayerSettings';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
@@ -70,6 +71,7 @@ export default function Account() {
     { id: 'profile', label: t('tbProfile') },
     { id: 'billing', label: t('tbSub') },
     { id: 'emails', label: t('tbMails') },
+    ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
     ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
   ];
   const qs = useSearchParams();
@@ -96,6 +98,7 @@ export default function Account() {
           </TabPanel>
           <TabPanel id="billing" current={tab}><Suspense fallback={null}><Billing /></Suspense></TabPanel>
           <TabPanel id="emails" current={tab}><EmailPrefs /></TabPanel>
+          <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
           <TabPanel id="gifts" current={tab}>
             <MyGifts />
             <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>

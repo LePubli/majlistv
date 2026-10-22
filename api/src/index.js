@@ -119,8 +119,13 @@ app.get('/config', async () => {
   const features = await allFeatures();
   const hasSeries = features.series && (await ext.call('series.list', [], { limit: 1 })).length > 0;
   const hasBooks = features.books && (await pool.query("SELECT 1 FROM books b WHERE b.published AND (EXISTS (SELECT 1 FROM book_files f WHERE f.book_id = b.id AND f.rights_confirmed) OR EXISTS (SELECT 1 FROM book_links l WHERE l.book_id = b.id)) LIMIT 1")).rowCount > 0;
+  // Fonction Prière (étape 23a) : réglages par défaut de l'administrateur ; les horaires sont calculés côté site / application.
+  const prayer = features.prayer ? {
+    defaultEnabled: await on('mod_prayer_default_enabled'), pill: await on('mod_prayer_pill'), method: await getSetting('mod_prayer_method'), asr: await getSetting('mod_prayer_asr'),
+    blockMinutes: await getNumber('mod_prayer_block_minutes'), maxBlockMinutes: await getNumber('mod_prayer_max_block_minutes'), city: await getSetting('mod_prayer_city'),
+  } : null;
   return {
-    features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    prayer, features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };

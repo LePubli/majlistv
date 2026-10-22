@@ -1,0 +1,21 @@
+{
+  "id": "prayer",
+  "name": "Prière : pause et horaires",
+  "version": "1.0.0",
+  "description": "Horaires de prière calculés en interne selon l'endroit où se trouve la personne, pastille « Prochaine prière » dans l'en-tête, pause de la lecture à l'heure de la prière (blocage souple), réglages par personne.",
+  "feature": "prayer",
+  "requires": [],
+  "settings": [
+    { "key": "default_enabled", "type": "bool", "label": "Pause à l'heure de la prière activée par défaut", "def": "true",
+      "help": "Valeur de départ pour les visiteurs et les comptes qui n'ont encore rien choisi. Chacun peut la désactiver dans Compte → Prière." },
+    { "key": "pill", "type": "bool", "label": "Afficher « Prochaine prière » dans l'en-tête", "def": "true",
+      "help": "Pastille à côté de la loupe : nom de la prière et compte à rebours. Chacun peut la masquer dans ses réglages." },
+    { "key": "method", "type": "select", "label": "Méthode de calcul par défaut", "def": "uoif", "options": ["uoif", "mwl", "umm", "egypt", "turkey", "isna"],
+      "help": "uoif = UOIF (France, 12°) ; mwl = Ligue islamique mondiale ; umm = Umm al-Qura ; egypt = Autorité égyptienne ; turkey = Diyanet ; isna = Amérique du Nord." },
+    { "key": "asr", "type": "select", "label": "École pour Asr par défaut", "def": "standard", "options": ["standard", "hanafi"] },
+    { "key": "block_minutes", "type": "number", "label": "Durée de la pause par défaut (minutes)", "def": "10", "min": 1, "max": 120 },
+    { "key": "max_block_minutes", "type": "number", "label": "Durée de pause maximale réglable par chacun (minutes)", "def": "30", "min": 1, "max": 120 },
+    { "key": "city", "type": "text", "label": "Ville par défaut (identifiant)", "def": "paris",
+      "help": "Utilisée quand le fuseau de l'appareil ne correspond à aucune ville de la liste. Exemples : paris, lille, marseille, bruxelles, casablanca, alger, tunis, dakar." }
+  ]
+}

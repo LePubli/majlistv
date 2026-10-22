@@ -3710,3 +3710,60 @@ html[dir=rtl] .kc-search input { padding: 0 52px 0 18px; }
 .pwa-soon { opacity: .85; }
 .pwa-installed { margin: 0; }
 @media (max-width: 520px) { .pwa-hero { flex-direction: column; text-align: center; } .pwa-btn { justify-self: stretch; } }
+
+/* ===== Étape 23a — Prière : pastille d'en-tête, horaires du jour, écran de pause, réglages ===== */
+.hd-search-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.pry { position: relative; display: inline-flex; }
+.pry-pill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1; white-space: nowrap; transition: border-color .15s, background .15s, color .15s; }
+.pry-pill svg { color: var(--accent); flex: none; }
+.pry-pill:hover { border-color: var(--accent); color: var(--text); }
+.pry-pill .pry-time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; letter-spacing: .01em; }
+.pry-pill.is-soon { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.pry-pill.is-soon svg, .pry-pill.is-soon .pry-time { color: var(--on-accent); }
+.pry-pop { position: absolute; top: calc(100% + 10px); inset-inline-end: 0; z-index: 70; width: 290px; max-width: calc(100vw - 24px); padding: 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 48px rgba(0, 0, 0, .5); display: grid; gap: 10px; text-align: start; }
+.pry-pop-title { margin: 0; font-weight: 700; font-size: 14px; color: var(--text); }
+.pry-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.pry-list li { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 10px; color: var(--text-2); font-size: 14px; }
+.pry-list li b { font-variant-numeric: tabular-nums; color: var(--text); }
+.pry-list li.is-next { background: var(--gold-soft); color: var(--accent); }
+.pry-list li.is-next b { color: var(--accent); }
+.pry-place { margin: 0; font-size: 12px; color: var(--muted); }
+.pry-msg { margin: 0; font-size: 13px; color: var(--accent); }
+.pry-actions { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .pry-pill { padding: 0 10px; gap: 6px; font-size: 12.5px; }
+  .pry-pop { position: fixed; top: 64px; inset-inline: 12px; width: auto; max-width: none; }
+}
+@media (max-width: 340px) { .pry-name { display: none; } }
+
+.pry-backdrop { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; padding: 20px; background: rgba(5, 4, 3, .82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: pry-in .25s ease-out; }
+.pry-card { width: min(440px, 100%); padding: 34px 28px 28px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 30px 80px rgba(0, 0, 0, .6); text-align: center; display: grid; gap: 6px; justify-items: center; }
+.pry-moon { color: var(--accent); margin-bottom: 4px; }
+.pry-eyebrow { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pry-big { margin: 2px 0 0; font-size: clamp(2.2rem, 9vw, 3rem); line-height: 1.1; font-weight: 800; color: var(--accent); }
+.pry-sub { margin: 0; font-size: 1.1rem; color: var(--text); font-variant-numeric: tabular-nums; }
+.pry-help { margin: 14px 0 4px; color: var(--text-2); max-width: 34ch; }
+.pry-left { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pry-buttons { display: grid; gap: 10px; width: 100%; }
+.pry-buttons .btn { width: 100%; justify-content: center; }
+@keyframes pry-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pry-backdrop { animation: none; } .pry-pill { transition: none; } }
+
+.pry-set { display: grid; gap: 14px; }
+.pry-set h2, .pry-set h3 { margin: 0; }
+.pry-set .chk { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.pry-set .chk input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.pry-fs { border: 1px solid var(--line-soft); border-radius: 14px; padding: 12px 14px; display: grid; gap: 10px; margin: 0; min-width: 0; }
+.pry-fs legend { padding: 0 6px; font-weight: 700; font-size: 14px; color: var(--text-2); }
+.pry-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pry-row input { flex: 1 1 220px; min-width: 0; }
+.pry-results { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.pry-results button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.pry-results button:hover { border-color: var(--accent); color: var(--accent); }
+.pry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.pry-checks { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.pry-today { max-width: 360px; }
+
+/* Espace enfant : la pastille reste lisible sur le thème coloré. */
+body.kd-theme .pry-pill { background: rgba(255, 255, 255, .2); border-color: rgba(255, 255, 255, .5); color: #fff; }
+body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }

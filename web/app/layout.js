@@ -24,6 +24,7 @@ import EditMode from '../components/EditMode';
 import { webFeatures, hasWebModule } from '../lib/modules'; // étape M3b : fonctions dont la partie web du module est présente
 import TopBar from '../components/TopBar';
 import PwaRegister from '../components/PwaRegister'; // étape 22a : site installable
+import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -31,7 +32,7 @@ async function siteConfig() {
   try {
     const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
     const c = await res.json();
-    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {}, modules: c.modules || {} };
+    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, prayer: c.prayer || null, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {}, modules: c.modules || {} };
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
@@ -59,16 +60,17 @@ export const generateViewport = async () => ({ themeColor: themeBg(await siteThe
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const [{ appName, trialDays, cards, hasSeries, hasBooks, stats, features, modules }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
+  const [{ appName, trialDays, prayer, cards, hasSeries, hasBooks, stats, features, modules }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
   return (
     <html lang={locale} dir={DIR[locale]}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
+        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
           <StatsBeacon />
           <PwaRegister />
+          <PrayerGate />
           <ResponsiveTables />
           <SkipLink />
           <TopBar />

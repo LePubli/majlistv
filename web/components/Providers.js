@@ -2,6 +2,7 @@
 // Contexte global : textes (i18n), session utilisateur (token en localStorage) et appels API.
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { usePrayerState } from '../lib/usePrayer';
 
 const Ctx = createContext(null);
 // Un jeton « espace enfant » (Mejliss Kids) porte l'identifiant du profil ; le serveur le refuse hors de l'espace enfant.
@@ -12,7 +13,7 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ locale, dict, appName, trialDays = 0, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
+export default function Providers({ locale, dict, appName, trialDays = 0, prayerCfg = null, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -76,6 +77,8 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
   }, [token, kid]);
   // Enfant : il ne quitte jamais l'espace Kids. Le verrou se base sur le jeton lui-même, pour tenir même si l'API répond mal.
   const kidMode = Boolean(kid) || Boolean(token && kidIdOf(token));
+  // Fonction Prière (étape 23a) : réglages, horaires calculés, localisation ; l'en-tête et l'écran de pause la lisent ici.
+  const prayer = usePrayerState({ call, token, kidMode, cfg: prayerCfg, featureOn: features.prayer !== false });
   useEffect(() => { if (kidMode && !path.startsWith('/kids')) router.replace('/kids'); }, [kidMode, path, router]);
   // Thème coloré de l'espace Kids (page des parents et espace enfant).
   useEffect(() => { document.body.classList.toggle('kd-theme', kidMode || path.startsWith('/kids')); }, [kidMode, path]);
@@ -95,5 +98,5 @@ export default function Providers({ locale, dict, appName, trialDays = 0, cards 
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
-    locale, t, appName, statsOn, trialDays, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, user: viewAs === 'visitor' ? null : user, ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }
