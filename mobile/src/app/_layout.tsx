@@ -9,9 +9,10 @@ import { Montserrat_700Bold, Montserrat_800ExtraBold } from '@expo-google-fonts/
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic';
 import { NotoKufiArabic_700Bold, NotoKufiArabic_800ExtraBold } from '@expo-google-fonts/noto-kufi-arabic';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { SessionProvider, useSession } from '@/lib/session';
+import { KidProvider, useKid } from '@/lib/kidSession';
 import { PrayerProvider } from '@/lib/prayerStore';
 import { DownloadProvider } from '@/lib/downloadStore';
 import { routeForPath } from '@/lib/notifRoute';
@@ -38,19 +39,31 @@ function NotificationRouter() {
   return null;
 }
 
+// Espace enfant verrouillé : tant qu'un enfant y est, tout écran hors de l'espace (lien profond, notification, retour) ramène à son accueil.
+function KidLock() {
+  const { kid, ready } = useKid();
+  const segments = useSegments() as string[];
+  useEffect(() => {
+    if (ready && kid && segments[0] !== 'kids') router.replace('/kids/home');
+  }, [ready, kid, segments]);
+  return null;
+}
+
 function Shell() {
   const { ready, dirStyle } = useSession();
+  const kidState = useKid();
   const [fontsLoaded, fontError] = useFonts({
     Montserrat_700Bold, Montserrat_800ExtraBold, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold,
     NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold, NotoKufiArabic_700Bold, NotoKufiArabic_800ExtraBold,
   });
-  const done = ready && (fontsLoaded || !!fontError);
+  const done = ready && kidState.ready && (fontsLoaded || !!fontError);
   useEffect(() => { if (done) void SplashScreen.hideAsync(); }, [done]);
   if (!done) return null;
   return (
     <>
       <StatusBar style="light" />
       <NotificationRouter />
+      <KidLock />
       <PrayerGate />
       <AppUpdate />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
@@ -71,6 +84,7 @@ function Shell() {
         <Stack.Screen name="downloads" />
         <Stack.Screen name="offline/[id]" />
         <Stack.Screen name="offline/quiz/[id]" />
+        <Stack.Screen name="kids" />
       </Stack>
     </>
   );
@@ -80,11 +94,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <PrayerProvider>
-          <DownloadProvider>
-            <Shell />
-          </DownloadProvider>
-        </PrayerProvider>
+        <KidProvider>
+          <PrayerProvider>
+            <DownloadProvider>
+              <Shell />
+            </DownloadProvider>
+          </PrayerProvider>
+        </KidProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

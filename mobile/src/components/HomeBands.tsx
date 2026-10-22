@@ -1,11 +1,10 @@
 // Bandeaux de l'accueil : « Explorer par format » et bande « Espace Kids ».
 import React from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
-import { SITE_URL } from '@/lib/config';
 import type { FormatItem, KidsHome } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { minutesLabel, thumbOf } from '@/lib/media';
@@ -49,7 +48,7 @@ export function KidsWord({ size = 24 }: { size?: number }) {
 export function KidsBand({ data }: { data: KidsHome }) {
   const { t, config } = useSession();
   if (!data?.enabled || !data.talks?.length) return null;
-  const open = () => { void Linking.openURL(`${SITE_URL}/kids`); }; // l'espace Kids natif arrive à la tranche 2c
+  const open = () => { router.push('/kids'); };
   return (
     <View style={{ marginHorizontal: GUTTER, padding: 16, borderRadius: radius.panel, backgroundColor: '#0A1038', borderWidth: 1, borderColor: '#34459F', gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

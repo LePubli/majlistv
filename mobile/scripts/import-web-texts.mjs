@@ -12,7 +12,7 @@ const { DICT } = await import(pathToFileURL(join(tmp, 'i18n.mjs')).href);
 
 // Préfixes de clés repris du site (une famille = un écran ou une fonction).
 const PREFIXES = ['hero', 'row', 'cit', 'fm', 'kdBand', 'rev', 'qp', 'pz', 'wb', 'nt', 'lk', 'pv', 'th', 'lv', 'spd', 'aud', 'cn', 'ep', 'season', 'ser', 'tab',
-  'err', 'reg', 'hm', 'fav', 'search', 'sr', 'up', 'play', 'prev', 'next', 'share', 'rp', 'lr', 'col', 'ch', 'sp', 'pr', 'sub', 'follow', 'welcome', 'cat', 'fmt', 'ft', 'pc', 'tp', 'pry'];
+  'err', 'reg', 'hm', 'fav', 'search', 'sr', 'up', 'play', 'prev', 'next', 'share', 'rp', 'lr', 'col', 'ch', 'sp', 'pr', 'sub', 'follow', 'welcome', 'cat', 'fmt', 'ft', 'pc', 'tp', 'pry', 'kd', 'kc'];
 // Clés isolées.
 const EXACT = ['home', 'library', 'navCatalogue', 'navLearn', 'seriesNav', 'colNav', 'minutes', 'login', 'register', 'email', 'password', 'submit', 'free', 'premium', 'mixed',
   'noTalks', 'summary', 'chapters', 'transcript', 'dSpeaker', 'dCategory', 'dLang', 'dDuration', 'dAccess', 'dSubs', 'lvLabel', 'pricing', 'subscribe', 'logout', 'account',

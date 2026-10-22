@@ -64,7 +64,8 @@ test('langues : mêmes clés partout, mêmes variables {x}, sens d’écriture',
   for (const l of ['en', 'ar'] as const) {
     assert.deepEqual(Object.keys(DICT[l]).sort(), keys, `clés de ${l}`);
     for (const k of keys) {
-      const vars = (s: string) => (s.match(/\{\w+\}/g) || []).sort().join();
+      // {s} = suffixe de pluriel : propre au français / à l’anglais, absent en arabe.
+      const vars = (s: string) => [...new Set(s.match(/\{\w+\}/g) || [])].filter((v) => v !== "{s}").sort().join();
       assert.equal(vars(DICT[l][k as keyof typeof DICT.fr]), vars(DICT.fr[k as keyof typeof DICT.fr]), `variables de ${l}.${k}`);
       assert.ok(DICT[l][k as keyof typeof DICT.fr].trim().length > 0, `${l}.${k} vide`);
     }

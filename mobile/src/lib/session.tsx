@@ -24,6 +24,8 @@ type Session = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Adopte un jeton de parent renvoyé par le serveur (sortie de l'espace enfant). */
+  adopt: (res: { token: string; user: User }) => Promise<void>;
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: (key: Key, vars?: Record<string, string | number>) => string;
@@ -137,10 +139,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback((key: Key, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
 
   const value = useMemo<Session>(() => ({
-    ready, user, api, login, register, logout, locale, setLocale, t, config, feat, favs, toggleFav,
+    ready, user, api, login, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, register, logout, locale, setLocale, t, config, feat, favs, toggleFav]);
+  }), [ready, user, api, login, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

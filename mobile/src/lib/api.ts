@@ -4,11 +4,14 @@
 export class ApiError extends Error {
   status: number;
   code?: string;
-  constructor(message: string, status: number, code?: string) {
+  /** Corps JSON de la réponse d'erreur (ex. { left } : essais restants du code parental). */
+  data?: Record<string, unknown>;
+  constructor(message: string, status: number, code?: string, data?: Record<string, unknown>) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.data = data;
   }
 }
 
@@ -70,7 +73,7 @@ export function createApi(opts: ApiOptions) {
     }
     if (!res.ok) {
       if (res.status === 401 && token) opts.onUnauthorized?.();
-      throw new ApiError(data?.error || `HTTP ${res.status}`, res.status, data?.code);
+      throw new ApiError(data?.error || `HTTP ${res.status}`, res.status, data?.code, data && typeof data === 'object' ? data : undefined);
     }
     return data as T;
   }

@@ -32,7 +32,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     { key: 'learning', label: t('navLearn'), icon: 'book-open', go: nav('/learn'), on: feat('learning') },
     { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },
     { key: 'downloads', label: t('dl.open'), icon: 'download', go: nav('/downloads'), on: feat('offline') },
-    { key: 'kids', label: t('kdNav'), icon: 'smile', go: site('/kids'), on: feat('kids') },
+    { key: 'kids', label: t('kdNav'), icon: 'smile', go: nav('/kids'), on: feat('kids') },
   ];
 
   return (

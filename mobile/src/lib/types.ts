@@ -155,3 +155,19 @@ export type ThemeDetail = { id: string; title: string; translit?: string; ar?: s
 export type SpeakerDetail = { slug: string; name: string; bio?: string; talks: number; seriesCount: number; series: SeriesItem[]; followers?: number };
 export type SearchHit = Card & { snippet?: string | null; moments?: { ms: number; text: string }[] };
 export type SearchResult = { total: number; hits: SearchHit[]; series: SeriesItem[]; markers: [string, string] };
+
+// ---- Mejliss Kids (22b-9a) ----
+export type KidProfile = { id: string; name: string; avatar: string; band: string };
+export type KidProfileFull = KidProfile & { dailyLimitMin: number | null; catalogMode: string };
+export type KidsState = {
+  allowed: boolean; hasPin: boolean; max: number; learning: boolean; reportEmail: string | null;
+  profiles: KidProfileFull[]; bands: string[]; avatars: string[];
+};
+export type KidTime = { limitMin: number | null; usedSec: number; leftSec: number | null; timeUp: boolean };
+export type KidRubric = { id: number; slug: string; names: Record<string, string>; emoji: string; position: number };
+export type KidCard = {
+  id: string; title: string; speaker: string | null; access: string; source: string; kidsBands: string[]; durationSeconds: number | null;
+  completed: boolean; positionMs: number; rubricIds: number[]; stars: number | null; posterUrl: string | null;
+};
+export type KidShelf = { kind: 'resume' | 'because' | 'age' | 'new' | 'popular' | 'rubric'; ids: string[]; rubricId?: number; basedOn?: { id: string; title: string } };
+export type KidCatalog = { rubrics: KidRubric[]; shelves: KidShelf[]; talks: KidCard[]; time: KidTime };

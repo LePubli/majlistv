@@ -5534,3 +5534,24 @@ curl -sI -H "Origin: https://www.gstatic.com" "https://api-majlisstv.le-publicit
 **Debug.** Pas de bouton : navigateur non compatible, aucun appareil sur le même réseau Wi-Fi (le SDK masque le bouton sinon), ou SDK bloqué (extension anti-pub, réseau d'entreprise) ; console : `cast_sender.js`. Le téléviseur affiche une erreur : vérifier l'en-tête CORS (`curl -sI -H "Origin: https://www.gstatic.com" "https://majlisstv.le-publicitaire.fr/api/hls/<id>/master.m3u8?t=<jeton>" | grep -i access-control`) et la règle CORS du bucket. Le site doit être en **https** (le récepteur refuse http).
 
 **Testé / non testé.** Testé (Chromium automatisé, SDK Google **simulé**) : bouton absent sous Safari et Firefox, présent sous Chrome ; démarrage d'une session → un seul chargement avec l'adresse https complète, le type `application/x-mpegurl`, la position de reprise et le récepteur par défaut ; panneau, pause et +10 s transmis au téléviseur ; arrêt → reprise locale à la position du téléviseur ; logique pure et CSP (`web/tests/cast.mjs`). **Non testé** : le vrai SDK Google et un vrai Chromecast, la PWA installée (le SDK web est annoncé pour Chrome ; son comportement dans une PWA installée n'a pas été vérifié), AirPlay sous Safari, l'arabe. Limites : l'enregistrement de la progression pendant la diffusion suit la position du téléviseur mais le suivi d'audience (statistiques) considère le lecteur local en pause ; pas de sous-titres sur le téléviseur ; la vitesse de lecture ne s'applique pas au téléviseur.
+
+## Étape 22b-9a — Espace Kids natif : entrée, profils, code parental, accueil enfant (22/10, application 0.9.0)
+
+**Description.** L'application mobile embarque désormais « Mejliss TV Kids » (avant : simple lien vers le site). Le parent (connecté, abonné) crée un **code parental** (4 à 6 chiffres, saisi deux fois), puis des **profils d'enfants** (prénom, avatar, tranche d'âge). Choisir un profil ouvre l'espace enfant : accueil (bonjour, temps restant, recherche, rubriques, « seulement pour mon âge », rangées), lecture (HLS, archive.org ; YouTube/Vimeo en lecteur intégré) avec reprise, vidéos suivantes. L'enfant ne sort que par le **cadenas + code parental** ; le bouton retour d'Android ne quitte jamais l'espace. Pas de téléchargement, de diffusion TV ni d'incrustation dans l'espace enfant (choix validé). Couleurs Kids inchangées (bleu nuit, or vif).
+
+**Sécurité.** L'enfant reçoit un jeton **distinct** (12 h) que le serveur refuse hors des routes Kids ; le jeton du parent n'est plus utilisé pendant la session enfant. Le jeton enfant est renouvelé en silence avant expiration (après 9 h). Code parental : 5 erreurs = blocage 10 min (règle du serveur). La limite quotidienne est comptée par le serveur (battement toutes les 30 s).
+
+**Prérequis.** Aucun changement API ni site : API et web inchangés. Seulement une nouvelle version de l'application (0.9.0, sans nouveau module natif → mise à jour automatique possible).
+
+**Déploiement.**
+1. Pousser sur `main` (le workflow GitHub fabrique l'APK car `mobile/**` change et publie la version).
+2. Sur le téléphone : Compte → vérifier la mise à jour, ou installer depuis la page « Télécharger l'application ».
+3. Aucun redéploiement DockPanel nécessaire.
+
+**Essai sur téléphone.** Menu → Kids → connexion → créer le code → créer un profil → l'ouvrir → lancer une vidéo → toucher le cadenas → saisir le code → retour au compte parent. Vérifier aussi : bouton retour Android (rien ne se passe), fermeture/réouverture de l'application (l'enfant reste dans son espace), arabe (disposition de droite à gauche).
+
+**Debug.** Pas de vidéo : vérifier que le profil a une tranche d'âge et que des conférences Kids existent (Admin → Kids). « Session expirée » : l'application rouvre le choix du profil. Code oublié : le parent le change depuis le site (Mon compte → Kids).
+
+**Tests.** `cd mobile && npm run check` (types + 103 tests dont `tests/kids.test.ts`). Contrat réel contre l'API : `export KIDS_FIXTURE="$(python3 api/tests/kids_fixture.py | tail -1)"; cd mobile && API_URL=http://127.0.0.1:3055 npx tsx tests/kids_contract.ts` (état parent, code, profil, entrée + verrou, catalogue, recherche, lecture + reprise, temps, sortie).
+
+**Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Metro Android. **Non testé** : les écrans sur un vrai téléphone (affichage, lecture vidéo, bouton retour, arabe). Reste (sur « go ») : 9b (quiz et étoiles, courts Kids, petites actions, pause de prière) et 9c (espace parent : limite, sélection du catalogue, validation des actions, rapport, changement de code, modification de profil).
