@@ -34,9 +34,9 @@ const putError = (status) => (status === 0 ? "Le navigateur n'a pas pu joindre l
 function Preview({ ad }) {
   if (!ad.mediaUrl) return null;
   return ad.mediaKind === 'video'
-    ? <video className="ads-thumb" src={ad.mediaUrl} muted playsInline preload="metadata" controls />
+    ? <video className="camp-thumb" src={ad.mediaUrl} muted playsInline preload="metadata" controls />
     // eslint-disable-next-line @next/next/no-img-element
-    : <img className="ads-thumb" src={ad.mediaUrl} alt="" loading="lazy" />;
+    : <img className="camp-thumb" src={ad.mediaUrl} alt="" loading="lazy" />;
 }
 
 function AdForm({ ad, limits, onDone, onCancel }) {
@@ -79,7 +79,7 @@ function AdForm({ ad, limits, onDone, onCancel }) {
   };
 
   return (
-    <form className="form ads-form card" onSubmit={submit}>
+    <form className="form camp-form card" onSubmit={submit}>
       <h2>{ad ? 'Modifier la publicité' : 'Nouvelle publicité'}</h2>
       <label className="fld"><span>Visuel plein écran {ad ? '(laisser vide pour garder l’actuel)' : ''}</span>
         <input type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,.png,.jpg,.jpeg,.webp,.mp4,.webm" onChange={(e) => setFile(e.target.files?.[0] || null)} />
@@ -127,7 +127,7 @@ export default function AdsAdmin() {
   if (data.error) return <p className="error">{data.error}</p>;
   const ads = data.ads;
   return (
-    <section className="ads-admin">
+    <section className="camp-admin">
       <p className="meta">Publicités plein écran, passables, montrées au lancement de l’application (jamais dans l’espace Kids, jamais pendant l’heure de prière). S’il y en a plusieurs en cours, elles tournent : une différente à chaque lancement. Réglages (abonnés payants, nombre à la suite, durées) : Admin → Paramètres → « Publicité au lancement ».</p>
       {!data.storage && <p className="error">Le stockage vidéo n’est pas configuré : l’envoi des visuels est impossible.</p>}
       {form ? (
@@ -137,13 +137,13 @@ export default function AdsAdmin() {
       )}
       {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
       {ads.length === 0 && !form && <p className="meta">Aucune publicité pour l’instant.</p>}
-      <ul className="ads-list">
+      <ul className="camp-list">
         {ads.map((a) => {
           const [label, cls] = STATUS[a.status] || ['', 'meta'];
           return (
-            <li key={a.id} className="card ads-item">
+            <li key={a.id} className="card camp-item">
               <Preview ad={a} />
-              <div className="ads-info">
+              <div className="camp-info">
                 <b>{a.title}</b>
                 <small className="meta">{a.advertiser}{a.sentence ? ` · ${a.sentence}` : ''}</small>
                 <small className={cls}>{label}{a.startsAt ? ` · du ${when(a.startsAt, locale)}` : ''}{a.endsAt ? ` · jusqu’au ${when(a.endsAt, locale)}` : ''}</small>
