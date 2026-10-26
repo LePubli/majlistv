@@ -25,6 +25,7 @@ from botocore.config import Config
 
 from settings import Settings
 import external
+import watch
 import importer
 import align
 import speakers
@@ -804,6 +805,70 @@ def import_loop():
             time.sleep(10)
 
 
+# --- Étape 23b : veille des chaînes (fil séparé, sa propre connexion) ------------------------------------------------------------
+def watch_loop():
+    conn = None
+
+    def local_query(sql, params=None, fetch=False):
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return cur.fetchall() if fetch else cur.rowcount
+
+    conf = Settings(local_query, lambda *a: log(*a))
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+            conf.refresh()
+            hours = conf.get_int("watch_interval_hours", "WATCH_INTERVAL_HOURS", 6)
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    f"""UPDATE watch_sources SET last_check_at = now(), check_requested = false
+                        WHERE id = (SELECT id FROM watch_sources WHERE active AND {watch.due_clause(hours)}
+                                    ORDER BY check_requested DESC, last_check_at NULLS FIRST LIMIT 1 FOR UPDATE SKIP LOCKED)
+                        RETURNING id, url, label, baselined"""
+                )
+                src = cur.fetchone()
+            if not src:
+                time.sleep(30)
+                continue
+            work = os.path.join(WORK_DIR, "watch-" + str(src["id"]))
+            os.makedirs(work, exist_ok=True)
+            try:
+                limit = max(5, conf.get_int("watch_max_videos", "WATCH_MAX_VIDEOS", 30))
+                log(f"[veille {src['id']}] lecture de {src['url']}")
+                title, entries = external.list_videos(src["url"], external_options(work, conf), limit)
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute("SELECT video_id FROM watch_items WHERE source_id = %s", (src["id"],))
+                    known = {r["video_id"] for r in cur.fetchall()}
+                    cur.execute("SELECT source, video_ref FROM talks WHERE source <> 'upload' AND video_ref = ANY(%s)", ([e["id"] for e in entries],))
+                    in_catalog = {(r["source"], r["video_ref"]) for r in cur.fetchall()}
+                    plan = watch.plan_check(entries, known, in_catalog, src["baselined"])
+                    for e, status in plan:
+                        cur.execute(
+                            """INSERT INTO watch_items(source_id, platform, video_id, title, duration, thumb, status)
+                               VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (source_id, video_id) DO NOTHING""",
+                            (src["id"], e["source"], e["id"], e["title"][:300], e.get("duration"), e.get("thumb"), status))
+                    cur.execute(
+                        """UPDATE watch_sources SET baselined = true, last_ok_at = now(), last_error = NULL, last_count = %s,
+                                  label = CASE WHEN label = '' THEN %s ELSE label END WHERE id = %s""",
+                        (len(entries), (title or "")[:120], src["id"]))
+                fresh = sum(1 for _, st in plan if st == "new")
+                log(f"[veille {src['id']}] {len(entries)} vidéo(s) lue(s), {fresh} nouvelle(s)")
+            except Exception as err:  # noqa: BLE001
+                log(f"[veille {src['id']}] échec : {err}")
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE watch_sources SET last_error = %s WHERE id = %s", (str(err)[:500], src["id"]))
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+            time.sleep(3)  # poli avec les plateformes entre deux sources
+        except Exception as err:  # noqa: BLE001
+            log("Veille : erreur base :", err)
+            conn = None
+            time.sleep(30)
+
+
 # --- Étape Import : copie chez nous d'une vidéo externe (fil séparé, sa propre connexion à la base) ---------------------------------
 # Le fil télécharge la vidéo (yt-dlp, archive.org, lien direct), vérifie qu'elle est lisible, l'envoie dans Garage (talks/<uuid>),
 # puis passe la demande à « converting » : le worker la convertit en HLS et bascule la conférence (voir worker/src/importconv.js).
@@ -1019,6 +1084,7 @@ def main():
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
     threading.Thread(target=media_import_loop, daemon=True).start()
+    threading.Thread(target=watch_loop, daemon=True).start()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 
     while not stopping:

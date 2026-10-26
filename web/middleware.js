@@ -34,7 +34,7 @@ export function buildCsp(nonce, { https, dev }) {
     // Les attributs style="…" de React ne peuvent pas porter de nonce : 'unsafe-inline' reste nécessaire pour les styles
     // (risque faible comparé aux scripts).
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', 'https://www.dailymotion.com', 'https://*.dmcdn.net', ...stor],
+    'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', 'https://i.vimeocdn.com', 'https://www.dailymotion.com', 'https://*.dmcdn.net', ...stor],
     'media-src': ["'self'", 'blob:', ...stor],
     'font-src': ["'self'", 'data:'],
     'connect-src': ["'self'", 'https://www.gstatic.com', ...stor],

@@ -3803,3 +3803,16 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .cast-panel strong { font-size: 18px; }
 .cast-ctl { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 @media (max-width: 640px) { .wb-cast { top: 8px; width: 36px; height: 36px; } .cast-panel { padding: 16px; border-radius: 0; } }
+
+/* Admin → Veille (étape 23b) */
+.watch-admin h2 { margin: 28px 0 10px; font-size: 1.15rem; }
+.watch-new { margin-top: 18px; }
+.watch-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.watch-item { padding: 14px; border-radius: 16px; width: 100%; max-width: none; margin: 0; }
+.watch-list { align-items: start; }
+.watch-row { display: flex; gap: 14px; align-items: flex-start; }
+.watch-thumb { width: 160px; height: 90px; object-fit: cover; border-radius: 10px; flex: none; background: #000; }
+.watch-info { display: grid; gap: 6px; min-width: 0; flex: 1; }
+.watch-info b { overflow-wrap: anywhere; }
+.watch-add { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line, rgba(255,255,255,.12)); }
+@media (max-width: 560px) { .watch-row { flex-direction: column; } .watch-thumb { width: 100%; height: auto; aspect-ratio: 16 / 9; } }

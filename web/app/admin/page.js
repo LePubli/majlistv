@@ -1,6 +1,7 @@
 'use client';
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
+import WatchAdmin from '../../components/WatchAdmin';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1109,7 +1110,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions" };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1126,6 +1127,7 @@ export default function Admin() {
       {tab === 'categories' && <><Categories /><Formats /></>}
       {tab === 'speakers' && <Speakers />}
       {tab === 'audit' && <AuditLog />}
+      {tab === 'watch' && <WatchAdmin />}
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}
     </main>
   );

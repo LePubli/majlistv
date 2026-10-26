@@ -426,3 +426,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 23a (26/10) — Dailymotion comme source vidéo
 - Nouvelle source `dailymotion` (API, site, transcripteur, application 0.12.0, migration 063) + réglage « Player ID Dailymotion ». Voir README « Étape 23a ». Reste (sur « go ») : 23b (veille des chaînes YouTube / Dailymotion / Vimeo, alertes dans l'admin), 22c Android TV, 22d Apple TV.
+
+## Étape 23b (26/10) — Veille des chaînes
+- Admin → Veille : sources YouTube / Dailymotion / Vimeo relues toutes les 6 h, nouvelles vidéos listées pour l'administrateur seul (Ajouter avec attestation des droits / Ignorer), migration 064, fonction activable. Voir README « Étape 23b ». Reste (sur « go ») : 22c Android TV, 22d Apple TV.

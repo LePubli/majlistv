@@ -5619,3 +5619,30 @@ bash /root/verify-deploy.sh
 **Tests.** `python3 api/tests/test_dailymotion.py` (contre l'API de test), `python3 transcriber/tests/test_external.py`, `cd mobile && npm run check` (types + 120 tests), `cd web && npx next build`.
 
 **Honnêteté.** Testé : lecture des adresses (toutes formes), enregistrement et refus côté API, migration, transcripteur (identifiants, adresse), page générée pour l'application, types, compilation du site. **Non testé** : lecture réelle d'une vidéo Dailymotion (pas d'accès réseau à Dailymotion dans l'environnement de développement), le lecteur piloté avec un vrai Player ID, l'import chez nous d'une vidéo Dailymotion, l'application sur un téléphone, l'arabe (RTL).
+
+
+## Étape 23b — Veille des chaînes YouTube / Dailymotion / Vimeo (26/10, API + site + transcripteur)
+
+**Description.** Admin → **Veille** (entrée du menu, avec une pastille « (n) » quand il y a des vidéos à traiter). L'administrateur colle l'adresse d'une chaîne, d'un compte, d'une playlist ou d'un album YouTube, Dailymotion ou Vimeo. Toutes les **6 heures** (réglable), le transcripteur relit chaque source avec yt-dlp (sans rien télécharger) et range les nouvelles vidéos dans la liste « À traiter », **visible de l'administrateur seul** (aucun e-mail, aucune notification ailleurs).
+- **Première lecture = référence** : les vidéos déjà publiées sont notées « déjà vues » et ne déclenchent aucune alerte ; seules les suivantes sont signalées.
+- Pour chaque nouvelle vidéo : **Voir** (ouvre la plateforme), **Ajouter…** (formulaire : intervenant, catégorie, accès gratuit/premium, langue, **case « J'ai l'accord de l'auteur »** ; sans elle la vidéo est ajoutée sans transcription ni traduction), **Ignorer** (récupérable via « Ignorées » → « Remettre à traiter »). « Tout ignorer » vide la liste d'un coup.
+- Par source : **Vérifier maintenant** (pris dans la minute), **Pause / Reprendre**, **Supprimer**, dernier contrôle, nombre de vidéos lues, dernière erreur lisible (ex. « YouTube bloque l'accès depuis le serveur »).
+- Une vidéo déjà au catalogue n'est jamais signalée ; si elle y est ajoutée entre-temps, « Ajouter » la rattache sans doublon.
+- Fonction activable : Admin → Fonctions → « Veille des chaînes » (coupée : menu et routes fermés). Réglages : Admin → Paramètres → « Vidéos YouTube, Vimeo et Dailymotion » → *intervalle (heures)* et *nombre de vidéos récentes lues par contrôle* (30).
+
+**Prérequis.** Migration `064_watch.sql` (tables `watch_sources`, `watch_items`, appliquée au démarrage de l'API). Redéployer **api**, **web** et **transcriber** (c'est lui qui fait les contrôles). Les cookies / proxy YouTube déjà réglés dans Admin → Paramètres servent aussi à la veille.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`, puis `majlistv-transcriber`. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+**Essai.** Admin → Veille → coller l'adresse d'une chaîne → « Suivre » → attendre 1 à 2 minutes → la ligne affiche « OK · n vidéo(s) lues » (aucune alerte : c'est la référence). Publier une vidéo sur cette chaîne (ou, pour tester, supprimer la source puis la rajouter après une publication), cliquer « Vérifier maintenant » → la vidéo apparaît dans « À traiter » et la pastille du menu s'allume. Voir les contrôles côté serveur : `docker logs --tail 50 dockpanel-git-majlistv-transcriber | grep veille`.
+
+**Debug.** État « Erreur : YouTube bloque l'accès… » : ajouter des cookies ou un proxy (Admin → Paramètres → Vidéos YouTube, Vimeo et Dailymotion), puis « Vérifier maintenant ». Rien ne se passe après « Suivre » : transcripteur non redéployé ou arrêté (voir les journaux ci-dessus). Chaîne qui publie beaucoup : augmenter « nombre de vidéos récentes lues ». Une source en erreur n'est relue qu'à l'intervalle suivant (ou à « Vérifier maintenant »). La pastille se met à jour toutes les 2 minutes, la page toutes les minutes.
+
+**Tests.** `python3 transcriber/tests/test_watch.py` (logique : référence, nouveautés, doublons, intervalle borné) ; `python3 api/tests/test_watch.py` (contre l'API de test : droits, ajout / doublon / mauvaise adresse, ignorer / remettre, ajout avec et sans attestation, déjà au catalogue, pause, suppression, journal d'audit, fonction coupée) ; `cd web && npx next build`. Page vérifiée dans un navigateur de test (ordinateur et 390 px, sans débordement, flux Ajouter / Ignorer / Suivre).
+
+**Honnêteté.** Testé : API et base, logique de détection, requêtes SQL du contrôle jouées sur la base de test, interface. **Non testé** : la lecture réelle d'une chaîne par le transcripteur (pas d'accès à YouTube / Dailymotion / Vimeo en développement) — notamment la forme des adresses de comptes Dailymotion et Vimeo avec yt-dlp, et le risque que YouTube bloque l'IP du serveur ; l'arabe (l'écran de la Veille est en français, comme le reste de l'admin).

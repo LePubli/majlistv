@@ -24,6 +24,8 @@ export const FEATURES = [
   // Catalogue
   { id: 'series', group: 'catalog', label: 'Séries et épisodes', hint: 'Regroupements ordonnés en saisons et épisodes',
     rules: [{ re: '^/(series|me/series|studio/series|studio/series-candidates|talks/[^/]+/series)(/|$)' }] },
+  { id: 'watch', group: 'catalog', label: 'Veille des chaînes', hint: 'Suivre des chaînes YouTube / Dailymotion / Vimeo et recevoir les nouvelles vidéos dans l\'admin (administrateur seulement)',
+    rules: [{ re: '^/admin/watch(/|$)' }] },
   { id: 'collections', group: 'catalog', label: 'Collections', hint: 'Sélections éditoriales de conférences',
     rules: [{ re: '^/(collections|studio/collections)(/|$)' }] },
   { id: 'books', group: 'catalog', label: 'Ouvrages', hint: 'Livres et PDF liés aux conférences',

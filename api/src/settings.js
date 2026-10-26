@@ -225,6 +225,11 @@ export const FIELDS = [
   { key: 'ytdlp_cookies', group: 'external', type: 'secret_text', label: 'Cookies YouTube (si YouTube bloque le serveur)', env: 'YTDLP_COOKIES',
     help: 'Contenu d\'un fichier cookies.txt (format Netscape) exporté depuis un navigateur connecté à un compte Google dédié. Laisser vide si tout fonctionne.' },
   { key: 'ytdlp_proxy', group: 'external', type: 'secret', label: 'Proxy de sortie (facultatif)', env: 'YTDLP_PROXY', help: 'Ex. http://utilisateur:motdepasse@proxy:port. Pour contourner un blocage par adresse IP.' },
+  // Étape 23b : veille des chaînes (lus par le transcripteur).
+  { key: 'watch_interval_hours', group: 'external', type: 'number', label: 'Veille : vérifier les chaînes suivies toutes les … heures', env: 'WATCH_INTERVAL_HOURS', def: '6', min: 1, max: 48,
+    help: 'Admin → Veille. Chaque chaîne suivie est relue à cet intervalle ; les nouvelles vidéos s\'ajoutent à la liste à traiter.' },
+  { key: 'watch_max_videos', group: 'external', type: 'number', label: 'Veille : nombre de vidéos récentes lues à chaque contrôle', env: 'WATCH_MAX_VIDEOS', def: '30', min: 5, max: 200,
+    help: 'Les plus récentes de la chaîne. À augmenter seulement si une chaîne publie plus que cela entre deux contrôles.' },
   { key: 'import_max_videos', group: 'external', type: 'number', label: 'Nombre maximum de vidéos par import de playlist ou de chaîne', env: 'IMPORT_MAX_VIDEOS', def: '200', min: 1, max: 2000 },
   // Étape Import : copie d'une vidéo externe chez nous (lus par le transcripteur, qui télécharge).
   { key: 'import_max_gb', group: 'external', type: 'number', label: 'Taille maximale d\'une vidéo importée (Go)', env: 'IMPORT_MAX_GB', def: '8', min: 1, max: 100,
