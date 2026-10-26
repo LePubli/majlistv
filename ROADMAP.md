@@ -459,3 +459,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 28 (27/10) — Admin → Paramètres : accueil par thèmes, recherche, sections en blocs (site seulement)
 - Voir README « Étape 28 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.
+
+## Idées d'améliorations (27/10) — liste proposée, rien de planifié
+- Voir `docs/IDEES-AMELIORATIONS.md` (8 thèmes, apport et effort de chaque idée, ordre conseillé). Chaque idée démarre sur un « go » d'Epok.
