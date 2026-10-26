@@ -5660,3 +5660,24 @@ bash /root/verify-deploy.sh
 **Tests.** Navigateur de test à 390 px : barre, ouverture, fermeture (bouton, Échap, lien), bureau inchangé. `cd web && npx next build`.
 
 **Honnêteté.** Non testé sur un vrai téléphone ni en arabe (RTL) ; le tiroir y est écrit en miroir mais non relu visuellement.
+
+
+## Étape 24a — Nouvelle page de lecture dans l'application (26/10, application 0.13.0)
+
+**Description.** La fiche d'une conférence (maquette « Lecture B — étude », validée) :
+- **Lecteur épinglé en haut**, avec le chapitre en cours affiché dessus ; plein écran pour les vidéos lues par l'appli (les commandes d'origine reviennent alors).
+- **Une seule barre de commandes** sous le lecteur : progression (toucher pour aller à un endroit), temps, −10 s, chapitre précédent / suivant, lecture-pause, vitesse. Elle sert aussi aux vidéos YouTube / Vimeo / Dailymotion, dont les commandes d'origine sont masquées (fini le doublon). Toucher la vidéo native = lecture / pause.
+- **Titre compact** (série / catégorie, titre, intervenant + « Suivre », durée, niveau), bouton **Favori** et bouton **⋯** qui ouvre « Actions » : Ma liste, Partager, Mode audio, Incrustation, Diffusion TV, Télécharger.
+- **Onglets** : Chapitres ouverts par défaut s'il y en a (sinon Résumé), puis Texte, Notes, À propos ; chapitre en cours surligné.
+- **Barre du bas** fixe : « Quiz : retenir » (si un quiz existe) et « Prendre une note » (ouvre l'onglet Notes).
+- Le reste (carte Apprendre, série, « Dans la même veine ») défile sous les onglets au lieu d'occuper l'écran en bas.
+
+**Prérequis / déploiement.** Application seulement (aucun changement API ni site, pas de nouveau module natif) : poussé sur `main` → APK / mise à jour automatique 0.13.0. Aucun redéploiement DockPanel.
+
+**Essai sur téléphone.** Ouvrir une conférence envoyée (vidéo native) puis une conférence YouTube : une seule barre de commandes ; toucher la barre de progression ; chapitre suivant ; vitesse ; « ⋯ » → Mode audio ; plein écran ; « Prendre une note » → l'onglet Notes s'ouvre.
+
+**Debug.** Commandes YouTube encore visibles : vidéo dont l'auteur impose son lecteur (rare) ou application pas à jour. Vimeo : le masquage des commandes ne fonctionne que pour les comptes Vimeo qui l'autorisent. Dailymotion : commandes d'origine non masquables (à vérifier avec un vrai Player ID). Plein écran absent : normal pour YouTube / Vimeo / Dailymotion (lecteur de la plateforme).
+
+**Tests.** `cd mobile && npm run check` (types + 120 tests, dont chapitres précédent / suivant et appui sur la barre) ; bundle Android `npx expo export --platform android`.
+
+**Honnêteté.** Testé : types, tests unitaires, compilation du bundle. **Non testé** : l'affichage sur un vrai téléphone (placement des boutons, barre du bas, feuille « Actions », arabe RTL), la lecture réelle, le plein écran, Chromecast depuis la feuille « Actions », les commandes masquées de YouTube / Vimeo. La barre de progression ne se glisse pas au doigt : on touche l'endroit voulu.

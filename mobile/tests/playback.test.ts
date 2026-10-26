@@ -99,3 +99,23 @@ test('dégradé de repli : stable pour une même conférence', () => {
   assert.deepEqual(gradientFor('abc'), gradientFor('abc'));
   assert.equal(gradientFor('abc').length, 2);
 });
+
+test('page de lecture : chapitre précédent / suivant et appui sur la barre', async () => {
+  const { prevChapterMs, nextChapterMs, seekFromTouch } = await import('../src/lib/playback');
+  const ch = [{ s: 0, t: 'A' }, { s: 60_000, t: 'B' }, { s: 120_000, t: 'C' }];
+  assert.equal(prevChapterMs(ch, 90_000), 60_000); // chapitre commencé depuis plus de 3 s : retour à son début
+  assert.equal(prevChapterMs(ch, 62_500), 0); // moins de 3 s après le début : chapitre précédent
+  assert.equal(prevChapterMs(ch, 63_500), 60_000);
+  assert.equal(prevChapterMs(ch, 60_500), 0); // tout début du chapitre : le précédent
+  assert.equal(prevChapterMs(ch, 1_000), 0);
+  assert.equal(prevChapterMs([], 5_000), null);
+  assert.equal(nextChapterMs(ch, 10_000), 60_000);
+  assert.equal(nextChapterMs(ch, 60_000), 120_000);
+  assert.equal(nextChapterMs(ch, 130_000), null);
+  assert.equal(nextChapterMs([], 0), null);
+  assert.equal(seekFromTouch(150, 300, 600), 300);
+  assert.equal(seekFromTouch(-20, 300, 600), 0);
+  assert.equal(seekFromTouch(999, 300, 600), 600);
+  assert.equal(seekFromTouch(10, 0, 600), 0);
+  assert.equal(seekFromTouch(10, 300, 0), 0);
+});

@@ -13,11 +13,16 @@ import { Button, Txt } from '../ui';
 
 export type TabKey = 'summary' | 'chapters' | 'transcript' | 'notes' | 'about';
 
-export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs }: {
+export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs, tab: forced, onTab }: {
   talk: Talk; insights: Insights | null; positionMs: number; onSeek: (ms: number) => void; getPositionMs: () => number;
+  /** Onglet demandé de l'extérieur (ex. « Prendre une note ») ; l'écran de lecture le pilote. */
+  tab?: TabKey | null; onTab?: (k: TabKey) => void;
 }) {
   const { t, locale, user } = useSession();
-  const [tab, setTab] = useState<TabKey>('summary');
+  const [own, setOwn] = useState<TabKey | null>(null);
+  // Par défaut : Chapitres s'il y en a (pour étudier), sinon Résumé.
+  const tab: TabKey = forced ?? own ?? (insights?.chapters?.length ? 'chapters' : 'summary');
+  const setTab = (k: TabKey) => { setOwn(k); onTab?.(k); };
   const tabs: { k: TabKey; label: string }[] = [
     { k: 'summary', label: t('summary') }, { k: 'chapters', label: t('chapters') }, { k: 'transcript', label: t('transcript') },
     { k: 'notes', label: t('ntTab') }, { k: 'about', label: t('tabAbout') },

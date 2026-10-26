@@ -47,3 +47,28 @@ export function currentChapter(chapters: { s: number }[], positionMs: number): n
   chapters.forEach((c, i) => { if (c.s <= positionMs) found = i; });
   return found;
 }
+
+// --- Commandes de la page de lecture (étape 24a) ---
+type Chapter = { s: number; t: string };
+
+/** Début du chapitre à rejoindre en reculant (retour au début du chapitre en cours s'il a commencé il y a plus de 3 s). Pur, testé. */
+export function prevChapterMs(chapters: Chapter[], posMs: number): number | null {
+  if (!chapters.length) return null;
+  let cur = -1;
+  chapters.forEach((c, i) => { if (c.s <= posMs) cur = i; });
+  if (cur < 0) return 0;
+  if (posMs - chapters[cur].s > 3000 || cur === 0) return chapters[cur].s;
+  return chapters[cur - 1].s;
+}
+
+/** Début du chapitre suivant ; null s'il n'y en a plus. Pur, testé. */
+export function nextChapterMs(chapters: Chapter[], posMs: number): number | null {
+  const next = chapters.find((c) => c.s > posMs + 500);
+  return next ? next.s : null;
+}
+
+/** Position (secondes) correspondant à un appui sur la barre : x / largeur × durée, bornée. Pur, testé. */
+export function seekFromTouch(x: number, width: number, durationSec: number): number {
+  if (!(width > 0) || !(durationSec > 0)) return 0;
+  return Math.min(durationSec, Math.max(0, (x / width) * durationSec));
+}

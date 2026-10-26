@@ -59,7 +59,7 @@ ${post}
 var pl,playing=false,LIMIT=${limit};
 function tick(){try{var c=pl.getCurrentTime()||0;post({t:'time',c:c,d:pl.getDuration()||0,playing:playing});if(LIMIT&&c>=LIMIT){pl.pauseVideo();pl.seekTo(LIMIT,true);post({t:'ended'})}}catch(e){}}
 function onYouTubeIframeAPIReady(){pl=new YT.Player('p',{videoId:'${id}',host:'https://www.youtube-nocookie.com',
-playerVars:{autoplay:${auto},start:${start},rel:0,playsinline:1,iv_load_policy:3,modestbranding:1,origin:'${opts.origin}'},
+playerVars:{autoplay:${auto},start:${start},controls:0,fs:0,disablekb:1,rel:0,playsinline:1,iv_load_policy:3,modestbranding:1,origin:'${opts.origin}'},
 events:{onReady:function(){post({t:'ready',d:pl.getDuration()||0});setInterval(tick,500)},
 onStateChange:function(e){playing=e.data===1;post({t:'state',playing:playing});if(e.data===0)post({t:'ended'})},
 onError:function(e){post({t:'error',code:e.data})}}})}
@@ -84,7 +84,7 @@ window.cmd=function(m){if(!pl)return;if(m.c==='seek')pl.seek(m.v);else if(m.c===
   return `${head}<script src="https://player.vimeo.com/api/player.js"></script><script>
 ${post}
 var LIMIT=${limit},playing=false,cur=0,dur=0;
-var f=document.createElement('iframe');f.src='https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0&playsinline=1${auto ? '&autoplay=1' : ''}${start ? `#t=${start}s` : ''}';
+var f=document.createElement('iframe');f.src='https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0&controls=0&playsinline=1${auto ? '&autoplay=1' : ''}${start ? `#t=${start}s` : ''}';
 f.allow='autoplay; fullscreen; picture-in-picture';f.allowFullscreen=true;document.getElementById('p').appendChild(f);
 var pl=new Vimeo.Player(f);
 pl.ready().then(function(){return pl.getDuration()}).then(function(d){dur=d||0;post({t:'ready',d:dur})}).catch(function(e){post({t:'error',code:'vimeo'})});

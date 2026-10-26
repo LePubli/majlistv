@@ -432,3 +432,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Correctif 23c (26/10) — Admin / Studio : menu en tiroir latéral sur téléphone
 - Barre fine + bouton ☰ + tiroir (fond assombri, Échap). Site seulement. Voir README « Correctif 23c ».
+
+## Étape 24a (26/10) — Nouvelle page de lecture (application 0.13.0)
+- Lecteur épinglé, barre de commandes unique, chapitres par défaut, actions dans « ⋯ », barre Quiz / Note. Voir README « Étape 24a ». Reste (sur « go ») : 24b Shorts dans l'appli, 24c pub au lancement, 22c Android TV, 22d Apple TV.
