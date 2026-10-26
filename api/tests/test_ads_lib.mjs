@@ -11,6 +11,8 @@ assert.equal(mediaInfo('image/svg+xml'), null); // SVG refusé (peut contenir du
 assert.equal(mediaInfo(undefined), null);
 assert.equal(keyInfo('ads/0b3f1f9e-1111-4222-8333-444455556666.mp4').kind, 'video');
 assert.equal(keyInfo('ads/0b3f1f9e-1111-4222-8333-444455556666.jpg').kind, 'image');
+assert.equal(keyInfo('campaigns/0b3f1f9e-1111-4222-8333-444455556666.webm').kind, 'video');
+assert.equal(keyInfo('campaigns/../secret.mp4'), null);
 assert.equal(keyInfo('talks/0b3f1f9e-1111-4222-8333-444455556666.mp4'), null);
 assert.equal(keyInfo('ads/../secret.mp4'), null);
 

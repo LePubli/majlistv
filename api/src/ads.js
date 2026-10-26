@@ -13,8 +13,8 @@ export function mediaInfo(contentType) {
   return null;
 }
 
-/** Clé de stockage d'un visuel : ads/<uuid>.<ext>. */
-export const MEDIA_KEY_RE = /^ads\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp|mp4|webm)$/;
+/** Clé de stockage d'un visuel : campaigns/<uuid>.<ext> (ads/… accepté : ancien nom). */
+export const MEDIA_KEY_RE = /^(?:campaigns|ads)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp|mp4|webm)$/;
 export const keyInfo = (key) => {
   const m = MEDIA_KEY_RE.exec(String(key || ''));
   if (!m) return null;

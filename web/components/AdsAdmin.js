@@ -61,7 +61,7 @@ function AdForm({ ad, limits, onDone, onCancel }) {
         const max = (isVideo ? limits.videoMb : limits.imageMb) * 1048576;
         if (!type) throw new Error('Format non accepté : photo png, jpeg, webp ou vidéo mp4, webm.');
         if (file.size > max) throw new Error(`Fichier trop lourd (${Math.round(file.size / 1048576)} Mo) : ${isVideo ? limits.videoMb : limits.imageMb} Mo maximum.`);
-        const u = await call('/admin/ads/upload-url', { method: 'POST', body: JSON.stringify({ contentType: type, size: file.size }) });
+        const u = await call('/admin/campaigns/upload-url', { method: 'POST', body: JSON.stringify({ contentType: type, size: file.size }) });
         if (!u.ok) throw new Error(u.data?.error || "Le serveur n'a pas donné de lien d'envoi.");
         setPct(0);
         const put = await putFile(u.data.url, file, type, setPct);
@@ -70,11 +70,11 @@ function AdForm({ ad, limits, onDone, onCancel }) {
       }
       setPct(null);
       const body = { advertiser: o.advertiser, title: o.title, sentence: o.sentence, ctaLabel: o.ctaLabel || 'En savoir plus', linkUrl: o.linkUrl, active: o.active, startsAt: toIso(o.startsAt), endsAt: toIso(o.endsAt), ...(key ? { mediaKey: key } : {}) };
-      const r = ad ? await call(`/admin/ads/${ad.id}`, { method: 'PATCH', body: JSON.stringify(body) }) : await call('/admin/ads', { method: 'POST', body: JSON.stringify(body) });
+      const r = ad ? await call(`/admin/campaigns/${ad.id}`, { method: 'PATCH', body: JSON.stringify(body) }) : await call('/admin/campaigns', { method: 'POST', body: JSON.stringify(body) });
       if (!r.ok) throw new Error(r.data?.error || 'Enregistrement impossible.');
       onDone();
     } catch (ex) {
-      setErr(ex?.message || 'Une erreur est survenue : réessayez.');
+      setErr(ex instanceof TypeError ? "La requête n'a pas abouti (réseau coupé, ou extension du navigateur qui bloque la page : essayez en navigation privée ou sans bloqueur de publicités)." : ex?.message || 'Une erreur est survenue : réessayez.');
     } finally { setBusy(false); setPct(null); }
   };
 
@@ -114,14 +114,14 @@ export default function AdsAdmin() {
   const [data, setData] = useState(null);
   const [form, setForm] = useState(null); // null | 'new' | annonce en modification
   const [msg, setMsg] = useState(null);
-  const load = useCallback(() => call('/admin/ads').then((r) => setData(r.ok ? r.data : { error: r.data?.error || 'Chargement impossible.' })), [call]);
+  const load = useCallback(() => call('/admin/campaigns').then((r) => setData(r.ok ? r.data : { error: r.data?.error || 'Chargement impossible.' })), [call]);
   useEffect(() => { load(); }, [load]);
   const flash = (ok, text) => setMsg({ ok, text });
   const act = async (path, opts, okText) => {
     const r = await call(path, opts);
     if (r.ok) { if (okText) flash(true, okText); load(); } else flash(false, r.data?.error || 'Action impossible.');
   };
-  const remove = (a) => { if (window.confirm(`Supprimer la publicité « ${a.title} » (${a.advertiser}) ? Son visuel et ses compteurs seront effacés.`)) act(`/admin/ads/${a.id}`, { method: 'DELETE' }, 'Publicité supprimée.'); };
+  const remove = (a) => { if (window.confirm(`Supprimer la publicité « ${a.title} » (${a.advertiser}) ? Son visuel et ses compteurs seront effacés.`)) act(`/admin/campaigns/${a.id}`, { method: 'DELETE' }, 'Publicité supprimée.'); };
 
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;
@@ -151,7 +151,7 @@ export default function AdsAdmin() {
                 <small className="meta">{a.impressions} affichage(s) · {a.clicks} clic(s) ({a.ctr} %) · {a.skips} « passer » — 7 derniers jours : {a.impressions7} affichage(s), {a.clicks7} clic(s)</small>
                 <div className="studio-tools">
                   <button type="button" className="btn ghost" onClick={() => { setMsg(null); setForm(a); window.scrollTo?.({ top: 0 }); }}>Modifier</button>
-                  <button type="button" className="btn ghost" onClick={() => act(`/admin/ads/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>
+                  <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>
                   <button type="button" className="btn ghost" onClick={() => remove(a)}>Supprimer</button>
                 </div>
               </div>

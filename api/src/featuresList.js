@@ -52,7 +52,7 @@ export const FEATURES = [
   { id: 'shorts', group: 'catalog', label: 'Shorts', hint: 'Extraits verticaux publiés par les chaînes : fil vertical, accueil, page de la chaîne ; l\'espace Kids n\'en montre que pour ses conférences',
     rules: [{ re: '^/(shorts|studio/shorts)(/|$)' }] },
   { id: 'ads', group: 'catalog', label: 'Publicité au lancement de l\'application', hint: 'Publicité plein écran (photo ou vidéo) au lancement de l\'application, passable ; jamais dans l\'espace Kids ni pendant l\'heure de prière. Gérée dans Admin → Publicités',
-    rules: [{ re: '^/(ads|admin/ads)(/|$)' }] },
+    rules: [{ re: '^/(ads|admin/campaigns)(/|$)' }] },
   { id: 'media_import', group: 'catalog', label: 'Import de vidéos externes', hint: 'Copier chez nous une vidéo YouTube, Vimeo, archive.org ou d\'un autre site (déclaration des droits obligatoire, journal) pour la monter, la doubler et la mettre en extraits',
     rules: [{ re: '^/(talks/[^/]+/import|studio/imports)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre, alertes par e-mail et notifications sur téléphone',

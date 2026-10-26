@@ -3,11 +3,11 @@
 //   POST  /ads/:id/impression       public : compte un affichage
 //   POST  /ads/:id/click            public : compte un clic sur le bouton
 //   POST  /ads/:id/skip             public : compte un « Passer »
-//   GET   /admin/ads                administrateur : liste, situation, compteurs
-//   POST  /admin/ads/upload-url     administrateur : lien d'envoi direct du visuel (photo ou vidéo)
-//   POST  /admin/ads                administrateur : créer
-//   PATCH /admin/ads/:id            administrateur : modifier (texte, lien, dates, active, nouveau visuel)
-//   DELETE /admin/ads/:id           administrateur : supprimer (visuel compris)
+//   GET   /admin/campaigns                administrateur : liste, situation, compteurs
+//   POST  /admin/campaigns/upload-url     administrateur : lien d'envoi direct du visuel (photo ou vidéo)
+//   POST  /admin/campaigns                administrateur : créer
+//   PATCH /admin/campaigns/:id            administrateur : modifier (texte, lien, dates, active, nouveau visuel)
+//   DELETE /admin/campaigns/:id           administrateur : supprimer (visuel compris)
 // Fonction « Publicité » (Admin → Fonctions) : coupée, toutes ces routes répondent 404 et l'application n'affiche rien.
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -77,7 +77,7 @@ export default async function adsRoutes(app) {
   app.post('/ads/:id/skip', count('skips'));
 
   // ---------- Administration ----------
-  app.get('/admin/ads', adminOnly, async () => {
+  app.get('/admin/campaigns', adminOnly, async () => {
     const { rows } = await pool.query(
       `SELECT ${COLS},
               coalesce(sum(s.impressions), 0)::int AS impressions, coalesce(sum(s.clicks), 0)::int AS clicks, coalesce(sum(s.skips), 0)::int AS skips,
@@ -97,13 +97,13 @@ export default async function adsRoutes(app) {
     return { ads, storage: Boolean(storage), limits: { imageMb: mediaInfo('image/png').maxMb, videoMb: mediaInfo('video/mp4').maxMb } };
   });
 
-  app.post('/admin/ads/upload-url', adminOnly, async (req, reply) => {
+  app.post('/admin/campaigns/upload-url', adminOnly, async (req, reply) => {
     if (!storage) return off(reply);
     const b = uploadSchema.parse(req.body ?? {});
     const info = mediaInfo(b.contentType);
     if (!info) return reply.code(400).send({ error: 'Format non accepté (photo png, jpeg, webp ou vidéo mp4, webm)', code: 'bad_type' });
     if (b.size > info.maxMb * 1048576) return reply.code(400).send({ error: `Fichier trop lourd (${info.maxMb} Mo maximum pour ${info.kind === 'image' ? 'une photo' : 'une vidéo'})`, code: 'too_big' });
-    const key = `ads/${randomUUID()}.${info.ext}`;
+    const key = `campaigns/${randomUUID()}.${info.ext}`; // pas de « ads » dans l'adresse : les bloqueurs de publicités du navigateur la bloqueraient
     return { key, url: await presignPut(key, info.type), kind: info.kind };
   });
 
@@ -116,7 +116,7 @@ export default async function adsRoutes(app) {
     return info;
   }
 
-  app.post('/admin/ads', adminOnly, async (req, reply) => {
+  app.post('/admin/campaigns', adminOnly, async (req, reply) => {
     if (!storage) return off(reply);
     const b = createSchema.parse(req.body ?? {});
     const link = safeLink(b.linkUrl);
@@ -131,7 +131,7 @@ export default async function adsRoutes(app) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.patch('/admin/ads/:id', adminOnly, async (req, reply) => {
+  app.patch('/admin/campaigns/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = patchSchema.parse(req.body ?? {});
     const cur = (await pool.query('SELECT * FROM ads WHERE id = $1', [id])).rows[0];
@@ -156,7 +156,7 @@ export default async function adsRoutes(app) {
     return { ok: true };
   });
 
-  app.delete('/admin/ads/:id', adminOnly, async (req, reply) => {
+  app.delete('/admin/campaigns/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const r = await pool.query('DELETE FROM ads WHERE id = $1 RETURNING media_key', [id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Publicité introuvable' });
