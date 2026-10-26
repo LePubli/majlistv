@@ -22,18 +22,18 @@ export type Plan = {
 };
 
 export const PLAN: Plan = {
-  total: 3000,
-  trace: { at: 0, dur: 1000 },
-  push: { at: 0, dur: 2300 },
-  fill: { at: 900, dur: 700 },
-  glowIn: { at: 700, dur: 800 },
-  glowOut: { at: 1500, dur: 600 },
-  outlineOut: { at: 1500, dur: 500 },
-  name: { at: 1300, dur: 500 },
-  tagline: { at: 1650, dur: 500 },
-  textOut: { at: 2300, dur: 250 },
-  zoom: { at: 2300, dur: 700 },
-  fade: { at: 2500, dur: 500 },
+  total: 5400,
+  trace: { at: 0, dur: 1800 },
+  push: { at: 0, dur: 4140 },
+  fill: { at: 1620, dur: 1260 },
+  glowIn: { at: 1260, dur: 1440 },
+  glowOut: { at: 2700, dur: 1080 },
+  outlineOut: { at: 2700, dur: 900 },
+  name: { at: 2340, dur: 900 },
+  tagline: { at: 2970, dur: 900 },
+  textOut: { at: 4140, dur: 450 },
+  zoom: { at: 4140, dur: 1260 },
+  fade: { at: 4500, dur: 900 },
 };
 
 /** Mouvements réduits (réglage d'accessibilité) : logo fixe un instant, puis fondu — aucun mouvement. */
@@ -41,7 +41,7 @@ export const REDUCED_PLAN = { total: 1200, hold: 900, fade: 300 } as const;
 /** Appui pour passer : fondu court. */
 export const SKIP_FADE_MS = 250;
 /** Garde-fou : quoi qu'il arrive, l'animation ne dure jamais plus que cela. */
-export const MAX_MS = 6000;
+export const MAX_MS = 8000;
 
 /** Fin d'une étape. */
 export const endOf = (s: Step): number => s.at + s.dur;

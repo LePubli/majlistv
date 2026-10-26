@@ -21,7 +21,7 @@ test('calendrier : l’ordre de la séquence (tracé → remplissage → nom →
 });
 
 test('durées raisonnables : courte, jamais plus que le garde-fou, version réduite plus courte', () => {
-  assert.ok(PLAN.total >= 2000 && PLAN.total <= 3500);
+  assert.ok(PLAN.total >= 4500 && PLAN.total <= 6000);
   assert.ok(PLAN.total < MAX_MS);
   assert.ok(REDUCED_PLAN.total < PLAN.total && REDUCED_PLAN.hold + REDUCED_PLAN.fade === REDUCED_PLAN.total);
   assert.ok(SKIP_FADE_MS <= 300);
