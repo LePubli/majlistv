@@ -37,7 +37,7 @@ export default function SearchScreen() {
   }, [q, api]);
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}>
         <IconButton label={t('common.close')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
           <Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} />

@@ -35,7 +35,7 @@ export default function ListScreen() {
   }
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
       <ScreenHeader title={list.data?.title ?? ''} />
       {list.loading && !list.data ? <Loading /> : !list.data ? <ErrorBox onRetry={list.reload} /> : (
         <FlatList

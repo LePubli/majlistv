@@ -1,6 +1,7 @@
 // Fenêtre « Ajouter à une liste » : coche / décoche les listes qui contiennent la conférence, ou crée une nouvelle liste.
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
@@ -10,6 +11,7 @@ import { Button, ErrorBox, Field, Loading, Txt } from './ui';
 
 export function AddToListModal({ talkId, visible, onClose }: { talkId: string; visible: boolean; onClose: () => void }) {
   const { api, t, dirStyle } = useSession();
+  const insets = useSafeAreaInsets(); // affichage complet : le bas de la feuille ne doit pas passer sous les boutons de navigation
   const [lists, setLists] = useState<ListsResponse | null>(null);
   const [inside, setInside] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState(false);
@@ -51,7 +53,7 @@ export function AddToListModal({ talkId, visible, onClose }: { talkId: string; v
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable accessibilityLabel={t('common.close')} onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} />
-      <View style={[{ maxHeight: '75%', backgroundColor: colors.panel, borderTopLeftRadius: radius.panel, borderTopRightRadius: radius.panel, padding: 18, gap: 14, borderTopWidth: 1, borderColor: colors.border }, dirStyle]}>
+      <View style={[{ maxHeight: '75%', backgroundColor: colors.panel, borderTopLeftRadius: radius.panel, borderTopRightRadius: radius.panel, padding: 18, paddingBottom: 18 + insets.bottom, gap: 14, borderTopWidth: 1, borderColor: colors.border }, dirStyle]}>
         <Txt weight="extrabold" size={18}>{t('lib.addToList')}</Txt>
         {failed ? <ErrorBox onRetry={load} /> : !lists ? <View style={{ height: 100 }}><Loading /></View> : (
           <ScrollView contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">

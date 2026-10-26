@@ -51,9 +51,9 @@ export default function PrayerSettingsScreen() {
   const sideAlign = { textAlign: isRTL ? 'right' : 'left' } as const;
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['bottom']}>
       <AppHeader />
-      <ScrollView contentContainerStyle={{ padding: 18, gap: 16 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         <Title>{t('prySetTitle')}</Title>
         {!prayer.on ? <Txt color={colors.muted}>{t('ftOffText')}</Txt> : (
           <>

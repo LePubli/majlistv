@@ -11,7 +11,7 @@ export function Page({ title, loading, error, onRetry, onRefresh, children, padd
 }) {
   const { dirStyle } = useSession();
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
       <ScreenHeader title={title} />
       {loading ? <Loading /> : error ? <ErrorBox onRetry={onRetry} /> : (
         <ScrollView contentContainerStyle={{ padding: padded ? 16 : 0, gap: 16, paddingBottom: 48 }}

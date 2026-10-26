@@ -216,7 +216,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   const sheetTile = (node: React.ReactNode, key: string) => <View key={key} style={{ width: '48%' }}>{node}</View>;
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
       {/* Lecteur épinglé en haut */}
       <View style={{ backgroundColor: '#000' }}>
         <View style={{ aspectRatio: 16 / 9, width: '100%', backgroundColor: '#000', justifyContent: 'center' }}>

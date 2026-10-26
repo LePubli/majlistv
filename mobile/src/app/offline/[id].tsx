@@ -78,7 +78,7 @@ function OfflinePlayer({ talkId }: { talkId: string }) {
   const audio = rec.kind === 'audio';
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top']}>
+    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
       <View style={{ backgroundColor: '#000' }}>
         <View style={{ aspectRatio: 16 / 9, width: '100%', justifyContent: 'center', backgroundColor: '#000' }}>
           {audio ? (
