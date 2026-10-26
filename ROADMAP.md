@@ -450,3 +450,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 26 (26/10) — Animation du logo au lancement (application 0.16.0, mise à jour OTA)
 - Piste C « Cinéma » : contour néon tracé, remplissage, nom + slogan, zoom ; avant la publicité ; passable ; jamais en Kids. Voir README « Étape 26 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.
+
+## Étape 27a (26/10) — Affichage complet (application 0.17.0, nouvel APK)
+- Plus de bande grise sous la barre d'onglets. Voir README « Étape 27a ». Suite : 27b — nouveau design des widgets (sur « go » après choix A ou B).

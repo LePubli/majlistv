@@ -1,5 +1,5 @@
 {
-  "fr": "Widgets sur l'écran d'accueil : Prière (prochaine prière et horaires du jour), Réviser (conférences à réviser aujourd'hui) et Citation du jour, en petit et en grand.",
-  "en": "Home screen widgets: Prayer (next prayer and today's times), Review (talks to review today) and Quote of the day, in small and large sizes.",
-  "ar": "ودجات على الشاشة الرئيسية: الصلاة (الصلاة القادمة ومواقيت اليوم)، المراجعة (محاضرات اليوم للمراجعة)، واقتباس اليوم، بحجمين صغير وكبير."
+  "fr": "Affichage complet : l'application occupe tout l'écran, y compris sous les boutons de navigation d'Android (plus de bande grise en bas). Animation du logo à l'ouverture.",
+  "en": "Full-screen display: the app now fills the whole screen, including behind Android's navigation buttons (no more grey strip at the bottom). Logo animation when opening.",
+  "ar": "عرض كامل: يملأ التطبيق الشاشة بأكملها بما في ذلك خلف أزرار التنقل في أندرويد (لا مزيد من الشريط الرمادي في الأسفل). حركة الشعار عند الفتح."
 }

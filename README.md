@@ -5802,3 +5802,13 @@ Debug : l'animation ne s'affiche pas → vérifier que ce n'est pas l'espace Kid
 **Correctif 26b — publicité absente de la liste Admin (26/10).** L'application affichait bien la publicité mais la liste d'Admin → Publicités restait vide. Cause probable : les **bloqueurs de publicités masquent les éléments dont la classe contient « ads- »** (`ads-list`, `ads-item`…). Toutes les classes de l'écran sont renommées `camp-*` (sans changement visuel). Redéployer **majlistv-web** seulement (DockPanel → Git Deploy → Redeploy), puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`. Puis actualiser Admin → Publicités (Ctrl+F5). Si la liste reste vide : ouvrir la console du navigateur (F12 → Réseau), actualiser, et me dire le code de la ligne `campaigns`. **Non vérifié sur ton navigateur.**
 
 **Réglage 26c — animation plus longue (26/10).** Durée passée de ≈ 3 s à **≈ 5,4 s** (toutes les étapes ralenties de ×1,8 ; le slogan reste lisible ≈ 1,2 s). Garde-fou porté à 8 s. Réglable en un seul endroit : `mobile/src/lib/intro.ts` (`PLAN`). Mise à jour OTA (version inchangée 0.16.0) : fermer complètement l'appli, la rouvrir deux fois.
+
+## Étape 27a — Affichage complet (26/10, application 0.17.0)
+
+**Constat** (capture d'Epok) : une bande grise claire apparaissait sous la barre d'onglets, à l'endroit des boutons de navigation d'Android. C'est le « voile de contraste forcé » que le système pose par-dessus le bas de l'application.
+
+**Correctif.** Petit plugin `mobile/plugins/withFullScreen.js` (déclaré dans `app.json`) : désactive ce voile (`enforceNavigationBarContrast`, `enforceStatusBarContrast` = false) et impose des icônes claires aux barres d'état et de navigation. L'application occupe tout l'écran, la barre d'onglets noire descend jusqu'en bas.
+
+**⚠ Code natif modifié → nouvel APK obligatoire** (version 0.17.0, versionCode 14) : la mise à jour automatique ne suffit pas. GitHub → Actions → dernier « Mobile Android » → télécharger l'APK et l'installer par-dessus l'ancien.
+
+**Vérifié** : `npm run check` (143 tests), `expo prebuild` (styles.xml généré avec les 4 lignes). **Non vérifié sur téléphone** : surtout sur Samsung (One UI), qui peut garder un léger fond sous les boutons ; à me dire si la bande persiste. Avec la navigation par gestes, rien à voir de toute façon.
