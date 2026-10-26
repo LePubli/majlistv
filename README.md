@@ -5776,3 +5776,25 @@ L'envoi du visuel va directement vers le stockage (`https://s3-majlisstv.le-publ
 **Cause réelle de l'envoi bloqué : non établie** (je n'ai pas accès à ton navigateur ni à ton stockage). Si le message affiché après redéploiement parle de réseau / CORS : vérifier que `CSP_STORAGE_ORIGINS` (site) contient `https://s3-majlisstv.le-publicitaire.fr` et que le stockage autorise l'origine du site ; si « trop gros » : réduire la vidéo (40 Mo max, photo 8 Mo max).
 
 **Correctif 25c — cause probable de « Failed to fetch » (26/10).** Ton capture montre « Failed to fetch » pendant la création d'une publicité, alors que le stockage n'est jamais atteint. Cause probable : une **extension de blocage de publicités** du navigateur bloquait les adresses contenant `/ads/` (`/api/admin/ads/upload-url`, fichiers rangés sous `ads/…`). Corrigé : les adresses d'administration sont maintenant **`/api/admin/campaigns…`** et les visuels sont rangés sous **`campaigns/…`** (l'ancien dossier `ads/` reste accepté). Le message d'erreur du formulaire explique aussi ce cas (« extension du navigateur qui bloque la page »). Redéployer **majlistv-api**, puis **majlistv-web** (DockPanel → Git Deploy → Redeploy), puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`. Les routes publiques de l'application (`/ads/next`…) ne changent pas (l'application n'a pas de bloqueur). Si l'erreur persiste après cela : essayer en navigation privée (sans extensions) et me dire le message. **Non vérifié sur ton navigateur.**
+
+## Étape 26 — Animation du logo au lancement (26/10, application 0.16.0, piste C « Cinéma »)
+
+**Description.** À l'ouverture de l'application : écran de démarrage Android → **animation du logo (≈ 3 s)** → publicité éventuelle → application. L'animation : le contour doré « néon » du logo se trace de bas en haut, le logo se remplit et rayonne, le nom « Mejliss TV » et le slogan **« Des vidéos qui éclairent »** apparaissent, puis zoom à travers le logo et fondu vers l'application. Un **toucher** ou le **bouton Retour** passe l'animation. Elle n'est jouée **qu'une fois par lancement** et **jamais dans l'espace Kids**. Si le téléphone a « réduire les animations » activé, version fixe de 1,2 s.
+
+**Limite honnête.** Tu n'as pas le logo en SVG : le contour est **calculé à partir de l'image du logo** (`assets/brand/intro-outline.png`, `intro-glow.png`) et « tracé » par deux rideaux de la couleur du fond. Le rendu est proche d'un vrai tracé mais ce n'est pas un tracé vectoriel ; avec le SVG, on pourrait faire mieux (module natif en plus).
+
+**Slogan.** « Des vidéos qui éclairent » n'est utilisé **que dans l'animation** (clé `intro.tagline`, fr/en/ar). Le slogan global du site/de l'appli (« Des conférences qui éclairent ») n'est **pas modifié**. À confirmer par Epok.
+
+**Prérequis.** Aucun : pas de nouvelle dépendance, pas de réglage, pas de changement API/site. Version identique (0.16.0) : arrive **par mise à jour automatique (OTA)** si l'APK 0.16.0 est déjà installé ; sinon installer le nouvel APK du workflow GitHub Actions.
+
+**Déploiement.** Rien à redéployer sur le VPS. Sur le téléphone : **fermer complètement l'application puis la rouvrir deux fois** (la 1re ouverture télécharge la mise à jour, la 2e l'applique).
+
+**Fichiers.** `mobile/src/components/LogoIntro.tsx` (animation), `src/lib/intro.ts` (calendrier), `src/lib/launch.ts` (relais : la publicité attend la fin de l'animation et y renonce si elle n'est pas prête 3 s après), `AdGate.tsx`, `_layout.tsx`, clés `intro.*` de `lib/i18n.ts`, `tests/intro.test.ts`.
+
+**Tests / debug.**
+```bash
+cd mobile
+npm run check        # tsc + 143 tests (dont calendrier de l'animation et relais publicité)
+npx expo export --platform android --output-dir /tmp/exp
+```
+Debug : l'animation ne s'affiche pas → vérifier que ce n'est pas l'espace Kids, ou que le 2e lancement n'est pas une reprise d'arrière-plan (jouée seulement à froid). La publicité n'apparaît plus → attendue après l'animation ; voir étape 24c. **Jamais vu sur un vrai téléphone** (pas d'émulateur ici) : durées et rendu à valider par Epok.

@@ -447,3 +447,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Correctif 25b (26/10) — Widgets vides (fragments) et envoi du visuel d'une publicité
 - Voir README « Correctif 25b ».
+
+## Étape 26 (26/10) — Animation du logo au lancement (application 0.16.0, mise à jour OTA)
+- Piste C « Cinéma » : contour néon tracé, remplissage, nom + slogan, zoom ; avant la publicité ; passable ; jamais en Kids. Voir README « Étape 26 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.

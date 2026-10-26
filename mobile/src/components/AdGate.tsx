@@ -1,6 +1,6 @@
 // Publicité plein écran au lancement (étape 24c) — maquette « Pub » validée : visuel (photo ou vidéo) sur tout l'écran, mention « Publicité »,
 // bouton « Passer dans N s », annonceur, titre, phrase, bouton d'action. Une seule fois par lancement de l'application.
-// Jamais : espace enfant, fonction coupée côté serveur, pendant l'heure de prière, abonné payant (réglage serveur), réponse trop lente.
+// Elle passe après l'animation du logo (lib/launch.ts). Jamais : espace enfant, fonction coupée côté serveur, pendant l'heure de prière, abonné payant (réglage serveur), réponse trop lente.
 // Plusieurs publicités : le serveur choisit la suivante dans la rotation (on lui donne la dernière montrée) ; réglage « à la suite ».
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -16,6 +16,7 @@ import { useKid } from '@/lib/kidSession';
 import { usePrayer } from '@/lib/prayerStore';
 import { statusAt } from '@/lib/prayer/prayerLogic';
 import { Ad, AdsReply, adAllowed, adRatio, parseAds, skipRemaining, tooLate } from '@/lib/ads';
+import { introEndedAt, onIntroEnd } from '@/lib/launch';
 import { colors } from '@/lib/theme';
 import { Txt } from '@/components/ui';
 
@@ -131,7 +132,7 @@ export function AdGate() {
     if (handled || started.current || !ready || !kidReady) return;
     // L'heure de prière n'est connue qu'une fois la fonction prête (on attend un peu, sinon on s'abstient : pas de pub à l'heure de la prière).
     const prayerKnown = !prayer.on || prayer.ready;
-    if (!prayerKnown) { if (tooLate(Date.now() - LAUNCH, 3000)) handled = true; return; }
+    if (!prayerKnown) { if (tooLate(Date.now() - LAUNCH, 5000)) handled = true; return; }
     const inPrayer = prayer.on && prayer.prefs.enabled && prayer.items.length > 0 && statusAt(prayer.items, Date.now(), prayer.prefs).current != null;
     if (!adAllowed({ featureOn: feat('ads'), isKid: !!kid, inPrayer })) { handled = true; return; }
     started.current = true;
@@ -140,7 +141,8 @@ export function AdGate() {
         let after: string | null = null;
         try { after = await SecureStore.getItemAsync(K_LAST); } catch { /* coffre indisponible : on commence au début */ }
         const r = parseAds(await api.get<unknown>('/ads/next', after ? { after } : undefined));
-        if (r.ads.length && !tooLate(Date.now() - LAUNCH)) setReply(r);
+        // La publicité vient après l'animation du logo ; si elle n'est pas prête 3 s après la fin de l'animation, on y renonce.
+        if (r.ads.length) onIntroEnd(() => { if (!tooLate(Date.now() - introEndedAt(), 3000)) setReply(r); });
       } catch { /* hors ligne ou erreur : pas de publicité, l'application démarre normalement */ }
       handled = true;
     })();

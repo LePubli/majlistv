@@ -18,6 +18,7 @@ import { DownloadProvider } from '@/lib/downloadStore';
 import { routeForPath } from '@/lib/notifRoute';
 import { PrayerGate } from '@/components/PrayerGate';
 import { AdGate } from '@/components/AdGate';
+import { LogoIntro } from '@/components/LogoIntro';
 import { WidgetSync } from '@/components/WidgetSync';
 import { AppUpdate } from '@/components/AppUpdate';
 import { colors } from '@/lib/theme';
@@ -91,6 +92,7 @@ function Shell() {
         <Stack.Screen name="kids" />
       </Stack>
       <AdGate />
+      <LogoIntro />
     </>
   );
 }
