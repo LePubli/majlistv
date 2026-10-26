@@ -7,6 +7,7 @@ import { FEATURES, settingKey } from './featuresList.js';
 
 export const GROUPS = [
   { id: 'general', label: 'Général' },
+  { id: 'ads', label: 'Publicité au lancement' },
   { id: 'home', label: "Page d'accueil" },
   { id: 'cards', label: 'Vignettes des conférences' },
   { id: 'payment', label: 'Paiement (Stripe)' },
@@ -230,6 +231,14 @@ export const FIELDS = [
     help: 'Admin → Veille. Chaque chaîne suivie est relue à cet intervalle ; les nouvelles vidéos s\'ajoutent à la liste à traiter.' },
   { key: 'watch_max_videos', group: 'external', type: 'number', label: 'Veille : nombre de vidéos récentes lues à chaque contrôle', env: 'WATCH_MAX_VIDEOS', def: '30', min: 5, max: 200,
     help: 'Les plus récentes de la chaîne. À augmenter seulement si une chaîne publie plus que cela entre deux contrôles.' },
+  // Étape 24c : publicité au lancement de l'application (lus par GET /ads/next).
+  { key: 'ads_paid_subscribers', group: 'ads', type: 'select', options: ['masquer', 'afficher'], label: 'Abonnés payants : masquer ou afficher la publicité', env: 'ADS_PAID_SUBSCRIBERS', def: 'masquer',
+    help: 'masquer = les abonnés payants (essai compris) ne voient jamais de publicité ; afficher = ils la voient comme les autres.' },
+  { key: 'ads_per_launch', group: 'ads', type: 'number', label: 'Nombre de publicités à la suite à chaque lancement', env: 'ADS_PER_LAUNCH', def: '1', min: 1, max: 3,
+    help: '1 = une seule publicité par lancement, différente à chaque fois (rotation). 2 ou 3 = plusieurs publicités l\'une après l\'autre.' },
+  { key: 'ads_skip_seconds', group: 'ads', type: 'number', label: 'Bouton « Passer » disponible après … secondes', env: 'ADS_SKIP_SECONDS', def: '5', min: 0, max: 15 },
+  { key: 'ads_image_seconds', group: 'ads', type: 'number', label: 'Durée d\'affichage d\'une photo (secondes)', env: 'ADS_IMAGE_SECONDS', def: '6', min: 3, max: 30,
+    help: 'Une vidéo dure le temps de la vidéo.' },
   { key: 'import_max_videos', group: 'external', type: 'number', label: 'Nombre maximum de vidéos par import de playlist ou de chaîne', env: 'IMPORT_MAX_VIDEOS', def: '200', min: 1, max: 2000 },
   // Étape Import : copie d'une vidéo externe chez nous (lus par le transcripteur, qui télécharge).
   { key: 'import_max_gb', group: 'external', type: 'number', label: 'Taille maximale d\'une vidéo importée (Go)', env: 'IMPORT_MAX_GB', def: '8', min: 1, max: 100,

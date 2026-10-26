@@ -3,7 +3,7 @@
     "name": "Mejliss TV",
     "slug": "majlistv",
     "scheme": "mejlisstv",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "fr.lepublicitaire.mejlisstv",
-      "versionCode": 11,
+      "versionCode": 12,
       "supportsRtl": true,
       "adaptiveIcon": {
         "backgroundColor": "#0B0906",

@@ -3816,3 +3816,12 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .watch-info b { overflow-wrap: anywhere; }
 .watch-add { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line, rgba(255,255,255,.12)); }
 @media (max-width: 560px) { .watch-row { flex-direction: column; } .watch-thumb { width: 100%; height: auto; aspect-ratio: 16 / 9; } }
+
+/* Étape 24c : Admin → Publicités */
+.ads-admin h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.ads-form { margin-top: 16px; padding: 16px; border-radius: 16px; display: grid; gap: 12px; max-width: 880px; }
+.ads-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
+.ads-item { display: flex; gap: 16px; padding: 14px; border-radius: 16px; width: 100%; max-width: none; margin: 0; align-items: flex-start; }
+.ads-thumb { width: 108px; height: 192px; object-fit: cover; border-radius: 12px; background: #000; flex: none; }
+.ads-info { display: grid; gap: 4px; min-width: 0; flex: 1; }
+@media (max-width: 560px) { .ads-item { flex-direction: column; } .ads-thumb { width: 100%; max-width: 220px; height: auto; aspect-ratio: 9 / 16; } }

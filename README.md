@@ -5701,3 +5701,41 @@ bash /root/verify-deploy.sh
 **Tests.** `cd mobile && npm run check` (types + 124 tests, dont liste lisible, pages sans doublon, reste-t-il des shorts, progression) ; bundle `npx expo export --platform android`.
 
 **Honnêteté.** Testé : types, tests unitaires, compilation du bundle. **Non testé** : le défilement et la lecture sur un vrai téléphone (fluidité, hauteur de page avec barres système, son, pause au retour de la fiche, arabe RTL).
+
+## Étape 24c — Publicité plein écran au lancement (26/10, API + site + application 0.15.0)
+
+**Description.** Une publicité (photo ou courte vidéo, maquette « Pub » validée) s'affiche en **plein écran à chaque lancement** de l'application : mention « Publicité », bouton « Passer dans N s » puis « Passer », annonceur, titre, phrase, bouton d'action (« En savoir plus » par défaut, modifiable) qui ouvre le lien de l'annonceur.
+- **Plusieurs publicités** : toutes celles qui sont « en cours » tournent, une différente à chaque lancement (la suivante dans l'ordre de création, puis retour à la première). Le réglage « Nombre de publicités à la suite » (1 à 3) permet d'en montrer plusieurs l'une après l'autre au même lancement.
+- **Dates et heures** : chaque publicité peut avoir un début et une fin (date + heure) ; sans date, elle est montrée tout de suite et jusqu'à ce qu'on la mette en pause. Situations : En cours, Programmée, Terminée, En pause.
+- **Abonnés payants** (essai compris) : réglage Admin → Paramètres → « Publicité au lancement » → « masquer » (par défaut) ou « afficher ».
+- **Prière** : pas de publicité pendant l'heure de prière (même fenêtre que la pause de prière, si la fonction Prière est active chez la personne). **Espace Kids** : jamais de publicité.
+- **Photo** : durée réglable (6 s par défaut). **Vidéo** : jusqu'à la fin (bouton son disponible). « Passer » apparaît après 5 s (réglable, 0 à 15).
+- Si le serveur est lent (plus de 6 s après le lancement), hors ligne ou en erreur : **aucune publicité**, l'application démarre normalement.
+- **Statistiques** par publicité : affichages, clics (taux), « passer », et les 7 derniers jours (Admin → Publicités). Aucune donnée personnelle.
+
+**Où on règle quoi.**
+- Admin → **Publicités** : créer / modifier / mettre en pause / supprimer, envoi du visuel (photo png, jpeg, webp 8 Mo max ; vidéo mp4, webm 40 Mo max ; format vertical 9:16, 1080 × 1920, conseillé), dates, compteurs.
+- Admin → **Paramètres** → « Publicité au lancement » : abonnés payants, nombre à la suite, durée de « Passer », durée d'une photo.
+- Admin → **Fonctions** → « Publicité au lancement de l'application » : interrupteur général (coupé : l'API répond 404 et l'appli n'affiche rien).
+
+**Prérequis / déploiement.** Migration `065_ads.sql` (tables `ads`, `ad_stats`, appliquée au démarrage de l'API). Redéployer dans l'ordre (DockPanel → Git Deploy → Redeploy) : **majlistv-api**, puis **majlistv-web**. Pas de worker, transcripteur, traducteur ni doublage. Application : poussée sur `main` → mise à jour 0.15.0 (nouveau module natif : aucun). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+L'envoi du visuel va directement vers le stockage (`https://s3-majlisstv.le-publicitaire.fr`, comme les logos de l'éditeur) : aucune limite supplémentaire côté nginx de l'API.
+
+**Essai pas à pas.**
+1. Admin → Publicités → « Nouvelle publicité » : photo verticale, annonceur, titre, phrase, lien `https://…`, Créer.
+2. Fermer complètement l'application puis la rouvrir : la publicité apparaît ; « Passer dans 5 s » puis « Passer » ; le bouton d'action ouvre le lien.
+3. Créer une 2e publicité (vidéo) : au lancement suivant, c'est elle qui apparaît (rotation).
+4. Compte abonné payant : aucune publicité (tant que le réglage est « masquer »). Espace Kids : jamais.
+5. Admin → Publicités : compteurs mis à jour.
+
+**Debug.** Rien ne s'affiche : fonction coupée (Admin → Fonctions), publicité en pause / programmée / terminée (voir sa situation), compte abonné payant, application déjà ouverte depuis un moment (la publicité n'est proposée qu'au lancement), réseau lent. Visuel qui ne s'envoie pas : format ou taille refusés (message affiché), ou stockage non configuré (bandeau rouge dans Admin → Publicités). Logs : `docker logs dockpanel-git-majlistv-api --tail 100`.
+
+**Tests.** `python3 api/tests/test_ads.py` (API de test : droits, formats, liens, dates, rotation, pause, abonnés payants, compteurs, fonction coupée, suppression), `node api/tests/test_ads_lib.mjs`, `cd mobile && npm run check` (types + 129 tests), `npx expo export --platform android`, `next build` du site.
+
+**Honnêteté.** Testé : API (ci-dessus), règles pures, types, compilation de l'appli et du site. **Non testé** : l'affichage sur un vrai téléphone (plein écran, vidéo, son, bouton retour Android, arabe RTL), l'écran d'administration vu dans un navigateur (compilé seulement), le cas « enfant » côté API (jeton enfant → liste vide : écrit mais non joué), l'heure de prière en situation réelle. Les textes de l'écran Admin → Publicités sont en français seulement.

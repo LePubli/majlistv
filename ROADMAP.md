@@ -438,3 +438,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 24b (26/10) — Shorts dans l'application (application 0.14.0)
 - Fil vertical plein écran, favori / liste / partage, « Voir la conférence complète » dans l'appli. Voir README « Étape 24b ». Reste (sur « go ») : 24c pub au lancement, 22c Android TV, 22d Apple TV.
+
+## Étape 24c (26/10) — Publicité au lancement (API + site + application 0.15.0)
+- Publicités plein écran (photo ou vidéo), rotation, dates, abonnés payants réglables, rien à l'heure de prière ni dans Kids, statistiques. Voir README « Étape 24c ». Reste (sur « go ») : 22c Android TV, 22d Apple TV.

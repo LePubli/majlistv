@@ -24,6 +24,7 @@ import seoRoutes from './routes/seo.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
 import watchRoutes from './routes/watch.js';
+import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -154,6 +155,7 @@ await app.register(seoRoutes);
 await app.register(legalRoutes);
 await app.register(importRoutes);
 await app.register(watchRoutes);
+await app.register(adsRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);

@@ -17,6 +17,7 @@ import { PrayerProvider } from '@/lib/prayerStore';
 import { DownloadProvider } from '@/lib/downloadStore';
 import { routeForPath } from '@/lib/notifRoute';
 import { PrayerGate } from '@/components/PrayerGate';
+import { AdGate } from '@/components/AdGate';
 import { AppUpdate } from '@/components/AppUpdate';
 import { colors } from '@/lib/theme';
 
@@ -87,6 +88,7 @@ function Shell() {
         <Stack.Screen name="offline/quiz/[id]" />
         <Stack.Screen name="kids" />
       </Stack>
+      <AdGate />
     </>
   );
 }
