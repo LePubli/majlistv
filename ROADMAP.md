@@ -456,3 +456,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 27b (26/10) — Widgets : nouveau design « B » avec logo et Shuruk (application 0.17.0, OTA)
 - Voir README « Étape 27b ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.
+
+## Étape 28 (27/10) — Admin → Paramètres : accueil par thèmes, recherche, sections en blocs (site seulement)
+- Voir README « Étape 28 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.

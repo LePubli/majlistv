@@ -5830,3 +5830,26 @@ Debug : l'animation ne s'affiche pas → vérifier que ce n'est pas l'espace Kid
 **Honnêteté.** Testé : typage, 144 tests, export Android, constructeur d'arbre réel de la bibliothèque. **Jamais vu sur un téléphone** : tailles de texte, coupures (titres longs, arabe), rendu du dégradé et du logo à valider par Epok ; il est possible que je doive ajuster les tailles après ta capture.
 
 **Correctif 27c — bas des écrans sous les boutons de navigation (26/10).** Avec l'affichage complet (27a), les écrans ouverts par-dessus les onglets laissaient leur bas passer sous les boutons d'Android (capture : bouton « Fermer » de la page Réglages de la prière coupé). Corrigé : marge de bas d'écran (zone sûre) ajoutée sur Réglages prière, Page (gabarit commun), Recherche, Listes, Conférence hors ligne, Conférence (lecteur), et sur la feuille « Ajouter à une liste » ; le bas de la page Prière a aussi plus de marge. Les onglets, Kids, quiz, pratique, connexion, téléchargements l'avaient déjà. Mise à jour automatique (OTA) sur l'APK 0.17.0 : fermer/rouvrir l'appli deux fois. **Non vérifié sur téléphone** ; à me signaler : tout écran dont le bas reste coupé.
+
+## Étape 28 — Admin → Paramètres : accueil par thèmes (27/10)
+
+**Description.** Constat d'Epok : la page Paramètres de l'admin était une longue liste de sections (48 avec les modules) aux pastilles et sous-titres décalés. Nouvelle présentation (proposition A validée) :
+- **Accueil des Paramètres** : barre de **recherche** (réglages par nom, aide ou section ; 2 lettres minimum) et **cartes par thème** — *Site et contenu* (Général, Page d'accueil, Vignettes, Citations, Ouvrages), *Argent* (Stripe, Cartes cadeaux, Rémunération des chaînes, Publicité au lancement), *Intelligence artificielle* (Traduction, Résumés, Transcription, Quiz, Mise en pratique), *Communauté et communication* (E-mails, Notifications, Modération, Kids), *Technique* (Recherche, Vidéos externes, Statistiques, Activité) et *Réglages des modules* (les 26 sections « mod_… », repliées par défaut).
+- Chaque carte : icône, explication, **état** (Prêt / Non configuré / Clé manquante…, calculé comme avant) et « • » si la section contient des modifications non enregistrées.
+- **Section ouverte** : fil d'Ariane « ← Paramètres / thème », pastilles des sections voisines, champs en blocs sur deux colonnes (une colonne sur téléphone), barre « Enregistrer / Annuler » toujours visible avec le nombre de modifications non enregistrées.
+- Inchangé : tous les réglages et leurs valeurs, tests de clés, enregistrement, protection « modifications non enregistrées » (les brouillons sont gardés en changeant de section), API, adresses `?tab=settings&section=<id>` (sans `section` → accueil).
+
+**Fichiers.** `web/components/SettingsHub.js` (thèmes, cartes, recherche, en-tête de section), `web/app/admin/page.js` (composant Settings), `web/app/globals.css` (`.set-*`). Aucun changement d'API. Une section nouvelle non listée tombe automatiquement dans « Autres » ; une section de module (`mod_…`) dans « Réglages des modules ».
+
+**Déploiement (DockPanel).** Redeploy **majlistv-web** uniquement, puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis Ctrl+F5 dans l'admin.
+
+**Debug.** Page blanche ou ancien affichage : Ctrl+F5 (cache). Section manquante : elle dépend d'un module désactivé (Admin → Modules). Si des cartes disparaissent avec un bloqueur de pub : me le dire (classes `set-*`, sans « ads »).
+
+**Testé** (navigateur réel Chromium sur un API de test) : accueil (6 thèmes, 48 cartes), recherche, ouverture d'une section, brouillon conservé en changeant de section avec confirmation, indicateur « • », retour à l'accueil, mobile 390 px sans défilement horizontal, aucune erreur JavaScript, build Next. **Non testé** : l'arabe (l'admin est en français), les vrais états de ton serveur (Stripe, e-mails, clés IA).

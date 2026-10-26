@@ -3,6 +3,7 @@
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
 import WatchAdmin from '../../components/WatchAdmin';
 import AdsAdmin from '../../components/AdsAdmin';
+import { SectionHeader, SettingsHub } from '../../components/SettingsHub';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -322,6 +323,7 @@ function Settings() {
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const [tests, setTests] = useState({});
+  const [query, setQuery] = useState('');
 
   useEffect(() => { call('/admin/settings').then((r) => r.ok && setData(r.data)); }, [call]);
   const dirty = Object.keys(draft).length > 0;
@@ -333,10 +335,12 @@ function Settings() {
   }, [dirty]);
   if (!data) return <p className="meta">Chargement…</p>;
 
-  const section = data.groups.some((g) => g.id === sp.get('section')) ? sp.get('section') : 'general';
+  // Sans section dans l'adresse : accueil des paramètres (cartes par thèmes).
+  const section = data.groups.some((g) => g.id === sp.get('section')) ? sp.get('section') : null;
   const goto = (id) => {
     if (dirty && !window.confirm('Des modifications ne sont pas enregistrées. Changer de section quand même ? (elles sont conservées tant que tu restes sur cette page)')) return;
-    router.replace(`/admin?tab=settings&section=${id}`, { scroll: false });
+    router.replace(id ? `/admin?tab=settings&section=${id}` : '/admin?tab=settings', { scroll: false });
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
   };
   const byKey = Object.fromEntries(data.fields.map((f) => [f.key, f]));
   // Valeur courante (brouillon sinon valeur enregistrée) ; « set » = une valeur existe (ou une clé est déjà enregistrée).
@@ -366,45 +370,48 @@ function Settings() {
     setTests((t) => ({ ...t, [target]: r.ok ? r.data : { ok: false, message: r.data.error || 'Erreur' } }));
   };
 
-  const fields = data.fields.filter((f) => f.group === section && !f.hidden && !(section === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
-  const g = data.groups.find((x) => x.id === section);
   const changedIn = (id) => data.fields.some((f) => f.group === id && f.key in draft);
+  const dirtyCount = Object.keys(draft).length;
+  const encryptionWarning = !data.encryption && <p className="error">SETTINGS_KEY n'est pas définie sur l'API : les clés ne peuvent pas être enregistrées. Ajoute cette variable (voir README) puis redéploie l'API.</p>;
+
+  // Accueil : cartes par thèmes, avec l'état de chaque section et une recherche.
+  if (!section) {
+    return (
+      <section className="set-wrap">
+        {encryptionWarning}
+        <SettingsHub groups={data.groups} fields={data.fields} statusOf={(id) => sectionStatus(id, val, set)} changedIn={changedIn} onOpen={goto} query={query} onQuery={setQuery} dirtyCount={dirtyCount} />
+      </section>
+    );
+  }
+
+  const fields = data.fields.filter((f) => f.group === section && !f.hidden && !(section === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
+  const [state, stateLabel] = sectionStatus(section, val, set);
   return (
-    <section className="set-layout">
-      {!data.encryption && <p className="error">SETTINGS_KEY n'est pas définie sur l'API : les clés ne peuvent pas être enregistrées. Ajoute cette variable (voir README) puis redéploie l'API.</p>}
-      <nav className="set-nav" aria-label="Sections des paramètres">
-        {data.groups.map((x) => {
-          const [state, label] = sectionStatus(x.id, val, set);
-          return (
-            <button key={x.id} type="button" className={x.id === section ? 'set-tab on' : 'set-tab'} aria-current={x.id === section ? 'page' : undefined} onClick={() => goto(x.id)}>
-              <span className={`set-dot hs-${state}`} aria-hidden="true">{HEALTH_ICON[state]}</span>
-              <span className="set-tab-main"><b>{x.label}{changedIn(x.id) ? ' •' : ''}</b>{label && <small>{label}</small>}</span>
-            </button>
-          );
-        })}
-      </nav>
-      <div className="set-main">
-        <h3 className="set-title">{g.label}</h3>
-        <p className="meta">{SECTION_HELP[section]} Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
-        {section === 'home' && <HeroImage />}
-        {section === 'translation' && <EngineTable data={data} val={val} set={set} setVal={setVal} />}
-        <div className="adm-group-body set-fields">
-          {fields.map((f) => (
-            <div key={f.key}>
-              <Field f={f} langs={data.langs} dirty={dirty}
-                value={f.type === 'secret' ? secretVal(f.key) : draft[f.key]}
-                onChange={(v) => setVal(f.key, v)}
-                onClear={() => setVal(f.key, null)}
-                onTest={test} testing={Boolean(f.test && tests[f.test]?.loading)} />
-              {f.test && tests[f.test] && !tests[f.test].loading && <p className={tests[f.test].ok ? 'adm-ok' : 'error'}>{tests[f.test].message}</p>}
-            </div>
-          ))}
-        </div>
-        <div className="adm-savebar">
-          <button className="btn" disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-          {dirty && <button className="btn ghost" onClick={() => { setDraft({}); setMsg(null); }}>Annuler les modifications</button>}
-          {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
-        </div>
+    <section className="set-wrap">
+      {encryptionWarning}
+      <SectionHeader section={section} groups={data.groups} onOpen={goto} onBack={() => goto(null)} changedIn={changedIn} />
+      <p className="meta set-help">{SECTION_HELP[section]} Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
+      {stateLabel && state !== 'ok' && <p className={`set-state hs-${state}`} role="status"><span aria-hidden="true">{HEALTH_ICON[state]}</span> {stateLabel}</p>}
+      {section === 'home' && <HeroImage />}
+      {section === 'translation' && <EngineTable data={data} val={val} set={set} setVal={setVal} />}
+      <div className="set-fields">
+        {fields.map((f) => (
+          <div key={f.key} className={f.type === 'langs' ? 'set-wide' : undefined}>
+            <Field f={f} langs={data.langs} dirty={dirty}
+              value={f.type === 'secret' ? secretVal(f.key) : draft[f.key]}
+              onChange={(v) => setVal(f.key, v)}
+              onClear={() => setVal(f.key, null)}
+              onTest={test} testing={Boolean(f.test && tests[f.test]?.loading)} />
+            {f.test && tests[f.test] && !tests[f.test].loading && <p className={tests[f.test].ok ? 'adm-ok' : 'error'}>{tests[f.test].message}</p>}
+          </div>
+        ))}
+        {!fields.length && <p className="meta">Cette section n'a pas de réglage à saisir ici.</p>}
+      </div>
+      <div className="adm-savebar">
+        <button className="btn" disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+        {dirty && <button className="btn ghost" onClick={() => { setDraft({}); setMsg(null); }}>Annuler les modifications</button>}
+        {dirty && <span className="meta">{dirtyCount} modification{dirtyCount > 1 ? 's' : ''} non enregistrée{dirtyCount > 1 ? 's' : ''}</span>}
+        {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
       </div>
     </section>
   );
