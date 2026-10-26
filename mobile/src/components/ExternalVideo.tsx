@@ -1,4 +1,4 @@
-// Lecteur YouTube / Vimeo intégré à la fiche : page minimale dans une WebView, pilotée par messages.
+// Lecteur YouTube / Vimeo / Dailymotion intégré à la fiche : page minimale dans une WebView, pilotée par messages.
 import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import { WebView as RNWebView } from 'react-native-webview';
@@ -12,15 +12,15 @@ type WebEvent = { nativeEvent: { data: string } };
 export type PlayerHandle = { seek: (s: number) => void; play: () => void; pause: () => void; rate: (r: number) => void };
 
 type Props = {
-  kind: EmbedKind; id: string; startSeconds: number; limitSeconds: number;
+  kind: EmbedKind; id: string; playerId?: string; startSeconds: number; limitSeconds: number;
   onMessage: (m: EmbedMessage) => void;
 };
 
-export const ExternalVideo = forwardRef<PlayerHandle, Props>(function ExternalVideo({ kind, id, startSeconds, limitSeconds, onMessage }, ref) {
+export const ExternalVideo = forwardRef<PlayerHandle, Props>(function ExternalVideo({ kind, id, playerId, startSeconds, limitSeconds, onMessage }, ref) {
   const web = useRef<{ injectJavaScript: (s: string) => void } | null>(null);
   // La page n'est construite qu'une fois : changer de position ne doit pas recharger le lecteur.
   const html = useMemo(
-    () => buildEmbedHtml(kind, id, { start: startSeconds, limit: limitSeconds, auto: true, origin: SITE_URL }),
+    () => buildEmbedHtml(kind, id, { start: startSeconds, limit: limitSeconds, auto: true, origin: SITE_URL, playerId }),
     [kind, id], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const send = (c: EmbedCommand) => web.current?.injectJavaScript(commandScript(c));

@@ -122,7 +122,7 @@ def claim():
                       transcript_attempts = transcript_attempts + 1
                WHERE id = (SELECT id FROM talks
                            WHERE transcript_status = 'pending'
-                             AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'archive') AND rights_confirmed))
+                             AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'dailymotion', 'archive') AND rights_confirmed))
                              {cond}
                            ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
                RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts""",

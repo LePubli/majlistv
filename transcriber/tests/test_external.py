@@ -69,6 +69,7 @@ ok(external.normalize_list_url("https://www.youtube.com/@MaChaine") == "https://
 ok(external.normalize_list_url("https://www.youtube.com/playlist?list=PL123") == "https://www.youtube.com/playlist?list=PL123", "playlist inchangée")
 ok(external.normalize_list_url("https://youtube.com/channel/UCabc/") == "https://youtube.com/channel/UCabc/videos", "chaîne par identifiant")
 ok(external.video_url("vimeo", "123") == "https://vimeo.com/123", "adresse Vimeo")
+ok(external.video_url("dailymotion", "x8abc12") == "https://www.dailymotion.com/video/x8abc12", "adresse Dailymotion (23a)")
 
 # --- Erreurs lisibles --------------------------------------------------------------------------
 e = external.readable_error(Exception("ERROR: [youtube] x: Sign in to confirm you're not a bot"))
@@ -84,6 +85,13 @@ class FakeYDL:
     def __exit__(self, *a): return False
     def extract_info(self, url, download=False):
         FakeYDL.calls.append((url, self.opts.get("extract_flat"), self.opts.get("playlistend")))
+        if "dailymotion.com/MonCompte" in url:
+            return {"_type": "playlist", "title": "Mon Compte", "entries": [
+                {"ie_key": "Dailymotion", "id": "x8abc12", "title": "Conférence DM 1", "duration": 1800, "thumbnails": [{"url": "dm1", "width": 480}]},
+                {"ie_key": "Dailymotion", "id": "x8abc12", "title": "Doublon"},
+                {"ie_key": "Generic", "url": "https://www.dailymotion.com/video/x9zzz99_titre-long", "title": "Via l'adresse"},
+                {"ie_key": "Dailymotion", "id": "bad id!", "title": "Identifiant invalide"},
+            ]}
         if "playlist" in url or "/videos" in url:
             return {"_type": "playlist", "title": "Ma Chaîne - Videos", "entries": [
                 {"ie_key": "Youtube", "id": "aaaaaaaaaaa", "title": "Conférence 1", "duration": 3600.0, "thumbnails": [{"url": "t1", "width": 320}, {"url": "t2", "width": 1280}]},
@@ -103,6 +111,11 @@ _, two = external.list_videos("https://www.youtube.com/playlist?list=PL1", exter
 ok(len(two) == 2, "limite du nombre de vidéos respectée")
 _, single = external.list_videos("https://www.youtube.com/watch?v=ccccccccccc", external.ydl_options("/tmp"), 50)
 ok([x["id"] for x in single] == ["ccccccccccc"], "adresse d'une seule vidéo acceptée")
+
+dtitle, dentries = external.list_videos("https://www.dailymotion.com/MonCompte", external.ydl_options("/tmp"), 50)
+ok(dtitle == "Mon Compte" and [(x["id"], x["source"]) for x in dentries] == [("x8abc12", "dailymotion"), ("x9zzz99", "dailymotion")], f"compte Dailymotion : sans doublon ni identifiant invalide ({dentries})")
+ok(dentries[0]["duration"] == 1800 and dentries[0]["thumb"] == "dm1", "Dailymotion : durée et miniature")
+ok(external.normalize_list_url("https://www.dailymotion.com/MonCompte") == "https://www.dailymotion.com/MonCompte", "compte Dailymotion inchangé")
 
 o = external.ydl_options("/tmp/claude-0", cookies="# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tabc", proxy="http://p:1")
 ok(o["cookiefile"] == "/tmp/claude-0/cookies.txt" and oct(os.stat(o["cookiefile"]).st_mode)[-3:] == "600" and o["proxy"] == "http://p:1", "cookies écrits (droits 600) et proxy transmis")

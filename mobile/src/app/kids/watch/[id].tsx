@@ -63,9 +63,9 @@ function Watch({ id }: { id: string }) {
 }
 
 function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; next: KidCard[]; stars: number | null; topBar: React.ReactNode; locale: string; kidName: string }) {
-  const { t } = useSession();
+  const { t, config } = useSession();
   const { kid, kidApi, time } = useKid();
-  const src = useMemo(() => pickSource(talk, API_URL), [talk]);
+  const src = useMemo(() => pickSource(talk, API_URL, config?.dailymotionPlayerId), [talk, config?.dailymotionPlayerId]);
   const startMs = talk.resumeMs ?? 0;
   const embedRef = useRef<PlayerHandle>(null);
   const [failed, setFailed] = useState(false);
@@ -128,7 +128,7 @@ function Player({ talk, next, stars, topBar, locale, kidName }: { talk: Talk; ne
         {left != null && left <= 5 ? <KTxt weight="bold" color={KC.accent} style={{ paddingHorizontal: 20 }} accessibilityRole="alert">⏳ {t('kdTimeLow', { n: left })}</KTxt> : null}
         <View style={{ aspectRatio: 16 / 9, backgroundColor: '#000', marginHorizontal: 12, borderRadius: 20, overflow: 'hidden', justifyContent: 'center' }}>
           {src.embed ? (
-            <ExternalVideo ref={embedRef} kind={src.embed.kind} id={src.embed.id} startSeconds={startMs / 1000} limitSeconds={0} onMessage={onEmbed} />
+            <ExternalVideo ref={embedRef} kind={src.embed.kind} id={src.embed.id} playerId={config?.dailymotionPlayerId} startSeconds={startMs / 1000} limitSeconds={0} onMessage={onEmbed} />
           ) : src.uri ? (
             <VideoView player={player} style={{ flex: 1 }} nativeControls contentFit="contain" allowsPictureInPicture={false} fullscreenOptions={{ enable: true }} />
           ) : (

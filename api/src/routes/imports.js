@@ -1,4 +1,4 @@
-// Import de playlists, de chaînes ou d'albums YouTube / Vimeo :
+// Import de playlists, de chaînes ou d'albums, de comptes YouTube / Vimeo / Dailymotion :
 // 1) l'organisateur colle l'adresse -> le transcripteur liste les vidéos (sans rien télécharger) ;
 // 2) il coche celles à importer -> les conférences sont créées (transcription si l'accord de l'auteur est confirmé).
 import { z } from 'zod';
@@ -6,11 +6,11 @@ import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
-const ALLOWED_HOSTS = /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com|archive\.org)$/i;
+const ALLOWED_HOSTS = /^(www\.|m\.|music\.|geo\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly|archive\.org)$/i;
 
 const urlSchema = z.string().trim().url().max(500).refine((u) => {
   try { return ALLOWED_HOSTS.test(new URL(u).hostname); } catch { return false; }
-}, 'Adresse YouTube, Vimeo ou archive.org attendue');
+}, 'Adresse YouTube, Vimeo, Dailymotion ou archive.org attendue');
 
 const confirmSchema = z.object({
   ids: z.array(z.string().regex(/^[\w.-]{1,100}$/)).min(1).max(2000), // identifiants archive.org : jusqu'à 100 caractères

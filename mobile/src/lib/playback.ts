@@ -1,7 +1,7 @@
 // Choix de la source de lecture d'une conférence, selon ce que renvoie GET /talks/:id. Pur, testable avec Node.
 import { absoluteUrl } from './api';
 import type { Talk } from './types';
-import { validEmbedId, type EmbedKind } from './embed';
+import { validDailymotionPlayer, validEmbedId, type EmbedKind } from './embed';
 
 export type PlaySource = {
   /** Adresse de la vidéo (HLS multi-qualités du serveur, fichier archive.org, ou fichier d'origine pour le propriétaire). */
@@ -16,12 +16,16 @@ export type PlaySource = {
   notReady: boolean;
 };
 
-export function pickSource(talk: Talk, baseUrl: string): PlaySource {
+/** dailymotionPlayerId : Player ID réglé par l'administrateur (GET /config) ; sans lui, une vidéo Dailymotion se regarde sur le site. */
+export function pickSource(talk: Talk, baseUrl: string, dailymotionPlayerId?: string | null): PlaySource {
   const abs = (p?: string) => (p ? absoluteUrl(baseUrl, p) : null);
   if (talk.source !== 'upload') {
     if (talk.fileUrl) return { uri: talk.fileUrl, audioUri: null, external: false, embed: null, notReady: false };
     if ((talk.source === 'youtube' || talk.source === 'vimeo') && validEmbedId(talk.source, talk.video_ref)) {
       return { uri: null, audioUri: null, external: false, embed: { kind: talk.source, id: talk.video_ref as string }, notReady: false };
+    }
+    if (talk.source === 'dailymotion' && validDailymotionPlayer(dailymotionPlayerId) && validEmbedId('dailymotion', talk.video_ref)) {
+      return { uri: null, audioUri: null, external: false, embed: { kind: 'dailymotion', id: talk.video_ref as string }, notReady: false };
     }
     return { uri: null, audioUri: null, external: true, embed: null, notReady: false };
   }
@@ -31,7 +35,7 @@ export function pickSource(talk: Talk, baseUrl: string): PlaySource {
 }
 
 /** Nom de la plateforme d'une vidéo externe, pour le message affiché. */
-export const platformName = (source: string) => (source === 'youtube' ? 'YouTube' : source === 'vimeo' ? 'Vimeo' : source);
+export const platformName = (source: string) => (source === 'youtube' ? 'YouTube' : source === 'vimeo' ? 'Vimeo' : source === 'dailymotion' ? 'Dailymotion' : source);
 
 /** Vitesses proposées, dans l'ordre du bouton. */
 export const SPEEDS = [1, 1.25, 1.5, 2, 0.75];

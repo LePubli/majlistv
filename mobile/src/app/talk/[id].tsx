@@ -59,7 +59,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, config, feat } = useSession();
   const dls = useDownloads();
   const [dlOpen, setDlOpen] = useState(false);
-  const src = useMemo(() => pickSource(talk, API_URL), [talk]);
+  const src = useMemo(() => pickSource(talk, API_URL, config?.dailymotionPlayerId), [talk, config?.dailymotionPlayerId]);
   const locked = !!talk.locked;
   const startMs = locked ? 0 : atMs ?? resumeStartMs(talk.resumeMs, talk.durationSeconds);
   const meta = { title: talk.title, artist: talk.speaker, artwork: talk.posterUrl ?? undefined };
@@ -198,7 +198,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
       <View style={{ backgroundColor: '#000' }}>
         <View style={{ aspectRatio: 16 / 9, width: '100%', backgroundColor: '#000', justifyContent: 'center' }}>
           {src.embed ? (
-            <ExternalVideo ref={embedRef} kind={src.embed.kind} id={src.embed.id} startSeconds={startMs / 1000} limitSeconds={locked ? talk.previewSeconds || 120 : 0} onMessage={onEmbed} />
+            <ExternalVideo ref={embedRef} kind={src.embed.kind} id={src.embed.id} playerId={config?.dailymotionPlayerId} startSeconds={startMs / 1000} limitSeconds={locked ? talk.previewSeconds || 120 : 0} onMessage={onEmbed} />
           ) : src.uri && !audioMode ? (
             <VideoView ref={videoRef} player={player} style={{ flex: 1 }} nativeControls contentFit="contain" allowsPictureInPicture fullscreenOptions={{ enable: true }} />
           ) : (

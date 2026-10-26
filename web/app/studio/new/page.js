@@ -30,6 +30,12 @@ function parseLink(raw) {
     return id && /^[\w-]{11}$/.test(id) ? { source: 'youtube', ref: id } : null;
   }
   if (host === 'vimeo.com') return /^\/\d+/.test(u.pathname) ? { source: 'vimeo', ref: u.pathname.slice(1).split('/')[0] } : null;
+  if (host === 'dai.ly') return /^[A-Za-z0-9]{5,16}$/.test(u.pathname.slice(1)) ? { source: 'dailymotion', ref: u.pathname.slice(1) } : null;
+  if (host === 'dailymotion.com' || host === 'geo.dailymotion.com') {
+    const m = u.pathname.match(/^\/(?:embed\/)?video\/([A-Za-z0-9]{5,16})(?:_|\/|$)/);
+    const id = m ? m[1] : u.searchParams.get('video');
+    return id && /^[A-Za-z0-9]{5,16}$/.test(id) ? { source: 'dailymotion', ref: id } : null;
+  }
   if (host === 'archive.org') return /^\/details\/[^/]+/.test(u.pathname) ? { source: 'archive', ref: u.pathname.split('/')[2] } : null;
   return null;
 }

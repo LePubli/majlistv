@@ -25,16 +25,16 @@ export function buildCsp(nonce, { https, dev }) {
   // Sans adresse de stockage connue : schéma https: (ou http: en test local) plutôt que de casser les vidéos et images.
   const stor = storage.length ? storage : [https ? 'https:' : 'https: http:'];
   // 'self' : l'aperçu d'Admin → Apparence affiche une page du site dans un cadre (étape I1).
-  const frames = ["'self'", 'https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com', ...list(process.env.CSP_EXTRA_FRAME)];
+  const frames = ["'self'", 'https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com', 'https://www.dailymotion.com', 'https://geo.dailymotion.com', ...list(process.env.CSP_EXTRA_FRAME)];
   const d = {
     'default-src': ["'self'"],
     // strict-dynamic : les scripts chargés par un script de confiance (API YouTube / Vimeo) sont autorisés ;
     // les adresses listées ne servent qu'aux très vieux navigateurs qui ignorent strict-dynamic.
-    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", 'https://www.youtube.com', 'https://player.vimeo.com', 'https://www.gstatic.com', ...(dev ? ["'unsafe-eval'"] : [])],
+    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", 'https://www.youtube.com', 'https://player.vimeo.com', 'https://geo.dailymotion.com', 'https://www.gstatic.com', ...(dev ? ["'unsafe-eval'"] : [])],
     // Les attributs style="…" de React ne peuvent pas porter de nonce : 'unsafe-inline' reste nécessaire pour les styles
     // (risque faible comparé aux scripts).
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', ...stor],
+    'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', 'https://www.dailymotion.com', 'https://*.dmcdn.net', ...stor],
     'media-src': ["'self'", 'blob:', ...stor],
     'font-src': ["'self'", 'data:'],
     'connect-src': ["'self'", 'https://www.gstatic.com', ...stor],

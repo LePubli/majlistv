@@ -20,6 +20,8 @@ class Blocked(Exception):
 def video_url(source, ref):
     if source == "archive":
         return f"{ARCHIVE_BASE}/details/{ref}"
+    if source == "dailymotion":
+        return f"https://www.dailymotion.com/video/{ref}"
     return f"https://www.youtube.com/watch?v={ref}" if source == "youtube" else f"https://vimeo.com/{ref}"
 
 
@@ -79,7 +81,7 @@ def best_thumbnail(info):
     return (good or thumbs)[-1]["url"]
 
 
-_PLATFORM_URL = re.compile(r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be|vimeo\.com|archive\.org)/\S*", re.I)
+_PLATFORM_URL = re.compile(r"(https?://)?(www\.|m\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly|archive\.org)/\S*", re.I)
 
 
 def clean_description(text):
@@ -379,6 +381,7 @@ def list_archive(url, limit):
 
 
 # --- Playlists et chaînes ------------------------------------------------------------------------
+DAILYMOTION_ID = re.compile(r"^[A-Za-z0-9]{5,16}$")
 CHANNEL_ROOT = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(@[\w.-]+|channel/[\w-]+|c/[\w.-]+|user/[\w.-]+)/?$", re.I)
 
 
@@ -397,6 +400,8 @@ def _entry(e):
         source = "youtube"
     elif "vimeo" in ie and vid.isdigit():
         source = "vimeo"
+    elif "dailymotion" in ie and DAILYMOTION_ID.match(vid):
+        source = "dailymotion"
     else:
         url = e.get("url") or e.get("webpage_url") or ""
         m = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", url)
@@ -404,9 +409,13 @@ def _entry(e):
             source, vid = "youtube", m.group(1)
         else:
             m = re.search(r"vimeo\.com/(?:.*/)?(\d+)", url)
-            if not m:
-                return None
-            source, vid = "vimeo", m.group(1)
+            if m:
+                source, vid = "vimeo", m.group(1)
+            else:
+                m = re.search(r"(?:dailymotion\.com/(?:embed/)?video/|dai\.ly/)([A-Za-z0-9]{5,16})", url)
+                if not m:
+                    return None
+                source, vid = "dailymotion", m.group(1)
     duration = e.get("duration")
     return {
         "id": vid, "source": source, "title": (e.get("title") or "").strip()[:200] or vid,

@@ -42,6 +42,17 @@ test('YouTube / Vimeo avec identifiant valide : lecteur intégré ; identifiant 
   assert.equal(bad.external, true);
 });
 
+test('Dailymotion : lecteur intégré seulement avec un Player ID ; sinon lecture sur le site', () => {
+  const dm = { ...base, source: 'dailymotion', video_ref: 'x8abcd1' } as Talk;
+  assert.deepEqual(pickSource(dm, API, 'xabc12').embed, { kind: 'dailymotion', id: 'x8abcd1' });
+  const none = pickSource(dm, API);
+  assert.equal(none.embed, null);
+  assert.equal(none.external, true);
+  assert.equal(pickSource(dm, API, 'x"><script>').embed, null);
+  assert.equal(pickSource({ ...dm, video_ref: "x');evil()" } as Talk, API, 'xabc12').embed, null);
+  assert.equal(platformName('dailymotion'), 'Dailymotion');
+});
+
 test('vitesses : cycle complet et retour au début', () => {
   let s = 1;
   const seen: number[] = [];

@@ -17,7 +17,7 @@ import { viaChannel, managedSpeakers } from '../channelAccess.js';
 import { featureOn } from '../features.js';
 import { classifyUrl, insertImport, newObjectKey, storageProblem } from '../mediaImport.js';
 
-// Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo ou archive.org.
+// Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo, Dailymotion ou archive.org.
 export function parseVideoUrl(raw) {
   const ia = parseArchiveUrl(raw);
   if (ia) return ia;
@@ -38,7 +38,22 @@ export function parseVideoUrl(raw) {
     const m = u.pathname.match(/^\/(\d+)/);
     return m ? { source: 'vimeo', ref: m[1] } : null;
   }
+  const dm = parseDailymotion(u);
+  if (dm) return { source: 'dailymotion', ref: dm };
   return null;
+}
+
+// Identifiant d'une vidéo Dailymotion : dailymotion.com/video/x8abc12 (ou /video/x8abc12_titre), dai.ly/x8abc12, /embed/video/x8abc12,
+// geo.dailymotion.com/player…html?video=x8abc12. null si ce n'est pas une vidéo (chaîne, playlist, autre site).
+export function parseDailymotion(u) {
+  const host = u.hostname.replace(/^(www|m|geo)\./, '').toLowerCase();
+  const id = /^[A-Za-z0-9]{5,16}$/;
+  if (host === 'dai.ly') { const x = u.pathname.slice(1).split('/')[0]; return id.test(x) ? x : null; }
+  if (host !== 'dailymotion.com') return null;
+  const q = u.searchParams.get('video');
+  if (q && /player/.test(u.pathname)) return id.test(q) ? q : null;
+  const m = u.pathname.match(/^\/(?:embed\/)?video\/([A-Za-z0-9]{5,16})(?:_[^/]*)?\/?$/);
+  return m ? m[1] : null;
 }
 
 const listSchema = z.object({
@@ -391,7 +406,7 @@ export default async function talksRoutes(app) {
           video = { source: 'upload', ref: newObjectKey(), importing: true };
         }
       }
-      if (!video) return reply.code(400).send({ error: 'Lien YouTube, Vimeo ou archive.org non reconnu : pour un autre site, cochez « Importer la vidéo chez nous »', code: 'bad_url' });
+      if (!video) return reply.code(400).send({ error: 'Lien YouTube, Vimeo, Dailymotion ou archive.org non reconnu : pour un autre site, cochez « Importer la vidéo chez nous »', code: 'bad_url' });
       const dup = video.importing ? { rows: [] } : await pool.query('SELECT id FROM talks WHERE source = $1 AND video_ref = $2 LIMIT 1', [video.source, video.ref]);
       if (dup.rows[0]) return reply.code(409).send({ error: 'Cette vidéo est déjà dans le catalogue', code: 'duplicate', id: dup.rows[0].id });
       if (video.source === 'archive') {

@@ -33,7 +33,7 @@ export function isPrivateHost(hostname) {
   return !h.includes('.') || /\.(localhost|local|internal|lan|home\.arpa|intranet)$/.test(h);
 }
 
-// Adresse saisie -> { url, origin, archive } ou { error }. origin : youtube | vimeo | archive | web.
+// Adresse saisie -> { url, origin, archive } ou { error }. origin : youtube | vimeo | dailymotion | archive | web.
 export function classifyUrl(raw) {
   const text = String(raw || '').trim();
   if (!text || text.length > 1000) return { error: 'Adresse invalide', code: 'bad_url' };
@@ -44,7 +44,7 @@ export function classifyUrl(raw) {
   if (isPrivateHost(u.hostname)) return { error: 'Cette adresse n\'est pas un site public', code: 'private_url' };
   const host = u.hostname.replace(/^(www|m|player)\./i, '').toLowerCase();
   const archive = parseArchiveUrl(u.toString());
-  const origin = host === 'youtu.be' || host === 'youtube.com' ? 'youtube' : host === 'vimeo.com' ? 'vimeo' : archive ? 'archive' : 'web';
+  const origin = host === 'youtu.be' || host === 'youtube.com' ? 'youtube' : host === 'vimeo.com' ? 'vimeo' : host === 'dailymotion.com' || host === 'dai.ly' ? 'dailymotion' : archive ? 'archive' : 'web';
   return { url: u.toString(), origin, archive };
 }
 
@@ -52,6 +52,7 @@ export function classifyUrl(raw) {
 export function talkSourceUrl(talk) {
   if (talk.source === 'youtube') return { url: `https://www.youtube.com/watch?v=${talk.video_ref}`, origin: 'youtube', archiveFile: null };
   if (talk.source === 'vimeo') return { url: `https://vimeo.com/${talk.video_ref}`, origin: 'vimeo', archiveFile: null };
+  if (talk.source === 'dailymotion') return { url: `https://www.dailymotion.com/video/${talk.video_ref}`, origin: 'dailymotion', archiveFile: null };
   if (talk.source === 'archive') return { url: `https://archive.org/details/${talk.video_ref}`, origin: 'archive', archiveFile: talk.external_file || null };
   return null;
 }

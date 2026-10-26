@@ -56,7 +56,7 @@ export default async function seoRoutes(app) {
     return {
       id: t.id, slug: await ensureSlug('talks', id), summary, chapters, excerpt, title: t.title, description: clip(t.description, 5000), speaker: t.speaker, language: t.language, access: t.access,
       category: t.category, durationSeconds: t.durationSeconds, publishedAt: t.publishedAt,
-      embed: t.source === 'youtube' ? { kind: 'youtube', ref: t.video_ref } : t.source === 'vimeo' ? { kind: 'vimeo', ref: t.video_ref } : null,
+      embed: t.source === 'youtube' ? { kind: 'youtube', ref: t.video_ref } : t.source === 'vimeo' ? { kind: 'vimeo', ref: t.video_ref } : t.source === 'dailymotion' ? { kind: 'dailymotion', ref: t.video_ref } : null,
       posterPath: t.hasPoster ? posterPath('talks', id) : null, series,
       site: await siteInfo(),
     };

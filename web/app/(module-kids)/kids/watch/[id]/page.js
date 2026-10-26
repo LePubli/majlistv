@@ -67,7 +67,7 @@ export default function KidsWatch() {
   const start = (talk.resumeMs || 0) / 1000;
   let player = <p className="soon">{t('playerUnavailable')}</p>;
   if (talk.source === 'archive' && talk.fileUrl) player = <VideoPlayer src={talk.fileUrl} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={start} />;
-  else if (talk.source === 'youtube' || talk.source === 'vimeo') player = <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={start} tracks={tracks} videoRef={videoRef} t={t} />;
+  else if (talk.source === 'youtube' || talk.source === 'vimeo' || talk.source === 'dailymotion') player = <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={start} tracks={tracks} videoRef={videoRef} t={t} />;
   else if (talk.hlsPath) player = <VideoPlayer src={'/api' + talk.hlsPath} poster={talk.posterUrl} tracks={tracks} videoRef={videoRef} startSeconds={start} />;
   const me = list.find((x) => x.id === id);
   const stars = Math.max(gotStars || 0, me?.stars || 0);

@@ -1,7 +1,7 @@
 // Lecteur YouTube / Vimeo intégré : identifiants, page générée, messages.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEmbedHtml, commandScript, parseEmbedMessage, validEmbedId } from '../src/lib/embed';
+import { buildEmbedHtml, commandScript, parseEmbedMessage, validDailymotionPlayer, validEmbedId } from '../src/lib/embed';
 
 test('identifiants : YouTube 11 caractères, Vimeo chiffres ; le reste est refusé (pas d’injection)', () => {
   assert.equal(validEmbedId('youtube', 'dQw4w9WgXcQ'), true);
@@ -49,4 +49,20 @@ test('messages du lecteur : lus, ou ignorés s’ils ne viennent pas de lui', ()
 test('commandes envoyées à la page', () => {
   assert.equal(commandScript({ c: 'seek', v: 30 }), 'window.cmd && window.cmd({"c":"seek","v":30}); true;');
   assert.match(commandScript({ c: 'rate', v: 1.5 }), /"rate"/);
+});
+
+test('Dailymotion : identifiant et Player ID validés, page pilotée par le lecteur', () => {
+  assert.equal(validEmbedId('dailymotion', 'x8abcd1'), true);
+  assert.equal(validEmbedId('dailymotion', "x8');evil()//"), false);
+  assert.equal(validDailymotionPlayer('xabc12'), true);
+  assert.equal(validDailymotionPlayer('x"><script>'), false);
+  assert.equal(validDailymotionPlayer(''), false);
+  assert.throws(() => buildEmbedHtml('dailymotion', 'x8abcd1', { origin: 'https://x.fr' }), /Player ID/);
+  const h = buildEmbedHtml('dailymotion', 'x8abcd1', { start: 42.9, limit: 120, auto: true, origin: 'https://x.fr', playerId: 'xabc12' });
+  assert.match(h, /geo\.dailymotion\.com\/libs\/player\/xabc12\.js/);
+  assert.match(h, /video:'x8abcd1'/);
+  assert.match(h, /startTime:42,/);
+  assert.match(h, /autoplay:true/);
+  assert.match(h, /LIMIT=120/);
+  assert.match(h, /VIDEO_TIMECHANGE/);
 });

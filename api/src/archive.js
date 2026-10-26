@@ -59,7 +59,7 @@ export function pickVideoFile(files, wanted) {
 const stripHtml = (s) => String(Array.isArray(s) ? s.join('\n') : s || '')
   .replace(/<br\s*\/?>/gi, '\n').replace(/<\/?p[^>]*>/gi, '\n').replace(/<[^>]+>/g, '')
   .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-  .replace(/(https?:\/\/)?(www\.)?(archive\.org|youtube\.com|youtu\.be|vimeo\.com)\/\S*/gi, '') // aucun lien vers la plateforme d'origine
+  .replace(/(https?:\/\/)?(www\.)?(archive\.org|youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly)\/\S*/gi, '') // aucun lien vers la plateforme d'origine
   .replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 
 // Lit l'élément archive.org et renvoie { title, description, duration, thumb, file }.

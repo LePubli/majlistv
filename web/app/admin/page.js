@@ -178,7 +178,7 @@ const SECTION_HELP = {
   translation: 'Sous-titres traduits : choisis le moteur par défaut et, langue par langue, celui qui convient le mieux.',
   insights: 'Résumé et chapitres de chaque conférence.',
   transcription: 'Transcription automatique des vidéos envoyées (Whisper, sur ton serveur).',
-  external: 'Conférences YouTube / Vimeo : comment récupérer le texte, imports en masse.',
+  external: 'Conférences YouTube / Vimeo / Dailymotion : comment récupérer le texte, imports en masse.',
   search: 'Recherche rapide avec tolérance aux fautes (Meilisearch).',
 };
 const ENGINES = [['claude', 'Claude'], ['azure', 'Azure'], ['deepseek', 'DeepSeek']];

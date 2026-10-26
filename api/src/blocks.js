@@ -88,8 +88,8 @@ export const BLOCK_TYPES = {
     sample: { title: { fr: 'Questions fréquentes' }, items: [{ q: { fr: 'Une question ?' }, a: { fr: 'Une réponse.' } }] },
   },
   video: {
-    label: 'Vidéo', hint: 'Une vidéo YouTube ou Vimeo intégrée.',
-    fields: [{ k: 'url', label: 'Adresse de la vidéo (YouTube ou Vimeo)', kind: 'video' }, T('title', 'Titre de la vidéo')], sample: {},
+    label: 'Vidéo', hint: 'Une vidéo YouTube, Vimeo ou Dailymotion intégrée.',
+    fields: [{ k: 'url', label: 'Adresse de la vidéo (YouTube, Vimeo ou Dailymotion)', kind: 'video' }, T('title', 'Titre de la vidéo')], sample: {},
   },
   // ---- Blocs « données du site » (étape H) : leur contenu vient du catalogue et du compte de la personne, il se met à jour tout seul.
   featured: {
@@ -161,6 +161,8 @@ export function videoEmbed(url) {
   if (m) return { kind: 'youtube', id: m[1], src: `https://www.youtube-nocookie.com/embed/${m[1]}` };
   m = url.match(/^https:\/\/(?:www\.)?vimeo\.com\/(\d{6,12})(?:[/?#][^\s]*)?$/) || url.match(/^https:\/\/player\.vimeo\.com\/video\/(\d{6,12})(?:[?#][^\s]*)?$/);
   if (m) return { kind: 'vimeo', id: m[1], src: `https://player.vimeo.com/video/${m[1]}` };
+  m = url.match(/^https:\/\/(?:www\.)?dailymotion\.com\/(?:embed\/)?video\/([A-Za-z0-9]{5,16})(?:_[^/?#\s]*)?\/?(?:[?#][^\s]*)?$/) || url.match(/^https:\/\/dai\.ly\/([A-Za-z0-9]{5,16})(?:[?#][^\s]*)?$/);
+  if (m) return { kind: 'dailymotion', id: m[1], src: `https://www.dailymotion.com/embed/video/${m[1]}` };
   return null;
 }
 
@@ -198,7 +200,7 @@ function cleanField(f, v) {
       return v;
     case 'video':
       if (v == null || v === '') return undefined;
-      if (!videoEmbed(v)) throw new Error('Adresse YouTube ou Vimeo attendue (https://www.youtube.com/watch?v=… ou https://vimeo.com/…)');
+      if (!videoEmbed(v)) throw new Error('Adresse YouTube, Vimeo ou Dailymotion attendue (https://www.youtube.com/watch?v=…, https://vimeo.com/… ou https://www.dailymotion.com/video/…)');
       return v;
     case 'sel': {
       if (v == null) return undefined;

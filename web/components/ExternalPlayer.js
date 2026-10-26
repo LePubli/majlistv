@@ -1,5 +1,5 @@
 'use client';
-// Lecteur YouTube / Vimeo piloté par le site. Il expose dans videoRef un objet qui se comporte comme une balise <video>
+// Lecteur YouTube / Vimeo / Dailymotion piloté par le site. Il expose dans videoRef un objet qui se comporte comme une balise <video>
 // (currentTime, duration, paused, play(), pause(), événements timeupdate / pause / ended / loadedmetadata) :
 // transcription cliquable, chapitres, reprise de lecture et liens « ?t= » fonctionnent donc comme pour une vidéo envoyée.
 // Les sous-titres traduits sont affichés par-dessus la vidéo (on ne peut pas les injecter dans le lecteur YouTube).
@@ -133,6 +133,55 @@ export default function ExternalPlayer({ source, videoId, title, startSeconds = 
           if (!Number.isFinite(adapter.d) || !adapter.d) adapter.d = player.getDuration?.() || NaN;
           if (!adapter.isPaused) { adapter.emit('timeupdate'); guard(); }
         }, 250);
+      }).catch(() => alive && setFailed(true));
+    } else if (source === 'dailymotion') {
+      // Dailymotion : lecteur « Player ID » (piloté) si l'administrateur en a renseigné un, sinon simple cadre sans pilotage.
+      fetch('/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((cfg) => {
+        if (!alive) return null;
+        const pid = String((cfg && cfg.dailymotionPlayerId) || '').replace(/[^A-Za-z0-9]/g, '');
+        if (!pid) {
+          // Sans Player ID : pas de pilotage, donc pas d'aperçu limité possible (contenu premium).
+          if (limit) { setFailed(true); return null; }
+          const frame = document.createElement('iframe');
+          frame.src = `https://www.dailymotion.com/embed/video/${encodeURIComponent(videoId)}?${auto.current ? 'autoplay=1&' : ''}${start.current ? `start=${Math.floor(start.current)}&` : ''}ui-logo=0&sharing-enable=0`;
+          frame.allow = 'autoplay; fullscreen; picture-in-picture';
+          frame.allowFullscreen = true;
+          frame.title = title || 'Dailymotion';
+          host.current.appendChild(frame);
+          return null;
+        }
+        return loadScript(`https://geo.dailymotion.com/libs/player/${pid}.js`, () => Boolean(window.dailymotion && window.dailymotion.createPlayer)).then(() => {
+          if (!alive) return null;
+          const el = document.createElement('div');
+          el.id = `dm-${Math.random().toString(36).slice(2, 10)}`;
+          host.current.appendChild(el);
+          return window.dailymotion.createPlayer(el.id, { video: videoId, params: { startTime: Math.floor(start.current || 0), ...(auto.current ? { autoplay: true } : {}) } });
+        }).then((p) => {
+          if (!p || !alive) return;
+          player = p;
+          const sync = () => p.getState().then((st) => {
+            if (!st) return;
+            if (Number.isFinite(st.videoTime)) adapter.t = st.videoTime;
+            if (Number.isFinite(st.videoDuration) && st.videoDuration > 0) adapter.d = st.videoDuration;
+          }).catch(() => {});
+          p.on(window.dailymotion.events.VIDEO_DURATIONCHANGE, () => { sync().then(() => { adapter.emit('loadedmetadata'); adapter.emit('canplay'); }); });
+          p.on(window.dailymotion.events.VIDEO_TIMECHANGE, (st) => {
+            if (st && Number.isFinite(st.videoTime)) adapter.t = st.videoTime;
+            if (st && Number.isFinite(st.videoDuration) && st.videoDuration > 0) adapter.d = st.videoDuration;
+            adapter.emit('timeupdate'); guard();
+          });
+          p.on(window.dailymotion.events.VIDEO_PLAY, () => { adapter.isPaused = false; adapter.isEnded = false; adapter.emit('play'); });
+          p.on(window.dailymotion.events.VIDEO_PAUSE, () => { adapter.isPaused = true; adapter.emit('pause'); });
+          p.on(window.dailymotion.events.VIDEO_END, () => { adapter.isPaused = true; adapter.isEnded = true; adapter.emit('ended'); if (limit && onPreviewEnd) onPreviewEnd(); });
+          p.on(window.dailymotion.events.PLAYER_ERROR, () => { if (alive) setFailed(true); });
+          adapter.impl = {
+            seek: (s) => p.seek(s),
+            play: () => p.play(),
+            pause: () => p.pause(),
+            setRate: () => {}, // vitesse non pilotable avec ce lecteur
+            setVolume: (v) => p.setVolume(v),
+          };
+        });
       }).catch(() => alive && setFailed(true));
     } else {
       loadScript('https://player.vimeo.com/api/player.js', () => Boolean(window.Vimeo && window.Vimeo.Player)).then(() => {

@@ -32,7 +32,7 @@ export function TalkView({ t, routeId }) {
   if (t) {
     const base = t.site.baseUrl;
     const image = absolute(base, t.posterPath);
-    const embedUrl = t.embed ? (t.embed.kind === 'youtube' ? `https://www.youtube.com/embed/${t.embed.ref}` : `https://player.vimeo.com/video/${t.embed.ref}`) : undefined;
+    const embedUrl = t.embed ? (t.embed.kind === 'youtube' ? `https://www.youtube.com/embed/${t.embed.ref}` : t.embed.kind === 'dailymotion' ? `https://www.dailymotion.com/embed/video/${t.embed.ref}` : `https://player.vimeo.com/video/${t.embed.ref}`) : undefined;
     ld = {
       '@context': 'https://schema.org',
       '@type': 'VideoObject',

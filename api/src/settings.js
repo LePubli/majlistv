@@ -24,7 +24,7 @@ export const GROUPS = [
   { id: 'stats', label: "Statistiques d'audience" },
   { id: 'citations', label: 'Citations (versets et hadiths)' },
   { id: 'transcription', label: 'Transcription (Whisper)' },
-  { id: 'external', label: 'Vidéos YouTube et Vimeo' },
+  { id: 'external', label: 'Vidéos YouTube, Vimeo et Dailymotion' },
   { id: 'search', label: 'Recherche (Meilisearch)' },
   { id: 'activity', label: 'Activité (tâches lourdes)' },
 ];
@@ -220,6 +220,8 @@ export const FIELDS = [
     help: 'subtitles_then_audio : sous-titres publiés par l\'auteur s\'ils existent, sinon téléchargement de l\'audio et Whisper (recommandé) · audio_only : toujours Whisper · subtitles_only : jamais de téléchargement.' },
   { key: 'external_auto_captions', group: 'external', type: 'bool', label: 'Utiliser les sous-titres automatiques de YouTube en dernier recours', env: 'EXTERNAL_AUTO_CAPTIONS', def: 'true',
     help: 'Moins bonne qualité (pas de ponctuation), utilisés seulement si l\'audio ne peut pas être récupéré.' },
+  { key: 'dailymotion_player_id', group: 'external', type: 'text', label: 'Dailymotion : identifiant de lecteur (Player ID)', env: 'DAILYMOTION_PLAYER_ID',
+    help: "Facultatif. Sans lui, les vidéos Dailymotion se lisent dans le lecteur simple (pas de reprise de lecture, pas de pause de prière, pas d'aperçu des conférences premium). Avec lui, le lecteur est piloté comme YouTube. Créez-le dans Dailymotion Studio → Players (lettres et chiffres, par exemple x8lr5)." },
   { key: 'ytdlp_cookies', group: 'external', type: 'secret_text', label: 'Cookies YouTube (si YouTube bloque le serveur)', env: 'YTDLP_COOKIES',
     help: 'Contenu d\'un fichier cookies.txt (format Netscape) exporté depuis un navigateur connecté à un compte Google dédié. Laisser vide si tout fonctionne.' },
   { key: 'ytdlp_proxy', group: 'external', type: 'secret', label: 'Proxy de sortie (facultatif)', env: 'YTDLP_PROXY', help: 'Ex. http://utilisateur:motdepasse@proxy:port. Pour contourner un blocage par adresse IP.' },

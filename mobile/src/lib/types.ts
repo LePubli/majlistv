@@ -8,7 +8,7 @@ export type Card = {
   speaker: string;
   language?: string;
   access: 'free' | 'premium';
-  source: 'upload' | 'youtube' | 'vimeo' | 'archive';
+  source: 'upload' | 'youtube' | 'vimeo' | 'dailymotion' | 'archive';
   category?: string | null;
   durationSeconds?: number | null;
   posterUrl?: string | null;
@@ -70,6 +70,8 @@ export type AppConfig = {
   hasBooks: boolean;
   appName: string;
   trialDays: number;
+  /** Player ID Dailymotion (Admin → Paramètres) ; vide : les vidéos Dailymotion s'ouvrent sur le site. */
+  dailymotionPlayerId?: string;
   cards?: { show: Record<string, boolean> };
   /** Réglages de la fonction Prière (Admin → Paramètres) ; absent si la fonction est désactivée. */
   prayer?: { defaultEnabled: boolean; pill: boolean; method: string; asr: string; blockMinutes: number; maxBlockMinutes: number; city: string } | null;

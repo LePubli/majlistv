@@ -5594,3 +5594,28 @@ curl -sI -H "Origin: https://www.gstatic.com" "https://api-majlisstv.le-publicit
 **Tests.** `cd mobile && npm run check` (types + 117 tests). Contrat réel (`tests/kids_contract.ts`, voir 22b-9a) : ajouts rapport, limite (valeurs refusées hors 5–480), mode catalogue + blocage visible côté enfant, modification de profil, changement de code (mauvais ancien code refusé) puis sortie avec le nouveau code.
 
 **Honnêteté.** Testé : types, tests unitaires, contrat avec la vraie API, bundle Android. **Non testé** : l'affichage sur un vrai téléphone (graphique, listes longues du catalogue, clavier sur les champs de code, arabe) et l'envoi réel de l'e-mail du rapport. Avec 9c, l'espace Kids natif est complet ; restent 22c (Android TV) et 22d (Apple TV).
+
+
+## Étape 23a — Dailymotion comme source vidéo (26/10, API + site + transcripteur + application 0.12.0)
+
+**Description.** On peut ajouter des conférences **Dailymotion** comme YouTube et Vimeo : coller `dailymotion.com/video/…`, `dai.ly/…` ou un lien d'intégration dans Studio → Nouvelle conférence, dans les blocs vidéo des pages, ou dans « Importer chez nous » (copie sur notre stockage). La vidéo se lit depuis Dailymotion. Les sous-titres, la transcription (avec l'accord de l'auteur), les chapitres et la recherche fonctionnent comme pour YouTube.
+- **Avec un Player ID** (Admin → Paramètres → « Vidéos YouTube, Vimeo et Dailymotion » → *Player ID Dailymotion*) : lecteur piloté par le site et l'application → transcription cliquable, reprise de lecture, pause de prière, aperçu limité des conférences premium, sous-titres traduits superposés.
+- **Sans Player ID** : simple cadre Dailymotion (pas de reprise ni de pause de prière) ; une conférence premium à aperçu limité n'est alors pas lisible ; dans l'application, la vidéo s'ouvre sur le site.
+- Le Player ID s'obtient dans Dailymotion → Partner HQ → Players (« Créer un lecteur » puis copier l'identifiant, ex. `x1a2b`). Seuls les caractères A-Z, a-z, 0-9 (3 à 20) sont acceptés.
+
+**Prérequis.** Migration `063_dailymotion.sql` (appliquée au démarrage de l'API). Redéployer **api**, **web** et **transcriber** ; l'application passe en 0.12.0 (pas de nouveau module natif).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`, puis `majlistv-transcriber`. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+**Essai.** Studio → Nouvelle conférence → coller une vidéo Dailymotion publique → la miniature et le titre s'affichent, publier, ouvrir la fiche : la vidéo se lit. Avec un Player ID : lancer la lecture, quitter, revenir → reprise ; cliquer dans la transcription → saut.
+
+**Debug.** « Adresse YouTube, Vimeo ou Dailymotion attendue » : lien non reconnu (essayer `https://www.dailymotion.com/video/x…`). Lecteur noir avec Player ID : Player ID faux ou domaine non autorisé dans Partner HQ (ajouter `majlisstv.le-publicitaire.fr`). Vidéo « indisponible » : vidéo privée ou intégration interdite par son auteur. Importer chez nous échoue : Dailymotion bloque parfois l'IP du serveur (comme YouTube) ; le réglage de cookies existant s'applique.
+
+**Tests.** `python3 api/tests/test_dailymotion.py` (contre l'API de test), `python3 transcriber/tests/test_external.py`, `cd mobile && npm run check` (types + 120 tests), `cd web && npx next build`.
+
+**Honnêteté.** Testé : lecture des adresses (toutes formes), enregistrement et refus côté API, migration, transcripteur (identifiants, adresse), page générée pour l'application, types, compilation du site. **Non testé** : lecture réelle d'une vidéo Dailymotion (pas d'accès réseau à Dailymotion dans l'environnement de développement), le lecteur piloté avec un vrai Player ID, l'import chez nous d'une vidéo Dailymotion, l'application sur un téléphone, l'arabe (RTL).

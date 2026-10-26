@@ -2,7 +2,7 @@
 // 4 étapes : V vidéo, T transcription, S sous-titres traduits, R résumé et chapitres.
 // Chaque étape vaut : ok | run | wait | err | none (sans objet).
 
-const SOURCES = { youtube: 'YouTube', vimeo: 'Vimeo', archive: 'archive.org' };
+const SOURCES = { youtube: 'YouTube', vimeo: 'Vimeo', dailymotion: 'Dailymotion', archive: 'archive.org' };
 export const sourceLabel = (s) => SOURCES[s] || '';
 
 export function talkSteps(x) {

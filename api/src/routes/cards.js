@@ -6,7 +6,7 @@ import { makePreviewToken } from '../playback.js';
 import { getSetting, isOn } from '../settings.js';
 
 export default async function cardsRoutes(app) {
-  // Réponse : { kind: 'hls', src } | { kind: 'youtube' | 'vimeo', ref } | { kind: 'none' }.
+  // Réponse : { kind: 'hls', src } | { kind: 'youtube' | 'vimeo' | 'dailymotion', ref } | { kind: 'none' }.
   // - Vidéo envoyée : jeton d'aperçu (le serveur coupe le flux à la durée de l'aperçu gratuit, même pour une conférence premium).
   // - YouTube / Vimeo : uniquement si la conférence est gratuite.
   // - archive.org : pas d'aperçu (miniature seulement).
@@ -20,7 +20,7 @@ export default async function cardsRoutes(app) {
     if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
     reply.header('cache-control', 'private, max-age=60');
     if (t.source === 'upload') return { kind: 'hls', src: `/hls/${id}/master.m3u8?t=${encodeURIComponent(makePreviewToken(id, 30 * 60))}` };
-    if (t.access === 'free' && (t.source === 'youtube' || t.source === 'vimeo')) return { kind: t.source, ref: t.video_ref };
+    if (t.access === 'free' && (t.source === 'youtube' || t.source === 'vimeo' || t.source === 'dailymotion')) return { kind: t.source, ref: t.video_ref };
     return none;
   });
 }

@@ -110,6 +110,9 @@ app.get('/health', async () => {
   return { status: 'ok' };
 });
 
+// Identifiant de lecteur Dailymotion : lettres et chiffres seulement (il sert à bâtir l'adresse d'un script), sinon rien.
+const dailymotionPlayerId = (v) => (/^[A-Za-z0-9]{3,20}$/.test(String(v || '').trim()) ? String(v).trim() : '');
+
 // Configuration publique (nom de l'application) utilisée par les front-ends.
 app.get('/config', async () => {
   const on = async (k) => isOn(await getSetting(k));
@@ -125,7 +128,7 @@ app.get('/config', async () => {
     blockMinutes: await getNumber('mod_prayer_block_minutes'), maxBlockMinutes: await getNumber('mod_prayer_max_block_minutes'), city: await getSetting('mod_prayer_city'),
   } : null;
   return {
-    prayer, features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0,
+    prayer, features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0, dailymotionPlayerId: dailymotionPlayerId(await getSetting('dailymotion_player_id')),
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
   };

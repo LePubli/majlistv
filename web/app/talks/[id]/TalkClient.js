@@ -140,7 +140,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
   const external = Boolean(talk && talk.source !== 'upload');
   // archive.org : fichier vidéo lu avec le lecteur Mejliss TV (pas de lecteur ni de publicité de la plateforme).
-  const embed = Boolean(talk && ['youtube', 'vimeo'].includes(talk.source));
+  const embed = Boolean(talk && ['youtube', 'vimeo', 'dailymotion'].includes(talk.source));
   const trackable = Boolean(user && talk && (talk.hlsPath || external) && !talk.locked);
   // Statistiques d'audience anonymes : ouverture, lecture, temps regardé, quartiles, fin (l'aperçu d'une conférence premium ne compte que comme ouverture).
   useTalkStats({ videoRef, talkId: id, call, active: Boolean(talk && talk.id), playing: Boolean(talk && !talk.locked && (talk.hlsPath || external)), statsOn });
@@ -306,7 +306,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
       )
       : <p className="soon">{talk.playerError || t('playerUnavailable')}</p>;
   } else if (embed) {
-    // YouTube / Vimeo : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
+    // YouTube / Vimeo / Dailymotion : lecteur piloté (transcription cliquable, chapitres, reprise, sous-titres traduits superposés).
     player = (
       <div className="player">
         <ExternalPlayer source={talk.source} videoId={talk.video_ref} title={talk.title} startSeconds={(jumpMs || resumeMs) / 1000} autoPlay={autoplay} rate={rate}

@@ -64,7 +64,7 @@ export function KidVideoCard({ x, width, onPress }: { x: KidCard; width?: number
   const stars = starsText(x.stars);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={x.title} onPress={onPress} style={({ pressed }) => ({ width: width ?? '100%', gap: 6, opacity: pressed ? 0.85 : 1 })}>
-      <Poster talk={{ id: x.id, posterUrl: x.posterUrl, source: x.source as 'upload' | 'youtube' | 'vimeo' | 'archive', video_ref: undefined }} radiusPx={18}>
+      <Poster talk={{ id: x.id, posterUrl: x.posterUrl, source: x.source as 'upload' | 'youtube' | 'vimeo' | 'dailymotion' | 'archive', video_ref: undefined }} radiusPx={18}>
         {x.completed ? (
           <View style={{ position: 'absolute', start: 8, top: 8, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, backgroundColor: KC.ok }}>
             <Txt weight="extrabold" size={12} color="#06210F">{t('kdSeen')}</Txt>
