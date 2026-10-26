@@ -427,25 +427,25 @@ mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: va
 .studio .form { margin: 0; }
 .studio .import { margin-top: 0; }
 
-/* Studio sur tablette et mobile : menu en haut, défilant */
+/* Studio et Administration sur tablette et mobile : barre fine en haut + menu latéral dépliant (tiroir) */
+.studio-bar, .studio-backdrop { display: none; }
 @media (max-width: 900px) {
   .studio { flex-direction: column; }
-  .studio-side { position: sticky; top: 0; z-index: 20; width: 100%; height: auto; flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px;
-    border-inline-end: 0; border-bottom: 1px solid var(--line-soft); overflow-x: auto; scrollbar-width: none; }
-  .studio-brand { padding: 0 6px 0 0; }
-  .studio-brand span { display: none; }
-  .studio-brand > img { height: 32px; }
-  .studio-nav { display: flex; flex-wrap: nowrap; flex: none; gap: 4px; }
-  .studio-group { flex-direction: row; flex-wrap: nowrap; flex: none; gap: 4px; }
-  .studio-group + .studio-group { border-inline-start: 1px solid var(--line-soft); padding-inline-start: 6px; }
-  .studio-group-title { display: none; }
-  .studio-nav a, .studio-link { min-height: 40px; padding: 8px 10px; white-space: nowrap; }
-  .studio-foot { margin: 0; padding: 0; flex-direction: row; align-items: center; }
-  .studio-foot .studio-link span, .studio-who { display: none; }
-  .studio-user { border: 0; padding: 0; }
+  .studio-bar { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 40; height: 56px; padding: 0 12px; background: var(--studio-side-bg); border-bottom: 1px solid var(--line-soft); }
+  .studio-burger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--line-soft); border-radius: 12px; background: transparent; color: var(--text); cursor: pointer; }
+  .studio-burger:hover { background: var(--surface); }
+  .studio-bar-title { display: flex; align-items: center; gap: 10px; min-width: 0; font-weight: 700; color: var(--text); }
+  .studio-bar-title img { height: 30px; width: auto; }
+  .studio-bar-title b { font-family: var(--font-title); font-size: 11px; letter-spacing: .24em; color: var(--accent); }
+  .studio-side { position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 60; width: min(300px, 86vw); height: 100vh; height: 100dvh; padding: 18px 14px; overflow-y: auto;
+    border-inline-end: 1px solid var(--line-soft); transform: translateX(-105%); transition: transform .22s ease; visibility: hidden; box-shadow: none; }
+  [dir="rtl"] .studio-side { transform: translateX(105%); }
+  .studio.menu-open .studio-side { transform: none; visibility: visible; box-shadow: 0 0 40px rgba(0,0,0,.6); }
+  .studio.menu-open .studio-backdrop { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); border: 0; padding: 0; }
   .studio-page { padding-top: 20px; }
   .studio-thumb.big { width: 100%; max-width: 360px; }
 }
+@media (prefers-reduced-motion: reduce) { .studio-side { transition: none; } }
 /* Liste du studio sur téléphone : une carte par conférence au lieu du tableau */
 @media (max-width: 700px) {
   .studio-table-wrap { background: none; border: 0; overflow: visible; }

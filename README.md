@@ -5646,3 +5646,17 @@ bash /root/verify-deploy.sh
 **Tests.** `python3 transcriber/tests/test_watch.py` (logique : référence, nouveautés, doublons, intervalle borné) ; `python3 api/tests/test_watch.py` (contre l'API de test : droits, ajout / doublon / mauvaise adresse, ignorer / remettre, ajout avec et sans attestation, déjà au catalogue, pause, suppression, journal d'audit, fonction coupée) ; `cd web && npx next build`. Page vérifiée dans un navigateur de test (ordinateur et 390 px, sans débordement, flux Ajouter / Ignorer / Suivre).
 
 **Honnêteté.** Testé : API et base, logique de détection, requêtes SQL du contrôle jouées sur la base de test, interface. **Non testé** : la lecture réelle d'une chaîne par le transcripteur (pas d'accès à YouTube / Dailymotion / Vimeo en développement) — notamment la forme des adresses de comptes Dailymotion et Vimeo avec yt-dlp, et le risque que YouTube bloque l'IP du serveur ; l'arabe (l'écran de la Veille est en français, comme le reste de l'admin).
+
+## Correctif 23c — Menu en tiroir latéral sur téléphone (Administration et Studio) (26/10, site)
+
+**Description.** Sur écran étroit (900 px et moins), le menu de l'Administration et du Studio n'est plus une barre qui défile en haut : une barre fine affiche un bouton ☰ ; il ouvre le menu complet en **tiroir latéral** (groupes, pied avec site, langue, compte) avec fond assombri. Il se ferme en touchant une entrée, le fond, ou avec la touche Échap. En arabe (RTL) le tiroir s'ouvre à droite. Sur ordinateur, rien ne change.
+
+**Prérequis / déploiement.** Site seulement : DockPanel → Git Deploy → Redeploy `majlistv-web`, puis les commandes VPS habituelles (`/root/apply-limits.sh`, `grep -n proxy_pass …`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`).
+
+**Essai.** Téléphone : Admin ou Studio → ☰ → choisir une entrée (le tiroir se ferme).
+
+**Debug.** Bouton absent sur ordinateur : normal (menu latéral fixe). Menu qui ne s'ouvre pas : vider le cache / recharger la page après le redéploiement.
+
+**Tests.** Navigateur de test à 390 px : barre, ouverture, fermeture (bouton, Échap, lien), bureau inchangé. `cd web && npx next build`.
+
+**Honnêteté.** Non testé sur un vrai téléphone ni en arabe (RTL) ; le tiroir y est écrit en miroir mais non relu visuellement.

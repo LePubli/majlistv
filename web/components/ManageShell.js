@@ -1,9 +1,10 @@
 'use client';
 // Habillage commun des espaces de gestion (Studio et Administration) : menu latéral repliable, pied (site, langue, compte).
 // Étape D : le Studio et l'Administration ont chacun leur menu (StudioShell.js, AdminShell.js) mais partagent cet habillage.
-// Sur téléphone, le menu devient une barre en haut qui défile horizontalement.
+// Sur téléphone, une barre fine en haut ouvre le menu en tiroir latéral (bouton, fond assombri, Échap pour fermer).
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { LOCALES } from '../lib/i18n';
 import { useCollapsed, ChevIco } from './MemberShell';
@@ -41,13 +42,27 @@ export default function ManageShell({ space, groups, links, isOn, extra, childre
   const { t, user, logout, locale } = useApp();
   const router = useRouter();
   const [col, toggle] = useCollapsed();
+  const [open, setOpen] = useState(false); // tiroir ouvert (téléphone)
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [open]);
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };
   const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
   const home = space === 'admin' ? '/admin' : '/studio';
   const label = space === 'admin' ? t('adminNav') : 'STUDIO';
   return (
-    <div className={`studio studio-${space}${col ? ' col' : ''}`}>
-      <aside className="studio-side">
+    <div className={`studio studio-${space}${col ? ' col' : ''}${open ? ' menu-open' : ''}`}>
+      <div className="studio-bar">
+        <button type="button" className="studio-burger" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="studio-menu" aria-label={t('menuOpen')}><Icon d={ICONS.list} /></button>
+        <Link href={home} className="studio-bar-title" aria-label={`Mejliss TV ${label}`}><img src="/brand/emblem.png" alt="" width="30" height="33" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></Link>
+      </div>
+      <button type="button" className="studio-backdrop" tabIndex={-1} aria-label={t('menuClose')} onClick={() => setOpen(false)} />
+      <aside className="studio-side" id="studio-menu" onClick={(e) => { if (e.target.closest('a')) setOpen(false); }}>
         <button type="button" className="ms-toggle studio-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <Link href={home} className="studio-brand" aria-label={`Mejliss TV ${label}`}>
           <img src="/brand/emblem.png" alt="" width="35" height="38" />

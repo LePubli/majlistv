@@ -429,3 +429,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 23b (26/10) — Veille des chaînes
 - Admin → Veille : sources YouTube / Dailymotion / Vimeo relues toutes les 6 h, nouvelles vidéos listées pour l'administrateur seul (Ajouter avec attestation des droits / Ignorer), migration 064, fonction activable. Voir README « Étape 23b ». Reste (sur « go ») : 22c Android TV, 22d Apple TV.
+
+## Correctif 23c (26/10) — Admin / Studio : menu en tiroir latéral sur téléphone
+- Barre fine + bouton ☰ + tiroir (fond assombri, Échap). Site seulement. Voir README « Correctif 23c ».
