@@ -444,3 +444,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 25 (26/10) — Widgets Android : Prière, Réviser, Citation (application 0.16.0)
 - Trois widgets, petit et grand. Nouvel APK à installer (code natif). Voir README « Étape 25 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.
+
+## Correctif 25b (26/10) — Widgets vides (fragments) et envoi du visuel d'une publicité
+- Voir README « Correctif 25b ».

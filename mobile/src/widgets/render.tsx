@@ -3,7 +3,7 @@
 import React from 'react';
 import { citationView, prayerView, reviseView } from './model';
 import { loadCitation, loadLocale, loadPrayerSnap, loadRevise } from './store';
-import { CitationLarge, CitationSmall, PrayerLarge, PrayerSmall, ReviseLarge, ReviseSmall } from './ui';
+import { CitationLarge, CitationSmall, Fallback, PrayerLarge, PrayerSmall, ReviseLarge, ReviseSmall } from './ui';
 
 export const WIDGET_NAMES = ['PrayerSmall', 'PrayerLarge', 'ReviseSmall', 'ReviseLarge', 'CitationSmall', 'CitationLarge'] as const;
 export type WidgetName = (typeof WIDGET_NAMES)[number];
@@ -20,3 +20,6 @@ export async function buildWidget(name: string): Promise<React.JSX.Element> {
     default: return <PrayerSmall v={prayerView(null, now)} />;
   }
 }
+
+/** Dessin de secours : texte simple, appui = ouvre l'application. */
+export const fallbackWidget = () => <Fallback text="Mejliss TV" />;

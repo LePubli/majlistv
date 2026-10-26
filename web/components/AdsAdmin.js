@@ -14,6 +14,23 @@ const toIso = (v) => (v ? new Date(v).toISOString() : null);
 const when = (d, locale) => (d ? new Date(d).toLocaleString(locale === 'ar' ? 'ar' : locale, { dateStyle: 'short', timeStyle: 'short' }) : '');
 const typeOf = (f) => f.type || (/\.png$/i.test(f.name) ? 'image/png' : /\.jpe?g$/i.test(f.name) ? 'image/jpeg' : /\.webp$/i.test(f.name) ? 'image/webp' : /\.mp4$/i.test(f.name) ? 'video/mp4' : /\.webm$/i.test(f.name) ? 'video/webm' : '');
 
+// Envoi direct du fichier vers le stockage, avec progression ; ne reste jamais bloqué (délai maximal 15 min, erreurs expliquées).
+function putFile(url, file, type, onProgress) {
+  return new Promise((resolve) => {
+    const x = new XMLHttpRequest();
+    x.open('PUT', url);
+    x.setRequestHeader('Content-Type', type);
+    x.timeout = 15 * 60 * 1000;
+    x.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    x.onload = () => resolve({ ok: x.status >= 200 && x.status < 300, status: x.status });
+    x.onerror = () => resolve({ ok: false, status: 0 });
+    x.ontimeout = () => resolve({ ok: false, status: -1 });
+    x.onabort = () => resolve({ ok: false, status: -2 });
+    x.send(file);
+  });
+}
+const putError = (status) => (status === 0 ? "Le navigateur n'a pas pu joindre le stockage (réseau, ou le stockage refuse l'origine du site : vérifier CORS et CSP_STORAGE_ORIGINS)." : status === -1 ? "L'envoi a dépassé 15 minutes : essayez un fichier plus léger." : status === 413 ? 'Fichier refusé par le serveur de stockage (trop gros).' : status === 403 ? 'Stockage : accès refusé (lien d’envoi expiré ou clés de stockage incorrectes).' : `Le stockage a répondu une erreur (code ${status}).`);
+
 function Preview({ ad }) {
   if (!ad.mediaUrl) return null;
   return ad.mediaKind === 'video'
@@ -28,26 +45,37 @@ function AdForm({ ad, limits, onDone, onCancel }) {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [pct, setPct] = useState(null);
   const set = (k) => (e) => setO({ ...o, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   const submit = async (e) => {
     e.preventDefault(); setErr('');
     if (!ad && !file) { setErr('Choisissez une photo ou une vidéo.'); return; }
     if (o.startsAt && o.endsAt && new Date(o.endsAt) <= new Date(o.startsAt)) { setErr('La date de fin doit suivre la date de début.'); return; }
-    setBusy(true);
-    let key;
-    if (file) {
-      const type = typeOf(file);
-      const u = await call('/admin/ads/upload-url', { method: 'POST', body: JSON.stringify({ contentType: type, size: file.size }) });
-      if (!u.ok) { setBusy(false); setErr(u.data?.error || 'Envoi impossible.'); return; }
-      const put = await fetch(u.data.url, { method: 'PUT', body: file, headers: { 'Content-Type': type } }).catch(() => null);
-      if (!put || !put.ok) { setBusy(false); setErr("L'envoi du fichier a échoué : recommencez."); return; }
-      key = u.data.key;
-    }
-    const body = { advertiser: o.advertiser, title: o.title, sentence: o.sentence, ctaLabel: o.ctaLabel || 'En savoir plus', linkUrl: o.linkUrl, active: o.active, startsAt: toIso(o.startsAt), endsAt: toIso(o.endsAt), ...(key ? { mediaKey: key } : {}) };
-    const r = ad ? await call(`/admin/ads/${ad.id}`, { method: 'PATCH', body: JSON.stringify(body) }) : await call('/admin/ads', { method: 'POST', body: JSON.stringify(body) });
-    setBusy(false);
-    if (r.ok) onDone(); else setErr(r.data?.error || 'Enregistrement impossible.');
+    setBusy(true); setPct(null);
+    try {
+      let key;
+      if (file) {
+        const type = typeOf(file);
+        const isVideo = type.startsWith('video/');
+        const max = (isVideo ? limits.videoMb : limits.imageMb) * 1048576;
+        if (!type) throw new Error('Format non accepté : photo png, jpeg, webp ou vidéo mp4, webm.');
+        if (file.size > max) throw new Error(`Fichier trop lourd (${Math.round(file.size / 1048576)} Mo) : ${isVideo ? limits.videoMb : limits.imageMb} Mo maximum.`);
+        const u = await call('/admin/ads/upload-url', { method: 'POST', body: JSON.stringify({ contentType: type, size: file.size }) });
+        if (!u.ok) throw new Error(u.data?.error || "Le serveur n'a pas donné de lien d'envoi.");
+        setPct(0);
+        const put = await putFile(u.data.url, file, type, setPct);
+        if (!put.ok) throw new Error(putError(put.status));
+        key = u.data.key;
+      }
+      setPct(null);
+      const body = { advertiser: o.advertiser, title: o.title, sentence: o.sentence, ctaLabel: o.ctaLabel || 'En savoir plus', linkUrl: o.linkUrl, active: o.active, startsAt: toIso(o.startsAt), endsAt: toIso(o.endsAt), ...(key ? { mediaKey: key } : {}) };
+      const r = ad ? await call(`/admin/ads/${ad.id}`, { method: 'PATCH', body: JSON.stringify(body) }) : await call('/admin/ads', { method: 'POST', body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(r.data?.error || 'Enregistrement impossible.');
+      onDone();
+    } catch (ex) {
+      setErr(ex?.message || 'Une erreur est survenue : réessayez.');
+    } finally { setBusy(false); setPct(null); }
   };
 
   return (
@@ -70,9 +98,11 @@ function AdForm({ ad, limits, onDone, onCancel }) {
       </div>
       <small className="meta">Sans date : la publicité est montrée dès l’enregistrement et jusqu’à ce que vous la mettiez en pause. Les heures sont celles de cet ordinateur.</small>
       <label className="check"><input type="checkbox" checked={o.active} onChange={set('active')} /> Active</label>
+      {busy && pct != null && <progress value={pct} max="100" style={{ width: '100%' }} aria-label="Progression de l’envoi" />}
+      {file && !busy && <small className="meta">Fichier choisi : {file.name} ({(file.size / 1048576).toFixed(1)} Mo)</small>}
       {err && <p className="error" role="alert">{err}</p>}
       <div className="studio-tools">
-        <button className="btn" disabled={busy}>{busy ? 'Envoi…' : ad ? 'Enregistrer' : 'Créer la publicité'}</button>
+        <button className="btn" disabled={busy}>{busy ? (pct != null ? `Envoi du fichier… ${pct} %` : 'Enregistrement…') : ad ? 'Enregistrer' : 'Créer la publicité'}</button>
         <button type="button" className="btn ghost" onClick={onCancel}>Annuler</button>
       </div>
     </form>
