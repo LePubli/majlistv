@@ -23,8 +23,12 @@ test('prayerView : prochaine prière, cinq horaires du jour, une seule mise en �
   assert.equal(v.kind, 'ready');
   if (v.kind !== 'ready') return;
   assert.equal(v.next.id, 'dhuhr');
-  assert.equal(v.rows.length, 5);
-  assert.deepEqual(v.rows.map((r) => r.id), ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']);
+  assert.equal(v.rows.length, 6);
+  assert.deepEqual(v.rows.map((r) => r.id), ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha']);
+  assert.equal(v.rows.filter((r) => r.sun).length, 1, 'le Shuruk est signalé (ce n’est pas une prière)');
+  assert.equal(v.rows.find((r) => r.id === 'sunrise')?.name, 'Shuruk');
+  assert.equal(v.sun?.name, 'Shuruk');
+  assert.ok(v.date.length > 0, 'date du jour');
   assert.equal(v.rows.filter((r) => r.next).length, 1);
   assert.equal(v.rows.find((r) => r.id === 'fajr')?.past, true);
   assert.equal(v.rows.find((r) => r.id === 'asr')?.past, false);
@@ -93,4 +97,20 @@ test('parseCitation / citationFresh / localDay', () => {
 
 test('liens des widgets : schéma de l’application', () => {
   for (const l of Object.values(WIDGET_LINKS)) assert.ok(l.startsWith('mejlisstv://'));
+});
+
+test('prayerView : entre Fajr et le lever du soleil, le Shuruk est la prochaine échéance (libellé adapté)', () => {
+  const v = prayerView(snap(), at('2026-10-26T06:00:00Z')); // ≈ 7 h à Lille
+  assert.equal(v.kind, 'ready');
+  if (v.kind !== 'ready') return;
+  assert.equal(v.next.id, 'sunrise');
+  assert.equal(v.next.name, 'Shuruk');
+  assert.match(v.label, /lever du soleil/i);
+  assert.equal(v.rows.filter((r) => r.next).length, 1);
+  assert.equal(v.rows.find((r) => r.id === 'sunrise')?.next, true);
+  // En arabe et en anglais, le Shuruk est traduit.
+  const en = prayerView(snap({ locale: 'en' }), at('2026-10-26T06:00:00Z'));
+  assert.equal(en.kind === 'ready' && en.next.name, 'Sunrise');
+  const ar = prayerView(snap({ locale: 'ar' }), at('2026-10-26T06:00:00Z'));
+  assert.equal(ar.kind === 'ready' && ar.next.name, 'الشروق');
 });

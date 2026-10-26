@@ -15,6 +15,9 @@ M._resolveFilename = function patched(req: string, ...rest: unknown[]) {
   return orig.call(this, req, ...rest);
 };
 
+// Les images (png) ne se chargent pas avec Node : un numéro les remplace, comme le fait l'empaqueteur de l'application.
+(Module as unknown as { _extensions: Record<string, (m: { exports: unknown }) => void> })._extensions['.png'] = (m) => { m.exports = 1; };
+
 type Tree = { type: string; props: Record<string, unknown>; children?: Tree[] };
 const walk = (t: Tree | string, f: (n: Tree) => void) => { if (typeof t === 'string') return; f(t); (t.children ?? []).forEach((c) => walk(c, f)); };
 const texts = (t: Tree) => { const out: string[] = []; walk(t, (n) => { if (n.type === 'TextWidget') out.push(String(n.props.text)); }); return out; };
@@ -46,7 +49,7 @@ test('les six widgets se construisent (états variés) sans fragment ni erreur',
     const tree = buildWidgetTree(jsx) as Tree;
     assert.equal(tree.type, 'LinearLayoutWidget', name);
     assert.ok(texts(tree).length > 0, `${name} : aucun texte dessiné`);
-    walk(tree, (n) => assert.ok(['LinearLayoutWidget', 'TextWidget'].includes(n.type), `${name} : type inattendu ${n.type}`));
+    walk(tree, (n) => assert.ok(['LinearLayoutWidget', 'TextWidget', 'ImageWidget'].includes(n.type), `${name} : type inattendu ${n.type}`));
     assert.equal((tree.props as { clickAction?: string }).clickAction, 'OPEN_URI', `${name} : l'appui doit ouvrir l'application`);
   }
   // Contenu : l'heure de la prochaine prière et les cinq horaires du grand widget sont bien dessinés.
@@ -56,4 +59,13 @@ test('les six widgets se construisent (états variés) sans fragment ni erreur',
     for (const r of pv.rows) assert.ok(large.includes(r.time), `horaire ${r.id} absent`);
   }
   assert.ok(texts(buildWidgetTree(el(ui.ReviseLarge, { v: rOk }))).some((t) => t.includes('Al-Zahrawi')));
+  // Étape 27b : le Shuruk figure dans le grand widget Prière ; le logo (image) est présent sur chaque widget ; fond dégradé.
+  if (pv.kind === 'ready') assert.ok(texts(buildWidgetTree(el(ui.PrayerLarge, { v: pv }))).includes('Shuruk'));
+  const images = (t: Tree) => { let n = 0; walk(t, (x) => { if (x.type === 'ImageWidget') n++; }); return n; };
+  for (const [name, jsx] of cases) {
+    if (name === 'Fallback') continue;
+    assert.ok(images(buildWidgetTree(jsx) as Tree) >= 1, `${name} : logo absent`);
+  }
+  assert.ok(images(buildWidgetTree(el(ui.PrayerLarge, { v: pv })) as Tree) >= 2, 'grand format : emblème + nom');
+  assert.ok((buildWidgetTree(el(ui.PrayerLarge, { v: pv })) as Tree).props.backgroundGradient, 'fond dégradé');
 });

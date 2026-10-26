@@ -5812,3 +5812,19 @@ Debug : l'animation ne s'affiche pas → vérifier que ce n'est pas l'espace Kid
 **⚠ Code natif modifié → nouvel APK obligatoire** (version 0.17.0, versionCode 14) : la mise à jour automatique ne suffit pas. GitHub → Actions → dernier « Mobile Android » → télécharger l'APK et l'installer par-dessus l'ancien.
 
 **Vérifié** : `npm run check` (143 tests), `expo prebuild` (styles.xml généré avec les 4 lignes). **Non vérifié sur téléphone** : surtout sur Samsung (One UI), qui peut garder un léger fond sous les boutons ; à me dire si la bande persiste. Avec la navigation par gestes, rien à voir de toute façon.
+
+## Étape 27b — Nouveau design des widgets, « version B » (26/10, application 0.17.0)
+
+**Description.** Les trois widgets (petit et grand) adoptent le design validé par Epok : fond **dégradé brun doré → noir** (vrai dégradé), bordure or fine, coins arrondis, **logo Mejliss TV** (emblème seul en petit, emblème + nom en grand), accents or.
+- **Prière** : prochaine échéance en grand avec **l'heure en très grand** (or) ; en bas, les six moments de la journée : Fajr, **Shuruk**, Dhuhr, Asr, Maghrib, Isha (le Shuruk, qui n'est pas une prière, est en teinte atténuée ; la prochaine échéance est en or ; les passées sont atténuées). Si la prochaine échéance est le Shuruk, il est affiché en grand avec le libellé « Prochain : lever du soleil ». Ville et date en haut à droite. Petit format : « Shuruk 08:07 · ville » en bas.
+- **Réviser** : gros chiffre or, « à réviser aujourd'hui », titres (1 ligne chacun), bouton plein « ▶ Réviser maintenant » (petit : « ▶ Réviser »). États « connectez-vous », « offre requise », « indisponible » : message + bouton « Ouvrir ».
+- **Citation** : logo, texte arabe doré centré, traduction centrée en blanc, source « — Coran 68:48 » en or.
+- FR / EN / AR : nouvelles clés `wd.sunrise`, `wd.nextSun`, `wd.reviseToday`, `wd.reviseNow`, `wd.reviseGo`.
+
+**Fichiers.** `mobile/src/widgets/ui.tsx` (dessin), `model.ts` (Shuruk, date, textes), `images.ts` + `mobile/assets/widget/emblem.png` et `wordmark.png` (logo réduit, léger), tests `tests/widgets.test.ts` et `tests/widgetsTree.test.ts` (le vrai constructeur d'arbre de la bibliothèque dessine les widgets : Shuruk présent, logo présent, dégradé présent).
+
+**Prérequis / déploiement.** Aucune dépendance ajoutée, rien à redéployer sur le VPS. Version 0.17.0 inchangée : arrive **par mise à jour automatique (OTA)** sur l'APK 0.17.0 (étape 27a). Fermer complètement l'appli puis la rouvrir deux fois ; les widgets se rafraîchissent alors (sinon : les retirer et les remettre, ou attendre ≈ 30 min).
+
+**Debug.** Widget vide ou « Mejliss TV » seul : dessin de secours → me le dire (les erreurs sont journalisées sous `MejlissWidget`). Logo absent : vérifier que l'APK est bien le 0.17.0. Pas de Shuruk : le widget Prière affiche les horaires calculés par l'appli (méthode et lieu choisis dans Prière).
+
+**Honnêteté.** Testé : typage, 144 tests, export Android, constructeur d'arbre réel de la bibliothèque. **Jamais vu sur un téléphone** : tailles de texte, coupures (titres longs, arabe), rendu du dégradé et du logo à valider par Epok ; il est possible que je doive ajuster les tailles après ta capture.

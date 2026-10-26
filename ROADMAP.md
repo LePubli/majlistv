@@ -453,3 +453,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 27a (26/10) — Affichage complet (application 0.17.0, nouvel APK)
 - Plus de bande grise sous la barre d'onglets. Voir README « Étape 27a ». Suite : 27b — nouveau design des widgets (sur « go » après choix A ou B).
+
+## Étape 27b (26/10) — Widgets : nouveau design « B » avec logo et Shuruk (application 0.17.0, OTA)
+- Voir README « Étape 27b ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.

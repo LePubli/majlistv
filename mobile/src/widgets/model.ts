@@ -2,7 +2,7 @@
 // Trois widgets, chacun en petit et en grand : Prière (horaires calculés sur le téléphone), Réviser (conférences à réviser aujourd'hui),
 // Citation du jour. L'affichage (widgets/ui.tsx) ne fait que dessiner ce que ce fichier prépare.
 import { buildSchedule } from '../lib/prayer/prayerLogic';
-import { PRAYERS, fmtTime } from '../lib/prayer/prayerTimes';
+import { fmtTime } from '../lib/prayer/prayerTimes';
 import { translate, type Locale, type Key } from '../lib/i18n';
 
 type Prefs = { loc: { lat: number; lon: number; tz: string; name?: string; mode?: string }; method: string; asr: string; highLat: string };
@@ -20,7 +20,11 @@ const tr = (locale: Locale, key: string, vars?: Record<string, string | number>)
 // ---------- Prière ----------
 export type PrayerView =
   | { kind: 'off'; message: string }
-  | { kind: 'ready'; place: string; next: { id: string; name: string; time: string }; rows: { id: string; name: string; time: string; next: boolean; past: boolean }[]; label: string };
+  | { kind: 'ready'; place: string; date: string; next: { id: string; name: string; time: string }; rows: PrayerRow[]; label: string; sun: { name: string; time: string } | null };
+/** Une ligne du widget : cinq prières + le Shuruk (lever du soleil, qui n'est pas une prière : `sun`). */
+export type PrayerRow = { id: string; name: string; time: string; next: boolean; past: boolean; sun: boolean };
+/** Moments affichés, dans l'ordre de la journée. */
+export const EVENTS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
 /** Jour civil (AAAA-M-J) d'un instant dans un fuseau, pour ne garder que les prières d'aujourd'hui. */
 const dayKey = (ms: number, tz: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
@@ -31,20 +35,28 @@ export function prayerView(snap: PrayerSnap | null, now: number): PrayerView {
   const items = buildSchedule(now, snap.prefs) as { id: string; at: number }[];
   const tz = snap.prefs.loc.tz;
   const today = dayKey(now, tz);
-  const next = items.find((p) => (PRAYERS as string[]).includes(p.id) && p.at > now);
+  const next = items.find((p) => (EVENTS as readonly string[]).includes(p.id) && p.at > now);
   if (!next) return { kind: 'off', message: tr(locale, 'wd.prayerOff') };
-  const rows = PRAYERS.map((id) => items.find((x) => x.id === id && dayKey(x.at, tz) === today))
+  const evName = (id: string) => (id === 'sunrise' ? tr(locale, 'wd.sunrise') : tr(locale, NAME_KEY(id)));
+  const rows: PrayerRow[] = EVENTS.map((id) => items.find((x) => x.id === id && dayKey(x.at, tz) === today))
     .filter((x): x is { id: string; at: number } => !!x)
-    .map((x) => ({ id: x.id, name: tr(locale, NAME_KEY(x.id)), time: fmtTime(x.at, tz, locale), next: x.id === next.id && x.at === next.at, past: x.at <= now }));
+    .map((x) => ({ id: x.id, name: evName(x.id), time: fmtTime(x.at, tz, locale), next: x.id === next.id && x.at === next.at, past: x.at <= now, sun: x.id === 'sunrise' }));
   const place = snap.prefs.loc.mode === 'geo' ? tr(locale, 'pryMyPos') : snap.prefs.loc.name || '';
-  return { kind: 'ready', place, next: { id: next.id, name: tr(locale, NAME_KEY(next.id)), time: fmtTime(next.at, tz, locale) }, rows, label: tr(locale, 'wd.nextPrayer') };
+  const sunRow = rows.find((r) => r.sun);
+  let date = '';
+  try { date = new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(now)); } catch { /* Intl indisponible : pas de date */ }
+  return {
+    kind: 'ready', place, date, rows, sun: sunRow ? { name: sunRow.name, time: sunRow.time } : null,
+    next: { id: next.id, name: evName(next.id), time: fmtTime(next.at, tz, locale) },
+    label: tr(locale, next.id === 'sunrise' ? 'wd.nextSun' : 'wd.nextPrayer'),
+  };
 }
 
 // ---------- Réviser ----------
-export type ReviseView = { kind: 'ok' | 'none' | 'login' | 'tier' | 'error'; number: string; label: string; titles: string[]; week: string; action: string; at: number };
+export type ReviseView = { kind: 'ok' | 'none' | 'login' | 'tier' | 'error'; number: string; label: string; titles: string[]; week: string; action: string; at: number; today: string; actionNow: string; actionGo: string };
 
 export function reviseView(snap: ReviseSnap | null, locale: Locale): ReviseView {
-  const base = { number: '', titles: [] as string[], week: '', action: tr(locale, 'wd.reviseAction'), at: snap?.at ?? 0 };
+  const base = { number: '', titles: [] as string[], week: '', action: tr(locale, 'wd.reviseAction'), at: snap?.at ?? 0, today: tr(locale, 'wd.reviseToday'), actionNow: tr(locale, 'wd.reviseNow'), actionGo: tr(locale, 'wd.reviseGo') };
   if (!snap || snap.state === 'login') return { ...base, kind: 'login', label: tr(locale, 'wd.reviseLogin'), action: tr(locale, 'wd.open') };
   if (snap.state === 'error') return { ...base, kind: 'error', label: tr(locale, 'wd.reviseError'), action: tr(locale, 'wd.open') };
   if (snap.state === 'tier') return { ...base, kind: 'tier', label: tr(locale, 'wd.reviseTier'), action: tr(locale, 'wd.open') };
