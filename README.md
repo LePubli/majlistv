@@ -5681,3 +5681,23 @@ bash /root/verify-deploy.sh
 **Tests.** `cd mobile && npm run check` (types + 120 tests, dont chapitres précédent / suivant et appui sur la barre) ; bundle Android `npx expo export --platform android`.
 
 **Honnêteté.** Testé : types, tests unitaires, compilation du bundle. **Non testé** : l'affichage sur un vrai téléphone (placement des boutons, barre du bas, feuille « Actions », arabe RTL), la lecture réelle, le plein écran, Chromecast depuis la feuille « Actions », les commandes masquées de YouTube / Vimeo. La barre de progression ne se glisse pas au doigt : on touche l'endroit voulu.
+
+## Étape 24b — Shorts dans l'application (26/10, application 0.14.0)
+
+**Description.** Les Shorts ne font plus sortir de l'appli vers le site. Menu → « Shorts » ouvre un fil vertical plein écran (maquette validée) :
+- **On glisse vers le haut** pour le short suivant (une page = un short, lecture automatique, en boucle). Les suivants se chargent au fur et à mesure (12 par 12).
+- Un seul lecteur actif à la fois ; **toucher** l'écran = pause / lecture ; bouton **son** en haut à droite (le choix reste d'un short à l'autre).
+- Colonne à droite : **Favori**, **Liste** (Ma liste), **Partager** ; non connecté → page d'inscription.
+- En bas : nom de la chaîne (ouvre l'intervenant), titre, bouton **« Voir la conférence complète »** (ouvre la fiche dans l'appli ; la vidéo du short se met en pause) et fine barre de progression.
+- Une vue est comptée par personne, par short et par jour (route existante `POST /shorts/:id/view`). La pause de prière coupe la lecture comme ailleurs.
+- Le fil respecte déjà l'espace adulte / enfants côté serveur ; Kids garde son propre écran.
+
+**Prérequis / déploiement.** Application seulement : aucun changement API, site ni base ; aucun redéploiement DockPanel, aucune commande VPS. Poussé sur `main` → mise à jour automatique 0.14.0. La fonction « Shorts » doit être activée (Admin → Fonctions) pour que l'entrée apparaisse dans le menu, et il faut des shorts publiés.
+
+**Essai sur téléphone.** Menu → Shorts : le premier démarre ; glisser vers le haut ×3 ; toucher pour pause ; couper le son ; Favori puis Liste ; Partager ; « Voir la conférence complète » puis retour ; flèche retour.
+
+**Debug.** Écran noir avec le seul titre : le lien de la vidéo n'a pas pu être lu (stockage) — vérifier `https://s3-majlisstv.le-publicitaire.fr`. « Aucun short » : aucun short publié ou fonction coupée. Logs : `docker logs dockpanel-git-majlistv-api --tail 100`.
+
+**Tests.** `cd mobile && npm run check` (types + 124 tests, dont liste lisible, pages sans doublon, reste-t-il des shorts, progression) ; bundle `npx expo export --platform android`.
+
+**Honnêteté.** Testé : types, tests unitaires, compilation du bundle. **Non testé** : le défilement et la lecture sur un vrai téléphone (fluidité, hauteur de page avec barres système, son, pause au retour de la fiche, arabe RTL).

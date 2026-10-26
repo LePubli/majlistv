@@ -80,6 +80,7 @@ function Shell() {
         <Stack.Screen name="collections/[id]" />
         <Stack.Screen name="theme/[id]" />
         <Stack.Screen name="speaker/[slug]" />
+        <Stack.Screen name="shorts" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="prayer" />
         <Stack.Screen name="downloads" />
         <Stack.Screen name="offline/[id]" />

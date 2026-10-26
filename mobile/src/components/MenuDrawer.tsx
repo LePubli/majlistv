@@ -27,7 +27,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     { key: 'catalogue', label: t('navCatalogue'), icon: 'film', go: nav('/talks'), on: true },
     { key: 'series', label: t('seriesNav'), icon: 'layers', go: nav('/series'), on: !!config?.hasSeries },
     { key: 'collections', label: t('colNav'), icon: 'folder', go: nav('/collections'), on: feat('collections') },
-    { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: site('/shorts'), on: feat('shorts') },
+    { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
     { key: 'books', label: t('bkNav'), icon: 'book', go: site('/books'), on: !!config?.hasBooks },
     { key: 'learning', label: t('navLearn'), icon: 'book-open', go: nav('/learn'), on: feat('learning') },
     { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },

@@ -187,6 +187,11 @@ export type KidSummary = {
   time: KidTime; learning: boolean; stars: number; quizzes: number; watched: number; badges: { code: string; earnedAt: string }[]; allBadges: string[];
   due: { id: string; title: string; speaker: string | null; source: string; durationSeconds: number | null; posterUrl: string | null }[]; actions?: KidActionCounts;
 };
+/** Short de l'application adulte (GET /shorts) : comme celui de Kids, avec la chaîne de l'intervenant. */
+export type Short = {
+  id: string; title: string; duration: number | null; views: number; publishedAt: string; videoUrl: string | null; posterUrl: string | null;
+  talk: { id: string; title: string; premium: boolean }; channel: { slug: string; name: string; avatarUrl: string | null } | null;
+};
 export type KidShort = { id: string; title: string; duration: number | null; views: number; publishedAt: string; videoUrl: string | null; posterUrl: string | null; talk: { id: string; title: string; premium: boolean } };
 
 // ---- Mejliss Kids (22b-9c) : espace parent ----

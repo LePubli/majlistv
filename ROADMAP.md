@@ -435,3 +435,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 24a (26/10) — Nouvelle page de lecture (application 0.13.0)
 - Lecteur épinglé, barre de commandes unique, chapitres par défaut, actions dans « ⋯ », barre Quiz / Note. Voir README « Étape 24a ». Reste (sur « go ») : 24b Shorts dans l'appli, 24c pub au lancement, 22c Android TV, 22d Apple TV.
+
+## Étape 24b (26/10) — Shorts dans l'application (application 0.14.0)
+- Fil vertical plein écran, favori / liste / partage, « Voir la conférence complète » dans l'appli. Voir README « Étape 24b ». Reste (sur « go ») : 24c pub au lancement, 22c Android TV, 22d Apple TV.
