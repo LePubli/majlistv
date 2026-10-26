@@ -18,6 +18,7 @@ import { DownloadProvider } from '@/lib/downloadStore';
 import { routeForPath } from '@/lib/notifRoute';
 import { PrayerGate } from '@/components/PrayerGate';
 import { AdGate } from '@/components/AdGate';
+import { WidgetSync } from '@/components/WidgetSync';
 import { AppUpdate } from '@/components/AppUpdate';
 import { colors } from '@/lib/theme';
 
@@ -66,6 +67,7 @@ function Shell() {
       <NotificationRouter />
       <KidLock />
       <PrayerGate />
+      <WidgetSync />
       <AppUpdate />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
         <Stack.Screen name="(tabs)" />

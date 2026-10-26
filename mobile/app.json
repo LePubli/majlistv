@@ -3,7 +3,7 @@
     "name": "Mejliss TV",
     "slug": "majlistv",
     "scheme": "mejlisstv",
-    "version": "0.15.0",
+    "version": "0.16.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "fr.lepublicitaire.mejlisstv",
-      "versionCode": 12,
+      "versionCode": 13,
       "supportsRtl": true,
       "adaptiveIcon": {
         "backgroundColor": "#0B0906",
@@ -95,6 +95,10 @@
           "iosStartDiscoveryAfterFirstTapOnCastButton": true,
           "androidPlayServicesCastFrameworkVersion": "22.3.1"
         }
+      ],
+      [
+        "react-native-android-widget",
+        {"widgets": [{"name": "PrayerSmall", "label": "Mejliss TV — Prière (petit)", "description": "Prochaine prière et son heure.", "minWidth": "110dp", "minHeight": "110dp", "targetCellWidth": 2, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}, {"name": "PrayerLarge", "label": "Mejliss TV — Prière (grand)", "description": "Les cinq horaires du jour, la prochaine prière en évidence.", "minWidth": "250dp", "minHeight": "110dp", "targetCellWidth": 4, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}, {"name": "ReviseSmall", "label": "Mejliss TV — Réviser (petit)", "description": "Nombre de conférences à réviser aujourd'hui.", "minWidth": "110dp", "minHeight": "110dp", "targetCellWidth": 2, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}, {"name": "ReviseLarge", "label": "Mejliss TV — Réviser (grand)", "description": "Conférences à réviser aujourd'hui, avec un bouton pour réviser.", "minWidth": "250dp", "minHeight": "110dp", "targetCellWidth": 4, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}, {"name": "CitationSmall", "label": "Mejliss TV — Citation (petit)", "description": "La citation du jour, en court.", "minWidth": "110dp", "minHeight": "110dp", "targetCellWidth": 2, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}, {"name": "CitationLarge", "label": "Mejliss TV — Citation (grand)", "description": "La citation du jour avec le texte arabe.", "minWidth": "250dp", "minHeight": "110dp", "targetCellWidth": 4, "targetCellHeight": 2, "resizeMode": "horizontal|vertical", "updatePeriodMillis": 1800000}]}
       ],
       "expo-system-ui"
     ],

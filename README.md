@@ -5739,3 +5739,31 @@ L'envoi du visuel va directement vers le stockage (`https://s3-majlisstv.le-publ
 **Tests.** `python3 api/tests/test_ads.py` (API de test : droits, formats, liens, dates, rotation, pause, abonnés payants, compteurs, fonction coupée, suppression), `node api/tests/test_ads_lib.mjs`, `cd mobile && npm run check` (types + 129 tests), `npx expo export --platform android`, `next build` du site.
 
 **Honnêteté.** Testé : API (ci-dessus), règles pures, types, compilation de l'appli et du site. **Non testé** : l'affichage sur un vrai téléphone (plein écran, vidéo, son, bouton retour Android, arabe RTL), l'écran d'administration vu dans un navigateur (compilé seulement), le cas « enfant » côté API (jeton enfant → liste vide : écrit mais non joué), l'heure de prière en situation réelle. Les textes de l'écran Admin → Publicités sont en français seulement.
+
+## Étape 25 — Widgets Android : Prière, Réviser, Citation du jour (26/10, application 0.16.0)
+
+**Description.** Trois widgets pour l'écran d'accueil du téléphone, chacun en **petit (2 × 2)** et **grand (4 × 2)**, noir et or, textes en blanc pur, coins arrondis, redimensionnables. Un appui ouvre l'application au bon endroit.
+- **Prière** : petit = prochaine prière + heure + lieu ; grand = les cinq horaires du jour, la prochaine en or, les passées atténuées. Horaires **calculés sur le téléphone** (mêmes réglages que l'écran Prière : lieu, méthode) : fonctionne sans réseau. Appui → écran Prière. Si la prière n'est pas activée : message « Activez la prière dans Mejliss TV ».
+- **Réviser** : petit = nombre de conférences à réviser aujourd'hui ; grand = nombre + 2 titres + ce qui arrive cette semaine + bouton « Réviser ». Appui → onglet Apprendre. Réservé à l'offre **Apprentissage** (comme l'écran « À réviser aujourd'hui ») : sinon le widget l'indique ; non connecté : « Connectez-vous pour réviser ». Sans réseau : dernier état connu.
+- **Citation du jour** : petit = court extrait + référence ; grand = texte arabe + traduction + référence. Même citation que l'accueil de l'application.
+- Langue : français, anglais ou arabe selon la langue de l'application. Les noms dans la liste des widgets d'Android restent en français.
+
+**Comment ça marche.** Bibliothèque `react-native-android-widget` (0.24.0). Les widgets sont dessinés par une tâche de fond de l'application (`mobile/index.js` → `src/widgets/`). L'application leur laisse les réglages de prière et les redessine à chaque retour au premier plan, changement de réglage, de langue ou de compte. Android les rafraîchit aussi seul **environ toutes les 30 minutes** (minimum imposé par Android).
+
+**Prérequis / déploiement.** Application seulement : **aucun changement API, site ni base, aucun redéploiement DockPanel, aucune commande VPS.** Ce lot ajoute du code natif (la bibliothèque des widgets) : la version d'exécution change, donc les téléphones **doivent installer le nouvel APK** (l'écran « Nouvelle version disponible » de l'application le propose, ou télécharger l'APK de GitHub Actions) ; la mise à jour de contenu seule ne suffit pas. Poussé sur `main` → GitHub Actions « Application Android (APK) » fabrique l'APK 0.16.0.
+
+**Poser un widget.** Appui long sur le fond de l'écran d'accueil → Widgets → **Mejliss TV** → choisir « Prière (petit) », « Réviser (grand) », etc. → le glisser sur l'écran. Il se remplit tout de suite.
+
+**Essai pas à pas.**
+1. Installer l'APK 0.16.0, ouvrir l'application une fois (connexion, écran Prière avec un lieu, langue).
+2. Poser « Prière (grand) » : cinq horaires ; la prochaine en or. Poser « Prière (petit) ».
+3. Poser « Citation (grand) » et « Citation (petit) » : la citation du jour de l'accueil.
+4. Poser « Réviser (petit / grand) » avec un compte Apprentissage : nombre de conférences à réviser ; avec un compte gratuit : « Offre Apprentissage requise » ; déconnecté : « Connectez-vous pour réviser ».
+5. Appuyer sur chaque widget : l'application s'ouvre sur Prière / Apprendre / accueil.
+6. Mode avion : les widgets Prière et Citation gardent leur affichage ; Réviser montre le dernier état.
+
+**Debug.** Widget vide ou « Impossible de charger le widget » : ouvrir l'application une fois, puis retirer et reposer le widget. Heure de la prochaine prière en retard (par ex. Asr encore affiché après son heure) : normal jusqu'au prochain rafraîchissement d'Android (≈ 30 min, plus long en économie d'énergie) — ouvrir l'application le redessine aussitôt. Réviser reste sur « Connectez-vous » : se reconnecter dans l'application. Journaux d'un téléphone branché : `adb logcat | grep -i -E "RNWidget|ReactNativeJS"`. Compilation GitHub Actions : onglet Actions → « Application Android (APK) ».
+
+**Tests.** `cd mobile && npm run check` (types + 138 tests, dont 9 pour les widgets : prochaine prière, horaires du jour, après Isha, arabe, états de Réviser, lecture sûre des réponses du serveur, extraits de citation, liens) ; `npx expo export --platform android` (bundle) ; `npx expo prebuild --platform android` (les six widgets sont bien déclarés : récepteurs, descriptions, tailles).
+
+**Honnêteté.** Testé : logique des widgets, types, bundle JavaScript, génération du projet Android avec les six widgets. **Non testé** : la compilation du code natif (pas de SDK Android ici : le premier APK fabriqué par GitHub Actions en sera l'essai), l'affichage réel des widgets (tailles, coupures de texte, arabe, texte long de citation), le rafraîchissement automatique, l'appui qui ouvre l'application. Pas de compte à rebours « en direct » (Android ne le permet pas toutes les secondes). Pas d'image d'aperçu dans la liste des widgets d'Android. Widgets iPhone : plus tard (autre technique).

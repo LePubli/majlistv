@@ -441,3 +441,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 24c (26/10) — Publicité au lancement (API + site + application 0.15.0)
 - Publicités plein écran (photo ou vidéo), rotation, dates, abonnés payants réglables, rien à l'heure de prière ni dans Kids, statistiques. Voir README « Étape 24c ». Reste (sur « go ») : 22c Android TV, 22d Apple TV.
+
+## Étape 25 (26/10) — Widgets Android : Prière, Réviser, Citation (application 0.16.0)
+- Trois widgets, petit et grand. Nouvel APK à installer (code natif). Voir README « Étape 25 ». Reste (sur « go ») : widgets iPhone, 22c Android TV, 22d Apple TV.
