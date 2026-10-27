@@ -80,7 +80,7 @@ ok(other.status_code == 403, "les cartes d'un membre ne fuient pas vers un autre
 # 4) Réponses et calendrier
 a = requests.post(f"{B}/me/cards/{ids[0]}/answer", headers=L, json={"known": True}).json()
 ok(a["stage"] == 1 and a["advanced"] and not a["mastered"], "carte sue : étape 1")
-cur.execute("select due_on - current_date, stage, seen, known from memory_card_progress where user_id=%s and question_id=%s", (lu, ids[0]))
+cur.execute("select due_on - (now() at time zone 'Europe/Paris')::date, stage, seen, known from memory_card_progress where user_id=%s and question_id=%s", (lu, ids[0]))
 d = cur.fetchone(); ok(d[0] in (0, 1) and d[1] == 1 and d[2] == 1 and d[3] == 1, "revue programmée demain, compteurs à jour")
 a = requests.post(f"{B}/me/cards/{ids[1]}/answer", headers=L, json={"known": False}).json()
 ok(a["stage"] == 0 and not a["advanced"], "carte ratée : étape 0")
@@ -92,14 +92,14 @@ a = requests.post(f"{B}/me/cards/{ids[0]}/answer", headers=L, json={"known": Tru
 ok(a["stage"] == 1 and not a["advanced"], "carte revue avant l'échéance : calendrier inchangé")
 
 # 5) Échéance atteinte : la carte revient et avance
-cur.execute("update memory_card_progress set due_on = current_date - 2 where user_id=%s and question_id=%s", (lu, ids[0]))
+cur.execute("update memory_card_progress set due_on = (now() at time zone 'Europe/Paris')::date - 2 where user_id=%s and question_id=%s", (lu, ids[0]))
 r = requests.get(B + "/me/cards", headers=L).json()
 ok(r["session"]["cards"][0]["id"] == ids[0] and r["session"]["due"] == 1 and r["counts"]["due"] == 1, "carte échue en tête de séance (en retard de 2 jours)")
 a = requests.post(f"{B}/me/cards/{ids[0]}/answer", headers=L, json={"known": True}).json()
 ok(a["stage"] == 2 and a["advanced"], "réussie à l'échéance : étape 2")
-cur.execute("select due_on - current_date from memory_card_progress where user_id=%s and question_id=%s", (lu, ids[0])); ok(cur.fetchone()[0] == 3, "prochaine revue dans 3 jours")
+cur.execute("select due_on - (now() at time zone 'Europe/Paris')::date from memory_card_progress where user_id=%s and question_id=%s", (lu, ids[0])); ok(cur.fetchone()[0] == 3, "prochaine revue dans 3 jours")
 for expected, days in ((3, 7), (4, 21), (5, None)):
-    cur.execute("update memory_card_progress set due_on = current_date where user_id=%s and question_id=%s", (lu, ids[0]))
+    cur.execute("update memory_card_progress set due_on = (now() at time zone 'Europe/Paris')::date where user_id=%s and question_id=%s", (lu, ids[0]))
     a = requests.post(f"{B}/me/cards/{ids[0]}/answer", headers=L, json={"known": True}).json()
     ok(a["stage"] == expected, f"étape {expected}")
 ok(a["mastered"] and a["dueOn"] is None, "cinquième réussite : carte acquise, plus d'échéance")
@@ -118,7 +118,7 @@ ok(requests.post(f"{B}/me/cards/pas-un-uuid/answer", headers=L, json={"known": T
 
 # 7) Plafond de séance
 requests.post(f"{B}/me/cards/{ids[2]}/answer", headers=L, json={"known": False})
-cur.execute("update memory_card_progress set due_on = current_date - 1 where user_id=%s and stage < 5", (lu,))
+cur.execute("update memory_card_progress set due_on = (now() at time zone 'Europe/Paris')::date - 1 where user_id=%s and stage < 5", (lu,))
 setting(ADM, cards_daily_max="2")
 r = requests.get(B + "/me/cards", headers=L).json()
 ok(len(r["session"]["cards"]) == 2 and r["session"]["remaining"] >= 1, "plafond de séance respecté, le reste est annoncé")

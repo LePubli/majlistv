@@ -53,7 +53,7 @@ def submit(h, tid, good=True):
 
 
 def item(uid, tid):
-    cur.execute("select stage, anchor_on - current_date, due_on - current_date, reviews from revision_items where user_id=%s and talk_id=%s", (uid, tid))
+    cur.execute("select stage, anchor_on - (now() at time zone 'Europe/Paris')::date, due_on - (now() at time zone 'Europe/Paris')::date, reviews from revision_items where user_id=%s and talk_id=%s", (uid, tid))
     return cur.fetchone()
 
 
@@ -84,20 +84,20 @@ ok(rv["advanced"] and rv["stage"] == 1 and item(ulrn, t1)[2] == 2, "à l'échéa
 shift(ulrn, t1, 2); cur.execute("update revision_items set stage=2 where user_id=%s and talk_id=%s", (ulrn, t1))  # en retard, stage 2 (J+7)
 s = submit(LRN, t1, good=False); rv = s["learning"]["review"]
 ok(not s["passed"] and rv["stage"] == 0 and item(ulrn, t1)[2] == 1 and item(ulrn, t1)[1] == 0, "raté à l'échéance : retour à J+1, ancre = aujourd'hui")
-cur.execute("update revision_items set stage=3, anchor_on=current_date-21, due_on=current_date where user_id=%s and talk_id=%s", (ulrn, t1))
+cur.execute("update revision_items set stage=3, anchor_on=(now() at time zone 'Europe/Paris')::date-21, due_on=(now() at time zone 'Europe/Paris')::date where user_id=%s and talk_id=%s", (ulrn, t1))
 s = submit(LRN, t1); rv = s["learning"]["review"]
 ok(rv["mastered"] and rv["stage"] == 4 and rv["nextReviewOn"] is None, "J+21 réussi : conférence acquise")
 d = requests.get(f"{B}/me/revision", headers=LRN).json(); ok(d["items"] == [] and d["upcoming"]["mastered"] == 1, "acquise : plus de révision, comptée dans « acquis »")
 s = submit(LRN, t1); ok(item(ulrn, t1)[0] == 4, "acquise : refaire le quiz ne relance pas le calendrier")
-cur.execute("update revision_items set stage=1, anchor_on=current_date-10, due_on=current_date-7 where user_id=%s and talk_id=%s", (ulrn, t1))
+cur.execute("update revision_items set stage=1, anchor_on=(now() at time zone 'Europe/Paris')::date-10, due_on=(now() at time zone 'Europe/Paris')::date-7 where user_id=%s and talk_id=%s", (ulrn, t1))
 s = submit(LRN, t1); ok(item(ulrn, t1)[0] == 2 and item(ulrn, t1)[2] == 1, "très en retard : l'échéance suivante n'est jamais dans le passé (demain au plus tôt)")
 
 # --- limite quotidienne, retard, conférence retirée
 t2, t3 = talk("Révision B"), talk("Révision C")
-cur.execute("update revision_items set stage=0, anchor_on=current_date-1, due_on=current_date where user_id=%s and talk_id=%s", (ulrn, t1))
+cur.execute("update revision_items set stage=0, anchor_on=(now() at time zone 'Europe/Paris')::date-1, due_on=(now() at time zone 'Europe/Paris')::date where user_id=%s and talk_id=%s", (ulrn, t1))
 for t in (t2, t3):
     submit(LRN, t); shift(ulrn, t, 1)
-cur.execute("update revision_items set due_on=current_date-3 where user_id=%s and talk_id=%s", (ulrn, t3))
+cur.execute("update revision_items set due_on=(now() at time zone 'Europe/Paris')::date-3 where user_id=%s and talk_id=%s", (ulrn, t3))
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"revision_daily_max": "2"}})
 d = requests.get(f"{B}/me/revision", headers=LRN).json()
 ok(len(d["items"]) == 2 and d["total"] == 3 and d["remaining"] == 1, "limite quotidienne : 2 affichées, 1 reportée")
