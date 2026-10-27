@@ -3845,3 +3845,43 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .camp-thumb { width: 108px; height: 192px; object-fit: cover; border-radius: 12px; background: #000; flex: none; }
 .camp-info { display: grid; gap: 4px; min-width: 0; flex: 1; }
 @media (max-width: 560px) { .camp-item { flex-direction: column; } .camp-thumb { width: 100%; max-width: 220px; height: auto; aspect-ratio: 9 / 16; } }
+
+/* Étape 29 — Santé du serveur */
+.health { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.health > * { min-width: 0; }
+.health-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 14px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--card, rgba(255,255,255,.04)); }
+.health-banner strong { font-size: 1.05rem; }
+.health-banner.ok { border-color: rgba(80, 200, 120, .5); }
+.health-banner.warn { border-color: rgba(240, 170, 40, .7); }
+.health-banner.crit { border-color: rgba(235, 80, 80, .8); }
+.health-muted { color: var(--text-2, #cfc6b4); font-size: .9rem; margin: 6px 0 0; }
+.health-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; }
+.health-gauge-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.health-gauge-head h3 { margin: 0; font-size: 1rem; }
+.health-badge { font-size: .75rem; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.health-badge.ok { color: #6fd99a; } .health-badge.warn { color: #f0b440; } .health-badge.crit { color: #ff7a7a; }
+.health-pct { font-size: 2.4rem; font-weight: 700; margin: 8px 0; line-height: 1; }
+.health-pct small { font-size: 1rem; font-weight: 500; }
+.health-bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.health-bar span { display: block; height: 100%; border-radius: 999px; background: #6fd99a; transition: width .4s; }
+.health-gauge[data-level="warn"] .health-bar span { background: #f0b440; }
+.health-gauge[data-level="crit"] .health-bar span { background: #ff7a7a; }
+.health-lines { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: .9rem; }
+.health-block h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.health-spark { margin: 0 0 8px; }
+.health-spark svg { width: 100%; height: 120px; display: block; background: rgba(255,255,255,.03); border-radius: 12px; }
+.health-grid { stroke: rgba(255,255,255,.12); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.health-line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.health-line.disk { stroke: #E6A739; } .health-line.mem { stroke: #8ab4ff; stroke-dasharray: 6 4; }
+.health-spark figcaption { font-size: .8rem; color: var(--text-2, #cfc6b4); margin-top: 6px; }
+.health-key { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-inline: 6px 2px; }
+.health-key.disk { background: #E6A739; } .health-key.mem { background: #8ab4ff; }
+.health-tables { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.health-tables li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.health-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.health-ok { color: #6fd99a; margin: 10px 0 0; }
+.health-warn-text { color: #f0b440; }
+.health-code { background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; overflow-x: auto; font-size: .85rem; direction: ltr; text-align: left; }
+@media (max-width: 480px) { .health-pct { font-size: 2rem; } .health-actions .btn { width: 100%; text-align: center; } }
+.health .card { max-width: none; margin: 0; padding: 20px; border-radius: 16px; width: 100%; box-sizing: border-box; }
+@media (max-width: 480px) { .health .card { padding: 16px; } }

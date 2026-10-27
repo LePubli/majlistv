@@ -24,6 +24,8 @@ import seoRoutes from './routes/seo.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
 import watchRoutes from './routes/watch.js';
+import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
+import { startHealth } from './health.js';
 import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
@@ -156,6 +158,7 @@ await app.register(legalRoutes);
 await app.register(importRoutes);
 await app.register(watchRoutes);
 await app.register(adsRoutes);
+await app.register(healthRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);
@@ -176,5 +179,6 @@ await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
+startHealth(app.log); // étape 29 : mesures du serveur + alertes
 startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
 await startModules(app); // tâches de fond de chaque module (citations, e-mails de révision, bilan, Kids, chaînes, statistiques, alertes…)

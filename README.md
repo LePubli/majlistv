@@ -5853,3 +5853,30 @@ Puis Ctrl+F5 dans l'admin.
 **Debug.** Page blanche ou ancien affichage : Ctrl+F5 (cache). Section manquante : elle dépend d'un module désactivé (Admin → Modules). Si des cartes disparaissent avec un bloqueur de pub : me le dire (classes `set-*`, sans « ads »).
 
 **Testé** (navigateur réel Chromium sur un API de test) : accueil (6 thèmes, 48 cartes), recherche, ouverture d'une section, brouillon conservé en changeant de section avec confirmation, indicateur « • », retour à l'accueil, mobile 390 px sans défilement horizontal, aucune erreur JavaScript, build Next. **Non testé** : l'arabe (l'admin est en français), les vrais états de ton serveur (Stripe, e-mails, clés IA).
+
+## Étape 29 — Santé du serveur et alerte disque (27/10)
+
+**Description.** Nouvel écran **Admin → Santé du serveur** : disque, mémoire, charge du processeur (jauges avec niveau « Tout va bien / À surveiller / Critique »), courbe des 7 derniers jours, tendance (« plein dans environ N jours »), taille de la base de données et plus grosses tables, état des alertes. Le serveur mesure toutes les 10 minutes, garde 35 jours d'historique et **envoie un e-mail** quand le disque (80 % attention, 90 % critique) ou la mémoire (92 %) dépasse un seuil : une alerte au franchissement, un rappel toutes les 24 h (critique) ou 72 h (attention) tant que ça dure, un message « retour à la normale » ensuite. Pas d'e-mail quand on passe de critique à attention.
+
+**Prérequis.** L'envoi d'e-mails doit être configuré (Admin → Paramètres → E-mails), sinon l'écran fonctionne mais aucune alerte ne part (l'écran le signale).
+
+**Réglages** (Admin → Paramètres → Technique → *Santé du serveur*) : alertes oui/non, seuil disque attention (80), seuil disque critique (90), seuil mémoire critique (92), destinataires (vide = tous les administrateurs). Variable facultative `HEALTH_DISK_PATH` (défaut `/`) pour choisir le dossier dont on mesure le disque.
+
+**Fichiers.** API : `api/migrations/066_health.sql` (tables `health_samples`, `health_alerts`), `api/src/healthLib.js` (calculs purs), `api/src/health.js` (mesures, alertes, rapport), `api/src/routes/health.js` (`GET /admin/health`, `POST /admin/health/check`, `POST /admin/health/test-alert`), modèle d'e-mail `health_alert` (fr/en/ar), réglages. Web : `web/components/HealthAdmin.js`, onglet `?tab=health`, entrée de menu « Santé du serveur ».
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 066 au démarrage), puis **majlistv-web**. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis Admin → Santé du serveur → **Mesurer maintenant** et **Tester l'alerte e-mail**.
+
+**Exemples.** Pour voir une vraie alerte : Paramètres → Santé du serveur, mettre « seuil attention » à 10 (minimum) puis « Mesurer maintenant » : un e-mail arrive ; remettre 80 ensuite (un e-mail « retour à la normale » part).
+
+**Debug.** « Envoi d'e-mails non configuré » : renseigner Paramètres → E-mails. Pas d'alerte reçue : regarder le dossier spam, `docker logs dockpanel-git-majlistv-api | grep -i health`, et la file : `docker exec -i dockpanel-app-postgres-majlisstv psql -U <utilisateur> -c "select to_email,status,last_error from email_outbox where kind='health_alert' order by id desc limit 5;"`. Tendance absente : il faut ~6 h de mesures.
+
+**Limites (honnêtes).** Le disque mesuré est la partition qui porte Docker, vue depuis le conteneur de l'API : on s'attend au même chiffre que `df -h /` sur le VPS (à confirmer sur ton serveur). Mémoire et charge sont celles de tout le VPS (partagé avec Miel & Co et TriMaint). Les images Docker et le cache de construction ne sont pas visibles depuis le site (l'API n'a pas accès à Docker, volontairement) : l'écran affiche les commandes de nettoyage à lancer en SSH.
+
+**Testé** : calculs (28 vérifications Node, `node api/tests/test_health_lib.mjs`), API (`python3 api/tests/test_health.py` : droits, rapport, mesure, alerte, absence de doublon, retour à la normale, alertes coupées, e-mail d'essai, purge), envoi réel vers un serveur SMTP factice, écran en navigateur réel (ordinateur et 390 px, sans défilement horizontal). **Non testé** : sur ton VPS, avec ton vrai SMTP ; arabe (écran admin en français).

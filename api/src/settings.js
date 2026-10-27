@@ -28,6 +28,7 @@ export const GROUPS = [
   { id: 'external', label: 'Vidéos YouTube, Vimeo et Dailymotion' },
   { id: 'search', label: 'Recherche (Meilisearch)' },
   { id: 'activity', label: 'Activité (tâches lourdes)' },
+  { id: 'health', label: 'Santé du serveur' },
 ];
 
 const PROVIDERS = ['claude', 'azure', 'deepseek'];
@@ -256,6 +257,13 @@ export const FIELDS = [
   { key: 'activity_window_enabled', group: 'activity', type: 'bool', label: 'Limiter les tâches lourdes à une plage horaire', def: 'false' },
   { key: 'activity_window_start', group: 'activity', type: 'number', label: 'Début de la plage (heure de Paris, 0-23)', def: '22', min: 0, max: 23 },
   { key: 'activity_window_end', group: 'activity', type: 'number', label: 'Fin de la plage (heure de Paris, 0-23)', def: '7', min: 0, max: 23 },
+  { key: 'health_alerts_enabled', group: 'health', type: 'bool', label: 'Envoyer des alertes e-mail (disque, mémoire)', env: 'HEALTH_ALERTS_ENABLED', def: 'true',
+    help: "Nécessite l'envoi d'e-mails configuré (groupe E-mails). Mesure toutes les 10 minutes." },
+  { key: 'health_disk_warn_pct', group: 'health', type: 'number', label: 'Disque : seuil « attention » (% utilisé)', env: 'HEALTH_DISK_WARN_PCT', def: '80', min: 10, max: 99 },
+  { key: 'health_disk_crit_pct', group: 'health', type: 'number', label: 'Disque : seuil « critique » (% utilisé)', env: 'HEALTH_DISK_CRIT_PCT', def: '90', min: 10, max: 99 },
+  { key: 'health_mem_crit_pct', group: 'health', type: 'number', label: 'Mémoire : seuil « critique » (% utilisée)', env: 'HEALTH_MEM_CRIT_PCT', def: '92', min: 10, max: 99 },
+  { key: 'health_alert_to', group: 'health', type: 'text', label: "Destinataires des alertes (adresses séparées par des virgules)", env: 'HEALTH_ALERT_TO',
+    help: 'Vide = tous les administrateurs.' },
 ];
 // Interrupteurs des fonctions (étape A) : un réglage « feat_<id> » par fonction sans réglage existant.
 // Masqués de la page Paramètres classique : ils se règlent dans Admin → Fonctions et paramètres.

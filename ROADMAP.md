@@ -462,3 +462,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Idées d'améliorations (27/10) — liste proposée, rien de planifié
 - Voir `docs/IDEES-AMELIORATIONS.md` (8 thèmes, apport et effort de chaque idée, ordre conseillé). Chaque idée démarre sur un « go » d'Epok.
+
+## Étape 29 (27/10) — Santé du serveur : disque, mémoire, charge, tendance, alertes e-mail
+- Voir README « Étape 29 ». Reste (sur « go ») : voir docs/IDEES-AMELIORATIONS.md (2FA, tests automatiques, SEO/partage…).

@@ -9,7 +9,7 @@ export const THEMES = [
   { id: 'money', label: 'Argent', groups: ['payment', 'gifts', 'revenue', 'ads'] },
   { id: 'ai', label: 'Intelligence artificielle', groups: ['translation', 'insights', 'transcription', 'quiz', 'practice'] },
   { id: 'community', label: 'Communauté et communication', groups: ['email', 'notifications', 'moderation', 'kids'] },
-  { id: 'tech', label: 'Technique', groups: ['search', 'external', 'stats', 'activity'] },
+  { id: 'tech', label: 'Technique', groups: ['health', 'search', 'external', 'stats', 'activity'] },
 ];
 /** Icône et phrase d'explication de chaque section. */
 export const SECTION_META = {
@@ -19,7 +19,7 @@ export const SECTION_META = {
   translation: ['🌐', 'Moteurs et clés'], insights: ['✨', 'Résumés et chapitres automatiques'], transcription: ['🎙️', 'Modèle, langue, cœurs'],
   quiz: ['❓', 'Seuil de réussite, langue'], practice: ['🧭', '« Et maintenant, que faire ? »'],
   email: ['✉️', 'Envoi, expéditeur'], notifications: ['🔔', 'E-mails et téléphone'], moderation: ['🛡️', 'Relecture, signalements'], kids: ['🧒', 'Espace enfants'],
-  search: ['🔎', 'Serveur et clé Meilisearch'], external: ['▶️', 'YouTube, Vimeo, Dailymotion'], stats: ['📊', "Statistiques d'audience"], activity: ['⏱️', 'Limites des tâches lourdes'],
+  search: ['🔎', 'Serveur et clé Meilisearch'], external: ['▶️', 'YouTube, Vimeo, Dailymotion'], stats: ['📊', "Statistiques d'audience"], activity: ['⏱️', 'Limites des tâches lourdes'], health: ['🩺', 'Seuils et destinataires des alertes'],
 };
 const FALLBACK_THEME = { id: 'other', label: 'Autres', groups: [] };
 /** Les réglages propres à chaque module (identifiants « mod_… ») forment un thème à part, en dernier. */
