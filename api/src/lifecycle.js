@@ -15,6 +15,7 @@ import { inSendWindow, clampInt, remainingToday, onePerUser, talkPath, minutesLa
 
 const TZ = 'Europe/Paris';
 const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adultSql(t)}`;
+const card = (r) => ({ id: r.id, title: r.title, speaker: r.speaker || '', poster: Boolean(r.poster), path: talkPath(r) });
 const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.speaker}` : ''}`).join('\n');
 // Le membre a-t-il accès aux conférences premium en ce moment ? (même règle que access.js, en SQL)
 const HAS_ACCESS = (u) => `(COALESCE(${u}.premium_until > now(), false) OR EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = ${u}.id AND s.status IN ('trialing', 'active', 'past_due')
@@ -41,7 +42,7 @@ const COMMON = (u, gapParam) => `${u}.notify_lifecycle AND ${u}.disabled_at IS N
 // Trois conférences à proposer : les plus récentes, gratuites d'abord si `freeFirst`.
 async function suggestions(n, freeFirst) {
   return (await pool.query(
-    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker FROM talks t WHERE ${READY('t')}
+    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS poster FROM talks t WHERE ${READY('t')}
       ORDER BY ${freeFirst ? "(t.access = 'free') DESC," : ''} t.created_at DESC LIMIT $1`, [n])).rows;
 }
 
@@ -49,7 +50,7 @@ async function suggestions(n, freeFirst) {
 export async function candidates(kind, cfg, limit = 500) {
   if (kind === 'resume_talk') {
     const { rows } = await pool.query(
-      `SELECT DISTINCT ON (p.user_id) u.id AS "userId", u.email, u.name, u.locale, t.id AS "talkId", t.slug, t.title, trim(t.speaker) AS speaker, p.position_ms AS "positionMs"
+      `SELECT DISTINCT ON (p.user_id) u.id AS "userId", u.email, u.name, u.locale, t.id AS "talkId", t.slug, t.title, trim(t.speaker) AS speaker, (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS poster, p.position_ms AS "positionMs"
          FROM watch_progress p JOIN users u ON u.id = p.user_id JOIN talks t ON t.id = p.talk_id
         WHERE NOT p.completed AND p.position_ms >= 120000 AND (p.duration_ms = 0 OR p.position_ms < p.duration_ms * 0.9)
           AND p.updated_at < now() - make_interval(days => $1) AND p.updated_at > now() - make_interval(days => $1 + 11)
@@ -122,8 +123,8 @@ export async function runLifecycle(log) {
         const ins = await pool.query('INSERT INTO lifecycle_log(user_id, kind, ref) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING id', [r.userId, kind, String(r.ref)]);
         if (!ins.rowCount) continue;
         const vars = kind === 'resume_talk'
-          ? { name: r.name, title: r.title, speaker: r.speaker || '', minutes: minutesLabel(r.positionMs), path: talkPath({ slug: r.slug, id: r.talkId }) }
-          : { name: r.name, titles: bullet(sugg), path: kind === 'winback' ? '/pricing' : '/' };
+          ? { name: r.name, title: r.title, speaker: r.speaker || '', minutes: minutesLabel(r.positionMs), path: talkPath({ slug: r.slug, id: r.talkId }), cards: [card({ id: r.talkId, slug: r.slug, title: r.title, speaker: r.speaker, poster: r.poster })] }
+          : { name: r.name, titles: bullet(sugg), cards: sugg.map(card), path: kind === 'winback' ? '/pricing' : '/' };
         await enqueueEmail(pool, { userId: r.userId, to: r.email, locale: r.locale, kind, vars, dedupeKey: `lc:${kind}:${r.userId}:${r.ref}` });
         left -= 1; total += 1;
       } catch (err) {

@@ -16,6 +16,8 @@ import { pushConfigured, pushToUser } from './push.js';
 
 const TZ = 'Europe/Paris';
 const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adultSql(t)}`;
+const POSTER = (t) => `(${t}.poster_key IS NOT NULL OR ${t}.external_thumb IS NOT NULL) AS poster`;
+const card = (r) => ({ id: r.id, title: r.title, speaker: r.speaker || '', poster: Boolean(r.poster), path: `/conferences/${r.slug || r.id}` });
 const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.speaker}` : ''}`).join('\n');
 
 // --- 1. Intervenants suivis
@@ -24,7 +26,7 @@ export async function runSpeakers(log) {
   const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
   if (!mailOn && !pushOn) return 0;
   const talks = (await pool.query(
-    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, t.language FROM talks t
+    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, t.language, ${POSTER('t')} FROM talks t
       WHERE t.announced_at IS NULL AND trim(t.speaker) <> '' AND ${READY('t')} ORDER BY t.created_at LIMIT 200`)).rows;
   if (!talks.length) return 0;
   const bySlug = new Map();
@@ -54,7 +56,7 @@ export async function runSpeakers(log) {
       const path = e.talks.length === 1 ? `/conferences/${e.talks[0].slug || e.talks[0].id}` : '/';
       if (mailOn) {
         await enqueueEmail(client, { userId: e.user_id, to: e.email, locale: e.locale, kind: 'speaker_new',
-          vars: { name: e.name, titles: bullet(list) + (e.talks.length > list.length ? `\n… +${e.talks.length - list.length}` : ''), speakers: names, count: String(e.talks.length), path },
+          vars: { name: e.name, cards: list.map(card), titles: bullet(list) + (e.talks.length > list.length ? `\n… +${e.talks.length - list.length}` : ''), speakers: names, count: String(e.talks.length), path },
           dedupeKey: `spk:${e.user_id}:${ids.length > 200 ? ids.slice(0, 200) : ids}` });
       }
       if (pushOn) pushes.push({ userId: e.user_id, vars: { count: e.talks.length, titles: list.map((x) => x.title), speakers: names }, path: e.talks.length === 1 ? `/conferences/${e.talks[0].id}` : '/' }); // l'application ouvre la conférence par son identifiant
@@ -80,12 +82,12 @@ export async function weeklySelection() {
   const cid = String(await getSetting('weekly_collection') || '').trim();
   if (/^[0-9a-f-]{36}$/i.test(cid)) {
     const items = (await pool.query(
-      `SELECT t.title, trim(t.speaker) AS speaker FROM collections c JOIN collection_items i ON i.collection_id = c.id JOIN talks t ON t.id = i.talk_id
+      `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, ${POSTER('t')} FROM collections c JOIN collection_items i ON i.collection_id = c.id JOIN talks t ON t.id = i.talk_id
         WHERE c.id = $1 AND c.published AND ${READY('t')} ORDER BY i.position LIMIT $2`, [cid, count])).rows;
     if (items.length) return { path: `/collections/${cid}`, items };
   }
   const items = (await pool.query(
-    `SELECT t.title, trim(t.speaker) AS speaker FROM talks t WHERE ${READY('t')} AND t.created_at > now() - interval '7 days' ORDER BY t.created_at DESC LIMIT $1`, [count])).rows;
+    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, ${POSTER('t')} FROM talks t WHERE ${READY('t')} AND t.created_at > now() - interval '7 days' ORDER BY t.created_at DESC LIMIT $1`, [count])).rows;
   return { path: '/', items };
 }
 
@@ -107,7 +109,7 @@ export async function runWeekly(log) {
     try {
       if (mailOn) {
         await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind: 'weekly_selection',
-          vars: { name: u.name, titles: bullet(sel.items), path: sel.path }, dedupeKey: `weekly:${u.id}:${now.wk}` });
+          vars: { name: u.name, titles: bullet(sel.items), cards: sel.items.map(card), path: sel.path }, dedupeKey: `weekly:${u.id}:${now.wk}` });
       }
       if (pushOn) await pushToUser(u.id, 'weekly_selection', { titles: sel.items.map((x) => x.title) }, sel.path, log);
       await pool.query('UPDATE users SET weekly_last_week = $2::date WHERE id = $1', [u.id, now.wk]);
