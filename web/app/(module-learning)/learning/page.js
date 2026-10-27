@@ -11,6 +11,7 @@ import Crumbs from '../../../components/Crumbs';
 import { thumbOf } from '../../../components/TalkCard';
 import { TabBar, TabPanel, useTab } from '../../../components/Tabs';
 import Row from '../../../components/Row';
+import MemoryCards from '../../../components/MemoryCards';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -44,6 +45,7 @@ export default function Learning() {
   const [cont, setCont] = useState([]); // conférences à reprendre
   const [todo, setTodo] = useState([]); // quiz à passer
   const [goals, setGoals] = useState(null); // objectifs du bilan (privés)
+  const [cardsN, setCardsN] = useState(0); // cartes mémoire à faire aujourd'hui (à échéance + nouvelles)
   const [pz, setPz] = useState(null); // mes engagements : { items, counts } (synthèse du tableau de bord)
   const [next, setNext] = useState([]); // « Pour continuer à apprendre » (ou ce qu'on peut faire dès maintenant)
 
@@ -57,11 +59,13 @@ export default function Learning() {
   useEffect(() => { if (user && feat('selfcheck')) call('/me/selfcheck').then((r) => setGoals(r.ok ? r.data.goals || [] : null)); }, [user, call, feat]);
   useEffect(() => { if (user && d && feat('practice')) call('/me/practice').then((r) => setPz(r.ok ? r.data : null)); }, [user, d, call, feat]);
   useEffect(() => { if (user) call('/talks?limit=12', {}, null).then((r) => setNext(r.ok ? r.data : [])); }, [user, call]);
+  useEffect(() => { if (user && feat('memorycards')) call('/me/cards').then((r) => { if (r.ok) setCardsN(r.data.counts.due + r.data.counts.newAvailable); }); }, [user, call, feat]);
   const revN = rv ? rv.items.length + (rv.remaining || 0) : 0;
   const tabs = [
     { id: 'dash', label: t('tbDash') },
     { id: 'path', label: t('tbPath') },
     ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
+    ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
     ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
     ...(feat('selfcheck') ? [{ id: 'bilan', label: t('msBilan') }] : []),
     { id: 'att', label: t('tbAtt') },
@@ -237,6 +241,12 @@ export default function Learning() {
                   <button type="button" className="lg-ghost" onClick={() => go('rev')}>{t('lgRevStart')}</button>
                 </>
               ) : <p className="lg-txt">{t('lgRevNone')}</p>}
+              {feat('memorycards') && cardsN > 0 && (
+                <>
+                  <p className="lg-txt"><b>{t('lgCardsN').replace('{n}', cardsN)}</b></p>
+                  <button type="button" className="lg-ghost" onClick={() => go('cards')}>{t('lgCardsGo')}</button>
+                </>
+              )}
             </section>
           )}
         </div>
@@ -366,6 +376,10 @@ export default function Learning() {
         </section>
       )}
 
+      </TabPanel>
+
+      <TabPanel id="cards" current={tab}>
+        <MemoryCards onCount={setCardsN} />
       </TabPanel>
 
       <TabPanel id="path" current={tab}>

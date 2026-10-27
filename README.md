@@ -6108,3 +6108,31 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** Le test restaure la **base** pour de vrai ; pour les **vidéos** il vérifie la présence (instantané des métadonnées lisible + blocs listés), il ne reconstruit pas Garage ni ne relit une vidéo. Si le VPS est éteint, le site (hébergé sur le même VPS) l'est aussi : aucune alerte ne peut partir, d'où l'intérêt du moniteur Uptime Kuma optionnel (`KUMA_PUSH_URL`) hébergé ailleurs. Le scénario « VPS perdu, tout reconstruire » reste à répéter une fois à blanc (docs/RECONSTRUIRE-DE-ZERO.md).
 
 **Testé.** Règles pures : 24 vérifications (`node api/tests/test_backup_lib.mjs`). API sur base réelle : `api/tests/test_backup.py` (jeton absent/mauvais, validation, filtrage des détails, niveaux, e-mail d'alerte et de retour, sans doublon, seuils réglables, rétention 200, jeton jamais renvoyé). Scripts du VPS avec **faux docker/restic** (`ops/backup/tests/run-stub-test.sh`, 9 contrôles). Écran en navigateur réel (ordinateur + 390 px, sans débordement). **PAS testé** : les scripts sur le vrai VPS et le vrai dépôt PlanetHoster, l'envoi d'un vrai e-mail d'alerte.
+
+## Étape 38 — Cartes mémoire intégrées à la révision espacée (27/10)
+
+**Description.** Pour les membres de la formule **Apprentissage**, un nouvel onglet **Cartes** dans « Mon apprentissage » : des cartes recto/verso à retourner. Le recto est une question, le verso donne la bonne réponse, l'explication et le passage cité (avec un lien « Revoir ce passage dans la vidéo » qui s'ouvre à la bonne minute). Le membre répond « Je savais » ou « À revoir ».
+- **D'où viennent les cartes.** Chaque carte est une **question de quiz déjà validée par un humain** (Studio → Quiz), jamais un texte généré en plus : rien de nouveau à relire, une question corrigée ou retirée corrige ou retire la carte. Une carte n'est proposée que pour une conférence dont le membre a **déjà passé le quiz**.
+- **Calendrier.** Même principe que la révision des quiz : une carte sue revient après 1, 3, 7 puis 21 jours ; la cinquième réussite la déclare **acquise**. « À revoir » la ramène au début (demain) et elle revient une fois en fin de séance. Une carte revue avant son échéance (séance libre) ne fait pas avancer le calendrier.
+- **Séance du jour.** Cartes à échéance d'abord (les plus en retard en tête), puis nouvelles cartes, dans la limite du jour. Réglages (Admin → Paramètres → Quiz) : « Cartes mémoire par séance » (20) et « Nouvelles cartes mémoire par jour » (5, 0 = aucune nouvelle). Compteurs À réviser / Nouvelles / En cours / Acquises, pastille du nombre de cartes du jour sur l'onglet et sur le tableau de bord.
+- Fonction activable : Admin → Fonctions → « Cartes mémoire » (module `memorycards`, demande la fonction Quiz).
+
+**Prérequis.** Fonction Quiz active, quiz validés (Studio → Quiz), palier Apprentissage.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 070, table `memory_card_progress`) puis **majlistv-web** ; l'application mobile n'est pas concernée. Puis :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** Avec un compte Apprentissage : passer le quiz d'une conférence, ouvrir Mon apprentissage → Cartes (le tableau de bord affiche « N cartes mémoire à réviser »), commencer la séance, retourner une carte, répondre « À revoir » puis « Je savais ». Le lendemain, la carte sue revient dans « À réviser ».
+
+**Debug.** Onglet absent : fonction coupée (Admin → Fonctions) ou palier insuffisant (403 `learning_required`). « Aucune carte » : le membre n'a pas passé de quiz, ou les questions sont en brouillon / refusées, ou la conférence n'est pas publiée. Voir la progression d'un membre : table `memory_card_progress` (étape, échéance, réponses). Elle fait partie de l'export RGPD et disparaît avec le compte.
+
+**Fichiers.** `api/migrations/070_memory_cards.sql`, `api/src/memoryCardsLib.js`, `api/src/modules/memorycards/` (routes `GET /me/cards`, `GET /me/cards?free=1`, `POST /me/cards/:qid/answer`), `api/src/featuresList.js`, `api/src/settings.js`, `web/components/MemoryCards.js`, `web/lib/memoryCards.js`, `web/app/(module-learning)/learning/page.js`, `web/lib/i18n.js` (`mc*`, fr/en/ar), `web/app/globals.css`.
+
+**Limites (honnêtes).** Une carte est une question de quiz retournée : pas de cartes tirées du résumé IA (non validé par un humain, donc écarté volontairement). Pas encore dans l'application mobile ni dans l'e-mail quotidien de révision. Le membre s'auto-évalue (« je savais » / « à revoir ») : le serveur ne corrige pas une réponse tapée. Les cartes sont dans la langue de la question du quiz.
+
+**Testé.** Règles pures : 21 vérifications (`node api/tests/test_memorycards_lib.mjs`) et 7 côté site (`node web/tests/test_memorycards_web.mjs`). API sur base réelle (`api/tests/test_memorycards.py`, ~45 contrôles : droits et palier, cartes limitées aux quiz passés et aux questions validées, calendrier complet jusqu'à « acquise », plafonds, séance libre, fonction coupée, suppression en cascade, export RGPD). Écran en navigateur réel (ordinateur et 390 px, séance complète avec carte à revoir, carte en arabe en RTL, sans débordement horizontal). **PAS testé** : avec un vrai abonnement Stripe Apprentissage (palier simulé en base), lecteur d'écran.

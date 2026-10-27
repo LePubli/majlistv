@@ -1,0 +1,9 @@
+{
+  "id": "memorycards",
+  "name": "Cartes mémoire",
+  "version": "1.0.0",
+  "description": "Cartes recto/verso tirées des questions de quiz validées, avec révision espacée.",
+  "feature": "memorycards",
+  "requires": ["quiz"],
+  "settings": ["cards_daily_max", "cards_new_per_day"]
+}

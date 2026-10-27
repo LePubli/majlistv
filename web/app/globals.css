@@ -3924,3 +3924,29 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .health-pill.ok { border-color: rgba(80, 200, 120, .6); }
 .health-pill.warn { border-color: rgba(230, 180, 60, .7); }
 .health-pill.crit { border-color: rgba(230, 80, 80, .8); }
+
+/* Étape 38 — Cartes mémoire (Mon apprentissage → Cartes). */
+.mc { display: grid; gap: 14px; max-width: 720px; }
+.mc h2 { margin: 0; }
+.mc-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.mc-stats li { display: grid; gap: 2px; padding: 12px; text-align: center; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); }
+.mc-stats b { font-size: 1.6rem; color: var(--accent); font-family: var(--font-title); }
+.mc-stats span { font-size: .85rem; color: var(--text-2); }
+.mc-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mc-bar { height: 6px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.mc-bar span { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
+.mc-card { padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); display: grid; gap: 12px; }
+.mc-from { margin: 0; font-size: .85rem; color: var(--muted); }
+.mc-new { padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .75rem; margin-inline-end: 6px; }
+.mc-front { margin: 0; font-size: 1.3rem; line-height: 1.4; color: var(--text); }
+.mc-back { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.mc-back p { margin: 0; }
+.mc-label { font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+.mc-answer { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.mc-quote { margin: 0; padding: 10px 14px; border-inline-start: 3px solid var(--accent); background: var(--gold-soft); border-radius: 8px; display: grid; gap: 4px; }
+.mc-replay { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; justify-self: start; }
+.mc-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.mc-actions .btn { min-height: 48px; flex: 1 1 160px; }
+.mc-free { display: grid; gap: 6px; justify-items: start; }
+@media (max-width: 520px) { .mc-stats { grid-template-columns: repeat(2, 1fr); } .mc-card { padding: 16px; } }
+.mc-actions .btn { scroll-margin-bottom: 110px; }

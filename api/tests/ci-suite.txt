@@ -27,6 +27,7 @@ test_onboarding.py
 test_practice.py
 test_push_api.py
 test_quiz_play.py
+test_memorycards.py
 test_revision.py
 test_selfcheck.py
 test_seo.py

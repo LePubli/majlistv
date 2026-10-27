@@ -30,7 +30,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 ## 3. Apprendre : renforcer le 360°
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 3.1 | **Cartes mémoire automatiques** tirées des résumés et du quiz, intégrées à la révision espacée | Retient mieux, justifie la formule Apprentissage | M | ★★★ |
+| 3.1 | ✅ (étape 38 ; reste mobile et e-mail quotidien) **Cartes mémoire automatiques** tirées des résumés et du quiz, intégrées à la révision espacée | Retient mieux, justifie la formule Apprentissage | M | ★★★ |
 | 3.2 | **« Pose une question sur cette conférence »** (assistant IA limité au contenu de la conférence, réponses avec le passage horodaté, jamais d'avis religieux inventé) | Compréhension, engagement, argument fort de l'offre ; coût IA et modération à cadrer | L | ★★ |
 | 3.3 | **Fiche PDF imprimable** (résumé, chapitres, points clés, notes du membre) | Utile en cercle d'étude, pour l'imprimer ou l'envoyer | S | ★★ |
 | 3.4 | **Glossaire des termes arabes** (définition au survol dans la transcription, liste par conférence) | Accessibilité pour les débutants, enseignement plus fin | M | ★★ |

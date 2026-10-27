@@ -36,6 +36,8 @@ export const FEATURES = [
   { id: 'practice', group: 'learning', label: 'Mise en pratique', hint: 'Écran « Et maintenant, que faire ? »', setting: 'practice_enabled' },
   { id: 'revision', group: 'learning', label: 'Révision espacée', hint: 'Notions à revoir et rappels',
     rules: [{ re: '^/me/revision(/|$)' }, { re: '^/(talks/[^/]+/)?studio/reminders(/|$)' }] },
+  { id: 'memorycards', group: 'learning', label: 'Cartes mémoire', hint: 'Cartes recto/verso tirées des quiz, avec révision espacée',
+    rules: [{ re: '^/me/cards(/|$)' }] },
   { id: 'selfcheck', group: 'learning', label: 'Mon bilan personnel', hint: 'Objectifs et notes privées',
     rules: [{ re: '^/me/(selfcheck|evolution)(/|$)' }] },
   { id: 'learning', group: 'learning', label: 'Parcours et attestations', hint: 'Tableau de bord d\'apprentissage et attestations',
