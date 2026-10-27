@@ -35,5 +35,10 @@ echo "$((total - fail)) réussis, $fail en échec sur $total"
 for l in "${failed[@]:-}"; do
   [ -z "$l" ] && continue
   echo; echo "----- $l (dernières lignes) -----"; tail -n 15 "$LOGS/$(echo "$l" | tr '/ ' '__').log"
+  # Chez GitHub : l'échec apparaît aussi en annotation rouge, lisible tout en haut de la page de l'exécution.
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    msg="$(tail -n 4 "$LOGS/$(echo "$l" | tr '/ ' '__').log" | tr '\n\r' '  ' | tr -d '%' | cut -c1-400)"
+    echo "::error title=Test en échec : $l::$msg"
+  fi
 done
 [ "$fail" -eq 0 ]
