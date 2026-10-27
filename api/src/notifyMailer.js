@@ -9,6 +9,8 @@ import { getSetting, isOn, getNumber } from './settings.js';
 import { featureOn } from './features.js';
 import { enqueueEmail, smtpConf } from './mailer.js';
 import { speakerSlug } from './speakers.js';
+import { pickFollowCards, hasPersonal, dueText } from './weeklyLetterLib.js';
+import { HAS_ACCESS } from './lifecycle.js';
 import { visibleSql } from './visibility.js';
 import { adultSql } from './taxonomy.js';
 import { parisHour } from './revision.js';
@@ -91,6 +93,27 @@ export async function weeklySelection() {
   return { path: '/', items };
 }
 
+// Étape 34 — sections personnelles de la lettre : à reprendre, nouveautés des intervenants suivis, notions à réviser.
+async function weeklyContext() {
+  const recent = (await pool.query(
+    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, ${POSTER('t')} FROM talks t
+      WHERE ${READY('t')} AND t.created_at > now() - interval '7 days' AND trim(t.speaker) <> '' ORDER BY t.created_at DESC LIMIT 300`)).rows;
+  return { recent, revision: await featureOn('revision') };
+}
+
+export async function personalLetter(userId, ctx) {
+  const follows = (await pool.query('SELECT speaker_slug FROM speaker_follows WHERE user_id = $1', [userId])).rows.map((r) => r.speaker_slug);
+  const cardsFollow = pickFollowCards(ctx.recent, follows, speakerSlug, 3).map(card);
+  const r = (await pool.query(
+    `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, ${POSTER('t')} FROM watch_progress p JOIN talks t ON t.id = p.talk_id JOIN users u ON u.id = p.user_id
+      WHERE p.user_id = $1 AND NOT p.completed AND p.position_ms >= 120000 AND (p.duration_ms = 0 OR p.position_ms < p.duration_ms * 0.9)
+        AND p.updated_at > now() - interval '30 days' AND ${READY('t')} AND (t.access = 'free' OR ${HAS_ACCESS('u')})
+      ORDER BY p.updated_at DESC LIMIT 1`, [userId])).rows;
+  const due = ctx.revision ? (await pool.query(
+    `SELECT count(*)::int AS n FROM revision_items WHERE user_id = $1 AND due_on IS NOT NULL AND due_on <= (now() AT TIME ZONE '${TZ}')::date`, [userId])).rows[0].n : 0;
+  return { cardsResume: r.map(card), cardsFollow, due: dueText(due) };
+}
+
 export async function runWeekly(log) {
   if (!isOn(await getSetting('weekly_enabled'))) return 0;
   const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
@@ -105,11 +128,17 @@ export async function runWeekly(log) {
   const sel = await weeklySelection();
   if (!sel.items.length) return 0; // rien à proposer cette semaine : personne n'est marqué, on réessaiera
   let sent = 0;
+  const personal = isOn(await getSetting('weekly_personal'));
+  const ctx = personal ? await weeklyContext() : null;
   for (const u of users) {
     try {
       if (mailOn) {
-        await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind: 'weekly_selection',
-          vars: { name: u.name, titles: bullet(sel.items), cards: sel.items.map(card), path: sel.path }, dedupeKey: `weekly:${u.id}:${now.wk}` });
+        const base = { name: u.name, titles: bullet(sel.items), cards: sel.items.map(card), path: sel.path };
+        const letter = personal ? await personalLetter(u.id, ctx) : null;
+        // Lettre personnalisée si la personne a quelque chose à reprendre, à réviser ou de nouveaux contenus chez ses intervenants ; sinon la sélection simple.
+        const kind = letter && hasPersonal(letter) ? 'weekly_letter' : 'weekly_selection';
+        const vars = kind === 'weekly_letter' ? { ...base, ...letter, cardsSelection: base.cards, path: sel.path } : base;
+        await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind, vars, dedupeKey: `weekly:${u.id}:${now.wk}` });
       }
       if (pushOn) await pushToUser(u.id, 'weekly_selection', { titles: sel.items.map((x) => x.title) }, sel.path, log);
       await pool.query('UPDATE users SET weekly_last_week = $2::date WHERE id = $1', [u.id, now.wk]);

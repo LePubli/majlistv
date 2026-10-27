@@ -18,7 +18,7 @@ const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adu
 const card = (r) => ({ id: r.id, title: r.title, speaker: r.speaker || '', poster: Boolean(r.poster), path: talkPath(r) });
 const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.speaker}` : ''}`).join('\n');
 // Le membre a-t-il accès aux conférences premium en ce moment ? (même règle que access.js, en SQL)
-const HAS_ACCESS = (u) => `(COALESCE(${u}.premium_until > now(), false) OR EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = ${u}.id AND s.status IN ('trialing', 'active', 'past_due')
+export const HAS_ACCESS = (u) => `(COALESCE(${u}.premium_until > now(), false) OR EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = ${u}.id AND s.status IN ('trialing', 'active', 'past_due')
   AND (s.current_period_end IS NULL OR s.current_period_end > now() - interval '2 days')))`;
 
 export async function settings() {

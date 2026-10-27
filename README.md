@@ -5994,3 +5994,30 @@ Puis Ctrl+F5 sur le site.
 **Limites (honnêtes).** Pas de notification sur téléphone pour ces trois messages (e-mail seulement) ; pas de case dans l'application mobile (la préférence se règle sur le site ou par le lien de désinscription) ; les textes sont les miens, à relire (ton, promesses) avant d'activer ; aucun suivi d'ouvertures/clics ; la reprise ne tient pas compte des conférences vues seulement sur l'application Kids.
 
 **Testé.** Règles pures : 28 vérifications (`node api/tests/test_lifecycle_lib.mjs`). API sur base réelle : `api/tests/test_lifecycle.py` (droits, désactivé par défaut, aperçu, les trois situations, cas exclus, un seul e-mail par personne, pas de doublon, plage horaire, plafond, préférence, désinscription en un clic, signature falsifiée, exemple) ; les deux sont lancés par les tests automatiques GitHub. Site compilé ; PAS testé : l'envoi réel vers une vraie boîte (Gmail/Outlook) ni le rendu dans les clients de messagerie.
+
+
+## Étape 34 — Lettre hebdomadaire personnalisée (27/10)
+
+**Description.** La « sélection de la semaine » (opt-in existant, étape 21) devient une **lettre personnelle**. Chaque membre qui l'a demandée (Mon compte → Mes e-mails → « Recevoir la sélection de la semaine ») reçoit, le jour et à l'heure réglés, un e-mail avec des **cartes à couverture** : **À reprendre** (sa conférence commencée la plus récente, 30 jours max), **Nouveau chez vos intervenants** (jusqu'à 3 conférences publiées depuis 7 jours par les intervenants qu'il suit), **Notions à réviser cette semaine : N** (révision espacée, si la fonction est active) et **Notre sélection** (celle de Admin : collection choisie, sinon nouveautés des 7 jours). Une section vide disparaît ; si la personne n'a **rien de personnel**, elle reçoit la sélection simple comme avant. FR / EN / AR.
+
+**Réglages.** Admin → Paramètres → Notifications : nouvel interrupteur **« Lettre personnalisée »** (activé par défaut ; décoché = tout le monde reçoit la même sélection). Les réglages existants restent valables : activation de la sélection, jour, heure, collection, nombre de conférences. L'envoi reste limité aux membres qui ont coché la case et au plus une fois par semaine ; désinscription en un clic dans chaque lettre.
+
+**Fichiers.** `api/src/notifyMailer.js` (`weeklyContext`, `personalLetter`, choix lettre / sélection), `api/src/weeklyLetterLib.js` (règles pures), modèle `weekly_letter` + titres de sections (`sec`) dans `api/src/emails.js` (rendu générique des sections `?{cardsXxx}`), `api/src/unsubscribe.js` (catégorie), `api/src/settings.js` (`weekly_personal`). Aucune migration, aucun changement du site ni de l'application.
+
+**Correctif au passage.** Le texte du bouton des e-mails acceptait mal les variables : « Revenir sur {app} » (e-mail « Retour », étape 33) aurait affiché `{app}` tel quel. Corrigé et testé.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** uniquement. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Exemples.** Jeudi 9 h : Amal (suit un intervenant qui a publié lundi, a laissé une conférence à 12 min, a 3 notions à réviser) reçoit les quatre sections. Karim (rien de tout cela) reçoit « La sélection de la semaine » comme avant.
+
+**Debug.** Rien ne part : « Envoyer la sélection de la semaine » est décoché, jour/heure pas encore atteints, envoi d'e-mails non configuré, ou personne n'a coché la case. Vérifier : `select kind, status, to_email, created_at from email_outbox where kind in ('weekly_letter','weekly_selection') order by id desc limit 20;` (dans la base `postgres-majlisstv`). Logs API : « Sélections de la semaine mises en file ».
+
+**Limites (honnêtes).** Pas de test d'envoi manuel depuis l'admin pour cette lettre (le premier envoi réel a lieu au jour réglé : pour l'essayer plus tôt, mettre temporairement le jour d'envoi sur aujourd'hui et l'heure sur 0, avec un seul compte de test qui a coché la case) ; la notification téléphone reste celle de la sélection simple ; pas de suivi d'ouvertures.
+
+**Testé.** Règles pures et rendu des 3 langues : 25 vérifications (`node api/tests/test_weeklyletter_lib.mjs`). Sur base réelle (`api/tests/test_weekly_letter.py`, qui lance le vrai passage hebdomadaire) : lettre personnelle avec ses trois sections, sélection simple sans personnel, un seul envoi par semaine, interrupteur, membre non inscrit. PAS testé : envoi vers une vraie boîte, rendu dans Gmail/Outlook.

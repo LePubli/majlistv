@@ -477,3 +477,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 33 (27/10) — E-mails automatiques de cycle de vie (reprise, par où commencer, retour)
 - Voir README « Étape 33 ». Désactivé d'office, aperçu avant activation. Reste (sur « go ») : relance avant la fin de l'essai améliorée, lettre hebdomadaire (idée 2.2), notifications téléphone pour ces messages ; voir docs/IDEES-AMELIORATIONS.md.
+
+## Étape 34 (27/10) — Lettre hebdomadaire personnalisée (à reprendre, intervenants suivis, révision, sélection)
+- Voir README « Étape 34 ». Reste (sur « go ») : notifications téléphone du cycle de vie, 2FA obligatoire pour l'admin ; voir docs/IDEES-AMELIORATIONS.md.

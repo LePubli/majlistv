@@ -29,6 +29,8 @@ const T = {
     resume_talk: { subject: 'Reprenez « {title} » là où vous vous êtes arrêté', lines: ['Vous avez regardé {minutes} min de « {title} », puis la vie a repris le dessus.', '?{cards}', '?Une conférence de {speaker}.', 'Votre lecture vous attend, à la minute exacte où vous l\'avez quittée.'], button: 'Reprendre la conférence', footer: 'Vous recevez cet e-mail car vous avez commencé cette conférence sur {app}.' },
     welcome_nudge: { subject: 'Par où commencer sur {app} ?', lines: ['Votre compte est prêt, mais vous n\'avez encore rien regardé. Voici trois conférences pour commencer :', '{titles}', 'Dix minutes suffisent pour sentir si cela vous parle.'], button: 'Commencer', footer: 'Vous recevez cet e-mail car vous avez créé un compte sur {app}.' },
     winback: { subject: 'Du nouveau sur {app} depuis votre départ', lines: ['Votre abonnement est terminé, mais la bibliothèque continue de s\'agrandir. Voici ce qui est arrivé récemment :', '{titles}', 'Vous pouvez reprendre quand vous voulez, sans engagement de durée.'], button: 'Revenir sur {app}', footer: 'Vous recevez cet e-mail car vous avez été abonné(e) à {app}.' },
+    weekly_letter: { subject: 'Votre semaine sur {app}', lines: ['Voici votre semaine sur {app}.', '?{cardsResume}', '?Notions à réviser cette semaine : {due}.', '?{cardsFollow}', '?{cardsSelection}'], button: 'Ouvrir {app}', footer: 'Vous recevez cette lettre car vous avez demandé la sélection de la semaine sur {app}.' },
+    sec: { cardsResume: 'À reprendre', cardsFollow: 'Nouveau chez vos intervenants', cardsSelection: 'Notre sélection' },
     test: { subject: 'Test d\'envoi {app}', lines: ['Cet e-mail confirme que les réglages d\'envoi fonctionnent.'], button: 'Ouvrir le site' },
     dub_ready: { subject: 'La version française de « {title} » est disponible', lines: ['La version française que vous avez demandée est prête : « {title} ».', 'Dans le lecteur, choisissez « Version française » sous « Langue de l\'audio ».'], button: 'Écouter la conférence' },
     helloAnon: 'Bonjour,', unsub: 'Se désabonner en un clic', manage: 'Gérer mes e-mails',
@@ -58,6 +60,8 @@ const T = {
     resume_talk: { subject: 'Pick up "{title}" where you left off', lines: ['You watched {minutes} min of "{title}", then life got in the way.', '?{cards}', '?A talk by {speaker}.', 'It is waiting for you at the exact minute you left it.'], button: 'Resume the talk', footer: 'You are receiving this email because you started this talk on {app}.' },
     welcome_nudge: { subject: 'Where to start on {app}?', lines: ['Your account is ready, but you have not watched anything yet. Here are three talks to start with:', '{titles}', 'Ten minutes is enough to tell whether it speaks to you.'], button: 'Get started', footer: 'You are receiving this email because you created an account on {app}.' },
     winback: { subject: 'What is new on {app} since you left', lines: ['Your subscription has ended, but the library keeps growing. Here is what arrived recently:', '{titles}', 'You can come back whenever you like, with no minimum commitment.'], button: 'Come back to {app}', footer: 'You are receiving this email because you were subscribed to {app}.' },
+    weekly_letter: { subject: 'Your week on {app}', lines: ['Here is your week on {app}.', '?{cardsResume}', '?Notions to review this week: {due}.', '?{cardsFollow}', '?{cardsSelection}'], button: 'Open {app}', footer: 'You are receiving this letter because you asked for the weekly selection on {app}.' },
+    sec: { cardsResume: 'Pick up where you left off', cardsFollow: 'New from your speakers', cardsSelection: 'Our selection' },
     test: { subject: '{app} test email', lines: ['This email confirms that the sending settings work.'], button: 'Open the site' },
     dub_ready: { subject: 'The French version of "{title}" is available', lines: ['The French version you requested is ready: "{title}".', 'In the player, pick "French version" under "Audio language".'], button: 'Listen to the talk' },
     helloAnon: 'Hello,', unsub: 'Unsubscribe in one click', manage: 'Manage my emails',
@@ -87,6 +91,8 @@ const T = {
     resume_talk: { subject: 'أكمل «{title}» من حيث توقفت', lines: ['شاهدت {minutes} دقيقة من «{title}» ثم شغلتك الحياة.', '?{cards}', '?محاضرة {speaker}.', 'مشاهدتك بانتظارك عند الدقيقة التي توقفت عندها تمامًا.'], button: 'متابعة المحاضرة', footer: 'تصلك هذه الرسالة لأنك بدأت مشاهدة هذه المحاضرة على {app}.' },
     welcome_nudge: { subject: 'من أين تبدأ على {app}؟', lines: ['حسابك جاهز لكنك لم تشاهد شيئًا بعد. إليك ثلاث محاضرات للبداية:', '{titles}', 'عشر دقائق تكفي لتعرف إن كانت تناسبك.'], button: 'ابدأ الآن', footer: 'تصلك هذه الرسالة لأنك أنشأت حسابًا على {app}.' },
     winback: { subject: 'الجديد على {app} منذ رحيلك', lines: ['انتهى اشتراكك لكن المكتبة تواصل النمو. إليك ما وصل مؤخرًا:', '{titles}', 'يمكنك العودة متى شئت دون التزام بمدة.'], button: 'العودة إلى {app}', footer: 'تصلك هذه الرسالة لأنك كنت مشتركًا في {app}.' },
+    weekly_letter: { subject: 'أسبوعك على {app}', lines: ['هذا أسبوعك على {app}.', '?{cardsResume}', '?مفاهيم للمراجعة هذا الأسبوع: {due}.', '?{cardsFollow}', '?{cardsSelection}'], button: 'افتح {app}', footer: 'تصلك هذه الرسالة لأنك طلبت اختيارات الأسبوع على {app}.' },
+    sec: { cardsResume: 'تابع من حيث توقفت', cardsFollow: 'جديد من محاضريك', cardsSelection: 'اختيارنا لك' },
     test: { subject: 'رسالة اختبار من {app}', lines: ['تؤكد هذه الرسالة أن إعدادات الإرسال تعمل.'], button: 'فتح الموقع' },
     dub_ready: { subject: 'النسخة الفرنسية من «{title}» متاحة', lines: ['النسخة الفرنسية التي طلبتها جاهزة: «{title}».', 'في المشغّل، اختر «النسخة الفرنسية» ضمن «لغة الصوت».'], button: 'استمع إلى المحاضرة' },
     helloAnon: 'مرحبًا،', unsub: 'إلغاء الاشتراك بنقرة واحدة', manage: 'إدارة رسائلي',
@@ -118,18 +124,27 @@ export function renderEmail(kind, locale, vars) {
   // Ligne commençant par « ? » : facultative, retirée si l'une de ses valeurs est vide.
   const lines = m.lines
     .filter((x) => !x.startsWith('?') || [...x.matchAll(/\{(\w+)\}/g)].every((g) => String(v[g[1]] ?? '').trim() !== ''))
-    .map((x) => (x === '?{cards}' ? x : x.replace(/^\?/, '')));
-  // Cartes avec la couverture : v.cards = [{ id, title, speaker, path, poster }]. Elles remplacent la ligne « {titles} » (liste à puces
-  // conservée dans la version texte) ; la ligne « {cards} » n'existe qu'en HTML.
-  const cards = Array.isArray(v.cards) ? v.cards.filter((c) => c && c.title) : [];
-  const cardsHtml = cards.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px">${cards.map((c) => {
+    .map((x) => (/^\?\{cards\w*\}$/.test(x) ? x : x.replace(/^\?/, '')));
+  // Cartes avec la couverture : v.cards (ou v.cardsXxx) = [{ id, title, speaker, path, poster }].
+  // « {titles} » est remplacée par les cartes de v.cards (liste à puces conservée dans la version texte) ; une ligne « ?{cardsXxx} » affiche
+  // les cartes d'une section (titre de section t.sec.cardsXxx, version texte en puces) ; la ligne « ?{cards} » n'existe qu'en HTML.
+  const listOf = (k) => (Array.isArray(v[k]) ? v[k].filter((c) => c && c.title) : []);
+  const cardKey = (x) => (/^\?\{(cards\w*)\}$/.exec(x) || [])[1];
+  const cardsTable = (list) => (list.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px">${list.map((c) => {
     const href = v.webUrl && c.path ? v.webUrl + c.path : v.url || '#';
     const img = c.poster && v.webUrl && c.id ? `<td width="132" valign="top" style="padding:0 12px 12px 0"><a href="${esc(href)}"><img src="${esc(v.webUrl)}/api/seo/poster/talks/${esc(c.id)}" alt="${esc(c.title)}" width="120" style="display:block;width:120px;max-width:100%;height:auto;border:0;border-radius:8px;background:#EFE7DA"></a></td>` : '';
     return `<tr>${img}<td valign="top" style="padding:0 0 12px;font:15px/1.4 Arial,sans-serif;color:#2B241A"><a href="${esc(href)}" style="color:#120D06;font-weight:700;text-decoration:none">${esc(c.title)}</a>${c.speaker ? `<br><span style="color:#7A6F5F">${esc(c.speaker)}</span>` : ''}</td></tr>`;
-  }).join('')}</table>` : '';
-  const paras = lines.filter((x) => !(x === '?{cards}' && !cardsHtml)).map((line) => line === '?{cards}' || (line === '{titles}' && cardsHtml) ? cardsHtml : `<p style="margin:0 0 14px;font:16px/1.55 Arial,sans-serif;color:#2B241A">${fill(line, v, true).replace(/\n/g, '<br>')}</p>`).join('');
+  }).join('')}</table>` : '');
+  const secHead = (k) => (t.sec?.[k] ? `<p style="margin:18px 0 8px;font:700 13px Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#B07A12">${esc(t.sec[k])}</p>` : '');
+  const bullets = (list) => list.map((c) => `• ${c.title}${c.speaker ? ` — ${c.speaker}` : ''}${v.webUrl && c.path ? ` : ${v.webUrl}${c.path}` : ''}`).join('\n');
+  const paras = lines.filter((x) => !(cardKey(x) && !listOf(cardKey(x)).length)).map((line) => {
+    const k = cardKey(line);
+    if (k) return secHead(k) + cardsTable(listOf(k));
+    if (line === '{titles}' && listOf('cards').length) return cardsTable(listOf('cards'));
+    return `<p style="margin:0 0 14px;font:16px/1.55 Arial,sans-serif;color:#2B241A">${fill(line, v, true).replace(/\n/g, '<br>')}</p>`;
+  }).join('');
   const unsubHtml = v.unsubUrl ? `<br><a href="${esc(v.unsubUrl)}" style="color:#7A6F5F">${esc(t.unsub)}</a>${v.prefsUrl ? ` · <a href="${esc(v.prefsUrl)}" style="color:#7A6F5F">${esc(t.manage)}</a>` : ''}` : '';
-  const button = v.url ? `<p style="margin:22px 0 6px"><a href="${esc(v.url)}" style="display:inline-block;background:#E6A739;color:#120D06;font:700 16px Arial,sans-serif;text-decoration:none;padding:13px 24px;border-radius:999px">${esc(m.button)}</a></p>` : '';
+  const button = v.url ? `<p style="margin:22px 0 6px"><a href="${esc(v.url)}" style="display:inline-block;background:#E6A739;color:#120D06;font:700 16px Arial,sans-serif;text-decoration:none;padding:13px 24px;border-radius:999px">${fill(m.button, v, true)}</a></p>` : '';
   const html = `<!doctype html><html lang="${l}" dir="${dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(subject)}</title></head>
 <body style="margin:0;background:#F4EFE6">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4EFE6"><tr><td align="center" style="padding:24px 12px">
@@ -142,7 +157,7 @@ ${paras}${button}
 </td></tr>
 <tr><td dir="${dir}" style="padding:14px 24px 22px;border-top:1px solid #EFE7DA;font:12px/1.5 Arial,sans-serif;color:#7A6F5F;text-align:${align}">${fill(footTxt, v, true)}${unsubHtml}</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [fill(helloTxt, v, false), '', ...lines.filter((x) => x !== '?{cards}').map((x) => fill(x, v, false)), '', v.url ? `${m.button} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(footTxt, v, false), v.unsubUrl ? `${t.unsub} : ${v.unsubUrl}` : '']
+  const text = [fill(helloTxt, v, false), '', ...lines.flatMap((x) => { const k = cardKey(x); return k ? (t.sec?.[k] && listOf(k).length ? ['', t.sec[k].toUpperCase(), bullets(listOf(k))] : []) : [fill(x, v, false)]; }), '', v.url ? `${fill(m.button, v, false)} : ${v.url}` : '', '', fill(t.team, v, false), '', fill(footTxt, v, false), v.unsubUrl ? `${t.unsub} : ${v.unsubUrl}` : '']
     .filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
   return { subject, html, text };
 }
