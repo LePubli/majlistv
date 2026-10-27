@@ -27,6 +27,8 @@ import watchRoutes from './routes/watch.js';
 import twoFactorRoutes from './routes/twofactor.js'; // étape 31 : double authentification
 import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
 import { startHealth } from './health.js';
+import lifecycleRoutes from './routes/lifecycle.js'; // étape 33 : e-mails de cycle de vie
+import { startLifecycle } from './lifecycle.js';
 import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
@@ -160,6 +162,7 @@ await app.register(importRoutes);
 await app.register(watchRoutes);
 await app.register(adsRoutes);
 await app.register(healthRoutes);
+await app.register(lifecycleRoutes);
 await app.register(twoFactorRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
@@ -182,5 +185,6 @@ await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
 startHealth(app.log); // étape 29 : mesures du serveur + alertes
+startLifecycle(app.log); // étape 33 : reprise, bienvenue, retour (désactivé tant que l'admin ne l'active pas)
 startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
 await startModules(app); // tâches de fond de chaque module (citations, e-mails de révision, bilan, Kids, chaînes, statistiques, alertes…)

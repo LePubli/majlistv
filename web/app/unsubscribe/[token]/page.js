@@ -13,7 +13,7 @@ export default function Unsubscribe() {
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => { call(`/unsubscribe/${token}`, {}, null).then((r) => (r.ok ? setInfo(r.data) : setBad(true))); }, [call, token]);
-  const what = info ? t(info.category === 'weekly' ? 'unWeekly' : 'unSpeakers') : '';
+  const what = info ? t(info.category === 'weekly' ? 'unWeekly' : info.category === 'lifecycle' ? 'unLifecycle' : 'unSpeakers') : '';
   const go = async () => {
     setBusy(true);
     const r = await call(`/unsubscribe/${token}`, { method: 'POST', body: '{}' }, null);

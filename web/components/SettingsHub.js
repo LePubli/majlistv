@@ -8,7 +8,7 @@ export const THEMES = [
   { id: 'site', label: 'Site et contenu', groups: ['general', 'home', 'cards', 'citations', 'books'] },
   { id: 'money', label: 'Argent', groups: ['payment', 'gifts', 'revenue', 'ads'] },
   { id: 'ai', label: 'Intelligence artificielle', groups: ['translation', 'insights', 'transcription', 'quiz', 'practice'] },
-  { id: 'community', label: 'Communauté et communication', groups: ['email', 'notifications', 'moderation', 'kids'] },
+  { id: 'community', label: 'Communauté et communication', groups: ['email', 'notifications', 'lifecycle', 'moderation', 'kids'] },
   { id: 'tech', label: 'Technique', groups: ['health', 'search', 'external', 'stats', 'activity'] },
 ];
 /** Icône et phrase d'explication de chaque section. */
@@ -18,7 +18,7 @@ export const SECTION_META = {
   payment: ['💳', 'Abonnements, essai, taxes'], gifts: ['🎁', 'Montants et validité'], revenue: ['💰', 'Part reversée, seuil de paiement'], ads: ['📣', 'Fréquence, abonnés payants'],
   translation: ['🌐', 'Moteurs et clés'], insights: ['✨', 'Résumés et chapitres automatiques'], transcription: ['🎙️', 'Modèle, langue, cœurs'],
   quiz: ['❓', 'Seuil de réussite, langue'], practice: ['🧭', '« Et maintenant, que faire ? »'],
-  email: ['✉️', 'Envoi, expéditeur'], notifications: ['🔔', 'E-mails et téléphone'], moderation: ['🛡️', 'Relecture, signalements'], kids: ['🧒', 'Espace enfants'],
+  email: ['✉️', 'Envoi, expéditeur'], notifications: ['🔔', 'E-mails et téléphone'], lifecycle: ['💌', 'Reprise, bienvenue, retour'], moderation: ['🛡️', 'Relecture, signalements'], kids: ['🧒', 'Espace enfants'],
   search: ['🔎', 'Serveur et clé Meilisearch'], external: ['▶️', 'YouTube, Vimeo, Dailymotion'], stats: ['📊', "Statistiques d'audience"], activity: ['⏱️', 'Limites des tâches lourdes'], health: ['🩺', 'Seuils et destinataires des alertes'],
 };
 const FALLBACK_THEME = { id: 'other', label: 'Autres', groups: [] };

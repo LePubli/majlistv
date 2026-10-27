@@ -5960,3 +5960,35 @@ Puis Ctrl+F5.
 **Limites (honnêtes).** Application mobile : non incluse (le site, ouvert dans le navigateur du téléphone, donne déjà la feuille de partage). Les aperçus de liens (WhatsApp, Facebook) restent ceux déjà en place (vignette de la conférence) ; une image de carte propre à chaque citation ou phrase, vue directement dans l'aperçu du lien, n'est pas faite (elle demanderait de dessiner l'image sur le serveur). Les pages de conférences référencées par Google (idée 1.1) n'ont pas été modifiées dans cette étape.
 
 **Testé.** Calculs : 18 vérifications (`node web/tests/share_card.mjs`, lancé aussi par les tests automatiques). Navigateur réel (Chromium, ordinateur et 390 px, sans défilement horizontal) : bouton sous la citation, 3 formats aux bonnes tailles, téléchargement (fichier `….png`), copie du lien (`/talks/<id>?t=4` pour la 2e phrase), fermeture par Échap, bouton sur chaque phrase de transcription, carte d'une phrase en arabe ; rendu des images contrôlé à l'œil (arabe voyellé et assemblé, texte long ajusté). **Non testé** : la feuille de partage native d'un vrai téléphone (Android/iPhone) et l'envoi vers Instagram/WhatsApp.
+
+
+## Étape 33 — E-mails automatiques de cycle de vie (27/10)
+
+**Description.** Trois e-mails automatiques, chacun envoyé **au plus une fois par situation** : **Reprise** (« Reprenez là où vous vous êtes arrêté » : conférence commencée, au moins 2 minutes, non terminée, laissée de côté depuis 3 jours), **Par où commencer** (compte créé depuis 3 jours qui n'a encore rien regardé : trois conférences à découvrir, gratuites d'abord), **Retour** (abonnement terminé depuis 14 jours et plus aucun accès : les nouveautés depuis le départ). Les e-mails de fin d'essai, de paiement refusé et de résiliation existent déjà (étape 4) et ne sont pas modifiés. Français, anglais, arabe (sens de lecture droite-gauche).
+
+**Tout est désactivé d'office.** Interrupteur général **Admin → E-mails de cycle de vie** (ou Paramètres → « E-mails de cycle de vie » → « Activer »). L'écran donne un **aperçu en direct** : combien d'e-mails partiraient maintenant, par situation, avec des adresses masquées en exemple, **sans rien envoyer**. Boutons : Activer / Désactiver, « Lancer un passage maintenant », et un exemple de chaque modèle envoyé à votre adresse.
+
+**Garde-fous.** Préférence du membre (case « Recevoir des rappels utiles » dans Mon compte → Mes e-mails, cochée par défaut) ; lien de désinscription en un clic dans chaque e-mail (+ en-têtes List-Unsubscribe) ; **un seul e-mail de ce type par personne tous les 7 jours** (réglable) ; plage d'envoi 10 h – 19 h heure de Paris (réglable ; mêmes bornes = toute la journée) ; **plafond de 100 e-mails par jour** (réglable, à monter progressivement pour protéger la réputation du domaine d'envoi) ; journal `lifecycle_log` ; clé anti-doublon dans la file d'envoi ; si l'interrupteur est coupé après la mise en file, les e-mails en attente sont abandonnés ; comptes suspendus exclus ; la reprise n'est proposée que si la personne a accès à la conférence.
+
+**Prérequis.** Envoi d'e-mails configuré (Admin → Paramètres → E-mails). Aucune nouvelle variable d'environnement.
+
+**Fichiers.** API : `api/migrations/068_lifecycle.sql` (colonne `users.notify_lifecycle`, table `lifecycle_log`), `api/src/lifecycle.js` (sélection des personnes, envoi, aperçu), `api/src/lifecycleLib.js` (règles pures), `api/src/routes/lifecycle.js` (`GET /admin/lifecycle`, `POST /admin/lifecycle/run`, `POST /admin/lifecycle/test`), modèles `resume_talk` / `welcome_nudge` / `winback` dans `api/src/emails.js`, catégorie `lifecycle` dans `api/src/unsubscribe.js`, préférence dans `api/src/modules/follow/routes.js`, 11 réglages `lifecycle_*` dans `api/src/settings.js`. Site : `web/components/LifecycleAdmin.js` (écran admin), `EmailPrefs.js` (case), page `/unsubscribe/[token]`, clés i18n `nfLife`, `unLifecycle`, `admLifecycle`.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** d'abord (la migration 068 s'applique au démarrage), puis **majlistv-web**. Worker, transcripteur, traducteur, doublage : inchangés. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis Ctrl+F5 sur le site.
+
+**Mise en route conseillée.** (1) Admin → E-mails de cycle de vie : lire l'aperçu. (2) Boutons « Reprise », « Par où commencer », « Retour » : recevoir un exemple et le relire. (3) Dans Paramètres → E-mails de cycle de vie, garder le plafond à 100 pour commencer. (4) Activer. Le premier passage a lieu dans les 15 minutes, dans la plage horaire.
+
+**Exemples.** Un membre regarde 20 minutes d'une conférence puis ne revient pas : au bout de 3 jours il reçoit « Reprenez … là où vous vous êtes arrêté » (une seule fois pour cette conférence). Un compte créé lundi sans lecture reçoit jeudi « Par où commencer ». Un ancien abonné reçoit, 14 jours après la fin, les nouveautés. Une personne qui remplit deux situations le même jour ne reçoit qu'un e-mail.
+
+**Debug.** Rien ne part : l'interrupteur est coupé, l'envoi d'e-mails n'est pas configuré, on est hors de la plage horaire, ou le plafond du jour est atteint (l'écran admin le dit). L'aperçu indique 0 : tout le monde a déjà reçu un e-mail il y a moins de 7 jours, ou a refusé. Vérifier la file : `docker exec -it dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select kind, status, to_email, created_at from email_outbox where kind in ('resume_talk','welcome_nudge','winback') order by id desc limit 20;"`. Journal : `select kind, count(*) from lifecycle_log group by 1;`. Journaux API : DockPanel → majlistv-api → Logs (« E-mails de cycle de vie mis en file »).
+
+**Limites (honnêtes).** Pas de notification sur téléphone pour ces trois messages (e-mail seulement) ; pas de case dans l'application mobile (la préférence se règle sur le site ou par le lien de désinscription) ; les textes sont les miens, à relire (ton, promesses) avant d'activer ; aucun suivi d'ouvertures/clics ; la reprise ne tient pas compte des conférences vues seulement sur l'application Kids.
+
+**Testé.** Règles pures : 28 vérifications (`node api/tests/test_lifecycle_lib.mjs`). API sur base réelle : `api/tests/test_lifecycle.py` (droits, désactivé par défaut, aperçu, les trois situations, cas exclus, un seul e-mail par personne, pas de doublon, plage horaire, plafond, préférence, désinscription en un clic, signature falsifiée, exemple) ; les deux sont lancés par les tests automatiques GitHub. Site compilé ; PAS testé : l'envoi réel vers une vraie boîte (Gmail/Outlook) ni le rendu dans les clients de messagerie.

@@ -2,7 +2,7 @@
 // Réglages SMTP dans Admin → Paramètres → E-mails (pris en compte sans redéploiement).
 import nodemailer from 'nodemailer';
 import { pool } from './db.js';
-import { getSetting } from './settings.js';
+import { getSetting, isOn } from './settings.js';
 import { renderEmail } from './emails.js';
 import { CATEGORIES, KIND_CATEGORY, unsubToken } from './unsubscribe.js';
 
@@ -109,7 +109,8 @@ async function tick() {
         const cat = KIND_CATEGORY[m.kind];
         if (cat && m.user_id) {
           const on = await pool.query(`SELECT ${CATEGORIES[cat]} AS on FROM users WHERE id = $1`, [m.user_id]);
-          if (!on.rows[0]?.on) { await pool.query("UPDATE email_outbox SET status = 'expired' WHERE id = $1", [m.id]); continue; }
+          const lifeOff = cat === 'lifecycle' && !isOn(await getSetting('lifecycle_enabled')); // interrupteur général coupé depuis la mise en file
+          if (lifeOff || !on.rows[0]?.on) { await pool.query("UPDATE email_outbox SET status = 'expired' WHERE id = $1", [m.id]); continue; }
         }
         const mail = compose(m, base);
         await transport.sendMail({ from: c.from, replyTo: c.replyTo || undefined, to: m.to_email, ...mail });

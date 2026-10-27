@@ -30,6 +30,10 @@ export default function EmailPrefs() {
         <input type="checkbox" checked={d.prefs.weekly} disabled={!d.available.weekly} onChange={(e) => set('weekly', e.target.checked)} />
         <span>{t('nfWeekly')}{!d.available.weekly && <small className="meta"> — {t('nfPaused')}</small>}</span>
       </label>
+      <label className="rv-email">
+        <input type="checkbox" checked={d.prefs.lifecycle !== false} onChange={(e) => set('lifecycle', e.target.checked)} />
+        <span>{t('nfLife')}</span>
+      </label>
       <p className="meta small" role="status" aria-live="polite">{saved ? `✓ ${t('nfSaved')}` : ' '}</p>
       <h3>{t('nfFollows')}</h3>
       {d.follows.length === 0 ? (

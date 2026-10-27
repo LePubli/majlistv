@@ -474,3 +474,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 32 (27/10) — Partager en image (cartes citation et extraits de transcription)
 - Voir README « Étape 32 ». Reste (sur « go ») : aperçu de lien propre à chaque extrait (image côté serveur), pages conférence référencées (idée 1.1) ; puis voir docs/IDEES-AMELIORATIONS.md (e-mails de cycle de vie…).
+
+## Étape 33 (27/10) — E-mails automatiques de cycle de vie (reprise, par où commencer, retour)
+- Voir README « Étape 33 ». Désactivé d'office, aperçu avant activation. Reste (sur « go ») : relance avant la fin de l'essai améliorée, lettre hebdomadaire (idée 2.2), notifications téléphone pour ces messages ; voir docs/IDEES-AMELIORATIONS.md.

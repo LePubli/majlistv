@@ -16,24 +16,24 @@ const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+
 
 export default async function notificationsRoutes(app) {
   app.get('/me/notifications', { preHandler: app.authenticate }, async (req) => {
-    const u = (await pool.query('SELECT notify_speakers, notify_weekly, notify_push FROM users WHERE id = $1', [req.user.sub])).rows[0];
+    const u = (await pool.query('SELECT notify_speakers, notify_weekly, notify_push, notify_lifecycle FROM users WHERE id = $1', [req.user.sub])).rows[0];
     const devices = (await pool.query('SELECT count(*)::int AS n FROM device_tokens WHERE user_id = $1', [req.user.sub])).rows[0].n;
     const follows = (await pool.query(
       `SELECT f.speaker_slug AS slug, COALESCE(NULLIF(c.name, ''), f.speaker_name) AS name, f.created_at AS "createdAt"
          FROM speaker_follows f LEFT JOIN speakers c ON c.slug = f.speaker_slug WHERE f.user_id = $1 ORDER BY 2`, [req.user.sub])).rows; // nom actuel de la chaîne
     return {
-      prefs: { speakers: u.notify_speakers, weekly: u.notify_weekly, push: u.notify_push },
-      available: { speakers: isOn(await getSetting('notify_speakers_enabled')), weekly: isOn(await getSetting('weekly_enabled')), push: await pushConfigured() },
+      prefs: { speakers: u.notify_speakers, weekly: u.notify_weekly, push: u.notify_push, lifecycle: u.notify_lifecycle },
+      available: { speakers: isOn(await getSetting('notify_speakers_enabled')), weekly: isOn(await getSetting('weekly_enabled')), push: await pushConfigured(), lifecycle: isOn(await getSetting('lifecycle_enabled')) },
       devices,
       follows, maxFollows: MAX_FOLLOWS,
     };
   });
 
   app.put('/me/notifications', { preHandler: app.authenticate }, async (req) => {
-    const b = z.object({ speakers: z.boolean().optional(), weekly: z.boolean().optional(), push: z.boolean().optional() }).parse(req.body ?? {});
+    const b = z.object({ speakers: z.boolean().optional(), weekly: z.boolean().optional(), push: z.boolean().optional(), lifecycle: z.boolean().optional() }).parse(req.body ?? {});
     const { rows } = await pool.query(
-      `UPDATE users SET notify_speakers = COALESCE($2, notify_speakers), notify_weekly = COALESCE($3, notify_weekly), notify_push = COALESCE($4, notify_push) WHERE id = $1
-       RETURNING notify_speakers AS speakers, notify_weekly AS weekly, notify_push AS push`, [req.user.sub, b.speakers ?? null, b.weekly ?? null, b.push ?? null]);
+      `UPDATE users SET notify_speakers = COALESCE($2, notify_speakers), notify_weekly = COALESCE($3, notify_weekly), notify_push = COALESCE($4, notify_push), notify_lifecycle = COALESCE($5, notify_lifecycle) WHERE id = $1
+       RETURNING notify_speakers AS speakers, notify_weekly AS weekly, notify_push AS push, notify_lifecycle AS lifecycle`, [req.user.sub, b.speakers ?? null, b.weekly ?? null, b.push ?? null, b.lifecycle ?? null]);
     return rows[0];
   });
 
