@@ -521,6 +521,14 @@ function UserSheet({ id, me, onClose, onChanged }) {
     setMsg(r.ok ? { ok: true, text: `Lien envoyé à ${r.data.email} (valable 1 h)` } : { ok: false, text: r.data.error || 'Erreur' });
     if (r.ok) load();
   };
+  const reset2fa = async () => {
+    if (!window.confirm(`Désactiver la double authentification de ${d.user.email} ? Son compte ne sera plus protégé que par son mot de passe et ses sessions ouvertes seront fermées. À faire seulement après avoir vérifié qui demande.`)) return;
+    setBusy(true);
+    const r = await call(`/admin/users/${id}/2fa/reset`, { method: 'POST' });
+    setBusy(false);
+    setMsg(r.ok ? { ok: true, text: 'Double authentification désactivée pour ce compte.' } : { ok: false, text: r.data.error || 'Erreur' });
+    if (r.ok) load();
+  };
   const tempPwd = async () => {
     if (!window.confirm('Générer un mot de passe provisoire ? Les sessions ouvertes de ce compte seront fermées.')) return;
     const r = await call(`/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({}) });
@@ -643,6 +651,8 @@ function UserSheet({ id, me, onClose, onChanged }) {
                 <button type="button" className="btn ghost" disabled={busy || Boolean(u.disabledAt)} onClick={resetLink}>Envoyer un lien de réinitialisation</button>
                 <button type="button" className="btn ghost" disabled={busy} onClick={tempPwd}>Mot de passe provisoire</button>
               </div>
+              <p className="meta">Double authentification : <strong>{u.twoFactor ? 'activée' : 'désactivée'}</strong></p>
+              {u.twoFactor && <div className="adm-row"><button type="button" className="btn ghost" disabled={busy} onClick={reset2fa}>Réinitialiser la double authentification</button></div>}
               {secret && (
                 <p><code className="adm-secret">{secret}</code> <button type="button" className="link" onClick={() => navigator.clipboard?.writeText(secret)}>Copier</button><br /><small className="meta">Affiché une seule fois. Les sessions ouvertes de ce compte ont été fermées.</small></p>
               )}

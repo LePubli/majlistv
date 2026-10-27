@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { pool } from '../db.js';
 import { enqueueEmail } from '../mailer.js';
 import { forgetUser } from '../userstate.js';
+import { startChallenge } from '../twofactor.js';
 import { TRANSLATION_LANGS } from '../langs.js';
 
 const registerSchema = z.object({
@@ -50,14 +51,16 @@ export default async function authRoutes(app) {
   app.post('/auth/login', strictLimit, async (req, reply) => {
     const { email, password } = loginSchema.parse(req.body);
     const { rows } = await pool.query(
-      'SELECT id, email, name, role, locale, password_hash, disabled_at FROM users WHERE email = $1',
+      'SELECT id, email, name, role, locale, password_hash, disabled_at, totp_enabled_at FROM users WHERE email = $1',
       [email]
     );
     const found = rows[0];
     const ok = found && (await bcrypt.compare(password, found.password_hash));
     if (!ok) return reply.code(401).send({ error: 'Identifiants invalides' });
     if (found.disabled_at) return reply.code(403).send({ error: 'Compte suspendu' });
-    const { password_hash, disabled_at, ...user } = found;
+    // Double authentification activée : pas de jeton tant que le code n'est pas donné (POST /auth/2fa/verify).
+    if (found.totp_enabled_at) return { twoFactor: true, challenge: await startChallenge(found.id) };
+    const { password_hash, disabled_at, totp_enabled_at, ...user } = found;
     return { token: sign(user), user };
   });
 

@@ -24,6 +24,7 @@ import seoRoutes from './routes/seo.js';
 import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
 import watchRoutes from './routes/watch.js';
+import twoFactorRoutes from './routes/twofactor.js'; // étape 31 : double authentification
 import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
 import { startHealth } from './health.js';
 import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
@@ -159,6 +160,7 @@ await app.register(importRoutes);
 await app.register(watchRoutes);
 await app.register(adsRoutes);
 await app.register(healthRoutes);
+await app.register(twoFactorRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);

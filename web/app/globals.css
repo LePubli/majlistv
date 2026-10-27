@@ -3885,3 +3885,16 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 @media (max-width: 480px) { .health-pct { font-size: 2rem; } .health-actions .btn { width: 100%; text-align: center; } }
 .health .card { max-width: none; margin: 0; padding: 20px; border-radius: 16px; width: 100%; box-sizing: border-box; }
 @media (max-width: 480px) { .health .card { padding: 16px; } }
+
+/* Étape 31 — Double authentification */
+.tf { display: grid; gap: 12px; }
+.tf h2, .tf h3 { margin: 0; }
+.tf-badge { display: inline-block; padding: 3px 12px; border-radius: 999px; border: 1px solid currentColor; font-size: .85rem; }
+.tf-badge.on { color: #6fd99a; } .tf-badge.off { color: var(--text-2, #cfc6b4); }
+.tf-form { display: grid; gap: 12px; max-width: 420px; }
+.tf-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.tf-key { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,.08); letter-spacing: .08em; overflow-wrap: anywhere; }
+.tf .qr { width: 220px; max-width: 100%; height: auto; border-radius: 12px; background: #fff; }
+.tf-codelist { list-style: none; padding: 0; margin: 10px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.tf-codelist li { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.07); text-align: center; font-size: 1.05rem; }
+@media (max-width: 480px) { .tf-actions .btn { width: 100%; text-align: center; } }

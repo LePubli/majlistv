@@ -7,6 +7,7 @@ import { API_URL } from './config';
 import { DIR, Key, Locale, pickLocale, translate } from './i18n';
 import type { AppConfig, User } from './types';
 import { unregisterPush } from './notifications';
+import { readLogin, type LoginResponse } from './twoFactor';
 import { runLogoutHooks } from './hooks';
 
 const TOKEN_KEY = 'mejliss.token';
@@ -21,7 +22,9 @@ type Session = {
   ready: boolean;
   user: User | null;
   api: Api;
-  login: (email: string, password: string) => Promise<void>;
+  /** Renvoie un défi si le compte a la double authentification (à compléter avec verifyTwoFactor), sinon null (connecté). */
+  login: (email: string, password: string) => Promise<{ challenge: string } | null>;
+  verifyTwoFactor: (challenge: string, code: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   /** Adopte un jeton de parent renvoyé par le serveur (sortie de l'espace enfant). */
@@ -126,7 +129,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    await finish(await api.post<{ token: string; user: User }>('/auth/login', { email: email.trim(), password }));
+    const out = readLogin(await api.post<LoginResponse>('/auth/login', { email: email.trim(), password }));
+    if (out.kind === 'challenge') return { challenge: out.challenge };
+    await finish({ token: out.token, user: out.user });
+    return null;
+  }, [api, finish]);
+
+  const verifyTwoFactor = useCallback(async (challenge: string, code: string) => {
+    await finish(await api.post<{ token: string; user: User }>('/auth/2fa/verify', { challenge, code: code.trim() }));
   }, [api, finish]);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
@@ -139,10 +149,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback((key: Key, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
 
   const value = useMemo<Session>(() => ({
-    ready, user, api, login, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
+    ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav]);
+  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -5883,7 +5883,7 @@ Puis Admin → Santé du serveur → **Mesurer maintenant** et **Tester l'alerte
 
 ## Étape 30 — Tests automatiques à chaque envoi sur GitHub (27/10)
 
-**Description.** À chaque envoi sur `main` (et sur toute demande de fusion), GitHub lance trois contrôles indépendants, **sans rien déployer** (le déploiement reste DockPanel) : **API** (syntaxe de tout le code, 18 tests Node (dont ceux du moteur de rendu, avec FFmpeg) et 43 tests de l'API sur un PostgreSQL jetable), **Site** (tests Node du site + construction Next.js), **Application** (typage + tests, comme avant l'APK). Rouge = quelque chose est cassé : regarde avant de déployer. Aucun secret n'est utilisé.
+**Description.** À chaque envoi sur `main` (et sur toute demande de fusion), GitHub lance trois contrôles indépendants, **sans rien déployer** (le déploiement reste DockPanel) : **API** (syntaxe de tout le code, 19 tests Node (dont ceux du moteur de rendu, avec FFmpeg) et 44 tests de l'API sur un PostgreSQL jetable), **Site** (tests Node du site + construction Next.js), **Application** (typage + tests, comme avant l'APK). Rouge = quelque chose est cassé : regarde avant de déployer. Aucun secret n'est utilisé.
 
 **Premier bénéfice déjà obtenu.** En préparant ces tests, l'un d'eux a détecté une vraie dérive : `web/lib/blocks.js` n'avait pas le texte « Dailymotion » de `api/src/blocks.js` (les deux fichiers doivent être identiques). Corrigé dans cette étape (libellé du bloc « Vidéo » de l'éditeur de pages).
 
@@ -5906,3 +5906,32 @@ bash ops/ci/run-api-tests.sh
 **Pas encore couvert (limites).** Tests de l'API qui exigent le stockage S3 (moto), l'IA, le transcripteur ou Stripe simulé (≈ 45 fichiers : éditeur de montage, import vidéo, cartes cadeaux, quiz/pratique générés, etc.) et `test_citations_auto.mjs` (corpus de citations), `test_jobs_activity.py` (transcripteur Python) : ils restent à lancer à la main pour l'instant ; les couvrir demande d'ajouter ces services de test au workflow (étape ultérieure possible). Pas de test de navigateur (Playwright) dans le contrôle automatique.
 
 **Testé.** Le script a été lancé sur une base **vierge** : 62 réussis, 0 échec en local (18 tests Node, 44 tests API) ; le premier passage chez GitHub a révélé deux différences d'environnement (modules du worker non installés, test du transcripteur Python) corrigées ensuite (43 tests API dans la liste) ; construction du site avec une API injoignable (comme chez GitHub) : OK ; les 6 tests Node du site : OK ; syntaxe de l'API : OK. **Chez GitHub** : les trois contrôles sont verts (4e exécution, après correction des différences d'environnement trouvées aux trois premières). **Non vérifié** : le message e-mail d'échec de GitHub (dépend de tes réglages de notifications GitHub).
+
+## Étape 31 — Double authentification (2FA) (27/10)
+
+**Description.** Chaque membre (administrateurs compris) peut activer, **facultativement**, la double authentification dans **Mon compte → Sécurité** : en plus du mot de passe, un code à 6 chiffres de son application d'authentification (Google Authenticator, Microsoft Authenticator, Authy, 1Password, Bitwarden…) est demandé à chaque connexion, **sur le site et dans l'application**. À l'activation : QR code (ou clé à saisir à la main), confirmation par un premier code, puis **10 codes de secours** affichés une seule fois (copier / télécharger). Aucun compte n'est obligé de l'activer (choix d'Epok).
+
+**Protections.** Code conforme à la norme TOTP (RFC 6238, tolérance ± 30 s) ; un même code ne sert qu'une fois ; **5 erreurs de suite = compte verrouillé 15 minutes** ; l'étape « code » est un défi à part valable 5 minutes et 5 essais (jamais utilisable comme jeton) ; la clé secrète est chiffrée en base (SETTINGS_KEY), les codes de secours ne sont gardés que sous forme d'empreinte ; désactiver ou regénérer les codes demande le mot de passe **et** un code. Un « mot de passe oublié » ne désactive pas la 2FA.
+
+**Compte perdu (téléphone et codes de secours perdus).** Admin → Utilisateurs → ouvrir le compte → Sécurité → **Réinitialiser la double authentification** (ferme aussi ses sessions ; action inscrite au journal d'audit). À faire seulement après avoir vérifié l'identité de la personne. La fiche et la liste indiquent si la 2FA est activée.
+
+**Fichiers.** API : `api/migrations/067_two_factor.sql`, `api/src/totp.js` (calculs, sans dépendance), `api/src/twofactor.js` (base de données), `api/src/routes/twofactor.js`, `api/src/routes/auth.js` (la connexion renvoie `{ twoFactor: true, challenge }` au lieu d'un jeton quand la 2FA est active), `api/src/routes/admin.js` (indicateur). Routes : `POST /auth/2fa/verify`, `GET /me/2fa`, `POST /me/2fa/setup|enable|disable|recovery`, `POST /admin/users/:id/2fa/reset`. Site : `web/components/TwoFactor.js`, `QrCode.js` (QR en SVG, nouvelle dépendance `qrcode`), `AuthForm.js` (2e étape), onglet Sécurité de `web/app/account/page.js`, bouton dans la fiche utilisateur de l'admin, textes fr/en/ar. Application : `mobile/src/lib/twoFactor.ts`, `session.tsx`, `src/app/login.tsx` (écran du code), textes fr/en/ar, note de version.
+
+**Prérequis.** `SETTINGS_KEY` définie sur l'API (déjà le cas : elle sert aux réglages chiffrés). Sans elle l'activation est refusée avec un message clair.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 067 au démarrage), puis **majlistv-web**. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Application : le push sur `main` lance la fabrication de l'APK (GitHub → Actions → « Application Android (APK) »). Aucun changement natif (version d'exécution inchangée) : les applications déjà installées reçoivent l'écran du code par **mise à jour du contenu**, sans réinstaller ; fermer/rouvrir l'appli deux fois.
+
+**Essai conseillé.** Mon compte → Sécurité → Activer, scanner le QR avec ton téléphone, confirmer, **noter les codes de secours**. Te déconnecter, te reconnecter : le code est demandé. Tester aussi dans l'application.
+
+**Debug.** « Code incorrect » alors qu'il paraît bon : l'heure du téléphone doit être automatique (écart toléré 30 s) ; un code déjà utilisé est refusé, attendre le suivant. « Trop d'essais » : attendre 15 min ou réinitialiser depuis l'admin. Activation impossible (« SETTINGS_KEY manquante ») : voir Prérequis. Base : `select email, totp_enabled_at, totp_failures, totp_locked_until from users where totp_enabled_at is not null;`.
+
+**Limites (honnêtes).** Une **ancienne version de l'application** (avant la mise à jour du contenu) ne sait pas afficher l'écran du code : un compte avec 2FA y verrait une erreur à la connexion tant que l'application n'est pas mise à jour. L'activation se fait sur le site (pas dans l'application). Pas de 2FA obligatoire pour l'administration (peut être ajoutée sur demande). Les codes par SMS ou e-mail ne sont pas proposés (application d'authentification seulement).
+
+**Testé.** Calculs : 22 vérifications dont les vecteurs officiels de la RFC 6238 (`node api/tests/test_totp_lib.mjs`). API : 47 vérifications (`python3 api/tests/test_two_factor.py` : activation, connexion en deux temps, rejeu refusé, code de secours à usage unique, défi expiré/épuisé, verrou, nouveaux codes, désactivation, réinitialisation par l'admin + journal). Site en navigateur réel (ordinateur et 390 px) : activation, QR code **relu avec un décodeur** (adresse `otpauth` exacte), codes de secours, connexion en deux temps, code faux/réutilisé refusés, désactivation. Application : typage et 5 tests de lecture des réponses du serveur (149 tests au total). **Non testé** : avec une vraie application d'authentification sur téléphone, et l'écran du code sur un vrai appareil Android.

@@ -1,5 +1,5 @@
 {
-  "fr": "Affichage complet : l'application occupe tout l'écran, y compris sous les boutons de navigation d'Android (plus de bande grise en bas). Animation du logo à l'ouverture.",
-  "en": "Full-screen display: the app now fills the whole screen, including behind Android's navigation buttons (no more grey strip at the bottom). Logo animation when opening.",
-  "ar": "عرض كامل: يملأ التطبيق الشاشة بأكملها بما في ذلك خلف أزرار التنقل في أندرويد (لا مزيد من الشريط الرمادي في الأسفل). حركة الشعار عند الفتح."
+  "fr": "Double authentification : si vous l'activez sur le site (Mon compte → Sécurité), l'application demande le code de votre application d'authentification à la connexion. Affichage complet et animation du logo à l'ouverture.",
+  "en": "Two-factor authentication: if you turn it on on the website (My account → Security), the app asks for the code from your authenticator app when you sign in. Full-screen display and logo animation when opening.",
+  "ar": "المصادقة الثنائية: إذا فعّلتها على الموقع (حسابي ← الأمان)، يطلب التطبيق رمز تطبيق المصادقة عند تسجيل الدخول. عرض كامل وحركة الشعار عند الفتح."
 }

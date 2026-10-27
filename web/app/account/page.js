@@ -7,6 +7,7 @@ import Steps from '../../components/Steps';
 import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
 import PrayerSettings from '../../components/PrayerSettings';
+import TwoFactor from '../../components/TwoFactor';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
@@ -71,6 +72,7 @@ export default function Account() {
     { id: 'profile', label: t('tbProfile') },
     { id: 'billing', label: t('tbSub') },
     { id: 'emails', label: t('tbMails') },
+    { id: 'security', label: t('tbSecurity') },
     ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
     ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
   ];
@@ -98,6 +100,7 @@ export default function Account() {
           </TabPanel>
           <TabPanel id="billing" current={tab}><Suspense fallback={null}><Billing /></Suspense></TabPanel>
           <TabPanel id="emails" current={tab}><EmailPrefs /></TabPanel>
+          <TabPanel id="security" current={tab}><TwoFactor /></TabPanel>
           <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
           <TabPanel id="gifts" current={tab}>
             <MyGifts />

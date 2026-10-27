@@ -39,7 +39,7 @@ const patchSchema = z.object({
 const tempPassword = () => randomBytes(9).toString('base64url');
 
 const USER_COLS = `u.id, u.email, u.name, u.role, u.trusted_publisher AS "trustedPublisher", u.locale, u.created_at AS "createdAt", u.disabled_at AS "disabledAt",
-  u.premium_until AS "premiumUntil",
+  u.premium_until AS "premiumUntil", (u.totp_enabled_at IS NOT NULL) AS "twoFactor",
   (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY (s.status IN ('trialing','active','past_due')) DESC, s.updated_at DESC LIMIT 1) AS "subscriptionStatus",
   (SELECT count(*) FROM talks t WHERE t.organizer_id = u.id)::int AS "talksCount",
   (SELECT max(updated_at) FROM watch_progress w WHERE w.user_id = u.id) AS "lastWatchAt"`;

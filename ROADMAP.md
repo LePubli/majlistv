@@ -468,3 +468,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 30 (27/10) — Tests automatiques GitHub (API, site, application)
 - Voir README « Étape 30 ». Reste (sur « go ») : étendre aux tests avec stockage/IA simulés ; puis voir docs/IDEES-AMELIORATIONS.md (2FA, SEO/partage…).
+
+## Étape 31 (27/10) — Double authentification (TOTP + codes de secours), site et application
+- Voir README « Étape 31 ». Reste (sur « go ») : 2FA obligatoire pour l'admin (option), puis voir docs/IDEES-AMELIORATIONS.md (SEO/partage, e-mails de cycle de vie…).
