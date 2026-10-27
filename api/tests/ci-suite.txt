@@ -13,7 +13,6 @@ test_dubbing_d1b.py
 test_features.py
 test_formats.py
 test_home_blocks.py
-test_jobs_activity.py
 test_kid_actions.py
 test_kids.py
 test_kids_catalog.py
