@@ -40,6 +40,38 @@ function Spark({ series }) {
   );
 }
 
+const KIND_LABEL = { backup: 'Sauvegarde', restore_test: 'Test de restauration' };
+
+/** Étape 37 — Sauvegardes : ce que le VPS a rapporté (sauvegarde nocturne, test de restauration hebdomadaire). */
+function BackupCard({ b, ago }) {
+  if (!b) return null;
+  const [lvlText, lvl] = b.level === 'off' ? ['Suivi non activé', 'warn'] : LEVEL[b.level];
+  const bk = b.last?.backup, rt = b.last?.restore_test;
+  const det = bk?.details || {}, rdet = rt?.details || {};
+  return (
+    <section className="card health-block" aria-labelledby="health-backup-title">
+      <h3 id="health-backup-title">Sauvegardes <span className={`health-pill ${lvl}`}>{lvlText}</span></h3>
+      {b.level === 'off' ? (
+        <p className="health-muted">Le VPS fait déjà une sauvegarde chiffrée chaque nuit, mais le site ne la surveille pas encore. Pour l’activer : générer un jeton sur le VPS et le saisir dans Paramètres → Santé du serveur (« Sauvegardes : jeton des rapports du VPS »), pas à pas dans ops/backup/README.md.</p>
+      ) : (
+        <>
+          {b.reasons.length > 0 && <ul className="health-lines">{b.reasons.map((r) => <li key={r}><strong className="health-warn-text">{r}</strong></li>)}</ul>}
+          <ul className="health-lines">
+            <li>Dernière sauvegarde : {bk ? `${ago(bk.at)} · ${bk.ok ? 'réussie' : 'ÉCHEC'}` : 'aucun rapport'}{det.snapshots != null ? ` · ${det.snapshots} sauvegardes conservées hors du VPS` : ''}{det.garageOk === true ? ' · vidéos incluses' : ''}</li>
+            <li>Dernier test de restauration : {rt ? `${ago(rt.at)} · ${rt.ok ? 'réussi' : 'ÉCHEC'}` : 'aucun rapport'}{rdet.restoreTalks != null ? ` · ${rdet.restoreTalks} conférences et ${rdet.restoreUsers ?? '?'} comptes retrouvés` : ''}</li>
+            {rdet.repoBytes != null && <li>Taille de la copie hors VPS : {size(rdet.repoBytes)}</li>}
+          </ul>
+          <details>
+            <summary>Derniers rapports</summary>
+            <ul className="health-lines">{b.history.map((h, i) => <li key={i}>{ago(h.at)} · {KIND_LABEL[h.kind]} · {h.ok ? 'réussi' : 'ÉCHEC'}{h.summary ? ` — ${h.summary}` : ''}</li>)}</ul>
+          </details>
+        </>
+      )}
+      <p className="health-muted">La sauvegarde tourne chaque nuit à 4 h 15, le test de restauration chaque lundi à 5 h 30. Un e-mail part si un rapport manque (plus de 30 h par défaut) ou signale un échec.</p>
+    </section>
+  );
+}
+
 export default function HealthAdmin() {
   const { call } = useApp();
   const [d, setD] = useState(null);
@@ -69,7 +101,7 @@ export default function HealthAdmin() {
     <div className="health">
       <div className={`health-banner ${lvl}`} role="status">
         <strong>{lvlText}</strong>
-        <span>{lvl === 'ok' ? 'Disque et mémoire sont sous les seuils.' : lvl === 'warn' ? 'Un seuil d’attention est dépassé : pense à libérer de la place (voir plus bas).' : 'Un seuil critique est dépassé : à traiter rapidement.'}</span>
+        <span>{lvl === 'ok' ? 'Disque, mémoire et sauvegardes sont en ordre.' : lvl === 'warn' ? 'Un seuil d’attention est dépassé : pense à libérer de la place (voir plus bas).' : 'Un seuil critique est dépassé : à traiter rapidement.'}</span>
         <span className="health-muted">Serveur allumé depuis {uptime(d.uptimeSec)}</span>
       </div>
 
@@ -110,6 +142,8 @@ export default function HealthAdmin() {
         {msg && <p className="health-ok" role="status">{msg}</p>}
         {err && <p className="error" role="alert">{err}</p>}
       </section>
+
+      <BackupCard b={d.backup} ago={ago} />
 
       <section className="card health-block">
         <h3>Libérer de la place</h3>

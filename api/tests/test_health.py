@@ -55,7 +55,7 @@ r = requests.post(B + "/admin/health/check", headers=A)
 ok(r.status_code == 200 and "disk" in r.json(), "POST check : 200 + rapport")
 cur.execute("select count(*) from health_samples"); ok(cur.fetchone()[0] == 1, "un échantillon enregistré")
 cur.execute("select kind, level from health_alerts order by kind"); st = dict(cur.fetchall())
-ok(set(st) == {"disk", "mem"}, "niveaux disque et mémoire mémorisés")
+ok({"disk", "mem"} <= set(st), "niveaux disque et mémoire mémorisés")
 ok(len(r.json()["series"]) == 1, "série horaire de 7 jours (1 point)")
 
 # 4) Alertes e-mail

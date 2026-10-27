@@ -7,6 +7,7 @@ import os from 'node:os';
 import { pool } from './db.js';
 import { getSetting, getNumber, isOn } from './settings.js';
 import { enqueueEmail, smtpConf } from './mailer.js';
+import { evaluateBackup, LEVEL_NUM } from './backupLib.js';
 import { alertText, decideAlert, diskFromStatfs, fmtBytes, levelOf, memFrom, trend } from './healthLib.js';
 
 const DISK_PATH = process.env.HEALTH_DISK_PATH || '/';
@@ -61,6 +62,17 @@ async function evaluate(kind, pct, warn, crit, detail, now, enabled) {
   return { kind, level, action, sent };
 }
 
+/** État des sauvegardes d'après les derniers rapports du VPS (étape 37). */
+export async function backupState(now = Date.now()) {
+  const [token, maxH, maxD, rows] = await Promise.all([getSetting('backup_report_token'), getSetting('backup_max_age_hours'), getSetting('backup_restore_max_days'),
+    pool.query(`SELECT DISTINCT ON (kind) kind, ok, summary, details, extract(epoch FROM at) * 1000 AS at FROM backup_reports ORDER BY kind, id DESC`)]);
+  const last = { backup: null, restore_test: null };
+  for (const r of rows.rows) last[r.kind] = { ok: r.ok, summary: r.summary, details: r.details, at: Number(r.at) };
+  const ev = evaluateBackup(last, { tokenSet: Boolean(token), maxHours: maxH, maxDays: maxD }, now);
+  const { rows: hist } = await pool.query(`SELECT kind, ok, summary, extract(epoch FROM at) * 1000 AS at FROM backup_reports ORDER BY id DESC LIMIT 14`);
+  return { ...ev, last, history: hist.map((h) => ({ kind: h.kind, ok: h.ok, summary: h.summary, at: Number(h.at) })) };
+}
+
 /** Une mesure : enregistre l'échantillon, met à jour les niveaux et envoie les alertes éventuelles. */
 export async function runCheck(now = Date.now()) {
   const sys = readSystem();
@@ -74,6 +86,9 @@ export async function runCheck(now = Date.now()) {
   const out = [];
   if (sys.disk) out.push(await evaluate('disk', sys.disk.pct, th.diskWarn, th.diskCrit, `Il reste ${fmtBytes(sys.disk.free)} sur ${fmtBytes(sys.disk.total)}.`, now, enabled));
   out.push(await evaluate('mem', sys.mem.pct, th.memWarn, th.memCrit, `Il reste ${fmtBytes(sys.mem.avail)} de mémoire disponible sur ${fmtBytes(sys.mem.total)}.`, now, enabled));
+  // Sauvegardes (étape 37) : niveau 0/1/2 passé à la même mécanique (attention = 1, critique = 2).
+  const bk = await backupState();
+  if (bk.level !== 'off') out.push(await evaluate('backup', LEVEL_NUM[bk.level], 1, 2, bk.reasons.join(' '), now, enabled));
   return { sys, checks: out };
 }
 
@@ -95,11 +110,13 @@ export async function report() {
   const disk = sys.disk && { ...sys.disk, level: levelOf(sys.disk.pct, th.diskWarn, th.diskCrit), ...trend(pts.map((p) => ({ t: p.t, used: p.used })), sys.disk.total) };
   const mem = { ...sys.mem, level: levelOf(sys.mem.pct, th.memWarn, th.memCrit) };
   const loadPct = Math.round((sys.load[0] / Math.max(1, sys.cpus)) * 100);
-  const worst = [disk?.level, mem.level].includes('crit') ? 'crit' : [disk?.level, mem.level].includes('warn') ? 'warn' : 'ok';
+  const backup = await backupState();
+  const lv = [disk?.level, mem.level, backup.level];
+  const worst = lv.includes('crit') ? 'crit' : lv.includes('warn') ? 'warn' : 'ok';
   return {
     now: Date.now(), level: worst, disk, mem,
     cpu: { load: sys.load.map((n) => Math.round(n * 100) / 100), cpus: sys.cpus, loadPct, level: loadPct >= 150 ? 'crit' : loadPct >= 90 ? 'warn' : 'ok' },
-    uptimeSec: sys.uptimeSec, thresholds: th,
+    uptimeSec: sys.uptimeSec, thresholds: th, backup,
     series: pts.map((p) => ({ t: p.t, diskPct: p.total ? Math.round((p.used / p.total) * 1000) / 10 : null, memPct: p.memTotal ? Math.round((p.memUsed / p.memTotal) * 1000) / 10 : null, load1: p.load1 })),
     database: { size: Number(db.rows[0].size), tables: tables.rows.map((r) => ({ name: r.name, size: Number(r.size) })) },
     alerts: { enabled: isOn(await getSetting('health_alerts_enabled')), mailConfigured: Boolean(mailOn), recipients: to.length, states: alerts.rows },

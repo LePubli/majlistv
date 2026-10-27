@@ -69,6 +69,15 @@ export function fmtBytes(n) {
 
 /** Textes de l'e-mail d'alerte. */
 export function alertText(kind, level, pct, detail) {
+  if (kind === 'backup') {
+    if (level === 'ok') return { title: 'Sauvegardes : retour à la normale', summary: 'Les sauvegardes du serveur (et leur test de restauration) sont de nouveau à jour.', advice: '' };
+    const crit = level === 'crit';
+    return {
+      title: `Sauvegardes : ${crit ? 'problème à traiter' : 'à surveiller'}`,
+      summary: detail,
+      advice: 'Sur le VPS : cat /var/lib/backup-vps/last-status puis tail -30 /var/log/backup-vps.log (détails dans ops/backup/README.md).',
+    };
+  }
   const what = kind === 'disk' ? 'le disque du serveur' : 'la mémoire du serveur';
   if (level === 'ok') return { title: `Serveur : ${kind === 'disk' ? 'disque' : 'mémoire'} revenu à la normale`, summary: `${what[0].toUpperCase()}${what.slice(1)} est repassé sous les seuils (${pct} % utilisé). ${detail}`.trim(), advice: '' };
   const crit = level === 'crit';

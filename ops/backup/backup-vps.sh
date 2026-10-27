@@ -3,6 +3,7 @@
 #   1. dump vérifié de chaque base : Mejliss TV, TriMaint, Miel & Compagnie (MariaDB)
 #   2. envoi chiffré vers l'hébergement PlanetHoster (dépôt restic, SFTP) avec les sauvegardes DockPanel et quelques fichiers de configuration
 #   3. rotation : 7 jours, 4 semaines, 6 mois ; contrôle d'intégrité chaque dimanche
+#   4. (étape 37) rapport au site Mejliss TV : visible dans Admin → Santé du serveur, alerte e-mail s'il manque ou signale un échec
 # Aucun secret dans ce fichier : tout est lu dans /root/.config/backup/env (droits 600).
 set -uo pipefail
 export HOME=/root
@@ -26,6 +27,9 @@ fail() { log "ECHEC : $*"; FAILS+=("$*"); }
 # shellcheck disable=SC1090
 . "$CONF"
 TS=$(date +%Y%m%d_%H%M%S)
+START=$(date +%s)
+# shellcheck disable=SC1091
+[ -r "$(dirname "$0")/report-lib.sh" ] && . "$(dirname "$0")/report-lib.sh" || report_api() { :; }
 
 # Supprime les vieux dumps locaux d'un même type (garde les KEEP_LOCAL plus récents).
 prune_local() { ls -1t "$DUMPS/$1"_*.sql.gz 2>/dev/null | tail -n +$((KEEP_LOCAL + 1)) | xargs -r rm -f; }
@@ -102,14 +106,22 @@ if [ "$rc" -eq 0 ]; then
   fi
 fi
 
+# --- Détails du rapport au site (étape 37).
+DUMP_BYTES=$(du -sb "$DUMPS" 2>/dev/null | cut -f1)
+SNAPS=$(restic snapshots --tag vps-nightly --json 2>/dev/null | grep -o '"short_id"' | wc -l)
+DETAILS="{\"snapshotAt\":\"$(date -u +%FT%TZ)\",\"snapshots\":${SNAPS:-0},\"dumpBytes\":${DUMP_BYTES:-0},\"garageOk\":$([ "$GARAGE_OK" = 1 ] && echo true || echo false),\"durationSec\":$(( $(date +%s) - START ))}"
+[ "$rc" -eq 0 ] || DETAILS="{\"garageOk\":$([ "$GARAGE_OK" = 1 ] && echo true || echo false),\"durationSec\":$(( $(date +%s) - START ))}"
+
 # --- Bilan, et signal à Uptime Kuma si une URL « push » est définie (KUMA_PUSH_URL dans le fichier env).
 if [ "${#FAILS[@]}" -eq 0 ]; then
   log "=== Sauvegarde terminée : tout est OK ==="
   echo "ok $(date -Is)" > "$STATE/last-status"
   [ -n "${KUMA_PUSH_URL:-}" ] && curl -fsS -m 15 "${KUMA_PUSH_URL}?status=up&msg=OK" >/dev/null 2>&1
+  report_api backup true "Sauvegarde nocturne terminée, tout est OK." "$DETAILS"
   exit 0
 fi
 log "=== Sauvegarde terminée avec ${#FAILS[@]} échec(s) ==="
 echo "echec $(date -Is) : ${FAILS[*]}" > "$STATE/last-status"
 [ -n "${KUMA_PUSH_URL:-}" ] && curl -fsS -m 15 --get --data-urlencode "msg=${FAILS[*]}" "${KUMA_PUSH_URL}?status=down" >/dev/null 2>&1
+report_api backup false "${FAILS[*]}" "$DETAILS"
 exit 1

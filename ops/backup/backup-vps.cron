@@ -1,2 +1,4 @@
 # /etc/cron.d/backup-vps — sauvegarde nocturne du VPS (04:15, après le script DockPanel de 03:00)
 15 4 * * * root /root/backup/backup-vps.sh >> /var/log/backup-vps.cron.log 2>&1
+# Étape 37 : test de restauration automatique chaque lundi à 05:30 (après la sauvegarde ; rapport visible dans Admin → Santé du serveur)
+30 5 * * 1 root /root/backup/restore-test.sh >> /var/log/backup-vps.cron.log 2>&1

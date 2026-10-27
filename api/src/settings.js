@@ -267,6 +267,11 @@ export const FIELDS = [
   { key: 'health_mem_crit_pct', group: 'health', type: 'number', label: 'Mémoire : seuil « critique » (% utilisée)', env: 'HEALTH_MEM_CRIT_PCT', def: '92', min: 10, max: 99 },
   { key: 'health_alert_to', group: 'health', type: 'text', label: "Destinataires des alertes (adresses séparées par des virgules)", env: 'HEALTH_ALERT_TO',
     help: 'Vide = tous les administrateurs.' },
+  // Étape 37 : suivi des sauvegardes (rapports envoyés par le VPS).
+  { key: 'backup_report_token', group: 'health', type: 'secret', label: 'Sauvegardes : jeton des rapports du VPS',
+    help: "Chaîne secrète (générée sur le VPS, voir ops/backup/README.md) que le VPS envoie avec chaque rapport de sauvegarde. Vide = suivi des sauvegardes désactivé." },
+  { key: 'backup_max_age_hours', group: 'health', type: 'number', label: 'Sauvegardes : alerte si aucune sauvegarde depuis (heures)', env: 'BACKUP_MAX_AGE_HOURS', def: '30', min: 6, max: 336 },
+  { key: 'backup_restore_max_days', group: 'health', type: 'number', label: 'Sauvegardes : alerte si aucun test de restauration réussi depuis (jours)', env: 'BACKUP_RESTORE_MAX_DAYS', def: '10', min: 1, max: 90 },
   { key: 'lifecycle_enabled', group: 'lifecycle', type: 'bool', label: 'Activer les e-mails de cycle de vie', env: 'LIFECYCLE_ENABLED', def: 'false',
     help: "Interrupteur général, désactivé d'office. Avant de l'activer, ouvrez Admin → E-mails de cycle de vie : l'aperçu indique combien d'e-mails partiraient. Chaque membre peut les refuser dans Mon compte, et chaque e-mail porte un lien de désinscription." },
   { key: 'lifecycle_resume_enabled', group: 'lifecycle', type: 'bool', label: 'Reprise : « Reprenez là où vous vous êtes arrêté »', env: 'LIFECYCLE_RESUME_ENABLED', def: 'true',

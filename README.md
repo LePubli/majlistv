@@ -6081,3 +6081,30 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** L'export est un JSON technique (noms de tables et de colonnes), pas un document mis en page ; la suppression est immédiate (pas de délai de rétractation de quelques jours) ; je n'ai pas supprimé le client chez Stripe (les factures doivent rester accessibles) ; pas de suppression depuis l'application elle-même (lien vers le site).
 
 **Testé.** Règles pures : 11 vérifications (`node api/tests/test_gdpr_lib.mjs`, y compris l'arrêt des abonnements Stripe avec un faux client). API sur base réelle (`api/tests/test_gdpr.py`) : classement des tables, export complet sans secrets ni données d'autres membres, mot de passe, double authentification, refus (dernier admin, conférences, abonnement sans Stripe), suppression en cascade (dont l'avancement de l'enfant), preuve CGV conservée sans lien, e-mail de confirmation, session coupée. Navigateur réel (ordinateur et 390 px, sans défilement horizontal) : export téléchargé et lu, bouton de suppression inactif tant que la case n'est pas cochée, suppression puis retour à l'accueil, connexion impossible ensuite. PAS testé : l'arrêt d'un vrai abonnement chez Stripe (testé avec un faux client seulement), l'e-mail de confirmation reçu dans une vraie boîte.
+
+## Étape 37 — Sauvegardes : test de restauration automatique et suivi (27/10)
+
+**Description.** Une sauvegarde chiffrée existait déjà (étape 8) : chaque nuit à 4 h 15, la base Mejliss TV, les **vidéos** (Garage), TriMaint, Miel & Compagnie, nginx et cron partent vers l'hébergement PlanetHoster (restic, SFTP), 7 jours / 4 semaines / 6 mois. Mais le test de restauration était à lancer à la main et personne n'était prévenu si la sauvegarde cessait de tourner. Cette étape ajoute :
+- **Test de restauration automatique chaque lundi 5 h 30** : dernier dump → base jetable sans réseau → comparaison avec la production (échec si la sauvegarde a moins de 90 % des conférences/comptes/séries, ou si le dump a plus de 36 h) ; vérification que les **vidéos** sont dans la dernière sauvegarde ; taille de la copie hors VPS.
+- **Rapports au site** après chaque sauvegarde et chaque test (jeton secret, aucune donnée de membre).
+- **Carte « Sauvegardes » dans Admin → Santé du serveur** (dernière sauvegarde, dernier test, taille hors VPS, historique) et **alerte e-mail** : échec rapporté, **silence de plus de 30 h**, test en échec ou de plus de 10 jours ; message au retour à la normale. Le niveau « Sauvegardes » compte dans le niveau global du serveur.
+
+**Prérequis.** Étape 8 en place sur le VPS ; envoi d'e-mails configuré (sinon la carte s'affiche mais aucune alerte ne part).
+
+**Déploiement.** (1) Redeploy **majlistv-api** (migration 069) puis **majlistv-web**. (2) Sur le VPS, suivre « Suivi depuis le site » dans `ops/backup/README.md` : jeton, copie des scripts mis à jour, nouveau cron, premier test. (3) Commandes habituelles :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** `/root/backup/restore-test.sh` sur le VPS doit finir par « TEST DE RESTAURATION REUSSI » et la carte passe à « Tout va bien ». Pour voir une alerte : Paramètres → Santé du serveur → délai sans sauvegarde à 6 h (l'alerte part quand la dernière sauvegarde dépasse 6 h) ; remettre 30 ensuite.
+
+**Debug.** Carte « Suivi non activé » : le jeton n'est pas saisi dans les réglages. « rapport au site non envoyé » dans la sortie du script : adresse ou jeton incorrects dans `/root/.config/backup/env` (le jeton doit être identique des deux côtés, 401 sinon). État local : `cat /var/lib/backup-vps/last-status /var/lib/backup-vps/restore-status` ; journaux : `tail -50 /var/log/backup-vps.log /var/log/backup-vps.cron.log`.
+
+**Fichiers.** `ops/backup/restore-test.sh` (réécrit), `ops/backup/report-lib.sh`, `ops/backup/backup-vps.sh` + `backup-vps.cron` (rapport, cron du lundi), `ops/backup/tests/run-stub-test.sh`, `api/migrations/069_backup_reports.sql`, `api/src/backupLib.js`, `api/src/routes/backup.js`, `api/src/health.js` / `healthLib.js` (évaluation et alerte), `api/src/settings.js` (3 réglages), `web/components/HealthAdmin.js`.
+
+**Limites (honnêtes).** Le test restaure la **base** pour de vrai ; pour les **vidéos** il vérifie la présence (instantané des métadonnées lisible + blocs listés), il ne reconstruit pas Garage ni ne relit une vidéo. Si le VPS est éteint, le site (hébergé sur le même VPS) l'est aussi : aucune alerte ne peut partir, d'où l'intérêt du moniteur Uptime Kuma optionnel (`KUMA_PUSH_URL`) hébergé ailleurs. Le scénario « VPS perdu, tout reconstruire » reste à répéter une fois à blanc (docs/RECONSTRUIRE-DE-ZERO.md).
+
+**Testé.** Règles pures : 24 vérifications (`node api/tests/test_backup_lib.mjs`). API sur base réelle : `api/tests/test_backup.py` (jeton absent/mauvais, validation, filtrage des détails, niveaux, e-mail d'alerte et de retour, sans doublon, seuils réglables, rétention 200, jeton jamais renvoyé). Scripts du VPS avec **faux docker/restic** (`ops/backup/tests/run-stub-test.sh`, 9 contrôles). Écran en navigateur réel (ordinateur + 390 px, sans débordement). **PAS testé** : les scripts sur le vrai VPS et le vrai dépôt PlanetHoster, l'envoi d'un vrai e-mail d'alerte.

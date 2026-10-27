@@ -150,6 +150,7 @@ bash /root/verify-deploy.sh
 ## 3. Restaurer les données (si les sauvegardes existent)
 
 Prérequis : `restic`, la clé SSH `id_backup` et `/root/.config/backup/env` (voir `ops/backup/README.md`).
+Un test de restauration de la base tourne chaque lundi (étape 37) et son résultat est visible dans Admin → Santé du serveur : si la dernière carte « Sauvegardes » est verte, les sauvegardes ci-dessous sont lisibles.
 ```bash
 set -a; . /root/.config/backup/env; set +a
 restic snapshots

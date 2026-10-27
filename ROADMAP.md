@@ -486,3 +486,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 36 (27/10) — Mes données : exporter et supprimer son compte (RGPD)
 - Voir README « Étape 36 ». Reste (sur « go ») : 6.3 sauvegardes (test de restauration), podcast RSS, cartes mémoire… voir docs/IDEES-AMELIORATIONS.md.
+
+## Étape 37 (27/10) — Sauvegardes : test de restauration automatique et suivi
+- Voir README « Étape 37 ». Reste (sur « go ») : podcast RSS, cartes mémoire, suivi des erreurs… voir docs/IDEES-AMELIORATIONS.md. Pages légales à la fin.
