@@ -492,3 +492,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 38 (27/10) — Cartes mémoire intégrées à la révision espacée
 - Voir README « Étape 38 ». Reste (sur « go ») : podcast RSS, notifications web, suivi des erreurs… voir docs/IDEES-AMELIORATIONS.md. Pages légales à la fin. Les manipulations VPS de l'étape 37 attendent Epok (rappel demain 9 h).
+
+## Étape 39 (28/10) — Suivi des erreurs du site et de l'API
+- Voir README « Étape 39 ». Reste (sur « go ») : podcast RSS, notifications web, audit de vitesse… voir docs/IDEES-AMELIORATIONS.md. Pages légales à la fin. Les manipulations VPS de l'étape 37 attendent Epok.

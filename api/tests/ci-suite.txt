@@ -45,6 +45,7 @@ test_themes.py
 test_users_admin.py
 test_watch.py
 test_health.py
+test_errors.py
 test_backup.py
 test_two_factor.py
 test_lifecycle.py

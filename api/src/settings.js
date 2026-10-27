@@ -271,6 +271,8 @@ export const FIELDS = [
   { key: 'health_mem_crit_pct', group: 'health', type: 'number', label: 'Mémoire : seuil « critique » (% utilisée)', env: 'HEALTH_MEM_CRIT_PCT', def: '92', min: 10, max: 99 },
   { key: 'health_alert_to', group: 'health', type: 'text', label: "Destinataires des alertes (adresses séparées par des virgules)", env: 'HEALTH_ALERT_TO',
     help: 'Vide = tous les administrateurs.' },
+  { key: 'errors_alerts_enabled', group: 'health', type: 'bool', label: 'Erreurs : alerte e-mail à chaque nouvelle erreur (serveur et site)', env: 'ERRORS_ALERTS_ENABLED', def: 'true',
+    help: "Un e-mail à la première apparition d'une erreur, et quand une erreur marquée « résolue » revient (6 e-mails par heure au plus). Mêmes destinataires que la santé du serveur. Détail dans Admin → Erreurs." },
   // Étape 37 : suivi des sauvegardes (rapports envoyés par le VPS).
   { key: 'backup_report_token', group: 'health', type: 'secret', label: 'Sauvegardes : jeton des rapports du VPS',
     help: "Chaîne secrète (générée sur le VPS, voir ops/backup/README.md) que le VPS envoie avec chaque rapport de sauvegarde. Vide = suivi des sauvegardes désactivé." },

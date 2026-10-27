@@ -4,6 +4,7 @@
 import WatchAdmin from '../../components/WatchAdmin';
 import AdsAdmin from '../../components/AdsAdmin';
 import HealthAdmin from '../../components/HealthAdmin';
+import ErrorsAdmin from '../../components/ErrorsAdmin';
 import LifecycleAdmin from '../../components/LifecycleAdmin';
 import { SectionHeader, SettingsHub } from '../../components/SettingsHub';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -1130,7 +1131,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', health: 'Santé du serveur', lifecycle: 'E-mails de cycle de vie' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', health: 'Santé du serveur', errors: 'Erreurs', lifecycle: 'E-mails de cycle de vie' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1150,6 +1151,7 @@ export default function Admin() {
       {tab === 'watch' && <WatchAdmin />}
       {tab === 'ads' && <AdsAdmin />}
       {tab === 'health' && <HealthAdmin />}
+      {tab === 'errors' && <ErrorsAdmin />}
       {tab === 'lifecycle' && <LifecycleAdmin />}
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}
     </main>

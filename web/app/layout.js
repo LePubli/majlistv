@@ -12,6 +12,7 @@ import Footer from '../components/Footer';
 import RouteGate from '../components/RouteGate';
 import MemberShell from '../components/MemberShell';
 import StatsBeacon from '../components/StatsBeacon';
+import ErrorReporter from '../components/ErrorReporter'; // étape 39 : suivi des erreurs du navigateur
 import ResponsiveTables from '../components/ResponsiveTables';
 import SkipLink from '../components/SkipLink';
 import { DIR, getLocale } from '../lib/i18n';
@@ -69,6 +70,7 @@ export default async function RootLayout({ children }) {
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
         <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
           <StatsBeacon />
+          <ErrorReporter />
           <PwaRegister />
           <PrayerGate />
           <ResponsiveTables />

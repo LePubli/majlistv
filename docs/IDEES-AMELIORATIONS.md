@@ -61,7 +61,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 6.2 | ✅ (étape 31 ; reste l'option « obligatoire pour l'admin », abandonnée) **Double authentification (2FA)** pour administrateurs et organisateurs (absente aujourd'hui) | Protège les clés, les paiements et les comptes ; priorité sécurité | M | ★★★ |
 | 6.3 | ✅ (étape 37 ; reste à répéter une reconstruction à blanc) **Sauvegardes : test de restauration régulier** et copie des données Mejliss TV hors du VPS (une sauvegarde restic nocturne existe déjà : à vérifier ce qu'elle couvre) | Savoir que la reconstruction marche, pas seulement l'espérer | S–M | ★★★ |
 | 6.4 | ✅ (étape 30) **Tests automatiques à chaque envoi sur GitHub** (API, site, application) | Moins de bugs en production, déploiements plus sereins | M | ★★★ |
-| 6.5 | **Suivi des erreurs** (site, API, application) avec alerte | Je vois les bugs avant que tu ne me les signales | M | ★★ |
+| 6.5 | ✅ (étape 39 ; ni mobile ni services annexes) **Suivi des erreurs** (site, API, application) avec alerte | Je vois les bugs avant que tu ne me les signales | M | ★★ |
 | 6.6 | ✅ (étape 36) **Droits RGPD en libre-service** : exporter ses données, supprimer son compte (à vérifier ce qui existe) | Conformité, confiance | S–M | ★★ |
 | 6.7 | **Cache et diffusion vidéo (CDN)** pour les internautes éloignés et les pointes d'audience | Lecture plus rapide à l'étranger, VPS moins chargé | M | ★★ |
 | 6.8 | **Audit de vitesse (Core Web Vitals) et d'accessibilité** sur les pages principales | Meilleur référencement, confort sur téléphone modeste | M | ★★ |

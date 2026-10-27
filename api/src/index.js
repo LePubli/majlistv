@@ -27,6 +27,8 @@ import watchRoutes from './routes/watch.js';
 import twoFactorRoutes from './routes/twofactor.js'; // étape 31 : double authentification
 import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
 import backupRoutes from './routes/backup.js'; // étape 37 : rapports de sauvegarde
+import errorsRoutes from './routes/errors.js'; // étape 39 : suivi des erreurs
+import { recordError, startErrors } from './errors.js';
 import { startHealth } from './health.js';
 import gdprRoutes from './routes/gdpr.js'; // étape 36 : exporter / supprimer ses données
 import lifecycleRoutes from './routes/lifecycle.js'; // étape 33 : e-mails de cycle de vie
@@ -111,6 +113,10 @@ app.setErrorHandler((err, req, reply) => {
     return reply.code(400).send({ error: 'Données invalides', details: err.issues });
   }
   req.log.error(err);
+  // Étape 39 : les erreurs serveur (pas les refus 4xx) sont enregistrées dans Admin → Erreurs, sans attendre ni bloquer la réponse.
+  if (!err.statusCode || err.statusCode >= 500) {
+    void recordError({ source: 'api', message: err.message, stack: err.stack, route: req.routeOptions?.url || req.url, method: req.method, status: err.statusCode || 500, userAgent: String(req.headers['user-agent'] || '') });
+  }
   reply.code(err.statusCode || 500).send({ error: err.statusCode ? err.message : 'Erreur serveur' });
 });
 
@@ -165,6 +171,7 @@ await app.register(watchRoutes);
 await app.register(adsRoutes);
 await app.register(healthRoutes);
 await app.register(backupRoutes);
+await app.register(errorsRoutes);
 await app.register(lifecycleRoutes);
 await app.register(gdprRoutes);
 await app.register(twoFactorRoutes);
@@ -189,6 +196,7 @@ await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });
 startSearchSync(app.log);
 startHealth(app.log); // étape 29 : mesures du serveur + alertes
+startErrors(app.log); // étape 39 : nettoyage quotidien des erreurs enregistrées
 startLifecycle(app.log); // étape 33 : reprise, bienvenue, retour (désactivé tant que l'admin ne l'active pas)
 startMailer(app.log); // file d'e-mails (inactive tant que l'envoi n'est pas configuré)
 await startModules(app); // tâches de fond de chaque module (citations, e-mails de révision, bilan, Kids, chaînes, statistiques, alertes…)

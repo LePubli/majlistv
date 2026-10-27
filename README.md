@@ -6136,3 +6136,31 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** Une carte est une question de quiz retournée : pas de cartes tirées du résumé IA (non validé par un humain, donc écarté volontairement). Pas encore dans l'application mobile ni dans l'e-mail quotidien de révision. Le membre s'auto-évalue (« je savais » / « à revoir ») : le serveur ne corrige pas une réponse tapée. Les cartes sont dans la langue de la question du quiz.
 
 **Testé.** Règles pures : 21 vérifications (`node api/tests/test_memorycards_lib.mjs`) et 7 côté site (`node web/tests/test_memorycards_web.mjs`). API sur base réelle (`api/tests/test_memorycards.py`, ~45 contrôles : droits et palier, cartes limitées aux quiz passés et aux questions validées, calendrier complet jusqu'à « acquise », plafonds, séance libre, fonction coupée, suppression en cascade, export RGPD). Écran en navigateur réel (ordinateur et 390 px, séance complète avec carte à revoir, carte en arabe en RTL, sans débordement horizontal). **PAS testé** : avec un vrai abonnement Stripe Apprentissage (palier simulé en base), lecteur d'écran.
+
+## Étape 39 — Suivi des erreurs du site et de l'API (28/10)
+
+**Description.** Avant, un bug n'était connu que si un membre te l'écrivait. Maintenant :
+- **L'API** enregistre ses erreurs internes (code 500) ; **le site** envoie les erreurs JavaScript non rattrapées de ses pages (et affiche une page d'erreur propre « Un problème est survenu — l'équipe en a été informée » avec un bouton Réessayer).
+- **Admin → Erreurs** (groupe Pilotage) : les erreurs sont **regroupées** (même message + même page = une ligne avec un compteur, première et dernière apparition). « Voir le détail » montre la trace complète et les dernières occurrences. Trois états : **ouverte**, **résolue** (rouvre toute seule si elle revient), **ignorée** (plus d'alerte). Le bouton « Déclencher une erreur d'essai » vérifie toute la chaîne.
+- **Alerte e-mail** : une seule fois à la première apparition d'une erreur, et quand une erreur « résolue » revient (6 e-mails par heure au plus). Mêmes destinataires que la santé du serveur ; interrupteur dans Paramètres → Santé du serveur (« Erreurs : alerte e-mail… »).
+- **Vie privée** : aucun identifiant de membre, aucune adresse IP ; e-mails, jetons, longues chaînes secrètes et paramètres d'adresse sont masqués avant l'enregistrement. Occurrences gardées 30 jours, erreurs résolues/ignorées 90 jours (nettoyage quotidien). Le bruit du navigateur (extensions, réseau coupé, « ResizeObserver ») est ignoré.
+
+**Prérequis.** Envoi d'e-mails configuré pour recevoir les alertes (sinon l'écran fonctionne quand même).
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 071) puis **majlistv-web**. Puis :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** Admin → Erreurs → « Déclencher une erreur d'essai » : elle apparaît dans la liste (origine « Serveur », POST /admin/errors/test) et un e-mail « Nouvelle erreur sur le serveur » arrive. Marquer résolue, relancer l'essai : elle rouvre et l'e-mail « Erreur revenue » part.
+
+**Debug.** Aucune erreur du site n'apparaît : le site envoie à `/api/errors/client` (limité à 20 par minute et par adresse ; 5 par page, la même une seule fois) ; vérifier que le proxy du site répond. Pas d'e-mail : Paramètres → E-mails non configuré, interrupteur coupé, ou plafond de 6 alertes par heure atteint (les erreurs restent enregistrées). Pour faire corriger une erreur : copier le message et la trace de l'écran de détail et dire à Claude « corrige cette erreur ».
+
+**Fichiers.** `api/migrations/071_error_log.sql`, `api/src/errorsLib.js` (masquage, empreinte, bruit, limiteur), `api/src/errors.js` (enregistrement, alerte, nettoyage), `api/src/routes/errors.js`, `api/src/index.js` (branché sur le gestionnaire d'erreurs), `api/src/settings.js`, `web/lib/reportError.js`, `web/components/ErrorReporter.js`, `web/app/error.js`, `web/app/global-error.js`, `web/components/ErrorsAdmin.js`, `web/app/layout.js`, `web/app/admin/page.js`, `web/components/AdminShell.js`.
+
+**Limites (honnêtes).** Ne couvre pas l'application mobile ni les services annexes (worker, transcripteur, traducteur, doublage : leurs erreurs restent dans les journaux Docker) ; ni les plantages complets du processus API (arrêt brutal) ni les erreurs de l'API qui ne passent pas par le gestionnaire (rare) ; le contenu de la trace est celui du code compilé du site (lignes peu lisibles, mais le message et la page suffisent en général). Les erreurs 4xx (refus normaux) ne sont pas suivies. À mentionner dans la page « Confidentialité » (pages légales, à la fin) : journal technique d'erreurs sans donnée personnelle, conservé 30 à 90 jours.
+
+**Testé.** Règles pures : 24 vérifications (`node api/tests/test_errors_lib.mjs`) et 5 côté site. API sur base réelle (`api/tests/test_errors.py`, 31 contrôles : droits, regroupement, masquage, bruit, vraie erreur serveur provoquée, 4xx ignorés, états, alertes nouvelle/revenue/ignorée/coupée, limites) et nettoyage (`test_errors_purge.mjs`). Navigateur réel : une vraie exception JavaScript lancée dans la page est arrivée dans Admin → Erreurs (ordinateur et 390 px, sans débordement). **PAS testé** : la page d'erreur de rendu (`error.js`) déclenchée par un vrai plantage de composant ; l'envoi d'un vrai e-mail d'alerte.
