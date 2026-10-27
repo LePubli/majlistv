@@ -88,8 +88,8 @@ export const BLOCK_TYPES = {
     sample: { title: { fr: 'Questions fréquentes' }, items: [{ q: { fr: 'Une question ?' }, a: { fr: 'Une réponse.' } }] },
   },
   video: {
-    label: 'Vidéo', hint: 'Une vidéo YouTube ou Vimeo intégrée.',
-    fields: [{ k: 'url', label: 'Adresse de la vidéo (YouTube ou Vimeo)', kind: 'video' }, T('title', 'Titre de la vidéo')], sample: {},
+    label: 'Vidéo', hint: 'Une vidéo YouTube, Vimeo ou Dailymotion intégrée.',
+    fields: [{ k: 'url', label: 'Adresse de la vidéo (YouTube, Vimeo ou Dailymotion)', kind: 'video' }, T('title', 'Titre de la vidéo')], sample: {},
   },
   // ---- Blocs « données du site » (étape H) : leur contenu vient du catalogue et du compte de la personne, il se met à jour tout seul.
   featured: {

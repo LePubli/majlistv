@@ -1,0 +1,134 @@
+# Étape 30 — Tests automatiques : à chaque envoi sur GitHub (et à la main : Actions → « Tests automatiques » → Run workflow).
+# Trois contrôles indépendants :
+#   1. API   : tests unitaires + tests de l'API sur un PostgreSQL jetable (liste : api/tests/ci-suite.txt, lancement : ops/ci/run-api-tests.sh)
+#   2. Site  : construction de l'application Next.js (détecte toute erreur de code ou d'import)
+#   3. Appli : typage + tests de l'application mobile (comme avant la fabrication de l'APK)
+# Rouge = quelque chose est cassé : ne déploie pas avant d'avoir regardé le détail (clic sur l'exécution, puis sur le contrôle en échec).
+# Aucun secret n'est utilisé. Ce workflow ne déploie rien : le déploiement reste DockPanel (Git Deploy).
+name: Tests automatiques
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'web/**'
+      - 'mobile/**'
+      - 'ops/ci/**'
+      - '.github/workflows/tests.yml'
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (tests unitaires et tests de l'API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: majlis
+          POSTGRES_PASSWORD: pw
+          POSTGRES_DB: majlis
+        ports:
+          - 5544:5432
+        options: >-
+          --health-cmd "pg_isready -U majlis -d majlis"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installer les dépendances
+        run: |
+          npm ci --prefix api
+          pip install requests psycopg2-binary
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Vérifier la syntaxe de tout le code de l'API
+        run: find api/src -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Démarrer l'API de test
+        working-directory: api
+        env:
+          DATABASE_URL: postgres://majlis:pw@127.0.0.1:5544/majlis
+          PRACTICE_KEY: practice-key-for-tests-0123456789
+          JWT_SECRET: 0123456789abcdef0123456789abcdef-test
+          SETTINGS_KEY: test-settings-key-0123456789
+          ADMIN_EMAIL: admin@test.local
+          ADMIN_PASSWORD: AdminPassw0rd-test
+          PORT: '3055'
+          RATE_LIMIT_MAX: '100000'
+          AUTH_RATE_MAX: '100000'
+          REPORT_RATE_MAX: '100000'
+        run: |
+          nohup node src/index.js > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fs http://127.0.0.1:3055/health && break
+            sleep 1
+          done
+          curl -fs http://127.0.0.1:3055/health || { cat "$RUNNER_TEMP/api.log"; exit 1; }
+
+      - name: Lancer les tests
+        run: bash ops/ci/run-api-tests.sh
+
+      - name: Journal de l'API (en cas d'échec)
+        if: failure()
+        run: tail -n 200 "$RUNNER_TEMP/api.log" || true
+
+  web:
+    name: Site (construction Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Installer les dépendances
+        run: npm ci --prefix web
+      - name: Tests du site (fichiers .mjs sans navigateur)
+        run: |
+          for f in web/tests/*.mjs; do
+            [ -e "$f" ] || continue
+            echo "== $f"; node "$f"
+          done
+      - name: Construire le site
+        working-directory: web
+        env:
+          API_URL: http://127.0.0.1:3055
+        run: npx next build
+
+  mobile:
+    name: Application (typage et tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Installer les dépendances
+        run: npm ci --prefix mobile
+      - name: Vérifier le code (typage + tests)
+        run: npm run check --prefix mobile

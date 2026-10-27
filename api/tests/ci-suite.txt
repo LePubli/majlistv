@@ -1,0 +1,47 @@
+# Tests de l'API lancés automatiquement par GitHub (ops/ci/run-api-tests.sh) : ceux qui n'ont besoin que de l'API et de PostgreSQL.
+# Un nom de fichier par ligne (api/tests/<nom>). Pour ajouter un test : ajoute sa ligne ; pour en retirer un : supprime-la.
+# Pas dans cette liste (besoin du stockage S3, de l'IA, du site web ou de FFmpeg + services) : voir README « Étape 30 ».
+test_bulk.py
+test_cards.py
+test_categories.py
+test_channel_editors.py
+test_channels.py
+test_channels_rich.py
+test_collections.py
+test_content_edit.py
+test_dubbing_d1b.py
+test_features.py
+test_formats.py
+test_home_blocks.py
+test_jobs_activity.py
+test_kid_actions.py
+test_kids.py
+test_kids_catalog.py
+test_kids_control.py
+test_kids_learning.py
+test_layout.py
+test_learning.py
+test_levels.py
+test_moderation.py
+test_notes.py
+test_onboarding.py
+test_practice.py
+test_push_api.py
+test_quiz_play.py
+test_revision.py
+test_selfcheck.py
+test_seo.py
+test_series_discovery.py
+test_settings_engines.py
+test_showcase.py
+test_similar.py
+test_slugs.py
+test_speakers.py
+test_stats.py
+test_studio_vtt.py
+test_taxonomy.py
+test_texts.py
+test_themes.py
+test_users_admin.py
+test_watch.py
+test_health.py

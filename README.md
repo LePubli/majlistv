@@ -5880,3 +5880,29 @@ Puis Admin → Santé du serveur → **Mesurer maintenant** et **Tester l'alerte
 **Limites (honnêtes).** Le disque mesuré est la partition qui porte Docker, vue depuis le conteneur de l'API : on s'attend au même chiffre que `df -h /` sur le VPS (à confirmer sur ton serveur). Mémoire et charge sont celles de tout le VPS (partagé avec Miel & Co et TriMaint). Les images Docker et le cache de construction ne sont pas visibles depuis le site (l'API n'a pas accès à Docker, volontairement) : l'écran affiche les commandes de nettoyage à lancer en SSH.
 
 **Testé** : calculs (28 vérifications Node, `node api/tests/test_health_lib.mjs`), API (`python3 api/tests/test_health.py` : droits, rapport, mesure, alerte, absence de doublon, retour à la normale, alertes coupées, e-mail d'essai, purge), envoi réel vers un serveur SMTP factice, écran en navigateur réel (ordinateur et 390 px, sans défilement horizontal). **Non testé** : sur ton VPS, avec ton vrai SMTP ; arabe (écran admin en français).
+
+## Étape 30 — Tests automatiques à chaque envoi sur GitHub (27/10)
+
+**Description.** À chaque envoi sur `main` (et sur toute demande de fusion), GitHub lance trois contrôles indépendants, **sans rien déployer** (le déploiement reste DockPanel) : **API** (syntaxe de tout le code, 18 tests unitaires Node et 43 tests de l'API sur un PostgreSQL jetable), **Site** (tests Node du site + construction Next.js), **Application** (typage + tests, comme avant l'APK). Rouge = quelque chose est cassé : regarde avant de déployer. Aucun secret n'est utilisé.
+
+**Premier bénéfice déjà obtenu.** En préparant ces tests, l'un d'eux a détecté une vraie dérive : `web/lib/blocks.js` n'avait pas le texte « Dailymotion » de `api/src/blocks.js` (les deux fichiers doivent être identiques). Corrigé dans cette étape (libellé du bloc « Vidéo » de l'éditeur de pages).
+
+**Où voir le résultat.** GitHub → dépôt `LePubli/majlistv` → onglet **Actions** → « Tests automatiques » : coche verte ✅ ou croix rouge ❌ ; cliquer sur l'exécution puis sur le contrôle en échec montre les dernières lignes du test cassé. Lancement manuel : Actions → Tests automatiques → **Run workflow**. Tu reçois aussi un e-mail GitHub en cas d'échec.
+
+**Fichiers.** `.github/workflows/tests.yml` (les trois contrôles), `ops/ci/run-api-tests.sh` (lance les tests et résume), `api/tests/ci-suite.txt` (liste des tests Python de l'API lancés : ajouter/retirer une ligne), `web/lib/blocks.js` (correction), `api/src/routes/auth.js` (variable facultative `AUTH_RATE_MAX`, réservée aux tests : sans elle, la limite reste 10 connexions/minute et 5 « mot de passe oublié »/10 min comme avant).
+
+**Prérequis.** Aucun : tout tourne chez GitHub. Pas de déploiement DockPanel nécessaire pour la partie tests ; la correction du libellé `blocks.js` et `AUTH_RATE_MAX` partent avec le prochain Redeploy de **majlistv-api** puis **majlistv-web** (inchangé en production tant que la variable n'est pas définie).
+
+**Lancer les tests chez toi (WSL, facultatif).** Avec un PostgreSQL de test (base, utilisateur `majlis`, mot de passe `pw`, port 5544) et l'API de test démarrée sur 3055 avec `RATE_LIMIT_MAX=100000 AUTH_RATE_MAX=100000 REPORT_RATE_MAX=100000` (variables complètes : voir `.github/workflows/tests.yml`, étape « Démarrer l'API de test »), puis :
+```bash
+pip install requests psycopg2-binary
+bash ops/ci/run-api-tests.sh
+```
+
+**Ajouter un test.** Écrire `api/tests/test_xxx.py` (même modèle que les autres) puis ajouter `test_xxx.py` dans `api/tests/ci-suite.txt`. Les tests Node `api/tests/*.mjs` sont lancés automatiquement.
+
+**Debug.** Un contrôle rouge : ouvrir l'exécution → le contrôle → « Lancer les tests » (résumé et dernières lignes de chaque échec) ; « Journal de l'API » s'affiche en cas d'échec. Un test qui échoue seulement chez GitHub : le relancer (Re-run jobs) ; s'il échoue encore, le copier ici avec son message.
+
+**Pas encore couvert (limites).** Tests de l'API qui exigent le stockage S3 (moto), l'IA, le transcripteur ou Stripe simulé (≈ 45 fichiers : éditeur de montage, import vidéo, cartes cadeaux, quiz/pratique générés, etc.) et `test_citations_auto.mjs` (corpus de citations) : ils restent à lancer à la main pour l'instant ; les couvrir demande d'ajouter ces services de test au workflow (étape ultérieure possible). Pas de test de navigateur (Playwright) dans le contrôle automatique.
+
+**Testé.** Le script a été lancé sur une base **vierge** : 62 réussis, 0 échec (18 tests Node, 43 tests API, + le test de l'étape 29) ; construction du site avec une API injoignable (comme chez GitHub) : OK ; les 6 tests Node du site : OK ; syntaxe de l'API : OK. **Non testé** : le workflow `tests.yml` lui-même n'a jamais tourné chez GitHub avant ce push — la première exécution (onglet Actions) fait foi ; si elle est rouge pour une raison d'environnement, je corrige.

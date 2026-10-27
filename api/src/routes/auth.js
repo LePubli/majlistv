@@ -19,7 +19,9 @@ const loginSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
-const strictLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
+// AUTH_RATE_MAX (facultatif) : réservé aux tests automatiques, qui se connectent bien plus de 10 fois par minute. En production : 10 / minute.
+const AUTH_MAX = Number(process.env.AUTH_RATE_MAX) || 0;
+const strictLimit = { config: { rateLimit: { max: AUTH_MAX || 10, timeWindow: '1 minute' } } };
 
 export default async function authRoutes(app) {
   const sign = (user) => app.jwt.sign({ sub: user.id, role: user.role });
@@ -98,7 +100,7 @@ export default async function authRoutes(app) {
   // --- Mot de passe oublié ---
   // Réponse identique que l'adresse existe ou non (on ne révèle pas qui a un compte).
   const hashToken = (t) => createHash('sha256').update(t).digest('hex');
-  app.post('/auth/forgot', { config: { rateLimit: { max: 5, timeWindow: '10 minutes' } } }, async (req) => {
+  app.post('/auth/forgot', { config: { rateLimit: { max: AUTH_MAX || 5, timeWindow: '10 minutes' } } }, async (req) => {
     const { email } = z.object({ email: z.string().email().max(254).transform((s) => s.toLowerCase()) }).parse(req.body);
     const { rows } = await pool.query('SELECT id, email, name, locale, disabled_at FROM users WHERE email = $1', [email]);
     const u = rows[0];
