@@ -471,3 +471,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 31 (27/10) — Double authentification (TOTP + codes de secours), site et application
 - Voir README « Étape 31 ». Reste (sur « go ») : 2FA obligatoire pour l'admin (option), puis voir docs/IDEES-AMELIORATIONS.md (SEO/partage, e-mails de cycle de vie…).
+
+## Étape 32 (27/10) — Partager en image (cartes citation et extraits de transcription)
+- Voir README « Étape 32 ». Reste (sur « go ») : aperçu de lien propre à chaque extrait (image côté serveur), pages conférence référencées (idée 1.1) ; puis voir docs/IDEES-AMELIORATIONS.md (e-mails de cycle de vie…).

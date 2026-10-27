@@ -5935,3 +5935,28 @@ Application : le push sur `main` lance la fabrication de l'APK (GitHub → Actio
 **Limites (honnêtes).** Une **ancienne version de l'application** (avant la mise à jour du contenu) ne sait pas afficher l'écran du code : un compte avec 2FA y verrait une erreur à la connexion tant que l'application n'est pas mise à jour. L'activation se fait sur le site (pas dans l'application). Pas de 2FA obligatoire pour l'administration (peut être ajoutée sur demande). Les codes par SMS ou e-mail ne sont pas proposés (application d'authentification seulement).
 
 **Testé.** Calculs : 22 vérifications dont les vecteurs officiels de la RFC 6238 (`node api/tests/test_totp_lib.mjs`). API : 47 vérifications (`python3 api/tests/test_two_factor.py` : activation, connexion en deux temps, rejeu refusé, code de secours à usage unique, défi expiré/épuisé, verrou, nouveaux codes, désactivation, réinitialisation par l'admin + journal). Site en navigateur réel (ordinateur et 390 px) : activation, QR code **relu avec un décodeur** (adresse `otpauth` exacte), codes de secours, connexion en deux temps, code faux/réutilisé refusés, désactivation. Application : typage et 5 tests de lecture des réponses du serveur (149 tests au total). **Non testé** : avec une vraie application d'authentification sur téléphone, et l'écran du code sur un vrai appareil Android.
+
+## Étape 32 — Partager en image : citation du jour et phrases d'une conférence (27/10)
+
+**Description.** Nouveau bouton **« Partager en image »** sous la **citation du jour** (accueil) et, dans l'onglet **Transcription** d'une conférence, un petit bouton **« ↗ Image »** à côté de chaque phrase. Il ouvre une fenêtre avec l'aperçu d'une carte noir et or aux couleurs Mejliss TV (logo, texte en blanc, référence en or, adresse du site), en **3 formats** : **Carré** 1080×1080 (WhatsApp, Instagram, X), **Story** 1080×1920 (Instagram, WhatsApp statut, TikTok), **Paysage** 1200×630 (Facebook, LinkedIn). Trois boutons : **Partager** (feuille de partage du téléphone avec l'image ; sur ordinateur, téléchargement), **Télécharger l'image**, **Copier le lien**. Le lien d'une phrase de conférence ouvre la conférence **à cet instant** (`?t=`), celui de la citation ouvre l'accueil.
+
+**Détails.** Les cartes sont dessinées **dans le navigateur** (canvas) avec les polices du site : l'arabe est correctement assemblé (lettres liées, sens de lecture, voyelles), le texte arabe de la citation est au-dessus de la traduction, la taille du texte s'ajuste à la longueur (un texte très long est raccourci avec « … »). Une phrase de transcription en arabe donne une carte en arabe. Fonctionne en français, anglais et arabe (libellés). Aucune donnée n'est envoyée au serveur : rien à déployer côté API, pas de migration. Les conférences réservées aux abonnés n'exposent pas de transcription : pas de bouton.
+
+**Fichiers.** `web/lib/shareCard.js` (calculs : sens de lecture, retour à la ligne, ajustement de la taille, noms de fichiers ; dessin), `web/components/ShareCardModal.js` (fenêtre), `web/components/CitationCard.js` (bouton), `web/components/Transcript.js` et `web/app/talks/[id]/TalkClient.js` (bouton par phrase), `web/app/globals.css` (`.shc-*`, `.seg-row`), textes fr/en/ar dans `web/lib/i18n.js`, test `web/tests/share_card.mjs`.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-web** uniquement (l'API ne change pas). Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis Ctrl+F5.
+
+**Exemples.** Accueil → sous la citation du jour → « Partager en image » → Story → Partager → Instagram. Conférence → onglet Transcription → survoler une phrase → « ↗ Image » → Carré → Télécharger l'image.
+
+**Debug.** L'aperçu reste vide ou le texte arabe est dans une police par défaut : recharger (Ctrl+F5), les polices du site se chargent à la première utilisation. « Partager » télécharge au lieu d'ouvrir la feuille de partage : le navigateur (ordinateur, Firefox) ne permet pas le partage de fichiers, c'est normal. Pas de bouton sous une phrase : la conférence n'est pas accessible en transcription (réservée ou en cours de transcription).
+
+**Limites (honnêtes).** Application mobile : non incluse (le site, ouvert dans le navigateur du téléphone, donne déjà la feuille de partage). Les aperçus de liens (WhatsApp, Facebook) restent ceux déjà en place (vignette de la conférence) ; une image de carte propre à chaque citation ou phrase, vue directement dans l'aperçu du lien, n'est pas faite (elle demanderait de dessiner l'image sur le serveur). Les pages de conférences référencées par Google (idée 1.1) n'ont pas été modifiées dans cette étape.
+
+**Testé.** Calculs : 18 vérifications (`node web/tests/share_card.mjs`, lancé aussi par les tests automatiques). Navigateur réel (Chromium, ordinateur et 390 px, sans défilement horizontal) : bouton sous la citation, 3 formats aux bonnes tailles, téléchargement (fichier `….png`), copie du lien (`/talks/<id>?t=4` pour la 2e phrase), fermeture par Échap, bouton sur chaque phrase de transcription, carte d'une phrase en arabe ; rendu des images contrôlé à l'œil (arabe voyellé et assemblé, texte long ajusté). **Non testé** : la feuille de partage native d'un vrai téléphone (Android/iPhone) et l'envoi vers Instagram/WhatsApp.

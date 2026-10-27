@@ -561,7 +561,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             )}
             {showTranscript && (
               <div id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript" hidden={current !== 'transcript'} className="tpanel">
-                <Transcript key={talk.tracks.join()} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
+                <Transcript key={talk.tracks.join()} shareInfo={talk.locked ? null : { title: talk.title, speaker: initial?.speaker || talk.speaker }} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
               </div>
             )}
           </div>
