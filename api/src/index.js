@@ -27,6 +27,7 @@ import watchRoutes from './routes/watch.js';
 import twoFactorRoutes from './routes/twofactor.js'; // étape 31 : double authentification
 import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
 import { startHealth } from './health.js';
+import gdprRoutes from './routes/gdpr.js'; // étape 36 : exporter / supprimer ses données
 import lifecycleRoutes from './routes/lifecycle.js'; // étape 33 : e-mails de cycle de vie
 import { startLifecycle } from './lifecycle.js';
 import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
@@ -163,6 +164,7 @@ await app.register(watchRoutes);
 await app.register(adsRoutes);
 await app.register(healthRoutes);
 await app.register(lifecycleRoutes);
+await app.register(gdprRoutes);
 await app.register(twoFactorRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);

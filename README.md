@@ -6047,3 +6047,37 @@ Puis, **une fois**, dans Google Search Console (propriété `majlisstv.le-public
 **Limites (honnêtes).** Je ne peux pas mesurer le gain Google (il dépend de l'indexation, dans le temps) ; pas de pages séparées pour les traductions (le site n'a pas d'adresse par langue : le texte indexé est celui de la langue d'origine) ; le sitemap n'a pas de balise « vidéo » (la lecture se fait chez YouTube/Vimeo ou derrière l'abonnement) ; pour les conférences premium on n'expose volontairement rien du contenu.
 
 **Testé.** Regroupement en paragraphes : 8 vérifications (`node api/tests/test_seo_transcript.mjs`). API sur base réelle (`api/tests/test_seo_talk.py`) : transcription gratuite en paragraphes horodatés, langue d'origine uniquement, intervenant, premium sans transcription, brouillon introuvable, sitemap avec miniature. Site compilé et servi : page d'une conférence avec transcription dans le HTML, VideoObject (`creator.url`, `transcript`) et fil d'Ariane lus dans la page, sitemap avec balises image. PAS testé : l'indexation réelle par Google.
+
+
+## Étape 36 — Mes données : exporter et supprimer son compte (RGPD) (27/10)
+
+**Description.** Avant cette étape, un membre ne pouvait ni récupérer ses données ni supprimer son compte seul (seul l'administrateur pouvait supprimer). Nouvel onglet **Mon compte → Mes données** (site, FR / EN / AR) :
+- **Télécharger mes données** : un fichier JSON avec tout ce que la base garde sur la personne (compte, favoris, notes, progression, révision, bilans, intervenants suivis, listes et leurs éléments, **profils enfants et leur avancement**, abonnements, consentements, historique d'e-mails, cartes cadeaux, etc.). Les mots de passe, clés, jetons, codes de secours et codes PIN n'y figurent **jamais**. Limité à 5 téléchargements par heure.
+- **Supprimer mon compte** : mot de passe obligatoire (+ code de double authentification ou de secours si elle est activée) et case « je comprends que c'est définitif ». Le compte et toutes les données personnelles sont effacés (la base s'en charge en cascade). Un **abonnement en cours est arrêté chez Stripe** (sans remboursement) ; si Stripe refuse, le compte n'est **pas** supprimé. Un e-mail de confirmation part à l'ancienne adresse. La session est coupée aussitôt.
+- **Refusée** : au dernier administrateur (en nommer un autre d'abord) ; à un organisateur propriétaire de conférences (l'administrateur doit d'abord les transférer, Admin → Utilisateurs) ; si un abonnement est en cours alors que Stripe n'est pas joignable.
+
+**Ce qui est conservé après suppression (obligation légale, sans lien avec un compte).** Les preuves d'acceptation des CGV (avec l'adresse e-mail de l'époque, déjà prévu à l'étape 9) ; l'historique de revenus agrégé ; le journal d'équipe ; les factures déjà émises, qui restent chez Stripe (conservation légale). Les cartes cadeaux achetées restent valables pour leur bénéficiaire.
+
+**Principe de sécurité de l'export.** La liste des tables exportées est **découverte dans la base** (toute table liée à un membre) : une table ajoutée plus tard est exportée d'office. Seules sont écartées, avec leur raison dans `api/src/gdpr.js`, les tables de secrets (`login_challenges`, `two_factor_recovery`, `password_resets`, `device_tokens`) et les colonnes « créé par / relu par… » (actions d'équipe sur des contenus). Le test refuse une nouvelle colonne inconnue : elle doit être classée consciemment.
+
+**Application mobile.** Un bouton « Mes données et suppression du compte (sur le site) » ouvre `/account?tab=data`. **Google Play** exige une adresse web de suppression de compte dans la fiche (« Sécurité des données ») : utiliser `https://majlisstv.le-publicitaire.fr/account?tab=data` (connexion demandée). Mise à jour par OTA (version 0.17.0 inchangée).
+
+**Fichiers.** `api/src/gdpr.js` (export, vérifications, suppression), `api/src/routes/gdpr.js` (`GET /me/data/check`, `GET /me/export`, `POST /me/delete`), modèle d'e-mail `account_deleted` (`api/src/emails.js`), `web/components/MyData.js`, onglet dans `web/app/account/page.js`, clés `dt*` / `tbData` (`web/lib/i18n.js`), `mobile/src/app/(tabs)/account.tsx` et `mobile/src/lib/i18n.ts`. Aucune migration.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** puis **majlistv-web** ; l'application mobile reçoit la mise à jour au prochain lancement (OTA) : publier via l'action GitHub habituelle. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**À faire de ton côté (juridique, pas du code).** Mentionner dans la page « Confidentialité » (Admin → Pages légales) que les membres peuvent exporter et supprimer leurs données dans Mon compte → Mes données, et la durée de conservation des factures. Je n'ai pas modifié les textes juridiques sans ton accord.
+
+**Essayer.** Créer un compte de test, Mon compte → Mes données → « Télécharger mes données » (ouvrir le JSON : pas de mot de passe) ; puis « Supprimer mon compte… » avec ce compte de test. Vérifier que l'e-mail de confirmation arrive.
+
+**Debug.** « Trop de tentatives » : limite de 5 essais (10 min pour la suppression, 1 h pour l'export). Suppression refusée : le message dit pourquoi (dernier admin, conférences à transférer, abonnement). Contrôle en base : `select count(*) from users where email = '<adresse>';`.
+
+**Limites (honnêtes).** L'export est un JSON technique (noms de tables et de colonnes), pas un document mis en page ; la suppression est immédiate (pas de délai de rétractation de quelques jours) ; je n'ai pas supprimé le client chez Stripe (les factures doivent rester accessibles) ; pas de suppression depuis l'application elle-même (lien vers le site).
+
+**Testé.** Règles pures : 11 vérifications (`node api/tests/test_gdpr_lib.mjs`, y compris l'arrêt des abonnements Stripe avec un faux client). API sur base réelle (`api/tests/test_gdpr.py`) : classement des tables, export complet sans secrets ni données d'autres membres, mot de passe, double authentification, refus (dernier admin, conférences, abonnement sans Stripe), suppression en cascade (dont l'avancement de l'enfant), preuve CGV conservée sans lien, e-mail de confirmation, session coupée. Navigateur réel (ordinateur et 390 px, sans défilement horizontal) : export téléchargé et lu, bouton de suppression inactif tant que la case n'est pas cochée, suppression puis retour à l'accueil, connexion impossible ensuite. PAS testé : l'arrêt d'un vrai abonnement chez Stripe (testé avec un faux client seulement), l'e-mail de confirmation reçu dans une vraie boîte.

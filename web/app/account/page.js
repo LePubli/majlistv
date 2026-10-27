@@ -7,6 +7,7 @@ import Steps from '../../components/Steps';
 import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
 import PrayerSettings from '../../components/PrayerSettings';
+import MyData from '../../components/MyData';
 import TwoFactor from '../../components/TwoFactor';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
@@ -73,6 +74,7 @@ export default function Account() {
     { id: 'billing', label: t('tbSub') },
     { id: 'emails', label: t('tbMails') },
     { id: 'security', label: t('tbSecurity') },
+    { id: 'data', label: t('tbData') },
     ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
     ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
   ];
@@ -101,6 +103,7 @@ export default function Account() {
           <TabPanel id="billing" current={tab}><Suspense fallback={null}><Billing /></Suspense></TabPanel>
           <TabPanel id="emails" current={tab}><EmailPrefs /></TabPanel>
           <TabPanel id="security" current={tab}><TwoFactor /></TabPanel>
+          <TabPanel id="data" current={tab}><MyData /></TabPanel>
           <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
           <TabPanel id="gifts" current={tab}>
             <MyGifts />

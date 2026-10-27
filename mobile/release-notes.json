@@ -1,5 +1,5 @@
 {
-  "fr": "Double authentification : si vous l'activez sur le site (Mon compte → Sécurité), l'application demande le code de votre application d'authentification à la connexion. Affichage complet et animation du logo à l'ouverture.",
-  "en": "Two-factor authentication: if you turn it on on the website (My account → Security), the app asks for the code from your authenticator app when you sign in. Full-screen display and logo animation when opening.",
-  "ar": "المصادقة الثنائية: إذا فعّلتها على الموقع (حسابي ← الأمان)، يطلب التطبيق رمز تطبيق المصادقة عند تسجيل الدخول. عرض كامل وحركة الشعار عند الفتح."
+  "fr": "Double authentification : si vous l'activez sur le site (Mon compte → Sécurité), l'application demande le code de votre application d'authentification à la connexion. Affichage complet et animation du logo à l'ouverture. Mes données : lien vers l'export et la suppression du compte.",
+  "en": "Two-factor authentication: if you turn it on on the website (My account → Security), the app asks for the code from your authenticator app when you sign in. Full-screen display and logo animation when opening. My data: link to data export and account deletion.",
+  "ar": "المصادقة الثنائية: إذا فعّلتها على الموقع (حسابي ← الأمان)، يطلب التطبيق رمز تطبيق المصادقة عند تسجيل الدخول. عرض كامل وحركة الشعار عند الفتح. بياناتي: رابط لتصدير البيانات وحذف الحساب."
 }

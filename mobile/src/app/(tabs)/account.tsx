@@ -79,6 +79,7 @@ export default function AccountScreen() {
 
         <UpdateStatus />
 
+        {user ? <Button label={t('account.data')} variant="dark" onPress={() => Linking.openURL(`${SITE_URL}/account?tab=data`)} /> : null}
         {user ? <Button label={t('account.logout')} variant="dark" onPress={() => { void logout(); }} /> : null}
         <Txt size={12} color={colors.muted} style={{ textAlign: 'center' }}>{t('account.version', { v: Constants.expoConfig?.version ?? '' })}</Txt>
       </ScrollView>

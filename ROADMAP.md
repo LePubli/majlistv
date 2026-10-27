@@ -483,3 +483,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 35 (27/10) — Conférences 100 % référençables (transcription complète, fil d'Ariane, images du sitemap)
 - Voir README « Étape 35 ». Reste (sur « go ») : voir docs/IDEES-AMELIORATIONS.md (podcast RSS, cartes mémoire, notifications web…).
+
+## Étape 36 (27/10) — Mes données : exporter et supprimer son compte (RGPD)
+- Voir README « Étape 36 ». Reste (sur « go ») : 6.3 sauvegardes (test de restauration), podcast RSS, cartes mémoire… voir docs/IDEES-AMELIORATIONS.md.
