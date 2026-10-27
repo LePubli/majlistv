@@ -8,8 +8,8 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
 | 1.1 | ✅ (étape 35) **Pages de conférence 100 % référençables** : transcription lisible par Google, données structurées « vidéo » (déjà présentes sur séries, ouvrages, intervenants, chaînes : à étendre aux conférences — à vérifier), sitemap par langue | Trafic Google gratuit, c'est la source d'audience la moins chère | M | ★★★ |
-| 1.2 | **Partage d'un extrait** : lien « à partir de 12:34 » + carte image au bon format (WhatsApp, Instagram, X) avec titre et citation | Chaque partage amène des visiteurs ; très adapté au public | S–M | ★★★ |
-| 1.3 | **Générateur de cartes citation** (verset, hadith, extrait) en image aux couleurs Mejliss TV, à partager | Viralité, marque visible ; s'appuie sur « Citation du jour » existante | S | ★★★ |
+| 1.2 | ✅ (étape 32 ; reste l'aperçu de lien propre à chaque extrait) **Partage d'un extrait** : lien « à partir de 12:34 » + carte image au bon format (WhatsApp, Instagram, X) avec titre et citation | Chaque partage amène des visiteurs ; très adapté au public | S–M | ★★★ |
+| 1.3 | ✅ (étape 32) **Générateur de cartes citation** (verset, hadith, extrait) en image aux couleurs Mejliss TV, à partager | Viralité, marque visible ; s'appuie sur « Citation du jour » existante | S | ★★★ |
 | 1.4 | **Essai sans carte bancaire** (option Stripe) | Moins de friction à l'inscription, plus d'essais | S | ★★ |
 | 1.5 | **Parrainage** : un mois offert au parrain et au filleul | Bouche-à-oreille mesurable ; réutilise les cartes cadeaux | M | ★★ |
 | 1.6 | **Abonnement groupe / association / école** (une facture, plusieurs comptes) | Nouveau marché (mosquées, écoles, associations), revenus récurrents plus gros | L | ★★ |
@@ -57,10 +57,10 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 ## 6. Fiabilité, sécurité, exploitation
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 6.1 | **Page « Santé du serveur » dans l'admin** : espace disque, mémoire, tâches en échec, certificats, avec **alerte e-mail** au-delà de 80 % | Évite l'incident du jour (disque à 71 %) avant qu'il ne coupe le site | M | ★★★ |
-| 6.2 | **Double authentification (2FA)** pour administrateurs et organisateurs (absente aujourd'hui) | Protège les clés, les paiements et les comptes ; priorité sécurité | M | ★★★ |
+| 6.1 | ✅ (étape 29) **Page « Santé du serveur » dans l'admin** : espace disque, mémoire, tâches en échec, certificats, avec **alerte e-mail** au-delà de 80 % | Évite l'incident du jour (disque à 71 %) avant qu'il ne coupe le site | M | ★★★ |
+| 6.2 | ✅ (étape 31 ; reste l'option « obligatoire pour l'admin », abandonnée) **Double authentification (2FA)** pour administrateurs et organisateurs (absente aujourd'hui) | Protège les clés, les paiements et les comptes ; priorité sécurité | M | ★★★ |
 | 6.3 | **Sauvegardes : test de restauration régulier** et copie des données Mejliss TV hors du VPS (une sauvegarde restic nocturne existe déjà : à vérifier ce qu'elle couvre) | Savoir que la reconstruction marche, pas seulement l'espérer | S–M | ★★★ |
-| 6.4 | **Tests automatiques à chaque envoi sur GitHub** (API, site, application) | Moins de bugs en production, déploiements plus sereins | M | ★★★ |
+| 6.4 | ✅ (étape 30) **Tests automatiques à chaque envoi sur GitHub** (API, site, application) | Moins de bugs en production, déploiements plus sereins | M | ★★★ |
 | 6.5 | **Suivi des erreurs** (site, API, application) avec alerte | Je vois les bugs avant que tu ne me les signales | M | ★★ |
 | 6.6 | **Droits RGPD en libre-service** : exporter ses données, supprimer son compte (à vérifier ce qui existe) | Conformité, confiance | S–M | ★★ |
 | 6.7 | **Cache et diffusion vidéo (CDN)** pour les internautes éloignés et les pointes d'audience | Lecture plus rapide à l'étranger, VPS moins chargé | M | ★★ |
