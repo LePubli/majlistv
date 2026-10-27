@@ -480,3 +480,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 34 (27/10) — Lettre hebdomadaire personnalisée (à reprendre, intervenants suivis, révision, sélection)
 - Voir README « Étape 34 ». Reste (sur « go ») : notifications téléphone du cycle de vie, 2FA obligatoire pour l'admin ; voir docs/IDEES-AMELIORATIONS.md.
+
+## Étape 35 (27/10) — Conférences 100 % référençables (transcription complète, fil d'Ariane, images du sitemap)
+- Voir README « Étape 35 ». Reste (sur « go ») : voir docs/IDEES-AMELIORATIONS.md (podcast RSS, cartes mémoire, notifications web…).

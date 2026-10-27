@@ -10,7 +10,8 @@ import { getSetting } from '../settings.js';
 import { adultSql } from '../taxonomy.js';
 import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
-import { publicSpeakers, speakerBio } from '../speakers.js';
+import { publicSpeakers, speakerBio, speakerSlug } from '../speakers.js';
+import { paragraphs } from '../seoTranscript.js';
 import { channelImages, channelProfile } from '../channels.js';
 
 const idParam = z.object({ id: z.string().uuid() });
@@ -41,7 +42,7 @@ export default async function seoRoutes(app) {
     if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
     const series = (await ext.call('series.episodeLabels', () => new Map(), [id])).get(id) || null;
     // Chapitres et extrait de la transcription : seulement pour les conférences gratuites (jamais de contenu premium dans le HTML public).
-    let chapters = []; let excerpt = ''; let summary = '';
+    let chapters = []; let excerpt = ''; let summary = ''; let transcript = [];
     if (t.access === 'free') {
       const ins = (await pool.query(
         `SELECT summary, chapters FROM talk_insights WHERE talk_id = $1 AND status = 'ready'
@@ -51,10 +52,16 @@ export default async function seoRoutes(app) {
         chapters = (Array.isArray(ins.chapters) ? ins.chapters : []).filter((c) => Number.isFinite(c?.ms) && c?.title).slice(0, 40).map((c) => ({ ms: c.ms, title: clip(c.title, 140) }));
       }
       excerpt = clip((await pool.query('SELECT left(coalesce(transcript_text, \'\'), 1500) AS x FROM talks WHERE id = $1', [id])).rows[0]?.x, 1200);
+      // Transcription complète (langue d'origine de la conférence, sinon la première disponible), en paragraphes horodatés.
+      const segs = (await pool.query(
+        `SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1
+            AND lang = COALESCE((SELECT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY (lang = $2) DESC, lang LIMIT 1), $2)
+          ORDER BY idx LIMIT 6000`, [id, t.language || 'fr'])).rows;
+      transcript = paragraphs(segs);
     }
     reply.header('cache-control', 'public, max-age=60');
     return {
-      id: t.id, slug: await ensureSlug('talks', id), summary, chapters, excerpt, title: t.title, description: clip(t.description, 5000), speaker: t.speaker, language: t.language, access: t.access,
+      id: t.id, slug: await ensureSlug('talks', id), summary, chapters, excerpt, transcript, speakerSlug: t.speaker ? speakerSlug(t.speaker) : null, title: t.title, description: clip(t.description, 5000), speaker: t.speaker, language: t.language, access: t.access,
       category: t.category, durationSeconds: t.durationSeconds, publishedAt: t.publishedAt,
       embed: t.source === 'youtube' ? { kind: 'youtube', ref: t.video_ref } : t.source === 'vimeo' ? { kind: 'vimeo', ref: t.video_ref } : t.source === 'dailymotion' ? { kind: 'dailymotion', ref: t.video_ref } : null,
       posterPath: t.hasPoster ? posterPath('talks', id) : null, series,
@@ -153,7 +160,7 @@ export default async function seoRoutes(app) {
   app.get('/seo/sitemap', async (req, reply) => {
     await ensureAllSlugs('talks'); await ensureAllSlugs('series');
     const talks = (await pool.query(
-      `SELECT t.id, t.slug, COALESCE(t.publish_at, t.created_at) AS "lastmod" FROM talks t
+      `SELECT t.id, t.slug, COALESCE(t.publish_at, t.created_at) AS "lastmod", (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS "hasPoster" FROM talks t
         WHERE t.video_status = 'ready' AND ${visibleSql('t')} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT 5000`)).rows;
     const series = (await ext.call('series.list', [], { limit: 5000 })).map((s) => s.id);
     const lastmods = (await pool.query('SELECT id, slug, updated_at FROM series WHERE id = ANY($1)', [series])).rows;

@@ -7,7 +7,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 ## 1. Croissance : faire venir et convertir
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 1.1 | **Pages de conférence 100 % référençables** : transcription lisible par Google, données structurées « vidéo » (déjà présentes sur séries, ouvrages, intervenants, chaînes : à étendre aux conférences — à vérifier), sitemap par langue | Trafic Google gratuit, c'est la source d'audience la moins chère | M | ★★★ |
+| 1.1 | ✅ (étape 35) **Pages de conférence 100 % référençables** : transcription lisible par Google, données structurées « vidéo » (déjà présentes sur séries, ouvrages, intervenants, chaînes : à étendre aux conférences — à vérifier), sitemap par langue | Trafic Google gratuit, c'est la source d'audience la moins chère | M | ★★★ |
 | 1.2 | **Partage d'un extrait** : lien « à partir de 12:34 » + carte image au bon format (WhatsApp, Instagram, X) avec titre et citation | Chaque partage amène des visiteurs ; très adapté au public | S–M | ★★★ |
 | 1.3 | **Générateur de cartes citation** (verset, hadith, extrait) en image aux couleurs Mejliss TV, à partager | Viralité, marque visible ; s'appuie sur « Citation du jour » existante | S | ★★★ |
 | 1.4 | **Essai sans carte bancaire** (option Stripe) | Moins de friction à l'inscription, plus d'essais | S | ★★ |

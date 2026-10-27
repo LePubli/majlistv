@@ -47,3 +47,4 @@ test_health.py
 test_two_factor.py
 test_lifecycle.py
 test_weekly_letter.py
+test_seo_talk.py

@@ -6021,3 +6021,29 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** Pas de test d'envoi manuel depuis l'admin pour cette lettre (le premier envoi réel a lieu au jour réglé : pour l'essayer plus tôt, mettre temporairement le jour d'envoi sur aujourd'hui et l'heure sur 0, avec un seul compte de test qui a coché la case) ; la notification téléphone reste celle de la sélection simple ; pas de suivi d'ouvertures.
 
 **Testé.** Règles pures et rendu des 3 langues : 25 vérifications (`node api/tests/test_weeklyletter_lib.mjs`). Sur base réelle (`api/tests/test_weekly_letter.py`, qui lance le vrai passage hebdomadaire) : lettre personnelle avec ses trois sections, sélection simple sans personnel, un seul envoi par semaine, interrupteur, membre non inscrit. PAS testé : envoi vers une vraie boîte, rendu dans Gmail/Outlook.
+
+
+## Étape 35 — Conférences 100 % référençables (27/10)
+
+**Description.** Ce qui existait déjà sur chaque page de conférence : titre et description pour Google, vignette, données structurées « vidéo » (VideoObject), chapitres, résumé et un extrait de 1 200 caractères. **Ajouts :** (1) la **transcription complète**, découpée en paragraphes horodatés dont chaque heure est un lien `?t=` vers le passage, dans le HTML de la page (section « Résumé, chapitres et transcription ») ; (2) la transcription aussi dans les données structurées (propriété `transcript`, 8 000 caractères) ; (3) un **fil d'Ariane** structuré (site › intervenant › conférence) ; (4) l'**intervenant relié à sa page** (`creator.url`) et la catégorie (`genre`, `keywords`) ; (5) la **miniature de chaque conférence dans le sitemap** (balise image). Pour les conférences **premium**, rien ne change : aucun texte de transcription n'est exposé publiquement (titre, description, durée et miniature seulement). Brouillons et publications programmées restent invisibles.
+
+**Détails.** La transcription est celle de la langue d'origine de la conférence (jamais mélangée aux traductions), 60 000 caractères au plus (une conférence d'environ une heure et demie). Un paragraphe se ferme à 700 caractères, à 60 secondes ou après une pause de 2,5 secondes. Pas de changement visible pour les membres : le bloc reste replié (« Résumé, chapitres et transcription »).
+
+**Fichiers.** `api/src/seoTranscript.js` (regroupement en paragraphes), `api/src/routes/seo.js` (`/seo/talks/:id` : `transcript`, `speakerSlug` ; `/seo/sitemap` : `hasPoster`), `web/lib/talkPage.js` (HTML + JSON-LD + fil d'Ariane), `web/app/sitemap.js` (images). Aucune migration, aucune variable.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** puis **majlistv-web**. Sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis, **une fois**, dans Google Search Console (propriété `majlisstv.le-publicitaire.fr`) : Sitemaps → ajouter `https://majlisstv.le-publicitaire.fr/sitemap.xml` (s'il n'y est pas déjà). Le référencement n'est pas immédiat : compter plusieurs semaines.
+
+**Vérifier.** (1) Ouvrir une conférence gratuite, clic droit › « Afficher le code source de la page », chercher « Transcription » : le texte est là. (2) Test Google des résultats enrichis : https://search.google.com/test/rich-results → coller l'adresse d'une conférence gratuite : « Vidéo » et « Fil d'Ariane » détectés. (3) `https://majlisstv.le-publicitaire.fr/sitemap.xml` contient des lignes `<image:loc>`.
+
+**Debug.** Pas de transcription dans la page : la conférence est premium, la transcription n'est pas encore faite (Studio → conférence) ou la page vient d'être mise en cache (l'API met 60 s en cache). Sitemap sans images : conférences sans vignette. Contrôle direct : `curl -s https://api-majlisstv.le-publicitaire.fr/seo/talks/<identifiant> | head -c 600`.
+
+**Limites (honnêtes).** Je ne peux pas mesurer le gain Google (il dépend de l'indexation, dans le temps) ; pas de pages séparées pour les traductions (le site n'a pas d'adresse par langue : le texte indexé est celui de la langue d'origine) ; le sitemap n'a pas de balise « vidéo » (la lecture se fait chez YouTube/Vimeo ou derrière l'abonnement) ; pour les conférences premium on n'expose volontairement rien du contenu.
+
+**Testé.** Regroupement en paragraphes : 8 vérifications (`node api/tests/test_seo_transcript.mjs`). API sur base réelle (`api/tests/test_seo_talk.py`) : transcription gratuite en paragraphes horodatés, langue d'origine uniquement, intervenant, premium sans transcription, brouillon introuvable, sitemap avec miniature. Site compilé et servi : page d'une conférence avec transcription dans le HTML, VideoObject (`creator.url`, `transcript`) et fil d'Ariane lus dans la page, sitemap avec balises image. PAS testé : l'indexation réelle par Google.

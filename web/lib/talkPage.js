@@ -46,21 +46,34 @@ export function TalkView({ t, routeId }) {
       url: talkUrl(base, t),
       isAccessibleForFree: t.access === 'free',
       ...(t.access === 'premium' ? { hasPart: { '@type': 'WebPageElement', isAccessibleForFree: false, cssSelector: '.player-wrap' } } : {}),
-      ...(t.speaker ? { creator: { '@type': 'Person', name: t.speaker } } : {}),
+      ...(t.speaker ? { creator: { '@type': 'Person', name: t.speaker, ...(t.speakerSlug ? { url: `${base}/intervenants/${t.speakerSlug}` } : {}) } } : {}),
+      ...(t.category ? { genre: t.category, keywords: t.category } : {}),
+      ...(t.transcript?.length ? { transcript: clip(t.transcript.map((p) => p.text).join(' '), 8000) } : {}),
       ...(t.series ? { isPartOf: { '@type': 'CreativeWorkSeries', name: t.series.title, url: `${base}/series/${t.series.slug || t.series.id}` } } : {}),
       ...(t.chapters?.length ? { hasPart: t.chapters.map((c) => ({ '@type': 'Clip', name: c.title, startOffset: Math.floor(c.ms / 1000), url: `${talkUrl(base, t)}?t=${Math.floor(c.ms / 1000)}` })) } : {}),
       publisher: { '@type': 'Organization', name: t.site.appName, url: base },
     };
   }
-  const more = t && (t.chapters?.length || t.excerpt || t.summary);
+  // Fil d'ariane : Accueil › (Intervenant) › Conférence.
+  const crumbs = t && {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t.site.appName, item: t.site.baseUrl },
+      ...(t.speaker && t.speakerSlug ? [{ '@type': 'ListItem', position: 2, name: t.speaker, item: `${t.site.baseUrl}/intervenants/${t.speakerSlug}` }] : []),
+      { '@type': 'ListItem', position: t.speaker && t.speakerSlug ? 3 : 2, name: t.title, item: talkUrl(t.site.baseUrl, t) },
+    ],
+  };
+  const more = t && (t.chapters?.length || t.excerpt || t.summary || t.transcript?.length);
   return (
     <>
       {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
+      {crumbs && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(crumbs)} />}
       {/* Chapitres et extrait (HTML lisible par les moteurs de recherche) : affichés par TalkClient AU-DESSUS de « À suivre » (demande d'Epok du 20/10). */}
       <TalkClient talkId={t?.id || routeId} initial={t ? { title: t.title, speaker: t.speaker, category: t.category, description: t.description } : null}
         extra={more ? (
           <details className="seo-extra">
-            <summary>{t.chapters?.length ? 'Chapitres et extrait' : 'Résumé et extrait'}</summary>
+            <summary>{t.transcript?.length ? 'Résumé, chapitres et transcription' : t.chapters?.length ? 'Chapitres et extrait' : 'Résumé et extrait'}</summary>
             {t.summary && <p>{t.summary}</p>}
             {t.chapters?.length > 0 && (
               <>
@@ -68,7 +81,14 @@ export function TalkView({ t, routeId }) {
                 <ol>{t.chapters.map((c) => <li key={c.ms}><a href={`/conferences/${t.slug}?t=${Math.floor(c.ms / 1000)}`}>{stamp(c.ms)}</a> {c.title}</li>)}</ol>
               </>
             )}
-            {t.excerpt && <><h2>Extrait de la transcription</h2><p lang={t.language || undefined}>{t.excerpt}</p></>}
+            {t.transcript?.length > 0
+              ? (
+                <>
+                  <h2>Transcription</h2>
+                  {t.transcript.map((p) => <p key={p.ms} lang={t.language || undefined}><a href={`/conferences/${t.slug}?t=${Math.floor(p.ms / 1000)}`}>{stamp(p.ms)}</a> {p.text}</p>)}
+                </>
+              )
+              : t.excerpt && <><h2>Extrait de la transcription</h2><p lang={t.language || undefined}>{t.excerpt}</p></>}
           </details>
         ) : null} />
     </>
