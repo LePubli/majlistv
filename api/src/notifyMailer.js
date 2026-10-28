@@ -14,7 +14,7 @@ import { HAS_ACCESS } from './lifecycle.js';
 import { visibleSql } from './visibility.js';
 import { adultSql } from './taxonomy.js';
 import { parisHour } from './revision.js';
-import { pushConfigured, pushToUser } from './push.js';
+import { anyPushChannel, pushToUser } from './push.js';
 
 const TZ = 'Europe/Paris';
 const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adultSql(t)}`;
@@ -25,7 +25,7 @@ const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.
 // --- 1. Intervenants suivis
 export async function runSpeakers(log) {
   if (!isOn(await getSetting('notify_speakers_enabled')) || !(await featureOn('follow'))) return 0;
-  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  const mailOn = Boolean(await smtpConf()), pushOn = await anyPushChannel();
   if (!mailOn && !pushOn) return 0;
   const talks = (await pool.query(
     `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, t.language, ${POSTER('t')} FROM talks t
@@ -116,7 +116,7 @@ export async function personalLetter(userId, ctx) {
 
 export async function runWeekly(log) {
   if (!isOn(await getSetting('weekly_enabled'))) return 0;
-  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  const mailOn = Boolean(await smtpConf()), pushOn = await anyPushChannel();
   if (!mailOn && !pushOn) return 0;
   const now = (await pool.query(
     `SELECT extract(isodow FROM now() AT TIME ZONE '${TZ}')::int AS dow, to_char(date_trunc('week', now() AT TIME ZONE '${TZ}'), 'YYYY-MM-DD') AS wk`)).rows[0];

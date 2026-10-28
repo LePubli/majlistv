@@ -4,6 +4,8 @@
 import { createSign } from 'node:crypto';
 import { pool } from './db.js';
 import { getSetting } from './settings.js';
+import { featureOn } from './features.js';
+import { webPushToUser, anyWebSubscription } from './webPush.js';
 
 const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 const API_BASE = () => process.env.FCM_API_BASE || 'https://fcm.googleapis.com'; // surchargé uniquement par les tests
@@ -23,6 +25,11 @@ export function parseServiceAccount(raw) {
 
 export async function pushConf() { return parseServiceAccount(await getSetting('fcm_service_account')); }
 export async function pushConfigured() { return Boolean(await pushConf()); }
+// Étape 40 : y a-t-il au moins un canal de notification (téléphone via Firebase OU navigateur via Web Push) ?
+export async function anyPushChannel() {
+  if (await pushConfigured()) return true;
+  try { return (await featureOn('webpush')) && (await anyWebSubscription()); } catch { return false; }
+}
 
 const b64u = (b) => Buffer.from(b).toString('base64url');
 
@@ -88,24 +95,29 @@ export const pushText = (kind, locale, vars) => TEXTS[kind][LANG(locale)](vars);
 // Envoie une notification à tous les téléphones d'un compte (si l'interrupteur « notifications sur le téléphone » est actif).
 // Renvoie le nombre d'appareils atteints. Ne lève jamais : un échec d'envoi ne doit pas bloquer les boucles d'e-mails.
 export async function pushToUser(userId, kind, vars, path, log) {
+  let sent = 0;
   try {
+    const on = (await pool.query('SELECT notify_push FROM users WHERE id = $1', [userId])).rows[0]?.notify_push;
+    if (!on) return 0;
     const conf = await pushConf();
-    if (!conf) return 0;
-    const { rows } = await pool.query(
-      `SELECT d.token, u.locale FROM device_tokens d JOIN users u ON u.id = d.user_id WHERE d.user_id = $1 AND u.notify_push`, [userId]);
-    let sent = 0;
-    for (const d of rows) {
-      try {
-        const msg = pushText(kind, d.locale, vars);
-        const r = await sendToDevice(conf, d.token, { ...msg, path, kind });
-        if (r === 'ok') sent += 1;
-        else await pool.query('DELETE FROM device_tokens WHERE token = $1', [d.token]);
-      } catch (err) { log?.warn?.(`Notification (${userId}) : ${err.message}`); }
+    if (conf) {
+      const { rows } = await pool.query(
+        `SELECT d.token, u.locale FROM device_tokens d JOIN users u ON u.id = d.user_id WHERE d.user_id = $1`, [userId]);
+      for (const d of rows) {
+        try {
+          const msg = pushText(kind, d.locale, vars);
+          const r = await sendToDevice(conf, d.token, { ...msg, path, kind });
+          if (r === 'ok') sent += 1;
+          else await pool.query('DELETE FROM device_tokens WHERE token = $1', [d.token]);
+        } catch (err) { log?.warn?.(`Notification (${userId}) : ${err.message}`); }
+      }
     }
+    // Navigateurs (étape 40) : mêmes textes, même interrupteur « notifications » du compte.
+    if (await featureOn('webpush')) sent += await webPushToUser(userId, (loc) => pushText(kind, loc, vars), path, kind, log);
     return sent;
   } catch (err) {
     log?.warn?.(`Notification (${userId}) : ${err.message}`);
-    return 0;
+    return sent;
   }
 }
 

@@ -70,7 +70,7 @@ ok(r.status_code == 400 and r.json()["code"] == "theme", "thème d'une autre lis
 ok(requests.post(S + "/goals", headers=A, json={"nature": "defect", "themeId": "D99"}).status_code == 400 and requests.post(S + "/goals", headers=A, json={"nature": "defect", "themeId": "X1"}).status_code == 400, "thème inconnu refusé")
 g3 = requests.post(S + "/goals", headers=A, json={"nature": "defect", "themeId": "D4"}).json()
 ok(g3["title"] == "La colère" and g3["themeId"] == "D4", "objectif créé depuis un thème : intitulé repris")
-cur.execute("select theme_enc from self_goals where id=%s", (g3["id"],)); ok("D4" not in cur.fetchone()[0], "le code du thème est chiffré aussi (il révélerait le défaut)")
+cur.execute("select theme_enc from self_goals where id=%s", (g3["id"],)); enc = cur.fetchone()[0]; ok(enc != "D4" and len(enc) > 20, "le code du thème est chiffré aussi (il révélerait le défaut)")  # « D4 » peut apparaître par hasard dans du base64 : on ne teste pas la sous-chaîne
 setting("practice_themes_on", "false")
 
 # --- bilan de la semaine

@@ -5,7 +5,7 @@ import { pool } from './db.js';
 import { getSetting, isOn } from './settings.js';
 import { featureOn } from './features.js';
 import { enqueueForUser, smtpConf } from './mailer.js';
-import { pushConfigured, pushToUser } from './push.js';
+import { anyPushChannel, pushToUser } from './push.js';
 import { dueTalks, reminderOfTheDay, parisHour, todayParis } from './revision.js';
 
 const LOCALE_LANG = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
@@ -40,7 +40,7 @@ async function sendFor(userId, today, mailOn = true, pushOn = false) {
 
 export async function runDaily(log) {
   if (!isOn(await getSetting('revision_email_enabled')) || !(await featureOn('revision'))) return 0;
-  const mailOn = Boolean(await smtpConf()), pushOn = await pushConfigured();
+  const mailOn = Boolean(await smtpConf()), pushOn = await anyPushChannel();
   if (!mailOn && !pushOn) return 0; // aucun canal configuré : rien n'est mis en file
   const hour = Number(await getSetting('revision_email_hour'));
   if ((await parisHour()) < (Number.isFinite(hour) ? hour : 8)) return 0;

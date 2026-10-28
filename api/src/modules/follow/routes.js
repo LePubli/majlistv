@@ -9,7 +9,7 @@ import { pool } from '../../db.js';
 import { getSetting, isOn } from '../../settings.js';
 import { publicSpeakers } from '../../speakers.js';
 import { CATEGORIES, parseUnsubToken } from '../../unsubscribe.js';
-import { pushConfigured } from '../../push.js';
+import { anyPushChannel } from '../../push.js';
 
 export const MAX_FOLLOWS = 100;
 const slugParam = z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) });
@@ -23,7 +23,7 @@ export default async function notificationsRoutes(app) {
          FROM speaker_follows f LEFT JOIN speakers c ON c.slug = f.speaker_slug WHERE f.user_id = $1 ORDER BY 2`, [req.user.sub])).rows; // nom actuel de la chaîne
     return {
       prefs: { speakers: u.notify_speakers, weekly: u.notify_weekly, push: u.notify_push, lifecycle: u.notify_lifecycle },
-      available: { speakers: isOn(await getSetting('notify_speakers_enabled')), weekly: isOn(await getSetting('weekly_enabled')), push: await pushConfigured(), lifecycle: isOn(await getSetting('lifecycle_enabled')) },
+      available: { speakers: isOn(await getSetting('notify_speakers_enabled')), weekly: isOn(await getSetting('weekly_enabled')), push: await anyPushChannel(), lifecycle: isOn(await getSetting('lifecycle_enabled')) },
       devices,
       follows, maxFollows: MAX_FOLLOWS,
     };

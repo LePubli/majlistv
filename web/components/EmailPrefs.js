@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import WebPushToggle from './WebPushToggle';
 
 export default function EmailPrefs() {
   const { t, call } = useApp();
@@ -35,6 +36,7 @@ export default function EmailPrefs() {
         <span>{t('nfLife')}</span>
       </label>
       <p className="meta small" role="status" aria-live="polite">{saved ? `✓ ${t('nfSaved')}` : ' '}</p>
+      <WebPushToggle />
       <h3>{t('nfFollows')}</h3>
       {d.follows.length === 0 ? (
         <p className="meta">{t('nfNoFollow')} <Link className="link u" href="/chaines">{t('nfBrowse')}</Link></p>

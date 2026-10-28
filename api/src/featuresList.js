@@ -62,6 +62,8 @@ export const FEATURES = [
   { id: 'citations', group: 'community', label: 'Citation du jour', hint: 'Verset ou hadith affiché sur l\'accueil',
     rules: [{ re: '^/citation/today$' }] },
   // Étape 22a : site installable (manifeste, service worker, page « Télécharger l'application »). Partie web seulement : aucune route d'API.
+  { id: 'webpush', group: 'comms', label: 'Notifications dans le navigateur', hint: 'Les membres peuvent recevoir les notifications (nouveautés, sélection de la semaine, révision) directement dans leur navigateur ou le site installé',
+    rules: [{ re: '^/(web-push|me/web-push)(/|$)' }] },
   { id: 'app_install', group: 'access', label: 'Application installable', hint: 'Icône sur l’écran d’accueil, plein écran, page hors connexion, page « Télécharger l’application »' },
   { id: 'prayer', group: 'community', label: 'Prière : pause et horaires', hint: 'Pastille « Prochaine prière » dans l\'en-tête, pause de la lecture à l\'heure de la prière (blocage souple de 10 minutes), horaires calculés par le site selon l\'endroit où se trouve la personne',
     rules: [{ re: '^/me/prayer(/|$)' }] },

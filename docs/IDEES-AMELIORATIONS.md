@@ -20,7 +20,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 ## 2. Engagement : les faire revenir
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 2.1 | **Notifications web (navigateur / site installé)** — absentes aujourd'hui sur le site (existent dans l'application) | Rappel des nouveautés et de la révision sans e-mail | M | ★★★ |
+| 2.1 | ✅ (étape 40 ; à valider sur vrais appareils) **Notifications web (navigateur / site installé)** — absentes aujourd'hui sur le site (existent dans l'application) | Rappel des nouveautés et de la révision sans e-mail | M | ★★★ |
 | 2.2 | ✅ (étape 34) **Lettre hebdomadaire automatique** « Cette semaine sur Mejliss TV » personnalisée (nouveautés des chaînes suivies, à réviser) | Retour régulier, canal qui t'appartient | M | ★★★ |
 | 2.3 | **Séries de jours, objectifs de la semaine et badges** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
 | 2.4 | **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |

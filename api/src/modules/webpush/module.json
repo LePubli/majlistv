@@ -1,0 +1,9 @@
+{
+  "id": "webpush",
+  "name": "Notifications dans le navigateur",
+  "version": "1.0.0",
+  "description": "Web Push (VAPID) : notifications sur ordinateur, téléphone (navigateur) et site installé, pour les mêmes événements que l'application.",
+  "feature": "webpush",
+  "requires": ["follow"],
+  "settings": []
+}

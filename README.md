@@ -6164,3 +6164,33 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** Ne couvre pas l'application mobile ni les services annexes (worker, transcripteur, traducteur, doublage : leurs erreurs restent dans les journaux Docker) ; ni les plantages complets du processus API (arrêt brutal) ni les erreurs de l'API qui ne passent pas par le gestionnaire (rare) ; le contenu de la trace est celui du code compilé du site (lignes peu lisibles, mais le message et la page suffisent en général). Les erreurs 4xx (refus normaux) ne sont pas suivies. À mentionner dans la page « Confidentialité » (pages légales, à la fin) : journal technique d'erreurs sans donnée personnelle, conservé 30 à 90 jours.
 
 **Testé.** Règles pures : 24 vérifications (`node api/tests/test_errors_lib.mjs`) et 5 côté site. API sur base réelle (`api/tests/test_errors.py`, 31 contrôles : droits, regroupement, masquage, bruit, vraie erreur serveur provoquée, 4xx ignorés, états, alertes nouvelle/revenue/ignorée/coupée, limites) et nettoyage (`test_errors_purge.mjs`). Navigateur réel : une vraie exception JavaScript lancée dans la page est arrivée dans Admin → Erreurs (ordinateur et 390 px, sans débordement). **PAS testé** : la page d'erreur de rendu (`error.js`) déclenchée par un vrai plantage de composant ; l'envoi d'un vrai e-mail d'alerte.
+
+## Étape 40 — Notifications dans le navigateur (Web Push) (28/10)
+
+**Description.** Les notifications existaient seulement dans l'application mobile. Maintenant, un membre peut aussi les recevoir **sur le site** (ordinateur, téléphone, site installé), même quand le site est fermé :
+- **Mon compte → Mes e-mails → « Notifications dans le navigateur »** : bouton « Activer sur cet appareil » (le navigateur demande l'autorisation), « Envoyer un test », « Désactiver ». Le choix est propre à chaque appareil (10 appareils au plus par compte).
+- Mêmes événements et mêmes textes (FR / EN / AR) que dans l'application : nouvelles conférences des intervenants suivis, sélection de la semaine, révision du jour. Un clic sur la notification ouvre la bonne page.
+- Même interrupteur général « notifications » du compte que l'application (activer sur un appareil le remet à « oui »). Ces envois suivent les mêmes réglages qu'avant (Admin → Paramètres : alertes d'intervenants, sélection hebdo, révision).
+- **Rien à configurer** : les clés d'identification du site (standard VAPID) sont créées automatiquement au premier besoin et gardées en base (clé privée chiffrée par SETTINGS_KEY). Aucun compte Google/Firebase nécessaire pour le navigateur. Fonction coupable dans Admin → Fonctions → Communication → « Notifications dans le navigateur ».
+- **iPhone / iPad** : Apple n'autorise les notifications que pour un site **ajouté à l'écran d'accueil** et ouvert depuis son icône ; le site l'explique au membre.
+- **Sécurité** : seules les adresses de vrais services de navigateurs sont acceptées (Chrome/Edge, Firefox, Safari, Windows ; https uniquement) — le serveur ne peut pas être détourné vers une adresse interne. Abonnements périmés (404/410) supprimés automatiquement.
+
+**Prérequis.** Site en https (déjà le cas). SETTINGS_KEY définie (déjà le cas). Aucune nouvelle variable.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 072 ; nouvelle dépendance `web-push`, installée au build) puis **majlistv-web**. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** Sur le site connecté : Mon compte → Mes e-mails → « Activer sur cet appareil » → autoriser → « Envoyer un test » : une notification « Mejliss TV — Test réussi » s'affiche. Pour une vraie notification : suivre un intervenant, puis publier une de ses conférences (ou attendre la sélection de la semaine / la révision du jour).
+
+**Debug.** Le bouton n'apparaît pas : fonction coupée (Admin → Fonctions). « Bloquées dans votre navigateur » : le membre doit les autoriser dans les réglages du site (icône à gauche de l'adresse). Test sans effet : l'abonnement est périmé, désactiver puis réactiver. Côté serveur : `docker logs dockpanel-git-majlistv-api 2>&1 | grep "Web Push"`. Table `web_push_subscriptions` (un abonnement par navigateur), `web_push_keys` (clés du site : ne jamais supprimer sans raison, tous les abonnements deviendraient invalides).
+
+**Fichiers.** `api/migrations/072_web_push.sql`, `api/src/webPushLib.js` (règles pures), `api/src/webPush.js` (clés, envoi), `api/src/push.js` (`pushToUser` envoie aussi aux navigateurs ; `anyPushChannel`), `api/src/modules/webpush/*` (routes `/web-push/key`, `/me/web-push`, `/me/web-push/test`), `api/src/featuresList.js`, `web/public/push-sw.js` (service worker dédié, portée `/push-scope/`, indépendant de `sw.js`), `web/lib/webPush.js`, `web/components/WebPushToggle.js`, `EmailPrefs.js`, i18n `wp*`.
+
+**Limites (honnêtes).** Pas testé sur de vrais navigateurs Chrome/Firefox/Safari/iPhone avec un vrai service Google/Apple (impossible depuis ici) : l'envoi chiffré a été vérifié contre un faux service local, l'interface avec une simulation des deux appels du navigateur. **À essayer par Epok sur son ordinateur et son téléphone.** Pas de notification pour les événements autres que ceux de l'application (pas d'alerte « paiement » etc.). Les navigateurs peuvent couper les notifications d'un site non utilisé depuis longtemps. Les membres ayant coupé « notifications » dans l'application ne reçoivent rien non plus sur le site (même interrupteur).
+
+**Testé.** Règles pures : 22 vérifications (`node api/tests/test_webpush_lib.mjs`) et 9 côté site. Envoi réel (chiffrement aes128gcm + signature VAPID) vers un faux service HTTPS local, base réelle (`api/tests/test_webpush_send.mjs`, 11 contrôles : clés auto-créées et chiffrées, un envoi par navigateur, interrupteur du compte, 410 supprime, 500 garde, fonction coupée). API (`api/tests/test_webpush.py`, 30 contrôles : droits, adresses refusées, doublons, changement de compte, plafond, retrait, essai, fonction coupée). Navigateur réel (Chromium) : bloc affiché, état « bloquées », activation / test / désactivation avec simulation de l'abonnement, pas de débordement à 1280 et 390 px.

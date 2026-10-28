@@ -3950,3 +3950,7 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .mc-free { display: grid; gap: 6px; justify-items: start; }
 @media (max-width: 520px) { .mc-stats { grid-template-columns: repeat(2, 1fr); } .mc-card { padding: 16px; } }
 .mc-actions .btn { scroll-margin-bottom: 110px; }
+
+/* Étape 40 — notifications dans le navigateur */
+.wp-box { margin-top: 22px; padding-top: 6px; border-top: 1px solid var(--line, #2A2116); }
+.wp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
