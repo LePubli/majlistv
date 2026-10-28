@@ -119,6 +119,12 @@ export default async function dashboardRoutes(app) {
     const search = { enabled: Boolean(await meiliConf()), ...searchStatus() };
     if (search.enabled && search.lastError) add('search_error', 1, `Recherche : ${search.lastError}`, '/admin?tab=settings', 'error');
 
+    // Étape 41B : réponses de l'assistant signalées par des membres, pas encore traitées (la table n'existe pas si le module est retiré).
+    try {
+      const rep = (await pool.query('SELECT count(*)::int AS n FROM ask_log WHERE reported_at IS NOT NULL AND reviewed_at IS NULL')).rows[0].n;
+      add('ask_reported', rep, "réponse(s) de l'assistant signalée(s) par des membres", '/admin?tab=ask');
+    } catch { /* module « Questions sur la conférence » absent */ }
+
     // --- Santé des services : déduite des files d'attente et de tests rapides (le worker, etc. n'exposent pas d'adresse à l'API) ---
     const health = [];
     let dbOk = true;

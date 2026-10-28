@@ -6226,3 +6226,31 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** **Jamais testé avec le vrai Claude ni le vrai DeepSeek** : les appels ont été vérifiés contre un faux serveur local (format de la requête, outil forcé / JSON, jetons) ; la qualité réelle des réponses (pertinence, fidélité aux passages, détection des questions religieuses) reste à juger par Epok sur de vraies conférences, avec le modèle choisi. Le contrôle serveur garantit qu'une réponse cite un passage existant, **pas que la réponse en soit une fidèle synthèse** : c'est pourquoi le passage est toujours affiché. L'assistant lit la transcription automatique : ses erreurs (noms, termes arabes) se retrouvent dans les réponses. Pas encore : historique conservé entre deux visites, signalement d'une réponse, modération par l'équipe, version application mobile, coût affiché dans l'admin → étape 41B. Les questions de suivi ne tiennent pas compte de la précédente (chaque question est indépendante).
 
 **Testé.** Règles pures : 30 vérifications (`node api/tests/test_ask_lib.mjs`) et 6 côté site. API réelle + faux Claude et faux DeepSeek (`api/tests/test_ask.py`, 46 contrôles, dont le choix du moteur : palier, droits, transcription absente, réponse sourcée, refus fixes, réponse sans source refusée, plafonds membre et global, échec non décompté, contexte borné, langue arabe, fonction coupée, nettoyage 90 jours, suppression de compte). Navigateur réel (Chromium, faux Claude) : onglet, question, réponse avec passage, refus religieux, bureau et 390 px sans débordement ; pas testé en navigateur : le clic « Revoir à », l'état « palier requis », l'arabe RTL.
+
+## Étape 41B — Assistant de conférence : historique, signalement, modération, coût (28/10)
+
+**Description.** Suite de l'étape 41A :
+- **Historique** : le membre retrouve, dans l'onglet « Poser une question », ses 30 derniers échanges sur cette conférence (conservés 90 jours, réglable). Il peut **supprimer** un échange.
+- **Signalement** : sous chaque réponse, « ⚑ Signaler cette réponse » (motif facultatif). Le signalement part à l'équipe.
+- **Admin → Questions IA** (menu Pilotage) : file **« À traiter (signalées) »** avec la question, la réponse, les passages cités, le motif, le membre et la conférence ; boutons **« Marquer comme traitée »** (la réponse sort de la file ; un nouveau signalement l'y remet) et **« Supprimer l'échange »**. Filtres Refus / Réponses / Tout. Le tableau de bord admin ajoute une ligne **« À traiter : N réponse(s) de l'assistant signalée(s) »**. Les actions de l'équipe sont inscrites au journal d'audit habituel.
+- **Coût** (même écran) : questions, réponses et refus du jour / des 7 / 30 derniers jours, **jetons envoyés et reçus**, répartition par modèle, conférences les plus questionnées, moteur en service et plafonds. Pas de prix en euros : il dépend du modèle et de ton contrat (jetons × tarif de ton fournisseur).
+
+**Prérequis.** Étape 41A déployée.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 074) puis **majlistv-web**. Puis :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** Poser une question, recharger la page : l'échange est toujours là. « Signaler cette réponse » avec un motif ; ouvrir Admin → Questions IA : la réponse est dans « À traiter » (et sur le tableau de bord) ; « Marquer comme traitée » la retire. Regarder les volumes et les jetons en haut de l'écran.
+
+**Debug.** « Cette fonction est coupée » dans l'écran : Admin → Fonctions → « Questions sur la conférence » est désactivée. Écran vide alors que des questions ont été posées : le nettoyage supprime après la durée de conservation (Paramètres). Les routes `GET /admin/ask`, `GET /admin/ask/stats`, `PUT /admin/ask/:id/review` ; membre : `GET /talks/:id/ask/history`, `POST /talks/:id/ask/:qid/report`, `DELETE /talks/:id/ask/:qid`.
+
+**Fichiers.** `api/migrations/074_ask_reports.sql`, `api/src/modules/ask/routes.js`, `api/src/routes/dashboard.js` (ligne « À traiter »), `api/src/featuresList.js`, `web/components/AskAdmin.js`, `web/components/AskPanel.js` (historique, signalement, suppression), `web/lib/ask.js`, `AdminShell.js`, `app/admin/page.js`, i18n `ask*` / `admAsk`.
+
+**Limites (honnêtes).** **Pas de version pour l'application mobile** (l'assistant n'existe que sur le site) : non faite faute de pouvoir la tester sur un téléphone, à décider à part. Le signalement n'avertit pas par e-mail (la file est dans l'admin et sur le tableau de bord). Le panneau admin est en français seulement, comme les autres écrans d'administration. La suppression d'un échange par l'équipe est définitive et le membre n'en est pas informé. Même réserve qu'en 41A : jamais testé avec le vrai Claude / DeepSeek.
+
+**Testé.** API réelle + faux Claude (`api/tests/test_ask.py`, 67 contrôles au total dont 21 nouveaux : historique propre à chaque membre, signalement de ses seules réponses, file admin, filtres, traité / re-signalé, suppression, statistiques, ligne du tableau de bord, droits, fonction coupée). Site : 8 vérifications (`web/tests/test_ask_web.mjs`). Navigateur réel (Chromium) : historique après rechargement, signalement, écran Admin → Questions IA et « Marquer comme traitée », sur bureau et 390 px sans débordement ; pas testé : l'arabe RTL, la suppression par le membre en navigateur.

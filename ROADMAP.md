@@ -501,3 +501,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 41A (28/10) — Assistant « Poser une question sur cette conférence »
 - Voir README « Étape 41A ». Étape 41B à venir sur « go » : historique, signalement et modération, coût dans l'admin, application mobile. Pages légales à la fin (y inclure la mention Anthropic / durée de conservation des questions). Les manipulations VPS de l'étape 37 attendent Epok.
+
+## Étape 41B (28/10) — Assistant de conférence : historique, signalement, modération, coût
+- Voir README « Étape 41B ». Reste (sur « go ») : version mobile de l'assistant, audit de vitesse, podcast RSS (à repenser). Pages légales à la fin (y inclure Anthropic / DeepSeek et la durée de conservation des questions). L'étape 37 (VPS) attend la fin des tests.

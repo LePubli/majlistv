@@ -3969,3 +3969,7 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .ask-form textarea { width: 100%; resize: vertical; min-height: 64px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; }
 .ask-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .ask-note { margin: 0; }
+.ask-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.ask-adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.ask-adm-item { padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); display: grid; gap: 8px; }
+.ask-adm-item blockquote { margin: 0; padding: 6px 10px; border-inline-start: 3px solid var(--accent); background: var(--surface-2); border-radius: 8px; font-size: .9rem; }

@@ -197,9 +197,40 @@ cur.execute("update talks set transcript_status='ready' where id=%s", (TL,))
 SEEN.clear(); L3, _ = member("learning"); ask(L3, TL, "Que dit-elle sur la patience ?")
 ok(len(SEEN[0]["body"]["messages"][0]["content"]) < 6500, "longue conférence : seule une partie (≈ 4 000 caractères) est envoyée")
 
+# 8b. Historique, signalement, modération, coût (étape 41B)
+H, hu = member("learning"); H2, h2u = member("learning")
+a1 = ask(H, T, "Que dit-il sur la patience ?").json(); a2 = ask(H, T, "mock-ruling halal ?").json()
+ok(a1.get("id") and a2.get("id") and a1["id"] != a2["id"], "chaque réponse reçoit un identifiant")
+r = requests.get(f"{B}/talks/{T}/ask/history", headers=H).json()["items"]
+ok([x["id"] for x in r] == [a1["id"], a2["id"]] and r[0]["sources"] and r[0]["reported"] is False, "historique : échanges du membre, du plus ancien au plus récent, avec sources")
+ok(requests.get(f"{B}/talks/{T}/ask/history", headers=H2).json()["items"] == [], "l'historique d'un autre membre est vide (jamais le mien)")
+ok(requests.get(f"{B}/talks/{T}/ask/history", headers=S).status_code == 403 and requests.get(f"{B}/talks/{T}/ask/history").status_code == 401, "historique : palier et connexion requis")
+ok(requests.post(f"{B}/talks/{T}/ask/{a1['id']}/report", headers=H2, json={"reason": "x"}).status_code == 404, "on ne signale pas la réponse d'un autre")
+ok(requests.post(f"{B}/talks/{T}/ask/{a1['id']}/report", headers=H, json={"reason": "Le passage ne correspond pas"}).status_code == 204, "signalement enregistré")
+ok(requests.get(f"{B}/talks/{T}/ask/history", headers=H).json()["items"][0]["reported"] is True, "historique : réponse marquée signalée")
+ok(requests.get(B + "/admin/ask", headers=H).status_code == 403 and requests.get(B + "/admin/ask/stats", headers=H).status_code == 403, "administration réservée aux administrateurs")
+adm = requests.get(B + "/admin/ask", headers=ADM).json()
+mine = [x for x in adm["items"] if x["id"] == a1["id"]]
+ok(adm["filter"] == "reported" and len(mine) == 1 and mine[0]["reportReason"] == "Le passage ne correspond pas" and mine[0]["talkTitle"].startswith("Conférence sur la patience") and mine[0]["userEmail"], "file des signalements : question, réponse, motif, conférence, membre")
+ok(all(x["id"] != a2["id"] for x in adm["items"]) and adm["reportedOpen"] >= 1, "seules les réponses signalées sont dans la file")
+ok(any(x["id"] == a2["id"] for x in requests.get(B + "/admin/ask?filter=refused", headers=ADM).json()["items"]), "filtre « refus » : les refus sont listés")
+ok(any(x["id"] == a1["id"] for x in requests.get(B + "/admin/ask?filter=all", headers=ADM).json()["items"]), "filtre « tout »")
+todo = requests.get(B + "/admin/dashboard", headers=ADM).json() if requests.get(B + "/admin/dashboard", headers=ADM).status_code == 200 else {}
+ok(not todo or any(x["key"] == "ask_reported" for x in todo.get("todo", [])), "tableau de bord : « À traiter » mentionne les réponses signalées")
+st = requests.get(B + "/admin/ask/stats", headers=ADM).json()
+ok(st["today"]["questions"] >= 2 and st["today"]["tokensIn"] > 0 and st["month"]["questions"] >= st["today"]["questions"] and st["limits"]["dailyMax"] == 4, "coût : volumes du jour / 30 jours, jetons, plafonds")
+ok(st["engine"]["ready"] is True and st["byModel"] and sum(st["byStatus"].values()) >= 2 and st["topTalks"][0]["n"] >= 1 and st["reportedOpen"] >= 1, "coût : moteur, répartition par modèle et statut, conférences les plus questionnées")
+ok(requests.put(f"{B}/admin/ask/{a1['id']}/review", headers=ADM, json={"action": "ok"}).status_code == 204, "signalement marqué traité")
+ok(all(x["id"] != a1["id"] for x in requests.get(B + "/admin/ask", headers=ADM).json()["items"]), "traité : sort de la file")
+requests.post(f"{B}/talks/{T}/ask/{a1['id']}/report", headers=H, json={"reason": "encore"})
+ok(any(x["id"] == a1["id"] for x in requests.get(B + "/admin/ask", headers=ADM).json()["items"]), "un nouveau signalement ramène l'échange dans la file")
+ok(requests.put(f"{B}/admin/ask/{a1['id']}/review", headers=ADM, json={"action": "delete"}).status_code == 204 and requests.put(f"{B}/admin/ask/{a1['id']}/review", headers=ADM, json={"action": "delete"}).status_code == 404, "l'équipe peut supprimer un échange")
+ok(requests.delete(f"{B}/talks/{T}/ask/{a2['id']}", headers=H2).status_code == 204 and len(requests.get(f"{B}/talks/{T}/ask/history", headers=H).json()["items"]) == 1, "supprimer l'échange d'un autre : sans effet")
+ok(requests.delete(f"{B}/talks/{T}/ask/{a2['id']}", headers=H).status_code == 204 and requests.get(f"{B}/talks/{T}/ask/history", headers=H).json()["items"] == [], "le membre supprime son propre échange")
+
 # 9. Fonction coupée
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_ask": "false"}})
-ok(ask(L3, T, "Que dit-il ?").status_code in (403, 404) and requests.get(f"{B}/talks/{T}/ask", headers=L3).status_code in (403, 404), "fonction coupée dans Admin → Fonctions : routes fermées")
+ok(ask(L3, T, "Que dit-il ?").status_code in (403, 404) and requests.get(f"{B}/talks/{T}/ask", headers=L3).status_code in (403, 404) and requests.get(B + "/admin/ask/stats", headers=ADM).status_code in (403, 404), "fonction coupée dans Admin → Fonctions : routes (membre et admin) fermées")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_ask": "true"}})
 
 # 10. Nettoyage et suppression de compte

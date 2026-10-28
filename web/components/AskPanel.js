@@ -4,7 +4,22 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { clock } from '../lib/clock';
-import { MAX_QUESTION, errorKey, pushTurn, validQuestion } from '../lib/ask';
+import { MAX_QUESTION, dropTurn, errorKey, markReported, pushTurn, validQuestion } from '../lib/ask';
+
+// Signaler une réponse : motif facultatif, envoyé à l'équipe (Admin → Questions IA).
+function ReportBox({ talkId, turn, t, call, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  if (turn.reported) return <p className="meta small" role="status">{t('askReportDone')}</p>;
+  if (!open) return <button type="button" className="link u small" onClick={() => setOpen(true)}>⚑ {t('askReport')}</button>;
+  const send = async () => { const r = await call(`/talks/${talkId}/ask/${turn.id}/report`, { method: 'POST', body: JSON.stringify({ reason }) }); if (r.ok) onDone(); };
+  return (
+    <div className="qp-report">
+      <input maxLength={300} value={reason} placeholder={t('askReportAsk')} aria-label={t('askReportAsk')} onChange={(e) => setReason(e.target.value)} />
+      <button type="button" className="btn ghost" onClick={send}>{t('askReportSend')}</button>
+    </div>
+  );
+}
 
 export default function AskPanel({ talkId, t, call, onSeek }) {
   const [info, setInfo] = useState(undefined); // undefined = chargement ; { available, reason, remaining, dailyMax } ; { locked: true }
@@ -23,6 +38,8 @@ export default function AskPanel({ talkId, t, call, onSeek }) {
       else if (r.data?.code === 'learning_required') setInfo({ locked: true });
       else setInfo({ available: false, reason: r.data?.code || 'ask_unavailable' });
     });
+    // Historique : les derniers échanges du membre sur cette conférence (conservés 90 jours, supprimables).
+    call(`/talks/${talkId}/ask/history`).then((r) => { if (alive && r.ok) setTurns(r.data.items.map((x) => ({ ...x }))); });
     return () => { alive = false; };
   }, [talkId, call]);
 
@@ -44,6 +61,8 @@ export default function AskPanel({ talkId, t, call, onSeek }) {
     setBusy(false);
   };
 
+  const remove = async (id) => { const r = await call(`/talks/${talkId}/ask/${id}`, { method: 'DELETE' }); if (r.ok || r.status === 204) setTurns((x) => dropTurn(x, id)); };
+
   if (info === undefined) return <p className="meta" role="status">{t('askLoading')}</p>;
   if (info.locked) {
     return (
@@ -64,7 +83,7 @@ export default function AskPanel({ talkId, t, call, onSeek }) {
       <p className="meta small">{t('askIntro')}</p>
       <ul className="ask-turns" aria-live="polite">
         {turns.map((x, i) => (
-          <li key={i} className="ask-turn">
+          <li key={x.id || i} className="ask-turn">
             <p className="ask-q">{x.question}</p>
             <p className={`ask-a ${x.status === 'answered' ? '' : 'ask-refusal'}`}>{x.answer}</p>
             {x.sources?.length > 0 && (
@@ -76,6 +95,12 @@ export default function AskPanel({ talkId, t, call, onSeek }) {
                     <button type="button" className="link u small" onClick={() => onSeek?.(Math.floor(s.startMs / 1000))}>▶ {t('askReplay').replace('{t}', clock(s.startMs))}</button>
                   </blockquote>
                 ))}
+              </div>
+            )}
+            {x.id && (
+              <div className="ask-actions">
+                <ReportBox talkId={talkId} turn={x} t={t} call={call} onDone={() => setTurns((l) => markReported(l, x.id))} />
+                <button type="button" className="link u small" onClick={() => remove(x.id)}>{t('askDelete')}</button>
               </div>
             )}
           </li>

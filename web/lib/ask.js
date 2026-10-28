@@ -15,5 +15,8 @@ export function errorKey(code, status) {
 // La question peut-elle être envoyée ? (3 à 400 caractères, hors espaces autour)
 export const validQuestion = (q) => { const n = String(q || '').trim().length; return n >= 3 && n <= MAX_QUESTION; };
 
-// Ajoute une réponse à la conversation affichée (les 20 dernières seulement : la page reste légère).
-export const pushTurn = (turns, turn) => [...turns, turn].slice(-20);
+// Ajoute une réponse à la conversation affichée (les 30 dernières seulement : la page reste légère).
+export const pushTurn = (turns, turn) => [...turns, turn].slice(-30);
+// Marque / retire un échange de la conversation affichée.
+export const markReported = (turns, id) => turns.map((x) => (x.id === id ? { ...x, reported: true } : x));
+export const dropTurn = (turns, id) => turns.filter((x) => x.id !== id);
