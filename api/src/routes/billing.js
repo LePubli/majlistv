@@ -79,9 +79,10 @@ export default async function billingRoutes(app) {
     const ctx = await stripeContext();
     const trialDays = await getNumber('trial_days');
     const methods = await methodsList();
+    const trialNoCard = trialDays > 0 && isOn(await getSetting('trial_no_card'));
     // `plans` : formule standard (inchangé). `learning` : palier Apprentissage (mêmes champs).
     const fromSettings = async () => ({
-      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, methods,
+      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, trialNoCard, methods,
       learning: { enabled: false, plans: await listedPlans('learning') },
     });
     if (!ctx) return fromSettings();
@@ -105,7 +106,7 @@ export default async function billingRoutes(app) {
     }
     // Palier Apprentissage non configuré chez Stripe : on montre les prix saisis, sans bouton de paiement.
     const learning = ctx.learn ? { enabled: true, plans: plansCache.data.learning } : { enabled: false, plans: await listedPlans('learning') };
-    return { enabled: true, source: 'stripe', plans: plansCache.data.standard, trialDays, methods, learning };
+    return { enabled: true, source: 'stripe', plans: plansCache.data.standard, trialDays, trialNoCard, methods, learning };
   });
 
   // --- Mon abonnement ---
@@ -169,7 +170,11 @@ export default async function billingRoutes(app) {
     const trialDays = await getNumber('trial_days');
     const webUrl = await getSetting('web_url');
     const subscription_data = { metadata: { user_id: req.user.sub } };
-    if (trialDays > 0 && !before.rowCount) subscription_data.trial_period_days = trialDays;
+    const trialApplies = trialDays > 0 && !before.rowCount;
+    if (trialApplies) subscription_data.trial_period_days = trialDays;
+    // Essai sans carte : Stripe ne demande aucun moyen de paiement pendant l'essai ; à son terme, sans carte ajoutée, l'abonnement est annulé.
+    const noCard = trialApplies && isOn(await getSetting('trial_no_card'));
+    if (noCard) subscription_data.trial_settings = { end_behavior: { missing_payment_method: 'cancel' } };
     const { rows: me } = await pool.query('SELECT email, locale FROM users WHERE id = $1', [req.user.sub]);
     const l = lang2(me[0].locale);
     // Preuve horodatée du consentement (texte exact, version, adresse IP, navigateur).
@@ -183,6 +188,7 @@ export default async function billingRoutes(app) {
       client_reference_id: req.user.sub,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data,
+      ...(noCard ? { payment_method_collection: 'if_required' } : {}),
       allow_promotion_codes: true, // codes promo créés dans Stripe → Produits → Coupons
       custom_text: { submit: { message: SUBMIT_TEXT[l] } },
       locale: l === 'ar' ? 'auto' : l,

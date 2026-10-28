@@ -10,7 +10,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 1.1 | ✅ (étape 35) **Pages de conférence 100 % référençables** : transcription lisible par Google, données structurées « vidéo » (déjà présentes sur séries, ouvrages, intervenants, chaînes : à étendre aux conférences — à vérifier), sitemap par langue | Trafic Google gratuit, c'est la source d'audience la moins chère | M | ★★★ |
 | 1.2 | ✅ (étape 32 ; reste l'aperçu de lien propre à chaque extrait) **Partage d'un extrait** : lien « à partir de 12:34 » + carte image au bon format (WhatsApp, Instagram, X) avec titre et citation | Chaque partage amène des visiteurs ; très adapté au public | S–M | ★★★ |
 | 1.3 | ✅ (étape 32) **Générateur de cartes citation** (verset, hadith, extrait) en image aux couleurs Mejliss TV, à partager | Viralité, marque visible ; s'appuie sur « Citation du jour » existante | S | ★★★ |
-| 1.4 | **Essai sans carte bancaire** (option Stripe) | Moins de friction à l'inscription, plus d'essais | S | ★★ |
+| 1.4 | ✅ (étape 42) **Essai sans carte bancaire** (option Stripe) | Moins de friction à l'inscription, plus d'essais | S | ★★ |
 | 1.5 | **Parrainage** : un mois offert au parrain et au filleul | Bouche-à-oreille mesurable ; réutilise les cartes cadeaux | M | ★★ |
 | 1.6 | **Abonnement groupe / association / école** (une facture, plusieurs comptes) | Nouveau marché (mosquées, écoles, associations), revenus récurrents plus gros | L | ★★ |
 | 1.7 | ✅ (étape 33, 3 e-mails ; fin d'essai déjà existante) **E-mails automatiques de cycle de vie** : relance avant la fin de l'essai, « tu n'as pas fini ta conférence », réactivation après résiliation | Meilleure conversion essai → payant, moins de départs | M | ★★★ |

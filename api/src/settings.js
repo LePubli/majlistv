@@ -92,6 +92,8 @@ export const FIELDS = [
   { key: 'plan_currency', group: 'payment', type: 'select', options: ['eur', 'usd', 'gbp', 'chf', 'cad'], label: 'Devise affichée', env: 'PLAN_CURRENCY', def: 'eur' },
   { key: 'paypal_enabled', group: 'payment', type: 'bool', label: 'Proposer PayPal en plus de la carte bancaire', env: 'PAYPAL_ENABLED', def: 'false',
     help: 'À activer APRÈS avoir activé PayPal dans Stripe (Paramètres → Moyens de paiement). Si PayPal est refusé par Stripe, le paiement retombe automatiquement sur la carte bancaire.' },
+  { key: 'trial_no_card', group: 'payment', type: 'bool', label: "Essai gratuit sans carte bancaire", env: 'TRIAL_NO_CARD', def: 'false',
+    help: "Si activé, l'essai gratuit démarre sans saisir de carte. À la fin de l'essai, sans moyen de paiement ajouté, l'abonnement s'arrête tout seul (le membre peut s'abonner ensuite). Sans effet si l'essai est à 0 jour ou déjà utilisé par le compte." },
   { key: 'stripe_automatic_tax', group: 'payment', type: 'bool', label: 'TVA automatique (Stripe Tax)', env: 'STRIPE_AUTOMATIC_TAX', def: 'false',
     help: 'Activer seulement après avoir configuré Stripe Tax (Stripe → Taxes) et défini vos prix « taxes incluses ». L\'adresse de facturation est alors demandée au paiement.' },
 

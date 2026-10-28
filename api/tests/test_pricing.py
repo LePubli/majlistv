@@ -68,5 +68,22 @@ ok(len(last) == 2 and last[0]["body"].get("payment_method_types[1]") == "paypal"
 os.remove(FLAG)
 put({"paypal_enabled": None})
 ok(plans()["methods"] == ["card"], "PayPal remis à « non »")
+# --- Essai sans carte (étape 42)
+put({"trial_days": "7", "trial_no_card": None})
+ok(plans().get("trialNoCard") is False, "essai sans carte : désactivé par défaut")
+ok(buy().status_code == 200, "essai avec carte : paiement possible")
+b = checkouts()[-1]["body"]
+ok(b.get("subscription_data[trial_period_days]") == "7" and "payment_method_collection" not in b, "essai avec carte : carte demandée dès le départ")
+put({"trial_no_card": "true"})
+ok(plans().get("trialNoCard") is True, "essai sans carte : annoncé sur la page Abonnement")
+ok(buy().status_code == 200, "essai sans carte : paiement possible")
+b = checkouts()[-1]["body"]
+ok(b.get("payment_method_collection") == "if_required" and b.get("subscription_data[trial_settings][end_behavior][missing_payment_method]") == "cancel", "essai sans carte : Stripe ne demande pas de carte, abonnement annulé en fin d'essai sans carte")
+put({"trial_days": "0"})
+ok(plans().get("trialNoCard") is False, "essai à 0 jour : pas d'essai sans carte annoncé")
+ok(buy().status_code == 200, "sans essai : paiement possible")
+b = checkouts()[-1]["body"]
+ok("payment_method_collection" not in b and "subscription_data[trial_period_days]" not in b, "sans essai : carte toujours demandée")
+put({"trial_no_card": None, "trial_days": None})
 free()
 print("TOUT OK")

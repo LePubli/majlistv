@@ -50,7 +50,7 @@ export default function Pricing() {
       <h1>{t('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
       {!info.enabled && <p className="soon">{anyPlans ? t('pricingSoon') : t('billingUnavailable')}</p>}
-      {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t('trialNote'), info.trialDays)}</p>}
+      {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t(info.trialNoCard ? 'trialNoCardNote' : 'trialNote'), info.trialDays)}</p>}
       {err && <p className="error">{err}</p>}
       {tiers.map((tier) => {
         const month = tier.plans.find((p) => p.interval === 'month');

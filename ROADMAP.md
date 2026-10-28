@@ -504,3 +504,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 41B (28/10) — Assistant de conférence : historique, signalement, modération, coût
 - Voir README « Étape 41B ». Reste (sur « go ») : version mobile de l'assistant, audit de vitesse, podcast RSS (à repenser). Pages légales à la fin (y inclure Anthropic / DeepSeek et la durée de conservation des questions). L'étape 37 (VPS) attend la fin des tests.
+
+## Étape 42 (28/10) — Essai gratuit sans carte bancaire
+- Voir README « Étape 42 ». Bloc « Revenus » en cours, un « go » par étape : 43 parrainage (1.5), 44 Apple Pay / Google Pay et tarifs par pays (1.8), 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6, gros chantier).

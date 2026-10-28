@@ -6254,3 +6254,28 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** **Pas de version pour l'application mobile** (l'assistant n'existe que sur le site) : non faite faute de pouvoir la tester sur un téléphone, à décider à part. Le signalement n'avertit pas par e-mail (la file est dans l'admin et sur le tableau de bord). Le panneau admin est en français seulement, comme les autres écrans d'administration. La suppression d'un échange par l'équipe est définitive et le membre n'en est pas informé. Même réserve qu'en 41A : jamais testé avec le vrai Claude / DeepSeek.
 
 **Testé.** API réelle + faux Claude (`api/tests/test_ask.py`, 67 contrôles au total dont 21 nouveaux : historique propre à chaque membre, signalement de ses seules réponses, file admin, filtres, traité / re-signalé, suppression, statistiques, ligne du tableau de bord, droits, fonction coupée). Site : 8 vérifications (`web/tests/test_ask_web.mjs`). Navigateur réel (Chromium) : historique après rechargement, signalement, écran Admin → Questions IA et « Marquer comme traitée », sur bureau et 390 px sans débordement ; pas testé : l'arabe RTL, la suppression par le membre en navigateur.
+
+## Étape 42 — Essai gratuit sans carte bancaire (28/10)
+
+**Description.** Nouveau réglage **Admin → Paramètres → Paiement → « Essai gratuit sans carte bancaire »** (désactivé par défaut). Activé, le bouton « Commencer l'essai » ouvre une page Stripe qui **ne demande aucune carte** ; à la fin de l'essai, si le membre n'a pas ajouté de moyen de paiement, l'abonnement s'arrête tout seul (e-mail « abonnement terminé » existant) et il peut s'abonner ensuite normalement. La page Abonnement annonce « sans carte bancaire ». L'essai reste offert une seule fois par compte et n'existe que si « Essai gratuit (jours) » est supérieur à 0.
+
+**Prérequis.** Stripe configuré (clés, prix, webhook) ; « Essai gratuit (jours) » > 0.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api**, puis **majlistv-web** (pas de migration). Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Ensuite : Admin → Paramètres → Paiement → cocher « Essai gratuit sans carte bancaire » → Enregistrer. Dans Stripe, vérifier que les e-mails de rappel avant la fin d'essai sont activés (Paramètres → Facturation → Abonnements et e-mails).
+
+**Essayer.** Avec un compte neuf (jamais abonné) : /pricing → « Commencer l'essai » → la page Stripe n'affiche aucun champ carte. Pour revenir à la normale, décocher le réglage.
+
+**Debug.** Page Stripe qui demande quand même une carte : le compte a déjà eu un abonnement (pas d'essai deux fois), ou « Essai gratuit (jours) » vaut 0, ou le réglage n'est pas enregistré. Voir `GET /billing/plans` : `trialNoCard` doit valoir `true`.
+
+**Fichiers.** `api/src/settings.js`, `api/src/routes/billing.js`, `web/app/pricing/page.js`, `web/lib/i18n.js`, `api/tests/test_pricing.py`.
+
+**Limites (honnêtes).** Jamais essayé avec le vrai Stripe. Plus d'essais, mais aussi plus d'essais jamais convertis : à surveiller. Le test `test_pricing.py` n'est pas dans la suite automatique (il demande le faux Stripe) : à lancer à la main.
+
+**Testé.** API réelle + faux Stripe : 8 contrôles nouveaux (réglage par défaut, paramètres envoyés à Stripe avec/sans l'option, essai à 0 jour).
