@@ -14,12 +14,21 @@ const DISK_PATH = process.env.HEALTH_DISK_PATH || '/';
 const EVERY_MS = 10 * 60 * 1000;
 const KEEP_DAYS = 35;
 
+/** Nombre de cœurs de la MACHINE. La charge (loadavg) est celle de tout le serveur, pas du conteneur : il faut donc la comparer
+ *  aux cœurs de la machine. os.availableParallelism() respecte la limite CPU du conteneur (apply-limits.sh : 1 cœur pour l'API),
+ *  ce qui affichait « 176 % — Critique » alors que le serveur (6 cœurs) était à 26 %. */
+export function hostCpus() {
+  let n = 0;
+  try { n = os.cpus().length; } catch { /* illisible */ }
+  return Math.max(1, n, os.availableParallelism ? os.availableParallelism() : 0);
+}
+
 /** Mesures instantanées du système (jamais d'exception : une mesure impossible vaut null). */
 export function readSystem(path = DISK_PATH) {
   let disk = null;
   try { disk = diskFromStatfs(fs.statfsSync(path)); } catch { /* disque illisible */ }
   const mem = memFrom(os.totalmem(), os.freemem());
-  return { disk, mem, load: os.loadavg(), cpus: os.availableParallelism ? os.availableParallelism() : os.cpus().length, uptimeSec: Math.round(os.uptime()) };
+  return { disk, mem, load: os.loadavg(), cpus: hostCpus(), uptimeSec: Math.round(os.uptime()) };
 }
 
 async function thresholds() {
