@@ -15,6 +15,7 @@ import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
 import { levelLabel } from '../../../lib/levels';
 import NotesPanel from '../../../components/NotesPanel';
+import AskPanel from '../../../components/AskPanel';
 import Quiz from '../../../components/Quiz';
 import PracticeBlock from '../../../components/PracticeBlock';
 import ReportButton from '../../../components/ReportButton';
@@ -374,6 +375,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
     ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
     ...(feat('notes') && user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
+    ...(feat('ask') && user && hasPlayer && !talk.locked && talk.tracks?.length > 0 ? [{ key: 'ask', label: t('askTab') }] : []),
     { key: 'about', label: t('tabAbout') },
   ];
   const current = tabs.some((x) => x.key === tab) ? tab : tabs[0].key;
@@ -548,6 +550,11 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               {talk.description && <p className="about-text">{talk.description}</p>}
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
             </div>
+            {current === 'ask' && (
+              <div id="panel-ask" role="tabpanel" aria-labelledby="tab-ask" className="tpanel">
+                <AskPanel talkId={id} t={t} call={call} onSeek={seekTo} />
+              </div>
+            )}
             {notesOn && (
               <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden={current !== 'notes'} className="tpanel">
                 <NotesPanel notes={notes} onAdd={addNote} onSave={saveNote} onDelete={dropNote} onSeek={seekTo} getPos={() => curSec() * 1000} t={t} />

@@ -1,0 +1,9 @@
+{
+  "id": "ask",
+  "name": "Questions sur la conférence",
+  "version": "1.0.0",
+  "description": "Assistant IA limité à la transcription d'une conférence : réponses sourcées (passage horodaté), refus des avis religieux, plafond par jour.",
+  "feature": "ask",
+  "requires": [],
+  "settings": ["ask_daily_max", "ask_global_daily_max", "ask_model", "ask_context_chars", "ask_keep_days"]
+}

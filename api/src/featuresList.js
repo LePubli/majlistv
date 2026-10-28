@@ -38,6 +38,8 @@ export const FEATURES = [
     rules: [{ re: '^/me/revision(/|$)' }, { re: '^/(talks/[^/]+/)?studio/reminders(/|$)' }] },
   { id: 'memorycards', group: 'learning', label: 'Cartes mémoire', hint: 'Cartes recto/verso tirées des quiz, avec révision espacée',
     rules: [{ re: '^/me/cards(/|$)' }] },
+  { id: 'ask', group: 'learning', label: 'Questions sur la conférence (assistant IA)', hint: 'Le membre « Apprentissage » pose une question ; réponse tirée de la transcription, avec le passage horodaté. Coût IA : plafonds dans Paramètres',
+    rules: [{ re: '^/talks/[^/]+/ask(/|$)' }] },
   { id: 'selfcheck', group: 'learning', label: 'Mon bilan personnel', hint: 'Objectifs et notes privées',
     rules: [{ re: '^/me/(selfcheck|evolution)(/|$)' }] },
   { id: 'learning', group: 'learning', label: 'Parcours et attestations', hint: 'Tableau de bord d\'apprentissage et attestations',

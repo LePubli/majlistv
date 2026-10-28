@@ -17,6 +17,7 @@ export const EXCLUDED_TABLES = {
   two_factor_recovery: 'empreintes des codes de secours (secret)',
   device_tokens: 'jetons de notification du téléphone (secret technique)',
   password_resets: 'empreintes de jetons de réinitialisation (secret)',
+  web_push_subscriptions: 'adresses et clés des navigateurs abonnés aux notifications (secret technique)',
 };
 // Colonnes qui désignent un membre de l'équipe auteur d'une action sur un contenu (créé par, relu par…) : pas des données de la personne.
 // Toute autre colonne qui pointe vers users est exportée d'office (le RGPD pardonne mal un oubli).

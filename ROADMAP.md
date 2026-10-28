@@ -498,3 +498,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 40 (28/10) — Notifications dans le navigateur (Web Push)
 - Voir README « Étape 40 ». Reste (sur « go ») : podcast RSS, audit de vitesse, assistant IA… voir docs/IDEES-AMELIORATIONS.md. Pages légales à la fin. Les manipulations VPS de l'étape 37 attendent Epok.
+
+## Étape 41A (28/10) — Assistant « Poser une question sur cette conférence »
+- Voir README « Étape 41A ». Étape 41B à venir sur « go » : historique, signalement et modération, coût dans l'admin, application mobile. Pages légales à la fin (y inclure la mention Anthropic / durée de conservation des questions). Les manipulations VPS de l'étape 37 attendent Epok.

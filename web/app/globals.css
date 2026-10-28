@@ -3954,3 +3954,18 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 /* Étape 40 — notifications dans le navigateur */
 .wp-box { margin-top: 22px; padding-top: 6px; border-top: 1px solid var(--line, #2A2116); }
 .wp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+
+/* Étape 41 — Poser une question sur la conférence */
+.ask-box { display: grid; gap: 12px; }
+.ask-turns { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.ask-turn { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.ask-q { margin: 0; font-weight: 600; }
+.ask-a { margin: 0; line-height: 1.55; }
+.ask-refusal { color: var(--muted); }
+.ask-src { display: grid; gap: 6px; }
+.ask-src blockquote { margin: 0; padding: 8px 12px; border-inline-start: 3px solid var(--accent); background: var(--surface-2); border-radius: 8px; }
+.ask-src blockquote p { margin: 0 0 4px; font-size: .92rem; }
+.ask-form { display: grid; gap: 8px; }
+.ask-form textarea { width: 100%; resize: vertical; min-height: 64px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; }
+.ask-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ask-note { margin: 0; }

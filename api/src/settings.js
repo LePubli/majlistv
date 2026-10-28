@@ -15,6 +15,7 @@ export const GROUPS = [
   { id: 'translation', label: 'Traduction des sous-titres' },
   { id: 'insights', label: 'Résumés et chapitres' },
   { id: 'quiz', label: 'Quiz de compréhension' },
+  { id: 'ask', label: 'Questions sur la conférence (assistant IA)' },
   { id: 'moderation', label: 'Modération' },
   { id: 'notifications', label: 'Notifications (e-mails et téléphone)' },
   { id: 'lifecycle', label: 'E-mails de cycle de vie (reprise, bienvenue, retour)' },
@@ -208,6 +209,16 @@ export const FIELDS = [
   { key: 'quiz_max_questions', group: 'quiz', type: 'number', label: 'Nombre maximum de questions par quiz', env: 'QUIZ_MAX_QUESTIONS', def: '10', min: 3, max: 20 },
   { key: 'quiz_generate_count', group: 'quiz', type: 'number', label: 'Questions proposées par la génération automatique', env: 'QUIZ_GENERATE_COUNT', def: '8', min: 3, max: 15,
     help: 'Le moteur utilisé est celui des résumés (Résumés et chapitres). Toute question générée doit être relue et validée dans le Studio avant d\'être publiée.' },
+  { key: 'ask_daily_max', group: 'ask', type: 'number', label: 'Questions par membre et par jour', env: 'ASK_DAILY_MAX', def: '20', min: 1, max: 500,
+    help: 'Plafond individuel (jour de Paris). Chaque question coûte un appel à Claude : réservé au palier Apprentissage.' },
+  { key: 'ask_global_daily_max', group: 'ask', type: 'number', label: 'Questions par jour pour tout le site', env: 'ASK_GLOBAL_DAILY_MAX', def: '1000', min: 1, max: 1000000,
+    help: 'Garde-fou de coût : une fois atteint, l\'assistant s\'arrête jusqu\'au lendemain pour tout le monde.' },
+  { key: 'ask_model', group: 'ask', type: 'text', label: 'Modèle Claude de l\'assistant (vide = modèle de traduction)', env: 'ASK_MODEL',
+    help: 'claude-haiku-5-5 : économique ; claude-sonnet-5-5 : réponses plus fines, plus cher. La clé est celle de « Traduction des sous-titres ».' },
+  { key: 'ask_context_chars', group: 'ask', type: 'number', label: 'Taille des passages envoyés à l\'IA (caractères)', env: 'ASK_CONTEXT_CHARS', def: '18000', min: 4000, max: 60000,
+    help: 'Plus grand = réponses mieux fondées sur les longues conférences, mais plus cher par question. 18 000 ≈ 5 000 jetons.' },
+  { key: 'ask_keep_days', group: 'ask', type: 'number', label: 'Durée de conservation des questions (jours)', env: 'ASK_KEEP_DAYS', def: '90', min: 1, max: 365,
+    help: 'Passé ce délai, la question et la réponse sont supprimées automatiquement.' },
   { key: 'insights_enabled', group: 'insights', type: 'bool', label: 'Générer résumé et chapitres', env: 'INSIGHTS_ENABLED', def: 'true' },
   { key: 'insights_provider', group: 'insights', type: 'select', options: ['auto', 'deepseek', 'claude'], label: 'Moteur', env: 'INSIGHTS_PROVIDER', def: 'auto', help: 'auto : DeepSeek s\'il a une clé, sinon Claude.' },
   { key: 'insights_langs', group: 'insights', type: 'langs', label: 'Résumé toujours produit dans ces langues', env: 'INSIGHTS_LANGS', def: 'fr',
@@ -342,7 +353,7 @@ export async function getNumber(key) { const n = Number(await getSetting(key)); 
 
 // Description complète pour le back-office : jamais de clé en clair (seulement « défini » + 4 derniers caractères).
 // Étape M3a : réglages propres à un module, masqués de Admin → Paramètres quand le dossier du module est absent.
-const GROUP_MODULE = { gifts: 'gifts', revenue: 'revenue', practice: 'practice', books: 'books', kids: 'kids', stats: 'stats', citations: 'citations', notifications: 'follow', quiz: 'quiz' };
+const GROUP_MODULE = { gifts: 'gifts', revenue: 'revenue', practice: 'practice', books: 'books', kids: 'kids', stats: 'stats', citations: 'citations', notifications: 'follow', quiz: 'quiz', ask: 'ask' };
 const FIELD_MODULE = { revision_daily_max: 'revision', revision_email_enabled: 'revision', revision_email_hour: 'revision' };
 let moduleCheck = () => true;
 export const setSettingsModuleCheck = (fn) => { moduleCheck = fn; };
