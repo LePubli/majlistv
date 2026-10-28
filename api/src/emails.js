@@ -41,6 +41,8 @@ const T = {
     gift_received: { subject: '{from} vous offre un abonnement {app}', lines: ['{from} vous offre {months} d\'accès à toutes les conférences de {app}.', '?Son message : « {message} »', 'Votre code : {code}', 'Pour l\'activer, connectez-vous (ou créez un compte gratuit) puis saisissez ce code. Il n\'engage à rien : aucun paiement, aucun renouvellement automatique.'], button: 'Activer ma carte cadeau', footer: '{from} a choisi de vous envoyer cette carte cadeau. Aucun autre e-mail ne sera envoyé à cette adresse à ce sujet.' },
     gift_redeemed: { subject: 'Votre carte cadeau a été activée', lines: ['{redeemer} a activé la carte cadeau que vous avez offerte ({months}). Merci pour ce beau geste !'], button: 'Mes cartes cadeaux' },
     gift_activated: { subject: 'Votre carte cadeau est activée', lines: ['Votre carte cadeau est activée : vous avez accès à toutes les conférences jusqu\'au {date}.'], button: 'Regarder les conférences' },
+    referral_reward_referee: { subject: 'Votre mois offert grâce au parrainage', lines: ['Merci pour votre abonnement à {app} ! Grâce au parrainage, {months} vous est offert.', 'Votre accès est prolongé jusqu\'au {date}.', '?Votre parrain : {referrer}.'], button: 'Voir mon compte' },
+    referral_reward_referrer: { subject: 'Votre filleul s\'est abonné : {months} offert', lines: ['{friend} s\'est abonné grâce à vous. Merci de faire connaître {app} !', '{months} vous est offert : votre accès est prolongé jusqu\'au {date}.'], button: 'Mon parrainage' },
     plans: { month: 'mensuel', year: 'annuel' },
   },
   en: {
@@ -73,6 +75,8 @@ const T = {
     gift_received: { subject: '{from} is giving you a {app} subscription', lines: ['{from} is giving you {months} of access to all the talks on {app}.', '?Their message: “{message}”', 'Your code: {code}', 'To redeem it, sign in (or create a free account) and enter this code. No payment, no automatic renewal.'], button: 'Redeem my gift card', footer: '{from} chose to send you this gift card. No other email will be sent to this address about it.' },
     gift_redeemed: { subject: 'Your gift card was redeemed', lines: ['{redeemer} redeemed the gift card you gave ({months}). Thank you for the kind gesture!'], button: 'My gift cards' },
     gift_activated: { subject: 'Your gift card is active', lines: ['Your gift card is active: you have access to all talks until {date}.'], button: 'Watch the talks' },
+    referral_reward_referee: { subject: 'Your free month through referral', lines: ['Thank you for subscribing to {app}! Through referral, {months} is on us.', 'Your access now runs until {date}.', '?Your referrer: {referrer}.'], button: 'View my account' },
+    referral_reward_referrer: { subject: 'Your friend subscribed: {months} on us', lines: ['{friend} subscribed thanks to you. Thank you for spreading the word about {app}!', '{months} is on us: your access now runs until {date}.'], button: 'My referrals' },
     plans: { month: 'monthly', year: 'yearly' },
   },
   ar: {
@@ -105,6 +109,8 @@ const T = {
     gift_received: { subject: '{from} يهديك اشتراكًا في {app}', lines: ['يهديك {from} {months} من الوصول إلى جميع محاضرات {app}.', '?رسالته: «{message}»', 'رمزك: {code}', 'لتفعيله، سجّل الدخول (أو أنشئ حسابًا مجانيًا) ثم أدخل هذا الرمز. بلا دفع وبلا تجديد تلقائي.'], button: 'تفعيل بطاقة الهدية', footer: 'اختار {from} أن يرسل إليك بطاقة الهدية هذه. لن تصلك رسائل أخرى على هذا العنوان بهذا الشأن.' },
     gift_redeemed: { subject: 'تم تفعيل بطاقة الهدية', lines: ['فعّل {redeemer} بطاقة الهدية التي أهديتها ({months}). شكرًا على هذه اللفتة الكريمة!'], button: 'بطاقات الهدايا' },
     gift_activated: { subject: 'بطاقة الهدية مفعّلة', lines: ['بطاقة الهدية مفعّلة: يمكنك مشاهدة جميع المحاضرات حتى {date}.'], button: 'مشاهدة المحاضرات' },
+    referral_reward_referee: { subject: 'شهرك المجاني بفضل الإحالة', lines: ['شكرًا لاشتراكك في {app}! بفضل الإحالة، لديك {months} مجانًا.', 'تم تمديد وصولك حتى {date}.', '?صاحب الدعوة: {referrer}.'], button: 'عرض حسابي' },
+    referral_reward_referrer: { subject: 'اشترك صديقك: {months} مجانًا', lines: ['اشترك {friend} بفضلك. شكرًا لأنك عرّفت بـ {app}!', 'لديك {months} مجانًا: تم تمديد وصولك حتى {date}.'], button: 'إحالاتي' },
     plans: { month: 'شهري', year: 'سنوي' },
   },
 };

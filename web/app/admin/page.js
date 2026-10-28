@@ -6,6 +6,7 @@ import AdsAdmin from '../../components/AdsAdmin';
 import HealthAdmin from '../../components/HealthAdmin';
 import ErrorsAdmin from '../../components/ErrorsAdmin';
 import AskAdmin from '../../components/AskAdmin';
+import ReferralAdmin from '../../components/ReferralAdmin';
 import LifecycleAdmin from '../../components/LifecycleAdmin';
 import { SectionHeader, SettingsHub } from '../../components/SettingsHub';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -1154,6 +1155,7 @@ export default function Admin() {
       {tab === 'health' && <HealthAdmin />}
       {tab === 'errors' && <ErrorsAdmin />}
       {tab === 'ask' && <AskAdmin />}
+      {tab === 'referral' && <ReferralAdmin />}
       {tab === 'lifecycle' && <LifecycleAdmin />}
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}
     </main>

@@ -20,6 +20,7 @@ export const GROUPS = [
   { id: 'notifications', label: 'Notifications (e-mails et téléphone)' },
   { id: 'lifecycle', label: 'E-mails de cycle de vie (reprise, bienvenue, retour)' },
   { id: 'gifts', label: 'Cartes cadeaux' },
+  { id: 'referral', label: 'Parrainage' },
   { id: 'revenue', label: 'Rémunération des chaînes' },
   { id: 'practice', label: 'Mise en pratique (Et maintenant, que faire ?)' },
   { id: 'books', label: 'Ouvrages' },
@@ -211,6 +212,10 @@ export const FIELDS = [
   { key: 'quiz_max_questions', group: 'quiz', type: 'number', label: 'Nombre maximum de questions par quiz', env: 'QUIZ_MAX_QUESTIONS', def: '10', min: 3, max: 20 },
   { key: 'quiz_generate_count', group: 'quiz', type: 'number', label: 'Questions proposées par la génération automatique', env: 'QUIZ_GENERATE_COUNT', def: '8', min: 3, max: 15,
     help: 'Le moteur utilisé est celui des résumés (Résumés et chapitres). Toute question générée doit être relue et validée dans le Studio avant d\'être publiée.' },
+  { key: 'referral_months', group: 'referral', type: 'number', label: 'Mois offerts au parrain et au filleul', env: 'REFERRAL_MONTHS', def: '1', min: 1, max: 12,
+    help: "Versés aux deux personnes au premier vrai paiement du filleul (pas à l'inscription ni pendant l'essai). Le mois offert prolonge l'accès comme une carte cadeau : il s'ajoute à la fin de l'abonnement et ne baisse pas la facture." },
+  { key: 'referral_max_per_year', group: 'referral', type: 'number', label: 'Récompenses maximum par parrain et par an (0 = sans limite)', env: 'REFERRAL_MAX_PER_YEAR', def: '12', min: 0, max: 100,
+    help: "Au-delà, le filleul reçoit quand même son mois offert, mais pas le parrain." },
   { key: 'ask_daily_max', group: 'ask', type: 'number', label: 'Questions par membre et par jour', env: 'ASK_DAILY_MAX', def: '20', min: 1, max: 500,
     help: 'Plafond individuel (jour de Paris). Chaque question coûte un appel à Claude : réservé au palier Apprentissage.' },
   { key: 'ask_global_daily_max', group: 'ask', type: 'number', label: 'Questions par jour pour tout le site', env: 'ASK_GLOBAL_DAILY_MAX', def: '1000', min: 1, max: 1000000,
@@ -357,7 +362,7 @@ export async function getNumber(key) { const n = Number(await getSetting(key)); 
 
 // Description complète pour le back-office : jamais de clé en clair (seulement « défini » + 4 derniers caractères).
 // Étape M3a : réglages propres à un module, masqués de Admin → Paramètres quand le dossier du module est absent.
-const GROUP_MODULE = { gifts: 'gifts', revenue: 'revenue', practice: 'practice', books: 'books', kids: 'kids', stats: 'stats', citations: 'citations', notifications: 'follow', quiz: 'quiz', ask: 'ask' };
+const GROUP_MODULE = { gifts: 'gifts', revenue: 'revenue', practice: 'practice', books: 'books', kids: 'kids', stats: 'stats', citations: 'citations', notifications: 'follow', quiz: 'quiz', ask: 'ask', referral: 'referral' };
 const FIELD_MODULE = { revision_daily_max: 'revision', revision_email_enabled: 'revision', revision_email_hour: 'revision' };
 let moduleCheck = () => true;
 export const setSettingsModuleCheck = (fn) => { moduleCheck = fn; };

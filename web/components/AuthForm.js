@@ -29,6 +29,7 @@ export default function AuthForm({ mode }) {
     const r = await call(isReg ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(body) }, null);
     setBusy(false);
     if (r.ok && r.data.twoFactor) { setChallenge(r.data.challenge); setCode(''); return; }
+    if (r.ok && isReg && qs.get('ref')) await call('/me/referral/claim', { method: 'POST', body: JSON.stringify({ code: qs.get('ref') }) }, r.data.token).catch(() => {}); // échec sans gravité : l'inscription réussit quand même
     if (r.ok) { login(r.data.token, r.data.user); router.push(isReg ? `/welcome?next=${encodeURIComponent(next)}` : next); return; }
     setErr(r.status === 401 ? t('errInvalid') : r.status === 409 ? t('errExists') : t('errGeneric'));
   };
@@ -68,6 +69,7 @@ export default function AuthForm({ mode }) {
         <label>{t('email')}<input type="email" required value={f.email} onChange={set('email')} /></label>
         <label>{t('password')}<input type="password" required minLength={8} value={f.password} onChange={set('password')} /></label>
         {err && <p className="error">{err}</p>}
+        {isReg && qs.get('ref') && <p className="meta small ref-note">{t('refInvited')}</p>}
         {isReg && <p className="meta small">{t('registerLegal')} <Link href="/legal/cgv">{t('legalTerms')}</Link> · <Link href="/legal/confidentialite">{t('legalPrivacy')}</Link></p>}
         <button className="btn" disabled={busy}>{t('submit')}</button>
         {!isReg && <Link href="/forgot" className="small">{t('forgotLink')}</Link>}

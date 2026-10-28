@@ -3973,3 +3973,12 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .ask-adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
 .ask-adm-item { padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); display: grid; gap: 8px; }
 .ask-adm-item blockquote { margin: 0; padding: 6px 10px; border-inline-start: 3px solid var(--accent); background: var(--surface-2); border-radius: 8px; font-size: .9rem; }
+
+/* Étape 43 — Parrainage */
+.ref-link { display: block; overflow-wrap: anywhere; user-select: all; }
+.ref-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.ref-stats { list-style: none; padding: 0; margin: 14px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.ref-stats li { background: var(--surface); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.ref-stats b { font-size: 1.6rem; color: var(--gold, #F7C863); }
+.ref-stats span { font-size: .85rem; }
+.ref-note { border-inline-start: 3px solid var(--gold, #F7C863); padding-inline-start: 10px; }

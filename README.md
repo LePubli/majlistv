@@ -6279,3 +6279,31 @@ Ensuite : Admin → Paramètres → Paiement → cocher « Essai gratuit sans ca
 **Limites (honnêtes).** Jamais essayé avec le vrai Stripe. Plus d'essais, mais aussi plus d'essais jamais convertis : à surveiller. Le test `test_pricing.py` n'est pas dans la suite automatique (il demande le faux Stripe) : à lancer à la main.
 
 **Testé.** API réelle + faux Stripe : 8 contrôles nouveaux (réglage par défaut, paramètres envoyés à Stripe avec/sans l'option, essai à 0 jour).
+
+## Étape 43 — Parrainage (28/10)
+
+**Description.** Chaque membre a un **lien personnel** (Mon compte → Parrainage) : `https://majlisstv.le-publicitaire.fr/register?ref=CODE`, avec boutons « Copier » et « WhatsApp ». Quand la personne invitée s'inscrit avec ce lien, elle est rattachée à son parrain. **Au premier vrai paiement du filleul** (facture payée supérieure à 0 € : ni l'inscription, ni l'essai gratuit), le **parrain et le filleul reçoivent chacun N mois d'accès offerts** (comme une carte cadeau) et un e-mail (FR/EN/AR). Le parrain suit ses invités, ses abonnés et ses mois gagnés ; tu les vois tous dans **Admin → Parrainages** (menu Catalogue).
+
+**Règles anti-abus.** Pas d'auto-parrainage ; un filleul n'a qu'un parrain ; rattachement possible seulement pour un compte créé il y a moins de 48 h et sans abonnement passé ; récompense versée une seule fois (même si Stripe rejoue l'événement) ; plafond annuel de récompenses par parrain (au-delà, le filleul reçoit quand même son mois, pas le parrain).
+
+**Réglages.** Admin → Paramètres → **Parrainage** : « Mois offerts » (1 par défaut) et « Récompenses maximum par parrain et par an » (12 par défaut, 0 = sans limite). Admin → Fonctions → « Parrainage » coupe tout (routes fermées, plus aucune récompense).
+
+**Prérequis.** Stripe configuré avec le webhook `invoice.paid` (déjà le cas). Migration 075 (tables `referral_codes`, `referrals`), appliquée au démarrage de l'API.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 075), puis **majlistv-web**. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** Compte A : Mon compte → Parrainage → copier le lien. Fenêtre privée : ouvrir le lien, créer le compte B (le texte « Vous êtes invité(e) » s'affiche). Avec B, s'abonner (carte de test Stripe `4242 4242 4242 4242`, ou fin d'essai) : à la facture payée, A et B ont chacun le mois offert (Mon compte → Abonnement, « accès offert jusqu'au… »), Admin → Parrainages montre « récompensé ».
+
+**Debug.** Le filleul n'apparaît pas chez le parrain : le compte avait plus de 48 h, ou déjà eu un abonnement, ou le lien n'avait pas `?ref=`. Récompense non versée : la facture est à 0 € (essai), ou l'événement `invoice.paid` n'arrive pas (Stripe → Développeurs → Webhooks), ou la fonction est coupée. Voir `docker logs dockpanel-git-majlistv-api`.
+
+**Fichiers.** `api/migrations/075_referrals.sql`, `api/src/modules/referral/*`, `api/src/settings.js`, `api/src/featuresList.js`, `api/src/emails.js`, `web/components/MyReferral.js`, `web/components/ReferralAdmin.js`, `web/components/AuthForm.js`, `web/app/account/page.js`, `web/lib/i18n.js`, tests `api/tests/test_referral.py`, `web/tests/test_referral_web.mjs`.
+
+**Limites (honnêtes).** Le mois offert **prolonge l'accès** comme une carte cadeau : pour un abonné qui continue de payer, il ne baisse pas sa facture (il sert s'il arrête). Pas de reprise si le filleul se fait rembourser. Pas de contrôle d'adresse IP ni d'e-mail jetable : le premier paiement réel est le garde-fou. Le lien n'est pas conservé si le visiteur navigue ailleurs avant de s'inscrire. Pas de version pour l'application mobile. À mentionner dans les pages légales (données de parrainage). `test_pricing.py` et `test_referral.py` demandent le faux Stripe : lancés à la main, hors suite GitHub.
+
+**Testé.** `api/tests/test_referral.py` (21 contrôles, API réelle + webhook signé), `web/tests/test_referral_web.mjs`.

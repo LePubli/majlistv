@@ -6,6 +6,7 @@ import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
+import MyReferral from '../../components/MyReferral';
 import PrayerSettings from '../../components/PrayerSettings';
 import MyData from '../../components/MyData';
 import TwoFactor from '../../components/TwoFactor';
@@ -77,6 +78,7 @@ export default function Account() {
     { id: 'data', label: t('tbData') },
     ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
     ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
+    ...(feat('referral') ? [{ id: 'referral', label: t('refTab') }] : []),
   ];
   const qs = useSearchParams();
   const [tab, go] = useTab(tabs, qs.get('billing') ? 'billing' : undefined); // retour du paiement : on arrive sur Abonnement
@@ -105,6 +107,7 @@ export default function Account() {
           <TabPanel id="security" current={tab}><TwoFactor /></TabPanel>
           <TabPanel id="data" current={tab}><MyData /></TabPanel>
           <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
+          <TabPanel id="referral" current={tab}><MyReferral /></TabPanel>
           <TabPanel id="gifts" current={tab}>
             <MyGifts />
             <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>

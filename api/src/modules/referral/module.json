@@ -1,0 +1,10 @@
+{
+  "id": "referral",
+  "name": "Parrainage",
+  "version": "1.0.0",
+  "description": "Lien personnel de parrainage : le parrain et le filleul reçoivent des mois offerts au premier paiement du filleul. Plafond annuel par parrain, suivi dans l'administration.",
+  "feature": "referral",
+  "requires": [],
+  "settings": ["referral_months", "referral_max_per_year"],
+  "admin": { "label": "Ouvrir les parrainages", "href": "/admin?tab=referral" }
+}

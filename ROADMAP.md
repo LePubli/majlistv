@@ -507,3 +507,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 42 (28/10) — Essai gratuit sans carte bancaire
 - Voir README « Étape 42 ». Bloc « Revenus » en cours, un « go » par étape : 43 parrainage (1.5), 44 Apple Pay / Google Pay et tarifs par pays (1.8), 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6, gros chantier).
+
+## Étape 43 (28/10) — Parrainage
+- Voir README « Étape 43 ». Suite du bloc « Revenus » (un « go » par étape) : 44 Apple Pay / Google Pay et tarifs par pays (1.8), 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6).
