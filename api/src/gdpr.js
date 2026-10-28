@@ -10,7 +10,7 @@ import { stripeClient } from './routes/billing.js';
 import { enqueueEmail } from './mailer.js';
 
 // Colonnes qui rattachent une ligne à une personne.
-export const OWN_COLUMNS = ['user_id', 'purchaser_id', 'redeemed_by', 'reporter_id', 'owner_id', 'organizer_id'];
+export const OWN_COLUMNS = ['user_id', 'purchaser_id', 'redeemed_by', 'reporter_id', 'owner_id', 'organizer_id', 'referrer_id', 'referee_id'];
 // Tables qui pointent vers users mais qui n'ont rien à exporter (technique ou secret), avec la raison (documentée dans le README).
 export const EXCLUDED_TABLES = {
   login_challenges: 'jeton de connexion temporaire (secret)',
