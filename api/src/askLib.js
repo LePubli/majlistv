@@ -84,10 +84,10 @@ export const TOOL = {
 const LANG_NAME = { fr: 'French', en: 'English', ar: 'Arabic' };
 
 /** Messages envoyés au modèle. Le titre, la question et les passages sont du texte non fiable : jamais des instructions. */
-export function buildPrompt({ title, speaker, locale, passages, question }) {
+export function buildPrompt({ title, speaker, locale, passages, question, json = false }) {
   const l = lang(locale);
   const system = `You answer a viewer's question about ONE recorded conference, using ONLY the numbered transcript passages provided.
-Call the tool "answer" with: status, answer, passages.
+${json ? 'Reply with ONLY a json object {"status": ..., "answer": ..., "passages": [...]} and nothing else.' : 'Call the tool "answer" with: status, answer, passages.'}
 Rules:
 - Use nothing but the passages. Never use outside knowledge. Never invent, complete, correct or recall a verse, a hadith, a saying, a date or a name that is not written in the passages.
 - status "answered": the passages contain the answer. "answer" = a short, plain-text answer (max 120 words, no markdown, no list), written in ${LANG_NAME[l]}, always attributed to the speaker ("According to the speaker…"), never presented as your own opinion. "passages" = the numbers (1 to 4) of the passages that support it.

@@ -13,7 +13,7 @@ ENV.update({
     "DATABASE_URL": ENV.get("DATABASE_URL", "postgres://majlis:pw@127.0.0.1:5544/majlis"), "PRACTICE_KEY": ENV.get("PRACTICE_KEY", "practice-key-for-tests-0123456789"),
     "JWT_SECRET": ENV.get("JWT_SECRET", "0123456789abcdef0123456789abcdef-test"), "SETTINGS_KEY": ENV.get("SETTINGS_KEY", "test-settings-key-0123456789"),
     "ADMIN_EMAIL": "admin@test.local", "ADMIN_PASSWORD": "AdminPassw0rd-test", "PORT": str(PORT), "RATE_LIMIT_MAX": "100000", "AUTH_RATE_MAX": "100000",
-    "ASK_RATE_MAX": "1000", "ANTHROPIC_API_URL": f"http://127.0.0.1:{MOCK}/v1/messages",
+    "ASK_RATE_MAX": "1000", "ANTHROPIC_API_URL": f"http://127.0.0.1:{MOCK}/v1/messages", "DEEPSEEK_API_URL": f"http://127.0.0.1:{MOCK}/chat/completions",
 })
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
 
@@ -34,11 +34,15 @@ class Mock(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))))
-        SEEN.append({"headers": dict(self.headers), "body": body})
-        q = body["messages"][0]["content"].split("Viewer's question")[-1]
+        SEEN.append({"headers": {k.lower(): v for k, v in self.headers.items()}, "body": body, "path": self.path})
+        deep = self.path.startswith("/chat/completions")
+        q = body["messages"][-1]["content"].split("Viewer's question")[-1]
         first = 1
         if "mock-fail" in q:
             self.send_response(500); self.end_headers(); self.wfile.write(b'{"error":{"message":"boom"}}'); return
+        if "mock-nojson" in q and deep:
+            out = json.dumps({"choices": [{"message": {"content": "ceci n'est pas du json"}, "finish_reason": "stop"}], "usage": {}}).encode()
+            self.send_response(200); self.send_header("content-type", "application/json"); self.end_headers(); self.wfile.write(out); return
         if "mock-ruling" in q:
             inp = {"status": "religious_ruling", "answer": "C'est permis.", "passages": [first]}
         elif "mock-off" in q:
@@ -49,7 +53,10 @@ class Mock(BaseHTTPRequestHandler):
             inp = {"status": "answered", "answer": "Réponse sans source valide.", "passages": [9999]}
         else:
             inp = {"status": "answered", "answer": "Selon l'intervenant, la patience est essentielle.", "passages": [first]}
-        out = json.dumps({"content": [{"type": "tool_use", "name": "answer", "input": inp}], "usage": {"input_tokens": 1200, "output_tokens": 80}}).encode()
+        if deep:
+            out = json.dumps({"choices": [{"message": {"content": json.dumps(inp)}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 700, "completion_tokens": 50}}).encode()
+        else:
+            out = json.dumps({"content": [{"type": "tool_use", "name": "answer", "input": inp}], "usage": {"input_tokens": 1200, "output_tokens": 80}}).encode()
         self.send_response(200); self.send_header("content-type", "application/json"); self.end_headers(); self.wfile.write(out)
 
 
@@ -111,6 +118,7 @@ ask = lambda h, tid, q: requests.post(f"{B}/talks/{tid}/ask", headers=h, json={"
 # Réglage de la clé (fausse) et des plafonds, via l'admin
 r = requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_daily_max": "4", "ask_global_daily_max": "1000"}}); ok(r.status_code == 200, "plafonds réglés")
 
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"anthropic_key": None, "deepseek_key": None, "ask_provider": None}})  # départ propre (un essai précédent interrompu)
 # 1. Sans clé Claude : indisponible
 r = requests.get(f"{B}/talks/{T}/ask", headers=L); ok(r.status_code == 200 and r.json()["available"] is False and r.json()["reason"] == "ask_unavailable", "sans clé Claude : assistant indisponible (état)")
 ok(ask(L, T, "Que dit-il ?").status_code == 503, "sans clé Claude : question refusée proprement (503)")
@@ -157,6 +165,25 @@ r = ask(L2, T, "mock-fail question"); ok(r.status_code == 502 and r.json()["code
 cur.execute("select count(*) from ask_log where user_id=%s", (l2u,)); ok(cur.fetchone()[0] == 0, "question en échec non décomptée")
 ok(requests.get(f"{B}/talks/{T}/ask", headers=L2).json()["remaining"] == 4, "compteur inchangé")
 
+# 6b. DeepSeek : mêmes clés que la traduction, rien à ressaisir
+r = requests.put(B + "/admin/settings", headers=ADM, json={"values": {"deepseek_key": "test-deepseek-key-not-real"}}); ok(r.status_code == 200, "clé DeepSeek de test (celle de la traduction)")
+D, du = member("learning"); SEEN.clear()
+r = ask(D, T, "Que dit-il sur la patience ?"); j = r.json()
+ok(r.status_code == 200 and j["status"] == "answered" and len(j["sources"]) == 1, "auto + clé DeepSeek : DeepSeek répond, passage cité")
+ok(SEEN[0]["path"].startswith("/chat/completions") and SEEN[0]["headers"].get("authorization") == "Bearer test-deepseek-key-not-real", "appel DeepSeek avec la clé déjà saisie")
+b = SEEN[0]["body"]
+ok(b["response_format"] == {"type": "json_object"} and "tools" not in b and b["messages"][0]["role"] == "system" and "json object" in b["messages"][0]["content"], "format JSON demandé, consigne en système, pas d'outil Claude")
+cur.execute("select model, tokens_in, tokens_out from ask_log where user_id=%s", (du,)); ok(cur.fetchone() == ("deepseek-flash", 700, 50), "modèle DeepSeek et jetons journalisés")
+r = ask(D, T, "mock-ruling halal ?").json(); ok(r["status"] == "religious_ruling" and "savant" in r["answer"], "DeepSeek : refus religieux, texte fixe")
+r = ask(D, T, "mock-nojson question"); ok(r.status_code == 502, "DeepSeek : réponse qui n'est pas du JSON → 502 clair")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_provider": "claude"}}); SEEN.clear()
+ok(ask(D, T, "Que dit-il ?").status_code == 200 and SEEN[0]["path"].startswith("/v1/messages"), "moteur forcé sur Claude : Claude répond malgré la clé DeepSeek")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_provider": "deepseek", "anthropic_key": None}}); SEEN.clear()
+ok(ask(D, T, "Que dit-il ?").status_code == 200 and SEEN[0]["path"].startswith("/chat/completions"), "moteur forcé sur DeepSeek")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_provider": "claude"}})
+r = ask(D, T, "Que dit-il ?"); ok(r.status_code == 503, "moteur forcé sur Claude sans clé Claude : indisponible (pas de repli silencieux)")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_provider": None, "deepseek_key": None, "anthropic_key": "test-claude-key-not-real"}})
+
 # 7. Plafond global
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"ask_global_daily_max": "1"}})
 r = ask(L2, T, "Que dit-il ?"); ok(r.status_code == 429 and r.json()["code"] == "ask_busy", "plafond global atteint : l'assistant s'arrête pour tous")
@@ -184,7 +211,7 @@ ok(before >= 1 and after == 0, "questions de plus de 90 jours supprimées")
 cur.execute("delete from users where id=%s", (aru,)); cur.execute("select count(*) from ask_log where user_id=%s", (aru,)); ok(cur.fetchone()[0] == 0, "suppression du compte : questions supprimées")
 
 # Remise en état
-requests.put(B + "/admin/settings", headers=ADM, json={"values": {"anthropic_key": None, "ask_daily_max": None, "ask_global_daily_max": None, "ask_context_chars": None, "feat_ask": None}})
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"anthropic_key": None, "deepseek_key": None, "ask_provider": None, "ask_daily_max": None, "ask_global_daily_max": None, "ask_context_chars": None, "feat_ask": None}})
 cur.execute("delete from talks where id = any(%s::uuid[])", ([T, T0, TL],))
 stop()
 print("\nTout est OK")

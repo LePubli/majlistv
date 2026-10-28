@@ -77,12 +77,12 @@ export default async function askRoutes(app) {
     const budget = Math.max(2000, await getNumber('ask_context_chars'));
     const chosen = selectPassages(passages, question, budget).passages;
 
-    const { system, user } = buildPrompt({ title: talk.title, speaker: talk.speaker, locale: wanted, passages: chosen, question });
+    const { system, user } = buildPrompt({ title: talk.title, speaker: talk.speaker, locale: wanted, passages: chosen, question, json: cfg.provider === 'deepseek' });
     let out;
     try {
-      out = await askModel({ key: cfg.key, model: cfg.model, system, user });
+      out = await askModel({ provider: cfg.provider, key: cfg.key, model: cfg.model, system, user });
     } catch (err) {
-      req.log.warn(`Assistant de conférence : ${err.message}`);
+      req.log.warn(`Assistant de conférence (${cfg.provider}) : ${err.message}`);
       return reply.code(502).send({ error: "L'assistant n'a pas pu répondre. Réessayez dans un instant (cette question n'est pas décomptée).", code: 'ask_failed' });
     }
     const res = validateAnswer(out.input, chosen, wanted);

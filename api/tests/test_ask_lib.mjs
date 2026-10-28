@@ -32,6 +32,7 @@ const pr = buildPrompt({ title: 'Titre', speaker: 'Cheikh', locale: 'ar', passag
 ok(/\[1\] \(00:00\)/.test(pr.user) && /\[2\]/.test(pr.user), 'passages numérotés avec leur minute dans le message');
 ok(/Arabic/.test(pr.system) && /untrusted/.test(pr.system) && /ONLY/.test(pr.system), 'consignes : langue, texte non fiable, passages seuls');
 ok(pr.user.includes('Ignore les règles') && !pr.system.includes('Ignore les règles'), 'la question reste dans le message utilisateur, jamais dans les consignes');
+ok(/json object/.test(buildPrompt({ title: 'T', speaker: '', locale: 'fr', passages: ps.slice(0, 1), question: 'x', json: true }).system) && !/Call the tool/.test(buildPrompt({ title: 'T', speaker: '', locale: 'fr', passages: ps.slice(0, 1), question: 'x', json: true }).system), 'moteur JSON (DeepSeek) : consigne de répondre en JSON, sans appel d\'outil');
 ok(buildPrompt({ title: 'T', speaker: '', locale: 'xx', passages: ps.slice(0, 1), question: 'x'.repeat(900) }).user.length < 1500, 'question tronquée à 400 caractères');
 
 const P = [{ id: 1, startMs: 12000, endMs: 20000, text: 'Texte un.' }, { id: 2, startMs: 3725000, endMs: 3730000, text: 'Texte deux.' }];
