@@ -15,6 +15,7 @@ const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 assert.match(read('../components/AuthForm.js'), /\/me\/referral\/claim/, "l'inscription rattache le filleul");
 assert.match(read('../app/account/page.js'), /MyReferral/, 'onglet Parrainage dans Mon compte');
 assert.match(read('../app/admin/page.js'), /ReferralAdmin/, 'écran Admin → Parrainages');
+assert.match(read('../app/admin/page.js'), /referral: 'Parrainages'/, 'titre de l\'écran Parrainages (sinon le tableau de bord s\'affiche)');
 assert.match(read('../components/AdminShell.js'), /'referral'/, 'menu Admin');
 assert.match(read('../components/MyReferral.js'), /\/register\?ref=/, 'lien de parrainage');
 console.log('web referral OK');
