@@ -513,3 +513,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 44 (31/10) — Apple Pay / Google Pay, moyens locaux et tarifs par pays
 - Voir README « Étape 44 ». Reste du bloc « Revenus » (un « go » par étape) : 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6, gros chantier à découper).
+
+## Étape 45 (31/10) — Pages de saison (Ramadan, Hajj, Mawlid, Achoura)
+- Voir README « Étape 45 ». Reste du bloc « Revenus » (un « go » par étape) : 46 abonnement groupe / association / école (1.6, gros chantier à découper).

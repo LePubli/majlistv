@@ -26,6 +26,8 @@ export const FEATURES = [
     rules: [{ re: '^/(series|me/series|studio/series|studio/series-candidates|talks/[^/]+/series)(/|$)' }] },
   { id: 'watch', group: 'catalog', label: 'Veille des chaînes', hint: 'Suivre des chaînes YouTube / Dailymotion / Vimeo et recevoir les nouvelles vidéos dans l\'admin (administrateur seulement)',
     rules: [{ re: '^/admin/watch(/|$)' }] },
+  { id: 'seasons', group: 'catalog', label: 'Saisons (Ramadan, Hajj, Mawlid, Achoura)', hint: "Bandeau et rangée sur l'accueil pendant les grandes périodes du calendrier hégirien, notification une fois par an (réglages dans Admin → Saisons)",
+    rules: [{ re: '^/(seasons|admin/seasons)(/|$)' }] },
   { id: 'collections', group: 'catalog', label: 'Collections', hint: 'Sélections éditoriales de conférences',
     rules: [{ re: '^/(collections|studio/collections)(/|$)' }] },
   { id: 'books', group: 'catalog', label: 'Ouvrages', hint: 'Livres et PDF liés aux conférences',

@@ -84,6 +84,11 @@ const TEXTS = {
     en: (v) => ({ title: 'This week’s selection', body: cut(v.titles.join(' · '), 160) }),
     ar: (v) => ({ title: 'اختيارات الأسبوع', body: cut(v.titles.join(' · '), 160) }),
   },
+  season: { // période saisonnière (Ramadan, Hajj…) : textes saisis ou par défaut, par langue
+    fr: (v) => ({ title: cut(v.t.fr, 60), body: cut(v.b.fr, 140) }),
+    en: (v) => ({ title: cut(v.t.en, 60), body: cut(v.b.en, 140) }),
+    ar: (v) => ({ title: cut(v.t.ar, 60), body: cut(v.b.ar, 140) }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),

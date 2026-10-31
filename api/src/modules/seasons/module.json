@@ -1,0 +1,10 @@
+{
+  "id": "seasons",
+  "name": "Saisons (Ramadan, Hajj, Mawlid, Achoura)",
+  "version": "1.0.0",
+  "description": "Pages saisonnières automatiques selon le calendrier hégirien : bandeau et rangée sur l'accueil, notification une fois par an, collection au choix.",
+  "feature": "seasons",
+  "requires": [],
+  "settings": ["hijri_offset_days"],
+  "admin": { "label": "Ouvrir les saisons", "href": "/admin?tab=seasons" }
+}

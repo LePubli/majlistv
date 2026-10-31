@@ -6335,3 +6335,33 @@ Admin → Fonctions → « Tarifs par pays » coupe tout (tarif général pour t
 **Limites (honnêtes).** Le pays est **choisi par le membre** : il n'y a pas de géolocalisation sur le site, donc un membre peut choisir un autre pays pour payer moins cher (si tu veux une vraie détection : mettre Cloudflare devant le site). Même devise obligatoire pour tous les groupes. Un abonné en cours garde son prix (pas de changement automatique). Jamais essayé avec le vrai Stripe (Apple Pay, Google Pay, SEPA, Bancontact, iDEAL, Link). `test_pricing_regions.py` demande le faux Stripe : lancé à la main, hors suite GitHub. À mentionner dans les pages légales : les prix dépendent du pays déclaré.
 
 **Testé.** `api/tests/test_pricing_regions.py` (27 contrôles, API réelle + faux Stripe), `test_pricing.py` et `test_pricing_learning.py` toujours verts, `web/tests/test_regions_web.mjs`.
+
+## Étape 45 — Pages de saison : Ramadan, Hajj, Mawlid, Achoura (31/10)
+
+**Description.** Pendant la période d'une fête ou d'un mois spécial, l'accueil affiche un **bandeau** (icône, titre, texte, « Encore N jours ») et une **rangée** de conférences (une collection de ton choix), et une **notification** part à l'ouverture. Les dates suivent le **calendrier hégirien** (Umm al-Qura, fuseau de Paris), calculées par le serveur : rien à mettre à jour chaque année.
+- **Ramadan** : 1 → 30 Ramadan, annoncé 7 jours avant. **Hajj** : 1 → 13 Dhou al-hijja, 7 jours avant. **Mawlid** : 1 → 12 Rabi' al-awwal, 3 jours avant. **Achoura** : 1 → 10 Mouharram, 3 jours avant.
+- **Désactivé par défaut** : rien ne s'affiche tant que tu n'actives pas une saison dans **Admin → Saisons** (menu Catalogue).
+- Par saison : activer, collection à mettre en avant (une collection publiée), nombre de jours d'annonce, titre et texte en FR / EN / AR (vide = texte par défaut fourni), notification oui/non, bouton **« M'envoyer la notification (test) »**.
+- **Notification** : une seule fois par saison et par année hégirienne, aux membres qui ont activé les notifications (web et application). Si tu actives une saison **alors qu'elle a déjà commencé de plus d'un jour**, rien n'est envoyé (pas de notification tardive) ; elle sera envoyée l'an prochain. Sans canal de notification configuré, la saison n'est pas marquée et part dès qu'un canal existe (dans la limite précédente).
+- **Décalage de date** : Admin → Paramètres → Saisons, « Décalage du calendrier hégirien » (−2 à +2 jours), si la lune est vue un jour plus tôt ou plus tard que le calendrier. Admin → Saisons affiche la date hégirienne du jour pour vérifier.
+
+**Prérequis.** Au moins une collection publiée (Admin → Collections) avec les conférences de la période ; notifications push configurées pour l'envoi (sinon bandeau seul).
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 077, table `season_pages`), puis **majlistv-web**. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Admin → Fonctions → « Pages de saison » coupe tout (bandeau et notification).
+
+**Essayer.** (a) Admin → Saisons : la date du jour s'affiche en hégirien ; vérifie-la. (b) Active la saison dont la période est ouverte (ou dont l'annonce a commencé : augmente « jours d'avance » jusqu'à 60 pour voir le bandeau tout de suite), choisis une collection, Enregistrer. (c) Accueil : bandeau + rangée. (d) « M'envoyer la notification (test) » sur ton téléphone. (e) Passe en arabe : le bandeau est en RTL.
+
+**Debug.** Le bandeau n'apparaît pas : saison non activée, hors période (voir « jours d'avance »), ou fonction coupée. Pas de rangée : la collection n'est pas publiée ou ne contient aucune conférence visible. Notification non reçue : le canal (Firebase / web push) n'est pas configuré, ou le membre n'a pas activé les notifications, ou la saison avait déjà commencé à l'activation ; journaux `docker logs dockpanel-git-majlistv-api | grep -i saison`.
+
+**Fichiers.** `api/migrations/077_seasons.sql`, `api/src/hijri.js`, `api/src/modules/seasons/*`, `api/src/push.js`, `api/src/settings.js`, `api/src/featuresList.js`, `web/components/SeasonBand.js`, `web/components/SeasonsAdmin.js`, `web/app/page.js`, `web/app/admin/page.js`, `web/components/AdminShell.js`, `web/lib/i18n.js`, `web/app/globals.css`, tests `api/tests/test_hijri.mjs`, `api/tests/test_seasons_run.mjs`, `api/tests/test_seasons.py`, `web/tests/test_seasons_web.mjs`.
+
+**Limites (honnêtes).** Le calendrier Umm al-Qura est un calendrier calculé : le début réel d'un mois peut différer d'**un jour** de ton pays (d'où le décalage manuel). Pas d'autre fête que les 4 prévues. Aucune notification tardive. Push seulement (pas d'e-mail). Jamais essayé avec un vrai téléphone ni les vrais canaux de notification. À mentionner dans les pages légales : rien de nouveau (aucune donnée supplémentaire).
+
+**Testé.** `test_hijri.mjs` (dates 2026 vérifiées), `test_seasons_run.mjs` (9 contrôles : une seule notification par année, bons destinataires, pas de rattrapage, fonction coupée), `test_seasons.py` (25 contrôles, API réelle avec date simulée au 19/03/2026), `test_seasons_web.mjs`.

@@ -54,3 +54,4 @@ test_seo_talk.py
 test_gdpr.py
 test_webpush.py
 test_ask.py
+test_seasons.py
