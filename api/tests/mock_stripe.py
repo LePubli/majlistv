@@ -6,7 +6,13 @@ LOG = []
 PRICES = {"price_m": {"id": "price_m", "object": "price", "unit_amount": 990, "currency": "eur", "recurring": {"interval": "month"}},
           "price_y": {"id": "price_y", "object": "price", "unit_amount": 9900, "currency": "eur", "recurring": {"interval": "year"}},
           "price_lm": {"id": "price_lm", "object": "price", "unit_amount": 999, "currency": "eur", "recurring": {"interval": "month"}},
-          "price_ly": {"id": "price_ly", "object": "price", "unit_amount": 9999, "currency": "eur", "recurring": {"interval": "year"}}}
+          "price_ly": {"id": "price_ly", "object": "price", "unit_amount": 9999, "currency": "eur", "recurring": {"interval": "year"}},
+          "price_rm": {"id": "price_rm", "object": "price", "unit_amount": 399, "currency": "eur", "recurring": {"interval": "month"}},
+          "price_ry": {"id": "price_ry", "object": "price", "unit_amount": 3999, "currency": "eur", "recurring": {"interval": "year"}},
+          "price_rlm": {"id": "price_rlm", "object": "price", "unit_amount": 599, "currency": "eur", "recurring": {"interval": "month"}},
+          "price_rly": {"id": "price_rly", "object": "price", "unit_amount": 5999, "currency": "eur", "recurring": {"interval": "year"}},
+          "price_usd": {"id": "price_usd", "object": "price", "unit_amount": 499, "currency": "usd", "recurring": {"interval": "month"}},
+          "price_once": {"id": "price_once", "object": "price", "unit_amount": 499, "currency": "eur"}}
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):
         raw = json.dumps(obj).encode()

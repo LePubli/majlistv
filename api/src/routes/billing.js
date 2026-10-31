@@ -8,6 +8,7 @@ import { getSetting, getNumber, isOn } from '../settings.js';
 import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
 import { hasLearningTier } from '../access.js';
+import { anyRegion, learningPriceIds, normalizeCountry, regionForCountry } from '../pricingRegions.js';
 import * as ext from '../ext.js'; // étape M3a : cartes cadeaux et rémunération réagissent aux événements de paiement
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
@@ -67,7 +68,14 @@ async function listedPlans(tier = 'standard') {
   }
   return out;
 }
-const methodsList = async () => (isOn(await getSetting('paypal_enabled')) ? ['card', 'paypal'] : ['card']);
+// Moyens proposés en plus de la carte (SEPA, Bancontact, iDEAL, Link) : liste saisie dans les paramètres, limitée aux moyens connus.
+export const EXTRA_METHODS = ['sepa_debit', 'bancontact', 'ideal', 'link'];
+export async function extraMethods() {
+  const wanted = String(await getSetting('payment_methods_extra') || '').toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  return EXTRA_METHODS.filter((m) => wanted.includes(m));
+}
+// Carte (qui porte Apple Pay et Google Pay) + PayPal + moyens locaux choisis.
+const methodsList = async () => ['card', ...(isOn(await getSetting('paypal_enabled')) ? ['paypal'] : []), ...(await extraMethods())];
 
 export default async function billingRoutes(app) {
   const off = (reply) => reply.code(503).send({ error: "Le paiement n'est pas configuré" });
@@ -75,6 +83,7 @@ export default async function billingRoutes(app) {
   // --- Formules (public) : toujours affichées. Avec Stripe, les montants sont lus chez Stripe (donc modifiables sans toucher
   // au code) ; sinon ce sont les prix saisis dans le back-office, et le paiement est annoncé « bientôt disponible » (enabled: false).
   let plansCache = { sig: '', at: 0, data: null };
+  const priceMemo = new Map();
   app.get('/billing/plans', async (req) => {
     const ctx = await stripeContext();
     const trialDays = await getNumber('trial_days');
@@ -82,31 +91,53 @@ export default async function billingRoutes(app) {
     const trialNoCard = trialDays > 0 && isOn(await getSetting('trial_no_card'));
     // `plans` : formule standard (inchangé). `learning` : palier Apprentissage (mêmes champs).
     const fromSettings = async () => ({
-      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, trialNoCard, methods,
+      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), regionalPricing: false, region: null,
       learning: { enabled: false, plans: await listedPlans('learning') },
     });
     if (!ctx) return fromSettings();
+    // Montants lus chez Stripe, gardés 10 minutes par identifiant de prix.
+    const readPrices = async (prices) => {
+      const out = [];
+      for (const [interval, id] of Object.entries(prices)) {
+        let hit = priceMemo.get(id);
+        if (!hit || Date.now() - hit.at > 10 * 60 * 1000) {
+          const p = await ctx.stripe.prices.retrieve(id);
+          hit = { at: Date.now(), v: { interval, amount: p.unit_amount, currency: p.currency } };
+          priceMemo.set(id, hit);
+        }
+        out.push(hit.v);
+      }
+      return out;
+    };
     const sig = `${clientCache.key}|${ctx.prices.month}|${ctx.prices.year}|${ctx.learn?.month || ''}|${ctx.learn?.year || ''}`;
     if (!plansCache.data || plansCache.sig !== sig || Date.now() - plansCache.at > 10 * 60 * 1000) {
       try {
-        const get = async (prices) => {
-          const out = [];
-          for (const [interval, id] of Object.entries(prices)) {
-            const p = await ctx.stripe.prices.retrieve(id);
-            out.push({ interval, amount: p.unit_amount, currency: p.currency });
-          }
-          return out;
-        };
-        plansCache = { sig, at: Date.now(), data: { standard: await get(ctx.prices), learning: ctx.learn ? await get(ctx.learn) : [] } };
+        plansCache = { sig, at: Date.now(), data: { standard: await readPrices(ctx.prices), learning: ctx.learn ? await readPrices(ctx.learn) : [] } };
       } catch (err) {
         // Stripe injoignable : on montre quand même les formules, mais on ne propose pas de payer.
         req.log.error(err);
         return fromSettings();
       }
     }
+    // Étape 44 — tarif du pays choisi par le membre (groupe défini dans Admin → Tarifs par pays) ; sinon tarif général.
+    const regionalPricing = await anyRegion();
+    const country = normalizeCountry(req.query?.country);
+    let region = country ? await regionForCountry(country) : null;
+    let standard = plansCache.data.standard;
+    let learnPlans = plansCache.data.learning;
+    if (region) {
+      try {
+        standard = await readPrices({ month: region.month, year: region.year });
+        if (ctx.learn && region.learnMonth && region.learnYear) learnPlans = await readPrices({ month: region.learnMonth, year: region.learnYear });
+      } catch (err) {
+        req.log.error(err); // prix de groupe illisible : tarif général plutôt qu'une page cassée
+        region = null; standard = plansCache.data.standard; learnPlans = plansCache.data.learning;
+      }
+    }
     // Palier Apprentissage non configuré chez Stripe : on montre les prix saisis, sans bouton de paiement.
-    const learning = ctx.learn ? { enabled: true, plans: plansCache.data.learning } : { enabled: false, plans: await listedPlans('learning') };
-    return { enabled: true, source: 'stripe', plans: plansCache.data.standard, trialDays, trialNoCard, methods, learning };
+    const learning = ctx.learn ? { enabled: true, plans: learnPlans } : { enabled: false, plans: await listedPlans('learning') };
+    return { enabled: true, source: 'stripe', plans: standard, trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), learning,
+      regionalPricing, region: region ? { id: region.id, name: region.name, country } : null };
   });
 
   // --- Mon abonnement ---
@@ -154,9 +185,15 @@ export default async function billingRoutes(app) {
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
     const ctx = await stripeContext();
     if (!ctx) return off(reply);
-    const { interval, tier, waiver, returnTo } = z.object({ interval: z.enum(['month', 'year']), tier: z.enum(['standard', 'learning']).default('standard'), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional() }).parse(req.body);
+    const { interval, tier, waiver, returnTo, country } = z.object({ interval: z.enum(['month', 'year']), tier: z.enum(['standard', 'learning']).default('standard'), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional(), country: z.string().max(2).optional() }).parse(req.body);
     if (tier === 'learning' && !ctx.learn) return reply.code(503).send({ error: "La formule Apprentissage n'est pas encore disponible" });
-    const priceId = (tier === 'learning' ? ctx.learn : ctx.prices)[interval];
+    // Étape 44 : prix du groupe de pays choisi par le membre (Apprentissage : prix du groupe s'il existe, sinon prix général).
+    const region = await regionForCountry(country);
+    let priceId = (tier === 'learning' ? ctx.learn : ctx.prices)[interval];
+    if (region) {
+      const own = tier === 'learning' ? (interval === 'month' ? region.learnMonth : region.learnYear) : (interval === 'month' ? region.month : region.year);
+      if (own) priceId = own;
+    }
     // Page à retrouver après le paiement (ex. la conférence qui a donné envie de s'abonner) : chemin du site uniquement.
     const back = returnTo && /^\/(?![\/\\])/.test(returnTo) ? returnTo : '';
     // Renonciation expresse au droit de rétractation, exigée avant tout paiement (contenu numérique).
@@ -169,7 +206,7 @@ export default async function billingRoutes(app) {
     const customer = await customerFor(ctx.stripe, req.user.sub);
     const trialDays = await getNumber('trial_days');
     const webUrl = await getSetting('web_url');
-    const subscription_data = { metadata: { user_id: req.user.sub } };
+    const subscription_data = { metadata: { user_id: req.user.sub, ...(region ? { pricing_region: region.name.slice(0, 80) } : {}) } };
     const trialApplies = trialDays > 0 && !before.rowCount;
     if (trialApplies) subscription_data.trial_period_days = trialDays;
     // Essai sans carte : Stripe ne demande aucun moyen de paiement pendant l'essai ; à son terme, sans carte ajoutée, l'abonnement est annulé.
@@ -204,15 +241,17 @@ export default async function billingRoutes(app) {
         tax_id_collection: { enabled: true },
       });
     }
-    // PayPal (via Stripe) : demandé explicitement quand l'option est active ; si Stripe le refuse (PayPal pas encore activé
-    // sur le compte, ou indisponible pour cet abonnement), on retombe sur le choix automatique de Stripe (carte) plutôt que d'échouer.
+    // PayPal et moyens locaux (SEPA, Bancontact, iDEAL, Link) : demandés explicitement quand ils sont choisis dans les paramètres ; si Stripe
+    // en refuse un (pas activé sur le compte, ou indisponible pour cet abonnement), on retombe sur le choix automatique de Stripe
+    // (carte, Apple Pay, Google Pay) plutôt que d'échouer. Apple Pay et Google Pay font partie de « card » : rien à demander.
     let session;
-    if (isOn(await getSetting('paypal_enabled'))) {
+    const wanted = await methodsList();
+    if (wanted.length > 1) {
       try {
-        session = await ctx.stripe.checkout.sessions.create({ ...params, payment_method_types: ['card', 'paypal'] });
+        session = await ctx.stripe.checkout.sessions.create({ ...params, payment_method_types: wanted });
       } catch (err) {
         if (!(err && err.type === 'StripeInvalidRequestError' && /payment_method/i.test(`${err.param || ''} ${err.message || ''}`))) throw err;
-        req.log.warn(`PayPal refusé par Stripe, paiement par carte : ${err.message}`);
+        req.log.warn(`Moyen de paiement refusé par Stripe, choix automatique : ${err.message}`);
       }
     }
     if (!session) session = await ctx.stripe.checkout.sessions.create(params);
@@ -237,7 +276,7 @@ export default async function billingRoutes(app) {
     hook.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => done(null, body));
 
     async function applySubscription(client, sub, eventCreated) {
-      const learnIds = [await getSetting('stripe_price_learn_monthly'), await getSetting('stripe_price_learn_yearly')].filter(Boolean);
+      const learnIds = await learningPriceIds(); // prix généraux et prix par pays du palier Apprentissage
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
       let userId = sub.metadata?.user_id || null;
       if (customerId) {

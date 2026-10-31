@@ -79,6 +79,8 @@ export const FEATURES = [
   { id: 'stats', group: 'community', label: 'Statistiques d\'audience', hint: 'Mesure anonyme des vues', setting: 'stats_enabled' },
   // Argent
   { id: 'gifts', group: 'money', label: 'Cartes cadeaux', hint: 'Offrir un abonnement', setting: 'gift_enabled' },
+  { id: 'regional_pricing', group: 'money', label: 'Tarifs par pays', hint: 'Prix adaptés au pays choisi par le membre sur la page Abonnement (groupes définis dans Admin → Tarifs par pays)',
+    rules: [{ re: '^/admin/pricing-regions(/|$)' }] },
   { id: 'referral', group: 'money', label: 'Parrainage', hint: 'Lien personnel : un mois offert au parrain et au filleul au premier paiement du filleul',
     rules: [{ re: '^/(me/referral|admin/referrals)(/|$)' }] },
   { id: 'revenue', group: 'money', label: 'Rémunération des chaînes', hint: 'Partage des abonnements entre les chaînes selon le temps de visionnage ; relevés Studio, clôture mensuelle et suivi des paiements', def: 'false',

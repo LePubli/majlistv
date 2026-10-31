@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import { safePath, pricingPath, authPath } from '../../lib/nav';
+import { COUNTRY_CODES, countryName, guessCountry } from '../../lib/countries';
 
 const fill = (text, n) => text.replace('{n}', n);
 
@@ -17,11 +18,25 @@ export default function Pricing() {
   const [err, setErr] = useState('');
   const [waiver, setWaiver] = useState(false);
   const [gifts, setGifts] = useState(false);
+  const [country, setCountry] = useState(null); // null = pas encore lu (localStorage) ; '' = non choisi
   const qs = useSearchParams();
   const canceled = qs.get('canceled');
   const from = safePath(qs.get('from')); // page d'origine (ex. la conférence verrouillée)
 
-  useEffect(() => { call('/billing/plans').then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] })); }, [call]);
+  // Pays : dernier choix du membre, sinon pays de la langue du navigateur. Il ne sert qu'à choisir le tarif (groupes de Admin → Tarifs par pays).
+  useEffect(() => {
+    let c = '';
+    try { c = localStorage.getItem('pay_country') || ''; } catch { /* stockage indisponible */ }
+    setCountry(c || guessCountry());
+  }, []);
+  useEffect(() => {
+    if (country === null) return;
+    call(`/billing/plans${country ? `?country=${country}` : ''}`).then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] }));
+  }, [call, country]);
+  const pickCountry = (e) => {
+    setCountry(e.target.value);
+    try { localStorage.setItem('pay_country', e.target.value); } catch { /* stockage indisponible */ }
+  };
   useEffect(() => { call('/gifts/options', {}, null).then((r) => setGifts(Boolean(r.ok && r.data.enabled))); }, [call]);
   useEffect(() => { if (user) call('/billing/status').then((r) => r.ok && setStatus(r.data)); }, [user, call]);
 
@@ -51,6 +66,17 @@ export default function Pricing() {
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
       {!info.enabled && <p className="soon">{anyPlans ? t('pricingSoon') : t('billingUnavailable')}</p>}
       {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t(info.trialNoCard ? 'trialNoCardNote' : 'trialNote'), info.trialDays)}</p>}
+      {info.regionalPricing && (
+        <p className="pay-country">
+          <label>{t('payCountry')}{' '}
+            <select value={country || ''} onChange={pickCountry}>
+              <option value="">{t('payCountryPick')}</option>
+              {COUNTRY_CODES.map((c) => [c, countryName(c, locale)]).sort((a, b) => a[1].localeCompare(b[1], locale)).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+            </select>
+          </label>
+          {info.region && <span className="meta small"> {fill(t('payRegionNote'), info.region.name)}</span>}
+        </p>
+      )}
       {err && <p className="error">{err}</p>}
       {tiers.map((tier) => {
         const month = tier.plans.find((p) => p.interval === 'month');
@@ -80,7 +106,7 @@ export default function Pricing() {
                   ) : active ? (
                     <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{current ? t('manageSub') : t('changePlan')}</button>
                   ) : user ? (
-                    <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, tier: tier.key, waiver: true, ...(from ? { returnTo: from } : {}) }, `${tier.key}-${interval}`)}>
+                    <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, tier: tier.key, waiver: true, ...(from ? { returnTo: from } : {}), ...(info.regionalPricing && country ? { country } : {}) }, `${tier.key}-${interval}`)}>
                       {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
                     </button>
                   ) : (
@@ -96,7 +122,13 @@ export default function Pricing() {
         <p className="pay-methods" aria-label={t('payMethods')}>
           <span>{t('payMethods')}</span>
           <span className="pay-chip">{t('payCard')}</span>
+          {info.wallets && <span className="pay-chip">Apple Pay</span>}
+          {info.wallets && <span className="pay-chip">Google Pay</span>}
           {(info.methods || []).includes('paypal') && <span className="pay-chip">PayPal</span>}
+          {(info.methods || []).includes('sepa_debit') && <span className="pay-chip">{t('paySepa')}</span>}
+          {(info.methods || []).includes('bancontact') && <span className="pay-chip">Bancontact</span>}
+          {(info.methods || []).includes('ideal') && <span className="pay-chip">iDEAL</span>}
+          {(info.methods || []).includes('link') && <span className="pay-chip">Link</span>}
         </p>
       )}
       {info.enabled && user && !active && (

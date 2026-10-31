@@ -510,3 +510,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 43 (28/10) — Parrainage
 - Voir README « Étape 43 ». Suite du bloc « Revenus » (un « go » par étape) : 44 Apple Pay / Google Pay et tarifs par pays (1.8), 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6).
+
+## Étape 44 (31/10) — Apple Pay / Google Pay, moyens locaux et tarifs par pays
+- Voir README « Étape 44 ». Reste du bloc « Revenus » (un « go » par étape) : 45 pages saisonnières (1.9), 46 abonnement groupe / école (1.6, gros chantier à découper).

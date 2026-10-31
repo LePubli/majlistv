@@ -14,6 +14,7 @@ import mediaImportRoutes from './routes/mediaImport.js'; // étape Import : copi
 import hlsRoutes from './routes/hls.js';
 import transcriptRoutes from './routes/transcripts.js';
 import billingRoutes from './routes/billing.js';
+import pricingRegionsRoutes from './routes/pricingRegions.js';
 import { ensureCors } from './storage.js';
 import { getSetting, getNumber, isOn } from './settings.js';
 import { currentUser } from './userstate.js';
@@ -161,6 +162,7 @@ await app.register(mediaImportRoutes);
 await app.register(hlsRoutes);
 await app.register(transcriptRoutes);
 await app.register(billingRoutes);
+await app.register(pricingRegionsRoutes);
 await app.register(settingsRoutes);
 await app.register(libraryRoutes);
 await app.register(searchRoutes);

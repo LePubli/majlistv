@@ -14,7 +14,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 1.5 | ✅ (étape 43) **Parrainage** : un mois offert au parrain et au filleul | Bouche-à-oreille mesurable ; réutilise les cartes cadeaux | M | ★★ |
 | 1.6 | **Abonnement groupe / association / école** (une facture, plusieurs comptes) | Nouveau marché (mosquées, écoles, associations), revenus récurrents plus gros | L | ★★ |
 | 1.7 | ✅ (étape 33, 3 e-mails ; fin d'essai déjà existante) **E-mails automatiques de cycle de vie** : relance avant la fin de l'essai, « tu n'as pas fini ta conférence », réactivation après résiliation | Meilleure conversion essai → payant, moins de départs | M | ★★★ |
-| 1.8 | **Apple Pay / Google Pay et moyens locaux** (activés dans Stripe) ; **tarifs adaptés par pays** | Paiement en 2 clics sur mobile, accès aux pays à pouvoir d'achat plus faible | S–M | ★★ |
+| 1.8 | ✅ (étape 44) **Apple Pay / Google Pay et moyens locaux** (activés dans Stripe) ; **tarifs adaptés par pays** | Paiement en 2 clics sur mobile, accès aux pays à pouvoir d'achat plus faible | S–M | ★★ |
 | 1.9 | **Pages saisonnières automatiques** (Ramadan, Hajj, Mawlid, Achoura) selon le calendrier hégirien : bannière, rangées, notifications | Contenu pertinent au bon moment, pics d'audience | M | ★★ |
 
 ## 2. Engagement : les faire revenir

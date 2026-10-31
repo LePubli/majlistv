@@ -95,6 +95,10 @@ export const FIELDS = [
     help: 'À activer APRÈS avoir activé PayPal dans Stripe (Paramètres → Moyens de paiement). Si PayPal est refusé par Stripe, le paiement retombe automatiquement sur la carte bancaire.' },
   { key: 'trial_no_card', group: 'payment', type: 'bool', label: "Essai gratuit sans carte bancaire", env: 'TRIAL_NO_CARD', def: 'false',
     help: "Si activé, l'essai gratuit démarre sans saisir de carte. À la fin de l'essai, sans moyen de paiement ajouté, l'abonnement s'arrête tout seul (le membre peut s'abonner ensuite). Sans effet si l'essai est à 0 jour ou déjà utilisé par le compte." },
+  { key: 'payment_wallets_shown', group: 'payment', type: 'bool', label: 'Afficher Apple Pay et Google Pay sur la page Abonnement', env: 'PAYMENT_WALLETS_SHOWN', def: 'false',
+    help: "Apple Pay et Google Pay passent par la carte dans la page de paiement Stripe : ils apparaissent tout seuls sur les appareils compatibles quand ils sont activés dans Stripe (Paramètres → Moyens de paiement). Cocher seulement pour les annoncer sur la page." },
+  { key: 'payment_methods_extra', group: 'payment', type: 'text', label: 'Moyens de paiement locaux en plus (sepa_debit, bancontact, ideal, link)', env: 'PAYMENT_METHODS_EXTRA', def: '',
+    help: "Liste séparée par des virgules, parmi : sepa_debit (prélèvement SEPA), bancontact, ideal, link. À activer APRÈS les avoir activés dans Stripe ; s'ils sont refusés par Stripe, le paiement retombe sur le choix automatique de Stripe." },
   { key: 'stripe_automatic_tax', group: 'payment', type: 'bool', label: 'TVA automatique (Stripe Tax)', env: 'STRIPE_AUTOMATIC_TAX', def: 'false',
     help: 'Activer seulement après avoir configuré Stripe Tax (Stripe → Taxes) et défini vos prix « taxes incluses ». L\'adresse de facturation est alors demandée au paiement.' },
 

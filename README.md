@@ -6307,3 +6307,31 @@ bash /root/verify-deploy.sh
 **Limites (honnêtes).** Le mois offert **prolonge l'accès** comme une carte cadeau : pour un abonné qui continue de payer, il ne baisse pas sa facture (il sert s'il arrête). Pas de reprise si le filleul se fait rembourser. Pas de contrôle d'adresse IP ni d'e-mail jetable : le premier paiement réel est le garde-fou. Le lien n'est pas conservé si le visiteur navigue ailleurs avant de s'inscrire. Pas de version pour l'application mobile. Les parrainages d'un membre sont inclus dans son export RGPD (Mon compte → Mes données) et supprimés avec son compte ; à mentionner dans les pages légales. `test_pricing.py` et `test_referral.py` demandent le faux Stripe : lancés à la main, hors suite GitHub.
 
 **Testé.** `api/tests/test_referral.py` (21 contrôles, API réelle + webhook signé), `web/tests/test_referral_web.mjs`.
+
+## Étape 44 — Apple Pay / Google Pay, moyens locaux et tarifs par pays (31/10)
+
+**Description.**
+1. **Apple Pay et Google Pay.** Ils passent par la carte dans la page de paiement Stripe : il n'y a rien à coder, ils s'affichent tout seuls sur les appareils compatibles dès qu'ils sont activés dans Stripe (Paramètres → Moyens de paiement). Un réglage **« Afficher Apple Pay et Google Pay sur la page Abonnement »** (Admin → Paramètres → Paiement) ajoute seulement les pastilles d'annonce.
+2. **Moyens locaux.** Réglage **« Moyens de paiement locaux en plus »** : liste parmi `sepa_debit, bancontact, ideal, link` (séparés par des virgules). Ils sont demandés à Stripe avec la carte (et PayPal s'il est actif) ; **si Stripe en refuse un** (pas activé sur le compte, devise non adaptée), le paiement retombe automatiquement sur le choix de Stripe (carte, Apple Pay, Google Pay).
+3. **Tarifs par pays.** **Admin → Tarifs par pays** (menu Catalogue) : tu crées des **groupes** (nom, pays en codes à 2 lettres, 2 prix Stripe, et en option 2 prix Apprentissage). Sur la page Abonnement, le membre choisit **son pays** (liste pré-remplie d'après la langue du navigateur et mémorisée) : si son pays est dans un groupe, il voit et paie les prix du groupe ; sinon, les prix généraux. Chaque prix saisi est **vérifié chez Stripe** à l'enregistrement : il existe, c'est un abonnement, la durée correspond, et la **devise est la même** que les prix généraux (Stripe ne permet pas de facturer un même client en deux devises). Sans prix Apprentissage propres, le prix Apprentissage général s'applique. L'abonnement au prix d'un groupe est bien reconnu comme « Apprentissage » quand c'est un prix Apprentissage de groupe.
+
+**Prérequis.** Stripe configuré (clés, prix généraux). Pour un groupe : créer dans Stripe → Produits → les prix récurrents du groupe (mensuel, annuel, et Apprentissage si voulu), même devise que les prix généraux, puis copier leurs identifiants `price_…`.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 076, table `price_regions`), puis **majlistv-web**. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Admin → Fonctions → « Tarifs par pays » coupe tout (tarif général pour tous).
+
+**Essayer.** (a) Admin → Tarifs par pays → Nouveau groupe : « Maghreb », pays `MA, DZ, TN`, vos prix Stripe → Enregistrer. (b) Page Abonnement, choisir « Maroc » : les prix du groupe s'affichent, « Tarif adapté : Maghreb » ; choisir « France » : prix généraux. (c) Avec le compte de test, « Commencer l'essai » : la page Stripe doit montrer le prix du groupe. (d) Réglages de paiement : cocher « Afficher Apple Pay et Google Pay », mettre `sepa_debit` dans les moyens locaux, vérifier la page de paiement Stripe sur un téléphone.
+
+**Debug.** « Prix … introuvable chez Stripe » : mauvais identifiant, ou clé Stripe d'un autre compte. « Devise différente » : recréer le prix dans la devise des prix généraux. Le groupe ne s'applique pas : il est inactif, la fonction est coupée, ou le pays choisi n'est pas dans sa liste. Un moyen local n'apparaît pas chez Stripe : il n'est pas activé dans Stripe, ou la devise ne convient pas (SEPA, Bancontact et iDEAL demandent l'euro) ; voir les journaux `docker logs dockpanel-git-majlistv-api` (« Moyen de paiement refusé par Stripe »).
+
+**Fichiers.** `api/migrations/076_price_regions.sql`, `api/src/pricingRegions.js`, `api/src/routes/pricingRegions.js`, `api/src/routes/billing.js`, `api/src/settings.js`, `api/src/featuresList.js`, `api/src/index.js`, `web/app/pricing/page.js`, `web/lib/countries.js`, `web/components/PricingRegionsAdmin.js`, `web/components/AdminShell.js`, `web/app/admin/page.js`, `web/lib/i18n.js`, tests `api/tests/test_pricing_regions.py`, `web/tests/test_regions_web.mjs`.
+
+**Limites (honnêtes).** Le pays est **choisi par le membre** : il n'y a pas de géolocalisation sur le site, donc un membre peut choisir un autre pays pour payer moins cher (si tu veux une vraie détection : mettre Cloudflare devant le site). Même devise obligatoire pour tous les groupes. Un abonné en cours garde son prix (pas de changement automatique). Jamais essayé avec le vrai Stripe (Apple Pay, Google Pay, SEPA, Bancontact, iDEAL, Link). `test_pricing_regions.py` demande le faux Stripe : lancé à la main, hors suite GitHub. À mentionner dans les pages légales : les prix dépendent du pays déclaré.
+
+**Testé.** `api/tests/test_pricing_regions.py` (27 contrôles, API réelle + faux Stripe), `test_pricing.py` et `test_pricing_learning.py` toujours verts, `web/tests/test_regions_web.mjs`.
