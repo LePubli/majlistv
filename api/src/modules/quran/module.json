@@ -1,0 +1,10 @@
+{
+  "id": "quran",
+  "name": "Coran (texte, traduction, phonétique, tafsir)",
+  "version": "1.0.0",
+  "description": "Lecteur du Coran verset par verset : texte arabe (Hafs), traductions, phonétique et tafsir, importés depuis l'admin avec leur source, licence et crédit.",
+  "feature": "quran",
+  "requires": [],
+  "settings": [],
+  "admin": { "label": "Ouvrir le Coran", "href": "/admin?tab=quran" }
+}

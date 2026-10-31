@@ -28,6 +28,8 @@ export const FEATURES = [
     rules: [{ re: '^/admin/watch(/|$)' }] },
   { id: 'seasons', group: 'catalog', label: 'Saisons (Ramadan, Hajj, Mawlid, Achoura)', hint: "Bandeau et rangée sur l'accueil pendant les grandes périodes du calendrier hégirien, notification une fois par an (réglages dans Admin → Saisons)",
     rules: [{ re: '^/(seasons|admin/seasons)(/|$)' }] },
+  { id: 'quran', group: 'catalog', label: 'Coran (lecteur)', hint: "Texte arabe, traductions, phonétique et tafsir, verset par verset (contenus importés dans Admin → Coran)",
+    rules: [{ re: '^/(quran|admin/quran)(/|$)' }] },
   { id: 'collections', group: 'catalog', label: 'Collections', hint: 'Sélections éditoriales de conférences',
     rules: [{ re: '^/(collections|studio/collections)(/|$)' }] },
   { id: 'books', group: 'catalog', label: 'Ouvrages', hint: 'Livres et PDF liés aux conférences',
