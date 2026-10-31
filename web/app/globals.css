@@ -4006,3 +4006,24 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .ss-card input[type=checkbox] { justify-self: start; }
 .ss-lang { border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 8px 10px; display: grid; gap: 8px; }
 .ss-card label.chk { display: flex; align-items: center; gap: 8px; }
+
+/* Coran (étape 45B) */
+.qr-ar { font-family: 'Amiri Quran', 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: #fff; line-height: 2.1; }
+.qr-search { display: block; margin: 12px 0; } .qr-search input { width: 100%; }
+.qr-grid { list-style: none; padding: 0; margin: 16px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.qr-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); color: #fff; text-decoration: none; }
+.qr-card:hover, .qr-card:focus-visible { border-color: var(--gold, #d4af37); }
+.qr-num { min-width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--gold, #d4af37); color: var(--gold, #d4af37); font-size: .85rem; }
+.qr-names { flex: 1; display: grid; gap: 2px; min-width: 0; } .qr-name-ar { font-size: 1.35rem; line-height: 1.4; }
+.qr-results { display: grid; gap: 8px; margin: 12px 0; } .qr-hit { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); color: #fff; text-decoration: none; }
+.qr-head h1 { margin: 4px 0 12px; }
+.qr-options { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: end; margin: 12px 0 18px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); }
+.qr-options label { display: grid; gap: 4px; } .qr-options label.chk { display: flex; align-items: center; gap: 8px; }
+.qr-verses { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.qr-verse { position: relative; padding: 14px 16px 14px 52px; border-radius: 14px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); display: grid; gap: 6px; scroll-margin-top: 80px; }
+[dir=rtl] .qr-verse { padding: 14px 52px 14px 16px; }
+.qr-badge { position: absolute; inset-inline-start: 12px; top: 14px; min-width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--gold, #d4af37); color: var(--gold, #d4af37); font-size: .8rem; }
+.qr-verse .qr-ar { margin: 0; font-size: 1.7rem; text-align: right; } .qr-size-1 .qr-ar { font-size: 1.3rem; } .qr-size-3 .qr-ar { font-size: 2.1rem; } .qr-size-4 .qr-ar { font-size: 2.6rem; }
+.qr-ph { margin: 0; color: var(--gold, #d4af37); font-style: italic; } .qr-tr { margin: 0; color: #fff; } .qr-tf { margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(212,175,55,.08); color: #fff; white-space: pre-wrap; }
+.qr-nav { display: flex; justify-content: space-between; gap: 10px; margin: 20px 0; } .qr-credits ul { margin: 6px 0 0; padding-inline-start: 18px; }
+@media (max-width: 640px) { .qr-grid { grid-template-columns: 1fr; } .qr-verse { padding-inline-start: 46px; } }

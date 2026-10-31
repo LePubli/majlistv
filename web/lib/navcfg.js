@@ -31,7 +31,7 @@ export const MENUS = {
     label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur), en cinq groupes ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
     groups: [['discover', 'Découvrir'], ['space', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
-      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
+      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['quran', 'Coran'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
       space: [['learning', 'Mon parcours'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
       account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],

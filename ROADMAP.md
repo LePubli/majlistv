@@ -516,3 +516,6 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 
 ## Étape 45 (31/10) — Pages de saison (Ramadan, Hajj, Mawlid, Achoura)
 - Voir README « Étape 45 ». Reste du bloc « Revenus » (un « go » par étape) : 46 abonnement groupe / association / école (1.6, gros chantier à découper).
+
+## Étape 45B (31/10) — Socle Coran (1/7 du plan saisons / Coran / Ramadan)
+- Voir README « Étape 45B ». Suite du plan (un « go » par sous-étape) : 45C vendredi (Al-Kahf, ghusl, prière sur le Prophète, notification), 45D compteur d'athkar (Apprentissage), 45E lecture en 30 jours, 45F circuit Ramadan, 45G bilan de Ramadan, 45H saisons enrichies et thème. Étape 46 (abonnement groupe) toujours en attente.

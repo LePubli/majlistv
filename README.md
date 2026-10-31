@@ -6365,3 +6365,39 @@ Admin → Fonctions → « Pages de saison » coupe tout (bandeau et notificatio
 **Limites (honnêtes).** Le calendrier Umm al-Qura est un calendrier calculé : le début réel d'un mois peut différer d'**un jour** de ton pays (d'où le décalage manuel). Pas d'autre fête que les 4 prévues. Aucune notification tardive. Push seulement (pas d'e-mail). Jamais essayé avec un vrai téléphone ni les vrais canaux de notification. À mentionner dans les pages légales : rien de nouveau (aucune donnée supplémentaire).
 
 **Testé.** `test_hijri.mjs` (dates 2026 vérifiées), `test_seasons_run.mjs` (9 contrôles : une seule notification par année, bons destinataires, pas de rattrapage, fonction coupée), `test_seasons.py` (25 contrôles, API réelle avec date simulée au 19/03/2026), `test_seasons_web.mjs`.
+
+## Étape 45B — Socle Coran : lecteur, ressources, recherche (31/10)
+
+Première sous-étape du plan « saisons, vendredi, athkar, lecture 30 jours, circuit Ramadan » (voir `claude/PLAN-SAISONS-CORAN-RAMADAN.md` dans le Projet). Elle prépare le texte dont dépendront le vendredi (Al-Kahf), la lecture en 30 jours et le circuit Ramadan.
+
+**Description.**
+- **Aucun texte religieux n'est fourni avec le logiciel.** Tu importes toi-même, dans **Admin → Coran** (menu Catalogue), les ressources que tu as le droit d'utiliser. Chaque ressource garde sa **source, sa licence et son crédit**, affichés sous la sourate.
+- 4 types de ressource : **texte arabe (Hafs)**, **traduction**, **phonétique**, **tafsir** (un ou plusieurs par langue ; FR, EN, AR).
+- **Import** : par adresse (le serveur télécharge ; adresses publiques seulement, 60 Mo au plus) ou par fichier de ton ordinateur. Formats : `tanzil` (lignes `sourate|verset|texte`, `#` = commentaire) ou `json` (liste de `{sura, aya, text}`, ou `{"1": {"1": "texte"}}`, ou `{"1": ["texte", …]}`). Le contenu est nettoyé (balises HTML retirées). Un nouvel import **remplace** l'ancien (tout ou rien).
+- **Lecteur** (`/coran`, menu latéral « Coran ») : 114 sourates, filtre par nom ou numéro, **recherche** (arabe sans les signes, traduction, phonétique), puis `/coran/18` : versets un par un, **choix de la traduction**, phonétique en option, **tafsir** déplié verset par verset, taille du texte, liens directs `/coran/18#v5`. Les réglages sont gardés sur l'appareil.
+- Gratuit pour tous (décision d'Epok). Fonction coupable : **Admin → Fonctions → « Coran (lecteur) »**.
+
+**Prérequis.** Les fichiers à importer, avec leur licence vérifiée (voir « Limites »).
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 078, tables `quran_resources` et `quran_verses`), puis **majlistv-web**. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Essayer.** (a) Admin → Coran → « Nouvelle ressource » : type « Texte arabe (Hafs) », langue `ar`, nom, auteur, adresse de la source, **licence et crédit exacts de la source**. (b) « Importer » : adresse ou fichier, format `tanzil`. Le message indique le nombre de versets ; pour le texte arabe, **6236** est le total habituel (sinon un avertissement s'affiche). (c) « Afficher ». (d) Même chose pour une traduction française, la phonétique, un tafsir. (e) Site → Coran → une sourate : vérifier arabe, traduction, phonétique, tafsir, crédits en bas ; en arabe (RTL) et sur téléphone.
+
+**Debug.** « Aucun verset valide » : mauvais format (essaie l'autre) ou numéros de sourate/verset hors 1–114 / 1–286. « Cette adresse n'est pas un site public » : l'import refuse les adresses internes ; utilise une adresse internet ou envoie le fichier. Activation refusée : importe d'abord. La sourate est vide : la ressource « texte » n'a pas ce verset. Journaux : `docker logs dockpanel-git-majlistv-api`.
+
+**Fichiers.** `api/migrations/078_quran.sql`, `api/src/modules/quran/*` (module, suras, lib, routes), `api/src/featuresList.js`, `web/app/coran/page.js`, `web/app/coran/[n]/page.js`, `web/components/QuranAdmin.js`, `web/components/MemberShell.js`, `web/lib/navcfg.js`, `web/app/admin/page.js`, `web/components/AdminShell.js`, `web/lib/i18n.js`, `web/app/globals.css`, tests `api/tests/test_quran_lib.mjs`, `api/tests/test_quran.py`, `web/tests/test_quran_web.mjs`.
+
+**Limites (honnêtes).**
+- **Licences non vérifiées par moi** : la licence officielle de Tanzil n'était pas lisible depuis mon environnement ; je n'ai pas pu confirmer celles des traductions, de la phonétique ni des tafsirs. C'est toi (Epok) qui valides chaque source avant l'import ; le logiciel affiche le crédit et la licence que tu saisis.
+- Les textes de test sont **fictifs** : le rendu du vrai Coran (signes, polices, longues sourates) n'a pas été essayé. La police arabe dépend de l'appareil (Amiri Quran / Scheherazade si installées, sinon police arabe du système) ; aucune police n'est téléchargée (CSP).
+- La basmala n'est ajoutée par le logiciel nulle part : elle apparaît seulement si elle est dans le fichier importé.
+- Pas de lecture audio, pas de marque-page ni de suivi de lecture (prévus dans les étapes suivantes). Site et PWA seulement : l'application Android et la TV viennent ensuite (l'API est prête pour elles).
+- Registre : ligne 139.
+
+**Testé.** `test_quran_lib.mjs` (19 contrôles : formats, nettoyage, adresses refusées), `test_quran.py` (37 contrôles, API réelle, données fictives, import par adresse avec redirection), `test_quran_web.mjs`, rendu mobile / bureau / arabe.
