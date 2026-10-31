@@ -15,6 +15,8 @@ ok(parseContent('json', JSON.stringify({ verses: [{ sura: 3, aya: 1, text: 'c' }
 const nested = parseContent('json', JSON.stringify({ 1: { 1: 'a', 2: 'b' }, 2: ['c', 'd', { text: 'e' }] }));
 ok(nested.rows.length === 5 && nested.rows[4].aya === 3 && nested.rows[4].text === 'e', 'json : objet imbriqué et listes par sourate');
 ok(parseContent('json', '{pas du json').error && parseContent('tanzil', 'rien\nde valide').error, 'fichiers illisibles : erreur claire');
+const fn = parseContent('json', JSON.stringify({ 1: [{ chapter: 1, verse: 1, text: 'Un[1]', footnotes: '[1] <b>Note</b> un' }, { chapter: 1, verse: 3, text: 'Trois' }] }));
+ok(fn.rows[0].notes === '[1] Note un' && fn.rows[1].aya === 3 && fn.rows[1].notes === '', 'json : notes de bas de page conservées, numéro de verset du fichier respecté')
 ok(parseTanzil('1|1|a\r\n1|2|b\r\n').rows.length === 2, 'fins de ligne Windows acceptées');
 
 for (const u of ['http://127.0.0.1:9/x', 'http://localhost/x', 'http://10.0.0.5/x', 'http://169.254.169.254/latest', 'http://[::1]/', 'ftp://example.com/x', 'file:///etc/passwd', 'http://user:pw@example.com/', 'pas une adresse']) {

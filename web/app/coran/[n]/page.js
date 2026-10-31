@@ -85,6 +85,9 @@ export default function SuraPage() {
               <p className="qr-ar" lang="ar" dir="rtl">{v.ar}</p>
               {v.ph && <p className="qr-ph" dir="ltr">{v.ph}</p>}
               {v.tr && <p className="qr-tr" dir={d.translation?.lang === 'ar' ? 'rtl' : 'ltr'}>{v.tr}</p>}
+              {v.tn && (
+                <details className="qr-notes"><summary>{t('qrNotes')}</summary><p dir={d.translation?.lang === 'ar' ? 'rtl' : 'ltr'}>{v.tn}</p></details>
+              )}
               {tf && (
                 <>
                   <button type="button" className="link u small" aria-expanded={Boolean(open[v.aya])} onClick={() => setOpen({ ...open, [v.aya]: !open[v.aya] })}>

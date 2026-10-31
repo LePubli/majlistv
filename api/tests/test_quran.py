@@ -108,7 +108,7 @@ ok(requests.post(f"{B}/admin/quran/resources/{FR}/import", headers=ADM, json={"f
 requests.put(f"{B}/admin/quran/resources/{FR}", headers=ADM, json={k: v for k, v in meta(slug="zt-fr", lang="fr", name="Traduction fictive", credit="Traducteur fictif", position=1, enabled=True).items() if k not in ("slug", "kind")})
 # Traduction anglaise en JSON, phonétique, tafsir
 r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-en", kind="translation", lang="en", name="Translation", position=2)); EN = r.json()["id"]
-requests.post(f"{B}/admin/quran/resources/{EN}/import", headers=ADM, json={"format": "json", "content": json.dumps({"1": {"1": "First verse one"}, "18": ["Eighteen one"]})})
+requests.post(f"{B}/admin/quran/resources/{EN}/import", headers=ADM, json={"format": "json", "content": json.dumps({"1": [{"chapter": 1, "verse": 1, "text": "First verse one[1]", "footnotes": "[1] Note one"}, {"chapter": 1, "verse": 2, "text": "Second"}], "18": ["Eighteen one"]})})
 requests.put(f"{B}/admin/quran/resources/{EN}", headers=ADM, json={k: v for k, v in meta(slug="zt-en", lang="en", name="Translation", position=2, enabled=True).items() if k not in ("slug", "kind")})
 r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-ph", kind="transliteration", lang="fr", name="Phonétique fictive", position=3)); PH = r.json()["id"]
 requests.post(f"{B}/admin/quran/resources/{PH}/import", headers=ADM, json={"format": "tanzil", "content": "1|1|fonétik un\n1|2|fonétik deux\n"})
@@ -124,10 +124,10 @@ res = requests.get(B + "/quran/resources").json()
 ok([x["slug"] for x in res] == ["zt-ar", "zt-fr", "zt-en", "zt-ph", "zt-tf"] and res[0]["credit"] == "Crédit fictif" and res[0]["license"], "ressources publiques avec source, licence et crédit")
 j = requests.get(B + "/quran/suras/1?lang=fr").json()
 ok(len(j["verses"]) == 2 and j["verses"][0]["ar"].startswith("نَ") and j["verses"][0]["tr"] == "Premier verset un" and j["verses"][0]["ph"] == "fonétik un" and j["translation"]["slug"] == "zt-fr", "lecteur FR : arabe + traduction FR + phonétique")
-j = requests.get(B + "/quran/suras/1?lang=en").json(); ok(j["verses"][0]["tr"] == "First verse one" and j["verses"][1]["tr"] is None, "lecteur EN : traduction anglaise par défaut (verset manquant = null)")
+j = requests.get(B + "/quran/suras/1?lang=en").json(); ok(j["verses"][0]["tr"] == "First verse one[1]" and j["verses"][0]["tn"] == "[1] Note one" and "tn" not in j["verses"][1] and j["verses"][1]["tr"] == "Second", "lecteur EN : traduction anglaise par défaut, avec ses notes de bas de page")
 j = requests.get(B + "/quran/suras/1?lang=ar").json(); ok(j["translation"]["lang"] in ("fr", "en"), "langue sans traduction : repli sur la première")
 j = requests.get(B + "/quran/suras/1?translation=none&translit=none").json(); ok("tr" not in j["verses"][0] and "ph" not in j["verses"][0] and j["translation"] is None, "traduction et phonétique désactivables (none)")
-j = requests.get(B + "/quran/suras/1?translation=zt-en").json(); ok(j["verses"][0]["tr"] == "First verse one", "traduction choisie par identifiant")
+j = requests.get(B + "/quran/suras/1?translation=zt-en").json(); ok(j["verses"][0]["tr"] == "First verse one[1]", "traduction choisie par identifiant")
 ok(len(j["translations"]) == 2 and len(j["tafsirs"]) == 1 and j["tafsirs"][0]["slug"] == "zt-tf", "le lecteur liste les traductions et tafsirs disponibles")
 ok(requests.get(B + "/quran/suras/5").status_code == 404 and requests.get(B + "/quran/suras/115").status_code == 400, "sourate sans texte : 404 ; numéro hors limites : 400")
 j = requests.get(B + "/quran/tafsir/zt-tf/18").json()

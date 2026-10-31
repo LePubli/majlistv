@@ -53,14 +53,15 @@ export default async function quranRoutes(app) {
     const tr = pick(list, 'translation', q.translation, lang(q.lang));
     const ph = pick(list, 'transliteration', q.translit, lang(q.lang));
     const ids = [ar.id, tr?.id, ph?.id].filter(Boolean);
-    const { rows } = await pool.query('SELECT resource_id, aya, text FROM quran_verses WHERE sura = $1 AND resource_id = ANY($2) ORDER BY aya', [n, ids]);
+    const { rows } = await pool.query('SELECT resource_id, aya, text, notes FROM quran_verses WHERE sura = $1 AND resource_id = ANY($2) ORDER BY aya', [n, ids]);
     const by = (rid) => new Map(rows.filter((r) => r.resource_id === rid).map((r) => [r.aya, r.text]));
     const A = by(ar.id); const T = tr ? by(tr.id) : null; const P = ph ? by(ph.id) : null;
+    const N = tr ? new Map(rows.filter((r) => r.resource_id === tr.id && r.notes).map((r) => [r.aya, r.notes])) : new Map();
     if (!A.size) return reply.code(404).send({ error: 'Cette sourate n\'est pas disponible.' });
     reply.header('cache-control', 'public, max-age=60');
     return {
       sura: suraOf(n),
-      verses: [...A.keys()].sort((a, b) => a - b).map((aya) => ({ aya, ar: A.get(aya), ...(T ? { tr: T.get(aya) ?? null } : {}), ...(P ? { ph: P.get(aya) ?? null } : {}) })),
+      verses: [...A.keys()].sort((a, b) => a - b).map((aya) => ({ aya, ar: A.get(aya), ...(T ? { tr: T.get(aya) ?? null } : {}), ...(N.has(aya) ? { tn: N.get(aya) } : {}), ...(P ? { ph: P.get(aya) ?? null } : {}) })),
       text: publicMeta(ar), translation: tr ? publicMeta(tr) : null, transliteration: ph ? publicMeta(ph) : null,
       translations: list.filter((r) => r.kind === 'translation').map(publicMeta), transliterations: list.filter((r) => r.kind === 'transliteration').map(publicMeta),
       tafsirs: list.filter((r) => r.kind === 'tafsir').map(publicMeta),

@@ -6377,9 +6377,16 @@ Première sous-étape du plan « saisons, vendredi, athkar, lecture 30 jours, ci
 - **Lecteur** (`/coran`, menu latéral « Coran ») : 114 sourates, filtre par nom ou numéro, **recherche** (arabe sans les signes, traduction, phonétique), puis `/coran/18` : versets un par un, **choix de la traduction**, phonétique en option, **tafsir** déplié verset par verset, taille du texte, liens directs `/coran/18#v5`. Les réglages sont gardés sur l'appareil.
 - Gratuit pour tous (décision d'Epok). Fonction coupable : **Admin → Fonctions → « Coran (lecteur) »**.
 
-**Prérequis.** Les fichiers à importer, avec leur licence vérifiée (voir « Limites »).
+**Coran complet en un clic (arabe, français, anglais).** Admin → Coran → bouton **« Ajouter le Coran complet »** : le serveur télécharge et importe trois ressources, avec leur licence et leur crédit déjà renseignés :
+- texte arabe **Tanzil** (Hafs, Uthmani) : licence CC BY 3.0, copie fidèle autorisée, **modification interdite** ;
+- traduction française de **Muhammad Hamidullah** (QuranEnc.com, version 1.0.2) ;
+- traduction anglaise du **Noor International Center** (QuranEnc.com, version 1.1.2) ;
+- QuranEnc.com autorise la republication sous 7 conditions : crédit de l'éditeur et de QuranEnc.com, numéro de version, notes conservées, aucune modification, mise à jour, signalement des remarques, pas de publicité déplacée. Les **notes de bas de page** des traductions sont donc importées et affichées (« Notes » sous le verset).
+Les fichiers viennent d'adresses **figées** (version précise) du dépôt public `risan/quran-json`, dont les empreintes sont vérifiées (ce sont les fichiers d'origine de Tanzil et de QuranEnc). Essai réel fait : 6236 versets dans chaque ressource, 114 sourates, Al-Baqara 286 versets, Al-Kahf 110.
 
-**Déploiement (DockPanel).** Redeploy **majlistv-api** (migration 078, tables `quran_resources` et `quran_verses`), puis **majlistv-web**. Puis sur le VPS :
+**Prérequis.** Le serveur doit pouvoir joindre `raw.githubusercontent.com` (pour le bouton) ; sinon importer un fichier depuis l'ordinateur. Pour d'autres sources : leur licence vérifiée (voir « Limites »).
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api** (migrations 078 et 079, tables `quran_resources` et `quran_verses`), puis **majlistv-web**. Puis sur le VPS :
 ```bash
 /root/apply-limits.sh
 grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
@@ -6391,13 +6398,13 @@ bash /root/verify-deploy.sh
 
 **Debug.** « Aucun verset valide » : mauvais format (essaie l'autre) ou numéros de sourate/verset hors 1–114 / 1–286. « Cette adresse n'est pas un site public » : l'import refuse les adresses internes ; utilise une adresse internet ou envoie le fichier. Activation refusée : importe d'abord. La sourate est vide : la ressource « texte » n'a pas ce verset. Journaux : `docker logs dockpanel-git-majlistv-api`.
 
-**Fichiers.** `api/migrations/078_quran.sql`, `api/src/modules/quran/*` (module, suras, lib, routes), `api/src/featuresList.js`, `web/app/coran/page.js`, `web/app/coran/[n]/page.js`, `web/components/QuranAdmin.js`, `web/components/MemberShell.js`, `web/lib/navcfg.js`, `web/app/admin/page.js`, `web/components/AdminShell.js`, `web/lib/i18n.js`, `web/app/globals.css`, tests `api/tests/test_quran_lib.mjs`, `api/tests/test_quran.py`, `web/tests/test_quran_web.mjs`.
+**Fichiers.** `api/migrations/078_quran.sql`, `api/migrations/079_quran_notes.sql`, `api/src/modules/quran/*` (module, suras, lib, routes), `api/src/featuresList.js`, `web/app/coran/page.js`, `web/app/coran/[n]/page.js`, `web/components/QuranAdmin.js`, `web/components/MemberShell.js`, `web/lib/navcfg.js`, `web/app/admin/page.js`, `web/components/AdminShell.js`, `web/lib/i18n.js`, `web/app/globals.css`, tests `api/tests/test_quran_lib.mjs`, `api/tests/test_quran.py`, `web/tests/test_quran_web.mjs`.
 
 **Limites (honnêtes).**
-- **Licences non vérifiées par moi** : la licence officielle de Tanzil n'était pas lisible depuis mon environnement ; je n'ai pas pu confirmer celles des traductions, de la phonétique ni des tafsirs. C'est toi (Epok) qui valides chaque source avant l'import ; le logiciel affiche le crédit et la licence que tu saisis.
+- **Licences** : pour le « Coran complet », les termes viennent des fiches de licence du dépôt `risan/quran-json` (qui cite Tanzil et QuranEnc) : je n'ai **pas pu lire les pages officielles** depuis mon environnement. À toi de confirmer sur https://tanzil.net/docs/text_license et https://quranenc.com/en/home/api. **Phonétique et tafsir : pas encore importés** (aucune source avec licence confirmée) ; l'écran d'import est prêt pour eux.
+- **Basmala** : le fichier Tanzil place « Au nom d'Allah… » au début du verset 1 de chaque sourate (sauf Al-Fatiha, où c'est le verset, et At-Tawba). Elle s'affiche donc dans le verset 1, telle quelle (le texte Tanzil ne doit pas être modifié).
 - Les textes de test sont **fictifs** : le rendu du vrai Coran (signes, polices, longues sourates) n'a pas été essayé. La police arabe dépend de l'appareil (Amiri Quran / Scheherazade si installées, sinon police arabe du système) ; aucune police n'est téléchargée (CSP).
-- La basmala n'est ajoutée par le logiciel nulle part : elle apparaît seulement si elle est dans le fichier importé.
 - Pas de lecture audio, pas de marque-page ni de suivi de lecture (prévus dans les étapes suivantes). Site et PWA seulement : l'application Android et la TV viennent ensuite (l'API est prête pour elles).
 - Registre : ligne 139.
 
-**Testé.** `test_quran_lib.mjs` (19 contrôles : formats, nettoyage, adresses refusées), `test_quran.py` (37 contrôles, API réelle, données fictives, import par adresse avec redirection), `test_quran_web.mjs`, rendu mobile / bureau / arabe.
+**Testé.** `test_quran_lib.mjs` (formats, notes de bas de page, nettoyage, adresses refusées), `test_quran.py` (37 contrôles, API réelle, données fictives, import par adresse avec redirection), `test_quran_web.mjs`, rendu mobile / bureau / arabe ; **import réel des 3 fichiers** (6236 versets chacun, recherche arabe et française).

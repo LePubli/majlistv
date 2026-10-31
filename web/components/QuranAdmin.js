@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 
 const KINDS = [['text', 'Texte arabe (Hafs)'], ['translation', 'Traduction'], ['transliteration', 'Phonétique'], ['tafsir', 'Tafsir']];
+// Coran complet : trois ressources dont les licences autorisent la copie fidèle (sans modification) avec crédit. Adresses figées sur une version précise
+// du dépôt « risan/quran-json » (empreintes vérifiées) ; ce sont les fichiers d'origine de Tanzil et de QuranEnc.com.
+const RAW = 'https://raw.githubusercontent.com/risan/quran-json/6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123/data/';
+const PRESET = [
+  { slug: 'ar-tanzil-uthmani', kind: 'text', lang: 'ar', name: 'Coran — texte arabe (Hafs, Uthmani)', author: 'Tanzil Project', sourceUrl: 'https://tanzil.net/docs/text_license', position: 0,
+    license: 'Creative Commons Attribution 3.0 — copie fidèle autorisée, modification interdite', credit: 'Texte du Coran : Tanzil Project (tanzil.net), © 2007-2021', url: `${RAW}tanzil/uthmani.json` },
+  { slug: 'fr-hamidullah', kind: 'translation', lang: 'fr', name: 'Traduction française — Muhammad Hamidullah', author: 'Muhammad Hamidullah', sourceUrl: 'https://quranenc.com/en/browse/french_hameedullah/', position: 1,
+    license: 'QuranEnc.com : republication fidèle autorisée sous conditions (crédit, version, notes conservées, aucune modification)', credit: 'Traduction : Muhammad Hamidullah — QuranEnc.com, version 1.0.2', url: `${RAW}quranenc/french_hameedullah.json` },
+  { slug: 'en-noor-saheeh', kind: 'translation', lang: 'en', name: 'English translation — Noor International Center', author: 'Noor International Center', sourceUrl: 'https://quranenc.com/en/browse/english_saheeh/', position: 2,
+    license: 'QuranEnc.com : republication fidèle autorisée sous conditions (crédit, version, notes conservées, aucune modification)', credit: 'Translation: Noor International Center — QuranEnc.com, version 1.1.2', url: `${RAW}quranenc/english_saheeh.json` },
+];
 const EMPTY = { slug: '', kind: 'translation', lang: 'fr', name: '', author: '', sourceUrl: '', license: '', credit: '', enabled: false, position: 0 };
 const when = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'));
@@ -45,6 +56,27 @@ export default function QuranAdmin() {
     const r = await call(`/admin/quran/resources/${x.id}`, { method: 'PUT', body: JSON.stringify({ lang: x.lang, name: x.name, author: x.author, sourceUrl: x.sourceUrl, license: x.license, credit: x.credit, enabled: !x.enabled, position: x.position }) });
     if (r.ok) load(); else setErr(errOf(r, t));
   };
+  const addComplete = async () => {
+    if (!window.confirm(t('qrAdPresetConfirm'))) return;
+    setBusy(true); setErr(''); setMsg('');
+    const done = [];
+    for (const x of PRESET) {
+      setMsg(`Import en cours : ${x.name}…`);
+      const meta = { lang: x.lang, name: x.name, author: x.author, sourceUrl: x.sourceUrl, license: x.license, credit: x.credit, position: x.position };
+      let id = d.resources.find((y) => y.slug === x.slug)?.id;
+      if (!id) {
+        const c = await call('/admin/quran/resources', { method: 'POST', body: JSON.stringify({ ...meta, slug: x.slug, kind: x.kind, enabled: false }) });
+        if (!c.ok) { setErr(`${x.name} : ${errOf(c, t)}`); setBusy(false); setMsg(''); load(); return; }
+        id = c.data.id;
+      }
+      const i = await call(`/admin/quran/resources/${id}/import`, { method: 'POST', body: JSON.stringify({ format: 'json', url: x.url }) });
+      if (!i.ok) { setErr(`${x.name} : ${errOf(i, t)}`); setBusy(false); setMsg(''); load(); return; }
+      const u = await call(`/admin/quran/resources/${id}`, { method: 'PUT', body: JSON.stringify({ ...meta, enabled: true }) });
+      if (!u.ok) { setErr(`${x.name} : ${errOf(u, t)}`); setBusy(false); setMsg(''); load(); return; }
+      done.push(`${x.name} (${i.data.imported} versets${i.data.warning ? ` ⚠ ${i.data.warning}` : ''})`);
+    }
+    setBusy(false); setMsg(`${t('qrAdPresetDone')} ${done.join(' ; ')}`); load();
+  };
   const runImport = async (e) => {
     e.preventDefault(); setBusy(true); setErr(''); setMsg('');
     const body = { format: imp.format, ...(imp.url.trim() ? { url: imp.url.trim() } : { content: imp.content }) };
@@ -62,6 +94,13 @@ export default function QuranAdmin() {
       <h2>{t('qrAdTitle')}</h2>
       <p className="meta">{t('qrAdIntro')} <Link className="link u" href="/coran">{t('qrAdOpen')}</Link></p>
       <p className="meta small">{t('qrAdLicence')}</p>
+      {!form && !imp && (
+        <section className="qr-preset">
+          <h3>{t('qrAdPresetTitle')}</h3>
+          <p className="meta small">{t('qrAdPresetText')}</p>
+          <p><button type="button" className="btn" disabled={busy} onClick={addComplete}>{busy ? t('qrAdPresetBusy') : t('qrAdPresetBtn')}</button></p>
+        </section>
+      )}
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       {!form && !imp && <p><button type="button" className="btn" onClick={() => { setForm({ ...EMPTY }); setMsg(''); setErr(''); }}>{t('qrAdNew')}</button></p>}

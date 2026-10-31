@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 const i18n = fs.readFileSync(new URL('../lib/i18n.js', import.meta.url), 'utf8');
 const KEYS = ['qrNav', 'qrTitle', 'qrIntro', 'qrSoon', 'qrSearch', 'qrFilter', 'qrNoResult', 'qrVerses', 'qrNotFound', 'qrSura', 'qrOptions', 'qrTranslation', 'qrPhonetic', 'qrTafsir', 'qrNone',
-  'qrSize', 'qrVerse', 'qrShowTafsir', 'qrHideTafsir', 'qrPrev', 'qrNext', 'qrSources', 'qrSource', 'qrAdNav', 'qrAdTitle', 'qrAdIntro', 'qrAdOpen', 'qrAdLicence', 'qrAdNew', 'qrAdSaved', 'qrAdNone'];
+  'qrSize', 'qrVerse', 'qrShowTafsir', 'qrHideTafsir', 'qrPrev', 'qrNext', 'qrSources', 'qrSource', 'qrAdNav', 'qrAdTitle', 'qrAdIntro', 'qrAdOpen', 'qrAdLicence', 'qrAdNew', 'qrAdSaved', 'qrAdNone', 'qrNotes', 'qrAdPresetTitle', 'qrAdPresetText', 'qrAdPresetBtn', 'qrAdPresetBusy', 'qrAdPresetConfirm', 'qrAdPresetDone'];
 for (const lang of ['fr', 'en', 'ar']) {
   const line = i18n.split('\n').find((l) => l.startsWith(`  ${lang}: {`));
   assert.ok(line, `langue ${lang}`);
@@ -19,4 +19,6 @@ assert.match(read('../lib/navcfg.js'), /\['quran', 'Coran'\]/, 'entrée du menu 
 assert.match(read('../app/coran/page.js'), /\/quran\/search/, 'recherche');
 assert.match(read('../app/coran/[n]/page.js'), /\/quran\/tafsir\//, 'tafsir');
 assert.match(read('../app/coran/[n]/page.js'), /dir="rtl"/, 'texte arabe de droite à gauche');
+assert.match(read('../components/QuranAdmin.js'), /raw\.githubusercontent\.com\/risan\/quran-json\/[0-9a-f]{40}\//, 'Coran complet : adresses figées sur une version précise');
+assert.match(read('../app/coran/[n]/page.js'), /qr-notes/, 'notes de bas de page');
 console.log('web quran OK');

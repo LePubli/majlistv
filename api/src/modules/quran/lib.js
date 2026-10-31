@@ -37,17 +37,17 @@ export function parseJson(content) {
   let data;
   try { data = JSON.parse(content); } catch { return { error: 'Fichier JSON illisible.' }; }
   const rows = []; let skipped = 0;
-  const push = (sura, aya, text) => {
+  const push = (sura, aya, text, notes) => {
     const s = Number(sura); const a = Number(aya); const t = cleanText(text);
     if (!validKey(s, a) || !t) { skipped++; return; }
-    rows.push({ sura: s, aya: a, text: t });
+    rows.push({ sura: s, aya: a, text: t, notes: cleanText(notes) });
   };
   const list = Array.isArray(data) ? data : Array.isArray(data?.verses) ? data.verses : null;
   if (list) {
-    for (const v of list) push(v?.sura ?? v?.surah ?? v?.chapter, v?.aya ?? v?.ayah ?? v?.verse, v?.text ?? v?.content);
+    for (const v of list) push(v?.sura ?? v?.surah ?? v?.chapter, v?.aya ?? v?.ayah ?? v?.verse, v?.text ?? v?.content, v?.footnotes ?? v?.notes);
   } else if (data && typeof data === 'object') {
     for (const [s, body] of Object.entries(data)) {
-      if (Array.isArray(body)) body.forEach((t, i) => push(s, i + 1, typeof t === 'string' ? t : t?.text));
+      if (Array.isArray(body)) body.forEach((t, i) => (typeof t === 'string' ? push(s, i + 1, t) : push(s, t?.verse ?? t?.aya ?? t?.ayah ?? i + 1, t?.text, t?.footnotes ?? t?.notes)));
       else if (body && typeof body === 'object') for (const [a, t] of Object.entries(body)) push(s, a, typeof t === 'string' ? t : t?.text);
       else skipped++;
     }
@@ -106,8 +106,8 @@ export async function importRows(resource, rows) {
     for (let i = 0; i < rows.length; i += 2000) {
       const part = rows.slice(i, i + 2000);
       await c.query(
-        'INSERT INTO quran_verses(resource_id, sura, aya, text) SELECT $1, * FROM unnest($2::smallint[], $3::smallint[], $4::text[])',
-        [resource.id, part.map((r) => r.sura), part.map((r) => r.aya), part.map((r) => r.text)]);
+        'INSERT INTO quran_verses(resource_id, sura, aya, text, notes) SELECT $1, * FROM unnest($2::smallint[], $3::smallint[], $4::text[], $5::text[])',
+        [resource.id, part.map((r) => r.sura), part.map((r) => r.aya), part.map((r) => r.text), part.map((r) => r.notes || '')]);
     }
     await c.query('UPDATE quran_resources SET verse_count = $2, imported_at = now(), updated_at = now() WHERE id = $1', [resource.id, rows.length]);
     await c.query('COMMIT');

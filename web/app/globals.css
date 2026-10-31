@@ -4028,3 +4028,5 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .qr-nav { display: flex; justify-content: space-between; gap: 10px; margin: 20px 0; } .qr-credits ul { margin: 6px 0 0; padding-inline-start: 18px; }
 @media (max-width: 640px) { .qr-grid { grid-template-columns: 1fr; } .qr-verse { padding-inline-start: 46px; } }
 .qr-options label.chk { white-space: nowrap; } .qr-options input[type=checkbox] { width: auto; flex: none; }
+.qr-preset { margin: 14px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(212,175,55,.45); background: rgba(212,175,55,.06); } .qr-preset h3 { margin: 0 0 6px; }
+.qr-notes { font-size: .9rem; } .qr-notes summary { cursor: pointer; color: var(--gold, #d4af37); } .qr-notes p { margin: 6px 0 0; white-space: pre-wrap; color: #fff; }
