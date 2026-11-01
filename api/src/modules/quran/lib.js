@@ -97,6 +97,28 @@ export async function fetchText(raw) {
   throw new Error('Trop de redirections.');
 }
 
+// Adresse avec « {n} » : un fichier par sourate (1 à 114), téléchargés 6 à la fois puis réunis (format JSON).
+export async function fetchBySura(template) {
+  const files = new Array(114);
+  let next = 1;
+  const worker = async () => {
+    for (;;) {
+      const n = next++;
+      if (n > 114) return;
+      try { files[n - 1] = await fetchText(String(template).replace(/\{n\}/g, String(n))); }
+      catch (e) { throw new Error(`sourate ${n} : ${e.message}`); }
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+  const rows = []; let skipped = 0;
+  for (let i = 0; i < 114; i++) {
+    const r = parseJson(files[i]);
+    if (r.error) throw new Error(`sourate ${i + 1} : ${r.error}`);
+    rows.push(...r.rows); skipped += r.skipped;
+  }
+  return { rows, skipped };
+}
+
 // Remplace tous les versets d'une ressource (transaction : en cas d'erreur, l'ancien contenu reste).
 export async function importRows(resource, rows) {
   const c = await pool.connect();

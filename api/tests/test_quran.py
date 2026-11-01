@@ -27,6 +27,9 @@ class Files(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/tr.txt":
             body = TANZIL_TR.encode(); self.send_response(200); self.end_headers(); self.wfile.write(body)
+        elif self.path.startswith("/sura/") and self.path.endswith(".json"):
+            n = int(self.path[6:-5])
+            body = json.dumps([{"surah": str(n), "ayah": str(a), "text": f"Tafsir {n}:{a}\nligne 2"} for a in (1, 2)]).encode(); self.send_response(200); self.end_headers(); self.wfile.write(body)
         elif self.path == "/redir":
             self.send_response(302); self.send_header("location", "/tr.txt"); self.end_headers()
         else:
@@ -116,6 +119,14 @@ requests.put(f"{B}/admin/quran/resources/{PH}", headers=ADM, json={k: v for k, v
 r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-tf", kind="tafsir", lang="fr", name="Tafsir fictif", position=4)); TF = r.json()["id"]
 requests.post(f"{B}/admin/quran/resources/{TF}/import", headers=ADM, json={"format": "tanzil", "content": "18|1|<p>Commentaire du verset un.</p>\n18|2|Commentaire deux\n"})
 requests.put(f"{B}/admin/quran/resources/{TF}", headers=ADM, json={k: v for k, v in meta(slug="zt-tf", lang="fr", name="Tafsir fictif", position=4, enabled=True).items() if k not in ("slug", "kind")})
+
+# Import « une sourate par fichier » ({n} dans l'adresse) : 114 fichiers réunis
+r = requests.post(f"{B}/admin/quran/resources/{TF}/import", headers=ADM, json={"format": "json", "url": f"http://127.0.0.1:{FILES}/sura/{{n}}.json"})
+ok(r.status_code == 200 and r.json()["imported"] == 228 and r.json()["suras"] == 114, "import par sourate : 114 fichiers réunis (228 versets)")
+ok(requests.post(f"{B}/admin/quran/resources/{TF}/import", headers=ADM, json={"format": "json", "url": f"http://127.0.0.1:{FILES}/nope/{{n}}.json"}).status_code == 400, "import par sourate : erreur claire si un fichier manque")
+j = requests.get(B + "/quran/tafsir/zt-tf/114").json()
+ok([i["text"] for i in j["items"]] == ["Tafsir 114:1\nligne 2", "Tafsir 114:2\nligne 2"], "tafsir importé par sourate lisible (retours à la ligne gardés)")
+requests.post(f"{B}/admin/quran/resources/{TF}/import", headers=ADM, json={"format": "tanzil", "content": "18|1|<p>Commentaire du verset un.</p>\n18|2|Commentaire deux\n"})
 
 # Liste et lecteur publics
 j = requests.get(B + "/quran/suras").json()

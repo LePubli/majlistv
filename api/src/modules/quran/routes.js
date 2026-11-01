@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { SURAS, suraOf } from './suras.js';
-import { KINDS, TOTAL_VERSES, arabicOf, enabledResources, fetchText, importRows, lang, parseContent, pick, publicMeta } from './lib.js';
+import { KINDS, TOTAL_VERSES, arabicOf, enabledResources, fetchBySura, fetchText, importRows, lang, parseContent, pick, publicMeta } from './lib.js';
 
 const slugRe = /^[a-z0-9][a-z0-9_-]{1,59}$/;
 const metaSchema = z.object({
@@ -142,10 +142,19 @@ export default async function quranRoutes(app) {
     const res = (await pool.query('SELECT * FROM quran_resources WHERE id = $1', [id])).rows[0];
     if (!res) return reply.code(404).send({ error: 'Ressource introuvable.' });
     let content = b.content;
-    if (b.url) {
-      try { content = await fetchText(b.url); } catch (e) { return reply.code(400).send({ error: `Téléchargement impossible : ${e.message}` }); }
+    let parsed;
+    if (b.url && b.format === 'json' && b.url.includes('{n}')) {
+      // un fichier par sourate
+      try { parsed = await fetchBySura(b.url); } catch (e) { return reply.code(400).send({ error: `Téléchargement impossible : ${e.message}` }); }
+      const map = new Map(); for (const x of parsed.rows) map.set(x.sura * 1000 + x.aya, x);
+      parsed = { rows: [...map.values()].sort((a, c) => a.sura - c.sura || a.aya - c.aya), skipped: parsed.skipped };
+      if (!parsed.rows.length) return reply.code(400).send({ error: 'Aucun verset valide trouvé.' });
+    } else {
+      if (b.url) {
+        try { content = await fetchText(b.url); } catch (e) { return reply.code(400).send({ error: `Téléchargement impossible : ${e.message}` }); }
+      }
+      parsed = parseContent(b.format, content);
     }
-    const parsed = parseContent(b.format, content);
     if (parsed.error) return reply.code(400).send({ error: parsed.error });
     await importRows(res, parsed.rows);
     const suras = new Set(parsed.rows.map((r) => r.sura)).size;

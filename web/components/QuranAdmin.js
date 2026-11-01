@@ -17,6 +17,16 @@ const PRESET = [
   { slug: 'en-noor-saheeh', kind: 'translation', lang: 'en', name: 'English translation — Noor International Center', author: 'Noor International Center', sourceUrl: 'https://quranenc.com/en/browse/english_saheeh/', position: 2,
     license: 'QuranEnc.com : republication fidèle autorisée sous conditions (crédit, version, notes conservées, aucune modification)', credit: 'Translation: Noor International Center — QuranEnc.com, version 1.1.2', url: `${RAW}quranenc/english_saheeh.json` },
 ];
+const TAF = 'https://raw.githubusercontent.com/spa5k/tafsir_api/eb82bb6294efe30ad5c135c03b1864afaa70e855/tafsir/';
+const TAF_LIC = 'Al-Mukhtasar (Tafsir Center for Quranic Studies), via Quran.com / QUL (qul.tarteel.ai) — licence validée par Epok ; texte non modifié';
+PRESET.push(
+  { slug: 'fr-tafsir-mukhtasar', kind: 'tafsir', lang: 'fr', name: 'Tafsir — Explication abrégée du Coran (Al-Mukhtasar)', author: 'Tafsir Center for Quranic Studies', sourceUrl: 'https://qul.tarteel.ai/resources/tafsir/259', position: 10,
+    license: TAF_LIC, credit: 'Tafsir : Explication abrégée du Coran (Al-Mukhtasar) — Tafsir Center for Quranic Studies, via QUL', url: `${TAF}french-mokhtasar/{n}.json` },
+  { slug: 'en-tafsir-mukhtasar', kind: 'tafsir', lang: 'en', name: 'Tafsir — Al-Mukhtasar (English)', author: 'Tafsir Center for Quranic Studies', sourceUrl: 'https://qul.tarteel.ai/resources/tafsir/266', position: 11,
+    license: TAF_LIC, credit: 'Tafsir: Al-Mukhtasar — Tafsir Center for Quranic Studies, via QUL', url: `${TAF}en-tafsir-al-mukhtasar/{n}.json` },
+  { slug: 'ar-tafsir-mukhtasar', kind: 'tafsir', lang: 'ar', name: 'التفسير — المختصر في تفسير القرآن الكريم', author: 'مركز تفسير للدراسات القرآنية', sourceUrl: 'https://qul.tarteel.ai/resources/tafsir/251', position: 12,
+    license: TAF_LIC, credit: 'التفسير: المختصر في تفسير القرآن الكريم — مركز تفسير للدراسات القرآنية، عبر QUL', url: `${TAF}ar-tafsir-al-mukhtasar/{n}.json` },
+);
 const EMPTY = { slug: '', kind: 'translation', lang: 'fr', name: '', author: '', sourceUrl: '', license: '', credit: '', enabled: false, position: 0 };
 const when = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'));
