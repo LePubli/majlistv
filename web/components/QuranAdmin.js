@@ -4,8 +4,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import QuranReciters from './QuranReciters';
 
-const KINDS = [['text', 'Texte arabe (Hafs)'], ['translation', 'Traduction'], ['transliteration', 'Phonétique'], ['tafsir', 'Tafsir']];
+const KINDS = [['text', 'Texte arabe (Hafs)'], ['translation', 'Traduction'], ['transliteration', 'Phonétique'], ['tafsir', 'Tafsir'], ['words', 'Mot à mot (sens de chaque mot)'], ['tajweed', 'Couleurs du tajwid']];
 // Coran complet : trois ressources dont les licences autorisent la copie fidèle (sans modification) avec crédit. Adresses figées sur une version précise
 // du dépôt « risan/quran-json » (empreintes vérifiées) ; ce sont les fichiers d'origine de Tanzil et de QuranEnc.com.
 const RAW = 'https://raw.githubusercontent.com/risan/quran-json/6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123/data/';
@@ -129,7 +130,9 @@ export default function QuranAdmin() {
         <form className="reg-form" onSubmit={runImport}>
           <h3>Importer « {imp.res.name} »</h3>
           <p className="meta small">Remplace tout le contenu de cette ressource. Formats : <b>tanzil</b> (lignes <code>sourate|verset|texte</code>) ou <b>json</b> (liste de {'{sura, aya, text}'} ou objet par sourate).</p>
-          <label>Format<select value={imp.format} onChange={(e) => setImp({ ...imp, format: e.target.value })}><option value="tanzil">tanzil (sourate|verset|texte)</option><option value="json">json</option></select></label>
+          {['words', 'tajweed'].includes(imp.res.kind)
+            ? <p className="meta small">{imp.res.kind === 'words' ? 'JSON : liste de {sura, aya, position, text} (position = numéro du mot dans le verset, à partir de 1) ou objet { "sourate:verset:mot": "sens" }. Un verset dont les mots ne sont pas numérotés 1, 2, 3… sans trou est écarté. Le sens s\'affiche mot par mot dans l\'ordre du texte arabe.' : 'JSON : liste de {surah, ayah, annotations: [{rule, start, end}]}, positions en caractères du texte arabe importé (qui doit être déjà importé et activé). Les versets dont une position dépasse le texte sont écartés.'}</p>
+            : <label>Format<select value={imp.format} onChange={(e) => setImp({ ...imp, format: e.target.value })}><option value="tanzil">tanzil (sourate|verset|texte)</option><option value="json">json</option></select></label>}
           <label>Adresse du fichier (téléchargé par le serveur, adresse publique)<input value={imp.url} onChange={(e) => setImp({ ...imp, url: e.target.value, content: '' })} dir="ltr" placeholder="https://…" /></label>
           <label>… ou fichier de votre ordinateur<input type="file" accept=".txt,.json,.csv,text/*,application/json" onChange={readFile} /></label>
           {imp.content && <p className="meta small">Fichier lu : {Math.round(imp.content.length / 1024)} Ko.</p>}
@@ -148,7 +151,7 @@ export default function QuranAdmin() {
                 <td>{x.verseCount}{x.kind === 'text' && x.verseCount && x.verseCount !== d.totalExpected ? ` ⚠ (attendu ${d.totalExpected})` : ''}</td>
                 <td>{when(x.importedAt)}</td><td>{x.enabled ? '✓' : '—'}</td>
                 <td className="adm-actions">
-                  <button type="button" className="btn ghost small" onClick={() => { setImp({ res: x, format: 'tanzil', url: '', content: '' }); setForm(null); setErr(''); setMsg(''); }}>Importer</button>{' '}
+                  <button type="button" className="btn ghost small" onClick={() => { setImp({ res: x, format: ['words', 'tajweed'].includes(x.kind) ? 'json' : 'tanzil', url: '', content: '' }); setForm(null); setErr(''); setMsg(''); }}>Importer</button>{' '}
                   <button type="button" className="btn ghost small" disabled={!x.verseCount && !x.enabled} onClick={() => toggle(x)}>{x.enabled ? 'Masquer' : 'Afficher'}</button>{' '}
                   <button type="button" className="btn ghost small" onClick={() => { setForm({ ...x }); setImp(null); setErr(''); setMsg(''); }}>Modifier</button>{' '}
                   <button type="button" className="btn ghost small" onClick={() => del(x)}>Supprimer</button>
@@ -158,6 +161,7 @@ export default function QuranAdmin() {
           </tbody>
         </table>
       </div>
+      {!form && !imp && <QuranReciters />}
     </section>
   );
 }

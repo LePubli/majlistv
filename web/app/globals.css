@@ -4030,3 +4030,17 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .qr-options label.chk { white-space: nowrap; } .qr-options input[type=checkbox] { width: auto; flex: none; }
 .qr-preset { margin: 14px 0; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(212,175,55,.45); background: rgba(212,175,55,.06); } .qr-preset h3 { margin: 0 0 6px; }
 .qr-notes { font-size: .9rem; } .qr-notes summary { cursor: pointer; color: var(--gold, #d4af37); } .qr-notes p { margin: 6px 0 0; white-space: pre-wrap; color: #fff; }
+
+/* Coran 45B2 : récitation, mot à mot, tajwid */
+.qr-play { position: absolute; inset-inline-start: 10px; top: 52px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--gold, #d4af37); background: transparent; color: var(--gold, #d4af37); cursor: pointer; font-size: .8rem; line-height: 1; padding: 0; }
+.qr-play[aria-pressed=true], .qr-verse.is-playing { background: rgba(212,175,55,.14); }
+.qr-play[aria-pressed=true] { background: var(--gold, #d4af37); color: #000; }
+.qr-verse.is-playing { border-color: var(--gold, #d4af37); }
+.qr-ar.is-click { cursor: pointer; }
+.qr-words { display: flex; flex-wrap: wrap; gap: 2px 10px; justify-content: flex-start; }
+.qr-w { background: none; border: 0; border-radius: 8px; padding: 0 4px; color: inherit; font: inherit; cursor: pointer; }
+.qr-w:hover, .qr-w.on { background: rgba(212,175,55,.2); outline: 1px solid var(--gold, #d4af37); }
+.qr-wm { flex-basis: 100%; margin: 6px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(212,175,55,.1); color: #fff; font-family: inherit; font-size: 1rem; line-height: 1.5; direction: ltr; text-align: start; }
+[dir=rtl] .qr-wm { direction: rtl; }
+.qr-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; font-size: .9rem; color: #fff; }
+.qr-leg { display: inline-flex; align-items: center; gap: 6px; } .qr-leg i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }

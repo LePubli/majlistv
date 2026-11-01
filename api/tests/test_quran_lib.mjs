@@ -1,6 +1,6 @@
 // Étape 45B — lecture des fichiers du Coran (formats tanzil et json), nettoyage, adresses refusées. Données fictives, sans texte réel.
 import assert from 'node:assert/strict';
-const { parseContent, parseTanzil, cleanText, fetchText } = await import('../src/modules/quran/lib.js');
+const { parseContent, parseTanzil, cleanText, fetchText, parseWords, parseTajweed, checkReciterUrl } = await import('../src/modules/quran/lib.js');
 const { SURAS } = await import('../src/modules/quran/suras.js');
 const ok = (c, m) => { assert.ok(c, m); console.log('OK   ' + m); };
 
@@ -23,4 +23,16 @@ for (const u of ['http://127.0.0.1:9/x', 'http://localhost/x', 'http://10.0.0.5/
   let err = null; try { await fetchText(u); } catch (e) { err = e; }
   ok(err, `adresse refusée : ${u}`);
 }
+
+// 45B2 : mot à mot, tajwid, adresse de récitateur
+const w = parseWords(JSON.stringify([{ sura: 1, aya: 1, position: 2, text: 'b' }, { sura: 1, aya: 1, position: 1, text: 'a' }, { sura: 1, aya: 2, position: 2, text: 'x' }, { sura: 1, aya: 3, position: 1, text: '  ' }]));
+ok(w.rows.length === 1 && w.rows[0].words.join() === 'a,b' && w.skipped === 2, 'mot à mot : ordre par position, verset avec trou et mot vide écartés');
+ok(parseWords(JSON.stringify({ '2:5:1': 'p', '2:5:2': { text: 'q' }, mauvais: 'z' })).rows[0].words.join() === 'p,q', 'mot à mot : clés sourate:verset:mot');
+ok(parseWords('pas du json').error && parseWords('[]').error, 'mot à mot : fichier illisible ou vide refusé');
+const len = new Map([[1001, 10]]);
+const tj = parseTajweed(JSON.stringify([{ surah: 1, ayah: 1, annotations: [{ rule: 'ikhfa', start: 0, end: 4 }] }, { surah: 1, ayah: 2, annotations: [{ rule: 'ikhfa', start: 0, end: 4 }] }, { surah: 1, ayah: 1 }]), len);
+ok(tj.rows.length === 1 && tj.rows[0].marks[0].join() === 'ikhfa,0,4' && tj.skipped === 2, 'tajwid : verset inconnu du texte ou sans règle écarté');
+ok(parseTajweed(JSON.stringify([{ surah: 1, ayah: 1, annotations: [{ rule: 'ikhfa', start: 0, end: 11 }] }]), len).error, 'tajwid : position hors du texte arabe refusée');
+ok(checkReciterUrl('https://a.example/x/{sura3}{aya3}.mp3').origin === 'https://a.example' && checkReciterUrl('https://a.example/{sura}/{aya}.mp3').origin, 'récitateur : modèles acceptés');
+ok(checkReciterUrl('http://a.example/{sura3}{aya3}').error && checkReciterUrl('https://a.example/x.mp3').error && checkReciterUrl('https://u:p@a.example/{sura3}{aya3}').error, 'récitateur : http, sans variables, identifiant refusés');
 console.log('quran lib OK');

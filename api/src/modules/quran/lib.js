@@ -3,7 +3,7 @@ import dns from 'node:dns/promises';
 import { pool } from '../../db.js';
 import { isPrivateHost } from '../../mediaImport.js';
 
-export const KINDS = ['text', 'translation', 'transliteration', 'tafsir'];
+export const KINDS = ['text', 'translation', 'transliteration', 'tafsir', 'words', 'tajweed'];
 export const TOTAL_VERSES = 6236; // total habituel du texte Hafs (sans la basmala des sourates) : sert à un simple avertissement
 export const MAX_BYTES = 60 * 1024 * 1024;
 
@@ -117,6 +117,95 @@ export async function fetchBySura(template) {
     rows.push(...r.rows); skipped += r.skipped;
   }
   return { rows, skipped };
+}
+
+// --- Mot à mot et tajwid ------------------------------------------------------------------------------------------------------
+// Mot à mot : liste [{ sura, aya, position, text }] (ou surah/ayah/word/translation…), ou objet { "1:1:1": "texte" } (sourate:verset:mot).
+// Un verset n'est gardé que si ses mots sont numérotés 1, 2, 3… sans trou.
+export function parseWords(content) {
+  let data;
+  try { data = JSON.parse(content); } catch { return { error: 'Fichier JSON illisible.' }; }
+  const items = [];
+  if (Array.isArray(data) || Array.isArray(data?.words)) {
+    for (const w of (Array.isArray(data) ? data : data.words)) {
+      items.push([Number(w?.sura ?? w?.surah ?? w?.chapter), Number(w?.aya ?? w?.ayah ?? w?.verse), Number(w?.position ?? w?.word ?? w?.pos ?? w?.index), w?.text ?? w?.translation ?? w?.meaning ?? w?.content]);
+    }
+  } else if (data && typeof data === 'object') {
+    for (const [k, v] of Object.entries(data)) {
+      const m = /^(\d+)[:_-](\d+)[:_-](\d+)$/.exec(k);
+      items.push(m ? [Number(m[1]), Number(m[2]), Number(m[3]), typeof v === 'string' ? v : v?.text ?? v?.translation] : [NaN, NaN, NaN, null]);
+    }
+  } else return { error: 'Format JSON non reconnu.' };
+  const by = new Map(); let skipped = 0;
+  for (const [sura, aya, pos, raw] of items) {
+    const text = cleanText(raw);
+    if (!validKey(sura, aya) || !Number.isInteger(pos) || pos < 1 || pos > 400 || !text) { skipped++; continue; }
+    const key = sura * 1000 + aya;
+    if (!by.has(key)) by.set(key, { sura, aya, w: new Map() });
+    by.get(key).w.set(pos, text);
+  }
+  const rows = [];
+  for (const v of by.values()) {
+    const n = v.w.size;
+    let good = true;
+    for (let i = 1; i <= n; i++) if (!v.w.has(i)) { good = false; break; }
+    if (!good) { skipped += n; continue; }
+    rows.push({ sura: v.sura, aya: v.aya, words: Array.from({ length: n }, (_, i) => v.w.get(i + 1)) });
+  }
+  rows.sort((a, b) => a.sura - b.sura || a.aya - b.aya);
+  if (!rows.length) return { error: 'Aucun mot valide trouvé dans ce fichier (sourate, verset, numéro du mot, texte).' };
+  return { rows, skipped };
+}
+
+// Tajwid : liste [{ surah, ayah, annotations: [{ rule, start, end }] }] — positions en caractères (points de code) du texte arabe.
+// Si on connaît le texte arabe (arabicLen = Map clé → longueur), les versets dont une position dépasse le texte sont écartés.
+export function parseTajweed(content, arabicLen) {
+  let data;
+  try { data = JSON.parse(content); } catch { return { error: 'Fichier JSON illisible.' }; }
+  const list = Array.isArray(data) ? data : Array.isArray(data?.verses) ? data.verses : null;
+  if (!list) return { error: 'Format JSON non reconnu (liste de versets avec « annotations »).' };
+  const rows = []; let skipped = 0;
+  for (const v of list) {
+    const sura = Number(v?.sura ?? v?.surah); const aya = Number(v?.aya ?? v?.ayah);
+    const ann = v?.annotations ?? v?.marks;
+    if (!validKey(sura, aya) || !Array.isArray(ann)) { skipped++; continue; }
+    const marks = [];
+    let bad = false;
+    for (const a of ann) {
+      const rule = String(a?.rule ?? ''); const start = Number(a?.start); const end = Number(a?.end);
+      if (!/^[a-z0-9_]{1,40}$/.test(rule) || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) { bad = true; break; }
+      marks.push([rule, start, end]);
+    }
+    const len = arabicLen?.get(sura * 1000 + aya);
+    if (bad || !marks.length || (arabicLen && (len === undefined || marks.some((m) => m[2] > len)))) { skipped++; continue; }
+    rows.push({ sura, aya, marks });
+  }
+  if (!rows.length) return { error: 'Aucun verset de tajwid utilisable (les positions doivent correspondre au texte arabe importé).' };
+  return { rows, skipped };
+}
+
+async function replaceInto(resource, sql, rows, mk) {
+  const c = await pool.connect();
+  try {
+    await c.query('BEGIN');
+    await c.query('DELETE FROM quran_words WHERE resource_id = $1', [resource.id]);
+    await c.query('DELETE FROM quran_tajweed WHERE resource_id = $1', [resource.id]);
+    for (const r of rows) await c.query(sql, mk(r));
+    await c.query('UPDATE quran_resources SET verse_count = $2, imported_at = now(), updated_at = now() WHERE id = $1', [resource.id, rows.length]);
+    await c.query('COMMIT');
+  } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { c.release(); }
+}
+export const importWords = (res, rows) => replaceInto(res, 'INSERT INTO quran_words(resource_id, sura, aya, words) VALUES ($1,$2,$3,$4)', rows, (r) => [res.id, r.sura, r.aya, r.words]);
+export const importTajweed = (res, rows) => replaceInto(res, 'INSERT INTO quran_tajweed(resource_id, sura, aya, marks) VALUES ($1,$2,$3,$4::jsonb)', rows, (r) => [res.id, r.sura, r.aya, JSON.stringify(r.marks)]);
+
+// Adresse d'un récitateur : https, avec {sura} ou {sura3} et {aya} ou {aya3} ; renvoie { origin } ou { error }.
+export function checkReciterUrl(tpl) {
+  const t = String(tpl || '').trim();
+  if (!/\{sura3?\}/.test(t) || !/\{aya3?\}/.test(t)) return { error: 'L\'adresse doit contenir {sura3} (ou {sura}) et {aya3} (ou {aya}).' };
+  let u;
+  try { u = new URL(t.replace(/\{sura3\}/g, '001').replace(/\{aya3\}/g, '001').replace(/\{sura\}/g, '1').replace(/\{aya\}/g, '1')); } catch { return { error: 'Adresse invalide.' }; }
+  if (u.protocol !== 'https:' || u.username || u.password) return { error: 'L\'adresse doit commencer par https:// et ne pas contenir d\'identifiant.' };
+  return { origin: u.origin };
 }
 
 // Remplace tous les versets d'une ressource (transaction : en cas d'erreur, l'ancien contenu reste).

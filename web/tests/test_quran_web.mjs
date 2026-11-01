@@ -25,3 +25,11 @@ console.log('web quran OK');
 assert.match(read('../lib/navcfg.js'), /space: \[\['learning', 'Mon parcours'\], \['quranlearn', 'Coran'\]/, 'raccourci Coran dans l\'espace Apprendre');
 assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/coran'/, 'raccourci vers le même lecteur gratuit');
 console.log('web quran shortcut OK');
+// 45B2 : récitation, mot à mot, tajwid
+const page = read('../app/coran/[n]/page.js');
+assert.match(page, /qr-play/, 'bouton ▶ par verset'); assert.match(page, /\/quran\/reciters/, 'récitateurs chargés'); assert.match(page, /urlTemplate\.replace/, 'adresse du verset construite');
+assert.match(page, /words', '1'/, 'mot à mot demandé à la demande'); assert.match(page, /tajweed', '1'/, 'tajwid demandé à la demande'); assert.match(page, /toks\.length === words\.length/, 'mot à mot seulement si le nombre de mots correspond');
+assert.match(read('../middleware.js'), /CSP_MEDIA_ORIGINS/, 'origines audio autorisées par la CSP');
+assert.match(read('../components/QuranAdmin.js'), /QuranReciters/, 'récitateurs dans Admin → Coran');
+for (const k of ['qrReciter', 'qrWbw', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
+console.log('web quran 45B2 OK');

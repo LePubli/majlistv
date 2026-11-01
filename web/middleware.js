@@ -35,7 +35,7 @@ export function buildCsp(nonce, { https, dev }) {
     // (risque faible comparé aux scripts).
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', 'https://i.vimeocdn.com', 'https://www.dailymotion.com', 'https://*.dmcdn.net', ...stor],
-    'media-src': ["'self'", 'blob:', ...stor],
+    'media-src': ["'self'", 'blob:', ...stor, ...list(process.env.CSP_MEDIA_ORIGINS).map(origin).filter(Boolean)],
     'font-src': ["'self'", 'data:'],
     'connect-src': ["'self'", 'https://www.gstatic.com', ...stor],
     'frame-src': frames,

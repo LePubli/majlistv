@@ -75,7 +75,7 @@ cur.execute("select id from users where email='admin@test.local'"); aid = cur.fe
 ADM = token(aid, "admin")
 cur.execute("insert into users(email, password_hash, name, role) values (%s,'x','M','user') returning id", (f"qr-{uuid.uuid4().hex[:8]}@test.local",)); uid = cur.fetchone()[0]
 USR = token(uid)
-cur.execute("delete from quran_resources"); cur.execute("delete from app_settings where key = 'feat_quran'")
+cur.execute("delete from quran_reciters"); cur.execute("delete from quran_resources"); cur.execute("delete from app_settings where key = 'feat_quran'")
 
 # Rien d'importé : lecteur pas prêt
 r = requests.get(B + "/quran/suras"); j = r.json()
@@ -152,6 +152,50 @@ j = requests.get(B + "/quran/search", params={"q": "sourate deux"}).json()["resu
 j = requests.get(B + "/quran/search", params={"q": "fonétik"}).json()["results"]; ok(len(j) == 2, "recherche dans la phonétique")
 ok(requests.get(B + "/quran/search", params={"q": "Commentaire"}).json()["results"] == [], "le tafsir n'est pas fouillé")
 ok(requests.get(B + "/quran/search", params={"q": "%_"}).json()["results"] == [] and requests.get(B + "/quran/search", params={"q": "a"}).status_code == 400, "caractères spéciaux sans effet ; requête trop courte refusée")
+
+# --- 45B2 : récitateurs, mot à mot, tajwid ------------------------------------------------------------------------------------
+rc = lambda **k: {**{"slug": "zt-rec", "name": "Récitateur fictif", "urlTemplate": "https://audio.example.org/rec/{sura3}{aya3}.mp3", "sourceUrl": "https://example.org/rec", "license": "Licence fictive", "credit": "Récitateur fictif — source fictive", "enabled": False, "position": 0}, **k}
+ok(requests.get(B + "/admin/quran/reciters").status_code == 401 and requests.get(B + "/admin/quran/reciters", headers=USR).status_code == 403, "récitateurs : admin seulement")
+for bad, why in [({"urlTemplate": "http://audio.example.org/{sura3}{aya3}.mp3"}, "http refusé"), ({"urlTemplate": "https://audio.example.org/fichier.mp3"}, "sans {sura}/{aya}"), ({"urlTemplate": "https://u:p@audio.example.org/{sura3}{aya3}.mp3"}, "identifiant dans l'adresse"), ({"slug": "Mauvais Slug"}, "identifiant invalide")]:
+    ok(requests.post(B + "/admin/quran/reciters", headers=ADM, json=rc(**bad)).status_code == 400, f"récitateur refusé : {why}")
+r = requests.post(B + "/admin/quran/reciters", headers=ADM, json=rc()); ok(r.status_code == 200 and r.json()["origin"] == "https://audio.example.org", "récitateur créé (origine à autoriser dans la CSP indiquée)"); RID = r.json()["id"]
+ok(requests.post(B + "/admin/quran/reciters", headers=ADM, json=rc()).status_code == 409, "récitateur en double refusé")
+ok(requests.get(B + "/quran/reciters").json() == [], "récitateur non activé : invisible du public")
+ok(requests.put(f"{B}/admin/quran/reciters/{RID}", headers=ADM, json={k: v for k, v in rc(enabled=True, position=1).items() if k != "slug"}).status_code == 200, "récitateur activé")
+j = requests.get(B + "/quran/reciters").json()
+ok(len(j) == 1 and j[0]["slug"] == "zt-rec" and j[0]["urlTemplate"].endswith("{sura3}{aya3}.mp3") and j[0]["credit"], "liste publique des récitateurs (adresse, licence, crédit)")
+
+r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-wbw", kind="words", lang="fr", name="Mot à mot fictif", position=5)); WB = r.json()["id"]
+words = [{"surah": 1, "ayah": 1, "position": 1, "translation": "un"}, {"surah": 1, "ayah": 1, "position": 2, "translation": "deux"}, {"surah": 1, "ayah": 1, "position": 3, "translation": "trois"},
+         {"surah": 1, "ayah": 2, "position": 1, "translation": "a"}, {"surah": 1, "ayah": 2, "position": 3, "translation": "c"}]
+r = requests.post(f"{B}/admin/quran/resources/{WB}/import", headers=ADM, json={"format": "json", "content": json.dumps(words)}); j = r.json()
+ok(r.status_code == 200 and j["imported"] == 1 and j["skipped"] == 2 and j["warning"], "mot à mot : verset à numérotation incomplète écarté")
+ok(requests.post(f"{B}/admin/quran/resources/{WB}/import", headers=ADM, json={"format": "tanzil", "content": "1|1|x"}).status_code == 400, "mot à mot : JSON seulement")
+r = requests.post(f"{B}/admin/quran/resources/{WB}/import", headers=ADM, json={"format": "json", "content": json.dumps({"18:1:1": "x", "18:1:2": {"text": "y"}})}); ok(r.status_code == 200 and r.json()["imported"] == 1, "mot à mot : clés « sourate:verset:mot »")
+requests.post(f"{B}/admin/quran/resources/{WB}/import", headers=ADM, json={"format": "json", "content": json.dumps(words)})
+requests.put(f"{B}/admin/quran/resources/{WB}", headers=ADM, json={k: v for k, v in meta(slug="zt-wbw", kind="words", lang="fr", name="Mot à mot fictif", position=5, enabled=True).items() if k not in ("slug", "kind")})
+j = requests.get(B + "/quran/suras/1?lang=fr").json()
+ok(j["wordsMeta"]["slug"] == "zt-wbw" and "words" not in j and "tajweed" not in j, "lecteur : mot à mot signalé mais envoyé seulement à la demande")
+j = requests.get(B + "/quran/suras/1?lang=fr&words=1").json()
+ok(j["words"] == {"1": ["un", "deux", "trois"]}, "lecteur : sens des mots d'un verset, dans l'ordre")
+ok(all(x["slug"] != "zt-wbw" for x in j["translations"] + j["tafsirs"]), "le mot à mot n'apparaît pas parmi les traductions")
+
+r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-taj", kind="tajweed", lang="ar", name="Tajwid fictif", position=6)); TJ = r.json()["id"]
+cur.execute("select char_length(text) from quran_verses where resource_id=%s and sura=1 and aya=1", (AR,)); L = cur.fetchone()[0]
+taj = [{"surah": 1, "ayah": 1, "annotations": [{"rule": "ghunnah", "start": 1, "end": 3}, {"rule": "madd_2", "start": 4, "end": L}]},
+       {"surah": 1, "ayah": 2, "annotations": [{"rule": "ikhfa", "start": 0, "end": 999}]},
+       {"surah": 2, "ayah": 1, "annotations": [{"rule": "Mauvaise Règle", "start": 0, "end": 2}]}]
+r = requests.post(f"{B}/admin/quran/resources/{TJ}/import", headers=ADM, json={"format": "json", "content": json.dumps(taj)}); j = r.json()
+ok(r.status_code == 200 and j["imported"] == 1 and j["skipped"] == 2, "tajwid : verset hors du texte ou règle invalide écartés")
+requests.put(f"{B}/admin/quran/resources/{TJ}", headers=ADM, json={k: v for k, v in meta(slug="zt-taj", kind="tajweed", lang="ar", name="Tajwid fictif", position=6, enabled=True).items() if k not in ("slug", "kind")})
+j = requests.get(B + "/quran/suras/1?lang=fr&tajweed=1").json()
+ok(j["tajweedMeta"]["slug"] == "zt-taj" and j["tajweed"] == {"1": [["ghunnah", 1, 3], ["madd_2", 4, L]]}, "lecteur : positions du tajwid à la demande")
+res = [x["slug"] for x in requests.get(B + "/quran/resources").json()]
+ok("zt-wbw" in res and "zt-taj" in res, "crédits : mot à mot et tajwid listés avec les ressources")
+ok(requests.get(B + "/quran/search", params={"q": "trois"}).json()["results"] == [], "le mot à mot n'est pas fouillé")
+ok(requests.delete(f"{B}/admin/quran/reciters/{RID}", headers=ADM).status_code == 200 and requests.get(B + "/quran/reciters").json() == [], "récitateur supprimé")
+requests.delete(f"{B}/admin/quran/resources/{WB}", headers=ADM); requests.delete(f"{B}/admin/quran/resources/{TJ}", headers=ADM)
+cur.execute("select count(*) from quran_words"); ok(cur.fetchone()[0] == 0, "supprimer la ressource supprime ses mots")
 
 # Désactiver une ressource la retire ; fonction coupée
 requests.put(f"{B}/admin/quran/resources/{FR}", headers=ADM, json={k: v for k, v in meta(slug="zt-fr", lang="fr", name="Traduction fictive", position=1, enabled=False).items() if k not in ("slug", "kind")})

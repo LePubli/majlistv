@@ -6414,3 +6414,29 @@ bash /root/verify-deploy.sh
 - Registre : ligne 139.
 
 **Testé.** `test_quran_lib.mjs` (formats, notes de bas de page, nettoyage, adresses refusées), `test_quran.py` (37 contrôles, API réelle, données fictives, import par adresse avec redirection), `test_quran_web.mjs`, rendu mobile / bureau / arabe ; **import réel des 3 fichiers** (6236 versets chacun, recherche arabe et française).
+
+## Étape 45B2 — Récitation, mot à mot, couleurs du tajwid (01/11)
+
+**Description.** Trois fonctions du lecteur du Coran (`/coran/<sourate>`), toutes gratuites pour les visiteurs. **Aucune donnée n'est fournie** : tout vient de l'administration, avec source, licence et crédit.
+- **Récitation** : un bouton ▶ par verset (et un clic sur le texte arabe quand le mot à mot est coupé) lance le verset chez le récitateur choisi ; « Enchaîner les versets » lit la suite. Le **navigateur du visiteur** télécharge le fichier directement chez la source : rien n'est copié chez nous. Le choix du récitateur est gardé sur l'appareil.
+- **Mot à mot** : chaque mot arabe devient cliquable ; son sens (ressource de type « Mot à mot ») s'affiche sous le verset. Proposé seulement pour les versets dont le nombre de mots correspond exactement au texte arabe (mots séparés par les espaces) ; sinon le verset s'affiche normalement.
+- **Couleurs du tajwid** : une case « Couleurs du tajwid » colore les lettres d'après une ressource de type « Couleurs du tajwid », avec une légende (Ghunna, Idgham, Ikhfa, Iqlab, Qalqala, Madd, lettres muettes). Les noms de règles viennent du fichier importé ; une règle inconnue est colorée en gris clair et nommée telle quelle.
+
+**Prérequis.** Étape 45B déployée (texte arabe importé et affiché). Migration `080_quran_reciters_words_tajweed.sql` (appliquée au démarrage de l'API).
+
+**Configuration.**
+1. *Récitateurs* : Admin → Coran → section « Récitateurs » → « Ajouter un récitateur » : identifiant, nom, **adresse modèle** en https avec `{sura3}` (sourate sur 3 chiffres, ex. 018) ou `{sura}` et `{aya3}` ou `{aya}`, par exemple `https://hote.exemple/chemin/{sura3}{aya3}.mp3` ; adresse de la source (conditions), **licence ou autorisation reçue**, crédit. Cochez « Proposé aux visiteurs ». Le tableau affiche l'**origine** à autoriser.
+2. *CSP* : pour chaque origine, ajoutez-la à la variable **`CSP_MEDIA_ORIGINS`** du site web (DockPanel → majlistv-web → variables, séparées par des virgules, ex. `https://hote.exemple`) puis **redéployez majlistv-web**. Sans cela, le navigateur bloque le son.
+3. *Mot à mot* : Admin → Coran → Nouvelle ressource, type « Mot à mot », langue `fr` ; puis « Importer » (JSON). Formats : liste de `{sura, aya, position, text}` (aussi `surah/ayah/word/translation`) ou objet `{ "sourate:verset:mot": "sens" }`. Un verset dont les mots ne sont pas numérotés 1, 2, 3… sans trou est écarté (indiqué dans le message d'import).
+4. *Tajwid* : type « Couleurs du tajwid » ; JSON : liste de `{surah, ayah, annotations: [{rule, start, end}]}`, positions en caractères (points de code) du **texte arabe déjà importé et activé** (les versets dont une position dépasse le texte sont écartés). Les positions dépendent du texte exact : réimporter le texte arabe oblige à réimporter le tajwid.
+5. Affichez chaque ressource (« Afficher »).
+
+**Lancement / déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 080), puis `majlistv-web` (après avoir mis `CSP_MEDIA_ORIGINS` si des récitateurs sont ajoutés). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (attendu : 0 échec).
+
+**API.** Public : `GET /quran/reciters` ; `GET /quran/suras/:n?words=1&tajweed=1` (ajoute `words`, `tajweed`, `wordsMeta`, `tajweedMeta`). Admin : `GET/POST /admin/quran/reciters`, `PUT/DELETE /admin/quran/reciters/:id`, import des ressources « words » et « tajweed » par `POST /admin/quran/resources/:id/import` (format `json`, adresse ou contenu).
+
+**Debug.** Le ▶ ne fait rien ou « La récitation ne peut pas être lue » : ouvrez l'adresse du verset dans un onglet (404 = modèle faux), puis vérifiez `CSP_MEDIA_ORIGINS` (console du navigateur : « violates Content Security Policy … media-src »). Mot à mot absent sur un verset : le nombre de mots du fichier ≠ nombre de mots du texte arabe. Couleurs décalées : le fichier de tajwid ne correspond pas exactement au texte arabe importé.
+
+**Exemples.** Récitateur : `https://hote.exemple/audio/{sura3}{aya3}.mp3` → verset 255 de la sourate 2 : `…/002255.mp3`. Mot à mot : `[{"sura":112,"aya":1,"position":1,"text":"…"}]`.
+
+**Licences et limites (honnêteté).** Aucune autorisation de récitateur n'a été obtenue ; certaines sources n'autorisent l'usage que non commercial (le site vend des abonnements, même si le Coran y est gratuit) : obtenez l'accord écrit de la source et notez-le dans « Licence ». Aucune source de mot à mot français ni de tajwid relue n'est validée à ce jour. Testé : API réelle et lecteur réel dans un navigateur avec des données **fictives** (390 / 1280 px, FR et arabe) ; PAS testé : vrai son depuis le VPS, vraies données.
