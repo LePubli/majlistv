@@ -22,3 +22,6 @@ assert.match(read('../app/coran/[n]/page.js'), /dir="rtl"/, 'texte arabe de droi
 assert.match(read('../components/QuranAdmin.js'), /raw\.githubusercontent\.com\/risan\/quran-json\/[0-9a-f]{40}\//, 'Coran complet : adresses figées sur une version précise');
 assert.match(read('../app/coran/[n]/page.js'), /qr-notes/, 'notes de bas de page');
 console.log('web quran OK');
+assert.match(read('../lib/navcfg.js'), /space: \[\['learning', 'Mon parcours'\], \['quranlearn', 'Coran'\]/, 'raccourci Coran dans l\'espace Apprendre');
+assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/coran'/, 'raccourci vers le même lecteur gratuit');
+console.log('web quran shortcut OK');
