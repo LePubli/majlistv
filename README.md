@@ -6460,3 +6460,25 @@ bash /root/verify-deploy.sh
 **Exemples.** Notification à 8 h : le vendredi à 8 h 10 (heure de Paris) les membres concernés reçoivent « Vendredi — Vos rappels du vendredi : sourate Al-Kahf… » ; le vendredi suivant, de nouveau.
 
 **Limites (honnêteté).** Testé : API réelle avec dates simulées (jour à Paris, heure d'été et d'hiver, minuit, une seule notification par vendredi, pas de rattrapage tardif, comptes suspendus exclus, droits, fonction coupée) et affichage réel dans un navigateur. **PAS testé** : envoi réel de notification sur un téléphone ; textes relus par un connaisseur ; sourate Al-Kahf avec de vraies données ; version application Android (sous-étape à part, comme prévu pour la règle « toutes les plateformes »). Vendredi commence ici à minuit heure de Paris (pas au coucher du soleil du jeudi).
+
+## Étape 45D — Compteur d'athkar (formule Apprentissage) (01/11)
+
+**Description.** Un onglet **« Athkar »** dans la page Apprendre (et dans le menu Apprendre) pour les membres de la formule **Apprentissage** : liste des dhikr par moment (matin, soir, après la prière, avant de dormir, à tout moment), texte arabe, phonétique et traduction si saisies, **référence**, gros bouton à toucher pour compter (vibration à l'objectif quand le téléphone le permet), « Terminé » quand le nombre de répétitions est atteint, remise à zéro. En haut : dhikr **terminés aujourd'hui / objectif** et **série** de jours consécutifs. Réglages du membre : **objectif du jour** (nombre de dhikr terminés) et **rappel quotidien** facultatif (heure de Paris). Les comptes repartent de zéro chaque jour à minuit (Paris).
+
+**Contenu.** **Aucun dhikr n'est fourni** avec le logiciel. Admin → Athkar : ajouter un dhikr (moment, texte arabe, phonétique, traductions FR/EN, **référence obligatoire**, nombre de répétitions, ordre), ou importer une liste JSON. Un dhikr n'est montré aux membres qu'une fois **validé** (case « relu par une personne qualifiée », l'administrateur et la date sont enregistrés) **et** affiché. Les dhikr importés arrivent non validés et non affichés.
+
+**Prérequis.** Migration `082_athkar.sql`. Rappel : canal de notification configuré et notifications activées par le membre.
+
+**Lancement / déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 082 ; minuteur de rappel toutes les 15 minutes), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (attendu : 0 échec).
+
+**API.** Membre (formule Apprentissage, sinon 403 `learning_required`) : `GET /athkar?lang=fr`, `POST /athkar/:id/tap {n}` (1 à 1000, les touchers rapprochés sont groupés), `POST /athkar/:id/reset`, `PUT /athkar/prefs {goal, remindHour|null}`. Admin : `GET/POST /admin/athkar`, `PUT/DELETE /admin/athkar/:id`, `POST /admin/athkar/import {items:[…]}`. Fonction : Admin → Fonctions → « Compteur d'athkar ».
+
+**Format d'import (exemple, données fictives).** `[{"category":"morning","textAr":"…","translit":"…","trFr":"…","trEn":"…","reference":"Recueil, n°…","target":3}]` — catégories : `morning`, `evening`, `after_prayer`, `sleep`, `general`.
+
+**Rappel.** À partir de l'heure choisie (Paris), une fois par jour, seulement si l'objectif du jour n'est pas atteint, et jamais plus de 3 h après l'heure choisie ; lien vers l'onglet Athkar.
+
+**RGPD.** Les comptes et réglages (`athkar_counts`, `athkar_prefs`) sont rattachés au membre : inclus d'office dans l'export de ses données et supprimés avec son compte. À mentionner dans les pages légales (données de suivi).
+
+**Debug.** Onglet absent : formule Apprentissage ? fonction activée ? Liste vide : aucun dhikr à la fois validé et affiché. Pas de rappel : heure choisie, notifications activées, objectif déjà atteint, canal de notification.
+
+**Limites (honnêteté).** Testé : API réelle avec données **fictives** (droits, validation obligatoire, compteur, série sur plusieurs jours, objectif, rappel une fois par jour sans rattrapage, import, fonction coupée) et onglet réel dans un navigateur (390 / 1280 px, FR et arabe, 3 touchers → « Terminé »). **PAS testé** : vrai rappel sur un téléphone ; vrais dhikr (à fournir et valider par Epok) ; application Android (sous-étape à part). Claude ne fournit ni ne garantit aucun dhikr.

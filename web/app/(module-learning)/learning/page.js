@@ -13,6 +13,7 @@ import { TabBar, TabPanel, useTab } from '../../../components/Tabs';
 import Row from '../../../components/Row';
 import MemoryCards from '../../../components/MemoryCards';
 import QuranIndex from '../../../components/QuranIndex';
+import Athkar from '../../../components/Athkar';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -66,6 +67,7 @@ export default function Learning() {
     { id: 'dash', label: t('tbDash') },
     { id: 'path', label: t('tbPath') },
     ...(feat('quran') ? [{ id: 'quran', label: t('qrNav') }] : []),
+    ...(feat('athkar') ? [{ id: 'athkar', label: t('atTab') }] : []),
     ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
     ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
     ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
@@ -395,6 +397,9 @@ export default function Learning() {
 
       <TabPanel id="quran" current={tab}>
       <div className="qr-page qr-in-tab"><QuranIndex embedded /></div>
+      </TabPanel>
+      <TabPanel id="athkar" current={tab}>
+      {tab === 'athkar' && <Athkar />}
       </TabPanel>
       <TabPanel id="att" current={tab}>
       {seriesBlock('att')}

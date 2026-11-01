@@ -1,0 +1,10 @@
+{
+  "id": "athkar",
+  "name": "Compteur d'athkar",
+  "version": "1.0.0",
+  "description": "Compteur quotidien d'athkar (formule Apprentissage) : dhikr saisis et validés dans l'admin avec leur référence, compte du jour, objectif, série de jours, rappel facultatif.",
+  "feature": "athkar",
+  "requires": [],
+  "settings": [],
+  "admin": { "label": "Ouvrir les athkar", "href": "/admin?tab=athkar" }
+}

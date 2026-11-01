@@ -5,6 +5,7 @@ import { featureOn } from '../../features.js';
 import { anyPushChannel, pushToUser } from '../../push.js';
 import { visibleItems } from '../../talkCards.js';
 import { arabicOf, enabledResources } from '../quran/lib.js';
+import { parisDay } from '../../parisTime.js';
 
 export const LANGS = ['fr', 'en', 'ar'];
 export const lang = (l) => (LANGS.includes(String(l || '').slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
@@ -33,12 +34,8 @@ export const textOf = (row, key, l) => (row[`${key}_${l}`] || '').trim() || DEFA
 // Instant courant ; FRIDAY_NOW (date ISO) ne sert qu'aux tests.
 export const nowDate = () => (process.env.FRIDAY_NOW ? new Date(process.env.FRIDAY_NOW) : new Date());
 
-// Jour (vendredi ?), date (AAAA-MM-JJ) et heure à Paris.
-export function parisDay(now = nowDate()) {
-  const f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' });
-  const p = Object.fromEntries(f.formatToParts(now).map((x) => [x.type, x.value]));
-  return { isFriday: p.weekday === 'Fri', date: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) };
-}
+// Jour (vendredi ?), date (AAAA-MM-JJ) et heure à Paris : voir src/parisTime.js.
+export { parisDay };
 
 export const getRow = async () => (await pool.query('SELECT * FROM friday_page WHERE id = 1')).rows[0];
 

@@ -4054,3 +4054,21 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 @media (max-width: 640px) { .fd-band { flex-direction: column; align-items: flex-start; margin: 14px 16px; } .fd-band .btn { align-self: stretch; text-align: center; } }
 .fd-fs { border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; } .fd-fs legend { padding: 0 6px; }
 .qr-in-tab .series-listhead { padding: 0; margin: 14px 0 12px; } .qr-in-tab .series-listhead h2 { margin: 0 0 4px; }
+
+/* Athkar 45D */
+.at { display: grid; gap: 14px; margin-top: 14px; }
+.at-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.at-stat { padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(212,175,55,.35); background: rgba(212,175,55,.08); display: grid; gap: 2px; }
+.at-stat span { color: #fff; font-size: .9rem; } .at-stat b { color: var(--gold, #d4af37); font-size: 1.4rem; }
+.at-prefs { display: flex; flex-wrap: wrap; gap: 12px 22px; } .at-prefs label { display: grid; gap: 4px; } .at-prefs input { width: 90px; }
+.at-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.at-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.at-item { padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); display: grid; gap: 6px; }
+.at-item.done { border-color: var(--gold, #d4af37); }
+.at-ar { margin: 0; font-size: 1.5rem; text-align: right; } .at-ph { margin: 0; color: var(--gold, #d4af37); font-style: italic; } .at-tr { margin: 0; color: #fff; } .at-ref { margin: 0; }
+.at-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.at-tap { min-width: 120px; min-height: 64px; border-radius: 16px; border: 2px solid var(--gold, #d4af37); background: rgba(212,175,55,.1); color: #fff; cursor: pointer; display: inline-flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 18px; touch-action: manipulation; user-select: none; }
+.at-tap b { font-size: 1.8rem; color: var(--gold, #d4af37); } .at-tap:active { transform: scale(.97); }
+.at-item.done .at-tap { background: var(--gold, #d4af37); } .at-item.done .at-tap b, .at-item.done .at-tap span { color: #000; }
+.at-state { color: var(--gold, #d4af37); font-weight: 600; }
+.at-adm-ar { font-family: 'Amiri', 'Noto Naskh Arabic', serif; }

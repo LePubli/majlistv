@@ -32,7 +32,7 @@ export const MENUS = {
     groups: [['discover', 'Découvrir'], ['space', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
       discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['quran', 'Coran'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
-      space: [['learning', 'Mon parcours'], ['quranlearn', 'Coran'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
+      space: [['learning', 'Mon parcours'], ['quranlearn', 'Coran'], ['athkar', 'Athkar'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
       account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],
       manage: [['studio', 'Studio'], ['admin', 'Administration']],

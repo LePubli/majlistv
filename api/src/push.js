@@ -94,6 +94,11 @@ const TEXTS = {
     en: (v) => ({ title: 'Friday', body: cut(v.b.en, 140) }),
     ar: (v) => ({ title: 'الجمعة', body: cut(v.b.ar, 140) }),
   },
+  athkar: { // rappel quotidien du compteur d'athkar
+    fr: (v) => ({ title: 'Athkar', body: `Vos athkar du jour vous attendent (${v.done}/${v.goal}).` }),
+    en: (v) => ({ title: 'Athkar', body: `Your daily athkar are waiting (${v.done}/${v.goal}).` }),
+    ar: (v) => ({ title: 'الأذكار', body: `أذكارك اليومية بانتظارك (${v.done}/${v.goal}).` }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),
