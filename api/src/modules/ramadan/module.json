@@ -1,0 +1,10 @@
+{
+  "id": "ramadan",
+  "name": "Circuit de Ramadan (30 jours)",
+  "version": "1.0.0",
+  "description": "Circuit d'adoration de 30 jours pendant Ramadan : actions du jour et de chaque jour (saisies et validées dans l'admin), cases, suivi des tarawih, rappel quotidien. Gratuit pour tout membre connecté.",
+  "feature": "ramadan",
+  "requires": [],
+  "settings": [],
+  "admin": { "label": "Ouvrir le circuit de Ramadan", "href": "/admin?tab=ramadan" }
+}

@@ -83,6 +83,7 @@ export default function MemberShell({ children }) {
     catalogue: { key: 'catalogue', href: '/catalogue', label: t('navCatalogue'), icon: ICONS.cat, on: true },
     series: { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
     collections: { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.col, on: feat('collections') },
+    ramadan: { key: 'ramadan', href: '/ramadan', label: t('rzNav'), icon: ICONS.tag, on: feat('ramadan') },
     quran: { key: 'quran', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
     athkar: { key: 'athkar', href: '/learning?tab=athkar', label: t('atTab'), icon: ICONS.bilan, on: learn && feat('athkar') },
     quranlearn: { key: 'quranlearn', href: '/learning?tab=quran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },

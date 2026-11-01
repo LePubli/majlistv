@@ -9,7 +9,7 @@ import Row from './Row';
 const ICON = { ramadan: '🌙', hajj: '🕋', mawlid: '✨', ashura: '🌅' };
 
 export default function SeasonBand() {
-  const { t, locale, call } = useApp();
+  const { t, locale, call, feat } = useApp();
   const [s, setS] = useState(null);
   useEffect(() => { call(`/seasons/current?lang=${locale}`, {}, null).then((r) => setS(r.ok ? r.data.season : null)); }, [call, locale]);
   if (!s) return null;
@@ -23,7 +23,10 @@ export default function SeasonBand() {
           <p className="ss-text">{s.text}</p>
           <p className="ss-when">{when}</p>
         </div>
-        {s.collection && <Link className="btn" href={`/collections/${s.collection.id}`}>{t('seasonSee')}</Link>}
+        <div className="ss-btns">
+          {s.id === 'ramadan' && feat('ramadan') && <Link className="btn" href="/ramadan">{t('rzNav')}</Link>}
+          {s.collection && <Link className={s.id === 'ramadan' && feat('ramadan') ? 'btn ghost' : 'btn'} href={`/collections/${s.collection.id}`}>{t('seasonSee')}</Link>}
+        </div>
       </section>
       {s.talks.length > 0 && <Row id={`row-season-${s.id}`} title={s.collection?.title || s.title} talks={s.talks} t={t} />}
     </>

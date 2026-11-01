@@ -4084,3 +4084,20 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .kh-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .kh-grid li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1); } .kh-grid li.done { border-color: rgba(212,175,55,.6); } .kh-grid li.now { outline: 2px solid var(--gold, #d4af37); }
 .kh-tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; } .kh-tools label { display: grid; gap: 4px; }
+
+/* Circuit de Ramadan 45F */
+.ss-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.rm-status { color: var(--gold, #d4af37); font-weight: 600; margin: 6px 0 0; }
+.rm-days { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; margin: 14px 0; }
+.rm-days button { padding: 8px 2px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: #fff; cursor: pointer; display: grid; gap: 2px; font: inherit; }
+.rm-days button span { font-size: .72rem; color: rgba(255,255,255,.75); } .rm-days button.today { border-color: var(--gold, #d4af37); }
+.rm-days button.on { background: rgba(212,175,55,.2); outline: 2px solid var(--gold, #d4af37); } .rm-days button.full b { color: var(--gold, #d4af37); }
+@media (max-width: 640px) { .rm-days { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.rm-day { padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); display: grid; gap: 12px; }
+.rm-day h2 { margin: 0; font-size: 1.2rem; color: #fff; }
+.rm-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rm-items li { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); display: grid; gap: 4px; } .rm-items li.done { border-color: var(--gold, #d4af37); }
+.rm-items p { margin: 0; color: #fff; } .rm-items .chk, .rm-tw .chk { display: inline-flex; gap: 8px; align-items: center; } .rm-page input[type=checkbox] { width: auto; flex: none; }
+.rm-tw { padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(212,175,55,.5); display: grid; gap: 8px; }
+.rm-tw-more { display: flex; flex-wrap: wrap; gap: 10px 18px; } .rm-tw-more label, .rm-remind { display: grid; gap: 4px; } .rm-tw-more input { width: 90px; }
+.rm-remind { margin: 14px 0; max-width: 260px; }

@@ -6502,3 +6502,29 @@ bash /root/verify-deploy.sh
 **Debug.** Pas de carte : texte arabe non importé, ou fonction coupée. Mauvais juz du jour : le jour se calcule en heure de Paris à partir de la date de début. Pas de rappel : heure, notifications activées, juz du jour déjà coché, programme terminé (au-delà du jour 30).
 
 **Limites (honnêteté).** Testé : découpage des 30 juz, API réelle avec dates simulées (début, jour du programme, cases, recommencer, arrêter, rappel une fois par jour, droits, fonction coupée), carte réelle dans un navigateur (390 / 1280 px, FR et arabe, visiteur et membre). **PAS testé** : vrai rappel sur un téléphone ; application Android (sous-étape à part). La phrase « Qu'Allah l'accepte » (fin de lecture) est modifiable dans Admin → Textes (clé `khFinished`).
+
+## Étape 45F — Circuit de Ramadan sur 30 jours (adultes) et suivi des tarawih (01/11)
+
+**Description.** Page **`/ramadan`** (menu « Découvrir » → Ramadan, et bouton « Ramadan » dans le bandeau de saison pendant Ramadan), **gratuite pour tout membre connecté** : jour du mois (« Jour 6 de Ramadan 1447 »), grille des 30 jours (actions faites / attendues), actions du jour choisi (celles du jour + celles de **chaque jour**), avec texte, référence et lien vers une page du site, et case à cocher ; **tarawih** de la nuit (case, nombre de rakaat facultatif, mosquée ou maison) ; **rappel quotidien** facultatif. On peut cocher le jour même et **rattraper** un jour passé, pas un jour à venir ; les cases s'ouvrent pendant Ramadan seulement (avant : le programme se consulte et la date de début est annoncée). Un visiteur voit le programme et un bouton de connexion.
+
+**Contenu.** **Aucune action n'est fournie.** Admin → Circuit de Ramadan : ajouter une action (jour 1 à 30, ou 0 = chaque jour ; titre et explication FR/EN/AR ; lien vers une page du site ; référence ; ordre), ou importer une liste JSON. Une action n'est montrée qu'une fois **validée** (relue par une personne qualifiée ; administrateur et date enregistrés) **et** affichée.
+
+**Dates.** Jour de Ramadan selon le calendrier hégirien Umm al-Qura (Node/ICU) avec le **décalage** de Admin → Paramètres → Saisons (−2 à +2 jours), comme le bandeau de saison. Les cases sont rangées par année hégirienne.
+
+**Version enfants.** Prévue dans la sous-étape suivante (le tableau des actions a déjà une colonne « public »).
+
+**Prérequis.** Migration `084_ramadan.sql`. Rappel : canal de notification et notifications activées.
+
+**Lancement / déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 084 ; minuteur de rappel toutes les 15 minutes), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (attendu : 0 échec).
+
+**API.** Public : `GET /ramadan?lang=fr` (connecté : ajoute `me` = mes cases, mes tarawih, mon rappel). Membre : `PUT /ramadan/mark {day, itemId, done}`, `PUT /ramadan/tarawih {day, done, rakaat?, place?}`, `PUT /ramadan/prefs {remindHour|null}`. Admin : `GET/POST /admin/ramadan/items`, `PUT/DELETE /admin/ramadan/items/:id`, `POST /admin/ramadan/import`. Fonction : Admin → Fonctions → « Circuit de Ramadan ».
+
+**Format d'import (exemple, données fictives).** `[{"day":1,"titleFr":"…","textFr":"…","titleEn":"…","titleAr":"…","link":"/coran/1","reference":"…"}]`.
+
+**Rappel.** Pendant Ramadan, à partir de l'heure choisie (Paris), une fois par jour, si les actions du jour ne sont pas toutes cochées ; jamais plus de 3 h après l'heure choisie ; lien vers /ramadan.
+
+**RGPD.** `ramadan_marks`, `ramadan_tarawih`, `ramadan_prefs` : export d'office et suppression avec le compte. À mentionner dans les pages légales.
+
+**Debug.** Cases grisées : hors Ramadan, jour à venir, ou visiteur. Mauvais jour : régler le décalage (Paramètres → Saisons). Action absente : non validée ou non affichée.
+
+**Limites (honnêteté).** Testé : API réelle avec dates simulées (Ramadan 1447 et hors Ramadan, décalage +1, cases, rattrapage, refus d'un jour à venir, tarawih, rappel, import, validation obligatoire, fonction coupée) ; page réelle dans un navigateur (390 / 1280 px, FR et arabe, membre et visiteur, bouton du bandeau). **PAS testé** : vrai Ramadan, vrai rappel sur un téléphone, vraies actions (à fournir et valider par Epok), application Android, version enfants (à venir).

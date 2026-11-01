@@ -104,6 +104,11 @@ const TEXTS = {
     en: (v) => ({ title: `Today’s juz: ${v.juz}`, body: `Today’s reading starts at ${v.sura}, verse ${v.aya}.` }),
     ar: (v) => ({ title: `جزء اليوم: ${v.juz}`, body: `تبدأ قراءة اليوم من ${v.sura}، الآية ${v.aya}.` }),
   },
+  ramadan: { // circuit de Ramadan : jour n
+    fr: (v) => ({ title: `Ramadan — jour ${v.day}`, body: `Votre circuit du jour : ${v.done}/${v.total} action(s) faite(s).` }),
+    en: (v) => ({ title: `Ramadan — day ${v.day}`, body: `Today’s path: ${v.done}/${v.total} action(s) done.` }),
+    ar: (v) => ({ title: `رمضان — اليوم ${v.day}`, body: `برنامج اليوم: ${v.done}/${v.total} مكتملة.` }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),
