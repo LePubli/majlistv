@@ -1,0 +1,9 @@
+{
+  "id": "quranplan",
+  "name": "Lecture du Coran en 30 jours",
+  "version": "1.0.0",
+  "description": "Programme de lecture : 1 juz par jour pendant 30 jours, case « lu », progression, lectures complètes terminées, rappel quotidien facultatif. Gratuit pour tout membre connecté.",
+  "feature": "quranplan",
+  "requires": ["quran"],
+  "settings": []
+}

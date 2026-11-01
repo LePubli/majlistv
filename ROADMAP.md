@@ -517,6 +517,9 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ## Étape 45 (31/10) — Pages de saison (Ramadan, Hajj, Mawlid, Achoura)
 - Voir README « Étape 45 ». Reste du bloc « Revenus » (un « go » par étape) : 46 abonnement groupe / association / école (1.6, gros chantier à découper).
 
+## Étape 45E (01/11) — Lire le Coran en 30 jours
+- Voir README « Étape 45E ». Reste : 45F circuit Ramadan, 45G bilan, 45H saisons enrichies.
+
 ## Étape 45D (01/11) — Compteur d'athkar (Apprentissage)
 - Voir README « Étape 45D ». Dhikr à fournir et valider par Epok dans Admin → Athkar.
 

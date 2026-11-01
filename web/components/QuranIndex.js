@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import QuranPlan from './QuranPlan';
 
 export default function QuranIndex({ embedded = false }) {
   const { t, locale, call, feat } = useApp();
@@ -23,6 +24,7 @@ export default function QuranIndex({ embedded = false }) {
     <>
       <section className="series-listhead">{embedded ? <h2>{t('qrTitle')}</h2> : <h1>{t('qrTitle')}</h1>}<p className="meta">{t('qrIntro')}</p></section>
       {(d.off || !d.ready) && <p className="soon">{t('qrSoon')}</p>}
+      {d.ready && feat('quranplan') && <QuranPlan />}
       {d.ready && (
         <>
           <label className="qr-search"><span className="sr-only">{t('qrSearch')}</span>

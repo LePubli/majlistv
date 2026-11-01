@@ -99,6 +99,11 @@ const TEXTS = {
     en: (v) => ({ title: 'Athkar', body: `Your daily athkar are waiting (${v.done}/${v.goal}).` }),
     ar: (v) => ({ title: 'الأذكار', body: `أذكارك اليومية بانتظارك (${v.done}/${v.goal}).` }),
   },
+  quranplan: { // lecture du Coran en 30 jours : juz du jour
+    fr: (v) => ({ title: `Juz ${v.juz} du jour`, body: `Votre lecture du jour commence à ${v.sura}, verset ${v.aya}.` }),
+    en: (v) => ({ title: `Today’s juz: ${v.juz}`, body: `Today’s reading starts at ${v.sura}, verse ${v.aya}.` }),
+    ar: (v) => ({ title: `جزء اليوم: ${v.juz}`, body: `تبدأ قراءة اليوم من ${v.sura}، الآية ${v.aya}.` }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),

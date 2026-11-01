@@ -6482,3 +6482,23 @@ bash /root/verify-deploy.sh
 **Debug.** Onglet absent : formule Apprentissage ? fonction activée ? Liste vide : aucun dhikr à la fois validé et affiché. Pas de rappel : heure choisie, notifications activées, objectif déjà atteint, canal de notification.
 
 **Limites (honnêteté).** Testé : API réelle avec données **fictives** (droits, validation obligatoire, compteur, série sur plusieurs jours, objectif, rappel une fois par jour sans rattrapage, import, fonction coupée) et onglet réel dans un navigateur (390 / 1280 px, FR et arabe, 3 touchers → « Terminé »). **PAS testé** : vrai rappel sur un téléphone ; vrais dhikr (à fournir et valider par Epok) ; application Android (sous-étape à part). Claude ne fournit ni ne garantit aucun dhikr.
+
+## Étape 45E — Lire le Coran en 30 jours (1 juz par jour) (01/11)
+
+**Description.** En haut de la page Coran (`/coran`) et de l'onglet « Coran » d'Apprendre, une carte **« Lire le Coran en 30 jours »**, **gratuite pour tout membre connecté** (sans formule Apprentissage) : bouton « Commencer aujourd'hui », jour du programme (Jour n / 30), barre de progression, **juz du jour** avec son début et sa fin (ex. « Al-Fatiha 1 → Al-Baqara 141 »), bouton « Lire » (ouvre le lecteur au premier verset du juz) et case **« Lu »**. « Voir les 30 juz » : les 30 cases (on peut cocher en avance ou rattraper), le **rappel quotidien** (heure de Paris), « Recommencer aujourd'hui » (une lecture complète de 30 juz est comptée) et « Arrêter ». Un visiteur voit l'invitation et le bouton de connexion (retour à la page Coran après connexion).
+
+**Découpage.** Les 30 juz suivent le découpage habituel (métadonnées du projet Tanzil : premiers versets des juz et nombre de versets des sourates), écrits dans `api/src/modules/quran/juz.js` (données de structure, pas de texte) ; un test vérifie qu'ils couvrent les 6236 versets sans trou ni chevauchement.
+
+**Rappel.** À partir de l'heure choisie, une fois par jour, pendant les 30 jours, seulement si le juz du jour n'est pas coché ; jamais plus de 3 h après l'heure choisie ; lien vers le premier verset du juz ; aux membres qui ont activé les notifications.
+
+**Prérequis.** Étape 45B (texte arabe importé : la carte n'apparaît que lorsque le lecteur est prêt). Migration `083_quran_plan.sql`.
+
+**Lancement / déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 083 ; minuteur de rappel toutes les 15 minutes), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (attendu : 0 échec).
+
+**API.** Public : `GET /quran/juzs`. Membre connecté : `GET /quran/plan`, `POST /quran/plan/start {startedOn?}` (entre 29 jours avant et 60 jours après aujourd'hui), `PUT /quran/plan/juz/:n {read}`, `PUT /quran/plan/prefs {remindHour|null}`, `DELETE /quran/plan`. Fonction : Admin → Fonctions → « Lecture du Coran en 30 jours » (le lecteur du Coran reste disponible si on la coupe).
+
+**RGPD.** `quran_plans` et `quran_plan_reads` sont rattachés au membre : export d'office, suppression avec le compte. À mentionner dans les pages légales.
+
+**Debug.** Pas de carte : texte arabe non importé, ou fonction coupée. Mauvais juz du jour : le jour se calcule en heure de Paris à partir de la date de début. Pas de rappel : heure, notifications activées, juz du jour déjà coché, programme terminé (au-delà du jour 30).
+
+**Limites (honnêteté).** Testé : découpage des 30 juz, API réelle avec dates simulées (début, jour du programme, cases, recommencer, arrêter, rappel une fois par jour, droits, fonction coupée), carte réelle dans un navigateur (390 / 1280 px, FR et arabe, visiteur et membre). **PAS testé** : vrai rappel sur un téléphone ; application Android (sous-étape à part). La phrase « Qu'Allah l'accepte » (fin de lecture) est modifiable dans Admin → Textes (clé `khFinished`).

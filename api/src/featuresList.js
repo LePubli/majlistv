@@ -32,6 +32,8 @@ export const FEATURES = [
     rules: [{ re: '^/(athkar|admin/athkar)(/|$)' }] },
   { id: 'friday', group: 'catalog', label: 'Vendredi (Al-Kahf, ablutions, prière sur le Prophète)', hint: "Carte sur l'accueil le vendredi, rangée « Conférences du vendredi » et notification facultative (réglages dans Admin → Vendredi ; désactivé tant qu'il n'est pas réglé)",
     rules: [{ re: '^/(friday|admin/friday)(/|$)' }] },
+  { id: 'quranplan', group: 'catalog', label: 'Lecture du Coran en 30 jours', hint: "1 juz par jour, case « lu », progression, rappel quotidien facultatif ; gratuit pour tout membre connecté (sur la page Coran)",
+    rules: [{ re: '^/quran/(plan|juzs)(/|$)' }] },
   { id: 'quran', group: 'catalog', label: 'Coran (lecteur)', hint: "Texte arabe, traductions, phonétique et tafsir, verset par verset (contenus importés dans Admin → Coran)",
     rules: [{ re: '^/(quran|admin/quran)(/|$)' }] },
   { id: 'collections', group: 'catalog', label: 'Collections', hint: 'Sélections éditoriales de conférences',
