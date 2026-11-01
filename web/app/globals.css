@@ -4044,3 +4044,5 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 [dir=rtl] .qr-wm { direction: rtl; }
 .qr-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; font-size: .9rem; color: #fff; }
 .qr-leg { display: inline-flex; align-items: center; gap: 6px; } .qr-leg i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.lg-quran { margin: 0 0 14px; }

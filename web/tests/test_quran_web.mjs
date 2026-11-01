@@ -33,3 +33,6 @@ assert.match(read('../middleware.js'), /CSP_MEDIA_ORIGINS/, 'origines audio auto
 assert.match(read('../components/QuranAdmin.js'), /QuranReciters/, 'récitateurs dans Admin → Coran');
 for (const k of ['qrReciter', 'qrWbw', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web quran 45B2 OK');
+assert.match(read('../app/(module-learning)/learning/page.js'), /feat\('quran'\)[\s\S]{0,120}href="\/coran"/, 'lien Coran dans la page Apprendre (téléphone compris)');
+assert.equal((read('../lib/i18n.js').match(/lgQuran:/g) || []).length, 3, 'lgQuran en fr/en/ar');
+console.log('web quran lien Apprendre OK');

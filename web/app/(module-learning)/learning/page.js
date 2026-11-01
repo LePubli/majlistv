@@ -176,6 +176,9 @@ export default function Learning() {
           <div key={n} className="lg-step"><span>{i + 1} · {t(n)}</span><b>{v}</b></div>
         ))}
       </section>
+      {feat('quran') && (
+        <p className="lg-quran"><Link className="btn ghost" href="/coran">{t('lgQuran')}</Link></p>
+      )}
       <div className="lg-top">
         {first ? (
           <section className="lg-resume" aria-label={t('lgResumeAria')}>
