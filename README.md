@@ -6440,3 +6440,23 @@ bash /root/verify-deploy.sh
 **Exemples.** Récitateur : `https://hote.exemple/audio/{sura3}{aya3}.mp3` → verset 255 de la sourate 2 : `…/002255.mp3`. Mot à mot : `[{"sura":112,"aya":1,"position":1,"text":"…"}]`.
 
 **Licences et limites (honnêteté).** Aucune autorisation de récitateur n'a été obtenue ; certaines sources n'autorisent l'usage que non commercial (le site vend des abonnements, même si le Coran y est gratuit) : obtenez l'accord écrit de la source et notez-le dans « Licence ». Aucune source de mot à mot français ni de tajwid relue n'est validée à ce jour. Testé : API réelle et lecteur réel dans un navigateur avec des données **fictives** (390 / 1280 px, FR et arabe) ; PAS testé : vrai son depuis le VPS, vraies données.
+
+## Étape 45C — Vendredi : carte, rappels, rangée de conférences, notification (01/11)
+
+**Description.** Chaque vendredi (heure de Paris), l'accueil affiche une carte « Vendredi » : bouton **« Lire la sourate Al-Kahf »** (vers le lecteur gratuit, seulement si le Coran est importé), rappel de la **grande ablution**, rappel de la **prière sur le Prophète ﷺ** (simple rappel, **pas de compteur**), et une rangée **« Conférences du vendredi »** (une collection publiée de ton choix). Une **notification** facultative part le vendredi à l'heure choisie, une seule fois, aux membres qui ont activé les notifications. Le vendredi est **désactivé par défaut** : rien ne s'affiche tant que tu ne l'actives pas.
+
+**Textes.** Les textes par défaut (français, anglais, arabe) sont de simples phrases de rappel écrites par l'assistant, sans citation de hadith ni de texte religieux. **Relis-les et corrige-les** dans Admin → Vendredi avant d'activer ; ils sont modifiables par langue (vide = texte par défaut).
+
+**Prérequis.** Étape 45B déployée pour le bouton Al-Kahf (sinon seuls les rappels s'affichent). Pour la notification : canal de notification configuré (étape de web push). Migration `081_friday.sql` (une seule ligne de réglages).
+
+**Configuration.** Admin → Vendredi : activer ; cocher les éléments à afficher ; relire les textes ; choisir la collection ; régler la notification (heure de Paris, texte) ; « Envoyer la notification d'essai à mon compte ». Admin → Fonctions → « Vendredi » : interrupteur général.
+
+**Lancement / déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 081 ; la notification est lancée par un minuteur toutes les 30 minutes), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (attendu : 0 échec).
+
+**API.** Public : `GET /friday?lang=fr` → `{ active, date, kahf, ghusl, salawat, collection, talks }` ou `{ active: false }` (hors vendredi ou désactivé). Admin : `GET/PUT /admin/friday`, `POST /admin/friday/test-push`. Test : la variable `FRIDAY_NOW` (date ISO) simule la date.
+
+**Debug.** La carte n'apparaît pas : est-ce vendredi à Paris ? Admin → Vendredi activé ? Admin → Fonctions → « Vendredi » activée ? Pas de bouton Al-Kahf : le texte arabe du Coran (sourate 18) n'est pas importé ou la fonction « Coran » est coupée. Pas de notification : « notification » cochée, heure déjà passée de plus de 6 h (le jour est alors marqué sans envoi), aucun canal de notification, ou aucun membre n'a activé les notifications (journal de l'API : « Vendredi : … »).
+
+**Exemples.** Notification à 8 h : le vendredi à 8 h 10 (heure de Paris) les membres concernés reçoivent « Vendredi — Vos rappels du vendredi : sourate Al-Kahf… » ; le vendredi suivant, de nouveau.
+
+**Limites (honnêteté).** Testé : API réelle avec dates simulées (jour à Paris, heure d'été et d'hiver, minuit, une seule notification par vendredi, pas de rattrapage tardif, comptes suspendus exclus, droits, fonction coupée) et affichage réel dans un navigateur. **PAS testé** : envoi réel de notification sur un téléphone ; textes relus par un connaisseur ; sourate Al-Kahf avec de vraies données ; version application Android (sous-étape à part, comme prévu pour la règle « toutes les plateformes »). Vendredi commence ici à minuit heure de Paris (pas au coucher du soleil du jeudi).

@@ -517,6 +517,9 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ## Étape 45 (31/10) — Pages de saison (Ramadan, Hajj, Mawlid, Achoura)
 - Voir README « Étape 45 ». Reste du bloc « Revenus » (un « go » par étape) : 46 abonnement groupe / association / école (1.6, gros chantier à découper).
 
+## Étape 45C (01/11) — Vendredi
+- Voir README « Étape 45C ». Reste du plan : 45D athkar (Apprentissage), 45E lecture 30 jours, 45F circuit Ramadan, 45G bilan, 45H saisons enrichies et thème.
+
 ## Étape 45B2 (01/11) — Récitation, mot à mot, tajwid (mécanique, sans données)
 - Voir README « Étape 45B2 ». Les données (récitateurs, mot à mot, tajwid) restent à autoriser et à importer.
 

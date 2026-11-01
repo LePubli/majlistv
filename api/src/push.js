@@ -89,6 +89,11 @@ const TEXTS = {
     en: (v) => ({ title: cut(v.t.en, 60), body: cut(v.b.en, 140) }),
     ar: (v) => ({ title: cut(v.t.ar, 60), body: cut(v.b.ar, 140) }),
   },
+  friday: { // vendredi : titre fixe, texte saisi ou par défaut, par langue
+    fr: (v) => ({ title: 'Vendredi', body: cut(v.b.fr, 140) }),
+    en: (v) => ({ title: 'Friday', body: cut(v.b.en, 140) }),
+    ar: (v) => ({ title: 'الجمعة', body: cut(v.b.ar, 140) }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),

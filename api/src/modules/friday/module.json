@@ -1,0 +1,10 @@
+{
+  "id": "friday",
+  "name": "Vendredi (Al-Kahf, ablutions, prière sur le Prophète)",
+  "version": "1.0.0",
+  "description": "Le vendredi : carte sur l'accueil (lien vers la sourate Al-Kahf, rappel de la grande ablution, rappel de la prière sur le Prophète), rangée « Conférences du vendredi » et notification facultative. Désactivé tant qu'il n'est pas réglé dans l'admin.",
+  "feature": "friday",
+  "requires": [],
+  "settings": [],
+  "admin": { "label": "Ouvrir le vendredi", "href": "/admin?tab=friday" }
+}
