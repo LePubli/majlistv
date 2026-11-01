@@ -16,14 +16,15 @@ assert.match(read('../app/admin/page.js'), /quran: 'Coran'/, "titre de l'écran 
 assert.match(read('../components/AdminShell.js'), /'quran'/, 'menu Admin');
 assert.match(read('../components/MemberShell.js'), /href: '\/coran'/, 'entrée « Coran » du menu latéral');
 assert.match(read('../lib/navcfg.js'), /\['quran', 'Coran'\]/, 'entrée du menu configurable');
-assert.match(read('../app/coran/page.js'), /\/quran\/search/, 'recherche');
+assert.match(read('../components/QuranIndex.js'), /\/quran\/search/, 'recherche');
+assert.match(read('../app/coran/page.js'), /<QuranIndex \/>/, 'page /coran = liste des sourates');
 assert.match(read('../app/coran/[n]/page.js'), /\/quran\/tafsir\//, 'tafsir');
 assert.match(read('../app/coran/[n]/page.js'), /dir="rtl"/, 'texte arabe de droite à gauche');
 assert.match(read('../components/QuranAdmin.js'), /raw\.githubusercontent\.com\/risan\/quran-json\/[0-9a-f]{40}\//, 'Coran complet : adresses figées sur une version précise');
 assert.match(read('../app/coran/[n]/page.js'), /qr-notes/, 'notes de bas de page');
 console.log('web quran OK');
 assert.match(read('../lib/navcfg.js'), /space: \[\['learning', 'Mon parcours'\], \['quranlearn', 'Coran'\]/, 'raccourci Coran dans l\'espace Apprendre');
-assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/coran'/, 'raccourci vers le même lecteur gratuit');
+assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/learning\?tab=quran'/, 'raccourci vers l\'onglet Coran d\'Apprendre');
 console.log('web quran shortcut OK');
 // 45B2 : récitation, mot à mot, tajwid
 const page = read('../app/coran/[n]/page.js');
@@ -33,6 +34,9 @@ assert.match(read('../middleware.js'), /CSP_MEDIA_ORIGINS/, 'origines audio auto
 assert.match(read('../components/QuranAdmin.js'), /QuranReciters/, 'récitateurs dans Admin → Coran');
 for (const k of ['qrReciter', 'qrWbw', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web quran 45B2 OK');
-assert.match(read('../app/(module-learning)/learning/page.js'), /feat\('quran'\)[\s\S]{0,120}href="\/coran"/, 'lien Coran dans la page Apprendre (téléphone compris)');
+const lp = read('../app/(module-learning)/learning/page.js');
+assert.match(lp, /feat\('quran'\) \? \[\{ id: 'quran', label: t\('qrNav'\) \}\]/, 'onglet « Coran » dans Apprendre (avec Tableau de bord, Progression…)');
+assert.match(lp, /<TabPanel id="quran"[\s\S]{0,120}<QuranIndex embedded \/>/, 'l\'onglet affiche la liste des sourates et la recherche');
+assert.match(lp, /feat\('quran'\) && <p className="lg-quran"><Link className="btn ghost" href="\/coran">/, 'écran verrouillé : lien vers le Coran gratuit');
 assert.equal((read('../lib/i18n.js').match(/lgQuran:/g) || []).length, 3, 'lgQuran en fr/en/ar');
 console.log('web quran lien Apprendre OK');

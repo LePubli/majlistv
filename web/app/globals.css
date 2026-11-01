@@ -4053,3 +4053,4 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .fd-title { margin: 0; color: var(--gold, #d4af37); font-size: 1.25rem; } .fd-text { margin: 0; color: #fff; }
 @media (max-width: 640px) { .fd-band { flex-direction: column; align-items: flex-start; margin: 14px 16px; } .fd-band .btn { align-self: stretch; text-align: center; } }
 .fd-fs { border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; } .fd-fs legend { padding: 0 6px; }
+.qr-in-tab .series-listhead { padding: 0; margin: 14px 0 12px; } .qr-in-tab .series-listhead h2 { margin: 0 0 4px; }

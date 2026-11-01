@@ -12,6 +12,7 @@ import { thumbOf } from '../../../components/TalkCard';
 import { TabBar, TabPanel, useTab } from '../../../components/Tabs';
 import Row from '../../../components/Row';
 import MemoryCards from '../../../components/MemoryCards';
+import QuranIndex from '../../../components/QuranIndex';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -64,6 +65,7 @@ export default function Learning() {
   const tabs = [
     { id: 'dash', label: t('tbDash') },
     { id: 'path', label: t('tbPath') },
+    ...(feat('quran') ? [{ id: 'quran', label: t('qrNav') }] : []),
     ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
     ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
     ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
@@ -98,6 +100,7 @@ export default function Learning() {
           <div><h2>{t('lzH2')}</h2><p>{t('lzP')}</p></div>
           <div className="lk-btns"><Link className="btn" href="/pricing">{t('lzCta')}</Link></div>
         </section>
+        {feat('quran') && <p className="lg-quran"><Link className="btn ghost" href="/coran">{t('lgQuran')}</Link></p>}
         {next.length > 0 && <Row id="row-lk-now" title={t('lzNow')} talks={next.slice(0, 8)} t={t} />}
       </main>
     );
@@ -176,9 +179,6 @@ export default function Learning() {
           <div key={n} className="lg-step"><span>{i + 1} · {t(n)}</span><b>{v}</b></div>
         ))}
       </section>
-      {feat('quran') && (
-        <p className="lg-quran"><Link className="btn ghost" href="/coran">{t('lgQuran')}</Link></p>
-      )}
       <div className="lg-top">
         {first ? (
           <section className="lg-resume" aria-label={t('lgResumeAria')}>
@@ -393,6 +393,9 @@ export default function Learning() {
       <PracticeList t={t} call={call} locale={locale} />
       </TabPanel>
 
+      <TabPanel id="quran" current={tab}>
+      <div className="qr-page qr-in-tab"><QuranIndex embedded /></div>
+      </TabPanel>
       <TabPanel id="att" current={tab}>
       {seriesBlock('att')}
       </TabPanel>
