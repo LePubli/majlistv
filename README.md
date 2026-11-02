@@ -6849,3 +6849,8 @@ Puis Admin → Paramètres → Général → « Thème visuel par défaut » →
 **Debug.** Le thème ne change pas : vérifier `curl -s https://api-majlisstv.le-publicitaire.fr/config | grep -o '"skin":{[^}]*}'` (def doit valoir "nuit"). Revenir au classique : remettre le réglage sur `classique`.
 
 **Tests.** `api/tests/test_skin.py` (4 contrôles), `web/tests/test_skin_web.mjs` (+ tous les tests du site) ; rendu réel dans un navigateur (accueil et Apprendre, 1280 px FR, 390 px FR et arabe, thème classique inchangé, sans débordement).
+
+### Correctifs du 02/11 (retours d'Epok sur téléphone)
+- En-tête sur téléphone (tous thèmes) : un bouton placé dans l'en-tête (« S'abonner » ou bouton personnalisé d'Admin → Navigation) n'apparaît plus sous 900 px (il reste dans le menu) ; la page ne peut plus être plus large que l'écran (`overflow-x: clip`). Le décalage n'a pas pu être reproduit avec les réglages de test : correctif défensif, à vérifier sur le vrai site.
+- Thème Nuit et or : la photo du bandeau d'accueil (conférences mises en avant, bannière personnalisée) s'affiche de nouveau (la rosace ne concerne plus que le bandeau texte) ; titres plus petits (bandeau, rangées, Apprendre), jamais coupés au milieu d'un mot ; titres de rangée qui contiennent un lien (« À réviser aujourd'hui · Mon apprentissage ») sur une seule ligne.
+- Menu du téléphone : le bloc « Télécharger l'application » passe après tous les liens (et après langue et thème). Dans la barre latérale de l'ordinateur, il était déjà après tous les liens.

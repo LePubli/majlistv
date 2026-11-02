@@ -4217,3 +4217,12 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .lg-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border-inline-start: 3px solid var(--accent); }
 .lg-intro p { margin: 0; color: var(--text-2); line-height: 1.45; }
 .lg-intro button { flex: none; }
+
+/* Correctif 02/11 — en-tête sur téléphone (tous thèmes) : aucun bouton de l'en-tête (« S'abonner », bouton personnalisé de
+   Admin → Navigation) sous 900 px, ils sont dans le menu ; la page ne peut plus être plus large que l'écran. */
+@media (max-width: 900px) {
+  .hd .hd-el:has(> .btn), .hd .hd-el > .btn { display: none; }
+  .hd { max-width: 100vw; min-width: 0; }
+  .hd-right { min-width: 0; }
+}
+html, body { overflow-x: clip; }

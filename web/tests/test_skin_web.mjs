@@ -18,3 +18,13 @@ assert.equal((read('components/Header.js').match(/<SkinPicker \/>/g) || []).leng
 const i18n = read('lib/i18n.js');
 for (const k of ['skLabel', 'skClassic', 'skNight']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web skin OK');
+// Correctifs 02/11 (retours d'Epok sur téléphone)
+{
+  const g = read('app/globals.css'); const c = read('app/skin-nuit.css'); const h = read('components/Header.js');
+  assert.match(g, /\.hd \.hd-el:has\(> \.btn\), \.hd \.hd-el > \.btn \{ display: none; \}/, 'aucun bouton dans l’en-tête sur téléphone');
+  assert.match(g, /html, body \{ overflow-x: clip; \}/, 'la page ne peut plus être plus large que l’écran');
+  assert.match(c, /\.hero:not\(\.banner\) > \* \{ position: relative/, 'bandeau avec photo : calques intacts (photo visible)');
+  assert.doesNotMatch(c, /html\[data-skin="nuit"\] \.hero \{ background: transparent/, 'la photo du bandeau n’est plus effacée');
+  assert.ok(h.indexOf('<AppPromo variant="drawer" />') > h.indexOf('<SkinPicker />'), 'menu du téléphone : promotion de l’application après tous les liens');
+  console.log('web skin correctifs OK');
+}

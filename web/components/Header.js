@@ -229,7 +229,6 @@ function MainHeader() {
               )}
             </nav>
             <div className="dr-foot">
-              <AppPromo variant="drawer" />
               {user ? (
                 <>
                   <Link href="/account"><Ico d={ICONS.user} />{t('account')}</Link>
@@ -245,6 +244,8 @@ function MainHeader() {
               )}
               <div className="dr-lang">{langSelect}</div>
               <div className="dr-lang"><SkinPicker /></div>
+              {/* Promotion de l'application : après tous les liens du menu (demande d'Epok, 02/11). */}
+              <AppPromo variant="drawer" />
             </div>
           </aside>
         </div>,

@@ -49,23 +49,25 @@ html[data-skin="nuit"] .header::after {
 html[data-skin="nuit"] .hd-avatar { background: var(--surface-2); color: var(--accent-light); border: 1px solid var(--accent); font-family: var(--font-title); }
 
 /* Bandeau d'accueil : rosace à 16 branches qui déborde à droite (masquée sur téléphone). */
-html[data-skin="nuit"] .hero { background: transparent; }
-html[data-skin="nuit"] .hero::after {
+/* Seulement pour le bandeau texte : un bandeau avec photo (.banner) garde sa photo et ses calques. */
+html[data-skin="nuit"] .hero:not(.banner) { background: transparent; }
+html[data-skin="nuit"] .hero:not(.banner)::after {
   content: ''; position: absolute; right: -210px; top: 50%; width: 520px; height: 520px; transform: translateY(-50%);
   background: url('/skin/rosette.svg') center / contain no-repeat; pointer-events: none; z-index: 0;
 }
-html[data-skin="nuit"][dir="rtl"] .hero::after { right: auto; left: -210px; }
-html[data-skin="nuit"] .hero > * { position: relative; z-index: 1; }
-html[data-skin="nuit"] .hero h1 { font-size: clamp(2.4rem, 5.4vw, 4rem); line-height: 1.04; }
-@media (max-width: 900px) { html[data-skin="nuit"] .hero::after { width: 320px; height: 320px; right: -150px; top: 18%; opacity: .55; } html[data-skin="nuit"][dir="rtl"] .hero::after { left: -150px; } }
+html[data-skin="nuit"][dir="rtl"] .hero:not(.banner)::after { right: auto; left: -210px; }
+html[data-skin="nuit"] .hero:not(.banner) > * { position: relative; z-index: 1; }
+/* Marcellus est plus large que Montserrat : titres un peu plus petits, jamais coupés au milieu d'un mot. */
+html[data-skin="nuit"] .hero h1 { font-size: clamp(1.9rem, 4.6vw, 3.4rem); line-height: 1.08; overflow-wrap: normal; word-break: normal; hyphens: manual; max-width: 20ch; }
+@media (max-width: 900px) { html[data-skin="nuit"] .hero:not(.banner)::after { width: 300px; height: 300px; right: -160px; top: 16%; opacity: .45; } html[data-skin="nuit"][dir="rtl"] .hero:not(.banner)::after { left: -160px; } }
+@media (max-width: 520px) { html[data-skin="nuit"] .hero h1 { font-size: clamp(1.7rem, 8vw, 2.2rem); } html[data-skin="nuit"] .lg-head h1 { font-size: 1.6rem; } }
 
 /* Titres de rangée : étoile à huit branches et filet d'or. */
-html[data-skin="nuit"] .row-head h2, html[data-skin="nuit"] .lr-block > h2, html[data-skin="nuit"] .today-head h2 {
-  display: flex; align-items: center; gap: 12px; font-size: 1.45rem;
-}
+html[data-skin="nuit"] .row-head h2, html[data-skin="nuit"] .lr-block > h2 { font-size: 1.3rem; min-width: 0; }
 html[data-skin="nuit"] .row-head h2::before, html[data-skin="nuit"] .lr-block > h2::before {
-  content: ''; flex: none; width: 15px; height: 15px; background: url('/skin/star.svg') center / contain no-repeat;
+  content: ''; display: inline-block; width: 13px; height: 13px; margin-inline-end: 10px; vertical-align: 1px; background: url('/skin/star.svg') center / contain no-repeat;
 }
+@media (max-width: 520px) { html[data-skin="nuit"] .row-head h2, html[data-skin="nuit"] .lr-block > h2 { font-size: 1.12rem; } html[data-skin="nuit"] .row-head::after { display: none; } }
 html[data-skin="nuit"] .row-head { position: relative; }
 html[data-skin="nuit"] .row-head::after {
   content: ''; flex: 1; align-self: center; height: 1px; margin-inline-start: 6px; background: var(--nuit-gold-line); order: 1;
