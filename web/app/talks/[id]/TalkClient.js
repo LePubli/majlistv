@@ -35,7 +35,9 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null, extra = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName, later, toggleLater } = useApp();
+  const [laterMsg, setLaterMsg] = useState('');
+  useEffect(() => { if (!laterMsg) return undefined; const k = setTimeout(() => setLaterMsg(''), 3500); return () => clearTimeout(k); }, [laterMsg]);
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
   const [fav, setFav] = useState(false);
@@ -129,6 +131,10 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   };
   const dropNote = async (nid) => { setNotes((l) => l.filter((x) => x.id !== nid)); await call(`/me/notes/${nid}`, { method: 'DELETE' }); };
   useEffect(() => { if (jumpMs && hasTracks) setTab('transcript'); }, [jumpMs, hasTracks, id]);
+
+  // « Plus tard » (amélioration 2.5) : partagé avec les vignettes (Providers).
+  const laterOn = Boolean(later?.has(id));
+  const onLater = async () => { if (!user) { router.push('/login'); return; } const was = laterOn; const err = await toggleLater(id); setLaterMsg(err ? (err === 'error' ? t('errGeneric') : err) : (was ? t('wlRemoved') : t('wlAdded'))); };
 
   // Favori : mise à jour immédiate, annulée si le serveur refuse.
   const toggleFav = async () => {
@@ -503,8 +509,10 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
           <div className="wb-bar" role="toolbar" aria-label={t('wbActions')}>
             {feat('favorites') && <ActionTile icon={fav ? ICONS.heartOn : ICONS.heart} label={t('wbFav')} pressed={fav} onClick={toggleFav} title={fav ? t('removeFav') : t('addFav')} act="fav" />}
+            {feat('watchlater') && <ActionTile icon={laterOn ? ICONS.clockOn : ICONS.clock} label={t('wbLater')} pressed={laterOn} onClick={onLater} title={laterOn ? t('wlRemove') : t('wlAdd')} act="later" />}
             {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.plus} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
             <ActionTile icon={ICONS.share} label={t('wbShare')} onClick={share} act="share" />
+            {laterMsg && <span className="wl-msg" role="status">{laterMsg}</span>}
             {user && hasPlayer && !talk.locked && <ActionTile icon={ICONS.bookmark} label={bmFlash ? t('ntBookmarked') : t('wbBookmark')} onClick={() => addNote('')} title={t('ntBookmarkHelp')} act="bookmark" />}
             <MoreMenu label={t('wbMore')}>
               {hasPlayer && <button type="button" className={`wb-item${cinema ? ' on' : ''}`} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')} data-act="cinema">{ICONS.cinema}<span>{cinema ? t('cnOff') : t('cnOn')}</span></button>}

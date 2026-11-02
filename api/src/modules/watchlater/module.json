@@ -1,0 +1,9 @@
+{
+  "id": "watchlater",
+  "name": "À regarder plus tard",
+  "version": "1.0.0",
+  "description": "Liste personnelle « À regarder plus tard », distincte des favoris : bouton sur les vignettes et la page de la conférence, onglet dans Ma bibliothèque, rangée sur l'accueil. Une conférence terminée en sort d'elle-même.",
+  "feature": "watchlater",
+  "requires": [],
+  "settings": []
+}

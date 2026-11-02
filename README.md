@@ -6854,3 +6854,28 @@ Puis Admin → Paramètres → Général → « Thème visuel par défaut » →
 - En-tête sur téléphone (tous thèmes) : un bouton placé dans l'en-tête (« S'abonner » ou bouton personnalisé d'Admin → Navigation) n'apparaît plus sous 900 px (il reste dans le menu) ; la page ne peut plus être plus large que l'écran (`overflow-x: clip`). Le décalage n'a pas pu être reproduit avec les réglages de test : correctif défensif, à vérifier sur le vrai site.
 - Thème Nuit et or : la photo du bandeau d'accueil (conférences mises en avant, bannière personnalisée) s'affiche de nouveau (la rosace ne concerne plus que le bandeau texte) ; titres plus petits (bandeau, rangées, Apprendre), jamais coupés au milieu d'un mot ; titres de rangée qui contiennent un lien (« À réviser aujourd'hui · Mon apprentissage ») sur une seule ligne.
 - Menu du téléphone : le bloc « Télécharger l'application » passe après tous les liens (et après langue et thème). Dans la barre latérale de l'ordinateur, il était déjà après tous les liens.
+
+## Amélioration D1 — « À regarder plus tard » (03/11)
+
+**Description.** Liste personnelle, distincte des favoris et des listes de lecture (idée 2.5) :
+- bouton **« Plus tard »** (horloge) sur la page de chaque conférence (avec confirmation « Ajoutée à… » annoncée aux lecteurs d'écran) et dans la carte qui s'ouvre au survol d'une vignette (ordinateur) ;
+- onglet **« Plus tard »** dans Ma bibliothèque (le plus récent d'abord, barre de progression si commencée, bouton retirer, état vide avec « Trouver une conférence ») ;
+- rangée **« À regarder plus tard »** sur l'accueil des membres (si la liste n'est pas vide) ;
+- une conférence **regardée jusqu'au bout sort d'elle-même** de la liste ; remise « plus tard » après l'avoir vue, elle reste (pour la revoir) ;
+- 200 conférences au plus (message clair au-delà) ; gratuit pour tout membre connecté ; fonction « À regarder plus tard » dans Admin → Fonctions (activée).
+
+**API.** Module `api/src/modules/watchlater` : `GET /me/watchlater`, `GET /me/watchlater/ids`, `PUT /me/watchlater/:id`, `DELETE /me/watchlater/:id`. Migration `092_watch_later.sql`.
+
+**Prérequis.** Aucun.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (migration 092 au démarrage), puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Bouton absent : fonction coupée (Admin → Fonctions) ou visiteur non connecté (le bouton mène alors à la connexion). Liste : `curl -s -H "Authorization: Bearer <jeton>" https://api-majlisstv.le-publicitaire.fr/me/watchlater`.
+
+**Tests.** `api/tests/test_watchlater.py` (14 contrôles), `web/tests/test_watchlater_web.mjs` ; parcours réel dans un navigateur (1280 px FR, 390 px arabe : ajout depuis la conférence, confirmation, onglet de la bibliothèque, rangée de l'accueil, retrait).

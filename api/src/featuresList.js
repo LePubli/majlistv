@@ -63,6 +63,8 @@ export const FEATURES = [
   // Communauté
   { id: 'favorites', group: 'community', label: 'Favoris', hint: 'Cœur sur les vignettes',
     rules: [{ re: '^/me/favorites(/|$)' }] },
+  { id: 'watchlater', group: 'community', label: 'À regarder plus tard', hint: 'Liste personnelle distincte des favoris : bouton sur les vignettes et la page de la conférence, onglet dans Ma bibliothèque, rangée sur l’accueil',
+    rules: [{ re: '^/me/watchlater(/|$)' }] },
   { id: 'lists', group: 'community', label: 'Listes de lecture', hint: 'Listes personnelles et partage par lien',
     rules: [{ re: '^/(me/lists|lists/shared)(/|$)' }] },
   { id: 'channels', group: 'catalog', label: 'Chaînes', hint: 'Pages de chaînes (ex-intervenants), propriétaire organisateur, Studio « Ma chaîne »',

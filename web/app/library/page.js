@@ -14,16 +14,18 @@ import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
 
 export default function Library() {
-  const { user, ready, t, call, feat } = useApp();
+  const { user, ready, t, call, feat , later, toggleLater } = useApp();
   const router = useRouter();
   const [cont, setCont] = useState(null);
   const [favs, setFavs] = useState(null);
+  const [lat, setLat] = useState(null); // « À regarder plus tard »
   const [mine, setMine] = useState(null);
   const [todo, setTodo] = useState([]);
   const [notes, setNotes] = useState([]);
 
   const tabs = [
     { id: 'resume', label: t('tbResume') },
+    ...(feat('watchlater') ? [{ id: 'later', label: t('wlTab') }] : []),
     ...(feat('favorites') ? [{ id: 'favs', label: t('tbFavs') }] : []),
     ...(feat('lists') ? [{ id: 'lists', label: t('tbLists') }] : []),
     ...(feat('follow') && feat('channels') ? [{ id: 'follows', label: t('tbFollows') }] : []),
@@ -34,14 +36,16 @@ export default function Library() {
   const load = useCallback(() => {
     call('/me/continue').then((r) => setCont(r.ok ? r.data : []));
     call('/me/favorites').then((r) => setFavs(r.ok ? r.data : []));
+    if (feat('watchlater')) call('/me/watchlater').then((r) => setLat(r.ok ? r.data : []));
     call('/me/series').then((r) => setMine(r.ok ? r.data : []));
     call('/me/quiz/todo').then((r) => setTodo(r.ok ? r.data : []));
     call('/me/notes').then((r) => setNotes(r.ok ? r.data : []));
-  }, [call]);
+  }, [call, feat]);
   useEffect(() => { if (user) load(); }, [user, load]);
   if (!user) return null;
 
   const dropProgress = async (id) => { setCont((l) => l.filter((x) => x.id !== id)); await call(`/me/progress/${id}`, { method: 'DELETE' }); };
+  const dropLater = async (id) => { setLat((l) => l.filter((x) => x.id !== id)); if (later?.has(id)) await toggleLater(id); else await call(`/me/watchlater/${id}`, { method: 'DELETE' }); };
   const dropFav = async (id) => { setFavs((l) => l.filter((x) => x.id !== id)); await call(`/me/favorites/${id}`, { method: 'DELETE' }); };
 
   const dropNote = async (gid, nid) => {
@@ -76,6 +80,14 @@ export default function Library() {
             <div className="grid">{mine.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
           </>
         )}
+      </TabPanel>
+
+      <TabPanel id="later" current={tab}>
+        <p className="meta">{t('wlIntro')}</p>
+        {lat && lat.length === 0 && <EmptyState text={t('wlEmpty')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />}
+        <div className="grid">
+          {(lat || []).map((x) => <TalkCard key={x.id} talk={x} t={t} progress={x.positionMs && x.durationSeconds ? x.positionMs / (x.durationSeconds * 1000) : 0} onRemove={() => dropLater(x.id)} removeLabel={t('wlRemove')} />)}
+        </div>
       </TabPanel>
 
       <TabPanel id="favs" current={tab}>

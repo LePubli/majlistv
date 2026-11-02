@@ -57,6 +57,8 @@ function HomeInner() {
   useEffect(() => { if (ready && legacy) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready, legacy]);
   useEffect(() => { if (user && legacy) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call, legacy]);
   const [quizTodo, setQuizTodo] = useState([]);
+  const [later, setLater] = useState([]); // « À regarder plus tard » (amélioration 2.5)
+  useEffect(() => { if (user && legacy && feat('watchlater')) call('/me/watchlater').then((r) => setLater(r.ok ? r.data.slice(0, 16) : [])); else setLater([]); }, [user, call, legacy, feat]);
   const [review, setReview] = useState([]); // « À réviser aujourd'hui » (Apprentissage ; 403 sinon)
   useEffect(() => { if (user && legacy) call('/me/revision').then((r) => setReview(r.ok ? r.data.items : [])); else setReview([]); }, [user, call, legacy]);
   useEffect(() => { if (user && legacy) call('/me/quiz/todo').then((r) => setQuizTodo(r.ok ? r.data : [])); else setQuizTodo([]); }, [user, call, legacy]);
@@ -98,6 +100,7 @@ function HomeInner() {
           {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
+          {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
           {user && <FormatTiles />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r, i) => (

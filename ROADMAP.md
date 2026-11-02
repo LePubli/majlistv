@@ -581,3 +581,7 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 ## Bloc C — design (02/11)
 - Maquette « Nuit et or » (artefact Design) : Epok garde le fond bleu nuit et les polices ; 2e version (harmonie bleu nuit + or, ornements en double filet).
 - C1 Thème « Nuit et or » en plus du thème classique, choisi par l'administrateur seul (voir README « Étape C1 »). Suite : retours d'Epok sur le rendu réel, puis ajustements (pages Coran, Ramadan, Kids…).
+
+
+## Bloc D — autres améliorations (ordre choisi par Epok le 03/11)
+1. ✅ « À regarder plus tard » (README « Amélioration D1 »). 2. Séries de jours et badges. 3. Glossaire arabe. 4. Fiche PDF. 5. Mode podcast. 6. Abonnement groupe (étape 46).

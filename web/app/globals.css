@@ -4226,3 +4226,7 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
   .hd-right { min-width: 0; }
 }
 html, body { overflow-x: clip; }
+
+/* Amélioration 2.5 — « À regarder plus tard » */
+.wl-msg { order: 99; flex-basis: 100%; font-size: 14px; color: var(--accent-light, var(--accent)); }
+.hc-btn.on { border-color: var(--accent); color: var(--accent); }

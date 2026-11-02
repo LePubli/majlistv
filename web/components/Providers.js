@@ -26,6 +26,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   const [formats, setFormats] = useState([]); // liste des formats (conférence, cours…) : nom selon la langue, pour les badges et le catalogue
   const [cats, setCats] = useState([]); // catégories principales (menu latéral et tiroir du téléphone)
   const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
+  const [later, setLater] = useState(() => new Set()); // amélioration 2.5 : conférences gardées « pour plus tard »
   const [blockEdits, setBlockEdits] = useState({}); // mode édition sur la page : blocs modifiés (id → bloc), vus tout de suite par l'administrateur
   const [textPatch, setTextPatch] = useState({});   // mode édition sur la page : textes modifiés (clé → texte), pour la langue courante
   const t = (key) => textPatch[key] || dict[key] || key;
@@ -71,6 +72,13 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
       .catch(() => {});
   }, [token, kid]);
   useEffect(() => {
+    if (!token || kid || features.watchlater === false) { setLater(new Set()); return; }
+    fetch('/api/me/watchlater/ids', { headers: { Authorization: 'Bearer ' + token } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((ids) => Array.isArray(ids) && setLater(new Set(ids)))
+      .catch(() => {});
+  }, [token, kid, features.watchlater]);
+  useEffect(() => {
     if (!token || kid) { setPrefs(null); return; }
     fetch('/api/me/preferences', { headers: { Authorization: 'Bearer ' + token } })
       .then((r) => (r.ok ? r.json() : null)).then((p) => p && setPrefs(p)).catch(() => {});
@@ -89,6 +97,15 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     if (!r.ok) setFavs((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); // échec : on annule
   }, [favs, call]);
 
+  // « Plus tard » : mise à jour immédiate, annulée si le serveur refuse (liste pleine…). Renvoie le message d'erreur éventuel.
+  const toggleLater = useCallback(async (id) => {
+    const on = later.has(id);
+    setLater((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
+    const r = await call(`/me/watchlater/${id}`, { method: on ? 'DELETE' : 'PUT' });
+    if (!r.ok) { setLater((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); return r.data?.error || 'error'; }
+    return null;
+  }, [later, call]);
+
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); setKid(null); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); setKid(null); };
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
@@ -98,5 +115,5 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
-    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, later, toggleLater, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
 }
