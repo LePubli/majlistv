@@ -17,6 +17,7 @@ import { defaultHeader, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 import { NAV_ICON_PATHS } from '../lib/navicons';
 import { KidsPendingBadge } from './KidsPending';
+import SkinPicker from './SkinPicker';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 // Espace enfant : en-tête réduit ; on n'en sort qu'avec le code parental du parent.
@@ -153,6 +154,7 @@ function MainHeader() {
             </>
           )}
           <div className="hd-menu-lang">{langSelect}</div>
+          <div className="hd-menu-lang"><SkinPicker /></div>
           <button type="button" role="menuitem" className="hd-menu-out" onClick={logoutNow}>{t('logout')}</button>
         </div>
       )}
@@ -242,6 +244,7 @@ function MainHeader() {
                 </>
               )}
               <div className="dr-lang">{langSelect}</div>
+              <div className="dr-lang"><SkinPicker /></div>
             </div>
           </aside>
         </div>,

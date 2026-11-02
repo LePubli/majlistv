@@ -1,0 +1,136 @@
+/* ======================================================================
+   Thème « Nuit et or » (choix du visiteur ou réglage par défaut du site) — activé par <html data-skin="nuit">.
+   Bleu de nuit en trois profondeurs, or en trois tons, titres Marcellus, arabe Amiri.
+   Ornements : entrelacs (étoile {8/3}) en double filet d'or, frise guillochée, rosace à 16 branches, rinceaux d'angle.
+   Fichiers des ornements : public/skin/*.svg. Le thème « Classique » (globals.css) n'est pas modifié.
+   Sélecteurs html[data-skin="nuit"] : plus forts que :root et body, donc prioritaires sur le thème publié (Admin → Apparence).
+   ====================================================================== */
+html[data-skin="nuit"] {
+  --bg: #0E1430; --surface: #131B3D; --surface-2: #1A2552; --line: #2B3B78; --line-soft: #1F2B5C; --line-strong: #3B4D8E;
+  --accent: #E6A739; --accent-hover: #F2C76E; --accent-light: #F2C76E; --bronze: #B07A1E; --on-accent: #120D06; --gold-soft: rgba(230, 167, 57, .14);
+  --text: #FFFFFF; --text-2: #E6EAF8; --muted: #BAC2E3; --placeholder: #8691BE;
+  --font-title: 'Marcellus', 'Amiri', Georgia, serif;
+  --quote-bg-a: #1A2552; --quote-bg-b: #131B3D; --quote-border: rgba(230, 167, 57, .7); --quote-gold: #F2C76E; --quote-arabic: #F6DCA0;
+  --nuit-deep: #0A0F26; --nuit-gold-line: rgba(230, 167, 57, .32);
+}
+html[data-skin="nuit"][lang="ar"] { --font-title: 'Amiri', 'Marcellus', serif; }
+html[data-skin="nuit"] body {
+  --header-bg: rgba(14, 20, 48, .94); --header-border: var(--nuit-gold-line);
+  --sidebar-bg: transparent; --sidebar-active-bg: var(--surface-2); --sidebar-border: var(--nuit-gold-line);
+  --bottom-bg: rgba(10, 15, 38, .97); --bottom-border: var(--nuit-gold-line);
+  --studio-side-bg: var(--nuit-deep);
+  --btn-ghost-border: rgba(230, 167, 57, .6);
+  --card-bg: var(--surface); --card-border: var(--nuit-gold-line); --card-meta: var(--muted);
+  --badge-bg: rgba(14, 20, 48, .88);
+  --input-bg: var(--bg); --input-bg-panel: var(--bg); --input-border: var(--line);
+  --footer-bg: var(--nuit-deep); --footer-border: transparent;
+  background: var(--bg);
+}
+
+/* Titres : Marcellus n'a qu'une graisse : pas de faux gras. Boutons : texte de lecture. */
+html[data-skin="nuit"] :is(h1, h2, h3, .logo-text, .eyebrow) { font-weight: 400; letter-spacing: 0; }
+html[data-skin="nuit"] .btn { font-family: var(--font-body); font-weight: 700; }
+html[data-skin="nuit"] .eyebrow { font-family: var(--font-body); font-weight: 700; letter-spacing: .22em; color: var(--accent-light); }
+
+/* Fond : entrelacs très discret en haut de page, qui s'efface vers le bas. */
+html[data-skin="nuit"] body::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 900px; z-index: -1; pointer-events: none;
+  background: url('/skin/tile.svg') 0 0 / 100px 100px repeat; opacity: .08;
+  -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent);
+}
+html[data-skin="nuit"] body { position: relative; }
+
+/* En-tête : filet d'or et frise guillochée dessous. */
+html[data-skin="nuit"] .header { border-bottom: 0; }
+html[data-skin="nuit"] .header::after {
+  content: ''; position: absolute; inset: auto 0 -10px 0; height: 10px; pointer-events: none;
+  background: url('/skin/frieze.svg') 0 0 / 14.3px 10px repeat-x; opacity: .9;
+}
+html[data-skin="nuit"] .hd-avatar { background: var(--surface-2); color: var(--accent-light); border: 1px solid var(--accent); font-family: var(--font-title); }
+
+/* Bandeau d'accueil : rosace à 16 branches qui déborde à droite (masquée sur téléphone). */
+html[data-skin="nuit"] .hero { background: transparent; }
+html[data-skin="nuit"] .hero::after {
+  content: ''; position: absolute; right: -210px; top: 50%; width: 520px; height: 520px; transform: translateY(-50%);
+  background: url('/skin/rosette.svg') center / contain no-repeat; pointer-events: none; z-index: 0;
+}
+html[data-skin="nuit"][dir="rtl"] .hero::after { right: auto; left: -210px; }
+html[data-skin="nuit"] .hero > * { position: relative; z-index: 1; }
+html[data-skin="nuit"] .hero h1 { font-size: clamp(2.4rem, 5.4vw, 4rem); line-height: 1.04; }
+@media (max-width: 900px) { html[data-skin="nuit"] .hero::after { width: 320px; height: 320px; right: -150px; top: 18%; opacity: .55; } html[data-skin="nuit"][dir="rtl"] .hero::after { left: -150px; } }
+
+/* Titres de rangée : étoile à huit branches et filet d'or. */
+html[data-skin="nuit"] .row-head h2, html[data-skin="nuit"] .lr-block > h2, html[data-skin="nuit"] .today-head h2 {
+  display: flex; align-items: center; gap: 12px; font-size: 1.45rem;
+}
+html[data-skin="nuit"] .row-head h2::before, html[data-skin="nuit"] .lr-block > h2::before {
+  content: ''; flex: none; width: 15px; height: 15px; background: url('/skin/star.svg') center / contain no-repeat;
+}
+html[data-skin="nuit"] .row-head { position: relative; }
+html[data-skin="nuit"] .row-head::after {
+  content: ''; flex: 1; align-self: center; height: 1px; margin-inline-start: 6px; background: var(--nuit-gold-line); order: 1;
+}
+html[data-skin="nuit"] .row-head > :not(h2) { order: 2; }
+
+/* Vignettes : cadre d'or fin, double filet au survol. */
+html[data-skin="nuit"] .thumb { border: 1px solid var(--nuit-gold-line); background-color: var(--surface-2); }
+html[data-skin="nuit"] .talk:hover .thumb, html[data-skin="nuit"] .talk:focus-visible .thumb { box-shadow: inset 0 0 0 4px rgba(14, 20, 48, .7), inset 0 0 0 5px rgba(230, 167, 57, .6); border-color: var(--accent); }
+
+/* Panneaux et cartes : double cadre (filet d'or + filet intérieur). */
+html[data-skin="nuit"] :is(.panel, .lg-card, .ob, .invite, .kh, .rb, .kp-banner) {
+  border: 1px solid var(--nuit-gold-line);
+  box-shadow: inset 0 0 0 6px var(--surface), inset 0 0 0 7px rgba(230, 167, 57, .14);
+}
+html[data-skin="nuit"] :is(.ob, .invite) { background: var(--surface); }
+
+/* Bloc « Aujourd'hui » : rinceaux aux deux coins hauts. */
+html[data-skin="nuit"] .today { position: relative; padding-top: 26px; border: 1px solid rgba(230, 167, 57, .5); box-shadow: inset 0 0 0 7px var(--surface), inset 0 0 0 8px rgba(230, 167, 57, .18); }
+html[data-skin="nuit"] .today::before, html[data-skin="nuit"] .today::after {
+  content: ''; position: absolute; top: 8px; width: 64px; height: 64px; pointer-events: none; background: url('/skin/rinceau.svg') center / contain no-repeat;
+}
+html[data-skin="nuit"] .today::before { left: 8px; }
+html[data-skin="nuit"] .today::after { right: 8px; transform: scaleX(-1); }
+html[data-skin="nuit"] .today-head { justify-content: center; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 0 56px; }
+html[data-skin="nuit"] .today-list a { background: transparent; border: 0; border-top: 1px solid var(--nuit-gold-line); border-radius: 0; }
+html[data-skin="nuit"] .today-list a:hover, html[data-skin="nuit"] .today-list a:focus-visible { background: var(--gold-soft); }
+html[data-skin="nuit"] .today-box { width: 28px; height: 28px; border: 0; border-radius: 0; background: url('/skin/star.svg') center / contain no-repeat; opacity: .35; }
+html[data-skin="nuit"] .today-list li.done .today-box { background: url('/skin/star.svg') center / contain no-repeat; opacity: 1; color: var(--on-accent); }
+
+/* Onglets : sous-onglets en pastilles bordées d'or. */
+html[data-skin="nuit"] .tabs { border-bottom-color: var(--nuit-gold-line); }
+
+/* Citation du jour : cadre en cartouche (pointes à gauche et à droite). */
+html[data-skin="nuit"] .cit-framed { background: var(--surface); border: 1px solid rgba(230, 167, 57, .55); box-shadow: inset 0 0 0 7px var(--surface), inset 0 0 0 8px rgba(230, 167, 57, .2); }
+
+/* Menu latéral et barre du bas. */
+html[data-skin="nuit"] .ms-side { background: transparent; }
+html[data-skin="nuit"] .ms-bar { border-top: 0; }
+html[data-skin="nuit"] .ms-bar::before {
+  content: ''; position: absolute; inset: -10px 0 auto 0; height: 10px; pointer-events: none;
+  background: url('/skin/frieze.svg') 0 0 / 14.3px 10px repeat-x;
+}
+
+/* Pied de page : frise au-dessus, nuit profonde. */
+html[data-skin="nuit"] .site-footer { position: relative; background: var(--nuit-deep); border-top: 0; }
+html[data-skin="nuit"] .site-footer::before {
+  content: ''; position: absolute; inset: -14px 0 auto 0; height: 14px; pointer-events: none;
+  background: url('/skin/frieze.svg') 0 0 / 20px 14px repeat-x;
+}
+
+/* Sélecteur de thème (pied de page, menu du compte). */
+.skin-pick { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.skin-pick button { min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
+.skin-pick button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: var(--gold-soft); }
+
+@media (prefers-reduced-motion: no-preference) { html[data-skin="nuit"] .thumb { transition: box-shadow .2s, border-color .2s; } }
+
+/* Apprendre : surfaces qui utilisaient les bruns du thème classique. */
+html[data-skin="nuit"] .lg-resume { background: var(--surface); border-color: rgba(230, 167, 57, .45); box-shadow: inset 0 0 0 7px var(--surface), inset 0 0 0 8px rgba(230, 167, 57, .16); }
+html[data-skin="nuit"] .lg-empty { background: url('/skin/rosette.svg') right -150px top -150px / 340px no-repeat, var(--surface); }
+html[data-skin="nuit"][dir="rtl"] .lg-empty { background-position: left -150px top -150px, 0 0; }
+html[data-skin="nuit"] .lg-poster { background: url('/skin/tile-card.svg') 0 0 / 60px 60px, var(--surface-2); border: 1px solid var(--nuit-gold-line); }
+html[data-skin="nuit"] .lg-thumb { background: url('/skin/tile-card.svg') 0 0 / 40px 40px, var(--surface-2) !important; }
+html[data-skin="nuit"] .lg-lock { background: var(--surface-2); border: 1px solid var(--nuit-gold-line); }
+
+/* Vignettes sans image : entrelacs discret au lieu d'un aplat. */
+html[data-skin="nuit"] .thumb:not([style*="url("]) { background-image: url('/skin/tile-card.svg'); background-size: 60px 60px; }

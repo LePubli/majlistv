@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import NavLink from './NavLink';
+import SkinPicker from './SkinPicker';
 import { LayoutZone } from './PageBlocks';
 import { resolveList, audienceOk, deviceClass } from '../lib/menus';
 import { defaultFooter, MENUS } from '../lib/navcfg';
@@ -47,6 +48,7 @@ export default function Footer() {
       <footer className="site-footer">
         <div className="ft-zone ft-left">{zone('left')}</div>
         <div className="ft-zone ft-right">{zone('right')}{!placed && renderEl({ id: 'forced', key: 'links' })}</div>
+        <div className="ft-zone ft-skin"><SkinPicker /></div>
       </footer>
     </>
   );

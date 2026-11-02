@@ -5,7 +5,11 @@ import '@fontsource-variable/fredoka';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/noto-kufi-arabic';
 import '@fontsource-variable/noto-sans-arabic';
+import '@fontsource/marcellus';
+import '@fontsource/amiri/400.css';
+import '@fontsource/amiri/700.css';
 import './globals.css';
+import './skin-nuit.css'; // thème « Nuit et or » (html[data-skin="nuit"])
 import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -34,7 +38,7 @@ async function siteConfig() {
   try {
     const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
     const c = await res.json();
-    if (c.appName) return { appName: c.appName, trialDays: Number(c.trialDays) || 0, prayer: c.prayer || null, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {}, modules: c.modules || {} };
+    if (c.appName) return { skin: c.skin || null, appName: c.appName, trialDays: Number(c.trialDays) || 0, prayer: c.prayer || null, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {}, modules: c.modules || {} };
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
@@ -62,14 +66,18 @@ export const generateViewport = async () => ({ themeColor: themeBg(await siteThe
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
-  const [{ appName, trialDays, prayer, cards, hasSeries, hasBooks, stats, features, modules }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
+  const [{ appName, trialDays, prayer, cards, hasSeries, hasBooks, stats, features, modules, skin: skinCfg }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
+  // Thème visuel : choix du visiteur (cookie « skin ») s'il est permis, sinon celui par défaut (Admin → Paramètres → Général).
+  const skinDef = skinCfg?.def === 'nuit' ? 'nuit' : 'classique';
+  const wanted = cookies().get('skin')?.value;
+  const skin = skinCfg?.choice !== false && (wanted === 'nuit' || wanted === 'classique') ? wanted : skinDef;
   return (
-    <html lang={locale} dir={DIR[locale]}>
+    <html lang={locale} dir={DIR[locale]} data-skin={skin}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
+        <Providers skin={skin} skinChoice={skinCfg?.choice !== false} locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
           <StatsBeacon />
           <ErrorReporter />
           <PwaRegister />

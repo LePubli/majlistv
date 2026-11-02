@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="464" height="464" viewBox="-232 -232 464 464"><!-- rosace à 16 branches, double filet d'or -->
+<defs><clipPath id="c"><path clip-rule="evenodd" d="M-196 0a196 196 0 1 0 392 0a196 196 0 1 0-392 0ZM-80 0a80 80 0 1 0 160 0a80 80 0 1 0-160 0Z"/></clipPath>
+<path id="r16" d="M0 -196L75 181.1L-138.6 -138.6L181.1 75L-196 0L181.1 -75L-138.6 138.6L75 -181.1L0 196L-75 -181.1L138.6 138.6L-181.1 -75L196 0L-181.1 75L138.6 -138.6L-75 181.1Z"/>
+<path id="r8" d="M26.8 -64.7L26.8 64.7L-64.7 -26.8L64.7 -26.8L-26.8 64.7L-26.8 -64.7L64.7 26.8L-64.7 26.8Z"/>
+<path id="sc" d="M0 -200A21 21 0 0 1 39 -196.2A21 21 0 0 1 76.5 -184.8A21 21 0 0 1 111.1 -166.3A21 21 0 0 1 141.4 -141.4A21 21 0 0 1 166.3 -111.1A21 21 0 0 1 184.8 -76.5A21 21 0 0 1 196.2 -39A21 21 0 0 1 200 0A21 21 0 0 1 196.2 39A21 21 0 0 1 184.8 76.5A21 21 0 0 1 166.3 111.1A21 21 0 0 1 141.4 141.4A21 21 0 0 1 111.1 166.3A21 21 0 0 1 76.5 184.8A21 21 0 0 1 39 196.2A21 21 0 0 1 0 200A21 21 0 0 1 -39 196.2A21 21 0 0 1 -76.5 184.8A21 21 0 0 1 -111.1 166.3A21 21 0 0 1 -141.4 141.4A21 21 0 0 1 -166.3 111.1A21 21 0 0 1 -184.8 76.5A21 21 0 0 1 -196.2 39A21 21 0 0 1 -200 0A21 21 0 0 1 -196.2 -39A21 21 0 0 1 -184.8 -76.5A21 21 0 0 1 -166.3 -111.1A21 21 0 0 1 -141.4 -141.4A21 21 0 0 1 -111.1 -166.3A21 21 0 0 1 -76.5 -184.8A21 21 0 0 1 -39 -196.2A21 21 0 0 1 0 -200Z"/></defs>
+<circle r="228" fill="none" stroke="#E6A739" stroke-opacity=".35"/>
+<use xlink:href="#sc" href="#sc" fill="#131B3D" stroke="#E6A739" stroke-width="3.2"/><use xlink:href="#sc" href="#sc" fill="none" stroke="#131B3D" stroke-width="1.2"/>
+<circle r="186" fill="#1A2552"/>
+<g clip-path="url(#c)"><use xlink:href="#r16" href="#r16" fill="none" stroke="#E6A739" stroke-width="4"/><use xlink:href="#r16" href="#r16" fill="none" stroke="#1A2552" stroke-width="1.6"/></g>
+<circle r="80" fill="#131B3D" stroke="#E6A739" stroke-width="3"/><circle r="80" fill="none" stroke="#131B3D" stroke-width="1.1"/>
+<use xlink:href="#r8" href="#r8" fill="#B07A1E" fill-opacity=".35" stroke="#E6A739" stroke-width="3.4"/><use xlink:href="#r8" href="#r8" fill="none" stroke="#131B3D" stroke-width="1.3"/>
+<path d="M0 -30L6.1 -14.8L21.2 -21.2L14.8 -6.1L30 0L14.8 6.1L21.2 21.2L6.1 14.8L0 30L-6.1 14.8L-21.2 21.2L-14.8 6.1L-30 0L-14.8 -6.1L-21.2 -21.2L-6.1 -14.8Z" fill="#E6A739"/>
+<circle r="7" fill="#0E1430"/><circle r="3" fill="#F2C76E"/></svg>

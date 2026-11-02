@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><!-- rinceau d'angle : tige en spirale, palmettes -->
+<path d="M2 158V70C2 32 32 2 70 2H158" fill="none" stroke="#E6A739" stroke-width="1.6"/>
+<path d="M10 150V72C10 38 38 10 72 10H150" fill="none" stroke="#E6A739" stroke-opacity=".45" stroke-width="1"/>
+<path d="M24 128C24 78 52 40 98 30C122 25 138 34 138 50C138 64 124 70 115 63C108 57 112 47 120 47" fill="none" stroke="#E6A739" stroke-width="2"/>
+<path d="M52 62C60 78 76 86 94 84" fill="none" stroke="#E6A739" stroke-width="1.6"/>
+<path d="M94 84C102 70 118 66 132 72C118 75 106 79 94 84Z" fill="#E6A739"/><path d="M94 84C106 92 122 94 134 88C120 86 106 85 94 84Z" fill="#F2C76E"/>
+<path d="M36 92C24 84 22 68 30 58C34 70 36 80 36 92Z" fill="#E6A739"/><path d="M36 92C46 84 48 70 44 60C38 70 36 80 36 92Z" fill="#B07A1E"/>
+<path d="M70 40C64 30 66 20 74 14C76 24 74 32 70 40Z" fill="#F2C76E"/><circle cx="120" cy="47" r="3" fill="#F2C76E"/><path d="M18 18L24 12L30 18L24 24Z" fill="#E6A739"/></svg>

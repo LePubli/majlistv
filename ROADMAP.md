@@ -576,3 +576,8 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - B4 Invitation des visiteurs : livré (voir README « Étape B4 »).
 - B5 Signal au parent (pastille, bandeau, push + e-mail quotidien) : livré (voir README « Étape B5 », migration 091).
 - B6 Apprendre en 4 onglets : livré (voir README « Étape B6 »). Bloc B (parcours UX) terminé côté site + PWA. Suivant : bloc C (refonte du design, maquette à valider), puis D, puis « go mobile ».
+
+
+## Bloc C — design (02/11)
+- Maquette « Nuit et or » (artefact Design) : Epok garde le fond bleu nuit et les polices ; 2e version (harmonie bleu nuit + or, ornements en double filet).
+- C1 Thème « Nuit et or » en plus du thème classique, au choix du visiteur (voir README « Étape C1 »). Suite : retours d'Epok sur le rendu réel, puis ajustements (pages Coran, Ramadan, Kids…).

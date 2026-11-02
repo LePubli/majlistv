@@ -145,6 +145,8 @@ app.get('/config', async () => {
     blockMinutes: await getNumber('mod_prayer_block_minutes'), maxBlockMinutes: await getNumber('mod_prayer_max_block_minutes'), city: await getSetting('mod_prayer_city'),
   } : null;
   return {
+    // Thème visuel (« Classique » ou « Nuit et or ») : celui par défaut et le choix laissé au visiteur.
+    skin: { def: (await getSetting('skin_default')) === 'nuit' ? 'nuit' : 'classique', choice: await on('skin_choice') },
     prayer, features, modules: await allModules(), hasSeries, hasBooks, stats: await on('stats_enabled'), appName: await getSetting('app_name'), trialDays: Number(await getSetting('trial_days')) || 0, dailymotionPlayerId: dailymotionPlayerId(await getSetting('dailymotion_player_id')),
     // Réglages des vignettes (Admin → Paramètres → Vignettes) : le site les applique tels quels.
     cards: { hover: await on('card_hover'), preview: await on('card_preview'), previewDelay: await getNumber('card_preview_delay'), previewSeconds: await getNumber('card_preview_seconds'), show },
