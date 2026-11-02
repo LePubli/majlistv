@@ -104,6 +104,37 @@ ok("5" not in requests.get(B + "/ramadan", headers=USR).json()["me"]["tarawih"],
 ok(requests.put(B + "/ramadan/prefs", headers=USR, json={"remindHour": 30}).status_code == 400, "heure invalide refusée")
 ok(requests.put(B + "/ramadan/prefs", headers=USR, json={"remindHour": 20}).status_code == 200 and requests.get(B + "/ramadan", headers=USR).json()["me"]["remindHour"] == 20, "rappel à 20 h")
 ok(requests.get(B + "/ramadan", headers=LRN).json()["me"]["marks"] == {}, "les cases sont personnelles")
+# --- 45F2 : enfants (l'enfant dit « je l'ai fait », le parent valide) -----------------------------------------------------------
+def kidtok(parent_id, profile_id):
+    h = b64(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()); pl = b64(json.dumps({"sub": str(parent_id), "role": "user", "kid": str(profile_id), "iat": int(time.time())}).encode())
+    return {"authorization": "Bearer " + h + "." + pl + "." + b64(hmac.new(ENV["JWT_SECRET"].encode(), f"{h}.{pl}".encode(), hashlib.sha256).digest())}
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Enfant fictif','7-10') returning id", (uid,)); kp = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Autre fictif','7-10') returning id", (lid,)); kp2 = cur.fetchone()[0]
+KID = kidtok(uid, kp)
+K6 = requests.post(B + "/admin/ramadan/items", headers=ADM, json=it(audience="kid", title={"fr": "Action enfant fictive", "en": "", "ar": ""}, validated=True, enabled=True)).json()["id"]
+ok(requests.get(B + "/admin/ramadan/items", headers=ADM).json()["items"][0]["audience"] in ("adult", "kid"), "admin : public de chaque action (adultes / enfants)")
+ok(all(i["id"] != K6 for i in requests.get(B + "/ramadan").json()["days"][5]["items"]), "les actions enfants ne sont pas dans le circuit des adultes")
+j = requests.get(B + "/kids/ramadan", headers=KID).json()
+ok(j["status"]["day"] == 6 and [i["id"] for i in j["items"]] == [K6] and j["items"][0]["state"] == "todo", "enfant : action du jour (seulement celles des enfants)")
+ok(requests.get(B + "/kids/ramadan", headers=USR).status_code == 401, "jeton parent refusé côté enfant")
+ok(requests.get(B + "/ramadan", headers=KID).json().get("me") is None, "jeton enfant : pas de données du parent sur la page adultes")
+ok(requests.put(B + "/ramadan/mark", headers=KID, json={"day": 6, "itemId": A6, "done": True}).status_code == 403, "jeton enfant : ne coche pas le circuit des adultes")
+ok(requests.post(B + "/kids/ramadan/claim", headers=KID, json={"itemId": A6}).status_code == 404, "enfant : action d'adulte refusée")
+ok(requests.post(B + "/kids/ramadan/claim", headers=KID, json={"itemId": K6}).status_code == 200, "enfant : « je l'ai fait »")
+ok(requests.get(B + "/kids/ramadan", headers=KID).json()["items"][0]["state"] == "claimed", "en attente de la validation du parent")
+ok(requests.post(f"{B}/me/kids/profiles/{kp}/ramadan/validate", headers=KID, json={"day": 6, "itemId": K6}).status_code == 403, "l'enfant ne peut pas valider")
+ok(requests.get(f"{B}/me/kids/profiles/{kp2}/ramadan", headers=USR).status_code == 404, "parent : pas d'accès au profil d'un autre parent")
+j = requests.get(f"{B}/me/kids/profiles/{kp}/ramadan", headers=USR).json()
+ok(j["days"][0]["day"] == 6 and j["days"][0]["items"][0]["state"] == "claimed" and len(j["days"]) == 6, "parent : 6 derniers jours, action dite faite")
+ok(requests.post(f"{B}/me/kids/profiles/{kp}/ramadan/validate", headers=USR, json={"day": 7, "itemId": K6}).status_code == 400, "parent : jour à venir refusé")
+ok(requests.post(f"{B}/me/kids/profiles/{kp}/ramadan/validate", headers=USR, json={"day": 6, "itemId": K6}).status_code == 200, "parent : validée")
+j = requests.get(B + "/kids/ramadan", headers=KID).json(); ok(j["items"][0]["state"] == "validated" and j["validated"] == 1, "enfant : action validée, compteur")
+ok(requests.post(f"{B}/me/kids/profiles/{kp}/ramadan/validate", headers=USR, json={"day": 4, "itemId": K6}).status_code == 404, "parent : action d'un autre jour refusée")
+K0 = requests.post(B + "/admin/ramadan/items", headers=ADM, json=it(audience="kid", day=0, title={"fr": "Action enfant de chaque jour", "en": "", "ar": ""}, validated=True, enabled=True)).json()["id"]
+ok(requests.post(f"{B}/me/kids/profiles/{kp}/ramadan/validate", headers=USR, json={"day": 4, "itemId": K0}).status_code == 200, "parent : valider un jour passé (même sans « je l'ai fait »)")
+ok(requests.get(B + "/kids/ramadan", headers=KID).json()["validated"] == 2, "enfant : 2 actions validées en tout")
+cur.execute("delete from kid_profiles where id in (%s,%s)", (kp, kp2))
+
 # Import
 r = requests.post(B + "/admin/ramadan/import", headers=ADM, json={"items": [{"day": 1, "titleFr": "Import fictif"}, {"day": 40, "titleFr": "x"}]})
 ok(r.status_code == 200 and r.json()["created"] == 1 and len(r.json()["errors"]) == 1, "import : 1 créée (non validée), 1 refusée")

@@ -517,6 +517,9 @@ n°13 fondu enchaîné · n°28 et 31 place des mots et suivi du visage dans Stu
 ## Étape 45 (31/10) — Pages de saison (Ramadan, Hajj, Mawlid, Achoura)
 - Voir README « Étape 45 ». Reste du bloc « Revenus » (un « go » par étape) : 46 abonnement groupe / association / école (1.6, gros chantier à découper).
 
+## Étape 45F2 (01/11) — Circuit de Ramadan des enfants
+- Voir README « Étape 45F2 ».
+
 ## Étape 45F (01/11) — Circuit de Ramadan (adultes) et tarawih
 - Voir README « Étape 45F ». Suite : 45F2 version enfants (sous contrôle du parent), 45G bilan de Ramadan, 45H saisons enrichies.
 

@@ -10,6 +10,7 @@ import { itemsOfDay, lang, publicItem, publishedItems, ramadanStatus } from './l
 
 const trio = (max) => z.object({ fr: z.string().trim().max(max).default(''), en: z.string().trim().max(max).default(''), ar: z.string().trim().max(max).default('') });
 const itemSchema = z.object({
+  audience: z.enum(['adult', 'kid']).default('adult'),
   day: z.number().int().min(0).max(30), title: trio(200), text: trio(2000),
   link: z.string().trim().max(300).regex(/^(\/[^\s]*)?$/, 'Lien : une page du site commençant par / (ou vide).').default(''),
   reference: z.string().trim().max(500).default(''), position: z.number().int().min(0).max(10000).default(0),
@@ -17,7 +18,7 @@ const itemSchema = z.object({
 }).refine((b) => b.title.fr || b.title.en || b.title.ar, { message: 'Donnez au moins un titre.', path: ['title'] });
 const idSchema = z.object({ id: z.coerce.number().int().positive() });
 const adminRow = (r) => ({
-  id: r.id, day: r.day, title: { fr: r.title_fr, en: r.title_en, ar: r.title_ar }, text: { fr: r.text_fr, en: r.text_en, ar: r.text_ar },
+  id: r.id, audience: r.audience, day: r.day, title: { fr: r.title_fr, en: r.title_en, ar: r.title_ar }, text: { fr: r.text_fr, en: r.text_en, ar: r.text_ar },
   link: r.link, reference: r.reference, position: r.position, enabled: r.enabled, validated: Boolean(r.reviewed_at),
 });
 
@@ -77,25 +78,90 @@ export default async function ramadanRoutes(app) {
     return { remindHour };
   });
 
+  // ---- Enfants (45F2) : l'enfant dit « je l'ai fait », le parent valide ; jamais de comparaison entre enfants -------------------
+  const kidAuth = { preHandler: app.authenticate, config: { kidOk: true } };
+  const kidMarks = async (profileId, hyear) => (await pool.query(
+    'SELECT day, item_id, status FROM ramadan_kid_marks WHERE profile_id = $1 AND hyear = $2', [profileId, hyear])).rows;
+
+  app.get('/kids/ramadan', kidAuth, async (req, reply) => {
+    const c = await app.kidContext(req);
+    if (!c) return reply.code(401).send({ error: 'Session enfant expirée', code: 'kid_expired' });
+    const st = await ramadanStatus();
+    if (!st.active) return { status: st, items: [], validated: 0 };
+    const l = lang(c.locale || req.query?.lang);
+    const items = itemsOfDay(await publishedItems('kid'), st.day).map((r) => publicItem(r, l));
+    const marks = await kidMarks(c.profile.id, st.hyear);
+    const today = new Map(marks.filter((m) => m.day === st.day).map((m) => [m.item_id, m.status]));
+    return { status: st, items: items.map((i) => ({ ...i, state: today.get(i.id) || 'todo' })), validated: marks.filter((m) => m.status === 'validated').length };
+  });
+
+  app.post('/kids/ramadan/claim', kidAuth, async (req, reply) => {
+    const c = await app.kidContext(req);
+    if (!c) return reply.code(401).send({ error: 'Session enfant expirée', code: 'kid_expired' });
+    const b = z.object({ itemId: z.number().int().positive() }).parse(req.body ?? {});
+    const st = await ramadanStatus();
+    if (!st.active) return reply.code(409).send({ error: 'Le circuit ne se coche que pendant Ramadan.' });
+    if (!itemsOfDay(await publishedItems('kid'), st.day).some((i) => i.id === b.itemId)) return reply.code(404).send({ error: 'Action introuvable pour aujourd’hui.' });
+    await pool.query(
+      `INSERT INTO ramadan_kid_marks(profile_id, hyear, day, item_id, status, claimed_at) VALUES ($1,$2,$3,$4,'claimed',now()) ON CONFLICT DO NOTHING`,
+      [c.profile.id, st.hyear, st.day, b.itemId]);
+    return { ok: true };
+  });
+
+  const ownKid = async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const p = (await pool.query('SELECT id, name FROM kid_profiles WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
+    if (!p) { reply.code(404).send({ error: 'Profil introuvable' }); return null; }
+    return p;
+  };
+  // Parent : actions dites « faites » par l'enfant (et celles de ses jours de Ramadan), validation.
+  app.get('/me/kids/profiles/:id/ramadan', auth, async (req, reply) => {
+    const p = await ownKid(req, reply); if (!p) return undefined;
+    const st = await ramadanStatus();
+    if (!st.active) return { status: st, days: [] };
+    const l = lang(req.query?.lang);
+    const items = await publishedItems('kid');
+    const marks = await kidMarks(p.id, st.hyear);
+    const by = new Map(marks.map((m) => [`${m.day}:${m.item_id}`, m.status]));
+    const days = [];
+    for (let d = st.day; d >= Math.max(1, st.day - 6); d--) {
+      days.push({ day: d, items: itemsOfDay(items, d).map((r) => ({ ...publicItem(r, l), state: by.get(`${d}:${r.id}`) || 'todo' })) });
+    }
+    return { status: st, days };
+  });
+
+  app.post('/me/kids/profiles/:id/ramadan/validate', auth, async (req, reply) => {
+    const p = await ownKid(req, reply); if (!p) return undefined;
+    const b = z.object({ day: z.number().int().min(1).max(30), itemId: z.number().int().positive() }).parse(req.body ?? {});
+    const st = await ramadanStatus();
+    if (!st.active) return reply.code(409).send({ error: 'Le circuit ne se valide que pendant Ramadan.' });
+    if (b.day > st.day) return reply.code(400).send({ error: 'Ce jour n’est pas encore arrivé.' });
+    if (!itemsOfDay(await publishedItems('kid'), b.day).some((i) => i.id === b.itemId)) return reply.code(404).send({ error: 'Action introuvable pour ce jour.' });
+    await pool.query(
+      `INSERT INTO ramadan_kid_marks(profile_id, hyear, day, item_id, status, validated_at) VALUES ($1,$2,$3,$4,'validated',now())
+       ON CONFLICT (profile_id, hyear, day, item_id) DO UPDATE SET status = 'validated', validated_at = now()`, [p.id, st.hyear, b.day, b.itemId]);
+    return { ok: true };
+  });
+
   // ---- Administration ----------------------------------------------------------------------------------------------------------
   app.get('/admin/ramadan/items', adminOnly, async () => ({
-    status: await ramadanStatus(), items: (await pool.query("SELECT * FROM ramadan_items WHERE audience = 'adult' ORDER BY day, position, id")).rows.map(adminRow),
+    status: await ramadanStatus(), items: (await pool.query('SELECT * FROM ramadan_items ORDER BY audience, day, position, id')).rows.map(adminRow),
   }));
 
   const save = async (req, reply, id) => {
     const b = itemSchema.parse(req.body ?? {});
     if (b.enabled && !b.validated) return reply.code(400).send({ error: 'Validez d’abord cette action (relue par une personne qualifiée) avant de l’afficher.' });
-    const v = [b.day, b.title.fr, b.title.en, b.title.ar, b.text.fr, b.text.en, b.text.ar, b.link, b.reference, b.position, b.enabled, b.validated, req.user.sub];
+    const v = [b.day, b.title.fr, b.title.en, b.title.ar, b.text.fr, b.text.en, b.text.ar, b.link, b.reference, b.position, b.enabled, b.validated, req.user.sub, b.audience];
     const sql = id
       ? `UPDATE ramadan_items SET day=$1, title_fr=$2, title_en=$3, title_ar=$4, text_fr=$5, text_en=$6, text_ar=$7, link=$8, reference=$9, position=$10, enabled=$11,
                 reviewed_at = CASE WHEN $12 THEN COALESCE(reviewed_at, now()) ELSE NULL END,
-                reviewed_by = CASE WHEN $12 THEN COALESCE(reviewed_by, $13::uuid) ELSE NULL END, updated_at = now()
-          WHERE id = $14 AND audience = 'adult' RETURNING *`
-      : `INSERT INTO ramadan_items(day, title_fr, title_en, title_ar, text_fr, text_en, text_ar, link, reference, position, enabled, reviewed_at, reviewed_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, CASE WHEN $12 THEN now() END, CASE WHEN $12 THEN $13::uuid END) RETURNING *`;
+                reviewed_by = CASE WHEN $12 THEN COALESCE(reviewed_by, $13::uuid) ELSE NULL END, audience = $14, updated_at = now()
+          WHERE id = $15 RETURNING *`
+      : `INSERT INTO ramadan_items(day, title_fr, title_en, title_ar, text_fr, text_en, text_ar, link, reference, position, enabled, reviewed_at, reviewed_by, audience)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, CASE WHEN $12 THEN now() END, CASE WHEN $12 THEN $13::uuid END, $14) RETURNING *`;
     const { rows } = await pool.query(sql, id ? [...v, id] : v);
     if (!rows.length) return reply.code(404).send({ error: 'Action introuvable.' });
-    req.auditSummary = `Ramadan : action n° ${rows[0].id} (jour ${b.day || 'chaque jour'}) ${id ? 'modifiée' : 'créée'}${b.validated ? ', validée' : ''}${b.enabled ? ', affichée' : ''}`;
+    req.auditSummary = `Ramadan${b.audience === 'kid' ? ' (enfants)' : ''} : action n° ${rows[0].id} (jour ${b.day || 'chaque jour'}) ${id ? 'modifiée' : 'créée'}${b.validated ? ', validée' : ''}${b.enabled ? ', affichée' : ''}`;
     return adminRow(rows[0]);
   };
   app.post('/admin/ramadan/items', adminOnly, (req, reply) => save(req, reply, null));
@@ -103,7 +169,7 @@ export default async function ramadanRoutes(app) {
 
   app.delete('/admin/ramadan/items/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const r = await pool.query("DELETE FROM ramadan_items WHERE id = $1 AND audience = 'adult' RETURNING id", [id]);
+    const r = await pool.query("DELETE FROM ramadan_items WHERE id = $1 RETURNING id", [id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable.' });
     req.auditSummary = `Ramadan : action n° ${id} supprimée`;
     return { ok: true };
@@ -115,14 +181,14 @@ export default async function ramadanRoutes(app) {
     let created = 0; const errors = [];
     for (const [i, raw] of items.entries()) {
       const p = itemSchema.safeParse({
-        day: Number(raw?.day), title: { fr: raw?.title?.fr ?? raw?.titleFr ?? '', en: raw?.title?.en ?? raw?.titleEn ?? '', ar: raw?.title?.ar ?? raw?.titleAr ?? '' },
+        audience: raw?.audience === 'kid' ? 'kid' : 'adult', day: Number(raw?.day), title: { fr: raw?.title?.fr ?? raw?.titleFr ?? '', en: raw?.title?.en ?? raw?.titleEn ?? '', ar: raw?.title?.ar ?? raw?.titleAr ?? '' },
         text: { fr: raw?.text?.fr ?? raw?.textFr ?? '', en: raw?.text?.en ?? raw?.textEn ?? '', ar: raw?.text?.ar ?? raw?.textAr ?? '' },
         link: raw?.link ?? '', reference: raw?.reference ?? '', position: raw?.position === undefined ? i : Number(raw.position), validated: false, enabled: false,
       });
       if (!p.success) { errors.push(`n° ${i + 1} : ${p.error.issues.map((x) => x.message).join(', ')}`); continue; }
       const b = p.data;
-      await pool.query('INSERT INTO ramadan_items(day, title_fr, title_en, title_ar, text_fr, text_en, text_ar, link, reference, position) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-        [b.day, b.title.fr, b.title.en, b.title.ar, b.text.fr, b.text.en, b.text.ar, b.link, b.reference, b.position]);
+      await pool.query('INSERT INTO ramadan_items(day, title_fr, title_en, title_ar, text_fr, text_en, text_ar, link, reference, position, audience) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+        [b.day, b.title.fr, b.title.en, b.title.ar, b.text.fr, b.text.en, b.text.ar, b.link, b.reference, b.position, b.audience]);
       created++;
     }
     if (!created) return reply.code(400).send({ error: 'Aucune action importée.', errors: errors.slice(0, 20) });

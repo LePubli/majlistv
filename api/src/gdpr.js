@@ -28,6 +28,7 @@ export const CHILD_TABLES = {
   kid_actions: ['profile_id', 'kid_profiles'], kid_badges: ['profile_id', 'kid_profiles'], kid_catalog: ['profile_id', 'kid_profiles'],
   kid_progress: ['profile_id', 'kid_profiles'], kid_quiz_attempts: ['profile_id', 'kid_profiles'], kid_revision: ['profile_id', 'kid_profiles'],
   kid_usage: ['profile_id', 'kid_profiles'], user_list_items: ['list_id', 'user_lists'], self_checkins: ['goal_id', 'self_goals'],
+  ramadan_kid_marks: ['profile_id', 'kid_profiles'],
 };
 // Valeurs jamais exportées, quel que soit le tableau.
 export const SENSITIVE_KEY = /(password|hash|secret|token|totp|recovery|(^|_)pin($|_))/i;

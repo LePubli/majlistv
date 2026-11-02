@@ -8,6 +8,7 @@ import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
 import { useKidTime, leftMin } from '../lib/kidTime';
 import KidsBanner from './KidsBanner';
 import { KidActions } from './KidsActions';
+import { KidRamadan } from './KidsRamadan';
 import KidCatalog from './KidCatalog';
 import KidShorts from './KidShorts';
 
@@ -93,6 +94,7 @@ export default function KidsHome() {
                 {sum.learning && <Link href="/kids?tab=learn" className="kd-pcard link-card"><span className="kd-pico" aria-hidden="true">🧠</span><b>{sum.due.length}</b><span>{t('kdDue')}</span></Link>}
               </section>
             )}
+            <KidRamadan />
             <section className="ka-home"><KidActions limit={3} onlyOpen hideEmpty title={t('kaTitle')} /></section>
             {sum?.learning && earned > 0 && <section aria-labelledby="kd-bd"><h2 id="kd-bd">{t('kdBadges')}</h2><Badges /></section>}
             {sum && sum.due.length > 0 && (

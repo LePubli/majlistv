@@ -11,4 +11,9 @@ assert.match(read('components/SeasonBand.js'), /s\.id === 'ramadan' && feat\('ra
 assert.match(read('app/admin/page.js'), /tab === 'ramadan' && <RamadanAdmin/, 'onglet Admin → Ramadan');
 assert.match(read('lib/navcfg.js'), /\['ramadan', 'Ramadan'\]/, 'entrée du menu');
 for (const k of ['rzNav', 'rzTitle', 'rzIntro', 'rzDayOf', 'rzStartsIn', 'rzTarawih', 'rzRakaat', 'rzMosque', 'rzHome', 'rzNote', 'rzSoon']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
+assert.match(read('components/KidsHome.js'), /<KidRamadan \/>/, 'enfants : circuit sur l’accueil Kids');
+assert.match(read('components/KidsParent.js'), /<KidRamadanParent profile=\{p\} \/>/, 'parent : suivi et validation');
+assert.match(read('components/KidsRamadan.js'), /\/kids\/ramadan\/claim/, 'enfant : « je l’ai fait »');
+assert.match(read('components/RamadanAdmin.js'), /value="kid"/, 'admin : public Enfants');
+for (const k of ['kzTitle', 'kzCount', 'kzParent', 'kzOpen', 'kzOff', 'kzNone']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web ramadan OK');

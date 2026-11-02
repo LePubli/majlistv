@@ -6528,3 +6528,19 @@ bash /root/verify-deploy.sh
 **Debug.** Cases grisées : hors Ramadan, jour à venir, ou visiteur. Mauvais jour : régler le décalage (Paramètres → Saisons). Action absente : non validée ou non affichée.
 
 **Limites (honnêteté).** Testé : API réelle avec dates simulées (Ramadan 1447 et hors Ramadan, décalage +1, cases, rattrapage, refus d'un jour à venir, tarawih, rappel, import, validation obligatoire, fonction coupée) ; page réelle dans un navigateur (390 / 1280 px, FR et arabe, membre et visiteur, bouton du bandeau). **PAS testé** : vrai Ramadan, vrai rappel sur un téléphone, vraies actions (à fournir et valider par Epok), application Android, version enfants (à venir).
+
+## Étape 45F2 — Circuit de Ramadan des enfants (01/11)
+
+**Description.** Pendant Ramadan, l'accueil de l'espace **Kids** affiche « 🌙 Ramadan — jour n » avec les actions **enfants** du jour (celles du jour + celles de chaque jour) et un bouton **« Je l'ai fait »** ; l'action passe « en attente » jusqu'à ce que **le parent la valide** (comme « Mes petites actions »). Le compteur montre le nombre d'actions validées ce Ramadan. Côté parent (Kids → Espace parents → bouton **« Ramadan »** sur le profil) : les 7 derniers jours, l'état de chaque action, bouton « Valider » (aussi pour un jour passé, même sans « je l'ai fait »). **Aucune comparaison entre enfants** : chaque profil est vu seul.
+
+**Contenu.** Admin → Circuit de Ramadan → champ **Public : Enfants** (ou `"audience":"kid"` à l'import). Mêmes règles : validation obligatoire avant affichage. Les actions enfants ne sont jamais dans le circuit des adultes, et inversement.
+
+**Prérequis.** Étape 45F ; espace Kids activé. Migration `085_ramadan_kids.sql`.
+
+**Déploiement.** Redeploy `majlistv-api` (migration 085), puis `majlistv-web`, puis les 4 commandes VPS (attendu : 0 échec).
+
+**API.** Enfant (jeton enfant) : `GET /kids/ramadan`, `POST /kids/ramadan/claim {itemId}` (jour du jour seulement). Parent : `GET /me/kids/profiles/:id/ramadan`, `POST /me/kids/profiles/:id/ramadan/validate {day, itemId}` (son propre enfant seulement ; jour passé ou du jour).
+
+**RGPD.** `ramadan_kid_marks` est rattaché au profil enfant : inclus dans l'export du parent (tableaux liés aux profils enfants) et supprimé avec le profil ou le compte.
+
+**Limites (honnêteté).** Testé : API réelle avec dates simulées (droits enfant/parent, profil d'un autre parent refusé, l'enfant ne peut pas valider, séparation adultes/enfants, jour à venir refusé) ; affichage réel côté enfant (« je l'ai fait » → en attente) et côté parent (bouton Ramadan, Valider). **PAS testé** : vrai Ramadan ; vraies actions (à fournir et valider par Epok) ; application Android.

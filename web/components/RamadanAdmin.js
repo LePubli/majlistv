@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 
 const L = [['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']];
-const EMPTY = { day: 1, title: { fr: '', en: '', ar: '' }, text: { fr: '', en: '', ar: '' }, link: '', reference: '', position: 0, validated: false, enabled: false };
+const EMPTY = { audience: 'adult', day: 1, title: { fr: '', en: '', ar: '' }, text: { fr: '', en: '', ar: '' }, link: '', reference: '', position: 0, validated: false, enabled: false };
 const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'));
 
 export default function RamadanAdmin() {
@@ -50,13 +50,14 @@ export default function RamadanAdmin() {
   return (
     <section>
       <h2>Circuit de Ramadan</h2>
-      <p className="meta">Actions proposées chaque jour de Ramadan aux membres connectés (page <Link className="link u" href="/ramadan">/ramadan</Link>, gratuite). Aucun contenu n’est fourni : saisissez chaque action avec, si besoin, sa référence et un lien vers une page du site. Une action n’est montrée qu’une fois <b>validée</b> et <b>affichée</b>. Jour 0 = chaque jour. Les membres cochent aussi leurs tarawih.</p>
+      <p className="meta">Actions proposées chaque jour de Ramadan aux membres connectés (page <Link className="link u" href="/ramadan">/ramadan</Link>, gratuite). Aucun contenu n’est fourni : saisissez chaque action avec, si besoin, sa référence et un lien vers une page du site. Une action n’est montrée qu’une fois <b>validée</b> et <b>affichée</b>. Jour 0 = chaque jour. Les membres cochent aussi leurs tarawih. Les actions « Enfants » apparaissent dans l’espace Kids pendant Ramadan : l’enfant dit « je l’ai fait », le parent valide (aucune comparaison entre enfants). Import : ajoutez <code>"audience":"kid"</code>.</p>
       <p className="meta">{st.active ? `Aujourd’hui : jour ${st.day} de Ramadan ${st.hyear}.` : st.startsOn ? `Prochain Ramadan : ${new Date(`${st.startsOn}T12:00:00Z`).toLocaleDateString('fr-FR', { dateStyle: 'long' })} (dans ${st.daysToStart} jours).` : ''} Décalage de date : <Link className="link u" href="/admin?tab=settings">Paramètres → Saisons</Link>.</p>
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       {!form && imp === null && <p><button type="button" className="btn" onClick={() => { setForm(JSON.parse(JSON.stringify(EMPTY))); setMsg(''); setErr(''); }}>Ajouter une action</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(''); setMsg(''); setErr(''); }}>Importer une liste (JSON)</button></p>}
       {form && (
         <form className="reg-form" onSubmit={save}>
+          <label>Public<select value={form.audience} onChange={set('audience')}><option value="adult">Adultes (page /ramadan)</option><option value="kid">Enfants (espace Kids, validé par le parent)</option></select></label>
           <label>Jour (0 = chaque jour)<input type="number" min="0" max="30" value={form.day} onChange={set('day')} dir="ltr" /></label>
           <fieldset className="fd-fs"><legend>Titre</legend>{L.map(([l, n]) => <label key={l}>{n}<input maxLength={200} value={form.title[l]} onChange={setL('title', l)} dir={l === 'ar' ? 'rtl' : 'ltr'} /></label>)}</fieldset>
           <fieldset className="fd-fs"><legend>Explication (facultatif)</legend>{L.map(([l, n]) => <label key={l}>{n}<textarea rows={2} maxLength={2000} value={form.text[l]} onChange={setL('text', l)} dir={l === 'ar' ? 'rtl' : 'ltr'} /></label>)}<p className="meta small">Langue vide = texte français.</p></fieldset>
@@ -78,11 +79,12 @@ export default function RamadanAdmin() {
       )}
       <div className="adm-table-wrap">
         <table className="adm-table">
-          <thead><tr><th>Jour</th><th>Action</th><th>Validée</th><th>Affichée</th><th /></tr></thead>
+          <thead><tr><th>Public</th><th>Jour</th><th>Action</th><th>Validée</th><th>Affichée</th><th /></tr></thead>
           <tbody>
-            {d.items.length === 0 && <tr><td colSpan={5}>Aucune action pour le moment.</td></tr>}
+            {d.items.length === 0 && <tr><td colSpan={6}>Aucune action pour le moment.</td></tr>}
             {d.items.map((x) => (
               <tr key={x.id}>
+                <td>{x.audience === 'kid' ? 'Enfants' : 'Adultes'}</td>
                 <td>{x.day || 'Chaque jour'}</td>
                 <td><b>{x.title.fr || x.title.en || x.title.ar}</b>{x.reference ? <><br /><span className="meta small">{x.reference}</span></> : null}</td>
                 <td>{x.validated ? '✓' : '—'}</td><td>{x.enabled ? '✓' : '—'}</td>
