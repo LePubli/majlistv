@@ -70,14 +70,14 @@ export default async function RootLayout({ children }) {
   // Thème visuel : choix du visiteur (cookie « skin ») s'il est permis, sinon celui par défaut (Admin → Paramètres → Général).
   const skinDef = skinCfg?.def === 'nuit' ? 'nuit' : 'classique';
   const wanted = cookies().get('skin')?.value;
-  const skin = skinCfg?.choice !== false && (wanted === 'nuit' || wanted === 'classique') ? wanted : skinDef;
+  const skin = skinCfg?.choice === true && (wanted === 'nuit' || wanted === 'classique') ? wanted : skinDef;
   return (
     <html lang={locale} dir={DIR[locale]} data-skin={skin}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
-        <Providers skin={skin} skinChoice={skinCfg?.choice !== false} locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
+        <Providers skin={skin} skinChoice={skinCfg?.choice === true} locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
           <StatsBeacon />
           <ErrorReporter />
           <PwaRegister />

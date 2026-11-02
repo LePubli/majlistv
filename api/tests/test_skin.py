@@ -52,10 +52,10 @@ def token(uid, role="user"):
 
 
 cur.execute("select id from users where email='admin@test.local'"); ADM = token(cur.fetchone()[0], "admin")
-ok(requests.get(B + "/config").json()["skin"] == {"def": "classique", "choice": True}, "par défaut : thème classique, choix laissé au visiteur")
+ok(requests.get(B + "/config").json()["skin"] == {"def": "classique", "choice": False}, "par défaut : thème classique, choisi par l'administrateur seul (pas de choix pour les visiteurs)")
 ok(requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": "violet"}}).status_code == 400, "valeur inconnue refusée")
-requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": "nuit", "skin_choice": "false"}})
-ok(requests.get(B + "/config").json()["skin"] == {"def": "nuit", "choice": False}, "Nuit et or par défaut, choix fermé")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": "nuit"}})
+ok(requests.get(B + "/config").json()["skin"] == {"def": "nuit", "choice": False}, "l'administrateur passe tout le site en Nuit et or")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": None, "skin_choice": None}})
 ok(requests.get(B + "/config").json()["skin"]["def"] == "classique", "retour au réglage d'origine")
 stop(); print("skin OK")

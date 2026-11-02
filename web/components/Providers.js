@@ -13,7 +13,7 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ skin = 'classique', skinChoice = true, locale, dict, appName, trialDays = 0, prayerCfg = null, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
+export default function Providers({ skin = 'classique', skinChoice = false, locale, dict, appName, trialDays = 0, prayerCfg = null, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);

@@ -6832,8 +6832,7 @@ bash /root/verify-deploy.sh
 
 **Description.** Un second thème visuel, au choix, sans rien changer au thème actuel (« Classique », noir et or) :
 - **Nuit et or** : fond bleu de nuit (trois profondeurs), or en trois tons, titres en Marcellus, arabe en Amiri (polices auto-hébergées, aucun appel à Google) ; ornements dessinés en double filet d'or : entrelacs (étoile {8/3}) discret en haut des pages, frise guillochée sous l'en-tête, au-dessus du pied de page et de la barre du bas, rosace à 16 branches dans le bandeau d'accueil (à gauche en arabe), rinceaux aux coins du bloc « Aujourd'hui », étoile et filet devant les titres de rangée, double cadre des panneaux, entrelacs dans les vignettes sans image.
-- **Choix** : chaque visiteur choisit « Classique » ou « Nuit et or » dans le pied de page et dans le menu du compte (et le menu du téléphone) ; mémorisé sur l'appareil (cookie `skin`, lu par le serveur : pas de clignotement).
-- **Réglages** (Admin → Paramètres → Général) : `skin_default` (`classique` par défaut, ou `nuit`) et `skin_choice` (choix laissé au visiteur, activé). Choix fermé : le thème par défaut s'impose à tous.
+- **Choix réservé à l'administrateur** (décision d'Epok, 02/11) : Admin → Paramètres → Général → « Thème visuel par défaut » (`skin_default` : `classique` ou `nuit`) s'applique à tous les visiteurs. Les visiteurs ne voient aucun sélecteur. (Réglage `skin_choice`, désactivé : s'il était activé un jour, un sélecteur apparaîtrait dans le pied de page et le menu du compte, mémorisé par le cookie `skin`.)
 Fichiers : `web/app/skin-nuit.css` (tout est sous `html[data-skin="nuit"]`, prioritaire sur le thème publié dans Admin → Apparence), `web/public/skin/*.svg`, `web/components/SkinPicker.js`. L'espace Kids garde ses couleurs. Maquette de référence : artefact « Mejliss TV — refonte visuelle (arabesques et couleurs) ».
 
 **Prérequis.** Nouvelles dépendances du site (installées au build) : `@fontsource/marcellus`, `@fontsource/amiri`. Aucune variable.
@@ -6845,8 +6844,8 @@ grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
 nginx -t && systemctl reload nginx
 bash /root/verify-deploy.sh
 ```
-Puis en bas de n'importe quelle page : Thème → « Nuit et or ».
+Puis Admin → Paramètres → Général → « Thème visuel par défaut » → `nuit` → Enregistrer, et recharger le site.
 
-**Debug.** Le thème ne change pas : vérifier `curl -s https://api-majlisstv.le-publicitaire.fr/config | grep -o '"skin":{[^}]*}'` (choice doit être true). Revenir au classique : bouton « Classique » ou supprimer le cookie `skin`.
+**Debug.** Le thème ne change pas : vérifier `curl -s https://api-majlisstv.le-publicitaire.fr/config | grep -o '"skin":{[^}]*}'` (def doit valoir "nuit"). Revenir au classique : remettre le réglage sur `classique`.
 
 **Tests.** `api/tests/test_skin.py` (4 contrôles), `web/tests/test_skin_web.mjs` (+ tous les tests du site) ; rendu réel dans un navigateur (accueil et Apprendre, 1280 px FR, 390 px FR et arabe, thème classique inchangé, sans débordement).

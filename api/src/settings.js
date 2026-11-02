@@ -40,7 +40,7 @@ const PROVIDERS = ['claude', 'azure', 'deepseek'];
 export const FIELDS = [
   { key: 'app_name', group: 'general', type: 'text', label: 'Nom du site', env: 'APP_NAME', def: 'Mejliss TV' },
   { key: 'skin_default', group: 'general', type: 'select', options: ['classique', 'nuit'], label: 'Thème visuel par défaut (classique : noir et or ; nuit : « Nuit et or », bleu de nuit et arabesques)', env: 'SKIN_DEFAULT', def: 'classique' },
-  { key: 'skin_choice', group: 'general', type: 'bool', label: 'Laisser chaque visiteur choisir son thème (pied de page et menu du compte)', env: 'SKIN_CHOICE', def: 'true' },
+  { key: 'skin_choice', group: 'general', type: 'bool', label: 'Laisser chaque visiteur choisir son thème (désactivé : seul l’administrateur choisit, avec le réglage ci-dessus)', env: 'SKIN_CHOICE', def: 'false' },
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',
     help: 'Utilisée pour le retour après paiement (ex. https://majlisstv.le-publicitaire.fr).' },
   { key: 'seo_description', group: 'general', type: 'text', label: 'Description du site (Google et réseaux sociaux)', env: 'SEO_DESCRIPTION',

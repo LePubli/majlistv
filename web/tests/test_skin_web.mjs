@@ -5,7 +5,7 @@ const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const lay = read('app/layout.js');
 assert.match(lay, /import '\.\/skin-nuit\.css'/, 'feuille du thème chargée'); assert.match(lay, /@fontsource\/marcellus/, 'police Marcellus auto-hébergée'); assert.match(lay, /@fontsource\/amiri/, 'police Amiri auto-hébergée');
 assert.match(lay, /cookies\(\)\.get\('skin'\)/, 'choix du visiteur lu par le serveur (pas de clignotement)');
-assert.match(lay, /skinCfg\?\.choice !== false && \(wanted === 'nuit' \|\| wanted === 'classique'\) \? wanted : skinDef/, 'choix fermé : thème par défaut imposé');
+assert.match(lay, /skinCfg\?\.choice === true && \(wanted === 'nuit' \|\| wanted === 'classique'\) \? wanted : skinDef/, 'par défaut (et API muette) : thème choisi par l’administrateur, cookie du visiteur ignoré');
 assert.match(lay, /data-skin=\{skin\}/, 'attribut data-skin sur <html>');
 const css = read('app/skin-nuit.css');
 assert.ok(!/^:root|^body \{/m.test(css), 'le thème classique n’est jamais modifié (tout est sous html[data-skin="nuit"])');
