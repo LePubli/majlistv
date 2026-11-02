@@ -15,6 +15,7 @@ import MemoryCards from '../../../components/MemoryCards';
 import QuranIndex from '../../../components/QuranIndex';
 import Athkar from '../../../components/Athkar';
 import TodayBlock from '../../../components/TodayBlock';
+import EmptyState from '../../../components/EmptyState';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -137,7 +138,7 @@ export default function Learning() {
     <section className="lr-block">
       <h2>{mode === 'att' ? t('tbAtt') : t('lrSeries')}</h2>
       {msg && <p className="error" role="alert">{msg}</p>}
-      {d.series.length === 0 && <p className="meta">{t('lrNoSeries')}</p>}
+      {d.series.length === 0 && <EmptyState compact text={t('lrNoSeries')} actions={[feat('series') && { href: '/series', label: t('esSeeSeries') }]} />}
       <ul className="lr-series">
         {d.series.map((s) => (
           <li key={s.id}>
@@ -223,15 +224,15 @@ export default function Learning() {
                 </div>
                 <p className="lg-dim">
                   {d.recent[0] && <>{t('lgLastAct').replace('{d}', since(d.recent[0].at))}<br /></>}
-                  {cur.complete ? t('lgPathDone') : t('lgQuizLeft').replace('{n}', cur.total - cur.passed)}
+                  {cur.complete ? <>{t('lgPathDone')} <button type="button" className="link u" onClick={() => go('att')}>{t('esAttest')}</button>{feat('series') && <> · <Link className="link u" href="/series">{t('esNextPath')}</Link></>}</> : t('lgQuizLeft').replace('{n}', cur.total - cur.passed)}
                 </p>
               </>
-            ) : <p className="lg-dim">{t('lgNoPath')}</p>}
+            ) : <p className="lg-dim">{t('lgNoPath')}{feat('series') && <> <Link className="link u" href="/series">{t('esSeeSeries')}</Link></>}</p>}
           </section>
           {feat('practice') && pz && (
             <section className="lg-card" aria-label={t('lrMyCommits')}>
               <h2>{t('lrMyCommits')}</h2>
-              {pz.items.length === 0 ? <p className="lg-txt">{t('lrNoCommit')}</p> : (
+              {pz.items.length === 0 ? <p className="lg-txt">{t('lrNoCommit')} <Link className="link u" href="/catalogue">{t('esFindTalk')}</Link></p> : (
                 <ul className="lg-commits">
                   {pz.items.filter((x) => x.status !== 'not_yet').slice(0, 2).map((x) => <li key={x.id} className={x.status === 'done' ? 'done' : ''}><span aria-hidden="true">{x.status === 'done' ? '✓' : '○'}</span> {x.text}</li>)}
                 </ul>
@@ -353,7 +354,7 @@ export default function Learning() {
         <section className="lr-block rv-block" aria-labelledby="rv-title">
           <h2 id="rv-title">{t('revTitle')}</h2>
           {rv.items.length === 0 ? (
-            <p className="meta">{rv.upcoming.week > 0 ? t('revNone').replace('{n}', rv.upcoming.week) : t('revNoneYet')}</p>
+            rv.upcoming.week > 0 ? <p className="meta">✓ {t('revNone').replace('{n}', rv.upcoming.week)}</p> : <EmptyState compact text={t('revNoneYet')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />
           ) : (
             <ul className="rv-list">
               {rv.items.map((x) => (

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import EmptyState from './EmptyState';
 import { requeue, replayHref } from '../lib/memoryCards';
 
 export default function MemoryCards({ onCount }) {
@@ -121,7 +122,7 @@ export default function MemoryCards({ onCount }) {
         <li><b>{c.mastered}</b><span>{t('mcMastered')}</span></li>
       </ul>
       {err && <p className="error" role="alert">{err}</p>}
-      {c.total === 0 ? <p className="lg-txt">{t('mcNone')}</p> : todayN === 0 ? <p className="lg-txt">{t('mcNoneToday')}</p> : (
+      {c.total === 0 ? <EmptyState compact title={t('mcNone')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} /> : todayN === 0 ? <p className="lg-txt">✓ {t('mcNoneToday')}</p> : (
         <div className="mc-actions"><button type="button" className="btn" onClick={() => start(false)}>{t('mcStart').replace('{n}', todayN)}</button></div>
       )}
       {data.session.remaining > 0 && <p className="meta">{t('mcMore').replace('{n}', data.session.remaining)}</p>}

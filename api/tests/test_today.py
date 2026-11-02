@@ -128,11 +128,17 @@ requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_ramadan"
 start("2026-02-23T16:00:00Z")
 x = line(T(LRN), "athkar"); ok(x and x["moment"] == "evening" and x["done"] is False, "à 17 h : athkar du soir")
 
+# Après Ramadan (10 avril 2026, 22 jours après la fin) : ligne « Votre bilan de Ramadan », faite quand la note est écrite (étape B3)
+start("2026-04-10T10:00:00Z")
+x = line(T(USR), "ramadanBilan"); ok(x and x["year"] == 1447 and x["done"] is False and x["href"] == "/ramadan#rb-t" and line(T(USR), "ramadan") is None, "après Ramadan : « Votre bilan de Ramadan 1447 » à faire")
+ok(requests.put(B + "/ramadan/bilan/note", headers=USR, json={"text": "Garder la prière de nuit"}).status_code == 200, "note du bilan écrite")
+ok(line(T(USR), "ramadanBilan")["done"] is True, "note écrite : ligne du bilan faite")
+
 # Hors Ramadan (6 novembre 2026) : pas de ligne Ramadan
 start("2026-11-06T10:00:00Z")
-ok(line(T(USR), "ramadan") is None, "hors Ramadan : pas de ligne Ramadan")
+ok(line(T(USR), "ramadan") is None and line(T(USR), "ramadanBilan") is None, "plus de 60 jours après Ramadan : ni actions ni bilan")
 ok(line(T(USR), "quranJuz") is None and line(T(USR), "quranStart") is None, "plan Coran dépassé (au-delà des 30 jours) : pas de ligne")
 
-cur.execute("delete from athkar_items"); cur.execute("delete from ramadan_items")
+cur.execute("delete from athkar_items"); cur.execute("delete from ramadan_items"); cur.execute("delete from ramadan_notes where user_id = %s", (uid,))
 cur.execute("delete from talks where id = %s", (tid,)); cur.execute("delete from users where id in (%s,%s)", (uid, lid))
 stop(); print("today OK")

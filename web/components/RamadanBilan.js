@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 
-export default function RamadanBilan() {
+export default function RamadanBilan({ ended = false }) {
   const { t, call, feat } = useApp();
   const [b, setB] = useState(undefined);
   const [note, setNote] = useState('');
@@ -26,6 +26,7 @@ export default function RamadanBilan() {
   ];
   return (
     <section className="rb" aria-labelledby="rb-t">
+      {ended && <p className="rb-ended" role="status">{t('rbEnded').replace('{y}', b.hyear)}</p>}
       <h2 id="rb-t">{t('rbTitle').replace('{y}', b.hyear)}</h2>
       <p className="meta small">{t('rbIntro')}</p>
       <div className="rb-cards">

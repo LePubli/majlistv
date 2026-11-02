@@ -11,6 +11,7 @@ export default function QuranPlan() {
   const [plan, setPlan] = useState(undefined);
   const [err, setErr] = useState('');
   const [open, setOpen] = useState(false);
+  const [shared, setShared] = useState(false);
   useEffect(() => { call('/quran/juzs', {}, null).then((r) => setJuzs(r.ok ? r.data : null)); }, [call]);
   const load = useCallback(() => { if (user) call('/quran/plan').then((r) => setPlan(r.ok ? r.data.plan : null)); }, [call, user]);
   useEffect(() => { load(); }, [load]);
@@ -18,6 +19,14 @@ export default function QuranPlan() {
     setErr('');
     const r = await call(path, { method, body: body ? JSON.stringify(body) : undefined });
     if (r.ok) setPlan(r.data.plan); else setErr(r.data?.error || t('errGeneric'));
+  };
+  // Partage d'une lecture complète (étape B3) : feuille de partage du téléphone, sinon copie du texte et du lien.
+  const share = async () => {
+    const text = t('khShareTx'); const url = `${window.location.origin}/coran`;
+    try {
+      if (navigator.share) await navigator.share({ text, url }); else await navigator.clipboard.writeText(`${text} ${url}`);
+      setShared(true);
+    } catch { /* partage annulé */ }
   };
   if (!juzs) return null;
   const nameOf = (p) => (locale === 'ar' ? p.ar : p.name);
@@ -52,7 +61,26 @@ export default function QuranPlan() {
       </div>
       <div className="kh-bar" role="progressbar" aria-valuemin={0} aria-valuemax={30} aria-valuenow={plan.reads.length} aria-label={t('khProgress')}><span style={{ width: `${pct}%` }} /></div>
       <p className="meta small">{t('khRead').replace('{n}', plan.reads.length)}{plan.completed > 0 ? ` · ${t('khCompleted').replace('{n}', plan.completed)}` : ''}</p>
-      {plan.finished && <p className="kh-done">✓ {t('khFinished')}</p>}
+      {plan.finished && (
+        <div className="kh-end" role="status">
+          <p className="kh-done">✓ {t('khFinished')}</p>
+          <p className="meta">{t('khEndTx')}</p>
+          <p className="kh-end-actions">
+            <button type="button" className="btn" onClick={() => act('/quran/plan/start', 'POST', {})}>{t('khRestart')}</button>
+            <button type="button" className="btn ghost" onClick={share}>{shared ? `✓ ${t('khShared')}` : t('khShare')}</button>
+          </p>
+        </div>
+      )}
+      {!plan.finished && plan.day > 30 && (
+        <div className="kh-end" role="status">
+          <p className="kh-done">{t('khOverTx').replace('{n}', plan.reads.length)}</p>
+          <p className="meta">{t('khOverHelp')}</p>
+          <p className="kh-end-actions">
+            <button type="button" className="btn" onClick={() => setOpen(true)}>{t('khContinue')}</button>
+            <button type="button" className="btn ghost" onClick={() => { if (window.confirm(t('khRestartAsk'))) act('/quran/plan/start', 'POST', {}); }}>{t('khRestart')}</button>
+          </p>
+        </div>
+      )}
       {today && (
         <div className={`kh-today${read.has(today.n) ? ' done' : ''}`}>
           <div>

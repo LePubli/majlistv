@@ -4169,3 +4169,17 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .tour-nav { display: flex; gap: 8px; margin-inline-start: auto; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
 @media (max-width: 520px) { .ob { margin-inline: 12px; padding: 16px; } .ob h2 { font-size: 20px; } }
+
+/* Étape B3 — états vides utiles et messages de fin */
+.empty { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border-radius: 18px; background: var(--surface-2); border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line-soft)); margin: 8px 0; }
+.empty-compact { padding: 14px; }
+.empty-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); background: var(--gold-soft); font-size: 15px; }
+.empty-body { min-width: 0; }
+.empty-title { margin: 0 0 4px; font-weight: 800; color: var(--text); }
+.empty-text { margin: 0; color: var(--text-2); line-height: 1.45; }
+.empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.kh-end { margin: 12px 0; padding: 16px; border-radius: 18px; border: 1px solid var(--accent); background: var(--gold-soft); }
+.kh-end .kh-done { margin: 0 0 4px; font-weight: 800; }
+.kh-end .meta { margin: 0; }
+.kh-end-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.rb-ended { margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; background: var(--gold-soft); color: var(--text); font-weight: 700; }

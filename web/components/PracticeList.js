@@ -3,6 +3,7 @@
 // Aucun total ni pourcentage de réussite : l'objectif est de se souvenir et de reprendre, pas de se comparer.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import EmptyState from './EmptyState';
 
 const STATUSES = ['todo', 'doing', 'done', 'not_yet'];
 const dots = (n) => '●'.repeat(n);
@@ -92,7 +93,7 @@ export default function PracticeList({ t, call, locale }) {
     <section className="lr-block pz-mine" id="engagements" aria-labelledby="pz-mine-title">
       <h2 id="pz-mine-title">{t('pzMineTitle')}</h2>
       <p className="meta">{t('pzMineIntro')}</p>
-      {d.items.length === 0 ? <p className="soon">{t('pzMineEmpty')}</p> : (
+      {d.items.length === 0 ? <EmptyState title={t('esCommitTitle')} text={t('pzMineEmpty')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} /> : (
         <>
           <p className="meta small">{t('pzCounts').replace('{a}', c.todo + c.doing).replace('{b}', c.done)}</p>
           {groups.map((g) => (

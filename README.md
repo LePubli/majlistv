@@ -6729,3 +6729,32 @@ bash /root/verify-deploy.sh
 **Debug.** Revoir l'écran sur son propre compte : `curl -s -X PUT -H "Authorization: Bearer <jeton>" -H "Content-Type: application/json" -d '{"done":false}' https://api-majlisstv.le-publicitaire.fr/me/onboarding` puis recharger l'accueil. Revoir la visite : menu du compte → « Visite guidée », ou ouvrir `https://majlisstv.le-publicitaire.fr/?tour=1`.
 
 **Tests.** `api/tests/test_onboarding.py` (12 contrôles : migration, inscription réelle, vu / à revoir, fonction coupée), `web/tests/test_onboarding_web.mjs` ; parcours réel dans un navigateur (390 et 1280 px, FR et arabe : 3 cartes, visite complète 4 étapes sur téléphone / 5 sur ordinateur, fermeture, écran plus affiché après rechargement, sans débordement).
+
+## Étape B3 — États vides utiles et messages de fin (02/11)
+
+**Description.**
+- **États vides** (composant `web/components/EmptyState.js` : pourquoi + action) :
+  - Athkar sans dhikr publié → explication + « Lire le Coran ».
+  - Circuit de Ramadan sans action publiée → explication + « Lire le Coran » / « Athkar du matin et du soir ».
+  - Engagements, cartes mémoire, révisions (aucune encore), « Reprendre » vide (Ma bibliothèque) → « Trouver une conférence ».
+  - Parcours (aucune série commencée) → « Voir les séries ».
+- **Messages de fin** :
+  - Lecture complète du Coran terminée : carte de félicitations + « Recommencer aujourd'hui » + « Partager » (feuille de partage du téléphone, sinon texte et lien copiés).
+  - 30 jours passés sans tout lire : « {n} juz sur 30 lus » + « Continuer à mon rythme » / « Recommencer ».
+  - Ramadan terminé : bandeau « Ramadan {année} est terminé » sur le bilan (/ramadan), et ligne « Votre bilan de Ramadan » dans le bloc « Aujourd'hui » pendant 60 jours (faite quand la note personnelle est écrite).
+  - Parcours de série terminé (tableau de bord d'Apprendre) : « Obtenir mon attestation » (onglet Attestations) et « Choisir un autre parcours ».
+- Textes FR / EN / AR (clés `es*`, `kh*`, `rbEnded`, `rzSoonTx`, `atEmptyTx`, `tdRamadanBilan`).
+
+**Prérequis.** Aucun (pas de migration, pas de variable).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Un état vide n'a pas de bouton : la fonction visée est coupée dans Admin → Fonctions (le bouton est masqué). « Partager » sans effet sur ordinateur : le texte est copié dans le presse-papiers (navigateur sans feuille de partage).
+
+**Tests.** `api/tests/test_today.py` (+ bilan de Ramadan après la fin, avant / après la note, plus rien après 60 jours), `web/tests/test_empty_web.mjs` ; rendu réel dans un navigateur (390 px FR et 1280 px arabe : fin de lecture du Coran, athkar vides, Ramadan terminé + circuit vide, cartes vides, accueil ; sans débordement).

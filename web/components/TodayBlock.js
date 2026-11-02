@@ -12,6 +12,7 @@ export function todayLabel(it, t) {
     case 'quranStart': return t('tdQuranStart');
     case 'athkar': return t(`tdAthkar_${it.moment}`);
     case 'ramadan': return t('tdRamadan').replace('{d}', it.day);
+    case 'ramadanBilan': return t('tdRamadanBilan').replace('{y}', it.year);
     case 'cards': return it.done ? t('tdCardsDone') : t('tdCards');
     case 'revision': return t('tdRevision');
     default: return '';
@@ -39,7 +40,7 @@ export default function TodayBlock({ compact = false }) {
       </header>
       <ul className="today-list">
         {d.items.map((it) => (
-          <li key={`${it.kind}-${it.moment || it.juz || it.day || ''}`} className={it.done ? 'done' : ''}>
+          <li key={`${it.kind}-${it.moment || it.juz || it.day || it.year || ''}`} className={it.done ? 'done' : ''}>
             <Link href={it.href}>
               <span className="today-box" aria-hidden="true">{it.done ? '✓' : ''}</span>
               <span className="today-label">{todayLabel(it, t)}</span>

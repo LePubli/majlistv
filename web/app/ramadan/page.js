@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import RamadanBilan from '../../components/RamadanBilan';
+import EmptyState from '../../components/EmptyState';
 
 function DayItems({ items, day, mine, can, onMark, t }) {
   if (!items.length) return <p className="meta">{t('rzNoItem')}</p>;
@@ -28,7 +29,7 @@ function DayItems({ items, day, mine, can, onMark, t }) {
 }
 
 export default function RamadanPage() {
-  const { t, locale, call, user } = useApp();
+  const { t, locale, call, user, feat } = useApp();
   const [d, setD] = useState(null);
   const [sel, setSel] = useState(null);
   const [err, setErr] = useState('');
@@ -57,9 +58,9 @@ export default function RamadanPage() {
         <p className="rm-status">{st.active ? t('rzDayOf').replace('{n}', st.day).replace('{y}', st.hyear) : st.startsOn ? t('rzStartsIn').replace('{n}', st.daysToStart).replace('{d}', date(st.startsOn)) : ''}</p>
       </section>
       {!user && <p><Link className="btn" href="/login?next=/ramadan">{t('rzLogin')}</Link></p>}
-      {user && <RamadanBilan />}
+      {user && <RamadanBilan ended={!st.active} />}
       {err && <p className="error" role="alert">{err}</p>}
-      {!any ? <p className="soon">{t('rzSoon')}</p> : (
+      {!any ? <EmptyState title={t('rzSoon')} text={t('rzSoonTx')} actions={[feat('quranplan') && { href: '/coran', label: t('esReadQuran') }, feat('athkar') && { href: '/learning?tab=athkar', label: t('obAthkar') }]} /> : (
         <>
           <nav className="rm-days" aria-label={t('rzDays')}>
             {d.days.map((x) => {

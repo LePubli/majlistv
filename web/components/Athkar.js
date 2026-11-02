@@ -4,11 +4,12 @@
 // Compte du jour en heure de Paris ; objectif (nombre de dhikr terminés par jour), série de jours, rappel facultatif.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';
+import EmptyState from './EmptyState';
 
 const CATS = ['morning', 'evening', 'after_prayer', 'sleep', 'general'];
 
 export default function Athkar() {
-  const { t, locale, call } = useApp();
+  const { t, locale, call, feat } = useApp();
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   const [cat, setCat] = useState('');
@@ -76,7 +77,7 @@ export default function Athkar() {
         </div>
       )}
       {err && <p className="error" role="alert">{err}</p>}
-      {d.items.length === 0 ? <p className="soon">{t('atEmpty')}</p> : (
+      {d.items.length === 0 ? <EmptyState title={t('atEmpty')} text={t('atEmptyTx')} actions={[feat('quran') && { href: '/coran', label: t('esReadQuran') }]} /> : (
         <>
           {cats.length > 1 && (
             <div className="at-cats" role="group" aria-label={t('atCats')}>

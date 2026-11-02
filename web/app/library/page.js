@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import TalkCard from '../../components/TalkCard';
+import EmptyState from '../../components/EmptyState';
 import SeriesCard from '../../components/SeriesCard';
 import { clock } from '../../lib/clock';
 import ListsPanel from '../../components/ListsPanel';
@@ -63,7 +64,7 @@ export default function Library() {
           </>
         )}
         <h2>{t('continueWatching')}</h2>
-        {cont && cont.length === 0 && <p className="meta">{t('nothingToContinue')}</p>}
+        {cont && cont.length === 0 && <EmptyState compact text={t('nothingToContinue')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />}
         <div className="grid">
           {(cont || []).map((x) => (
             <TalkCard key={x.id} talk={x} t={t} progress={x.durationMs ? x.positionMs / x.durationMs : 0} onRemove={() => dropProgress(x.id)} removeLabel={t('removeFromList')} />
