@@ -6604,3 +6604,27 @@ python3 ops/contenus/athkar/build_matin_soir.py /tmp/adk/Adhkar-json /tmp/qdata/
 **Debug.** « Aucun dhikr importé » : JSON mal collé (garder les crochets). Une entrée refusée : sa référence est vide ou trop longue (500 caractères).
 
 **Testé.** Format du fichier (43 entrées, catégories, longueurs, référence présente, non validé), import réel dans l'API (43 créées, 0 validée, 0 affichée). **Pas testé** : relecture religieuse (à faire par Epok ou un savant), affichage mobile.
+
+## Contenus 2 — Dhikr après la prière, du sommeil et du réveil (02/11)
+
+**Description.** Deuxième lot de contenus du compteur d'athkar : **31 entrées** (12 après la prière, 15 du sommeil, 4 du réveil), avec arabe voyellé, phonétique, français, référence et nombre de répétitions. Même méthode, mêmes sources et mêmes limites que « Contenus 1 » : arabe et renvois du recueil *Hisn al-Muslim* (fichiers libres rn0x), versets Tanzil + Hamidullah, français de l'assistant, phonétique par règles. **Rien n'est affiché avant validation.**
+
+**Choix faits par l'assistant (à confirmer).**
+- Découpage pour que le compteur fonctionne : « 33 – 33 – 33 + une fois » après la prière = 4 entrées (une par formule) ; « 33 – 33 – 34 » au coucher = 3 entrées ; « Astaghfirullah ×3 » et « Allahumma anta s-salam » = 2 entrées.
+- Les dhikr du réveil sont classés en catégorie « général » : il n'existe pas de catégorie « réveil » (à décider avec le parcours UX).
+- Au coucher, l'entrée n° 12 (sourates As-Sajda et Al-Mulk) ne donne que les **noms** des sourates (écrits par l'assistant), pas leur texte.
+- Le dhikr du coucher « Allahumma ‘alim al-ghayb » dit « shirkihi » (son polythéisme) alors que celui du matin dit « sharakihi » (ses pièges) : c'est ce que donne le recueil pour chacun.
+- Corrections de voyellation de la source : variable `FIX` de `ops/contenus/athkar/common.py`.
+
+**Fichiers.** `docs/contenus/athkar-priere-sommeil-reveil.json` (à importer), `docs/contenus/athkar-priere-sommeil-reveil.md` (fiche de relecture), `ops/contenus/athkar/build_priere_sommeil_reveil.py` (régénération), outils communs `common.py` et `translit.py`. Le lot « Contenus 1 » a été régénéré avec la phonétique améliorée (article assimilé, « ā » interne) : réimporter son JSON si tu ne l'as pas déjà importé.
+
+**Importer.** Admin → Athkar → Importer (JSON) : coller le contenu du fichier. Résultat attendu : « 31 dhikr importés (non validés, non affichés) ». Puis relire la fiche et valider une entrée à la fois.
+
+**Régénérer.**
+```
+git clone --depth 1 https://github.com/rn0x/Adhkar-json /tmp/adk/Adhkar-json
+git clone --depth 1 https://github.com/risan/quran-json /tmp/qdata/repo
+python3 ops/contenus/athkar/build_priere_sommeil_reveil.py /tmp/adk/Adhkar-json /tmp/qdata/repo docs/contenus
+```
+
+**Testé.** Format des deux fichiers (test `api/tests/test_athkar_content.mjs`), import réel dans l'API (43 + 31 entrées créées, 0 validée, 0 affichée). **Pas testé** : relecture religieuse, affichage mobile.

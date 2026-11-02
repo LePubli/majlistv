@@ -137,6 +137,8 @@ def render_word(units, prev_ends_vowel, pause):
         # alif de liaison non article (ex. اغْفِرْ, اسْتُرْ) : voyelle i, ou u si la 3e lettre porte damma
         third = units[2].v if n > 2 else ''
         v = 'u' if third == 'u' else 'i'
+        if n > 2 and units[1].ch == 'ل' and units[1].shadda:
+            v = 'a'   # ٱلَّذِي, ٱلَّيْلِ : article assimilé
         if not prev_ends_vowel:
             out.append(VOW[v]); prev_v = v
         else:
@@ -169,6 +171,11 @@ def render_word(units, prev_ends_vowel, pause):
             i += 1
             continue
         # consonne
+        if ch == 'آ':
+            out.append('’a')
+            prev_v = 'a'
+            i += 1
+            continue
         if ch == 'ة':
             if last and (pause or u.v in ('s', '')):
                 out.append('h')

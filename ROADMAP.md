@@ -555,3 +555,6 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## Contenus 1 (02/11) — Dhikr du matin et du soir
 - Voir README « Contenus 1 ». 43 entrées importables (arabe, phonétique, français, références), non validées. Suite du bloc « Contenus » : après-prière, sommeil, réveil, circuit de Ramadan, récitateurs, mot à mot, tajwid.
+
+## Contenus 2 (02/11) — Dhikr après la prière, du sommeil et du réveil
+- Voir README « Contenus 2 ». 31 entrées importables, non validées. Reste du bloc « Contenus » : circuit de Ramadan (adultes et enfants), récitateurs, mot à mot, tajwid, autres chapitres de Hisn al-Muslim (à choisir).
