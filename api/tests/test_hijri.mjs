@@ -34,4 +34,9 @@ for (const s of SEASONS) {
 }
 // Textes par défaut complets dans les 3 langues.
 for (const s of SEASONS) for (const l of ['fr', 'en', 'ar']) assert.ok(s.name[l] && s.title[l] && s.text[l], `${s.id} ${l}`);
+// 45H : Aïd al-Fitr (1-3 Chawwal 1447 = 20-22 mars 2026), Rajab 1448 (10 décembre 2026), Dhou al-Qi‘da 1447 (avril-mai 2026).
+assert.equal(R('eid_fitr', '2026-03-20', { lead: 0 }).startsOn, '2026-03-20');
+assert.equal(R('eid_fitr', '2026-03-20', { lead: 0 }).endsOn, '2026-03-22');
+assert.equal(R('dhulqada', '2026-04-20', { lead: 0 }).startsOn, '2026-04-18');
+assert.equal(R('rajab', '2026-10-31', { lead: 0 }).startsOn, '2026-12-10');
 console.log('hijri OK');

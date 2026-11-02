@@ -4108,3 +4108,14 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .rb-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .rb-card { padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); display: grid; gap: 2px; color: #fff; } .rb-card b { font-size: 1.4rem; color: var(--gold, #d4af37); }
 .rb-note label { display: grid; gap: 6px; color: #fff; }
+
+/* Thème de saison 45H : lueur dorée en haut de page et filet doré sous l'en-tête ; même famille noir et or, textes inchangés. */
+body[data-season] { --season-glow: rgba(212,175,55,.14); }
+body[data-season="ramadan"], body[data-season="eid_fitr"] { --season-glow: rgba(212,175,55,.2); }
+body[data-season="hajj"], body[data-season="dhulqada"] { --season-glow: rgba(196,160,90,.18); }
+body[data-season]::after { content: ''; position: fixed; inset: 0 0 auto 0; height: 60vh; pointer-events: none; z-index: -1;
+  background: radial-gradient(900px 340px at 50% -80px, var(--season-glow), transparent 70%); }
+body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; height: 3px; pointer-events: none; z-index: 1000;
+  background: linear-gradient(90deg, transparent, var(--gold, #d4af37), transparent); }
+@media (prefers-reduced-motion: no-preference) { body[data-season="eid_fitr"]::before { animation: ss-shine 6s ease-in-out infinite alternate; } }
+@keyframes ss-shine { from { opacity: .55; } to { opacity: 1; } }

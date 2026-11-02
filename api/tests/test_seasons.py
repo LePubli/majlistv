@@ -53,7 +53,7 @@ ADM = token(aid, "admin")
 cur.execute("insert into users(email, password_hash, name, role) values (%s,'x','M','user') returning id", (f"se-{uuid.uuid4().hex[:8]}@test.local",)); uid = cur.fetchone()[0]
 USR = token(uid)
 tag = uuid.uuid4().hex[:6]
-cur.execute("update season_pages set enabled=false, collection_id=null, lead_days=null, notify=true, last_notified_year=null, title_fr='',title_en='',title_ar='',text_fr='',text_en='',text_ar=''")
+cur.execute("update season_pages set enabled=false, collection_id=null, lead_days=null, notify=true, last_notified_year=null, title_fr='',title_en='',title_ar='',text_fr='',text_en='',text_ar='', theme=false")
 cur.execute("delete from app_settings where key in ('feat_seasons','hijri_offset_days')")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_seasons": None, "hijri_offset_days": None}})
 
@@ -68,7 +68,7 @@ ok(requests.put(B + "/admin/seasons/ramadan", headers=USR, json=body()).status_c
 
 # Vue admin
 r = requests.get(B + "/admin/seasons", headers=ADM); j = r.json()
-ok(r.status_code == 200 and [s["id"] for s in j["seasons"]] == ["ramadan", "hajj", "mawlid", "ashura"], "admin : les 4 saisons")
+ok(r.status_code == 200 and [s["id"] for s in j["seasons"]] == ["ramadan", "hajj", "mawlid", "ashura", "eid_fitr", "rajab", "dhulqada"], "admin : les 7 saisons (45H : Aïd al-Fitr, Rajab, Dhou al-Qi‘da)")
 ok(j["today"]["hijri"]["year"] == 1447 and j["today"]["hijri"]["month"] == 9 and j["today"]["hijri"]["day"] == 30, "date hégirienne du jour : 30 Ramadan 1447")
 ram = j["seasons"][0]
 ok(ram["state"]["endsOn"] == "2026-03-19" and ram["state"]["startsOn"] == "2026-02-18" and ram["state"]["hijriYear"] == 1447, "dates du Ramadan 2026 calculées (18/02 → 19/03)")
@@ -77,6 +77,10 @@ ok(ram["state"]["endsOn"] == "2026-03-19" and ram["state"]["startsOn"] == "2026-
 r = requests.put(B + "/admin/seasons/ramadan", headers=ADM, json=body()); ok(r.status_code == 200, "Ramadan activé")
 s = requests.get(B + "/seasons/current?lang=fr").json()["season"]
 ok(s and s["id"] == "ramadan" and s["title"].startswith("Ramadan") and s["daysLeft"] == 0 and s["collection"] is None and s["talks"] == [], "dernier jour : bandeau Ramadan, sans rangée")
+ok(s["theme"] is False, "45H : thème de saison coupé par défaut")
+requests.put(B + "/admin/seasons/ramadan", headers=ADM, json=body(theme=True))
+ok(requests.get(B + "/seasons/current?lang=fr").json()["season"]["theme"] is True and requests.get(B + "/admin/seasons", headers=ADM).json()["seasons"][0]["theme"] is True, "45H : thème de saison activé (au choix, par saison)")
+requests.put(B + "/admin/seasons/ramadan", headers=ADM, json=body())
 ar = requests.get(B + "/seasons/current?lang=ar").json()["season"]; en = requests.get(B + "/seasons/current?lang=en").json()["season"]
 ok(ar["title"] != s["title"] and en["title"] != s["title"] and any("؀" <= c <= "ۿ" for c in ar["title"]), "textes par défaut en français, anglais et arabe")
 
@@ -123,6 +127,6 @@ ok(requests.post(B + "/admin/seasons/ramadan/test-push", headers=USR).status_cod
 
 # Nettoyage
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_seasons": None, "hijri_offset_days": None}})
-cur.execute("update season_pages set enabled=false, collection_id=null, lead_days=null, notify=true, title_fr='',title_en='',title_ar='',text_fr='',text_en='',text_ar=''")
+cur.execute("update season_pages set enabled=false, collection_id=null, lead_days=null, notify=true, title_fr='',title_en='',title_ar='',text_fr='',text_en='',text_ar='', theme=false")
 cur.execute("delete from collections where id in (%s,%s)", (cid, cdraft)); cur.execute("delete from talks where id=%s", (tid,)); cur.execute("delete from users where id=%s", (uid,))
 stop(); print("seasons OK")

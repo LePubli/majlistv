@@ -6560,3 +6560,17 @@ bash /root/verify-deploy.sh
 **RGPD.** `ramadan_notes` : rattachée au membre (export d'office, chiffrée comme les autres textes personnels ; suppression avec le compte).
 
 **Limites (honnêteté).** Testé : calcul (dates du Ramadan 1447, ouverture au 20e jour, fermeture après 60 jours, actions, jours complets, tarawih, juz pendant Ramadan seulement), API réelle (note chiffrée en base, relue, effacée, bilan personnel), carte réelle dans un navigateur (390 / 1280 px, FR et arabe). **PAS testé** : vrai Ramadan ; application Android.
+
+## Étape 45H — Saisons enrichies (Aïd al-Fitr, Rajab, Dhou al-Qi‘da) et thème de saison (02/11)
+
+**Description.** Trois saisons de plus dans Admin → Saisons, avec bandeau, rangée (collection au choix) et notification comme les autres : **Aïd al-Fitr** (1 au 3 Chawwal, annoncé 2 jours avant), **Rajab** et **Dhou al-Qi‘da** (deux des quatre mois sacrés ; Muharram et Dhou al-Hijja sont déjà couverts par Achoura et Hajj/Aïd al-Adha). Pendant Ramadan, le bandeau de saison propose aussi le bouton du circuit (45F). Nouvelle case par saison **« Thème de saison »** : pendant la période, le site prend une touche graphique légère (filet doré en haut de page, lueur dorée discrète ; même famille noir et or ; textes inchangés). Rien n'est activé par défaut.
+
+**Textes par défaut.** Courtes phrases descriptives écrites par l'assistant, modifiables par langue dans Admin → Saisons : à relire avant d'activer.
+
+**Prérequis / déploiement.** Migration `087_seasons_more.sql` (nouvelles lignes désactivées, colonne `theme`). Redeploy `majlistv-api`, puis `majlistv-web`, puis les 4 commandes VPS (attendu : 0 échec).
+
+**API.** `PUT /admin/seasons/:id` accepte `theme` (booléen, facultatif) ; `GET /seasons/current` renvoie `theme`.
+
+**Debug.** Pas de touche graphique : saison non activée, case « Thème de saison » non cochée, ou période pas encore ouverte (le thème suit exactement l'affichage du bandeau).
+
+**Limites (honnêteté).** Testé : dates (Aïd al-Fitr 1447 = 20 au 22 mars 2026, Dhou al-Qi‘da 1447 à partir du 18 avril 2026, Rajab 1448 à partir du 10 décembre 2026), API (7 saisons, thème), affichage réel (thème coupé / activé). **PAS testé** : rendu sur de vrais téléphones ; application Android.

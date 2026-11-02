@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useApp } from './Providers';
 import Row from './Row';
 
-const ICON = { ramadan: '🌙', hajj: '🕋', mawlid: '✨', ashura: '🌅' };
+const ICON = { ramadan: '🌙', hajj: '🕋', mawlid: '✨', ashura: '🌅', eid_fitr: '🎉', rajab: '🌟', dhulqada: '🌟' };
 
 export default function SeasonBand() {
   const { t, locale, call, feat } = useApp();

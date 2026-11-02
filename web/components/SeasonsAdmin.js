@@ -10,13 +10,13 @@ const day = (s) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateString('fr-FR', {
 
 function SeasonCard({ s, collections, onSaved }) {
   const { t, call } = useApp();
-  const [f, setF] = useState({ enabled: s.enabled, collectionId: s.collectionId || '', leadDays: s.leadDays ?? '', notify: s.notify, title: { ...s.title }, text: { ...s.text } });
+  const [f, setF] = useState({ enabled: s.enabled, collectionId: s.collectionId || '', leadDays: s.leadDays ?? '', notify: s.notify, theme: Boolean(s.theme), title: { ...s.title }, text: { ...s.text } });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const save = async (e) => {
     e.preventDefault(); setBusy(true); setErr(''); setMsg('');
-    const body = { enabled: f.enabled, collectionId: f.collectionId || null, leadDays: f.leadDays === '' ? null : Number(f.leadDays), notify: f.notify, title: f.title, text: f.text };
+    const body = { enabled: f.enabled, collectionId: f.collectionId || null, leadDays: f.leadDays === '' ? null : Number(f.leadDays), notify: f.notify, theme: f.theme, title: f.title, text: f.text };
     const r = await call(`/admin/seasons/${s.id}`, { method: 'PUT', body: JSON.stringify(body) });
     setBusy(false);
     if (!r.ok) { setErr(r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'))); return; }
@@ -52,6 +52,7 @@ function SeasonCard({ s, collections, onSaved }) {
         </fieldset>
       ))}
       <label className="chk"><input type="checkbox" checked={f.notify} onChange={(e) => setF({ ...f, notify: e.target.checked })} /> {t('seasonNotify')}</label>
+      <label className="chk"><input type="checkbox" checked={f.theme} onChange={(e) => setF({ ...f, theme: e.target.checked })} /> {t('seasonTheme')}</label>
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       <p><button className="btn" disabled={busy}>{t('seasonSave')}</button>{' '}<button type="button" className="btn ghost" onClick={test}>{t('seasonTest')}</button></p>

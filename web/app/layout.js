@@ -25,6 +25,7 @@ import EditMode from '../components/EditMode';
 import { webFeatures, hasWebModule } from '../lib/modules'; // étape M3b : fonctions dont la partie web du module est présente
 import TopBar from '../components/TopBar';
 import PwaRegister from '../components/PwaRegister'; // étape 22a : site installable
+import SeasonTheme from '../components/SeasonTheme'; // étape 45H : thème de saison
 import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }) {
           <StatsBeacon />
           <ErrorReporter />
           <PwaRegister />
+          <SeasonTheme />
           <PrayerGate />
           <ResponsiveTables />
           <SkipLink />

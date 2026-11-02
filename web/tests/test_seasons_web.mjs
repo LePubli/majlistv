@@ -18,3 +18,15 @@ assert.match(read('../app/admin/page.js'), /seasons: 'Saisons'/, "titre de l'éc
 assert.match(read('../components/AdminShell.js'), /'seasons'/, 'menu Admin');
 assert.match(read('../components/SeasonBand.js'), /\/seasons\/current\?lang=/, 'lecture de la saison en cours');
 console.log('web seasons OK');
+// 45H : nouvelles saisons et thème de saison
+{
+  const fs2 = await import('node:fs');
+  const r = (p) => fs2.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+  if (!/<SeasonTheme \/>/.test(r('app/layout.js'))) throw new Error('thème de saison branché dans la mise en page');
+  if (!/dataset\.season = s\.id/.test(r('components/SeasonTheme.js'))) throw new Error('thème appliqué seulement si coché');
+  if (!/body\[data-season\]::after/.test(r('app/globals.css'))) throw new Error('styles du thème');
+  if (!/theme: f\.theme/.test(r('components/SeasonsAdmin.js'))) throw new Error('case « thème de saison » dans l’admin');
+  if (!/eid_fitr: '🎉'/.test(r('components/SeasonBand.js'))) throw new Error('icônes des nouvelles saisons');
+  if ((r('lib/i18n.js').match(/seasonTheme:/g) || []).length !== 3) throw new Error('seasonTheme en fr/en/ar');
+  console.log('web seasons 45H OK');
+}

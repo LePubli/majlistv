@@ -29,6 +29,19 @@ export const SEASONS = [
     name: { fr: 'Achoura', en: 'Ashura', ar: 'عاشوراء' },
     title: { fr: 'Muharram et Achoura : le début de l’année', en: 'Muharram and Ashura: the start of the year', ar: 'محرم وعاشوراء: بداية العام' },
     text: { fr: 'Des conférences pour le début de l’année hégirienne et le jour d’Achoura.', en: 'Talks for the start of the Hijri year and the day of Ashura.', ar: 'محاضرات لبداية العام الهجري ويوم عاشوراء.' } },
+  // Étape 45H : Aïd al-Fitr et deux des mois sacrés (Muharram et Dhou al-Hijja sont déjà couverts par Achoura et Hajj).
+  { id: 'eid_fitr', month: 10, from: 1, to: 3, lead: 2,
+    name: { fr: 'Aïd al-Fitr', en: 'Eid al-Fitr', ar: 'عيد الفطر' },
+    title: { fr: 'Aïd al-Fitr : la fête de fin de Ramadan', en: 'Eid al-Fitr: the feast ending Ramadan', ar: 'عيد الفطر: عيد ختام رمضان' },
+    text: { fr: 'Des conférences pour vivre et comprendre la fête de l’Aïd.', en: 'Talks to live and understand the Eid celebration.', ar: 'محاضرات لعيش العيد وفهمه.' } },
+  { id: 'rajab', month: 7, from: 1, to: 30, lead: 3,
+    name: { fr: 'Rajab', en: 'Rajab', ar: 'رجب' },
+    title: { fr: 'Rajab : l’un des mois sacrés', en: 'Rajab: one of the sacred months', ar: 'رجب: من الأشهر الحرم' },
+    text: { fr: 'Des conférences pour le mois de Rajab, l’un des quatre mois sacrés.', en: 'Talks for the month of Rajab, one of the four sacred months.', ar: 'محاضرات لشهر رجب، أحد الأشهر الحرم الأربعة.' } },
+  { id: 'dhulqada', month: 11, from: 1, to: 30, lead: 3,
+    name: { fr: 'Dhou al-Qi‘da', en: 'Dhul Qa‘dah', ar: 'ذو القعدة' },
+    title: { fr: 'Dhou al-Qi‘da : un mois sacré avant le Hajj', en: 'Dhul Qa‘dah: a sacred month before Hajj', ar: 'ذو القعدة: شهر حرام قبل الحج' },
+    text: { fr: 'Des conférences pour Dhou al-Qi‘da, l’un des quatre mois sacrés.', en: 'Talks for Dhul Qa‘dah, one of the four sacred months.', ar: 'محاضرات لذي القعدة، أحد الأشهر الحرم الأربعة.' } },
 ];
 export const SEASON_IDS = SEASONS.map((s) => s.id);
 export const seasonDef = (id) => SEASONS.find((s) => s.id === id) || null;

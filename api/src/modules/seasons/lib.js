@@ -48,7 +48,7 @@ export async function publicSeason(l, now = nowDate()) {
   return {
     id: def.id, name: def.name[l], title: titleOf(row, def, l), text: textOf(row, def, l),
     daysToStart: st.daysToStart, daysLeft: st.daysLeft, startsOn: st.startsOn, endsOn: st.endsOn,
-    collection: coll ? { id: coll.id, title: coll.title } : null, talks,
+    collection: coll ? { id: coll.id, title: coll.title } : null, talks, theme: Boolean(row.theme),
   };
 }
 

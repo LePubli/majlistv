@@ -13,7 +13,7 @@ const idSchema = z.object({ id: z.enum(SEASON_IDS) });
 const trio = z.object({ fr: z.string().max(300).default(''), en: z.string().max(300).default(''), ar: z.string().max(300).default('') });
 const bodySchema = z.object({
   enabled: z.boolean(), collectionId: z.string().uuid().nullable(), leadDays: z.number().int().min(0).max(60).nullable(),
-  title: trio, text: trio, notify: z.boolean(),
+  title: trio, text: trio, notify: z.boolean(), theme: z.boolean().default(false),
 });
 const hijriText = (now, offset) => new Intl.DateTimeFormat('fr-u-ca-islamic-umalqura', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date(now.getTime() + offset * 86400000));
 
@@ -38,7 +38,7 @@ export default async function seasonsRoutes(app) {
         return {
           id: def.id, name: def.name.fr, enabled: r.enabled, collectionId: r.collection_id, leadDays: r.lead_days, defaultLead: def.lead,
           title: Object.fromEntries(LANGS.map((l) => [l, r[`title_${l}`]])), text: Object.fromEntries(LANGS.map((l) => [l, r[`text_${l}`]])),
-          defaults: { title: def.title, text: def.text }, notify: r.notify, lastNotifiedYear: r.last_notified_year, state: stateOf(r, now, offset),
+          defaults: { title: def.title, text: def.text }, notify: r.notify, theme: r.theme, lastNotifiedYear: r.last_notified_year, state: stateOf(r, now, offset),
         };
       }),
     };
@@ -53,8 +53,8 @@ export default async function seasonsRoutes(app) {
     }
     await pool.query(
       `UPDATE season_pages SET enabled = $2, collection_id = $3, lead_days = $4, title_fr = $5, title_en = $6, title_ar = $7,
-              text_fr = $8, text_en = $9, text_ar = $10, notify = $11, updated_at = now() WHERE id = $1`,
-      [id, b.enabled, b.collectionId, b.leadDays, b.title.fr.trim(), b.title.en.trim(), b.title.ar.trim(), b.text.fr.trim(), b.text.en.trim(), b.text.ar.trim(), b.notify]);
+              text_fr = $8, text_en = $9, text_ar = $10, notify = $11, theme = $12, updated_at = now() WHERE id = $1`,
+      [id, b.enabled, b.collectionId, b.leadDays, b.title.fr.trim(), b.title.en.trim(), b.title.ar.trim(), b.text.fr.trim(), b.text.en.trim(), b.text.ar.trim(), b.notify, b.theme]);
     return { id };
   });
 
