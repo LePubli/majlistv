@@ -6758,3 +6758,25 @@ bash /root/verify-deploy.sh
 **Debug.** Un état vide n'a pas de bouton : la fonction visée est coupée dans Admin → Fonctions (le bouton est masqué). « Partager » sans effet sur ordinateur : le texte est copié dans le presse-papiers (navigateur sans feuille de partage).
 
 **Tests.** `api/tests/test_today.py` (+ bilan de Ramadan après la fin, avant / après la note, plus rien après 60 jours), `web/tests/test_empty_web.mjs` ; rendu réel dans un navigateur (390 px FR et 1280 px arabe : fin de lecture du Coran, athkar vides, Ramadan terminé + circuit vide, cartes vides, accueil ; sans débordement).
+
+## Étape B4 — Invitation des visiteurs (02/11)
+
+**Description.** Composant `web/components/InviteCard.js` : carte « Créez votre compte gratuit » adaptée à l'endroit, à la place d'un simple bouton « Se connecter » :
+- **/coran** (plan « 30 jours ») et **/ramadan** : progression sauvegardée, rappels — « Gratuit, sans abonnement » ; 3 avantages ; « Créer un compte gratuit » / « J'ai déjà un compte ».
+- **/learning** (Apprendre) : un visiteur n'est plus renvoyé d'office vers la connexion ; il voit l'invitation, avec la mention « Certaines fonctions (athkar, quiz, cartes, révisions) font partie de la formule Apprentissage ».
+- **Fin de l'aperçu d'une conférence premium** : sous l'écran d'abonnement existant, version courte « Pas encore prêt à vous abonner ? Un compte gratuit donne déjà accès au Coran, au plan 30 jours et au circuit de Ramadan ».
+Après inscription ou connexion, retour à la page d'origine (`?next=`). Inscription fermée (Admin → Fonctions) : seul « J'ai déjà un compte » reste. Jamais affichée à un membre connecté.
+
+**Prérequis.** Aucun.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-web` (l'API ne change pas). Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Carte absente : vous êtes connecté (ouvrir une fenêtre privée). Bouton « Créer un compte » absent : inscription coupée dans Admin → Fonctions.
+
+**Tests.** `web/tests/test_invite_web.mjs` (+ tests Coran 30 jours et Ramadan mis à jour) ; rendu réel en visiteur dans un navigateur (390 px FR, 1280 px arabe : /coran, /ramadan, /learning, liens avec retour à la page, sans débordement).

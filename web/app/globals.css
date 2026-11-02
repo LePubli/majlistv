@@ -4183,3 +4183,14 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .kh-end .meta { margin: 0; }
 .kh-end-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
 .rb-ended { margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; background: var(--gold-soft); color: var(--text); font-weight: 700; }
+
+/* Étape B4 — invitation des visiteurs */
+.invite { margin: 16px 0; padding: 20px; border-radius: 20px; background: linear-gradient(150deg, var(--gold-soft), transparent 60%), var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line-soft)); }
+.invite-compact { margin-top: 14px; padding: 14px 16px; }
+.invite h2 { margin: 0 0 6px; font-size: 20px; font-weight: 800; color: var(--text); }
+.invite-compact h2 { font-size: 17px; }
+.invite-text { margin: 0; color: var(--text-2); line-height: 1.45; }
+.invite-list { margin: 12px 0 0; padding-inline-start: 0; list-style: none; display: grid; gap: 6px; }
+.invite-list li { color: var(--text); }
+.invite-list li::before { content: '✓'; color: var(--accent); font-weight: 800; margin-inline-end: 8px; }
+.invite-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }

@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import InviteCard from './InviteCard';
 
 export default function QuranPlan() {
   const { t, locale, call, user } = useApp();
@@ -36,7 +37,7 @@ export default function QuranPlan() {
     return (
       <section className="kh kh-intro" aria-label={t('khTitle')}>
         <h2>{t('khTitle')}</h2><p className="meta">{t('khIntro')}</p>
-        <p><Link className="btn" href="/login?next=/coran">{t('khLogin')}</Link></p>
+        <InviteCard context="quran" next="/coran" />
       </section>
     );
   }

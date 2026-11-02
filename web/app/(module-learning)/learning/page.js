@@ -16,6 +16,7 @@ import QuranIndex from '../../../components/QuranIndex';
 import Athkar from '../../../components/Athkar';
 import TodayBlock from '../../../components/TodayBlock';
 import EmptyState from '../../../components/EmptyState';
+import InviteCard from '../../../components/InviteCard';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -53,7 +54,7 @@ export default function Learning() {
   const [pz, setPz] = useState(null); // mes engagements : { items, counts } (synthèse du tableau de bord)
   const [next, setNext] = useState([]); // « Pour continuer à apprendre » (ou ce qu'on peut faire dès maintenant)
 
-  useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
+  // Étape B4 : un visiteur voit une invitation à créer un compte (au lieu d'être renvoyé vers la connexion).
   const load = useCallback(() => call('/me/learning').then((r) => setD(r.ok ? r.data : null)), [call]);
   useEffect(() => { if (user) load(); }, [user, load]);
   const loadRv = useCallback(() => call('/me/revision').then((r) => setRv(r.ok ? r.data : null)), [call]);
@@ -78,6 +79,14 @@ export default function Learning() {
   ];
   const [tab, go] = useTab(tabs);
   const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
+  if (ready && !user) {
+    return (
+      <main className="page learning">
+        <header className="lg-head"><h1>{t('lrTitle')}</h1><p>{t('lgSub')}</p></header>
+        <InviteCard context="learn" next="/learning" />
+      </main>
+    );
+  }
   if (!user || d === undefined) return null;
 
   // Palier requis : écran « verrouillé » (maquette) : bannière, les temps avec cadenas, invitation, puis ce qu'on peut faire dès maintenant.

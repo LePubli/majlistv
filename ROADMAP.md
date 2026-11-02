@@ -572,4 +572,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Écran de démarrage : 3 cartes « Par quoi commencer ? » ET visite guidée ; « Aujourd'hui » sur l'accueil ET Apprendre ; Apprendre regroupé en 4 onglets ; parent : pastille + push + e-mail.
 - B1 Bloc « Aujourd'hui » : livré (voir README « Étape B1 »).
 - B2 « Par quoi commencer ? » + visite guidée : livré (voir README « Étape B2 », migration 090).
-- B3 États vides utiles + messages de fin : livré (voir README « Étape B3 »). Suivant : B4 invitation visiteurs, B5 signal parent, B6 Apprendre en 4 onglets.
+- B3 États vides utiles + messages de fin : livré (voir README « Étape B3 »).
+- B4 Invitation des visiteurs : livré (voir README « Étape B4 »). Suivant : B5 signal parent, B6 Apprendre en 4 onglets.

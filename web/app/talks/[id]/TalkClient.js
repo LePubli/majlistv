@@ -25,6 +25,7 @@ import FollowButton from '../../../components/FollowButton';
 import { ActionTile, MoreMenu, PlayerSettings, ICONS } from '../../../components/WatchBar';
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
+import InviteCard from '../../../components/InviteCard';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
@@ -474,7 +475,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               </div>
             </div>
           )}
-          {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}</div>}
+          {talk.locked && previewEnded && <div className="preview-end" role="status"><strong>{t('lkEndTitle')}</strong>{lock}<InviteCard context="preview" next="/coran" compact /></div>}
         </div>
 
         <div className="wb-info">

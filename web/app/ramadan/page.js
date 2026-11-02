@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import RamadanBilan from '../../components/RamadanBilan';
 import EmptyState from '../../components/EmptyState';
+import InviteCard from '../../components/InviteCard';
 
 function DayItems({ items, day, mine, can, onMark, t }) {
   if (!items.length) return <p className="meta">{t('rzNoItem')}</p>;
@@ -57,7 +58,7 @@ export default function RamadanPage() {
         <p className="meta">{t('rzIntro')}</p>
         <p className="rm-status">{st.active ? t('rzDayOf').replace('{n}', st.day).replace('{y}', st.hyear) : st.startsOn ? t('rzStartsIn').replace('{n}', st.daysToStart).replace('{d}', date(st.startsOn)) : ''}</p>
       </section>
-      {!user && <p><Link className="btn" href="/login?next=/ramadan">{t('rzLogin')}</Link></p>}
+      {!user && <InviteCard context="ramadan" next="/ramadan" />}
       {user && <RamadanBilan ended={!st.active} />}
       {err && <p className="error" role="alert">{err}</p>}
       {!any ? <EmptyState title={t('rzSoon')} text={t('rzSoonTx')} actions={[feat('quranplan') && { href: '/coran', label: t('esReadQuran') }, feat('athkar') && { href: '/learning?tab=athkar', label: t('obAthkar') }]} /> : (
