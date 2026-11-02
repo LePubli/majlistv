@@ -4101,3 +4101,10 @@ body.kd-theme .pry-pill svg, body.kd-theme .pry-pill .pry-time { color: #fff; }
 .rm-tw { padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(212,175,55,.5); display: grid; gap: 8px; }
 .rm-tw-more { display: flex; flex-wrap: wrap; gap: 10px 18px; } .rm-tw-more label, .rm-remind { display: grid; gap: 4px; } .rm-tw-more input { width: 90px; }
 .rm-remind { margin: 14px 0; max-width: 260px; }
+
+/* Bilan de Ramadan 45G */
+.rb { margin: 14px 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(212,175,55,.45); background: linear-gradient(135deg, rgba(212,175,55,.12), rgba(10,10,10,.92)); display: grid; gap: 10px; }
+.rb h2 { margin: 0; color: #fff; font-size: 1.25rem; }
+.rb-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.rb-card { padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); display: grid; gap: 2px; color: #fff; } .rb-card b { font-size: 1.4rem; color: var(--gold, #d4af37); }
+.rb-note label { display: grid; gap: 6px; color: #fff; }

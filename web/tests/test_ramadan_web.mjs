@@ -16,4 +16,7 @@ assert.match(read('components/KidsParent.js'), /<KidRamadanParent profile=\{p\} 
 assert.match(read('components/KidsRamadan.js'), /\/kids\/ramadan\/claim/, 'enfant : « je l’ai fait »');
 assert.match(read('components/RamadanAdmin.js'), /value="kid"/, 'admin : public Enfants');
 for (const k of ['kzTitle', 'kzCount', 'kzParent', 'kzOpen', 'kzOff', 'kzNone']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
+assert.match(pg, /\{user && <RamadanBilan \/>\}/, 'bilan sur la page Ramadan (membre)');
+assert.match(read('components/RamadanBilan.js'), /\/ramadan\/bilan\/note/, 'note personnelle');
+for (const k of ['rbTitle', 'rbIntro', 'rbActions', 'rbFullDays', 'rbTarawih', 'rbJuz', 'rbAthkar', 'rbNote', 'rbPrivate', 'rbSave']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web ramadan OK');

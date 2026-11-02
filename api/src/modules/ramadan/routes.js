@@ -7,6 +7,8 @@
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { itemsOfDay, lang, publicItem, publishedItems, ramadanStatus } from './lib.js';
+import { bilanOf, bilanYear } from './bilan.js';
+import { sealText, practiceKeyReady } from '../../practiceCrypto.js';
 
 const trio = (max) => z.object({ fr: z.string().trim().max(max).default(''), en: z.string().trim().max(max).default(''), ar: z.string().trim().max(max).default('') });
 const itemSchema = z.object({
@@ -76,6 +78,25 @@ export default async function ramadanRoutes(app) {
     const { remindHour } = z.object({ remindHour: z.number().int().min(0).max(23).nullable() }).parse(req.body ?? {});
     await pool.query('INSERT INTO ramadan_prefs(user_id, remind_hour) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET remind_hour = $2, updated_at = now()', [req.user.sub, remindHour]);
     return { remindHour };
+  });
+
+  // ---- Bilan de Ramadan (45G) : à partir du 20e jour et jusqu'à 60 jours après la fin ----------------------------------------------
+  app.get('/ramadan/bilan', auth, async (req) => {
+    const y = await bilanYear();
+    if (!y) return { bilan: null };
+    return { bilan: await bilanOf(req.user.sub, y) };
+  });
+
+  app.put('/ramadan/bilan/note', auth, async (req, reply) => {
+    const { text } = z.object({ text: z.string().max(4000) }).parse(req.body ?? {});
+    const y = await bilanYear();
+    if (!y) return reply.code(409).send({ error: 'Le bilan s’ouvre à partir du 20e jour de Ramadan.' });
+    if (!practiceKeyReady()) return reply.code(503).send({ error: 'Chiffrement non configuré (PRACTICE_KEY)', code: 'no_key' });
+    if (!text.trim()) await pool.query('DELETE FROM ramadan_notes WHERE user_id = $1 AND hyear = $2', [req.user.sub, y]);
+    else await pool.query(
+      `INSERT INTO ramadan_notes(user_id, hyear, text_enc) VALUES ($1,$2,$3) ON CONFLICT (user_id, hyear) DO UPDATE SET text_enc = $3, updated_at = now()`,
+      [req.user.sub, y, sealText(text.trim())]);
+    return { ok: true };
   });
 
   // ---- Enfants (45F2) : l'enfant dit « je l'ai fait », le parent valide ; jamais de comparaison entre enfants -------------------

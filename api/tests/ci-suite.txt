@@ -59,4 +59,5 @@ test_friday.py
 test_athkar.py
 test_quranplan.py
 test_ramadan.py
+test_ramadan_bilan.py
 test_quran.py

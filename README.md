@@ -6544,3 +6544,19 @@ bash /root/verify-deploy.sh
 **RGPD.** `ramadan_kid_marks` est rattaché au profil enfant : inclus dans l'export du parent (tableaux liés aux profils enfants) et supprimé avec le profil ou le compte.
 
 **Limites (honnêteté).** Testé : API réelle avec dates simulées (droits enfant/parent, profil d'un autre parent refusé, l'enfant ne peut pas valider, séparation adultes/enfants, jour à venir refusé) ; affichage réel côté enfant (« je l'ai fait » → en attente) et côté parent (bouton Ramadan, Valider). **PAS testé** : vrai Ramadan ; vraies actions (à fournir et valider par Epok) ; application Android.
+
+## Étape 45G — Bilan de Ramadan (01/11)
+
+**Description.** Sur la page `/ramadan`, pour un membre connecté, une carte **« Mon bilan de Ramadan 1447 »** s'affiche **à partir du 20e jour** de Ramadan et **jusqu'à 60 jours après la fin** : actions faites / attendues (jours passés), jours complets, nuits de tarawih (et total de rakaat, mosquée / maison), juz lus **pendant** Ramadan (lecture en 30 jours), jours d'athkar à l'objectif (si ces fonctions sont actives), et une **note personnelle chiffrée** « Ce que je garde après Ramadan ». Chiffres personnels : rien n'est comparé ni partagé.
+
+**Prérequis.** Étapes 45F (et 45E, 45D pour les chiffres correspondants). `PRACTICE_KEY` (déjà en place) pour chiffrer la note. Migration `086_ramadan_bilan.sql`.
+
+**Déploiement.** Redeploy `majlistv-api` (migration 086), puis `majlistv-web`, puis les 4 commandes VPS (attendu : 0 échec).
+
+**API.** `GET /ramadan/bilan` → `{ bilan }` ou `{ bilan: null }` (hors période) ; `PUT /ramadan/bilan/note {text}` (texte vide = effacer ; 409 hors période ; 503 sans clé de chiffrement).
+
+**Calcul.** Dates du Ramadan de l'année hégirienne (calendrier Umm al-Qura + décalage des saisons) ; juz comptés selon la date où ils ont été cochés (heure de Paris).
+
+**RGPD.** `ramadan_notes` : rattachée au membre (export d'office, chiffrée comme les autres textes personnels ; suppression avec le compte).
+
+**Limites (honnêteté).** Testé : calcul (dates du Ramadan 1447, ouverture au 20e jour, fermeture après 60 jours, actions, jours complets, tarawih, juz pendant Ramadan seulement), API réelle (note chiffrée en base, relue, effacée, bilan personnel), carte réelle dans un navigateur (390 / 1280 px, FR et arabe). **PAS testé** : vrai Ramadan ; application Android.

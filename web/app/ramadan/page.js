@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
+import RamadanBilan from '../../components/RamadanBilan';
 
 function DayItems({ items, day, mine, can, onMark, t }) {
   if (!items.length) return <p className="meta">{t('rzNoItem')}</p>;
@@ -56,6 +57,7 @@ export default function RamadanPage() {
         <p className="rm-status">{st.active ? t('rzDayOf').replace('{n}', st.day).replace('{y}', st.hyear) : st.startsOn ? t('rzStartsIn').replace('{n}', st.daysToStart).replace('{d}', date(st.startsOn)) : ''}</p>
       </section>
       {!user && <p><Link className="btn" href="/login?next=/ramadan">{t('rzLogin')}</Link></p>}
+      {user && <RamadanBilan />}
       {err && <p className="error" role="alert">{err}</p>}
       {!any ? <p className="soon">{t('rzSoon')}</p> : (
         <>
@@ -65,7 +67,7 @@ export default function RamadanPage() {
               const cls = [sel === x.day ? 'on' : '', st.active && x.day === st.day ? 'today' : '', total && done >= total ? 'full' : ''].filter(Boolean).join(' ');
               return (
                 <button key={x.day} type="button" className={cls} aria-pressed={sel === x.day} onClick={() => setSel(x.day)}>
-                  <b>{x.day}</b>{me && st.active && x.day <= st.day ? <span>{done}/{total}</span> : null}
+                  <b>{x.day}</b>{me && st.active && x.day <= st.day ? <span dir="ltr">{done}/{total}</span> : null}
                 </button>
               );
             })}

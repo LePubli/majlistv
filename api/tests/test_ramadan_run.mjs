@@ -5,9 +5,11 @@ import { randomUUID } from 'node:crypto';
 const { pool } = await import('../src/db.js');
 const { ramadanStatus, itemsOfDay, runRamadan } = await import('../src/modules/ramadan/lib.js');
 const { invalidateSettings } = await import('../src/settings.js');
+const { bilanOf, bilanYear, ramadanRange } = await import('../src/modules/ramadan/bilan.js');
 const ok = (c, m) => { assert.ok(c, m); console.log('OK   ' + m); };
 const Z = (s) => new Date(s);
 await pool.query("DELETE FROM app_settings WHERE key IN ('feat_ramadan', 'hijri_offset_days')"); invalidateSettings?.();
+await pool.query('DELETE FROM ramadan_items'); // base de test : on part d'un circuit vide
 
 let st = await ramadanStatus(Z('2026-02-23T10:00:00Z'));
 ok(st.active && st.day === 6 && st.hyear === 1447 && st.startsOn === '2026-02-18', 'pendant Ramadan 1447 : jour 6 (début le 18 février 2026)');
@@ -46,6 +48,25 @@ await pool.query("INSERT INTO app_settings(key, value) VALUES ('feat_ramadan', '
 await runRamadan(null, Z('2026-02-24T19:10:00Z'), { send, hasChannel: yes });
 ok(calls.length === n, 'fonction coupée : rien');
 await pool.query("DELETE FROM app_settings WHERE key = 'feat_ramadan'"); invalidateSettings?.();
+
+// Bilan (45G)
+const rr = await ramadanRange(1447, Z('2026-04-01T10:00:00Z'));
+ok(rr.start === '2026-02-18' && rr.end === '2026-03-19' && rr.days === 30, 'Ramadan 1447 : 18 février → 19 mars 2026 (30 jours)');
+ok((await bilanYear(Z('2026-03-01T10:00:00Z'))) === null, 'bilan fermé avant le 20e jour');
+ok((await bilanYear(Z('2026-03-10T10:00:00Z'))) === 1447, 'bilan ouvert à partir du 20e jour');
+ok((await bilanYear(Z('2026-04-15T10:00:00Z'))) === 1447, 'bilan encore ouvert 27 jours après la fin');
+ok((await bilanYear(Z('2026-06-01T10:00:00Z'))) === null, 'bilan fermé plus de 60 jours après la fin');
+await pool.query("INSERT INTO ramadan_marks(user_id, hyear, day, item_id) VALUES ($1, 1447, 7, $2)", [b, i1]);
+await pool.query("INSERT INTO ramadan_tarawih(user_id, hyear, day, rakaat, place) VALUES ($1,1447,1,8,'mosque'),($1,1447,2,20,'home'),($1,1447,3,NULL,NULL)", [b]);
+await pool.query("INSERT INTO quran_plans(user_id, started_on) VALUES ($1, '2026-02-18')", [b]);
+await pool.query("INSERT INTO quran_plan_reads(user_id, juz, read_at) VALUES ($1,1,'2026-02-18 20:00+01'),($1,2,'2026-02-19 20:00+01'),($1,3,'2026-04-02 20:00+02')", [b]);
+const bl = await bilanOf(b, 1447, Z('2026-04-01T10:00:00Z'));
+ok(bl.actions.done === 3 && bl.actions.expected === 31 && bl.actions.fullDays === 2, 'actions : 3 faites sur 31 attendues (30 « chaque jour » + 1 le jour 6), 2 jours complets (6 et 7)');
+ok(bl.tarawih.nights === 3 && bl.tarawih.rakaat === 28 && bl.tarawih.mosque === 1 && bl.tarawih.home === 1, 'tarawih : 3 nuits, 28 rakaat, 1 mosquée, 1 maison');
+ok(bl.quranJuz === 2, 'juz lus pendant Ramadan seulement (2, pas celui d’avril)');
+ok(bl.note === '' && bl.athkarDays === 0, 'pas de note, pas d’athkar');
+const mid = await bilanOf(b, 1447, Z('2026-03-10T10:00:00Z'));
+ok(mid.daysPassed === 21 && mid.actions.expected === 22, 'pendant Ramadan : seuls les jours passés comptent (21 jours)');
 await pool.query('DELETE FROM ramadan_items WHERE id = ANY($1)', [[i1, i2, i3]]);
 await pool.query('DELETE FROM users WHERE id = ANY($1)', [[a, b, c]]);
 await pool.end();
