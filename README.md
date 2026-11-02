@@ -6664,3 +6664,18 @@ Puis : Admin → Athkar → « Restaurer les dhikr fournis » → filtre Statut 
 **Exemple.** `{"ids":[1,2,3],"action":"update","set":{"category":"sleep","target":7}}`.
 
 **Tests.** `api/tests/test_athkar.py`, `test_ramadan.py`, `web/tests/test_athkar_web.mjs`.
+
+## Contenus 3 — Circuit de Ramadan (adultes et enfants) (02/11)
+
+**Description.** 27 actions prêtes pour Admin → Circuit de Ramadan : 21 pour les adultes (8 chaque jour : jeûne, suhur, rupture sans tarder, prière de nuit, Coran, garder sa langue, donner, nourrir un jeûneur ; jour 1 : intention ; jour 21 : dix dernières nuits ; jours 21/23/25/27/29 : Nuit du Destin + invocation ; jour 29 : zakat al-fitr) et 6 pour les enfants (5 chaque jour, simples, + invocation de pardon le 27). Arabe des hadiths : extrait mot pour mot d'un jeu de données ouvert (AhmedBaset/hadith-json) et contrôlé par recherche du texte. Français/anglais : reformulations de l'assistant. Références : recueil + livre/chapitre (numéros de hadith volontairement non repris, la numérotation varie selon les éditions : à compléter à la relecture). Aucun contenu copié d'un livre.
+Fichiers : `docs/contenus/ramadan-circuit.{json,md}` ; générateurs `ops/contenus/ramadan/` ; migration `api/migrations/089_ramadan_contenus.sql`.
+
+**Prérequis.** Aucun. Les actions arrivent **non validées et non affichées** ; l'arabe des titres et tous les textes sont à relire (Epok ou un savant).
+
+**Déploiement (DockPanel).** Redeploy `majlistv-api` (la migration 089 s'applique au démarrage), puis `majlistv-web` si besoin, puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`. Puis Admin → Circuit de Ramadan : filtre « à valider », relire, cocher, « Valider et afficher » (en lot).
+
+**Debug.** La migration est idempotente (public + jour + titre). Si les actions ont été supprimées après le déploiement, elle ne se rejoue pas : réimporter `docs/contenus/ramadan-circuit.json` via le bouton d'import de l'admin.
+
+**Régénérer.** `python3 ops/contenus/ramadan/build_circuit.py docs/contenus && python3 ops/contenus/ramadan/make_migration.py docs/contenus/ramadan-circuit.json api/migrations/089_ramadan_contenus.sql` (dépôt `AhmedBaset/hadith-json` cloné dans `/tmp/hj`).
+
+**Tests.** `node api/tests/test_ramadan_content.mjs` ; migration appliquée deux fois sur une base réelle (27 lignes, 0 validée, 0 affichée, pas de doublon).

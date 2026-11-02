@@ -564,3 +564,6 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## Admin en lot et restauration des dhikr (02/11)
 - Voir README « Admin en lot et restauration des dhikr » : valider/modifier/supprimer en lot (Athkar, Ramadan) + bouton « Restaurer les dhikr fournis » (74 dhikr, après suppression accidentelle).
+
+## Contenus 3 — Circuit de Ramadan (02/11)
+- Voir README « Contenus 3 ». 27 actions (21 adultes, 6 enfants), migration 089, non validées. Reste : récitateurs, mot à mot, tajwid, autres chapitres de Hisn al-Muslim ; relecture d'Epok (lignes 149–153).
