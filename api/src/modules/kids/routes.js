@@ -18,6 +18,7 @@ import { getNumber, getSetting, isOn } from '../../settings.js';
 import { bandOkSql } from '../../taxonomy.js';
 import { catalogSql, timeState, addPing, kidReport, MIN_LIMIT, MAX_LIMIT } from '../../kidsControl.js';
 import { sendReportNow } from '../../kidsReportMailer.js';
+import { pendingFor } from './pending.js';
 import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../../kidsLearning.js';
 
 export const BANDS = ['3-6', '7-10', '11-14'];
@@ -80,11 +81,23 @@ export default async function kidsRoutes(app) {
     if (await off(reply)) return;
     const [profiles, u, allowed, max] = await Promise.all([
       pool.query('SELECT * FROM kid_profiles WHERE user_id = $1 ORDER BY created_at', [req.user.sub]),
-      pool.query('SELECT kids_pin_hash IS NOT NULL AS has_pin, kids_pin_locked_until, kids_report_email FROM users WHERE id = $1', [req.user.sub]),
+      pool.query('SELECT kids_pin_hash IS NOT NULL AS has_pin, kids_pin_locked_until, kids_report_email, kids_pending_email FROM users WHERE id = $1', [req.user.sub]),
       parentAllowed(req.user.sub, req.user.role),
       profileLimit(req.user.sub),
     ]);
-    return { allowed, hasPin: u.rows[0].has_pin, max, learning: await hasLearningTier(req.user.sub), reportEmail: u.rows[0].kids_report_email, profiles: profiles.rows.map((x) => ({ ...shape(x), dailyLimitMin: x.daily_limit_min, catalogMode: x.catalog_mode })), bands: BANDS, avatars: AVATARS };
+    return { allowed, hasPin: u.rows[0].has_pin, max, learning: await hasLearningTier(req.user.sub), reportEmail: u.rows[0].kids_report_email, pendingEmail: u.rows[0].kids_pending_email, pending: await pendingFor(req.user.sub), profiles: profiles.rows.map((x) => ({ ...shape(x), dailyLimitMin: x.daily_limit_min, catalogMode: x.catalog_mode })), bands: BANDS, avatars: AVATARS };
+  });
+
+  // Étape B5 — validations en attente (pastille du menu, bandeau de l'espace Kids) et choix de l'e-mail quotidien.
+  app.get('/me/kids/pending', auth, async (req, reply) => {
+    if (await off(reply)) return;
+    return pendingFor(req.user.sub);
+  });
+  app.put('/me/kids/pending-prefs', auth, async (req, reply) => {
+    if (await off(reply)) return;
+    const { email } = z.object({ email: z.boolean() }).parse(req.body ?? {});
+    await pool.query('UPDATE users SET kids_pending_email = $2 WHERE id = $1', [req.user.sub, email]);
+    return { email };
   });
 
   // Définir le code (première fois) ou le changer (l'ancien code est exigé).

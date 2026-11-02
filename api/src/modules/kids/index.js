@@ -3,6 +3,7 @@ import routes from './routes.js';
 import catalogRoutes from './catalog.js';
 import { startKidsReportMailer } from '../../kidsReportMailer.js';
 import { kidCanSee } from './routes.js';
+import { startPending } from './pending.js';
 
 export default async function register(app, ctx) {
   ctx.provide('kids.canSee', kidCanSee); // fiche conférence et statistiques Kids (étape M3a)
@@ -11,4 +12,4 @@ export default async function register(app, ctx) {
 }
 
 // Rapport hebdomadaire envoyé aux parents.
-export async function start(app) { startKidsReportMailer(app.log); }
+export async function start(app) { startKidsReportMailer(app.log); startPending(app.log); }

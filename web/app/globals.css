@@ -4194,3 +4194,15 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .invite-list li { color: var(--text); }
 .invite-list li::before { content: '✓'; color: var(--accent); font-weight: 800; margin-inline-end: 8px; }
 .invite-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+
+/* Étape B5 — validations des enfants en attente */
+.kp-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-inline-start: 6px; border-radius: 999px; background: var(--danger-bg, #9B2C22); color: #fff; font-size: 12px; font-weight: 800; line-height: 1; vertical-align: middle; }
+.ms-bar .kp-badge { position: absolute; top: 4px; margin: 0; transform: translateX(14px); }
+[dir="rtl"] .ms-bar .kp-badge { transform: translateX(-14px); }
+.ms-bar a { position: relative; }
+.kp-banner { margin: 0 0 18px; padding: 16px 18px; border-radius: 18px; background: var(--gold-soft); border: 1px solid var(--accent); }
+.kp-banner h2 { margin: 0 0 10px; font-size: 18px; font-weight: 800; color: var(--text); }
+.kp-banner ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.kp-banner li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kp-banner li span:not(.kd-avatar) { flex: 1; min-width: 140px; color: var(--text); }
+.kp-pref { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; }

@@ -109,6 +109,11 @@ const TEXTS = {
     en: (v) => ({ title: `Ramadan — day ${v.day}`, body: `Today’s path: ${v.done}/${v.total} action(s) done.` }),
     ar: (v) => ({ title: `رمضان — اليوم ${v.day}`, body: `برنامج اليوم: ${v.done}/${v.total} مكتملة.` }),
   },
+  kids_pending: { // étape B5 : validations des enfants en attente (regroupées une fois par jour)
+    fr: (v) => ({ title: 'Mejliss Kids', body: v.count > 1 ? `${v.count} actions de ${v.names} attendent votre validation.` : `${v.names} attend votre validation.` }),
+    en: (v) => ({ title: 'Mejliss Kids', body: v.count > 1 ? `${v.count} actions by ${v.names} are waiting for your approval.` : `${v.names} is waiting for your approval.` }),
+    ar: (v) => ({ title: 'مجلس كيدز', body: v.count > 1 ? `${v.count} أعمال لـ${v.names} بانتظار تأكيدك.` : `${v.names} بانتظار تأكيدك.` }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),

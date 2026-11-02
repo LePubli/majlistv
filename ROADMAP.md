@@ -573,4 +573,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - B1 Bloc « Aujourd'hui » : livré (voir README « Étape B1 »).
 - B2 « Par quoi commencer ? » + visite guidée : livré (voir README « Étape B2 », migration 090).
 - B3 États vides utiles + messages de fin : livré (voir README « Étape B3 »).
-- B4 Invitation des visiteurs : livré (voir README « Étape B4 »). Suivant : B5 signal parent, B6 Apprendre en 4 onglets.
+- B4 Invitation des visiteurs : livré (voir README « Étape B4 »).
+- B5 Signal au parent (pastille, bandeau, push + e-mail quotidien) : livré (voir README « Étape B5 », migration 091). Suivant : B6 Apprendre en 4 onglets.

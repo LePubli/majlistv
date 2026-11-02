@@ -12,6 +12,7 @@ import { MENUS } from '../lib/navcfg';
 import { NAV_ICON_PATHS } from '../lib/navicons';
 import { tx } from '../lib/blocks';
 import AppPromo from './AppPromo';
+import { KidsPendingBadge } from './KidsPending';
 
 const ICONS = {
   shorts: 'M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5z',
@@ -126,7 +127,7 @@ export default function MemberShell({ children }) {
   const bar = (
     <nav className="ms-bar" aria-label={member ? t('msBar') : t('barVisitor')}>
       {barItems.map((it) => (
-        <NavLink key={it.key} href={it.href} className={[isOnBar(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOnBar(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span></NavLink>
+        <NavLink key={it.key} href={it.href} className={[isOnBar(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOnBar(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span>{it.key === 'kids' && <KidsPendingBadge />}</NavLink>
       ))}
     </nav>
   );
@@ -141,7 +142,7 @@ export default function MemberShell({ children }) {
             <div key={g.key} className="ms-group">
               <div className="ms-title">{g.title}</div>
               {g.items.map((it) => (
-                <NavLink key={it.key} href={it.href} title={col ? it.label : undefined} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span></NavLink>
+                <NavLink key={it.key} href={it.href} title={col ? it.label : undefined} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span>{it.key === 'kids' && <KidsPendingBadge />}</NavLink>
               ))}
             </div>
           ))}

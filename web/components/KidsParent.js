@@ -74,6 +74,8 @@ export default function KidsParent() {
     if (r.ok) { setD(r.data); setState('ok'); } else setState(r.status === 404 ? 'off' : 'error');
   }, [call]);
   useEffect(() => { if (user) load(); }, [user, load]);
+  // Étape B5 : le bandeau « en attente » se met à jour après chaque validation.
+  useEffect(() => { const f = () => load(); window.addEventListener('kids:pending-refresh', f); return () => window.removeEventListener('kids:pending-refresh', f); }, [load]);
 
   if (!ready) return null;
   if (!user) return (
@@ -94,11 +96,31 @@ export default function KidsParent() {
   };
   const del = async (p) => { if (window.confirm(t('kdDeleteConfirm').replace('{name}', p.name))) { await call(`/me/kids/profiles/${p.id}`, { method: 'DELETE' }); load(); } };
   const full = d.profiles.length >= d.max;
+  // Étape B5 : ouvre la validation de l'enfant (petites actions, sinon circuit de Ramadan) et y amène la page.
+  const openPending = (p) => {
+    setManage(true); setEdit(null);
+    if (p.actions > 0) { setAct(p.id); setRm(null); } else { setRm(p.id); setAct(null); }
+    setTimeout(() => document.getElementById(`kd-p-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+  const savePendingEmail = async (on) => { setD((x) => ({ ...x, pendingEmail: on })); await call('/me/kids/pending-prefs', { method: 'PUT', body: JSON.stringify({ email: on }) }); };
 
   return (
     <main className="page kd-page">
       <KidsBanner variant="full" />
       <h1>{t('kdWho')}</h1>
+      {d.pending?.total > 0 && (
+        <section className="kp-banner" aria-labelledby="kp-t" role="status">
+          <h2 id="kp-t">{t('kpTitle').replace('{n}', d.pending.total)}</h2>
+          <ul>
+            {d.pending.profiles.map((p) => (
+              <li key={p.id}>
+                <Avatar a={p.avatar} size={32} /><span><b>{p.name}</b> · {t('kpCount').replace('{n}', p.total)}</span>
+                <button type="button" className="btn" onClick={() => openPending(p)}>{t('kpGo')}</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {err && <p className="error" role="alert">{err}</p>}
       {d.profiles.length === 0 && !manage && <p className="meta">{t('kdNoProfile')}</p>}
       <ul className="kd-profiles">
@@ -110,12 +132,13 @@ export default function KidsParent() {
       {manage && (
         <section className="kd-manage" aria-label={t('kdManage')}>
           <PinForm t={t} call={call} hasPin={d.hasPin} onDone={load} />
+          <label className="chk kp-pref"><input type="checkbox" checked={d.pendingEmail !== false} onChange={(e) => savePendingEmail(e.target.checked)} /> {t('kpEmail')}</label>
           <div className="panel">
             <h2 className="panel-title">{t('kdProfiles')} ({d.profiles.length}/{d.max})</h2>
             {!d.learning && <p className="meta small">{t('kdLimitUpgrade')}</p>}
             <ul className="kd-list">
               {d.profiles.map((p) => (
-                <li key={p.id}>
+                <li key={p.id} id={`kd-p-${p.id}`}>
                   {edit === p.id ? <ProfileForm t={t} call={call} p={p} bands={d.bands} avatars={d.avatars} onDone={() => { setEdit(null); load(); }} onCancel={() => setEdit(null)} /> : (
                     <div className="kd-row"><Avatar a={p.avatar} size={40} /><span><b>{p.name}</b> · {bandLabel(p.band, t)}</span>
                       <button type="button" className="link u small" onClick={() => setCtrl(ctrl === p.id ? null : p.id)} aria-expanded={ctrl === p.id}>{t('kcOpen')}</button>

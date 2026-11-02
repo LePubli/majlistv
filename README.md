@@ -6780,3 +6780,27 @@ bash /root/verify-deploy.sh
 **Debug.** Carte absente : vous êtes connecté (ouvrir une fenêtre privée). Bouton « Créer un compte » absent : inscription coupée dans Admin → Fonctions.
 
 **Tests.** `web/tests/test_invite_web.mjs` (+ tests Coran 30 jours et Ramadan mis à jour) ; rendu réel en visiteur dans un navigateur (390 px FR, 1280 px arabe : /coran, /ramadan, /learning, liens avec retour à la page, sans débordement).
+
+## Étape B5 — Signal au parent : un enfant attend une validation (02/11)
+
+**Description.** Quand un enfant appuie sur « Je l'ai fait » (petites actions, circuit de Ramadan des enfants), le parent est prévenu :
+- **Pastille** avec le nombre en attente sur l'entrée « Kids » de tous les menus (en-tête, menu du téléphone, barre latérale, barre du bas) ; jamais en mode enfant ; mise à jour au retour sur l'onglet, toutes les 5 minutes et après chaque validation.
+- **Bandeau** en haut de l'espace Kids : « N validation(s) en attente », une ligne par enfant avec un bouton « Valider » qui ouvre directement la bonne liste (petites actions, sinon Ramadan).
+- **Notification push + e-mail regroupés**, une fois par jour au plus, à partir de l'heure réglée (18 h, heure de Paris, par défaut), seulement si une demande est arrivée **depuis le dernier signal** (pas de relance quotidienne pour la même demande). Push : seulement si le parent a activé les notifications. E-mail : désactivable dans l'espace Kids (Gérer les profils) ou par le lien de désinscription en un clic.
+- Réglages (Admin → Paramètres → Kids) : `kids_pending_enabled` (activé par défaut), `kids_pending_hour` (18). Les actions de Ramadan ne comptent pas si la fonction Ramadan est coupée.
+
+**API.** `GET /me/kids/pending` → `{ total, profiles: [{ id, name, avatar, actions, ramadan, total }] }` ; `GET /me/kids` renvoie aussi `pending` et `pendingEmail` ; `PUT /me/kids/pending-prefs {"email": true|false}`. Tâche de fond `api/src/modules/kids/pending.js` (toutes les 15 min). Migration `091_kids_pending.sql` (`users.kids_pending_email`, `users.kids_pending_at`).
+
+**Prérequis.** Notifications push : déjà configurées (Firebase / Web Push). E-mail : envoi SMTP déjà configuré. Aucune nouvelle variable.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (migration 091 au démarrage), puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Voir les e-mails en file : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select user_id, status, created_at from email_outbox where kind = 'kids_pending' order by id desc limit 10;"` (utilisateur et base : ceux de DATABASE_URL). Journal de l'API : `docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i "Signal Kids\|validations en attente"`.
+
+**Tests.** `api/tests/test_kids_pending.py` (12 contrôles : compte, séparation entre parents, validation, Ramadan coupé, Kids coupé, préférence), `api/tests/test_kids_pending_run.mjs` (13 contrôles : heure, une fois par jour, pas de relance sans nouvelle demande, push / e-mail selon les préférences, réglage coupé, textes FR/EN/AR), `web/tests/test_kids_pending_web.mjs` ; parcours réel dans un navigateur (1280 px FR, 390 px arabe : pastille, bandeau, bouton Valider, mise à jour après validation).

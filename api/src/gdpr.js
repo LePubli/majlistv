@@ -34,7 +34,7 @@ export const CHILD_TABLES = {
 export const SENSITIVE_KEY = /(password|hash|secret|token|totp|recovery|(^|_)pin($|_))/i;
 // Colonnes de la fiche membre exportées (liste blanche).
 export const USER_COLUMNS = ['id', 'email', 'name', 'role', 'locale', 'created_at', 'preferred_sub_lang', 'favorite_categories', 'onboarded_at', 'premium_until',
-  'kids_report_email', 'practice_consent_at', 'practice_email', 'practice_weekday', 'notify_speakers', 'notify_weekly', 'notify_push', 'notify_lifecycle', 'disabled_at'];
+  'kids_report_email', 'kids_pending_email', 'practice_consent_at', 'practice_email', 'practice_weekday', 'notify_speakers', 'notify_weekly', 'notify_push', 'notify_lifecycle', 'disabled_at'];
 const ROW_CAP = 5000;
 
 export const redact = (row) => Object.fromEntries(Object.entries(row).filter(([k]) => !SENSITIVE_KEY.test(k)));

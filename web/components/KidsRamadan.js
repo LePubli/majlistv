@@ -4,6 +4,7 @@
 //   KidRamadanParent  côté parent (gestion des profils) : 7 derniers jours, validation (jeton parent). Aucune comparaison entre enfants.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { refreshKidsPending } from './KidsPending';
 
 export function KidRamadan() {
   const { t, call, locale, feat } = useApp();
@@ -39,7 +40,7 @@ export function KidRamadanParent({ profile }) {
   const load = useCallback(() => call(`${base}?lang=${locale}`).then((r) => setD(r.ok ? r.data : null)), [call, base, locale]);
   useEffect(() => { load(); }, [load]);
   if (!d) return null;
-  const validate = async (day, itemId) => { const r = await call(`${base}/validate`, { method: 'POST', body: JSON.stringify({ day, itemId }) }); if (r.ok) load(); };
+  const validate = async (day, itemId) => { const r = await call(`${base}/validate`, { method: 'POST', body: JSON.stringify({ day, itemId }) }); if (r.ok) { load(); refreshKidsPending(); } };
   const STATE = { todo: t('kaStTodo'), claimed: t('kaStClaimed'), validated: t('kaStValidated') };
   return (
     <div className="panel kd-ctrl" role="group" aria-label={t('kzParent').replace('{name}', profile.name)}>

@@ -4,9 +4,9 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
 
 // Catégorie → colonne de users. Liste fixe : jamais de nom de colonne venant de l'extérieur.
-export const CATEGORIES = { speakers: 'notify_speakers', weekly: 'notify_weekly', lifecycle: 'notify_lifecycle' };
+export const CATEGORIES = { speakers: 'notify_speakers', weekly: 'notify_weekly', lifecycle: 'notify_lifecycle', kidspending: 'kids_pending_email' };
 // Modèles d'e-mail concernés (reçoivent le lien et les en-têtes List-Unsubscribe).
-export const KIND_CATEGORY = { speaker_new: 'speakers', weekly_selection: 'weekly', weekly_letter: 'weekly', resume_talk: 'lifecycle', welcome_nudge: 'lifecycle', winback: 'lifecycle' };
+export const KIND_CATEGORY = { speaker_new: 'speakers', weekly_selection: 'weekly', weekly_letter: 'weekly', resume_talk: 'lifecycle', welcome_nudge: 'lifecycle', winback: 'lifecycle', kids_pending: 'kidspending' };
 
 const sign = (userId, cat) => createHmac('sha256', config.jwtSecret).update(`unsub:${userId}:${cat}`).digest('base64url').slice(0, 32);
 

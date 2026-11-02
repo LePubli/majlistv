@@ -16,6 +16,7 @@ import { resolveList, audienceOk, deviceClass, withHid } from '../lib/menus';
 import { defaultHeader, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 import { NAV_ICON_PATHS } from '../lib/navicons';
+import { KidsPendingBadge } from './KidsPending';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 // Espace enfant : en-tête réduit ; on n'en sort qu'avec le code parental du parent.
@@ -168,7 +169,7 @@ function MainHeader() {
       );
       case 'menu': return (
         <nav className="hd-nav" aria-label={t('mainNav')}>
-          {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}</NavLink>)}
+          {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}{it.kids && <KidsPendingBadge />}</NavLink>)}
         </nav>
       );
       // Étape 23a : la pastille « Prochaine prière » se place juste à côté de la loupe, où que l'administrateur la mette.
@@ -210,7 +211,7 @@ function MainHeader() {
             {user && <div className="dr-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>}
             <nav aria-label={t('mainNav')} className="dr-nav">
               <p className="hd-menu-title">{t('hmDiscover')}</p>
-              {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined}><Ico d={iconOf(it)} />{it.label}</NavLink>)}
+              {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined}><Ico d={iconOf(it)} />{it.label}{it.kids && <KidsPendingBadge />}</NavLink>)}
               {cats?.length > 0 && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('msCats')}</p>

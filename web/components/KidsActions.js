@@ -4,6 +4,7 @@
 //   KidActionsParent  côté parent (page de gestion des profils) : ajout, validation, suppression (jeton parent).
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { refreshKidsPending } from './KidsPending';
 
 // limit : nombre maximal d'actions affichées ; onlyOpen : masquer les actions déjà validées (accueil, fin de quiz).
 export function KidActions({ limit = 100, onlyOpen = false, hideEmpty = false, title = '', onChange }) {
@@ -49,7 +50,7 @@ export function KidActionsParent({ profile }) {
     const r = await call(base, { method: 'POST', body: JSON.stringify({ title }) });
     if (r.ok) { setTitle(''); load(); } else setErr(r.data?.error || t('errGeneric'));
   };
-  const validate = async (id) => { const r = await call(`${base}/${id}/validate`, { method: 'POST' }); if (r.ok) load(); };
+  const validate = async (id) => { const r = await call(`${base}/${id}/validate`, { method: 'POST' }); if (r.ok) { load(); refreshKidsPending(); } };
   const remove = async (id) => { const r = await call(`${base}/${id}`, { method: 'DELETE' }); if (r.ok) load(); };
   const STATE = { todo: t('kaStTodo'), claimed: t('kaStClaimed'), validated: t('kaStValidated') };
   return (

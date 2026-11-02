@@ -197,6 +197,8 @@ export const FIELDS = [
   { key: 'kids_report_enabled', group: 'kids', type: 'bool', label: 'Rapport hebdomadaire envoyé aux parents', env: 'KIDS_REPORT_ENABLED', def: 'true',
     help: "Un e-mail par semaine par parent qui a au moins un profil enfant actif (chaque parent peut le désactiver). Nécessite l'envoi d'e-mails configuré." },
   { key: 'kids_report_weekday', group: 'kids', type: 'number', label: "Jour d'envoi du rapport (0 = dimanche, 1 = lundi … 6 = samedi)", env: 'KIDS_REPORT_WEEKDAY', def: '0', min: 0, max: 6 },
+  { key: 'kids_pending_enabled', group: 'kids', type: 'bool', label: 'Prévenir le parent quand un enfant attend une validation (notification + e-mail, une fois par jour)', env: 'KIDS_PENDING_ENABLED', def: 'true' },
+  { key: 'kids_pending_hour', group: 'kids', type: 'number', label: "Heure du signal au parent (heure de Paris)", env: 'KIDS_PENDING_HOUR', def: '18', min: 0, max: 23 },
   { key: 'kids_report_hour', group: 'kids', type: 'number', label: "Heure d'envoi du rapport (heure de Paris)", env: 'KIDS_REPORT_HOUR', def: '18', min: 0, max: 23 },
 
   { key: 'citations_auto', group: 'citations', type: 'bool', label: 'Générer automatiquement des citations (versets et hadiths)', env: 'CITATIONS_AUTO', def: 'true',
