@@ -6804,3 +6804,26 @@ bash /root/verify-deploy.sh
 **Debug.** Voir les e-mails en file : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select user_id, status, created_at from email_outbox where kind = 'kids_pending' order by id desc limit 10;"` (utilisateur et base : ceux de DATABASE_URL). Journal de l'API : `docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -i "Signal Kids\|validations en attente"`.
 
 **Tests.** `api/tests/test_kids_pending.py` (12 contrôles : compte, séparation entre parents, validation, Ramadan coupé, Kids coupé, préférence), `api/tests/test_kids_pending_run.mjs` (13 contrôles : heure, une fois par jour, pas de relance sans nouvelle demande, push / e-mail selon les préférences, réglage coupé, textes FR/EN/AR), `web/tests/test_kids_pending_web.mjs` ; parcours réel dans un navigateur (1280 px FR, 390 px arabe : pastille, bandeau, bouton Valider, mise à jour après validation).
+
+## Étape B6 — Apprendre en 4 onglets (02/11)
+
+**Description.** Les 9 onglets d'Apprendre deviennent 4, avec des sous-onglets quand un groupe a plusieurs sections :
+- **Aujourd'hui** : tableau de bord (bloc « Aujourd'hui », 4 temps, reprise de la dernière conférence).
+- **Coran et athkar** : Coran · Athkar.
+- **Conférences** : Parcours · Quiz et révision · Cartes (pastille = révisions + cartes à faire).
+- **Mes progrès** : Mes engagements · Mon bilan · Attestations.
+En haut de chaque onglet, une phrase d'explication jusqu'à ce que le membre clique « Compris » (mémorisé sur cet appareil ; sans stockage, la phrase reste simplement affichée). Une section dont la fonction est coupée disparaît ; un groupe vide aussi. Les anciennes adresses (`/learning?tab=athkar`, `?tab=cards`, `?tab=rev`, `?tab=att`…) restent valables : le bon onglet et la bonne section s'ouvrent. Fil d'Ariane : Apprendre › onglet › section.
+
+**Prérequis.** Aucun.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-web` (l'API ne change pas). Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Revoir les phrases d'explication : vider les données du site dans le navigateur (clés `lg-intro-g_*`).
+
+**Tests.** `web/tests/test_learning_groups_web.mjs` (+ tous les tests du site) ; parcours réel dans un navigateur (1280 px et 390 px FR, 390 px arabe : 4 onglets, ancienne adresse ?tab=athkar, sous-onglets, « Compris » mémorisé, adresse mise à jour et bouton retour, sans débordement).

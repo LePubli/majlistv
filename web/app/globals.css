@@ -4206,3 +4206,14 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .kp-banner li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .kp-banner li span:not(.kd-avatar) { flex: 1; min-width: 140px; color: var(--text); }
 .kp-pref { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; }
+
+/* Étape B6 — Apprendre en 4 onglets */
+.lg-group { margin-top: 4px; }
+.lg-subtabs { margin: 0 0 16px; }
+.lg-subtabs .tabs { border-bottom: 0; gap: 8px; flex-wrap: wrap; }
+.lg-subtabs .tabs button { min-height: 38px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface); font-size: 14px; }
+.lg-subtabs .tabs button.on { background: var(--gold-soft); border-color: var(--accent); color: var(--text); }
+.lg-subtabs .tabs button.on::after { display: none; }
+.lg-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border-inline-start: 3px solid var(--accent); }
+.lg-intro p { margin: 0; color: var(--text-2); line-height: 1.45; }
+.lg-intro button { flex: none; }

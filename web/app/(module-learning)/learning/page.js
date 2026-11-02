@@ -40,6 +40,21 @@ function Curve({ points, locale, t }) {
   );
 }
 
+// Étape B6 — phrase d'explication en haut de chaque onglet, jusqu'à ce que le membre clique « Compris » (mémorisé sur cet appareil).
+function GroupIntro({ id, text, t }) {
+  const key = `lg-intro-${id}`;
+  const [seen, setSeen] = useState(true);
+  useEffect(() => { try { setSeen(localStorage.getItem(key) === '1'); } catch { setSeen(false); } }, [key]);
+  if (seen) return null;
+  const close = () => { setSeen(true); try { localStorage.setItem(key, '1'); } catch { /* stockage indisponible */ } };
+  return (
+    <div className="lg-intro" role="note">
+      <p>{text}</p>
+      <button type="button" className="link u small" onClick={close}>{t('lgGotIt')}</button>
+    </div>
+  );
+}
+
 export default function Learning() {
   const { user, ready, t, call, locale, feat } = useApp();
   const router = useRouter();
@@ -78,6 +93,17 @@ export default function Learning() {
     { id: 'att', label: t('tbAtt') },
   ];
   const [tab, go] = useTab(tabs);
+  // Étape B6 — 4 onglets au lieu de 9 : chaque groupe réunit des sections (sous-onglets). Les anciennes adresses (?tab=athkar,
+  // ?tab=cards, ?tab=rev…) restent valables : l'onglet du groupe se déduit de la section ouverte.
+  const GROUPS = [
+    { id: 'g_today', label: t('lgGToday'), intro: 'lgGTodayTx', subs: ['dash'] },
+    { id: 'g_quran', label: t('lgGQuran'), intro: 'lgGQuranTx', subs: ['quran', 'athkar'] },
+    { id: 'g_talks', label: <>{t('lgGTalks')}{revN + cardsN > 0 && <span className="lg-badge" aria-label={String(revN + cardsN)}>{revN + cardsN}</span>}</>, plain: t('lgGTalks'), intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
+    { id: 'g_progress', label: t('lgGProgress'), intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
+  ].map((g) => ({ ...g, subs: g.subs.filter((id) => tabs.some((x) => x.id === id)) })).filter((g) => g.subs.length);
+  const group = GROUPS.find((g) => g.subs.includes(tab)) || GROUPS[0];
+  const subTabs = group.subs.map((id) => tabs.find((x) => x.id === id));
+  const goGroup = (gid) => { const g = GROUPS.find((x) => x.id === gid); if (g) go(g.subs[0]); };
   const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
   if (ready && !user) {
     return (
@@ -177,12 +203,15 @@ export default function Learning() {
 
   return (
     <main className="page learning">
-      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, tabs.find((x) => x.id === tab).plain || tabs.find((x) => x.id === tab).label]] : [])]} />
+      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, group.plain || group.label], ...(subTabs.length > 1 ? [[null, tabs.find((x) => x.id === tab).plain || tabs.find((x) => x.id === tab).label]] : [])] : [])]} />
       <header className="lg-head">
         <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
         <p>{t('lgSub')}</p>
       </header>
-      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+      <TabBar tabs={GROUPS} current={group.id} onChange={goGroup} label={t('tbLabel')} />
+      <div role="tabpanel" id={`panel-${group.id}`} aria-labelledby={`tab-${group.id}`} className="lg-group">
+      <GroupIntro id={group.id} text={t(group.intro)} t={t} />
+      {subTabs.length > 1 && <div className="lg-subtabs"><TabBar tabs={subTabs} current={tab} onChange={go} label={group.plain || group.label} /></div>}
 
       <TabPanel id="dash" current={tab}>
       <TodayBlock compact />
@@ -420,6 +449,7 @@ export default function Learning() {
       <SelfCheck t={t} call={call} locale={locale} />
       <Evolution t={t} call={call} locale={locale} />
       </TabPanel>
+      </div>
     </main>
   );
 }
