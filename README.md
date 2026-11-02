@@ -6628,3 +6628,17 @@ python3 ops/contenus/athkar/build_priere_sommeil_reveil.py /tmp/adk/Adhkar-json 
 ```
 
 **Testé.** Format des deux fichiers (test `api/tests/test_athkar_content.mjs`), import réel dans l'API (43 + 31 entrées créées, 0 validée, 0 affichée). **Pas testé** : relecture religieuse, affichage mobile.
+
+## Contenus — import automatique en base (migration 088, 02/11)
+
+**Ce qui change.** Les 74 dhikr des lots « Contenus 1 » et « Contenus 2 » n'ont plus besoin d'être collés : la migration `088_athkar_contenus.sql` les insère **directement dans la base** au démarrage de l'API. Ils arrivent **non validés et non affichés** (rien n'apparaît chez les membres avant ta relecture et ta validation dans Admin → Athkar).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (la migration s'applique au démarrage), puis `majlistv-web`, puis les 4 commandes VPS habituelles. Vérifier ensuite : Admin → Athkar affiche 74 dhikr (22 matin, 20 soir, 12 après la prière, 15 sommeil, 5 général).
+
+**Sécurité.** Idempotente : un dhikr déjà présent (même catégorie, même texte arabe) n'est pas réinséré, donc aucun doublon si tu avais déjà importé un des fichiers JSON. Elle ne touche à aucun dhikr existant. Si tu avais déjà importé l'ancien lot « matin et soir » (avant la phonétique améliorée), ses lignes restent telles quelles et la migration ajoute la nouvelle version à côté : supprime les anciennes lignes dans Admin → Athkar pour éviter les doublons.
+
+**Corriger un contenu plus tard.** Directement dans Admin → Athkar (modifier la ligne). Pour un lot de corrections, une nouvelle migration sera ajoutée (089, 090…) : les migrations déjà appliquées ne sont jamais rejouées.
+
+**Régénérer la migration** (si les fichiers JSON changent avant le déploiement) : `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/088_athkar_contenus.sql`.
+
+**Testé.** Base vide : 74 lignes créées (0 validée, 0 affichée), redémarrage de l'API sans doublon, migration enregistrée une seule fois, tests Athkar existants toujours OK avec les lignes présentes.
