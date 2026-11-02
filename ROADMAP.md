@@ -561,3 +561,6 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## Contenus — import automatique (02/11)
 - Voir README « Contenus — import automatique en base ». Migration 088 : 74 dhikr insérés non validés au démarrage de l'API (plus de collage JSON).
+
+## Admin en lot et restauration des dhikr (02/11)
+- Voir README « Admin en lot et restauration des dhikr » : valider/modifier/supprimer en lot (Athkar, Ramadan) + bouton « Restaurer les dhikr fournis » (74 dhikr, après suppression accidentelle).

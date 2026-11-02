@@ -3,10 +3,12 @@
 //   POST /athkar/:id/tap  { n }       membre : ajoute n (1 à 1000) au compte du jour
 //   POST /athkar/:id/reset            membre : remet le compte du jour à zéro
 //   PUT  /athkar/prefs { goal, remindHour }   membre : objectif du jour et heure du rappel (null = aucun)
-//   GET/POST /admin/athkar, PUT/DELETE /admin/athkar/:id, POST /admin/athkar/import   administrateur
+//   GET/POST /admin/athkar, PUT/DELETE /admin/athkar/:id, POST /admin/athkar/import, POST /admin/athkar/bulk, POST /admin/athkar/restore-provided   administrateur
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { hasLearningTier } from '../../access.js';
+import { BULK_ACTIONS, LABELS, bulkIds, runBulk } from '../../bulk.js';
+import { restoreProvided } from './provided.js';
 import { CATEGORIES, MAX_COUNT, doneByDay, nowDate, prefsOf, published, streakOf, today } from './lib.js';
 
 const itemSchema = z.object({
@@ -101,6 +103,27 @@ export default async function athkarRoutes(app) {
     if (!r.rowCount) return reply.code(404).send({ error: 'Dhikr introuvable.' });
     req.auditSummary = `Athkar : dhikr n° ${id} supprimé`;
     return { ok: true };
+  });
+
+  // Actions en lot : valider, valider et afficher, afficher, masquer, dé-valider, supprimer, modifier le moment ou les répétitions.
+  const bulkSchema = z.object({
+    ids: bulkIds, action: z.enum(BULK_ACTIONS),
+    set: z.object({ category: z.enum(CATEGORIES).optional(), target: z.number().int().min(1).max(1000).optional() }).optional(),
+  });
+  app.post('/admin/athkar/bulk', adminOnly, async (req, reply) => {
+    const b = bulkSchema.parse(req.body ?? {});
+    const set = {}; if (b.set?.category) set.category = b.set.category; if (b.set?.target) set.target = b.set.target;
+    if (b.action === 'update' && !Object.keys(set).length) return reply.code(400).send({ error: 'Choisissez le moment ou le nombre de répétitions à appliquer.' });
+    const out = await runBulk({ table: 'athkar_items', ids: b.ids, action: b.action, userId: req.user.sub, set });
+    req.auditSummary = `Athkar : ${out.done} dhikr ${LABELS[b.action]} en lot${out.skipped ? ` (${out.skipped} ignorés)` : ''}`;
+    return out;
+  });
+
+  // Restaurer les dhikr fournis (74 à ce jour) : ceux qui manquent sont réinsérés NON validés et NON affichés ; aucun doublon.
+  app.post('/admin/athkar/restore-provided', adminOnly, async (req) => {
+    const out = await restoreProvided();
+    req.auditSummary = `Athkar : ${out.created} dhikr fournis restaurés (non validés)`;
+    return out;
   });
 
   // Import en lot (JSON) : chaque dhikr arrive NON validé et NON affiché ; on le relit puis on le valide un par un.

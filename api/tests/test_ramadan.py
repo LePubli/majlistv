@@ -147,5 +147,24 @@ requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_ramadan"
 # Suppression
 ok(requests.delete(f"{B}/admin/ramadan/items/{A0}", headers=ADM).status_code == 200, "action supprimée")
 cur.execute("select count(*) from ramadan_marks where item_id=%s", (A0,)); ok(cur.fetchone()[0] == 0, "ses cases sont supprimées avec elle")
+# --- Actions en lot
+cur.execute("delete from ramadan_items")
+BI = []
+for k in range(4):
+    BI.append(requests.post(B + "/admin/ramadan/items", headers=ADM, json=it(day=k + 1, title={"fr": f"Lot {k}", "en": "", "ar": ""})).json()["id"])
+BR = lambda **k: requests.post(B + "/admin/ramadan/items/bulk", headers=ADM, json=k)
+ok(requests.post(B + "/admin/ramadan/items/bulk", json={"ids": BI, "action": "validate"}).status_code == 401 and requests.post(B + "/admin/ramadan/items/bulk", headers=LRN, json={"ids": BI, "action": "validate"}).status_code == 403, "lot : refusé sans connexion et aux membres")
+ok(BR(ids=[], action="validate").status_code == 400 and BR(ids=BI, action="inconnue").status_code == 400, "lot : sélection vide et action inconnue refusées")
+ok(BR(ids=BI[:2], action="validate").json() == {"done": 2, "skipped": 0}, "lot : 2 actions validées")
+ok(BR(ids=BI, action="show").json() == {"done": 2, "skipped": 2}, "lot : afficher ignore les 2 actions non validées")
+cur.execute("select count(*) from ramadan_items where enabled and reviewed_at is null"); ok(cur.fetchone()[0] == 0, "lot : jamais d'affichage sans validation")
+ok(BR(ids=BI[2:], action="publish").json()["done"] == 2, "lot : valider et afficher en une fois")
+ok(BR(ids=BI, action="hide").json()["done"] == 4, "lot : masquer")
+ok(BR(ids=BI[:2], action="unvalidate").json()["done"] == 2, "lot : dé-valider")
+ok(BR(ids=BI, action="update").status_code == 400 and BR(ids=BI, action="update", set={"audience": "autre"}).status_code == 400 and BR(ids=BI, action="update", set={"day": 31}).status_code == 400, "lot : modification sans valeur ou invalide refusée")
+ok(BR(ids=BI, action="update", set={"audience": "kid", "day": 0}).json()["done"] == 4, "lot : public et jour modifiés pour 4 actions")
+cur.execute("select count(*) from ramadan_items where id = any(%s) and audience = 'kid' and day = 0", (BI,)); ok(cur.fetchone()[0] == 4, "lot : modification enregistrée")
+ok(BR(ids=BI, action="delete").json()["done"] == 4, "lot : 4 actions supprimées")
+cur.execute("select count(*) from audit_log where summary like 'Ramadan%%en lot%%'"); ok(cur.fetchone()[0] >= 5, "lot : actions consignées dans le journal d'audit")
 cur.execute("delete from ramadan_items"); cur.execute("delete from users where id in (%s,%s)", (uid, lid))
 stop(); print("ramadan OK")

@@ -6642,3 +6642,25 @@ python3 ops/contenus/athkar/build_priere_sommeil_reveil.py /tmp/adk/Adhkar-json 
 **Régénérer la migration** (si les fichiers JSON changent avant le déploiement) : `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/088_athkar_contenus.sql`.
 
 **Testé.** Base vide : 74 lignes créées (0 validée, 0 affichée), redémarrage de l'API sans doublon, migration enregistrée une seule fois, tests Athkar existants toujours OK avec les lignes présentes.
+
+## Admin en lot et restauration des dhikr (02/11)
+
+**Description.** Dans Admin → Athkar et Admin → Ramadan : cases à cocher (+ « tout sélectionner » sur la liste filtrée), filtres (moment/public, statut) et une barre d'actions en lot : *Valider et afficher*, *Valider*, *Afficher*, *Masquer*, *Dé-valider*, *Modifier* (Athkar : moment et répétitions ; Ramadan : public et jour), *Supprimer* (avec confirmation indiquant le nombre). « Afficher » ignore (et signale) les éléments non validés : jamais d'affichage sans validation. Maximum 2 000 éléments par action. Chaque action est inscrite au journal d'audit (« … en lot »).
+Le bouton **« Restaurer les dhikr fournis »** (Admin → Athkar) recrée les 74 dhikr livrés avec l'application (`api/content/athkar/*.json`) qui manquent, **non validés et non affichés** ; ceux qui existent déjà ne sont pas dupliqués (clé : moment + texte arabe).
+
+**Prérequis.** Aucun (pas de migration, pas de nouvelle variable).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Puis : Admin → Athkar → « Restaurer les dhikr fournis » → filtre Statut « à valider » → cocher → *Valider et afficher* (après relecture).
+
+**Debug.** Restauration à 0 créé = tout existe déjà. Erreur 400 = sélection vide, > 2 000, action inconnue ou modification sans valeur. API : `POST /admin/athkar/bulk`, `POST /admin/athkar/restore-provided`, `POST /admin/ramadan/items/bulk` (admin).
+
+**Exemple.** `{"ids":[1,2,3],"action":"update","set":{"category":"sleep","target":7}}`.
+
+**Tests.** `api/tests/test_athkar.py`, `test_ramadan.py`, `web/tests/test_athkar_web.mjs`.

@@ -3,9 +3,10 @@
 //   PUT  /ramadan/mark {day, itemId, done}            membre : cocher une action (pendant Ramadan, jour passé ou du jour)
 //   PUT  /ramadan/tarawih {day, done, rakaat?, place?} membre : tarawih de la nuit n
 //   PUT  /ramadan/prefs {remindHour|null}             membre : rappel quotidien (Paris)
-//   GET/POST /admin/ramadan/items, PUT/DELETE /admin/ramadan/items/:id, POST /admin/ramadan/import   administrateur
+//   GET/POST /admin/ramadan/items, PUT/DELETE /admin/ramadan/items/:id, POST /admin/ramadan/items/bulk, POST /admin/ramadan/import   administrateur
 import { z } from 'zod';
 import { pool } from '../../db.js';
+import { BULK_ACTIONS, LABELS, bulkIds, runBulk } from '../../bulk.js';
 import { itemsOfDay, lang, publicItem, publishedItems, ramadanStatus } from './lib.js';
 import { bilanOf, bilanYear } from './bilan.js';
 import { sealText, practiceKeyReady } from '../../practiceCrypto.js';
@@ -194,6 +195,20 @@ export default async function ramadanRoutes(app) {
     if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable.' });
     req.auditSummary = `Ramadan : action n° ${id} supprimée`;
     return { ok: true };
+  });
+
+  // Actions en lot : valider, valider et afficher, afficher, masquer, dé-valider, supprimer, changer le public ou le jour.
+  const bulkSchema = z.object({
+    ids: bulkIds, action: z.enum(BULK_ACTIONS),
+    set: z.object({ audience: z.enum(['adult', 'kid']).optional(), day: z.number().int().min(0).max(30).optional() }).optional(),
+  });
+  app.post('/admin/ramadan/items/bulk', adminOnly, async (req, reply) => {
+    const b = bulkSchema.parse(req.body ?? {});
+    const set = {}; if (b.set?.audience) set.audience = b.set.audience; if (b.set?.day !== undefined) set.day = b.set.day;
+    if (b.action === 'update' && !Object.keys(set).length) return reply.code(400).send({ error: 'Choisissez le public ou le jour à appliquer.' });
+    const out = await runBulk({ table: 'ramadan_items', ids: b.ids, action: b.action, userId: req.user.sub, set });
+    req.auditSummary = `Ramadan : ${out.done} action(s) ${LABELS[b.action]} en lot${out.skipped ? ` (${out.skipped} ignorées)` : ''}`;
+    return out;
   });
 
   // Import en lot : chaque action arrive NON validée et NON affichée.

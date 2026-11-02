@@ -4119,3 +4119,10 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
   background: linear-gradient(90deg, transparent, var(--gold, #d4af37), transparent); }
 @media (prefers-reduced-motion: no-preference) { body[data-season="eid_fitr"]::before { animation: ss-shine 6s ease-in-out infinite alternate; } }
 @keyframes ss-shine { from { opacity: .55; } to { opacity: 1; } }
+
+/* Administration : actions sur une sélection (Athkar, Ramadan) */
+.adm-bulk{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0;padding:10px 12px;border:1px solid var(--gold,#d4af37);border-radius:12px;background:#111}
+.adm-bulk b{color:var(--gold,#d4af37);margin-inline-end:4px}
+.adm-bulk select,.adm-bulk input{max-width:160px}
+.adm-bulk-del{margin-inline-start:auto}
+.adm-filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}

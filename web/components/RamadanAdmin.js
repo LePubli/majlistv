@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import { BulkBar, SelectAll, useSelection } from './BulkTools';
 
 const L = [['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']];
 const EMPTY = { audience: 'adult', day: 1, title: { fr: '', en: '', ar: '' }, text: { fr: '', en: '', ar: '' }, link: '', reference: '', position: 0, validated: false, enabled: false };
@@ -15,11 +16,16 @@ export default function RamadanAdmin() {
   const [form, setForm] = useState(null);
   const [imp, setImp] = useState(null);
   const [msg, setMsg] = useState(''); const [err, setErr] = useState('');
+  const sel = useSelection();
+  const [fAud, setFAud] = useState(''); const [fSt, setFSt] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [chg, setChg] = useState({ audience: '', day: '' });
   const load = useCallback(async () => {
     const r = await call('/admin/ramadan/items');
     if (r.ok) { setD(r.data); setErr(''); } else setErr(r.status === 404 ? 'Cette fonction est coupée (Admin → Fonctions → « Circuit de Ramadan »).' : errOf(r, t));
   }, [call, t]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { sel.clear(); }, [fAud, fSt, sel.clear]); // la sélection ne garde jamais des éléments masqués par un filtre
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const setL = (k, l) => (e) => setForm({ ...form, [k]: { ...form[k], [l]: e.target.value } });
   const save = async (e) => {
@@ -43,10 +49,22 @@ export default function RamadanAdmin() {
     if (!r.ok) { setErr(`${errOf(r, t)}${r.data?.errors?.length ? ` — ${r.data.errors.join(' ; ')}` : ''}`); return; }
     setImp(null); setMsg(`${r.data.created} action(s) importée(s) (non validées, non affichées).${r.data.errors.length ? ` Refusées : ${r.data.errors.join(' ; ')}` : ''}`); load();
   };
+  const bulk = async (action) => {
+    setErr(''); setMsg(''); setBusy(true);
+    const set = {};
+    if (action === 'update') { if (chg.audience) set.audience = chg.audience; if (chg.day !== '') set.day = Number(chg.day); }
+    const r = await call('/admin/ramadan/items/bulk', { method: 'POST', body: JSON.stringify({ ids: sel.ids, action, set }) });
+    setBusy(false);
+    if (!r.ok) { setErr(errOf(r, t)); return; }
+    setMsg(`${r.data.done} action${r.data.done > 1 ? 's' : ''} traitée${r.data.done > 1 ? 's' : ''}${r.data.skipped ? ` · ${r.data.skipped} ignorée${r.data.skipped > 1 ? 's' : ''} (non validées : on ne peut pas les afficher)` : ''}.`);
+    if (action === 'delete') sel.clear();
+    setChg({ audience: '', day: '' }); load();
+  };
   const readFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => setImp(String(rd.result || '')); rd.readAsText(f); };
   if (err && !d) return <p className="error" role="alert">{err}</p>;
   if (!d) return null;
   const st = d.status;
+  const shown = d.items.filter((x) => (!fAud || x.audience === fAud) && (!fSt || (fSt === 'todo' ? !x.validated : fSt === 'valid' ? x.validated && !x.enabled : x.enabled)));
   return (
     <section>
       <h2>Circuit de Ramadan</h2>
@@ -77,13 +95,24 @@ export default function RamadanAdmin() {
           <p><button className="btn" disabled={!imp.trim()}>Importer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
       )}
+      <div className="adm-filters">
+        <label>Public<select value={fAud} onChange={(e) => setFAud(e.target.value)}><option value="">Tous</option><option value="adult">Adultes</option><option value="kid">Enfants</option></select></label>
+        <label>Statut<select value={fSt} onChange={(e) => setFSt(e.target.value)}><option value="">Tous</option><option value="todo">À valider</option><option value="valid">Validées, non affichées</option><option value="shown">Affichées</option></select></label>
+        <span className="meta small" style={{ alignSelf: 'end' }}>{shown.length} sur {d.items.length}</span>
+      </div>
+      <BulkBar count={sel.count} busy={busy} onRun={bulk} onClear={sel.clear}>
+        <select aria-label="Changer le public" value={chg.audience} onChange={(e) => setChg({ ...chg, audience: e.target.value })}><option value="">Public…</option><option value="adult">Adultes</option><option value="kid">Enfants</option></select>
+        <input type="number" min="0" max="30" placeholder="Jour" aria-label="Changer le jour (0 = chaque jour)" value={chg.day} onChange={(e) => setChg({ ...chg, day: e.target.value })} dir="ltr" />
+        <button type="button" className="btn ghost small" disabled={busy || (!chg.audience && chg.day === '')} onClick={() => bulk('update')}>Appliquer</button>
+      </BulkBar>
       <div className="adm-table-wrap">
         <table className="adm-table">
-          <thead><tr><th>Public</th><th>Jour</th><th>Action</th><th>Validée</th><th>Affichée</th><th /></tr></thead>
+          <thead><tr><th><SelectAll visible={shown.map((x) => x.id)} selection={sel} /></th><th>Public</th><th>Jour</th><th>Action</th><th>Validée</th><th>Affichée</th><th /></tr></thead>
           <tbody>
-            {d.items.length === 0 && <tr><td colSpan={6}>Aucune action pour le moment.</td></tr>}
-            {d.items.map((x) => (
+            {shown.length === 0 && <tr><td colSpan={7}>{d.items.length ? 'Aucune action ne correspond aux filtres.' : 'Aucune action pour le moment.'}</td></tr>}
+            {shown.map((x) => (
               <tr key={x.id}>
+                <td><input type="checkbox" aria-label={`Sélectionner l’action ${x.id}`} checked={sel.has(x.id)} onChange={() => sel.toggle(x.id)} /></td>
                 <td>{x.audience === 'kid' ? 'Enfants' : 'Adultes'}</td>
                 <td>{x.day || 'Chaque jour'}</td>
                 <td><b>{x.title.fr || x.title.en || x.title.ar}</b>{x.reference ? <><br /><span className="meta small">{x.reference}</span></> : null}</td>

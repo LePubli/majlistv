@@ -14,3 +14,12 @@ assert.match(read('app/admin/page.js'), /tab === 'athkar' && <AthkarAdmin/, 'ong
 assert.match(read('lib/navcfg.js'), /\['athkar', 'Athkar'\]/, 'entrée du menu Apprendre');
 for (const k of ['atTab', 'atToday', 'atStreak', 'atGoal', 'atRemind', 'atEmpty', 'atCat_morning', 'atCat_after_prayer', 'atRef', 'atReset', 'atNote']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web athkar OK');
+// Actions en lot + restauration (02/11)
+{
+  const a = read('components/AthkarAdmin.js'), r = read('components/RamadanAdmin.js'), b = read('components/BulkTools.js');
+  assert.match(a, /BulkBar/, 'Athkar admin : barre d’actions en lot'); assert.match(a, /\/admin\/athkar\/bulk/, 'Athkar admin : route en lot');
+  assert.match(a, /\/admin\/athkar\/restore-provided/, 'bouton Restaurer les dhikr fournis');
+  assert.match(r, /BulkBar/, 'Ramadan admin : barre d’actions en lot'); assert.match(r, /\/admin\/ramadan\/items\/bulk/, 'Ramadan admin : route en lot');
+  assert.match(b, /confirm\(/, 'suppression en lot confirmée');
+  console.log('web lot OK');
+}
