@@ -10,7 +10,7 @@ assert.match(lay, /data-skin=\{skin\}/, 'attribut data-skin sur <html>');
 const css = read('app/skin-nuit.css');
 assert.ok(!/^:root|^body \{/m.test(css), 'le thème classique n’est jamais modifié (tout est sous html[data-skin="nuit"])');
 for (const f of ['tile', 'frieze', 'rosette', 'rinceau', 'star', 'tile-card']) { assert.ok(fs.existsSync(new URL(`../public/skin/${f}.svg`, import.meta.url)), `ornement ${f}.svg`); }
-assert.match(css, /\[dir="rtl"\] \.hero::after/, 'rosace placée à gauche en arabe');
+assert.match(css, /\[dir="rtl"\] \.hero:not\(\.banner\)::after/, 'rosace placée à gauche en arabe');
 const sp = read('components/SkinPicker.js');
 assert.match(sp, /if \(!skinChoice\) return null/, 'sélecteur masqué si le choix est fermé'); assert.match(sp, /aria-pressed=\{cur === id\}/, 'état du bouton annoncé');
 assert.match(read('components/Footer.js'), /<SkinPicker \/>/, 'sélecteur dans le pied de page');
