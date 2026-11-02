@@ -76,6 +76,7 @@ const ICONS = {
   learn: 'M3 9l9-5 9 5-9 5zM7 12v4c2.5 2 7.5 2 10 0v-4', lib: 'M6 3h12v18l-6-4-6 4z', price: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z',
   studio: 'M3 7a3 3 0 013-3h12a3 3 0 013 3v10a3 3 0 01-3 3H6a3 3 0 01-3-3zM10 9.5l5 2.5-5 2.5z', admin: 'M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z',
   user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
+  help: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 015 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01',
   shorts: 'M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5z',
 };
 
@@ -142,6 +143,7 @@ function MainHeader() {
           <div className="hd-menu-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>
           <Link href="/account" role="menuitem" aria-current={cur('/account')}>{t('account')}</Link>
           <Link href="/pricing" role="menuitem">{t('pricing')}</Link>
+          {feat('onboarding') && <Link href="/?tour=1" role="menuitem" onClick={() => setMenu(false)}>{t('tourMenu')}</Link>}
           {manager && (
             <>
               <p className="hd-menu-title">{t('hmManage')}</p>
@@ -229,6 +231,7 @@ function MainHeader() {
                 <>
                   <Link href="/account"><Ico d={ICONS.user} />{t('account')}</Link>
                   <Link href="/pricing"><Ico d={ICONS.price} />{t('pricing')}</Link>
+                  {feat('onboarding') && <Link href="/?tour=1" onClick={() => setDrawer(false)}><Ico d={ICONS.help} />{t('tourMenu')}</Link>}
                   <button type="button" className="hd-menu-out" onClick={logoutNow}>{t('logout')}</button>
                 </>
               ) : (

@@ -15,6 +15,7 @@ import FormatTiles from '../components/FormatTiles';
 import SeasonBand from '../components/SeasonBand';
 import FridayBand from '../components/FridayBand';
 import TodayBlock from '../components/TodayBlock';
+import { StartCards, Tour } from '../components/Onboarding';
 
 // Première rangée de conférences de l'accueil (nouveautés) : elle sert de « Dernières conférences » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -33,6 +34,8 @@ function HomeInner() {
   // Catégorie choisie (« Tout voir » d'une rangée) : dans l'adresse (?cat=12), donc le bouton « retour » du navigateur fonctionne.
   const cat = /^\d{1,9}$/.test(sp.get('cat') || '') ? sp.get('cat') : '';
   const setCat = (id) => { router.push(id ? `/?cat=${id}` : '/'); };
+  // Visite guidée (étape B2) : /?tour=1 (bouton « Faire la visite guidée » ou menu du compte).
+  const tour = user && feat('onboarding') && sp.get('tour') === '1' ? <Tour onClose={() => router.replace('/', { scroll: false })} /> : null;
   // Accueil en blocs (Admin → Pages → Accueil des membres) : s'il est publié, il remplace l'accueil d'origine. undefined = on vérifie, null = pas d'accueil en blocs.
   const [blocks, setBlocks] = useState(undefined);
   useEffect(() => {
@@ -70,13 +73,14 @@ function HomeInner() {
     return <Vitrine cit={cit} latest={latest} wait={!ready} hero={home?.hero} />;
   }
   if (!cat && blocks === undefined) return <main className="pb-page" aria-busy="true" />;
-  if (!cat && blocks) return <><TodayBlock /><SeasonBand /><FridayBand /><HomeBlocks page={blocks} /></>;
+  if (!cat && blocks) return <><StartCards /><TodayBlock /><SeasonBand /><FridayBand /><HomeBlocks page={blocks} />{tour}</>;
   const browsing = !cat; // accueil vitrine (pas de filtre)
   const catName = cats.find((c) => String(c.id) === cat);
   const rows = home?.rows || [];
   return (
     <main>
       {browsing && <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />}
+      {browsing && <StartCards />}
       {browsing && <TodayBlock />}
       {browsing && <SeasonBand />}
       {browsing && <FridayBand />}
@@ -112,6 +116,7 @@ function HomeInner() {
           <CitationCard c={cit} t={t} framed />
         </>
       )}
+      {tour}
     </main>
   );
 }

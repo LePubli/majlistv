@@ -34,6 +34,8 @@ export const FEATURES = [
     rules: [{ re: '^/(friday|admin/friday)(/|$)' }] },
   { id: 'ramadan', group: 'catalog', label: 'Circuit de Ramadan (30 jours)', hint: "Actions du jour pendant Ramadan (saisies et validées dans Admin → Ramadan), suivi des tarawih, rappel quotidien ; gratuit pour tout membre connecté",
     rules: [{ re: '^/(ramadan|admin/ramadan)(/|$)' }] },
+  { id: 'onboarding', group: 'catalog', label: 'Accueil des nouveaux membres', hint: "Écran « Par quoi commencer ? » (3 cartes, une seule fois, nouveaux comptes uniquement) et visite guidée en bulles (relançable depuis le menu du compte)",
+    rules: [{ re: '^/me/onboarding(/|$)' }] },
   { id: 'quranplan', group: 'catalog', label: 'Lecture du Coran en 30 jours', hint: "1 juz par jour, case « lu », progression, rappel quotidien facultatif ; gratuit pour tout membre connecté (sur la page Coran)",
     rules: [{ re: '^/quran/(plan|juzs)(/|$)' }] },
   { id: 'quran', group: 'catalog', label: 'Coran (lecteur)', hint: "Texte arabe, traductions, phonétique et tafsir, verset par verset (contenus importés dans Admin → Coran)",

@@ -66,11 +66,18 @@ export default async function authRoutes(app) {
 
   app.get('/auth/me', { preHandler: app.authenticate }, async (req, reply) => {
     const { rows } = await pool.query(
-      'SELECT id, email, name, role, locale FROM users WHERE id = $1',
+      'SELECT id, email, name, role, locale, onboarded_at IS NOT NULL AS onboarded FROM users WHERE id = $1',
       [req.user.sub]
     );
     if (!rows[0]) return reply.code(404).send({ error: 'Utilisateur introuvable' });
     return rows[0];
+  });
+
+  // Étape B2 — écran « Par quoi commencer ? » vu (done: true) ou à revoir (done: false). Fonction « onboarding » (Admin → Fonctions).
+  app.put('/me/onboarding', { preHandler: app.authenticate }, async (req) => {
+    const { done } = z.object({ done: z.boolean() }).parse(req.body ?? {});
+    await pool.query(`UPDATE users SET onboarded_at = ${done ? 'COALESCE(onboarded_at, now())' : 'NULL'} WHERE id = $1`, [req.user.sub]);
+    return { onboarded: done };
   });
 
   // --- Préférences (page de bienvenue) : prénom, langue des sous-titres, thèmes préférés ---

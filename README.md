@@ -6706,3 +6706,26 @@ bash /root/verify-deploy.sh
 **Exemple de réponse.** `{"date":"2026-02-23","left":2,"items":[{"kind":"ramadan","day":6,"n":0,"total":2,"done":false,"href":"/ramadan"},{"kind":"quranJuz","juz":3,"done":false,"href":"/coran"},{"kind":"athkar","moment":"morning","n":2,"total":2,"done":true,"href":"/learning?tab=athkar"}]}`
 
 **Tests.** `api/tests/test_today.py` (22 contrôles, dates simulées : Ramadan matin/soir, hors Ramadan, droits, fonctions coupées), `web/tests/test_today_web.mjs` ; rendu réel dans un navigateur (390 / 1280 px, FR et arabe, sans débordement).
+
+## Étape B2 — « Par quoi commencer ? » et visite guidée (02/11)
+
+**Description.**
+- **Écran « Par quoi commencer ? »** en haut de l'accueil, **une seule fois**, pour les **nouveaux** comptes : 3 cartes selon les fonctions activées (Regarder une conférence → catalogue ; Lire le Coran en 30 jours → /coran ; Athkar du matin et du soir → Apprendre, avec la mention « Formule Apprentissage » ; Circuit de Ramadan en remplacement si une fonction est coupée), un bouton « Faire la visite guidée (1 min) » et « Plus tard ». Tout choix marque l'écran comme vu (sur le compte, donc sur tous les appareils). Les comptes existants au moment du déploiement ne le voient pas (migration 090).
+- **Visite guidée en bulles** (`/?tour=1`) : la page s'assombrit et chaque étape éclaire un élément réel : bloc « Aujourd'hui », Apprendre, Coran, recherche, compte. Un élément absent est sauté ; sur téléphone, Apprendre est éclairé dans la barre du bas et le Coran / le compte via le bouton du menu (jamais deux fois le même élément). Boutons Précédent / Suivant / Terminer, « Passer la visite », Échap pour fermer, flèches du clavier (inversées en arabe). Relançable depuis le menu du compte et le menu du téléphone (« Visite guidée »).
+- Fonction **« Accueil des nouveaux membres »** (`onboarding`) dans Admin → Fonctions (activée par défaut) : coupée, ni écran ni visite ni entrée de menu.
+
+**API.** `GET /auth/me` renvoie `onboarded` (booléen) ; `PUT /me/onboarding {"done": true|false}` (true = vu, false = à revoir). Migration `090_onboarding.sql` : colonne `users.onboarded_at`, comptes existants marqués vus.
+
+**Prérequis.** Aucune variable.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (migration 090 au démarrage), puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Revoir l'écran sur son propre compte : `curl -s -X PUT -H "Authorization: Bearer <jeton>" -H "Content-Type: application/json" -d '{"done":false}' https://api-majlisstv.le-publicitaire.fr/me/onboarding` puis recharger l'accueil. Revoir la visite : menu du compte → « Visite guidée », ou ouvrir `https://majlisstv.le-publicitaire.fr/?tour=1`.
+
+**Tests.** `api/tests/test_onboarding.py` (12 contrôles : migration, inscription réelle, vu / à revoir, fonction coupée), `web/tests/test_onboarding_web.mjs` ; parcours réel dans un navigateur (390 et 1280 px, FR et arabe : 3 cartes, visite complète 4 étapes sur téléphone / 5 sur ordinateur, fermeture, écran plus affiché après rechargement, sans débordement).

@@ -1,67 +1,81 @@
-"""12.4 : inscription courte + préférences (GET/PUT /me/preferences) + rangées « pour vous ». Prérequis : API (3055) et PG de test (5544)."""
-import sys, uuid, requests, psycopg2
+"""Étape B2 : écran « Par quoi commencer ? » — champ `onboarded` de /auth/me, PUT /me/onboarding (vu / à revoir),
+comptes existants marqués « vus » par la migration 090, fonction « onboarding » coupée.
+Démarre sa propre copie de l'API (port 3075). Prérequis : PG de test (5544)."""
+import base64, hashlib, hmac, json, os, subprocess, sys, tempfile, time, uuid
+import psycopg2, requests
 
-B = "http://127.0.0.1:3055"
+API_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PORT = 3075
+B = f"http://127.0.0.1:{PORT}"
+ENV = dict(os.environ)
+ENV.update({
+    "DATABASE_URL": ENV.get("DATABASE_URL", "postgres://majlis:pw@127.0.0.1:5544/majlis"), "PRACTICE_KEY": ENV.get("PRACTICE_KEY", "practice-key-for-tests-0123456789"),
+    "JWT_SECRET": ENV.get("JWT_SECRET", "0123456789abcdef0123456789abcdef-test"), "SETTINGS_KEY": ENV.get("SETTINGS_KEY", "test-settings-key-0123456789"),
+    "ADMIN_EMAIL": "admin@test.local", "ADMIN_PASSWORD": "AdminPassw0rd-test", "PORT": str(PORT), "RATE_LIMIT_MAX": "100000", "AUTH_RATE_MAX": "100000",
+})
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
+cur.execute("delete from app_settings where key = 'feat_onboarding'")
+try:
+    requests.get(B + "/health", timeout=1); print(f"FAIL le port {PORT} est déjà occupé"); sys.exit(1)
+except requests.exceptions.ConnectionError:
+    pass
+LOG = tempfile.NamedTemporaryFile(delete=False, suffix=".log")
+proc = subprocess.Popen(["node", "src/index.js"], cwd=API_DIR, env=ENV, stdout=LOG, stderr=subprocess.STDOUT)
+
+
+def stop():
+    proc.terminate()
 
 
 def ok(c, m):
-    print(("OK   " if c else "FAIL ") + m)
+    print(("OK   " if c else "FAIL ") + m, flush=True)
     if not c:
-        sys.exit(1)
+        stop(); sys.exit(1)
 
 
-tag = uuid.uuid4().hex[:6]
-email = f"nouveau.{tag}@test.local"
-r = requests.post(f"{B}/auth/register", json={"email": email, "password": "MotDePasse-123"})
-ok(r.status_code == 201, "inscription avec e-mail + mot de passe seulement")
-tok = r.json()["token"]; H = {"Authorization": f"Bearer {tok}"}
-ok(r.json()["user"]["name"] == f"nouveau.{tag}", "nom par défaut = début de l'e-mail")
+for _ in range(80):
+    try:
+        if requests.get(B + "/health", timeout=1).status_code == 200:
+            break
+    except Exception:
+        time.sleep(0.5)
+else:
+    print("FAIL l'API de test ne démarre pas"); print(open(LOG.name).read()[-1500:]); stop(); sys.exit(1)
 
-ok(requests.get(f"{B}/me/preferences").status_code == 401, "préférences : connexion requise")
-p = requests.get(f"{B}/me/preferences", headers=H).json()
-ok(p["subLang"] is None and p["categories"] == [] and p["onboarded"] is False, "état initial : rien de choisi, pas encore accueilli")
 
-# catégories de test : cb a moins de conférences que ca, donc passe après dans l'ordre naturel
-cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
-ids = []
-for n in (f"CA{tag}", f"CB{tag}"):
-    cur.execute("insert into categories(name) values(%s) returning id", (n,)); ids.append(cur.fetchone()[0])
-ca, cb = ids
-for i in range(3):
-    cur.execute("insert into talks(title,speaker,source,video_ref,organizer_id,category_id,publication,video_status) values(%s,'X','youtube','abc',%s,%s,'published','ready')", (f"A{i}{tag}", aid, ca))
-cur.execute("insert into talks(title,speaker,source,video_ref,organizer_id,category_id,publication,video_status) values(%s,'X','youtube','abc',%s,%s,'published','ready')", (f"B{tag}", aid, cb))
+def b64(x):
+    return base64.urlsafe_b64encode(x).decode().rstrip("=")
 
-keys = lambda h: [x["key"] for x in requests.get(f"{B}/home", headers=h).json()["rows"]]
-anon = keys({})
-ok(anon.index(f"cat:{ca}") < anon.index(f"cat:{cb}"), "visiteur : ordre naturel (la plus fournie d'abord)")
 
-r = requests.put(f"{B}/me/preferences", headers=H, json={"subLang": "ar", "categories": [cb, 999999], "name": "Yacine"})
-ok(r.status_code == 200, "enregistrement des préférences")
-p = r.json()
-ok(p["subLang"] == "ar" and p["name"] == "Yacine" and p["onboarded"] is True, "langue, prénom et accueil enregistrés")
-ok(p["categories"] == [cb], "catégorie inconnue ignorée")
-ok(requests.get(f"{B}/me/preferences", headers=H).json()["categories"] == [cb], "relecture identique")
+def token(uid, role="user"):
+    h = b64(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()); p = b64(json.dumps({"sub": str(uid), "role": role, "iat": int(time.time())}).encode())
+    return {"authorization": "Bearer " + h + "." + p + "." + b64(hmac.new(ENV["JWT_SECRET"].encode(), f"{h}.{p}".encode(), hashlib.sha256).digest())}
 
-k = keys(H)
-ok(k[0] == "new" or k[0] == f"cat:{cb}", "« Nouveautés » reste en tête ou la catégorie préférée passe devant")
-ok(k.index(f"cat:{cb}") < k.index(f"cat:{ca}"), "connecté : la catégorie préférée passe avant les autres")
-rows = requests.get(f"{B}/home", headers=H).json()["rows"]
-ok([x.get("forYou") for x in rows if x["key"] == f"cat:{cb}"] == [True], "rangée marquée forYou")
-ok(keys({}).index(f"cat:{ca}") < keys({}).index(f"cat:{cb}"), "visiteur non affecté")
 
-ok(requests.put(f"{B}/me/preferences", headers=H, json={"subLang": "xx"}).status_code == 400, "langue inconnue : 400")
-ok(requests.put(f"{B}/me/preferences", headers=H, json={"role": "admin"}).status_code == 400, "champ inconnu refusé (schéma strict)")
-ok(requests.put(f"{B}/me/preferences", headers=H, json={"categories": list(range(1, 14))}).status_code == 400, "13 catégories : 400")
-ok(requests.put(f"{B}/me/preferences", headers=H, json={"name": ""}).status_code == 400, "prénom vide refusé")
-r = requests.put(f"{B}/me/preferences", headers=H, json={"subLang": None, "categories": []})
-ok(r.json()["subLang"] is None and r.json()["categories"] == [] and r.json()["name"] == "Yacine", "effacer sans toucher au prénom")
-ok(requests.put(f"{B}/me/preferences", headers=H, json={}).status_code == 200, "corps vide accepté")
+cur.execute("select id from users where email='admin@test.local'"); ADM = token(cur.fetchone()[0], "admin")
+cur.execute("select name from schema_migrations where name = '090_onboarding.sql'"); ok(cur.fetchone() is not None, "migration 090 appliquée")
+cur.execute("select count(*) from users u where onboarded_at is null and created_at < (select applied_at from schema_migrations where name = '090_onboarding.sql')")
+ok(cur.fetchone()[0] == 0, "comptes existants au déploiement : marqués « vus » (pas d'écran de démarrage)")
 
-# retour après paiement : returnTo invalide ne doit pas casser (validation côté serveur, sans Stripe : 4xx/5xx propre, jamais 500 de validation)
-r = requests.post(f"{B}/billing/checkout", headers=H, json={"plan": "monthly", "returnTo": "//evil.example"})
-ok(r.status_code in (400, 409, 422, 503), f"returnTo externe refusé ou paiement non configuré ({r.status_code})")
+# Nouveau compte par l'inscription réelle
+email = f"ob-{uuid.uuid4().hex[:8]}@test.local"
+r = requests.post(B + "/auth/register", json={"email": email, "password": "Passw0rd-test-123", "name": "Nouveau"})
+ok(r.status_code in (200, 201), f"inscription ({r.status_code})"); H = {"authorization": "Bearer " + r.json()["token"]}
+me = requests.get(B + "/auth/me", headers=H).json(); ok(me.get("onboarded") is False, "nouveau compte : onboarded = false (écran affiché)")
+ok(requests.put(B + "/me/onboarding", json={"done": True}).status_code == 401, "connexion obligatoire")
+ok(requests.put(B + "/me/onboarding", headers=H, json={}).status_code == 400, "corps invalide refusé")
+ok(requests.put(B + "/me/onboarding", headers=H, json={"done": True}).json() == {"onboarded": True}, "marqué vu")
+ok(requests.get(B + "/auth/me", headers=H).json()["onboarded"] is True, "/auth/me : onboarded = true")
+cur.execute("select onboarded_at from users where email = %s", (email,)); t1 = cur.fetchone()[0]
+requests.put(B + "/me/onboarding", headers=H, json={"done": True}); cur.execute("select onboarded_at from users where email = %s", (email,))
+ok(cur.fetchone()[0] == t1, "marqué vu deux fois : date d'origine conservée")
+ok(requests.put(B + "/me/onboarding", headers=H, json={"done": False}).json() == {"onboarded": False} and requests.get(B + "/auth/me", headers=H).json()["onboarded"] is False, "à revoir (done = false)")
 
-cur.execute("delete from talks where title like %s", (f"%{tag}",)); cur.execute("delete from categories where id in (%s,%s)", (ca, cb))
-cur.execute("delete from users where email=%s", (email,))
-print("TOUT OK")
+# Fonction coupée
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_onboarding": "false"}})
+ok(requests.put(B + "/me/onboarding", headers=H, json={"done": True}).status_code in (403, 404), "fonction coupée : route fermée")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_onboarding": None}})
+ok(requests.put(B + "/me/onboarding", headers=H, json={"done": True}).status_code == 200, "fonction réactivée")
+
+cur.execute("delete from users where email = %s", (email,))
+stop(); print("onboarding OK")

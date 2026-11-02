@@ -570,4 +570,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## Parcours UX (bloc B) — décisions d'Epok du 02/11
 - Écran de démarrage : 3 cartes « Par quoi commencer ? » ET visite guidée ; « Aujourd'hui » sur l'accueil ET Apprendre ; Apprendre regroupé en 4 onglets ; parent : pastille + push + e-mail.
-- B1 Bloc « Aujourd'hui » : livré (voir README « Étape B1 »). Suivant : B2 écran de démarrage + visite guidée, B3 états vides et messages de fin, B4 invitation visiteurs, B5 signal parent, B6 Apprendre en 4 onglets.
+- B1 Bloc « Aujourd'hui » : livré (voir README « Étape B1 »).
+- B2 « Par quoi commencer ? » + visite guidée : livré (voir README « Étape B2 », migration 090). Suivant : B3 états vides et messages de fin, B4 invitation visiteurs, B5 signal parent, B6 Apprendre en 4 onglets.

@@ -4145,3 +4145,27 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .today-go { flex: none; color: var(--accent); font-size: 20px; line-height: 1; }
 [dir="rtl"] .today-go { transform: scaleX(-1); }
 @media (max-width: 520px) { .today { margin-inline: 12px; padding: 14px; } .today-head h2 { font-size: 17px; } }
+
+/* Étape B2 — « Par quoi commencer ? » et visite guidée */
+.ob { margin: 18px var(--page-x, 16px) 22px; padding: 22px; border-radius: 22px; background: linear-gradient(160deg, var(--gold-soft), transparent 55%), var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line-soft)); max-width: 1100px; }
+.ob h2 { margin: 0 0 6px; font-size: 24px; font-weight: 800; color: var(--text); }
+.ob-intro { margin: 0 0 16px; color: var(--text-2); }
+.ob-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.ob-card { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 18px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--text); text-decoration: none; }
+.ob-card:hover, .ob-card:focus-visible { border-color: var(--accent); }
+.ob-card b { font-size: 17px; }
+.ob-text { color: var(--text-2); font-size: 14px; line-height: 1.45; }
+.ob-ico { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); background: var(--gold-soft); }
+.ob-badge { align-self: flex-start; margin-top: auto; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); }
+.ob-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.tour { position: fixed; inset: 0; z-index: 1000; }
+.tour-back { position: absolute; inset: 0; }
+.tour-hole { position: fixed; border-radius: 14px; border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .68); pointer-events: none; transition: all .25s ease; }
+.tour-bubble { position: fixed; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--accent); color: var(--text); box-shadow: 0 12px 40px rgba(0, 0, 0, .5); }
+.tour-bubble h2 { margin: 2px 0 6px; font-size: 18px; font-weight: 800; }
+.tour-bubble p { margin: 0 0 14px; color: var(--text-2); line-height: 1.45; }
+.tour-count { font-size: 12px; font-weight: 700; color: var(--accent); }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tour-nav { display: flex; gap: 8px; margin-inline-start: auto; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+@media (max-width: 520px) { .ob { margin-inline: 12px; padding: 16px; } .ob h2 { font-size: 20px; } }
