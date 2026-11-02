@@ -567,3 +567,7 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## Contenus 3 — Circuit de Ramadan (02/11)
 - Voir README « Contenus 3 ». 27 actions (21 adultes, 6 enfants), migration 089, non validées. Reste : récitateurs, mot à mot, tajwid, autres chapitres de Hisn al-Muslim ; relecture d'Epok (lignes 149–153).
+
+## Parcours UX (bloc B) — décisions d'Epok du 02/11
+- Écran de démarrage : 3 cartes « Par quoi commencer ? » ET visite guidée ; « Aujourd'hui » sur l'accueil ET Apprendre ; Apprendre regroupé en 4 onglets ; parent : pastille + push + e-mail.
+- B1 Bloc « Aujourd'hui » : livré (voir README « Étape B1 »). Suivant : B2 écran de démarrage + visite guidée, B3 états vides et messages de fin, B4 invitation visiteurs, B5 signal parent, B6 Apprendre en 4 onglets.

@@ -14,6 +14,7 @@ import { HomeBlocks } from '../components/PageBlocks';
 import FormatTiles from '../components/FormatTiles';
 import SeasonBand from '../components/SeasonBand';
 import FridayBand from '../components/FridayBand';
+import TodayBlock from '../components/TodayBlock';
 
 // Première rangée de conférences de l'accueil (nouveautés) : elle sert de « Dernières conférences » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -69,13 +70,14 @@ function HomeInner() {
     return <Vitrine cit={cit} latest={latest} wait={!ready} hero={home?.hero} />;
   }
   if (!cat && blocks === undefined) return <main className="pb-page" aria-busy="true" />;
-  if (!cat && blocks) return <><SeasonBand /><FridayBand /><HomeBlocks page={blocks} /></>;
+  if (!cat && blocks) return <><TodayBlock /><SeasonBand /><FridayBand /><HomeBlocks page={blocks} /></>;
   const browsing = !cat; // accueil vitrine (pas de filtre)
   const catName = cats.find((c) => String(c.id) === cat);
   const rows = home?.rows || [];
   return (
     <main>
       {browsing && <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />}
+      {browsing && <TodayBlock />}
       {browsing && <SeasonBand />}
       {browsing && <FridayBand />}
       {cat ? (

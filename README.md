@@ -6364,7 +6364,7 @@ Admin → Fonctions → « Pages de saison » coupe tout (bandeau et notificatio
 
 **Limites (honnêtes).** Le calendrier Umm al-Qura est un calendrier calculé : le début réel d'un mois peut différer d'**un jour** de ton pays (d'où le décalage manuel). Pas d'autre fête que les 4 prévues. Aucune notification tardive. Push seulement (pas d'e-mail). Jamais essayé avec un vrai téléphone ni les vrais canaux de notification. À mentionner dans les pages légales : rien de nouveau (aucune donnée supplémentaire).
 
-**Testé.** `test_hijri.mjs` (dates 2026 vérifiées), `test_seasons_run.mjs` (9 contrôles : une seule notification par année, bons destinataires, pas de rattrapage, fonction coupée), `test_seasons.py` (25 contrôles, API réelle avec date simulée au 19/03/2026), `test_seasons_web.mjs`.
+**Testé.** `test_hijri.mjs` (dates 2026 vérifiées), `test_seasons_run.mjs` (9 contrôles : une seule notification par année, bons destinataires, pas de rattrapage, fonction coupée), `test_seasons.py` (22 contrôles, API réelle avec date simulée au 19/03/2026), `test_seasons_web.mjs`.
 
 ## Étape 45B — Socle Coran : lecteur, ressources, recherche (31/10)
 
@@ -6679,3 +6679,30 @@ Fichiers : `docs/contenus/ramadan-circuit.{json,md}` ; générateurs `ops/conten
 **Régénérer.** `python3 ops/contenus/ramadan/build_circuit.py docs/contenus && python3 ops/contenus/ramadan/make_migration.py docs/contenus/ramadan-circuit.json api/migrations/089_ramadan_contenus.sql` (dépôt `AhmedBaset/hadith-json` cloné dans `/tmp/hj`).
 
 **Tests.** `node api/tests/test_ramadan_content.mjs` ; migration appliquée deux fois sur une base réelle (27 lignes, 0 validée, 0 affichée, pas de doublon).
+
+## Étape B1 — Bloc « Aujourd'hui » (02/11)
+
+**Description.** En haut de l'accueil des membres (accueil d'origine et accueil en blocs) et du Tableau de bord d'Apprendre : une courte liste de ce que le membre peut faire aujourd'hui. Chaque ligne mène directement à l'action, les lignes faites passent en bas, cochées et barrées ; en-tête « N à faire » ou « Tout est fait pour aujourd'hui ✓ ». Rien ne s'affiche pour un visiteur ni quand il n'y a aucune ligne.
+Lignes possibles (chacune n'apparaît que si sa fonction est activée dans Admin → Fonctions) :
+- **Ramadan** (pendant Ramadan) : actions du jour cochées / total — gratuit.
+- **Coran 30 jours** : « Lire le juz N » (fait quand coché) ; sans plan : « Commencer Lire le Coran en 30 jours » — gratuit.
+- **Athkar** (formule Apprentissage, s'il existe des dhikr publiés) : matin avant 14 h (heure de Paris), soir ensuite ; fait quand chaque dhikr du moment a atteint son nombre.
+- **Cartes mémoire** et **révisions** (formule Apprentissage) : nombre à revoir aujourd'hui.
+
+**Architecture.** `GET /me/today?lang=fr` (socle, `api/src/routes/today.js`) émet l'événement de module `today.collect` ; chaque module ajoute sa ligne (`api/src/modules/{ramadan,quranplan,athkar,memorycards,revision}/today.js`). Un module retiré ou une fonction coupée = pas de ligne. Composant `web/components/TodayBlock.js`, textes `td*` en FR/EN/AR (RTL : flèches retournées).
+
+**Prérequis.** Aucun (pas de migration, pas de variable).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Bloc absent : membre déconnecté, aucune ligne (pas de plan Coran et fonction quranplan coupée, hors Ramadan, pas de dhikr publiés, rien à réviser). Tester l'API : `curl -s -H "Authorization: Bearer <jeton>" https://api-majlisstv.le-publicitaire.fr/me/today?lang=fr`. En test, dates simulées : `TODAY_NOW`, `PLAN_NOW`, `ATHKAR_NOW`, `RAMADAN_NOW`.
+
+**Exemple de réponse.** `{"date":"2026-02-23","left":2,"items":[{"kind":"ramadan","day":6,"n":0,"total":2,"done":false,"href":"/ramadan"},{"kind":"quranJuz","juz":3,"done":false,"href":"/coran"},{"kind":"athkar","moment":"morning","n":2,"total":2,"done":true,"href":"/learning?tab=athkar"}]}`
+
+**Tests.** `api/tests/test_today.py` (22 contrôles, dates simulées : Ramadan matin/soir, hors Ramadan, droits, fonctions coupées), `web/tests/test_today_web.mjs` ; rendu réel dans un navigateur (390 / 1280 px, FR et arabe, sans débordement).

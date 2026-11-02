@@ -14,6 +14,7 @@ import Row from '../../../components/Row';
 import MemoryCards from '../../../components/MemoryCards';
 import QuranIndex from '../../../components/QuranIndex';
 import Athkar from '../../../components/Athkar';
+import TodayBlock from '../../../components/TodayBlock';
 
 const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
@@ -174,6 +175,7 @@ export default function Learning() {
       <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
 
       <TabPanel id="dash" current={tab}>
+      <TodayBlock compact />
       <section className="lg-steps" aria-label={t('lgSteps')}>
         {[['lrStepW', t('lrStepWv').replace('{n}', cont.length)], ['lrStepQ', t('lrStepQv').replace('{n}', d.quizzesPassed)],
           ...(feat('revision') ? [['lrStepR', t('lrStepRv').replace('{n}', revN)]] : []),

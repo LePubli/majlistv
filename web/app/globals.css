@@ -4126,3 +4126,22 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .adm-bulk select,.adm-bulk input{max-width:160px}
 .adm-bulk-del{margin-inline-start:auto}
 .adm-filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+
+/* Étape B1 — bloc « Aujourd'hui » (accueil et Apprendre) */
+.today { margin: 18px var(--page-x, 16px) 22px; padding: 18px 20px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-soft); max-width: 760px; }
+.today-compact { margin: 0 0 18px; max-width: none; }
+.today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.today-head h2 { margin: 0; font-size: 19px; font-weight: 800; color: var(--text); }
+.today-left { font-size: 14px; font-weight: 700; color: var(--accent); }
+.today-left.ok { color: var(--text-2); }
+.today-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.today-list a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border-radius: 14px; color: var(--text); text-decoration: none; background: var(--surface-2); border: 1px solid transparent; }
+.today-list a:hover, .today-list a:focus-visible { border-color: var(--accent); }
+.today-box { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); display: grid; place-items: center; font-size: 14px; font-weight: 800; color: var(--on-accent); }
+.today-list li.done .today-box { background: var(--accent); }
+.today-list li.done .today-label { color: var(--text-2); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-2) 60%, transparent); }
+.today-label { flex: 1; min-width: 0; font-weight: 700; }
+.today-count { flex: none; font-variant-numeric: tabular-nums; font-size: 14px; color: var(--text-2); }
+.today-go { flex: none; color: var(--accent); font-size: 20px; line-height: 1; }
+[dir="rtl"] .today-go { transform: scaleX(-1); }
+@media (max-width: 520px) { .today { margin-inline: 12px; padding: 14px; } .today-head h2 { font-size: 17px; } }
