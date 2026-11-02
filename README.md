@@ -6574,3 +6574,33 @@ bash /root/verify-deploy.sh
 **Debug.** Pas de touche graphique : saison non activée, case « Thème de saison » non cochée, ou période pas encore ouverte (le thème suit exactement l'affichage du bandeau).
 
 **Limites (honnêteté).** Testé : dates (Aïd al-Fitr 1447 = 20 au 22 mars 2026, Dhou al-Qi‘da 1447 à partir du 18 avril 2026, Rajab 1448 à partir du 10 décembre 2026), API (7 saisons, thème), affichage réel (thème coupé / activé). **PAS testé** : rendu sur de vrais téléphones ; application Android.
+
+## Contenus 1 — Dhikr du matin et du soir (02/11)
+
+**Description.** Premier lot de contenus du compteur d'athkar (Apprentissage) : **43 entrées** (24 invocations du recueil *Hisn al-Muslim*, dédoublées matin / soir quand le texte change) avec arabe voyellé, **phonétique**, **français**, **référence** et nombre de répétitions. Rien n'est affiché aux membres tant qu'une entrée n'est pas relue puis **validée** une par une dans Admin → Athkar.
+
+**Origine des textes (honnêteté).**
+- **Arabe** : recueil *Hisn al-Muslim* (Sa'id al-Qahtani), fichier libre [rn0x/Adhkar-json](https://github.com/rn0x/Adhkar-json) ; versets (Ayat al-Kursi, 112, 113, 114) : texte Tanzil. Quelques voyelles manquantes de la source ont été complétées (variable `FIX` du script). Les textes « soir » sont obtenus en remplaçant « matin » par « soir » : à confirmer.
+- **Références** : renvois (takhrij) du recueil [rn0x/hisn_almuslim_json](https://github.com/rn0x/hisn_almuslim_json), traduits en français. Les renvois ne sont pas numérotés dans la source : leur rattachement à chaque invocation a été fait en lisant le contenu (le n° 18 est le moins sûr). Les degrés d'authenticité (sahih, hassan) sont ceux donnés par la source, pas un jugement de l'assistant.
+- **Français** : traduction de l'assistant depuis l'arabe (versets : Hamidullah, déjà importé). Les traductions publiées (livres, surahquran.com) sont sous droits réservés et n'ont pas été reprises.
+- **Phonétique** : générée par règles (`ops/contenus/athkar/translit.py`), sans IA ; pas de tajwid, fin de phrase prononcée en pause.
+- Licence du fichier arabe libre : non précisée dans le dépôt d'origine ; à gérer par Epok.
+
+**Fichiers.** `docs/contenus/athkar-matin-soir.json` (à importer), `docs/contenus/athkar-matin-soir.md` (fiche de relecture lisible), `ops/contenus/athkar/build_matin_soir.py` et `translit.py` (régénération), test `api/tests/test_athkar_content.mjs`.
+
+**Prérequis.** Étape 45D déployée (table `athkar_items`), fonction « Athkar » activée dans Admin → Fonctions quand tu es prêt.
+
+**Importer.** Admin → Athkar → Importer (JSON) : coller le contenu de `docs/contenus/athkar-matin-soir.json` (ou, depuis un terminal du poste local : ouvrir le fichier, tout copier). Résultat attendu : « 43 dhikr importés (non validés, non affichés) ».
+
+**Valider.** Relire la fiche `docs/contenus/athkar-matin-soir.md` (ou chaque ligne dans Admin → Athkar), corriger au besoin, puis cocher « Validé » et « Affiché » une entrée à la fois.
+
+**Régénérer** (si on corrige le script) :
+```
+git clone --depth 1 https://github.com/rn0x/Adhkar-json /tmp/adk/Adhkar-json
+git clone --depth 1 https://github.com/risan/quran-json /tmp/qdata/repo
+python3 ops/contenus/athkar/build_matin_soir.py /tmp/adk/Adhkar-json /tmp/qdata/repo docs/contenus
+```
+
+**Debug.** « Aucun dhikr importé » : JSON mal collé (garder les crochets). Une entrée refusée : sa référence est vide ou trop longue (500 caractères).
+
+**Testé.** Format du fichier (43 entrées, catégories, longueurs, référence présente, non validé), import réel dans l'API (43 créées, 0 validée, 0 affichée). **Pas testé** : relecture religieuse (à faire par Epok ou un savant), affichage mobile.
