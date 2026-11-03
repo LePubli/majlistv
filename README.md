@@ -7039,3 +7039,28 @@ Vérifier les données : `curl -s "https://api-majlisstv.le-publicitaire.fr/rama
 **Correction.** Les noms arabes courts (liste des sourates, titre d'une sourate, juz du programme 30 jours en arabe) sont affichés d'un seul tenant (espaces insécables, `arLabel()` dans `mobile/src/lib/quran.ts`), sur une ligne, avec une petite marge. Le texte des versets n'est pas touché.
 **Déploiement.** Push sur `main` → GitHub Actions publie la mise à jour (sans réinstaller). Rien sur DockPanel ni le VPS.
 **Tests.** `npm test` (192 contrôles, dont : aucun nom des 114 sourates ne garde d'espace sécable, juz en arabe). **Pas testé** : rendu sur le téléphone — à vérifier par Epok (Menu → Coran → sourate 3).
+
+
+## Vérification du texte du Coran (03/11)
+
+**Pourquoi.** Epok demande d'être sûr qu'il n'y a aucune erreur dans le Coran affiché. Le texte n'est pas écrit par nous : il est **importé tel quel** depuis le fichier d'origine Tanzil (Hafs, Uthmani ; traduction Hamidullah de QuranEnc), à une adresse figée. Ce qu'on peut garantir, c'est qu'il est **identique caractère par caractère** au fichier d'origine, et que l'affichage ne l'altère pas.
+
+**Ce qui a été vérifié ici (03/11).**
+- **Structure** (noms, nombre de versets, juz) comparée à deux sources indépendantes (paquets `quran-json` 3.1.2 et `quran-meta` 7.0.0, riwaya Hafs) : 114 sourates, 6236 versets, nombre de versets de chaque sourate et bornes des 30 juz **identiques**. Six noms de sourate diffèrent seulement par l'écriture de la hamza (ex. إبراهيم / ابراهيم, سبأ / سبإ, الانفطار / الإنفطار) : ce sont des graphies admises, pas des erreurs.
+- **Fichier Tanzil importé** (`risan/quran-json`, commit `6523a9a`, `tanzil/uthmani.json`, SHA-256 `adaebb37…eb4b761`) comparé lettre par lettre à une seconde distribution indépendante : 6216 / 6236 versets identiques sans les voyelles ; les 20 autres ne diffèrent que par des conventions d'écriture du mushaf (hamza sur ي, mots soudés comme مالي / ما لي). Aucune lettre fausse.
+- **Affichage (site et application)** : sur les 6236 versets, le texte affiché (normal, couleurs du tajwid, mot à mot) est **identique** au texte reçu du serveur — rien n'est retiré ni ajouté. La police Amiri contient **tous** les caractères utilisés (73 signes distincts, y compris les signes coraniques).
+- **Import** : un import du fichier d'origine dans la base de test donne 6236 / 6236 versets identiques (arabe et français).
+
+**Ce qui reste à vérifier sur le serveur réel (base de production, inaccessible d'ici).** Un script de contrôle en lecture seule est fourni : `api/scripts/verifier-coran.mjs`. Il retélécharge le fichier d'origine, le lit avec la même fonction que l'import, puis compare **chaque verset** de la base (arabe + français), la structure (114 sourates, 6236 versets, nombre de versets par sourate) et l'absence de caractères inattendus. Testé : il signale bien un verset manquant et un verset auquel il manque un seul signe.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (aucune migration ; ajoute seulement le script). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+docker exec dockpanel-git-majlistv-api node scripts/verifier-coran.mjs
+```
+Résultat attendu : « RÉSULTAT : 0 écart » et, pour l'arabe, « 6236 / 6236 versets identiques au fichier d'origine ». En cas d'écart : ne rien corriger à la main ; Admin → Coran → « Ajouter le Coran complet » (réimport), puis relancer la commande.
+
+**Limite honnête.** Ce contrôle prouve que le texte affiché est exactement celui de Tanzil (référence reconnue, utilisée par de nombreux sites). Il ne remplace pas une relecture par une personne qualifiée si tu souhaites une validation religieuse formelle.
