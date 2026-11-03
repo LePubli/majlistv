@@ -26,6 +26,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Étape M1 (« go mobile », 03/11)** : thème **« Nuit et or »** suivi depuis le réglage de l'administrateur (`/config` → `skin.def`, gardé en mémoire pour le démarrage suivant ; sélecteur dans Compte seulement si le site laisse chaque visiteur choisir) — `src/lib/theme.ts` (`applySkin`, `veil`), polices Marcellus / Amiri dans `assets/fonts` (licence OFL) ; bloc **« Aujourd'hui »** sur l'accueil et dans Apprendre (`src/components/TodayBlock.tsx`, `src/lib/today.ts`, `GET /me/today`) ; **« À regarder plus tard »** (bouton horloge sur la fiche, onglet « Plus tard » de la bibliothèque, rangée de l'accueil — `GET/PUT/DELETE /me/watchlater`). Essai contre une vraie API : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m1_contract.ts`. Voir le README racine « Étape M1 ».
 
+**Étape M2 (03/11)** : **Coran** dans l'application — écran `src/app/quran/index.tsx` (programme « 30 jours », recherche, 114 sourates) et `src/app/quran/[n].tsx` (verset par verset : arabe en Amiri, traduction, phonétique, notes, tafsir, récitation verset par verset lue chez la source avec enchaînement, mot à mot, couleurs du tajwid, taille du texte ; réglages gardés sur le téléphone ; `?aya=` ouvre sur un verset) ; « Lire le Coran en 30 jours » : `src/components/QuranPlan.tsx` ; logique pure : `src/lib/quran.ts`. Accès : menu, Apprendre, bloc « Aujourd'hui », notification du rappel (`/coran/<n>#v<aya>` → écran du verset). Essai contre une API de test : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m2_contract.ts` (crée puis supprime des données fictives ; refuse de tourner contre le site réel).
+
 ## Architecture
 
 ```

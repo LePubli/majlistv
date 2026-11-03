@@ -6905,3 +6905,29 @@ Suivi : GitHub → dépôt LePubli/majlistv → onglet Actions → « mobile-and
 **Debug.** Thème qui ne change pas : vérifier `curl -s https://api-majlisstv.le-publicitaire.fr/config | grep -o '"skin":{[^}]*}'` ; l'application relit la configuration à l'ouverture. Bloc « Aujourd'hui » absent : visiteur non connecté ou aucune ligne (normal). Bouton horloge absent : fonction « À regarder plus tard » coupée.
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (156 contrôles dont `tests/today.test.ts` : textes FR/EN/AR, compteur, liens jamais extérieurs, thème aller-retour, aucune couleur « noir chaud » écrite en dur) ; `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m1_contract.ts` contre une API réelle (configuration, « Aujourd'hui » dans les 3 langues, ajout / doublon / retrait « Plus tard ») ; paquet Android construit (`expo export`, polices incluses). **Pas testé** : rendu sur un vrai téléphone (pas d'émulateur ici) — à vérifier par Epok.
+
+
+## Étape M2 — Application : le Coran et « Lire le Coran en 30 jours » (03/11)
+
+**Description.** Deuxième sous-étape de « go mobile ». Mêmes données et mêmes règles que les pages /coran du site (étapes 45B, 45B2, 45E) :
+- **Écran « Le Coran »** (menu → « Coran », Apprendre → « Le Coran », bloc « Aujourd'hui ») : programme « Lire le Coran en 30 jours » en haut, recherche dans le texte, les traductions et la phonétique (résultat → verset), filtre des 114 sourates (nom ou numéro), liste avec nom arabe.
+- **Écran d'une sourate** : verset par verset — arabe (police Amiri), traduction, phonétique, notes de traduction, tafsir à déplier ; **récitation** verset par verset (bouton ▶ ou toucher le texte), lue directement chez la source choisie par l'admin, avec enchaînement des versets et le son qui continue écran éteint ; **mot à mot** (toucher un mot affiche son sens) ; **couleurs du tajwid** avec légende ; 4 tailles de texte ; sourate précédente / suivante ; sources et licences en bas. Options repliées sous « Options de lecture », gardées sur le téléphone.
+- **« Lire le Coran en 30 jours »** : commencer, juz du jour (« Lire » ouvre le bon verset, case « Lu »), barre de progression, les 30 juz à cocher, rappel quotidien (heure au choix ou aucun), recommencer, arrêter (avec confirmation), fin de lecture (recommencer, partager). Visiteur : explication + « Se connecter pour commencer ».
+- La notification de rappel du programme ouvre maintenant l'écran du verset dans l'application (avant : l'accueil).
+
+**API / site.** Inchangés.
+
+**Prérequis.** Le texte du Coran doit être importé et activé (Admin → Coran), comme pour le site ; sinon l'écran affiche « Le Coran sera bientôt disponible ». Fonctions « Coran » et « Lire le Coran en 30 jours » (Admin → Fonctions).
+
+**Déploiement.** Rien sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions (onglet Actions → « Application Android (APK) ») : APK publié et mise à jour du contenu envoyée aux téléphones (pas de réinstallation : aucune nouvelle dépendance native).
+
+**Essai sur le téléphone.**
+1. Fermer complètement l'application et la rouvrir (deux fois si besoin) pour prendre la mise à jour.
+2. Menu (☰) → « Coran » : la liste des sourates s'affiche, le programme 30 jours en haut.
+3. Ouvrir Al-Fatiha → « Options de lecture » : changer la traduction, activer mot à mot et tajwid, choisir un récitateur → ▶ sur le verset 1 : la récitation s'enchaîne verset par verset ; éteindre l'écran : le son continue.
+4. Programme : « Commencer aujourd'hui » → « Lire » ouvre le juz 1 → revenir → cocher « Lu » → le bloc « Aujourd'hui » de l'accueil passe en coché.
+5. Refaire en arabe (Compte → langue).
+
+**Debug.** « Bientôt disponible » : aucune ressource « texte arabe » activée (`curl -s https://api-majlisstv.le-publicitaire.fr/quran/suras | head -c 100` doit montrer `"ready":true`). Pas de bouton ▶ : aucun récitateur activé (`curl -s https://api-majlisstv.le-publicitaire.fr/quran/reciters`). Message « La récitation ne peut pas être lue » : la source audio ne répond pas ou bloque le téléphone (ouvrir l'adresse d'un verset dans le navigateur du téléphone pour vérifier).
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (165 contrôles, dont `tests/quran.test.ts` : réglages, adresse de récitation https seulement, enchaînement, tajwid et légende traduite, mot à mot, filtres, programme, liens de notification) ; `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m2_contract.ts` contre une API de test (données fictives : sourates, lecteur avec tous les réglages, tafsir, récitateur, recherche, programme complet) ; paquet Android construit. **Pas testé** : rendu et son sur un vrai téléphone (lecture audio par expo-video, défilement vers un verset) — à vérifier par Epok.

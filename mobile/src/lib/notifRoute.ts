@@ -13,5 +13,11 @@ export function routeForPath(path: unknown): string {
   if (seg[0] === 'collections' && safe(seg[1])) return `/collections/${safe(seg[1])}`;
   if (seg[0] === 'intervenants' && safe(seg[1])) return `/speaker/${safe(seg[1])}`;
   if (seg[0] === 'learning') return '/learn';
+  // Coran (étape M2) : /coran, /coran/<sourate>#v<verset> (rappel de la lecture en 30 jours).
+  if (seg[0] === 'coran' && !seg[1]) return '/quran';
+  if (seg[0] === 'coran' && /^\d{1,3}$/.test(seg[1] ?? '') && Number(seg[1]) >= 1 && Number(seg[1]) <= 114) {
+    const aya = /#v(\d{1,3})$/.exec(p)?.[1];
+    return `/quran/${Number(seg[1])}${aya && Number(aya) >= 1 ? `?aya=${Number(aya)}` : ''}`;
+  }
   return '/';
 }

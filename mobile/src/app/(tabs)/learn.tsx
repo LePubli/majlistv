@@ -1,7 +1,7 @@
 // Apprendre : à réviser aujourd'hui, quiz à passer, score et badges, engagements. Réservé à l'offre « Apprentissage »
 // pour la révision, le score et les engagements ; la liste « quiz à passer » est ouverte à tout membre.
 import React, { useCallback, useState } from 'react';
-import { Linking, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -34,7 +34,7 @@ export default function LearnScreen() {
 }
 
 function LearnBody() {
-  const { api, user, t } = useSession();
+  const { api, user, t, feat, isRTL } = useSession();
   const rev = useAsync(() => api.get<RevisionResponse>('/me/revision'), [user?.id]);
   const todo = useAsync(() => api.get<QuizTodoCard[]>('/me/quiz/todo'), [user?.id]);
   const learning = useAsync(() => api.get<LearningResponse>('/me/learning'), [user?.id]);
@@ -70,6 +70,20 @@ function LearnBody() {
 
       {/* Étape M1 : « Aujourd'hui » aussi dans Apprendre (comme sur le site). */}
       <TodayBlock style={{ marginHorizontal: 0 }} />
+
+      {/* Étape M2 : accès au Coran et à « Lire le Coran en 30 jours ». */}
+      {feat('quran') ? (
+        <Pressable accessibilityRole="link" onPress={() => router.push('/quran')} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+          <Panel style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: colors.goldLine }}>
+            <Feather name="book" size={22} color={colors.goldLight} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt weight="bold" size={16}>{t('qrTitle')}</Txt>
+              <Txt size={13} color={colors.muted} numberOfLines={2}>{feat('quranplan') ? t('khTitle') : t('qrIntro')}</Txt>
+            </View>
+            <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={20} color={colors.muted} />
+          </Panel>
+        </Pressable>
+      ) : null}
 
       {first ? <View style={{ height: 120 }}><Loading /></View> : null}
 

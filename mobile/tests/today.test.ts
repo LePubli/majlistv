@@ -39,7 +39,7 @@ test('todayCount et todayKey', () => {
 test('todayTarget : écran de l\'application ou page du site, jamais d\'adresse extérieure', () => {
   assert.deepEqual(todayTarget('/learning?tab=rev'), { app: '/learn' });
   assert.deepEqual(todayTarget('/learning'), { app: '/learn' });
-  assert.deepEqual(todayTarget('/coran'), { web: '/coran' });
+  assert.deepEqual(todayTarget('/coran'), { app: '/quran' });
   assert.deepEqual(todayTarget('/learning?tab=athkar'), { web: '/learning?tab=athkar' });
   assert.deepEqual(todayTarget('/ramadan#rb-t'), { web: '/ramadan#rb-t' });
   for (const bad of [undefined, 42, '', 'https://evil.example', '//evil.example', 'javascript:alert(1)', '/a b']) assert.deepEqual(todayTarget(bad), { app: '/learn' }, String(bad));

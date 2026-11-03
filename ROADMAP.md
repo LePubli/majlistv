@@ -590,4 +590,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 ## « Go mobile » (03/11) — publication à chaque sous-étape, ordre M1 → M6
 - M1 thème « Nuit et or » + « Aujourd'hui » + « À regarder plus tard » : livré (README « Étape M1 »), à essayer sur téléphone.
-- Suite : M2 Coran (lecture, plan 30 jours), M3 athkar / vendredi / saisons, M4 Ramadan (+ enfants, pastille parent), M5 Apprendre (4 onglets, cartes, auto-évaluation, assistant), M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).
+- M2 Coran (lecture complète, récitation, mot à mot, tajwid, programme 30 jours) : livré (README « Étape M2 »), à essayer sur téléphone.
+- Suite : M3 athkar / vendredi / saisons, M4 Ramadan (+ enfants, pastille parent), M5 Apprendre (4 onglets, cartes, auto-évaluation, assistant), M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).
