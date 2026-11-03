@@ -41,7 +41,7 @@ export const todayKey = (it: TodayItem): string => `${it.kind}-${it.moment ?? it
 
 /**
  * Où mène la ligne : un écran de l'application quand il existe, sinon la page du site (chemin relatif, jamais d'adresse extérieure).
- * Coran (M2) et athkar (M3) : dans l'application. Ramadan et cartes arrivent aux étapes M4 et M5 : en attendant, ils s'ouvrent sur le site.
+ * Coran (M2), athkar (M3) et Ramadan (M4) : dans l'application. Les cartes arrivent à l'étape M5 : en attendant, elles s'ouvrent sur le site.
  */
 export function todayTarget(href: unknown, moment?: string): { app: string } | { web: string } {
   const h = typeof href === 'string' ? href.trim() : '';
@@ -50,6 +50,7 @@ export function todayTarget(href: unknown, moment?: string): { app: string } | {
   const tab = new URLSearchParams(query).get('tab');
   if (path === '/learning' && (tab === 'rev' || !tab)) return { app: '/learn' };
   if (path === '/coran') return { app: '/quran' }; // étape M2
+  if (path === '/ramadan') return { app: /#rb-t$/.test(h) ? '/ramadan?bilan=1' : '/ramadan' }; // étape M4
   if (path === '/learning' && tab === 'athkar') return { app: moment === 'morning' || moment === 'evening' ? `/athkar?cat=${moment}` : '/athkar' }; // étape M3
   return { web: h };
 }

@@ -12,11 +12,14 @@ import { SITE_URL } from '@/lib/config';
 import type { Category } from '@/lib/types';
 import { colors } from '@/lib/theme';
 import { Button, Chip, Txt } from './ui';
+import { useKidsPending } from '@/lib/kidsPending';
+import { badgeText } from '@/lib/ramadan';
 
 type Item = { key: string; label: string; icon: React.ComponentProps<typeof Feather>['name']; go: () => void; on: boolean };
 
 export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t, user, config, feat, api, locale, setLocale, logout, dirStyle } = useSession();
+  const pending = useKidsPending();
   const insets = useSafeAreaInsets();
   const cats = useAsync(async () => (await api.get<Category[]>('/categories').catch(() => [])).filter((c) => c.parentId == null), []);
   const site = (path: string) => () => { onClose(); void Linking.openURL(`${SITE_URL}${path}`); };
@@ -30,6 +33,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
     { key: 'books', label: t('bkNav'), icon: 'book', go: site('/books'), on: !!config?.hasBooks },
     { key: 'quran', label: t('qrNav'), icon: 'book', go: nav('/quran'), on: feat('quran') },
+    { key: 'ramadan', label: t('rzNav'), icon: 'moon', go: nav('/ramadan'), on: feat('ramadan') },
     { key: 'athkar', label: t('atTab'), icon: 'sun', go: nav('/athkar'), on: feat('athkar') && !!user },
     { key: 'learning', label: t('navLearn'), icon: 'book-open', go: nav('/learn'), on: feat('learning') },
     { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },
@@ -54,6 +58,12 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
               <Pressable key={i.key} accessibilityRole="link" onPress={i.go} style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
                 <Feather name={i.icon} size={19} color={colors.goldLight} />
                 <Txt weight="medium" size={15}>{i.label}</Txt>
+                {/* Étape M4 : pastille des validations en attente sur l'entrée Kids (parent). */}
+                {i.key === 'kids' && badgeText(pending?.total ?? 0) ? (
+                  <View accessibilityLabel={t('kpBadge', { n: pending?.total ?? 0 })} style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.danger }}>
+                    <Txt weight="bold" size={12} color="#FFFFFF" style={{ writingDirection: 'ltr' }}>{badgeText(pending?.total ?? 0)}</Txt>
+                  </View>
+                ) : null}
               </Pressable>
             ))}
             {(cats.data ?? []).length > 0 ? (

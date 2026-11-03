@@ -1,13 +1,12 @@
 // Étape M3 — Bandeaux de l'accueil, comme sur le site :
-//  - saison en cours (Ramadan, Hajj, Mawlid, Achoura…, étape 45) : réglée dans Admin → Saisons, affichée pendant la période et quelques jours avant ;
+//  - saison en cours (Ramadan → écran du circuit de l'application depuis l'étape M4,, Hajj, Mawlid, Achoura…, étape 45) : réglée dans Admin → Saisons, affichée pendant la période et quelques jours avant ;
 //  - vendredi (étape 45C) : seulement le vendredi (heure de Paris) et si Admin → Vendredi est activé ; lien vers Al-Kahf, rappels.
 // Chacun suivi de sa rangée de conférences quand une collection est choisie. Rien ne s'affiche hors période.
 import React, { useCallback } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
-import { SITE_URL } from '@/lib/config';
 import { SEASON_ICON, seasonWhen, type Friday, type Season } from '@/lib/athkar';
 import { colors, radius } from '@/lib/theme';
 import { Button, Txt } from './ui';
@@ -36,8 +35,7 @@ export function SeasonBand() {
         </View>
         {x.text ? <Txt size={14} color={colors.text2}>{x.text}</Txt> : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {/* Ramadan : écran de l'application à l'étape M4 ; en attendant, la page du site. */}
-          {ramadan ? <Button label={t('rzNav')} onPress={() => { void Linking.openURL(`${SITE_URL}/ramadan`); }} /> : null}
+          {ramadan ? <Button label={t('rzNav')} onPress={() => router.push('/ramadan')} /> : null}
           {x.collection ? <Button label={t('seasonSee')} variant={ramadan ? 'dark' : 'gold'} onPress={() => router.push({ pathname: '/collections/[id]', params: { id: x.collection!.id } })} /> : null}
         </View>
       </View>

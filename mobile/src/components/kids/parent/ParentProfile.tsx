@@ -8,13 +8,15 @@ import { AVATARS, BANDS, KC, LIMIT_CHOICES, actionStateKey, allowedCount, avatar
 import type { KidAction, KidActionCounts, KidControls, KidParentCatalog, KidProfileFull } from '@/lib/types';
 import { Field } from '@/components/ui';
 import { KButton, KChip, KTxt } from '@/components/kids/KidUi';
+import { KidRamadanParent } from '@/components/kids/KidRamadan';
+import { refreshKidsPending } from '@/lib/kidsPending';
 
-type Section = 'time' | 'catalog' | 'actions' | 'profile';
+export type Section = 'time' | 'catalog' | 'actions' | 'profile' | 'ramadan';
 const fieldStyle = { backgroundColor: KC.surface2, borderColor: KC.line, borderWidth: 2, borderRadius: 18 };
 
-export function ParentProfile({ profile, onChanged }: { profile: KidProfileFull; onChanged: () => void }) {
-  const { t } = useSession();
-  const [open, setOpen] = useState<Section | null>(null);
+export function ParentProfile({ profile, onChanged, initial = null }: { profile: KidProfileFull; onChanged: () => void; initial?: Section | null }) {
+  const { t, feat } = useSession();
+  const [open, setOpen] = useState<Section | null>(initial);
   const toggle = (s: Section) => setOpen(open === s ? null : s);
   return (
     <View style={{ gap: 12, padding: 16, borderRadius: 24, backgroundColor: KC.surface, borderWidth: 2, borderColor: KC.line }}>
@@ -23,11 +25,13 @@ export function ParentProfile({ profile, onChanged }: { profile: KidProfileFull;
         <KChip label={`⏱ ${t('kcTime')}`} active={open === 'time'} onPress={() => toggle('time')} />
         <KChip label={`📚 ${t('kcCatalog')}`} active={open === 'catalog'} onPress={() => toggle('catalog')} />
         <KChip label={`🌱 ${t('kaTitle')}`} active={open === 'actions'} onPress={() => toggle('actions')} />
+        {feat('ramadan') ? <KChip label={`🌙 ${t('kzOpen')}`} active={open === 'ramadan'} onPress={() => toggle('ramadan')} /> : null}
         <KChip label={`✏️ ${t('kdEdit')}`} active={open === 'profile'} onPress={() => toggle('profile')} />
       </View>
       {open === 'time' ? <TimeAndCatalogMode profile={profile} onChanged={onChanged} /> : null}
       {open === 'catalog' ? <CatalogList profile={profile} onChanged={onChanged} /> : null}
       {open === 'actions' ? <ActionsManager profile={profile} /> : null}
+      {open === 'ramadan' ? <KidRamadanParent profile={profile} /> : null}
       {open === 'profile' ? <EditProfile profile={profile} onChanged={onChanged} /> : null}
     </View>
   );
@@ -116,7 +120,7 @@ function ActionsManager({ profile }: { profile: KidProfileFull }) {
     setErr('');
     try { await api.post(base, { title: title.trim() }); setTitle(''); await load(); } catch (e) { setErr(e instanceof ApiError ? e.message : t('common.error')); }
   };
-  const validate = async (id: string) => { try { await api.post(`${base}/${id}/validate`); await load(); } catch { setErr(t('common.error')); } };
+  const validate = async (id: string) => { try { await api.post(`${base}/${id}/validate`); await load(); refreshKidsPending(); } catch { setErr(t('common.error')); } };
   const remove = async (id: string) => { try { await api.del(`${base}/${id}`); await load(); } catch { setErr(t('common.error')); } };
   return (
     <View style={{ gap: 10 }}>

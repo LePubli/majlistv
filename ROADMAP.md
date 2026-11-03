@@ -592,4 +592,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - M1 thème « Nuit et or » + « Aujourd'hui » + « À regarder plus tard » : livré (README « Étape M1 »), à essayer sur téléphone.
 - M2 Coran (lecture complète, récitation, mot à mot, tajwid, programme 30 jours) : livré (README « Étape M2 »), à essayer sur téléphone.
 - M3 athkar, bandeaux vendredi et saison : livré (README « Étape M3 »), à essayer sur téléphone.
-- Suite : M4 Ramadan (+ enfants, pastille parent), M5 Apprendre (4 onglets, cartes, auto-évaluation, assistant), M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).
+- M4 Ramadan (circuit, tarawih, bilan, enfants, pastille du parent) : livré (README « Étape M4 »), à essayer sur téléphone.
+- Suite : M5 Apprendre (4 onglets, cartes, auto-évaluation, assistant), M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).

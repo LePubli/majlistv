@@ -11,6 +11,7 @@ import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, badgeIcon, d
 import type { KidCard, KidCatalog, KidSummary } from '@/lib/types';
 import { KButton, KChip, KScreen, KTxt, KidVideoCard } from '@/components/kids/KidUi';
 import { KidActionsList } from '@/components/kids/KidActionsList';
+import { KidRamadan } from '@/components/kids/KidRamadan';
 
 const open = (id: string) => router.push({ pathname: '/kids/watch/[id]', params: { id } });
 
@@ -142,6 +143,8 @@ export default function KidsHome() {
                   renderItem={({ item }) => <KidVideoCard x={item} width={cardW} onPress={() => open(item.id)} />} />
               </View>
             ) : null}
+            {/* Étape M4 : actions de Ramadan du jour (pendant Ramadan seulement). */}
+            <KidRamadan />
             {actionsOpenCount(sm.actions) > 0 ? <View style={{ paddingHorizontal: 20 }}><KidActionsList limit={5} onlyOpen hideEmpty title={`🌱 ${t('kaTitle')}`} onChange={sum.reload} /></View> : null}
             {sm.learning && sm.badges.length > 0 ? (
               <View style={{ gap: 10, paddingHorizontal: 20 }}>

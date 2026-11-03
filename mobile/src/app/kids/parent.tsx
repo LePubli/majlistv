@@ -1,8 +1,8 @@
 // Espace parents de Mejliss Kids dans l'application : rapport de progression, gestion de chaque profil (temps, catalogue, petites actions,
 // modification), changement du code parental. Écran du parent connecté ; si un enfant est dans l'espace, retour à son accueil.
-import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
@@ -10,13 +10,18 @@ import { useAsync } from '@/lib/useAsync';
 import { KC } from '@/lib/kids';
 import type { KidsState } from '@/lib/types';
 import { KButton, KScreen, KTxt } from '@/components/kids/KidUi';
-import { ParentProfile } from '@/components/kids/parent/ParentProfile';
+import { ParentProfile, type Section } from '@/components/kids/parent/ParentProfile';
+import { KidsPendingBanner } from '@/components/kids/KidsPendingBanner';
 import { ParentReport } from '@/components/kids/parent/ParentReport';
 import { ParentPin } from '@/components/kids/parent/ParentPin';
 
 export default function KidsParent() {
   const { t, user, api, isRTL, ready } = useSession();
   const { kid } = useKid();
+  // ?open=<profil>&sec=actions|ramadan : arrivée depuis « Valider » du bandeau des validations en attente.
+  const params = useLocalSearchParams<{ open?: string; sec?: string }>();
+  const sec: Section | null = params.sec === 'actions' || params.sec === 'ramadan' ? params.sec : null;
+  const [pendingEmail, setPendingEmail] = useState<boolean | null>(null);
   const state = useAsync(async () => (user ? await api.get<KidsState>('/me/kids') : null), [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (kid) return <Redirect href="/kids/home" />;
   if (ready && !user) return <Redirect href="/kids" />;
@@ -37,7 +42,14 @@ export default function KidsParent() {
           <>
             <KTxt size={13} color={KC.muted}>{t('kdProfiles')} ({s.profiles.length}/{s.max})</KTxt>
             {s.profiles.length === 0 ? <KTxt color={KC.text2}>{t('kdNoProfile')}</KTxt> : null}
-            {s.profiles.map((p) => <ParentProfile key={`${p.id}:${p.name}:${p.avatar}:${p.band}`} profile={p} onChanged={state.reload} />)}
+            <KidsPendingBanner />
+            {s.profiles.map((p) => <ParentProfile key={`${p.id}:${p.name}:${p.avatar}:${p.band}`} profile={p} onChanged={state.reload} initial={params.open === p.id ? sec : null} />)}
+            {/* E-mail quotidien « un enfant attend votre validation » (étape B5). */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 20, backgroundColor: KC.surface, borderWidth: 2, borderColor: KC.line }}>
+              <KTxt size={14} style={{ flex: 1 }}>{t('kpEmail')}</KTxt>
+              <Switch accessibilityLabel={t('kpEmail')} value={pendingEmail ?? s.pendingEmail !== false}
+                onValueChange={(v) => { setPendingEmail(v); void api.put('/me/kids/pending-prefs', { email: v }).catch(() => setPendingEmail(!v)); }} />
+            </View>
             {s.profiles.length > 0 ? <ParentReport /> : null}
             {s.hasPin ? <ParentPin /> : null}
           </>

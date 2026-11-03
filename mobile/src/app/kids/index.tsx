@@ -13,6 +13,7 @@ import { AVATARS, BANDS, KC, avatarEmoji, bandKey, validPin } from '@/lib/kids';
 import type { KidsState } from '@/lib/types';
 import { Field } from '@/components/ui';
 import { KButton, KChip, KScreen, KTxt, PinPad } from '@/components/kids/KidUi';
+import { KidsPendingBanner } from '@/components/kids/KidsPendingBanner';
 
 function Back() {
   const { t, isRTL } = useSession();
@@ -102,6 +103,7 @@ export default function KidsHub() {
   return frame(
     <ScrollView contentContainerStyle={{ gap: 18, padding: 20, paddingBottom: 48 }}>
       <KTxt weight="extrabold" size={26} accessibilityRole="header">{t('kdWho')}</KTxt>
+      <KidsPendingBanner />
       {s.profiles.length === 0 && !adding ? <KTxt color={KC.text2}>{t('kdNoProfile')}</KTxt> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {s.profiles.map((p) => (

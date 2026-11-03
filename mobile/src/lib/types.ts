@@ -166,6 +166,8 @@ export type KidProfileFull = KidProfile & { dailyLimitMin: number | null; catalo
 export type KidsState = {
   allowed: boolean; hasPin: boolean; max: number; learning: boolean; reportEmail: string | null;
   profiles: KidProfileFull[]; bands: string[]; avatars: string[];
+  /** E-mail « un enfant attend votre validation » (étape B5) ; absent sur une ancienne API. */
+  pendingEmail?: boolean;
 };
 export type KidTime = { limitMin: number | null; usedSec: number; leftSec: number | null; timeUp: boolean };
 export type KidRubric = { id: number; slug: string; names: Record<string, string>; emoji: string; position: number };

@@ -30,6 +30,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Étape M3 (03/11)** : **athkar** — écran `src/app/athkar.tsx` (offre Apprentissage ; moments, compteur au toucher avec envois groupés, objectif du jour, série, rappel, remise à zéro ; `?cat=morning`) ; **bandeaux de saison et du vendredi** sur l'accueil — `src/components/SeasonBands.tsx` (Al-Kahf ouverte dans le Coran de l'application ; bouton Ramadan vers le site en attendant M4) ; logique pure : `src/lib/athkar.ts`. Essai contre une API de test : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m3_contract.ts`.
 
+**Étape M4 (03/11)** : **Ramadan** — écran `src/app/ramadan.tsx` (30 jours, cases, rattrapage, tarawih avec rakaat et lieu, rappel, `?bilan=1`), bilan `src/components/RamadanBilan.tsx` (note chiffrée) ; **enfants** — `src/components/kids/KidRamadan.tsx` (« Je l'ai fait » sur l'accueil Kids ; section « 🌙 Ramadan » dans la gestion d'un profil pour valider) ; **pastille du parent** — `src/lib/kidsPending.ts` (menu ☰ → Kids), bandeau `src/components/kids/KidsPendingBanner.tsx` (« Valider » ouvre la bonne section), interrupteur e-mail ; logique pure : `src/lib/ramadan.ts`. Essai : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m4_contract.ts` (API datée pendant Ramadan).
+
 ## Architecture
 
 ```

@@ -6955,3 +6955,27 @@ Suivi : GitHub → dépôt LePubli/majlistv → onglet Actions → « mobile-and
 **Debug.** « Aucun dhikr n'est encore publié » : aucun dhikr à la fois validé et affiché (Admin → Athkar). Encadré « offre Apprentissage » : le compte n'a pas l'offre. Bandeau absent : fonction coupée (Admin → Fonctions), pas vendredi, ou saison non activée / hors période.
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (172 contrôles, dont `tests/athkar.test.ts` : moments, touchers groupés plafonnés à 1000, objectif, saisons, liens, textes FR/EN/AR, et un contrôle qu'aucun style ne fige les couleurs d'un thème) ; `tests/m3_contract.ts` contre une API de test datée un vendredi de Ramadan (refus sans offre, dhikr fictif créé puis supprimé, compteur, objectif, rappel, remise à zéro, saison « Encore 20 jours », vendredi actif) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone.
+
+
+## Étape M4 — Application : circuit de Ramadan, bilan, Ramadan des enfants, pastille du parent (03/11)
+
+**Description.** Quatrième sous-étape de « go mobile ». Mêmes données et règles que le site (étapes 45F, 45F2, 45G, B5) :
+- **Circuit de Ramadan** (menu → « Ramadan », bandeau de saison, bloc « Aujourd'hui », notification du rappel) : état du mois (« Jour 12 de Ramadan 1448 » ou « Ramadan commence dans n jours »), les 30 jours en bande défilante (jour du jour encadré, compteur fait/total, jour complet en vert), actions du jour avec texte, référence et lien (« Ouvrir » : Coran, athkar ou conférence dans l'application, sinon page du site) ; cases à cocher pendant Ramadan (rattrapage permis, pas d'avance) ; **tarawih** de la nuit (case, nombre de rakaat avec − / +, lieu mosquée / maison) ; rappel quotidien. Visiteur : programme consultable + « Se connecter pour suivre le circuit ».
+- **Bilan de Ramadan** (à partir du 20e jour et 60 jours après) : actions faites, jours complets, nuits de tarawih et rakaat, juz lus, jours d'athkar, et la note personnelle chiffrée « Ce que je garde après Ramadan ». La ligne « Votre bilan » du bloc « Aujourd'hui » ouvre l'écran sur le bilan.
+- **Enfants** : sur l'accueil de l'espace Kids, pendant Ramadan, « 🌙 Ramadan — jour n » avec « Je l'ai fait » (puis « Un parent doit la valider ») et le nombre d'actions validées. Côté parent (Kids → Gérer les profils), nouvelle section **« 🌙 Ramadan »** par enfant : 7 derniers jours et bouton « Valider ». Jamais de comparaison entre enfants.
+- **Pastille du parent** : nombre de validations en attente sur l'entrée « Kids » du menu ☰ ; bandeau « n validation(s) en attente » en haut de l'espace parent (« Valider » ouvre directement la bonne section du bon enfant) ; interrupteur « Me prévenir par e-mail… ». La notification « un enfant attend votre validation » ouvre l'espace Kids.
+
+**API / site.** Inchangés.
+
+**Déploiement.** Rien sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions (onglet Actions → « Application Android (APK) ») ; la mise à jour arrive sur les téléphones sans réinstaller. Remarque : quand plusieurs sous-étapes sont poussées de suite, GitHub annule la fabrication précédente et ne publie que la dernière (qui contient tout).
+
+**Essai sur le téléphone.**
+1. Fermer complètement l'application et la rouvrir (deux fois si besoin).
+2. Menu → « Ramadan » : hors Ramadan, le programme se consulte (cases fermées, « Les cases s'ouvriront pendant Ramadan ») ; seules les actions **validées et affichées** dans Admin → Ramadan apparaissent.
+3. Espace Kids → « Gérer les profils » : chaque enfant a la puce « 🌙 Ramadan » (« Le circuit des enfants s'ouvre pendant Ramadan » hors période).
+4. Pastille : quand un enfant touche « Je l'ai fait » (petite action ou Ramadan), un rond rouge apparaît sur « Kids » dans le menu ☰.
+Vérifier les données : `curl -s "https://api-majlisstv.le-publicitaire.fr/ramadan?lang=fr" | head -c 300`.
+
+**Debug.** « Le circuit sera publié bientôt » : aucune action validée et affichée. Cases grisées : hors Ramadan, jour pas encore arrivé, ou visiteur. Bilan absent : avant le 20e jour ou plus de 60 jours après. Pastille absente : aucune demande en attente, fonction Kids coupée, ou appareil en mode enfant.
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (180 contrôles, dont `tests/ramadan.test.ts`) ; `tests/m4_contract.ts` contre une API de test datée au 23e jour de Ramadan (actions fictives créées puis supprimées : cases, rattrapage, refus du lendemain, tarawih 8 rakaat à la mosquée, rappel 21 h, bilan et note chiffrée relue, enfant « je l'ai fait », pastille +1, liste du parent, validation, pastille revenue, préférence e-mail) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone.
