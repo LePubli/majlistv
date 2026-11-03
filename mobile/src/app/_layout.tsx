@@ -53,15 +53,21 @@ function KidLock() {
 }
 
 function Shell() {
-  const { ready, dirStyle } = useSession();
+  const { ready, dirStyle, skin } = useSession();
   const kidState = useKid();
   const [fontsLoaded, fontError] = useFonts({
     Montserrat_700Bold, Montserrat_800ExtraBold, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold,
     NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold, NotoKufiArabic_700Bold, NotoKufiArabic_800ExtraBold,
+    // Thème « Nuit et or » : polices gardées dans assets/fonts (licence OFL) plutôt qu'en dépendance,
+    // pour que cette évolution arrive par mise à jour du contenu, sans réinstaller l'application.
+    Marcellus_400Regular: require('../../assets/fonts/Marcellus_400Regular.ttf'),
+    Amiri_400Regular: require('../../assets/fonts/Amiri_400Regular.ttf'),
+    Amiri_700Bold: require('../../assets/fonts/Amiri_700Bold.ttf'),
   });
   const done = ready && kidState.ready && (fontsLoaded || !!fontError);
   useEffect(() => { if (done) void SplashScreen.hideAsync(); }, [done]);
   if (!done) return null;
+  // Stack key={skin} : quand l'administrateur change de thème, toute l'application est redessinée avec les nouvelles couleurs.
   return (
     <>
       <StatusBar style="light" />
@@ -70,7 +76,7 @@ function Shell() {
       <PrayerGate />
       <WidgetSync />
       <AppUpdate />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
+      <Stack key={skin} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg, ...dirStyle } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="talk/[id]" />

@@ -20,7 +20,7 @@ import { CastBridge } from '@/components/CastBridge';
 import { levelLabel, LEVEL_COLOR } from '@/lib/media';
 import type { EmbedMessage } from '@/lib/embed';
 import type { Card, Insights, SeriesCtx, Talk } from '@/lib/types';
-import { colors, radius } from '@/lib/theme';
+import { colors, radius, veil } from '@/lib/theme';
 import { Button, ErrorBox, IconButton, Loading, Txt, screenStyle } from '@/components/ui';
 import { Poster, TalkCard } from '@/components/TalkCard';
 import { Rail } from '@/components/Rail';
@@ -57,7 +57,7 @@ export default function TalkScreen() {
 }
 
 function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
-  const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, config, feat } = useSession();
+  const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, later, toggleLater, config, feat } = useSession();
   const dls = useDownloads();
   const [dlOpen, setDlOpen] = useState(false);
   const src = useMemo(() => pickSource(talk, API_URL, config?.dailymotionPlayerId), [talk, config?.dailymotionPlayerId]);
@@ -84,6 +84,17 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   const tabsY = useRef(0);
   const insets = useSafeAreaInsets();
   const fav = favs.has(talk.id);
+  const isLater = later.has(talk.id);
+  const [laterMsg, setLaterMsg] = useState('');
+  const laterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (laterTimer.current) clearTimeout(laterTimer.current); }, []);
+  // « À regarder plus tard » (étape M1) : bascule + court message de confirmation.
+  async function onLater() {
+    const r = await toggleLater(talk.id);
+    setLaterMsg(r === 'added' ? t('wlAdded') : r === 'removed' ? t('wlRemoved') : r === 'full' ? t('wl.full') : t('common.error'));
+    if (laterTimer.current) clearTimeout(laterTimer.current);
+    laterTimer.current = setTimeout(() => setLaterMsg(''), 3000);
+  }
 
   // Vidéo native : lecture en arrière-plan et notification de lecture (le son continue écran éteint).
   const player = useVideoPlayer(sourceObj, (p) => {
@@ -233,7 +244,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
           ) : (
             <View style={{ flex: 1 }}>
               <Poster talk={talk} radiusPx={0} />
-              <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
+              <View style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.6), alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
                 {audioMode ? (
                   <><Feather name="headphones" size={40} color={colors.goldLight} /><Txt weight="bold">{t('talk.audio')}</Txt></>
                 ) : (
@@ -243,37 +254,37 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
             </View>
           )}
           {cast ? (
-            <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.82)', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }}>
+            <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.82), alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 }}>
               <Feather name="cast" size={36} color={colors.goldLight} />
               <Txt weight="bold" style={{ textAlign: 'center' }}>{t('cast.on', { device: cast.device })}</Txt>
             </View>
           ) : null}
           {failed ? (
-            <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.88)', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
+            <View style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.88), alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
               <Txt style={{ textAlign: 'center' }}>{t('talk.playerError')}</Txt>
               <Button label={t('common.retry')} variant="dark" onPress={retry} />
             </View>
           ) : null}
           {ended && (locked || nextEp) ? (
-            <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.9)', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
+            <View style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.9), alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
               {locked ? <Txt weight="extrabold" size={16} style={{ textAlign: 'center' }}>{t('lkEndTitle')}</Txt> : <Txt weight="extrabold" size={16} style={{ textAlign: 'center' }}>{t('nextEp')}</Txt>}
               {!locked && nextEp ? <Button label={t('playNow')} onPress={() => router.replace({ pathname: '/talk/[id]', params: { id: nextEp.id } })} /> : null}
               <Button label={t('fromStart')} variant="dark" onPress={() => seekMs(0)} />
             </View>
           ) : null}
           <View style={{ position: 'absolute', top: 8, start: 8 }}>
-            <IconButton label={t('common.close')} onPress={goBack} style={{ backgroundColor: 'rgba(11,9,6,0.55)', borderWidth: 0 }}>
+            <IconButton label={t('common.close')} onPress={goBack} style={{ backgroundColor: veil(0.55), borderWidth: 0 }}>
               <Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} />
             </IconButton>
           </View>
           {chIndex >= 0 && chapters[chIndex] ? (
-            <View pointerEvents="none" style={{ position: 'absolute', bottom: 8, start: 8, maxWidth: '70%', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(11,9,6,0.7)' }}>
+            <View pointerEvents="none" style={{ position: 'absolute', bottom: 8, start: 8, maxWidth: '70%', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: veil(0.7) }}>
               <Txt weight="bold" size={12} color={colors.goldLight} numberOfLines={1}>{t('talk.chapNow', { n: chIndex + 1, title: chapters[chIndex].t })}</Txt>
             </View>
           ) : null}
           {src.uri && !audioMode && !cast ? (
             <View style={{ position: 'absolute', bottom: 4, end: 4 }}>
-              <IconButton label={t('talk.fullscreen')} onPress={() => { void videoRef.current?.enterFullscreen(); }} style={{ backgroundColor: 'rgba(11,9,6,0.55)', borderWidth: 0 }}>
+              <IconButton label={t('talk.fullscreen')} onPress={() => { void videoRef.current?.enterFullscreen(); }} style={{ backgroundColor: veil(0.55), borderWidth: 0 }}>
                 <Feather name="maximize" size={20} color={colors.text} />
               </IconButton>
             </View>
@@ -309,6 +320,11 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
               ) : null}
             </View>
           </View>
+          {feat('watchlater') ? (
+            <IconButton label={isLater ? t('wlRemove') : t('wlAdd')} onPress={() => needLogin(() => { void onLater(); })} style={isLater ? { backgroundColor: colors.goldTint, borderColor: colors.goldLine } : undefined}>
+              <Feather name={isLater ? 'check-circle' : 'clock'} size={20} color={isLater ? colors.goldLight : colors.text} />
+            </IconButton>
+          ) : null}
           <IconButton label={fav ? t('removeFav') : t('addFav')} onPress={() => needLogin(() => { void toggleFav(talk.id); })} style={fav ? { backgroundColor: colors.goldTint, borderColor: colors.goldLine } : undefined}>
             <Feather name="bookmark" size={20} color={fav ? colors.goldLight : colors.text} />
           </IconButton>
@@ -316,6 +332,8 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
             <Feather name="more-horizontal" size={20} color={colors.text} />
           </IconButton>
         </View>
+
+        {laterMsg ? <Txt size={13} weight="bold" color={colors.goldLight} accessibilityLiveRegion="polite" style={{ paddingHorizontal: 16 }}>{laterMsg}</Txt> : null}
 
         {locked ? <LockCard talk={talk} /> : null}
 
@@ -329,7 +347,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
       </ScrollView>
 
       {/* Barre du bas : retenir / noter */}
-      <View style={{ position: 'absolute', start: 0, end: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 + insets.bottom, flexDirection: 'row', gap: 10, backgroundColor: 'rgba(11,9,6,0.94)', borderTopWidth: 1, borderTopColor: colors.border }}>
+      <View style={{ position: 'absolute', start: 0, end: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 + insets.bottom, flexDirection: 'row', gap: 10, backgroundColor: veil(0.94), borderTopWidth: 1, borderTopColor: colors.border }}>
         {quizOn && !locked ? <View style={{ flex: 1 }}><Button label={t('talk.quizBtn')} onPress={goQuiz} /></View> : null}
         <View style={{ flex: 1 }}><Button label={t('talk.noteBtn')} variant="dark" onPress={() => needLogin(openNote)} /></View>
       </View>

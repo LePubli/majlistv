@@ -14,6 +14,7 @@ import type { Key } from '@/lib/i18n';
 import { colors } from '@/lib/theme';
 import { Button, Chip, Eyebrow, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
+import { TodayBlock } from '@/components/TodayBlock';
 
 export default function LearnScreen() {
   const { user, t, dirStyle } = useSession();
@@ -66,6 +67,9 @@ function LearnBody() {
         <Title>{t('learn.title')}</Title>
         <Txt size={14} color={colors.muted}>{t('learn.subtitle')}</Txt>
       </View>
+
+      {/* Étape M1 : « Aujourd'hui » aussi dans Apprendre (comme sur le site). */}
+      <TodayBlock style={{ marginHorizontal: 0 }} />
 
       {first ? <View style={{ height: 120 }}><Loading /></View> : null}
 

@@ -586,3 +586,8 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 ## Bloc D — autres améliorations (ordre choisi par Epok le 03/11)
 1. ✅ « À regarder plus tard » (README « Amélioration D1 »). 2. Séries de jours et badges. 3. Glossaire arabe. 4. Fiche PDF. 5. Mode podcast. 6. Abonnement groupe (étape 46).
 - **03/11 : décision d'Epok — les autres améliorations du bloc D sont mises de côté pour le moment** (2 à 6 ci-dessus et le reste de IDEES-AMELIORATIONS). Elles ne reprennent que sur sa demande.
+
+
+## « Go mobile » (03/11) — publication à chaque sous-étape, ordre M1 → M6
+- M1 thème « Nuit et or » + « Aujourd'hui » + « À regarder plus tard » : livré (README « Étape M1 »), à essayer sur téléphone.
+- Suite : M2 Coran (lecture, plan 30 jours), M3 athkar / vendredi / saisons, M4 Ramadan (+ enfants, pastille parent), M5 Apprendre (4 onglets, cartes, auto-évaluation, assistant), M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).

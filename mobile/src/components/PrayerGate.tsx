@@ -14,7 +14,7 @@ import { useNow } from '@/lib/useNow';
 import { countdown, statusAt } from '@/lib/prayer/prayerLogic';
 import { fmtTime } from '@/lib/prayer/prayerTimes';
 import { MediaAdapter, playingMedia } from '@/lib/mediaRegistry';
-import { colors, radius } from '@/lib/theme';
+import { colors, radius, veilDeep } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
 import { prayerNameKey } from '@/components/PrayerPill';
 
@@ -74,7 +74,7 @@ export function PrayerGate() {
   }
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => finish(true)}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(5,4,3,0.86)', justifyContent: 'center', padding: 22 }}>
+      <View style={{ flex: 1, backgroundColor: veilDeep(0.86), justifyContent: 'center', padding: 22 }}>
         <View accessibilityViewIsModal style={[{ borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.goldLine, padding: 24, gap: 10, alignItems: 'center' }, dirStyle]}>
           <Feather name="moon" size={44} color={colors.gold} />
           <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 1, textTransform: 'uppercase' }}>{t('pryNow')}</Txt>

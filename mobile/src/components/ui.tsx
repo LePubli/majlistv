@@ -94,8 +94,9 @@ export function ErrorBox({ message, onRetry }: { message?: string; onRetry?: () 
   );
 }
 
-export const screenStyle: ViewStyle = { flex: 1, backgroundColor: colors.bg };
-export const titleStyle: TextStyle = { fontFamily: fonts.extrabold, fontSize: 24, color: colors.text };
+// Accesseurs : les valeurs suivent le thème en cours (classique / « Nuit et or »).
+export const screenStyle: ViewStyle = { flex: 1, get backgroundColor() { return colors.bg; } };
+export const titleStyle: TextStyle = { get fontFamily() { return fonts.extrabold; }, fontSize: 24, get color() { return colors.text; } };
 
 /** Carte arrondie de la maquette (fond « panel », bordure fine). */
 export function Panel({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {

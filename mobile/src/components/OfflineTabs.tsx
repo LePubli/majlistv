@@ -11,7 +11,8 @@ import { colors, radius } from '@/lib/theme';
 import { Button, Txt } from './ui';
 
 type Tab = 'summary' | 'chapters' | 'transcript' | 'quiz';
-const box = { padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 10 } as const;
+// Accesseurs : suivent le thème en cours.
+const box = { padding: 16, borderRadius: radius.panel, get backgroundColor() { return colors.panel; }, borderWidth: 1, get borderColor() { return colors.border; }, gap: 10 } as const;
 
 export function OfflineTabs({ talkId, pack, fallbackSummary, positionMs, onSeek }: {
   talkId: string; pack: OfflinePack | null; fallbackSummary?: string; positionMs: number; onSeek: (ms: number) => void;

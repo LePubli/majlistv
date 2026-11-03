@@ -15,7 +15,7 @@ import { usePrayer } from '@/lib/prayerStore';
 import { UpdateStatus } from '@/components/UpdateStatus';
 
 export default function AccountScreen() {
-  const { user, api, t, locale, setLocale, logout, dirStyle } = useSession();
+  const { user, api, t, locale, setLocale, logout, dirStyle, skinChoice, skinPick, setSkinPick } = useSession();
   const prayer = usePrayer();
   // Notifications du serveur (nouvelles conférences des intervenants suivis, sélection de la semaine, révision) : interrupteur du compte.
   const notif = useAsync(async () => (user ? await api.get<{ prefs: { push: boolean }; available: { push: boolean } }>('/me/notifications').catch(() => null) : null), [user?.id]);
@@ -76,6 +76,18 @@ export default function AccountScreen() {
             ))}
           </View>
         </View>
+
+        {/* Thème : seulement si l'administrateur laisse chaque visiteur choisir (Admin → Paramètres) ; sinon c'est le sien. */}
+        {skinChoice ? (
+          <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 12 }}>
+            <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('skin.title')}</Txt>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Chip label={t('skin.site')} active={!skinPick} onPress={() => setSkinPick(null)} />
+              <Chip label={t('skin.classique')} active={skinPick === 'classique'} onPress={() => setSkinPick('classique')} />
+              <Chip label={t('skin.nuit')} active={skinPick === 'nuit'} onPress={() => setSkinPick('nuit')} />
+            </View>
+          </View>
+        ) : null}
 
         <UpdateStatus />
 

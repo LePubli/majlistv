@@ -1,8 +1,9 @@
-// Bibliothèque : mes favoris et mes listes personnelles (création, suppression ; le contenu d'une liste s'ouvre sur son écran).
+// Bibliothèque : mes favoris, « À regarder plus tard » (étape M1) et mes listes personnelles
+// (création, suppression ; le contenu d'une liste s'ouvre sur son écran).
 import React, { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -11,10 +12,15 @@ import type { Card, ListsResponse } from '@/lib/types';
 import { colors } from '@/lib/theme';
 import { Button, Chip, ErrorBox, Field, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
+import { progressOf } from '@/lib/media';
 
 export default function LibraryScreen() {
-  const { user, t, dirStyle } = useSession();
-  const [tab, setTab] = useState<'fav' | 'lists'>('fav');
+  const { user, t, dirStyle, feat } = useSession();
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<'fav' | 'later' | 'lists'>(params.tab === 'later' ? 'later' : 'fav');
+  // Ouverture depuis l'accueil (« Voir tout » de la rangée « Plus tard ») : l'onglet suit le lien.
+  React.useEffect(() => { if (params.tab === 'later' || params.tab === 'fav' || params.tab === 'lists') setTab(params.tab); }, [params.tab]);
+  const laterOn = feat('watchlater');
 
   return (
     <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
@@ -23,6 +29,7 @@ export default function LibraryScreen() {
         {user ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip label={t('lib.favorites')} active={tab === 'fav'} onPress={() => setTab('fav')} />
+            {laterOn ? <Chip label={t('wlTab')} active={tab === 'later'} onPress={() => setTab('later')} /> : null}
             <Chip label={t('lib.lists')} active={tab === 'lists'} onPress={() => setTab('lists')} />
           </View>
         ) : null}
@@ -34,7 +41,7 @@ export default function LibraryScreen() {
             <Button label={t('account.signin')} onPress={() => router.push('/login')} />
           </Panel>
         </View>
-      ) : tab === 'fav' ? <Favorites /> : <Lists />}
+      ) : tab === 'later' && laterOn ? <Later /> : tab === 'lists' ? <Lists /> : <Favorites />}
     </SafeAreaView>
   );
 }
@@ -55,6 +62,45 @@ function Favorites() {
       renderItem={({ item }) => <TalkCard talk={item} />}
       onRefresh={favs.reload}
       refreshing={favs.loading}
+    />
+  );
+}
+
+// « À regarder plus tard » : les plus récentes d'abord ; une conférence regardée jusqu'au bout en sort toute seule.
+function Later() {
+  const { api, user, t, later, toggleLater } = useSession();
+  const list = useAsync(() => api.get<Card[]>('/me/watchlater'), [user?.id]);
+  useFocusEffect(React.useCallback(() => { void list.reload(); }, [])); // eslint-disable-line react-hooks/exhaustive-deps
+  async function drop(id: string) {
+    list.setData((l) => (l ?? []).filter((x) => x.id !== id));
+    if (later.has(id)) await toggleLater(id); else await api.del(`/me/watchlater/${id}`).catch(() => {});
+  }
+  if (list.loading && !list.data) return <Loading />;
+  if (!list.data) return <ErrorBox onRetry={list.reload} />;
+  return (
+    <FlatList
+      data={list.data}
+      keyExtractor={(c) => c.id}
+      contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 40 }}
+      ListHeaderComponent={<Txt size={13} color={colors.muted}>{t('wlIntro')}</Txt>}
+      ListEmptyComponent={(
+        <Panel style={{ gap: 12 }}>
+          <Txt color={colors.text2}>{t('wl.empty')}</Txt>
+          <Button label={t('navCatalogue')} variant="dark" onPress={() => router.navigate('/talks')} />
+        </Panel>
+      )}
+      renderItem={({ item }) => (
+        <View style={{ gap: 6 }}>
+          <TalkCard talk={item} progress={progressOf(item)} />
+          <Pressable accessibilityRole="button" accessibilityLabel={`${t('wlRemove')} : ${item.title}`} onPress={() => { void drop(item.id); }}
+            style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, opacity: pressed ? 0.7 : 1 })}>
+            <Feather name="x-circle" size={16} color={colors.muted} />
+            <Txt size={13} weight="bold" color={colors.muted}>{t('wlRemove')}</Txt>
+          </Pressable>
+        </View>
+      )}
+      onRefresh={list.reload}
+      refreshing={list.loading}
     />
   );
 }

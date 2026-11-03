@@ -6879,3 +6879,29 @@ bash /root/verify-deploy.sh
 **Debug.** Bouton absent : fonction coupée (Admin → Fonctions) ou visiteur non connecté (le bouton mène alors à la connexion). Liste : `curl -s -H "Authorization: Bearer <jeton>" https://api-majlisstv.le-publicitaire.fr/me/watchlater`.
 
 **Tests.** `api/tests/test_watchlater.py` (14 contrôles), `web/tests/test_watchlater_web.mjs` ; parcours réel dans un navigateur (1280 px FR, 390 px arabe : ajout depuis la conférence, confirmation, onglet de la bibliothèque, rangée de l'accueil, retrait).
+
+
+## Étape M1 — Application : thème « Nuit et or », « Aujourd'hui », « À regarder plus tard » (03/11)
+
+**Description.** Première sous-étape de « go mobile » (plan : Project doc `claude/PLAN-MOBILE-2026-11.md`) :
+- **Thème « Nuit et or »** dans l'application : l'application suit le thème choisi par l'administrateur (Admin → Paramètres → Général → « Thème visuel par défaut »). Bleu de nuit, accents or, filets or des cartes, titres en Marcellus (latin) et Amiri (arabe), texte toujours en blanc pur. Le thème reçu est gardé sur le téléphone : au lancement suivant il s'affiche tout de suite, même hors connexion. Si l'administrateur change de thème, l'application se redessine dès qu'elle relit la configuration. Si le site autorise le choix des visiteurs (« Laisser chaque visiteur choisir son thème »), un choix « Thème » apparaît dans Compte ; sinon rien. Pas encore d'ornements dessinés (entrelacs, frise, rosace) dans l'application : seulement couleurs et polices.
+- **Bloc « Aujourd'hui »** en haut de l'accueil (sous la bannière) et d'Apprendre : mêmes lignes que le site (juz du jour, athkar du moment, action de Ramadan, cartes, révisions), lignes faites cochées en bas, compteur « 2 à faire » / « Tout est fait ». Les révisions s'ouvrent dans l'application ; Coran, athkar, Ramadan et cartes s'ouvrent **sur le site** (icône « lien externe ») en attendant leurs écrans (M2 à M5).
+- **« À regarder plus tard »** : bouton horloge sur la fiche d'une conférence (message « Ajoutée à… » / « Retirée de… »), onglet « Plus tard » de Ma bibliothèque (retrait, état vide avec lien vers le catalogue), rangée « À regarder plus tard » de l'accueil (« Voir tout » ouvre l'onglet). Masqué si la fonction est coupée (Admin → Fonctions).
+
+**API / site.** Inchangés (routes des étapes B1, C1 et D1).
+
+**Prérequis.** Aucun. Pas de nouvelle dépendance native : la mise à jour arrive **par mise à jour du contenu**, sans réinstaller l'APK.
+
+**Déploiement.** Rien à faire sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions « mobile-android » : APK fabriqué et publié, et mise à jour du contenu envoyée aux applications installées.
+Suivi : GitHub → dépôt LePubli/majlistv → onglet Actions → « mobile-android » (vert = publié).
+
+**Essai sur le téléphone.**
+1. Ouvrir l'application, attendre le bandeau de mise à jour (ou la fermer complètement et la rouvrir deux fois).
+2. Thème : sur le site, Admin → Paramètres → Général → Thème visuel par défaut = « nuit » → Enregistrer ; dans l'application, tirer l'accueil vers le bas ou la rouvrir : fond bleu nuit, titres Marcellus. Remettre « classique » pour revenir.
+3. « Aujourd'hui » : connecté, l'encadré apparaît sous la bannière et en haut d'Apprendre (au moins « Commencer Lire le Coran en 30 jours » si la fonction Coran est active).
+4. « Plus tard » : ouvrir une conférence → bouton horloge → message → Bibliothèque → onglet « Plus tard » ; accueil → rangée « À regarder plus tard ».
+5. Refaire en arabe (Compte → langue) : tout à droite, titres en Amiri en thème nuit.
+
+**Debug.** Thème qui ne change pas : vérifier `curl -s https://api-majlisstv.le-publicitaire.fr/config | grep -o '"skin":{[^}]*}'` ; l'application relit la configuration à l'ouverture. Bloc « Aujourd'hui » absent : visiteur non connecté ou aucune ligne (normal). Bouton horloge absent : fonction « À regarder plus tard » coupée.
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (156 contrôles dont `tests/today.test.ts` : textes FR/EN/AR, compteur, liens jamais extérieurs, thème aller-retour, aucune couleur « noir chaud » écrite en dur) ; `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m1_contract.ts` contre une API réelle (configuration, « Aujourd'hui » dans les 3 langues, ajout / doublon / retrait « Plus tard ») ; paquet Android construit (`expo export`, polices incluses). **Pas testé** : rendu sur un vrai téléphone (pas d'émulateur ici) — à vérifier par Epok.

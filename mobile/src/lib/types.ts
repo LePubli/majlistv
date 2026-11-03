@@ -74,6 +74,8 @@ export type AppConfig = {
   dailymotionPlayerId?: string;
   cards?: { show: Record<string, boolean> };
   /** Réglages de la fonction Prière (Admin → Paramètres) ; absent si la fonction est désactivée. */
+  /** Thème visuel (Admin → Paramètres) : def = thème par défaut, choice = chaque visiteur peut choisir. */
+  skin?: { def: 'classique' | 'nuit'; choice: boolean };
   prayer?: { defaultEnabled: boolean; pill: boolean; method: string; asr: string; blockMinutes: number; maxBlockMinutes: number; city: string } | null;
 };
 

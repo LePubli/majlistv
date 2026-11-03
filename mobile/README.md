@@ -24,6 +24,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Pas encore là (tranche 2, suite)** : téléchargement hors connexion (2b), espace Mejliss TV Kids (2c), diffusion Chromecast / AirPlay (2d), séries. Les vidéos **YouTube / Vimeo** ne se lisent pas dans le lecteur du téléphone (elles se lisent depuis leur plateforme) : l'application renvoie vers la page du site.
 
+**Étape M1 (« go mobile », 03/11)** : thème **« Nuit et or »** suivi depuis le réglage de l'administrateur (`/config` → `skin.def`, gardé en mémoire pour le démarrage suivant ; sélecteur dans Compte seulement si le site laisse chaque visiteur choisir) — `src/lib/theme.ts` (`applySkin`, `veil`), polices Marcellus / Amiri dans `assets/fonts` (licence OFL) ; bloc **« Aujourd'hui »** sur l'accueil et dans Apprendre (`src/components/TodayBlock.tsx`, `src/lib/today.ts`, `GET /me/today`) ; **« À regarder plus tard »** (bouton horloge sur la fiche, onglet « Plus tard » de la bibliothèque, rangée de l'accueil — `GET/PUT/DELETE /me/watchlater`). Essai contre une vraie API : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m1_contract.ts`. Voir le README racine « Étape M1 ».
+
 ## Architecture
 
 ```

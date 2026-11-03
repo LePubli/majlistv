@@ -10,7 +10,7 @@ import { ApiError } from '@/lib/api';
 import { useDownloads } from '@/lib/downloadStore';
 import { DlErrorCode, errorCodeFor } from '@/lib/downloads';
 import { formatSize } from '@/lib/appUpdate';
-import { colors, radius } from '@/lib/theme';
+import { colors, radius, veilDeep } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
 import type { Talk } from '@/lib/types';
 
@@ -46,7 +46,7 @@ export function DownloadSheet({ talk, visible, onClose }: { talk: Talk; visible:
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => { if (!dl.active) onClose(); }}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(5,4,3,0.86)', justifyContent: 'center', padding: 22 }}>
+      <View style={{ flex: 1, backgroundColor: veilDeep(0.86), justifyContent: 'center', padding: 22 }}>
         <View accessibilityViewIsModal style={[{ borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.goldLine, padding: 22, gap: 12 }, dirStyle]}>
           <View style={{ alignItems: 'center', gap: 6 }}>
             <Feather name={rec ? 'check-circle' : 'download'} size={38} color={colors.gold} />

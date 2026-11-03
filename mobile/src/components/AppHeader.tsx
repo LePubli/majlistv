@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
-import { colors } from '@/lib/theme';
+import { colors, veil } from '@/lib/theme';
 import { MenuDrawer } from './MenuDrawer';
 import { PrayerPill } from './PrayerPill';
 
@@ -16,7 +16,7 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
   const { width } = useWindowDimensions();
   return (
-    <View style={[{ paddingTop: insets.top + 6, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: 'rgba(11,9,6,0.96)', borderBottomWidth: 1, borderBottomColor: colors.borderSoft,
+    <View style={[{ paddingTop: insets.top + 6, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: veil(0.96), borderBottomWidth: 1, borderBottomColor: colors.borderSoft,
       flexDirection: 'row', alignItems: 'center', gap: 10 }, dirStyle]}>
       <Pressable accessibilityRole="link" accessibilityLabel="Mejliss TV" onPress={() => router.navigate('/')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
         <Image source={require('../../assets/brand/emblem.png')} style={{ width: 32, height: 34 }} contentFit="contain" />

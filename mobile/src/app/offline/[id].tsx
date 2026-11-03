@@ -16,7 +16,7 @@ import type { OfflinePack } from '@/lib/offlinePack';
 import { OfflineTabs } from '@/components/OfflineTabs';
 import { nextSpeed } from '@/lib/playback';
 import { registerMedia } from '@/lib/mediaRegistry';
-import { colors } from '@/lib/theme';
+import { colors, veil } from '@/lib/theme';
 import { Button, IconButton, Txt, screenStyle } from '@/components/ui';
 
 function goBack() { if (router.canGoBack()) router.back(); else router.replace('/downloads'); }
@@ -89,13 +89,13 @@ function OfflinePlayer({ talkId }: { talkId: string }) {
             </View>
           ) : <VideoView player={player} style={{ flex: 1 }} nativeControls contentFit="contain" fullscreenOptions={{ enable: true }} />}
           {failed ? (
-            <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,9,6,0.88)', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
+            <View style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.88), alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
               <Txt style={{ textAlign: 'center' }}>{t('dl.playerError')}</Txt>
               <Button variant="dark" label={t('dl.remove')} onPress={() => { void dl.remove(talkId); goBack(); }} />
             </View>
           ) : null}
           <View style={{ position: 'absolute', top: 8, start: 8 }}>
-            <IconButton label={t('common.close')} onPress={goBack} style={{ backgroundColor: 'rgba(11,9,6,0.55)', borderWidth: 0 }}>
+            <IconButton label={t('common.close')} onPress={goBack} style={{ backgroundColor: veil(0.55), borderWidth: 0 }}>
               <Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} />
             </IconButton>
           </View>

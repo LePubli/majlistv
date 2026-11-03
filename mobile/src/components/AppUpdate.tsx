@@ -12,7 +12,7 @@ import { File, Paths } from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { API_URL } from '@/lib/config';
-import { colors, radius } from '@/lib/theme';
+import { colors, radius, veilDeep } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
 import {
   LatestRelease, ErrorKind, StepKind, UpdateCheckResult, bannerHidden, checkErrorDetail, formatSize, installedCode, notesFor, parseLatest, progressRatio, shouldCheck,
@@ -143,7 +143,7 @@ export function AppUpdate() {
       ) : null}
 
       <Modal visible={open && !!latest} transparent animationType="fade" onRequestClose={() => { if (!busy) later(); }}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(5,4,3,0.86)', justifyContent: 'center', padding: 22 }}>
+        <View style={{ flex: 1, backgroundColor: veilDeep(0.86), justifyContent: 'center', padding: 22 }}>
           {latest ? (
             <View accessibilityViewIsModal style={[{ maxHeight: '88%', borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.goldLine, padding: 22, gap: 10 }, dirStyle]}>
               <View style={{ alignItems: 'center', gap: 6 }}>

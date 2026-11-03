@@ -17,7 +17,7 @@ import { usePrayer } from '@/lib/prayerStore';
 import { statusAt } from '@/lib/prayer/prayerLogic';
 import { Ad, AdsReply, adAllowed, adRatio, parseAds, skipRemaining, tooLate } from '@/lib/ads';
 import { introEndedAt, onIntroEnd } from '@/lib/launch';
-import { colors } from '@/lib/theme';
+import { colors, veil } from '@/lib/theme';
 import { Txt } from '@/components/ui';
 
 const K_LAST = 'mejliss.adLast';
@@ -73,7 +73,7 @@ function AdScreen({ ad, skipSeconds, imageSeconds, onFinish }: { ad: Ad; skipSec
     return () => sub.remove();
   }, [canSkip, finish]);
   const open = () => { void Linking.openURL(ad.linkUrl).catch(() => { /* aucun navigateur : on continue */ }); finish('click'); };
-  const chip = { backgroundColor: 'rgba(11,9,6,0.7)' } as const;
+  const chip = { backgroundColor: veil(0.7) } as const;
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }, dirStyle]} accessibilityViewIsModal>
       {ad.mediaKind === 'video'

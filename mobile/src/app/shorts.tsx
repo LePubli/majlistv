@@ -13,7 +13,7 @@ import { registerMedia } from '@/lib/mediaRegistry';
 import { SITE_URL } from '@/lib/config';
 import { hasMore, mergeShorts, playableList, shortRatio } from '@/lib/shorts';
 import type { Short } from '@/lib/types';
-import { colors } from '@/lib/theme';
+import { colors, veil } from '@/lib/theme';
 import { Button, Txt } from '@/components/ui';
 import { AddToListModal } from '@/components/AddToListModal';
 
@@ -79,12 +79,12 @@ export default function ShortsScreen() {
       {/* Barre du haut, par-dessus le fil */}
       <View pointerEvents="box-none" style={{ position: 'absolute', top: insets.top + 6, start: 8, end: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} onPress={back} hitSlop={6}
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,9,6,0.55)' }}>
+          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.55) }}>
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>
         <Txt weight="extrabold" size={17} accessibilityRole="header">{t('shrTitle')}</Txt>
         <Pressable accessibilityRole="button" accessibilityLabel={muted ? t('shorts.unmute') : t('shorts.mute')} onPress={() => setMuted((m) => !m)} hitSlop={6}
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,9,6,0.55)' }}>
+          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.55) }}>
           <Feather name={muted ? 'volume-x' : 'volume-2'} size={22} color={colors.text} />
         </Pressable>
       </View>
@@ -96,7 +96,7 @@ export default function ShortsScreen() {
 function RailButton({ icon, label, onPress, active }: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; active?: boolean }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ minWidth: 56, minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? colors.goldTint : 'rgba(11,9,6,0.55)' }}>
+      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? colors.goldTint : veil(0.55) }}>
         <Feather name={icon} size={22} color={active ? colors.goldLight : colors.text} />
       </View>
       <Txt size={11} weight="medium" numberOfLines={1}>{label}</Txt>
@@ -129,7 +129,7 @@ function Page({ s, h, top, bottom, active, muted, fav, onFav, onList }: {
         ) : null}
         <Txt weight="extrabold" size={18} numberOfLines={2} style={{ paddingEnd: 64 }}>{s.title}</Txt>
         <Pressable accessibilityRole="button" accessibilityLabel={t('shorts.full')} onPress={() => router.push({ pathname: '/talk/[id]', params: { id: s.talk.id } })}
-          style={{ alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 18, borderRadius: 999, justifyContent: 'center', borderWidth: 1, borderColor: colors.gold, backgroundColor: 'rgba(11,9,6,0.55)' }}>
+          style={{ alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 18, borderRadius: 999, justifyContent: 'center', borderWidth: 1, borderColor: colors.gold, backgroundColor: veil(0.55) }}>
           <Txt weight="bold" size={14} color={colors.goldLight}>{t('shorts.full')}</Txt>
         </Pressable>
       </View>

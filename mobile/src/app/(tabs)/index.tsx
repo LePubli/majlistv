@@ -1,5 +1,6 @@
 // Accueil : comme celui du site. Bannière, « À réviser » / « Quiz à rattraper » / « Continuer à regarder », explorer par format,
 // rangées du catalogue (séries comprises), bande Kids, citation du jour. Visiteur : même accueil avec invitation à créer un compte.
+// Étape M1 : bloc « Aujourd'hui » sous la bannière et rangée « À regarder plus tard » (comme sur le site).
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
 import { FormatTiles, KidsBand } from '@/components/HomeBands';
+import { TodayBlock } from '@/components/TodayBlock';
 
 export default function HomeScreen() {
   const { api, user, t, config, feat, dirStyle } = useSession();
@@ -26,12 +28,13 @@ export default function HomeScreen() {
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   const review = useAsync(async () => (user ? await api.get<RevisionResponse>('/me/revision').then((r) => r.items).catch((e) => (isLearningRequired(e) ? [] : [])) : []), [user?.id]);
   const todo = useAsync(async () => (user ? await api.get<Card[]>('/me/quiz/todo').catch(() => []) : []), [user?.id]);
+  const laterList = useAsync(async () => (user && feat('watchlater') ? await api.get<Card[]>('/me/watchlater').catch(() => []) : []), [user?.id, feat('watchlater')]); // eslint-disable-line react-hooks/exhaustive-deps
   const kids = useAsync(async () => (feat('kids') ? await api.get<KidsHome>('/home/kids', undefined, false).catch(() => null) : null), [feat('kids')]); // eslint-disable-line react-hooks/exhaustive-deps
   const cit = useAsync(async () => (feat('citations') ? await api.get<Citation>('/citation/today', undefined, false).catch(() => null) : null), [feat('citations')]); // eslint-disable-line react-hooks/exhaustive-deps
   const [refreshing, setRefreshing] = useState(false);
 
   // Au retour sur l'accueil (après avoir regardé), « Continuer à regarder » se met à jour.
-  useFocusEffect(useCallback(() => { void cont.reload(); void todo.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
+  useFocusEffect(useCallback(() => { void cont.reload(); void todo.reload(); void laterList.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (home.loading && !home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}><Loading /></SafeAreaView>;
   if (!home.data) {
@@ -50,13 +53,17 @@ export default function HomeScreen() {
     <View style={[screenStyle, dirStyle]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40, gap: 22 }}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), review.reload(), todo.reload()]); setRefreshing(false); }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), review.reload(), todo.reload(), laterList.reload()]); setRefreshing(false); }} />}
       >
         <Hero hero={home.data.hero} />
+
+        <TodayBlock />
 
         {(review.data ?? []).length > 0 ? <Rail title={<>{t('revRow')}</>} items={review.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('lrTitle')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
         {(todo.data ?? []).length > 0 ? <Rail title={t('qpTodoRow')} items={todo.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('navLearn')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
         {(cont.data ?? []).length > 0 ? <Rail title={t('continueWatching')} items={cont.data ?? []} onSeeAll={() => router.navigate('/library')} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
+
+        {(laterList.data ?? []).length > 0 ? <Rail title={t('wlRow')} items={laterList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'later' } })} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
         {user ? <FormatTiles /> : null}
 

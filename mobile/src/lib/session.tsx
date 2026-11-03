@@ -9,9 +9,12 @@ import type { AppConfig, User } from './types';
 import { unregisterPush } from './notifications';
 import { readLogin, type LoginResponse } from './twoFactor';
 import { runLogoutHooks } from './hooks';
+import { applySkin, currentSkin, pickSkin, type Skin } from './theme';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
+const SKIN_KEY = 'mejliss.skin'; // dernier thème reçu du site (appliqué dès le démarrage, même hors connexion)
+const SKIN_PICK_KEY = 'mejliss.skinPick'; // choix du membre, seulement si l'administrateur l'autorise
 
 // Le coffre peut être indisponible (rare) : on ne bloque jamais l'application pour ça.
 const read = async (k: string) => { try { return await SecureStore.getItemAsync(k); } catch { return null; } };
@@ -40,6 +43,16 @@ type Session = {
   /** Favoris du membre (identifiants) et bascule. */
   favs: Set<string>;
   toggleFav: (talkId: string) => Promise<void>;
+  /** « À regarder plus tard » (identifiants) et bascule ; renvoie 'added' | 'removed' | 'full' | 'error'. */
+  later: Set<string>;
+  toggleLater: (talkId: string) => Promise<'added' | 'removed' | 'full' | 'error'>;
+  /** Thème visuel en cours (réglage de l'administrateur) ; changer de thème redessine toute l'application. */
+  skin: Skin;
+  /** Le site laisse-t-il chaque visiteur choisir son thème ? */
+  skinChoice: boolean;
+  /** Choix du membre (null : celui de l'administrateur). Sans effet si skinChoice est faux. */
+  setSkinPick: (s: Skin | null) => void;
+  skinPick: Skin | null;
   /** À mettre sur la vue racine de chaque écran : fait basculer la mise en page pour l'arabe. */
   dirStyle: { direction: 'ltr' | 'rtl' };
 };
@@ -52,6 +65,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('fr');
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [later, setLater] = useState<Set<string>>(new Set());
+  const [skin, setSkin] = useState<Skin>(currentSkin());
+  const [skinPick, setSkinPickState] = useState<Skin | null>(null);
   const tokenRef = useRef<string | null>(null);
 
   // Session effacée (jeton expiré : le serveur n'accepte déjà plus rien, inutile de lui parler).
@@ -97,12 +113,54 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     catch { setFavs(favs); }
   }, [api, favs]);
 
+  // « À regarder plus tard » : identifiants chargés à la connexion (si la fonction est activée), vidés à la déconnexion.
+  const laterOn = config ? config.features.watchlater !== false : true;
+  useEffect(() => {
+    if (!user || !laterOn) { setLater(new Set()); return undefined; }
+    let alive = true;
+    api.get<string[]>('/me/watchlater/ids').then((r) => { if (alive) setLater(new Set(Array.isArray(r) ? r : [])); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, user?.id, laterOn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleLater = useCallback(async (talkId: string) => {
+    const has = later.has(talkId);
+    const next = new Set(later);
+    if (has) next.delete(talkId); else next.add(talkId);
+    setLater(next);
+    try {
+      if (has) await api.del(`/me/watchlater/${talkId}`); else await api.put(`/me/watchlater/${talkId}`);
+      return has ? 'removed' : 'added';
+    } catch (err) {
+      setLater(later);
+      return err instanceof ApiError && err.code === 'full' ? 'full' : 'error';
+    }
+  }, [api, later]);
+
+  // Thème : celui de l'administrateur (/config), ou le choix du membre si le site l'autorise.
+  const skinChoice = config?.skin?.choice === true;
+  useEffect(() => {
+    if (!config) return;
+    const def = pickSkin(config.skin?.def);
+    const want = skinChoice && skinPick ? skinPick : def;
+    void write(SKIN_KEY, def);
+    if (applySkin(want)) setSkin(want);
+  }, [config, skinChoice, skinPick]);
+  const setSkinPick = useCallback((v: Skin | null) => {
+    setSkinPickState(v);
+    if (v) void write(SKIN_PICK_KEY, v); else void remove(SKIN_PICK_KEY);
+  }, []);
+
   const feat = useCallback((id: string) => (config ? config.features[id] !== false : true), [config]);
 
   // Démarrage : langue enregistrée (sinon celle du téléphone), puis session enregistrée.
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Thème mémorisé : appliqué avant le premier affichage (pas d'éclair de l'autre thème).
+      const [savedSkin, savedPick] = await Promise.all([read(SKIN_KEY), read(SKIN_PICK_KEY)]);
+      if (savedPick) setSkinPickState(pickSkin(savedPick));
+      const first = savedPick ? pickSkin(savedPick) : pickSkin(savedSkin);
+      if (applySkin(first) && alive) setSkin(first);
       const savedLocale = await read(LOCALE_KEY);
       const l = savedLocale ? pickLocale(savedLocale) : pickLocale(getLocales()[0]?.languageCode);
       if (alive) setLocaleState(l);
@@ -150,9 +208,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Session>(() => ({
     ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
+    later, toggleLater, skin, skinChoice, skinPick, setSkinPick,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav]);
+  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

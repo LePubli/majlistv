@@ -6,14 +6,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSession } from '@/lib/session';
 import type { Card, Home } from '@/lib/types';
-import { colors, gradientFor } from '@/lib/theme';
+import { colors, gradientFor, veil } from '@/lib/theme';
 import { minutesLabel, thumbOf } from '@/lib/media';
 import { SITE_URL } from '@/lib/config';
 import { Button, Txt } from './ui';
 import { Badge } from './TalkCard';
 
 function Shade() {
-  return <LinearGradient colors={['rgba(11,9,6,0.15)', 'rgba(11,9,6,0.55)', colors.bg]} locations={[0, 0.55, 1]} style={{ position: 'absolute', inset: 0 }} />;
+  return <LinearGradient colors={[veil(0.15), veil(0.55), colors.bg]} locations={[0, 0.55, 1]} style={{ position: 'absolute', inset: 0 }} />;
 }
 
 function TextHero() {

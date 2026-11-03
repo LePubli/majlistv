@@ -46,7 +46,8 @@ export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs, ta
   );
 }
 
-const box = { padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 10 } as const;
+// Accesseurs : suivent le thème en cours.
+const box = { padding: 16, borderRadius: radius.panel, get backgroundColor() { return colors.panel; }, borderWidth: 1, get borderColor() { return colors.border; }, gap: 10 } as const;
 
 function Summary({ talk, insights }: { talk: Talk; insights: Insights | null }) {
   const { t } = useSession();
