@@ -10,7 +10,7 @@ export type SuraData = {
   verses: Verse[];
   text: ResourceMeta; translation: ResourceMeta | null; transliteration: ResourceMeta | null;
   translations: ResourceMeta[]; transliterations: ResourceMeta[]; tafsirs: ResourceMeta[];
-  wordsMeta?: ResourceMeta; tajweedMeta?: ResourceMeta;
+  wordsMeta?: ResourceMeta; wordsList?: ResourceMeta[]; tajweedMeta?: ResourceMeta;
   words?: Record<string, string[]>;
   tajweed?: Record<string, [string, number, number][]>;
 };
@@ -23,8 +23,9 @@ export type QuranPlan = {
 } | null;
 
 /** Réglages de lecture gardés sur le téléphone (comme « qr-prefs » du site). */
-export type QuranPrefs = { translation?: string; ph: boolean; tafsir: string; size: 1 | 2 | 3 | 4; reciter: string; chain: boolean; wbw: boolean; taj: boolean };
-export const DEFAULT_PREFS: QuranPrefs = { ph: true, tafsir: '', size: 2, reciter: '', chain: true, wbw: false, taj: false };
+/** wbwLang : langue du sens des mots quand l'interface est en arabe ('' = aucun, par défaut). */
+export type QuranPrefs = { translation?: string; ph: boolean; tafsir: string; size: 1 | 2 | 3 | 4; reciter: string; chain: boolean; wbw: boolean; wbwLang: string; taj: boolean };
+export const DEFAULT_PREFS: QuranPrefs = { ph: true, tafsir: '', size: 2, reciter: '', chain: true, wbw: false, wbwLang: '', taj: false };
 
 /** Relit des réglages enregistrés (texte JSON ou objet) : toute valeur inattendue reprend sa valeur par défaut. */
 export function readPrefs(raw: unknown): QuranPrefs {
@@ -42,6 +43,7 @@ export function readPrefs(raw: unknown): QuranPrefs {
     reciter: slug(o.reciter),
     chain: bool(o.chain, DEFAULT_PREFS.chain),
     wbw: bool(o.wbw, DEFAULT_PREFS.wbw),
+    wbwLang: typeof o.wbwLang === 'string' && /^[a-z]{2,3}$/.test(o.wbwLang) ? o.wbwLang : '',
     taj: bool(o.taj, DEFAULT_PREFS.taj),
   };
 }
@@ -54,16 +56,36 @@ export function suraQuery(locale: string, p: QuranPrefs): Record<string, string>
   const q: Record<string, string> = { lang: locale };
   if (p.translation) q.translation = p.translation;
   if (!p.ph) q.translit = 'none';
-  if (p.wbw) q.words = '1';
+  const w = wordsParam(locale, p);
+  if (w) q.words = w;
   if (p.taj) q.tajweed = '1';
   return q;
 }
 
-/** Adresse du fichier audio d'un verset ({sura3}/{aya3} : sur trois chiffres). Seules les adresses https sont acceptées. */
+/**
+ * Mot à mot (étape A1 bis) : interface française ou anglaise → la langue de l'interface (si l'option est cochée) ;
+ * interface arabe → rien par défaut, ou la langue choisie dans « Sens des mots ».
+ */
+export function wordsParam(locale: string, p: Pick<QuranPrefs, 'wbw' | 'wbwLang'>): string {
+  if (locale === 'ar') return p.wbwLang || '';
+  return p.wbw ? locale : '';
+}
+
+/** Nombre de versets de chaque sourate (riwaya Hafs, 6236 au total) — copie de api/src/modules/quran/juz.js. */
+export const SURA_VERSES: number[] = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+/** Numéro du verset dans tout le Coran (1 à 6236). */
+export function globalAyah(sura: number, aya: number): number {
+  let n = 0;
+  for (let i = 0; i < sura - 1; i++) n += SURA_VERSES[i];
+  return n + aya;
+}
+
+/** Adresse du fichier audio d'un verset : {sura3}/{aya3} (sur trois chiffres), {sura}/{aya}, ou {ayahg} (1 à 6236). https seulement. */
 export function reciterUrl(template: string, sura: number, aya: number): string | null {
   if (typeof template !== 'string' || !/^https:\/\//i.test(template)) return null;
   const pad = (x: number) => String(x).padStart(3, '0');
-  return template.replace(/\{sura3\}/g, pad(sura)).replace(/\{aya3\}/g, pad(aya)).replace(/\{sura\}/g, String(sura)).replace(/\{aya\}/g, String(aya));
+  return template.replace(/\{sura3\}/g, pad(sura)).replace(/\{aya3\}/g, pad(aya)).replace(/\{sura\}/g, String(sura)).replace(/\{aya\}/g, String(aya))
+    .replace(/\{ayahg\}/g, String(globalAyah(sura, aya)));
 }
 
 /** Verset suivant à enchaîner, ou null (fin de sourate, enchaînement coupé). */

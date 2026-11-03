@@ -55,7 +55,7 @@ export default function SuraScreen() {
       .then((r) => { if (!dead) { setD(r); setMissing(false); } })
       .catch(() => { if (!dead) setMissing(true); });
     return () => { dead = true; };
-  }, [api, num, locale, prefsReady, prefs.translation, prefs.ph, prefs.wbw, prefs.taj]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, num, locale, prefsReady, prefs.translation, prefs.ph, prefs.wbw, prefs.wbwLang, prefs.taj]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { api.get<Reciter[]>('/quran/reciters', undefined, false).then(setReciters).catch(() => setReciters([])); }, [api]);
 
@@ -116,7 +116,7 @@ export default function SuraScreen() {
   const tafsirMeta = tafsir ? d.tafsirs.find((x) => x.slug === tafsir.slug) : undefined;
   const credits: ResourceMeta[] = [d.text, d.translation, d.transliteration, tafsirMeta].filter(Boolean) as ResourceMeta[];
   if (reciter) credits.push({ slug: 'rc', lang: 'ar', name: reciter.name, credit: reciter.credit, license: reciter.license, sourceUrl: reciter.sourceUrl });
-  if (prefs.wbw && d.wordsMeta) credits.push(d.wordsMeta);
+  if (d.words && d.wordsMeta) credits.push(d.wordsMeta);
   if (prefs.taj && d.tajweedMeta) credits.push(d.tajweedMeta);
 
   const head = (
@@ -189,7 +189,8 @@ export default function SuraScreen() {
 
 /** Options de lecture : traduction, phonétique, tafsir, récitateur, enchaînement, mot à mot, tajwid, taille. */
 function Options({ d, prefs, set, reciters, reciter }: { d: SuraData; prefs: QuranPrefs; set: (p: Partial<QuranPrefs>) => void; reciters: Reciter[]; reciter: Reciter | null }) {
-  const { t } = useSession();
+  const { t, locale } = useSession();
+  const wbwLangs = [...new Set((d.wordsList ?? []).map((x) => x.lang))];
   const tr = prefs.translation || d.translation?.slug || 'none';
   const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <View style={{ gap: 6 }}>
@@ -220,9 +221,16 @@ function Options({ d, prefs, set, reciters, reciter }: { d: SuraData; prefs: Qur
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {d.transliterations.length > 0 ? toggle(t('qrPhonetic'), prefs.ph, 'ph') : null}
         {reciters.length > 0 ? toggle(t('qrChain'), prefs.chain, 'chain') : null}
-        {d.wordsMeta ? toggle(t('qrWbw'), prefs.wbw, 'wbw') : null}
+        {d.wordsMeta && locale !== 'ar' ? toggle(t('qrWbw'), prefs.wbw, 'wbw') : null}
         {d.tajweedMeta ? toggle(t('qrTajweed'), prefs.taj, 'taj') : null}
       </View>
+      {/* Interface arabe : pas de sens des mots par défaut ; on peut choisir une langue (étape A1 bis). */}
+      {locale === 'ar' && wbwLangs.length > 0 ? (
+        <Row label={t('qrWbwLang')}>
+          <Chip label={t('qrNone')} active={!prefs.wbwLang} onPress={() => set({ wbwLang: '' })} />
+          {wbwLangs.map((l) => <Chip key={l} label={l === 'fr' ? 'Français' : l === 'en' ? 'English' : l} active={prefs.wbwLang === l} onPress={() => set({ wbwLang: l })} />)}
+        </Row>
+      ) : null}
       <Row label={t('qrSize')}>
         {([1, 2, 3, 4] as const).map((s) => <Chip key={s} label={'A'.padEnd(s, '+')} active={prefs.size === s} onPress={() => set({ size: s })} />)}
       </Row>
@@ -241,7 +249,7 @@ function VerseCard({ v, d, prefs, playing, canPlay, onPlay, tafsirText, tafsirLa
   const arStyle = { fontFamily: AR_FONT, fontSize: size, lineHeight: Math.round(size * 2), color: colors.text, textAlign: 'right' as const, writingDirection: 'rtl' as const };
   const cps = [...v.ar];
   const marks = prefs.taj ? d.tajweed?.[String(v.aya)] : null;
-  const words = prefs.wbw ? d.words?.[String(v.aya)] : null;
+  const words = d.words?.[String(v.aya)] ?? null;
   const wm = words && wordMode(v.ar, words);
   const trRtl = d.translation?.lang === 'ar';
   const colored = (from: number, to: number) => paint(cps, marks, from, to).map((p, i) => (p.rule ? <Text key={i} style={{ color: tajColor(p.rule) }}>{p.text}</Text> : p.text));
@@ -262,8 +270,10 @@ function VerseCard({ v, d, prefs, playing, canPlay, onPlay, tafsirText, tafsirLa
 
       {wm && words ? (
         <View style={{ direction: 'rtl', flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-          {tokens(cps).map(([a, b], i) => (
-            <Pressable key={a} accessibilityRole="button" accessibilityState={{ selected: sel === i }} accessibilityLabel={`${cps.slice(a, b).join('')} — ${words[i]}`}
+          {tokens(cps).map(([a, b], i) => (!words[i]
+            // Mot sans sens (basmala du verset 1) : affiché, mais pas touchable.
+            ? <View key={a} style={{ paddingHorizontal: 4 }}><Text style={arStyle}>{colored(a, b)}</Text></View>
+            : <Pressable key={a} accessibilityRole="button" accessibilityState={{ selected: sel === i }} accessibilityLabel={`${cps.slice(a, b).join('')} — ${words[i]}`}
               onPress={() => setSel(sel === i ? null : i)}
               style={{ paddingHorizontal: 4, borderRadius: 8, backgroundColor: sel === i ? colors.goldTint : 'transparent' }}>
               <Text style={arStyle}>{colored(a, b)}</Text>
@@ -273,7 +283,7 @@ function VerseCard({ v, d, prefs, playing, canPlay, onPlay, tafsirText, tafsirLa
       ) : (
         <Text style={arStyle} accessibilityLanguage="ar" onPress={canPlay ? onPlay : undefined}>{marks ? colored(0, cps.length) : v.ar}</Text>
       )}
-      {wm && words && sel !== null ? (
+      {wm && words && sel !== null && words[sel] ? (
         <Txt size={14} color={colors.goldLight} accessibilityLiveRegion="polite">{cps.slice(...tokens(cps)[sel]).join('')} — {words[sel]}</Txt>
       ) : null}
 

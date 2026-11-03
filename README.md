@@ -7064,3 +7064,41 @@ docker exec dockpanel-git-majlistv-api node scripts/verifier-coran.mjs
 Résultat attendu : « RÉSULTAT : 0 écart » et, pour l'arabe, « 6236 / 6236 versets identiques au fichier d'origine ». En cas d'écart : ne rien corriger à la main ; Admin → Coran → « Ajouter le Coran complet » (réimport), puis relancer la commande.
 
 **Limite honnête.** Ce contrôle prouve que le texte affiché est exactement celui de Tanzil (référence reconnue, utilisée par de nombreux sites). Il ne remplace pas une relecture par une personne qualifiée si tu souhaites une validation religieuse formelle.
+
+
+## Étape A1 — Récitateurs verset par verset (catalogues) et mot à mot selon la langue (04/11)
+
+**Description.**
+- **Récitateurs** (Admin → Coran → Récitateurs) :
+  - nouveaux boutons **« Ajouter depuis EveryAyah »** et **« Ajouter depuis Islamic Network »** : le serveur lit le catalogue de la source (EveryAyah : `everyayah.com/data/recitations.js` ; Islamic Network : `api.alquran.cloud/v1/edition?format=audio&type=versebyverse`, récitations arabes verset par verset), affiche la liste, l'administrateur coche ; les récitateurs sont créés **non proposés** (source, licence et crédit remplis) ;
+  - bouton **« ▶ 1:1 »** sur chaque ligne pour écouter le premier verset avant de proposer ;
+  - une adresse modèle peut désormais contenir **`{ayahg}`** (numéro du verset de 1 à 6236), utilisé par Islamic Network (`https://cdn.islamic.network/quran/audio/128/ar.alafasy/{ayahg}.mp3`) ; `{sura3}{aya3}` (EveryAyah) reste valable ;
+  - site : la protection du navigateur (CSP « media-src ») autorise toujours `everyayah.com` et `cdn.islamic.network`, et l'origine de chaque récitateur proposé (lue sur l'API, gardée 5 minutes) : plus besoin de `CSP_MEDIA_ORIGINS` pour les récitateurs. L'application téléphone n'a pas cette protection.
+- **Mot à mot** (toucher un mot arabe → son sens) :
+  - une ressource « Mot à mot » **par langue** (fr, en…) ; interface française → sens en français, anglaise → en anglais (option « Mot à mot » des options de lecture) ;
+  - interface **arabe** : aucun sens par défaut ; option **« معاني الكلمات / Sens des mots »** (Aucun / Français / English) ;
+  - les mots sont **alignés sur le texte arabe affiché** : le texte Tanzil commence le verset 1 de chaque sourate (sauf 1 et 9) par la basmala (4 mots) que les sources de mot à mot comptent à part ; ces 4 mots s'affichent sans sens (pas touchables). Un verset dont le nombre de mots ne correspond pas n'a pas de mot à mot (l'import indique combien) ;
+  - import : formats acceptés en plus de l'existant — clés `"sourate:verset:mot"` (valeur texte ou `{ t | text | translation }`), tableaux `[sourate, verset, mot, texte]` ; un dernier « mot » qui n'est que le numéro du verset est retiré.
+- Le site, l'API et l'application suivent les mêmes règles (`api/src/modules/quran/lib.js`, `web/lib/quranAudio.js`, `mobile/src/lib/quran.ts`).
+
+**Sources et licences (à confirmer par Epok avant de proposer).**
+- Islamic Network : conditions lues (https://alquran.cloud/terms-and-conditions) — récitations confiées pour une diffusion gratuite non commerciale ; usage commercial toléré, droits conservés par les récitateurs (retrait possible sur demande) ; mise en cache demandée.
+- EveryAyah : conditions **non lues** (site inaccessible depuis l'environnement de Claude) → licence marquée « à vérifier ».
+- Mot à mot : QUL (Tarteel, https://qul.tarteel.ai) — « French wbw translation » (n° 806, 99 %) et « English Word by Word Translation » (n° 59, 99 %). La FAQ QUL autorise l'usage commercial selon la licence de chaque ressource ; la fiche de licence de ces deux ressources **n'a pas pu être lue** : à vérifier.
+- Le projet GitHub `yshalsager/grayjay-plugins` (licence AGPL) a seulement servi à repérer les adresses publiques ; aucun code n'en est repris.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (aucune migration), puis `majlistv-web`. L'application se met à jour seule (GitHub Actions). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Mise en route.**
+1. Récitateurs : Admin → Coran → Récitateurs → « Ajouter depuis Islamic Network » (et/ou EveryAyah) → cocher → « Ajouter » → « ▶ 1:1 » pour écouter → « Proposer ».
+2. Mot à mot : sur https://qul.tarteel.ai, ressources « Word by word translation » → « French wbw translation » puis « English Word by Word Translation » → télécharger le fichier **JSON**. Admin → Coran → « Nouvelle ressource » : type « Mot à mot », langue `fr` (puis `en`), nom, auteur, adresse de la source, **licence et crédit exacts lus sur QUL** → « Importer » (fichier, format json) → lire le message (versets importés, versets non alignés) → « Afficher ». Si le fichier n'est pas reconnu, m'envoyer ses premières lignes.
+
+**Debug.** « Catalogue injoignable depuis le serveur » : le VPS ne joint pas la source (tester `docker exec dockpanel-git-majlistv-api wget -qO- https://api.alquran.cloud/v1/edition?format=audio | head -c 200`). « ▶ 1:1 » muet sur le site : vérifier l'en-tête `curl -sI https://majlisstv.le-publicitaire.fr/coran/1 | grep -io "media-src[^;]*"`. Mot à mot absent : ressource non affichée, langue différente, ou verset non aligné.
+
+**Tests.** `api/tests/test_quran_a1.mjs` (numéro global, modèles, catalogues EveryAyah / Islamic Network avec faux téléchargement, alignement basmala, formats QUL) ; `api/tests/test_quran.py` et `test_quran_lib.mjs` toujours OK ; `web/tests/test_quran_web.mjs` (adresse {ayahg}, langue du mot à mot, CSP) ; application : `npm test` (193). Essai réel sur la base de test avec le vrai texte Tanzil et un mot à mot fictif fr / en : alignement de la basmala (2:1 → 4 mots sans sens + « Alif-Lam-Mim »), verset non aligné écarté et signalé à l'import, choix de la langue (fr, en, arabe → en), récitateur `{ayahg}` accepté, catalogue refusé proprement sans Internet ; capture du site en arabe (option « معاني الكلمات », sens anglais du mot touché). **Pas testé** : lecture des vrais fichiers audio et des vrais catalogues (sites bloqués depuis l'environnement de Claude), vrai fichier QUL (format exact à confirmer), rendu sur téléphone.

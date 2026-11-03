@@ -28,11 +28,11 @@ assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranle
 console.log('web quran shortcut OK');
 // 45B2 : récitation, mot à mot, tajwid
 const page = read('../app/coran/[n]/page.js');
-assert.match(page, /qr-play/, 'bouton ▶ par verset'); assert.match(page, /\/quran\/reciters/, 'récitateurs chargés'); assert.match(page, /urlTemplate\.replace/, 'adresse du verset construite');
-assert.match(page, /words', '1'/, 'mot à mot demandé à la demande'); assert.match(page, /tajweed', '1'/, 'tajwid demandé à la demande'); assert.match(page, /toks\.length === words\.length/, 'mot à mot seulement si le nombre de mots correspond');
+assert.match(page, /qr-play/, 'bouton ▶ par verset'); assert.match(page, /\/quran\/reciters/, 'récitateurs chargés'); assert.match(page, /reciterUrl\(reciter\.urlTemplate/, 'adresse du verset construite (lib/quranAudio)');
+assert.match(page, /qs\.set\('words', w\)/, 'mot à mot demandé à la demande (langue)'); assert.match(page, /tajweed', '1'/, 'tajwid demandé à la demande'); assert.match(page, /toks\.length === words\.length/, 'mot à mot seulement si le nombre de mots correspond');
 assert.match(read('../middleware.js'), /CSP_MEDIA_ORIGINS/, 'origines audio autorisées par la CSP');
 assert.match(read('../components/QuranAdmin.js'), /QuranReciters/, 'récitateurs dans Admin → Coran');
-for (const k of ['qrReciter', 'qrWbw', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
+for (const k of ['qrReciter', 'qrWbw', 'qrWbwLang', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web quran 45B2 OK');
 const lp = read('../app/(module-learning)/learning/page.js');
 assert.match(lp, /feat\('quran'\) \? \[\{ id: 'quran', label: t\('qrNav'\) \}\]/, 'onglet « Coran » dans Apprendre (avec Tableau de bord, Progression…)');
@@ -40,3 +40,27 @@ assert.match(lp, /<TabPanel id="quran"[\s\S]{0,120}<QuranIndex embedded \/>/, 'l
 assert.match(lp, /feat\('quran'\) && <p className="lg-quran"><Link className="btn ghost" href="\/coran">/, 'écran verrouillé : lien vers le Coran gratuit');
 assert.equal((read('../lib/i18n.js').match(/lgQuran:/g) || []).length, 3, 'lgQuran en fr/en/ar');
 console.log('web quran lien Apprendre OK');
+
+// Étape A1 / A1 bis : {ayahg}, mot à mot selon la langue, CSP des récitateurs, catalogue dans l'admin.
+const qa = await import('../lib/quranAudio.js');
+assert.equal(qa.SURA_VERSES.reduce((a, b) => a + b, 0), 6236, '6236 versets');
+assert.equal(qa.globalAyah(2, 255), 262, 'Ayat al-Kursi = verset 262');
+assert.equal(qa.reciterUrl('https://cdn.islamic.network/quran/audio/128/ar.alafasy/{ayahg}.mp3', 114, 6), 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/6236.mp3', '{ayahg}');
+assert.equal(qa.reciterUrl('http://x/{ayahg}.mp3', 1, 1), null, 'https seulement');
+assert.equal(qa.wordsParam('ar', { wbw: true, wbwLang: '' }), '', 'arabe : aucun sens par défaut');
+assert.equal(qa.wordsParam('ar', { wbwLang: 'en' }), 'en', 'arabe : langue choisie');
+assert.equal(qa.wordsParam('fr', { wbw: true }), 'fr', 'français : suit la langue');
+assert.equal(qa.wordsParam('en', { wbw: false }), '', 'option décochée');
+const { SURA_VERSES: API } = await import('../../api/src/modules/quran/juz.js');
+assert.deepEqual(qa.SURA_VERSES, API, 'même table que l’API');
+// La CSP se lit dans le source (le middleware dépend de next/server, absent hors du serveur Next).
+const mwSrc = read('../middleware.js');
+assert.match(mwSrc, /RECITER_ORIGINS = \['https:\/\/everyayah\.com', 'https:\/\/cdn\.islamic\.network'\]/, 'CSP : serveurs des deux catalogues autorisés');
+assert.match(mwSrc, /'media-src': \[\.\.\.new Set\(\["'self'", 'blob:', \.\.\.stor, \.\.\.RECITER_ORIGINS, \.\.\.media/, 'CSP : media-src avec récitateurs');
+assert.match(mwSrc, /\/quran\/reciters/, 'CSP : récitateurs proposés lus sur l’API');
+assert.match(mwSrc, /media: await reciterOrigins\(\)/, 'CSP : origines passées à buildCsp');
+assert.deepEqual(qa.reciterOriginsOf([{ urlTemplate: 'https://a.example/x/{sura3}{aya3}.mp3' }, { urlTemplate: 'https://a.example/y/{ayahg}.mp3' }, { urlTemplate: 'http://b.example/{ayahg}.mp3' }, {}]), ['https://a.example'], 'origines des récitateurs (https, sans doublon)');
+assert.match(page, /qrWbwLang/, 'option « Sens des mots » en arabe');
+const adm = read('../components/QuranReciters.js');
+assert.match(adm, /reciter-catalog\?source=/, 'catalogue dans l’admin'); assert.match(adm, /enabled: false/, 'ajoutés non proposés');
+console.log('test_quran_web A1 OK');

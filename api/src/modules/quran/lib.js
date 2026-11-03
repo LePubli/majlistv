@@ -2,6 +2,7 @@
 import dns from 'node:dns/promises';
 import { pool } from '../../db.js';
 import { isPrivateHost } from '../../mediaImport.js';
+import { SURA_VERSES } from './juz.js';
 
 export const KINDS = ['text', 'translation', 'transliteration', 'tafsir', 'words', 'tajweed'];
 export const TOTAL_VERSES = 6236; // total habituel du texte Hafs (sans la basmala des sourates) : sert à un simple avertissement
@@ -128,12 +129,15 @@ export function parseWords(content) {
   const items = [];
   if (Array.isArray(data) || Array.isArray(data?.words)) {
     for (const w of (Array.isArray(data) ? data : data.words)) {
+      // Tableau [sourate, verset, mot, texte] (« nested array ») ou objet.
+      if (Array.isArray(w)) { items.push([Number(w[0]), Number(w[1]), Number(w[2]), w[3]]); continue; }
       items.push([Number(w?.sura ?? w?.surah ?? w?.chapter), Number(w?.aya ?? w?.ayah ?? w?.verse), Number(w?.position ?? w?.word ?? w?.pos ?? w?.index), w?.text ?? w?.translation ?? w?.meaning ?? w?.content]);
     }
   } else if (data && typeof data === 'object') {
     for (const [k, v] of Object.entries(data)) {
       const m = /^(\d+)[:_-](\d+)[:_-](\d+)$/.exec(k);
-      items.push(m ? [Number(m[1]), Number(m[2]), Number(m[3]), typeof v === 'string' ? v : v?.text ?? v?.translation] : [NaN, NaN, NaN, null]);
+      // Clés « 1:1:1 » (sourate:verset:mot) ; valeur texte, ou objet { text | translation | t }.
+      items.push(m ? [Number(m[1]), Number(m[2]), Number(m[3]), typeof v === 'string' ? v : v?.text ?? v?.translation ?? v?.t] : [NaN, NaN, NaN, null]);
     }
   } else return { error: 'Format JSON non reconnu.' };
   const by = new Map(); let skipped = 0;
@@ -146,7 +150,9 @@ export function parseWords(content) {
   }
   const rows = [];
   for (const v of by.values()) {
-    const n = v.w.size;
+    let n = v.w.size;
+    // Certaines sources ajoutent en dernier « mot » le numéro du verset (ex. « (5) ») : il n'a pas de sens à afficher.
+    if (n > 1 && /^[\s()\[\]{}0-9\u0660-\u0669\u06F0-\u06F9\u06DD]+$/.test(v.w.get(n) || '')) { v.w.delete(n); n--; }
     let good = true;
     for (let i = 1; i <= n; i++) if (!v.w.has(i)) { good = false; break; }
     if (!good) { skipped += n; continue; }
@@ -155,6 +161,17 @@ export function parseWords(content) {
   rows.sort((a, b) => a.sura - b.sura || a.aya - b.aya);
   if (!rows.length) return { error: 'Aucun mot valide trouvé dans ce fichier (sourate, verset, numéro du mot, texte).' };
   return { rows, skipped };
+}
+
+// Aligne le mot à mot sur les mots du texte arabe affiché. Le texte Tanzil commence le verset 1 de chaque sourate (sauf 1 et 9)
+// par « بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ » (4 mots), absente des sources qui comptent la basmala à part : on la laisse sans sens ('').
+// Renvoie la liste alignée (même longueur que le texte) ou null si les nombres de mots ne se correspondent pas.
+export function alignWords(sura, aya, arabic, words) {
+  if (!Array.isArray(words)) return null;
+  const n = String(arabic || '').trim().split(/\s+/).filter(Boolean).length;
+  if (n === words.length) return words;
+  if (aya === 1 && sura !== 1 && sura !== 9 && n === words.length + 4) return ['', '', '', '', ...words];
+  return null;
 }
 
 // Tajwid : liste [{ surah, ayah, annotations: [{ rule, start, end }] }] — positions en caractères (points de code) du texte arabe.
@@ -198,14 +215,114 @@ async function replaceInto(resource, sql, rows, mk) {
 export const importWords = (res, rows) => replaceInto(res, 'INSERT INTO quran_words(resource_id, sura, aya, words) VALUES ($1,$2,$3,$4)', rows, (r) => [res.id, r.sura, r.aya, r.words]);
 export const importTajweed = (res, rows) => replaceInto(res, 'INSERT INTO quran_tajweed(resource_id, sura, aya, marks) VALUES ($1,$2,$3,$4::jsonb)', rows, (r) => [res.id, r.sura, r.aya, JSON.stringify(r.marks)]);
 
-// Adresse d'un récitateur : https, avec {sura} ou {sura3} et {aya} ou {aya3} ; renvoie { origin } ou { error }.
+// Numéro du verset dans tout le Coran (1 à 6236) : utilisé par certains serveurs audio (Islamic Network / AlQuran.cloud).
+export function globalAyah(sura, aya) {
+  let n = 0;
+  for (let i = 0; i < sura - 1; i++) n += SURA_VERSES[i];
+  return n + aya;
+}
+
+// Adresse du fichier d'un verset à partir du modèle : {sura3}/{aya3} (sur 3 chiffres), {sura}/{aya}, ou {ayahg} (1 à 6236).
+export function reciterFileUrl(tpl, sura, aya) {
+  return String(tpl)
+    .replace(/\{sura3\}/g, String(sura).padStart(3, '0')).replace(/\{aya3\}/g, String(aya).padStart(3, '0'))
+    .replace(/\{sura\}/g, String(sura)).replace(/\{aya\}/g, String(aya)).replace(/\{ayahg\}/g, String(globalAyah(sura, aya)));
+}
+
+// Adresse d'un récitateur : https, avec ({sura} ou {sura3}) et ({aya} ou {aya3}), ou bien {ayahg} ; renvoie { origin } ou { error }.
 export function checkReciterUrl(tpl) {
   const t = String(tpl || '').trim();
-  if (!/\{sura3?\}/.test(t) || !/\{aya3?\}/.test(t)) return { error: 'L\'adresse doit contenir {sura3} (ou {sura}) et {aya3} (ou {aya}).' };
+  const pair = /\{sura3?\}/.test(t) && /\{aya3?\}/.test(t);
+  if (!pair && !/\{ayahg\}/.test(t)) return { error: 'L\'adresse doit contenir {sura3} (ou {sura}) et {aya3} (ou {aya}), ou bien {ayahg} (numéro du verset de 1 à 6236).' };
   let u;
-  try { u = new URL(t.replace(/\{sura3\}/g, '001').replace(/\{aya3\}/g, '001').replace(/\{sura\}/g, '1').replace(/\{aya\}/g, '1')); } catch { return { error: 'Adresse invalide.' }; }
+  try { u = new URL(reciterFileUrl(t, 1, 1)); } catch { return { error: 'Adresse invalide.' }; }
   if (u.protocol !== 'https:' || u.username || u.password) return { error: 'L\'adresse doit commencer par https:// et ne pas contenir d\'identifiant.' };
   return { origin: u.origin };
+}
+
+// --- Catalogues de récitateurs verset par verset (lus par le serveur ; rien n'est copié : le navigateur lit chez la source) ----------
+export const CATALOGS = {
+  everyayah: {
+    label: 'EveryAyah.com',
+    url: 'https://everyayah.com/data/recitations.js',
+    sourceUrl: 'https://everyayah.com',
+    license: 'EveryAyah.com — conditions d\'utilisation à vérifier par l\'administrateur avant de proposer ce récitateur',
+  },
+  islamic: {
+    label: 'Islamic Network (AlQuran.cloud)',
+    url: 'https://api.alquran.cloud/v1/edition?format=audio&type=versebyverse',
+    sourceUrl: 'https://alquran.cloud/terms-and-conditions',
+    license: 'Islamic Network : récitations confiées pour une diffusion gratuite non commerciale ; usage commercial toléré, droits conservés par les récitateurs (retrait possible sur demande)',
+  },
+};
+const slugOf = (prefix, s) => `${prefix}-${String(s).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')}`.slice(0, 60);
+
+// EveryAyah : fichier « recitations.js » = objet JSON { "1": { subfolder, name, bitrate }, …, ayahCount: […] }.
+export function parseEveryAyah(content) {
+  const txt = String(content || '');
+  const a = txt.indexOf('{'); const b = txt.lastIndexOf('}');
+  let data;
+  try { data = JSON.parse(txt.slice(a, b + 1)); } catch { return { error: 'Catalogue EveryAyah illisible.' }; }
+  const c = CATALOGS.everyayah;
+  const items = Object.entries(data).filter(([k, v]) => /^\d+$/.test(k) && v && typeof v === 'object' && /^[A-Za-z0-9_.-]{2,120}$/.test(String(v.subfolder || '')))
+    .sort((x, y) => Number(x[0]) - Number(y[0]))
+    .map(([, v]) => {
+      const name = String(v.name || v.subfolder).trim().slice(0, 100);
+      const bitrate = String(v.bitrate || '').trim().slice(0, 20);
+      return {
+        slug: slugOf('ea', v.subfolder), name: `${name}${bitrate ? ` (${bitrate})` : ''}`.slice(0, 120),
+        urlTemplate: `https://everyayah.com/data/${v.subfolder}/{sura3}{aya3}.mp3`,
+        sourceUrl: c.sourceUrl, license: c.license, credit: `Récitation : ${name} — EveryAyah.com`.slice(0, 300),
+      };
+    });
+  return items.length ? { items } : { error: 'Aucun récitateur dans le catalogue EveryAyah.' };
+}
+
+// Islamic Network : liste des éditions audio « verset par verset » ; on garde les récitations en arabe. L'adresse des fichiers
+// (débit compris) est lue sur le premier verset de chaque édition : …/quran/audio/<débit>/<édition>/1.mp3 → …/{ayahg}.mp3.
+export function parseIslamicEditions(content) {
+  let data;
+  try { data = JSON.parse(String(content || '')); } catch { return { error: 'Catalogue Islamic Network illisible.' }; }
+  const list = Array.isArray(data?.data) ? data.data : [];
+  const eds = list.filter((e) => e && e.format === 'audio' && (e.type === 'versebyverse' || !e.type) && e.language === 'ar' && /^[a-z]{2}\.[a-z0-9_-]{2,60}$/i.test(String(e.identifier || '')));
+  return eds.length ? { editions: eds.map((e) => ({ identifier: e.identifier, name: String(e.englishName || e.identifier).slice(0, 80), nameAr: String(e.name || '').slice(0, 80) })) } : { error: 'Aucune récitation dans le catalogue Islamic Network.' };
+}
+export function islamicTemplate(audioUrl, identifier) {
+  const m = /^(https:\/\/cdn\.islamic\.network\/quran\/audio\/\d{2,3}\/)([^/]+)\/1\.mp3$/.exec(String(audioUrl || ''));
+  return m && m[2] === identifier ? `${m[1]}${identifier}/{ayahg}.mp3` : `https://cdn.islamic.network/quran/audio/128/${identifier}/{ayahg}.mp3`;
+}
+export function islamicItem(ed, template) {
+  const c = CATALOGS.islamic;
+  return {
+    slug: slugOf('in', ed.identifier), name: `${ed.name}${ed.nameAr ? ` — ${ed.nameAr}` : ''}`.slice(0, 120), urlTemplate: template,
+    sourceUrl: c.sourceUrl, license: c.license, credit: `Récitation : ${ed.name} — Islamic Network (cdn.islamic.network)`.slice(0, 300),
+  };
+}
+
+const catalogCache = new Map(); // source → { at, items }
+export async function reciterCatalog(source, { fetcher = fetchText, now = Date.now() } = {}) {
+  const hit = catalogCache.get(source);
+  if (hit && now - hit.at < 10 * 60 * 1000) return { items: hit.items };
+  let out;
+  if (source === 'everyayah') out = parseEveryAyah(await fetcher(CATALOGS.everyayah.url));
+  else if (source === 'islamic') {
+    const r = parseIslamicEditions(await fetcher(CATALOGS.islamic.url));
+    if (r.error) return r;
+    const items = new Array(r.editions.length); let next = 0;
+    const worker = async () => {
+      for (;;) {
+        const i = next++; if (i >= r.editions.length) return;
+        const ed = r.editions[i];
+        let audio = null;
+        try { audio = JSON.parse(await fetcher(`https://api.alquran.cloud/v1/ayah/1/${ed.identifier}`))?.data?.audio; } catch { /* débit par défaut */ }
+        items[i] = islamicItem(ed, islamicTemplate(audio, ed.identifier));
+      }
+    };
+    await Promise.all(Array.from({ length: 4 }, worker));
+    out = { items };
+  } else return { error: 'Catalogue inconnu.' };
+  if (out.items) catalogCache.set(source, { at: now, items: out.items });
+  return out;
 }
 
 // Remplace tous les versets d'une ressource (transaction : en cas d'erreur, l'ancien contenu reste).

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
+import { reciterUrl, wordsParam } from '../../../lib/quranAudio';
 
 const KEY = 'qr-prefs';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
@@ -50,7 +51,7 @@ export default function SuraPage() {
   const { t, locale, call } = useApp();
   const [d, setD] = useState(null);
   const [missing, setMissing] = useState(false);
-  const [prefs, setPrefs] = useState({ translation: undefined, ph: true, tafsir: '', size: 2, reciter: '', chain: true, wbw: false, taj: false });
+  const [prefs, setPrefs] = useState({ translation: undefined, ph: true, tafsir: '', size: 2, reciter: '', chain: true, wbw: false, wbwLang: '', taj: false });
   const [reciters, setReciters] = useState([]);
   const [playing, setPlaying] = useState(null); // numéro du verset en cours de lecture
   const [audioErr, setAudioErr] = useState(false);
@@ -65,13 +66,16 @@ export default function SuraPage() {
     const qs = new URLSearchParams({ lang: locale });
     if (prefs.translation) qs.set('translation', prefs.translation);
     if (!prefs.ph) qs.set('translit', 'none');
-    if (prefs.wbw) qs.set('words', '1');
+    // Mot à mot (étape A1 bis) : langue de l'interface en français / anglais ; en arabe, seulement si une langue est choisie.
+    const w = wordsParam(locale, prefs);
+    if (w) qs.set('words', w);
     if (prefs.taj) qs.set('tajweed', '1');
     return call(`/quran/suras/${num}?${qs}`, {}, null);
-  }, [call, num, locale, prefs.translation, prefs.ph, prefs.wbw, prefs.taj]);
+  }, [call, num, locale, prefs.translation, prefs.ph, prefs.wbw, prefs.wbwLang, prefs.taj]);
   useEffect(() => { call('/quran/reciters', {}, null).then((r) => { if (r.ok) setReciters(r.data); }); }, [call]);
   const reciter = reciters.find((x) => x.slug === prefs.reciter) || reciters[0] || null;
-  const urlOf = useCallback((aya) => reciter && reciter.urlTemplate.replace(/\{sura3\}/g, String(num).padStart(3, '0')).replace(/\{aya3\}/g, String(aya).padStart(3, '0')).replace(/\{sura\}/g, String(num)).replace(/\{aya\}/g, String(aya)), [reciter, num]);
+  // Adresse du verset : {sura3}{aya3}, {sura}/{aya} ou {ayahg} (numéro de 1 à 6236, étape A1).
+  const urlOf = useCallback((aya) => reciter && reciterUrl(reciter.urlTemplate, num, aya), [reciter, num]);
   const stop = useCallback(() => { const a = audioRef.current; if (a) { a.pause(); a.removeAttribute('src'); a.load(); } setPlaying(null); }, []);
   const play = useCallback((aya) => {
     const a = audioRef.current; const url = urlOf(aya);
@@ -136,7 +140,16 @@ export default function SuraPage() {
           </label>
         )}
         {reciters.length > 0 && <label className="chk"><input type="checkbox" checked={prefs.chain} onChange={(e) => set({ chain: e.target.checked })} /> {t('qrChain')}</label>}
-        {d.wordsMeta && <label className="chk"><input type="checkbox" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
+        {d.wordsMeta && locale !== 'ar' && <label className="chk"><input type="checkbox" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
+        {/* Interface arabe : pas de sens des mots par défaut ; option pour choisir une langue (fr, en…). */}
+        {d.wordsList?.length > 0 && locale === 'ar' && (
+          <label>{t('qrWbwLang')}
+            <select value={prefs.wbwLang || ''} onChange={(e) => set({ wbwLang: e.target.value })}>
+              <option value="">{t('qrNone')}</option>
+              {[...new Set(d.wordsList.map((x) => x.lang))].map((l) => <option key={l} value={l}>{l === 'fr' ? 'Français' : l === 'en' ? 'English' : l}</option>)}
+            </select>
+          </label>
+        )}
         {d.tajweedMeta && <label className="chk"><input type="checkbox" checked={prefs.taj} onChange={(e) => set({ taj: e.target.checked })} /> {t('qrTajweed')}</label>}
         <label>{t('qrSize')}
           <input type="range" min="1" max="4" value={prefs.size} onChange={(e) => set({ size: Number(e.target.value) })} />
@@ -154,7 +167,7 @@ export default function SuraPage() {
               {reciter && (
                 <button type="button" className="qr-play" aria-pressed={playing === v.aya} aria-label={`${playing === v.aya ? t('qrStop') : t('qrListen')} — ${t('qrVerse')} ${v.aya}`} onClick={() => (playing === v.aya ? stop() : play(v.aya))}>{playing === v.aya ? '■' : '▶'}</button>
               )}
-              <Arabic v={v} words={d.words?.[v.aya]} marks={prefs.taj ? d.tajweed?.[v.aya] : null} sel={sel?.aya === v.aya ? sel.i : null} onPick={(i) => setSel(sel?.aya === v.aya && sel.i === i ? null : { aya: v.aya, i })} onText={reciter && !prefs.wbw ? () => (playing === v.aya ? stop() : play(v.aya)) : null} />
+              <Arabic v={v} words={d.words?.[v.aya]} marks={prefs.taj ? d.tajweed?.[v.aya] : null} sel={sel?.aya === v.aya ? sel.i : null} onPick={(i) => setSel(sel?.aya === v.aya && sel.i === i ? null : { aya: v.aya, i })} onText={reciter && !d.words?.[v.aya] ? () => (playing === v.aya ? stop() : play(v.aya)) : null} />
               {v.ph && <p className="qr-ph" dir="ltr">{v.ph}</p>}
               {v.tr && <p className="qr-tr" dir={d.translation?.lang === 'ar' ? 'rtl' : 'ltr'}>{v.tr}</p>}
               {v.tn && (
@@ -196,10 +209,12 @@ function Arabic({ v, words, marks, sel, onPick, onText }) {
   }
   return (
     <div className="qr-ar qr-words" lang="ar" dir="rtl">
-      {toks.map(([a, b], i) => (
-        <button type="button" key={a} className={`qr-w${sel === i ? ' on' : ''}`} aria-pressed={sel === i} onClick={() => onPick(i)}>{paint(cps, marks, a, b)}</button>
+      {/* Mot sans sens (basmala du verset 1) : affiché sans bouton. */}
+      {toks.map(([a, b], i) => (words[i]
+        ? <button type="button" key={a} className={`qr-w${sel === i ? ' on' : ''}`} aria-pressed={sel === i} onClick={() => onPick(i)}>{paint(cps, marks, a, b)}</button>
+        : <span key={a} className="qr-w">{paint(cps, marks, a, b)}</span>
       ))}
-      {sel !== null && <p className="qr-wm" dir="auto" role="status"><span lang="ar" dir="rtl">{cps.slice(...toks[sel]).join('')}</span> — {words[sel]}</p>}
+      {sel !== null && words[sel] && <p className="qr-wm" dir="auto" role="status"><span lang="ar" dir="rtl">{cps.slice(...toks[sel]).join('')}</span> — {words[sel]}</p>}
     </div>
   );
 }

@@ -10,7 +10,12 @@
 //                        À défaut, on prend S3_PUBLIC_URL puis S3_ENDPOINT s'ils existent ; sinon tout https: est accepté
 //                        pour les images, médias et envois (moins strict, mais le site continue de fonctionner).
 //   CSP_EXTRA_FRAME      origines supplémentaires autorisées en cadre (iframe), séparées par des virgules.
+//   CSP_MEDIA_ORIGINS    origines audio/vidéo supplémentaires (facultatif depuis l'étape A1 : voir ci-dessous).
+// Récitateurs du Coran (étape A1) : les serveurs des deux catalogues (EveryAyah, Islamic Network) sont toujours autorisés en
+// « media-src » (pour écouter un récitateur avant de le proposer), ainsi que l'origine de chaque récitateur proposé
+// (liste lue sur l'API, GET /quran/reciters, gardée 5 minutes).
 import { NextResponse } from 'next/server';
+import { reciterOriginsOf } from './lib/quranAudio';
 
 const list = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -19,7 +24,25 @@ function origin(u) {
   try { return new URL(u).origin; } catch { return null; }
 }
 
-export function buildCsp(nonce, { https, dev }) {
+export const RECITER_ORIGINS = ['https://everyayah.com', 'https://cdn.islamic.network'];
+
+// Origines des récitateurs proposés (adresse modèle → origine) ; en cas d'erreur, la dernière liste connue est gardée.
+const reciterCache = { at: 0, origins: [] };
+async function reciterOrigins() {
+  const now = Date.now();
+  if (now - reciterCache.at < 5 * 60 * 1000 || !process.env.API_URL) return reciterCache.origins;
+  reciterCache.at = now;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
+    const r = await fetch(`${process.env.API_URL.replace(/\/+$/, '')}/quran/reciters`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (r.ok) reciterCache.origins = reciterOriginsOf(await r.json());
+  } catch { /* liste précédente gardée */ }
+  return reciterCache.origins;
+}
+
+export function buildCsp(nonce, { https, dev, media = [] }) {
   const storage = [...new Set([...list(process.env.CSP_STORAGE_ORIGINS), process.env.S3_PUBLIC_URL, process.env.S3_ENDPOINT]
     .map((u) => (u ? origin(u) : null)).filter(Boolean))];
   // Sans adresse de stockage connue : schéma https: (ou http: en test local) plutôt que de casser les vidéos et images.
@@ -35,7 +58,7 @@ export function buildCsp(nonce, { https, dev }) {
     // (risque faible comparé aux scripts).
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'https://i.ytimg.com', 'https://i.vimeocdn.com', 'https://www.dailymotion.com', 'https://*.dmcdn.net', ...stor],
-    'media-src': ["'self'", 'blob:', ...stor, ...list(process.env.CSP_MEDIA_ORIGINS).map(origin).filter(Boolean)],
+    'media-src': [...new Set(["'self'", 'blob:', ...stor, ...RECITER_ORIGINS, ...media, ...list(process.env.CSP_MEDIA_ORIGINS).map(origin).filter(Boolean)])],
     'font-src': ["'self'", 'data:'],
     'connect-src': ["'self'", 'https://www.gstatic.com', ...stor],
     'frame-src': frames,
@@ -50,13 +73,13 @@ export function buildCsp(nonce, { https, dev }) {
   return parts.join('; ');
 }
 
-export function middleware(req) {
+export async function middleware(req) {
   const mode = (process.env.CSP_MODE || 'enforce').toLowerCase();
   if (mode === 'off') return NextResponse.next();
 
   const nonce = btoa(crypto.randomUUID());
   const proto = req.headers.get('x-forwarded-proto') || req.nextUrl.protocol.replace(':', '');
-  const csp = buildCsp(nonce, { https: proto === 'https', dev: process.env.NODE_ENV !== 'production' });
+  const csp = buildCsp(nonce, { https: proto === 'https', dev: process.env.NODE_ENV !== 'production', media: await reciterOrigins() });
   const header = mode === 'report-only' ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy';
 
   // L'en-tête est aussi transmis à Next.js (requête) pour qu'il pose le nonce sur ses scripts.

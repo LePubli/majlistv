@@ -1,14 +1,15 @@
 // Coran (étape 45B).
 //   GET  /quran/suras                          public : les 114 sourates (nombre de versets), état « prêt » ou non
 //   GET  /quran/resources                      public : ressources activées avec leur source, licence et crédit
-//   GET  /quran/suras/:n?lang=&translation=&translit=   public : versets (arabe + traduction + phonétique) ; « none » désactive
+//   GET  /quran/suras/:n?lang=&translation=&translit=&words=&tajweed=   public : versets (arabe + traduction + phonétique) ; « none » désactive
+//        words : 1 = mot à mot dans la langue de l'interface ; fr / en… = cette langue ; un identifiant ; absent ou 0 = aucun
 //   GET  /quran/tafsir/:slug/:n                public : commentaires d'une sourate
 //   GET  /quran/search?q=&lang=                public : recherche dans le texte, les traductions et la phonétique
 //   GET/POST /admin/quran/resources, PUT/DELETE /admin/quran/resources/:id, POST /admin/quran/resources/:id/import   administrateur
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { SURAS, suraOf } from './suras.js';
-import { KINDS, TOTAL_VERSES, arabicOf, checkReciterUrl, enabledResources, fetchBySura, fetchText, importRows, importTajweed, importWords, lang, parseContent, parseTajweed, parseWords, pick, publicMeta } from './lib.js';
+import { KINDS, TOTAL_VERSES, alignWords, arabicOf, CATALOGS, checkReciterUrl, enabledResources, reciterCatalog, fetchBySura, fetchText, importRows, importTajweed, importWords, lang, parseContent, parseTajweed, parseWords, pick, publicMeta } from './lib.js';
 
 const slugRe = /^[a-z0-9][a-z0-9_-]{1,59}$/;
 const metaSchema = z.object({
@@ -56,7 +57,7 @@ export default async function quranRoutes(app) {
 
   app.get('/quran/suras/:n', async (req, reply) => {
     const { n } = z.object({ n: z.coerce.number().int().min(1).max(114) }).parse(req.params);
-    const q = z.object({ lang: z.string().max(10).optional(), translation: z.string().max(60).optional(), translit: z.string().max(60).optional(), words: z.enum(['0', '1']).optional(), tajweed: z.enum(['0', '1']).optional() }).parse(req.query);
+    const q = z.object({ lang: z.string().max(10).optional(), translation: z.string().max(60).optional(), translit: z.string().max(60).optional(), words: z.string().max(60).optional(), tajweed: z.enum(['0', '1']).optional() }).parse(req.query);
     const list = await enabledResources();
     const ar = arabicOf(list);
     if (!ar) return reply.code(404).send({ error: 'Le texte du Coran n\'est pas encore disponible.' });
@@ -68,13 +69,26 @@ export default async function quranRoutes(app) {
     const A = by(ar.id); const T = tr ? by(tr.id) : null; const P = ph ? by(ph.id) : null;
     const N = tr ? new Map(rows.filter((r) => r.resource_id === tr.id && r.notes).map((r) => [r.aya, r.notes])) : new Map();
     if (!A.size) return reply.code(404).send({ error: 'Cette sourate n\'est pas disponible.' });
-    const wres = list.find((r) => r.kind === 'words'); const tres = list.find((r) => r.kind === 'tajweed');
+    // Mot à mot : une ressource par langue (fr, en…). « 1 » = langue de l'interface (sinon la première) ; « fr » = cette langue ;
+    // sinon un identifiant. Les mots sont alignés sur le texte arabe affiché (basmala du verset 1 sans sens).
+    const wordsAll = list.filter((r) => r.kind === 'words');
+    const wq = q.words && q.words !== '0' ? q.words : '';
+    const wres = !wq ? null : wq === '1' ? (wordsAll.find((r) => r.lang === lang(q.lang)) || wordsAll[0] || null)
+      : (wordsAll.find((r) => r.slug === wq) || wordsAll.find((r) => r.lang === wq) || null);
+    const tres = list.find((r) => r.kind === 'tajweed');
     let wordsOut; let tajOut;
-    if (wres && q.words === '1') wordsOut = Object.fromEntries((await pool.query('SELECT aya, words FROM quran_words WHERE resource_id = $1 AND sura = $2', [wres.id, n])).rows.map((r) => [r.aya, r.words]));
+    if (wres) {
+      wordsOut = {};
+      for (const r of (await pool.query('SELECT aya, words FROM quran_words WHERE resource_id = $1 AND sura = $2', [wres.id, n])).rows) {
+        const al = alignWords(n, r.aya, A.get(r.aya), r.words);
+        if (al) wordsOut[r.aya] = al;
+      }
+    }
     if (tres && q.tajweed === '1') tajOut = Object.fromEntries((await pool.query('SELECT aya, marks FROM quran_tajweed WHERE resource_id = $1 AND sura = $2', [tres.id, n])).rows.map((r) => [r.aya, r.marks]));
     reply.header('cache-control', 'public, max-age=60');
     return {
-      ...(wres ? { wordsMeta: publicMeta(wres) } : {}), ...(tres ? { tajweedMeta: publicMeta(tres) } : {}),
+      // wordsMeta : ressource envoyée (ou la première disponible, pour proposer l'option) ; wordsList : toutes les langues proposées.
+      ...(wordsAll.length ? { wordsMeta: publicMeta(wres || wordsAll[0]), wordsList: wordsAll.map(publicMeta) } : {}), ...(tres ? { tajweedMeta: publicMeta(tres) } : {}),
       ...(wordsOut ? { words: wordsOut } : {}), ...(tajOut ? { tajweed: tajOut } : {}),
       sura: suraOf(n),
       verses: [...A.keys()].sort((a, b) => a - b).map((aya) => ({ aya, ar: A.get(aya), ...(T ? { tr: T.get(aya) ?? null } : {}), ...(N.has(aya) ? { tn: N.get(aya) } : {}), ...(P ? { ph: P.get(aya) ?? null } : {}) })),
@@ -182,8 +196,19 @@ export default async function quranRoutes(app) {
       if (r.error) return reply.code(400).send({ error: r.error });
       if (res.kind === 'words') await importWords(res, r.rows); else await importTajweed(res, r.rows);
       const suras = new Set(r.rows.map((x) => x.sura)).size;
+      // Mot à mot : combien de versets s'alignent sur le texte arabe affiché (les autres n'auront pas le mot à mot).
+      let unaligned = 0;
+      if (res.kind === 'words') {
+        const ar = arabicOf(await enabledResources());
+        if (ar) {
+          const txt = new Map((await pool.query('SELECT sura, aya, text FROM quran_verses WHERE resource_id = $1', [ar.id])).rows.map((x) => [x.sura * 1000 + x.aya, x.text]));
+          unaligned = r.rows.filter((x) => !alignWords(x.sura, x.aya, txt.get(x.sura * 1000 + x.aya), x.words)).length;
+        }
+      }
+      const warn = [r.skipped ? `${r.skipped} élément(s) écarté(s) (numérotation incomplète ou positions hors du texte).` : '',
+        unaligned ? `${unaligned} verset(s) dont les mots ne correspondent pas au texte arabe : le mot à mot n'y sera pas proposé.` : ''].filter(Boolean).join(' ');
       req.auditSummary = `Coran : « ${res.name} » importé (${r.rows.length} versets, ${suras} sourates)`;
-      return { imported: r.rows.length, skipped: r.skipped, suras, warning: r.skipped ? `${r.skipped} élément(s) écarté(s) (numérotation incomplète ou positions hors du texte).` : null };
+      return { imported: r.rows.length, skipped: r.skipped, suras, unaligned, warning: warn || null };
     }
     if (b.url && b.format === 'json' && b.url.includes('{n}')) {
       // un fichier par sourate
@@ -204,6 +229,20 @@ export default async function quranRoutes(app) {
       ? `Le texte contient ${parsed.rows.length} versets (le total habituel est ${TOTAL_VERSES}) : vérifiez le fichier.` : null;
     req.auditSummary = `Coran : « ${res.name} » importé (${parsed.rows.length} versets, ${suras} sourates)`;
     return { imported: parsed.rows.length, skipped: parsed.skipped, suras, warning };
+  });
+
+  // ---- Catalogues de récitateurs (EveryAyah, Islamic Network) : lus par le serveur pour l'administrateur -----------------------
+  //   GET /admin/quran/reciter-catalog?source=everyayah|islamic → { source, label, items: [{ slug, name, urlTemplate, …, exists }] }
+  app.get('/admin/quran/reciter-catalog', adminOnly, async (req, reply) => {
+    const { source } = z.object({ source: z.enum(['everyayah', 'islamic']) }).parse(req.query);
+    let r;
+    try { r = await reciterCatalog(source); } catch (e) { return reply.code(502).send({ error: `Catalogue injoignable depuis le serveur : ${e.message}` }); }
+    if (r.error) return reply.code(502).send({ error: r.error });
+    const have = (await pool.query('SELECT slug, url_template FROM quran_reciters')).rows;
+    return {
+      source, label: CATALOGS[source].label,
+      items: r.items.map((x) => ({ ...x, exists: have.some((h) => h.slug === x.slug || h.url_template === x.urlTemplate) })),
+    };
   });
 
   // ---- Administration des récitateurs ------------------------------------------------------------------------------------------

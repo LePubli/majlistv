@@ -12,7 +12,7 @@ test('readPrefs : valeurs par défaut, valeurs gardées, valeurs étranges écar
   assert.deepEqual(readPrefs(null), DEFAULT_PREFS);
   assert.deepEqual(readPrefs('pas du json'), DEFAULT_PREFS);
   const p = readPrefs(JSON.stringify({ translation: 'hamidullah', ph: false, tafsir: 'ibn-kathir', size: 4, reciter: 'alafasy', chain: false, wbw: true, taj: true }));
-  assert.deepEqual(p, { translation: 'hamidullah', ph: false, tafsir: 'ibn-kathir', size: 4, reciter: 'alafasy', chain: false, wbw: true, taj: true });
+  assert.deepEqual(p, { translation: 'hamidullah', ph: false, tafsir: 'ibn-kathir', size: 4, reciter: 'alafasy', chain: false, wbw: true, wbwLang: '', taj: true });
   const bad = readPrefs({ translation: '../x', ph: 'oui', size: 9, reciter: 'A B', tafsir: 3 });
   assert.equal(bad.translation, undefined);
   assert.equal(bad.ph, true);
@@ -24,7 +24,12 @@ test('readPrefs : valeurs par défaut, valeurs gardées, valeurs étranges écar
 
 test('suraQuery : mêmes paramètres que le site', () => {
   assert.deepEqual(suraQuery('fr', DEFAULT_PREFS), { lang: 'fr' });
-  assert.deepEqual(suraQuery('ar', { ...DEFAULT_PREFS, translation: 'x', ph: false, wbw: true, taj: true }), { lang: 'ar', translation: 'x', translit: 'none', words: '1', tajweed: '1' });
+  // Arabe : pas de sens des mots par défaut, même option cochée ; une langue choisie l'active.
+  assert.deepEqual(suraQuery('ar', { ...DEFAULT_PREFS, translation: 'x', ph: false, wbw: true, taj: true }), { lang: 'ar', translation: 'x', translit: 'none', tajweed: '1' });
+  assert.deepEqual(suraQuery('ar', { ...DEFAULT_PREFS, wbwLang: 'en' }), { lang: 'ar', words: 'en' });
+  assert.deepEqual(suraQuery('fr', { ...DEFAULT_PREFS, wbw: true }), { lang: 'fr', words: 'fr' });
+  assert.deepEqual(suraQuery('en', { ...DEFAULT_PREFS, wbw: true, wbwLang: 'fr' }), { lang: 'en', words: 'en' });
+  assert.equal(readPrefs({ wbwLang: 'fr' }).wbwLang, 'fr'); assert.equal(readPrefs({ wbwLang: '../x' }).wbwLang, '');
   assert.equal(ARABIC_SIZES[1] < ARABIC_SIZES[4], true);
 });
 
@@ -104,4 +109,15 @@ test('arLabel : nom arabe d\'un seul tenant (« آل عمران » ne passe plus
   // Toutes les sourates du serveur : aucun nom arabe ne garde d'espace sécable une fois préparé.
   const { SURAS } = await import('../../api/src/modules/quran/suras.js' as string);
   for (const s of SURAS as { ar: string }[]) assert.equal(/ /.test(arLabel(s.ar)), false, s.ar);
+});
+
+test('récitateurs : numéro de verset de 1 à 6236 ({ayahg}, Islamic Network)', async () => {
+  const { globalAyah, SURA_VERSES } = await import('../src/lib/quran');
+  assert.equal(SURA_VERSES.reduce((a, b) => a + b, 0), 6236);
+  assert.equal(globalAyah(1, 1), 1); assert.equal(globalAyah(2, 255), 262); assert.equal(globalAyah(114, 6), 6236);
+  assert.equal(reciterUrl('https://cdn.islamic.network/quran/audio/128/ar.alafasy/{ayahg}.mp3', 2, 255), 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/262.mp3');
+  assert.equal(reciterUrl('https://everyayah.com/data/Alafasy_128kbps/{sura3}{aya3}.mp3', 18, 10), 'https://everyayah.com/data/Alafasy_128kbps/018010.mp3');
+  // Même table que l'API.
+  const { SURA_VERSES: API } = await import('../../api/src/modules/quran/juz.js' as string);
+  assert.deepEqual(SURA_VERSES, API);
 });

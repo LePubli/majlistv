@@ -595,3 +595,8 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - M4 Ramadan (circuit, tarawih, bilan, enfants, pastille du parent) : livré (README « Étape M4 »), à essayer sur téléphone.
 - M5 Apprendre en 4 onglets, cartes mémoire, bilan et évolution, attestations, assistant : livré (README « Étape M5 »), à essayer sur téléphone.
 - M6 premiers pas, visite guidée, parrainage, cartes cadeaux, états vides : livré (README « Étape M6 »). **« Go mobile » terminé (M1 → M6)**, à valider sur téléphone par Epok.
+
+
+## Bloc A — fin des contenus (04/11)
+- A1 récitateurs verset par verset (catalogues EveryAyah / Islamic Network, `{ayahg}`, CSP automatique) et mot à mot selon la langue (arabe : option) : livré (README « Étape A1 »). À faire par Epok : licences, choix des récitateurs, import des fichiers QUL fr / en.
+- Suite : tajwid (source à trouver), autres chapitres de Hisn al-Muslim, relecture vendredi / saisons.
