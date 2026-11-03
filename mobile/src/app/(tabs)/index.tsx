@@ -1,6 +1,7 @@
 // Accueil : comme celui du site. Bannière, « À réviser » / « Quiz à rattraper » / « Continuer à regarder », explorer par format,
 // rangées du catalogue (séries comprises), bande Kids, citation du jour. Visiteur : même accueil avec invitation à créer un compte.
 // Étape M1 : bloc « Aujourd'hui » sous la bannière et rangée « À regarder plus tard » (comme sur le site).
+// Étape M3 : bandeaux de saison et du vendredi.
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
 import { FormatTiles, KidsBand } from '@/components/HomeBands';
 import { TodayBlock } from '@/components/TodayBlock';
+import { FridayBand, SeasonBand } from '@/components/SeasonBands';
 
 export default function HomeScreen() {
   const { api, user, t, config, feat, dirStyle } = useSession();
@@ -58,6 +60,8 @@ export default function HomeScreen() {
         <Hero hero={home.data.hero} />
 
         <TodayBlock />
+        <SeasonBand />
+        <FridayBand />
 
         {(review.data ?? []).length > 0 ? <Rail title={<>{t('revRow')}</>} items={review.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('lrTitle')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
         {(todo.data ?? []).length > 0 ? <Rail title={t('qpTodoRow')} items={todo.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('navLearn')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}

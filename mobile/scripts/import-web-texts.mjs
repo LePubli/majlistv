@@ -18,7 +18,9 @@ const EXACT = ['home', 'library', 'navCatalogue', 'navLearn', 'seriesNav', 'colN
   'noTalks', 'summary', 'chapters', 'transcript', 'dSpeaker', 'dCategory', 'dLang', 'dDuration', 'dAccess', 'dSubs', 'lvLabel', 'pricing', 'subscribe', 'logout', 'account',
   'forgotLink', 'haveAccount', 'registerLegal', 'legalTerms', 'legalPrivacy', 'languageMenu', 'mainNav', 'removeFav', 'addFav', 'playerUnavailable', 'premiumOnly', 'convFailed',
   'processingMsg', 'previewMsg', 'transcribing', 'insightsWaiting', 'epN', 'seasonN', 'sShort', 'eShort', 'seasonCount', 'episodeCount', 'watchedOf', 'seriesTag', 'nextEp', 'prevEp',
-  'upNextIn', 'playNow', 'cancelBtn', 'tabsLabel', 'tabAbout', 'trial', 'shareCopied', 'shareCopiedAt', 'errInvalid', 'errExists', 'errGeneric', 'bkNav', 'shrTitle', 'msCats', 'watchNow', 'moreInfo', 'continueWatching', 'epOf', 'sameVein', 'nextTitle', 'nowPlaying', 'watched', 'kids', 'kdNav', 'tierLearn', 'tierStd'];
+  'upNextIn', 'playNow', 'cancelBtn', 'tabsLabel', 'tabAbout', 'trial', 'shareCopied', 'shareCopiedAt', 'errInvalid', 'errExists', 'errGeneric', 'bkNav', 'shrTitle', 'msCats', 'watchNow', 'moreInfo', 'continueWatching', 'epOf', 'sameVein', 'nextTitle', 'nowPlaying', 'watched', 'kids', 'kdNav', 'tierLearn', 'tierStd',
+  // Clés construites (t(`atCat_${c}`)) : non détectées automatiquement.
+  'atCat_morning', 'atCat_evening', 'atCat_after_prayer', 'atCat_sleep', 'atCat_general'];
 const keep = (k) => EXACT.includes(k) || PREFIXES.some((p) => k.startsWith(p) && /^[A-Z0-9]/.test(k.slice(p.length) || 'A') || k === p);
 
 // Toute clé utilisée dans le code (t('clé')) et présente sur le site est aussi importée : plus besoin de la lister à la main.

@@ -96,6 +96,7 @@ function Shell() {
         <Stack.Screen name="offline/[id]" />
         <Stack.Screen name="offline/quiz/[id]" />
         <Stack.Screen name="kids" />
+        <Stack.Screen name="athkar" />
         <Stack.Screen name="quran/index" />
         <Stack.Screen name="quran/[n]" />
       </Stack>

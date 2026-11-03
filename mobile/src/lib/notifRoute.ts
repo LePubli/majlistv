@@ -12,6 +12,7 @@ export function routeForPath(path: unknown): string {
   if (seg[0] === 'conferences' && safe(seg[1])) return `/talk/${safe(seg[1])}`;
   if (seg[0] === 'collections' && safe(seg[1])) return `/collections/${safe(seg[1])}`;
   if (seg[0] === 'intervenants' && safe(seg[1])) return `/speaker/${safe(seg[1])}`;
+  if (seg[0] === 'learning' && /[?&]tab=athkar\b/.test(p)) return '/athkar'; // rappel des athkar (étape M3)
   if (seg[0] === 'learning') return '/learn';
   // Coran (étape M2) : /coran, /coran/<sourate>#v<verset> (rappel de la lecture en 30 jours).
   if (seg[0] === 'coran' && !seg[1]) return '/quran';

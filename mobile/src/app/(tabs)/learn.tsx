@@ -71,6 +71,20 @@ function LearnBody() {
       {/* Étape M1 : « Aujourd'hui » aussi dans Apprendre (comme sur le site). */}
       <TodayBlock style={{ marginHorizontal: 0 }} />
 
+      {/* Étape M3 : compteur d'athkar (offre Apprentissage : l'écran l'explique sinon). */}
+      {feat('athkar') ? (
+        <Pressable accessibilityRole="link" onPress={() => router.push('/athkar')} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+          <Panel style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: colors.goldLine }}>
+            <Feather name="sun" size={22} color={colors.goldLight} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt weight="bold" size={16}>{t('atTab')}</Txt>
+              <Txt size={13} color={colors.muted} numberOfLines={2}>{t('atCats')} : {t('atCat_morning')}, {t('atCat_evening')}…</Txt>
+            </View>
+            <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={20} color={colors.muted} />
+          </Panel>
+        </Pressable>
+      ) : null}
+
       {/* Étape M2 : accès au Coran et à « Lire le Coran en 30 jours ». */}
       {feat('quran') ? (
         <Pressable accessibilityRole="link" onPress={() => router.push('/quran')} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>

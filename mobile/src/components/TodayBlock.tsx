@@ -40,7 +40,7 @@ export function TodayBlock({ style }: { style?: object }) {
 
 function TodayRow({ it }: { it: TodayItem }) {
   const { t, isRTL } = useSession();
-  const target = todayTarget(it.href);
+  const target = todayTarget(it.href, it.moment);
   const web = 'web' in target;
   const count = todayCount(it);
   const open = () => {

@@ -6931,3 +6931,27 @@ Suivi : GitHub → dépôt LePubli/majlistv → onglet Actions → « mobile-and
 **Debug.** « Bientôt disponible » : aucune ressource « texte arabe » activée (`curl -s https://api-majlisstv.le-publicitaire.fr/quran/suras | head -c 100` doit montrer `"ready":true`). Pas de bouton ▶ : aucun récitateur activé (`curl -s https://api-majlisstv.le-publicitaire.fr/quran/reciters`). Message « La récitation ne peut pas être lue » : la source audio ne répond pas ou bloque le téléphone (ouvrir l'adresse d'un verset dans le navigateur du téléphone pour vérifier).
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (165 contrôles, dont `tests/quran.test.ts` : réglages, adresse de récitation https seulement, enchaînement, tajwid et légende traduite, mot à mot, filtres, programme, liens de notification) ; `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m2_contract.ts` contre une API de test (données fictives : sourates, lecteur avec tous les réglages, tafsir, récitateur, recherche, programme complet) ; paquet Android construit. **Pas testé** : rendu et son sur un vrai téléphone (lecture audio par expo-video, défilement vers un verset) — à vérifier par Epok.
+
+
+## Étape M3 — Application : athkar, vendredi et saisons (03/11)
+
+**Description.** Troisième sous-étape de « go mobile ». Mêmes données que le site (étapes 45, 45C, 45D) :
+- **Athkar** (menu → « Athkar », Apprendre → « Athkar », bloc « Aujourd'hui », notification du rappel) : réservé à l'offre Apprentissage comme sur le site (sinon encadré + lien vers le site). « Terminés aujourd'hui » et « Série », objectif du jour, rappel quotidien (heure ou aucun), moments (matin, soir, après la prière, avant de dormir, à tout moment), chaque dhikr avec arabe (Amiri), phonétique, traduction et **référence** ; gros bouton compteur (+1 par toucher, les touchers rapprochés partent ensemble, « ✓ Terminé » à l'objectif), remise à zéro avec confirmation. La ligne « Athkar du matin / du soir » du bloc « Aujourd'hui » ouvre directement le bon moment. Seuls les dhikr **validés et affichés** dans Admin → Athkar apparaissent.
+- **Bandeau de saison** sur l'accueil (Ramadan, Hajj, Mawlid, Achoura…) : titre, texte, « dans n jours / encore n jours / dernier jour », bouton vers la sélection, rangée de conférences. Pour Ramadan, le bouton « Ramadan » ouvre **la page du site** en attendant l'écran de l'étape M4. La touche graphique de saison du site (lueur dorée) n'est pas reprise dans l'application.
+- **Bandeau du vendredi** sur l'accueil (seulement le vendredi, heure de Paris, si activé dans Admin → Vendredi) : rappels, « Lire la sourate Al-Kahf » (ouvre la sourate dans l'application si le Coran est prêt), rangée « Conférences du vendredi ».
+- Pas de vibration à l'objectif (cela demanderait une nouvelle autorisation Android, donc une réinstallation) : un « ✓ Terminé » s'affiche à la place.
+
+**API / site.** Inchangés.
+
+**Déploiement.** Rien sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions (onglet Actions → « Application Android (APK) ») ; la mise à jour arrive sur les téléphones sans réinstaller.
+
+**Essai sur le téléphone.**
+1. Fermer complètement l'application et la rouvrir (deux fois si besoin).
+2. Menu → « Athkar » (compte avec l'offre Apprentissage, ou admin) : toucher plusieurs fois le compteur d'un dhikr → « ✓ Terminé » ; revenir à l'accueil → le bloc « Aujourd'hui » suit.
+3. Changer l'objectif (ex. 3) et le rappel ; « Remettre à zéro » demande confirmation.
+4. Vendredi / saison : visibles seulement le vendredi ou pendant une saison activée dans l'admin. Pour vérifier les données :
+   `curl -s "https://api-majlisstv.le-publicitaire.fr/friday?lang=fr"` et `curl -s "https://api-majlisstv.le-publicitaire.fr/seasons/current?lang=fr"`.
+
+**Debug.** « Aucun dhikr n'est encore publié » : aucun dhikr à la fois validé et affiché (Admin → Athkar). Encadré « offre Apprentissage » : le compte n'a pas l'offre. Bandeau absent : fonction coupée (Admin → Fonctions), pas vendredi, ou saison non activée / hors période.
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (172 contrôles, dont `tests/athkar.test.ts` : moments, touchers groupés plafonnés à 1000, objectif, saisons, liens, textes FR/EN/AR, et un contrôle qu'aucun style ne fige les couleurs d'un thème) ; `tests/m3_contract.ts` contre une API de test datée un vendredi de Ramadan (refus sans offre, dhikr fictif créé puis supprimé, compteur, objectif, rappel, remise à zéro, saison « Encore 20 jours », vendredi actif) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone.

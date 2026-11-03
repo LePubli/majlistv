@@ -30,6 +30,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
     { key: 'books', label: t('bkNav'), icon: 'book', go: site('/books'), on: !!config?.hasBooks },
     { key: 'quran', label: t('qrNav'), icon: 'book', go: nav('/quran'), on: feat('quran') },
+    { key: 'athkar', label: t('atTab'), icon: 'sun', go: nav('/athkar'), on: feat('athkar') && !!user },
     { key: 'learning', label: t('navLearn'), icon: 'book-open', go: nav('/learn'), on: feat('learning') },
     { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },
     { key: 'downloads', label: t('dl.open'), icon: 'download', go: nav('/downloads'), on: feat('offline') },

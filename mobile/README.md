@@ -28,6 +28,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Étape M2 (03/11)** : **Coran** dans l'application — écran `src/app/quran/index.tsx` (programme « 30 jours », recherche, 114 sourates) et `src/app/quran/[n].tsx` (verset par verset : arabe en Amiri, traduction, phonétique, notes, tafsir, récitation verset par verset lue chez la source avec enchaînement, mot à mot, couleurs du tajwid, taille du texte ; réglages gardés sur le téléphone ; `?aya=` ouvre sur un verset) ; « Lire le Coran en 30 jours » : `src/components/QuranPlan.tsx` ; logique pure : `src/lib/quran.ts`. Accès : menu, Apprendre, bloc « Aujourd'hui », notification du rappel (`/coran/<n>#v<aya>` → écran du verset). Essai contre une API de test : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m2_contract.ts` (crée puis supprime des données fictives ; refuse de tourner contre le site réel).
 
+**Étape M3 (03/11)** : **athkar** — écran `src/app/athkar.tsx` (offre Apprentissage ; moments, compteur au toucher avec envois groupés, objectif du jour, série, rappel, remise à zéro ; `?cat=morning`) ; **bandeaux de saison et du vendredi** sur l'accueil — `src/components/SeasonBands.tsx` (Al-Kahf ouverte dans le Coran de l'application ; bouton Ramadan vers le site en attendant M4) ; logique pure : `src/lib/athkar.ts`. Essai contre une API de test : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m3_contract.ts`.
+
 ## Architecture
 
 ```
