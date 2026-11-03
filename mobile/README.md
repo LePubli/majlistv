@@ -32,6 +32,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Étape M4 (03/11)** : **Ramadan** — écran `src/app/ramadan.tsx` (30 jours, cases, rattrapage, tarawih avec rakaat et lieu, rappel, `?bilan=1`), bilan `src/components/RamadanBilan.tsx` (note chiffrée) ; **enfants** — `src/components/kids/KidRamadan.tsx` (« Je l'ai fait » sur l'accueil Kids ; section « 🌙 Ramadan » dans la gestion d'un profil pour valider) ; **pastille du parent** — `src/lib/kidsPending.ts` (menu ☰ → Kids), bandeau `src/components/kids/KidsPendingBanner.tsx` (« Valider » ouvre la bonne section), interrupteur e-mail ; logique pure : `src/lib/ramadan.ts`. Essai : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m4_contract.ts` (API datée pendant Ramadan).
 
+**Étape M5 (03/11)** : **Apprendre en 4 onglets** comme le site — `src/app/(tabs)/learn.tsx` (Aujourd'hui · Coran et athkar · Conférences : parcours, quiz et révision, cartes · Mes progrès : engagements, bilan, attestations ; pastille révisions + cartes ; phrase d'explication avec « Compris » ; `?tab=`), **cartes mémoire** `src/components/learn/MemoryCards.tsx`, **bilan personnel et évolution** `src/components/learn/SelfCheck.tsx`, **assistant « Poser une question »** dans la fiche (`src/components/talk/AskPanel.tsx`, onglet de `TalkTabs`) ; logique pure : `src/lib/learnHub.ts`. Essai : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m5_contract.ts`.
+
 ## Architecture
 
 ```

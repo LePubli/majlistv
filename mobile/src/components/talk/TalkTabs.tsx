@@ -1,6 +1,6 @@
-// Onglets de la fiche : Résumé, Chapitres, Transcription (cliquable), Mes notes (marque-pages), À propos.
+// Onglets de la fiche : Résumé, Chapitres, Transcription (cliquable), Mes notes (marque-pages), Poser une question (étape M5), À propos.
 import React, { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -10,37 +10,44 @@ import { levelLabel } from '@/lib/media';
 import type { Insights, Note, Talk, TranscriptData } from '@/lib/types';
 import { colors, fonts, radius } from '@/lib/theme';
 import { Button, Txt } from '../ui';
+import { AskPanel } from './AskPanel';
 
-export type TabKey = 'summary' | 'chapters' | 'transcript' | 'notes' | 'about';
+export type TabKey = 'summary' | 'chapters' | 'transcript' | 'notes' | 'ask' | 'about';
 
 export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs, tab: forced, onTab }: {
   talk: Talk; insights: Insights | null; positionMs: number; onSeek: (ms: number) => void; getPositionMs: () => number;
   /** Onglet demandé de l'extérieur (ex. « Prendre une note ») ; l'écran de lecture le pilote. */
   tab?: TabKey | null; onTab?: (k: TabKey) => void;
 }) {
-  const { t, locale, user } = useSession();
+  const { t, locale, user, feat } = useSession();
   const [own, setOwn] = useState<TabKey | null>(null);
   // Par défaut : Chapitres s'il y en a (pour étudier), sinon Résumé.
   const tab: TabKey = forced ?? own ?? (insights?.chapters?.length ? 'chapters' : 'summary');
   const setTab = (k: TabKey) => { setOwn(k); onTab?.(k); };
   const tabs: { k: TabKey; label: string }[] = [
     { k: 'summary', label: t('summary') }, { k: 'chapters', label: t('chapters') }, { k: 'transcript', label: t('transcript') },
-    { k: 'notes', label: t('ntTab') }, { k: 'about', label: t('tabAbout') },
+    { k: 'notes', label: t('ntTab') },
+    // Assistant (étape M5) : membre connecté, fonction activée ; l'offre Apprentissage est vérifiée par le serveur.
+    ...(user && feat('ask') ? [{ k: 'ask' as TabKey, label: t('askTab') }] : []),
+    { k: 'about', label: t('tabAbout') },
   ];
   return (
     <View style={{ gap: 14 }}>
-      <View accessibilityRole="tablist" style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {/* Barre défilante : 6 onglets tiennent aussi sur un petit téléphone. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist"
+        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }} contentContainerStyle={{ flexGrow: 1 }}>
         {tabs.map(({ k, label }) => (
           <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} onPress={() => setTab(k)}
-            style={{ flex: 1, minHeight: 46, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: tab === k ? colors.gold : 'transparent' }}>
+            style={{ flexGrow: 1, minHeight: 46, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: tab === k ? colors.gold : 'transparent' }}>
             <Txt weight={tab === k ? 'bold' : 'medium'} size={13} numberOfLines={1} color={tab === k ? colors.goldLight : colors.muted}>{label}</Txt>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
       {tab === 'summary' ? <Summary talk={talk} insights={insights} /> : null}
       {tab === 'chapters' ? <Chapters insights={insights} positionMs={positionMs} onSeek={onSeek} /> : null}
       {tab === 'transcript' ? <Transcript talk={talk} lang={locale} positionMs={positionMs} onSeek={onSeek} /> : null}
       {tab === 'notes' ? <Notes talk={talk} loggedIn={!!user} getPositionMs={getPositionMs} onSeek={onSeek} /> : null}
+      {tab === 'ask' ? <AskPanel talkId={talk.id} onSeek={onSeek} /> : null}
       {tab === 'about' ? <About talk={talk} /> : null}
     </View>
   );

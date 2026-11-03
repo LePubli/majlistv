@@ -15,7 +15,11 @@ export function routeForPath(path: unknown): string {
   if (seg[0] === 'ramadan' && !seg[1]) return '/ramadan'; // rappel du circuit (étape M4)
   if (seg[0] === 'kids' && !seg[1]) return '/kids'; // un enfant attend une validation (étape M4)
   if (seg[0] === 'learning' && /[?&]tab=athkar\b/.test(p)) return '/athkar'; // rappel des athkar (étape M3)
-  if (seg[0] === 'learning') return '/learn';
+  // Apprendre (étape M5) : la section demandée (?tab=rev, cards, bilan…) est gardée si elle est connue.
+  if (seg[0] === 'learning') {
+    const tab = /[?&]tab=([a-z]{2,8})\b/.exec(p)?.[1];
+    return tab && ['dash', 'quran', 'path', 'rev', 'cards', 'commit', 'bilan', 'att'].includes(tab) ? `/learn?tab=${tab}` : /#bilan$/.test(p) ? '/learn?tab=bilan' : '/learn';
+  }
   // Coran (étape M2) : /coran, /coran/<sourate>#v<verset> (rappel de la lecture en 30 jours).
   if (seg[0] === 'coran' && !seg[1]) return '/quran';
   if (seg[0] === 'coran' && /^\d{1,3}$/.test(seg[1] ?? '') && Number(seg[1]) >= 1 && Number(seg[1]) <= 114) {

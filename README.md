@@ -6979,3 +6979,30 @@ Vérifier les données : `curl -s "https://api-majlisstv.le-publicitaire.fr/rama
 **Debug.** « Le circuit sera publié bientôt » : aucune action validée et affichée. Cases grisées : hors Ramadan, jour pas encore arrivé, ou visiteur. Bilan absent : avant le 20e jour ou plus de 60 jours après. Pastille absente : aucune demande en attente, fonction Kids coupée, ou appareil en mode enfant.
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (180 contrôles, dont `tests/ramadan.test.ts`) ; `tests/m4_contract.ts` contre une API de test datée au 23e jour de Ramadan (actions fictives créées puis supprimées : cases, rattrapage, refus du lendemain, tarawih 8 rakaat à la mosquée, rappel 21 h, bilan et note chiffrée relue, enfant « je l'ai fait », pastille +1, liste du parent, validation, pastille revenue, préférence e-mail) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone.
+
+
+## Étape M5 — Application : Apprendre en 4 onglets, cartes mémoire, bilan personnel, assistant (03/11)
+
+**Description.** Cinquième sous-étape de « go mobile ». L'onglet **Apprendre** suit la page du site (étapes B6, 38, 31, 41) :
+- **4 onglets** : **Aujourd'hui** (bloc « Aujourd'hui », les 4 temps — regarder, comprendre, retenir, pratiquer —, reprise de la dernière conférence, révisions et cartes du jour, score, badges, derniers quiz) · **Coran et athkar** (programme 30 jours, accès au Coran et au compteur d'athkar) · **Conférences** (Parcours, Quiz et révision avec rappel du jour et e-mail quotidien, **Cartes**) · **Mes progrès** (Engagements, **Mon bilan**, **Attestations**). Pastille sur « Conférences » (révisions + cartes du jour). Une phrase d'explication en haut de chaque onglet jusqu'à « Compris ». Les sections dont la fonction est coupée (Admin → Fonctions) disparaissent.
+- **Cartes mémoire** : compteurs (à revoir, nouvelles, en cours, maîtrisées), séance recto / verso (« Voir la réponse », « À revoir » / « Je savais », explication, passage cité, « Revoir ce passage » ouvre la conférence 3 s avant), les cartes ratées reviennent une fois, bilan de séance, séance libre.
+- **Mon bilan** (Tazkiyat an-nafs) : qualités à cultiver et défauts à corriger, point de la semaine (Atteint / En progrès / Pas encore), frise des 8 dernières semaines, note chiffrée, lien avec un engagement, archiver, supprimer, choix dans la base de thèmes si l'admin l'a ouverte, accord demandé la première fois, rappel par e-mail (jour au choix), tout effacer. L'export (JSON / CSV) se fait sur le site (lien). Suivi de **Mon évolution** (par thème et par mois).
+- **Attestations** : « Obtenir mon attestation » quand un parcours est terminé (la page de l'attestation s'ouvre sur le site), voir, retirer.
+- **Assistant « Poser une question »** : nouvel onglet de la fiche d'une conférence (membre connecté, fonction « ask » active) ; réponse tirée de la transcription, passages cités avec « Revoir à mm:ss » (le lecteur y saute), quota du jour, historique, signaler une réponse, supprimer un échange. Sans l'offre Apprentissage : explication + lien vers l'offre sur le site.
+- Sans l'offre Apprentissage, Apprendre affiche l'écran « offre » du site (4 temps avec cadenas, « Découvrir l'offre » sur le site), puis le Coran, « Aujourd'hui » et les quiz à passer (ouverts à tous).
+- Liens : « Aujourd'hui » (révisions, cartes) et notifications (`/learning?tab=…`, `#bilan`) ouvrent la bonne section. La barre d'onglets de la fiche défile désormais (6 onglets).
+
+**API / site.** Inchangés.
+
+**Déploiement.** Rien sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions (onglet Actions → « Application Android (APK) ») ; mise à jour sans réinstaller.
+
+**Essai sur le téléphone.**
+1. Fermer complètement l'application et la rouvrir (deux fois si besoin).
+2. Onglet Apprendre (compte admin ou Apprentissage) : passer d'un onglet à l'autre, « Compris » fait disparaître la phrase d'explication.
+3. Conférences → Cartes : « Commencer (n cartes) » → « Voir la réponse » → « Je savais » / « À revoir » (il faut avoir passé au moins un quiz d'une conférence dont les questions sont validées).
+4. Mes progrès → Mon bilan : ajouter une qualité, choisir « En progrès », ajouter une note, archiver.
+5. Une conférence → onglet « Poser une question » (si l'assistant est configuré et que la conférence a une transcription).
+
+**Debug.** « Aucune carte » : aucun quiz passé ou questions non validées. Onglet « Poser une question » absent : visiteur ou fonction « ask » coupée ; message « transcription absente » : la conférence n'a pas de transcription. Écran « offre » : le compte n'a pas l'offre Apprentissage.
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (186 contrôles, dont `tests/learnHub.test.ts` : groupes et sections selon les fonctions, file des cartes, passage à revoir, assistant, bilan, liens, textes FR/EN/AR) ; `tests/m5_contract.ts` contre une API de test (refus sans offre, tableau de bord, attestation refusée si incomplet, cartes avec une question d'essai validée, bilan : création / point / note chiffrée / archivage / suppression, évolution, assistant) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone ; réponse réelle de l'assistant (aucune clé IA ni transcription sur la base de test).
