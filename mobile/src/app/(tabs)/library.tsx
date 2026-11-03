@@ -58,7 +58,13 @@ function Favorites() {
       keyExtractor={(c) => c.id}
       numColumns={1}
       contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 40 }}
-      ListEmptyComponent={<Txt color={colors.muted}>{t('lib.noFav')}</Txt>}
+      ListEmptyComponent={(
+        // État vide utile (étape M6, comme le site B3) : une action pour commencer.
+        <Panel style={{ gap: 12 }}>
+          <Txt color={colors.text2}>{t('lib.noFav')}</Txt>
+          <Button label={t('esFindTalk')} variant="dark" onPress={() => router.navigate('/talks')} />
+        </Panel>
+      )}
       renderItem={({ item }) => <TalkCard talk={item} />}
       onRefresh={favs.reload}
       refreshing={favs.loading}

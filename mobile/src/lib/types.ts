@@ -1,6 +1,6 @@
 // Formes des réponses de l'API utilisées par l'application (voir api/src/routes/*.js).
 
-export type User = { id: string; email: string; name: string; role: 'user' | 'organizer' | 'moderator' | 'admin'; locale: string };
+export type User = { id: string; email: string; name: string; role: 'user' | 'organizer' | 'moderator' | 'admin'; locale: string; /** Écran « Par quoi commencer ? » déjà vu (étape B2) ; absent avant la relecture du profil. */ onboarded?: boolean };
 
 export type Card = {
   id: string;

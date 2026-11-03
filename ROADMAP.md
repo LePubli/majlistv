@@ -594,4 +594,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - M3 athkar, bandeaux vendredi et saison : livré (README « Étape M3 »), à essayer sur téléphone.
 - M4 Ramadan (circuit, tarawih, bilan, enfants, pastille du parent) : livré (README « Étape M4 »), à essayer sur téléphone.
 - M5 Apprendre en 4 onglets, cartes mémoire, bilan et évolution, attestations, assistant : livré (README « Étape M5 »), à essayer sur téléphone.
-- Suite : M6 parcours (démarrage, états vides, messages de fin, invitation, parrainage / cartes cadeaux).
+- M6 premiers pas, visite guidée, parrainage, cartes cadeaux, états vides : livré (README « Étape M6 »). **« Go mobile » terminé (M1 → M6)**, à valider sur téléphone par Epok.

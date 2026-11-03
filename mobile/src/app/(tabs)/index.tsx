@@ -1,11 +1,11 @@
 // Accueil : comme celui du site. Bannière, « À réviser » / « Quiz à rattraper » / « Continuer à regarder », explorer par format,
 // rangées du catalogue (séries comprises), bande Kids, citation du jour. Visiteur : même accueil avec invitation à créer un compte.
 // Étape M1 : bloc « Aujourd'hui » sous la bannière et rangée « À regarder plus tard » (comme sur le site).
-// Étape M3 : bandeaux de saison et du vendredi.
-import React, { useCallback, useState } from 'react';
+// Étape M3 : bandeaux de saison et du vendredi. Étape M6 : « Par quoi commencer ? » et visite guidée.
+import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { useDownloads } from '@/lib/downloadStore';
@@ -22,10 +22,15 @@ import { CitationCard } from '@/components/CitationCard';
 import { FormatTiles, KidsBand } from '@/components/HomeBands';
 import { TodayBlock } from '@/components/TodayBlock';
 import { FridayBand, SeasonBand } from '@/components/SeasonBands';
+import { StartCards, TourModal } from '@/components/Onboarding';
 
 export default function HomeScreen() {
   const { api, user, t, config, feat, dirStyle } = useSession();
   const dls = useDownloads();
+  // Étape M6 : visite guidée (bouton « Par quoi commencer ? », menu ☰ → « Visite guidée », lien /?tour=1).
+  const params = useLocalSearchParams<{ tour?: string }>();
+  const [tour, setTour] = useState(false);
+  useEffect(() => { if (params.tour === '1' && feat('onboarding')) { setTour(true); router.setParams({ tour: undefined }); } }, [params.tour]); // eslint-disable-line react-hooks/exhaustive-deps
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   const review = useAsync(async () => (user ? await api.get<RevisionResponse>('/me/revision').then((r) => r.items).catch((e) => (isLearningRequired(e) ? [] : [])) : []), [user?.id]);
@@ -59,6 +64,7 @@ export default function HomeScreen() {
       >
         <Hero hero={home.data.hero} />
 
+        <StartCards onTour={() => setTour(true)} />
         <TodayBlock />
         <SeasonBand />
         <FridayBand />
@@ -100,6 +106,7 @@ export default function HomeScreen() {
           </Panel>
         ) : null}
       </ScrollView>
+      <TourModal visible={tour} onClose={() => setTour(false)} />
     </View>
   );
 }

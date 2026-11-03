@@ -13,9 +13,10 @@ import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Txt, screenStyle, Title } from '@/components/ui';
 import { usePrayer } from '@/lib/prayerStore';
 import { UpdateStatus } from '@/components/UpdateStatus';
+import { GiftsBox, ReferralBox } from '@/components/account/ReferralGifts';
 
 export default function AccountScreen() {
-  const { user, api, t, locale, setLocale, logout, dirStyle, skinChoice, skinPick, setSkinPick } = useSession();
+  const { user, api, t, locale, setLocale, logout, dirStyle, skinChoice, skinPick, setSkinPick, feat } = useSession();
   const prayer = usePrayer();
   // Notifications du serveur (nouvelles conférences des intervenants suivis, sélection de la semaine, révision) : interrupteur du compte.
   const notif = useAsync(async () => (user ? await api.get<{ prefs: { push: boolean }; available: { push: boolean } }>('/me/notifications').catch(() => null) : null), [user?.id]);
@@ -49,6 +50,10 @@ export default function AccountScreen() {
             <Button label={t('account.manage')} variant="dark" onPress={() => Linking.openURL(`${SITE_URL}/account`)} />
           </View>
         ) : null}
+
+        {/* Étape M6 : parrainage et cartes cadeaux (l'achat se fait sur le site). */}
+        {user && feat('referral') ? <ReferralBox /> : null}
+        {user && feat('gifts') ? <GiftsBox /> : null}
 
         {prayer.on || notif.data?.available.push ? (
           <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 12 }}>

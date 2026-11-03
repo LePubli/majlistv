@@ -53,6 +53,8 @@ type Session = {
   /** Choix du membre (null : celui de l'administrateur). Sans effet si skinChoice est faux. */
   setSkinPick: (s: Skin | null) => void;
   skinPick: Skin | null;
+  /** Modifie le profil gardé en mémoire (ex. onboarded: true après « Par quoi commencer ? »). */
+  patchUser: (p: Partial<User>) => void;
   /** À mettre sur la vue racine de chaque écran : fait basculer la mise en page pour l'arabe. */
   dirStyle: { direction: 'ltr' | 'rtl' };
 };
@@ -184,7 +186,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     tokenRef.current = res.token;
     await write(TOKEN_KEY, res.token);
     setUser(res.user);
-  }, []);
+    // Profil complet (dont « onboarded », absent de la réponse d'inscription) : relu en arrière-plan (étape M6).
+    api.get<User>('/auth/me').then((me) => { if (tokenRef.current === res.token) setUser(me); }).catch(() => {});
+  }, [api]);
+  const patchUser = useCallback((p: Partial<User>) => setUser((u) => (u ? { ...u, ...p } : u)), []);
 
   const login = useCallback(async (email: string, password: string) => {
     const out = readLogin(await api.post<LoginResponse>('/auth/login', { email: email.trim(), password }));
@@ -208,10 +213,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Session>(() => ({
     ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
-    later, toggleLater, skin, skinChoice, skinPick, setSkinPick,
+    later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick]);
+  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

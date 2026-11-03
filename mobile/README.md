@@ -34,6 +34,8 @@ Nom de code `majlistv`, identifiant d'application `fr.lepublicitaire.mejlisstv`.
 
 **Étape M5 (03/11)** : **Apprendre en 4 onglets** comme le site — `src/app/(tabs)/learn.tsx` (Aujourd'hui · Coran et athkar · Conférences : parcours, quiz et révision, cartes · Mes progrès : engagements, bilan, attestations ; pastille révisions + cartes ; phrase d'explication avec « Compris » ; `?tab=`), **cartes mémoire** `src/components/learn/MemoryCards.tsx`, **bilan personnel et évolution** `src/components/learn/SelfCheck.tsx`, **assistant « Poser une question »** dans la fiche (`src/components/talk/AskPanel.tsx`, onglet de `TalkTabs`) ; logique pure : `src/lib/learnHub.ts`. Essai : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m5_contract.ts`.
 
+**Étape M6 (03/11)** : **premiers pas** — « Par quoi commencer ? » sur l'accueil d'un nouveau compte et **visite guidée** (`src/components/Onboarding.tsx` ; menu ☰ → « Visite guidée » ; `/?tour=1`) ; **parrainage** et **cartes cadeaux** dans Compte (`src/components/account/ReferralGifts.tsx` : lien et partage, code d'un parrain, mes cartes, activation d'une carte ; l'achat reste sur le site) ; états vides utiles (favoris, engagements) ; logique pure : `src/lib/onboarding.ts`. Essai : `API_TEST_URL=http://127.0.0.1:3055 npx tsx tests/m6_contract.ts`.
+
 ## Architecture
 
 ```

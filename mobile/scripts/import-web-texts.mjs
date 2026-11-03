@@ -14,7 +14,9 @@ const { DICT } = await import(pathToFileURL(join(tmp, 'i18n.mjs')).href);
 const PREFIXES = ['hero', 'row', 'cit', 'fm', 'kdBand', 'rev', 'qp', 'pz', 'wb', 'nt', 'lk', 'pv', 'th', 'lv', 'spd', 'aud', 'cn', 'ep', 'season', 'ser', 'tab',
   'err', 'reg', 'hm', 'fav', 'search', 'sr', 'up', 'play', 'prev', 'next', 'share', 'rp', 'lr', 'col', 'ch', 'sp', 'pr', 'sub', 'follow', 'welcome', 'cat', 'fmt', 'ft', 'pc', 'tp', 'pry', 'kd', 'kc', 'ka', 'kr',
   // Étape M5 : Apprendre (onglets, cartes mémoire, bilan, évolution, assistant, offre).
-  'lg', 'tb', 'mc', 'sc', 'ev', 'ask', 'lz', 'pz'];
+  'lg', 'tb', 'mc', 'sc', 'ev', 'ask', 'lz', 'pz',
+  // Étape M6 : premiers pas, visite guidée, parrainage, cartes cadeaux.
+  'ob', 'tour', 'ref', 'gf', 'rd'];
 // Clés isolées.
 const EXACT = ['home', 'library', 'navCatalogue', 'navLearn', 'seriesNav', 'colNav', 'minutes', 'login', 'register', 'email', 'password', 'submit', 'free', 'premium', 'mixed',
   'noTalks', 'summary', 'chapters', 'transcript', 'dSpeaker', 'dCategory', 'dLang', 'dDuration', 'dAccess', 'dSubs', 'lvLabel', 'pricing', 'subscribe', 'logout', 'account',

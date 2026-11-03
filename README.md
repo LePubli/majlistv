@@ -7006,3 +7006,28 @@ Vérifier les données : `curl -s "https://api-majlisstv.le-publicitaire.fr/rama
 **Debug.** « Aucune carte » : aucun quiz passé ou questions non validées. Onglet « Poser une question » absent : visiteur ou fonction « ask » coupée ; message « transcription absente » : la conférence n'a pas de transcription. Écran « offre » : le compte n'a pas l'offre Apprentissage.
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (186 contrôles, dont `tests/learnHub.test.ts` : groupes et sections selon les fonctions, file des cartes, passage à revoir, assistant, bilan, liens, textes FR/EN/AR) ; `tests/m5_contract.ts` contre une API de test (refus sans offre, tableau de bord, attestation refusée si incomplet, cartes avec une question d'essai validée, bilan : création / point / note chiffrée / archivage / suppression, évolution, assistant) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone ; réponse réelle de l'assistant (aucune clé IA ni transcription sur la base de test).
+
+
+## Étape M6 — Application : premiers pas, visite guidée, parrainage, cartes cadeaux (03/11)
+
+**Description.** Dernière sous-étape de « go mobile » (étapes B2, B3, 21 et 43 du site) :
+- **« Par quoi commencer ? »** en haut de l'accueil, une seule fois, pour un compte neuf : 3 cartes selon les fonctions activées (regarder une conférence, Coran en 30 jours, athkar — « Formule Apprentissage » —, Ramadan), « Faire la visite guidée (1 min) », « Plus tard ». Le choix est enregistré sur le compte : l'écran ne revient ni dans l'application ni sur le site.
+- **Visite guidée** : une fenêtre par étape (votre journée, Apprendre, le Coran, le menu ☰, la recherche, votre compte) avec « Ouvrir » pour aller à la rubrique, Précédent / Suivant / Passer. Différence avec le site : pas de bulles posées sur l'écran (chaque étape dit où se trouve la rubrique). Relançable : menu ☰ → « Visite guidée ».
+- **Parrainage** (Compte) : lien personnel, partage par la feuille du téléphone (WhatsApp, SMS, e-mail…), code, compteurs (invités, abonnés grâce à vous, en attente, mois gagnés), plafond annuel, règle ; un compte tout neuf peut saisir le code de la personne qui l'invite (48 h, comme le site).
+- **Cartes cadeaux** (Compte) : mes cartes (durée, état, date, destinataire, code, partage du lien d'activation), activation d'une carte reçue (code ABCD-EFGH-JKLM) ; « Offrir un abonnement » ouvre le site (rien ne se vend dans l'application).
+- **États vides** : favoris et engagements vides proposent « Trouver une conférence ».
+- Les messages de fin (Coran terminé, bilan de Ramadan), l'invitation des visiteurs (Coran, Ramadan, Apprendre) et les autres états vides sont arrivés avec M2 à M5.
+
+**API / site.** Inchangés. Correction côté application : après une inscription, le profil est relu (pour savoir si « Par quoi commencer ? » a déjà été vu).
+
+**Déploiement.** Rien sur DockPanel ni sur le VPS. Le push sur `main` lance GitHub Actions (onglet Actions → « Application Android (APK) ») ; mise à jour sans réinstaller.
+
+**Essai sur le téléphone.**
+1. Fermer complètement l'application et la rouvrir (deux fois si besoin).
+2. Créer un compte de test dans l'application : « Par quoi commencer ? » apparaît sous la bannière ; toucher « Faire la visite guidée » ; la fermer ; rouvrir l'application : l'écran ne revient plus.
+3. Menu ☰ → « Visite guidée » : la visite se relance.
+4. Compte → Parrainage → « Partager » ; Compte → Mes cartes cadeaux (visible si les cartes cadeaux sont activées : Admin → Paramètres → Cartes cadeaux).
+
+**Debug.** « Par quoi commencer ? » absent : compte ancien (déjà marqué comme vu), ou fonction « Accueil des nouveaux membres » coupée (Admin → Fonctions). Parrainage absent : fonction « Parrainage » coupée. Cartes cadeaux absentes : réglage « Vendre des cartes cadeaux » désactivé.
+
+**Tests.** `cd mobile && npx tsc --noEmit && npm test` (191 contrôles, dont `tests/onboarding.test.ts`) ; `tests/m6_contract.ts` contre une API de test (nouveau compte non vu puis vu, code de parrainage lisible, refus de son propre code, filleul rattaché, compteurs du parrain ; cartes cadeaux activées : liste, code inconnu et code mal formé refusés) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone ; activation réelle d'une carte payée (il faut un paiement Stripe).

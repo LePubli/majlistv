@@ -376,7 +376,12 @@ function Commitments({ practice, reload }: { practice: PracticeMine | null; relo
   return (
     <View style={{ gap: 12 }}>
       <Eyebrow>{t('learn.commitments')}</Eyebrow>
-      {practice.items.length === 0 ? <Txt color={colors.muted}>{t('learn.noCommit')}</Txt> : sortCommitments(practice.items).map((c) => (
+      {practice.items.length === 0 ? (
+        <Panel style={{ gap: 10 }}>
+          <Txt color={colors.text2}>{t('lrNoCommit')}</Txt>
+          <Button label={t('esFindTalk')} variant="dark" onPress={() => router.navigate('/talks')} />
+        </Panel>
+      ) : sortCommitments(practice.items).map((c) => (
         <Panel key={c.id} style={{ gap: 8, borderColor: c.overdue ? colors.danger : colors.border }}>
           <Txt weight="bold">{c.text}</Txt>
           {c.talkTitle ? <Txt size={12} color={colors.muted} numberOfLines={1}>{c.talkTitle}</Txt> : null}
