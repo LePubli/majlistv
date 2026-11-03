@@ -93,3 +93,15 @@ test('textes du Coran présents dans les trois langues', () => {
     'khContinue', 'khToday', 'khReadNow', 'khMark', 'khShowAll', 'khHideAll', 'khJuz', 'khRemind', 'khRestart', 'khRestartAsk', 'khStop', 'khStopAsk', 'atNoRemind', 'cancelBtn', 'errGeneric'];
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}.${k}`);
 });
+
+test('arLabel : nom arabe d\'un seul tenant (« آل عمران » ne passe plus à la ligne)', async () => {
+  const { arLabel, juzRange } = await import('../src/lib/quran');
+  assert.equal(arLabel('آل عمران'), 'آل عمران');
+  assert.equal(arLabel('  البقرة '), 'البقرة');
+  assert.equal(/ /.test(arLabel('آل  عمران')), false);
+  const j = { n: 3, start: { sura: 2, aya: 253, name: 'Al-Baqara', ar: 'البقرة' }, end: { sura: 3, aya: 92, name: 'Al Imran', ar: 'آل عمران' } };
+  assert.equal(juzRange(j, 'ar'), 'البقرة 253 → آل عمران 92');
+  // Toutes les sourates du serveur : aucun nom arabe ne garde d'espace sécable une fois préparé.
+  const { SURAS } = await import('../../api/src/modules/quran/suras.js' as string);
+  for (const s of SURAS as { ar: string }[]) assert.equal(/ /.test(arLabel(s.ar)), false, s.ar);
+});

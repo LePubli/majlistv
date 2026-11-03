@@ -123,6 +123,13 @@ export function tokens(cps: string[]): [number, number][] {
 /** Le mot à mot n'est proposé que si le nombre de mots correspond exactement (comme sur le site). */
 export const wordMode = (ar: string, words?: string[] | null): boolean => Array.isArray(words) && tokens([...ar]).length === words.length;
 
+/**
+ * Nom arabe court (nom de sourate) affiché d'un seul tenant : les espaces deviennent insécables.
+ * Sur Android, la largeur d'un texte en police Amiri est parfois sous-estimée : un nom de deux mots (« آل عمران ») passait
+ * à la ligne et le second mot disparaissait. Un seul bloc insécable s'affiche toujours en entier.
+ */
+export const arLabel = (s: string): string => String(s || '').trim().replace(/\s+/g, '\u00A0');
+
 /** Filtre de la liste des sourates : nom latin, nom arabe ou numéro. */
 export function filterSuras(list: SuraInfo[], q: string): SuraInfo[] {
   const f = q.trim().toLowerCase();
@@ -132,7 +139,7 @@ export function filterSuras(list: SuraInfo[], q: string): SuraInfo[] {
 
 /** « Al-Baqara 142 → Al-Baqara 252 » (noms arabes en arabe). */
 export function juzRange(j: Juz, locale: string): string {
-  const nm = (p: JuzPoint) => (locale === 'ar' ? p.ar : p.name);
+  const nm = (p: JuzPoint) => (locale === 'ar' ? arLabel(p.ar) : p.name);
   return `${nm(j.start)} ${j.start.aya} → ${nm(j.end)} ${j.end.aya}`;
 }
 

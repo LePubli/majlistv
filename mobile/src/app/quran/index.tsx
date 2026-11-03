@@ -1,12 +1,12 @@
 // Étape M2 — Le Coran : programme « 30 jours », recherche dans le texte / les traductions / la phonétique, et les 114 sourates.
 // Mêmes données que la page /coran du site (GET /quran/suras, /quran/search). Gratuit pour tous.
 import React, { useEffect, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
-import { filterSuras, type SearchHit, type SuraInfo, type SurasResponse } from '@/lib/quran';
+import { arLabel, filterSuras, type SearchHit, type SuraInfo, type SurasResponse } from '@/lib/quran';
 import { colors, fonts, radius } from '@/lib/theme';
 import { ErrorBox, Loading, ScreenHeader, Txt, screenStyle } from '@/components/ui';
 import { QuranPlan } from '@/components/QuranPlan';
@@ -99,7 +99,11 @@ function SuraRow({ s }: { s: SuraInfo }) {
         <Txt weight="bold" size={15} numberOfLines={1}>{s.en}</Txt>
         <Txt size={12} color={colors.muted}>{s.verses ? t('qrVerses', { n: s.verses }) : '—'}</Txt>
       </View>
-      <Txt style={{ fontFamily: 'Amiri_700Bold', fontSize: 22, lineHeight: 36, writingDirection: 'rtl' }}>{s.ar}</Txt>
+      {/* Nom arabe d'un seul tenant (arLabel) : « آل عمران » s'affichait coupé sur Android. */}
+      <Text numberOfLines={1} accessibilityLanguage="ar"
+        style={{ flexShrink: 0, paddingHorizontal: 4, fontFamily: 'Amiri_700Bold', fontSize: 22, lineHeight: 38, color: colors.text, textAlign: 'right', writingDirection: 'rtl', includeFontPadding: false }}>
+        {arLabel(s.ar)}
+      </Text>
     </Pressable>
   );
 }

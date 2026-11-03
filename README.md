@@ -7031,3 +7031,11 @@ Vérifier les données : `curl -s "https://api-majlisstv.le-publicitaire.fr/rama
 **Debug.** « Par quoi commencer ? » absent : compte ancien (déjà marqué comme vu), ou fonction « Accueil des nouveaux membres » coupée (Admin → Fonctions). Parrainage absent : fonction « Parrainage » coupée. Cartes cadeaux absentes : réglage « Vendre des cartes cadeaux » désactivé.
 
 **Tests.** `cd mobile && npx tsc --noEmit && npm test` (191 contrôles, dont `tests/onboarding.test.ts`) ; `tests/m6_contract.ts` contre une API de test (nouveau compte non vu puis vu, code de parrainage lisible, refus de son propre code, filleul rattaché, compteurs du parrain ; cartes cadeaux activées : liste, code inconnu et code mal formé refusés) ; paquet Android construit. **Pas testé** : rendu sur un vrai téléphone ; activation réelle d'une carte payée (il faut un paiement Stripe).
+
+
+## Correctif M2b — Nom arabe « آل عمران » coupé dans l'application (03/11)
+
+**Problème (signalé par Epok, capture du téléphone).** Dans la liste des sourates, « آل عمران » (sourate 3, seul nom de sourate en deux mots) s'affichait « آل » : sur Android, la largeur d'un texte en police Amiri est parfois sous-estimée, le second mot passait à la ligne et n'apparaissait pas.
+**Correction.** Les noms arabes courts (liste des sourates, titre d'une sourate, juz du programme 30 jours en arabe) sont affichés d'un seul tenant (espaces insécables, `arLabel()` dans `mobile/src/lib/quran.ts`), sur une ligne, avec une petite marge. Le texte des versets n'est pas touché.
+**Déploiement.** Push sur `main` → GitHub Actions publie la mise à jour (sans réinstaller). Rien sur DockPanel ni le VPS.
+**Tests.** `npm test` (192 contrôles, dont : aucun nom des 114 sourates ne garde d'espace sécable, juz en arabe). **Pas testé** : rendu sur le téléphone — à vérifier par Epok (Menu → Coran → sourate 3).

@@ -11,7 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import {
-  ARABIC_SIZES, DEFAULT_PREFS, nextAya, paint, readPrefs, reciterUrl, suraNum, suraQuery, tajColor, tajLegend, tokens, wordMode,
+  ARABIC_SIZES, DEFAULT_PREFS, arLabel, nextAya, paint, readPrefs, reciterUrl, suraNum, suraQuery, tajColor, tajLegend, tokens, wordMode,
   type QuranPrefs, type Reciter, type ResourceMeta, type SuraData, type Verse,
 } from '@/lib/quran';
 import { colors, radius } from '@/lib/theme';
@@ -123,7 +123,7 @@ export default function SuraScreen() {
     <View style={{ gap: 12, paddingBottom: 8 }}>
       <View style={{ alignItems: 'center', gap: 2 }}>
         <Txt size={12} color={colors.muted}>{t('qrSura')} {d.sura.n}</Txt>
-        <Text style={{ fontFamily: 'Amiri_700Bold', fontSize: 34, lineHeight: 60, color: colors.goldLight, writingDirection: 'rtl' }}>{d.sura.ar}</Text>
+        <Text accessibilityLanguage="ar" style={{ paddingHorizontal: 6, fontFamily: 'Amiri_700Bold', fontSize: 34, lineHeight: 60, color: colors.goldLight, textAlign: 'center', writingDirection: 'rtl', includeFontPadding: false }}>{arLabel(d.sura.ar)}</Text>
         <Txt weight="bold" size={16}>{d.sura.en}</Txt>
       </View>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: showOpts }} onPress={() => setShowOpts(!showOpts)}
