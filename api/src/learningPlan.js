@@ -3,9 +3,12 @@
 // les séances choisies par le membre (table learning_plan_items) et, pour les jours passés, la marque « activité » déjà utilisée par la série.
 // Une révision en retard est regroupée sur aujourd'hui (rien n'est perdu, rien n'est reproché).
 import { pool } from './db.js';
+import { featureOn } from './features.js';
+import { openText, practiceKeyReady } from './practiceCrypto.js';
 import { visibleSql } from './visibility.js';
 import { TZ, addDays, mondayOf, parisToday, activeDaysOf, goalOf, weekOf } from './learningStreak.js';
 
+export const KINDS = ['video', 'quiz', 'custom', 'cards', 'quran', 'athkar', 'action', 'bilan'];
 export const MAX_DAYS = 62; // fenêtre maximale d'une requête (vue mois : 6 semaines = 42 jours)
 export const MAX_AHEAD = 366; // on ne planifie pas au-delà d'un an
 export const isDay = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
@@ -41,6 +44,63 @@ async function autoCards(userId, from, to, today) {
   return rows.map((r) => ({ type: 'cards', day: r.day, count: r.n }));
 }
 
+/** Lecture du Coran en 30 jours : un juz par jour, à partir du jour de départ choisi par le membre. */
+async function autoQuran(userId, from, to) {
+  if (!(await featureOn('quran')) || !(await featureOn('quranplan'))) return [];
+  const p = (await pool.query(`SELECT to_char(started_on, 'YYYY-MM-DD') AS s FROM quran_plans WHERE user_id = $1`, [userId])).rows[0];
+  if (!p) return [];
+  const reads = new Set((await pool.query('SELECT juz FROM quran_plan_reads WHERE user_id = $1', [userId])).rows.map((r) => r.juz));
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    const n = Math.round((Date.parse(`${d}T12:00:00Z`) - Date.parse(`${p.s}T12:00:00Z`)) / 86400000) + 1;
+    if (n >= 1 && n <= 30) out.push({ type: 'quran', day: d, juz: n, done: reads.has(n) });
+  }
+  return out;
+}
+
+/** Adhkar : un repère par jour pour les membres qui ont réglé leur objectif quotidien ; « fait » si l'objectif du jour est atteint. */
+async function autoAthkar(userId, from, to) {
+  if (!(await featureOn('athkar'))) return [];
+  const pref = (await pool.query('SELECT daily_goal FROM athkar_prefs WHERE user_id = $1', [userId])).rows[0];
+  if (!pref) return [];
+  const { rows } = await pool.query(
+    `SELECT to_char(c.day, 'YYYY-MM-DD') AS day, count(*)::int AS done
+       FROM athkar_counts c JOIN athkar_items i ON i.id = c.item_id
+      WHERE c.user_id = $1 AND i.enabled AND i.reviewed_at IS NOT NULL AND c.count >= i.target AND c.day BETWEEN $2::date AND $3::date
+      GROUP BY c.day`, [userId, from, to]);
+  const by = new Map(rows.map((r) => [r.day, r.done]));
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push({ type: 'athkar', day: d, goal: pref.daily_goal, done: (by.get(d) || 0) >= pref.daily_goal });
+  return out;
+}
+
+/** Mise en pratique : mes engagements à faire ou en cours qui ont une échéance (les retards sont ramenés à aujourd'hui). */
+async function autoActions(userId, from, to, today) {
+  if (!(await featureOn('practice')) || !practiceKeyReady()) return [];
+  const { rows } = await pool.query(
+    `SELECT id, text_enc, GREATEST(due_on, $4::date)::text AS day FROM practice_commitments
+      WHERE user_id = $1 AND status IN ('todo', 'doing') AND due_on IS NOT NULL AND GREATEST(due_on, $4::date) BETWEEN $2::date AND $3::date
+      ORDER BY day, created_at`, [userId, from, to, today]);
+  return rows.map((r) => ({ type: 'action', day: r.day, id: r.id, title: openText(r.text_enc) || '' }));
+}
+
+/** Bilan personnel : un repère le jour de la semaine choisi par le membre (vendredi par défaut), s'il a au moins un objectif actif. */
+async function autoBilan(userId, from, to) {
+  if (!(await featureOn('selfcheck')) || !practiceKeyReady()) return [];
+  const u = (await pool.query('SELECT practice_weekday AS wd FROM users WHERE id = $1', [userId])).rows[0];
+  const goals = (await pool.query('SELECT id FROM self_goals WHERE user_id = $1 AND archived_at IS NULL', [userId])).rows.map((r) => r.id);
+  if (!u || !goals.length) return [];
+  const { rows } = await pool.query(
+    `SELECT DISTINCT to_char(week, 'YYYY-MM-DD') AS w FROM self_checkins WHERE goal_id = ANY($1::uuid[]) AND week BETWEEN $2::date AND $3::date`,
+    [goals, mondayOf(from), to]);
+  const doneWeeks = new Set(rows.map((r) => r.w));
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (((new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7) + 1 === u.wd) out.push({ type: 'bilan', day: d, done: doneWeeks.has(mondayOf(d)) });
+  }
+  return out;
+}
+
 /** Séances choisies par le membre. */
 async function ownItems(userId, from, to) {
   const { rows } = await pool.query(
@@ -54,15 +114,16 @@ async function ownItems(userId, from, to) {
 /** Réponse complète de GET /me/learning/plan. */
 export async function planWindow(userId, from, to) {
   const today = await parisToday();
-  const [auto1, auto2, items, rest, active, g] = await Promise.all([
-    autoRevisions(userId, from, to, today), autoCards(userId, from, to, today), ownItems(userId, from, to),
+  const [autos, items, rest, active, g] = await Promise.all([
+    Promise.all([autoRevisions(userId, from, to, today), autoCards(userId, from, to, today), autoQuran(userId, from, to), autoAthkar(userId, from, to), autoActions(userId, from, to, today), autoBilan(userId, from, to)]),
+    ownItems(userId, from, to),
     pool.query('SELECT day::text AS day FROM learning_rest_days WHERE user_id = $1 AND day BETWEEN $2::date AND $3::date ORDER BY day', [userId, from, to]),
     activeDaysOf(userId), goalOf(userId),
   ]);
   const act = [...active].filter((d) => d >= from && d <= to).sort();
   return {
     today, from, to,
-    auto: [...auto1, ...auto2],
+    auto: autos.flat(),
     items,
     rest: rest.rows.map((r) => r.day),
     active: act, // jours où le membre a réellement appris (déjà fait)

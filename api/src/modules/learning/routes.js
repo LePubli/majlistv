@@ -7,7 +7,7 @@ import { hasLearningTier } from '../../access.js';
 import { getSetting } from '../../settings.js';
 import { FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, scoreAt, curveOf } from '../../learning.js';
 import { streakSummary, goalOf, parisToday } from '../../learningStreak.js';
-import { planWindow, windowOk, dayAllowed, isDay } from '../../learningPlan.js';
+import { planWindow, windowOk, dayAllowed, isDay, KINDS } from '../../learningPlan.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };
@@ -49,12 +49,12 @@ export default async function learningRoutes(app) {
   app.post('/me/learning/plan', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
     const b = z.object({
-      day: dayS, kind: z.enum(['video', 'quiz', 'custom']), talkId: z.string().uuid().optional(), note: z.string().trim().max(120).optional(),
+      day: dayS, kind: z.enum(KINDS), talkId: z.string().uuid().optional(), note: z.string().trim().max(120).optional(),
     }).parse(req.body ?? {});
     const today = await parisToday();
     if (!dayAllowed(b.day, today)) return reply.code(400).send({ error: "Choisissez un jour entre aujourd'hui et dans un an" });
     if (b.kind === 'custom' && !b.note) return reply.code(400).send({ error: 'Écrivez ce que vous voulez faire' });
-    if (b.kind !== 'custom') {
+    if (b.kind === 'video' || b.kind === 'quiz') {
       if (!b.talkId) return reply.code(400).send({ error: 'Choisissez une vidéo' });
       const ok = (await pool.query(`SELECT 1 FROM talks WHERE id = $1 AND video_status = 'ready'`, [b.talkId])).rowCount;
       if (!ok) return reply.code(404).send({ error: 'Vidéo introuvable' });
@@ -64,7 +64,7 @@ export default async function learningRoutes(app) {
     const { rows } = await pool.query(
       `INSERT INTO learning_plan_items(user_id, day, kind, talk_id, note) VALUES ($1, $2, $3, $4, $5)
        RETURNING id, day::text AS day, kind, talk_id AS "talkId", note, false AS done`,
-      [req.user.sub, b.day, b.kind, b.kind === 'custom' ? null : b.talkId, b.note ?? '']);
+      [req.user.sub, b.day, b.kind, b.kind === 'video' || b.kind === 'quiz' ? b.talkId : null, b.note ?? '']);
     // Une séance posée sur un jour de repos annule ce repos : le membre a changé d'avis.
     await pool.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = $2', [req.user.sub, b.day]);
     return reply.code(201).send(rows[0]);

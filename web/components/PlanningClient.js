@@ -65,25 +65,35 @@ export default function PlanningClient() {
     : view === 'week' ? `${fmt(win.from, { day: 'numeric', month: 'short' })} – ${fmt(win.to, { day: 'numeric', month: 'short', year: 'numeric' })}`
       : fmt(cursor, { month: 'long', year: 'numeric' });
 
-  const label = (a) => (a.type === 'cards' ? (a.count === 1 ? t('pnCard1') : t('pnCardsN').replace('{n}', a.count)) : a.title);
-  const tag = (a) => (a.type === 'cards' ? t('pnCards') : t('pnAuto'));
+  // Tout le cycle : chaque type renvoie vers son onglet d'Apprendre.
+  const TAB = { cards: 'cards', quran: 'quran', athkar: 'athkar', action: 'commit', bilan: 'bilan' };
+  const NAME = { cards: 'pnCards', quran: 'qrNav', athkar: 'atTab', action: 'tbCommit', bilan: 'msBilan', revision: 'pnAuto' };
+  const label = (a) => ({
+    cards: () => (a.count === 1 ? t('pnCard1') : t('pnCardsN').replace('{n}', a.count)),
+    quran: () => t('pnJuz').replace('{n}', a.juz),
+    athkar: () => t('pnAthkarDay').replace('{n}', a.goal),
+    bilan: () => t('pnBilanDo'),
+  }[a.type]?.() ?? a.title);
+  const tag = (a) => t(NAME[a.type]);
   const sub = (a) => (a.type === 'revision' ? t('pnStage').replace('{n}', (a.stage ?? 0) + 1) : '');
-  const href = (a) => (a.type === 'cards' ? '/learning?tab=cards' : `/talks/${a.talkId}?quiz=1`);
-  const mineTag = (i) => (i.kind === 'video' ? t('pnVideo') : i.kind === 'quiz' ? t('pnQuiz') : t('pnNote'));
-  const mineHref = (i) => (i.kind === 'quiz' ? `/talks/${i.talkId}?quiz=1` : i.kind === 'video' ? `/talks/${i.talkId}` : null);
-  const todoN = (d) => { const x = of(d); return x.auto.length + x.mine.filter((i) => !i.done).length; };
+  const href = (a) => (a.type === 'revision' ? `/talks/${a.talkId}?quiz=1` : `/learning?tab=${TAB[a.type]}`);
+  const KIND_KEY = { video: 'pnVideo', quiz: 'pnQuiz', custom: 'pnNote', cards: 'pnKindCards', quran: 'pnKindQuran', athkar: 'pnKindAthkar', action: 'pnKindAction', bilan: 'pnKindBilan' };
+  const mineTag = (i) => t(i.kind === 'cards' ? 'pnCards' : i.kind === 'quran' ? 'qrNav' : i.kind === 'athkar' ? 'atTab' : i.kind === 'action' ? 'tbCommit' : i.kind === 'bilan' ? 'msBilan' : KIND_KEY[i.kind]);
+  const mineHref = (i) => (i.kind === 'quiz' ? `/talks/${i.talkId}?quiz=1` : i.kind === 'video' ? `/talks/${i.talkId}` : i.kind === 'custom' ? null : `/learning?tab=${TAB[i.kind]}`);
+  const mineText = (i) => (i.kind === 'custom' ? i.note : i.kind === 'video' || i.kind === 'quiz' ? i.title : (i.note || t(KIND_KEY[i.kind])));
+  const todoN = (d) => { const x = of(d); return x.auto.filter((a) => !a.done).length + x.mine.filter((i) => !i.done).length; };
   const canPlan = (d) => d >= today;
 
   // Une ligne (révision automatique ou séance du membre).
   const Auto = ({ a, k }) => (
-    <li key={`a${k}`} className="pn-it pn-auto">
-      <span className="pn-tag">{tag(a)}</span>
+    <li key={`a${k}`} className={`pn-it pn-auto${a.done ? ' is-done' : ''}`}>
+      <span className="pn-tag">{tag(a)}{a.done ? ' ✓' : ''}</span>
       <Link href={href(a)} className="pn-ti">{label(a)}</Link>
       {sub(a) && <small>{sub(a)}</small>}
     </li>
   );
   const Mine = ({ i, bare }) => {
-    const h = mineHref(i); const text = i.kind === 'custom' ? i.note : i.title;
+    const h = mineHref(i); const text = mineText(i);
     return (
       <li key={i.id} className={`pn-it pn-mine${i.done ? ' is-done' : ''}`}>
         <div className="pn-row">
@@ -196,6 +206,8 @@ export default function PlanningClient() {
   );
 }
 
+const TALK_KINDS = ['video', 'quiz']; // séances liées à une vidéo ; les autres (cartes, Coran, adhkar, action, bilan, note) n'en ont pas
+
 // Formulaire d'ajout d'une séance (fenêtre modale simple).
 function AddForm({ day, today, onClose, onSaved }) {
   const { t, call } = useApp();
@@ -210,18 +222,18 @@ function AddForm({ day, today, onClose, onSaved }) {
 
   // Recherche d'une vidéo (après une courte pause de frappe).
   useEffect(() => {
-    if (kind === 'custom' || q.trim().length < 2) { setRes(null); return undefined; }
+    if (!TALK_KINDS.includes(kind) || q.trim().length < 2) { setRes(null); return undefined; }
     const h = setTimeout(() => call(`/talks?q=${encodeURIComponent(q.trim())}&limit=8`).then((r) => setRes(r.ok && Array.isArray(r.data) ? r.data : [])), 250);
     return () => clearTimeout(h);
   }, [q, kind, call]);
   useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
 
-  const ready = kind === 'custom' ? note.trim().length > 0 : !!talk;
+  const ready = TALK_KINDS.includes(kind) ? !!talk : kind === 'custom' ? note.trim().length > 0 : true;
   const save = async (e) => {
     e.preventDefault();
     if (!ready || busy) return;
     setBusy(true); setErr('');
-    const body = kind === 'custom' ? { day: d, kind, note: note.trim() } : { day: d, kind, talkId: talk.id };
+    const body = TALK_KINDS.includes(kind) ? { day: d, kind, talkId: talk.id } : { day: d, kind, note: note.trim() };
     const r = await call('/me/learning/plan', { method: 'POST', body: JSON.stringify(body) });
     setBusy(false);
     if (r.ok) onSaved(); else setErr(r.data?.error || t('pnErr'));
@@ -233,12 +245,12 @@ function AddForm({ day, today, onClose, onSaved }) {
         <h3>{t('pnFormTitle')}</h3>
         <label>{t('pnFormDay')}<input type="date" value={d} min={today} onChange={(e) => e.target.value && setD(e.target.value)} required /></label>
         <fieldset className="pn-kinds"><legend>{t('pnFormKind')}</legend>
-          {[['video', 'pnKindVideo'], ['quiz', 'pnKindQuiz'], ['custom', 'pnKindCustom']].map(([k, key]) => (
-            <label key={k} className={kind === k ? 'on' : ''}><input type="radio" name="pn-kind" checked={kind === k} onChange={() => { setKind(k); setTalk(null); }} />{t(key)}</label>
+          {[['video', 'pnKindVideo'], ['quiz', 'pnKindQuiz'], ['cards', 'pnKindCards'], ['quran', 'pnKindQuran'], ['athkar', 'pnKindAthkar'], ['action', 'pnKindAction'], ['bilan', 'pnKindBilan'], ['custom', 'pnKindCustom']].map(([k, key]) => (
+            <label key={k} className={kind === k ? 'on' : ''}><input type="radio" name="pn-kind" checked={kind === k} onChange={() => { setKind(k); setTalk(null); setNote(''); }} />{t(key)}</label>
           ))}
         </fieldset>
-        {kind === 'custom' ? (
-          <label>{t('pnNote')}<input type="text" maxLength={120} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('pnCustomPh')} autoFocus /></label>
+        {!TALK_KINDS.includes(kind) ? (
+          <label>{kind === 'custom' ? t('pnNote') : t('pnNoteOpt')}<input type="text" maxLength={120} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('pnCustomPh')} autoFocus /></label>
         ) : (
           <div>
             {talk ? (

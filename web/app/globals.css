@@ -4619,3 +4619,6 @@ a.pn-ti:hover { text-decoration: underline; }
 @media (max-width: 1320px) and (min-width: 901px) {
   .pn-week { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+.pn-it.is-done .pn-ti { opacity: .6; text-decoration: line-through; }
+.pn-kinds label { font-size: .85rem; padding: 6px 11px; }

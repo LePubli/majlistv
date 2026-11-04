@@ -1,6 +1,6 @@
 """Planning de révisions (étape 1) : séances, jours de repos, révisions automatiques, accès réservé au palier Apprentissage.
-Prérequis : API (3055), PG de test (5544), un compte admin admin@test.local."""
-import sys, uuid, datetime, requests, psycopg2
+Prérequis : API (3055), PG de test (5544), un compte admin admin@test.local ; à lancer depuis le dossier api (même PRACTICE_KEY que l'API de test)."""
+import sys, uuid, datetime, subprocess, os, requests, psycopg2
 
 B = "http://127.0.0.1:3055"
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
@@ -105,6 +105,47 @@ if qid:
     ok(any(x["type"] == "cards" and x["day"] == d(6) and x["count"] == 1 for x in a), "cartes mémoire à revoir : un bloc par jour")
     ok(requests.get(f"{B}/me/learning/plan", headers=OTH, params=win).json()["auto"] == [], "révisions d'un autre membre invisibles")
 
+
+# ─── tout le cycle : séances sans vidéo (cartes, Coran, adhkar, mise en pratique, bilan)
+for k in ("cards", "quran", "athkar", "action", "bilan"):
+    r = requests.post(f"{B}/me/learning/plan", headers=H, json={"day": d(14), "kind": k}); ok(r.status_code == 201 and r.json()["kind"] == k and r.json()["talkId"] is None, f"séance « {k} » sans vidéo ni note")
+ok(requests.post(f"{B}/me/learning/plan", headers=H, json={"day": d(15), "kind": "inconnu"}).status_code == 400, "type de séance inconnu refusé")
+ok(requests.post(f"{B}/me/learning/plan", headers=H, json={"day": d(15), "kind": "quiz"}).status_code == 400, "quiz sans vidéo refusé")
+
+def seal(txt):
+    out = subprocess.run(["node", "-e", "import('./src/practiceCrypto.js').then(m=>process.stdout.write(m.sealText(process.argv[1])))", txt], capture_output=True, text=True, cwd=os.environ.get("API_DIR", os.getcwd()), env={**os.environ})
+    return out.stdout
+
+auto = lambda: requests.get(f"{B}/me/learning/plan", headers=H, params=win).json()["auto"]
+before = len([x for x in auto() if x["type"] in ("quran", "athkar", "action", "bilan")])
+ok(before == 0, "rien en automatique tant que rien n'est activé")
+# Coran : programme commencé il y a 2 jours, juz 1 lu
+cur.execute("insert into quran_plans(user_id, started_on) values (%s,%s)", (ulrn, d(-2)))
+cur.execute("insert into quran_plan_reads(user_id, juz) values (%s,1)", (ulrn,))
+q = [x for x in auto() if x["type"] == "quran"]
+ok(any(x["day"] == d(-2) and x["juz"] == 1 and x["done"] for x in q) and any(x["day"] == d(0) and x["juz"] == 3 and not x["done"] for x in q), "Coran : un juz par jour, le juz lu est « fait »")
+ok(max(x["juz"] for x in q) == 30 and len(q) == 30, "Coran : 30 juz sur la fenêtre (du jour 1 au jour 30)")
+# Adhkar : objectif réglé → un repère par jour
+cur.execute("insert into athkar_prefs(user_id, daily_goal) values (%s,2)", (ulrn,))
+a = [x for x in auto() if x["type"] == "athkar"]
+ok(len(a) == 34 and all(not x["done"] for x in a) and a[0]["goal"] == 2, "Adhkar : un repère par jour une fois l'objectif réglé")
+# Mise en pratique : un engagement avec échéance en retard → ramené à aujourd'hui
+cur.execute("insert into practice_commitments(user_id, text_enc, status, due_on) values (%s,%s,'todo',%s)", (ulrn, seal("Appeler ma mère"), d(-1)))
+ac = [x for x in auto() if x["type"] == "action"]
+ok(len(ac) == 1 and ac[0]["day"] == d(0) and ac[0]["title"] == "Appeler ma mère", "Action : engagement en retard ramené à aujourd'hui, texte déchiffré")
+cur.execute("insert into practice_commitments(user_id, text_enc, status, due_on) values (%s,%s,'done',%s)", (ulrn, seal("Déjà fait"), d(3)))
+ok(len([x for x in auto() if x["type"] == "action"]) == 1, "Action : un engagement terminé n'apparaît pas")
+ok(not [x for x in requests.get(f"{B}/me/learning/plan", headers=OTH, params=win).json()["auto"] if x["type"] in ("quran", "athkar", "action", "bilan")], "Coran / adhkar / actions d'un autre membre invisibles")
+# Bilan : un objectif actif + jour choisi = jour de la semaine de d(3)
+wd = ((today + datetime.timedelta(days=3)).weekday()) + 1
+cur.execute("update users set practice_weekday=%s where id=%s", (wd, ulrn))
+cur.execute("insert into self_goals(user_id, nature, title_enc) values (%s,'quality',%s) returning id", (ulrn, seal("Patience")))
+gid = cur.fetchone()[0]
+b = [x for x in auto() if x["type"] == "bilan"]
+ok(len(b) >= 4 and any(x["day"] == d(3) for x in b) and all(not x["done"] for x in b), "Bilan : un repère par semaine, au jour choisi")
+cur.execute("insert into self_checkins(goal_id, week, status) values (%s, date_trunc('week', %s::date)::date, 'progress')", (gid, d(3)))
+b = [x for x in auto() if x["type"] == "bilan"]
+ok(any(x["day"] == d(3) and x["done"] for x in b), "Bilan : « fait » quand le point de la semaine est enregistré")
 # suppression
 ok(requests.delete(f"{B}/me/learning/plan/{vid}", headers=H).status_code == 204, "séance supprimée")
 cur.execute("delete from talks where id=%s", (tid,))
