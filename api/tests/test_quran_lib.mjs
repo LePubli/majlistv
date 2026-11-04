@@ -36,3 +36,9 @@ ok(parseTajweed(JSON.stringify([{ surah: 1, ayah: 1, annotations: [{ rule: 'ikhf
 ok(checkReciterUrl('https://a.example/x/{sura3}{aya3}.mp3').origin === 'https://a.example' && checkReciterUrl('https://a.example/{sura}/{aya}.mp3').origin, 'récitateur : modèles acceptés');
 ok(checkReciterUrl('http://a.example/{sura3}{aya3}').error && checkReciterUrl('https://a.example/x.mp3').error && checkReciterUrl('https://u:p@a.example/{sura3}{aya3}').error, 'récitateur : http, sans variables, identifiant refusés');
 console.log('quran lib OK');
+// Tajwid : contrôle des lettres (verset décalé écarté)
+{
+  const txt = new Map([[1001, 'ٱلْحَمْدُ'], [1002, 'ٱلْحَمْدُ']]);
+  const r = parseTajweed(JSON.stringify([{ surah: 1, ayah: 1, annotations: [{ rule: 'hamzat_wasl', start: 0, end: 1 }] }, { surah: 1, ayah: 2, annotations: [{ rule: 'hamzat_wasl', start: 1, end: 2 }] }]), txt);
+  ok(r.rows.length === 1 && r.rows[0].aya === 1 && r.shifted === 1, 'tajwid : règle sur une mauvaise lettre → verset décalé écarté');
+}

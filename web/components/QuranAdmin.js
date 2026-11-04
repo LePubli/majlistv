@@ -107,6 +107,21 @@ export default function QuranAdmin() {
     }
     setImp({ res, format: 'json', url: '', content: '' }); setForm(null);
   };
+  // Tajwid : crée la ressource (si absente) puis ouvre l'import avec choix du fichier (cpfair/quran-tajweed, CC BY 4.0).
+  const startTajweed = async () => {
+    setErr(''); setMsg('');
+    const slug = 'ar-tajwid-hafs';
+    let res = d.resources.find((y) => y.slug === slug);
+    if (!res) {
+      const meta = { slug, kind: 'tajweed', lang: 'ar', name: 'Couleurs du tajwid (Hafs)', author: 'Catherine Pfaff (cpfair/quran-tajweed)',
+        sourceUrl: 'https://github.com/cpfair/quran-tajweed', license: 'Creative Commons Attribution 4.0 (CC BY 4.0) — crédit obligatoire', credit: 'Règles de tajwid : cpfair/quran-tajweed (github.com/cpfair/quran-tajweed), CC BY 4.0', enabled: false, position: 30 };
+      const c = await call('/admin/quran/resources', { method: 'POST', body: JSON.stringify(meta) });
+      if (!c.ok) { setErr(errOf(c, t)); return; }
+      res = { ...meta, id: c.data.id };
+      load();
+    }
+    setImp({ res, format: 'json', url: '', content: '' }); setForm(null);
+  };
   const readFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => setImp((s) => ({ ...s, content: String(rd.result || ''), url: '' })); rd.readAsText(f); };
 
   if (err && !d) return <p className="error" role="alert">{err}</p>;
@@ -128,6 +143,9 @@ export default function QuranAdmin() {
           <h3>Mot à mot (sens de chaque mot au clic)</h3>
           <p className="meta small">Sur qul.tarteel.ai → Resources → « Word by word translation », téléchargez le fichier JSON (décompressez le .zip). Cliquez ensuite sur la langue, choisissez le fichier, puis cochez « Affichée » dans le tableau. Renseignez la licence via « Modifier ».</p>
           <p><button type="button" className="btn" onClick={() => startWords('fr')}>Importer le mot à mot français</button>{' '}<button type="button" className="btn ghost" onClick={() => startWords('en')}>Importer le mot à mot anglais</button></p>
+          <h3>Couleurs du tajwid</h3>
+          <p className="meta small">Fichier <code>tajweed.hafs.uthmani-pause-sajdah.json</code> du dépôt cpfair/quran-tajweed (CC BY 4.0). Le texte arabe doit être importé et affiché avant. Les versets dont les règles ne tombent pas sur les bonnes lettres sont écartés (sans couleurs).</p>
+          <p><button type="button" className="btn" onClick={startTajweed}>Importer le tajwid</button></p>
         </section>
       )}
       {msg && <p className="meta" role="status">✓ {msg}</p>}

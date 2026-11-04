@@ -7110,3 +7110,11 @@ bash /root/verify-deploy.sh
 3. Dans le tableau, **Modifier** (renseigner la licence) puis cocher **Affichée**.
 4. Résultat attendu avec le fichier QUL français : 6 232 versets alignés ; 2:181, 8:6, 13:37 et 37:130 sans mot à mot (un mot de moins que le texte arabe).
 Debug : « Fichier trop lourd » → utiliser le fichier JSON décompressé ; rien au clic sur un mot → vérifier « Affichée » et, en arabe, l'option « Sens des mots ».
+
+### A2 — Importer les couleurs du tajwid (04/11)
+
+1. Télécharger `tajweed.hafs.uthmani-pause-sajdah.json` (dépôt cpfair/quran-tajweed, CC BY 4.0).
+2. Admin → Coran → « Couleurs du tajwid » → **Importer le tajwid** → choisir le fichier → Importer. Le texte arabe doit déjà être importé et affiché.
+3. Dans le tableau : cocher **Affichée**.
+Résultat attendu avec le fichier d'origine : 5 999 versets importés ; les versets décalés (≈174) sont écartés et s'affichent sans couleurs (message d'avertissement).
+Debug : « Importez et activez d'abord le texte arabe » → activer la ressource texte arabe.

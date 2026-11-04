@@ -176,12 +176,16 @@ export function alignWords(sura, aya, arabic, words) {
 
 // Tajwid : liste [{ surah, ayah, annotations: [{ rule, start, end }] }] — positions en caractères (points de code) du texte arabe.
 // Si on connaît le texte arabe (arabicLen = Map clé → longueur), les versets dont une position dépasse le texte sont écartés.
+const LETTER_CHECK = {
+  hamzat_wasl: (x) => x === '\u0671', lam_shamsiyyah: (x) => x === '\u0644',
+  qalqalah: (x) => /^[\u0642\u0637\u0628\u062c\u062f]\u0652?$/.test(x), ghunnah: (x) => /^[\u0646\u0645]\u0651/.test(x),
+};
 export function parseTajweed(content, arabicLen) {
   let data;
   try { data = JSON.parse(content); } catch { return { error: 'Fichier JSON illisible.' }; }
   const list = Array.isArray(data) ? data : Array.isArray(data?.verses) ? data.verses : null;
   if (!list) return { error: 'Format JSON non reconnu (liste de versets avec « annotations »).' };
-  const rows = []; let skipped = 0;
+  const rows = []; let skipped = 0; let shifted = 0;
   for (const v of list) {
     const sura = Number(v?.sura ?? v?.surah); const aya = Number(v?.aya ?? v?.ayah);
     const ann = v?.annotations ?? v?.marks;
@@ -193,12 +197,16 @@ export function parseTajweed(content, arabicLen) {
       if (!/^[a-z0-9_]{1,40}$/.test(rule) || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) { bad = true; break; }
       marks.push([rule, start, end]);
     }
-    const len = arabicLen?.get(sura * 1000 + aya);
+    const info = arabicLen?.get(sura * 1000 + aya);
+    const chars = typeof info === 'string' ? [...info] : null;
+    const len = chars ? chars.length : info;
     if (bad || !marks.length || (arabicLen && (len === undefined || marks.some((m) => m[2] > len)))) { skipped++; continue; }
+    // Contrôle des lettres : le fichier d'origine date de 2017 ; si une règle tombe sur une lettre qui ne lui correspond pas, le verset est décalé → écarté (jamais de mauvaise couleur).
+    if (chars && marks.some((m) => { const f = LETTER_CHECK[m[0]]; return f && !f(chars.slice(m[1], m[2]).join('')); })) { shifted++; continue; }
     rows.push({ sura, aya, marks });
   }
   if (!rows.length) return { error: 'Aucun verset de tajwid utilisable (les positions doivent correspondre au texte arabe importé).' };
-  return { rows, skipped };
+  return { rows, skipped, shifted };
 }
 
 async function replaceInto(resource, sql, rows, mk) {

@@ -190,7 +190,7 @@ export default async function quranRoutes(app) {
       else {
         const ar = arabicOf(await enabledResources());
         if (!ar) return reply.code(400).send({ error: 'Importez et activez d\'abord le texte arabe : les couleurs du tajwid sont vérifiées contre lui.' });
-        const len = new Map((await pool.query('SELECT sura, aya, text FROM quran_verses WHERE resource_id = $1', [ar.id])).rows.map((x) => [x.sura * 1000 + x.aya, [...x.text].length]));
+        const len = new Map((await pool.query('SELECT sura, aya, text FROM quran_verses WHERE resource_id = $1', [ar.id])).rows.map((x) => [x.sura * 1000 + x.aya, x.text]));
         r = parseTajweed(content, len);
       }
       if (r.error) return reply.code(400).send({ error: r.error });
@@ -206,9 +206,10 @@ export default async function quranRoutes(app) {
         }
       }
       const warn = [r.skipped ? `${r.skipped} élément(s) écarté(s) (numérotation incomplète ou positions hors du texte).` : '',
+        r.shifted ? `${r.shifted} verset(s) écarté(s) : les couleurs ne tombent pas sur les bonnes lettres du texte actuel (fichier plus ancien) — ces versets s'affichent sans couleurs.` : '',
         unaligned ? `${unaligned} verset(s) dont les mots ne correspondent pas au texte arabe : le mot à mot n'y sera pas proposé.` : ''].filter(Boolean).join(' ');
       req.auditSummary = `Coran : « ${res.name} » importé (${r.rows.length} versets, ${suras} sourates)`;
-      return { imported: r.rows.length, skipped: r.skipped, suras, unaligned, warning: warn || null };
+      return { imported: r.rows.length, skipped: r.skipped, shifted: r.shifted || 0, suras, unaligned, warning: warn || null };
     }
     if (b.url && b.format === 'json' && b.url.includes('{n}')) {
       // un fichier par sourate
