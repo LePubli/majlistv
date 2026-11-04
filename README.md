@@ -7321,3 +7321,19 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 **Debug.** `cd mobile && npm run check` (typage + 198 tests, dont `tests/prayerExtras.test.ts`). Boussole muette : vérifier l'autorisation de position de l'application, éloigner le téléphone des aimants, dessiner un « 8 ». Aucune date hégirienne affichée : le moteur du téléphone ne sait pas la calculer (voir ci-dessus).
 
 **Limites (honnêtes).** Testé : calculs (Qibla, hégirien, mois, choix du cap), typage, export du paquet Android. **Non testé** : rendu et boussole sur un vrai téléphone, écran tourné en paysage (le cap n'est pas corrigé de la rotation), arabe sur téléphone. Pas d'impression du calendrier dans l'application.
+
+## Amélioration 3.3 — Fiche imprimable d'une vidéo (04/11)
+
+**Description.** Chaque vidéo a une page « fiche » (`/fiche/<id>`) qui rassemble sur une seule page : titre, intervenant, catégorie, durée, **résumé**, **points clés**, **chapitres** (avec leur minute) et, pour un membre connecté, **ses notes et marque-pages** de cette vidéo. Le bouton « Imprimer / enregistrer en PDF » ouvre la fenêtre d'impression du navigateur ; en choisissant « Enregistrer au format PDF », on obtient le PDF (menu, barre latérale et boutons sont masqués à l'impression). Accès : menu « ⋯ » de la page de la vidéo → « Fiche à imprimer ».
+
+**Droits.** Aucune nouvelle route d'API : la fiche lit `/talks/<id>`, `/talks/<id>/insights` (avec le jeton de lecture, comme la page de la vidéo) et `/talks/<id>/notes` (privées au membre). Vidéo réservée aux abonnés et visiteur sans accès : seul le résumé d'aperçu apparaît, jamais les chapitres, et le lien n'est pas proposé sur la vidéo. La page est en `noindex` (elle contient des notes personnelles).
+
+**Prérequis / installation.** Aucune migration, aucune variable `.env`. Fichiers : `web/app/fiche/[id]/page.js`, `web/components/FicheClient.js`, styles « Fiche » en fin de `web/app/globals.css`, textes `fc*` dans `web/lib/i18n.js` (FR / EN / AR), lien dans `TalkClient.js`.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy de `majlistv-web` seulement (l'API ne change pas), puis les commandes VPS habituelles.
+
+**Debug.** `node web/tests/test_fiche.mjs` (39 contrôles : textes dans les 3 langues, noindex, jeton de lecture, impression). Fiche vide : la vidéo n'a pas encore de résumé (analyse IA en attente). Notes absentes : fonction « Notes » coupée dans Admin → Fonctions, ou membre non connecté.
+
+**Exemples.** Ouvrir une vidéo → « ⋯ » → « Fiche à imprimer » → « Imprimer / enregistrer en PDF » → destination « Enregistrer au format PDF ».
+
+**Limites (honnêtes).** Testé : page en français et en arabe (RTL), 390 et 1280 px, génération d'un PDF A4 à une page avec le moteur de test, sans débordement. Le résumé et les chapitres restent ceux de l'IA (mention sur la fiche). Non testé : impression papier, Safari / iPhone. Le PDF n'est pas fabriqué par le serveur (choix volontaire : l'arabe s'imprime correctement par le navigateur). Pas de fiche dans l'application Android pour l'instant (le site s'ouvre depuis le navigateur du téléphone).

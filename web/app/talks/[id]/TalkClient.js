@@ -518,6 +518,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               {hasPlayer && <button type="button" className={`wb-item${cinema ? ' on' : ''}`} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')} data-act="cinema">{ICONS.cinema}<span>{cinema ? t('cnOff') : t('cnOn')}</span></button>}
               {ctx && ctx.prev && <Link className="wb-item" href={`/talks/${ctx.prev.id}`}>{locale === 'ar' ? ICONS.next : ICONS.prev}<span>{t('prevEp')}</span></Link>}
               {ctx && ctx.next && <Link className="wb-item" href={`/talks/${ctx.next.id}`}>{locale === 'ar' ? ICONS.prev : ICONS.next}<span>{t('nextEp')}</span></Link>}
+              {!talk.locked && <Link className="wb-item" href={`/fiche/${id}`} data-act="fiche">{ICONS.bookmark}<span>{t('fcOpen')}</span></Link>}
               <ReportButton talkId={id} t={t} call={call} />
             </MoreMenu>
             <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>
