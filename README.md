@@ -7142,3 +7142,12 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-voyage.md`, puis valider / afficher dans Admin → Adhkar.
 - Prérequis : aucun. Debug : si rien n'apparaît après redéploiement, vérifier dans Admin → Adhkar le filtre « non validés ». Exemple de contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 300"` → 14.
 - Régénérer : `python3 ops/contenus/athkar/build_voyage.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/094_athkar_voyage.sql athkar-voyage.json`.
+
+### Contenus 6 — Dhikr des épreuves (04/11)
+
+- 26 entrées (catégorie « général ») : tristesse et souci, détresse (karb), rencontre d'un ennemi, crainte d'un gouverneur injuste, invocation contre l'ennemi, doute dans la foi, dette, murmures de Satan, chose difficile, ce qu'on n'aime pas, visite d'un malade, malade en fin de vie, douleur dans le corps, effroi. Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil traduits, français de l'assistant, phonétique par règles.
+- **Non validées et non affichées** : migration `095_athkar_epreuves.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar). Positions 400 et suivantes.
+- Non repris (aucune formule dans la source, rien d'inventé) : consignes après un péché, contre Satan (appel à la prière…), mauvais œil (« invoquer la bénédiction »), visite des malades (mérite). Le texte « contre le souci et la tristesse » n'existe qu'une fois (il sert aussi pour la dette).
+- Relire `docs/contenus/athkar-epreuves.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 400"` → 26.
+- Régénérer : `python3 ops/contenus/athkar/build_epreuves.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/095_athkar_epreuves.sql athkar-epreuves.json`.

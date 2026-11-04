@@ -15,6 +15,7 @@ FILES = sys.argv[3:] or ['athkar-matin-soir.json', 'athkar-priere-sommeil-reveil
 TITLES = {
     'athkar-vie-quotidienne.json': 'Contenus 3 : dhikr de la vie quotidienne (toilettes, ablutions, maison, mosquée, vêtements, repas, marché, assemblée)',
     'athkar-voyage.json': 'Contenus 5 : dhikr du voyage et des nouvelles (monture, départ, villages, retour, présages)',
+    'athkar-epreuves.json': 'Contenus 6 : dhikr des épreuves (tristesse, détresse, peur, dette, doute, maladie, mauvais œil, fin de vie)',
 }
 TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else TITLES.get(FILES[0], 'Contenus : dhikr du recueil')
 
