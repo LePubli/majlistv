@@ -10,7 +10,9 @@ import json
 import sys
 
 SRC, OUT = sys.argv[1], sys.argv[2]
-FILES = ['athkar-matin-soir.json', 'athkar-priere-sommeil-reveil.json']
+# Sans 3e argument : migration 088 (contenus 1 et 2). Sinon : liste de fichiers (ex. 093 = athkar-vie-quotidienne.json).
+FILES = sys.argv[3:] or ['athkar-matin-soir.json', 'athkar-priere-sommeil-reveil.json']
+TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else 'Contenus 3 : dhikr de la vie quotidienne (toilettes, ablutions, maison, mosquée, vêtements, repas, marché, assemblée)'
 
 
 def q(s):
@@ -19,7 +21,7 @@ def q(s):
 
 
 lines = [
-    '-- Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil (74 entrées).',
+    f'-- {TITLE} (__N__ entrées).',
     '-- Insérés NON validés (reviewed_at NULL) et NON affichés (enabled false) : rien n\'apparaît chez les membres avant relecture',
     '-- et validation dans Admin → Athkar. Idempotent : un dhikr déjà présent (même catégorie, même texte arabe) est ignoré.',
     '-- Généré par ops/contenus/athkar/make_migration.py à partir de docs/contenus/athkar-*.json.',
@@ -34,5 +36,5 @@ for f in FILES:
             f"SELECT {q(x['category'])}, {q(x['textAr'])}, {q(x['translit'])}, {q(x['trFr'])}, {q(x['trEn'])}, {q(x['reference'])}, {int(x['target'])}, {int(x['position'])}, false\n"
             f"WHERE NOT EXISTS (SELECT 1 FROM athkar_items WHERE category = {q(x['category'])} AND text_ar = {q(x['textAr'])});\n"
         )
-open(OUT, 'w', encoding='utf-8').write('\n'.join(lines))
+open(OUT, 'w', encoding='utf-8').write('\n'.join(lines).replace('__N__', str(total), 1))
 print(total, 'insertions')

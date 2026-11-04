@@ -8,6 +8,7 @@ const ok = (c, m) => { assert.ok(c, m); console.log('OK   ' + m); };
 const LOTS = [
   { file: 'athkar-matin-soir.json', total: 43, parCategorie: { morning: 22, evening: 20, general: 1 } },
   { file: 'athkar-priere-sommeil-reveil.json', total: 31, parCategorie: { after_prayer: 12, sleep: 15, general: 4 } },
+  { file: 'athkar-vie-quotidienne.json', total: 23, parCategorie: { general: 23 } },
 ];
 const positions = new Set();
 for (const lot of LOTS) {

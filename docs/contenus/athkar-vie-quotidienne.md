@@ -1,0 +1,290 @@
+# Dhikr de la vie quotidienne — fiche de relecture
+
+23 entrées. **Aucune n’est validée ni affichée** : à relire par Epok ou un savant, puis à valider une par une dans Admin → Athkar.
+
+## Ce qu’il faut vérifier
+
+1. **Arabe** : recueil *Hisn al-Muslim* (fichier rn0x/Adhkar-json). Les variantes entre crochets du recueil ne sont pas reprises ; voyelles corrigées selon `FIX` de `common.py`.
+2. **Catégorie** : toutes en « général » (pas de catégorie « vie quotidienne » pour l’instant) ; à décider avec le parcours UX.
+3. **Découpages décidés par l’assistant** : le chapitre « avant le repas » est séparé en 2 entrées (nourriture / lait) ; les formules au texte arabe identique sont fusionnées en une seule entrée (« Au nom d’Allah » : ablutions + vêtement ôté + repas ; « Subhanaka Allahumma… » : après les ablutions + fin d’assemblée) car l’application écarte deux dhikr de même texte ; « après les ablutions » en 3 ; l’invocation d’entrée à la mosquée est une seule entrée (3 phrases du recueil jointes).
+4. **Répétitions** : toutes à 1. « Rabbi ighfir li » (assemblée) : le hadith parle d’une centaine de fois, noté dans le texte français, compteur laissé à 1.
+5. **Références** : renvois du recueil (rn0x/hisn_almuslim_json) traduits en français ; un renvoi par texte dans ce fichier, rattachement vérifié ; entrée « entrée à la mosquée » : rattachement non précisé par la source.
+6. **Français** : traduction de l’assistant depuis l’arabe, à valider (notamment « après le repas » n° 2 et « vêtement neuf »). **Phonétique** : générée par règles, sans tajwid.
+
+## Les invocations
+
+### Dhikr en entrant aux toilettes n° 1
+
+**Arabe** : بِسْمِ اللَّهِ، اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبْثِ وَالْخَبَائِثِ
+
+**Phonétique** : Bismi llahi, Allahoumma inni aʿoudhou bika mina l-khoubthi wal-khaba’ith
+
+**Français** : Au nom d’Allah. Ô Allah, je cherche refuge auprès de Toi contre les démons mâles et femelles.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr en entrant aux toilettes », invocation n° 1. Al-Bukhari 1/45 ; Muslim 1/283 (hadith unanimement reconnu). L’ajout « Au nom d’Allah » au début est rapporté par Sa‘id ibn Mansur (voir Fath al-Bari 1/244).
+
+*Renvoi d’origine (arabe)* : أخرجه البخاري 1/ 45 ومسلم 1/283 وزيادة بسم الله في أوله متفق عليه، أخرجها سعيد بن منصور أنظر فتح الباري 1/244
+
+### Dhikr en sortant des toilettes n° 1
+
+**Arabe** : غُفْرَانَكَ
+
+**Phonétique** : Ghoufranak
+
+**Français** : Je Te demande Ton pardon.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr en sortant des toilettes », invocation n° 1. Les auteurs des Sunan, sauf an-Nasa’i qui le rapporte dans ‘Amal al-yawm wa-l-layla (voir Takhrij Zad al-Ma‘ad 2/387).
+
+*Renvoi d’origine (arabe)* : أخرجه أصحاب السنن إلا النسائي أخرجه في عمل اليوم والليلة انظر تخريج زاد المعاد 2/ 387
+
+### Dhikr avant les ablutions (aussi en ôtant son vêtement et avant le repas) n° 1
+
+**Arabe** : بِسْمِ اللَّهِ
+
+**Phonétique** : Bismi llah
+
+**Français** : Au nom d’Allah. (avant les ablutions ; la même formule se dit en ôtant son vêtement et avant de manger : si on l’oublie au début du repas, dire « Au nom d’Allah, au début et à la fin »)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr avant les ablutions (aussi en ôtant son vêtement et avant le repas) », invocation n° 1. Ablutions : Abu Dawud, Ibn Majah, Ahmad (voir Irwa’ al-ghalil 1/122). Vêtement ôté : at-Tirmidhi 2/505 et d’autres (Irwa’ n° 49) : écran entre les yeux des djinns et la nudité des fils d’Adam. Repas : Abu Dawud 3/347 ; at-Tirmidhi 4/288.
+
+*Renvoi d’origine (arabe)* : أبو داود وابن ماجه وأحمد وانظر إرواء الغليل 1/ 122
+
+### Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) n° 1
+
+**Arabe** : أَشْهَدُ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ وَأَشْهَدُ أَنَّ مُحَمَّداً عَبْدُهُ وَرَسُولُهُ
+
+**Phonétique** : Achhadou an la ilaha illa llahou wahdahou la charika lahou wa’achhadou anna mouhammadan ʿabdouhou warasoulouh
+
+**Français** : J’atteste qu’il n’y a de divinité digne d’adoration qu’Allah, Seul, sans associé, et j’atteste que Muhammad est Son serviteur et Son messager.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) », invocation n° 1. Muslim 1/209.
+
+*Renvoi d’origine (arabe)* : رواه مسلم 1/ 209
+
+### Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) n° 2
+
+**Arabe** : اللَّهُمَّ اجْعَلْنِي مِنَ التَّوَّابِينَ وَاجْعَلْنِي مِنَ الْمُتَطَهِّرِينَ
+
+**Phonétique** : Allahoumma-djʿalni mina t-tawwabina wadjʿalni mina l-moutatahhirin
+
+**Français** : Ô Allah, fais de moi l’un de ceux qui reviennent à Toi avec repentir et l’un de ceux qui se purifient. (à ajouter après les deux témoignages)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) », invocation n° 2. At-Tirmidhi 1/78 (voir Sahih at-Tirmidhi 1/18). C’est un ajout rapporté par at-Tirmidhi après les deux témoignages.
+
+*Renvoi d’origine (arabe)* : الترمذي 1/ 78 وانظر صحيح الترمذي 1/ 18
+
+### Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) n° 3
+
+**Arabe** : سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، أَشْهَدُ أَنْ لاَ إِلَهَ إِلاَّ أَنْتَ، أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ
+
+**Phonétique** : Soubhanaka llahoumma wabihamdika, achhadou an la ilaha illa anta, astaghfirouka wa’atoubou ilayk
+
+**Français** : Gloire et pureté à Toi, ô Allah, et louange à Toi. J’atteste qu’il n’y a de divinité digne d’adoration que Toi ; je Te demande pardon et je me repens auprès de Toi. (après les ablutions ; la même formule conclut une assemblée)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr après les ablutions (le n° 3 conclut aussi une assemblée) », invocation n° 3. Ablutions : an-Nasa’i, ‘Amal al-yawm wa-l-layla p. 173 (Irwa’ al-ghalil 1/135 et 2/94). Fin d’assemblée : les auteurs des Sunan (Sahih at-Tirmidhi 3/153) ; ‘A’isha : le Messager d’Allah concluait ainsi toute assemblée, récitation ou prière (an-Nasa’i n° 308 ; Ahmad 6/77).
+
+*Renvoi d’origine (arabe)* : النسائي في عمل اليوم والليلة ص173 وانظر إرواء الغليل 1/ 135 و2/ 94
+
+### Dhikr en sortant de la maison n° 1
+
+**Arabe** : بِسْمِ اللَّهِ، تَوَكَّلْتُ عَلَى اللَّهِ، وَلاَ حَوْلَ وَلَا قُوَّةَ إِلاَّ بِاللَّهِ
+
+**Phonétique** : Bismi llahi, tawakkaltou ʿala llahi, wala hawla wala qouwwata illa billah
+
+**Français** : Au nom d’Allah ; je m’en remets à Allah ; il n’y a de force ni de puissance qu’en Allah.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr en sortant de la maison », invocation n° 1. Abu Dawud 4/325 ; at-Tirmidhi 5/490 (voir Sahih at-Tirmidhi 3/151).
+
+*Renvoi d’origine (arabe)* : أبو داود 4/ 325 والترمذي 5/ 490 وانظر صحيح الترمذي 3/ 151
+
+### Dhikr en sortant de la maison n° 2
+
+**Arabe** : اللَّهُمَّ إِنِّي أَعُوذُ بِكَ أَنْ أَضِلَّ، أَوْ أُضَلَّ، أَوْ أَزِلَّ، أَوْ أُزَلَّ، أَوْ أَظْلِمَ، أَوْ أُظْلَمَ، أَوْ أَجْهَلَ، أَوْ يُجْهَلَ عَلَيَّ
+
+**Phonétique** : Allahoumma inni aʿoudhou bika an adilla, aw oudalla, aw azilla, aw ouzalla, aw adhlima, aw oudhlama, aw adjhala, aw youdjhala ʿalayya
+
+**Français** : Ô Allah, je cherche refuge auprès de Toi pour ne pas m’égarer ni être égaré, pour ne pas faillir ni être poussé à faillir, pour ne pas être injuste ni victime d’une injustice, pour ne pas être ignorant ni qu’on se montre ignorant envers moi.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr en sortant de la maison », invocation n° 2. Les auteurs des Sunan (voir Sahih at-Tirmidhi 3/152 ; Sahih Ibn Majah 2/336).
+
+*Renvoi d’origine (arabe)* : أهل السنن وانظر صحيح الترمذي 3/ 152 وصحيح ابن ماجه 2/ 336
+
+### Dhikr en entrant à la maison n° 1
+
+**Arabe** : بِسْمِ اللَّهِ وَلَجْنَا، وَبِسْمِ اللَّهِ خَرَجْنَا، وَعَلَى اللَّهِ رَبِّنَا تَوَكَّلْنَا
+
+**Phonétique** : Bismi llahi waladjna, wabismi llahi kharadjna, waʿala llahi rabbina tawakkalna
+
+**Français** : Au nom d’Allah nous sommes entrés, au nom d’Allah nous sommes sortis, et c’est en Allah, notre Seigneur, que nous plaçons notre confiance. (puis saluer les siens)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Dhikr en entrant à la maison », invocation n° 1. Abu Dawud 4/325 ; Ibn Baz a jugé sa chaîne hassan (Tuhfat al-akhyar p. 28). Hadith authentique : quand l’homme entre chez lui et mentionne Allah à son entrée et à son repas, Satan dit : « Pas de gîte ni de dîner pour vous » (Muslim n° 2018).
+
+*Renvoi d’origine (arabe)* : أخرجه أبو داود 4/ 325 ، وحسن إسناده العلامة ابن باز في تحفة الأخيار ص28 ، وفي الصحيح إذا دخل الرجل بيته فذكر بيته فذكر الله عند دخوله وعند طعامه قال الشيطان لا مبيت لكم ولا عشاء مسلم برقم 2018
+
+### Invocation en allant à la mosquée n° 1
+
+**Arabe** : اللَّهُمَّ اجْعَلْ فِي قَلْبِي نُوراً، وَفِي لِسَانِي نُوراً، وَفِي سَمْعِي نُوراً، وَفِي بَصَرِي نُوراً، وَمِنْ فَوْقِي نُوراً، وَمِنْ تَحْتِي نُوراً، وَعَنْ يَمِينِي نُوراً، وَعَنْ شِمَالِي نُوراً، وَمِنْ أَمَامِي نُوراً، وَمِنْ خَلْفِي نُوراً، وَاجْعَلْ فِي نَفْسِي نُوراً، وَأَعْظِمْ لِي نُوراً، وَعَظِّم لِي نُوراً، وَاجْعَلْ لِي نُوراً، وَاجْعَلْنِي نُوراً، اللَّهُمَّ أَعْطِنِي نُوراً، وَاجْعَلْ فِي عَصَبِي نُوراً، وَفِي لَحْمِي نُوراً، وَفِي دَمِي نُوراً، وَفِي شَعْرِي نُوراً، وَفِي بَشَرِي نُوراً
+
+**Phonétique** : Allahoumma-djʿal fi qalbi nouran, wafi lisani nouran, wafi samʿi nouran, wafi basari nouran, wamin fawqi nouran, wamin tahti nouran, waʿan yamini nouran, waʿan chimali nouran, wamin amami nouran, wamin khalfi nouran, wadjʿal fi nafsi nouran, wa’aʿdhim li nouran, waʿadhdhim li nouran, wadjʿal li nouran, wadjʿalni nouran, Allahoumma aʿtini nouran, wadjʿal fi ʿasabi nouran, wafi lahmi nouran, wafi dami nouran, wafi chaʿri nouran, wafi bachari noura
+
+**Français** : Ô Allah, place une lumière dans mon cœur, une lumière dans ma langue, une lumière dans mon ouïe, une lumière dans ma vue, une lumière au-dessus de moi, une lumière au-dessous de moi, une lumière à ma droite, une lumière à ma gauche, une lumière devant moi, une lumière derrière moi ; place une lumière dans mon âme, agrandis ma lumière, rends-la immense pour moi, accorde-moi une lumière, fais de moi une lumière. Ô Allah, donne-moi une lumière ; place une lumière dans mes nerfs, dans ma chair, dans mon sang, dans mes cheveux et dans ma peau.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en allant à la mosquée », invocation n° 1. Al-Bukhari 11/116 n° 6316 ; Muslim 1/526, 529, 530 n° 763 (toutes ces demandes y figurent). Les autres renvois du recueil concernent des ajouts que nous n’avons pas repris (lumière dans la tombe et les os, « accorde-moi une lumière sur une lumière »).
+
+*Renvoi d’origine (arabe)* : جميع هذه الخصال في البخاري 11/ 116 برقم 6316 ومسلم 1/ 526، 529 ، 530 برقم 763
+
+### Invocation en entrant à la mosquée n° 1
+
+**Arabe** : أَعُوذُ بِاللَّهِ الْعَظِيمِ، وَبِوَجْهِهِ الْكَرِيمِ، وَسُلْطَانِهِ الْقَدِيمِ، مِنَ الشَّيْطَانِ الرَّجِيمِ، بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ
+
+**Phonétique** : Aʿoudhou billahi l-ʿadhimi, wabiwadjhihi l-karimi, wasoultanihi l-qadimi, mina ch-chaytani r-radjimi, bismi llahi, was-salatou was-salamou ʿala rasouli llahi, Allahoumma-ftah li abwaba rahmatik
+
+**Français** : (Entrer du pied droit.) Je cherche refuge auprès d’Allah le Très-Grand, par Son noble Visage et Sa souveraineté éternelle, contre Satan le maudit. Au nom d’Allah, et que la prière et la paix soient sur le Messager d’Allah. Ô Allah, ouvre-moi les portes de Ta miséricorde.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en entrant à la mosquée », invocation n° 1. Renvois du recueil (rattachement non précisé) : Abu Dawud (voir Sahih al-Jami‘ n° 4591) ; Ibn as-Sunni n° 88, jugé hassan par al-Albani ; Abu Dawud 1/126 (Sahih al-Jami‘ 1/528) ; Muslim 1/494 (Ibn Majah, d’après Fatima : « Ô Allah, pardonne-moi mes péchés et ouvre-moi les portes de Ta miséricorde », jugé sahih par al-Albani grâce à ses témoins).
+
+*Renvoi d’origine (arabe)* : أبو داود وانظر صحيح الجامع برقم 4591
+
+### Invocation en sortant de la mosquée n° 1
+
+**Arabe** : بِسْمِ اللَّهِ وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ، اللَّهُمَّ اعْصِمْنِي مِنَ الشَّيْطَانِ الرَّجِيمِ
+
+**Phonétique** : Bismi llahi was-salatou was-salamou ʿala rasouli llahi, Allahoumma inni as’alouka min fadlika, Allahoumma-ʿsimni mina ch-chaytani r-radjim
+
+**Français** : (Sortir du pied gauche.) Au nom d’Allah, et que la prière et la paix soient sur le Messager d’Allah. Ô Allah, je Te demande de Ta grâce. Ô Allah, protège-moi de Satan le maudit.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en sortant de la mosquée », invocation n° 1. Voir les renvois de l’invocation précédente. L’ajout « Ô Allah, protège-moi de Satan le maudit » est rapporté par Ibn Majah (voir Sahih Ibn Majah 1/288).
+
+*Renvoi d’origine (arabe)* : انظر تخريج روايات الحديث السابق رقم 20 وزيادة (( اللهم اعصمني من الشيطان الرجيم )) لابن ماجه . انظر صحيح ابن ماجه 1/ 288
+
+### Invocation en mettant un vêtement n° 1
+
+**Arabe** : الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلاَ قُوَّةٍ
+
+**Phonétique** : Al-hamdou lillahi-lladhi kasani hadha warazaqanihi min ghayri hawlin minni wala qouwwah
+
+**Français** : Louange à Allah qui m’a vêtu de ceci et me l’a accordé sans force ni puissance de ma part.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en mettant un vêtement », invocation n° 1. Les auteurs des Sunan, sauf an-Nasa’i (voir Irwa’ al-ghalil 7/47).
+
+*Renvoi d’origine (arabe)* : أخرجه أهل السنن إلا النسائي انظر إرواء الغليل 7/ 47
+
+### Invocation en mettant un vêtement neuf n° 1
+
+**Arabe** : اللَّهُمَّ لَكَ الْحَمْدُ أَنْتَ كَسَوْتَنِيهِ، أَسْأَلُكَ مِنْ خَيْرِهِ وَخَيْرِ مَا صُنِعَ لَهُ، وَأَعُوذُ بِكَ مِنْ شَرِّهِ وَشَرِّ مَا صُنِعَ لَهُ
+
+**Phonétique** : Allahoumma laka l-hamdou anta kasawtanihi, as’alouka min khayrihi wakhayri ma souniʿa lahou, wa’aʿoudhou bika min charrihi wacharri ma souniʿa lah
+
+**Français** : Ô Allah, à Toi la louange, c’est Toi qui me l’as fait porter. Je Te demande son bien et le bien de ce pour quoi il a été fait, et je cherche refuge auprès de Toi contre son mal et le mal de ce pour quoi il a été fait.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en mettant un vêtement neuf », invocation n° 1. Abu Dawud, at-Tirmidhi, al-Baghawi (voir Mukhtasar ash-Shama’il d’at-Tirmidhi par al-Albani p. 47).
+
+*Renvoi d’origine (arabe)* : أبو داود والترمذي والبغوي وانظر مختصر شمائل الترمذي للألباني ص 47
+
+### Invocation pour celui qui porte un vêtement neuf n° 1
+
+**Arabe** : اِلْبَسْ جَدِيداً وَعِشْ حَمِيداً وَمُتْ شَهِيداً
+
+**Phonétique** : Ilbas djadidan waʿich hamidan wamout chahida
+
+**Français** : Porte du neuf, vis digne de louange et meurs en martyr. (à dire à celui qui porte un vêtement neuf)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation pour celui qui porte un vêtement neuf », invocation n° 1. Ibn Majah 2/1178 ; al-Baghawi 12/41 (voir Sahih Ibn Majah 2/275).
+
+*Renvoi d’origine (arabe)* : ابن ماجه 2/ 1178 والبغوي 12/ 41 وانظر صحيح ابن ماجة 2/ 275
+
+### Invocation pour celui qui porte un vêtement neuf n° 2
+
+**Arabe** : تُبْلِي وَيُخْلِفُ اللَّهُ تَعَالَى
+
+**Phonétique** : Toubli wayoukhlifou llahou taʿala
+
+**Français** : Puisses-tu l’user, et qu’Allah, le Très-Haut, te le remplace. (à dire à celui qui porte un vêtement neuf)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation pour celui qui porte un vêtement neuf », invocation n° 2. Abu Dawud 4/41 (voir Sahih Abi Dawud 2/760).
+
+*Renvoi d’origine (arabe)* : أخرجه أبو داود 4/ 41 ، وانظر صحيح أبي داود 2/ 760
+
+### Invocation avant le repas n° 1
+
+**Arabe** : اللَّهُمَّ بَارِكْ لَنَا فِيهِ وَأَطْعِمْنَا خَيْراً مِنْهُ
+
+**Phonétique** : Allahoumma barik lana fihi wa’atʿimna khayran minh
+
+**Français** : Ô Allah, bénis-nous ce repas et donne-nous mieux que cela à manger. (à dire pour une nourriture qu’Allah nous a donnée)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation avant le repas », invocation n° 1. At-Tirmidhi 5/506 (voir Sahih at-Tirmidhi 3/158).
+
+*Renvoi d’origine (arabe)* : الترمذي 5/506 وانظر صحيح الترمذي3/ 158
+
+### Invocation avant le repas n° 2
+
+**Arabe** : اللَّهُمَّ بَارِكْ لَنَا فِيهِ وَزِدْنَا مِنْهُ
+
+**Phonétique** : Allahoumma barik lana fihi wazidna minh
+
+**Français** : Ô Allah, bénis-le pour nous et accorde-nous-en davantage. (à dire quand on a bu du lait)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation avant le repas », invocation n° 2. At-Tirmidhi 5/506 (voir Sahih at-Tirmidhi 3/158).
+
+*Renvoi d’origine (arabe)* : الترمذي 5/506 وانظر صحيح الترمذي3/ 158
+
+### Invocation après le repas n° 1
+
+**Arabe** : الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنِي هَذَا، وَرَزَقَنِيهِ، مِنْ غَيْرِ حَوْلٍ مِنِّي وَلاَ قُوَّةٍ
+
+**Phonétique** : Al-hamdou lillahi-lladhi atʿamani hadha, warazaqanihi, min ghayri hawlin minni wala qouwwah
+
+**Français** : Louange à Allah qui m’a nourri de ceci et me l’a accordé sans force ni puissance de ma part.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation après le repas », invocation n° 1. Les auteurs des Sunan, sauf an-Nasa’i (voir Sahih at-Tirmidhi 3/159).
+
+*Renvoi d’origine (arabe)* : أخرجه أصحاب السنن إلا النسائي وانظر صحيح الترمذي 3/159
+
+### Invocation après le repas n° 2
+
+**Arabe** : الْحَمْدُ لِلَّهِ حَمْداً كَثِيراً طَيِّباً مُبَارَكاً فِيهِ، غَيْرَ مَكْفِيٍّ وَلاَ مُوَدَّعٍ، وَلاَ مُسْتَغْنَىً عَنْهُ رَبَّنَا
+
+**Phonétique** : Al-hamdou lillahi hamdan kathiran tayyiban moubarakan fihi, ghayra makfiyyin wala mouwaddaʿin, wala moustaghnan ʿanhou rabbana
+
+**Français** : Louange à Allah, une louange abondante, bonne et bénie, (pour une nourriture) dont on ne peut se passer, qu’on ne peut délaisser et dont on ne peut se dispenser, ô notre Seigneur.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation après le repas », invocation n° 2. Al-Bukhari 6/214 ; at-Tirmidhi, avec ce texte, 5/507.
+
+*Renvoi d’origine (arabe)* : البخاري 6/‌214 والترمذي بلفظه 5/ 507
+
+### Invocation de l’invité pour son hôte n° 1
+
+**Arabe** : اللَّهُمَّ بَارِكْ لَهُمْ فِيمَا رَزَقْتَهُم، وَاغْفِرْ لَهُمْ وَارْحَمْهُمْ
+
+**Phonétique** : Allahoumma barik lahoum fima razaqtahoum, waghfir lahoum warhamhoum
+
+**Français** : Ô Allah, bénis-les dans ce que Tu leur as accordé, pardonne-leur et fais-leur miséricorde.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation de l’invité pour son hôte », invocation n° 1. Muslim 3/1626.
+
+*Renvoi d’origine (arabe)* : مسلم3/ 1626
+
+### Invocation en entrant au marché n° 1
+
+**Arabe** : لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ، وَلَهُ الْحَمْدُ، يُحْيِي وَيُمِيتُ، وَهُوَ حَيٌّ لاَ يَمُوتُ، بِيَدِهِ الْخَيْرُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ
+
+**Phonétique** : La ilaha illa llahou wahdahou la charika lahou, lahou l-moulkou, walahou l-hamdou, youhyi wayoumitou, wahouwa hayyoun la yamoutou, biyadihi l-khayrou, wahouwa ʿala koulli chay’in qadir
+
+**Français** : Il n’y a de divinité digne d’adoration qu’Allah, Seul, sans associé. À Lui la royauté et la louange ; Il donne la vie et la mort, et Il est Vivant et ne meurt pas. Le bien est dans Sa main, et Il est Omnipotent.
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Invocation en entrant au marché », invocation n° 1. At-Tirmidhi 5/491 ; al-Hakim 1/538 ; jugé hassan par al-Albani (Sahih Ibn Majah 2/21 ; Sahih at-Tirmidhi 3/152).
+
+*Renvoi d’origine (arabe)* : الترمذي 5/491 والحاكم 1/538 وحسنه الألباني في صحيح ابن ماجه 2/21 وفي صحيح الترمذي3/ 152
+
+### Ce que l’on dit pendant une assemblée n° 1
+
+**Arabe** : رَبِّ اغْفِرْ لِي، وَتُبْ عَلَيَّ، إِنَّكَ أَنْتَ التَّوَّابُ الْغَفُورُ
+
+**Phonétique** : Rabbi-ghfir li, watoub ʿalayya, innaka anta t-tawwabou l-ghafour
+
+**Français** : Seigneur, pardonne-moi et accepte mon repentir, car Tu es Celui qui accepte le repentir, le Pardonneur. (Ibn ‘Umar rapporte qu’on comptait pour le Messager d’Allah cent fois cette invocation dans une même assemblée, avant qu’il ne se lève.)
+
+**Référence** : Hisn al-Muslim (Sa‘id al-Qahtani), « Ce que l’on dit pendant une assemblée », invocation n° 1. At-Tirmidhi et d’autres (voir Sahih at-Tirmidhi 3/153 ; Sahih Ibn Majah 2/321) ; le texte est celui d’at-Tirmidhi.
+
+*Renvoi d’origine (arabe)* : الترمذي وغيره وانظر صحيح الترمذي 3/153 وصحيح ابن ماجه 2/321 ولفظه للترمذي

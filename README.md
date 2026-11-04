@@ -7125,3 +7125,10 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Page publique `/licences` : lit `GET /quran/resources` et `GET /quran/reciters` (ressources et récitateurs **activés** dans Admin → Coran). Pour y faire figurer ou retirer une licence : renseigner / modifier les champs Auteur, Licence, Crédit, Source dans Admin → Coran (ou Récitateurs) ; désactiver une ressource la retire de la page.
 - Lien « Licences » : pied de page du site (menu « Liens du pied de page », renommable) et menu de l'application.
 - Debug : page vide → aucune ressource activée ou fonction « Coran » coupée.
+
+### Contenus 4 — Dhikr de la vie quotidienne (04/11)
+
+- 23 entrées (catégorie « général ») : toilettes, ablutions, maison, mosquée, vêtements, repas, marché, assemblée. Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil (rn0x/hisn_almuslim_json) traduits, français de l'assistant, phonétique par règles.
+- Elles arrivent **non validées et non affichées** : migration `093_athkar_vie_quotidienne.sql` au redéploiement de l'API (idempotente), ou bouton « Restaurer les dhikr fournis » (Admin → Athkar).
+- Relire la fiche `docs/contenus/athkar-vie-quotidienne.md`, puis valider / afficher dans Admin → Athkar (actions en lot possibles).
+- Régénérer : `python3 ops/contenus/athkar/build_vie_quotidienne.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/093_athkar_vie_quotidienne.sql athkar-vie-quotidienne.json`.
