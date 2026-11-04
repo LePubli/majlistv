@@ -7160,3 +7160,13 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-priere.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 500"` → 43.
 - Régénérer : `python3 ops/contenus/athkar/build_priere.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/096_athkar_priere.sql athkar-priere.json`.
+
+### Contenus 8 — Dhikr du deuil (04/11)
+
+- 14 entrées (catégorie « général ») : quand un malheur survient, fermeture des yeux du défunt, prière funéraire (4 invocations pour le défunt, 3 pour un enfant), condoléances (2), mise en terre, après l'enterrement, visite des tombes. Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil traduits (renvoi d'origine en arabe dans la fiche), français de l'assistant, phonétique par règles. Positions 600 et suivantes.
+- Non repris : « Celui dont les dernières paroles sont lā ilāha illā llāh… » (hadith sur le fait de souffler la formule au mourant, pas une formule ; le texte arabe existe déjà dans le lot « épreuves »).
+- Plusieurs invocations contiennent « un tel » (nom du défunt) : le français le précise ; à décider à la relecture s'il faut un champ pour saisir le nom.
+- **Non validées et non affichées** : migration `097_athkar_deuil.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
+- Relire `docs/contenus/athkar-deuil.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 600"` → 14.
+- Régénérer : `python3 ops/contenus/athkar/build_deuil.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/097_athkar_deuil.sql athkar-deuil.json`.
