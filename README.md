@@ -7188,3 +7188,12 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-relations.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 800"` → 17.
 - Régénérer : `python3 ops/contenus/athkar/build_relations.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/099_athkar_relations.sql athkar-relations.json`.
+
+### Contenus 11 — Dhikr du pèlerinage et du tasbih (04/11)
+
+- 19 entrées (catégorie « général ») : talbiya, « Notre Seigneur, accorde-nous… » (entre le coin yéménite et la Pierre noire), texte sur as-Safa et al-Marwa, étonnement (2), douleur dans le corps, frayeur, égorgement du sacrifice, paroles parfaites d'Allah contre les démons rebelles, istighfar, et 9 formules de glorification (compteurs 100 et 10 quand le hadith les donne). Arabe voyellé de Hisn al-Muslim, renvois traduits, français de l'assistant, phonétique par règles. Positions 900 et suivantes.
+- Non repris : l'invocation de ‘Arafa (même texte que le tasbih n° 2, citée dans son renvoi), les descriptions sans formule (takbir à la Pierre noire, au Mash‘ar, aux jamarat), mauvais œil, prosternation de gratitude, façon de compter le tasbih.
+- **Non validées et non affichées** : migration `100_athkar_hajj_tasbih.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar). La migration n'insère que **16 lignes sur 19** : 3 formules existent déjà (Allah est le plus grand, il n'y a de divinité qu'Allah, la hawla).
+- Relire `docs/contenus/athkar-hajj-tasbih.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 900"` → 16.
+- Régénérer : `python3 ops/contenus/athkar/build_hajj_tasbih.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/100_athkar_hajj_tasbih.sql athkar-hajj-tasbih.json`.
