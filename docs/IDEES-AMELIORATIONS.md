@@ -24,7 +24,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 2.2 | ✅ (étape 34) **Lettre hebdomadaire automatique** « Cette semaine sur Mejliss TV » personnalisée (nouveautés des chaînes suivies, à réviser) | Retour régulier, canal qui t'appartient | M | ★★★ |
 | 2.3 | **Séries de jours, objectifs de la semaine et badges** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
 | 2.4 | **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |
-| 2.5 | **« À regarder plus tard »** distinct des favoris ; **listes partageables** | Moins de conférences perdues, partage entre amis | S | ★★ |
+| 2.5 | ✅ (Amélioration D1 ; listes partageables déjà existantes) **« À regarder plus tard »** distinct des favoris ; **listes partageables** | Moins de conférences perdues, partage entre amis | S | ★★ |
 | 2.6 | **Recommandations plus fines** (« Pour vous ») à partir de l'historique, des quiz et des thèmes | Plus de temps de visionnage par membre | M–L | ★★ |
 
 ## 3. Apprendre : renforcer le 360°
@@ -43,7 +43,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 |---|---|---|---|---|
 | 4.1 | **Correction collaborative des sous-titres** : un membre signale une erreur, un modérateur valide | Qualité des traductions qui progresse sans effort de ton côté | M | ★★ |
 | 4.2 | **Conférences en direct et événements** : annonce, rappel dans l'agenda (.ics), rediffusion automatique | Rendez-vous réguliers, lien fort avec les intervenants | L | ★★ |
-| 4.3 | **Prière : date hégirienne, direction de la Qibla, calendrier du mois** (ni date hégirienne ni Qibla aujourd'hui) | Usage quotidien du site, raison d'ouvrir l'application | S–M | ★★ |
+| 4.3 | ✅ (Amélioration 4.3, site + application) **Prière : date hégirienne, direction de la Qibla, calendrier du mois** (ni date hégirienne ni Qibla aujourd'hui) | Usage quotidien du site, raison d'ouvrir l'application | S–M | ★★ |
 | 4.4 | **Avis et notes** sur les conférences (étoiles, modérées) | Aide au choix, alimente les recommandations | M | ★ |
 | 4.5 | **Questions à l'intervenant** (avec réponses modérées) plutôt que des commentaires libres | Lien avec la communauté sans le risque d'un fil de commentaires ouvert | M | ★ |
 
