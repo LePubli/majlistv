@@ -9,18 +9,19 @@ import { pool } from '../../db.js';
 import { hasLearningTier } from '../../access.js';
 import { BULK_ACTIONS, LABELS, bulkIds, runBulk } from '../../bulk.js';
 import { restoreProvided } from './provided.js';
-import { CATEGORIES, MAX_COUNT, doneByDay, nowDate, prefsOf, published, streakOf, today } from './lib.js';
+import { CATEGORIES, THEMES, MAX_COUNT, themeFor, doneByDay, nowDate, prefsOf, published, streakOf, today } from './lib.js';
 
 const itemSchema = z.object({
   category: z.enum(CATEGORIES), textAr: z.string().trim().min(2).max(4000), translit: z.string().trim().max(4000).default(''),
   trFr: z.string().trim().max(4000).default(''), trEn: z.string().trim().max(4000).default(''),
+  theme: z.enum(THEMES).optional(), reviewNote: z.string().trim().max(1000).default(''),
   reference: z.string().trim().min(3, 'La référence (source) est obligatoire.').max(500),
   target: z.number().int().min(1).max(1000).default(1), position: z.number().int().min(0).max(10000).default(0),
   validated: z.boolean().default(false), enabled: z.boolean().default(false),
 });
 const idSchema = z.object({ id: z.coerce.number().int().positive() });
 const adminRow = (r) => ({
-  id: r.id, category: r.category, textAr: r.text_ar, translit: r.translit, trFr: r.tr_fr, trEn: r.tr_en, reference: r.reference, target: r.target,
+  id: r.id, category: r.category, textAr: r.text_ar, translit: r.translit, trFr: r.tr_fr, trEn: r.tr_en, reference: r.reference, target: r.target, theme: r.theme, reviewNote: r.review_note,
   position: r.position, enabled: r.enabled, validated: Boolean(r.reviewed_at), reviewedAt: r.reviewed_at,
 });
 
@@ -42,7 +43,7 @@ export default async function athkarRoutes(app) {
     return {
       today: day, goal: prefs.goal, remindHour: prefs.remindHour, doneToday: byDay.get(day) || 0, streak: streakOf(byDay, prefs.goal, day), total: items.length,
       items: items.map((i) => ({
-        id: i.id, category: i.category, ar: i.text_ar, translit: i.translit, tr: l === 'en' ? (i.tr_en || i.tr_fr) : l === 'ar' ? '' : (i.tr_fr || i.tr_en),
+        id: i.id, category: i.category, theme: i.theme, ar: i.text_ar, translit: i.translit, tr: l === 'en' ? (i.tr_en || i.tr_fr) : l === 'ar' ? '' : (i.tr_fr || i.tr_en),
         reference: i.reference, target: i.target, count: counts.get(i.id) || 0,
       })),
     };
@@ -77,18 +78,18 @@ export default async function athkarRoutes(app) {
   });
 
   // ---- Administration ----------------------------------------------------------------------------------------------------------
-  app.get('/admin/athkar', adminOnly, async () => ({ items: (await pool.query('SELECT * FROM athkar_items ORDER BY position, id')).rows.map(adminRow), categories: CATEGORIES }));
+  app.get('/admin/athkar', adminOnly, async () => ({ items: (await pool.query('SELECT * FROM athkar_items ORDER BY position, id')).rows.map(adminRow), categories: CATEGORIES, themes: THEMES }));
 
   const save = async (req, reply, id) => {
     const b = itemSchema.parse(req.body ?? {});
     if (b.enabled && !b.validated) return reply.code(400).send({ error: 'Validez d\'abord ce dhikr (relu par une personne qualifiée) avant de l\'afficher.' });
-    const vals = [b.category, b.textAr, b.translit, b.trFr, b.trEn, b.reference, b.target, b.position, b.enabled, b.validated, req.user.sub];
+    const vals = [b.category, b.textAr, b.translit, b.trFr, b.trEn, b.reference, b.target, b.position, b.enabled, b.validated, req.user.sub, b.theme || themeFor(b.category, b.position), b.reviewNote];
     const sql = id
       ? `UPDATE athkar_items SET category=$1, text_ar=$2, translit=$3, tr_fr=$4, tr_en=$5, reference=$6, target=$7, position=$8, enabled=$9,
                 reviewed_at = CASE WHEN $10 THEN COALESCE(reviewed_at, now()) ELSE NULL END,
-                reviewed_by = CASE WHEN $10 THEN COALESCE(reviewed_by, $11::uuid) ELSE NULL END, updated_at=now() WHERE id=$12 RETURNING *`
-      : `INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position, enabled, reviewed_at, reviewed_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CASE WHEN $10 THEN now() END, CASE WHEN $10 THEN $11::uuid END) RETURNING *`;
+                reviewed_by = CASE WHEN $10 THEN COALESCE(reviewed_by, $11::uuid) ELSE NULL END, theme=$12, review_note=$13, updated_at=now() WHERE id=$14 RETURNING *`
+      : `INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position, enabled, reviewed_at, reviewed_by, theme, review_note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CASE WHEN $10 THEN now() END, CASE WHEN $10 THEN $11::uuid END, $12, $13) RETURNING *`;
     const { rows } = await pool.query(sql, id ? [...vals, id] : vals);
     if (!rows.length) return reply.code(404).send({ error: 'Dhikr introuvable.' });
     req.auditSummary = `Adhkar : dhikr n° ${rows[0].id} ${id ? 'modifié' : 'créé'}${b.validated ? ' (validé)' : ''}${b.enabled ? ', affiché' : ''}`;
@@ -108,12 +109,12 @@ export default async function athkarRoutes(app) {
   // Actions en lot : valider, valider et afficher, afficher, masquer, dé-valider, supprimer, modifier le moment ou les répétitions.
   const bulkSchema = z.object({
     ids: bulkIds, action: z.enum(BULK_ACTIONS),
-    set: z.object({ category: z.enum(CATEGORIES).optional(), target: z.number().int().min(1).max(1000).optional() }).optional(),
+    set: z.object({ category: z.enum(CATEGORIES).optional(), theme: z.enum(THEMES).optional(), target: z.number().int().min(1).max(1000).optional() }).optional(),
   });
   app.post('/admin/athkar/bulk', adminOnly, async (req, reply) => {
     const b = bulkSchema.parse(req.body ?? {});
-    const set = {}; if (b.set?.category) set.category = b.set.category; if (b.set?.target) set.target = b.set.target;
-    if (b.action === 'update' && !Object.keys(set).length) return reply.code(400).send({ error: 'Choisissez le moment ou le nombre de répétitions à appliquer.' });
+    const set = {}; if (b.set?.category) set.category = b.set.category; if (b.set?.theme) set.theme = b.set.theme; if (b.set?.target) set.target = b.set.target;
+    if (b.action === 'update' && !Object.keys(set).length) return reply.code(400).send({ error: 'Choisissez le moment, le thème ou le nombre de répétitions à appliquer.' });
     const out = await runBulk({ table: 'athkar_items', ids: b.ids, action: b.action, userId: req.user.sub, set });
     req.auditSummary = `Adhkar : ${out.done} dhikr ${LABELS[b.action]} en lot${out.skipped ? ` (${out.skipped} ignorés)` : ''}`;
     return out;
@@ -134,8 +135,8 @@ export default async function athkarRoutes(app) {
       const p = itemSchema.safeParse({ ...raw, validated: false, enabled: false, target: raw?.target === undefined ? 1 : Number(raw.target), position: raw?.position === undefined ? i : Number(raw.position) });
       if (!p.success) { errors.push(`n° ${i + 1} : ${p.error.issues.map((x) => x.message).join(', ')}`); continue; }
       const b = p.data;
-      await pool.query('INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [b.category, b.textAr, b.translit, b.trFr, b.trEn, b.reference, b.target, b.position]);
+      await pool.query('INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position, theme, review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+        [b.category, b.textAr, b.translit, b.trFr, b.trEn, b.reference, b.target, b.position, b.theme || themeFor(b.category, b.position), b.reviewNote]);
       created++;
     }
     if (!created) return reply.code(400).send({ error: 'Aucun dhikr importé.', errors: errors.slice(0, 20) });

@@ -10,6 +10,8 @@ import { reciterUrl, wordsParam } from '../../../lib/quranAudio';
 const KEY = 'qr-prefs';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
 const save = (p) => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* stockage indisponible */ } };
+// « Reprendre » (page Coran) : dernière sourate (et verset écouté), gardée sur l'appareil.
+const saveLast = (n, aya) => { try { localStorage.setItem('qr-last', JSON.stringify({ n, aya })); } catch { /* stockage indisponible */ } };
 
 // Tajwid : une couleur par famille de règles (les noms de règles viennent du fichier importé ; une règle inconnue reste affichée avec sa couleur neutre).
 const TJ = {
@@ -80,11 +82,12 @@ export default function SuraPage() {
   const play = useCallback((aya) => {
     const a = audioRef.current; const url = urlOf(aya);
     if (!a || !url) return;
-    setAudioErr(false); setPlaying(aya);
+    setAudioErr(false); setPlaying(aya); saveLast(num, aya);
     a.src = url;
     a.play().catch(() => { setAudioErr(true); setPlaying(null); });
     document.getElementById(`v${aya}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [urlOf]);
+  }, [urlOf, num]);
+  useEffect(() => { if (d) saveLast(num, 1); }, [num, d?.sura?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { const a = audioRef.current; if (a) a.pause(); }, []);
   useEffect(() => { stop(); setSel(null); }, [num, prefs.reciter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -113,47 +116,20 @@ export default function SuraPage() {
         <p className="meta small">{t('qrSura')} {d.sura.n}</p>
         <h1><span lang="ar" dir="rtl" className="qr-ar">{d.sura.ar}</span> · {d.sura.en}</h1>
       </header>
-      <section className="qr-options" aria-label={t('qrOptions')}>
-        {d.translations.length > 0 && (
-          <label>{t('qrTranslation')}
-            <select value={prefs.translation || d.translation?.slug || 'none'} onChange={(e) => set({ translation: e.target.value })}>
-              {d.translations.map((x) => <option key={x.slug} value={x.slug}>{x.name} ({x.lang})</option>)}
-              <option value="none">{t('qrNone')}</option>
-            </select>
-          </label>
-        )}
-        {d.transliterations.length > 0 && <label className="chk"><input type="checkbox" checked={prefs.ph} onChange={(e) => set({ ph: e.target.checked })} /> {t('qrPhonetic')}</label>}
-        {d.tafsirs.length > 0 && (
-          <label>{t('qrTafsir')}
-            <select value={prefs.tafsir} onChange={(e) => { set({ tafsir: e.target.value }); setOpen({}); }}>
-              <option value="">{t('qrNone')}</option>
-              {d.tafsirs.map((x) => <option key={x.slug} value={x.slug}>{x.name} ({x.lang})</option>)}
-            </select>
-          </label>
-        )}
-        {reciters.length > 0 && (
+      <div className="qr-layout qr-read">
+      <div className="qr-main">
+      {reciters.length > 0 && (
+        <section className="qr-player" aria-label={t('qrReciter')}>
+          <button type="button" className="qr-playall" aria-pressed={playing !== null} aria-label={playing ? t('qrStop') : t('qrPlayAll')} onClick={() => (playing ? stop() : play(d.verses[0]?.aya || 1))}>{playing ? '■' : '▶'}</button>
+          <span className="qr-now">{playing ? `${t('qrVerse')} ${playing} / ${d.verses.length}` : t('qrPlayAll')}</span>
           <label>{t('qrReciter')}
             <select value={reciter?.slug || ''} onChange={(e) => set({ reciter: e.target.value })}>
               {reciters.map((x) => <option key={x.slug} value={x.slug}>{x.name}</option>)}
             </select>
           </label>
-        )}
-        {reciters.length > 0 && <label className="chk"><input type="checkbox" checked={prefs.chain} onChange={(e) => set({ chain: e.target.checked })} /> {t('qrChain')}</label>}
-        {d.wordsMeta && locale !== 'ar' && <label className="chk"><input type="checkbox" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
-        {/* Interface arabe : pas de sens des mots par défaut ; option pour choisir une langue (fr, en…). */}
-        {d.wordsList?.length > 0 && locale === 'ar' && (
-          <label>{t('qrWbwLang')}
-            <select value={prefs.wbwLang || ''} onChange={(e) => set({ wbwLang: e.target.value })}>
-              <option value="">{t('qrNone')}</option>
-              {[...new Set(d.wordsList.map((x) => x.lang))].map((l) => <option key={l} value={l}>{l === 'fr' ? 'Français' : l === 'en' ? 'English' : l}</option>)}
-            </select>
-          </label>
-        )}
-        {d.tajweedMeta && <label className="chk"><input type="checkbox" checked={prefs.taj} onChange={(e) => set({ taj: e.target.checked })} /> {t('qrTajweed')}</label>}
-        <label>{t('qrSize')}
-          <input type="range" min="1" max="4" value={prefs.size} onChange={(e) => set({ size: Number(e.target.value) })} />
-        </label>
-      </section>
+          <label className="chk"><input type="checkbox" checked={prefs.chain} onChange={(e) => set({ chain: e.target.checked })} /> {t('qrChain')}</label>
+        </section>
+      )}
       {audioErr && <p className="error" role="alert">{t('qrAudioErr')}</p>}
       {prefs.taj && d.tajweed && <TajLegend d={d} locale={locale} t={t} />}
       <audio ref={audioRef} preload="none" onEnded={() => { const next = playing + 1; if (prefs.chain && d.verses.some((x) => x.aya === next)) play(next); else setPlaying(null); }} onError={() => { if (playing) { setAudioErr(true); setPlaying(null); } }} />
@@ -188,6 +164,44 @@ export default function SuraPage() {
         {num > 1 ? <Link className="btn ghost" href={`/coran/${num - 1}`}>← {t('qrPrev')}</Link> : <span />}
         {num < 114 ? <Link className="btn ghost" href={`/coran/${num + 1}`}>{t('qrNext')} →</Link> : <span />}
       </nav>
+      </div>
+      <aside className="qr-side">
+        <section className="qr-options" aria-label={t('qrOptions')}>
+          <h2 className="at-h">{t('qrOptTitle')}</h2>
+          {d.translations.length > 0 && (
+            <label>{t('qrTranslation')}
+              <select value={prefs.translation || d.translation?.slug || 'none'} onChange={(e) => set({ translation: e.target.value })}>
+                {d.translations.map((x) => <option key={x.slug} value={x.slug}>{x.name} ({x.lang})</option>)}
+                <option value="none">{t('qrNone')}</option>
+              </select>
+            </label>
+          )}
+          {d.transliterations.length > 0 && <label className="chk"><input type="checkbox" checked={prefs.ph} onChange={(e) => set({ ph: e.target.checked })} /> {t('qrPhonetic')}</label>}
+          {d.tafsirs.length > 0 && (
+            <label>{t('qrTafsir')}
+              <select value={prefs.tafsir} onChange={(e) => { set({ tafsir: e.target.value }); setOpen({}); }}>
+                <option value="">{t('qrNone')}</option>
+                {d.tafsirs.map((x) => <option key={x.slug} value={x.slug}>{x.name} ({x.lang})</option>)}
+              </select>
+            </label>
+          )}
+          {d.wordsMeta && locale !== 'ar' && <label className="chk"><input type="checkbox" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
+          {/* Interface arabe : pas de sens des mots par défaut ; option pour choisir une langue (fr, en…). */}
+          {d.wordsList?.length > 0 && locale === 'ar' && (
+            <label>{t('qrWbwLang')}
+              <select value={prefs.wbwLang || ''} onChange={(e) => set({ wbwLang: e.target.value })}>
+                <option value="">{t('qrNone')}</option>
+                {[...new Set(d.wordsList.map((x) => x.lang))].map((l) => <option key={l} value={l}>{l === 'fr' ? 'Français' : l === 'en' ? 'English' : l}</option>)}
+              </select>
+            </label>
+          )}
+          {d.tajweedMeta && <label className="chk"><input type="checkbox" checked={prefs.taj} onChange={(e) => set({ taj: e.target.checked })} /> {t('qrTajweed')}</label>}
+          <label>{t('qrSize')}
+            <input type="range" min="1" max="4" value={prefs.size} onChange={(e) => set({ size: Number(e.target.value) })} />
+          </label>
+        </section>
+      </aside>
+      </div>
     </main>
   );
 }

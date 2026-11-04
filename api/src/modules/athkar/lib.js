@@ -6,6 +6,25 @@ import { anyPushChannel, pushToUser } from '../../push.js';
 import { parisDay, prevDate } from '../../parisTime.js';
 
 export const CATEGORIES = ['morning', 'evening', 'after_prayer', 'sleep', 'general'];
+// Thèmes de parcours (classement inspiré de Hisn al-Muslim). Les libellés sont dans web/lib/i18n.js (atTheme_<id>).
+export const THEMES = ['matin_soir', 'apres_priere', 'sommeil', 'dans_priere', 'maison', 'voyage', 'epreuves', 'deuil', 'nature', 'relations', 'pardon'];
+/** Thème par défaut d'un dhikr (même règle que la migration 102) : d'après le moment, puis la tranche de position du lot de contenus. */
+export function themeFor(category, position) {
+  if (category === 'morning' || category === 'evening') return 'matin_soir';
+  if (category === 'after_prayer') return 'apres_priere';
+  if (category === 'sleep') return 'sommeil';
+  const p = Number(position) || 0;
+  if (p >= 127 && p < 200) return 'sommeil';
+  if (p >= 200 && p < 300) return 'maison';
+  if (p >= 300 && p < 400) return 'voyage';
+  if (p >= 400 && p < 500) return 'epreuves';
+  if (p >= 500 && p < 600) return 'dans_priere';
+  if (p >= 600 && p < 700) return 'deuil';
+  if (p >= 700 && p < 800) return 'nature';
+  if (p >= 800 && p < 900) return 'relations';
+  if (p >= 1000) return 'sommeil';
+  return 'pardon'; // 39 (istighfar) et 900-999 (pèlerinage, tasbih)
+}
 export const MAX_COUNT = 100000; // garde-fou par dhikr et par jour
 
 // Instant courant ; ATHKAR_NOW (date ISO) ne sert qu'aux tests.

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../../db.js';
+import { themeFor } from './lib.js';
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../content/athkar');
 
@@ -17,10 +18,10 @@ export async function restoreProvided() {
   let created = 0;
   for (const x of items) {
     const r = await pool.query(
-      `INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position, enabled)
-       SELECT $1, $2, $3, $4, $5, $6, $7, $8, false
+      `INSERT INTO athkar_items(category, text_ar, translit, tr_fr, tr_en, reference, target, position, enabled, theme)
+       SELECT $1, $2, $3, $4, $5, $6, $7, $8, false, $9::text
        WHERE NOT EXISTS (SELECT 1 FROM athkar_items WHERE category = $1 AND text_ar = $2)`,
-      [x.category, x.textAr, x.translit, x.trFr, x.trEn || '', x.reference, x.target, x.position]);
+      [x.category, x.textAr, x.translit, x.trFr, x.trEn || '', x.reference, x.target, x.position, themeFor(x.category, x.position)]);
     created += r.rowCount;
   }
   return { created, total: items.length };

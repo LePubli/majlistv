@@ -14,7 +14,7 @@ ENV.update({
     "ADMIN_EMAIL": "admin@test.local", "ADMIN_PASSWORD": "AdminPassw0rd-test", "PORT": str(PORT), "RATE_LIMIT_MAX": "100000", "AUTH_RATE_MAX": "100000",
     "ATHKAR_NOW": "2026-11-06T10:00:00Z",
 })
-db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
+db = psycopg2.connect(host="127.0.0.1", port=int(os.environ.get("PGTEST_PORT", 5544)), dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
 LOG = tempfile.NamedTemporaryFile(delete=False, suffix=".log")
 proc = subprocess.Popen(["node", "src/index.js"], cwd=API_DIR, env=ENV, stdout=LOG, stderr=subprocess.STDOUT)
 
@@ -100,7 +100,7 @@ ok(requests.post(B + "/admin/athkar/import", headers=LRN, json={"items": [{}]}).
 # Masquer, dé-valider
 requests.put(f"{B}/admin/athkar/{I1}", headers=ADM, json=item(validated=False, enabled=False))
 ok(requests.get(B + "/athkar", headers=LRN).json()["items"] == [], "dé-validé : retiré des membres")
-cur.execute("select count(*) from audit_log where summary like 'Athkar%%'"); ok(cur.fetchone()[0] >= 3, "actions consignées dans le journal d'audit")
+cur.execute("select count(*) from audit_log where summary like 'Adhkar%%'"); ok(cur.fetchone()[0] >= 3, "actions consignées dans le journal d'audit")
 # Fonction coupée
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_athkar": "false"}})
 ok(requests.get(B + "/athkar", headers=LRN).status_code in (403, 404), "fonction coupée : indisponible")
@@ -109,7 +109,7 @@ requests.put(B + "/admin/settings", headers=ADM, json={"values": {"feat_athkar":
 ok(requests.delete(f"{B}/admin/athkar/{I1}", headers=ADM).status_code == 200, "dhikr supprimé")
 cur.execute("select count(*) from athkar_counts where item_id=%s", (I1,)); ok(cur.fetchone()[0] == 0, "ses comptes sont supprimés avec lui")
 # --- Actions en lot et restauration des dhikr fournis
-PROV = sum(len(json.load(open(os.path.join(API_DIR, "content", "athkar", f)))) for f in os.listdir(os.path.join(API_DIR, "content", "athkar")) if f.endswith(".json"))
+PROV = len({(x["category"], x["textAr"]) for f in os.listdir(os.path.join(API_DIR, "content", "athkar")) if f.endswith(".json") for x in json.load(open(os.path.join(API_DIR, "content", "athkar", f)))})  # même catégorie + même texte arabe = un seul dhikr
 ok(requests.post(B + "/admin/athkar/restore-provided").status_code == 401 and requests.post(B + "/admin/athkar/restore-provided", headers=LRN).status_code == 403, "restauration : refusée sans connexion et aux membres")
 cur.execute("delete from athkar_items")
 r = requests.post(B + "/admin/athkar/restore-provided", headers=ADM, json={}); ok(r.status_code == 200 and r.json()["created"] == PROV and PROV >= 74, f"restauration : {PROV} dhikr fournis recréés")
@@ -135,6 +135,22 @@ ok(BK(ids=IDS[:5], action="update", set={"category": "sleep", "target": 7}).json
 cur.execute("select count(*) from athkar_items where id = any(%s) and category = 'sleep' and target = 7", (IDS[:5],)); ok(cur.fetchone()[0] == 5, "lot : modification enregistrée")
 ok(BK(ids=IDS[:5], action="delete").json()["done"] == 5, "lot : 5 dhikr supprimés")
 cur.execute("select count(*) from athkar_items where id = any(%s)", (IDS[:5],)); ok(cur.fetchone()[0] == 0, "lot : suppression effective")
-cur.execute("select count(*) from audit_log where summary like 'Athkar%%en lot%%'"); ok(cur.fetchone()[0] >= 6, "lot : actions consignées dans le journal d'audit")
+cur.execute("select count(*) from audit_log where summary like 'Adhkar%%en lot%%'"); ok(cur.fetchone()[0] >= 6, "lot : actions consignées dans le journal d'audit")
+# --- Thèmes de parcours (étape « refonte Adhkar »)
+cur.execute("delete from athkar_items")
+r = requests.post(B + "/admin/athkar", headers=ADM, json=item(category="morning")); ok(r.status_code == 200 and r.json()["theme"] == "matin_soir", "thème déduit du moment (matin → matin_soir)")
+r = requests.post(B + "/admin/athkar", headers=ADM, json=item(category="general", position=350)); ok(r.json()["theme"] == "voyage", "thème déduit de la tranche de position (350 → voyage)")
+r = requests.post(B + "/admin/athkar", headers=ADM, json=item(category="general", position=350, theme="deuil", reviewNote="À relire : formule reconstituée.")); J = r.json()
+ok(r.status_code == 200 and J["theme"] == "deuil" and J["reviewNote"].startswith("À relire"), "thème choisi et note de relecture enregistrés")
+ok(requests.post(B + "/admin/athkar", headers=ADM, json=item(theme="inconnu")).status_code == 400, "thème inconnu refusé")
+requests.put(f"{B}/admin/athkar/{J['id']}", headers=ADM, json=item(category="general", position=350, theme="deuil", validated=True, enabled=True))
+m = [x for x in requests.get(B + "/athkar", headers=LRN).json()["items"] if x["id"] == J["id"]]
+ok(len(m) == 1 and m[0]["theme"] == "deuil" and "reviewNote" not in m[0], "membre : thème visible, note de relecture jamais montrée")
+ok("themes" in requests.get(B + "/admin/athkar", headers=ADM).json() and len(requests.get(B + "/admin/athkar", headers=ADM).json()["themes"]) == 11, "admin : liste des 11 thèmes")
+cur.execute("select id from athkar_items order by id limit 2"); T2 = [x[0] for x in cur.fetchall()]
+ok(BK(ids=T2, action="update", set={"theme": "nature"}).json()["done"] == 2, "lot : thème modifié pour 2 dhikr")
+ok(BK(ids=T2, action="update", set={"theme": "inconnu"}).status_code == 400, "lot : thème inconnu refusé")
+cur.execute("delete from athkar_items"); requests.post(B + "/admin/athkar/restore-provided", headers=ADM, json={})
+cur.execute("select count(*) from athkar_items where theme = ''"); ok(cur.fetchone()[0] == 0, "restauration : chaque dhikr fourni reçoit un thème")
 cur.execute("delete from athkar_items"); cur.execute("delete from users where id in (%s,%s)", (uid, lid))
 stop(); print("athkar OK")

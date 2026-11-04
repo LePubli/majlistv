@@ -1,7 +1,8 @@
 'use client';
-// Admin → Coran (étape 45B) : ressources (texte arabe, traductions, phonétique, tafsir), avec source, licence et crédit.
+// Admin → Coran (étape 45B, refonte 45B3) : bilan, onglets « Textes et traductions » / « Récitateurs », une carte par ressource avec interrupteur « Affichée »,
+// panneau « Importer une ressource » (modèles prêts à l'emploi). Ressources (texte arabe, traductions, phonétique, tafsir), avec source, licence et crédit.
 // Aucun texte n'est fourni avec le logiciel : on importe ici ce qu'on a le droit d'utiliser (adresse ou contenu du fichier).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import QuranReciters from './QuranReciters';
@@ -36,6 +37,9 @@ export default function QuranAdmin() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState('res'); // 'res' | 'rec'
+  const [fKind, setFKind] = useState('');
+  const [panel, setPanel] = useState(false); // panneau « Importer une ressource »
   const load = useCallback(async () => {
     const r = await call('/admin/quran/resources');
     if (r.ok) { setD(r.data); setErr(''); } else setErr(r.status === 404 ? 'Cette fonction est coupée (Admin → Fonctions → « Coran »).' : errOf(r, t));
@@ -124,35 +128,63 @@ export default function QuranAdmin() {
   };
   const readFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => setImp((s) => ({ ...s, content: String(rd.result || ''), url: '' })); rd.readAsText(f); };
 
+  const stats = useMemo(() => {
+    const rs = d?.resources || [];
+    const text = rs.find((x) => x.kind === 'text' && x.verseCount > 0);
+    return { text, shown: rs.filter((x) => x.enabled).length, total: rs.length, todo: rs.filter((x) => !x.verseCount || !x.license).length };
+  }, [d]);
   if (err && !d) return <p className="error" role="alert">{err}</p>;
   if (!d) return null;
+  const rows = d.resources.filter((x) => !fKind || x.kind === fKind);
+  const working = Boolean(form || imp);
+  const open = (fn) => () => { setErr(''); setMsg(''); fn(); setPanel(false); };
   return (
-    <section>
-      <h2>{t('qrAdTitle')}</h2>
-      <p className="meta">{t('qrAdIntro')} <Link className="link u" href="/coran">{t('qrAdOpen')}</Link></p>
-      <p className="meta small">{t('qrAdLicence')}</p>
-      {!form && !imp && (
-        <section className="qr-preset">
-          <h3>{t('qrAdPresetTitle')}</h3>
-          <p className="meta small">{t('qrAdPresetText')}</p>
-          <p><button type="button" className="btn" disabled={busy} onClick={addComplete}>{busy ? t('qrAdPresetBusy') : t('qrAdPresetBtn')}</button></p>
-        </section>
-      )}
-      {!form && !imp && (
-        <section className="qr-preset">
-          <h3>Mot à mot (sens de chaque mot au clic)</h3>
-          <p className="meta small">Sur qul.tarteel.ai → Resources → « Word by word translation », téléchargez le fichier JSON (décompressez le .zip). Cliquez ensuite sur la langue, choisissez le fichier, puis cochez « Affichée » dans le tableau. Renseignez la licence via « Modifier ».</p>
-          <p><button type="button" className="btn" onClick={() => startWords('fr')}>Importer le mot à mot français</button>{' '}<button type="button" className="btn ghost" onClick={() => startWords('en')}>Importer le mot à mot anglais</button></p>
-          <h3>Couleurs du tajwid</h3>
-          <p className="meta small">Fichier <code>tajweed.hafs.uthmani-pause-sajdah.json</code> du dépôt cpfair/quran-tajweed (CC BY 4.0). Le texte arabe doit être importé et affiché avant. Les versets dont les règles ne tombent pas sur les bonnes lettres sont écartés (sans couleurs).</p>
-          <p><button type="button" className="btn" onClick={startTajweed}>Importer le tajwid</button></p>
-        </section>
-      )}
+    <section className="qa">
+      <header className="aa-head">
+        <div>
+          <h2>{t('qrAdTitle')}</h2>
+          <p className="meta">{t('qrAdIntro')} <Link className="link u" href="/coran">{t('qrAdOpen')}</Link></p>
+          <p className="meta small">{t('qrAdLicence')}</p>
+        </div>
+        {!working && <div className="aa-actions"><button type="button" className="btn" onClick={() => setPanel(!panel)} aria-expanded={panel}>Importer une ressource</button></div>}
+      </header>
+
+      <div className="aa-kpis">
+        <div className="aa-kpi"><span>Texte arabe</span><b style={{ color: stats.text && stats.text.verseCount === d.totalExpected ? 'var(--ok)' : undefined }}>{stats.text ? `${stats.text.verseCount} / ${d.totalExpected}` : 'non importé'}</b><small>versets</small></div>
+        <div className="aa-kpi"><span>Ressources affichées</span><b>{stats.shown} sur {stats.total}</b><small>visibles par les membres</small></div>
+        <div className={`aa-kpi${stats.todo ? ' warn' : ''}`}><span>À faire</span><b>{stats.todo}</b><small>à importer ou sans licence</small></div>
+      </div>
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
-      {!form && !imp && <p><button type="button" className="btn" onClick={() => { setForm({ ...EMPTY }); setMsg(''); setErr(''); }}>{t('qrAdNew')}</button></p>}
+
+      {panel && !working && (
+        <section className="qa-panel" aria-label="Importer une ressource">
+          <div className="qa-opt">
+            <h3>Coran complet (recommandé)</h3>
+            <p className="meta small">{t('qrAdPresetText')}</p>
+            <p><button type="button" className="btn" disabled={busy} onClick={addComplete}>{busy ? t('qrAdPresetBusy') : t('qrAdPresetBtn')}</button></p>
+          </div>
+          <div className="qa-opt">
+            <h3>Mot à mot (sens de chaque mot au clic)</h3>
+            <p className="meta small">Sur qul.tarteel.ai → Resources → « Word by word translation », téléchargez le fichier JSON (décompressez le .zip). Cliquez ensuite sur la langue, choisissez le fichier, puis activez « Affichée ». Renseignez la licence via « Modifier ».</p>
+            <p><button type="button" className="btn ghost" onClick={() => { setPanel(false); startWords('fr'); }}>Mot à mot français</button>{' '}<button type="button" className="btn ghost" onClick={() => { setPanel(false); startWords('en'); }}>Mot à mot anglais</button></p>
+          </div>
+          <div className="qa-opt">
+            <h3>Couleurs du tajwid</h3>
+            <p className="meta small">Fichier <code>tajweed.hafs.uthmani-pause-sajdah.json</code> du dépôt cpfair/quran-tajweed (CC BY 4.0). Le texte arabe doit être importé et affiché avant. Les versets dont les règles ne tombent pas sur les bonnes lettres sont écartés (sans couleurs).</p>
+            <p><button type="button" className="btn ghost" onClick={() => { setPanel(false); startTajweed(); }}>Importer le tajwid</button></p>
+          </div>
+          <div className="qa-opt">
+            <h3>Autre source</h3>
+            <p className="meta small">Créez une ressource (texte, traduction, phonétique, tafsir), puis importez son fichier (tanzil ou json) depuis une adresse publique ou votre ordinateur.</p>
+            <p><button type="button" className="btn ghost" onClick={open(() => setForm({ ...EMPTY }))}>{t('qrAdNew')}</button></p>
+          </div>
+        </section>
+      )}
+
       {form && (
         <form className="reg-form" onSubmit={save}>
+          <h3>{form.id ? `Modifier « ${form.name} »` : t('qrAdNew')}</h3>
           {!form.id && <label>Identifiant (ex. fr-hamidullah)<input required value={form.slug} onChange={set('slug')} dir="ltr" pattern="[a-z0-9][a-z0-9_\-]{1,59}" /></label>}
           {!form.id && <label>Type<select value={form.kind} onChange={set('kind')}>{KINDS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>}
           <label>Langue (fr, en, ar…)<input required value={form.lang} onChange={set('lang')} dir="ltr" pattern="[a-z]{2,3}" /></label>
@@ -169,7 +201,8 @@ export default function QuranAdmin() {
       {imp && (
         <form className="reg-form" onSubmit={runImport}>
           <h3>Importer « {imp.res.name} »</h3>
-          <p className="meta small">Remplace tout le contenu de cette ressource. Formats : <b>tanzil</b> (lignes <code>sourate|verset|texte</code>) ou <b>json</b> (liste de {'{sura, aya, text}'} ou objet par sourate).</p>
+          <ol className="qa-steps" aria-label="Étapes"><li className="on">1. Source</li><li>2. Fichier</li><li>3. Import</li></ol>
+          <p className="meta small">Remplace tout le contenu de cette ressource. Elle reste masquée tant que vous ne l’avez pas relue et affichée. Formats : <b>tanzil</b> (lignes <code>sourate|verset|texte</code>) ou <b>json</b> (liste de {'{sura, aya, text}'} ou objet par sourate).</p>
           {['words', 'tajweed'].includes(imp.res.kind)
             ? <p className="meta small">{imp.res.kind === 'words' ? 'JSON : liste de {sura, aya, position, text} (position = numéro du mot dans le verset, à partir de 1) ou objet { "sourate:verset:mot": "sens" }. Un verset dont les mots ne sont pas numérotés 1, 2, 3… sans trou est écarté. Le sens s\'affiche mot par mot dans l\'ordre du texte arabe.' : 'JSON : liste de {surah, ayah, annotations: [{rule, start, end}]}, positions en caractères du texte arabe importé (qui doit être déjà importé et activé). Les versets dont une position dépasse le texte sont écartés.'}</p>
             : <label>Format<select value={imp.format} onChange={(e) => setImp({ ...imp, format: e.target.value })}><option value="tanzil">tanzil (sourate|verset|texte)</option><option value="json">json</option></select></label>}
@@ -179,29 +212,50 @@ export default function QuranAdmin() {
           <p><button className="btn" disabled={busy || (!imp.url.trim() && !imp.content)}>{busy ? 'Import en cours…' : 'Importer'}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
       )}
-      <div className="adm-table-wrap">
-        <table className="adm-table">
-          <thead><tr><th>Ressource</th><th>Type</th><th>Langue</th><th>Versets</th><th>Importée</th><th>Affichée</th><th /></tr></thead>
-          <tbody>
-            {d.resources.length === 0 && <tr><td colSpan={7}>{t('qrAdNone')}</td></tr>}
-            {d.resources.map((x) => (
-              <tr key={x.id}>
-                <td><b>{x.name}</b><br /><span className="meta small">{x.slug}{x.credit ? ` · ${x.credit}` : ''}{x.license ? ` · ${x.license}` : ''}</span></td>
-                <td>{KINDS.find(([k]) => k === x.kind)?.[1]}</td><td>{x.lang}</td>
-                <td>{x.verseCount}{x.kind === 'text' && x.verseCount && x.verseCount !== d.totalExpected ? ` ⚠ (attendu ${d.totalExpected})` : ''}</td>
-                <td>{when(x.importedAt)}</td><td>{x.enabled ? '✓' : '—'}</td>
-                <td className="adm-actions">
-                  <button type="button" className="btn ghost small" onClick={() => { setImp({ res: x, format: ['words', 'tajweed'].includes(x.kind) ? 'json' : 'tanzil', url: '', content: '' }); setForm(null); setErr(''); setMsg(''); }}>Importer</button>{' '}
-                  <button type="button" className="btn ghost small" disabled={!x.verseCount && !x.enabled} onClick={() => toggle(x)}>{x.enabled ? 'Masquer' : 'Afficher'}</button>{' '}
-                  <button type="button" className="btn ghost small" onClick={() => { setForm({ ...x }); setImp(null); setErr(''); setMsg(''); }}>Modifier</button>{' '}
-                  <button type="button" className="btn ghost small" onClick={() => del(x)}>Supprimer</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {!form && !imp && <QuranReciters />}
+
+      {!working && (
+        <>
+          <div className="qa-tabs" role="tablist" aria-label="Sections">
+            <button type="button" role="tab" aria-selected={tab === 'res'} className={tab === 'res' ? 'on' : ''} onClick={() => setTab('res')}>Textes et traductions <small>{d.resources.length}</small></button>
+            <button type="button" role="tab" aria-selected={tab === 'rec'} className={tab === 'rec' ? 'on' : ''} onClick={() => setTab('rec')}>Récitateurs</button>
+          </div>
+          {tab === 'res' && (
+            <>
+              <div className="qa-kinds" role="group" aria-label="Type">
+                <button type="button" className={!fKind ? 'on' : ''} aria-pressed={!fKind} onClick={() => setFKind('')}>Tout</button>
+                {KINDS.map(([k, n]) => <button key={k} type="button" className={fKind === k ? 'on' : ''} aria-pressed={fKind === k} onClick={() => setFKind(k)}>{n}</button>)}
+              </div>
+              {rows.length === 0 && <p className="meta">{t('qrAdNone')}</p>}
+              <ul className="qa-cards">
+                {rows.map((x) => {
+                  const imported = x.verseCount > 0;
+                  return (
+                    <li key={x.id} className={`qa-card${imported ? '' : ' todo'}`}>
+                      <div className="qa-info">
+                        <p className="qa-title"><b>{x.name}</b><span>{KINDS.find(([k]) => k === x.kind)?.[1]}</span><span>{x.lang.toUpperCase()}</span></p>
+                        <p className="meta small">{x.author || '—'}{x.credit ? ` · ${x.credit}` : ''}</p>
+                        <p className={`qa-lic${x.license ? '' : ' warn'}`}>{x.license ? `✓ ${x.license}` : '⚠ Licence à renseigner avant affichage'}</p>
+                      </div>
+                      <div className="qa-state">
+                        <span className="meta small">Contenu</span>
+                        <b className={imported ? 'ok' : 'warn'}>{imported ? `${x.verseCount} versets` : 'Non importée'}</b>
+                        <span className="meta small">{imported ? `Importée ${when(x.importedAt)}` : 'À importer'}{x.kind === 'text' && imported && x.verseCount !== d.totalExpected ? ` ⚠ attendu ${d.totalExpected}` : ''}</span>
+                      </div>
+                      <div className="qa-ctl">
+                        <label className="aa-sw"><span>Affichée</span><input type="checkbox" role="switch" checked={x.enabled} disabled={!imported && !x.enabled} onChange={() => toggle(x)} /></label>
+                        <button type="button" className={`btn${imported ? ' ghost' : ''} small`} onClick={() => { setImp({ res: x, format: ['words', 'tajweed'].includes(x.kind) ? 'json' : 'tanzil', url: '', content: '' }); setForm(null); setErr(''); setMsg(''); }}>{imported ? 'Réimporter' : 'Importer'}</button>
+                        <button type="button" className="btn ghost small" onClick={() => { setForm({ ...x }); setImp(null); setErr(''); setMsg(''); }}>Modifier</button>
+                        <button type="button" className="btn ghost small" onClick={() => del(x)}>Supprimer</button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+          {tab === 'rec' && <QuranReciters />}
+        </>
+      )}
     </section>
   );
 }

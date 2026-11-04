@@ -7193,7 +7193,7 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 
 - 19 entrées (catégorie « général ») : talbiya, « Notre Seigneur, accorde-nous… » (entre le coin yéménite et la Pierre noire), texte sur as-Safa et al-Marwa, étonnement (2), douleur dans le corps, frayeur, égorgement du sacrifice, paroles parfaites d'Allah contre les démons rebelles, istighfar, et 9 formules de glorification (compteurs 100 et 10 quand le hadith les donne). Arabe voyellé de Hisn al-Muslim, renvois traduits, français de l'assistant, phonétique par règles. Positions 900 et suivantes.
 - Non repris : l'invocation de ‘Arafa (même texte que le tasbih n° 2, citée dans son renvoi), les descriptions sans formule (takbir à la Pierre noire, au Mash‘ar, aux jamarat), mauvais œil, prosternation de gratitude, façon de compter le tasbih.
-- **Non validées et non affichées** : migration `100_athkar_hajj_tasbih.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar). La migration n'insère que **16 lignes sur 19** : 3 formules existent déjà (Allah est le plus grand, il n'y a de divinité qu'Allah, la hawla).
+- **Non validées et non affichées** : migration `100_athkar_hajj_tasbih.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar). La migration n'insère que **16 lignes sur 19** : 3 formules existent déjà : n° 905 (douleur dans le corps, déjà en « Épreuves » n° 424), n° 906 (« il n'y a de divinité qu'Allah » en cas de frayeur, déjà n° 425) et n° 915 (« il n'y a de force ni de puissance qu'en Allah », déjà n° 500). Correction du 04/11 : une version précédente de cette ligne citait à tort « Allah est le plus grand ».
 - Relire `docs/contenus/athkar-hajj-tasbih.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 900"` → 16.
 - Régénérer : `python3 ops/contenus/athkar/build_hajj_tasbih.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/100_athkar_hajj_tasbih.sql athkar-hajj-tasbih.json`.
@@ -7205,3 +7205,32 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - **Non validées et non affichées** : migration `101_athkar_nuit.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 1000"` → 3.
 - Régénérer : `python3 ops/contenus/athkar/build_nuit.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/101_athkar_nuit.sql athkar-nuit.json`.
+
+
+### Étape 45D2 + 45B3 — Refonte des pages Adhkar et Coran (admin et membre) (04/11)
+
+Suite aux maquettes validées par Epok (canevas « Maquette Adhkar — admin et page membre » et pages Coran). Rien n'est affiché de plus qu'avant : aucune règle de validation n'a changé.
+
+**Adhkar**
+- **Thèmes** : nouvelle colonne `theme` (11 thèmes inspirés de Hisn al-Muslim : matin et soir, après la prière, sommeil et réveil, dans la prière, maison et vie quotidienne, voyage, épreuves/peur/maladie, deuil, nature/jeûne/repas, relations, glorification/pardon/pèlerinage). Migration `102_athkar_themes.sql` : thème déduit du moment puis de la tranche de position du lot ; modifiable dans la fiche ou **en lot**. **Ce classement est une proposition de l'assistant, pas une validation religieuse.**
+- **Note de relecture** (`review_note`, jamais montrée aux membres) : renseignée pour le dhikr n° 1002 (rêve) dont l'arabe a été reconstitué par l'assistant.
+- **Admin → Adhkar** : bilan (traités, relus, affichés, à relire), thèmes avec progression, filtre de statut, recherche, une carte par dhikr avec interrupteurs « Relu » / « Affiché » (afficher reste impossible tant que le dhikr n'est pas relu), **mode relecture** un par un (Précédent, Passer, Corriger, Valider, Valider et afficher), actions en lot (+ thème), import JSON (champ `theme` facultatif), restauration des dhikr fournis.
+- **Page membre (Apprendre › Adhkar)** : 4 moments, thèmes, cartes avec compteur rond, objectif du jour (anneau), série, rappel, réglages d'affichage (phonétique, traduction, taille de l'arabe) gardés sur l'appareil. Deux colonnes dès 960 px, une seule en dessous ; arabe (RTL) pris en charge.
+- Clés i18n ajoutées (fr/en/ar) : `atTheme_*`, `atMoment`, `atThemes`, etc.
+
+**Coran**
+- **Admin → Coran** : bilan (texte arabe x / 6236, ressources affichées, à faire), onglets « Textes et traductions » / « Récitateurs », filtre par type, une carte par ressource (licence en jaune si absente, interrupteur « Affichée », Importer / Réimporter / Modifier / Supprimer), panneau « Importer une ressource » (Coran complet, mot à mot, tajwid, autre source). Les récitateurs gardent leur écran actuel (catalogues EveryAyah / Islamic Network, « Proposer »).
+- **Page Coran** : une seule recherche (sourate ou mot du texte), tri (ordre, plus courtes, plus longues), **« Reprendre »** (dernière sourate et dernier verset écouté, gardés sur l'appareil), lecture en 30 jours dans la colonne latérale.
+- **Page d'une sourate** : lecteur en haut (« Écouter toute la sourate », récitateur, enchaîner), réglages dans la colonne latérale.
+
+**Prérequis / déploiement** (DockPanel)
+1. DockPanel → Git Deploy → Redeploy **majlistv-api** (migrations 094 à 102 au démarrage), puis **majlistv-web**. Rien d'autre à redéployer.
+2. Sur le VPS : `/root/apply-limits.sh` puis `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*` puis `nginx -t && systemctl reload nginx` puis `bash /root/verify-deploy.sh` (attendu : 0 échec).
+3. Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select theme, count(*) from athkar_items group by 1 order by 2 desc"` → 11 thèmes, aucune ligne à thème vide.
+
+**Debug** : thème vide ou inattendu → Admin → Adhkar, filtrer par thème, sélectionner, « Thème… » puis « Appliquer ». « Reprendre » absent → rien lu sur cet appareil (stockage local). Page Coran vide → texte arabe non importé (Admin → Coran → Importer une ressource → Coran complet).
+
+**Exemples** : import JSON avec thème : `[{"category":"general","theme":"voyage","textAr":"…","trFr":"…","reference":"…","target":1}]`.
+
+**Tests** : `api/tests/test_athkar.py` (+ 10 contrôles : thème déduit, choisi, refusé, en lot, note jamais montrée, restauration) ; `test_athkar_content.mjs` ; `test_athkar_run.mjs`. Les tests d'audit et de restauration (253 fournis → 249 distincts) ont été corrigés (ils échouaient déjà avant cette étape). Construction du site (`next build`) et essai à l'écran en 1440, 1280 et 390 px avec des données d'essai.
+**Pas testé** : essai sur vrai téléphone, interface en arabe (RTL) à l'écran, lecture réelle d'un récitateur, import réel du Coran (pas d'accès réseau dans l'environnement de test).
