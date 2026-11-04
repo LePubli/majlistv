@@ -1,6 +1,6 @@
 // Étape 37 — Rapports de sauvegarde envoyés par le VPS.
 //   POST /backup/report   (jeton « Bearer » = réglage backup_report_token) { kind, ok, summary, details }
-// Aucune donnée de membre ne passe ici : seulement des comptes (nombre de conférences…) et un court message.
+// Aucune donnée de membre ne passe ici : seulement des comptes (nombre de vidéos…) et un court message.
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting } from '../settings.js';

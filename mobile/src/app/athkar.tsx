@@ -1,5 +1,5 @@
-// Étape M3 — Compteur d'athkar dans l'application (comme l'onglet « Athkar » du site, étape 45D ; offre Apprentissage).
-// Dhikr saisis et validés dans Admin → Athkar, avec leur référence. Un toucher = +1 ; les touchers rapprochés partent ensemble.
+// Étape M3 — Compteur d'athkar dans l'application (comme l'onglet « Adhkar » du site, étape 45D ; offre Apprentissage).
+// Dhikr saisis et validés dans Admin → Adhkar, avec leur référence. Un toucher = +1 ; les touchers rapprochés partent ensemble.
 // Compte du jour en heure de Paris ; objectif du jour, série de jours, rappel facultatif. ?cat=morning : ouvre sur un moment.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';

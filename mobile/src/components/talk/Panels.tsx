@@ -1,4 +1,4 @@
-// Blocs de la fiche : « Apprendre avec cette conférence », verrouillage / aperçu, panneau de série, barre d'actions.
+// Blocs de la fiche : « Apprendre avec cette vidéo », verrouillage / aperçu, panneau de série, barre d'actions.
 import React from 'react';
 import { Linking, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
@@ -10,7 +10,7 @@ import type { SeriesCtx, Talk } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { Button, Txt } from '../ui';
 
-/** Étapes regarder → comprendre → retenir → pratiquer, avec les boutons qui existent pour cette conférence. */
+/** Étapes regarder → comprendre → retenir → pratiquer, avec les boutons qui existent pour cette vidéo. */
 export function LearnCard({ talk }: { talk: Talk }) {
   const { t, user, config } = useSession();
   const quiz = talk.quiz?.available;
@@ -46,7 +46,7 @@ function Step({ n, title, sub, go, onPress }: { n: number; title: string; sub: s
   );
 }
 
-/** Carte affichée quand la conférence est verrouillée (aperçu seulement) : l'abonnement se prend sur le site. */
+/** Carte affichée quand la vidéo est verrouillée (aperçu seulement) : l'abonnement se prend sur le site. */
 export function LockCard({ talk }: { talk: Talk }) {
   const { t, user, config } = useSession();
   const minutes = Math.max(1, Math.round((talk.previewSeconds || 120) / 60));
@@ -63,7 +63,7 @@ export function LockCard({ talk }: { talk: Talk }) {
   );
 }
 
-/** Épisodes de la série de la conférence ; touche un épisode pour l'ouvrir. */
+/** Épisodes de la série de la vidéo ; touche un épisode pour l'ouvrir. */
 export function SeriesPanel({ ctx }: { ctx: SeriesCtx }) {
   const { t } = useSession();
   return (

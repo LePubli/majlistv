@@ -1,7 +1,7 @@
 // Étape 19 — Listes personnelles des membres, partageables par un lien secret.
 //   GET/POST /me/lists, PATCH/DELETE /me/lists/:id, PUT /me/lists/:id/items, PUT/DELETE /me/lists/:id/items/:talkId
 //   POST /me/lists/:id/share (active ou renouvelle le lien), DELETE /me/lists/:id/share (coupe le partage)
-//   GET /me/lists/containing/:talkId             listes du membre qui contiennent cette conférence
+//   GET /me/lists/containing/:talkId             listes du membre qui contiennent cette vidéo
 //   GET /lists/shared/:token                     lecture publique d'une liste partagée (jamais l'identité du membre)
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
@@ -47,7 +47,7 @@ export default async function listsRoutes(app) {
   app.get('/me/lists/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const l = await owned(req, reply, id); if (!l) return;
-    // Dans sa propre liste, le membre voit aussi les conférences devenues indisponibles (pour pouvoir les retirer).
+    // Dans sa propre liste, le membre voit aussi les vidéos devenues indisponibles (pour pouvoir les retirer).
     const talks = await visibleItems('user_list_items', 'list_id', id);
     const total = (await pool.query('SELECT count(*)::int AS n FROM user_list_items WHERE list_id = $1', [id])).rows[0].n;
     return { ...shape(l, total), unavailable: total - talks.length, talks };
@@ -67,7 +67,7 @@ export default async function listsRoutes(app) {
     return reply.code(204).send();
   });
 
-  // Ajoute (à la fin) ou réordonne : { talkIds } remplace l'ordre/le contenu ; PUT .../items/:talkId ajoute une conférence.
+  // Ajoute (à la fin) ou réordonne : { talkIds } remplace l'ordre/le contenu ; PUT .../items/:talkId ajoute une vidéo.
   app.put('/me/lists/:id/items', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { talkIds } = z.object({ talkIds: z.array(z.string().uuid()).max(MAX_LIST_ITEMS) }).parse(req.body ?? {});
@@ -77,7 +77,7 @@ export default async function listsRoutes(app) {
     try {
       await c.query('BEGIN');
       const old = new Set((await c.query('SELECT talk_id FROM user_list_items WHERE list_id = $1', [id])).rows.map((r) => r.talk_id));
-      if (ids.some((x) => !old.has(x))) { await c.query('ROLLBACK'); return reply.code(400).send({ error: 'Utilisez l\'ajout pour ajouter une conférence' }); }
+      if (ids.some((x) => !old.has(x))) { await c.query('ROLLBACK'); return reply.code(400).send({ error: 'Utilisez l\'ajout pour ajouter une vidéo' }); }
       await c.query('DELETE FROM user_list_items WHERE list_id = $1 AND NOT (talk_id = ANY($2::uuid[]))', [id, ids]);
       for (let i = 0; i < ids.length; i++) await c.query('UPDATE user_list_items SET position = $3 WHERE list_id = $1 AND talk_id = $2', [id, ids[i], i]);
       await c.query('UPDATE user_lists SET updated_at = now() WHERE id = $1', [id]);
@@ -90,9 +90,9 @@ export default async function listsRoutes(app) {
     const { id, talkId } = z.object({ id: z.string().uuid(), talkId: z.string().uuid() }).parse(req.params);
     const l = await owned(req, reply, id); if (!l) return;
     const t = (await pool.query(`SELECT 1 FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [talkId])).rowCount;
-    if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const r = (await pool.query('SELECT count(*)::int AS n, coalesce(max(position), -1) + 1 AS next FROM user_list_items WHERE list_id = $1', [id])).rows[0];
-    if (r.n >= MAX_LIST_ITEMS) return reply.code(409).send({ error: `Une liste contient ${MAX_LIST_ITEMS} conférences au plus.`, code: 'limit' });
+    if (r.n >= MAX_LIST_ITEMS) return reply.code(409).send({ error: `Une liste contient ${MAX_LIST_ITEMS} vidéos au plus.`, code: 'limit' });
     await pool.query('INSERT INTO user_list_items(list_id, talk_id, position) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [id, talkId, r.next]);
     await pool.query('UPDATE user_lists SET updated_at = now() WHERE id = $1', [id]);
     return reply.code(204).send();
@@ -121,7 +121,7 @@ export default async function listsRoutes(app) {
     return reply.code(204).send();
   });
 
-  // Lecture publique : titre, description et conférences visibles. Rien sur le membre. Pas d'indexation.
+  // Lecture publique : titre, description et vidéos visibles. Rien sur le membre. Pas d'indexation.
   app.get('/lists/shared/:token', async (req, reply) => {
     const { token } = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/) }).parse(req.params);
     const l = (await pool.query('SELECT id, title, description FROM user_lists WHERE share_token = $1', [token])).rows[0];

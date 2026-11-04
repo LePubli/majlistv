@@ -2,7 +2,7 @@
   "id": "quiz",
   "name": "Quiz",
   "version": "1.0.0",
-  "description": "Questions après chaque conférence, avec explication ; génération par IA et relecture dans le Studio.",
+  "description": "Questions après chaque vidéo, avec explication ; génération par IA et relecture dans le Studio.",
   "feature": "quiz",
   "requires": [],
   "settings": [

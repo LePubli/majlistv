@@ -1,5 +1,5 @@
-// Chaînes (étape C) : registre des chaînes (table speakers), propriétaire, synchronisation avec les conférences existantes.
-// Une chaîne est identifiée par le slug du nom d'intervenant saisi sur ses conférences (speakers.js) : les anciennes adresses
+// Chaînes (étape C) : registre des chaînes (table speakers), propriétaire, synchronisation avec les vidéos existantes.
+// Une chaîne est identifiée par le slug du nom d'intervenant saisi sur ses vidéos (speakers.js) : les anciennes adresses
 // /intervenants/<slug> deviennent /chaines/<slug> sans aucun changement de slug.
 import { pool } from './db.js';
 import { speakerSlug } from './speakers.js';
@@ -10,8 +10,8 @@ import { adultSql } from './taxonomy.js';
 
 let lastSync = 0;
 
-// Crée les chaînes manquantes (toutes les conférences, publiées ou non) et attribue chaque chaîne sans propriétaire
-// à l'organisateur qui y a le plus de conférences. Ne modifie jamais un nom ou un propriétaire déjà définis. Renvoie le nombre de créations.
+// Crée les chaînes manquantes (toutes les vidéos, publiées ou non) et attribue chaque chaîne sans propriétaire
+// à l'organisateur qui y a le plus de vidéos. Ne modifie jamais un nom ou un propriétaire déjà définis. Renvoie le nombre de créations.
 export async function syncChannels({ force = false } = {}) {
   if (!force && Date.now() - lastSync < 60_000) return 0;
   lastSync = Date.now();
@@ -57,7 +57,7 @@ export async function channelImages(slugs) {
 // Réseaux acceptés sur une chaîne (adresses https uniquement).
 export const SOCIAL_KEYS = ['youtube', 'instagram', 'x', 'facebook', 'tiktok'];
 
-// Champs « riches » publics d'une chaîne : accroche, site, contact, réseaux, pays, langue, conférence à la une (seulement si visible).
+// Champs « riches » publics d'une chaîne : accroche, site, contact, réseaux, pays, langue, vidéo à la une (seulement si visible).
 export async function channelProfile(slug) {
   const r = (await pool.query(
     `SELECT tagline, website, contact_email AS "contactEmail", socials, country, main_language AS "mainLanguage", featured_talk_id AS "featuredId"

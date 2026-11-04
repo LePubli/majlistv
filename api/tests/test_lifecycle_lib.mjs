@@ -33,7 +33,7 @@ for (const k of KINDS) {
   }
 }
 ok(renderEmail('resume_talk', 'fr', vars).html.includes('12 min') && renderEmail('resume_talk', 'fr', vars).text.includes('Cheikh X'), 'reprise : minutes et intervenant');
-ok(!renderEmail('resume_talk', 'fr', { ...vars, speaker: '' }).text.includes('Une conférence de'), 'reprise : ligne intervenant retirée si vide');
+ok(!renderEmail('resume_talk', 'fr', { ...vars, speaker: '' }).text.includes('Une vidéo de'), 'reprise : ligne intervenant retirée si vide');
 ok(renderEmail('resume_talk', 'ar', vars).html.includes('dir="rtl"'), 'arabe : sens de lecture droite-gauche');
 ok(!renderEmail('winback', 'fr', { ...vars, titles: '<b>x</b>' }).html.includes('<b>x</b>'), 'contenu échappé');
 
@@ -41,7 +41,7 @@ ok(!renderEmail('winback', 'fr', { ...vars, titles: '<b>x</b>' }).html.includes(
 const cards = [{ id: 'aaaaaaaa-0000-0000-0000-000000000001', title: 'Titre <i>1</i>', speaker: 'S1', poster: true, path: '/conferences/t1' }, { id: 'aaaaaaaa-0000-0000-0000-000000000002', title: 'Titre 2', poster: false, path: '/conferences/t2' }];
 for (const k of ['welcome_nudge', 'winback', 'speaker_new', 'weekly_selection']) {
   const r = renderEmail(k, 'fr', { ...vars, cards });
-  ok(r.html.includes('https://x/api/seo/poster/talks/aaaaaaaa-0000-0000-0000-000000000001') && r.html.includes('https://x/conferences/t2'), `${k} : couverture + lien de la conférence`);
+  ok(r.html.includes('https://x/api/seo/poster/talks/aaaaaaaa-0000-0000-0000-000000000001') && r.html.includes('https://x/conferences/t2'), `${k} : couverture + lien de la vidéo`);
   ok(!r.html.includes('poster/talks/aaaaaaaa-0000-0000-0000-000000000002') && !r.html.includes('<i>1</i>') && r.text.includes('• A'), `${k} : sans image si pas de couverture, titre échappé, texte à puces conservé`);
 }
 const rr = renderEmail('resume_talk', 'fr', { ...vars, cards: [cards[0]] });

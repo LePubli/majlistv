@@ -13,8 +13,8 @@ export const THEMES = [
 ];
 /** Icône et phrase d'explication de chaque section. */
 export const SECTION_META = {
-  general: ['⚙️', 'Nom, adresse, aperçu gratuit'], home: ['🏠', 'Bannière du haut de page'], cards: ['🎞️', 'Cartes des conférences'],
-  citations: ['📖', 'Versets et hadiths du jour'], books: ['📚', 'Ouvrages liés aux conférences'],
+  general: ['⚙️', 'Nom, adresse, aperçu gratuit'], home: ['🏠', 'Bannière du haut de page'], cards: ['🎞️', 'Cartes des vidéos'],
+  citations: ['📖', 'Versets et hadiths du jour'], books: ['📚', 'Ouvrages liés aux vidéos'],
   payment: ['💳', 'Abonnements, essai, taxes'], gifts: ['🎁', 'Montants et validité'], revenue: ['💰', 'Part reversée, seuil de paiement'], ads: ['📣', 'Fréquence, abonnés payants'],
   translation: ['🌐', 'Moteurs et clés'], insights: ['✨', 'Résumés et chapitres automatiques'], transcription: ['🎙️', 'Modèle, langue, cœurs'],
   quiz: ['❓', 'Seuil de réussite, langue'], practice: ['🧭', '« Et maintenant, que faire ? »'],

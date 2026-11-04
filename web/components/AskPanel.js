@@ -1,5 +1,5 @@
 'use client';
-// Étape 41 — onglet « Poser une question » de la page d'une conférence (palier Apprentissage).
+// Étape 41 — onglet « Poser une question » de la page d'une vidéo (palier Apprentissage).
 // La réponse vient de l'IA, uniquement à partir de la transcription ; chaque réponse montre le passage cité avec un bouton « Revoir à mm:ss ».
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -38,7 +38,7 @@ export default function AskPanel({ talkId, t, call, onSeek }) {
       else if (r.data?.code === 'learning_required') setInfo({ locked: true });
       else setInfo({ available: false, reason: r.data?.code || 'ask_unavailable' });
     });
-    // Historique : les derniers échanges du membre sur cette conférence (conservés 90 jours, supprimables).
+    // Historique : les derniers échanges du membre sur cette vidéo (conservés 90 jours, supprimables).
     call(`/talks/${talkId}/ask/history`).then((r) => { if (alive && r.ok) setTurns(r.data.items.map((x) => ({ ...x }))); });
     return () => { alive = false; };
   }, [talkId, call]);

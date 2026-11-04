@@ -1,6 +1,6 @@
 // Module « Doublage français » — intégration au Studio (étape S3) :
 //   Studio → Activité : demandes de doublage dans la liste des tâches, pause d'une demande en cours ;
-//   tableau de bord : écoute en français, choses à faire ; Studio → Contenus : état du doublage de chaque conférence.
+//   tableau de bord : écoute en français, choses à faire ; Studio → Contenus : état du doublage de chaque vidéo.
 import { pool } from '../../db.js';
 import { KEPT, SEGS_FROM, TEXT_HASH } from './routes.js';
 import { getDefaults, getTalkParams } from './lib.js';
@@ -28,7 +28,7 @@ export async function pauseRunning({ queue, ref }) {
   await pool.query(`UPDATE dub_jobs SET cancel_requested = true, updated_at = now() WHERE id = $1 AND status = 'running'`, [ref]);
 }
 
-// État du doublage de conférences : texte français, relecture, piste, demande active, demandes des membres, phrases à revoir.
+// État du doublage de vidéos : texte français, relecture, piste, demande active, demandes des membres, phrases à revoir.
 export async function talkStates(ids) {
   const out = new Map();
   if (!ids.length) return out;
@@ -63,7 +63,7 @@ export async function production(out, { ids }) {
   for (const [id, v] of st) if (out[id]) out[id].dub = v;
 }
 
-// Tableau de bord : part d'écoute en version française (période et dernière conférence) et choses à faire.
+// Tableau de bord : part d'écoute en version française (période et dernière vidéo) et choses à faire.
 export async function overview(out, { organizerId, days, talkId }) {
   const share = (rows) => {
     const fr = Number(rows.find((x) => x.lang === 'fr')?.s || 0); const orig = Number(rows.find((x) => x.lang === 'orig')?.s || 0);
@@ -73,7 +73,7 @@ export async function overview(out, { organizerId, days, talkId }) {
     `SELECT l.audio_lang AS lang, sum(l.seconds)::bigint AS s FROM dub_listen l JOIN talks t ON t.id = l.talk_id
       WHERE t.organizer_id = $1 AND l.day > (now() AT TIME ZONE 'utc')::date - $2::int GROUP BY l.audio_lang`, [organizerId, days])).rows;
   const last = talkId ? (await pool.query('SELECT audio_lang AS lang, sum(seconds)::bigint AS s FROM dub_listen WHERE talk_id = $1 GROUP BY audio_lang', [talkId])).rows : [];
-  // À faire : seulement les conférences où le doublage a commencé (demande, écoute, membres qui l'attendent).
+  // À faire : seulement les vidéos où le doublage a commencé (demande, écoute, membres qui l'attendent).
   const ids = (await pool.query(
     `SELECT DISTINCT t.id FROM talks t
       WHERE t.organizer_id = $1 AND (EXISTS (SELECT 1 FROM dub_jobs j WHERE j.talk_id = t.id) OR EXISTS (SELECT 1 FROM dub_requests r WHERE r.talk_id = t.id AND r.notified_at IS NULL))`,

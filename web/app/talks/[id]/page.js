@@ -1,5 +1,5 @@
-// Ancienne adresse d'une conférence : /talks/<identifiant>. Une conférence publique est redirigée (308) vers son adresse lisible ;
-// une conférence non publique (brouillon d'un organisateur…) s'affiche ici, en « noindex ».
+// Ancienne adresse d'une vidéo : /talks/<identifiant>. Une vidéo publique est redirigée (308) vers son adresse lisible ;
+// une vidéo non publique (brouillon d'un organisateur…) s'affiche ici, en « noindex ».
 import { permanentRedirect } from 'next/navigation';
 import { seoGet } from '../../../lib/seo';
 import { talkMetadata, TalkView } from '../../../lib/talkPage';

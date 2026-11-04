@@ -98,7 +98,7 @@ export async function deletionCheck(userId) {
     if (!others) blockers.push({ code: 'last_admin', message: "Vous êtes le dernier administrateur : nommez un autre administrateur avant de supprimer ce compte." });
   }
   const talks = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE organizer_id = $1', [userId])).rows[0].n;
-  if (talks) blockers.push({ code: 'has_talks', message: `Ce compte possède ${talks} conférence(s) : demandez à l'administrateur de les transférer à un autre compte avant la suppression.`, talks });
+  if (talks) blockers.push({ code: 'has_talks', message: `Ce compte possède ${talks} vidéo(s) : demandez à l'administrateur de les transférer à un autre compte avant la suppression.`, talks });
   const live = (await pool.query("SELECT id FROM subscriptions WHERE user_id = $1 AND status IN ('trialing', 'active', 'past_due', 'unpaid')", [userId])).rows.map((r) => r.id);
   return { blockers, liveSubscriptions: live };
 }

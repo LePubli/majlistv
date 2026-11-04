@@ -7,10 +7,10 @@
 //   PUT  /studio/shorts/:id                       Studio : titre, brouillon / publié
 //   POST /studio/shorts/:id/refresh               Studio : remplacer la vidéo par le dernier rendu de l'extrait
 //   DELETE /studio/shorts/:id                     Studio : supprimer (fichier compris)
-// Droits Studio : le créateur de la conférence, le propriétaire et les éditeurs de sa chaîne (src/channelAccess.js), modérateurs, administrateurs.
-// Espace Kids : un enfant ne voit que les shorts de conférences de sa tranche d'âge et du catalogue autorisé par son parent
+// Droits Studio : le créateur de la vidéo, le propriétaire et les éditeurs de sa chaîne (src/channelAccess.js), modérateurs, administrateurs.
+// Espace Kids : un enfant ne voit que les shorts de vidéos de sa tranche d'âge et du catalogue autorisé par son parent
 // (mêmes règles que le catalogue Kids, gratuites seulement sans abonnement), tant que son temps du jour n'est pas écoulé.
-// Un short d'une conférence réservée aux adultes n'est jamais proposé à un enfant ; un short d'une conférence Kids seule n'est jamais proposé aux adultes.
+// Un short d'une vidéo réservée aux adultes n'est jamais proposé à un enfant ; un short d'une vidéo Kids seule n'est jamais proposé aux adultes.
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { pool } from '../../db.js';
@@ -33,7 +33,7 @@ const listSchema = z.object({
 const TITLE_MAX = 90;
 const OWN = z.enum(['draft', 'published']);
 
-// Conditions d'un short visible : publié, conférence prête et publiée ; adultes : catalogue adulte ; enfant : sa tranche, son catalogue (paramètres $1 à $4).
+// Conditions d'un short visible : publié, vidéo prête et publiée ; adultes : catalogue adulte ; enfant : sa tranche, son catalogue (paramètres $1 à $4).
 const BASE_WHERE = `s.status = 'published' AND t.video_status = 'ready' AND ${visibleSql('t')}`;
 const ADULT_WHERE = `${BASE_WHERE} AND ${adultSql('t')}`;
 const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')`;
@@ -42,7 +42,7 @@ const PUBLIC_SELECT = `
          t.id AS talk_id, t.title AS talk_title, t.speaker, t.access, t.poster_key, t.external_thumb
     FROM public_shorts s JOIN talks t ON t.id = s.talk_id`;
 
-// Forme publique d'un short (liens temporaires, chaîne, miniature de la conférence en affiche).
+// Forme publique d'un short (liens temporaires, chaîne, miniature de la vidéo en affiche).
 async function publicView(rows, { kid = false } = {}) {
   const slugs = [...new Set(rows.map((r) => speakerSlug(r.speaker)).filter(Boolean))];
   const named = new Map((await pool.query('SELECT slug, name FROM speakers WHERE slug = ANY($1)', [slugs])).rows.map((r) => [r.slug, r.name]));
@@ -116,7 +116,7 @@ export default async function shortsRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Studio
-  // Peut-on gérer les shorts de cette conférence ? (ligne avec organizer_id et speaker)
+  // Peut-on gérer les shorts de cette vidéo ? (ligne avec organizer_id et speaker)
   const canManage = async (user, talk) => isStaff(user) || talk.organizer_id === user.sub || viaChannel(user, talk);
 
   async function loadOwn(req, reply) {
@@ -160,7 +160,7 @@ export default async function shortsRoutes(app) {
     };
   });
 
-  // Dernier rendu vertical prêt d'un extrait de l'éditeur, avec la conférence ; null si absent ou hors de mes droits.
+  // Dernier rendu vertical prêt d'un extrait de l'éditeur, avec la vidéo ; null si absent ou hors de mes droits.
   async function sourceOf(req, projectId) {
     const row = (await pool.query(
       `SELECT p.id, p.title, p.talk_id, t.title AS talk_title, t.organizer_id, t.speaker, r.output_key, r.out_duration_s, r.bytes

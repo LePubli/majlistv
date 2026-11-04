@@ -93,7 +93,7 @@ test('liens : notification du programme et bloc « Aujourd\'hui » ouvrent le Co
 
 test('textes du Coran présents dans les trois langues', () => {
   const keys = ['qrTitle', 'qrNav', 'qrIntro', 'qrSoon', 'qrSearch', 'qrFilter', 'qrNoResult', 'qrVerses', 'qrNotFound', 'qrSura', 'qrOptions', 'qrTranslation', 'qrPhonetic', 'qrTafsir', 'qrNone', 'qrSize', 'qrVerse',
-    'qrShowTafsir', 'qrHideTafsir', 'qrPrev', 'qrNext', 'qrSources', 'qrSource', 'qrReciter', 'qrChain', 'qrWbw', 'qrTajweed', 'qrListen', 'qrStop', 'qrAudioErr', 'qrLegend', 'qrNotes',
+    'qrShowTafsir', 'qrHideTafsir', 'qrPrev', 'qrNext', 'qrReciter', 'qrChain', 'qrWbw', 'qrTajweed', 'qrListen', 'qrStop', 'qrAudioErr', 'qrLegend', 'qrNotes',
     'khTitle', 'khIntro', 'khLogin', 'khStart', 'khDay', 'khOver', 'khSoon', 'khProgress', 'khRead', 'khCompleted', 'khFinished', 'khEndTx', 'khShare', 'khShared', 'khShareTx', 'khOverTx', 'khOverHelp',
     'khContinue', 'khToday', 'khReadNow', 'khMark', 'khShowAll', 'khHideAll', 'khJuz', 'khRemind', 'khRestart', 'khRestartAsk', 'khStop', 'khStopAsk', 'atNoRemind', 'cancelBtn', 'errGeneric'];
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}.${k}`);

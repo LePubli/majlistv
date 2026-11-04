@@ -1,4 +1,4 @@
-// Choix de la source de lecture d'une conférence, selon ce que renvoie GET /talks/:id. Pur, testable avec Node.
+// Choix de la source de lecture d'une vidéo, selon ce que renvoie GET /talks/:id. Pur, testable avec Node.
 import { absoluteUrl } from './api';
 import type { Talk } from './types';
 import { validDailymotionPlayer, validEmbedId, type EmbedKind } from './embed';

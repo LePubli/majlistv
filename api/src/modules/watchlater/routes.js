@@ -1,5 +1,5 @@
 // Amélioration 2.5 — « À regarder plus tard » (membre connecté, gratuit).
-//   GET    /me/watchlater          conférences gardées pour plus tard (les plus récentes d'abord) ; les terminées en sortent
+//   GET    /me/watchlater          vidéos gardées pour plus tard (les plus récentes d'abord) ; les terminées en sortent
 //   GET    /me/watchlater/ids      identifiants seuls (état des boutons sur les vignettes)
 //   PUT    /me/watchlater/:id      ajouter (au plus MAX_ITEMS)
 //   DELETE /me/watchlater/:id      retirer
@@ -11,7 +11,7 @@ import { CARD, cards } from '../../talkCards.js';
 export const MAX_ITEMS = 200;
 const idSchema = z.object({ id: z.string().uuid() });
 
-// Une conférence regardée jusqu'au bout n'a plus sa place dans « plus tard ».
+// Une vidéo regardée jusqu'au bout n'a plus sa place dans « plus tard ».
 async function dropFinished(userId) {
   await pool.query(
     `DELETE FROM watch_later w USING watch_progress p
@@ -40,10 +40,10 @@ export default async function watchLaterRoutes(app) {
   app.put('/me/watchlater/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const ok = await pool.query(`SELECT 1 FROM talks t WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')}`, [id]);
-    if (!ok.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!ok.rowCount) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const n = (await pool.query('SELECT count(*)::int AS n FROM watch_later WHERE user_id = $1', [req.user.sub])).rows[0].n;
     const has = (await pool.query('SELECT 1 FROM watch_later WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id])).rowCount;
-    if (!has && n >= MAX_ITEMS) return reply.code(409).send({ error: `Votre liste « À regarder plus tard » est pleine (${MAX_ITEMS}). Retirez-en une conférence.`, code: 'full' });
+    if (!has && n >= MAX_ITEMS) return reply.code(409).send({ error: `Votre liste « À regarder plus tard » est pleine (${MAX_ITEMS}). Retirez-en une vidéo.`, code: 'full' });
     await pool.query('INSERT INTO watch_later(user_id, talk_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user.sub, id]);
     return { saved: true };
   });

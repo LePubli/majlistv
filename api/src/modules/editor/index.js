@@ -25,7 +25,7 @@ export default async function register(app, ctx) {
   // Étape E2 : les analyses du son (formes d'onde) apparaissent dans Studio → Activité.
   // Étape E4a : les rendus (calculés par le worker) aussi.
   // Étape E4b : les préparations de nouvelle version (remplacement, restauration) aussi.
-  // Conférence supprimée : fichiers des rendus de ses montages et extraits (registre n°48 ; la base les supprime en cascade).
+  // Vidéo supprimée : fichiers des rendus de ses montages et extraits (registre n°48 ; la base les supprime en cascade).
   ctx.on('talk.deleting', async ({ talkId }) => {
     const { rows } = await pool.query('SELECT id FROM editor_projects WHERE talk_id = $1', [talkId]);
     for (const r of rows) await deleteProjectRenders(r.id);

@@ -42,7 +42,7 @@ async function main() {
 
   const home = await api.get<Home>('/home');
   const talk = (home.rows ?? []).flatMap((r) => r.talks ?? [])[0];
-  assert.ok(talk, 'au moins une conférence sur l\'accueil');
+  assert.ok(talk, 'au moins une vidéo sur l\'accueil');
   assert.deepEqual(await api.get<string[]>('/me/watchlater/ids'), []);
   await api.put(`/me/watchlater/${talk.id}`);
   assert.deepEqual(await api.get<string[]>('/me/watchlater/ids'), [talk.id]);

@@ -1,8 +1,8 @@
 {
   "id": "notes",
-  "name": "Notes sur les conférences",
+  "name": "Notes sur les vidéos",
   "version": "1.0.0",
-  "description": "Prise de notes pendant la lecture d'une conférence.",
+  "description": "Prise de notes pendant la lecture d'une vidéo.",
   "feature": "notes",
   "requires": [],
   "settings": []

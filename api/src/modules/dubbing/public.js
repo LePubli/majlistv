@@ -1,4 +1,4 @@
-// Module « Doublage français » — côté spectateurs (étape D2) : version française d'une conférence et demandes des abonnés.
+// Module « Doublage français » — côté spectateurs (étape D2) : version française d'une vidéo et demandes des abonnés.
 //   GET    /talks/:id/dub?t=<jeton de lecture>   état + liens temporaires des pistes (lecture complète seulement)
 //   POST   /talks/:id/dub/request                 « Demander la version française » (abonnés ; administrateurs pour essayer)
 //   DELETE /talks/:id/dub/request                 retirer sa demande
@@ -29,7 +29,7 @@ export default async function publicRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const { t } = z.object({ t: z.string().max(200).optional() }).parse(req.query ?? {});
     const talk = await visibleTalk(id);
-    if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const user = await app.optionalUser(req);
     const tr = (await pool.query(
       `SELECT tr.mix_key, tr.voice_key, tr.duration_s::float AS "durationS", tr.created_at AS "createdAt", j.params->>'duck' AS duck
@@ -37,7 +37,7 @@ export default async function publicRoutes(app) {
     const base = { ...(await counts(id, user)), canRequest: await canRequest(user), signedIn: Boolean(user) };
     if (!tr) return { available: false, ...base };
     const level = playbackLevel(id, t);
-    // Lecture complète seulement : un aperçu (non abonné sur une conférence premium) n'obtient pas la piste entière.
+    // Lecture complète seulement : un aperçu (non abonné sur une vidéo premium) n'obtient pas la piste entière.
     const urls = level === 'full' && storage
       ? { mix: tr.mix_key ? await presignGet(tr.mix_key) : null, voice: await presignGet(tr.voice_key) }
       : null;
@@ -49,7 +49,7 @@ export default async function publicRoutes(app) {
 
   app.post('/talks/:id/dub/request', { preHandler: app.authenticate }, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    if (!(await visibleTalk(id))) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!(await visibleTalk(id))) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const user = await app.optionalUser(req);
     if (!(await canRequest(user))) return reply.code(403).send({ error: 'Réservé aux abonnés', code: 'subscribers_only' });
     if ((await pool.query('SELECT 1 FROM dub_tracks WHERE talk_id = $1', [id])).rowCount) return reply.code(409).send({ error: 'La version française existe déjà', code: 'available' });

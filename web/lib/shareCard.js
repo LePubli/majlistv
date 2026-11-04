@@ -1,4 +1,4 @@
-// Étape 32 — Cartes à partager (citation du jour, phrase d'une conférence) : calculs purs (testés avec Node) + dessin sur canvas (navigateur).
+// Étape 32 — Cartes à partager (citation du jour, phrase d'une vidéo) : calculs purs (testés avec Node) + dessin sur canvas (navigateur).
 // Le dessin se fait côté navigateur : l'arabe est assemblé par le navigateur lui-même (lettres liées, sens de lecture), avec les polices du site.
 
 export const FORMATS = {

@@ -393,12 +393,12 @@ export default function PagesAdmin() {
 
   return (
     <section className="pe-list-view" lang="fr" dir="ltr">
-      <p className="meta">Créez de nouvelles pages et composez-les avec des blocs (bannière, titre, texte, image, cartes, conférences, questions…), ou ajoutez des blocs avant ou après une page existante du site. Chaque bloc peut être réservé à un appareil ou à un public, et avoir ses propres couleurs.</p>
+      <p className="meta">Créez de nouvelles pages et composez-les avec des blocs (bannière, titre, texte, image, cartes, vidéos, questions…), ou ajoutez des blocs avant ou après une page existante du site. Chaque bloc peut être réservé à un appareil ou à un public, et avoir ses propres couleurs.</p>
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
 
       <div className="panel">
         <h2 className="panel-title">Accueil des membres</h2>
-        <p className="meta small">Recomposez l’accueil du site avec des blocs : À la une + Reprendre, Chaînes à suivre, Collections, Citation du jour, rangées de conférences… dans l’ordre que vous voulez, avec une visibilité par appareil et par public. Le modèle de départ reprend la maquette « Main ».</p>
+        <p className="meta small">Recomposez l’accueil du site avec des blocs : À la une + Reprendre, Chaînes à suivre, Collections, Citation du jour, rangées de vidéos… dans l’ordre que vous voulez, avec une visibilité par appareil et par public. Le modèle de départ reprend la maquette « Main ».</p>
         {home ? (
           <ul className="pe-pages">
             <li>

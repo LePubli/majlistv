@@ -101,7 +101,7 @@ export default function WatchAdmin() {
     return r;
   };
   const ignore = (ids) => act('/admin/watch/items/ignore', { method: 'POST', body: JSON.stringify({ ids }) });
-  const remove = (s) => { if (window.confirm(`Ne plus suivre « ${s.label || s.url} » ? Sa liste de nouveautés sera supprimée (les conférences déjà ajoutées restent).`)) act(`/admin/watch/${s.id}`, { method: 'DELETE' }, 'Source supprimée.'); };
+  const remove = (s) => { if (window.confirm(`Ne plus suivre « ${s.label || s.url} » ? Sa liste de nouveautés sera supprimée (les vidéos déjà ajoutées restent).`)) act(`/admin/watch/${s.id}`, { method: 'DELETE' }, 'Source supprimée.'); };
 
   const sources = data?.sources || [];
   return (
@@ -177,11 +177,11 @@ export default function WatchAdmin() {
                   {status !== 'added' && <button type="button" className="btn" onClick={() => setOpen(open === i.id ? null : i.id)}>Ajouter…</button>}
                   {status === 'new' && <button type="button" className="btn ghost" onClick={() => ignore([i.id])}>Ignorer</button>}
                   {status === 'ignored' && <button type="button" className="btn ghost" onClick={() => act(`/admin/watch/items/${i.id}/restore`, { method: 'POST' })}>Remettre à traiter</button>}
-                  {status === 'added' && i.talkId && <a className="btn ghost" href={`/talks/${i.talkId}`}>Ouvrir la conférence</a>}
+                  {status === 'added' && i.talkId && <a className="btn ghost" href={`/talks/${i.talkId}`}>Ouvrir la vidéo</a>}
                 </div>
               </div>
             </div>
-            {open === i.id && <AddForm item={i} cats={cats} onCancel={() => setOpen(null)} onDone={() => { setOpen(null); flash(true, 'Conférence ajoutée au catalogue.'); refresh(); }} />}
+            {open === i.id && <AddForm item={i} cats={cats} onCancel={() => setOpen(null)} onDone={() => { setOpen(null); flash(true, 'Vidéo ajoutée au catalogue.'); refresh(); }} />}
           </li>
         ))}
       </ul>

@@ -1,6 +1,6 @@
 // Import de playlists, de chaînes ou d'albums, de comptes YouTube / Vimeo / Dailymotion :
 // 1) l'organisateur colle l'adresse -> le transcripteur liste les vidéos (sans rien télécharger) ;
-// 2) il coche celles à importer -> les conférences sont créées (transcription si l'accord de l'auteur est confirmé).
+// 2) il coche celles à importer -> les vidéos sont créées (transcription si l'accord de l'auteur est confirmé).
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
@@ -64,7 +64,7 @@ export default async function importRoutes(app) {
     return view(job);
   });
 
-  // Création des conférences pour les vidéos cochées.
+  // Création des vidéos pour les vidéos cochées.
   app.post('/imports/:id/confirm', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = confirmSchema.parse(req.body);

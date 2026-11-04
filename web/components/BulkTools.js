@@ -1,6 +1,6 @@
 'use client';
 // Outils d'administration « en lot » : sélection par cases à cocher + barre d'actions (valider, afficher, masquer, dé-valider,
-// modifier, supprimer). Utilisés par Admin → Athkar et Admin → Circuit de Ramadan.
+// modifier, supprimer). Utilisés par Admin → Adhkar et Admin → Circuit de Ramadan.
 import { useCallback, useState } from 'react';
 
 /** Sélection d'identifiants : cases, « tout cocher » sur une liste filtrée, effacement. */

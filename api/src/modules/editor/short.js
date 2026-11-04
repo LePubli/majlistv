@@ -9,7 +9,7 @@ import { manualSchema } from './follow.js';
 
 export const MIN_SHORT = 1;       // secondes
 export const MAX_SHORT = 180;     // 3 minutes : limite des formats courts des réseaux
-export const MAX_SHORTS = 30;     // par conférence
+export const MAX_SHORTS = 30;     // par vidéo
 export const TITLE_SECS = 4;      // durée d'affichage du titre
 export const CAPTION_WORDS = 5;
 export const CAPTION_CHARS = 34;

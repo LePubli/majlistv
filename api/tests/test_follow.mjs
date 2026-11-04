@@ -40,7 +40,7 @@ ok(F.manualSchema.parse(undefined).length === 0, 'schéma : par défaut aucune c
 let pth = F.buildPath({ follow: false, cropX: 40, from: 5, to: 15 });
 ok(J(pth) === J([{ t: 5, x: 40 }, { t: 15, x: 40 }]) && F.isConstant(pth), 'sans suivi : cadre fixe à cropX');
 pth = F.buildPath({ follow: true, keys: [{ t: 0, x: 0 }, { t: 20, x: 100 }], cropX: 40, from: 5, to: 15 });
-ok(near(pth[0].x, 25) && near(pth.at(-1).x, 75) && pth[0].t === 5 && pth.at(-1).t === 15, 'suivi : points clés de la conférence ramenés au passage (25 % → 75 %)');
+ok(near(pth[0].x, 25) && near(pth.at(-1).x, 75) && pth[0].t === 5 && pth.at(-1).t === 15, 'suivi : points clés de la vidéo ramenés au passage (25 % → 75 %)');
 pth = F.buildPath({ follow: true, keys: null, cropX: 40, from: 5, to: 15 });
 ok(F.isConstant(pth) && pth[0].x === 40, 'suivi demandé mais pas encore calculé : cadre fixe');
 pth = F.buildPath({ follow: true, keys: [{ t: 0, x: 0 }, { t: 20, x: 100 }], cropX: 40, manual: [{ from: 8, to: 10, x: 90 }], from: 5, to: 15 });

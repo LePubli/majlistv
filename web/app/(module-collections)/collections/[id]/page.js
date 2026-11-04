@@ -1,5 +1,5 @@
 'use client';
-// Étape 19 — Une collection : titre, présentation et conférences dans l'ordre choisi par l'équipe.
+// Étape 19 — Une collection : titre, présentation et vidéos dans l'ordre choisi par l'équipe.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';

@@ -18,10 +18,10 @@ ok(clip('abcdef', 4) === 'abc…' && clip('abc', 4) === 'abc', 'troncature');
 ok(normRoute('/talks/3f2b8c1e-aaaa-4bbb-8ccc-123456789abc/quiz?x=1') === '/talks/:id/quiz', 'route : identifiant et paramètres retirés');
 ok(normRoute('https://site.fr/talks/42/notes#a') === '/talks/:id/notes', 'adresse complète : chemin seul, nombre remplacé');
 ok(normRoute('') === '' && normRoute(null) === '', 'route vide');
-const a = fingerprint('api', 'Conférence 12 introuvable', '/talks/12');
-const b = fingerprint('api', 'Conférence 99 introuvable', '/talks/99');
+const a = fingerprint('api', 'Vidéo 12 introuvable', '/talks/12');
+const b = fingerprint('api', 'Vidéo 99 introuvable', '/talks/99');
 ok(a === b && /^[0-9a-f]{16}$/.test(a), 'deux numéros différents = la même erreur');
-ok(a !== fingerprint('web', 'Conférence 12 introuvable', '/talks/12'), 'serveur et navigateur : deux erreurs distinctes');
+ok(a !== fingerprint('web', 'Vidéo 12 introuvable', '/talks/12'), 'serveur et navigateur : deux erreurs distinctes');
 ok(a !== fingerprint('api', 'Autre message', '/talks/12'), 'message différent : erreur différente');
 ok(fingerprint('api', 'Erreur pour a@b.fr', '/x') === fingerprint('api', 'Erreur pour c@d.fr', '/x'), 'e-mails différents : même erreur (et jamais dans l’empreinte)');
 

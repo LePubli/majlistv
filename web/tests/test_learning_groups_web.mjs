@@ -1,4 +1,4 @@
-// Étape B6 — Apprendre en 4 onglets (Aujourd'hui, Coran et athkar, Conférences, Mes progrès) avec sous-onglets et phrase d'explication.
+// Étape B6 — Apprendre en 4 onglets (Aujourd'hui, Coran et athkar, Vidéos, Mes progrès) avec sous-onglets et phrase d'explication.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');

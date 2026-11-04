@@ -1,4 +1,4 @@
-// Contenu d'une liste personnelle : conférences, retrait d'une conférence, suppression de la liste.
+// Contenu d'une liste personnelle : vidéos, retrait d'une vidéo, suppression de la liste.
 import React, { useState } from 'react';
 import { Alert, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -1,5 +1,5 @@
-// Ouvrages (étape 25) : fiche, éditions par langue (PDF ou liens boutique), rattachement aux conférences et séries.
-//  - Public : liste et fiche des ouvrages publiés, ouvrages d'une conférence / d'une série.
+// Ouvrages (étape 25) : fiche, éditions par langue (PDF ou liens boutique), rattachement aux vidéos et séries.
+//  - Public : liste et fiche des ouvrages publiés, ouvrages d'une vidéo / d'une série.
 //  - Membres Apprentissage : lien de téléchargement personnel à durée limitée ; le PDF est filigrané (e-mail + date) à chaque téléchargement.
 //  - Studio : création, couverture, PDF (envoi direct vers le stockage), « droits confirmés », liens boutique, rattachements, publication.
 // Un PDF n'est jamais diffusé tant que la case « droits confirmés » n'est pas cochée.
@@ -73,7 +73,7 @@ export default async function bookRoutes(app) {
     };
   });
 
-  // Ouvrages liés à une conférence (directement ou par sa série) / à une série.
+  // Ouvrages liés à une vidéo (directement ou par sa série) / à une série.
   app.get('/talks/:id/books', async (req) => {
     const { id } = idSchema.parse(req.params);
     const { rows } = await pool.query(
@@ -171,7 +171,7 @@ export default async function bookRoutes(app) {
     return full(b);
   });
 
-  // Conférences / séries que l'organisateur peut rattacher (les siennes ; toutes pour un admin).
+  // Vidéos / séries que l'organisateur peut rattacher (les siennes ; toutes pour un admin).
   app.get('/studio/books-targets', organizer, async (req) => {
     const admin = req.user.role === 'admin';
     const [t, s] = await Promise.all([

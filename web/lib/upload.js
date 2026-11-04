@@ -12,7 +12,7 @@ function putPart(url, blob, onProgress) {
   });
 }
 
-// Renvoie l'identifiant d'upload à associer à la conférence.
+// Renvoie l'identifiant d'upload à associer à la vidéo.
 export async function uploadFile(file, call, onProgress) {
   const start = await call('/uploads', {
     method: 'POST',

@@ -12,13 +12,13 @@ const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 export default async function studioContentRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
 
-  // Conférence appartenant à l'utilisateur (ou n'importe laquelle pour un admin).
+  // Vidéo appartenant à l'utilisateur (ou n'importe laquelle pour un admin).
   async function owned(req, reply, id) {
     const { rows } = await pool.query(
       `SELECT id, organizer_id, transcript_status, transcript_language, language, duration_seconds FROM talks WHERE id = $1`, [id]);
     const t = rows[0];
     if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
-      reply.code(404).send({ error: 'Conférence introuvable' });
+      reply.code(404).send({ error: 'Vidéo introuvable' });
       return null;
     }
     return t;
@@ -40,7 +40,7 @@ export default async function studioContentRoutes(app) {
     return { lang: code, sourceLang: sourceOf(t), languages: langs.rows.map((r) => r.lang), segments: seg.rows };
   });
 
-  // Téléchargement des sous-titres d'une langue au format WebVTT (version enregistrée), pour l'organisateur de la conférence.
+  // Téléchargement des sous-titres d'une langue au format WebVTT (version enregistrée), pour l'organisateur de la vidéo.
   // Sert aussi de fichier d'entrée au banc d'essai du doublage (dubbing/d3bench).
   app.get('/talks/:id/studio/subs/:file', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);

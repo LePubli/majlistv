@@ -1,5 +1,5 @@
 'use client';
-// Studio → Rappels : bibliothèque de rappels INDÉPENDANTE des quiz et des conférences.
+// Studio → Rappels : bibliothèque de rappels INDÉPENDANTE des quiz et des vidéos.
 //  - saisie à la main (hadith, verset, citation) avec sa source obligatoire ;
 //  - pour l'administrateur : citations automatiques (versets du Coran et hadiths) choisies par l'IA dans un corpus importé.
 //    L'IA ne rédige jamais le texte : elle choisit des références, le texte affiché est celui de la source.

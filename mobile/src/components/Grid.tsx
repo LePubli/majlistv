@@ -1,4 +1,4 @@
-// Grille de vignettes (2 colonnes sur téléphone, davantage sur tablette) pour conférences et séries.
+// Grille de vignettes (2 colonnes sur téléphone, davantage sur tablette) pour vidéos et séries.
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
 

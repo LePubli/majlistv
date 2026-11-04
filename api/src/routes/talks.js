@@ -1,4 +1,4 @@
-// Catalogue public + gestion des conférences par les organisateurs.
+// Catalogue public + gestion des vidéos par les organisateurs.
 import { talkThemes } from '../themes.js';
 import * as ext from '../ext.js'; // étape M3a : quiz, mise en pratique et Kids sont fournis par leurs modules s'ils sont présents
 import { speakerNames, speakerSlug } from '../speakers.js';
@@ -72,10 +72,10 @@ const talkSchema = z.object({
   speaker: z.string().trim().max(200).default(''),
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().optional(),
-  formatId: z.number().int().positive().optional(), // étape B : format (conférence, cours…) ; par défaut « conférence »
+  formatId: z.number().int().positive().optional(), // étape B : format (vidéo, cours…) ; par défaut « vidéo »
   extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires (2 au plus)
   kidsBands: z.array(z.enum(BANDS)).max(9).default([]), // Mejliss Kids : tranches d'âge (vide = pas pour les enfants)
-  showAdults: z.boolean().optional(), // visible dans le catalogue adultes (par défaut : oui, sauf conférence Kids)
+  showAdults: z.boolean().optional(), // visible dans le catalogue adultes (par défaut : oui, sauf vidéo Kids)
   access: z.enum(['free', 'premium']).default('free'),
   // Niveau de difficulté (étape 24.1) : vide = tous niveaux.
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
@@ -92,7 +92,7 @@ const talkSchema = z.object({
   publishAt: z.string().datetime({ offset: true }).optional(),
 });
 
-// Modification d'une conférence existante (tous les champs sont facultatifs).
+// Modification d'une vidéo existante (tous les champs sont facultatifs).
 const patchSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(5000),
@@ -151,7 +151,7 @@ function checkPublication(publication, publishAt) {
   return { publication, publishAt };
 }
 
-// Modification en lot (étape 27.1) : mêmes règles que PATCH /talks/:id, appliquées à plusieurs conférences d'un coup.
+// Modification en lot (étape 27.1) : mêmes règles que PATCH /talks/:id, appliquées à plusieurs vidéos d'un coup.
 const bulkSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(200),
   bandsMode: z.enum(['replace', 'add', 'remove']).default('replace'), // façon de modifier les tranches Kids
@@ -204,12 +204,12 @@ export default async function talksRoutes(app) {
     }
   });
 
-  // Gestion des catégories (admin) : liste avec nombre de conférences, renommer / déplacer, supprimer.
+  // Gestion des catégories (admin) : liste avec nombre de vidéos, renommer / déplacer, supprimer.
   const admin = { preHandler: app.requireRole('admin') };
   const catId = z.object({ id: z.coerce.number().int().positive() });
   const catPatch = z.object({ name: z.string().trim().min(1).max(60), parentId: z.number().int().positive().nullable() }).partial().refine((x) => Object.keys(x).length > 0);
 
-  // « count » : conférences dont c'est la catégorie principale ; « total » : principale ou supplémentaire, sous-catégories comprises.
+  // « count » : vidéos dont c'est la catégorie principale ; « total » : principale ou supplémentaire, sous-catégories comprises.
   app.get('/categories/stats', admin, async () => (await pool.query(
     `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth,
             (SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) AS count,
@@ -234,7 +234,7 @@ export default async function talksRoutes(app) {
     return rows[0]; // la recherche se met à jour seule (la signature d'indexation contient le nom et les parents)
   });
 
-  // Les conférences de la catégorie supprimée restent en ligne, simplement sans cette catégorie. Une catégorie qui a des sous-catégories ne se supprime pas.
+  // Les vidéos de la catégorie supprimée restent en ligne, simplement sans cette catégorie. Une catégorie qui a des sous-catégories ne se supprime pas.
   app.delete('/categories/:id', admin, async (req, reply) => {
     const { id } = catId.parse(req.params);
     if ((await pool.query('SELECT 1 FROM categories WHERE parent_id = $1', [id])).rowCount) return reply.code(409).send({ error: "Supprimez ou déplacez d'abord ses sous-catégories", code: 'has_children' });
@@ -271,16 +271,16 @@ export default async function talksRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const { rows } = await pool.query(`${SELECT} WHERE t.id = $1`, [id]);
     const talk = rows[0];
-    if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
-    // Espace enfant : le jeton enfant ne donne accès qu'aux conférences Kids de sa tranche d'âge ; les droits sont ceux du parent.
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    // Espace enfant : le jeton enfant ne donne accès qu'aux vidéos Kids de sa tranche d'âge ; les droits sont ceux du parent.
     const kv = await app.kidContext(req);
-    if (kv && !(await ext.call('kids.canSee', false, kv.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    if (kv && !(await ext.call('kids.canSee', false, kv.profile, id))) return reply.code(404).send({ error: 'Vidéo introuvable', code: 'kid_locked' });
     if (kv && (await timeState(kv.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
     const viewer = kv ? kv.parent : await app.optionalUser(req); // visiteur anonyme : null
     const owner = await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id]);
-    const isOwner = viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === owner.rows[0].organizer_id || await viaChannel(viewer, id)); // le modérateur relit les conférences en attente
+    const isOwner = viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === owner.rows[0].organizer_id || await viaChannel(viewer, id)); // le modérateur relit les vidéos en attente
     // Brouillon ou publication programmée à venir : invisible pour tout le monde sauf le propriétaire et les admins.
-    if (!talk.visible && !isOwner) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk.visible && !isOwner) return reply.code(404).send({ error: 'Vidéo introuvable' });
     if (kv) {
       const kp = (await pool.query('SELECT position_ms, completed FROM kid_progress WHERE profile_id = $1 AND talk_id = $2', [kv.profile.id, id])).rows[0];
       talk.resumeMs = kp && !kp.completed && kp.position_ms >= 5000 ? kp.position_ms : 0;
@@ -399,7 +399,7 @@ export default async function talksRoutes(app) {
         if (full) return reply.code(409).send({ error: full, code: 'storage_full' });
         importReq = { url: c.url, origin: c.origin, archiveFile: null };
         if (!video) {
-          // Autre site, lien direct : conférence hébergée dès le départ, vidéo « importing » jusqu'à la fin de la copie.
+          // Autre site, lien direct : vidéo hébergée dès le départ, vidéo « importing » jusqu'à la fin de la copie.
           const again = await pool.query(
             `SELECT talk_id FROM media_imports WHERE source_url = $1 AND status IN ('pending', 'downloading', 'converting', 'done') LIMIT 1`, [c.url]);
           if (again.rows[0]) return reply.code(409).send({ error: 'Cette adresse est déjà importée', code: 'duplicate', id: again.rows[0].talk_id });
@@ -461,14 +461,14 @@ export default async function talksRoutes(app) {
     }
   });
 
-  // Modification en lot : { ids, changes, bandsMode }. Un organisateur ne touche qu'à ses conférences ; l'administrateur à toutes.
+  // Modification en lot : { ids, changes, bandsMode }. Un organisateur ne touche qu'à ses vidéos ; l'administrateur à toutes.
   app.post('/talks/bulk', organizer, async (req, reply) => {
     const { ids, changes: b, bandsMode } = bulkSchema.parse(req.body ?? {});
     if (!Object.keys(b).length) return reply.code(400).send({ error: 'Choisissez au moins une modification' });
     const own = (await pool.query(
       'SELECT id, kids_bands, category_id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3 OR lower(trim(speaker)) = ANY($4::text[]))',
       [ids, req.user.role === 'admin', req.user.sub, await managedSpeakers(req.user.sub)])).rows;
-    if (own.length !== new Set(ids).size) return reply.code(404).send({ error: 'Certaines conférences sont introuvables' });
+    if (own.length !== new Set(ids).size) return reply.code(404).send({ error: 'Certaines vidéos sont introuvables' });
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -510,12 +510,12 @@ export default async function talksRoutes(app) {
     return { ok: true, updated: own.length };
   });
 
-  // Modifie une conférence : informations, accès, publication (brouillon / programmée / publiée) et choix de la miniature.
+  // Modifie une vidéo : informations, accès, publication (brouillon / programmée / publiée) et choix de la miniature.
   app.patch('/talks/:id', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = patchSchema.parse(req.body ?? {});
     const cur = (await pool.query('SELECT organizer_id, source, publication, publish_at, poster_key, poster_candidates, category_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Vidéo introuvable' });
 
     const sets = [];
     const vals = [id];
@@ -530,7 +530,7 @@ export default async function talksRoutes(app) {
     if (b.kidsBands !== undefined) set('kids_bands', cleanBands(b.kidsBands));
     if (b.showAdults !== undefined) set('show_adults', b.showAdults);
     if (b.featured !== undefined) {
-      if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une conférence en avant sur l'accueil" });
+      if (req.user.role !== 'admin') return reply.code(403).send({ error: "Seul un administrateur peut mettre une vidéo en avant sur l'accueil" });
       set('featured', b.featured);
       sets.push(b.featured ? 'featured_at = now()' : 'featured_at = NULL');
     }
@@ -587,7 +587,7 @@ export default async function talksRoutes(app) {
       || (m[1] === 'image/webp' && buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP');
     if (!magic || buf.length > 2.5 * 1024 * 1024) return reply.code(400).send({ error: 'Image invalide ou trop lourde (2,5 Mo maximum)' });
     const cur = (await pool.query('SELECT organizer_id, poster_key FROM talks WHERE id = $1', [id])).rows[0];
-    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const key = `posters/${id}/custom-${Date.now()}.${POSTER_TYPES[m[1]]}`;
     await putObject(key, buf, m[1]);
     await pool.query('UPDATE talks SET poster_key = $2 WHERE id = $1', [id, key]);
@@ -595,13 +595,13 @@ export default async function talksRoutes(app) {
     return reply.code(201).send({ posterUrl: await presignGet(key) });
   });
 
-  // Ajoute une langue de sous-titres à une conférence (ou relance une traduction échouée).
+  // Ajoute une langue de sous-titres à une vidéo (ou relance une traduction échouée).
   const trParams = z.object({ id: z.string().uuid(), lang: z.enum(TRANSLATION_LANGS) });
   async function ownedUpload(req, reply, id) {
     const { rows } = await pool.query('SELECT organizer_id, source, language, transcript_language, rights_confirmed FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
     if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
-      reply.code(404).send({ error: 'Conférence introuvable' });
+      reply.code(404).send({ error: 'Vidéo introuvable' });
       return null;
     }
     if (talk.source !== 'upload' && !talk.rights_confirmed) {
@@ -611,13 +611,13 @@ export default async function talksRoutes(app) {
     return talk;
   }
 
-  // Active (ou relance) la transcription d'une conférence. YouTube / Vimeo : accord de l'auteur obligatoire.
+  // Active (ou relance) la transcription d'une vidéo. YouTube / Vimeo : accord de l'auteur obligatoire.
   app.post('/talks/:id/transcribe', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { rightsConfirmed } = z.object({ rightsConfirmed: z.boolean().optional() }).parse(req.body ?? {});
     const { rows } = await pool.query('SELECT organizer_id, source, transcript_status FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
-    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Vidéo introuvable' });
     if (talk.source !== 'upload' && rightsConfirmed !== true) {
       return reply.code(400).send({ error: "Confirmez avoir l'accord de l'auteur pour transcrire cette vidéo", code: 'rights_required' });
     }
@@ -636,7 +636,7 @@ export default async function talksRoutes(app) {
     const talk = await ownedUpload(req, reply, id);
     if (!talk) return;
     if (lang === baseLang(talk.transcript_language || talk.language)) {
-      return reply.code(400).send({ error: 'Cette langue est celle de la conférence' });
+      return reply.code(400).send({ error: 'Cette langue est celle de la vidéo' });
     }
     await pool.query(
       `INSERT INTO transcript_translations(talk_id, lang) VALUES ($1, $2)
@@ -653,7 +653,7 @@ export default async function talksRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const { rows } = await pool.query('SELECT organizer_id, source, video_status FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
-    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Vidéo introuvable' });
     if (talk.source !== 'upload') return reply.code(400).send({ error: 'Cette vidéo est lue depuis sa plateforme : rien à convertir' });
     if (talk.video_status !== 'failed') return reply.code(409).send({ error: 'La conversion n\'a pas échoué' });
     // Étape Import : si c'est la copie de la vidéo qui a échoué, il n'y a pas encore de fichier à convertir : on relance l'import.
@@ -688,7 +688,7 @@ export default async function talksRoutes(app) {
     return reply.code(202).send({ status: 'pending' });
   });
 
-  // Un organisateur supprime ses conférences ; un admin peut supprimer toutes les conférences.
+  // Un organisateur supprime ses vidéos ; un admin peut supprimer toutes les vidéos.
   app.delete('/talks/:id', { preHandler: app.authenticate }, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const admin = req.user.role === 'admin';
@@ -696,13 +696,13 @@ export default async function talksRoutes(app) {
     // mais pas le stockage (registre n°48).
     const own = (await pool.query('SELECT 1 FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2)', [id, req.user.sub, admin])).rowCount;
     if (own) await ext.emit('talk.deleting', { talkId: id }).catch((e) => req.log.warn(`Suppression : fichiers liés non effacés (${e.message})`));
-    // Étape Import : fichiers copiés chez nous (la demande est effacée avec la conférence : on relève les clés avant).
+    // Étape Import : fichiers copiés chez nous (la demande est effacée avec la vidéo : on relève les clés avant).
     const importKeys = own ? (await pool.query('SELECT object_key FROM media_imports WHERE talk_id = $1', [id])).rows.map((r) => r.object_key) : [];
     const { rows } = await pool.query(
       'DELETE FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2) RETURNING id, source, video_ref',
       [id, req.user.sub, admin]
     );
-    if (!rows[0]) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!rows[0]) return reply.code(404).send({ error: 'Vidéo introuvable' });
     for (const k of importKeys) await deleteObject(k).catch(() => {});
     if (importKeys.length && rows[0].source !== 'upload') await deletePrefix(`hls/${rows[0].id}/`).catch(() => {});
     await deletePrefix(`posters/${rows[0].id}/`).catch(() => {});

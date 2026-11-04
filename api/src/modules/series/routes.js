@@ -1,5 +1,5 @@
 // Séries et saisons (étape 14.1).
-//  - Public : GET /series, GET /series/:id, GET /talks/:id/series (contexte pour la fiche conférence).
+//  - Public : GET /series, GET /series/:id, GET /talks/:id/series (contexte pour la fiche vidéo).
 //  - Studio (organisateur propriétaire ou admin) : création, modification, saisons, ordre et accès des épisodes.
 // Règle d'accès : chaque épisode hérite de l'accès de la série, sauf s'il a son propre réglage (l'épisode l'emporte).
 // talks.access garde la valeur effective ; syncAccess() la recalcule.
@@ -93,7 +93,7 @@ export async function listSeries({ limit = 40, category = null, q = null, level 
   return out;
 }
 
-// Épisodes (en ligne) des séries publiées qui contiennent l'une de ces conférences, rangés dans l'ordre de lecture.
+// Épisodes (en ligne) des séries publiées qui contiennent l'une de ces vidéos, rangés dans l'ordre de lecture.
 async function seriesOrder(talkIds) {
   const { rows } = await pool.query(
     `SELECT e.series_id, s.title, s.has_seasons, e.talk_id, e.season_id,
@@ -107,7 +107,7 @@ async function seriesOrder(talkIds) {
   return bySeries;
 }
 
-// Pour des conférences : { id série, titre, saison, numéro } de leur place dans une série (absent si hors série).
+// Pour des vidéos : { id série, titre, saison, numéro } de leur place dans une série (absent si hors série).
 export async function episodeLabels(talkIds) {
   const out = new Map();
   if (!talkIds.length) return out;
@@ -244,7 +244,7 @@ export default async function seriesRoutes(app) {
     };
   });
 
-  // Contexte d'une conférence qui fait partie d'une série : numéro, précédent / suivant, liste des épisodes (colonne latérale).
+  // Contexte d'une vidéo qui fait partie d'une série : numéro, précédent / suivant, liste des épisodes (colonne latérale).
   app.get('/talks/:id/series', async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const link = (await pool.query(
@@ -286,7 +286,7 @@ export default async function seriesRoutes(app) {
     return rows;
   });
 
-  // Conférences que l'on peut ajouter : les miennes (toutes pour un admin) qui ne sont dans aucune série.
+  // Vidéos que l'on peut ajouter : les miennes (toutes pour un admin) qui ne sont dans aucune série.
   app.get('/studio/series-candidates', organizer, async (req) => {
     const q = z.object({ q: z.string().max(100).optional() }).parse(req.query);
     const vals = [];
@@ -386,7 +386,7 @@ export default async function seriesRoutes(app) {
     return { ok: true };
   });
 
-  // Supprime la série : les conférences restent, redevenues isolées (leur accès actuel est conservé).
+  // Supprime la série : les vidéos restent, redevenues isolées (leur accès actuel est conservé).
   app.delete('/series/:id', organizer, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const s = await owned(req, reply, id);
@@ -438,14 +438,14 @@ export default async function seriesRoutes(app) {
   });
 
   // ---------- Épisodes : ordre, saison et accès, en une seule sauvegarde ----------
-  // Remplace la liste : les conférences absentes quittent la série (isolées, accès conservé).
+  // Remplace la liste : les vidéos absentes quittent la série (isolées, accès conservé).
   app.put('/series/:id/episodes', organizer, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const { episodes } = layoutBody.parse(req.body ?? {});
     const s = await owned(req, reply, id);
     if (!s) return;
     const ids = episodes.map((e) => e.talkId);
-    if (new Set(ids).size !== ids.length) return reply.code(400).send({ error: 'Une conférence ne peut figurer qu\'une fois' });
+    if (new Set(ids).size !== ids.length) return reply.code(400).send({ error: 'Une vidéo ne peut figurer qu\'une fois' });
     const seasons = new Set((await pool.query('SELECT id FROM seasons WHERE series_id = $1', [id])).rows.map((r) => r.id));
     for (const e of episodes) {
       if (s.has_seasons && !(e.seasonId && seasons.has(e.seasonId))) return reply.code(400).send({ error: 'Chaque épisode doit être placé dans une saison de la série' });
@@ -454,10 +454,10 @@ export default async function seriesRoutes(app) {
     if (ids.length) {
       const talks = (await pool.query(
         `SELECT t.id, t.organizer_id, e.series_id FROM talks t LEFT JOIN series_episodes e ON e.talk_id = t.id WHERE t.id = ANY($1::uuid[])`, [ids])).rows;
-      if (talks.length !== ids.length) return reply.code(400).send({ error: 'Conférence introuvable' });
+      if (talks.length !== ids.length) return reply.code(400).send({ error: 'Vidéo introuvable' });
       for (const t of talks) {
-        if (!isAdmin(req) && t.organizer_id !== req.user.sub) return reply.code(403).send({ error: 'Vous ne pouvez ajouter que vos propres conférences' });
-        if (t.series_id && t.series_id !== id) return reply.code(409).send({ error: 'Une de ces conférences fait déjà partie d\'une autre série' });
+        if (!isAdmin(req) && t.organizer_id !== req.user.sub) return reply.code(403).send({ error: 'Vous ne pouvez ajouter que vos propres vidéos' });
+        if (t.series_id && t.series_id !== id) return reply.code(409).send({ error: 'Une de ces vidéos fait déjà partie d\'une autre série' });
       }
     }
     const client = await pool.connect();

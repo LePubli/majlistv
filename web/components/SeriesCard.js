@@ -1,5 +1,5 @@
 'use client';
-// Vignette d'une série (accueil, liste des séries) : même gabarit que les conférences, avec un effet « pile » et le nombre d'épisodes.
+// Vignette d'une série (accueil, liste des séries) : même gabarit que les vidéos, avec un effet « pile » et le nombre d'épisodes.
 import Link from 'next/link';
 import { levelLabel } from '../lib/levels';
 

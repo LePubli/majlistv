@@ -1,4 +1,4 @@
-// Fiche d'une conférence dans le Studio : l'adresse doit contenir un identifiant de conférence.
+// Fiche d'une vidéo dans le Studio : l'adresse doit contenir un identifiant de vidéo.
 // Étape M3b : sans cette vérification, une page de module retirée (ex. /studio/quiz) tombait ici au lieu d'afficher « page introuvable ».
 import { notFound } from 'next/navigation';
 

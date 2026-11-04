@@ -37,7 +37,7 @@ export async function getObjectBuffer(key) {
   return Buffer.from(await r.Body.transformToByteArray());
 }
 
-// Copie d'un fichier dans le même bucket, sans le télécharger (étape E4b : rendu → nouvelle vidéo de la conférence).
+// Copie d'un fichier dans le même bucket, sans le télécharger (étape E4b : rendu → nouvelle vidéo issue de la vidéo d’origine).
 export const copyObject = (from, to, contentType) => storage.send(new CopyObjectCommand({
   Bucket: bucket, Key: to, CopySource: `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
   ...(contentType ? { ContentType: contentType, MetadataDirective: 'REPLACE' } : {}),

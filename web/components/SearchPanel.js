@@ -1,6 +1,6 @@
 'use client';
 // Recherche en panneau central : la loupe du header l'ouvre, le site s'assombrit derrière.
-// Mots-clés, catégorie et niveau ; résultats en direct (conférences, séries, passages horodatés). Échap ou clic à côté : on ferme.
+// Mots-clés, catégorie et niveau ; résultats en direct (vidéos, séries, passages horodatés). Échap ou clic à côté : on ferme.
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';

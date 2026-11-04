@@ -1,7 +1,7 @@
 // Notifications de l'application (étape 22b-4) — partie native.
 //  1. Rappels de prière : programmés SUR le téléphone (7 jours à l'avance, reprogrammés à chaque ouverture) : ils sonnent application fermée,
 //     sans serveur ni connexion.
-//  2. Notifications du serveur (nouvelles conférences, sélection de la semaine, révision) : le téléphone donne son jeton Firebase à l'API
+//  2. Notifications du serveur (nouvelles vidéos, sélection de la semaine, révision) : le téléphone donne son jeton Firebase à l'API
 //     (PUT /me/push-token) ; le serveur écrit au téléphone quand il y a quelque chose à dire.
 //  3. Toucher une notification ouvre la bonne page (voir notifRoute.ts).
 import { Platform } from 'react-native';

@@ -1,5 +1,5 @@
 'use client';
-// Sélecteur de chaîne FACULTATIF pour une conférence, une série ou un import : il remplit le champ « Intervenant » avec la graphie
+// Sélecteur de chaîne FACULTATIF pour une vidéo, une série ou un import : il remplit le champ « Intervenant » avec la graphie
 // qui rattache l'élément à la chaîne choisie. « Aucune chaîne » vide le champ : une vidéo n'a jamais l'obligation d'avoir une chaîne.
 // Rien ne s'affiche si la personne n'a aucune chaîne (ou si le module Chaînes est éteint) : le champ libre reste alors seul.
 import { useEffect, useState } from 'react';

@@ -18,7 +18,7 @@ import { GiftsBox, ReferralBox } from '@/components/account/ReferralGifts';
 export default function AccountScreen() {
   const { user, api, t, locale, setLocale, logout, dirStyle, skinChoice, skinPick, setSkinPick, feat } = useSession();
   const prayer = usePrayer();
-  // Notifications du serveur (nouvelles conférences des intervenants suivis, sélection de la semaine, révision) : interrupteur du compte.
+  // Notifications du serveur (nouvelles vidéos des intervenants suivis, sélection de la semaine, révision) : interrupteur du compte.
   const notif = useAsync(async () => (user ? await api.get<{ prefs: { push: boolean }; available: { push: boolean } }>('/me/notifications').catch(() => null) : null), [user?.id]);
   const [pushOn, setPushOn] = React.useState<boolean | null>(null);
   const pushValue = pushOn ?? notif.data?.prefs.push ?? true;

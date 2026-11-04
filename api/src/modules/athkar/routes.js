@@ -1,4 +1,4 @@
-// Athkar (étape 45D) — formule Apprentissage.
+// Adhkar (étape 45D) — formule Apprentissage.
 //   GET  /athkar?lang=fr              membre : dhikr publiés avec le compte du jour, objectif, série, rappel
 //   POST /athkar/:id/tap  { n }       membre : ajoute n (1 à 1000) au compte du jour
 //   POST /athkar/:id/reset            membre : remet le compte du jour à zéro
@@ -91,7 +91,7 @@ export default async function athkarRoutes(app) {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CASE WHEN $10 THEN now() END, CASE WHEN $10 THEN $11::uuid END) RETURNING *`;
     const { rows } = await pool.query(sql, id ? [...vals, id] : vals);
     if (!rows.length) return reply.code(404).send({ error: 'Dhikr introuvable.' });
-    req.auditSummary = `Athkar : dhikr n° ${rows[0].id} ${id ? 'modifié' : 'créé'}${b.validated ? ' (validé)' : ''}${b.enabled ? ', affiché' : ''}`;
+    req.auditSummary = `Adhkar : dhikr n° ${rows[0].id} ${id ? 'modifié' : 'créé'}${b.validated ? ' (validé)' : ''}${b.enabled ? ', affiché' : ''}`;
     return adminRow(rows[0]);
   };
   app.post('/admin/athkar', adminOnly, (req, reply) => save(req, reply, null));
@@ -101,7 +101,7 @@ export default async function athkarRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const r = await pool.query('DELETE FROM athkar_items WHERE id = $1 RETURNING id', [id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Dhikr introuvable.' });
-    req.auditSummary = `Athkar : dhikr n° ${id} supprimé`;
+    req.auditSummary = `Adhkar : dhikr n° ${id} supprimé`;
     return { ok: true };
   });
 
@@ -115,14 +115,14 @@ export default async function athkarRoutes(app) {
     const set = {}; if (b.set?.category) set.category = b.set.category; if (b.set?.target) set.target = b.set.target;
     if (b.action === 'update' && !Object.keys(set).length) return reply.code(400).send({ error: 'Choisissez le moment ou le nombre de répétitions à appliquer.' });
     const out = await runBulk({ table: 'athkar_items', ids: b.ids, action: b.action, userId: req.user.sub, set });
-    req.auditSummary = `Athkar : ${out.done} dhikr ${LABELS[b.action]} en lot${out.skipped ? ` (${out.skipped} ignorés)` : ''}`;
+    req.auditSummary = `Adhkar : ${out.done} dhikr ${LABELS[b.action]} en lot${out.skipped ? ` (${out.skipped} ignorés)` : ''}`;
     return out;
   });
 
   // Restaurer les dhikr fournis (74 à ce jour) : ceux qui manquent sont réinsérés NON validés et NON affichés ; aucun doublon.
   app.post('/admin/athkar/restore-provided', adminOnly, async (req) => {
     const out = await restoreProvided();
-    req.auditSummary = `Athkar : ${out.created} dhikr fournis restaurés (non validés)`;
+    req.auditSummary = `Adhkar : ${out.created} dhikr fournis restaurés (non validés)`;
     return out;
   });
 
@@ -139,7 +139,7 @@ export default async function athkarRoutes(app) {
       created++;
     }
     if (!created) return reply.code(400).send({ error: 'Aucun dhikr importé.', errors: errors.slice(0, 20) });
-    req.auditSummary = `Athkar : ${created} dhikr importés (non validés)`;
+    req.auditSummary = `Adhkar : ${created} dhikr importés (non validés)`;
     return { created, errors: errors.slice(0, 20) };
   });
 }

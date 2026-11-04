@@ -33,7 +33,7 @@ const profileBody = z.object({
 const pinSchema = z.string().regex(/^\d{4,6}$/, '4 à 6 chiffres');
 
 
-// Une conférence est-elle visible par ce profil ? (prête, publiée, marquée Kids, tranche d'âge compatible)
+// Une vidéo est-elle visible par ce profil ? (prête, publiée, marquée Kids, tranche d'âge compatible)
 export async function kidCanSee(profile, talkId) {
   const { rowCount } = await pool.query(
     `SELECT 1 FROM talks t WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 3, 4)}`,
@@ -174,7 +174,7 @@ export default async function kidsRoutes(app) {
     return shape(c.profile);
   });
 
-  // Catalogue de l'enfant : conférences Kids de sa tranche d'âge ou plus jeunes ; seules les gratuites si le parent n'a plus d'abonnement.
+  // Catalogue de l'enfant : vidéos Kids de sa tranche d'âge ou plus jeunes ; seules les gratuites si le parent n'a plus d'abonnement.
   app.get('/kids/talks', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
     const time = await timeState(c.profile);
@@ -206,7 +206,7 @@ export default async function kidsRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const b = progressBody.parse(req.body ?? {});
     if ((await timeState(c.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
-    if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Vidéo introuvable', code: 'kid_locked' });
     const done = b.durationMs > 0 && b.positionMs >= Math.min(b.durationMs * 0.95, b.durationMs - 30_000);
     await pool.query(
       `INSERT INTO kid_progress(profile_id, talk_id, position_ms, completed) VALUES ($1, $2, $3, $4)
@@ -248,7 +248,7 @@ export default async function kidsRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const b = submitBody.parse(req.body ?? {});
     if ((await timeState(c.profile)).timeUp) return reply.code(403).send({ error: "C'est fini pour aujourd'hui", code: 'kid_time_up' });
-    if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Conférence introuvable', code: 'kid_locked' });
+    if (!(await kidCanSee(c.profile, id))) return reply.code(404).send({ error: 'Vidéo introuvable', code: 'kid_locked' });
     const ids = [...new Set(b.answers.map((a) => a.questionId))];
     if (ids.length !== b.answers.length) return reply.code(400).send({ error: 'Réponses en double' });
     const { rows } = await pool.query(
@@ -349,7 +349,7 @@ export default async function kidsRoutes(app) {
     return { dailyLimitMin: q.daily_limit_min, catalogMode: q.catalog_mode };
   });
 
-  // Conférences Kids que ce profil pourrait voir (âge compatible), avec l'état « autorisé » selon le mode choisi.
+  // Vidéos Kids que ce profil pourrait voir (âge compatible), avec l'état « autorisé » selon le mode choisi.
   app.get('/me/kids/profiles/:id/catalog', auth, async (req, reply) => {
     const p = await ownProfile(req, reply); if (!p) return;
     const { rows } = await pool.query(

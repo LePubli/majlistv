@@ -11,7 +11,7 @@ assert.match(c, /\/athkar\/\$\{id\}\/tap/, 'touchers envoyés au serveur'); asse
 assert.match(c, /\/athkar\/prefs/, 'objectif et rappel'); assert.match(c, /it\.reference/, 'référence affichée');
 assert.match(read('components/AthkarAdmin.js'), /disabled=\{!form\.validated\}/, 'affichage impossible sans validation');
 assert.match(read('app/admin/page.js'), /tab === 'athkar' && <AthkarAdmin/, 'onglet Admin → Athkar');
-assert.match(read('lib/navcfg.js'), /\['athkar', 'Athkar'\]/, 'entrée du menu Apprendre');
+assert.match(read('lib/navcfg.js'), /\['athkar', 'Adhkar'\]/, 'entrée du menu Apprendre');
 for (const k of ['atTab', 'atToday', 'atStreak', 'atGoal', 'atRemind', 'atEmpty', 'atCat_morning', 'atCat_after_prayer', 'atRef', 'atReset', 'atNote']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web athkar OK');
 // Actions en lot + restauration (02/11)

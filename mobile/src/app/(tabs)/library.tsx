@@ -72,7 +72,7 @@ function Favorites() {
   );
 }
 
-// « À regarder plus tard » : les plus récentes d'abord ; une conférence regardée jusqu'au bout en sort toute seule.
+// « À regarder plus tard » : les plus récentes d'abord ; une vidéo regardée jusqu'au bout en sort toute seule.
 function Later() {
   const { api, user, t, later, toggleLater } = useSession();
   const list = useAsync(() => api.get<Card[]>('/me/watchlater'), [user?.id]);

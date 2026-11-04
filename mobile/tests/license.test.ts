@@ -48,7 +48,7 @@ test('licenceState : expiration, compte, fichier', () => {
   assert.equal(licenceState(file(lic), 'u1', PUB, end).state, 'expired');
   assert.equal(licenceState(file(lic), 'u2', PUB, NOW).state, 'wrong_user'); assert.equal(licenceState(file(lic), null, PUB, NOW).state, 'wrong_user');
   assert.equal(licenceState({ ...file(lic), sha256: 'b'.repeat(64) }, 'u1', PUB, NOW).state, 'wrong_file', 'autre fichier');
-  assert.equal(licenceState({ ...file(lic), talkId: '4f2a1b9c-1111-4222-8333-444455556666' }, 'u1', PUB, NOW).state, 'wrong_file', 'autre conférence');
+  assert.equal(licenceState({ ...file(lic), talkId: '4f2a1b9c-1111-4222-8333-444455556666' }, 'u1', PUB, NOW).state, 'wrong_file', 'autre vidéo');
   assert.equal(licenceState({ ...file(lic), kind: 'audio', height: 0 }, 'u1', PUB, NOW).state, 'wrong_file');
   assert.equal(licenceState(file(lic), 'u1', null, NOW).state, 'invalid', 'pas de clé'); assert.equal(licenceState(file(''), 'u1', PUB, NOW).state, 'invalid', 'ancien téléchargement sans licence');
   const audio = licence({ kind: 'audio', h: 0 }); assert.equal(licenceState({ talkId: T, kind: 'audio', height: 0, sha256: SHA, licence: audio }, 'u1', PUB, NOW).state, 'ok');

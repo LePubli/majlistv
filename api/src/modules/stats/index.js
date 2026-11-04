@@ -5,7 +5,7 @@ import { startStatsMaintenance } from '../../stats.js';
 import { overview, production } from './studio.js';
 
 export default async function register(app, ctx) {
-  // Étape S3 : chiffres du tableau de bord et vues de chaque conférence dans Studio → Contenus.
+  // Étape S3 : chiffres du tableau de bord et vues de chaque vidéo dans Studio → Contenus.
   ctx.on('studio.overview', (out, opts) => overview(out, opts));
   ctx.on('studio.production', (out, opts) => production(out, opts));
   await app.register(routes);

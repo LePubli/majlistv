@@ -1,6 +1,6 @@
 'use client';
-// Étape B — Catalogue « Netflix » : une grande bannière (conférences à la une), puis une rangée horizontale par format
-// (Nouveautés, Conférences, Cours, Récitations…). Pas de filtres : « Tout voir » ouvre la grille d'un format
+// Étape B — Catalogue « Netflix » : une grande bannière (vidéos à la une), puis une rangée horizontale par format
+// (Nouveautés, Vidéos, Cours, Récitations…). Pas de filtres : « Tout voir » ouvre la grille d'un format
 // (/catalogue?format=cours) et une catégorie du menu latéral ouvre sa grille (/catalogue?cat=12).
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';

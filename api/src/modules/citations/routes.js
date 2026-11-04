@@ -1,6 +1,6 @@
 // Rappels : bibliothèque indépendante des quiz (étape 24.6) et citations du corpus (versets, hadiths).
 //   GET  /studio/reminders              toute la bibliothèque visible par l'utilisateur (filtres : origine, statut, recherche)
-//   POST /studio/reminders              rappel libre saisi à la main (source obligatoire), sans conférence
+//   POST /studio/reminders              rappel libre saisi à la main (source obligatoire), sans vidéo
 //   GET  /admin/citations               état du corpus, de la génération et du stock
 //   POST /admin/citations/import        (admin) importe le corpus depuis les dépôts publics
 //   POST /admin/citations/generate      (admin) demande à l'IA de choisir des références (le texte vient du corpus)

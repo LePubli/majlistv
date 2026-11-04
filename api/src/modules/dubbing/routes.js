@@ -14,7 +14,7 @@ const idSchema = z.object({ id: z.string().uuid() });
 // Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
 export const KEPT = `(COALESCE(f.keep_original, false) OR left(ltrim(s.text), 1) = '#')`;
 export const SEGS_FROM = `transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx`;
-// Empreinte du texte relu (texte + marquages) : calculée en SQL pour pouvoir la comparer aussi dans la liste des conférences.
+// Empreinte du texte relu (texte + marquages) : calculée en SQL pour pouvoir la comparer aussi dans la liste des vidéos.
 export const TEXT_HASH = `md5(string_agg(s.idx::text || chr(31) || s.text || chr(31) || (${KEPT})::text, chr(30) ORDER BY s.idx))`;
 const AUDIO_TYPES = { 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm', 'audio/flac': 'flac' };
 const GENDERS = ['', 'male', 'female', 'child'];
@@ -159,7 +159,7 @@ export default async function routes(app, ctx) {
     return { url: await presignGet(v.sample_key) };
   });
 
-  // --- Conférences ---
+  // --- Vidéos ---
   app.get('/studio/dubbing/talks', admin, async (req) => {
     const { q } = z.object({ q: z.string().trim().max(100).default('') }).parse(req.query ?? {});
     const voices = await listVoices(); const defaults = await getDefaults(); const coefs = await coefficients(ctx); const measured = await measuredRtf();
@@ -251,15 +251,15 @@ export default async function routes(app, ctx) {
   app.get('/studio/dubbing/talks/:id', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const d = await talkDetail(id);
-    if (!d) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!d) return reply.code(404).send({ error: 'Vidéo introuvable' });
     return d;
   });
 
-  // Réglages propres à une conférence : seulement les valeurs qui diffèrent des réglages par défaut ; null = revenir aux réglages par défaut.
+  // Réglages propres à une vidéo : seulement les valeurs qui diffèrent des réglages par défaut ; null = revenir aux réglages par défaut.
   app.put('/studio/dubbing/talks/:id', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { params } = z.object({ params: paramsSchema.nullable() }).strict().parse(req.body ?? {});
-    if (!(await pool.query('SELECT 1 FROM talks WHERE id = $1', [id])).rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!(await pool.query('SELECT 1 FROM talks WHERE id = $1', [id])).rowCount) return reply.code(404).send({ error: 'Vidéo introuvable' });
     if (params === null || !Object.keys(params).length) await pool.query('DELETE FROM dub_talk_settings WHERE talk_id = $1', [id]);
     else {
       const bad = await checkVoices(params);
@@ -374,14 +374,14 @@ export default async function routes(app, ctx) {
   });
 
   // --- Demandes de doublage (file d'attente du service dubbing/) ---
-  // kind = « preview » (écoute de 60 s, lancée dès que le service est libre) ou « full » (toute la conférence, la nuit par défaut).
+  // kind = « preview » (écoute de 60 s, lancée dès que le service est libre) ou « full » (toute la vidéo, la nuit par défaut).
   app.post('/studio/dubbing/talks/:id/jobs', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { kind } = z.object({ kind: z.enum(['preview', 'full']) }).strict().parse(req.body ?? {});
     const t = (await pool.query('SELECT id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const sp = await speech(id);
-    if (!sp.phrases) return reply.code(400).send({ error: "Pas de texte français pour cette conférence : demandez d'abord la traduction en français", code: 'no_french' });
+    if (!sp.phrases) return reply.code(400).send({ error: "Pas de texte français pour cette vidéo : demandez d'abord la traduction en français", code: 'no_french' });
     if (!sp.speechSeconds) return reply.code(400).send({ error: 'Toutes les phrases sont gardées en voix d’origine : rien à doubler', code: 'nothing_to_dub' });
     if (kind === 'full' && await requireReview() && !(await reviewState(id)).validated) {
       return reply.code(409).send({ error: 'Validez d’abord la relecture du texte français (Réglages → Relecture de la traduction)', code: 'review_required' });
@@ -405,7 +405,7 @@ export default async function routes(app, ctx) {
       const r = await pool.query(`INSERT INTO dub_jobs(talk_id, kind, params, created_by) VALUES ($1, $2, $3, $4) RETURNING ${JOB_COLS}`, [id, kind, params, req.user.sub]);
       return reply.code(201).send(publicJob(r.rows[0]));
     } catch (err) {
-      if (err.code === '23505') return reply.code(409).send({ error: kind === 'full' ? 'Un doublage de cette conférence est déjà en attente ou en cours' : 'Une écoute de 60 secondes est déjà en attente ou en cours', code: 'already_queued' });
+      if (err.code === '23505') return reply.code(409).send({ error: kind === 'full' ? 'Un doublage de cette vidéo est déjà en attente ou en cours' : 'Une écoute de 60 secondes est déjà en attente ou en cours', code: 'already_queued' });
       throw err;
     }
   });

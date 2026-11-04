@@ -1,4 +1,4 @@
-// Étape B1 — Bloc « Aujourd'hui » : la liste courte de ce que le membre peut faire aujourd'hui (juz du jour, athkar du moment,
+// Étape B1 — Bloc « Aujourd'hui » : la liste courte de ce que le membre peut faire aujourd'hui (juz du jour, adhkar du moment,
 // action de Ramadan, cartes et révisions à faire). Le socle ne connaît pas les modules : chacun ajoute ses lignes via l'événement
 // « today.collect » (voir ext.js). Une ligne = { kind, order, done, href, n?, total?, juz?, moment?, day? }.
 //   GET /me/today?lang=fr      membre connecté

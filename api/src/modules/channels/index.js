@@ -16,5 +16,5 @@ export default async function register(app, ctx) {
   await app.register(routes);
 }
 
-// Chaînes manquantes créées à partir des conférences.
+// Chaînes manquantes créées à partir des vidéos.
 export async function start(app) { startChannelSync(app.log); }

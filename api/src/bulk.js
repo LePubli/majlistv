@@ -1,4 +1,4 @@
-// Actions en lot de l'administration (Athkar, Ramadan…) : valider, afficher, masquer, dé-valider, supprimer, modifier un champ.
+// Actions en lot de l'administration (Adhkar, Ramadan…) : valider, afficher, masquer, dé-valider, supprimer, modifier un champ.
 // `table` et les noms de colonnes de `set` viennent du code des routes (jamais de la requête) : seules les VALEURS sont paramétrées.
 import { z } from 'zod';
 import { pool } from './db.js';

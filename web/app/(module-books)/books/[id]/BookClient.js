@@ -1,5 +1,5 @@
 'use client';
-// Fiche d'un ouvrage : couverture, présentation, éditions par langue (PDF réservé à l'Apprentissage, liens boutique), conférences et séries liées.
+// Fiche d'un ouvrage : couverture, présentation, éditions par langue (PDF réservé à l'Apprentissage, liens boutique), vidéos et séries liées.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';

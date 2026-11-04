@@ -1,5 +1,5 @@
 // Apprendre (étape M5 : comme la page du site, étape B6) — 4 onglets qui regroupent des sections :
-//   Aujourd'hui (tableau de bord) · Coran et athkar · Conférences (parcours, quiz et révision, cartes) · Mes progrès (engagements, bilan, attestations).
+//   Aujourd'hui (tableau de bord) · Coran et adhkar · Vidéos (parcours, quiz et révision, cartes) · Mes progrès (engagements, bilan, attestations).
 // Une phrase d'explication en haut de chaque onglet jusqu'à « Compris » (mémorisé sur le téléphone). ?tab=rev|cards|bilan|… ouvre une section.
 // Réservé à l'offre « Apprentissage » sauf Coran, « Aujourd'hui » et quiz à passer ; sans l'offre, un écran explique ce qu'elle apporte.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -84,7 +84,7 @@ function LearnBody() {
         <Txt size={14} color={colors.muted}>{t('lgSub')}</Txt>
       </View>
 
-      {/* Les 4 onglets (pastille : révisions + cartes du jour sur « Conférences »). */}
+      {/* Les 4 onglets (pastille : révisions + cartes du jour sur « Vidéos »). */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist" accessibilityLabel={t('tbLabel')}>
         {groups.map((g) => {
           const n = g.subs.reduce((a, s) => a + badgeOf(s), 0);
@@ -256,7 +256,7 @@ function QuranSection() {
   );
 }
 
-// ------------------------------------------------------------------ Conférences : quiz et révision
+// ------------------------------------------------------------------ Vidéos : quiz et révision
 function Revision({ rev, todo, reload }: { rev: RevisionFull | null; todo: QuizTodoCard[]; reload: () => void }) {
   const { api, t } = useSession();
   const [email, setEmail] = useState<boolean | null>(null);

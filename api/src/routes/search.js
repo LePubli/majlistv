@@ -1,5 +1,5 @@
 // Recherche dans le catalogue : Meilisearch si configuré (fautes de frappe tolérées, extraits, passages horodatés),
-// sinon recherche SQL simple. Les extraits de transcription d'une conférence premium ne sont montrés qu'aux
+// sinon recherche SQL simple. Les extraits de transcription d'une vidéo premium ne sont montrés qu'aux
 // personnes qui y ont accès (abonné, propriétaire, admin).
 import { inCategorySql, adultSql } from '../taxonomy.js';
 import { z } from 'zod';
@@ -80,7 +80,7 @@ export default async function searchRoutes(app) {
         ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, [q, p.category ?? null, p.limit, p.offset])).rows;
     }
 
-    // Passages horodatés (vidéos envoyées accessibles) : jusqu'à 3 par conférence, dans l'ordre de la vidéo.
+    // Passages horodatés (vidéos envoyées accessibles) : jusqu'à 3 par vidéo, dans l'ordre de la vidéo.
     // Mots de la requête + mots réellement trouvés par Meilisearch (corrige les fautes de frappe : « relativitée » → « relativité »).
     const found = [];
     for (const f of formatted.values()) {

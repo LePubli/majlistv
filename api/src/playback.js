@@ -1,4 +1,4 @@
-// Jeton de lecture court (HMAC) : autorise la lecture des playlists HLS d'une conférence précise.
+// Jeton de lecture court (HMAC) : autorise la lecture des playlists HLS d'une vidéo précise.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
 

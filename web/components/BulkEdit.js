@@ -1,5 +1,5 @@
 'use client';
-// Studio → modification en lot (étape 27.1) : on coche des conférences, on choisit les champs à changer, on applique.
+// Studio → modification en lot (étape 27.1) : on coche des vidéos, on choisit les champs à changer, on applique.
 // Seuls les champs cochés « modifier » sont envoyés ; tout est appliqué en une seule fois (tout ou rien).
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';

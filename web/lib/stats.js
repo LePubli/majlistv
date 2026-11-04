@@ -27,8 +27,8 @@ export function claimEntry(kind) {
 }
 
 // Hook de mesure d'une lecture (adultes ou enfants). videoRef : <video> ou adaptateur YouTube/Vimeo (mêmes événements).
-//   call : fonction d'appel API ; kids : espace enfant (envoi vers /kids/stats) ; active : la conférence est chargée.
-//   playing : compter les lectures (faux pendant l'aperçu d'une conférence premium : seule l'ouverture est comptée).
+//   call : fonction d'appel API ; kids : espace enfant (envoi vers /kids/stats) ; active : la vidéo est chargée.
+//   playing : compter les lectures (faux pendant l'aperçu d'une vidéo premium : seule l'ouverture est comptée).
 export function useTalkStats({ videoRef, talkId, call, kids = false, active = true, playing = true, statsOn = true }) {
   const send = useRef(null);
   send.current = (body) => { if (statsOn) call(kids ? '/kids/stats' : '/stats/hit', { method: 'POST', body: JSON.stringify({ talkId, ...body }), keepalive: true }).catch(() => {}); };

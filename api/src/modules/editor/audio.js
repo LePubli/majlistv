@@ -21,7 +21,7 @@ const PER_STEP = (RATE * STEP_MS) / 1000;
 const MAX_SECONDS = 15 * 60; // une analyse ne doit jamais bloquer la file
 export const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
 
-// Lien interne vers la qualité 360p d'une conférence (l'API répond elle-même et signe les segments).
+// Lien interne vers la qualité 360p d'une vidéo (l'API répond elle-même et signe les segments).
 export const internalHls = (talkId) => `http://127.0.0.1:${config.port}/hls/${talkId}/v0/index.m3u8?t=${encodeURIComponent(makePlaybackToken(talkId, 3600))}`;
 
 let ffmpegOk = null;
@@ -99,7 +99,7 @@ export function denoiseSample(talkId, at, level, seconds = 10) {
 
 // --- File des analyses
 
-// Ce qu'il faut analyser pour une conférence : voix d'origine (playlist v0) et, s'il y en a une, voix française.
+// Ce qu'il faut analyser pour une vidéo : voix d'origine (playlist v0) et, s'il y en a une, voix française.
 async function sourcesOf(talkId) {
   const t = (await pool.query("SELECT id, source, video_status, media_prefix FROM talks WHERE id = $1", [talkId])).rows[0];
   if (!t || t.source !== 'upload' || t.video_status !== 'ready') return {};
@@ -109,7 +109,7 @@ async function sourcesOf(talkId) {
     dub: media.dub?.trackId ? `dub:${media.dub.trackId}` : null };
 }
 
-// Met en file les analyses manquantes ou périmées d'une conférence. Renvoie les lignes à jour.
+// Met en file les analyses manquantes ou périmées d'une vidéo. Renvoie les lignes à jour.
 export async function ensureTalkWaveforms(talkId) {
   const src = await sourcesOf(talkId);
   for (const kind of ['orig', 'dub']) {
@@ -155,7 +155,7 @@ async function inputOf(w) {
   if (w.kind === 'dub') {
     const media = { dub: null };
     await ext.emit('editor.media', media, { talkId: w.talk_id });
-    if (!media.dub?.voiceUrl) throw new Error('Plus de piste française pour cette conférence');
+    if (!media.dub?.voiceUrl) throw new Error('Plus de piste française pour cette vidéo');
     return media.dub.voiceUrl;
   }
   const a = (await pool.query('SELECT key FROM editor_assets WHERE id = $1', [w.asset_id])).rows[0];

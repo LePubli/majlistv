@@ -8,7 +8,7 @@ export function rewriteMaster(text, token, version) {
   return text.split('\n').map((l) => (l && !l.startsWith('#') ? `${l.trim()}?t=${encodeURIComponent(token)}${v}` : l)).join('\n');
 }
 
-// Versions des fichiers HLS d'une conférence : « 0 » = dossier d'origine hls/<id>/, <uuid> = remplacement hls/<id>/r/<uuid>/.
+// Versions des fichiers HLS d'une vidéo : « 0 » = dossier d'origine hls/<id>/, <uuid> = remplacement hls/<id>/r/<uuid>/.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function prefixOf(id, v) {
   if (v === '0') return `hls/${id}/`;

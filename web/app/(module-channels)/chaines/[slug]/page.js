@@ -1,4 +1,4 @@
-// Page d'une chaîne (serveur) : <head>, données structurées Person, présentation et liste des conférences dans le HTML ; ChannelClient affiche les onglets.
+// Page d'une chaîne (serveur) : <head>, données structurées Person, présentation et liste des vidéos dans le HTML ; ChannelClient affiche les onglets.
 import { notFound } from 'next/navigation';
 import ChannelClient from '../../../../components/ChannelClient';
 import { seoGet, clip, jsonLd } from '../../../../lib/seo';
@@ -7,7 +7,7 @@ export async function generateMetadata({ params }) {
   const s = await seoGet(`speakers/${params.slug}`);
   if (!s) return { title: 'Chaîne', robots: { index: false, follow: false } };
   const url = `${s.site.baseUrl}/chaines/${s.slug}`;
-  const description = clip(s.tagline || s.bio, 160) || `Conférences et séries de ${s.name} sur ${s.site.appName}.`;
+  const description = clip(s.tagline || s.bio, 160) || `Vidéos et séries de ${s.name} sur ${s.site.appName}.`;
   return {
     title: s.name, description, alternates: { canonical: url },
     openGraph: { type: 'profile', siteName: s.site.appName, title: s.name, description, url },

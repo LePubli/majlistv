@@ -20,7 +20,7 @@ export default async function manifest() {
     id: '/',
     name,
     short_name: name.length > 12 ? name.split(/\s+/)[0] : name,
-    description: 'Des conférences qui éclairent.',
+    description: 'Des vidéos qui éclairent.',
     lang: 'fr',
     dir: 'auto',
     start_url: '/?source=app',

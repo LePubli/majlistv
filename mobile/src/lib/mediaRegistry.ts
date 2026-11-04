@@ -1,5 +1,5 @@
 // Les lecteurs en cours (vidéo native, YouTube / Vimeo) s'inscrivent ici : l'écran de pause de la prière peut ainsi les mettre en pause
-// puis les reprendre, sans connaître la fiche conférence. Même principe que web/lib/mediaRegistry.js.
+// puis les reprendre, sans connaître la fiche vidéo. Même principe que web/lib/mediaRegistry.js.
 export type MediaAdapter = { isPlaying: () => boolean; pause: () => void; play: () => void };
 
 const adapters = new Set<MediaAdapter>();

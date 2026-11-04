@@ -2,7 +2,7 @@
   "id": "lists",
   "name": "Listes de lecture",
   "version": "1.0.0",
-  "description": "Listes personnelles de conférences, partage par lien.",
+  "description": "Listes personnelles de vidéos, partage par lien.",
   "feature": "lists",
   "requires": [],
   "settings": []

@@ -21,7 +21,7 @@ export default function Pricing() {
   const [country, setCountry] = useState(null); // null = pas encore lu (localStorage) ; '' = non choisi
   const qs = useSearchParams();
   const canceled = qs.get('canceled');
-  const from = safePath(qs.get('from')); // page d'origine (ex. la conférence verrouillée)
+  const from = safePath(qs.get('from')); // page d'origine (ex. la vidéo verrouillée)
 
   // Pays : dernier choix du membre, sinon pays de la langue du navigateur. Il ne sert qu'à choisir le tarif (groupes de Admin → Tarifs par pays).
   useEffect(() => {

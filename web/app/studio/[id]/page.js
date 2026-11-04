@@ -1,5 +1,5 @@
 'use client';
-// Studio → fiche d'une conférence : état des 4 étapes et actions (relancer, langues, résumé, suppression).
+// Studio → fiche d'une vidéo : état des 4 étapes et actions (relancer, langues, résumé, suppression).
 // (Modification des informations, transcription corrigée et chronologie : étapes 10.4 à 10.6.)
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -50,7 +50,7 @@ export default function ManageTalk() {
   const router = useRouter();
   const [x, setX] = useState(undefined);
   const [msg, setMsg] = useState(null);
-  const [imp, setImp] = useState(null); // dernière demande d'import de la conférence (étape Import)
+  const [imp, setImp] = useState(null); // dernière demande d'import de la vidéo (étape Import)
   const load = useCallback(() => call('/me/talks').then((r) => { if (r.ok) setX(r.data.find((d) => d.id === id) || null); }), [call, id]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { call(`/talks/${id}/import`).then((r) => r.ok && setImp(r.data.import || null)); }, [call, id]);

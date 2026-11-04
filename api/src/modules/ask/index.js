@@ -1,4 +1,4 @@
-// Module « Questions sur la conférence » (étape 41) : assistant IA limité à la transcription.
+// Module « Questions sur la vidéo » (étape 41) : assistant IA limité à la transcription.
 import routes from './routes.js';
 import { purgeAsk } from './routes.js';
 

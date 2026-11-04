@@ -95,7 +95,7 @@ test('translate et pickLocale', () => {
   assert.equal(pickLocale(undefined), 'fr');
 });
 
-test('dégradé de repli : stable pour une même conférence', () => {
+test('dégradé de repli : stable pour une même vidéo', () => {
   assert.deepEqual(gradientFor('abc'), gradientFor('abc'));
   assert.equal(gradientFor('abc').length, 2);
 });

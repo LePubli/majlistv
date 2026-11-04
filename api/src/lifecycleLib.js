@@ -22,7 +22,7 @@ export function onePerUser(candidates) {
   return candidates.filter((c) => (seen.has(c.userId) ? false : (seen.add(c.userId), true)));
 }
 
-// Chemin du lien : conférence si on la connaît, sinon accueil.
+// Chemin du lien : vidéo si on la connaît, sinon accueil.
 export const talkPath = (t) => (t?.slug || t?.id ? `/conferences/${t.slug || t.id}` : '/');
 
 // « 12 min 30 » → texte lisible de la position de reprise (minutes pleines).

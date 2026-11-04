@@ -1,16 +1,16 @@
 // Module « Éditeur de montage » — étape E4b : REMPLACER LA VIDÉO PUBLIÉE par un rendu final, et « Restaurer l'original ».
 //
 // Déroulement (choix d'Epok du 19/10 : la bascule a lieu dès que la nouvelle vidéo est prête, le reste suit en arrière-plan) :
-//   1. « Remplacer la vidéo publiée » : le rendu final est copié en nouvelle vidéo de la conférence (talks/<id>-r<remplacement>.mp4) ;
+//   1. « Remplacer la vidéo publiée » : le rendu final est copié en nouvelle vidéo issue de la vidéo d’origine (talks/<id>-r<remplacement>.mp4) ;
 //      le worker la convertit en HLS dans un NOUVEAU dossier (hls/<id>/r/<remplacement>/) — la version publiée ne bouge pas.
-//   2. Bascule (API, une transaction) : la conférence pointe vers la nouvelle vidéo ; sous-titres (toutes langues), chapitres, quiz,
+//   2. Bascule (API, une transaction) : la vidéo pointe vers la nouvelle vidéo ; sous-titres (toutes langues), chapitres, quiz,
 //      actions, rappels, notes et reprises de lecture sont recalés avec la carte du temps (timemap.js). Un passage cité coupé met sa
 //      question « à revoir » (dépubliée). Le doublage (piste française) est retiré : il est à refaire sur la nouvelle vidéo.
 //      Les spectateurs déjà en lecture gardent l'ancienne version jusqu'au bout (v= dans les liens) ; elle est effacée 6 h après.
 //   3. Ensuite (sauf « Conserver mes corrections ») : nouvelle transcription, puis traductions et résumés relancés ; les quiz sont
 //      rattachés au texte de leur passage dans la nouvelle transcription. La recherche suit toute seule (signature de l'index).
 //   4. L'original (ancienne vidéo envoyée) est gardé N jours (réglage du module Stockage, 7 par défaut), puis proposé à l'archivage.
-//   « Restaurer l'original » : le dernier remplacement d'une conférence s'annule ; l'original (rapatrié des archives si besoin) est
+//   « Restaurer l'original » : le dernier remplacement d'une vidéo s'annule ; l'original (rapatrié des archives si besoin) est
 //   reconverti, puis tout revient comme avant (phrases, résumés, quiz, notes, doublage) ; ce qui a été créé entre-temps est recalé.
 import { z } from 'zod';
 import { pool } from '../../db.js';
@@ -79,7 +79,7 @@ function repView(r) {
 }
 const REP_SQL = 'SELECT r.*, u.name AS created_name FROM editor_replacements r LEFT JOIN users u ON u.id = r.created_by';
 
-// Remplacements d'une conférence : en cours, dernier fait (restaurable), historique.
+// Remplacements d'une vidéo : en cours, dernier fait (restaurable), historique.
 export async function talkReplacements(talkId) {
   const rows = (await pool.query(`${REP_SQL} WHERE r.talk_id = $1 ORDER BY r.created_at DESC LIMIT 20`, [talkId])).rows;
   const active = rows.find((r) => ACTIVE.includes(r.status)) || null;
@@ -103,7 +103,7 @@ export default async function replaceRoutes(app, { viewer, editable }) {
     if (r.status !== 'ready' || !r.output_key) return { code: 'not_ready', error: 'Ce rendu n’est pas prêt.' };
     if (r.plan?.vertical) return { code: 'vertical', error: 'Un extrait court 9:16 ne peut pas remplacer la vidéo publiée (il est pour les réseaux).' };
     if (r.kind !== 'final') return { code: 'preview', error: 'Un aperçu rapide (640 × 360) ne peut pas remplacer la vidéo : lancez un rendu final.' };
-    if (!editable(r)) return { code: 'not_editable', error: 'Cette conférence ne peut pas être remplacée (vidéo externe ou non convertie).' };
+    if (!editable(r)) return { code: 'not_editable', error: 'Cette vidéo ne peut pas être remplacée (vidéo externe ou non convertie).' };
     return null;
   };
 
@@ -158,11 +158,11 @@ export default async function replaceRoutes(app, { viewer, editable }) {
     return r;
   }
 
-  // État (suivi de la page) : remplacements de la conférence du projet.
+  // État (suivi de la page) : remplacements de la vidéo du projet.
   app.get('/studio/editor/talks/:id/replacements', viewer, async (req, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
     const t = (await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t || !(req.user.role === 'admin' || t.organizer_id === req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t || !(req.user.role === 'admin' || t.organizer_id === req.user.sub)) return reply.code(404).send({ error: 'Vidéo introuvable' });
     return { ...(await talkReplacements(id)), keepDays: await keepDays(), archiving: await storageOn() };
   });
 
@@ -210,7 +210,7 @@ async function cleanupCanceled(r) {
 }
 
 // ===================================================================================== Bascule
-// Recale les éléments datés d'une conférence. fwd = carte (ancien → nouveau). snap = { quiz, practice, reminders, notes } d'une
+// Recale les éléments datés d'une vidéo. fwd = carte (ancien → nouveau). snap = { quiz, practice, reminders, notes } d'une
 // restauration (valeurs d'avant le remplacement) : appliquées telles quelles aux éléments qui existaient alors.
 async function shiftItems(c, talkId, fwd, newDurMs, snap = null) {
   const rep = { quizReview: 0, practiceReview: 0, remindersReview: 0, notes: 0, progress: 0 };
@@ -332,7 +332,7 @@ export async function switchOver(rep, log) {
       for (const i of prev.insights) await c.query('UPDATE talk_insights SET chapters = $3, updated_at = now() WHERE talk_id = $1 AND lang = $2', [talk.id, i.lang, JSON.stringify(mapChapters(rep.map, i.chapters))]);
       // 4. Quiz, actions, rappels, notes, reprises de lecture.
       report = { segmentsBefore: all.length, segmentsKept: kept, ...(await shiftItems(c, talk.id, rep.map, newDurMs)) };
-      // 5. La conférence pointe vers la nouvelle vidéo. Sans « conserver mes corrections » : nouvelle transcription puis traductions.
+      // 5. La vidéo pointe vers la nouvelle vidéo. Sans « conserver mes corrections » : nouvelle transcription puis traductions.
       const redo = !rep.keep_corrections && talk.source === 'upload';
       await c.query(
         `UPDATE talks SET video_ref = $2, media_prefix = $3, duration_seconds = $4, poster_key = $5, poster_candidates = $6, audio_status = $7,
@@ -390,7 +390,7 @@ export async function switchOver(rep, log) {
         [rep.id, oldPrefix, talk.video_ref, { ...report, dropVideoRef: talk.video_ref }, GRACE_HOURS]);
       dubSnapshot = P.dub || null; restoredTarget = T;
     }
-    // Le montage de la conférence suivait l'ancienne vidéo : il est rangé en version nommée, et repart de la nouvelle vidéo entière
+    // Le montage de la vidéo suivait l'ancienne vidéo : il est rangé en version nommée, et repart de la nouvelle vidéo entière
     // (qui contient déjà les coupes et l'habillage). À la restauration, le montage d'avant revient.
     const proj = (await c.query("SELECT id, timeline FROM editor_projects WHERE talk_id = $1 AND kind = 'main' FOR UPDATE", [talk.id])).rows[0];
     if (proj) {

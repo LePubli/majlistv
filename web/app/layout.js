@@ -42,7 +42,7 @@ async function siteConfig() {
   } catch { /* API injoignable : valeurs de secours */ }
   return { appName: process.env.APP_NAME || 'Mejliss TV', trialDays: 7 };
 }
-// Titre « Page | Nom du site », description et aperçu de partage par défaut ; chaque page peut les remplacer (conférences, séries).
+// Titre « Page | Nom du site », description et aperçu de partage par défaut ; chaque page peut les remplacer (vidéos, séries).
 export const generateMetadata = async () => {
   const site = await seoSite();
   const name = site.appName || (await siteConfig()).appName;

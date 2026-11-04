@@ -1,5 +1,5 @@
 'use client';
-// Studio → Statistiques : audience de MES conférences (organisateur) — voir components/StatsView.js.
+// Studio → Statistiques : audience de MES vidéos (organisateur) — voir components/StatsView.js.
 import { useApp } from '../../../../components/Providers';
 import StatsView from '../../../../modules/stats/StatsView';
 import StudioTabs from '../../../../components/StudioTabs';

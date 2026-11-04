@@ -3,7 +3,7 @@ import routes from './routes.js';
 import { resetStale, removeFiles, sweep } from './prepare.js';
 
 export default async function register(app, ctx) {
-  // Conférence supprimée : on efface aussi ses fichiers préparés (la base efface les lignes en cascade).
+  // Vidéo supprimée : on efface aussi ses fichiers préparés (la base efface les lignes en cascade).
   ctx.on('talk.deleting', async ({ talkId }) => { await removeFiles(talkId); });
   await app.register(routes);
 }

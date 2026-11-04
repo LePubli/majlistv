@@ -1,4 +1,4 @@
-// Collections de conférences choisies par l'équipe.
+// Collections de vidéos choisies par l'équipe.
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';

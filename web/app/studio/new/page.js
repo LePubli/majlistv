@@ -1,5 +1,5 @@
 'use client';
-// Studio → Nouvelle conférence, en 2 étapes :
+// Studio → Nouvelle vidéo, en 2 étapes :
 //   1. Vidéo : glisser-déposer un fichier (l'envoi démarre aussitôt) ou coller un lien (YouTube / Vimeo / archive.org, ou tout autre site / lien direct :
 //      dans ce dernier cas la vidéo est copiée chez nous — étape Import ; pour YouTube / Vimeo / archive.org la copie est une option).
 //   2. Informations : titre, intervenant, langue, catégorie, accès… avec l'aperçu de la carte telle qu'elle apparaîtra.

@@ -17,7 +17,7 @@ import FridayBand from '../components/FridayBand';
 import TodayBlock from '../components/TodayBlock';
 import { StartCards, Tour } from '../components/Onboarding';
 
-// Première rangée de conférences de l'accueil (nouveautés) : elle sert de « Dernières conférences » sous la vitrine.
+// Première rangée de vidéos de l'accueil (nouveautés) : elle sert de « Dernières vidéos » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
 
 export default function Home() {
@@ -48,7 +48,7 @@ function HomeInner() {
   const legacy = blocks === null || (!user && feat('showcase'));
   const [cont, setCont] = useState([]);
   const [cit, setCit] = useState(null); // citation du jour (verset ou hadith), la même pour tous
-  const [kids, setKids] = useState(null); // bande « Espace Kids » : dernières conférences Kids
+  const [kids, setKids] = useState(null); // bande « Espace Kids » : dernières vidéos Kids
   useEffect(() => { if (legacy) call('/home/kids', {}, null).then((r) => setKids(r.ok ? r.data : null)); }, [call, legacy]);
   useEffect(() => { if (legacy) call('/citation/today', {}, null).then((r) => setCit(r.ok ? r.data : null)); }, [call, legacy]);
 

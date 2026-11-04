@@ -50,7 +50,7 @@ export const clampRakaat = (v: unknown): number | null => {
   return Number.isFinite(n) && n > 0 ? Math.min(40, Math.max(2, n)) : null;
 };
 
-/** Cartes du bilan (chiffres personnels, jamais comparés). Coran et athkar seulement si leur fonction est active. */
+/** Cartes du bilan (chiffres personnels, jamais comparés). Coran et adhkar seulement si leur fonction est active. */
 export function bilanCards(b: NonNullable<Bilan>, t: T, feat: (id: string) => boolean): { icon: string; value: string; label: string }[] {
   return [
     { icon: '✅', value: `${b.actions.done} / ${b.actions.expected}`, label: t('rbActions') },

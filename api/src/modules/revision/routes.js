@@ -23,7 +23,7 @@ export default async function reminderRoutes(app) {
     const { rows } = await pool.query('SELECT id, organizer_id, transcript_status, transcript_language, language FROM talks WHERE id = $1', [id]);
     const t = rows[0];
     if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
-      reply.code(404).send({ error: 'Conférence introuvable' });
+      reply.code(404).send({ error: 'Vidéo introuvable' });
       return null;
     }
     return t;
@@ -31,7 +31,7 @@ export default async function reminderRoutes(app) {
   async function ownedReminder(req, reply, rid) {
     const { rows } = await pool.query('SELECT m.*, t.organizer_id FROM reminders m LEFT JOIN talks t ON t.id = m.talk_id WHERE m.id = $1', [rid]);
     const m = rows[0];
-    // Rappel d'une conférence : son organisateur. Rappel libre : celui qui l'a créé. Citation du corpus : administrateur seulement.
+    // Rappel d'une vidéo : son organisateur. Rappel libre : celui qui l'a créé. Citation du corpus : administrateur seulement.
     const mine = m && (m.origin === 'corpus' ? false : m.talk_id ? m.organizer_id === req.user.sub : m.created_by === req.user.sub);
     if (!m || (req.user.role !== 'admin' && !mine)) {
       reply.code(404).send({ error: 'Rappel introuvable' });

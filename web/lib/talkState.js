@@ -1,4 +1,4 @@
-// État d'une conférence dans le studio, calculé à partir de GET /me/talks.
+// État d'une vidéo dans le studio, calculé à partir de GET /me/talks.
 // 4 étapes : V vidéo, T transcription, S sous-titres traduits, R résumé et chapitres.
 // Chaque étape vaut : ok | run | wait | err | none (sans objet).
 
@@ -47,12 +47,12 @@ export function talkSteps(x) {
   return { video, videoPct, transcript, transcriptPct, subs, summary };
 }
 
-// Catégorie de la conférence pour les filtres :
+// Catégorie de la vidéo pour les filtres :
 //   err (à corriger), run (en traitement), draft (brouillon), sched (programmée, pas encore visible), live (en ligne).
 export function talkKind(x, steps = talkSteps(x)) {
   const all = [steps.video, steps.transcript, steps.subs, steps.summary];
   if (all.includes('err')) return 'err';
-  // Un brouillon ou une conférence programmée garde son statut même pendant le traitement (la progression reste visible dans les pastilles).
+  // Un brouillon ou une vidéo programmée garde son statut même pendant le traitement (la progression reste visible dans les pastilles).
   if (x.publication === 'draft') return 'draft';
   if (x.reviewStatus === 'pending' || x.reviewStatus === 'rejected') return 'review'; // étape 20 : relecture avant mise en ligne
   if (x.publication === 'scheduled' && x.visible === false) return 'sched';
@@ -61,7 +61,7 @@ export function talkKind(x, steps = talkSteps(x)) {
   return 'live';
 }
 
-// Pourcentage global affiché pour une conférence en traitement.
+// Pourcentage global affiché pour une vidéo en traitement.
 export function talkProgress(steps) {
   if (steps.video === 'run') return steps.videoPct ?? 0;
   if (steps.transcript === 'run') return steps.transcriptPct ?? 0;

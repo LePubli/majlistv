@@ -1,5 +1,5 @@
 'use client';
-// Studio → onglet « Mise en pratique » d'une conférence : génération par l'IA, relecture et ajout de propositions d'action.
+// Studio → onglet « Mise en pratique » d'une vidéo : génération par l'IA, relecture et ajout de propositions d'action.
 import { useCallback, useEffect, useState } from 'react';
 import PracticeSuggestion, { SuggestionForm } from './PracticeSuggestion';
 

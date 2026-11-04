@@ -1,4 +1,4 @@
-// Étape B1 — ligne « Aujourd'hui » de la révision espacée : conférences à réviser aujourd'hui (formule Apprentissage).
+// Étape B1 — ligne « Aujourd'hui » de la révision espacée : vidéos à réviser aujourd'hui (formule Apprentissage).
 import { featureOn } from '../../features.js';
 import { hasLearningTier } from '../../access.js';
 import { dueTalks } from '../../revision.js';

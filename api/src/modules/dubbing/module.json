@@ -2,7 +2,7 @@
   "id": "dubbing",
   "name": "Doublage français",
   "version": "0.10.0",
-  "description": "Doublage français des conférences : voix de base (Piper) puis, au choix, conversion vers une voix autorisée (consentement daté). Réglages, voix, estimation, file du service dubbing/, écoute de 60 s, piste française, langue d'écoute, demandes des abonnés, relecture, glossaire (S1-S3, D1-D2, E1-E4) ; plusieurs intervenants détectés par la voix, une voix et une hauteur (± 4 demi-tons) chacun (D3c).",
+  "description": "Doublage français des vidéos : voix de base (Piper) puis, au choix, conversion vers une voix autorisée (consentement daté). Réglages, voix, estimation, file du service dubbing/, écoute de 60 s, piste française, langue d'écoute, demandes des abonnés, relecture, glossaire (S1-S3, D1-D2, E1-E4) ; plusieurs intervenants détectés par la voix, une voix et une hauteur (± 4 demi-tons) chacun (D3c).",
   "requires": [],
   "defaultEnabled": false,
   "settings": [

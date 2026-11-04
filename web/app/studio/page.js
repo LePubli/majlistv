@@ -1,6 +1,6 @@
 'use client';
 // Studio → Tableau de bord (maquette « Studio v2 », écran 1) — étape S3. Aucune donnée inventée : tout vient de l'API.
-//   GET /me/talks        : mes conférences (dernière publiée, choses à faire du socle)
+//   GET /me/talks        : mes vidéos (dernière publiée, choses à faire du socle)
 //   GET /studio/overview : chiffres des modules (statistiques, chaînes, doublage, stockage) + production en cours
 // Un bloc dont le module est absent ou désactivé n'apparaît pas.
 import { useEffect, useState } from 'react';

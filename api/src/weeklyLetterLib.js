@@ -1,5 +1,5 @@
 // Étape 34 — Lettre hebdomadaire personnalisée : règles pures (testables sans base de données).
-// Nouveautés des intervenants suivis : parmi les conférences récentes, celles dont l'intervenant est suivi, sans doublon,
+// Nouveautés des intervenants suivis : parmi les vidéos récentes, celles dont l'intervenant est suivi, sans doublon,
 // au plus `max`, dans l'ordre reçu (déjà trié du plus récent au plus ancien).
 export function pickFollowCards(recent, followSlugs, slugOf, max = 3) {
   const follow = new Set(followSlugs);

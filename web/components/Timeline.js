@@ -1,5 +1,5 @@
 'use client';
-// Studio → fiche d'une conférence : chronologie du traitement (conversion, transcription, sous-titres, résumé, publication…).
+// Studio → fiche d'une vidéo : chronologie du traitement (conversion, transcription, sous-titres, résumé, publication…).
 import { useEffect, useState } from 'react';
 import { langName } from './Transcript';
 import { sourceLabel } from '../lib/talkState';
@@ -9,7 +9,7 @@ const TONE = { ready: 'ok', published: 'ok', failed: 'err', processing: 'run', e
 export default function Timeline({ talkId, signature, t, call, locale }) {
   const [events, setEvents] = useState(null);
   const [all, setAll] = useState(false);
-  // Recharge à chaque changement d'état de la conférence (signature) : la fiche se met à jour pendant le traitement.
+  // Recharge à chaque changement d'état de la vidéo (signature) : la fiche se met à jour pendant le traitement.
   useEffect(() => { call(`/talks/${talkId}/studio/timeline`).then((r) => r.ok && setEvents(r.data.events)); }, [call, talkId, signature]);
 
   const when = (iso) => new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

@@ -1,5 +1,5 @@
 'use client';
-// Bloc « L'ouvrage étudié » (page conférence ou série) : ouvrages liés, si la conférence / série en a.
+// Bloc « L'ouvrage étudié » (page vidéo ou série) : ouvrages liés, si la vidéo / série en a.
 import { useEffect, useState } from 'react';
 import BookCard from './BookCard';
 import { useApp } from './Providers';

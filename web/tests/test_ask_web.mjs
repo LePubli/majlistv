@@ -1,4 +1,4 @@
-// Étape 41 — aides de l'assistant de conférence (site). Lancer : node web/tests/test_ask_web.mjs
+// Étape 41 — aides de l'assistant de vidéo (site). Lancer : node web/tests/test_ask_web.mjs
 import assert from 'node:assert/strict';
 import { errorKey, validQuestion, pushTurn, markReported, dropTurn, MAX_QUESTION } from '../lib/ask.js';
 

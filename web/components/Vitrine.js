@@ -1,5 +1,5 @@
 'use client';
-// Vitrine visiteur (étape E1) : « Regarder. Comprendre. Retenir. Mettre en pratique. » avec une vraie conférence
+// Vitrine visiteur (étape E1) : « Regarder. Comprendre. Retenir. Mettre en pratique. » avec une vraie vidéo
 // tirée au hasard parmi les plus vues et une vraie question de son quiz (jouable sans compte).
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

@@ -1,4 +1,4 @@
-// Adresse lisible d'une conférence : /conferences/la-patience-dans-l-epreuve (adresse canonique).
+// Adresse lisible d'une vidéo : /conferences/la-patience-dans-l-epreuve (adresse canonique).
 import { notFound } from 'next/navigation';
 import { seoGet } from '../../../lib/seo';
 import { talkMetadata, TalkView } from '../../../lib/talkPage';

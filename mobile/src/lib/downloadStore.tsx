@@ -46,7 +46,7 @@ type Ctx = {
   statusOf: (rec: DownloadRecord) => DlStatus;
   /** L'horloge du téléphone a été reculée. */
   clockWarn: boolean;
-  /** Pack hors connexion d'une conférence téléchargée (null si absent). */
+  /** Pack hors connexion d'une vidéo téléchargée (null si absent). */
   packOf: (talkId: string) => Promise<OfflinePack | null>;
   /** Quiz passé hors connexion : mis en file, envoyé au serveur à la reconnexion. */
   queueAttempt: (talkId: string, answers: Record<string, number>) => Promise<void>;

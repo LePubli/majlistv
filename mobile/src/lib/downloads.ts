@@ -40,7 +40,7 @@ export const fileNameFor = (talkId: string, kind: DlKind, height: number) =>
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const str = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '');
 
-/** Lit l'index enregistré : lignes invalides ignorées (jamais d'exception), une seule ligne par conférence (la plus récente). */
+/** Lit l'index enregistré : lignes invalides ignorées (jamais d'exception), une seule ligne par vidéo (la plus récente). */
 export function parseIndex(raw: string | null | undefined): DownloadRecord[] {
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : []; } catch { return []; }
@@ -68,12 +68,12 @@ export const daysLeftUntil = (expiresAt: number, now: number) => Math.max(0, Mat
 export const packStale = (r: Pick<DownloadRecord, 'pack' | 'packAt'>, now: number) => !r.pack || now - r.packAt >= PACK_REFRESH_MS || now < r.packAt;
 export const totalBytes = (rs: DownloadRecord[]) => rs.reduce((n, r) => n + r.size, 0);
 
-/** Ajoute ou remplace (une conférence = un téléchargement). */
+/** Ajoute ou remplace (une vidéo = un téléchargement). */
 export const upsert = (rs: DownloadRecord[], rec: DownloadRecord) => [rec, ...rs.filter((r) => r.talkId !== rec.talkId)];
 
 /**
  * Applique la réponse du serveur au renouvellement.
- * ok → nouvelle date de fin ; refus « subscription » (abonnement terminé) ou « gone » (conférence retirée) → téléchargement supprimé ;
+ * ok → nouvelle date de fin ; refus « subscription » (abonnement terminé) ou « gone » (vidéo retirée) → téléchargement supprimé ;
  * autre refus (vidéo en cours de remplacement…) → on garde jusqu'à la date de fin actuelle.
  */
 export function applyRenewal(rs: DownloadRecord[], items: RenewItem[], now: number): { records: DownloadRecord[]; removed: DownloadRecord[] } {

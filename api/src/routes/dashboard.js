@@ -123,7 +123,7 @@ export default async function dashboardRoutes(app) {
     try {
       const rep = (await pool.query('SELECT count(*)::int AS n FROM ask_log WHERE reported_at IS NOT NULL AND reviewed_at IS NULL')).rows[0].n;
       add('ask_reported', rep, "réponse(s) de l'assistant signalée(s) par des membres", '/admin?tab=ask');
-    } catch { /* module « Questions sur la conférence » absent */ }
+    } catch { /* module « Questions sur la vidéo » absent */ }
 
     // --- Santé des services : déduite des files d'attente et de tests rapides (le worker, etc. n'exposent pas d'adresse à l'API) ---
     const health = [];

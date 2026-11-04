@@ -1,4 +1,4 @@
-// Hors connexion (22b-6 bis) : « pack » d'une conférence téléchargée (résumé, chapitres, transcription, quiz) et file des quiz passés hors connexion.
+// Hors connexion (22b-6 bis) : « pack » d'une vidéo téléchargée (résumé, chapitres, transcription, quiz) et file des quiz passés hors connexion.
 // Logique pure (testée avec Node, tests/offlinePack.test.ts).
 import type { QuizResult } from '@/lib/types';
 

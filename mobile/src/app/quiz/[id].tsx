@@ -1,4 +1,4 @@
-// Quiz d'une conférence : une question à la fois, correction détaillée à la fin, explications et badges gagnés.
+// Quiz d'une vidéo : une question à la fois, correction détaillée à la fin, explications et badges gagnés.
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

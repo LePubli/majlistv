@@ -267,7 +267,7 @@ export default function EditMode() {
           {sel.kind === 'unknown' && (
             <div className="em-body">
               <p>« {sel.value} »</p>
-              <p className="meta small">Ce texte ne vient pas de la liste des textes du site (il change selon la personne ou le contenu : nom, date, titre d’une conférence…). Les textes avec des variables se modifient dans Admin → Textes ; le contenu des conférences, dans Studio.</p>
+              <p className="meta small">Ce texte ne vient pas de la liste des textes du site (il change selon la personne ou le contenu : nom, date, titre d’une vidéo…). Les textes avec des variables se modifient dans Admin → Textes ; le contenu des vidéos, dans Studio.</p>
               <a className="btn ghost" href="/admin?tab=texts">Ouvrir Admin → Textes</a>
             </div>
           )}

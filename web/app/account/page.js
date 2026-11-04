@@ -23,7 +23,7 @@ function Billing() {
   const [busy, setBusy] = useState(false);
   const qs = useSearchParams();
   const justPaid = qs.get('billing') === 'success';
-  const back = safePath(qs.get('next')); // conférence qui a donné envie de s'abonner
+  const back = safePath(qs.get('next')); // vidéo qui a donné envie de s'abonner
 
   // Après le paiement, l'activation arrive par webhook : on interroge quelques secondes.
   useEffect(() => {

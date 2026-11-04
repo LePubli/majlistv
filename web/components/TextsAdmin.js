@@ -16,7 +16,7 @@ const GROUP_OF = {
   hb: 'Accueil membre (blocs)', kd: 'Espace Kids', kr: 'Espace Kids', kc: 'Espace Kids',
   bk: 'Ouvrages', pz: 'Mise en pratique', st: 'Statistiques et suivi', sr: 'Séries et parcours',
   qz: 'Quiz', qp: 'Quiz et progression', vt: 'Page d’accueil visiteur', hero: 'Page d’accueil visiteur',
-  rm: 'Rappels', ct: 'Studio : conférences', nw: 'Studio : nouvelle conférence', thumb: 'Studio : miniatures', import: 'Studio : import',
+  rm: 'Rappels', ct: 'Studio : vidéos', nw: 'Studio : nouvelle vidéo', thumb: 'Studio : miniatures', import: 'Studio : import',
   sc: 'Mon bilan', lg: 'Accueil membre', lr: 'Apprentissage', ch: 'Chaînes', nf: 'Chaînes', sp: 'Chaînes',
   ls: 'Mes listes', gf: 'Cartes cadeaux', rd: 'Cartes cadeaux', th: 'Thèmes', tl: 'Chronologie', rv: 'Revenus des chaînes',
   citz: 'Citations', cit: 'Citations', bdg: 'Badges', rev: 'Révision espacée', col: 'Collections', rp: 'Signalements',

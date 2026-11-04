@@ -10,7 +10,7 @@ export const KID_QUESTIONS = 5; // questions posées à un enfant
 // Étoiles : 1 pour avoir essayé, 2 à partir de 60 %, 3 à partir de 90 %.
 export const starsOf = (percent) => 1 + (percent >= 60 ? 1 : 0) + (percent >= 90 ? 1 : 0);
 
-// Total d'étoiles : la meilleure note de chaque conférence (rejouer ne fait jamais baisser).
+// Total d'étoiles : la meilleure note de chaque vidéo (rejouer ne fait jamais baisser).
 export async function starTotal(profileId, db = pool) {
   return (await db.query(
     `SELECT COALESCE(sum(s), 0)::int AS n FROM (SELECT max(stars) AS s FROM kid_quiz_attempts WHERE profile_id = $1 GROUP BY talk_id) x`, [profileId])).rows[0].n;

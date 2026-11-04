@@ -1,4 +1,4 @@
-// Intervenants (étape 16.2b) : un intervenant = le nom saisi sur ses conférences ; sa page est identifiée par un slug stable.
+// Intervenants (étape 16.2b) : un intervenant = le nom saisi sur ses vidéos ; sa page est identifiée par un slug stable.
 import { createHash } from 'node:crypto';
 import { pool } from './db.js';
 import { slugify } from './slugs.js';
@@ -12,7 +12,7 @@ export function speakerSlug(name) {
   return slugify(n) || `intervenant-${createHash('md5').update(n.toLowerCase()).digest('hex').slice(0, 8)}`;
 }
 
-// Intervenants du catalogue public (conférences et séries visibles) : { slug, name (graphie la plus fréquente), talks, series }.
+// Intervenants du catalogue public (vidéos et séries visibles) : { slug, name (graphie la plus fréquente), talks, series }.
 export async function publicSpeakers() {
   const t = (await pool.query(
     `SELECT trim(t.speaker) AS name, count(*)::int AS n FROM talks t
@@ -35,7 +35,7 @@ export async function publicSpeakers() {
     .sort((a, b) => b.talks - a.talks || a.name.localeCompare(b.name));
 }
 
-// Graphies (en minuscules) d'un slug, pour filtrer les conférences et séries de cet intervenant ; [] si inconnu.
+// Graphies (en minuscules) d'un slug, pour filtrer les vidéos et séries de cet intervenant ; [] si inconnu.
 export async function speakerNames(slug) {
   const e = (await publicSpeakers()).find((x) => x.slug === slug);
   return e ? e.names.map((n) => n.toLowerCase()) : [];

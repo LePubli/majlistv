@@ -1,6 +1,6 @@
 // Affiche d'un short : une image JPEG tirée de la vidéo (vers 1 s, ou au début si le short est très court), enregistrée
 // sous shorts/<id>.jpg. FFmpeg lit la vidéo par un lien temporaire ; sans FFmpeg ou en cas d'échec, pas d'affiche (la page
-// prend alors la miniature de la conférence).
+// prend alors la miniature de la vidéo).
 import { spawn } from 'node:child_process';
 import { presignGet, putObject } from '../../storage.js';
 

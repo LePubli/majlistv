@@ -1,6 +1,6 @@
 'use client';
-// Étape 31.1 — Studio : thèmes « Du savoir à l'action » associés à une conférence (3 au maximum).
-// Ils servent à relier la conférence à la bibliothèque de thèmes et à « Mon évolution » des membres.
+// Étape 31.1 — Studio : thèmes « Du savoir à l'action » associés à une vidéo (3 au maximum).
+// Ils servent à relier la vidéo à la bibliothèque de thèmes et à « Mon évolution » des membres.
 import { useEffect, useState } from 'react';
 
 export default function ThemesPicker({ id, t, call }) {

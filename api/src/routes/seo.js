@@ -1,6 +1,6 @@
 // Référencement (Google, réseaux sociaux) : données publiques et minimales servies au site pour les balises <head>,
 // les données structurées (JSON-LD), le sitemap et les vignettes à adresse stable.
-// Règle : seules les conférences / séries visibles du public sont exposées, et jamais d'élément premium
+// Règle : seules les vidéos / séries visibles du public sont exposées, et jamais d'élément premium
 // (transcription, lien de lecture protégé) : titre, description, intervenant, durée, miniature seulement.
 import { z } from 'zod';
 import { pool } from '../db.js';
@@ -32,16 +32,16 @@ export default async function seoRoutes(app) {
   app.get('/seo/talks/:id', async (req, reply) => {
     const ref = refParam.parse(req.params).id;
     const id = await idFromRef('talks', ref);
-    if (!id) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!id) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.description, t.speaker, t.language, t.access, t.source, t.video_ref, t.duration_seconds AS "durationSeconds",
               c.name AS category, COALESCE(t.publish_at, t.created_at) AS "publishedAt", (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS "hasPoster"
          FROM talks t LEFT JOIN category_names c ON c.id = t.category_id
         WHERE t.id = $1 AND t.video_status = 'ready' AND ${visibleSql('t')}`, [id]);
     const t = rows[0];
-    if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const series = (await ext.call('series.episodeLabels', () => new Map(), [id])).get(id) || null;
-    // Chapitres et extrait de la transcription : seulement pour les conférences gratuites (jamais de contenu premium dans le HTML public).
+    // Chapitres et extrait de la transcription : seulement pour les vidéos gratuites (jamais de contenu premium dans le HTML public).
     let chapters = []; let excerpt = ''; let summary = ''; let transcript = [];
     if (t.access === 'free') {
       const ins = (await pool.query(
@@ -52,7 +52,7 @@ export default async function seoRoutes(app) {
         chapters = (Array.isArray(ins.chapters) ? ins.chapters : []).filter((c) => Number.isFinite(c?.ms) && c?.title).slice(0, 40).map((c) => ({ ms: c.ms, title: clip(c.title, 140) }));
       }
       excerpt = clip((await pool.query('SELECT left(coalesce(transcript_text, \'\'), 1500) AS x FROM talks WHERE id = $1', [id])).rows[0]?.x, 1200);
-      // Transcription complète (langue d'origine de la conférence, sinon la première disponible), en paragraphes horodatés.
+      // Transcription complète (langue d'origine de la vidéo, sinon la première disponible), en paragraphes horodatés.
       const segs = (await pool.query(
         `SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1
             AND lang = COALESCE((SELECT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY (lang = $2) DESC, lang LIMIT 1), $2)
@@ -120,7 +120,7 @@ export default async function seoRoutes(app) {
   });
 
 
-  // Intervenants : page publique (présentation, conférences et séries) pour le <head>, les données structurées et le HTML.
+  // Intervenants : page publique (présentation, vidéos et séries) pour le <head>, les données structurées et le HTML.
   app.get('/seo/speakers/:id', async (req, reply) => {
     const { id: slug } = refParam.parse(req.params);
     const e = (await publicSpeakers()).find((x) => x.slug === slug);
@@ -156,7 +156,7 @@ export default async function seoRoutes(app) {
     return reply.redirect(await presignGet(b.cover_key), 302);
   });
 
-  // Plan du site : conférences et séries visibles (jusqu'à 5 000 de chaque).
+  // Plan du site : vidéos et séries visibles (jusqu'à 5 000 de chaque).
   app.get('/seo/sitemap', async (req, reply) => {
     await ensureAllSlugs('talks'); await ensureAllSlugs('series');
     const talks = (await pool.query(

@@ -26,7 +26,7 @@ const talk = async (title, speaker, o = {}) => (await pool.query(
 const follow = (u, s, name) => pool.query("INSERT INTO speaker_follows(user_id,speaker_slug,speaker_name) VALUES ($1,$2,$3)", [u, speakerSlug(s), name]);
 const a = await mk('abonne'), b = await mk('muet', { speakers: false }), c = await mk('autre'), d = await mk('sans'), en = await mk('english', { locale: 'en' });
 await follow(a, S1, S1); await follow(b, S1, S1); await follow(c, S2, S2); await follow(en, S1, S1);
-// Les conférences déjà annoncées ou en attente d'autres tests ne doivent pas nous gêner : on les « annonce » d'abord.
+// Les vidéos déjà annoncées ou en attente d'autres tests ne doivent pas nous gêner : on les « annonce » d'abord.
 await runSpeakers(console);
 const t1 = await talk('Patience', S1), t2 = await talk('Gratitude', S1), t3 = await talk('Brouillon', S2, { pub: 'draft' });
 const t4 = await talk('Hors catalogue', S1, { adults: false }), t5 = await talk('Ancienne', S1, { announced: true });
@@ -34,10 +34,10 @@ const mails = (u) => pool.query("SELECT kind, vars, locale FROM email_outbox WHE
 
 const n1 = await runSpeakers(console);
 const ma = await mails(a);
-ok(ma.length === 1, "abonné : UN e-mail groupé pour deux nouvelles conférences");
+ok(ma.length === 1, "abonné : UN e-mail groupé pour deux nouvelles vidéos");
 ok(ma[0].vars.titles.includes(`Patience ${tag}`) && ma[0].vars.titles.includes(`Gratitude ${tag}`) && ma[0].vars.count === '2', 'titres et nombre');
-ok(!ma[0].vars.titles.includes('Ancienne') && !ma[0].vars.titles.includes('Hors catalogue') && !ma[0].vars.titles.includes('Brouillon'), 'ni ancienne conférence, ni hors catalogue, ni brouillon');
-ok(ma[0].vars.speakers === S1 && ma[0].vars.path === '/', "intervenant nommé, lien vers les conférences");
+ok(!ma[0].vars.titles.includes('Ancienne') && !ma[0].vars.titles.includes('Hors catalogue') && !ma[0].vars.titles.includes('Brouillon'), 'ni ancienne vidéo, ni hors catalogue, ni brouillon');
+ok(ma[0].vars.speakers === S1 && ma[0].vars.path === '/', "intervenant nommé, lien vers les vidéos");
 ok((await mails(b)).length === 0, 'alertes désactivées : rien');
 ok((await mails(c)).length === 0 && (await mails(d)).length === 0, "intervenant sans nouveauté / personne suivie : rien");
 ok((await mails(en)).length === 1 && (await mails(en))[0].locale === 'en', 'langue du compte respectée');
@@ -50,9 +50,9 @@ ok((await mails(a)).length === 1, 'deuxième passage : aucun doublon');
 await pool.query("UPDATE talks SET publication='published' WHERE id=$1", [t3.id]);
 await runSpeakers(console);
 const mc = await mails(c);
-ok(mc.length === 1 && mc[0].vars.titles.includes('Brouillon') && mc[0].vars.path === `/conferences/${t3.slug || t3.id}`, 'conférence publiée plus tard : son abonné est prévenu, lien direct');
+ok(mc.length === 1 && mc[0].vars.titles.includes('Brouillon') && mc[0].vars.path === `/conferences/${t3.slug || t3.id}`, 'vidéo publiée plus tard : son abonné est prévenu, lien direct');
 ok((await mails(a)).length === 1, "l'abonné d'un autre intervenant n'est pas dérangé");
-// Une conférence publiée en pleine « programmation » : visible seulement à l'heure dite.
+// Une vidéo publiée en pleine « programmation » : visible seulement à l'heure dite.
 const t6 = await talk('Programmée', S1, { pub: 'scheduled' });
 await pool.query("UPDATE talks SET publish_at = now() + interval '1 hour' WHERE id=$1", [t6.id]);
 await runSpeakers(console);

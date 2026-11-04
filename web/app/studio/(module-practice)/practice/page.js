@@ -1,5 +1,5 @@
 'use client';
-// Studio → file de relecture : toutes les propositions d'action en attente de validation, toutes conférences confondues.
+// Studio → file de relecture : toutes les propositions d'action en attente de validation, toutes vidéos confondues.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';

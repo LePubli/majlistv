@@ -72,10 +72,10 @@ export const BLOCK_TYPES = {
     sample: { items: [{ title: { fr: 'Première carte' }, text: { fr: 'Un court texte.' } }, { title: { fr: 'Deuxième carte' }, text: { fr: 'Un court texte.' } }, { title: { fr: 'Troisième carte' }, text: { fr: 'Un court texte.' } }] },
   },
   talks: {
-    label: 'Conférences', hint: 'Une rangée de conférences du catalogue (mise à jour automatique).',
-    fields: [T('title', 'Titre de la rangée'), S('source', 'Quelles conférences', [['latest', 'Les plus récentes'], ['category', 'D’une catégorie']], 'latest'),
+    label: 'Vidéos', hint: 'Une rangée de vidéos du catalogue (mise à jour automatique).',
+    fields: [T('title', 'Titre de la rangée'), S('source', 'Quelles vidéos', [['latest', 'Les plus récentes'], ['category', 'D’une catégorie']], 'latest'),
       N('category', 'Numéro de la catégorie (Admin → Catégories)', 0, 100000, 0), S('level', 'Niveau', [['', 'Tous'], ['beginner', 'Débutant'], ['intermediate', 'Intermédiaire'], ['advanced', 'Avancé']], ''),
-      N('limit', 'Nombre de conférences', 1, 12, 4), T('moreLabel', 'Lien « Tout voir » : texte'), U('moreUrl', 'Lien « Tout voir » : adresse')],
+      N('limit', 'Nombre de vidéos', 1, 12, 4), T('moreLabel', 'Lien « Tout voir » : texte'), U('moreUrl', 'Lien « Tout voir » : adresse')],
     sample: { title: { fr: 'Nouveautés' } },
   },
   quote: {
@@ -93,13 +93,13 @@ export const BLOCK_TYPES = {
   },
   // ---- Blocs « données du site » (étape H) : leur contenu vient du catalogue et du compte de la personne, il se met à jour tout seul.
   featured: {
-    label: 'À la une + Reprendre', hint: 'Grande conférence mise en avant (Admin → Conférences → « À la une »), avec à droite la carte « Reprendre » de la personne connectée.',
-    fields: [S('layout', 'Conférences à la une', [['auto', 'Plusieurs, qui défilent'], ['fixed', 'Une seule, fixe']], 'auto'),
-      S('resume', 'Carte « Reprendre »', [['yes', 'Oui (si une conférence est en cours)'], ['no', 'Non']], 'yes')],
+    label: 'À la une + Reprendre', hint: 'Grande vidéo mise en avant (Admin → Vidéos → « À la une »), avec à droite la carte « Reprendre » de la personne connectée.',
+    fields: [S('layout', 'Vidéos à la une', [['auto', 'Plusieurs, qui défilent'], ['fixed', 'Une seule, fixe']], 'auto'),
+      S('resume', 'Carte « Reprendre »', [['yes', 'Oui (si une vidéo est en cours)'], ['no', 'Non']], 'yes')],
     sample: {},
   },
   mine: {
-    label: 'Ma progression', hint: 'Une rangée personnelle : à réviser, quiz à rattraper, ou conférences en cours. Invisible si la personne n’a rien dedans ou n’est pas connectée.',
+    label: 'Ma progression', hint: 'Une rangée personnelle : à réviser, quiz à rattraper, ou vidéos en cours. Invisible si la personne n’a rien dedans ou n’est pas connectée.',
     fields: [S('what', 'Contenu', [['review', 'À réviser aujourd’hui'], ['quiz', 'Quiz à rattraper'], ['continue', 'Continuer à regarder']], 'review')],
     sample: { what: 'review' },
   },
@@ -130,7 +130,7 @@ export const BLOCK_TYPES = {
     fields: [N('max', 'Nombre de rangées', 1, 12, 4)], sample: {},
   },
   kids: {
-    label: 'Bande Espace Kids', hint: 'Les dernières conférences Kids. Invisible si l’Espace Kids est coupé (Admin → Paramètres).', fields: [], sample: {},
+    label: 'Bande Espace Kids', hint: 'Les dernières vidéos Kids. Invisible si l’Espace Kids est coupé (Admin → Paramètres).', fields: [], sample: {},
   },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },

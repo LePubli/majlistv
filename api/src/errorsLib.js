@@ -16,7 +16,7 @@ export const clip = (text, n) => { const s = String(text ?? ''); return s.length
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
-/** Adresse sans paramètres, avec les identifiants remplacés (« /talks/:id/quiz ») : deux conférences différentes = la même erreur. */
+/** Adresse sans paramètres, avec les identifiants remplacés (« /talks/:id/quiz ») : deux vidéos différentes = la même erreur. */
 export function normRoute(route) {
   let r = String(route ?? '').split('?')[0].split('#')[0];
   try { if (/^https?:\/\//i.test(r)) r = new URL(r).pathname; } catch { /* adresse invalide : gardée telle quelle */ }

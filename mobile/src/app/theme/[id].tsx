@@ -1,4 +1,4 @@
-// Thème : présentation, petits pas proposés, conférences qui en parlent.
+// Thème : présentation, petits pas proposés, vidéos qui en parlent.
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';

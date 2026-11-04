@@ -1,5 +1,5 @@
 // Étape 19 — Collections éditoriales (cycles, séries d'un intervenant, thèmes du moment).
-//   GET /collections, GET /collections/:id        public (collections publiées ; seules les conférences visibles apparaissent)
+//   GET /collections, GET /collections/:id        public (collections publiées ; seules les vidéos visibles apparaissent)
 //   GET /studio/collections[/:id]                 équipe (modérateur, administrateur) : toutes les collections
 //   POST /studio/collections, PATCH/DELETE /studio/collections/:id, PUT /studio/collections/:id/items
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { visibleSql } from '../../visibility.js';
 const idSchema = z.object({ id: z.string().uuid() });
 const KINDS = ['cycle', 'speaker', 'theme'];
 export const MAX_ITEMS = 100;
-import { CARD, cards, visibleItems } from '../../talkCards.js'; // fiches de conférences partagées (socle), étape M3a
+import { CARD, cards, visibleItems } from '../../talkCards.js'; // fiches de vidéos partagées (socle), étape M3a
 export { CARD, cards, visibleItems };
 
 export default async function collectionsRoutes(app) {
@@ -47,7 +47,7 @@ export default async function collectionsRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const c = (await pool.query('SELECT id, title, description, kind, published, pinned FROM collections WHERE id = $1', [id])).rows[0];
     if (!c) return reply.code(404).send({ error: 'Collection introuvable' });
-    // Côté équipe : toutes les conférences de la collection, même celles qui ne sont pas (encore) visibles du public.
+    // Côté équipe : toutes les vidéos de la collection, même celles qui ne sont pas (encore) visibles du public.
     const { rows } = await pool.query(
       `SELECT ${CARD}, ${visibleSql('t')} AS visible FROM collection_items i JOIN talks t ON t.id = i.talk_id LEFT JOIN category_names c ON c.id = t.category_id
         WHERE i.collection_id = $1 ORDER BY i.position`, [id]);
@@ -89,7 +89,7 @@ export default async function collectionsRoutes(app) {
     return reply.code(204).send();
   });
 
-  // Remplace la liste des conférences ; l'ordre du tableau est l'ordre d'affichage.
+  // Remplace la liste des vidéos ; l'ordre du tableau est l'ordre d'affichage.
   app.put('/studio/collections/:id/items', staff, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { talkIds } = z.object({ talkIds: z.array(z.string().uuid()).max(MAX_ITEMS) }).parse(req.body ?? {});
@@ -98,7 +98,7 @@ export default async function collectionsRoutes(app) {
     if (!cur) return reply.code(404).send({ error: 'Collection introuvable' });
     if (ids.length) {
       const found = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE id = ANY($1::uuid[])', [ids])).rows[0].n;
-      if (found !== ids.length) return reply.code(400).send({ error: 'Une conférence est introuvable' });
+      if (found !== ids.length) return reply.code(400).send({ error: 'Une vidéo est introuvable' });
     }
     const c = await pool.connect();
     try {
@@ -108,7 +108,7 @@ export default async function collectionsRoutes(app) {
       await c.query('UPDATE collections SET updated_at = now() WHERE id = $1', [id]);
       await c.query('COMMIT');
     } catch (e) { await c.query('ROLLBACK'); throw e; } finally { c.release(); }
-    req.auditSummary = `Conférences de la collection « ${cur.title} » : ${ids.length}`;
+    req.auditSummary = `Vidéos de la collection « ${cur.title} » : ${ids.length}`;
     return { count: ids.length };
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 // Studio → Ma chaîne. Une personne peut avoir PLUSIEURS chaînes (sélecteur en haut) et en créer de nouvelles, même vides.
-// Sections : Identité (nom, accroche, présentation), Images, Contact et liens, Informations (pays, langue, conférence à la une), Équipe.
+// Sections : Identité (nom, accroche, présentation), Images, Contact et liens, Informations (pays, langue, vidéo à la une), Équipe.
 // Propriétaire : tout, y compris l'équipe d'éditeurs. Éditeur : la page de la chaîne seulement. Modérateur / administrateur : toutes les chaînes
 // et l'attribution du propriétaire. Une vidéo n'a jamais l'obligation d'avoir une chaîne.
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -63,7 +63,7 @@ function Channel({ c, owners, canAssign, t, call, locale, onSaved, onDeleted }) 
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { setF(init); setOwner(c.ownerId || ''); setMsg(null); }, [init, c.ownerId]);
-  // Conférences publiées de cette chaîne : candidates pour la « une ».
+  // Vidéos publiées de cette chaîne : candidates pour la « une ».
   useEffect(() => { call(`/talks?speaker=${c.slug}&limit=100`).then((r) => setTalks(r.ok ? r.data : [])); }, [c.slug, call]);
   const set = (k, v) => setF((o) => ({ ...o, [k]: v }));
   const dirty = JSON.stringify(f) !== JSON.stringify(init);

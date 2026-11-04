@@ -1,4 +1,4 @@
-// Module « Vendredi » (étape 45C) : carte de l'accueil, rangée de conférences, notification du vendredi.
+// Module « Vendredi » (étape 45C) : carte de l'accueil, rangée de vidéos, notification du vendredi.
 import routes from './routes.js';
 import { startFriday } from './lib.js';
 

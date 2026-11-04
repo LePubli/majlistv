@@ -1,5 +1,5 @@
 // Hors connexion (22b-6 bis) : licence d'un téléchargement et horloge de confiance. Logique pure (testée avec Node, tests/license.test.ts).
-// Le serveur signe (Ed25519) un petit document { compte, conférence, fichier (empreinte), date de fin }. L'application ne lit un fichier que si
+// Le serveur signe (Ed25519) un petit document { compte, vidéo, fichier (empreinte), date de fin }. L'application ne lit un fichier que si
 // la signature est valide, que c'est bien le compte connecté et que la date de fin n'est pas passée — selon l'horloge de confiance :
 // la plus tardive des heures vues (téléphone, serveur). Reculer la date du téléphone ne prolonge donc rien.
 import nacl from 'tweetnacl';

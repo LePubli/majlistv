@@ -3,6 +3,6 @@ import routes from './routes.js';
 import { quizInfo } from './routes.js';
 
 export default async function register(app, ctx) {
-  ctx.provide('talk.quiz', quizInfo); // fiche conférence et vitrine (étape M3a)
+  ctx.provide('talk.quiz', quizInfo); // fiche vidéo et vitrine (étape M3a)
   await app.register(routes);
 }

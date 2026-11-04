@@ -1,5 +1,5 @@
-// Étape 22b-6 — prépare le fichier « hors connexion » d'une conférence : FFmpeg copie (sans reconversion) la playlist HLS vers un seul fichier
-// MP4 (vidéo) ou M4A (audio), qui est gardé dans le stockage (offline/<conférence>/<version>/…) et réutilisé pour les téléchargements suivants.
+// Étape 22b-6 — prépare le fichier « hors connexion » d'une vidéo : FFmpeg copie (sans reconversion) la playlist HLS vers un seul fichier
+// MP4 (vidéo) ou M4A (audio), qui est gardé dans le stockage (offline/<vidéo>/<version>/…) et réutilisé pour les téléchargements suivants.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
@@ -112,7 +112,7 @@ export async function resetStale() {
   await pool.query(`DELETE FROM offline_files WHERE status = 'preparing'`);
 }
 
-/** Efface les fichiers préparés d'une conférence (suppression de la conférence). */
+/** Efface les fichiers préparés d'une vidéo (suppression de la vidéo). */
 export async function removeFiles(talkId) {
   const { rows } = await pool.query('SELECT object_key FROM offline_files WHERE talk_id = $1 AND object_key IS NOT NULL', [talkId]);
   for (const r of rows) await deleteObject(r.object_key).catch(() => {});

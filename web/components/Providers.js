@@ -23,10 +23,10 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   const [viewAs, setViewAs] = useState(null); // aperçu de l'éditeur : 'visitor' = voir le site comme un visiteur non connecté
   const [layoutPreview, setLayoutPreview] = useState(null); // aperçu de l'éditeur (Admin → Pages) : remplace les réglages publiés
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
-  const [formats, setFormats] = useState([]); // liste des formats (conférence, cours…) : nom selon la langue, pour les badges et le catalogue
+  const [formats, setFormats] = useState([]); // liste des formats (vidéo, cours…) : nom selon la langue, pour les badges et le catalogue
   const [cats, setCats] = useState([]); // catégories principales (menu latéral et tiroir du téléphone)
-  const [favs, setFavs] = useState(() => new Set()); // identifiants des conférences en favoris (vignettes)
-  const [later, setLater] = useState(() => new Set()); // amélioration 2.5 : conférences gardées « pour plus tard »
+  const [favs, setFavs] = useState(() => new Set()); // identifiants des vidéos en favoris (vignettes)
+  const [later, setLater] = useState(() => new Set()); // amélioration 2.5 : vidéos gardées « pour plus tard »
   const [blockEdits, setBlockEdits] = useState({}); // mode édition sur la page : blocs modifiés (id → bloc), vus tout de suite par l'administrateur
   const [textPatch, setTextPatch] = useState({});   // mode édition sur la page : textes modifiés (clé → texte), pour la langue courante
   const t = (key) => textPatch[key] || dict[key] || key;

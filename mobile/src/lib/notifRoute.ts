@@ -14,7 +14,7 @@ export function routeForPath(path: unknown): string {
   if (seg[0] === 'intervenants' && safe(seg[1])) return `/speaker/${safe(seg[1])}`;
   if (seg[0] === 'ramadan' && !seg[1]) return '/ramadan'; // rappel du circuit (étape M4)
   if (seg[0] === 'kids' && !seg[1]) return '/kids'; // un enfant attend une validation (étape M4)
-  if (seg[0] === 'learning' && /[?&]tab=athkar\b/.test(p)) return '/athkar'; // rappel des athkar (étape M3)
+  if (seg[0] === 'learning' && /[?&]tab=athkar\b/.test(p)) return '/athkar'; // rappel des adhkar (étape M3)
   // Apprendre (étape M5) : la section demandée (?tab=rev, cards, bilan…) est gardée si elle est connue.
   if (seg[0] === 'learning') {
     const tab = /[?&]tab=([a-z]{2,8})\b/.exec(p)?.[1];

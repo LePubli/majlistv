@@ -1,7 +1,7 @@
 // Étape M3 — Bandeaux de l'accueil, comme sur le site :
 //  - saison en cours (Ramadan → écran du circuit de l'application depuis l'étape M4,, Hajj, Mawlid, Achoura…, étape 45) : réglée dans Admin → Saisons, affichée pendant la période et quelques jours avant ;
 //  - vendredi (étape 45C) : seulement le vendredi (heure de Paris) et si Admin → Vendredi est activé ; lien vers Al-Kahf, rappels.
-// Chacun suivi de sa rangée de conférences quand une collection est choisie. Rien ne s'affiche hors période.
+// Chacun suivi de sa rangée de vidéos quand une collection est choisie. Rien ne s'affiche hors période.
 import React, { useCallback } from 'react';
 import { Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';

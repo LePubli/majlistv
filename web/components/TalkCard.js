@@ -1,5 +1,5 @@
 'use client';
-// Vignette d'une conférence.
+// Vignette d'une vidéo.
 // - Toujours : miniature, badge, durée, barre de progression, titre, intervenant (selon les réglages du back-office).
 // - Ordinateur (souris) : si la souris reste dessus, la vignette s'agrandit (fenêtre flottante) avec boutons, infos et description ;
 //   si elle y reste encore, un court extrait muet démarre (délai et durée réglables).
@@ -12,7 +12,7 @@ import { useApp } from './Providers';
 import { langName } from './Transcript';
 import { levelLabel } from '../lib/levels';
 
-const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par conférence
+const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par vidéo
 
 export const thumbOf = (talk) => talk.posterUrl || (talk.source === 'youtube' ? `https://i.ytimg.com/vi/${talk.video_ref}/hqdefault.jpg` : talk.source === 'dailymotion' ? `https://www.dailymotion.com/thumbnail/video/${talk.video_ref}` : null);
 const minutesOf = (talk, t) => (talk.durationSeconds > 0 ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : '');

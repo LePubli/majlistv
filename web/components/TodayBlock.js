@@ -1,5 +1,5 @@
 'use client';
-// Étape B1 — Bloc « Aujourd'hui » : la courte liste de ce que le membre peut faire aujourd'hui (juz du jour, athkar du moment,
+// Étape B1 — Bloc « Aujourd'hui » : la courte liste de ce que le membre peut faire aujourd'hui (juz du jour, adhkar du moment,
 // action de Ramadan, cartes et révisions). Chaque ligne mène directement à l'action ; les lignes faites passent en bas, cochées.
 // Rien ne s'affiche pour un visiteur ni quand il n'y a aucune ligne. Données : GET /me/today (chaque module ajoute ses lignes).
 import { useEffect, useState } from 'react';
@@ -19,7 +19,7 @@ export function todayLabel(it, t) {
   }
 }
 
-// Petit compteur à droite : « 3 / 8 » (athkar, Ramadan) ou « 12 » (cartes, révisions).
+// Petit compteur à droite : « 3 / 8 » (adhkar, Ramadan) ou « 12 » (cartes, révisions).
 const countOf = (it) => (it.total ? `${it.n} / ${it.total}` : it.n > 0 ? String(it.n) : '');
 
 export default function TodayBlock({ compact = false }) {

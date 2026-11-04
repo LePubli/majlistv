@@ -16,7 +16,7 @@ const progressSchema = z.object({
   audioLang: z.enum(['orig', 'fr']).default('orig'),
 });
 
-// Une conférence est "terminée" quand il reste moins de 5 % (ou 30 s) à lire.
+// Une vidéo est "terminée" quand il reste moins de 5 % (ou 30 s) à lire.
 const isCompleted = (pos, dur) => dur > 0 && pos >= Math.min(dur * 0.95, dur - 30_000);
 // En dessous de ce seuil, ce n'est pas une vraie reprise (évite "Reprendre à 0:02").
 const MIN_RESUME_MS = 5000;
@@ -40,12 +40,12 @@ export default async function libraryRoutes(app) {
   // Favoris : module « favorites » (api/src/modules/favorites), étape M2.
 
   // --- Reprise de lecture ---
-  // Enregistre la position (appelé toutes les ~10 s pendant la lecture). Ignoré si la conférence n'existe plus.
+  // Enregistre la position (appelé toutes les ~10 s pendant la lecture). Ignoré si la vidéo n'existe plus.
   app.put('/me/progress/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { positionMs, durationMs, audioLang } = progressSchema.parse(req.body);
     const talk = await pool.query('SELECT duration_seconds, speaker FROM talks WHERE id = $1', [id]);
-    if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk.rowCount) return reply.code(404).send({ error: 'Vidéo introuvable' });
     // La durée connue du serveur fait foi (le navigateur peut envoyer 0 pendant le chargement).
     const dur = durationMs || Math.round((talk.rows[0].duration_seconds || 0) * 1000);
     const pos = dur ? Math.min(positionMs, dur) : positionMs;
@@ -68,7 +68,7 @@ export default async function libraryRoutes(app) {
     return reply.code(204).send();
   });
 
-  // "Continuer à regarder" : conférences commencées et non terminées, la plus récente d'abord.
+  // "Continuer à regarder" : vidéos commencées et non terminées, la plus récente d'abord.
   // Les épisodes de série portent leur place (`series`), et l'épisode qui suit un épisode terminé est proposé (`nextUp`).
   app.get('/me/continue', auth, async (req) => {
     const { rows } = await pool.query(
@@ -94,7 +94,7 @@ export default async function libraryRoutes(app) {
     return cards(rows);
   });
 
-  // « Quiz à rattraper » : conférences terminées dont le quiz n'est pas encore validé (jamais tenté : « à passer », tenté sans réussite : « à revoir »).
+  // « Quiz à rattraper » : vidéos terminées dont le quiz n'est pas encore validé (jamais tenté : « à passer », tenté sans réussite : « à revoir »).
   app.get('/me/quiz/todo', auth, async (req) => {
     const enabledByDefault = isOn(await getSetting('quiz_default_enabled'));
     const min = await getNumber('quiz_min_questions');
@@ -118,7 +118,7 @@ export default async function libraryRoutes(app) {
     return cards(rows);
   });
 
-  // « À réviser aujourd'hui » (palier Apprentissage) : conférences à échéance, rappel du jour, préférences d'e-mail.
+  // « À réviser aujourd'hui » (palier Apprentissage) : vidéos à échéance, rappel du jour, préférences d'e-mail.
   app.get('/me/revision', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return reply.code(403).send({ error: "Cette fonction fait partie de l'offre Mejliss Apprentissage", code: 'learning_required' });
     const { items, total } = await dueTalks(req.user.sub);

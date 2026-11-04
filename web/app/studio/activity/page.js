@@ -1,7 +1,7 @@
 'use client';
 // Studio → Activité — étape S3 : toutes les tâches de fond (conversion vidéo, transcription, traduction des sous-titres,
 // doublage, archivage) dans l'ordre où les services vont les prendre, avec pause / reprise, priorité, pause générale des
-// tâches lourdes et plage horaire. L'administrateur agit ; un organisateur voit les tâches de ses conférences.
+// tâches lourdes et plage horaire. L'administrateur agit ; un organisateur voit les tâches de ses vidéos.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';

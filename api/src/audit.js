@@ -5,7 +5,7 @@
 import { pool } from './db.js';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-// Routes éditoriales : seules les actions de l'administrateur y sont journalisées (une conférence d'un autre, une série, un import…).
+// Routes éditoriales : seules les actions de l'administrateur y sont journalisées (une vidéo d'un autre, une série, un import…).
 const EDITORIAL = ['/talks', '/series', '/categories', '/studio', '/imports', '/uploads', '/books'];
 // …hors gestes de simple spectateur.
 const VIEWER = [/^\/talks\/:id\/notes/, /^\/talks\/:id\/practice\/commitments/, /^\/talks\/:id\/report/, /^\/books\/:id\/download-link/,

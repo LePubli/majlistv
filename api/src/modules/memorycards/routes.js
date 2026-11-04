@@ -2,7 +2,7 @@
 //   GET  /me/cards               compteurs + séance du jour (cartes à échéance puis nouvelles, dans la limite du jour)
 //   GET  /me/cards?free=1        séance libre : cartes déjà vues, même non échues (n'avance pas le calendrier)
 //   POST /me/cards/:qid/answer   { known: boolean } → nouvel état de la carte
-// Une carte = une question de quiz VALIDÉE (jamais de texte généré en plus). Une carte n'est proposée que pour les conférences dont le membre a déjà passé le quiz.
+// Une carte = une question de quiz VALIDÉE (jamais de texte généré en plus). Une carte n'est proposée que pour les vidéos dont le membre a déjà passé le quiz.
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { hasLearningTier } from '../../access.js';
@@ -18,7 +18,7 @@ export default async function memoryCardsRoutes(app) {
   const auth = { preHandler: app.authenticate };
   const required = (reply) => reply.code(403).send({ error: "Cette fonction fait partie de l'offre Mejliss Apprentissage", code: 'learning_required' });
 
-  // Questions validées des conférences visibles dont le membre a passé le quiz.
+  // Questions validées des vidéos visibles dont le membre a passé le quiz.
   const POOL = `FROM quiz_questions q JOIN talks t ON t.id = q.talk_id
                  WHERE q.status = 'approved' AND t.video_status = 'ready' AND ${visibleSql('t')}
                    AND EXISTS (SELECT 1 FROM quiz_attempts a WHERE a.talk_id = q.talk_id AND a.user_id = $1)`;

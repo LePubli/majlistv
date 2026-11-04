@@ -1,4 +1,4 @@
-// Étape 41 — règles pures de l'assistant de conférence. Lancer : node api/tests/test_ask_lib.mjs
+// Étape 41 — règles pures de l'assistant de vidéo. Lancer : node api/tests/test_ask_lib.mjs
 import assert from 'node:assert/strict';
 import { terms, buildPassages, selectPassages, buildPrompt, validateAnswer, REFUSALS, clockOf, lang } from '../src/askLib.js';
 
@@ -47,7 +47,7 @@ v = validateAnswer({ status: 'religious_ruling', answer: 'C’est halal.', passa
 ok(v.status === 'religious_ruling' && v.answer === REFUSALS.religious_ruling.en && v.sources.length === 0, 'avis religieux : texte fixe, ce que l’IA a écrit est jeté');
 v = validateAnswer({ status: 'off_topic', answer: 'x', passages: [] }, P, 'ar');
 ok(v.answer === REFUSALS.off_topic.ar, 'hors sujet : texte fixe en arabe');
-ok(validateAnswer(null, P, 'fr').status === 'not_in_talk' && validateAnswer({ status: 'n’importe quoi' }, P, 'fr').status === 'not_in_talk', 'réponse mal formée → « pas dans la conférence »');
+ok(validateAnswer(null, P, 'fr').status === 'not_in_talk' && validateAnswer({ status: 'n’importe quoi' }, P, 'fr').status === 'not_in_talk', 'réponse mal formée → « pas dans la vidéo »');
 ok(validateAnswer({ status: 'answered', answer: 'a'.repeat(5000), passages: [1] }, P, 'fr').answer.length === 1500, 'réponse trop longue tronquée');
 ok(['fr', 'en', 'ar'].every((l) => ['not_in_talk', 'off_topic', 'religious_ruling'].every((k) => REFUSALS[k][l].length > 20)), 'refus fournis dans les 3 langues');
 ok(clockOf(3725000) === '1:02:05' && clockOf(65000) === '01:05', 'minute lisible');

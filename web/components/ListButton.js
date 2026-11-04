@@ -1,5 +1,5 @@
 'use client';
-// Étape 19 — « Ajouter à une liste » sur la page d'une conférence (membres connectés).
+// Étape 19 — « Ajouter à une liste » sur la page d'une vidéo (membres connectés).
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 

@@ -1,4 +1,4 @@
-// Bannière du haut de l'accueil : conférences mises en avant (défilement automatique), bannière personnalisée, ou simple titre.
+// Bannière du haut de l'accueil : vidéos mises en avant (défilement automatique), bannière personnalisée, ou simple titre.
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, FlatList, Linking, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';

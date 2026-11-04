@@ -64,7 +64,7 @@ async function ensureIndex(c) {
   state.configuredFor = id;
 }
 
-// Signature du contenu indexable : si elle change, la conférence est réindexée.
+// Signature du contenu indexable : si elle change, la vidéo est réindexée.
 const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t.access, t.category_id, c.name, t.show_adults, array_to_string(${categoryIdsSql('t')}, ','),
   length(coalesce(t.transcript_text, '')), extract(epoch FROM t.transcript_edited_at)::bigint,
   (SELECT count(*) FROM transcript_segments s WHERE s.talk_id = t.id),
@@ -84,7 +84,7 @@ async function buildDocs(ids) {
   return rows.map((r) => ({ ...r, createdAt: Number(r.createdAt) }));
 }
 
-// Un passage de synchronisation : ajoute/actualise les conférences prêtes, retire les autres et les supprimées.
+// Un passage de synchronisation : ajoute/actualise les vidéos prêtes, retire les autres et les supprimées.
 export async function syncOnce(log) {
   const c = await meiliConf();
   if (!c) { state.lastError = null; return { enabled: false }; }
@@ -116,7 +116,7 @@ export async function syncOnce(log) {
       removed += gone.length;
     }
   }
-  // Conférences supprimées de la base : à retirer de l'index.
+  // Vidéos supprimées de la base : à retirer de l'index.
   const orphans = (await pool.query(
     'SELECT talk_id FROM search_state s WHERE NOT EXISTS (SELECT 1 FROM talks t WHERE t.id = s.talk_id) LIMIT 500'
   )).rows.map((r) => r.talk_id);
@@ -125,7 +125,7 @@ export async function syncOnce(log) {
     await pool.query('DELETE FROM search_state WHERE talk_id = ANY($1)', [orphans]);
     removed += orphans.length;
   }
-  if (indexed || removed) log.info(`Recherche : ${indexed} conférence(s) indexée(s), ${removed} retirée(s)`);
+  if (indexed || removed) log.info(`Recherche : ${indexed} vidéo(s) indexée(s), ${removed} retirée(s)`);
   state.lastError = null;
   state.lastSyncAt = new Date().toISOString();
   return { enabled: true, indexed, removed };

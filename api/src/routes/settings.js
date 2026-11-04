@@ -66,7 +66,7 @@ const TESTS = {
     const v = await meili(c, 'GET', '/version', undefined, 5000);
     let docs = 0;
     try { docs = (await meili(c, 'GET', `/indexes/${INDEX}/stats`, undefined, 5000)).numberOfDocuments; } catch (err) { if (err.status !== 404) throw err; }
-    return { ok: true, message: `Meilisearch ${v.pkgVersion} joignable, clé acceptée. ${docs} conférence(s) dans l'index.` };
+    return { ok: true, message: `Meilisearch ${v.pkgVersion} joignable, clé acceptée. ${docs} vidéo(s) dans l'index.` };
   },
   async smtp(req) {
     const { rows } = await pool.query('SELECT email, name, locale FROM users WHERE id = $1', [req.user.sub]);

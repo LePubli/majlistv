@@ -93,7 +93,7 @@ function FontField({ t, value, fonts, onChange }) {
       <select aria-label={t.label} value={value} onChange={(e) => onChange(e.target.value)}>
         {families.map((x) => <option key={x} value={x}>{x}</option>)}
       </select>
-      <span className="ap-font-sample" style={{ fontFamily: stack }} dir={t.id.endsWith('Ar') ? 'rtl' : 'ltr'}>{t.id.endsWith('Ar') ? 'مجلس — أبجد هوز' : 'Des conférences qui éclairent'}</span>
+      <span className="ap-font-sample" style={{ fontFamily: stack }} dir={t.id.endsWith('Ar') ? 'rtl' : 'ltr'}>{t.id.endsWith('Ar') ? 'مجلس — أبجد هوز' : 'Des vidéos qui éclairent'}</span>
     </div>
   );
 }

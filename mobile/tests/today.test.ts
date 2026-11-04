@@ -11,13 +11,13 @@ const it = (x: Partial<TodayItem>): TodayItem => ({ kind: 'cards', order: 1, don
 test('todayLabel : une ligne par sorte, textes du site', () => {
   assert.equal(todayLabel(it({ kind: 'quranJuz', juz: 7 }), t), 'Lire le juz 7');
   assert.match(todayLabel(it({ kind: 'quranStart' }), t), /Coran/);
-  assert.equal(todayLabel(it({ kind: 'athkar', moment: 'morning' }), t), 'Athkar du matin');
-  assert.equal(todayLabel(it({ kind: 'athkar', moment: 'evening' }), t), 'Athkar du soir');
+  assert.equal(todayLabel(it({ kind: 'athkar', moment: 'morning' }), t), 'Adhkar du matin');
+  assert.equal(todayLabel(it({ kind: 'athkar', moment: 'evening' }), t), 'Adhkar du soir');
   assert.match(todayLabel(it({ kind: 'ramadan', day: 12 }), t), /12/);
   assert.match(todayLabel(it({ kind: 'ramadanBilan', year: 2027 }), t), /2027/);
   assert.equal(todayLabel(it({ kind: 'cards' }), t), 'Cartes à revoir');
   assert.equal(todayLabel(it({ kind: 'cards', done: true }), t), 'Cartes du jour revues');
-  assert.equal(todayLabel(it({ kind: 'revision' }), t), 'Conférences à réviser');
+  assert.equal(todayLabel(it({ kind: 'revision' }), t), 'Vidéos à réviser');
   assert.equal(todayLabel(it({ kind: 'inconnu' }), t), '');
 });
 

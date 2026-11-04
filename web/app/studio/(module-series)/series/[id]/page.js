@@ -1,5 +1,5 @@
 'use client';
-// Studio → fiche d'une série : informations, image, accès, saisons, épisodes (glisser-déposer ou boutons), ajout de conférences.
+// Studio → fiche d'une série : informations, image, accès, saisons, épisodes (glisser-déposer ou boutons), ajout de vidéos.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -91,7 +91,7 @@ export default function SeriesEditor() {
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
-  // Conférences que l'on peut encore ajouter (celles déjà ajoutées ici, même non enregistrées, sont masquées).
+  // Vidéos que l'on peut encore ajouter (celles déjà ajoutées ici, même non enregistrées, sont masquées).
   useEffect(() => {
     if (!addOpen) return undefined;
     const timer = setTimeout(() => call(`/studio/series-candidates?q=${encodeURIComponent(q)}`).then((r) => r.ok && setCand(r.data)), 250);

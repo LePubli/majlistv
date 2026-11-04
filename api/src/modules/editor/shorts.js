@@ -1,8 +1,8 @@
 // Module « Éditeur de montage » — étape E5b : extraits courts verticaux 9:16 (routes du Studio).
 //
-// Un extrait = un passage de la conférence choisi dans le texte (ou aux minutes), recadré en 9:16 avec un cadre qu'on place sur l'image,
+// Un extrait = un passage de la vidéo choisi dans le texte (ou aux minutes), recadré en 9:16 avec un cadre qu'on place sur l'image,
 // des sous-titres courts et un titre. C'est un projet de montage de type « short » : même file de rendu que le montage (render.js,
-// le worker fabrique le MP4 vertical), mêmes droits (l'organisateur sur ses conférences, l'administrateur sur toutes).
+// le worker fabrique le MP4 vertical), mêmes droits (l'organisateur sur ses vidéos, l'administrateur sur toutes).
 // Pas de verrou : un extrait est un petit réglage, enregistré avec un numéro de révision (409 si quelqu'un l'a modifié entre-temps).
 import { z } from 'zod';
 import { pool } from '../../db.js';
@@ -76,7 +76,7 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
     return row;
   }
 
-  // Les extraits d'une conférence (id = le montage de la conférence, comme dans l'éditeur).
+  // Les extraits d'une vidéo (id = le montage de la vidéo, comme dans l'éditeur).
   app.get('/studio/editor/projects/:id/shorts', viewer, async (req, reply) => {
     const main = await guard(req, reply); if (!main) return reply;
     const rows = (await pool.query(`${SHORT_SQL} WHERE p.talk_id = $1 AND p.kind = 'short' ORDER BY p.created_at DESC`, [main.talk_id])).rows;
@@ -88,12 +88,12 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
   // Nouvel extrait.
   app.post('/studio/editor/projects/:id/shorts', viewer, async (req, reply) => {
     const main = await guard(req, reply); if (!main) return reply;
-    if (!editable(main)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!editable(main)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     const b = z.object({ from: z.number().finite(), to: z.number().finite(), title: z.string().trim().max(90).optional(), cropX: z.number().min(0).max(100).optional() }).parse(req.body ?? {});
     const p = checkPassage(b.from, b.to, main.duration_seconds);
     if (!p.ok) return reply.code(400).send({ error: p.error, code: 'passage' });
     const n = Number((await pool.query("SELECT count(*) AS n FROM editor_projects WHERE talk_id = $1 AND kind = 'short'", [main.talk_id])).rows[0].n);
-    if (n >= MAX_SHORTS) return reply.code(409).send({ error: `${MAX_SHORTS} extraits au plus par conférence : supprimez-en un.`, code: 'too_many' });
+    if (n >= MAX_SHORTS) return reply.code(409).send({ error: `${MAX_SHORTS} extraits au plus par vidéo : supprimez-en un.`, code: 'too_many' });
     const cfg = shortDefaults({ cropX: b.cropX });
     const chk = checkTimeline(shortTimeline(p.from, p.to, main.duration_seconds, cfg), main.duration_seconds);
     if (!chk.ok) return reply.code(400).send({ error: chk.error });
@@ -105,7 +105,7 @@ export default async function shortRoutes(app, { guard, viewer, editable, mediaO
     return reply.code(201).send({ short: await shortView(row, { chunks: true }) });
   });
 
-  // Un extrait : réglages, sous-titres courts, aperçu 360p de la conférence.
+  // Un extrait : réglages, sous-titres courts, aperçu 360p de la vidéo.
   app.get('/studio/editor/shorts/:id', viewer, async (req, reply) => {
     const row = await loadShort(req, reply); if (!row) return reply;
     const media = editable(row) ? await mediaOf(row) : null;

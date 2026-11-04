@@ -1,6 +1,6 @@
-// Droits « par chaîne » : le propriétaire d'une chaîne et ses éditeurs gèrent aussi les conférences qui portent le nom de la chaîne,
-// même si une autre personne les a créées (organizer_id). Pas de colonne en plus : le lien conférence → chaîne est le nom d'intervenant
-// (speakerSlug), comme partout. La suppression d'une conférence reste réservée à son créateur et à l'administrateur.
+// Droits « par chaîne » : le propriétaire d'une chaîne et ses éditeurs gèrent aussi les vidéos qui portent le nom de la chaîne,
+// même si une autre personne les a créées (organizer_id). Pas de colonne en plus : le lien vidéo → chaîne est le nom d'intervenant
+// (speakerSlug), comme partout. La suppression d'une vidéo reste réservée à son créateur et à l'administrateur.
 import { pool } from './db.js';
 import { speakerSlug } from './speakers.js';
 
@@ -12,7 +12,7 @@ export async function myChannelSlugs(userId) {
   return new Set(rows.map((r) => r.slug));
 }
 
-// La conférence (identifiant ou ligne avec .speaker) appartient-elle à l'une de mes chaînes ?
+// La vidéo (identifiant ou ligne avec .speaker) appartient-elle à l'une de mes chaînes ?
 export async function viaChannel(user, talk) {
   if (!user?.sub) return false;
   let speaker = talk && typeof talk === 'object' ? talk.speaker : undefined;
@@ -25,7 +25,7 @@ export async function viaChannel(user, talk) {
   return !!slug && (await myChannelSlugs(user.sub)).has(slug);
 }
 
-// Noms d'intervenant (minuscules, sans espaces autour) des conférences de mes chaînes : pour filtrer en SQL
+// Noms d'intervenant (minuscules, sans espaces autour) des vidéos de mes chaînes : pour filtrer en SQL
 // `lower(trim(t.speaker)) = ANY($n::text[])`.
 export async function managedSpeakers(userId) {
   const slugs = await myChannelSlugs(userId);

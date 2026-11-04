@@ -1,5 +1,5 @@
 // Widgets Android (étape 25) : données et textes affichés, en fonctions pures (testées avec Node, aucune dépendance native).
-// Trois widgets, chacun en petit et en grand : Prière (horaires calculés sur le téléphone), Réviser (conférences à réviser aujourd'hui),
+// Trois widgets, chacun en petit et en grand : Prière (horaires calculés sur le téléphone), Réviser (vidéos à réviser aujourd'hui),
 // Citation du jour. L'affichage (widgets/ui.tsx) ne fait que dessiner ce que ce fichier prépare.
 import { buildSchedule } from '../lib/prayer/prayerLogic';
 import { fmtTime } from '../lib/prayer/prayerTimes';
@@ -9,7 +9,7 @@ type Prefs = { loc: { lat: number; lon: number; tz: string; name?: string; mode?
 
 /** Ce que l'application laisse pour le widget Prière : réglages déjà résolus (lieu, méthode…), langue, fonction active ou non. */
 export type PrayerSnap = { on: boolean; enabled: boolean; prefs: Prefs | null; locale: Locale };
-/** Dernier état connu des conférences à réviser (lu sur le serveur, gardé pour hors ligne). */
+/** Dernier état connu des vidéos à réviser (lu sur le serveur, gardé pour hors ligne). */
 export type ReviseSnap = { state: 'ok' | 'login' | 'tier' | 'error'; total: number; week: number; titles: string[]; at: number };
 export type CitationSnap = { text: string; textAr: string | null; attribution: string; day: string } | null;
 
@@ -64,7 +64,7 @@ export function reviseView(snap: ReviseSnap | null, locale: Locale): ReviseView 
   return { ...base, kind: 'ok', number: String(snap.total), label: tr(locale, 'wd.reviseDue', { n: snap.total }), titles: snap.titles.slice(0, 2), week: snap.week > 0 ? tr(locale, 'wd.reviseWeek', { n: snap.week }) : '' };
 }
 
-/** Lit la réponse de /me/revision (ou null) : conférences à réviser, titres, échéances de la semaine. Jamais d'exception. */
+/** Lit la réponse de /me/revision (ou null) : vidéos à réviser, titres, échéances de la semaine. Jamais d'exception. */
 export function parseRevision(raw: unknown, at: number): ReviseSnap {
   const r = (raw && typeof raw === 'object' ? raw : {}) as { total?: unknown; items?: unknown; upcoming?: { week?: unknown } };
   const items = Array.isArray(r.items) ? (r.items as { title?: unknown }[]) : [];

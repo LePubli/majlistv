@@ -52,7 +52,7 @@ export async function bilanOf(userId, hyear, now = nowDate()) {
   const from = `${range.start} 00:00`; const to = `${range.end} 23:59:59`;
   const juz = (await pool.query(
     `SELECT count(*)::int AS n FROM quran_plan_reads WHERE user_id = $1 AND (read_at AT TIME ZONE 'Europe/Paris') BETWEEN $2::timestamp AND $3::timestamp`, [userId, from, to]).catch(() => ({ rows: [{ n: 0 }] }))).rows[0].n;
-  const athkar = (await pool.query(
+  const adhkar = (await pool.query(
     `SELECT count(*)::int AS n FROM (
        SELECT c.day FROM athkar_counts c JOIN athkar_items i ON i.id = c.item_id
         WHERE c.user_id = $1 AND c.day BETWEEN $2::date AND $3::date AND c.count >= i.target GROUP BY c.day
@@ -64,6 +64,6 @@ export async function bilanOf(userId, hyear, now = nowDate()) {
     hyear, start: range.start, end: range.end, days: range.days, daysPassed: lastDay,
     actions: { done: marks.filter((m) => m.day <= lastDay).length, expected, fullDays },
     tarawih: { nights: tw.length, rakaat: tw.reduce((a, r) => a + (r.rakaat || 0), 0), mosque: tw.filter((r) => r.place === 'mosque').length, home: tw.filter((r) => r.place === 'home').length },
-    quranJuz: juz, athkarDays: athkar, note: text,
+    quranJuz: juz, athkarDays: adhkar, note: text,
   };
 }

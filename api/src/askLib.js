@@ -1,7 +1,7 @@
-// Étape 41 — règles pures de l'assistant « Pose une question sur cette conférence » (sans base de données ni réseau, testées à part).
+// Étape 41 — règles pures de l'assistant « Pose une question sur cette vidéo » (sans base de données ni réseau, testées à part).
 // Principe : l'IA ne voit QUE des passages de la transcription, numérotés. Elle répond en citant les numéros ; le serveur remplace
 // les numéros par le texte réel de la transcription (jamais un texte écrit par l'IA) et refuse toute réponse sans passage cité.
-// Les refus (hors sujet, pas dans la conférence, avis religieux) sont des textes FIXES écrits ici : l'IA ne les formule pas.
+// Les refus (hors sujet, pas dans la vidéo, avis religieux) sont des textes FIXES écrits ici : l'IA ne les formule pas.
 import { fold } from './fold.js';
 
 export const LANGS = ['fr', 'en', 'ar'];
@@ -103,12 +103,12 @@ Rules:
 // Textes fixes des refus.
 export const REFUSALS = {
   not_in_talk: {
-    fr: "La conférence n'aborde pas ce point : l'assistant ne répond qu'à partir de ce que dit l'intervenant. Reformulez votre question ou parcourez la transcription.",
+    fr: "La vidéo n'aborde pas ce point : l'assistant ne répond qu'à partir de ce que dit l'intervenant. Reformulez votre question ou parcourez la transcription.",
     en: "The talk does not cover this point: the assistant only answers from what the speaker says. Rephrase your question or browse the transcript.",
     ar: 'لا تتناول المحاضرة هذه النقطة: لا يجيب المساعد إلا مما يقوله المحاضر. أعد صياغة سؤالك أو تصفّح النص المكتوب.',
   },
   off_topic: {
-    fr: "Cette question ne concerne pas cette conférence. Posez une question sur ce que dit l'intervenant.",
+    fr: "Cette question ne concerne pas cette vidéo. Posez une question sur ce que dit l'intervenant.",
     en: 'This question is not about this talk. Ask about what the speaker says.',
     ar: 'هذا السؤال لا يتعلق بهذه المحاضرة. اسأل عمّا يقوله المحاضر.',
   },

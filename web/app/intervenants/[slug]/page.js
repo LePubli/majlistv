@@ -1,4 +1,4 @@
-// Page d'un intervenant (serveur) : <head>, données structurées Person, présentation et liste des conférences dans le HTML ; SpeakerClient affiche les vignettes.
+// Page d'un intervenant (serveur) : <head>, données structurées Person, présentation et liste des vidéos dans le HTML ; SpeakerClient affiche les vignettes.
 import { notFound } from 'next/navigation';
 import SpeakerClient from '../../../components/SpeakerClient';
 import { seoGet, clip, jsonLd } from '../../../lib/seo';
@@ -7,7 +7,7 @@ export async function generateMetadata({ params }) {
   const s = await seoGet(`speakers/${params.slug}`);
   if (!s) return { title: 'Intervenant', robots: { index: false, follow: false } };
   const url = `${s.site.baseUrl}/intervenants/${s.slug}`;
-  const description = clip(s.bio, 160) || `Conférences et séries de ${s.name} sur ${s.site.appName}.`;
+  const description = clip(s.bio, 160) || `Vidéos et séries de ${s.name} sur ${s.site.appName}.`;
   return {
     title: s.name, description, alternates: { canonical: url },
     openGraph: { type: 'profile', siteName: s.site.appName, title: s.name, description, url },

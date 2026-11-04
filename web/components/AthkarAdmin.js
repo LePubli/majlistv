@@ -1,5 +1,5 @@
 'use client';
-// Admin → Athkar (étape 45D) : les dhikr du compteur (formule Apprentissage). Aucun dhikr n'est fourni avec le logiciel.
+// Admin → Adhkar (étape 45D) : les dhikr du compteur (formule Apprentissage). Aucun dhikr n'est fourni avec le logiciel.
 // Chaque dhikr a une référence (source) ; il n'est montré aux membres qu'une fois VALIDÉ (relu par une personne qualifiée) et affiché.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
@@ -21,7 +21,7 @@ export default function AthkarAdmin() {
   const [chg, setChg] = useState({ category: '', target: '' });
   const load = useCallback(async () => {
     const r = await call('/admin/athkar');
-    if (r.ok) { setD(r.data); setErr(''); } else setErr(r.status === 404 ? 'Cette fonction est coupée (Admin → Fonctions → « Compteur d’athkar »).' : errOf(r, t));
+    if (r.ok) { setD(r.data); setErr(''); } else setErr(r.status === 404 ? 'Cette fonction est coupée (Admin → Fonctions → « Compteur d’adhkar »).' : errOf(r, t));
   }, [call, t]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { sel.clear(); }, [fCat, fSt, sel.clear]); // la sélection ne garde jamais des éléments masqués par un filtre
@@ -74,8 +74,8 @@ export default function AthkarAdmin() {
   const shown = d.items.filter((x) => (!fCat || x.category === fCat) && (!fSt || (fSt === 'todo' ? !x.validated : fSt === 'valid' ? x.validated && !x.enabled : x.enabled)));
   return (
     <section>
-      <h2>Athkar</h2>
-      <p className="meta">Compteur quotidien pour les membres de la formule Apprentissage (onglet « Athkar » de la page Apprendre). Aucun dhikr n’est fourni : saisissez-les avec leur <b>référence</b> (recueil, numéro, degré d’authenticité tel que donné par la source). Un dhikr n’est montré qu’une fois <b>validé</b> (relu par une personne qualifiée) et <b>affiché</b>.</p>
+      <h2>Adhkar</h2>
+      <p className="meta">Compteur quotidien pour les membres de la formule Apprentissage (onglet « Adhkar » de la page Apprendre). Aucun dhikr n’est fourni : saisissez-les avec leur <b>référence</b> (recueil, numéro, degré d’authenticité tel que donné par la source). Un dhikr n’est montré qu’une fois <b>validé</b> (relu par une personne qualifiée) et <b>affiché</b>.</p>
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       {!form && imp === null && <p><button type="button" className="btn" onClick={() => { setForm({ ...EMPTY }); setMsg(''); setErr(''); }}>Ajouter un dhikr</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(''); setMsg(''); setErr(''); }}>Importer une liste (JSON)</button>{' '}<button type="button" className="btn ghost" disabled={busy} onClick={restore}>Restaurer les dhikr fournis</button></p>}

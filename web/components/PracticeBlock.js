@@ -1,5 +1,5 @@
 'use client';
-// « Et maintenant, que faire ? » : propositions d'action tirées de la conférence. Visible par tous.
+// « Et maintenant, que faire ? » : propositions d'action tirées de la vidéo. Visible par tous.
 // Membre Apprentissage : il peut s'engager (intention, échéance) ; les autres peuvent lire et copier la proposition.
 import { forwardRef, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ const dots = (n) => '●'.repeat(n);
 const DUES = ['today', 'week', 'month'];
 
 const PracticeBlock = forwardRef(function PracticeBlock({ talkId, t, call, user, onSeek, highlight }, ref) {
-  const [d, setD] = useState(undefined); // undefined = chargement, null = pas d'écran pour cette conférence
+  const [d, setD] = useState(undefined); // undefined = chargement, null = pas d'écran pour cette vidéo
   const [pick, setPick] = useState(null); // id d'une proposition, ou 'own'
   const [own, setOwn] = useState('');
   const [niyya, setNiyya] = useState('');

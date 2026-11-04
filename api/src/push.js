@@ -75,7 +75,7 @@ const LANG = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String
 const cut = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
 const TEXTS = {
   speaker_new: {
-    fr: (v) => ({ title: v.count > 1 ? `${v.count} nouvelles conférences` : 'Nouvelle conférence', body: cut(v.titles.join(' · '), 140) + (v.speakers ? ` — ${cut(v.speakers, 60)}` : '') }),
+    fr: (v) => ({ title: v.count > 1 ? `${v.count} nouvelles vidéos` : 'Nouvelle vidéo', body: cut(v.titles.join(' · '), 140) + (v.speakers ? ` — ${cut(v.speakers, 60)}` : '') }),
     en: (v) => ({ title: v.count > 1 ? `${v.count} new talks` : 'New talk', body: cut(v.titles.join(' · '), 140) + (v.speakers ? ` — ${cut(v.speakers, 60)}` : '') }),
     ar: (v) => ({ title: v.count > 1 ? `${v.count} محاضرات جديدة` : 'محاضرة جديدة', body: cut(v.titles.join(' · '), 140) + (v.speakers ? ` — ${cut(v.speakers, 60)}` : '') }),
   },
@@ -95,8 +95,8 @@ const TEXTS = {
     ar: (v) => ({ title: 'الجمعة', body: cut(v.b.ar, 140) }),
   },
   athkar: { // rappel quotidien du compteur d'athkar
-    fr: (v) => ({ title: 'Athkar', body: `Vos athkar du jour vous attendent (${v.done}/${v.goal}).` }),
-    en: (v) => ({ title: 'Athkar', body: `Your daily athkar are waiting (${v.done}/${v.goal}).` }),
+    fr: (v) => ({ title: 'Adhkar', body: `Vos adhkar du jour vous attendent (${v.done}/${v.goal}).` }),
+    en: (v) => ({ title: 'Adhkar', body: `Your daily adhkar are waiting (${v.done}/${v.goal}).` }),
     ar: (v) => ({ title: 'الأذكار', body: `أذكارك اليومية بانتظارك (${v.done}/${v.goal}).` }),
   },
   quranplan: { // lecture du Coran en 30 jours : juz du jour
@@ -115,7 +115,7 @@ const TEXTS = {
     ar: (v) => ({ title: 'مجلس كيدز', body: v.count > 1 ? `${v.count} أعمال لـ${v.names} بانتظار تأكيدك.` : `${v.names} بانتظار تأكيدك.` }),
   },
   revision_daily: {
-    fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} conférences à réviser` : '1 conférence à réviser' }),
+    fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} vidéos à réviser` : '1 vidéo à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),
     ar: (v) => ({ title: 'للمراجعة اليوم', body: v.count > 1 ? `${v.count} محاضرات للمراجعة` : 'محاضرة واحدة للمراجعة' }),
   },

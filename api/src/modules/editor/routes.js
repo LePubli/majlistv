@@ -1,6 +1,6 @@
 // Module « Éditeur de montage » — routes du Studio (étape E1) : projets, sauvegarde automatique, versions, verrou.
 //
-// Droits : l'organisateur sur ses conférences, l'administrateur sur toutes (le modérateur n'a pas accès à l'éditeur).
+// Droits : l'organisateur sur ses vidéos, l'administrateur sur toutes (le modérateur n'a pas accès à l'éditeur).
 // Seules les vidéos ENVOYÉES et converties se montent (YouTube, Vimeo et archive.org ne sont pas hébergées chez nous).
 //
 // Verrou : une seule personne, dans un seul onglet (« séance »), modifie un projet. Le site renouvelle le verrou toutes les
@@ -57,7 +57,7 @@ const AUTO_KEEP = 30;
 const idSchema = z.object({ id: z.string().uuid() });
 const session = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, 'Séance invalide');
 
-// Conférence + projet, avec l'état du verrou calculé par la base (même horloge pour tout le monde).
+// Vidéo + projet, avec l'état du verrou calculé par la base (même horloge pour tout le monde).
 const PROJECT_SQL = `
   SELECT p.*, t.organizer_id, t.title AS talk_title, t.speaker, t.duration_seconds, t.source, t.video_status, t.poster_key, t.external_thumb,
          COALESCE(t.transcript_language, t.language) AS lang,
@@ -122,7 +122,7 @@ async function projectView(row, user, sess) {
   };
 }
 
-// Sous-titres de la conférence (français si possible) : { lang, cues: [{ s, e, text }] } en temps source.
+// Sous-titres de la vidéo (français si possible) : { lang, cues: [{ s, e, text }] } en temps source.
 async function cuesOf(row) {
   const langs = (await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1', [row.talk_id])).rows.map((r) => r.lang);
   const lang = langs.includes('fr') ? 'fr' : langs.find((l) => String(row.lang || '').startsWith(l)) || langs[0] || null;
@@ -132,7 +132,7 @@ async function cuesOf(row) {
   return { lang, cues };
 }
 
-// Chaîne de la conférence (étape C : speakers) : nom, adresse stable, image de la chaîne (avatar) servant de logo par défaut.
+// Chaîne de la vidéo (étape C : speakers) : nom, adresse stable, image de la chaîne (avatar) servant de logo par défaut.
 async function channelOf(row) {
   const slug = speakerSlug(row.speaker);
   if (!slug) return null;
@@ -172,7 +172,7 @@ export default async function routes(app) {
     return row;
   }
 
-  // Liste : mes projets (tous pour l'administrateur) et les conférences qu'on peut monter.
+  // Liste : mes projets (tous pour l'administrateur) et les vidéos qu'on peut monter.
   app.get('/studio/editor/projects', viewer, async (req) => {
     const admin = req.user.role === 'admin';
     const { rows } = await pool.query(`${PROJECT_SQL} WHERE p.kind = 'main' AND ($1::uuid IS NULL OR t.organizer_id = $1) ORDER BY p.updated_at DESC LIMIT 300`, [admin ? null : req.user.sub]);
@@ -197,11 +197,11 @@ export default async function routes(app) {
     return { projects, talks: out, lockTtl: LOCK_TTL_S };
   });
 
-  // Nouveau montage d'une conférence (ou le montage existant s'il y en a déjà un).
+  // Nouveau montage d'une vidéo (ou le montage existant s'il y en a déjà un).
   app.post('/studio/editor/projects', viewer, async (req, reply) => {
     const { talkId } = z.object({ talkId: z.string().uuid() }).parse(req.body ?? {});
     const t = (await pool.query('SELECT id, organizer_id, title, source, video_status, duration_seconds FROM talks WHERE id = $1', [talkId])).rows[0];
-    if (!t || !canSee(req.user, t)) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t || !canSee(req.user, t)) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const existing = (await pool.query("SELECT id FROM editor_projects WHERE talk_id = $1 AND kind = 'main'", [talkId])).rows[0];
     if (existing) return reply.code(200).send({ id: existing.id, created: false });
     if (!editable(t)) {
@@ -226,7 +226,7 @@ export default async function routes(app) {
   app.post('/studio/editor/projects/:id/lock', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const { session: sess } = z.object({ session }).parse(req.body ?? {});
-    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     const r = await pool.query(
       `UPDATE editor_projects SET lock_user = $2, lock_session = $3,
               lock_since = CASE WHEN lock_user = $2 AND lock_session = $3 AND lock_until > now() THEN lock_since ELSE now() END,
@@ -363,7 +363,7 @@ export default async function routes(app) {
   app.post('/studio/editor/projects/:id/denoise-sample', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const { at, level } = z.object({ at: z.number().min(0), level: z.enum(DENOISE) }).parse(req.body ?? {});
-    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
     if (sampling >= 2) return reply.code(429).send({ error: 'Un extrait est déjà en préparation : réessayez dans quelques secondes.' });
     sampling += 1;
@@ -521,7 +521,7 @@ export default async function routes(app) {
     if (!row || !canSee(req.user, row)) return reply.code(404).send({ error: 'Projet introuvable' });
     if (b.scope === 'all' && req.user.role !== 'admin') return reply.code(403).send({ error: 'Seul un administrateur crée un modèle pour toutes les chaînes.' });
     const slug = b.scope === 'all' ? null : speakerSlug(row.speaker);
-    if (b.scope === 'channel' && !slug) return reply.code(400).send({ error: 'Cette conférence n’a pas de chaîne (nom d’intervenant vide).', code: 'no_channel' });
+    if (b.scope === 'channel' && !slug) return reply.code(400).send({ error: 'Cette vidéo n’a pas de chaîne (nom d’intervenant vide).', code: 'no_channel' });
     const chk = checkDress(b.dress, { logos: await knownLogos(logoAssets({ dress: b.dress })) });
     if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
     try {
@@ -548,7 +548,7 @@ export default async function routes(app) {
   app.post('/studio/editor/projects/:id/frame', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const b = z.object({ timeline: z.unknown(), at: z.union([z.number().min(0), z.enum(['intro', 'outro'])]) }).parse(req.body ?? {});
-    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
     const chk = checkTimeline(b.timeline, row.duration_seconds, { logos: await knownLogos(logoAssets(b.timeline)) });
     if (!chk.ok) return reply.code(400).send({ error: chk.error, code: 'invalid' });
@@ -568,13 +568,13 @@ export default async function routes(app) {
     } catch (err) { app.log.warn(`Éditeur : image finale impossible : ${err.message}`); return reply.code(502).send({ error: err.message }); } finally { framing -= 1; }
   });
 
-  // Supprimer un projet (le montage seulement : la conférence et sa vidéo ne changent pas).
+  // Supprimer un projet (le montage seulement : la vidéo et sa vidéo ne changent pas).
   app.delete('/studio/editor/projects/:id', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const sess = typeof req.query.session === 'string' ? req.query.session : null;
     const v = lockView(row, req.user, sess);
     if (v.active && !v.mine) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked' });
-    // Étape E5b : les extraits courts de la conférence partent avec son montage (ils se gèrent depuis lui).
+    // Étape E5b : les extraits courts de la vidéo partent avec son montage (ils se gèrent depuis lui).
     const shorts = row.kind === 'main' ? (await pool.query("SELECT id FROM editor_projects WHERE talk_id = $1 AND kind = 'short'", [row.talk_id])).rows : [];
     await pool.query('DELETE FROM editor_projects WHERE id = $1', [row.id]);
     await deleteProjectRenders(row.id); // étape E4a : fichiers des rendus du projet

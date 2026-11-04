@@ -1,6 +1,6 @@
 'use client';
 // Studio → une proposition d'action : lecture (taille, passage cité, référence) et édition.
-// Sert à l'onglet « Mise en pratique » d'une conférence et à la file de relecture.
+// Sert à l'onglet « Mise en pratique » d'une vidéo et à la file de relecture.
 import { useState } from 'react';
 import { clock, parseClock } from '../lib/clock';
 

@@ -1,9 +1,9 @@
 // Marque-pages et notes personnelles (étape 17b). Strictement privés : chaque requête est filtrée par l'utilisateur connecté.
-//   GET    /talks/:id/notes      notes de l'utilisateur sur cette conférence (par ordre de position)
+//   GET    /talks/:id/notes      notes de l'utilisateur sur cette vidéo (par ordre de position)
 //   POST   /talks/:id/notes      { positionMs, body? }  crée un marque-page (body vide) ou une note
 //   PATCH  /me/notes/:id         { body }                modifie le texte
 //   DELETE /me/notes/:id         supprime
-//   GET    /me/notes             toutes les notes, regroupées par conférence (Ma bibliothèque)
+//   GET    /me/notes             toutes les notes, regroupées par vidéo (Ma bibliothèque)
 import { z } from 'zod';
 import { pool } from '../../db.js';
 
@@ -28,9 +28,9 @@ export default async function notesRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const data = createSchema.parse(req.body);
     const talk = await pool.query('SELECT 1 FROM talks WHERE id = $1', [id]);
-    if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk.rowCount) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const n = (await pool.query('SELECT count(*)::int AS n FROM talk_notes WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id])).rows[0].n;
-    if (n >= MAX_PER_TALK) return reply.code(409).send({ error: `Limite de ${MAX_PER_TALK} notes par conférence atteinte` });
+    if (n >= MAX_PER_TALK) return reply.code(409).send({ error: `Limite de ${MAX_PER_TALK} notes par vidéo atteinte` });
     // Même seconde, déjà un marque-page vide : on le réutilise au lieu d'en empiler.
     if (!data.body) {
       const dup = await pool.query(`SELECT ${FIELDS} FROM talk_notes WHERE user_id = $1 AND talk_id = $2 AND body = '' AND abs(position_ms - $3) < 1500 LIMIT 1`, [req.user.sub, id, data.positionMs]);
@@ -55,7 +55,7 @@ export default async function notesRoutes(app) {
     return r.rowCount ? reply.code(204).send() : reply.code(404).send({ error: 'Note introuvable' });
   });
 
-  // Ma bibliothèque : conférences avec leurs notes (les plus récemment modifiées d'abord).
+  // Ma bibliothèque : vidéos avec leurs notes (les plus récemment modifiées d'abord).
   app.get('/me/notes', auth, async (req) => {
     const { rows } = await pool.query(
       `SELECT n.id, n.talk_id AS "talkId", n.position_ms AS "positionMs", n.body, n.updated_at AS "updatedAt", t.title, t.slug

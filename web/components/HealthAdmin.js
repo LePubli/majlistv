@@ -58,7 +58,7 @@ function BackupCard({ b, ago }) {
           {b.reasons.length > 0 && <ul className="health-lines">{b.reasons.map((r) => <li key={r}><strong className="health-warn-text">{r}</strong></li>)}</ul>}
           <ul className="health-lines">
             <li>Dernière sauvegarde : {bk ? `${ago(bk.at)} · ${bk.ok ? 'réussie' : 'ÉCHEC'}` : 'aucun rapport'}{det.snapshots != null ? ` · ${det.snapshots} sauvegardes conservées hors du VPS` : ''}{det.garageOk === true ? ' · vidéos incluses' : ''}</li>
-            <li>Dernier test de restauration : {rt ? `${ago(rt.at)} · ${rt.ok ? 'réussi' : 'ÉCHEC'}` : 'aucun rapport'}{rdet.restoreTalks != null ? ` · ${rdet.restoreTalks} conférences et ${rdet.restoreUsers ?? '?'} comptes retrouvés` : ''}</li>
+            <li>Dernier test de restauration : {rt ? `${ago(rt.at)} · ${rt.ok ? 'réussi' : 'ÉCHEC'}` : 'aucun rapport'}{rdet.restoreTalks != null ? ` · ${rdet.restoreTalks} vidéos et ${rdet.restoreUsers ?? '?'} comptes retrouvés` : ''}</li>
             {rdet.repoBytes != null && <li>Taille de la copie hors VPS : {size(rdet.repoBytes)}</li>}
           </ul>
           <details>

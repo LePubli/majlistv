@@ -59,7 +59,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const dubLangRef = useRef('orig');
   dubLangRef.current = dubLang;
   const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
-  const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette conférence
+  const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette vidéo
   const [bmFlash, setBmFlash] = useState(false);
   const [tab, setTab] = useState('summary');        // onglet affiché sous le lecteur : le Résumé d'abord (demande d'Epok du 20/10), sinon le premier disponible
   const [cinema, setCinema] = useState(false); // mode cinéma : lecteur pleine largeur, menus masqués (Échap pour sortir)
@@ -85,7 +85,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const jumpMs = Number.isFinite(tParam) && tParam > 0 ? Math.floor(tParam * 1000) : 0;
   const videoRef = useRef(null);
 
-  // Changement de conférence (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
+  // Changement de vidéo (ex. épisode suivant) : tout repart de zéro, y compris la position de reprise.
   useEffect(() => { setTalk(undefined); setResumeMs(0); setPreviewEnded(false); setUpNext(null); setCtx(null); setQuizOpen(false); setQuizOffer(false); setPracticeOffer(false); setPracticeOpen(false); setQres(getResult(id)); setPending(getPending(id)); setPendingHidden(false); startMs.current = 0; }, [id]);
 
   // Rechargé quand la session change : un propriétaire/admin obtient le lien des vidéos premium.
@@ -150,7 +150,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   // archive.org : fichier vidéo lu avec le lecteur Mejliss TV (pas de lecteur ni de publicité de la plateforme).
   const embed = Boolean(talk && ['youtube', 'vimeo', 'dailymotion'].includes(talk.source));
   const trackable = Boolean(user && talk && (talk.hlsPath || external) && !talk.locked);
-  // Statistiques d'audience anonymes : ouverture, lecture, temps regardé, quartiles, fin (l'aperçu d'une conférence premium ne compte que comme ouverture).
+  // Statistiques d'audience anonymes : ouverture, lecture, temps regardé, quartiles, fin (l'aperçu d'une vidéo premium ne compte que comme ouverture).
   useTalkStats({ videoRef, talkId: id, call, active: Boolean(talk && talk.id), playing: Boolean(talk && !talk.locked && (talk.hlsPath || external)), statsOn });
   const startMs = useRef(0);
   useEffect(() => { if (jumpMs) startMs.current = jumpMs; else if (resumeMs && !startMs.current) startMs.current = resumeMs; }, [resumeMs, jumpMs]);
@@ -193,7 +193,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     };
   }, [trackable, id, call]);
 
-  // Fin de lecture : si la conférence a un quiz pas encore réussi, on le propose d'abord ; sinon (ou « Plus tard »),
+  // Fin de lecture : si la vidéo a un quiz pas encore réussi, on le propose d'abord ; sinon (ou « Plus tard »),
   // dans une série, compte à rebours de 8 s avant l'épisode suivant (annulable).
   const next = ctx && ctx.next;
   const canChain = Boolean(next && talk && !talk.locked && (talk.hlsPath || external));
@@ -366,7 +366,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const transcribing = hasPlayer && !talk.locked && !tracks.length && ['pending', 'processing'].includes(talk.transcriptStatus);
   const hasInsights = hasPlayer && Boolean(talk.playbackToken);
 
-  // Partage : lien vers la conférence, à la minute en cours si la lecture est avancée.
+  // Partage : lien vers la vidéo, à la minute en cours si la lecture est avancée.
   const share = async () => {
     const sec = Math.floor(videoRef.current?.currentTime || 0);
     const url = `${window.location.origin}/talks/${id}${sec > 5 ? `?t=${sec}` : ''}`;
@@ -405,7 +405,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   ].filter(([, v]) => v);
 
   // Fiche vidéo, proposition B (validée par Epok le 20/10) : lecteur sur un bandeau sombre, barre d'actions en icônes,
-  // carte « Apprendre avec cette conférence » (comprendre, retenir, agir), onglets réduits, « À suivre » en rangée de vignettes.
+  // carte « Apprendre avec cette vidéo » (comprendre, retenir, agir), onglets réduits, « À suivre » en rangée de vignettes.
   const learnOn = quizOn || practiceOn;
   const notesOn = feat('notes') && user && hasPlayer && !talk.locked;
   const revisionOn = Boolean(user && feat('revision'));

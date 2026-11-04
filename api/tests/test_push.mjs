@@ -64,7 +64,7 @@ ok((await push.pushToUser(uFr, 'revision_daily', { count: 2 }, '/learning')) ===
 // 3. Avec clé : envoi, textes, jeton signé
 await set('fcm_service_account', JSON.stringify(sa));
 ok((await push.pushToUser(uFr, 'revision_daily', { count: 2 }, '/learning')) === 1, 'un appareil atteint');
-ok(sent.at(-1).notification.title === 'À réviser aujourd’hui' && sent.at(-1).notification.body === '2 conférences à réviser', 'texte français');
+ok(sent.at(-1).notification.title === 'À réviser aujourd’hui' && sent.at(-1).notification.body === '2 vidéos à réviser', 'texte français');
 ok(sent.at(-1).data.path === '/learning' && sent.at(-1).data.kind === 'revision_daily' && sent.at(-1).android.notification.channel_id === 'news', 'chemin, type et canal Android');
 ok(jwtOk && tokenCalls === 1, 'jeton OAuth demandé avec une signature RS256 valide');
 await push.pushToUser(uEn, 'revision_daily', { count: 1 }, '/learning'); await push.pushToUser(uAr, 'weekly_selection', { titles: ['أ', 'ب'] }, '/');
@@ -85,7 +85,7 @@ await pool.query("DELETE FROM app_settings WHERE key IN ('smtp_host','mail_from'
 await set('notify_speakers_enabled', 'true');
 const admin = (await pool.query("SELECT id FROM users WHERE email='admin@test.local'")).rows[0].id;
 const S1 = `Cheikh Push ${tag}`;
-await runSpeakers(console); // vide les conférences déjà en attente d'autres tests
+await runSpeakers(console); // vide les vidéos déjà en attente d'autres tests
 await pool.query('INSERT INTO speaker_follows(user_id,speaker_slug,speaker_name) VALUES ($1,$2,$3),($4,$2,$3)', [uFr, speakerSlug(S1), S1, uOff]);
 const tk = async (title) => (await pool.query(
   "INSERT INTO talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,show_adults) VALUES ($1,'d',$2,'youtube',$3,$4,'published','ready','free',600,true) RETURNING id, slug",
@@ -96,8 +96,8 @@ const n = await runSpeakers(console);
 ok(n === 2, 'alerte préparée pour les 2 abonnés (même sans e-mail configuré)');
 const mine = sent.slice(before);
 ok(mine.length === 1 && mine[0].token.startsWith('OKFR'), 'téléphone du membre atteint ; celui dont l’interrupteur est coupé : rien');
-ok(mine[0].notification.title === 'Nouvelle conférence' && mine[0].notification.body.includes(`Patience ${tag}`) && mine[0].data.path === `/conferences/${t1.id}`, 'titre, intervenant et lien vers la conférence');
-ok((await pool.query('SELECT announced_at FROM talks WHERE id=$1', [t1.id])).rows[0].announced_at !== null, 'conférence marquée « annoncée »');
+ok(mine[0].notification.title === 'Nouvelle vidéo' && mine[0].notification.body.includes(`Patience ${tag}`) && mine[0].data.path === `/conferences/${t1.id}`, 'titre, intervenant et lien vers la vidéo');
+ok((await pool.query('SELECT announced_at FROM talks WHERE id=$1', [t1.id])).rows[0].announced_at !== null, 'vidéo marquée « annoncée »');
 ok((await pool.query("SELECT count(*)::int AS n FROM email_outbox WHERE user_id=$1 AND kind='speaker_new'", [uFr])).rows[0].n === 0, "sans SMTP : aucun e-mail mis en file");
 
 // 6. Sans aucun canal : rien n'est annoncé

@@ -62,7 +62,7 @@ export default function Learning() {
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState('');
   const [rv, setRv] = useState(null); // révisions du jour, rappel, e-mail
-  const [cont, setCont] = useState([]); // conférences à reprendre
+  const [cont, setCont] = useState([]); // vidéos à reprendre
   const [todo, setTodo] = useState([]); // quiz à passer
   const [goals, setGoals] = useState(null); // objectifs du bilan (privés)
   const [cardsN, setCardsN] = useState(0); // cartes mémoire à faire aujourd'hui (à échéance + nouvelles)

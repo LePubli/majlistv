@@ -1,5 +1,5 @@
 'use client';
-// Pastilles V T S R (vidéo, transcription, sous-titres, résumé) d'une conférence du Studio — voir lib/talkState.js.
+// Pastilles V T S R (vidéo, transcription, sous-titres, résumé) d'une vidéo du Studio — voir lib/talkState.js.
 import { useApp } from './Providers';
 
 export function Step({ letter, state, label, t }) {

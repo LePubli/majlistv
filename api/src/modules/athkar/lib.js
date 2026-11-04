@@ -1,4 +1,4 @@
-// Athkar : dhikr publiés, compte du jour (heure de Paris), série de jours, rappel quotidien.
+// Adhkar : dhikr publiés, compte du jour (heure de Paris), série de jours, rappel quotidien.
 import { pool } from '../../db.js';
 import { featureOn } from '../../features.js';
 import { hasLearningTier } from '../../access.js';
@@ -58,12 +58,12 @@ export async function runAthkar(log, now = nowDate(), { send = pushToUser, hasCh
     if (done >= r.daily_goal) continue;
     n += (await send(r.user_id, 'athkar', { done, goal: r.daily_goal }, '/learning?tab=athkar', log)) > 0 ? 1 : 0;
   }
-  if (n) log?.info(`Athkar : ${n} rappel(s) envoyé(s).`);
+  if (n) log?.info(`Adhkar : ${n} rappel(s) envoyé(s).`);
   return n;
 }
 
 export function startAthkar(log, everyMs = 15 * 60 * 1000) {
-  const tick = () => runAthkar(log).catch((err) => log?.warn(`Athkar : ${err.message}`));
+  const tick = () => runAthkar(log).catch((err) => log?.warn(`Adhkar : ${err.message}`));
   setTimeout(tick, 55000);
   return setInterval(tick, everyMs);
 }

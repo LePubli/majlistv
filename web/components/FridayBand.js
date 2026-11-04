@@ -1,6 +1,6 @@
 'use client';
 // Carte du vendredi (étape 45C) : sur l'accueil, uniquement le vendredi (heure de Paris) et si le vendredi est activé dans Admin → Vendredi.
-// Lien vers la sourate Al-Kahf (si le Coran est prêt), rappels et rangée « Conférences du vendredi ».
+// Lien vers la sourate Al-Kahf (si le Coran est prêt), rappels et rangée « Vidéos du vendredi ».
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';

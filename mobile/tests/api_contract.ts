@@ -40,7 +40,7 @@ async function main() {
   const me = await api.get<User>('/auth/me');
   assert.equal(me.name, 'Essai'); assert.equal(me.locale, 'ar'); step('POST /auth/login + GET /auth/me');
 
-  // --- une conférence de test (compte administrateur) ---
+  // --- une vidéo de test (compte administrateur) ---
   const admin = await createApi({ baseUrl: URL_, getToken: () => null }).post<{ token: string }>('/auth/login', { email: adminEmail, password: adminPassword });
   const adminApi = createApi({ baseUrl: URL_, getToken: () => admin.token });
   const tag = Date.now();
@@ -49,12 +49,12 @@ async function main() {
     videoUrl: 'https://archive.org/details/testitem' + tag, rightsConfirmed: true,
   }).catch((e: ApiError) => { console.log('    (création via archive.org impossible ici : ' + e.message + ')'); return null; });
 
-  // Catalogue : on prend la première conférence disponible (créée ou existante).
+  // Catalogue : on prend la première vidéo disponible (créée ou existante).
   let list = await api.get<Card[]>('/talks', { limit: 5 });
-  step('GET /talks : ' + list.length + ' conférence(s)');
+  step('GET /talks : ' + list.length + ' vidéo(s)');
   let talkId = list[0]?.id ?? created?.id;
   if (!talkId) {
-    console.log('  ! aucune conférence prête dans cette base : essais de lecture ignorés');
+    console.log('  ! aucune vidéo prête dans cette base : essais de lecture ignorés');
     return;
   }
   const q = await api.get<Card[]>('/talks', { q: list[0].title.split(' ')[0], limit: 5 });
@@ -84,7 +84,7 @@ async function main() {
   assert.equal(sent, 1);
   const cont = await api.get<Card[]>('/me/continue');
   const mine = cont.find((c) => c.id === talkId);
-  assert.ok(mine, 'la conférence apparaît dans « Continuer à regarder »');
+  assert.ok(mine, 'la vidéo apparaît dans « Continuer à regarder »');
   assert.equal(mine!.positionMs, 125_000); step('PUT /me/progress → GET /me/continue : position 125 000 ms');
   const again = await api.get<Talk>(`/talks/${talkId}`);
   assert.equal(again.resumeMs, talk.locked ? again.resumeMs : 125_000); step('GET /talks/:id → resumeMs relu');
@@ -113,7 +113,7 @@ async function main() {
   await api.del(`/me/lists/${created1.id}/items/${talkId}`);
   assert.equal((await api.get<ListDetail>(`/me/lists/${created1.id}`)).talks.length, 0);
   await api.del(`/me/lists/${created1.id}`);
-  await assert.rejects(api.get(`/me/lists/${created1.id}`), (e: ApiError) => e.status === 404); step('listes : retrait de la conférence puis suppression');
+  await assert.rejects(api.get(`/me/lists/${created1.id}`), (e: ApiError) => e.status === 404); step('listes : retrait de la vidéo puis suppression');
 
   // --- tranche 2a : quiz et mise en pratique (contenu créé par l'administrateur) ---
   const qids: string[] = [];
@@ -206,7 +206,7 @@ async function main() {
   await assert.rejects(api.get('/me/continue'), (e: ApiError) => e.status === 401);
   assert.equal(loggedOut, 1); step('jeton invalide → 401 → déconnexion déclenchée');
   token = null;
-  await assert.rejects(api.get('/talks/00000000-0000-4000-8000-000000000000'), (e: ApiError) => e.status === 404); step('conférence inconnue → 404');
+  await assert.rejects(api.get('/talks/00000000-0000-4000-8000-000000000000'), (e: ApiError) => e.status === 404); step('vidéo inconnue → 404');
 }
 
 main().then(() => console.log('TOUT EST OK')).catch((e) => { console.error('ÉCHEC', e); process.exit(1); });

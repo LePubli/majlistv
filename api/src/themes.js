@@ -13,14 +13,14 @@ export const themesOn = async () => isOn(await getSetting('practice_themes_on'))
 
 export const themeCard = (t) => ({ id: t.id, kind: t.kind, title: t.title, translit: t.translit, ar: t.ar, desc: t.desc });
 
-// Thèmes posés sur une conférence (liste vide tant que la base n'est pas activée).
+// Thèmes posés sur une vidéo (liste vide tant que la base n'est pas activée).
 export async function talkThemes(talkId) {
   if (!(await themesOn())) return [];
   const { rows } = await pool.query('SELECT theme_id FROM talk_themes WHERE talk_id = $1 ORDER BY theme_id', [talkId]);
   return rows.map((r) => THEME_BY_ID.get(r.theme_id)).filter(Boolean).map(themeCard);
 }
 
-// Conférences visibles portant ce thème.
+// Vidéos visibles portant ce thème.
 export async function talksOfTheme(themeId, limit = 24) {
   const { rows } = await pool.query(
     `SELECT t.id, t.title, t.speaker, t.duration_seconds, t.language

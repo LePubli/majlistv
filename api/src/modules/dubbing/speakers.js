@@ -1,4 +1,4 @@
-// Module « Doublage français », étape D3c — plusieurs intervenants par conférence.
+// Module « Doublage français », étape D3c — plusieurs intervenants par vidéo.
 // Le service de transcription écoute la voix de chaque phrase française et les regroupe par intervenant (dub_speakers, dub_phrase_speakers).
 // Ici : demande de détection, réglage d'un intervenant (nom, voix, hauteur), correction d'une phrase, propositions de voix, gel des voix dans
 // la demande de doublage, tâches de Studio → Activité.
@@ -20,8 +20,8 @@ export async function speakerJob(talkId) {
        FROM dub_speaker_jobs WHERE talk_id = $1`, [talkId])).rows[0] || null;
 }
 
-// Voix effective d'un intervenant. Aucune voix choisie (ni de base ni cible) : il garde les voix de la conférence.
-// Dès qu'une voix de base OU cible est choisie, il a SA voix : la voix de base manquante est celle de la conférence,
+// Voix effective d'un intervenant. Aucune voix choisie (ni de base ni cible) : il garde les voix de la vidéo.
+// Dès qu'une voix de base OU cible est choisie, il a SA voix : la voix de base manquante est celle de la vidéo,
 // la voix cible manquante est « aucune » (sinon tous les intervenants seraient convertis vers la même personne).
 export function resolveSpeaker(eff, s) {
   const own = Boolean(s && (s.baseVoice || s.targetVoice));
@@ -99,12 +99,12 @@ export async function refreshTotals(id) {
 export default function speakerRoutes(app, { admin }) {
   const n = z.coerce.number().int().min(1).max(MAX_SPEAKERS);
 
-  // Lancer la détection (remplace les intervenants et les corrections manuelles de cette conférence).
+  // Lancer la détection (remplace les intervenants et les corrections manuelles de cette vidéo).
   app.post('/studio/dubbing/talks/:id/speakers/detect', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { maxSpeakers } = z.object({ maxSpeakers: z.number().int().min(2).max(MAX_SPEAKERS).default(6) }).strict().parse(req.body ?? {});
     const t = (await pool.query('SELECT source FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!t) return reply.code(404).send({ error: 'Vidéo introuvable' });
     if (t.source !== 'upload') return reply.code(400).send({ error: 'Seules les vidéos envoyées sur le site peuvent être écoutées pour détecter les intervenants (les vidéos YouTube, Vimeo et archive.org ne sont pas chez nous).', code: 'external' });
     if (!(await pool.query("SELECT 1 FROM transcript_segments WHERE talk_id = $1 AND lang = 'fr' LIMIT 1", [id])).rowCount) {
       return reply.code(400).send({ error: 'Pas de texte français : demandez d’abord la traduction en français', code: 'no_french' });
@@ -115,7 +115,7 @@ export default function speakerRoutes(app, { admin }) {
        ON CONFLICT (talk_id) DO UPDATE SET status = 'pending', progress = 0, max_speakers = EXCLUDED.max_speakers, error = NULL, attempts = 0,
          cancel_requested = false, found = NULL, created_by = EXCLUDED.created_by, created_at = now(), updated_at = now()
        WHERE dub_speaker_jobs.status <> 'processing' RETURNING 1`, [id, maxSpeakers, req.user.sub]);
-    if (!r.rowCount) return reply.code(409).send({ error: 'Une détection est déjà en cours pour cette conférence', code: 'already_running' });
+    if (!r.rowCount) return reply.code(409).send({ error: 'Une détection est déjà en cours pour cette vidéo', code: 'already_running' });
     req.auditSummary = `Doublage : détection des intervenants demandée (${id})`;
     return reply.code(201).send({ job: await speakerJob(id) });
   });
@@ -137,7 +137,7 @@ export default function speakerRoutes(app, { admin }) {
     return { speakers: [], job: null };
   });
 
-  // Nom, voix et hauteur d'un intervenant. null = revenir aux réglages de la conférence.
+  // Nom, voix et hauteur d'un intervenant. null = revenir aux réglages de la vidéo.
   app.put('/studio/dubbing/talks/:id/speakers/:n', admin, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const num = n.parse(req.params.n);
@@ -173,7 +173,7 @@ export default function speakerRoutes(app, { admin }) {
   });
 
   // Proposer une voix de la catégorie suggérée à chaque intervenant qui n'a pas encore choisi sa voix.
-  // On ne touche à aucune voix déjà choisie. Un intervenant dont la catégorie est « homme » garde les voix de la conférence.
+  // On ne touche à aucune voix déjà choisie. Un intervenant dont la catégorie est « homme » garde les voix de la vidéo.
   app.post('/studio/dubbing/talks/:id/speakers/suggest', admin, async (req) => {
     const { id } = idSchema.parse(req.params);
     const list = await loadSpeakers(id);

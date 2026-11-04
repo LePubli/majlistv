@@ -14,7 +14,7 @@ import * as ext from '../ext.js'; // étape M3a : cartes cadeaux et rémunérati
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
 export const WAIVER_VERSION = '2026-10-12';
 export const WAIVER_TEXT = {
-  fr: "Je demande l'accès immédiat aux conférences et je reconnais perdre mon droit de rétractation de 14 jours dès le début de l'accès (article L221-28 du Code de la consommation). J'accepte les conditions générales de vente.",
+  fr: "Je demande l'accès immédiat aux vidéos et je reconnais perdre mon droit de rétractation de 14 jours dès le début de l'accès (article L221-28 du Code de la consommation). J'accepte les conditions générales de vente.",
   en: 'I request immediate access to the conferences and acknowledge that I lose my 14-day right of withdrawal once access begins. I accept the terms of sale.',
   ar: 'أطلب الوصول الفوري إلى المحاضرات وأقرّ بفقدان حقي في التراجع خلال 14 يومًا بمجرد بدء الوصول. أوافق على شروط البيع.',
 };
@@ -194,7 +194,7 @@ export default async function billingRoutes(app) {
       const own = tier === 'learning' ? (interval === 'month' ? region.learnMonth : region.learnYear) : (interval === 'month' ? region.month : region.year);
       if (own) priceId = own;
     }
-    // Page à retrouver après le paiement (ex. la conférence qui a donné envie de s'abonner) : chemin du site uniquement.
+    // Page à retrouver après le paiement (ex. la vidéo qui a donné envie de s'abonner) : chemin du site uniquement.
     const back = returnTo && /^\/(?![\/\\])/.test(returnTo) ? returnTo : '';
     // Renonciation expresse au droit de rétractation, exigée avant tout paiement (contenu numérique).
     if (waiver !== true) return reply.code(400).send({ error: 'Merci de cocher la case de renonciation au droit de rétractation.', code: 'waiver_required' });

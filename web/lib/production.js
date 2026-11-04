@@ -1,6 +1,6 @@
-// Étape S3 — parcours de production d'une conférence (Studio → Contenus, maquette « Studio v2 », écran 2) :
+// Étape S3 — parcours de production d'une vidéo (Studio → Contenus, maquette « Studio v2 », écran 2) :
 //   Importée › Transcrite › Traduite › Relue › Montée › Doublée › Publiée
-// Chaque étape vaut : ok | run | todo | err | na (sans objet : conférence en français, éditeur pas encore livré, module absent).
+// Chaque étape vaut : ok | run | todo | err | na (sans objet : vidéo en français, éditeur pas encore livré, module absent).
 // x = ligne de GET /me/talks enrichie (steps, kind de lib/talkState.js) ; p = état venu de GET /studio/production ({ views, dub, editor }).
 export const STAGES = ['imported', 'transcribed', 'translated', 'reviewed', 'edited', 'dubbed', 'published'];
 
@@ -25,7 +25,7 @@ export function production(x, p = {}) {
   st.dubbed = french || !dub ? 'na' : dub.track ? 'ok' : fullJob ? 'run' : 'todo';
   st.published = x.kind === 'live' ? 'ok' : 'todo';
 
-  // Étiquette : ce qui se passe maintenant, sinon où en est la conférence.
+  // Étiquette : ce qui se passe maintenant, sinon où en est la vidéo.
   let label; let tone = 'run'; let pct = null;
   const errAt = STAGES.find((k) => st[k] === 'err');
   if (errAt) { label = `err_${errAt}`; tone = 'err'; }

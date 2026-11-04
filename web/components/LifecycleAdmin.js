@@ -6,8 +6,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 
 const KIND = {
-  resume_talk: ['Reprise', 'Conférence commencée (≥ 2 min), laissée de côté depuis quelques jours : « Reprenez là où vous vous êtes arrêté ».'],
-  welcome_nudge: ['Par où commencer', 'Compte créé depuis quelques jours sans aucune conférence regardée : trois conférences pour démarrer.'],
+  resume_talk: ['Reprise', 'Vidéo commencée (≥ 2 min), laissée de côté depuis quelques jours : « Reprenez là où vous vous êtes arrêté ».'],
+  welcome_nudge: ['Par où commencer', 'Compte créé depuis quelques jours sans aucune vidéo regardée : trois vidéos pour démarrer.'],
   winback: ['Retour', 'Abonnement terminé depuis quelques jours (plus aucun accès) : les nouveautés depuis son départ.'],
 };
 
@@ -80,7 +80,7 @@ export default function LifecycleAdmin() {
         <ul className="health-tables">
           {Object.keys(KIND).map((k) => <li key={k}><span>{KIND[k][0]}</span><strong>{d.sent14[k] || 0}</strong></li>)}
         </ul>
-        <p className="health-muted">Chaque e-mail est envoyé au plus une fois par situation (par conférence, par compte ou par abonnement), avec un lien de désinscription en un clic. Les e-mails de fin d’essai, de paiement refusé et de résiliation existent déjà et ne sont pas concernés.</p>
+        <p className="health-muted">Chaque e-mail est envoyé au plus une fois par situation (par vidéo, par compte ou par abonnement), avec un lien de désinscription en un clic. Les e-mails de fin d’essai, de paiement refusé et de résiliation existent déjà et ne sont pas concernés.</p>
       </section>
 
       <section className="card health-block">

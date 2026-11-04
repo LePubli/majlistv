@@ -54,7 +54,7 @@ const COMMIT_SELECT = `SELECT c.*, t.title AS talk_title, to_char(c.due_on, 'YYY
         (c.due_on IS NOT NULL AND c.status IN ('todo', 'doing') AND c.due_on < (now() AT TIME ZONE 'Europe/Paris')::date) AS overdue
    FROM practice_commitments c LEFT JOIN talks t ON t.id = c.talk_id`;
 
-// Écran public disponible pour cette conférence ? (réglage du site + au moins une proposition validée + conférence visible)
+// Écran public disponible pour cette vidéo ? (réglage du site + au moins une proposition validée + vidéo visible)
 export async function practiceInfo(talkId) {
   if (!isOn(await getSetting('practice_enabled'))) return { available: false, count: 0 };
   const { rows } = await pool.query(
@@ -72,7 +72,7 @@ export default async function practiceRoutes(app) {
   async function ownedTalk(req, reply, id) {
     const { rows } = await pool.query('SELECT id, organizer_id, title, transcript_status, transcript_language, language FROM talks WHERE id = $1', [id]);
     const t = rows[0];
-    if (!t || (!STAFF.has(req.user.role) && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (!STAFF.has(req.user.role) && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Vidéo introuvable' }); return null; }
     return t;
   }
   async function ownedSuggestion(req, reply, sid) {
@@ -84,7 +84,7 @@ export default async function practiceRoutes(app) {
   // Une proposition n'est validable que complète et sans citation inventée.
   const approvable = (s) => (s.text?.trim().length >= 8 ? null : "Écrivez l'action (8 caractères au moins)");
 
-  // ------------------------------------------------------------------ Studio : propositions d'une conférence
+  // ------------------------------------------------------------------ Studio : propositions d'une vidéo
   app.get('/talks/:id/studio/practice', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const t = await ownedTalk(req, reply, id);
@@ -169,11 +169,11 @@ export default async function practiceRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Public : « Et maintenant, que faire ? »
-  // Visible par tous. Pour un membre Apprentissage : ses engagements pris sur cette conférence (aucun texte personnel pour les autres).
+  // Visible par tous. Pour un membre Apprentissage : ses engagements pris sur cette vidéo (aucun texte personnel pour les autres).
   app.get('/talks/:id/practice', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const info = await practiceInfo(id);
-    if (!info.available) return reply.code(404).send({ error: "Cette conférence n'a pas de propositions d'action" });
+    if (!info.available) return reply.code(404).send({ error: "Cette vidéo n'a pas de propositions d'action" });
     const { rows } = await pool.query(
       `SELECT id, text, size, reference, evidence_ms, evidence_quote FROM practice_suggestions WHERE talk_id = $1 AND status = 'approved' ORDER BY size, created_at, id`, [id]);
     const viewer = await app.optionalUser(req);
@@ -202,7 +202,7 @@ export default async function practiceRoutes(app) {
     if (!(await hasLearningTier(req.user.sub))) return reply.code(403).send({ error: "L'enregistrement des engagements fait partie de l'offre Mejliss Apprentissage", code: 'learning_required' });
     if (!practiceKeyReady()) return reply.code(503).send({ error: 'Chiffrement non configuré (PRACTICE_KEY)', code: 'no_key' });
     const info = await practiceInfo(id);
-    if (!info.available) return reply.code(404).send({ error: "Cette conférence n'a pas de propositions d'action" });
+    if (!info.available) return reply.code(404).send({ error: "Cette vidéo n'a pas de propositions d'action" });
     const u = (await pool.query('SELECT practice_consent_at FROM users WHERE id = $1', [req.user.sub])).rows[0];
     if (!u.practice_consent_at) {
       if (b.consent !== true) return reply.code(409).send({ error: 'Votre accord est nécessaire pour enregistrer des notes personnelles', code: 'consent_required' });

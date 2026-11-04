@@ -194,7 +194,7 @@ export default async function adminRoutes(app) {
     return { temporaryPassword: password ? null : pwd };
   });
 
-  // Suppression : refusée tant que l'utilisateur possède des conférences (à transférer) ou un abonnement actif.
+  // Suppression : refusée tant que l'utilisateur possède des vidéos (à transférer) ou un abonnement actif.
   app.delete('/admin/users/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { transferTo } = z.object({ transferTo: z.string().uuid().optional() }).parse(req.query);
@@ -206,7 +206,7 @@ export default async function adminRoutes(app) {
     if (live.rowCount) return reply.code(409).send({ error: "Cet utilisateur a un abonnement Stripe actif : résilie-le d'abord dans Stripe", code: 'active_subscription' });
     const talks = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE organizer_id = $1', [id])).rows[0].n;
     if (talks && !transferTo) {
-      return reply.code(409).send({ error: `Cet utilisateur possède ${talks} conférence(s) : transfère-les à un autre compte avant de le supprimer`, code: 'has_talks', talks });
+      return reply.code(409).send({ error: `Cet utilisateur possède ${talks} vidéo(s) : transfère-les à un autre compte avant de le supprimer`, code: 'has_talks', talks });
     }
     const client = await pool.connect();
     try {

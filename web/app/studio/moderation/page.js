@@ -1,5 +1,5 @@
 'use client';
-// Étape 20 — Modération (modérateurs et administrateurs) : conférences à relire et signalements des spectateurs.
+// Étape 20 — Modération (modérateurs et administrateurs) : vidéos à relire et signalements des spectateurs.
 // Chaque décision est enregistrée dans le journal des actions. Écran interne, en français.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -47,7 +47,7 @@ function Report({ r, call, onDone }) {
   const [err, setErr] = useState(null);
   const act = async (action) => {
     if (action === 'unpublish' && note.trim().length < 5) { setErr("Expliquez le motif du retrait à l'organisateur (5 caractères au moins)."); return; }
-    if (action === 'unpublish' && !window.confirm('Retirer cette conférence du site ?')) return;
+    if (action === 'unpublish' && !window.confirm('Retirer cette vidéo du site ?')) return;
     setBusy(true); setErr(null);
     const x = await call(`/moderation/reports/${r.id}/resolve`, { method: 'POST', body: JSON.stringify({ action, note }) });
     setBusy(false);
@@ -58,9 +58,9 @@ function Report({ r, call, onDone }) {
     <li className="md-item">
       <div className="md-head">
         <Link href={`/talks/${r.talkId}`} target="_blank" className="md-title">{r.title}</Link>
-        <span className="meta small"><b>{REASON[r.reason] || r.reason}</b> · {when(r.createdAt)} · {r.reporterEmail || 'visiteur sans compte'}{r.openOnTalk > 1 ? ` · ${r.openOnTalk} signalements ouverts sur cette conférence` : ''}</span>
+        <span className="meta small"><b>{REASON[r.reason] || r.reason}</b> · {when(r.createdAt)} · {r.reporterEmail || 'visiteur sans compte'}{r.openOnTalk > 1 ? ` · ${r.openOnTalk} signalements ouverts sur cette vidéo` : ''}</span>
         {r.details && <p className="md-details">{r.details}</p>}
-        {r.reviewStatus === 'rejected' && <span className="meta small">Cette conférence est déjà retirée du site.</span>}
+        {r.reviewStatus === 'rejected' && <span className="meta small">Cette vidéo est déjà retirée du site.</span>}
       </div>
       <label className="fld"><span>Note (obligatoire pour un retrait ; envoyée à l'organisateur dans ce cas)</span>
         <textarea rows={2} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -69,7 +69,7 @@ function Report({ r, call, onDone }) {
       <div className="panel-actions">
         <button type="button" className="btn ghost" disabled={busy} onClick={() => act('dismiss')}>Classer sans suite</button>
         <button type="button" className="btn ghost" disabled={busy} onClick={() => act('resolve')}>Réglé (sans retrait)</button>
-        {r.reviewStatus !== 'rejected' && <button type="button" className="btn" disabled={busy} onClick={() => act('unpublish')}>Retirer la conférence</button>}
+        {r.reviewStatus !== 'rejected' && <button type="button" className="btn" disabled={busy} onClick={() => act('unpublish')}>Retirer la vidéo</button>}
       </div>
     </li>
   );
@@ -110,7 +110,7 @@ export default function Moderation() {
           {tab === 'handled' && items.map((x) => (
             <li key={x.id} className="md-item">
               <Link href={`/talks/${x.talkId}`} target="_blank" className="md-title">{x.title}</Link>
-              <span className="meta small">{REASON[x.reason] || x.reason} · {{ dismissed: 'classé sans suite', resolved: 'réglé', actioned: 'conférence retirée' }[x.status]} par {x.handledBy || '—'} le {when(x.handledAt)}{x.note ? ` — ${x.note}` : ''}</span>
+              <span className="meta small">{REASON[x.reason] || x.reason} · {{ dismissed: 'classé sans suite', resolved: 'réglé', actioned: 'vidéo retirée' }[x.status]} par {x.handledBy || '—'} le {when(x.handledAt)}{x.note ? ` — ${x.note}` : ''}</span>
             </li>
           ))}
         </ul>

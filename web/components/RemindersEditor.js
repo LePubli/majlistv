@@ -1,5 +1,5 @@
 'use client';
-// Rappels d'une conférence (onglet « Rappels » du Studio, indépendant du quiz) et composant d'un rappel, réutilisé par Studio → Rappels.
+// Rappels d'une vidéo (onglet « Rappels » du Studio, indépendant du quiz) et composant d'un rappel, réutilisé par Studio → Rappels.
 // Aucune IA pour ces trois origines : extrait mot pour mot de la transcription, citation d'un quiz validé, ou saisie à la main avec sa source.
 import { useCallback, useEffect, useState } from 'react';
 import { clock, parseClock } from '../lib/clock';

@@ -1,4 +1,4 @@
-// Module « Athkar » (étape 45D) : liste validée dans l'admin, compteur du jour, objectif, série, rappel.
+// Module « Adhkar » (étape 45D) : liste validée dans l'admin, compteur du jour, objectif, série, rappel.
 import routes from './routes.js';
 import { athkarToday } from './today.js';
 import { startAthkar } from './lib.js';

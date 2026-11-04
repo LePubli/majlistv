@@ -1,5 +1,5 @@
 // Shorts (étape 24b) : fil vertical plein écran dans l'application. On glisse vers le haut pour le suivant ; un seul lecteur à la fois,
-// en boucle ; le son se coupe d'un bouton ; favori, liste, partage ; « Voir la conférence complète » ouvre la fiche (jamais le site).
+// en boucle ; le son se coupe d'un bouton ; favori, liste, partage ; « Voir la vidéo complète » ouvre la fiche (jamais le site).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Share, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -34,7 +34,7 @@ export default function ShortsScreen() {
   const [listFor, setListFor] = useState<string | null>(null);
   const onViewable = useRef(({ viewableItems }: { viewableItems: { index?: number | null }[] }) => { const i = viewableItems[0]?.index; if (i != null) setIndex(i); }).current;
 
-  // Quitter l'écran (fiche d'une conférence) arrête la lecture ; y revenir la reprend.
+  // Quitter l'écran (fiche d'une vidéo) arrête la lecture ; y revenir la reprend.
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
 
   const load = useCallback(async (offset: number) => {

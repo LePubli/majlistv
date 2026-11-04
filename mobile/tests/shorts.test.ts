@@ -12,7 +12,7 @@ test('playableList : écarte ce qui n’est pas lisible, sans planter sur un con
   assert.deepEqual(playableList([mk('a'), mk('b', null), mk('c', '')]).map((s) => s.id), ['a']);
   assert.deepEqual(playableList(null), []);
   assert.deepEqual(playableList({ error: 'x' }), []);
-  assert.deepEqual(playableList([null, 3, { id: 'z', videoUrl: 'u' }]), []); // sans conférence : écarté
+  assert.deepEqual(playableList([null, 3, { id: 'z', videoUrl: 'u' }]), []); // sans vidéo : écarté
 });
 
 test('mergeShorts : la page suivante s’ajoute sans doublon, l’ordre est gardé', () => {

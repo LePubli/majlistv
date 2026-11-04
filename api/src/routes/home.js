@@ -31,7 +31,7 @@ const safeLink = (u) => (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u) ? u : '')
 export default async function homeRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
 
-  // Bande « Espace Kids » de l'accueil : les dernières conférences Kids (aperçu seulement : un clic mène à l'espace Kids, où le parent choisit le profil).
+  // Bande « Espace Kids » de l'accueil : les dernières vidéos Kids (aperçu seulement : un clic mène à l'espace Kids, où le parent choisit le profil).
   app.get('/home/kids', async () => {
     if (!isOn(await getSetting('kids_enabled'))) return { enabled: false, talks: [] };
     const { rows } = await pool.query(
@@ -42,7 +42,7 @@ export default async function homeRoutes(app) {
     return { enabled: true, talks: rows };
   });
 
-  // Bloc « À la une » de l'accueil en blocs : les conférences mises à la une (jusqu'à 5) ; à défaut, la plus récente (fallback = true).
+  // Bloc « À la une » de l'accueil en blocs : les vidéos mises à la une (jusqu'à 5) ; à défaut, la plus récente (fallback = true).
   app.get('/home/featured', async () => {
     const vis = `${visibleSql('t')} AND ${adultSql('t')}`;
     let { rows } = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.featured AND t.video_status = 'ready' AND ${vis} ORDER BY t.featured_at DESC LIMIT 5`);
@@ -55,7 +55,7 @@ export default async function homeRoutes(app) {
     const viewer = await app.optionalUser(req); // connecté : ses thèmes préférés passent en premier
     const mode = await getSetting('home_hero_mode');
     const size = await getNumber('home_row_size');
-    const vis = `${visibleSql('t')} AND ${adultSql('t')}`; // catalogue adultes : sans les conférences réservées aux enfants
+    const vis = `${visibleSql('t')} AND ${adultSql('t')}`; // catalogue adultes : sans les vidéos réservées aux enfants
 
     let hero = { mode: 'text' };
     if (mode === 'featured') {
@@ -81,14 +81,14 @@ export default async function homeRoutes(app) {
       const list = await ext.call('series.list', [], { limit: size });
       if (list.length) rows.push({ key: 'series', title: null, series: list });
     }
-    // « Pour commencer » : les conférences de niveau débutant, pour un visiteur qui découvre le sujet.
+    // « Pour commencer » : les vidéos de niveau débutant, pour un visiteur qui découvre le sujet.
     if (isOn(await getSetting('home_row_beginner'))) {
       const r = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.level = 'beginner' AND t.video_status = 'ready' AND ${vis} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $1`, [size]);
       if (r.rows.length) rows.push({ key: 'beginner', title: null, talks: await Promise.all(r.rows.map((x) => card(x))) });
     }
     if (isOn(await getSetting('home_rows_categories'))) {
       // Une rangée par catégorie principale (sous-catégories et catégories supplémentaires comprises), les plus fournies d'abord.
-      // Les conférences sans catégorie n'ont pas de rangée (elles sont dans « Nouveautés »).
+      // Les vidéos sans catégorie n'ont pas de rangée (elles sont dans « Nouveautés »).
       const { rows: cats } = await pool.query(
         `SELECT c.id, c.name, (SELECT count(*)::int FROM talks t WHERE t.video_status = 'ready' AND ${vis} AND ${inCategorySql('t', 'c.id')}) AS n
            FROM categories c WHERE c.parent_id IS NULL ORDER BY n DESC, c.name LIMIT 12`);
@@ -112,12 +112,12 @@ export default async function homeRoutes(app) {
     return { hero, rows };
   });
 
-  // « Dans la même veine » (fiche conférence) : même intervenant d'abord, puis même catégorie, puis les plus récentes pour compléter.
+  // « Dans la même veine » (fiche vidéo) : même intervenant d'abord, puis même catégorie, puis les plus récentes pour compléter.
   app.get('/talks/:id/similar', async (req, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
     const vis = `${visibleSql('t')} AND ${adultSql('t')}`;
     const cur = (await pool.query('SELECT speaker, category_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!cur) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!cur) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const size = Math.min(await getNumber('home_row_size'), 12);
     const { rows } = await pool.query(
       `SELECT ${CARD}, (CASE WHEN $2 <> '' AND lower(t.speaker) = lower($2) THEN 2 ELSE 0 END + CASE WHEN $3::int IS NOT NULL AND (t.category_id = $3 OR EXISTS (SELECT 1 FROM talk_categories tc WHERE tc.talk_id = t.id AND tc.category_id = $3)) THEN 1 ELSE 0 END) AS score

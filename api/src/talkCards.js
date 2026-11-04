@@ -1,4 +1,4 @@
-// Fiches de conférences (vignettes) d'une collection ou d'une liste, dans l'ordre choisi. Étape M3a : sorti du module
+// Fiches de vidéos (vignettes) d'une collection ou d'une liste, dans l'ordre choisi. Étape M3a : sorti du module
 // collections pour que le module « Listes de lecture » n'en dépende plus.
 import { pool } from './db.js';
 import { presignGet } from './storage.js';
@@ -16,7 +16,7 @@ export async function cards(rows) {
   return rows;
 }
 
-// Conférences visibles et prêtes d'une collection ou d'une liste, dans l'ordre choisi.
+// Vidéos visibles et prêtes d'une collection ou d'une liste, dans l'ordre choisi.
 export async function visibleItems(table, key, id) {
   const { rows } = await pool.query(
     `SELECT ${CARD} FROM ${table} i JOIN talks t ON t.id = i.talk_id LEFT JOIN category_names c ON c.id = t.category_id

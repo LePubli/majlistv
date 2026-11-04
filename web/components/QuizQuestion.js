@@ -1,6 +1,6 @@
 'use client';
 // Studio → une question du quiz : lecture (réponse, explication, passage cité avec lien vers la minute) et édition.
-// Sert à la fois à la page « Quiz » d'une conférence et à la file de relecture.
+// Sert à la fois à la page « Quiz » d'une vidéo et à la file de relecture.
 import { useState } from 'react';
 import { clock, parseClock } from '../lib/clock';
 

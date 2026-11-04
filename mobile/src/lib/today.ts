@@ -33,7 +33,7 @@ export function todayLabel(it: TodayItem, t: T): string {
   }
 }
 
-/** Petit compteur à droite : « 3 / 8 » (athkar, Ramadan) ou « 12 » (cartes, révisions). */
+/** Petit compteur à droite : « 3 / 8 » (adhkar, Ramadan) ou « 12 » (cartes, révisions). */
 export const todayCount = (it: TodayItem): string => (it.total ? `${it.n ?? 0} / ${it.total}` : (it.n ?? 0) > 0 ? String(it.n) : '');
 
 /** Clé stable de la ligne. */
@@ -41,7 +41,7 @@ export const todayKey = (it: TodayItem): string => `${it.kind}-${it.moment ?? it
 
 /**
  * Où mène la ligne : un écran de l'application quand il existe, sinon la page du site (chemin relatif, jamais d'adresse extérieure).
- * Tout s'ouvre dans l'application depuis l'étape M5 (Coran, athkar, Ramadan, révisions, cartes) ; une ligne inconnue s'ouvre sur le site.
+ * Tout s'ouvre dans l'application depuis l'étape M5 (Coran, adhkar, Ramadan, révisions, cartes) ; une ligne inconnue s'ouvre sur le site.
  */
 export function todayTarget(href: unknown, moment?: string): { app: string } | { web: string } {
   const h = typeof href === 'string' ? href.trim() : '';

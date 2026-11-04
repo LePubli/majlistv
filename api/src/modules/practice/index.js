@@ -3,6 +3,6 @@ import routes from './routes.js';
 import { practiceInfo } from './routes.js';
 
 export default async function register(app, ctx) {
-  ctx.provide('talk.practice', practiceInfo); // fiche conférence (étape M3a)
+  ctx.provide('talk.practice', practiceInfo); // fiche vidéo (étape M3a)
   await app.register(routes);
 }

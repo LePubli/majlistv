@@ -1,4 +1,4 @@
-// Étape 41 — appel du modèle d'IA pour l'assistant de conférence : Claude (réponse forcée en appel d'outil) ou DeepSeek (réponse JSON).
+// Étape 41 — appel du modèle d'IA pour l'assistant de vidéo : Claude (réponse forcée en appel d'outil) ou DeepSeek (réponse JSON).
 // Les clés et le modèle DeepSeek sont ceux déjà saisis pour la traduction et les résumés (Admin → Paramètres → Traduction des sous-titres) : rien à ressaisir.
 // ANTHROPIC_API_URL / DEEPSEEK_API_URL ne servent qu'aux tests (faux serveurs locaux), comme dans le service de traduction.
 // Azure AI Translator ne peut pas servir ici : c'est un service de traduction, il ne sait pas répondre à une question.

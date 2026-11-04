@@ -1,4 +1,4 @@
-// Vignette d'une série : mêmes gabarit et dimensions que les conférences, avec le nombre d'épisodes et l'avancement.
+// Vignette d'une série : mêmes gabarit et dimensions que les vidéos, avec le nombre d'épisodes et l'avancement.
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';

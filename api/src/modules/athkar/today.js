@@ -1,4 +1,4 @@
-// Étape B1 — ligne « Aujourd'hui » des athkar : matin avant 14 h (Paris), soir ensuite ; faite quand chaque dhikr du moment
+// Étape B1 — ligne « Aujourd'hui » des adhkar : matin avant 14 h (Paris), soir ensuite ; faite quand chaque dhikr du moment
 // a atteint son nombre de répétitions. Réservée à la formule Apprentissage, et seulement s'il existe des dhikr publiés.
 import { pool } from '../../db.js';
 import { featureOn } from '../../features.js';

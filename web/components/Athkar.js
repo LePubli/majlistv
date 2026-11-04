@@ -1,6 +1,6 @@
 'use client';
-// Compteur d'athkar (étape 45D) — onglet « Athkar » de la page Apprendre (formule Apprentissage).
-// Dhikr saisis et validés dans Admin → Athkar (avec leur référence). Un toucher = +1 ; les touchers rapprochés partent ensemble.
+// Compteur d'athkar (étape 45D) — onglet « Adhkar » de la page Apprendre (formule Apprentissage).
+// Dhikr saisis et validés dans Admin → Adhkar (avec leur référence). Un toucher = +1 ; les touchers rapprochés partent ensemble.
 // Compte du jour en heure de Paris ; objectif (nombre de dhikr terminés par jour), série de jours, rappel facultatif.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';

@@ -1,5 +1,5 @@
 // Révision espacée (palier « Apprentissage ») : calendrier fixe J+1 / J+3 / J+7 / J+21 après un quiz.
-// Réviser = refaire le quiz de la conférence. Un quiz refait ALORS QU'IL EST À ÉCHÉANCE (ou en retard) fait avancer d'un cran s'il est réussi,
+// Réviser = refaire le quiz de la vidéo. Un quiz refait ALORS QU'IL EST À ÉCHÉANCE (ou en retard) fait avancer d'un cran s'il est réussi,
 // et ramène au début (J+1) s'il est raté. Refaire un quiz avant l'échéance ne change pas le calendrier.
 // Le score d'apprentissage profite de chaque tentative (fraîcheur remise à 100 %).
 import { pool } from './db.js';
@@ -46,7 +46,7 @@ async function backfill(userId) {
      ON CONFLICT DO NOTHING`, [userId]);
 }
 
-// Révisions à faire aujourd'hui (conférences encore visibles, dans la limite quotidienne), les plus en retard d'abord.
+// Révisions à faire aujourd'hui (vidéos encore visibles, dans la limite quotidienne), les plus en retard d'abord.
 export async function dueTalks(userId, { limit } = {}) {
   await backfill(userId);
   const max = limit ?? (await getNumber('revision_daily_max'));
@@ -71,7 +71,7 @@ export async function upcoming(userId) {
   return rows[0];
 }
 
-// Rappel du jour (personnel) : un passage validé de la bibliothèque, indépendant des quiz. Rappels de conférences visibles, rappels libres
+// Rappel du jour (personnel) : un passage validé de la bibliothèque, indépendant des quiz. Rappels de vidéos visibles, rappels libres
 // et citations du corpus ; un seul par jour, stable toute la journée, différent d'un membre à l'autre.
 export async function reminderOfTheDay(userId) {
   const { rows } = await pool.query(

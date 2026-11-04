@@ -2,7 +2,7 @@
   "id": "collections",
   "name": "Collections",
   "version": "1.0.0",
-  "description": "Sélections éditoriales de conférences : cycles, séries d'un intervenant, thèmes du moment (page publique et gestion dans le Studio).",
+  "description": "Sélections éditoriales de vidéos : cycles, séries d'un intervenant, thèmes du moment (page publique et gestion dans le Studio).",
   "feature": "collections",
   "requires": [],
   "settings": []

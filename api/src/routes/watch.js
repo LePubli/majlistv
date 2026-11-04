@@ -134,7 +134,7 @@ export default async function watchRoutes(app) {
     return { ok: true };
   });
 
-  // « Ajouter » : crée la conférence (publiée, comme un import depuis une liste), avec l'attestation des droits.
+  // « Ajouter » : crée la vidéo (publiée, comme un import depuis une liste), avec l'attestation des droits.
   app.post('/admin/watch/items/:id/add', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = addItemSchema.parse(req.body);

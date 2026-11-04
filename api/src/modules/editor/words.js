@@ -1,10 +1,10 @@
 // Module « Éditeur de montage » — étape E5a : montage par le texte.
 //
-// L'éditeur montre la transcription de la conférence ; supprimer des mots ou des phrases du texte coupe la vidéo
+// L'éditeur montre la transcription de la vidéo ; supprimer des mots ou des phrases du texte coupe la vidéo
 // (les coupes elles-mêmes sont faites par le site, sur le montage : web/modules/editor/ops.js, cutRange / restoreRange).
 // Cette route donne le texte avec la place de chaque mot dans la vidéo source :
 //   - « précis » : mots horodatés par Whisper (table transcript_words, réglage « Horodater chaque mot ») ;
-//   - « estimé » : conférence transcrite avant l'étape E5a, sous-titres de l'auteur (YouTube, Vimeo), phrase corrigée à la main
+//   - « estimé » : vidéo transcrite avant l'étape E5a, sous-titres de l'auteur (YouTube, Vimeo), phrase corrigée à la main
 //     après la transcription, ou traduction : la durée de la phrase est répartie entre ses mots selon leur longueur.
 // Une phrase dont le texte a été corrigé ne correspond plus aux mots de Whisper : elle passe d'elle-même en « estimé ».
 import { z } from 'zod';
@@ -82,7 +82,7 @@ export async function alignInfo(talkId) {
 
 export default async function wordRoutes(app, { guard, viewer }) {
   const q = z.object({ lang: z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/).optional() });
-  // Texte de la conférence, mot à mot, en temps source.
+  // Texte de la vidéo, mot à mot, en temps source.
   app.get('/studio/editor/projects/:id/words', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const { lang } = q.parse(req.query || {});
@@ -94,12 +94,12 @@ export default async function wordRoutes(app, { guard, viewer }) {
   app.post('/studio/editor/projects/:id/words/align', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
     const info = await alignInfo(row.talk_id);
-    if (!info.alignable) return reply.code(409).send({ code: 'unsupported', error: 'Seules les conférences envoyées sur le site et déjà transcrites peuvent être précisées.' });
+    if (!info.alignable) return reply.code(409).send({ code: 'unsupported', error: 'Seules les vidéos envoyées sur le site et déjà transcrites peuvent être précisées.' });
     if (['pending', 'processing'].includes(info.align?.status)) return reply.code(409).send({ code: 'busy', error: 'Le calcul est déjà demandé.', align: info.align });
     const origin = (await pool.query('SELECT transcript_language FROM talks WHERE id = $1', [row.talk_id])).rows[0]?.transcript_language || row.lang || null;
     const langs = (await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1', [row.talk_id])).rows.map((r) => r.lang);
     const lang = pickLang(langs, origin, null);
-    if (!lang) return reply.code(409).send({ code: 'no_text', error: 'Pas encore de texte pour cette conférence.' });
+    if (!lang) return reply.code(409).send({ code: 'no_text', error: 'Pas encore de texte pour cette vidéo.' });
     const { rows } = await pool.query(
       `INSERT INTO word_align_jobs (talk_id, lang, status, progress, attempts, error, aligned, total, requested_by, created_at, updated_at)
        VALUES ($1, $2, 'pending', 0, 0, NULL, NULL, NULL, $3, now(), now())

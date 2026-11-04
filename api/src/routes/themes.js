@@ -47,7 +47,7 @@ export default async function themesRoutes(app) {
   // ------------------------------------------------------------------ Studio : étiquettes
   async function ownedTalk(req, reply, id) {
     const t = (await pool.query('SELECT id, organizer_id FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) { reply.code(404).send({ error: 'Vidéo introuvable' }); return null; }
     return t;
   }
   app.get('/studio/talks/:id/themes', organizer, async (req, reply) => {
@@ -120,7 +120,7 @@ export default async function themesRoutes(app) {
     const acc = new Map(); // thème → compteurs
     const row = (id) => { if (!acc.has(id)) acc.set(id, { watched: 0, quizzes: 0, made: 0, done: 0, goals: 0, achieved: 0, progress: 0, notYet: 0 }); return acc.get(id); };
 
-    // Appris : conférences terminées et quiz réussis dans le mois, par thème de la conférence.
+    // Appris : vidéos terminées et quiz réussis dans le mois, par thème de la vidéo.
     for (const r of (await pool.query(
       `SELECT x.theme_id, count(*)::int AS n FROM watch_progress w JOIN talk_themes x ON x.talk_id = w.talk_id
         WHERE w.user_id = $1 AND w.completed AND w.updated_at >= $2 AND w.updated_at < $3 GROUP BY x.theme_id`, [uid, range.a, range.b])).rows) row(r.theme_id).watched += r.n;
@@ -128,7 +128,7 @@ export default async function themesRoutes(app) {
       `SELECT x.theme_id, count(DISTINCT a.talk_id)::int AS n FROM quiz_attempts a JOIN talk_themes x ON x.talk_id = a.talk_id
         WHERE a.user_id = $1 AND a.passed AND a.created_at >= $2 AND a.created_at < $3 GROUP BY x.theme_id`, [uid, range.a, range.b])).rows) row(r.theme_id).quizzes += r.n;
 
-    // Mis en pratique : engagements (thème de la conférence, ou thème choisi directement), puis objectifs et bilans du mois.
+    // Mis en pratique : engagements (thème de la vidéo, ou thème choisi directement), puis objectifs et bilans du mois.
     const commits = (await pool.query(
       `SELECT c.theme_enc, c.created_at, c.done_at, c.status, COALESCE(array_agg(x.theme_id) FILTER (WHERE x.theme_id IS NOT NULL), '{}') AS tagged
          FROM practice_commitments c LEFT JOIN talk_themes x ON x.talk_id = c.talk_id

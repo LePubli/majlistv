@@ -1,5 +1,5 @@
 'use client';
-// Étape 21 — Bouton « Suivre » sur la page d'un intervenant : alerte e-mail à chaque nouvelle conférence.
+// Étape 21 — Bouton « Suivre » sur la page d'un intervenant : alerte e-mail à chaque nouvelle vidéo.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authPath } from '../lib/nav';

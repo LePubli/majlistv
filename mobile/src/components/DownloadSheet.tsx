@@ -1,4 +1,4 @@
-// Hors connexion (22b-6) : fenêtre « Regarder sans connexion » ouverte depuis la fiche d'une conférence.
+// Hors connexion (22b-6) : fenêtre « Regarder sans connexion » ouverte depuis la fiche d'une vidéo.
 // Choix audio seul / vidéo 360p / 720p avec la taille estimée ; progression ; puis « Regarder hors connexion » ou « Supprimer ».
 import React, { useEffect } from 'react';
 import { Modal, Pressable, View } from 'react-native';

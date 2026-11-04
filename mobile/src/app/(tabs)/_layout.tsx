@@ -1,4 +1,4 @@
-// Barre de navigation du bas : Accueil, Conférences, Apprendre, Bibliothèque, Compte.
+// Barre de navigation du bas : Accueil, Vidéos, Apprendre, Bibliothèque, Compte.
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';

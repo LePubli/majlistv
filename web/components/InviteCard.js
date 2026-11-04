@@ -1,6 +1,6 @@
 'use client';
 // Étape B4 — Invitation des visiteurs : carte « Créez votre compte gratuit » adaptée à l'endroit (Coran, Ramadan, Apprendre,
-// fin d'aperçu d'une conférence), au lieu d'un simple bouton « Se connecter ». Ne s'affiche jamais pour un membre connecté.
+// fin d'aperçu d'une vidéo), au lieu d'un simple bouton « Se connecter ». Ne s'affiche jamais pour un membre connecté.
 // Inscription fermée (Admin → Fonctions → registration) : seul « J'ai déjà un compte » reste.
 import Link from 'next/link';
 import { useApp } from './Providers';

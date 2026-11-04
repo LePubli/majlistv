@@ -37,7 +37,7 @@ async function get(path: string, token?: string | null): Promise<{ status: numbe
   } catch { return null; } finally { clearTimeout(timer); }
 }
 
-/** Conférences à réviser : serveur d'abord ; sans réseau, dernier état connu. */
+/** Vidéos à réviser : serveur d'abord ; sans réseau, dernier état connu. */
 export async function loadRevise(now = Date.now()): Promise<ReviseSnap> {
   let token: string | null = null;
   try { token = await SecureStore.getItemAsync(TOKEN_KEY); } catch { /* ignoré */ }

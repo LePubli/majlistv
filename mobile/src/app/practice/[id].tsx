@@ -1,4 +1,4 @@
-// « Et maintenant, que faire ? » : propositions d'action d'une conférence et engagement personnel (offre Apprentissage).
+// « Et maintenant, que faire ? » : propositions d'action d'une vidéo et engagement personnel (offre Apprentissage).
 import React, { useState } from 'react';
 import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

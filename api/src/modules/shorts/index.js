@@ -4,7 +4,7 @@ import { pool } from '../../db.js';
 import { deleteObject } from '../../storage.js';
 
 export default async function register(app, ctx) {
-  // Conférence supprimée : on efface aussi les fichiers de ses shorts (la base les supprime en cascade).
+  // Vidéo supprimée : on efface aussi les fichiers de ses shorts (la base les supprime en cascade).
   ctx.on('talk.deleting', async ({ talkId }) => {
     const { rows } = await pool.query('SELECT video_key, poster_key FROM public_shorts WHERE talk_id = $1', [talkId]);
     for (const r of rows) {

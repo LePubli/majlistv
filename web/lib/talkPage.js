@@ -1,5 +1,5 @@
-// Page d'une conférence côté serveur, partagée par /conferences/[slug] (adresse lisible, canonique) et /talks/[id] (ancienne adresse : redirigée).
-// Balises <head>, données structurées VideoObject, puis TalkClient ; chapitres et extrait de transcription (conférences gratuites) dans le HTML.
+// Page d'une vidéo côté serveur, partagée par /conferences/[slug] (adresse lisible, canonique) et /talks/[id] (ancienne adresse : redirigée).
+// Balises <head>, données structurées VideoObject, puis TalkClient ; chapitres et extrait de transcription (vidéos gratuites) dans le HTML.
 import TalkClient from '../app/talks/[id]/TalkClient';
 import { seoGet, absolute, clip, isoDuration, jsonLd } from './seo';
 
@@ -7,7 +7,7 @@ export const talkUrl = (base, t) => `${base}/conferences/${t.slug}`;
 
 export async function talkMetadata(ref) {
   const t = await seoGet(`talks/${ref}`);
-  if (!t) return { title: 'Conférence', robots: { index: false, follow: false } };
+  if (!t) return { title: 'Vidéo', robots: { index: false, follow: false } };
   const base = t.site.baseUrl;
   const title = t.speaker ? `${t.title} — ${t.speaker}` : t.title;
   const description = clip(t.description, 160) || t.site.description || undefined;
@@ -54,7 +54,7 @@ export function TalkView({ t, routeId }) {
       publisher: { '@type': 'Organization', name: t.site.appName, url: base },
     };
   }
-  // Fil d'ariane : Accueil › (Intervenant) › Conférence.
+  // Fil d'ariane : Accueil › (Intervenant) › Vidéo.
   const crumbs = t && {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

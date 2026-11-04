@@ -20,7 +20,7 @@ test('fileNameFor / isSafeFile : jamais de chemin libre', () => {
   for (const bad of ['../x.mp4', `${T1}-video-720.mp4/../../etc`, 'index.json', `${T1}-video-720.mp4.part`, '', null, 5]) assert.equal(isSafeFile(bad), false, String(bad));
 });
 
-test('parseIndex : lignes invalides ignorées, une ligne par conférence', () => {
+test('parseIndex : lignes invalides ignorées, une ligne par vidéo', () => {
   const good = rec(); const newer = rec({ downloadedAt: NOW + 5, title: 'récent', kind: 'audio', height: 0, file: fileNameFor(T1, 'audio', 0) });
   const raw = JSON.stringify([good, newer, rec({ talkId: T2, file: fileNameFor(T2, 'audio', 0), kind: 'audio', height: 0 }), { talkId: 'x' }, null, 5,
     { ...good, talkId: '5f2a1b9c-1111-4222-8333-444455556666', file: '../../evil' }, { ...good, kind: 'film' }]);
@@ -40,7 +40,7 @@ test('expiration et jours restants', () => {
   assert.equal(daysLeftUntil(r.expiresAt, NOW), 30); assert.equal(daysLeftUntil(r.expiresAt, NOW + 29.5 * 86400000), 1); assert.equal(daysLeftUntil(r.expiresAt, r.expiresAt + 5), 0);
 });
 
-test('applyRenewal : prolongé, supprimé (abonnement fini / conférence retirée), gardé (autre refus)', () => {
+test('applyRenewal : prolongé, supprimé (abonnement fini / vidéo retirée), gardé (autre refus)', () => {
   const rs = [rec(), rec({ talkId: T2, file: fileNameFor(T2, 'audio', 0), kind: 'audio', height: 0 })];
   const later = new Date(NOW + 60 * 86400000).toISOString();
   let r = applyRenewal(rs, [{ talkId: T1, ok: true, expiresAt: later }, { talkId: T2, ok: false, reason: 'subscription' }], NOW);

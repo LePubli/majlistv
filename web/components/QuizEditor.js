@@ -1,5 +1,5 @@
 'use client';
-// Studio → onglet « Quiz » d'une conférence : activation, génération par l'IA, relecture et ajout de questions.
+// Studio → onglet « Quiz » d'une vidéo : activation, génération par l'IA, relecture et ajout de questions.
 import { useCallback, useEffect, useState } from 'react';
 import QuizQuestion, { QuestionForm } from './QuizQuestion';
 

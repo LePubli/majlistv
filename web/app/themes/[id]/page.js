@@ -1,5 +1,5 @@
 'use client';
-// Étape 31.1 — Page d'un thème : description, trois « petits pas », conférences du catalogue associées,
+// Étape 31.1 — Page d'un thème : description, trois « petits pas », vidéos du catalogue associées,
 // et, pour les membres Apprentissage, « Ajouter à mes objectifs » ou « M'engager » sur un pas.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

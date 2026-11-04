@@ -1,8 +1,8 @@
-// « Pose une question sur cette conférence » (palier Apprentissage).
+// « Pose une question sur cette vidéo » (palier Apprentissage).
 //   GET  /talks/:id/ask   { available, reason?, remaining, dailyMax }  état pour le panneau
 //   POST /talks/:id/ask   { question } → { status, answer, sources: [{ startMs, text }], remaining }
 // L'IA ne voit que des passages de la transcription ; toute réponse sans passage cité est refusée (voir askLib.js).
-// Plafonds réglables dans Admin → Paramètres → « Questions sur la conférence » : par membre et par jour, et global par jour.
+// Plafonds réglables dans Admin → Paramètres → « Questions sur la vidéo » : par membre et par jour, et global par jour.
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { getNumber } from '../../settings.js';
@@ -16,7 +16,7 @@ const DAY_START = `(date_trunc('day', now() AT TIME ZONE '${TZ}') AT TIME ZONE '
 const idSchema = z.object({ id: z.string().uuid() });
 const bodySchema = z.object({ question: z.string().trim().min(3).max(MAX_QUESTION) });
 const entrySchema = z.object({ id: z.string().uuid(), qid: z.string().uuid() });
-const HISTORY = 30; // derniers échanges d'un membre sur une conférence
+const HISTORY = 30; // derniers échanges d'un membre sur une vidéo
 
 export async function purgeAsk() {
   const days = Math.max(1, (await getNumber('ask_keep_days')) || 90);
@@ -42,7 +42,7 @@ export default async function askRoutes(app) {
     const { id } = idSchema.parse(req.params);
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
     const talk = await loadTalk(id);
-    if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const u = await usage(req.user.sub);
     const cfg = await askConfig();
     let reason = null;
@@ -57,8 +57,8 @@ export default async function askRoutes(app) {
     const uid = req.user.sub;
     if (!(await hasLearningTier(uid))) return required(reply);
     const talk = await loadTalk(id);
-    if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
-    if (talk.transcript_status !== 'ready') return reply.code(409).send({ error: "La transcription de cette conférence n'est pas encore prête", code: 'no_transcript' });
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    if (talk.transcript_status !== 'ready') return reply.code(409).send({ error: "La transcription de cette vidéo n'est pas encore prête", code: 'no_transcript' });
     const cfg = await askConfig();
     if (!cfg.key) return reply.code(503).send({ error: "L'assistant n'est pas disponible pour le moment", code: 'ask_unavailable' });
 
@@ -72,10 +72,10 @@ export default async function askRoutes(app) {
     const wanted = lang((await pool.query('SELECT locale FROM users WHERE id = $1', [uid])).rows[0]?.locale);
     const langs = (await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1', [id])).rows.map((r) => r.lang);
     const useLang = langs.includes(wanted) ? wanted : langs.includes(talk.transcript_language) ? talk.transcript_language : langs[0];
-    if (!useLang) return reply.code(409).send({ error: "La transcription de cette conférence n'est pas encore prête", code: 'no_transcript' });
+    if (!useLang) return reply.code(409).send({ error: "La transcription de cette vidéo n'est pas encore prête", code: 'no_transcript' });
     const segs = (await pool.query('SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1 AND lang = $2 ORDER BY idx', [id, useLang])).rows;
     const passages = buildPassages(segs);
-    if (!passages.length) return reply.code(409).send({ error: "La transcription de cette conférence est vide", code: 'no_transcript' });
+    if (!passages.length) return reply.code(409).send({ error: "La transcription de cette vidéo est vide", code: 'no_transcript' });
     const budget = Math.max(2000, await getNumber('ask_context_chars'));
     const chosen = selectPassages(passages, question, budget).passages;
 
@@ -84,7 +84,7 @@ export default async function askRoutes(app) {
     try {
       out = await askModel({ provider: cfg.provider, key: cfg.key, model: cfg.model, system, user });
     } catch (err) {
-      req.log.warn(`Assistant de conférence (${cfg.provider}) : ${err.message}`);
+      req.log.warn(`Assistant de vidéo (${cfg.provider}) : ${err.message}`);
       return reply.code(502).send({ error: "L'assistant n'a pas pu répondre. Réessayez dans un instant (cette question n'est pas décomptée).", code: 'ask_failed' });
     }
     const res = validateAnswer(out.input, chosen, wanted);
@@ -94,7 +94,7 @@ export default async function askRoutes(app) {
     return { ...res, id: saved.id, remaining: Math.max(0, u.remaining - 1), dailyMax: u.dailyMax };
   });
 
-  // --- Historique du membre sur cette conférence (ses 30 derniers échanges, du plus ancien au plus récent)
+  // --- Historique du membre sur cette vidéo (ses 30 derniers échanges, du plus ancien au plus récent)
   app.get('/talks/:id/ask/history', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     if (!(await hasLearningTier(req.user.sub))) return required(reply);

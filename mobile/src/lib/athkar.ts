@@ -1,4 +1,4 @@
-// Étape M3 — athkar, vendredi et saisons dans l'application (mêmes données que le site : étapes 45, 45C, 45D).
+// Étape M3 — adhkar, vendredi et saisons dans l'application (mêmes données que le site : étapes 45, 45C, 45D).
 // Fonctions pures : testées avec Node (tests/athkar.test.ts).
 import type { Card } from './types';
 import type { Key } from './i18n';

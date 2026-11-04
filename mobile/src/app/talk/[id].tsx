@@ -1,4 +1,4 @@
-// Fiche et lecteur d'une conférence, fidèle à la PWA : lecteur (vidéo du serveur, archive.org, YouTube/Vimeo intégrés),
+// Fiche et lecteur d'une vidéo, fidèle à la PWA : lecteur (vidéo du serveur, archive.org, YouTube/Vimeo intégrés),
 // actions, « Apprendre », onglets (résumé, chapitres, transcription, notes, à propos), série, « À suivre », aperçu verrouillé.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, BackHandler, Pressable, ScrollView, Share, View } from 'react-native';
@@ -52,7 +52,7 @@ export default function TalkScreen() {
       </SafeAreaView>
     );
   }
-  // key : un changement de session (connexion) ou de conférence recrée proprement le lecteur.
+  // key : un changement de session (connexion) ou de vidéo recrée proprement le lecteur.
   return <TalkView key={`${talk.data.id}:${user?.id ?? 'guest'}`} talk={talk.data} atMs={Number(at) > 0 ? Number(at) : undefined} />;
 }
 

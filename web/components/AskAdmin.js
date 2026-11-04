@@ -7,7 +7,7 @@ import { clock } from '../lib/clock';
 import { useApp } from './Providers';
 
 const FILTERS = [['reported', 'À traiter (signalées)'], ['refused', 'Refus'], ['answered', 'Réponses'], ['all', 'Tout']];
-const STATUS = { answered: 'Répondu', not_in_talk: 'Pas dans la conférence', off_topic: 'Hors sujet', religious_ruling: 'Question religieuse (refus)' };
+const STATUS = { answered: 'Répondu', not_in_talk: 'Pas dans la vidéo', off_topic: 'Hors sujet', religious_ruling: 'Question religieuse (refus)' };
 const when = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 const num = (n) => Number(n || 0).toLocaleString('fr-FR');
 
@@ -32,7 +32,7 @@ export default function AskAdmin() {
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([call(`/admin/ask?filter=${filter}`), call('/admin/ask/stats')]);
     if (a.ok && b.ok) { setList(a.data); setStats(b.data); setErr(''); }
-    else setErr(a.status === 404 || b.status === 404 ? "Cette fonction est coupée (Admin → Fonctions → « Questions sur la conférence »)." : (a.data?.error || b.data?.error || 'Chargement impossible.'));
+    else setErr(a.status === 404 || b.status === 404 ? "Cette fonction est coupée (Admin → Fonctions → « Questions sur la vidéo »)." : (a.data?.error || b.data?.error || 'Chargement impossible.'));
   }, [call, filter]);
   useEffect(() => { load(); }, [load]);
 
@@ -50,7 +50,7 @@ export default function AskAdmin() {
     <section className="billing">
       <h2>Questions IA</h2>
       <p className="meta small">
-        Moteur actuel : <b>{eng.ready ? `${eng.provider === 'deepseek' ? 'DeepSeek' : 'Claude'} (${eng.model})` : 'aucun (clé manquante)'}</b> · plafond {stats.limits.dailyMax} question(s) par membre et par jour, {num(stats.limits.globalDailyMax)} pour tout le site. Réglages : <Link className="link u" href="/admin?tab=settings">Paramètres → Questions sur la conférence</Link>.
+        Moteur actuel : <b>{eng.ready ? `${eng.provider === 'deepseek' ? 'DeepSeek' : 'Claude'} (${eng.model})` : 'aucun (clé manquante)'}</b> · plafond {stats.limits.dailyMax} question(s) par membre et par jour, {num(stats.limits.globalDailyMax)} pour tout le site. Réglages : <Link className="link u" href="/admin?tab=settings">Paramètres → Questions sur la vidéo</Link>.
       </p>
       <div className="ask-adm-grid">
         <Stat label="Aujourd'hui" v={stats.today} />
@@ -58,7 +58,7 @@ export default function AskAdmin() {
         <Stat label="30 derniers jours" v={stats.month} />
       </div>
       {stats.byModel.length > 0 && <p className="meta small">Par modèle (30 j) : {stats.byModel.map((m) => `${m.model} — ${num(m.questions)} q., ${num(m.tokensIn)} + ${num(m.tokensOut)} jetons`).join(' · ')}</p>}
-      {stats.topTalks.length > 0 && <p className="meta small">Conférences les plus questionnées (30 j) : {stats.topTalks.map((t) => <span key={t.id}><Link className="link u" href={`/talks/${t.id}`}>{t.title}</Link> ({t.n}) </span>)}</p>}
+      {stats.topTalks.length > 0 && <p className="meta small">Vidéos les plus questionnées (30 j) : {stats.topTalks.map((t) => <span key={t.id}><Link className="link u" href={`/talks/${t.id}`}>{t.title}</Link> ({t.n}) </span>)}</p>}
       <p className="meta small">Le prix dépend du modèle et de ton contrat : les jetons ci-dessus sont à multiplier par le tarif de ton fournisseur.</p>
 
       <div className="tablist" role="tablist" aria-label="Filtre">

@@ -1,11 +1,11 @@
 // Étape 20 — Modération.
-//   POST /talks/:id/report                     signalement d'une conférence par un spectateur (compte facultatif)
+//   POST /talks/:id/report                     signalement d'une vidéo par un spectateur (compte facultatif)
 //   GET  /moderation/summary                   compteurs (à relire, signalements ouverts)
-//   GET  /moderation/queue                     conférences à relire (en attente) ou refusées
-//   POST /moderation/talks/:id/decision        valider ou refuser une conférence (motif obligatoire en cas de refus)
+//   GET  /moderation/queue                     vidéos à relire (en attente) ou refusées
+//   POST /moderation/talks/:id/decision        valider ou refuser une vidéo (motif obligatoire en cas de refus)
 //   GET  /moderation/reports                   signalements (ouverts ou traités)
-//   POST /moderation/reports/:id/resolve       classer, régler ou retirer la conférence
-//   POST /talks/:id/review/submit              l'organisateur renvoie sa conférence corrigée à la relecture
+//   POST /moderation/reports/:id/resolve       classer, régler ou retirer la vidéo
+//   POST /talks/:id/review/submit              l'organisateur renvoie sa vidéo corrigée à la relecture
 //   GET  /admin/audit                          journal des actions de l'équipe (administrateur)
 // Rôles : « modérateur » et « administrateur » pour /moderation ; seul l'administrateur lit le journal.
 import { z } from 'zod';
@@ -27,7 +27,7 @@ export default async function moderationRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const b = z.object({ reason: z.enum(REASONS), details: z.string().trim().max(1000).default('') }).parse(req.body ?? {});
     const talk = (await pool.query(`SELECT t.id FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [id])).rows[0];
-    if (!talk) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const viewer = await app.optionalUser(req); // visiteur sans compte : accepté, mais limité à 5 signalements par heure et par adresse
     try {
       await pool.query('INSERT INTO content_reports(talk_id, reporter_id, reason, details) VALUES ($1, $2, $3, $4)', [id, viewer?.sub ?? null, b.reason, b.details]);
@@ -63,13 +63,13 @@ export default async function moderationRoutes(app) {
 
   async function decide(req, reply, id, decision, note, { fromReport = false } = {}) {
     const t = (await pool.query('SELECT id, title, organizer_id, review_status FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
-    if (decision === 'approve' && !['pending', 'rejected'].includes(t.review_status)) { reply.code(409).send({ error: "Cette conférence n'est pas en attente de relecture", code: 'not_pending' }); return null; }
-    if (decision === 'reject' && t.review_status === 'rejected') { reply.code(409).send({ error: 'Cette conférence est déjà refusée', code: 'already_rejected' }); return null; }
+    if (!t) { reply.code(404).send({ error: 'Vidéo introuvable' }); return null; }
+    if (decision === 'approve' && !['pending', 'rejected'].includes(t.review_status)) { reply.code(409).send({ error: "Cette vidéo n'est pas en attente de relecture", code: 'not_pending' }); return null; }
+    if (decision === 'reject' && t.review_status === 'rejected') { reply.code(409).send({ error: 'Cette vidéo est déjà refusée', code: 'already_rejected' }); return null; }
     const status = decision === 'approve' ? 'approved' : 'rejected';
     await pool.query('UPDATE talks SET review_status = $2, review_note = $3, reviewed_at = now(), reviewed_by = $4 WHERE id = $1', [id, status, note, req.user.sub]);
     await enqueueForUser(pool, t.organizer_id, decision === 'approve' ? 'review_approved' : 'review_rejected', { title: t.title, note, path: '/studio' }).catch(() => {});
-    req.auditSummary = `${decision === 'approve' ? 'Conférence validée' : fromReport ? 'Conférence retirée après signalement' : 'Conférence refusée'} : « ${t.title} »${note ? ` — ${note}` : ''}`;
+    req.auditSummary = `${decision === 'approve' ? 'Vidéo validée' : fromReport ? 'Vidéo retirée après signalement' : 'Vidéo refusée'} : « ${t.title} »${note ? ` — ${note}` : ''}`;
     return { id, reviewStatus: status, reviewNote: note };
   }
 
@@ -80,13 +80,13 @@ export default async function moderationRoutes(app) {
     return out ?? reply;
   });
 
-  // L'organisateur corrige puis renvoie sa conférence refusée.
+  // L'organisateur corrige puis renvoie sa vidéo refusée.
   app.post('/talks/:id/review/submit', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const t = (await pool.query('SELECT organizer_id, review_status, publication FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Conférence introuvable' });
-    if (t.review_status !== 'rejected') return reply.code(409).send({ error: "Cette conférence n'a pas été refusée", code: 'not_rejected' });
-    if (t.publication === 'draft') return reply.code(409).send({ error: "Publiez ou programmez la conférence : elle sera relue à ce moment-là", code: 'draft' });
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub)) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    if (t.review_status !== 'rejected') return reply.code(409).send({ error: "Cette vidéo n'a pas été refusée", code: 'not_rejected' });
+    if (t.publication === 'draft') return reply.code(409).send({ error: "Publiez ou programmez la vidéo : elle sera relue à ce moment-là", code: 'draft' });
     await pool.query(`UPDATE talks SET review_status = 'pending', submitted_at = now() WHERE id = $1`, [id]);
     return { reviewStatus: 'pending' };
   });
@@ -115,7 +115,7 @@ export default async function moderationRoutes(app) {
     if (!r) return reply.code(404).send({ error: 'Signalement introuvable' });
     if (r.status !== 'open') return reply.code(409).send({ error: 'Ce signalement est déjà traité', code: 'handled' });
     if (b.action === 'unpublish') {
-      // Retrait : la conférence repasse en « refusée » avec le motif, tous les signalements ouverts à son sujet sont réglés d'un coup.
+      // Retrait : la vidéo repasse en « refusée » avec le motif, tous les signalements ouverts à son sujet sont réglés d'un coup.
       const t = (await pool.query('SELECT review_status FROM talks WHERE id = $1', [r.talk_id])).rows[0];
       if (t.review_status !== 'rejected') { const out = await decide(req, reply, r.talk_id, 'reject', b.note, { fromReport: true }); if (!out) return reply; }
       await pool.query(`UPDATE content_reports SET status = 'actioned', handled_by = $2, handled_at = now(), note = $3 WHERE talk_id = $1 AND status = 'open'`, [r.talk_id, req.user.sub, b.note]);

@@ -1,8 +1,8 @@
 'use client';
 // Studio → Contenus (maquette « Studio v2 », écran 2) — étape S3 : parcours de production en 7 étapes
 // (Importée › Transcrite › Traduite › Relue › Montée › Doublée › Publiée), langue d'origine → français, visibilité, vues.
-// Données : GET /me/talks (conférences, traitements) + GET /studio/production (vues et doublage, fournis par les modules).
-// Conservé : recherche, modification en lot, relecture avant mise en ligne (modération), conférences programmées.
+// Données : GET /me/talks (vidéos, traitements) + GET /studio/production (vues et doublage, fournis par les modules).
+// Conservé : recherche, modification en lot, relecture avant mise en ligne (modération), vidéos programmées.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';

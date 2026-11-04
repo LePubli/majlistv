@@ -1,5 +1,5 @@
 'use client';
-// Étape 20 — « Signaler cette conférence » : petit formulaire en ligne (motif + précisions), compte facultatif.
+// Étape 20 — « Signaler cette vidéo » : petit formulaire en ligne (motif + précisions), compte facultatif.
 import { useState } from 'react';
 
 const REASONS = ['copyright', 'inappropriate', 'misleading', 'doctrinal', 'technical', 'other'];

@@ -36,7 +36,7 @@ async function main() {
   console.log('entrée + verrou du jeton enfant OK');
 
   const cat = await kid.get<KidCatalog>('/kids/catalog');
-  assert.ok(cat.talks.some((x) => x.id === fx.talkId), 'la conférence Kids est dans le catalogue');
+  assert.ok(cat.talks.some((x) => x.id === fx.talkId), 'la vidéo Kids est dans le catalogue');
   const rows = resolveShelves(cat.shelves, cat.talks, false, 'x');
   assert.ok(rows.length > 0);
   const titles = rows.map((r) => shelfTitle(r.shelf, { t, rubrics: cat.rubrics, locale: 'fr' }));

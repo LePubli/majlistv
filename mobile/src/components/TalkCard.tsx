@@ -1,4 +1,4 @@
-// Vignette d'une conférence, comme sur le site : miniature 16/9, badge (Gratuit / Premium / À passer / À réviser / Épisode suivant),
+// Vignette d'une vidéo, comme sur le site : miniature 16/9, badge (Gratuit / Premium / À passer / À réviser / Épisode suivant),
 // durée, barre de progression, titre, niveau, intervenant · catégorie (ou série · S1 É3).
 import React from 'react';
 import { Pressable, View } from 'react-native';

@@ -49,7 +49,7 @@ const shape = (r) => ({
 });
 
 
-// Quiz proposé au public pour cette conférence ? (activé + assez de questions validées). Sert aussi à la fiche conférence.
+// Quiz proposé au public pour cette vidéo ? (activé + assez de questions validées). Sert aussi à la fiche vidéo.
 export async function quizInfo(talkId) {
   const min = await getNumber('quiz_min_questions');
   const { rows } = await pool.query(
@@ -70,7 +70,7 @@ export default async function quizRoutes(app) {
       `SELECT id, organizer_id, title, transcript_status, transcript_language, language, quiz_enabled FROM talks WHERE id = $1`, [id]);
     const t = rows[0];
     if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) {
-      reply.code(404).send({ error: 'Conférence introuvable' });
+      reply.code(404).send({ error: 'Vidéo introuvable' });
       return null;
     }
     return t;
@@ -88,7 +88,7 @@ export default async function quizRoutes(app) {
     return q;
   }
 
-  // Chapitre qui contient cette minute (résumé de la langue de la conférence).
+  // Chapitre qui contient cette minute (résumé de la langue de la vidéo).
   async function chapterAt(talkId, lang, ms) {
     if (ms == null) return { ms: null, title: '' };
     const { rows } = await pool.query(
@@ -116,7 +116,7 @@ export default async function quizRoutes(app) {
     return null;
   }
 
-  // ------------------------------------------------------------------ État du quiz d'une conférence
+  // ------------------------------------------------------------------ État du quiz d'une vidéo
   app.get('/talks/:id/studio/quiz', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const t = await ownedTalk(req, reply, id);
@@ -139,7 +139,7 @@ export default async function quizRoutes(app) {
     };
   });
 
-  // Activer / désactiver le quiz pour cette conférence (null = suivre le réglage du site).
+  // Activer / désactiver le quiz pour cette vidéo (null = suivre le réglage du site).
   app.put('/talks/:id/studio/quiz/settings', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { enabled } = z.object({ enabled: z.boolean().nullable() }).parse(req.body ?? {});
@@ -243,7 +243,7 @@ export default async function quizRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Public : passer le quiz (étape 24.3)
-  // Conférence visible par le public dont le quiz est proposé ; sinon 404 (les réponses ne sont jamais envoyées avant la correction).
+  // Vidéo visible par le public dont le quiz est proposé ; sinon 404 (les réponses ne sont jamais envoyées avant la correction).
   async function publicQuiz(talkId) {
     const ok = (await pool.query(`SELECT 1 FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [talkId])).rowCount;
     if (!ok || !(await quizInfo(talkId)).available) return null;
@@ -263,7 +263,7 @@ export default async function quizRoutes(app) {
   app.get('/talks/:id/quiz', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const qs = await publicQuiz(id);
-    if (!qs) return reply.code(404).send({ error: "Cette conférence n'a pas de quiz" });
+    if (!qs) return reply.code(404).send({ error: "Cette vidéo n'a pas de quiz" });
     const viewer = await app.optionalUser(req);
     return {
       passPercent: await getNumber('quiz_pass_percent'),
@@ -277,7 +277,7 @@ export default async function quizRoutes(app) {
     const { id } = idSchema.parse(req.params);
     const b = submitBody.parse(req.body ?? {});
     const qs = await publicQuiz(id);
-    if (!qs) return reply.code(404).send({ error: "Cette conférence n'a pas de quiz" });
+    if (!qs) return reply.code(404).send({ error: "Cette vidéo n'a pas de quiz" });
     const chosen = new Map(b.answers.map((a) => [a.questionId, a.index]));
     const results = qs.map((q) => {
       const index = chosen.has(q.id) ? chosen.get(q.id) : null;

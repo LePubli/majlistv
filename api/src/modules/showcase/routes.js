@@ -1,4 +1,4 @@
-// Vitrine visiteur (étape E1) : une vraie conférence, tirée au hasard parmi les plus vues, avec une vraie question de son quiz.
+// Vitrine visiteur (étape E1) : une vraie vidéo, tirée au hasard parmi les plus vues, avec une vraie question de son quiz.
 // GET /showcase est public. Il ne renvoie jamais la bonne réponse : le visiteur répond via POST /talks/:id/quiz/submit
 // (ouvert aux visiteurs, rien n'est enregistré sans compte).
 import { pool } from '../../db.js';
@@ -8,7 +8,7 @@ import { adultSql } from '../../taxonomy.js';
 import { getNumber } from '../../settings.js';
 import * as ext from '../../ext.js'; // quiz : point d'extension « talk.quiz »
 
-const TOP = 8;      // le tirage se fait parmi les 8 conférences les plus vues qui ont un quiz
+const TOP = 8;      // le tirage se fait parmi les 8 vidéos les plus vues qui ont un quiz
 const WINDOW = 90;  // « les plus vues » = les 90 derniers jours (lectures comptent triple)
 const clip = (s, n) => { const x = String(s || '').replace(/\s+/g, ' ').trim(); return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x; };
 
@@ -16,7 +16,7 @@ export default async function showcaseRoutes(app) {
   app.get('/showcase', async (req) => {
     const lang = String(req.query?.lang || 'fr').split('-')[0].slice(0, 8);
     const min = await getNumber('quiz_min_questions');
-    // Conférences prêtes, publiques, adultes, avec assez de questions validées ; classées par audience récente.
+    // Vidéos prêtes, publiques, adultes, avec assez de questions validées ; classées par audience récente.
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, t.source, t.video_ref, t.access, t.level, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description,
               COALESCE(p.score, 0) AS score
@@ -26,7 +26,7 @@ export default async function showcaseRoutes(app) {
         WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
           AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $1
         ORDER BY COALESCE(p.score, 0) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 30`, [min, WINDOW]);
-    // Le quiz doit aussi être proposé au public (réglage de la conférence, fonction Quiz allumée).
+    // Le quiz doit aussi être proposé au public (réglage de la vidéo, fonction Quiz allumée).
     const ok = [];
     for (const r of rows) { if (ok.length >= TOP) break; if ((await ext.call('talk.quiz', { available: false, count: 0 }, r.id)).available) ok.push(r); }
     if (!ok.length) return { available: false };
@@ -47,7 +47,7 @@ export default async function showcaseRoutes(app) {
         posterUrl: talk.poster_key ? await presignGet(talk.poster_key) : (talk.external_thumb || null),
         summary: clip(row?.summary || talk.description, 220),
       },
-      // Les chapitres d'une conférence réservée aux abonnés restent cachés (comme l'aperçu gratuit) : on n'annonce que leur nombre.
+      // Les chapitres d'une vidéo réservée aux abonnés restent cachés (comme l'aperçu gratuit) : on n'annonce que leur nombre.
       chapters: talk.access === 'free' ? chapters.slice(0, 4).map((c) => ({ ms: c.ms, title: c.title })) : [],
       chapterCount: chapters.length,
       quizCount: qs.length,

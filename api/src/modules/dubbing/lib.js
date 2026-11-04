@@ -23,7 +23,7 @@ export const BUILTIN = Object.fromEntries(Object.entries(PARAMS).map(([k, p]) =>
 
 const num = (k) => z.number().min(PARAMS[k].min, `${k} : ${PARAMS[k].min} minimum`).max(PARAMS[k].max, `${k} : ${PARAMS[k].max} maximum`);
 const uuid = z.string().uuid();
-// Valeurs envoyées : toutes facultatives (une conférence ne garde que ce qui diffère des réglages par défaut).
+// Valeurs envoyées : toutes facultatives (une vidéo ne garde que ce qui diffère des réglages par défaut).
 export const paramsSchema = z.object({
   ...Object.fromEntries(Object.keys(PARAMS).map((k) => [k, num(k).optional()])),
   baseVoice: uuid.optional(),
@@ -54,7 +54,7 @@ export async function checkVoices(p) {
 export const getDefaults = async () => (await pool.query('SELECT params FROM dub_defaults WHERE id = 1')).rows[0]?.params || {};
 export const getTalkParams = async (talkId) => (await pool.query('SELECT params FROM dub_talk_settings WHERE talk_id = $1', [talkId])).rows[0]?.params || null;
 
-// Réglages effectifs : valeurs d'origine ← réglages par défaut ← réglages de la conférence. Une voix supprimée entre-temps
+// Réglages effectifs : valeurs d'origine ← réglages par défaut ← réglages de la vidéo. Une voix supprimée entre-temps
 // est remplacée : voix de base → première voix de base active (Tom d'abord) ; voix cible → aucune.
 export function effective(defaults, talk, voices) {
   const out = { ...BUILTIN, baseVoice: null, targetVoice: null, ...defaults, ...(talk || {}) };

@@ -1,4 +1,4 @@
-// Fenêtre « Ajouter à une liste » : coche / décoche les listes qui contiennent la conférence, ou crée une nouvelle liste.
+// Fenêtre « Ajouter à une liste » : coche / décoche les listes qui contiennent la vidéo, ou crée une nouvelle liste.
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

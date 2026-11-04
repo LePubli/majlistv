@@ -7,7 +7,7 @@ import { starTotal } from './kidsLearning.js';
 const TODAY = `(now() AT TIME ZONE '${TZ}')::date`;
 export const MIN_LIMIT = 5, MAX_LIMIT = 480;
 
-// Condition SQL « ce profil a le droit de voir cette conférence » ($p = id du profil, $m = mode du catalogue).
+// Condition SQL « ce profil a le droit de voir cette vidéo » ($p = id du profil, $m = mode du catalogue).
 export const catalogSql = (alias, p, m) => `(CASE $${m}::text
   WHEN 'selected' THEN EXISTS (SELECT 1 FROM kid_catalog kc WHERE kc.profile_id = $${p} AND kc.talk_id = ${alias}.id AND kc.allowed)
   ELSE NOT EXISTS (SELECT 1 FROM kid_catalog kc WHERE kc.profile_id = $${p} AND kc.talk_id = ${alias}.id AND NOT kc.allowed) END)`;

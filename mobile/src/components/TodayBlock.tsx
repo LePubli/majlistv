@@ -1,5 +1,5 @@
 // Étape M1 — Bloc « Aujourd'hui » (comme sur le site, étape B1) : la courte liste de ce que le membre peut faire aujourd'hui
-// (juz du jour, athkar du moment, action de Ramadan, cartes et révisions). Chaque ligne mène à l'action ; les lignes faites
+// (juz du jour, adhkar du moment, action de Ramadan, cartes et révisions). Chaque ligne mène à l'action ; les lignes faites
 // passent en bas, cochées. Rien ne s'affiche pour un visiteur ni quand il n'y a aucune ligne. Données : GET /me/today.
 import React, { useCallback } from 'react';
 import { Linking, Pressable, View } from 'react-native';

@@ -1,6 +1,6 @@
 'use client';
 // Page de bienvenue (après l'inscription) et « Mes préférences » (?edit=1) : prénom, langue des sous-titres, thèmes préférés.
-// Tout est facultatif : on peut passer cette étape, rien ne bloque l'accès aux conférences.
+// Tout est facultatif : on peut passer cette étape, rien ne bloque l'accès aux vidéos.
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';

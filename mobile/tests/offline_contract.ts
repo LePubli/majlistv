@@ -70,10 +70,10 @@ async function main() {
   await assert.rejects(() => free.post(`/me/offline/${fx.talkId}`, { kind: 'audio' }), (e: unknown) => e instanceof ApiError && errorCodeFor(e.status, e.code) === 'subscription');
   const ren2 = await free.post<{ items: { talkId: string; ok: boolean; reason?: string }[] }>('/me/offline/renew', { files: [{ talkId: fx.talkId, kind: 'video', height: 360, sha256: ready.sha256 }] });
   assert.equal(applyRenewal([rec], ren2.items, Date.now()).removed.length, 1);
-  // Même une conférence en accès libre est réservée aux abonnés pour le téléchargement et le pack.
+  // Même une vidéo en accès libre est réservée aux abonnés pour le téléchargement et le pack.
   await assert.rejects(() => free.post(`/me/offline/${fx.freeTalkId}`, { kind: 'audio' }), (e: unknown) => e instanceof ApiError && errorCodeFor(e.status, e.code) === 'subscription');
   await assert.rejects(() => free.get(`/me/offline/${fx.freeTalkId}/pack`), (e: unknown) => e instanceof ApiError && e.status === 403);
-  console.log('refus sans abonnement (y compris conférence libre) OK');
+  console.log('refus sans abonnement (y compris vidéo libre) OK');
   console.log('TOUT OK');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

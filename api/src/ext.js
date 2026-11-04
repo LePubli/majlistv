@@ -15,11 +15,11 @@ const always = async () => true;
 
 // Catalogue des points d'extension et événements connus du socle (documentation et Admin → Modules).
 export const CATALOG = {
-  'talk.quiz': 'Quiz proposé pour une conférence : { available, count } (fiche conférence, vitrine)',
-  'talk.practice': 'Écran « Et maintenant ? » d’une conférence : { available, count }',
-  'kids.canSee': 'Une conférence est-elle visible par ce profil enfant ? (oui / non)',
+  'talk.quiz': 'Quiz proposé pour une vidéo : { available, count } (fiche vidéo, vitrine)',
+  'talk.practice': 'Écran « Et maintenant ? » d’une vidéo : { available, count }',
+  'kids.canSee': 'Une vidéo est-elle visible par ce profil enfant ? (oui / non)',
   'series.list': 'Liste des séries publiées (filtres : limit, category, q, level, startedBy, speakerNames)',
-  'series.episodeLabels': 'Place de chaque conférence dans une série : Map(id → étiquette)',
+  'series.episodeLabels': 'Place de chaque vidéo dans une série : Map(id → étiquette)',
   'series.nextUp': '« Épisode suivant » de chaque série commencée par un membre',
   'stripe.checkout.payment': 'Événement : paiement unique Stripe réussi (client SQL, session)',
   'stripe.invoice.paid': 'Événement : facture d’abonnement payée (client SQL, facture)',
@@ -33,10 +33,10 @@ export const CATALOG = {
   'activity.cancel': 'Événement : annuler une tâche de Studio → Activité ({ done }, { queue, ref }) ; le module qui la porte met done = true',
   'activity.collect': 'Événement : chaque module ajoute ses tâches de fond à la liste de Studio → Activité (liste, { organizerId })',
   'activity.pause': 'Événement : une tâche en cours a été mise en pause ({ queue, ref }) : le module l’arrête et la remet dans la file',
-  'studio.production': 'Événement : chaque module ajoute l’état de production de conférences (vues, doublage…) — Studio → Contenus (objet par conférence, { ids })',
+  'studio.production': 'Événement : chaque module ajoute l’état de production de vidéos (vues, doublage…) — Studio → Contenus (objet par vidéo, { ids })',
   'studio.overview': 'Événement : chaque module ajoute ses chiffres au tableau de bord du Studio (objet, { organizerId, days, talkId, isAdmin })',
   'archive.restore': 'Faire revenir dans Garage un fichier archivé (clé) : { id, status } ou null si rien à restaurer (module Stockage et archivage)',
-  'editor.replaced': 'Événement : la vidéo publiée d’une conférence a été remplacée par un montage (snapshot, { talkId, map }) : chaque module range ce qu’il retire dans snapshot (module Éditeur, étape E4b)',
+  'editor.replaced': 'Événement : la vidéo publiée d’une vidéo a été remplacée par un montage (snapshot, { talkId, map }) : chaque module range ce qu’il retire dans snapshot (module Éditeur, étape E4b)',
   'editor.restored': 'Événement : la version d’avant un remplacement est revenue (snapshot rangé lors du remplacement, { talkId }) (module Éditeur, étape E4b)',
   'today.collect': 'Événement : chaque module ajoute ses lignes au bloc « Aujourd’hui » d’un membre (liste, { userId, lang }) — étape B1',
   'editor.media': 'Événement : chaque module ajoute ses pistes liées à un projet de l’éditeur de montage (ex. segments de la voix française) — module Éditeur (objet, { talkId })',

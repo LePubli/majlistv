@@ -1,4 +1,4 @@
-// sitemap.xml : accueil, séries, conférences et séries visibles, pages légales et abonnement. Rendu à chaque demande (mis en cache 5 min côté API).
+// sitemap.xml : accueil, séries, vidéos et séries visibles, pages légales et abonnement. Rendu à chaque demande (mis en cache 5 min côté API).
 import { seoGet, seoSite } from '../lib/seo';
 import { publicPages } from '../lib/pages';
 

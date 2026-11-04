@@ -1,6 +1,6 @@
 'use client';
 // Admin → Vendredi (étape 45C) : activer, choisir les éléments de la carte, relire et modifier les textes (FR / EN / AR),
-// choisir la collection « Conférences du vendredi », régler la notification (heure de Paris).
+// choisir la collection « Vidéos du vendredi », régler la notification (heure de Paris).
 // Les textes par défaut sont de simples rappels : relisez-les avant d'activer.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
@@ -42,7 +42,7 @@ function Form({ d, onSaved }) {
       {f.showGhusl && texts('ghusl', 'Texte du rappel de la grande ablution')}
       <label className="chk"><input type="checkbox" checked={f.showSalawat} onChange={set('showSalawat')} /> Rappel de la prière sur le Prophète</label>
       {f.showSalawat && texts('salawat', 'Texte du rappel de la prière sur le Prophète')}
-      <label>Collection « Conférences du vendredi » (rangée sous la carte)
+      <label>Collection « Vidéos du vendredi » (rangée sous la carte)
         <select value={f.collectionId} onChange={set('collectionId')}>
           <option value="">— aucune —</option>
           {d.collections.map((c) => <option key={c.id} value={c.id}>{c.title}{c.published ? '' : ' (non publiée : ne s’affichera pas)'}</option>)}
@@ -77,7 +77,7 @@ export default function FridayAdmin() {
   return (
     <section>
       <h2>Vendredi</h2>
-      <p className="meta">Le vendredi, l’accueil affiche une carte : lien vers la sourate Al-Kahf, rappel de la grande ablution, rappel de la prière sur le Prophète ﷺ, et une rangée de conférences. Il n’y a pas de compteur de prières. Désactivé tant que vous ne l’activez pas.</p>
+      <p className="meta">Le vendredi, l’accueil affiche une carte : lien vers la sourate Al-Kahf, rappel de la grande ablution, rappel de la prière sur le Prophète ﷺ, et une rangée de vidéos. Il n’y a pas de compteur de prières. Désactivé tant que vous ne l’activez pas.</p>
       <p className="meta">Aujourd’hui : {d.today.date} {d.today.isFriday ? '— c’est vendredi (la carte est visible si activée).' : '— ce n’est pas vendredi.'}</p>
       <p className="meta small">Les textes par défaut sont de simples rappels écrits par l’assistant : relisez-les et corrigez-les avant d’activer.</p>
       <Form d={d} onSaved={load} />

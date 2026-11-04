@@ -1,5 +1,5 @@
 'use client';
-// Panneaux fournis par les modules sur la page d'une conférence (ex. « Langue de l'audio » du module Doublage).
+// Panneaux fournis par les modules sur la page d'une vidéo (ex. « Langue de l'audio » du module Doublage).
 // Chaque panneau est chargé à la demande ; sans module, rien n'est affiché et la page fonctionne comme avant.
 import { useEffect, useState } from 'react';
 import { MODULE_TALK_PANELS } from '../lib/modules';

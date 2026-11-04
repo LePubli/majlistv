@@ -106,7 +106,7 @@ export function fontFamily(weight: Weight, size: number, rtl: boolean): string {
   return weight === 'regular' ? 'DMSans_400Regular' : weight === 'medium' ? 'DMSans_500Medium' : 'DMSans_700Bold';
 }
 
-/** Dégradés de repli quand une conférence n'a pas de miniature. */
+/** Dégradés de repli quand une vidéo n'a pas de miniature. */
 const CLASSIQUE_GRADIENTS: [string, string][] = [
   ['#3B2A12', '#A9772A'],
   ['#1F2A2C', '#4C8A86'],

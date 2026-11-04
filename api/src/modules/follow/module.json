@@ -2,7 +2,7 @@
   "id": "follow",
   "name": "Suivre et notifications",
   "version": "1.0.0",
-  "description": "Bouton Suivre un intervenant, alertes par e-mail, annonce des nouvelles conférences, sélection de la semaine.",
+  "description": "Bouton Suivre un intervenant, alertes par e-mail, annonce des nouvelles vidéos, sélection de la semaine.",
   "feature": "follow",
   "requires": [],
   "settings": [

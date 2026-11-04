@@ -1,4 +1,4 @@
-// Courts de l'espace enfant : extraits verticaux des conférences de son âge (même règles que le catalogue Kids, côté serveur).
+// Courts de l'espace enfant : extraits verticaux des vidéos de son âge (même règles que le catalogue Kids, côté serveur).
 // On fait glisser vers le haut pour le suivant ; un seul lecteur à la fois ; la prière met en pause comme ailleurs.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';

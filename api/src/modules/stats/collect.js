@@ -1,7 +1,7 @@
 // Collecte des statistiques d'audience (étape 18). Anonyme : aucun cookie, aucune adresse IP stockée.
 //   POST /stats/hit    visiteurs du site (public, connecté ou non)         — 204 toujours (le site ne doit jamais être gêné)
 //   POST /kids/stats   espace enfant (jeton enfant) : uniquement des compteurs par vidéo, aucune provenance/appareil/langue/pays
-// Ignorés : robots, visiteurs qui envoient « Do Not Track » / « Global Privacy Control », administrateurs, et le propriétaire de la conférence.
+// Ignorés : robots, visiteurs qui envoient « Do Not Track » / « Global Privacy Control », administrateurs, et le propriétaire de la vidéo.
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { visibleSql } from '../../visibility.js';
@@ -18,7 +18,7 @@ const hitBody = z.object({
   q: z.union([z.literal(25), z.literal(50), z.literal(75)]).optional(),
 });
 
-// Compteur de la colonne qui correspond à l'événement d'une conférence.
+// Compteur de la colonne qui correspond à l'événement d'une vidéo.
 const incOf = (b, newViewer) => {
   if (b.type === 'view') return { views: 1, viewers: newViewer ? 1 : 0 };
   if (b.type === 'play') return { plays: 1 };

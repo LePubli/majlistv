@@ -1,4 +1,4 @@
-// Droit d'accès aux conférences premium : abonnement Stripe en cours (essai, actif ou en retard de paiement)
+// Droit d'accès aux vidéos premium : abonnement Stripe en cours (essai, actif ou en retard de paiement)
 // ou accès offert par un admin (users.premium_until).
 import { pool } from './db.js';
 

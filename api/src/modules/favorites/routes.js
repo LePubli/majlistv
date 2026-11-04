@@ -35,7 +35,7 @@ export default async function favoritesRoutes(app) {
   app.put('/me/favorites/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const talk = await pool.query('SELECT 1 FROM talks WHERE id = $1', [id]);
-    if (!talk.rowCount) return reply.code(404).send({ error: 'Conférence introuvable' });
+    if (!talk.rowCount) return reply.code(404).send({ error: 'Vidéo introuvable' });
     await pool.query('INSERT INTO favorites(user_id, talk_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user.sub, id]);
     return reply.code(204).send();
   });

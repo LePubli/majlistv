@@ -1,7 +1,7 @@
 // Rapports d'audience (étape 18).
-//   GET /admin/stats   administrateur : tout le site (visiteurs, provenance, appareils…) + toutes les conférences
-//   GET /studio/stats  organisateur   : ses propres conférences seulement
-// Paramètres : days (7 | 30 | 90 | 365), audience (web | kids), talk (une conférence), format (json | csv).
+//   GET /admin/stats   administrateur : tout le site (visiteurs, provenance, appareils…) + toutes les vidéos
+//   GET /studio/stats  organisateur   : ses propres vidéos seulement
+// Paramètres : days (7 | 30 | 90 | 365), audience (web | kids), talk (une vidéo), format (json | csv).
 // Chiffres uniquement agrégés : jamais d'identité, y compris pour Kids (aucun profil d'enfant n'est nommé ni identifiable).
 import { z } from 'zod';
 import { pool } from '../../db.js';
@@ -16,7 +16,7 @@ const query = z.object({
 });
 
 // Étape 31.3 — Retour aux organisateurs : nombre de personnes (jamais leur identité) ayant pris ou tenu un engagement
-// après une conférence. Un chiffre n'est donné qu'à partir de 6 personnes (« au-delà de 5 ») ; en dessous, null.
+// après une vidéo. Un chiffre n'est donné qu'à partir de 6 personnes (« au-delà de 5 ») ; en dessous, null.
 export const PRACTICE_MIN_PEOPLE = 6;
 const shown = (n) => (n >= PRACTICE_MIN_PEOPLE ? n : null);
 
@@ -77,7 +77,7 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
   const scope = { organizerId, talkId };
   const cur = await talkPart(audience, since, until, scope);
   const prev = await talkPart(audience, prevSince, prevUntil, scope);
-  const wide = site && !talkId; // chiffres du site entier (hors conférence précise)
+  const wide = site && !talkId; // chiffres du site entier (hors vidéo précise)
   const out = { days, audience, since, until, scope: site ? 'site' : 'mine', talkId: talkId || null };
   out.practice = audience === 'web' ? await practiceFeedback(since, until, scope) : null;
   out.totals = totalsShape(cur.tot);
@@ -102,7 +102,7 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
       FROM base WHERE speaker <> '' GROUP BY speaker HAVING sum(views) + sum(plays) > 0 ORDER BY sum(plays) DESC, sum(views) DESC LIMIT 8`);
 
   if (audience === 'web') {
-    // Provenance / appareil / langue : site entier (admin) ou ouvertures des conférences de l'organisateur.
+    // Provenance / appareil / langue : site entier (admin) ou ouvertures des vidéos de l'organisateur.
     const dims = {};
     if (wide) {
       for (const dim of ['source', 'referrer', 'device', 'lang', 'country']) {
@@ -129,7 +129,7 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
     }
     out.dims = dims;
   } else {
-    // Kids : quiz (par conférence) et, pour l'administrateur, usage de l'espace enfant. Aucun profil n'est identifiable.
+    // Kids : quiz (par vidéo) et, pour l'administrateur, usage de l'espace enfant. Aucun profil n'est identifiable.
     const QF = `(a.created_at AT TIME ZONE '${TZ}')::date BETWEEN $1::date AND $2::date AND ($3::uuid IS NULL OR t.organizer_id = $3) AND ($4::uuid IS NULL OR a.talk_id = $4)`;
     const QP = [since, until, organizerId || null, talkId || null];
     const q = (await pool.query(`SELECT count(*)::int AS attempts, round(avg(percent))::int AS "avgPercent", round(avg(stars)::numeric, 1)::float AS "avgStars"
@@ -170,11 +170,11 @@ export function toCsv(r) {
   row(...keys);
   for (const s of r.series) row(...keys.map((k) => s[k]));
   lines.push('');
-  row('Conférence', 'Ouvertures', 'Lectures', 'Minutes regardées', 'Terminées', 'Taux de fin %', '% moyen regardé', ...(r.audience === 'kids' ? ['Quiz joués', 'Étoiles moyennes'] : []));
+  row('Vidéo', 'Ouvertures', 'Lectures', 'Minutes regardées', 'Terminées', 'Taux de fin %', '% moyen regardé', ...(r.audience === 'kids' ? ['Quiz joués', 'Étoiles moyennes'] : []));
   for (const t of r.top) row(t.title, t.views, t.plays, t.minutes, t.completes, t.completionRate, t.avgWatchPct, ...(r.audience === 'kids' ? [t.quizAttempts, t.quizStars] : []));
   if (r.practice) {
     lines.push('');
-    row('Après la conférence (personnes, anonyme, à partir de 6)', 'Se sont engagées', 'Ont tenu un engagement');
+    row('Après la vidéo (personnes, anonyme, à partir de 6)', 'Se sont engagées', 'Ont tenu un engagement');
     for (const t of r.practice.talks) row(t.title, t.committed ?? '', t.done ?? '');
   }
   // BOM : Excel ouvre ainsi correctement les accents.
@@ -192,9 +192,9 @@ export default async function statsRoutes(app) {
   app.get('/admin/stats', { preHandler: app.requireRole('admin') }, async (req, reply) => send(reply, query.parse(req.query), { site: true }));
   app.get('/studio/stats', { preHandler: app.requireRole('organizer', 'admin') }, async (req, reply) => {
     const q = query.parse(req.query);
-    if (q.talk) { // un organisateur ne voit que ses conférences
+    if (q.talk) { // un organisateur ne voit que ses vidéos
       const t = (await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [q.talk])).rows[0];
-      if (!t || t.organizer_id !== req.user.sub) return reply.code(404).send({ error: 'Conférence introuvable' });
+      if (!t || t.organizer_id !== req.user.sub) return reply.code(404).send({ error: 'Vidéo introuvable' });
     }
     return send(reply, q, { organizerId: req.user.sub });
   });

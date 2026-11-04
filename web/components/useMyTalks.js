@@ -1,5 +1,5 @@
 'use client';
-// Mes conférences avec leur état de traitement (GET /me/talks), rafraîchies toutes les 6 s tant qu'un traitement est en cours.
+// Mes vidéos avec leur état de traitement (GET /me/talks), rafraîchies toutes les 6 s tant qu'un traitement est en cours.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from './Providers';
 import { talkSteps, talkKind, talkProgress } from '../lib/talkState';

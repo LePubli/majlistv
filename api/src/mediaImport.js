@@ -1,5 +1,5 @@
 // Étape « Import » : copier chez nous une vidéo qui vit ailleurs (YouTube, Vimeo, archive.org, tout autre site ou lien direct).
-// Ce fichier regroupe ce que partagent la création d'une conférence (routes/talks.js), les routes d'import (routes/mediaImport.js)
+// Ce fichier regroupe ce que partagent la création d'une vidéo (routes/talks.js), les routes d'import (routes/mediaImport.js)
 // et Studio → Activité (routes/activity.js) : déclaration des droits, adresses acceptées, ouverture et annulation d'une demande.
 // Le téléchargement est fait par le transcripteur (yt-dlp, archive.org), la conversion HLS par le worker : voir README, « Étape Import ».
 import net from 'node:net';
@@ -48,7 +48,7 @@ export function classifyUrl(raw) {
   return { url: u.toString(), origin, archive };
 }
 
-// Adresse à copier pour une conférence YouTube / Vimeo / archive.org déjà au catalogue.
+// Adresse à copier pour une vidéo YouTube / Vimeo / archive.org déjà au catalogue.
 export function talkSourceUrl(talk) {
   if (talk.source === 'youtube') return { url: `https://www.youtube.com/watch?v=${talk.video_ref}`, origin: 'youtube', archiveFile: null };
   if (talk.source === 'vimeo') return { url: `https://vimeo.com/${talk.video_ref}`, origin: 'vimeo', archiveFile: null };
@@ -72,7 +72,7 @@ export async function storageProblem() {
   return null;
 }
 
-// Ouvre une demande (le client peut être une transaction). Lève l'erreur 23505 si une demande est déjà active pour la conférence.
+// Ouvre une demande (le client peut être une transaction). Lève l'erreur 23505 si une demande est déjà active pour la vidéo.
 export async function insertImport(db, { talkId, userId, url, origin, archiveFile = null, newTalk, prevSource = null, objectKey }) {
   const { rows } = await db.query(
     `INSERT INTO media_imports(talk_id, requested_by, requested_by_name, source_url, origin, archive_file, new_talk, prev_source, object_key,
@@ -82,7 +82,7 @@ export async function insertImport(db, { talkId, userId, url, origin, archiveFil
   return rows[0].id;
 }
 
-// Une conférence créée pour l'import ne peut pas rester « importing » : elle passe en échec (relançable depuis sa fiche).
+// Une vidéo créée pour l'import ne peut pas rester « importing » : elle passe en échec (relançable depuis sa fiche).
 export const failNewTalk = (talkId, message) => pool.query(
   `UPDATE talks SET video_status = 'failed', video_error = $2 WHERE id = $1 AND video_status = 'importing'`, [talkId, String(message).slice(0, 500)]);
 

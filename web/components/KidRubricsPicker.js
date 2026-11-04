@@ -1,5 +1,5 @@
 'use client';
-// Rubriques Kids d'une conférence (Studio) : pastilles à cocher, enregistrées tout de suite. Rien ne s'affiche si le module Kids est éteint.
+// Rubriques Kids d'une vidéo (Studio) : pastilles à cocher, enregistrées tout de suite. Rien ne s'affiche si le module Kids est éteint.
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
 

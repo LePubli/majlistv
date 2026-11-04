@@ -6,7 +6,7 @@ import { kidCanSee } from './routes.js';
 import { startPending } from './pending.js';
 
 export default async function register(app, ctx) {
-  ctx.provide('kids.canSee', kidCanSee); // fiche conférence et statistiques Kids (étape M3a)
+  ctx.provide('kids.canSee', kidCanSee); // fiche vidéo et statistiques Kids (étape M3a)
   await app.register(routes);
   await app.register(catalogRoutes);
 }

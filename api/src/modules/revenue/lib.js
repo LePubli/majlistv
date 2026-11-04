@@ -1,7 +1,7 @@
 // Rémunération des chaînes (étape D) : crédit du temps de visionnage, factures encaissées, calcul et clôture mensuels.
 //
 // Principe (« comme YouTube ») : chaque mois, une part (rev_share_pct) des abonnements encaissés hors taxes, après frais de paiement,
-// forme une cagnotte répartie entre les chaînes au prorata du temps de visionnage de leurs conférences.
+// forme une cagnotte répartie entre les chaînes au prorata du temps de visionnage de leurs vidéos.
 //   cagnotte = encaissé net × (1 − frais %) × part %
 //   chaîne   = cagnotte × temps de la chaîne / temps total
 // Le temps est compté côté serveur (reprise de lecture), plafonné par membre et par jour. Les cartes cadeaux ne sont pas dans la base.

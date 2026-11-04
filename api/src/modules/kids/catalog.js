@@ -2,7 +2,7 @@
 //
 // Admin       GET/POST /admin/kids/rubrics · PATCH/DELETE /admin/kids/rubrics/:id · PUT /admin/kids/rubrics/order
 // Studio      GET /studio/kids/rubrics (liste pour les menus) · GET/PUT /studio/talks/:id/kid-rubrics · POST /studio/kids/rubrics/bulk
-// Enfant      GET /kids/catalog (rubriques + rangées + conférences) · GET /kids/search?q=
+// Enfant      GET /kids/catalog (rubriques + rangées + vidéos) · GET /kids/search?q=
 // Règles : l'enfant ne voit que ce qu'il voit déjà (prête, publiée, sa tranche d'âge, catalogue autorisé par le parent, gratuites sans abonnement).
 // La recherche enfant est une recherche SQL volontairement simple (titre, intervenant, description, rubrique) : pas de moteur externe,
 // jamais d'extrait de transcription, jamais de contenu adulte. Les « plus regardés » sont des totaux anonymes (aucun enfant n'est comparé).
@@ -71,17 +71,17 @@ export default async function kidCatalogRoutes(app) {
     const { id } = rid.parse(req.params);
     const r = (await pool.query('DELETE FROM kid_rubrics WHERE id = $1 RETURNING names', [id])).rows[0];
     if (!r) return reply.code(404).send({ error: 'Rubrique introuvable' });
-    req.auditSummary = `Rubrique Kids « ${r.names.fr} » supprimée (les conférences sont conservées)`;
+    req.auditSummary = `Rubrique Kids « ${r.names.fr} » supprimée (les vidéos sont conservées)`;
     return reply.code(204).send();
   });
 
-  // ------------------------------------------------------------------ Studio : classer les conférences
+  // ------------------------------------------------------------------ Studio : classer les vidéos
   app.get('/studio/kids/rubrics', manager, async () => (await pool.query('SELECT * FROM kid_rubrics ORDER BY position, id')).rows.map(rubricRow));
 
-  // Droit sur une conférence : créateur, administrateur, propriétaire / éditeur de sa chaîne.
+  // Droit sur une vidéo : créateur, administrateur, propriétaire / éditeur de sa chaîne.
   async function mine(req, reply, id) {
     const t = (await pool.query('SELECT id, organizer_id, speaker FROM talks WHERE id = $1', [id])).rows[0];
-    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, t)))) { reply.code(404).send({ error: 'Conférence introuvable' }); return null; }
+    if (!t || (req.user.role !== 'admin' && t.organizer_id !== req.user.sub && !(await viaChannel(req.user, t)))) { reply.code(404).send({ error: 'Vidéo introuvable' }); return null; }
     return t;
   }
   app.get('/studio/talks/:id/kid-rubrics', orgAdmin, async (req, reply) => {
@@ -103,7 +103,7 @@ export default async function kidCatalogRoutes(app) {
       for (const r of ok) await c.query('INSERT INTO talk_kid_rubrics(talk_id, rubric_id) VALUES ($1, $2)', [id, r]);
       await c.query('COMMIT');
     } catch (e) { await c.query('ROLLBACK'); throw e; } finally { c.release(); }
-    req.auditSummary = `Conférence ${id} : rubriques Kids modifiées`;
+    req.auditSummary = `Vidéo ${id} : rubriques Kids modifiées`;
     return { rubricIds: ok };
   });
 
@@ -113,7 +113,7 @@ export default async function kidCatalogRoutes(app) {
     const talks = (await pool.query(
       'SELECT id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3 OR lower(trim(speaker)) = ANY($4::text[]))',
       [b.ids, req.user.role === 'admin', req.user.sub, await managedSpeakers(req.user.sub)])).rows.map((r) => r.id);
-    if (talks.length !== new Set(b.ids).size) return reply.code(404).send({ error: 'Certaines conférences sont introuvables' });
+    if (talks.length !== new Set(b.ids).size) return reply.code(404).send({ error: 'Certaines vidéos sont introuvables' });
     const ok = (await pool.query('SELECT id FROM kid_rubrics WHERE id = ANY($1::int[])', [b.rubricIds])).rows.map((r) => r.id);
     if (ok.length !== new Set(b.rubricIds).size) return reply.code(400).send({ error: 'Rubrique inconnue' });
     const c = await pool.connect();
@@ -124,7 +124,7 @@ export default async function kidCatalogRoutes(app) {
       else for (const t of talks) for (const r of ok) await c.query('INSERT INTO talk_kid_rubrics(talk_id, rubric_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [t, r]);
       await c.query('COMMIT');
     } catch (e) { await c.query('ROLLBACK'); throw e; } finally { c.release(); }
-    req.auditSummary = `Rubriques Kids (${b.mode}) sur ${talks.length} conférence(s)`;
+    req.auditSummary = `Rubriques Kids (${b.mode}) sur ${talks.length} vidéo(s)`;
     return { updated: talks.length };
   });
 

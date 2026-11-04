@@ -1,7 +1,7 @@
 // Étape S3 — Studio → Activité : toutes les tâches de fond (conversion vidéo, transcription, traduction des sous-titres,
 // et celles des modules : doublage, archivage), avec pause, priorité, plage horaire des tâches lourdes.
 // Les services lisent les réglages par les fonctions SQL activity_allows / activity_paused / activity_priority (migration 055).
-// Un organisateur voit les tâches de ses conférences ; l'administrateur voit tout et peut agir.
+// Un organisateur voit les tâches de ses vidéos ; l'administrateur voit tout et peut agir.
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { getSetting, isOn, saveSettings } from '../settings.js';
@@ -100,7 +100,7 @@ export default async function activityRoutes(app) {
 
   app.get('/studio/activity', viewer, async (req) => {
     const tasks = await listTasks(scope(req));
-    // Erreurs : seulement celles des 30 derniers jours (les plus anciennes restent visibles sur la fiche de la conférence).
+    // Erreurs : seulement celles des 30 derniers jours (les plus anciennes restent visibles sur la fiche de la vidéo).
     const recentErr = (t) => t.status !== 'failed' || Date.now() - new Date(t.createdAt).getTime() < 30 * 86400_000;
     return { tasks: tasks.filter(recentErr), settings: await activitySettings(), canControl: req.user.role === 'admin' };
   });
@@ -125,7 +125,7 @@ export default async function activityRoutes(app) {
     const { paused } = z.object({ paused: z.boolean() }).strict().parse(req.body ?? {});
     const task = (await listTasks(null)).find((t) => t.queue === queue && t.ref === ref);
     if (!task) return reply.code(404).send({ error: 'Tâche introuvable', code: 'not_found' });
-    if (paused && task.status === 'failed') return reply.code(409).send({ error: 'Cette tâche est en échec : relancez-la depuis la fiche de la conférence', code: 'failed' });
+    if (paused && task.status === 'failed') return reply.code(409).send({ error: 'Cette tâche est en échec : relancez-la depuis la fiche de la vidéo', code: 'failed' });
     if (paused && task.status === 'running' && !task.canPauseRunning) {
       return reply.code(409).send({ error: 'Cette tâche est déjà en cours : elle va jusqu’au bout. Mettez en pause les suivantes.', code: 'running' });
     }
@@ -137,7 +137,7 @@ export default async function activityRoutes(app) {
   });
 
   // Annuler une tâche (registre n°28 / 31) : seulement les tâches marquées canCancel (le module qui la porte fait le travail,
-  // événement « activity.cancel »). L'administrateur annule tout ; un organisateur, les tâches de ses conférences.
+  // événement « activity.cancel »). L'administrateur annule tout ; un organisateur, les tâches de ses vidéos.
   app.post('/studio/activity/:queue/:ref/cancel', viewer, async (req, reply) => {
     const { queue, ref } = qp.parse(req.params);
     const task = (await listTasks(scope(req))).find((t) => t.queue === queue && t.ref === ref);

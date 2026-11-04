@@ -37,7 +37,7 @@ ok(calls.length === 0, 'avant l’ouverture : rien');
 await runSeasons(null, D('2026-02-11'), { send, hasChannel: yes });
 const got = new Set(calls.map((x) => x.uid));
 ok(got.has(a) && got.has(b) && !got.has(c) && !got.has(dis), 'ouverture : envoyé aux membres qui ont activé les notifications, pas aux autres ni aux comptes suspendus');
-ok(calls[0].kind === 'season' && calls[0].vars.t.fr === 'Ramadan : des conférences pour le mois béni' && calls[0].vars.b.en && calls[0].vars.t.ar, 'textes par défaut dans les 3 langues');
+ok(calls[0].kind === 'season' && calls[0].vars.t.fr === 'Ramadan : des vidéos pour le mois béni' && calls[0].vars.b.en && calls[0].vars.t.ar, 'textes par défaut dans les 3 langues');
 ok((await lastYear('ramadan')) === 1447, 'année hégirienne 1447 enregistrée');
 // 5) pas de doublon
 const n = calls.length;

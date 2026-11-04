@@ -28,7 +28,7 @@ ok(chk.ok && chk.timeline.clips.length === 1 && chk.timeline.audio.loudness.targ
 
 // --- Sous-titres courts
 const mk = (txt, s0, step = 0.4) => txt.split(' ').map((w, i) => ({ s: s0 + i * step, e: s0 + i * step + step - 0.05, w }));
-let words = [...mk('Bonjour à tous et bienvenue dans cette conférence sur la patience.', 10), ...mk('La patience est une lumière, dit-on souvent.', 16)];
+let words = [...mk('Bonjour à tous et bienvenue dans cette vidéo sur la patience.', 10), ...mk('La patience est une lumière, dit-on souvent.', 16)];
 let c = S.chunkCaptions(words, 10, 30);
 ok(c.every((x) => x.text.split(' ').length <= 5 && x.text.length <= 34), `groupes de 5 mots et 34 caractères au plus (${c.map((x) => x.text.split(' ').length)})`);
 ok(c.map((x) => x.text).join(' ') === words.map((w) => w.w).join(' '), 'aucun mot perdu ni ajouté, dans l’ordre');

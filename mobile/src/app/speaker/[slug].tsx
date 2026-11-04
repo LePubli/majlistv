@@ -1,4 +1,4 @@
-// Intervenant / chaîne : présentation, bouton suivre, séries, conférences.
+// Intervenant / chaîne : présentation, bouton suivre, séries, vidéos.
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';

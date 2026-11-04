@@ -1,6 +1,6 @@
 'use client';
-// Studio → fiche d'une conférence : « Copier cette vidéo chez nous » (étape Import).
-// Une conférence YouTube / Vimeo / archive.org est copiée dans notre stockage pour devenir une vidéo hébergée ; une conférence créée
+// Studio → fiche d'une vidéo : « Copier cette vidéo chez nous » (étape Import).
+// Une vidéo YouTube / Vimeo / archive.org est copiée dans notre stockage pour devenir une vidéo hébergée ; une vidéo créée
 // pour l'import (adresse quelconque) affiche ici l'avancement, l'annulation et la relance. Masqué si la fonction est désactivée.
 import { useCallback, useEffect, useState } from 'react';
 
@@ -18,7 +18,7 @@ export default function ImportVideoPanel({ talk, imp, setImp, reload, t, call, s
   const [busy, setBusy] = useState(false);
   const active = Boolean(imp?.active);
 
-  // Suivi de la demande en cours ; quand elle se termine, la fiche est rechargée (la conférence est devenue hébergée).
+  // Suivi de la demande en cours ; quand elle se termine, la fiche est rechargée (la vidéo est devenue hébergée).
   const refresh = useCallback(async () => {
     const r = await call(`/talks/${talk.id}/import`);
     if (r.ok) setImp(r.data.import || null);

@@ -1,10 +1,10 @@
-// Étape 22b-6 bis — « pack hors connexion » d'une conférence : tout ce qui accompagne la vidéo (résumé, points clés, chapitres, transcription
+// Étape 22b-6 bis — « pack hors connexion » d'une vidéo : tout ce qui accompagne la vidéo (résumé, points clés, chapitres, transcription
 // dans chaque langue disponible, quiz avec les bonnes réponses et leurs explications). Réservé aux abonnés (même contrôle que le fichier).
 import { pool } from '../../db.js';
 import { quizInfo } from '../quiz/routes.js';
 import { getNumber } from '../../settings.js';
 
-/** Construit le pack d'une conférence (le contrôle d'accès est fait par la route). */
+/** Construit le pack d'une vidéo (le contrôle d'accès est fait par la route). */
 export async function buildPack(talkId) {
   const ins = (await pool.query(
     "SELECT lang, summary, key_points, chapters FROM talk_insights WHERE talk_id = $1 AND status = 'ready' ORDER BY lang", [talkId])).rows;

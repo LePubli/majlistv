@@ -1,9 +1,9 @@
 // Étape « Import » : copier chez nous une vidéo externe pour qu'elle devienne une vidéo hébergée.
-//   POST /talks/:id/import          { rightsConfirmed: true }  conférence YouTube / Vimeo / archive.org du catalogue, ou relance d'un import échoué
-//   GET  /talks/:id/import          dernière demande de la conférence (état, progression, erreur)
+//   POST /talks/:id/import          { rightsConfirmed: true }  vidéo YouTube / Vimeo / archive.org du catalogue, ou relance d'un import échoué
+//   GET  /talks/:id/import          dernière demande de la vidéo (état, progression, erreur)
 //   POST /talks/:id/import/cancel   annule la demande en cours (si la conversion n'est pas encore lancée)
 //   GET  /studio/imports            journal des imports : qui, quand, quelle adresse, déclaration des droits (admin : tous)
-// La création d'une conférence avec une adresse quelconque (« importVideo ») est dans routes/talks.js (POST /talks).
+// La création d'une vidéo avec une adresse quelconque (« importVideo ») est dans routes/talks.js (POST /talks).
 // Fonction désactivable : Admin → Fonctions (media_import).
 import { z } from 'zod';
 import { pool } from '../db.js';
@@ -22,13 +22,13 @@ export const importView = (m) => m && ({
 export default async function mediaImportRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
 
-  // Conférence visible pour la personne : son créateur, l'administrateur, ou un éditeur de la chaîne.
+  // Vidéo visible pour la personne : son créateur, l'administrateur, ou un éditeur de la chaîne.
   async function mine(req, reply, id) {
     const { rows } = await pool.query(
       'SELECT id, organizer_id, speaker, source, video_ref, video_status, external_file FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
     if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, talk)))) {
-      reply.code(404).send({ error: 'Conférence introuvable' });
+      reply.code(404).send({ error: 'Vidéo introuvable' });
       return null;
     }
     return talk;
@@ -46,7 +46,7 @@ export default async function mediaImportRoutes(app) {
     if (talk.source !== 'upload') {
       src = talkSourceUrl(talk);
     } else {
-      // Relance d'un import qui a échoué ou qui a été annulé (conférence créée pour l'import).
+      // Relance d'un import qui a échoué ou qui a été annulé (vidéo créée pour l'import).
       const last = await latest(id);
       if (last?.new_talk && talk.video_status === 'failed' && ['failed', 'canceled'].includes(last.status)) {
         const c = classifyUrl(last.source_url);
@@ -82,7 +82,7 @@ export default async function mediaImportRoutes(app) {
       return reply.code(202).send({ id: importId, status: 'pending' });
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
-      if (err.code === '23505') return reply.code(409).send({ error: 'Un import est déjà en cours pour cette conférence', code: 'import_active' });
+      if (err.code === '23505') return reply.code(409).send({ error: 'Un import est déjà en cours pour cette vidéo', code: 'import_active' });
       throw err;
     } finally {
       client.release();
@@ -106,7 +106,7 @@ export default async function mediaImportRoutes(app) {
     return { canceled: true };
   });
 
-  // Journal : l'administrateur voit tout, un organisateur voit les imports qu'il a demandés ou qui concernent ses conférences.
+  // Journal : l'administrateur voit tout, un organisateur voit les imports qu'il a demandés ou qui concernent ses vidéos.
   app.get('/studio/imports', organizer, async (req) => {
     const own = req.user.role === 'admin' ? '' : 'WHERE (m.requested_by = $1 OR t.organizer_id = $1)';
     const { rows } = await pool.query(

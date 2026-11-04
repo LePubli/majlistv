@@ -1,5 +1,5 @@
 'use client';
-// Espace Apprentissage → « Mes engagements » : les actions que le membre a choisies après une conférence, avec leur état.
+// Espace Apprentissage → « Mes engagements » : les actions que le membre a choisies après une vidéo, avec leur état.
 // Aucun total ni pourcentage de réussite : l'objectif est de se souvenir et de reprendre, pas de se comparer.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -62,7 +62,7 @@ export default function PracticeList({ t, call, locale }) {
   const [d, setD] = useState(null);
   const load = useCallback(() => call('/me/practice').then((r) => r.ok && setD(r.data)), [call]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { // lien « Mes engagements » depuis la page d'une conférence
+  useEffect(() => { // lien « Mes engagements » depuis la page d'une vidéo
     if (d && typeof window !== 'undefined' && window.location.hash === '#engagements') document.getElementById('engagements')?.scrollIntoView({ block: 'start' });
   }, [d === null]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d) return null;

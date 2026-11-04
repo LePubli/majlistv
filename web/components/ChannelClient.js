@@ -1,5 +1,5 @@
 'use client';
-// Page d'une chaîne (étape C) : en-tête (nom, abonnés, Suivre), présentation, puis onglets Conférences / Séries.
+// Page d'une chaîne (étape C) : en-tête (nom, abonnés, Suivre), présentation, puis onglets Vidéos / Séries.
 // `initial` (lu côté serveur) est dans le HTML dès le premier octet et affiché pendant le chargement des vignettes.
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';

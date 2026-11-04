@@ -1,5 +1,5 @@
 'use client';
-// Bannière du haut de l'accueil : conférences mises en avant (défilement), bannière personnalisée, ou simple titre.
+// Bannière du haut de l'accueil : vidéos mises en avant (défilement), bannière personnalisée, ou simple titre.
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 

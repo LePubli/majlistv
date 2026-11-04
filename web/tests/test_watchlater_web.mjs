@@ -1,4 +1,4 @@
-// Amélioration 2.5 — « À regarder plus tard » : bouton des vignettes et de la page conférence, onglet de Ma bibliothèque, rangée de l'accueil.
+// Amélioration 2.5 — « À regarder plus tard » : bouton des vignettes et de la page vidéo, onglet de Ma bibliothèque, rangée de l'accueil.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
@@ -7,7 +7,7 @@ assert.match(pr, /\/api\/me\/watchlater\/ids/, 'état chargé une fois (Provider
 assert.match(pr, /features\.watchlater === false/, 'fonction coupée : rien n’est chargé');
 assert.match(read('components/TalkCard.js'), /feat\('watchlater'\) && <button type="button" className=\{`hc-btn/, 'bouton sur la vignette');
 const tc = read('app/talks/[id]/TalkClient.js');
-assert.match(tc, /act="later"/, 'bouton « Plus tard » de la page conférence'); assert.match(tc, /className="wl-msg" role="status"/, 'confirmation annoncée');
+assert.match(tc, /act="later"/, 'bouton « Plus tard » de la page vidéo'); assert.match(tc, /className="wl-msg" role="status"/, 'confirmation annoncée');
 assert.doesNotMatch(tc, /window\.alert/, 'pas de fenêtre d’alerte');
 const lib = read('app/library/page.js');
 assert.match(lib, /\{ id: 'later', label: t\('wlTab'\) \}/, 'onglet de Ma bibliothèque'); assert.match(lib, /\/me\/watchlater'/, 'liste chargée');

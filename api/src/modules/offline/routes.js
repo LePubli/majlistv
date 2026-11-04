@@ -1,10 +1,10 @@
 // Étape 22b-6 — Hors connexion (application Android).
-//   GET  /me/offline/:id/options   ce qui peut être téléchargé pour cette conférence (audio, qualités vidéo, tailles estimées)
+//   GET  /me/offline/:id/options   ce qui peut être téléchargé pour cette vidéo (audio, qualités vidéo, tailles estimées)
 //   POST /me/offline/:id           { kind: 'audio'|'video', height?: 360|720, retry?: true } → 202 « preparing » (à rappeler), 200 « ready » + lien signé, taille, empreinte, fin de validité, ou 502 « failed » + message (retry: true relance)
 //   POST /me/offline/renew         { talkIds: [...] } → pour chacune : toujours autorisée ? nouvelle fin de validité
 //   POST /me/offline/:id/done      { kind, height? } → l'application a bien reçu le fichier : le serveur l'efface dans quelques minutes
 //   GET  /me/offline/:id/pack      résumé, chapitres, transcription, quiz (avec réponses) pour la lecture hors connexion
-// Droit : abonnement en cours (ou accès offert), propriétaire/modérateur/administrateur. Une conférence en accès libre n'est PAS téléchargeable sans abonnement.
+// Droit : abonnement en cours (ou accès offert), propriétaire/modérateur/administrateur. Une vidéo en accès libre n'est PAS téléchargeable sans abonnement.
 // Les fichiers préparés sont temporaires sur le serveur (ménage automatique) : ils s'accumulent sur le téléphone, pas dans le stockage.
 import { z } from 'zod';
 import { pool } from '../../db.js';
@@ -24,18 +24,18 @@ import { buildPack } from './pack.js';
 const idParam = z.object({ id: z.string().uuid() });
 const rate = { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } };
 
-/** Conférence téléchargeable par cet utilisateur ? → { talk } ou { code, error } */
+/** Vidéo téléchargeable par cet utilisateur ? → { talk } ou { code, error } */
 async function check(user, talkId) {
   const { rows } = await pool.query(
     `SELECT t.id, t.access, t.source, t.speaker, t.organizer_id, t.video_status, t.audio_status, t.duration_seconds, t.media_prefix, ${visibleSql('t')} AS visible
        FROM talks t WHERE t.id = $1`, [talkId]);
   const t = rows[0];
-  if (!t) return { code: 404, error: 'Conférence introuvable' };
+  if (!t) return { code: 404, error: 'Vidéo introuvable' };
   const owner = user.role === 'admin' || user.role === 'moderator' || user.sub === t.organizer_id || await viaChannel(user, t);
-  if (!t.visible && !owner) return { code: 404, error: 'Conférence introuvable' };
+  if (!t.visible && !owner) return { code: 404, error: 'Vidéo introuvable' };
   if (t.source !== 'upload') return { code: 409, error: "Cette vidéo est lue depuis une autre plateforme : elle n'est pas téléchargeable.", reason: 'external' };
   if (t.video_status !== 'ready') return { code: 409, error: "La vidéo n'est pas encore prête.", reason: 'not_ready' };
-  const allowed = owner || await hasActiveSubscription(user.sub);   // abonnés seulement, même pour une conférence en accès libre
+  const allowed = owner || await hasActiveSubscription(user.sub);   // abonnés seulement, même pour une vidéo en accès libre
   if (!allowed) return { code: 403, error: "Le téléchargement est réservé aux abonnés.", reason: 'subscription' };
   return { talk: { ...t, prefix: t.media_prefix || `hls/${t.id}/` } };
 }
@@ -70,7 +70,7 @@ export default async function offlineRoutes(app) {
     const c = await check(req.user, id);
     if (!c.talk) return reply.code(c.code).send({ error: c.error, reason: c.reason, code: c.reason });
     const t = c.talk;
-    if (b.kind === 'audio' && t.audio_status !== 'ready') return reply.code(409).send({ error: "L'audio seul n'est pas encore prêt pour cette conférence.", reason: 'no_audio', code: 'no_audio' });
+    if (b.kind === 'audio' && t.audio_status !== 'ready') return reply.code(409).send({ error: "L'audio seul n'est pas encore prêt pour cette vidéo.", reason: 'no_audio', code: 'no_audio' });
     const height = b.kind === 'audio' ? 0 : b.height;
     let row = (await pool.query(
       `INSERT INTO offline_files (talk_id, prefix, kind, height) VALUES ($1, $2, $3, $4)

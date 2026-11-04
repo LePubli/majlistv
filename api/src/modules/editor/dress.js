@@ -19,7 +19,7 @@
 //   Étape E6b : positions libres, en % de l'image (null = position prédéfinie ci-dessus). Point de repère :
 //     titre = centre du texte ; bandeau = bord gauche, milieu en hauteur ; logo = coin haut-gauche ; sous-titres = milieu (y seul, centrés).
 //   }
-//   Variables dans les textes : {titre} (titre de la conférence), {intervenant} (nom de l'intervenant).
+//   Variables dans les textes : {titre} (titre de la vidéo), {intervenant} (nom de l'intervenant).
 import { z } from 'zod';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';

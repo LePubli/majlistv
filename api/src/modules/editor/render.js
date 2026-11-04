@@ -108,7 +108,7 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
       format: z.enum(FORMATS).default('16:9'), fit: z.enum(['blur', 'crop']).default('blur'),
       quality: z.union([z.literal(360), z.literal(720), z.literal(1080), z.null()]).default(null),
     }).parse(req.body ?? {});
-    if (!editable(row)) return reply.code(409).send({ error: 'Cette conférence ne peut pas être montée.', code: 'not_editable' });
+    if (!editable(row)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     if (b.rev !== row.rev) return reply.code(409).send({ error: 'Le montage n’est pas encore enregistré : réessayez dans un instant.', code: 'not_saved', rev: row.rev });
     const busy = (await pool.query("SELECT id FROM editor_renders WHERE project_id = $1 AND status IN ('queued', 'running') LIMIT 1", [row.id])).rows[0];
     if (busy) return reply.code(409).send({ error: 'Un rendu de ce montage est déjà en cours : attendez la fin ou annulez-le.', code: 'busy', id: busy.id });

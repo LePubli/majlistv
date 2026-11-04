@@ -1,5 +1,5 @@
 'use client';
-// Quiz de fin de conférence : une question à la fois, correction par le serveur, puis relecture des réponses avec
+// Quiz de fin de vidéo : une question à la fois, correction par le serveur, puis relecture des réponses avec
 // l'explication, le lien « Revoir à mm:ss » et le signalement d'une question. Gratuit, sans compte nécessaire.
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';

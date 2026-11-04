@@ -2,8 +2,8 @@
 // Étape H — Blocs « données du site » de l'accueil des membres (Admin → Pages → Accueil des membres).
 //
 // Contrairement aux blocs de l'étape I3 (contenu écrit à la main), ceux-ci lisent le catalogue et le compte de la personne :
-//   featured     À la une (conférences mises en avant) + carte « Reprendre »
-//   mine         une rangée personnelle (à réviser, quiz à rattraper, conférences en cours)
+//   featured     À la une (vidéos mises en avant) + carte « Reprendre »
+//   mine         une rangée personnelle (à réviser, quiz à rattraper, vidéos en cours)
 //   channels     chaînes à suivre, avec le bouton « Suivre »
 //   shorts       rangée des derniers shorts publiés par les chaînes
 //   collections  cycles, séries d'un intervenant, thèmes du moment

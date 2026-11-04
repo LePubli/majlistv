@@ -1,6 +1,6 @@
 // Étape 21 — E-mails d'information, deux boucles de fond :
-//  1. Nouvelles conférences des intervenants suivis : toutes les 10 min, chaque conférence nouvellement visible est « annoncée » UNE fois
-//     (talks.announced_at) ; chaque abonné reçoit UN e-mail groupé par passage, jamais un par conférence.
+//  1. Nouvelles vidéos des intervenants suivis : toutes les 10 min, chaque vidéo nouvellement visible est « annoncée » UNE fois
+//     (talks.announced_at) ; chaque abonné reçoit UN e-mail groupé par passage, jamais un par vidéo.
 //  2. Sélection de la semaine : un e-mail par semaine, au jour et à l'heure réglés, aux seuls membres qui l'ont demandée.
 // Étape 22b-4 : chaque envoi part aussi en notification sur téléphone (si la clé Firebase est enregistrée et si le membre a un téléphone enregistré).
 // Rien n'est mis en file tant qu'aucun canal (e-mail ou téléphone) n'est configuré (ni annoncé, pour ne rien perdre).
@@ -61,7 +61,7 @@ export async function runSpeakers(log) {
           vars: { name: e.name, cards: list.map(card), titles: bullet(list) + (e.talks.length > list.length ? `\n… +${e.talks.length - list.length}` : ''), speakers: names, count: String(e.talks.length), path },
           dedupeKey: `spk:${e.user_id}:${ids.length > 200 ? ids.slice(0, 200) : ids}` });
       }
-      if (pushOn) pushes.push({ userId: e.user_id, vars: { count: e.talks.length, titles: list.map((x) => x.title), speakers: names }, path: e.talks.length === 1 ? `/conferences/${e.talks[0].id}` : '/' }); // l'application ouvre la conférence par son identifiant
+      if (pushOn) pushes.push({ userId: e.user_id, vars: { count: e.talks.length, titles: list.map((x) => x.title), speakers: names }, path: e.talks.length === 1 ? `/conferences/${e.talks[0].id}` : '/' }); // l'application ouvre la vidéo par son identifiant
       sent += 1;
     }
     await client.query('UPDATE talks SET announced_at = now() WHERE id = ANY($1)', [talks.map((t) => t.id)]);

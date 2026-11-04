@@ -1,6 +1,6 @@
 // Étape 33 — E-mails automatiques de cycle de vie. Trois messages, chacun envoyé AU PLUS UNE FOIS par situation :
-//  • resume_talk   : une conférence commencée (≥ 2 min, non terminée) et laissée de côté depuis N jours → « Reprenez là où vous vous êtes arrêté ».
-//  • welcome_nudge : un compte créé depuis N jours qui n'a encore rien regardé → trois conférences pour commencer.
+//  • resume_talk   : une vidéo commencée (≥ 2 min, non terminée) et laissée de côté depuis N jours → « Reprenez là où vous vous êtes arrêté ».
+//  • welcome_nudge : un compte créé depuis N jours qui n'a encore rien regardé → trois vidéos pour commencer.
 //  • winback       : un abonnement terminé depuis N jours (et plus aucun accès) → les nouveautés depuis son départ.
 // Garde-fous : désactivé par défaut (réglage maître) ; préférence du membre (notify_lifecycle) ; un seul message par personne et par
 // « délai minimum » (lifecycle_gap_days) ; plage horaire (heure de Paris) ; plafond quotidien ; journal (lifecycle_log) ; lien de
@@ -17,7 +17,7 @@ const TZ = 'Europe/Paris';
 const READY = (t) => `${t}.video_status = 'ready' AND ${visibleSql(t)} AND ${adultSql(t)}`;
 const card = (r) => ({ id: r.id, title: r.title, speaker: r.speaker || '', poster: Boolean(r.poster), path: talkPath(r) });
 const bullet = (rows) => rows.map((r) => `• ${r.title}${r.speaker ? ` — ${r.speaker}` : ''}`).join('\n');
-// Le membre a-t-il accès aux conférences premium en ce moment ? (même règle que access.js, en SQL)
+// Le membre a-t-il accès aux vidéos premium en ce moment ? (même règle que access.js, en SQL)
 export const HAS_ACCESS = (u) => `(COALESCE(${u}.premium_until > now(), false) OR EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = ${u}.id AND s.status IN ('trialing', 'active', 'past_due')
   AND (s.current_period_end IS NULL OR s.current_period_end > now() - interval '2 days')))`;
 
@@ -39,7 +39,7 @@ export async function settings() {
 const COMMON = (u, gapParam) => `${u}.notify_lifecycle AND ${u}.disabled_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM lifecycle_log l WHERE l.user_id = ${u}.id AND l.created_at > now() - make_interval(days => ${gapParam}))`;
 
-// Trois conférences à proposer : les plus récentes, gratuites d'abord si `freeFirst`.
+// Trois vidéos à proposer : les plus récentes, gratuites d'abord si `freeFirst`.
 async function suggestions(n, freeFirst) {
   return (await pool.query(
     `SELECT t.id, t.slug, t.title, trim(t.speaker) AS speaker, (t.poster_key IS NOT NULL OR t.external_thumb IS NOT NULL) AS poster FROM talks t WHERE ${READY('t')}

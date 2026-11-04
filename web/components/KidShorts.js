@@ -1,5 +1,5 @@
 'use client';
-// Espace Kids : rangée « Shorts » (extraits courts des conférences de son âge). Se tait s'il n'y en a pas ou si la fonction est coupée.
+// Espace Kids : rangée « Shorts » (extraits courts des vidéos de son âge). Se tait s'il n'y en a pas ou si la fonction est coupée.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';

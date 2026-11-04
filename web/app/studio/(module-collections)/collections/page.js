@@ -29,7 +29,7 @@ function Editor({ id, call, onChanged, onClose }) {
   };
   const saveItems = async () => {
     const r = await call(`/studio/collections/${id}/items`, { method: 'PUT', body: JSON.stringify({ talkIds: talks.map((x) => x.id) }) });
-    setMsg(r.ok ? { ok: true, text: `Conférences enregistrées (${r.data.count})` } : { ok: false, text: r.data?.error || 'Erreur' }); if (r.ok) { setDirty(false); onChanged(); }
+    setMsg(r.ok ? { ok: true, text: `Vidéos enregistrées (${r.data.count})` } : { ok: false, text: r.data?.error || 'Erreur' }); if (r.ok) { setDirty(false); onChanged(); }
   };
   const move = (i, d) => { const a = [...talks]; const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setTalks(a); setDirty(true); };
   const add = (x) => { if (talks.some((y) => y.id === x.id) || talks.length >= c.max) return; setTalks([...talks, { ...x, visible: true }]); setDirty(true); };
@@ -40,11 +40,11 @@ function Editor({ id, call, onChanged, onClose }) {
       <label className="fld"><span>Titre</span><input value={c.title} maxLength={120} onChange={set('title')} /></label>
       <label className="fld"><span>Présentation</span><textarea rows={3} maxLength={1000} value={c.description} onChange={set('description')} /></label>
       <label className="fld"><span>Type</span><select value={c.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-      <label className="rv-email"><input type="checkbox" checked={c.published} onChange={set('published')} /> <span>Publiée (visible sur le site, au moins une conférence visible)</span></label>
+      <label className="rv-email"><input type="checkbox" checked={c.published} onChange={set('published')} /> <span>Publiée (visible sur le site, au moins une vidéo visible)</span></label>
       <label className="rv-email"><input type="checkbox" checked={c.pinned} onChange={set('pinned')} /> <span>Épinglée en tête de la liste</span></label>
       <div className="panel-actions"><button type="button" className="btn" onClick={saveInfo}>Enregistrer les informations</button></div>
 
-      <h3>Conférences ({talks.length}/{c.max})</h3>
+      <h3>Vidéos ({talks.length}/{c.max})</h3>
       <ol className="co-items">
         {talks.map((x, i) => (
           <li key={x.id}>
@@ -57,14 +57,14 @@ function Editor({ id, call, onChanged, onClose }) {
           </li>
         ))}
       </ol>
-      <label className="fld"><span>Ajouter une conférence (recherche par titre, intervenant ou texte)</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Au moins 2 lettres…" /></label>
+      <label className="fld"><span>Ajouter une vidéo (recherche par titre, intervenant ou texte)</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Au moins 2 lettres…" /></label>
       {hits.length > 0 && (
         <ul className="co-hits">
           {hits.map((x) => <li key={x.id}><span>{x.title}<small className="muted"> · {x.speaker}</small></span><button type="button" className="btn ghost" disabled={talks.some((y) => y.id === x.id)} onClick={() => add(x)}>{talks.some((y) => y.id === x.id) ? 'Déjà ajoutée' : 'Ajouter'}</button></li>)}
         </ul>
       )}
       <div className="panel-actions">
-        <button type="button" className="btn" disabled={!dirty} onClick={saveItems}>Enregistrer les conférences</button>
+        <button type="button" className="btn" disabled={!dirty} onClick={saveItems}>Enregistrer les vidéos</button>
         <button type="button" className="btn ghost" onClick={onClose}>Fermer</button>
         <button type="button" className="link u small" onClick={remove}>Supprimer la collection</button>
       </div>
@@ -106,7 +106,7 @@ export default function StudioCollections() {
           <li key={c.id}>
             <button type="button" className={sel === c.id ? 'co-row on' : 'co-row'} onClick={() => setSel(sel === c.id ? null : c.id)} aria-expanded={sel === c.id}>
               <b>{c.title}</b>
-              <span className="meta small">{KINDS[c.kind]} · {c.items} conférence(s) · {c.published ? 'publiée' : 'brouillon'}{c.pinned ? ' · épinglée' : ''}</span>
+              <span className="meta small">{KINDS[c.kind]} · {c.items} vidéo(s) · {c.published ? 'publiée' : 'brouillon'}{c.pinned ? ' · épinglée' : ''}</span>
             </button>
             {sel === c.id && <Editor id={c.id} call={call} onChanged={load} onClose={() => setSel(null)} />}
           </li>

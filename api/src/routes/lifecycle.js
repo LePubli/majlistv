@@ -20,8 +20,8 @@ export default async function lifecycleRoutes(app) {
     if (!(await smtpConf())) return reply.code(400).send({ error: "L'envoi d'e-mails n'est pas configuré (Admin → Paramètres → E-mails)." });
     const u = (await pool.query('SELECT id, email, name, locale FROM users WHERE id = $1', [req.user.sub])).rows[0];
     const sample = kind === 'resume_talk'
-      ? { title: 'Exemple de conférence', speaker: 'Intervenant', minutes: '12', path: '/' }
-      : { titles: '• Première conférence — Intervenant\n• Deuxième conférence — Intervenant\n• Troisième conférence — Intervenant', path: '/' };
+      ? { title: 'Exemple de vidéo', speaker: 'Intervenant', minutes: '12', path: '/' }
+      : { titles: '• Première vidéo — Intervenant\n• Deuxième vidéo — Intervenant\n• Troisième vidéo — Intervenant', path: '/' };
     await enqueueEmail(pool, { userId: u.id, to: u.email, locale: u.locale, kind, vars: { name: u.name, ...sample }, dedupeKey: `lc:test:${kind}:${u.id}:${Date.now()}` });
     return { ok: true, to: u.email };
   });

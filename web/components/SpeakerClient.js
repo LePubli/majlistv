@@ -1,5 +1,5 @@
 'use client';
-// Page d'un intervenant : nom, présentation, ses séries et ses conférences. `initial` (lu côté serveur) est dans le HTML dès le premier octet
+// Page d'un intervenant : nom, présentation, ses séries et ses vidéos. `initial` (lu côté serveur) est dans le HTML dès le premier octet
 // et affiché pendant le chargement des vignettes.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

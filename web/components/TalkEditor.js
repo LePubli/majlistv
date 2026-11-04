@@ -1,5 +1,5 @@
 'use client';
-// Studio → fiche d'une conférence : modifier les informations, la publication (publiée / brouillon / programmée) et la miniature.
+// Studio → fiche d'une vidéo : modifier les informations, la publication (publiée / brouillon / programmée) et la miniature.
 import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
@@ -188,7 +188,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
             {pill(f.kidsBands.length === 0, t('kdStudioNone'), () => patch({ kidsBands: [], showAdults: true }))}
             {BANDS.map((b) => {
               const on = f.kidsBands.includes(b);
-              // Première tranche cochée : la conférence est pour les enfants, on la retire du catalogue adultes (décochable ci-dessous).
+              // Première tranche cochée : la vidéo est pour les enfants, on la retire du catalogue adultes (décochable ci-dessous).
               return <button key={b} type="button" className={on ? 'pill on' : 'pill'} aria-pressed={on}
                 onClick={() => patch({ kidsBands: BANDS.filter((x) => (x === b ? !on : f.kidsBands.includes(x))), ...(f.kidsBands.length === 0 && !on ? { showAdults: false } : {}) })}>{on ? '✓ ' : ''}{bandLabel(b, t)}</button>;
             })}

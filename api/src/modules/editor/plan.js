@@ -105,7 +105,7 @@ const fmt = (x) => String(r3(x));
 //   music    : { [idDeLaMusique]: { key } }
 //   logo     : { key } | null
 //   preview  : true = petit fichier rapide (aperçu), false = rendu final
-//   title    : titre de la conférence (pour le nom du fichier)
+//   title    : titre de la vidéo (pour le nom du fichier)
 //   short    : null, ou (étape E5b, extrait court 9:16) { cropX, captions: [{ s, e, text }] (temps source, déjà regroupés), titleText,
 //              karaoke (registre n°33) : mot dit en or ; path (E5d, facultatif) : [{ t, x }] trajectoire du cadre (suivi du visage et corrections), notes (E5d) : avertissements à afficher }.
 //              Image verticale recadrée sur la source ; pas d'habillage (titre et sous-titres courts seulement).
@@ -204,7 +204,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
 
   // Textes (ASS) : titres, bandeaux, sous-titres incrustés, écrans d'ouverture et de fin. Temps décalés de la durée de l'intro.
   const cueMap = mapItems(clips, cues).map((m) => ({ ts: m.ts, te: m.te, text: m.text }));
-  if (!short && dress.subs.burn && !cueMap.length) warnings.push('Sous-titres incrustés demandés, mais la conférence n’a pas de sous-titres : rien n’est incrusté.');
+  if (!short && dress.subs.burn && !cueMap.length) warnings.push('Sous-titres incrustés demandés, mais la vidéo n’a pas de sous-titres : rien n’est incrusté.');
   let ass;
   if (short) {
     // Extrait court : sous-titres déjà regroupés (temps source → temps de l'extrait) et titre du début.

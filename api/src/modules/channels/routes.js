@@ -6,7 +6,7 @@
 //   GET/POST/DELETE /studio/channels/:slug/members   équipe d'éditeurs : propriétaire, modérateur, administrateur
 //   PUT  /studio/channels/:slug/owner    attribuer / retirer le propriétaire : modérateur ou administrateur
 //   GET  /studio/channel-owners          personnes à qui une chaîne peut être attribuée : modérateur ou administrateur
-// Les séries restent gérées par leur créateur ; les conférences qui portent le nom de la chaîne sont gérées aussi par le propriétaire et les éditeurs (src/channelAccess.js).
+// Les séries restent gérées par leur créateur ; les vidéos qui portent le nom de la chaîne sont gérées aussi par le propriétaire et les éditeurs (src/channelAccess.js).
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { publicSpeakers, speakerBio, speakerSlug } from '../../speakers.js';
@@ -63,7 +63,7 @@ export default async function channelRoutes(app) {
               (c.owner_id = $1) AS owner, EXISTS (SELECT 1 FROM channel_members m WHERE m.slug = c.slug AND m.user_id = $1) AS editor
          FROM speakers c LEFT JOIN users u ON u.id = c.owner_id
         ${isStaff ? '' : 'WHERE c.owner_id = $1 OR EXISTS (SELECT 1 FROM channel_members m WHERE m.slug = c.slug AND m.user_id = $1)'} ORDER BY lower(c.name)`, [req.user.sub]);
-    // Nombre de conférences par chaîne et graphie la plus utilisée (le slug se calcule côté serveur, pas en SQL).
+    // Nombre de vidéos par chaîne et graphie la plus utilisée (le slug se calcule côté serveur, pas en SQL).
     const counts = new Map(); const spell = new Map();
     const { rows: tr } = await pool.query("SELECT trim(speaker) AS name, count(*)::int AS n FROM talks WHERE trim(speaker) <> '' GROUP BY 1");
     for (const r of tr) {
@@ -77,7 +77,7 @@ export default async function channelRoutes(app) {
       canAssign: isStaff,
       channels: rows.map(({ owner, editor, ...c }) => ({
         ...c, avatarUrl: img.get(c.slug)?.avatarUrl || null, bannerUrl: img.get(c.slug)?.bannerUrl || null, name: c.name || c.slug,
-        // Texte à saisir dans « Intervenant » d'une conférence pour la rattacher à cette chaîne.
+        // Texte à saisir dans « Intervenant » d'une vidéo pour la rattacher à cette chaîne.
         keyName: c.keyName || spell.get(c.slug)?.name || c.name || c.slug,
         talks: counts.get(c.slug) || 0, followers: f.get(c.slug) || 0, mine: c.ownerId === req.user.sub,
         myRole: owner ? 'owner' : editor ? 'editor' : 'staff',
@@ -95,15 +95,15 @@ export default async function channelRoutes(app) {
     socials: socialsBody.optional(), country: z.string().trim().max(80).optional(),
     mainLanguage: z.string().trim().regex(/^([a-z]{2,3})?$/).optional(), featuredTalkId: z.string().uuid().nullable().optional(),
   }).refine((b) => Object.keys(b).length > 0, { message: 'Rien à modifier' });
-  const LABELS = { name: 'nom', bio: 'présentation', tagline: 'accroche', website: 'site', contactEmail: 'contact', socials: 'réseaux', country: 'pays', mainLanguage: 'langue', featuredTalkId: 'conférence à la une' };
+  const LABELS = { name: 'nom', bio: 'présentation', tagline: 'accroche', website: 'site', contactEmail: 'contact', socials: 'réseaux', country: 'pays', mainLanguage: 'langue', featuredTalkId: 'vidéo à la une' };
   app.put('/studio/channels/:slug', anyManager, async (req, reply) => {
     const { slug } = slugParam.parse(req.params);
     const b = patchBody.parse(req.body ?? {});
     if (!(await pool.query('SELECT 1 FROM speakers WHERE slug = $1', [slug])).rows[0]) return reply.code(404).send({ error: 'Chaîne introuvable' });
     if (!(await levelOf(req, slug))) return reply.code(403).send({ error: "Cette chaîne n'est pas la vôtre" });
-    if (b.featuredTalkId) { // la conférence à la une doit porter le nom de cette chaîne
+    if (b.featuredTalkId) { // la vidéo à la une doit porter le nom de cette chaîne
       const t = (await pool.query('SELECT speaker FROM talks WHERE id = $1', [b.featuredTalkId])).rows[0];
-      if (!t || speakerSlug(t.speaker) !== slug) return reply.code(400).send({ error: 'Cette conférence n\'appartient pas à la chaîne' });
+      if (!t || speakerSlug(t.speaker) !== slug) return reply.code(400).send({ error: 'Cette vidéo n\'appartient pas à la chaîne' });
     }
     const sets = []; const vals = [slug];
     const set = (col, v, cast = '') => { vals.push(v); sets.push(`${col} = $${vals.length}${cast}`); };
@@ -121,7 +121,7 @@ export default async function channelRoutes(app) {
     return rows[0];
   });
 
-  // Créer une chaîne (même sans aucune conférence). Une vidéo n'a jamais l'obligation d'avoir une chaîne.
+  // Créer une chaîne (même sans aucune vidéo). Une vidéo n'a jamais l'obligation d'avoir une chaîne.
   const MAX_OWN = 10;
   app.post('/studio/channels', anyManager, async (req, reply) => {
     const { name } = z.object({ name: z.string().trim().min(1).max(120) }).parse(req.body ?? {});
@@ -139,7 +139,7 @@ export default async function channelRoutes(app) {
     return reply.code(201).send(r.rows[0]);
   });
 
-  // Supprimer une chaîne qui ne contient plus rien (aucune conférence ni série). Propriétaire, modérateur ou administrateur.
+  // Supprimer une chaîne qui ne contient plus rien (aucune vidéo ni série). Propriétaire, modérateur ou administrateur.
   app.delete('/studio/channels/:slug', anyManager, async (req, reply) => {
     const { slug } = slugParam.parse(req.params);
     const c = (await pool.query('SELECT name FROM speakers WHERE slug = $1', [slug])).rows[0];
@@ -147,7 +147,7 @@ export default async function channelRoutes(app) {
     const lv = await levelOf(req, slug);
     if (lv !== 'staff' && lv !== 'owner') return reply.code(403).send({ error: "Seul le propriétaire peut supprimer la chaîne" });
     const used = (await pool.query("SELECT trim(speaker) AS s FROM talks WHERE trim(speaker) <> '' UNION SELECT trim(speaker) FROM series WHERE trim(speaker) <> ''")).rows;
-    if (used.some((r) => speakerSlug(r.s) === slug)) return reply.code(409).send({ error: 'La chaîne contient encore des conférences ou des séries' });
+    if (used.some((r) => speakerSlug(r.s) === slug)) return reply.code(409).send({ error: 'La chaîne contient encore des vidéos ou des séries' });
     const imgs = (await pool.query('SELECT avatar_key, banner_key FROM speakers WHERE slug = $1', [slug])).rows[0];
     await pool.query('DELETE FROM speakers WHERE slug = $1', [slug]);
     for (const k of [imgs.avatar_key, imgs.banner_key]) if (k) await deleteObject(k).catch(() => {});

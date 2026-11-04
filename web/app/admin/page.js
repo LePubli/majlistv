@@ -73,7 +73,7 @@ function Dashboard() {
         <Kpi value={users.complimentary} label="accès offerts en cours" hint={users.suspended ? `${users.suspended} compte(s) suspendu(s)` : null} />
       </div>
 
-      <h3 className="dash-h">Conférences</h3>
+      <h3 className="dash-h">Vidéos</h3>
       <div className="admin-cards">
         <Kpi value={talks.live} label="en ligne" href="/studio?filter=live" />
         <Kpi value={talks.processing} label="en traitement" href="/studio?filter=run" />
@@ -185,14 +185,14 @@ function Field({ f, value, onChange, onClear, langs, dirty, onTest, testing }) {
 
 const SECTION_HELP = {
   cards: "Comportement et informations des vignettes (style plateforme de streaming) : agrandissement au survol, aperçu vidéo, et chaque information affichée ou non. Les changements s'appliquent à tout le site dès l'enregistrement.",
-  home: "Bannière du haut de page et rangées de l'accueil. Les conférences à afficher en bannière se choisissent dans leur fiche du Studio (« Mise en avant »).",
-  general: "Nom du site, adresse publique et durée de l'aperçu gratuit des conférences premium.",
+  home: "Bannière du haut de page et rangées de l'accueil. Les vidéos à afficher en bannière se choisissent dans leur fiche du Studio (« Mise en avant »).",
+  general: "Nom du site, adresse publique et durée de l'aperçu gratuit des vidéos premium.",
   payment: 'Abonnements via Stripe : clé, webhook, prix et essai gratuit.',
   email: 'Envoi des e-mails (bienvenue, mot de passe oublié, rappels d\'essai…).',
   translation: 'Sous-titres traduits : choisis le moteur par défaut et, langue par langue, celui qui convient le mieux.',
-  insights: 'Résumé et chapitres de chaque conférence.',
+  insights: 'Résumé et chapitres de chaque vidéo.',
   transcription: 'Transcription automatique des vidéos envoyées (Whisper, sur ton serveur).',
-  external: 'Conférences YouTube / Vimeo / Dailymotion : comment récupérer le texte, imports en masse.',
+  external: 'Vidéos YouTube / Vimeo / Dailymotion : comment récupérer le texte, imports en masse.',
   search: 'Recherche rapide avec tolérance aux fautes (Meilisearch).',
 };
 const ENGINES = [['claude', 'Claude'], ['azure', 'Azure'], ['deepseek', 'DeepSeek']];
@@ -430,10 +430,10 @@ function Settings() {
 
 /* ---------------------------------------------------------------- Utilisateurs */
 const ROLE_HELP = {
-  user: 'Regarde les conférences, garde ses favoris et sa progression. Les conférences premium demandent un abonnement ou un accès offert.',
-  organizer: "Comme un utilisateur, et accède au Studio : ajoute, modifie et publie ses propres conférences. Ne voit pas le back-office.",
-  moderator: "Comme un utilisateur, et accède à la Modération : relit les conférences en attente, traite les signalements, valide les propositions d'action. Ne voit pas le back-office ni les paramètres.",
-  admin: 'Accès total : back-office (utilisateurs, paramètres, catégories, pages légales) et toutes les conférences du Studio.',
+  user: 'Regarde les vidéos, garde ses favoris et sa progression. Les vidéos premium demandent un abonnement ou un accès offert.',
+  organizer: "Comme un utilisateur, et accède au Studio : ajoute, modifie et publie ses propres vidéos. Ne voit pas le back-office.",
+  moderator: "Comme un utilisateur, et accède à la Modération : relit les vidéos en attente, traite les signalements, valide les propositions d'action. Ne voit pas le back-office ni les paramètres.",
+  admin: 'Accès total : back-office (utilisateurs, paramètres, catégories, pages légales) et toutes les vidéos du Studio.',
 };
 const FILTERS = [['all', 'Tous'], ['paying', 'Abonnés'], ['trialing', 'Essais'], ['offered', 'Accès offerts'], ['none', 'Sans abonnement'], ['suspended', 'Suspendus']];
 const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString(); };
@@ -601,7 +601,7 @@ function UserSheet({ id, me, onClose, onChanged }) {
             {u.role === 'organizer' && (
               <section className="sheet-sec">
                 <h4>Publication</h4>
-                <label className="rv-email"><input type="checkbox" checked={Boolean(u.trustedPublisher)} disabled={busy} onChange={(e) => patch({ trustedPublisher: e.target.checked }, e.target.checked ? 'Organisateur de confiance' : 'Relecture rétablie')} /> <span>Organisateur de confiance : ses conférences sont publiées sans relecture (utile seulement quand « Relire les conférences » est activé dans les Paramètres).</span></label>
+                <label className="rv-email"><input type="checkbox" checked={Boolean(u.trustedPublisher)} disabled={busy} onChange={(e) => patch({ trustedPublisher: e.target.checked }, e.target.checked ? 'Organisateur de confiance' : 'Relecture rétablie')} /> <span>Organisateur de confiance : ses vidéos sont publiées sans relecture (utile seulement quand « Relire les vidéos » est activé dans les Paramètres).</span></label>
               </section>
             )}
 
@@ -624,7 +624,7 @@ function UserSheet({ id, me, onClose, onChanged }) {
               <p className="meta">Les paiements, remboursements et résiliations se gèrent dans Stripe{u.stripeCustomerId ? ' (client lié)' : ''}.</p>
               <div className="gift">
                 <b>Accès premium offert</b>
-                <p className="meta">{offered ? `Actif jusqu'au ${fmt(u.premiumUntil)}.` : 'Aucun accès offert en cours.'} Donne l'accès aux conférences premium sans abonnement.</p>
+                <p className="meta">{offered ? `Actif jusqu'au ${fmt(u.premiumUntil)}.` : 'Aucun accès offert en cours.'} Donne l'accès aux vidéos premium sans abonnement.</p>
                 <div className="adm-row">
                   <button type="button" className="btn ghost" disabled={busy} onClick={() => patch({ premiumUntil: addDays(30) }, 'Accès offert : 1 mois')}>+1 mois</button>
                   <button type="button" className="btn ghost" disabled={busy} onClick={() => patch({ premiumUntil: addDays(90) }, 'Accès offert : 3 mois')}>+3 mois</button>
@@ -642,14 +642,14 @@ function UserSheet({ id, me, onClose, onChanged }) {
               <h4>Activité</h4>
               <div className="sheet-stats">
                 <div><strong>{d.stats.favorites}</strong><small>favoris</small></div>
-                <div><strong>{d.stats.watched}</strong><small>conférences commencées</small></div>
+                <div><strong>{d.stats.watched}</strong><small>vidéos commencées</small></div>
                 <div><strong>{d.stats.completed}</strong><small>terminées</small></div>
               </div>
               <p className="meta">Dernière lecture : {fmtDT(d.stats.lastWatchAt)}</p>
               {d.emails.length > 0 && <p className="meta">Derniers e-mails : {d.emails.map((m) => `${m.kind} (${m.status})`).join(', ')}</p>}
               {d.talks.length > 0 && (
                 <>
-                  <p className="meta">Conférences de ce compte ({u.talksCount}) :</p>
+                  <p className="meta">Vidéos de ce compte ({u.talksCount}) :</p>
                   <ul className="sheet-list">{d.talks.map((t) => <li key={t.id}><Link href={`/studio/${t.id}`}>{t.title}</Link><small className="meta">{t.publication === 'published' ? 'publiée' : t.publication === 'scheduled' ? 'planifiée' : 'brouillon'}</small></li>)}</ul>
                 </>
               )}
@@ -685,7 +685,7 @@ function UserSheet({ id, me, onClose, onChanged }) {
                         <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>{del.candidates.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.email})</option>)}</select>
                         <button type="button" className="btn danger" disabled={busy || !transferTo} onClick={() => remove(transferTo)}>Transférer puis supprimer</button>
                       </div>
-                    ) : <p className="meta">Aucun organisateur ou admin disponible pour reprendre les conférences : crée-en un d'abord.</p>}
+                    ) : <p className="meta">Aucun organisateur ou admin disponible pour reprendre les vidéos : crée-en un d'abord.</p>}
                   </div>
                 )}
               </section>
@@ -824,7 +824,7 @@ function LegalPages() {
 }
 
 /* ---------------------------------------------------------------- Catégories */
-// Deux niveaux : « Coran » puis ses sous-catégories (« Lecture », « Apprentissage »…). Une conférence a une catégorie principale et jusqu'à 2 autres.
+// Deux niveaux : « Coran » puis ses sous-catégories (« Lecture », « Apprentissage »…). Une vidéo a une catégorie principale et jusqu'à 2 autres.
 function Categories() {
   const { call } = useApp();
   const [cats, setCats] = useState(null);
@@ -849,7 +849,7 @@ function Categories() {
   };
   const remove = async (c) => {
     const warn = c.count > 0
-      ? `Supprimer « ${c.fullName} » ? Ses ${c.count} conférence(s) resteront en ligne, mais sans cette catégorie.`
+      ? `Supprimer « ${c.fullName} » ? Ses ${c.count} vidéo(s) resteront en ligne, mais sans cette catégorie.`
       : `Supprimer la catégorie « ${c.fullName} » ?`;
     if (!window.confirm(warn)) return;
     const r = await call(`/categories/${c.id}`, { method: 'DELETE' });
@@ -858,7 +858,7 @@ function Categories() {
 
   return (
     <section className="panel">
-      <p className="meta">Les catégories classent les conférences dans le catalogue, la recherche et le Studio. Créez des sous-catégories pour affiner (Coran › Lecture, Coran › Apprentissage…). Chercher « Coran » trouve aussi ses sous-catégories. Une conférence a une catégorie principale et jusqu'à deux autres. Supprimer une catégorie ne supprime jamais de conférence.</p>
+      <p className="meta">Les catégories classent les vidéos dans le catalogue, la recherche et le Studio. Créez des sous-catégories pour affiner (Coran › Lecture, Coran › Apprentissage…). Chercher « Coran » trouve aussi ses sous-catégories. Une vidéo a une catégorie principale et jusqu'à deux autres. Supprimer une catégorie ne supprime jamais de vidéo.</p>
       <form className="cat-add" onSubmit={add}>
         <input required maxLength={60} placeholder={parentId ? 'Nouvelle sous-catégorie (ex. Apprentissage)' : 'Nouvelle catégorie (ex. Jurisprudence)'} value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom de la nouvelle catégorie" />
         <select value={parentId} onChange={(e) => setParentId(e.target.value)} aria-label="Catégorie parente">
@@ -887,7 +887,7 @@ function Categories() {
               ) : (
                 <>
                   <span className="cat-name"><b>{c.parentId ? '↳ ' : ''}{c.name}</b>
-                    <small className="meta">{c.parentId ? `${c.count} conférence${c.count > 1 ? 's' : ''}` : `${c.total} conférence${c.total > 1 ? 's' : ''}${c.children ? ` · ${c.children} sous-catégorie${c.children > 1 ? 's' : ''}` : ''}`}</small></span>
+                    <small className="meta">{c.parentId ? `${c.count} vidéo${c.count > 1 ? 's' : ''}` : `${c.total} vidéo${c.total > 1 ? 's' : ''}${c.children ? ` · ${c.children} sous-catégorie${c.children > 1 ? 's' : ''}` : ''}`}</small></span>
                   <span className="cat-actions">
                     {!c.parentId && <button type="button" className="link u" onClick={() => { setMsg(null); setParentId(String(c.id)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>+ Sous-catégorie</button>}
                     <button type="button" className="link u" onClick={() => { setMsg(null); setEditing({ id: c.id, name: c.name, parentId: c.parentId ? String(c.parentId) : '' }); }}>Renommer / déplacer</button>
@@ -904,7 +904,7 @@ function Categories() {
 }
 
 /* ---------------------------------------------------------------- Formats (étape B) */
-// Le format dit « ce que c'est » (Conférence, Cours, Récitation, Dessin animé…) ; la catégorie dit « de quoi ça parle ».
+// Le format dit « ce que c'est » (Vidéo, Cours, Récitation, Dessin animé…) ; la catégorie dit « de quoi ça parle ».
 // Chaque format qui contient des contenus devient une rangée de la page Catalogue et un badge sur les vignettes.
 const slugOf = (txt) => txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 function Formats() {
@@ -945,7 +945,7 @@ function Formats() {
   return (
     <section className="panel">
       <h2 className="panel-title">Formats</h2>
-      <p className="meta">Le format dit ce qu'est le contenu (conférence, cours, récitation, dessin animé…). Chaque format qui contient des contenus devient une rangée de la page Catalogue et un badge sur les vignettes. L'ordre ci-dessous est celui du Catalogue.</p>
+      <p className="meta">Le format dit ce qu'est le contenu (vidéo, cours, récitation, dessin animé…). Chaque format qui contient des contenus devient une rangée de la page Catalogue et un badge sur les vignettes. L'ordre ci-dessous est celui du Catalogue.</p>
       <form className="cat-add" onSubmit={create}>
         <input required maxLength={60} placeholder="Nom en français (ex. Documentaire)" value={add.nameFr} onChange={(e) => setAdd({ ...add, nameFr: e.target.value })} aria-label="Nom du format en français" />
         <input maxLength={60} placeholder="English name" value={add.nameEn} onChange={(e) => setAdd({ ...add, nameEn: e.target.value })} aria-label="Nom du format en anglais" />
@@ -986,7 +986,7 @@ function Formats() {
 }
 
 /* ---------------------------------------------------------------- Intervenants */
-// Présentation affichée sur la page publique de chaque chaîne (/chaines/…). Le nom vient des conférences. Depuis l'étape C, l'édition courante se fait dans Studio → Chaînes (avec attribution du propriétaire) ; cet écran reste accessible par ?tab=speakers.
+// Présentation affichée sur la page publique de chaque chaîne (/chaines/…). Le nom vient des vidéos. Depuis l'étape C, l'édition courante se fait dans Studio → Chaînes (avec attribution du propriétaire) ; cet écran reste accessible par ?tab=speakers.
 function Speakers() {
   const { call } = useApp();
   const [list, setList] = useState(null);
@@ -1001,15 +1001,15 @@ function Speakers() {
   };
   return (
     <section className="panel">
-      <p className="meta">Chaque intervenant a sa page publique (<code>/chaines/nom</code>) avec sa présentation, ses conférences et ses séries. Les noms viennent du champ « Intervenant » des conférences : « Cheikh Hamza » et « cheikh hamza » forment une seule page. Une présentation courte (2 à 5 phrases) aide le référencement.</p>
+      <p className="meta">Chaque intervenant a sa page publique (<code>/chaines/nom</code>) avec sa présentation, ses vidéos et ses séries. Les noms viennent du champ « Intervenant » des vidéos : « Cheikh Hamza » et « cheikh hamza » forment une seule page. Une présentation courte (2 à 5 phrases) aide le référencement.</p>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
-      {list && list.length === 0 && <p className="meta">Aucun intervenant : renseignez le champ « Intervenant » dans vos conférences.</p>}
+      {list && list.length === 0 && <p className="meta">Aucun intervenant : renseignez le champ « Intervenant » dans vos vidéos.</p>}
       <ul className="spk-admin">
         {(list || []).map((s) => {
           const val = draft[s.slug] ?? s.bio;
           return (
             <li key={s.slug}>
-              <div className="spk-admin-head"><b>{s.name}</b><span className="meta">{s.talks} conférence{s.talks > 1 ? 's' : ''} · <a href={`/chaines/${s.slug}`} target="_blank" rel="noreferrer">voir la page</a></span></div>
+              <div className="spk-admin-head"><b>{s.name}</b><span className="meta">{s.talks} vidéo{s.talks > 1 ? 's' : ''} · <a href={`/chaines/${s.slug}`} target="_blank" rel="noreferrer">voir la page</a></span></div>
               <textarea rows={3} maxLength={3000} value={val} placeholder="Présentation de l’intervenant…" aria-label={`Présentation de ${s.name}`} onChange={(e) => setDraft({ ...draft, [s.slug]: e.target.value })} />
               <div className="panel-actions"><button className="btn" disabled={val === s.bio} onClick={() => save(s)}>Enregistrer</button></div>
             </li>
@@ -1139,7 +1139,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Athkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">

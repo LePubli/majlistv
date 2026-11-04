@@ -31,7 +31,7 @@ ok(mapPoint(m2, 5).t === 15 && mapPoint(m2, 25).t === 5, 'extraits déplacés : 
 const words = [{ start_ms: 0, text: 'La patience est une lumière,' }, { start_ms: 4000, text: 'disait le Prophète.' }, { start_ms: 9000, text: 'La patience est une lumière, disait-il encore' }];
 ok(findQuote(words, 'la patience est une lumière disait le prophète', 0) === 0, 'passage cité sur deux phrases retrouvé');
 ok(findQuote(words, 'La patience est une lumière', 8000) === 9000, 'plusieurs occurrences : la plus proche de la place recalée');
-ok(findQuote(words, 'texte absent de la conférence', 0) === null && norm('Été, déjà !') === 'ete deja', 'passage absent : null ; normalisation');
+ok(findQuote(words, 'texte absent de la vidéo', 0) === null && norm('Été, déjà !') === 'ete deja', 'passage absent : null ; normalisation');
 ok(norm('الصَّبْرُ ضِيَاءٌ') === 'الصبر ضياء', 'arabe : voyelles retirées pour comparer');
 console.log(fails ? `\nÉCHECS : ${fails}` : '\nTout est bon');
 process.exit(fails ? 1 : 0);
