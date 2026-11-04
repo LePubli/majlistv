@@ -7179,3 +7179,12 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-meteo-jeune.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 700"` → 19.
 - Régénérer : `python3 ops/contenus/athkar/build_meteo_jeune.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/098_athkar_meteo_jeune.sql athkar-meteo-jeune.json`.
+
+### Contenus 10 — Dhikr des relations (04/11)
+
+- 18 entrées (catégorie « général ») : félicitation pour une naissance (2), protection des enfants, mariage, jeune marié / achat d'un serviteur, avant les rapports conjugaux, personne éprouvée, assemblée (« Seigneur, pardonne-moi… »), « et à toi aussi », « Qu'Allah te récompense en bien », « Que t'aime Celui pour qui tu m'aimes », « Qu'Allah te bénisse dans ta famille et tes biens » (2, dont le prêt), crainte du shirk, réponse aux gens du Livre, après avoir insulté un croyant, éloge, quand on est loué. Positions 800 et suivantes.
+- Non repris : colère et conclusion d'assemblée (même texte arabe que des entrées déjà fournies), propager le salut, coq / âne, chiens (consignes sans formule). L'entrée « Seigneur, pardonne-moi et accepte mon repentir » existe déjà : la migration en insère donc **17 lignes** sur 18. Les félicitations de naissance viennent d'an-Nawawi (pas d'un hadith) : à confirmer.
+- **Non validées et non affichées** : migration `099_athkar_relations.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
+- Relire `docs/contenus/athkar-relations.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 800"` → 17.
+- Régénérer : `python3 ops/contenus/athkar/build_relations.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/099_athkar_relations.sql athkar-relations.json`.
