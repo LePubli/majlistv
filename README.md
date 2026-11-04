@@ -7197,3 +7197,11 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-hajj-tasbih.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 900"` → 16.
 - Régénérer : `python3 ops/contenus/athkar/build_hajj_tasbih.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/100_athkar_hajj_tasbih.sql athkar-hajj-tasbih.json`.
+
+### Contenus 12 — Dhikr de la nuit (04/11)
+
+- 3 entrées (catégorie « général ») : quand on se retourne la nuit (chapitre 29 du recueil), frayeur et solitude dans le sommeil (chapitre 30), quand on a vu un rêve (chapitre 31). Positions 1000 et suivantes. Ce lot comble deux oublis des lots précédents (chapitres 29 et 30).
+- **Attention, entrée « rêve »** : la source ne donne pas de formule, seulement la description à la 3e personne (« il cherche refuge auprès d'Allah contre Satan et contre le mal de ce qu'il a vu »). L'arabe de l'entrée est une mise à la 1re personne faite par l'assistant : à valider ou à retirer (Admin → Adhkar).
+- **Non validées et non affichées** : migration `101_athkar_nuit.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 1000"` → 3.
+- Régénérer : `python3 ops/contenus/athkar/build_nuit.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/101_athkar_nuit.sql athkar-nuit.json`.

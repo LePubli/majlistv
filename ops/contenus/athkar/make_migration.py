@@ -21,6 +21,7 @@ TITLES = {
     'athkar-meteo-jeune.json': 'Contenus 9 : dhikr du quotidien du croyant (vent, tonnerre, pluie, nouvelle lune, jeûne, nourriture offerte, premiers fruits, éternuement)',
     'athkar-relations.json': 'Contenus 10 : dhikr des relations (naissance, mariage, colère, éloge, remerciements, pardon, prêt, assemblée, salut)',
     'athkar-hajj-tasbih.json': 'Contenus 11 : dhikr du pèlerinage et du tasbih (talbiya, Safa, douleur, frayeur, sacrifice, istighfar, glorification)',
+    'athkar-nuit.json': 'Contenus 12 : dhikr de la nuit (se retourner la nuit, frayeur dans le sommeil, rêve)',
 }
 TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else TITLES.get(FILES[0], 'Contenus : dhikr du recueil')
 

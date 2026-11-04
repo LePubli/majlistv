@@ -3,6 +3,8 @@
 Source : recueil *Hisn al-Muslim* (Sa‘id al-Qahtani) via rn0x/Adhkar-json (arabe voyellé, 132 chapitres) et rn0x/hisn_almuslim_json (renvois). Vérifié par comparaison automatique des 250 entrées fournies avec chaque passage du recueil, puis lecture des écarts.
 
 ## A. Formules à dire du recueil NON reprises (à décider)
+
+> Mise à jour 04/11 (lot 12, migration 101) : les chapitres 29, 30 et 31 sont désormais repris (fiche `athkar-nuit.md`). Pour le 31, la source ne donne pas de formule : l'arabe est une mise à la 1re personne faite par l'assistant, à valider ou retirer. Les points 1 à 3 ci-dessous sont conservés à titre d'historique.
 1. **Chapitre 29 — quand on se retourne la nuit** : « Lā ilāha illā llāhu l-wāḥidu l-qahhār, rabbu s-samāwāti wa-l-arḍi wa mā baynahumā, al-ʿazīzu l-ghaffār ». Oubli de ma part, non signalé dans les fiches.
 2. **Chapitre 30 — frayeur dans le sommeil / solitude** : « Aʿūdhu bi-kalimāti llāhi t-tāmmāti min ghaḍabihi wa ʿiqābihi, wa sharri ʿibādihi, wa min hamazāti sh-shayāṭīni wa an yaḥḍurūn ». Oubli de ma part, non signalé dans les fiches.
 3. **Chapitre 31 — rêve** : « Aʿūdhu billāhi mina sh-shayṭāni wa min sharri mā ra'ayt » : texte non repris (la source le noie dans une consigne : cracher à gauche, ne le raconter à personne, changer de côté, prier).
@@ -38,5 +40,4 @@ Source : recueil *Hisn al-Muslim* (Sa‘id al-Qahtani) via rn0x/Adhkar-json (ara
 - Noms de sourates (As-Sajda, Al-Mulk) et intitulés de chapitres en français : de l'assistant.
 
 ## F. À faire
-1. Décider d'ajouter les chapitres 29 et 30 (et 31 si voulu) : petit lot supplémentaire, non validé et non affiché.
-2. Faire relire un savant : arabe, français, renvois, découpages.
+1. Faire relire (en particulier l'entrée « rêve » du lot 12) un savant : arabe, français, renvois, découpages.
