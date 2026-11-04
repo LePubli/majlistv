@@ -78,7 +78,7 @@ test('textes Apprendre présents dans les trois langues', () => {
     'evTitle', 'evIntro', 'evMonth', 'evEmpty', 'evLearned', 'evPracticed', 'evWatched', 'evQuizzes', 'evMade', 'evDone', 'evGoal', 'evChecks', 'evPrivacy',
     'askTab', 'askTitle', 'askIntro', 'askPlaceholder', 'askSend', 'askThinking', 'askLoading', 'askSources', 'askReplay', 'askRemaining', 'askQuota', 'askNote', 'askNeedLearning', 'askSeeOffer', 'askBusy', 'askFailed',
     'askNoTranscript', 'askUnavailable', 'askError', 'askReport', 'askReportAsk', 'askReportSend', 'askReportDone', 'askDelete',
-    'lrSeries', 'lrNoSeries', 'lrQuizOf', 'lrAttGet', 'lrAttView', 'lrAttDel', 'lrAttDelConfirm', 'lrAttLeft', 'lrAttNote', 'lrRecent', 'lrBadgesWon', 'lrStepW', 'lrStepQ', 'lrStepR', 'lrStepP', 'lrStepWv', 'lrStepQv', 'lrStepRv', 'lrStepPv',
+    'lrSeries', 'lrNoSeries', 'lrQuizOf', 'lrAttGet', 'lrAttView', 'lrAttDel', 'lrAttDelConfirm', 'lrAttLeft', 'lrAttNote', 'lrRecent', 'lrStepW', 'lrStepQ', 'lrStepR', 'lrStepP', 'lrStepWv', 'lrStepQv', 'lrStepRv', 'lrStepPv',
     'lgSteps', 'lgResume', 'lgStartTitle', 'lgStartSub', 'lgStart', 'lgTodayRev', 'lgRevN', 'lgRevText', 'lgRevStart', 'lgRevNone', 'lgCardsN', 'lgCardsGo', 'lgProgress',
     'revNone', 'revNoneYet', 'revGo', 'revMore', 'revMasteredN', 'revEmail', 'lzKicker', 'lzTitle', 'lzText', 'lzH1', 'lzH2', 'lzH2s', 'lzH3', 'lzH4', 'lzP', 'lzCta', 'lzLocked', 'esFindTalk', 'esSeeSeries'];
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}.${k}`);

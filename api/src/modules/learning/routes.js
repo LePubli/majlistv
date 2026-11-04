@@ -5,7 +5,8 @@ import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
 import { hasLearningTier } from '../../access.js';
 import { getSetting } from '../../settings.js';
-import { BADGES, FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, badgesOf, scoreAt, curveOf } from '../../learning.js';
+import { FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, scoreAt, curveOf } from '../../learning.js';
+import { streakSummary, goalOf } from '../../learningStreak.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };
@@ -15,7 +16,6 @@ export default async function learningRoutes(app) {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
     const attempts = await attemptsOf(req.user.sub);
     const series = await seriesProgress(req.user.sub, attempts);
-    const got = badgesOf(attempts, series);
     const { score, quizzes } = scoreAt(attempts);
     const att = (await pool.query('SELECT series_id, code, issued_at FROM attestations WHERE user_id = $1', [req.user.sub])).rows;
     const passedTalks = new Set(attempts.filter((a) => a.passed).map((a) => a.talk_id));
@@ -23,7 +23,6 @@ export default async function learningRoutes(app) {
       score, quizzesTaken: quizzes, quizzesPassed: passedTalks.size,
       decay: { floor: FLOOR, days: DECAY_DAYS },
       curve: curveOf(attempts),
-      badges: BADGES.map((id) => ({ id, earned: Boolean(got[id]), earnedAt: got[id] || null })),
       series: await Promise.all(series.map(async (s) => ({
         id: s.id, title: s.title, speaker: s.speaker, posterUrl: s.poster_key ? await presignGet(s.poster_key) : null,
         total: s.total, passed: s.passed, complete: s.complete, average: s.average,
@@ -34,6 +33,24 @@ export default async function learningRoutes(app) {
   });
 
   // Délivre l'attestation d'une série dont tous les quiz sont réussis (une seule par série et par membre).
+  // Série de jours et objectif de la semaine (aucun badge pour les adultes).
+  app.get('/me/learning/streak', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    return streakSummary(req.user.sub);
+  });
+
+  // Réglage de l'objectif (jours actifs visés par semaine, 1 à 7) et affichage de la série (masquable).
+  app.put('/me/learning/goal', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const b = z.object({ goal: z.number().int().min(1).max(7).optional(), show: z.boolean().optional() }).refine((x) => x.goal !== undefined || x.show !== undefined, 'Rien à modifier').parse(req.body);
+    const cur = await goalOf(req.user.sub);
+    await pool.query(
+      `INSERT INTO learning_goals(user_id, weekly_goal, show) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET weekly_goal = EXCLUDED.weekly_goal, show = EXCLUDED.show, updated_at = now()`,
+      [req.user.sub, b.goal ?? cur.goal, b.show ?? cur.show]);
+    return streakSummary(req.user.sub);
+  });
+
   app.post('/me/learning/attestations', auth, async (req, reply) => {
     const { seriesId } = z.object({ seriesId: z.string().uuid() }).parse(req.body ?? {});
     if (!(await hasLearningTier(req.user.sub))) return required(reply);

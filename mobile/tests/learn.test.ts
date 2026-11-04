@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiError } from '../src/lib/api';
-import { BADGE_IDS, canCommit, commitBody, firstUnanswered, isBadgeId, isLearningRequired, sortCommitments, submitBody } from '../src/lib/learn';
+import { canCommit, commitBody, firstUnanswered, isLearningRequired, sortCommitments, submitBody } from '../src/lib/learn';
 import { DICT } from '../src/lib/i18n';
 import type { Commitment } from '../src/lib/types';
 
@@ -22,11 +22,8 @@ test('erreur « offre Apprentissage requise » reconnue (403 + code), pas les au
   assert.equal(isLearningRequired(new Error('x')), false);
 });
 
-test('badges : chaque identifiant du serveur a un libellé dans les 3 langues', () => {
-  assert.equal(BADGE_IDS.length, 8);
-  for (const id of BADGE_IDS) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[`badge.${id}`], `${l} badge.${id}`);
-  assert.equal(isBadgeId('perfect'), true);
-  assert.equal(isBadgeId('inconnu'), false);
+test('plus de badges adultes (décision d\'Epok, 04/11) : ni libellés, ni identifiants', () => {
+  for (const l of ['fr', 'en', 'ar'] as const) assert.equal(Object.keys(DICT[l]).some((k) => k.startsWith('badge.') || k === 'quiz.newBadges' || k === 'learn.badges'), false, `${l} : reste des textes de badges adultes`);
 });
 
 const c = (id: string, status: Commitment['status'], overdue = false) => ({ id, status, overdue } as Commitment);
@@ -42,4 +39,10 @@ test('engagement : texte libre OU proposition, accord envoyé une seule fois', (
   assert.equal(canCommit({ suggestionId: 's1', text: '', consent: false, consentGiven: false }), false);
   assert.equal(canCommit({ suggestionId: 's1', text: '', consent: true, consentGiven: false }), true);
   assert.equal(canCommit({ suggestionId: null, text: 'abc', consent: false, consentGiven: true }), true);
+});
+
+test('série de jours : textes présents dans les 3 langues, avec les jetons attendus', () => {
+  const keys = ['skTitle', 'skDay1', 'skDayN', 'skZero', 'skRisk', 'skDone', 'skBest', 'skWeek', 'skRest', 'skRestUsed', 'skGoalTitle', 'skGoalUnit', 'skReached', 'skGoalSet', 'skRule', 'skHide', 'skShow'];
+  for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}.${k}`);
+  for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>).skBest.includes('{n}'), `${l}.skBest : jeton {n}`);
 });

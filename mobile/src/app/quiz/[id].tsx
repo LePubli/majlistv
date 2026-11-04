@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { ApiError } from '@/lib/api';
-import { firstUnanswered, isBadgeId, submitBody } from '@/lib/learn';
+import { firstUnanswered, submitBody } from '@/lib/learn';
 import type { QuizData, QuizResult } from '@/lib/types';
 import type { Key } from '@/lib/i18n';
 import { colors, radius } from '@/lib/theme';
@@ -85,7 +85,6 @@ export default function QuizScreen() {
 function ResultView({ result, onRetry, talkId }: { result: QuizResult; onRetry: () => void; talkId: string }) {
   const { t, user } = useSession();
   const ok = result.passed;
-  const badges = (result.learning?.newBadges ?? []).filter(isBadgeId).map((b) => t(`badge.${b}` as Key));
   return (
     <ScrollView contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 40 }}>
       <Panel style={{ alignItems: 'center', gap: 8, borderColor: ok ? colors.goldLine : colors.border }}>
@@ -93,7 +92,6 @@ function ResultView({ result, onRetry, talkId }: { result: QuizResult; onRetry: 
         <Txt weight="extrabold" size={34} color={ok ? colors.goldLight : colors.text}>{result.percent} %</Txt>
         <Txt weight="bold" size={17}>{ok ? t('quiz.passed') : t('quiz.failed')}</Txt>
         <Txt size={13} color={colors.muted}>{result.score}/{result.total} · {t('quiz.passNeeded', { p: result.passPercent })}</Txt>
-        {badges.length ? <Txt weight="bold" color={colors.goldLight} style={{ textAlign: 'center' }}>{t('quiz.newBadges', { names: badges.join(', ') })}</Txt> : null}
         {!result.saved ? <Txt size={13} color={colors.muted} style={{ textAlign: 'center' }}>{t('quiz.unsaved')}</Txt> : null}
       </Panel>
       {result.results.map((r, i) => (

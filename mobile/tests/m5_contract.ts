@@ -28,11 +28,11 @@ async function main() {
 
   const adm = await api.post<{ token: string }>('/auth/login', { email: process.env.ADMIN_EMAIL ?? 'admin@test.local', password: process.env.ADMIN_PASSWORD ?? 'AdminPassw0rd-test' });
   token = adm.token;
-  const l = await api.get<{ score: number; badges: unknown[]; series: { id: string; complete: boolean; attestation: unknown }[]; recent: unknown[] }>('/me/learning');
+  const l = await api.get<{ score: number; series: { id: string; complete: boolean; attestation: unknown }[]; recent: unknown[] }>('/me/learning');
   assert.equal(typeof l.score, 'number'); assert.ok(Array.isArray(l.series)); assert.ok(l.series.every((s) => 'attestation' in s), 'attestation présente sur chaque parcours');
   const rv = await api.get<{ items: unknown[]; upcoming: { week: number }; emailEnabled?: boolean }>('/me/revision');
   assert.ok(Array.isArray(rv.items) && typeof rv.upcoming.week === 'number');
-  step(`tableau de bord : score ${l.score}, ${l.badges.length} badges, ${l.series.length} parcours, ${rv.items.length} révision(s)`);
+  step(`tableau de bord : score ${l.score}, ${l.series.length} parcours, ${rv.items.length} révision(s)`);
   for (const s of l.series.filter((x) => !x.complete).slice(0, 1)) {
     try { await api.post('/me/learning/attestations', { seriesId: s.id }); assert.fail(); } catch (e) { assert.ok(e instanceof ApiError && e.code === 'incomplete'); }
     step('attestation refusée pour un parcours incomplet (code incomplete)');

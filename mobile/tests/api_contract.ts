@@ -8,7 +8,7 @@ import { ProgressTracker } from '../src/lib/progress';
 import { canCommit, commitBody, isLearningRequired, submitBody } from '../src/lib/learn';
 import type {
   Card, Category, Home, Insights, Talk, User, BillingStatus, ListsResponse, ListDetail, QuizData, QuizResult, PracticeTalk,
-  Commitment, PracticeMine, RevisionResponse, LearningResponse, QuizTodoCard,
+  Commitment, PracticeMine, RevisionResponse, LearningResponse, StreakResponse, QuizTodoCard,
 } from '../src/lib/types';
 
 const URL_ = process.env.API_TEST_URL;
@@ -165,10 +165,12 @@ async function main() {
   assert.ok(Array.isArray(rev.items) && typeof rev.total === 'number'); step('GET /me/revision (offre) : ' + rev.items.length + ' à réviser');
   const aq = await adminApi.get<QuizData>(`/talks/${talkId}/quiz`);
   const ar = await adminApi.post<QuizResult>(`/talks/${talkId}/quiz/submit`, submitBody(aq.questions, Object.fromEntries(aq.questions.map((q) => [q.id, 0]))));
-  assert.ok(ar.learning && ar.learning.newBadges.includes('first_quiz'), 'premier quiz → badge first_quiz');
+  assert.ok(ar.learning && !('newBadges' in ar.learning), 'quiz (offre) : score annoncé, plus de badge');
   const learn = await adminApi.get<LearningResponse>('/me/learning');
-  assert.equal(learn.badges.length, 8); assert.ok(learn.score >= 1); assert.ok(learn.badges.find((b) => b.id === 'first_quiz')?.earned);
-  step('quiz (offre) : score et badge « first_quiz » gagné ; GET /me/learning : 8 badges, score ' + learn.score);
+  assert.ok(learn.score >= 1); assert.ok(!('badges' in learn), 'plus de badges adultes');
+  const sk = await adminApi.get<StreakResponse>('/me/learning/streak');
+  assert.ok(sk.current >= 1 && sk.activeToday && sk.week.days.length === 7 && sk.week.goal === 3, 'série : jour actif grâce au quiz');
+  step('quiz (offre) : score ' + learn.score + ', série de ' + sk.current + ' jour(s), objectif ' + sk.week.goal);
 
   await assert.rejects(adminApi.post(`/talks/${talkId}/practice/commitments`, { suggestionId: sids[0], niyya: '', due: null }), (e: ApiError) => e.status === 409 && e.code === 'consent_required');
   assert.equal(canCommit({ suggestionId: sids[0], text: '', consent: false, consentGiven: false }), false);

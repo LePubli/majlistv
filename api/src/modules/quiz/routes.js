@@ -290,7 +290,7 @@ export default async function quizRoutes(app) {
     const passed = percent >= passPercent;
     const viewer = await app.optionalUser(req);
     let best = null;
-    let learning = null; // palier Apprentissage : score global et badges gagnés grâce à cette tentative
+    let learning = null; // palier Apprentissage : score global avant / après cette tentative
     if (viewer) {
       const tracked = await hasLearningTier(viewer.sub);
       const before = tracked ? await learningBrief(viewer.sub) : null;
@@ -301,7 +301,7 @@ export default async function quizRoutes(app) {
       if (tracked) {
         const after = await learningBrief(viewer.sub);
         const review = await recordAttempt(viewer.sub, id, passed, percent); // calendrier J+1 / J+3 / J+7 / J+21
-        learning = { score: after.score, previousScore: before.score, newBadges: after.badges.filter((b) => !before.badges.includes(b)), review };
+        learning = { score: after.score, previousScore: before.score, review };
       }
     }
     return { score, total, percent, passed, passPercent, best, saved: Boolean(viewer), learning, results };

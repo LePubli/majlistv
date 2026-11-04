@@ -74,7 +74,6 @@ export default function Quiz({ talkId, t, call, user, onResult, onSeek, onPracti
           <div className="qp-learn" role="status">
             <b>{t('qpLearnScore').replace('{s}', res.learning.score)}</b>
             {res.learning.score !== res.learning.previousScore && <span className="meta"> ({res.learning.score > res.learning.previousScore ? '+' : ''}{res.learning.score - res.learning.previousScore})</span>}
-            {res.learning.newBadges.length > 0 && <p className="qp-newbadges">🏅 {t('qpNewBadges')} : {res.learning.newBadges.map((id) => t(`bdg_${id}`)).join(' · ')}</p>}
             {res.learning.review && <p className="meta small qp-review-next">{res.learning.review.mastered ? t('revMastered') : t('revNext').replace('{d}', new Date(res.learning.review.nextReviewOn + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</p>}
             <Link className="link u small" href="/learning">{t('qpSeeProgress')}</Link>
           </div>

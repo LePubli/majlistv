@@ -1,6 +1,6 @@
 // Petites fonctions pures de l'onglet Apprendre (testées sans téléphone).
 import { ApiError } from './api';
-import type { BadgeId, Commitment, DueKind, PracticeStatus, QuizQuestion } from './types';
+import type { Commitment, DueKind, PracticeStatus, QuizQuestion } from './types';
 
 export const STATUSES: PracticeStatus[] = ['todo', 'doing', 'done', 'not_yet'];
 export const DUE_KINDS: DueKind[] = ['today', 'week', 'month'];
@@ -11,8 +11,6 @@ export function isLearningRequired(e: unknown): boolean {
 }
 
 /** Clé de traduction d'un badge (une inconnue ne casse pas l'écran : on retombe sur l'identifiant). */
-export const BADGE_IDS: BadgeId[] = ['first_quiz', 'passed_5', 'passed_10', 'perfect', 'comeback', 'streak_3', 'explorer', 'series_done'];
-export const isBadgeId = (s: string): s is BadgeId => (BADGE_IDS as string[]).includes(s);
 
 /** Index de la première question sans réponse, ou -1 si tout est répondu. */
 export function firstUnanswered(questions: Pick<QuizQuestion, 'id'>[], answers: Record<string, number>): number {

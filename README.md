@@ -7358,3 +7358,26 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 **Ajouter un badge.** Ajouter le code côté API (`KID_BADGES`), le dessin SVG + PNG, la ligne dans `kidBadges.ts` et dans `BADGE_ICON` (web et mobile), puis les textes `kdB_` / `kdBd_`.
 
 **Limites (honnêtes).** Testé : planche de rendu (obtenu / grisé / 48 px), typage, 200 tests, compilation du site, export Android avec les images. **Non testé** : affichage réel dans les écrans Kids du site et de l'application (compte enfant), arabe. Les dessins sont faits en SVG « maison » : un illustrateur pourrait les affiner plus tard en gardant les mêmes noms de fichiers.
+
+## Amélioration 2.3 — Série de jours et objectif de la semaine ; fin des badges adultes (04/11)
+
+**Description.** Dans « Apprendre → Mes progrès » (site et application), une carte **Ma régularité** affiche : le nombre de jours de suite, les 7 jours de la semaine (lundi → dimanche, pastille cochée = jour actif), la meilleure série, et un **objectif de la semaine** (de 1 à 7 jours, 3 par défaut) avec sa barre d'avancement. Le membre peut changer l'objectif ou **masquer** la carte (lien « Afficher ma série et mon objectif » pour la rouvrir). **Décision d'Epok (04/11) : plus aucun badge pour les adultes** (jugés « enfantins ») : les 8 badges du tableau Apprentissage, l'annonce « Nouveau badge » après un quiz et leurs textes sont supprimés partout (API, site, application). Les badges de **Mejliss TV Kids** restent (illustrés : Amélioration 8.4).
+
+**Règles (validées par Epok).**
+- **Jour actif** (fuseau Europe/Paris) : une vidéo regardée jusqu'à au moins **1 minute**, un quiz, une révision espacée ou une carte mémoire.
+- **Série** : jours actifs consécutifs. **Un jour de repos par semaine** (lundi → dimanche) est pardonné et ne casse pas la série ; un second jour manqué la même semaine la remet à zéro. **Aujourd'hui** ne casse jamais la série (la journée n'est pas finie) ; un rappel s'affiche si elle est « à sauver ».
+- Palier **Apprentissage** seulement (comme le reste du tableau) ; la fonction se coupe avec « Parcours et attestations » dans Admin → Fonctions.
+
+**API.** `GET /me/learning/streak` → `{ show, current, best, activeToday, graceUsedThisWeek, atRisk, week: { start, days[7], done, goal, reached } }` ; `PUT /me/learning/goal` `{ goal?: 1–7, show?: boolean }` (renvoie la même réponse). `GET /me/learning` ne contient plus `badges` ; la correction d'un quiz ne contient plus `newBadges`. Migration **103** : table `learning_goals` (objectif et affichage par membre ; exportée et supprimée avec le compte). Les jours actifs ne sont **pas stockés** : recalculés à la demande depuis les vidéos, quiz, révisions et cartes (`api/src/learningStreak.js`).
+
+**Fichiers.** API : `learningStreak.js`, `migrations/103_learning_goals.sql`, `modules/learning/routes.js`. Site : `web/components/StreakCard.js`, page `learning`, styles `.sk-*`, textes `sk*`. Application : `mobile/src/components/learn/StreakCard.tsx`, `learn.tsx`.
+
+**Prérequis / `.env`.** Aucun.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy de **`majlistv-api`** (la migration 103 s'applique au démarrage), puis **`majlistv-web`**, puis les commandes VPS habituelles ; l'application se met à jour d'elle-même (contenu OTA, aucune nouvelle bibliothèque ni permission).
+
+**Debug.** `cd api && node tests/test_streak_unit.mjs` (calcul de la série, 20 contrôles, avec `DATABASE_URL` et `JWT_SECRET` définis) ; `tests/test_learning.py` (API + base : série, objectif, vidéo de 30 s refusée / 90 s acceptée) ; `cd mobile && npm run check` (201 tests). Série à 0 malgré une activité : vérifier que la vidéo a été regardée au moins 1 minute (position enregistrée ≥ 60 s) et que le membre est bien au palier Apprentissage.
+
+**Exemples.** Lundi quiz, mardi vidéo de 5 min, mercredi rien, jeudi révision → série de 3 jours actifs (le mercredi est le jour de repos de la semaine) ; si le vendredi est aussi manqué, la série repart de zéro.
+
+**Limites (honnêtes).** La « vidéo regardée 1 minute » se mesure à la **position atteinte** (1 min ou plus), pas au temps réellement passé ; pour une vidéo, seul son **dernier** jour de lecture est connu (une vidéo revue écrase l'ancien jour) : les jours passés où l'on a seulement regardé des vidéos peuvent donc manquer dans l'historique ; quiz, révisions et cartes sont exacts. Testé : calcul, API + base, site (FR / AR, 390 et 1280 px), 201 tests mobile, typage. **Non testé** : affichage réel dans l'application, changement de semaine en conditions réelles (dimanche → lundi).

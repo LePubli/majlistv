@@ -118,10 +118,13 @@ export type RevisionResponse = {
 
 export type QuizTodoCard = Card & { quizState: 'todo' | 'retry'; bestPercent?: number | null };
 
-export type BadgeId = 'first_quiz' | 'passed_5' | 'passed_10' | 'perfect' | 'comeback' | 'streak_3' | 'explorer' | 'series_done';
+/** Série de jours et objectif de la semaine (GET /me/learning/streak). Aucun badge pour les adultes. */
+export type StreakResponse = {
+  show: boolean; current: number; best: number; activeToday: boolean; graceUsedThisWeek: boolean; atRisk: boolean;
+  week: { start: string; days: { date: string; active: boolean; today: boolean; future: boolean }[]; done: number; goal: number; reached: boolean };
+};
 export type LearningResponse = {
   score: number; quizzesTaken: number; quizzesPassed: number;
-  badges: { id: BadgeId; earned: boolean; earnedAt: string | null }[];
   series: { id: string; title: string; speaker: string; total: number; passed: number; complete: boolean }[];
   recent: { talkId: string; title: string; percent: number; passed: boolean; at: string }[];
 };
@@ -139,7 +142,7 @@ export type QuizQuestion = { id: string; question: string; options: string[]; ch
 export type QuizData = { passPercent: number; questions: QuizQuestion[]; last: { percent: number; passed: boolean; best: number | null; everPassed: boolean } | null };
 export type QuizResult = {
   score: number; total: number; percent: number; passed: boolean; passPercent: number; best: number | null; saved: boolean;
-  learning: { score: number; previousScore: number; newBadges: BadgeId[] } | null;
+  learning: { score: number; previousScore: number } | null;
   results: { questionId: string; chosen: number | null; correct: boolean; correctIndex: number; explanation: string | null; chapterTitle: string | null }[];
 };
 

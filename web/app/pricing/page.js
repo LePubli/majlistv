@@ -50,7 +50,7 @@ export default function Pricing() {
 
   if (!info || !ready) return null;
   const active = status?.active;
-  // Deux paliers : « Mejliss » (visionnage) et « Mejliss Apprentissage » (score, badges, courbe, attestations).
+  // Deux paliers : « Mejliss » (visionnage) et « Mejliss Apprentissage » (score, courbe, série de jours, attestations).
   const learnPlans = info.learning?.plans || [];
   const tiers = [
     { key: 'standard', title: t('tierStd'), tag: t('tierStdTag'), plans: info.plans, enabled: info.enabled, bullets: ['planB1', 'planB2', 'planB3', 'planB4'] },

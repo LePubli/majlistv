@@ -1,4 +1,5 @@
-// Apprentissage (palier « Apprentissage ») : score, courbe, badges et progression par série, calculés à partir des tentatives de quiz.
+// Apprentissage (palier « Apprentissage ») : score, courbe et progression par série, calculés à partir des tentatives de quiz.
+// Pas de badges pour les adultes (décision d'Epok, 04/11) : la régularité se mesure par la série de jours (learningStreak.js).
 // Rien n'est stocké : tout se recalcule à la demande, donc un membre qui passe à ce palier retrouve tout son historique.
 import { pool } from './db.js';
 import { visibleSql } from './visibility.js';
@@ -10,7 +11,6 @@ export const FLOOR = 0.6;
 export const DECAY_DAYS = 120;
 export const freshness = (days) => Math.max(FLOOR, 1 - ((1 - FLOOR) * Math.min(Math.max(days, 0), DECAY_DAYS)) / DECAY_DAYS);
 
-export const BADGES = ['first_quiz', 'passed_5', 'passed_10', 'perfect', 'comeback', 'streak_3', 'explorer', 'series_done'];
 const DAY = 86400000;
 
 // Score à une date donnée : moyenne, sur les quiz tentés, du meilleur pourcentage pondéré par la fraîcheur.
@@ -83,43 +83,8 @@ export async function seriesProgress(userId, attempts) {
     average: s.percents.length ? Math.round(s.percents.reduce((x, y) => x + y, 0) / s.percents.length) : 0 }));
 }
 
-// Badges obtenus, avec la date d'obtention : { id: Date }.
-export function badgesOf(attempts, series) {
-  const got = {};
-  const firstPass = new Map();
-  for (const a of attempts) if (a.passed && !firstPass.has(a.talk_id)) firstPass.set(a.talk_id, a);
-  const passes = [...firstPass.values()].sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
-  if (passes[0]) got.first_quiz = new Date(passes[0].created_at);
-  if (passes[4]) got.passed_5 = new Date(passes[4].created_at);
-  if (passes[9]) got.passed_10 = new Date(passes[9].created_at);
-  const perfect = attempts.find((a) => a.percent === 100);
-  if (perfect) got.perfect = new Date(perfect.created_at);
-  // Persévérant : réussi un quiz après l'avoir raté.
-  const failed = new Set();
-  for (const a of attempts) {
-    if (!a.passed) failed.add(a.talk_id);
-    else if (failed.has(a.talk_id)) { got.comeback = new Date(a.created_at); break; }
-  }
-  // Régulier : au moins un quiz tenté trois jours de suite.
-  const days = [...new Map(attempts.map((a) => [new Date(a.created_at).toISOString().slice(0, 10), new Date(a.created_at)])).entries()].sort();
-  for (let i = 2; i < days.length; i++) {
-    const d = (k) => Date.parse(days[k][0]);
-    if (d(i) - d(i - 1) === DAY && d(i - 1) - d(i - 2) === DAY) { got.streak_3 = days[i][1]; break; }
-  }
-  // Explorateur : quiz réussis dans au moins trois catégories différentes.
-  const cats = new Set();
-  for (const a of passes) {
-    if (a.category_id != null) cats.add(a.category_id);
-    if (cats.size >= 3) { got.explorer = new Date(a.created_at); break; }
-  }
-  const done = series.filter((s) => s.complete && s.doneAt).sort((x, y) => x.doneAt - y.doneAt)[0];
-  if (done) got.series_done = done.doneAt;
-  return got;
-}
-
-// Résumé court pour la correction d'un quiz : score global et badges obtenus.
+// Résumé court pour la correction d'un quiz : score global.
 export async function learningBrief(userId) {
   const attempts = await attemptsOf(userId);
-  const series = await seriesProgress(userId, attempts);
-  return { score: scoreAt(attempts).score, badges: Object.keys(badgesOf(attempts, series)) };
+  return { score: scoreAt(attempts).score };
 }

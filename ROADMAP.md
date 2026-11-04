@@ -606,4 +606,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 3.3 « Fiche imprimable » (page /fiche/<id> : résumé, points clés, chapitres, notes du membre ; impression / PDF) : livré (README « Amélioration 3.3 »), à valider par Epok. Reste : version application Android (non demandée).
 - Amélioration 8.4 « Badges enfants illustrés » (7 badges dessinés, site + application ; version B choisie par Epok) : livré (README « Amélioration 8.4 »), à valider par Epok.
 - Décisions d'Epok 04/11 : badges supprimés pour les adultes (jamais) ; à venir côté adultes : série de jours + objectif de la semaine, sans badges.
+- Amélioration 2.3 « Série de jours et objectif de la semaine » + **suppression des badges adultes** (décision d'Epok 04/11) : livré (README « Amélioration 2.3 »), à valider par Epok. Déploiement : `majlistv-api` (migration 103) puis `majlistv-web`.
 

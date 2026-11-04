@@ -1036,13 +1036,6 @@ iframe.hc-video { width: 177.78%; height: 100%; margin-inline-start: -38.89%; } 
 .lr-curve .grid { stroke: var(--line); stroke-width: 1; }
 .lr-curve .line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
 .lr-curve .dot { fill: var(--accent); }
-.lr-badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-.lr-badges li { display: grid; gap: 4px; justify-items: start; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); opacity: .8; border-style: dashed; }
-.lr-badges li.on { opacity: 1; border-color: var(--accent); }
-.lr-ico { font-size: 1.8rem; filter: grayscale(1); }
-.lr-badges li.on .lr-ico { filter: none; }
-.lr-when { font-size: 12px; color: var(--accent); font-weight: 600; }
-.lr-when.locked { color: var(--muted); font-weight: 400; }
 .lr-series, .lr-recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .lr-series li { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); }
 .lr-series-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
@@ -4504,3 +4497,26 @@ input[type=checkbox]:focus-visible { outline: 3px solid var(--accent-hover); out
 .kd-badges-big .kd-badge-img { width: 84px; height: 84px; }
 .kd-badge-inline { display: inline-flex; vertical-align: middle; margin-inline-end: 4px; }
 .kd-badge-inline .kd-badge-img { width: 28px; height: 28px; }
+
+/* Série de jours et objectif de la semaine (Apprentissage) — sobre, sans badge */
+.sk { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); margin-bottom: 18px; }
+.sk > * { min-width: 0; }
+.sk-big { margin: 0; display: flex; align-items: baseline; gap: 8px; }
+.sk-big b { font-size: 44px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.sk-big span { font-weight: 700; }
+.sk-week { list-style: none; margin: 12px 0 8px; padding: 0; display: flex; gap: 8px; }
+.sk-week li { display: grid; justify-items: center; gap: 4px; }
+.sk-week li > span { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 800; font-size: 15px; color: var(--bg); }
+.sk-week li.on > span { background: var(--accent); border-color: var(--accent); }
+.sk-week li.is-today > span { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(230, 167, 57, .25); }
+.sk-week li.future > span { border-style: dashed; opacity: .6; }
+.sk-week small { font-size: 11px; color: var(--text-2); }
+.sk-goal h3 { margin: 0 0 6px; font-size: 16px; }
+.sk-prog { margin: 0 0 6px; } .sk-prog b { font-size: 22px; color: var(--accent); }
+.sk-bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin-bottom: 8px; }
+.sk-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.sk-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.sk-pick button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--text); font-weight: 700; cursor: pointer; }
+.sk-pick button.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.sk-hidden { margin: 0 0 14px; }
+@media (max-width: 720px) { .sk { grid-template-columns: minmax(0, 1fr); } }

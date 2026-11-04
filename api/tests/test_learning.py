@@ -1,4 +1,4 @@
-"""24.4 : palier Apprentissage — accès réservé, score, badges, courbe, attestation (page publique), tiers Stripe. Prérequis : API (3055), PG de test (5544)."""
+"""24.4 : palier Apprentissage — accès réservé, score, courbe, série de jours et objectif (plus de badges adultes), attestation (page publique), tiers Stripe. Prérequis : API (3055), PG de test (5544)."""
 import sys, uuid, requests, psycopg2
 
 B = "http://127.0.0.1:3055"
@@ -71,17 +71,15 @@ def play(h, t, picks):
 
 # --- tableau vide
 d = requests.get(f"{B}/me/learning", headers=LRN).json()
-ok(d["score"] == 0 and d["quizzesTaken"] == 0 and d["curve"] == [] and d["series"] == [] and not any(b["earned"] for b in d["badges"]), "tableau vide au départ")
-ok([b["id"] for b in d["badges"]] == ["first_quiz", "passed_5", "passed_10", "perfect", "comeback", "streak_3", "explorer", "series_done"], "8 badges proposés")
+ok(d["score"] == 0 and d["quizzesTaken"] == 0 and d["curve"] == [] and d["series"] == [], "tableau vide au départ")
+ok("badges" not in d, "aucun badge pour les adultes dans le tableau")
 
-# --- la correction annonce le score et les badges (palier Apprentissage seulement)
-r = play(STD, eps[0], [0, 0, 0]); ok(r["learning"] is None, "abonné standard : pas de score ni de badge dans la correction")
+# --- la correction annonce le score (palier Apprentissage seulement)
+r = play(STD, eps[0], [0, 0, 0]); ok(r["learning"] is None, "abonné standard : pas de score dans la correction")
 r = play(LRN, eps[0], [0, 1, 1])  # 1/3 = 33 %
-ok(r["passed"] is False and r["learning"]["score"] == 33 and r["learning"]["newBadges"] == [], "tentative ratée : score 33, aucun badge")
+ok(r["passed"] is False and r["learning"]["score"] == 33 and "newBadges" not in r["learning"], "tentative ratée : score 33, aucun badge annoncé")
 r = play(LRN, eps[0], [0, 0, 0])
 ok(r["passed"] is True and r["learning"]["score"] == 100 and r["learning"]["previousScore"] == 33, "réussite : score 100 (le meilleur résultat compte)")
-ok(set(r["learning"]["newBadges"]) == {"first_quiz", "perfect", "comeback"}, "badges gagnés : Premier quiz, Sans faute, Persévérant")
-r = play(LRN, eps[0], [0, 0, 0]); ok(r["learning"]["newBadges"] == [], "un badge déjà obtenu n'est pas annoncé deux fois")
 
 # --- série : progression puis attestation
 d = requests.get(f"{B}/me/learning", headers=LRN).json()
@@ -91,12 +89,27 @@ r = requests.post(f"{B}/me/learning/attestations", headers=LRN, json={"seriesId"
 ok(requests.post(f"{B}/me/learning/attestations", headers=STD, json={"seriesId": sid}).status_code == 403, "attestation : réservée au palier Apprentissage")
 ok(requests.post(f"{B}/me/learning/attestations", headers=LRN, json={"seriesId": str(uuid.uuid4())}).status_code == 404, "attestation : série sans quiz tenté introuvable")
 play(LRN, eps[1], [0, 0, 0]); r = play(LRN, eps[2], [0, 0, 0])
-ok("series_done" in r["learning"]["newBadges"], "dernier quiz réussi : badge « Série terminée »")
 d = requests.get(f"{B}/me/learning", headers=LRN).json()
 ok(d["score"] == 100 and d["quizzesPassed"] == 3 and d["quizzesTaken"] == 3, "score 100, 3 quiz réussis")
 ok(len(d["curve"]) >= 2 and d["curve"][-1]["score"] == 100, "courbe d'apprentissage disponible")
-ok(all(b["earned"] for b in d["badges"] if b["id"] in ("first_quiz", "perfect", "comeback", "series_done")), "badges obtenus affichés avec leur date")
-ok(next(b for b in d["badges"] if b["id"] == "first_quiz")["earnedAt"], "date d'obtention renvoyée")
+# --- série de jours et objectif de la semaine
+st = requests.get(f"{B}/me/learning/streak", headers=LRN).json()
+ok(st["current"] >= 1 and st["activeToday"] is True and st["show"] is True and st["atRisk"] is False, "série : les quiz du jour comptent (jour actif)")
+ok(st["week"]["goal"] == 3 and len(st["week"]["days"]) == 7 and sum(1 for x in st["week"]["days"] if x["today"]) == 1 and st["week"]["done"] >= 1, "semaine : 7 jours, objectif 3 par défaut")
+ok(requests.get(f"{B}/me/learning/streak", headers=STD).status_code == 403, "série : réservée au palier Apprentissage")
+ok(requests.get(f"{B}/me/learning/streak").status_code == 401, "série : connexion obligatoire")
+r = requests.put(f"{B}/me/learning/goal", headers=LRN, json={"goal": 5}); ok(r.status_code == 200 and r.json()["week"]["goal"] == 5 and r.json()["show"] is True, "objectif réglé à 5 jours")
+r = requests.put(f"{B}/me/learning/goal", headers=LRN, json={"show": False}); ok(r.status_code == 200 and r.json()["show"] is False and r.json()["week"]["goal"] == 5, "masquer la série garde l'objectif")
+ok(requests.put(f"{B}/me/learning/goal", headers=LRN, json={"goal": 0}).status_code == 400 and requests.put(f"{B}/me/learning/goal", headers=LRN, json={"goal": 8}).status_code == 400 and requests.put(f"{B}/me/learning/goal", headers=LRN, json={}).status_code == 400, "objectif hors 1–7 ou vide refusé")
+ok(requests.put(f"{B}/me/learning/goal", headers=STD, json={"goal": 2}).status_code == 403, "objectif : réservé au palier Apprentissage")
+requests.put(f"{B}/me/learning/goal", headers=LRN, json={"show": True, "goal": 3})
+# jours passés : une vidéo regardée 30 s ne compte pas, 90 s compte ; hier + avant-hier => série de 3 avec aujourd'hui
+cur.execute("select id from talks limit 1"); tid = cur.fetchone()[0]
+cur.execute("insert into watch_progress(user_id,talk_id,position_ms,duration_ms,updated_at) values (%s,%s,30000,600000, now()-interval '1 day') on conflict (user_id,talk_id) do update set position_ms=30000, updated_at=now()-interval '1 day'", (ulrn, tid))
+st = requests.get(f"{B}/me/learning/streak", headers=LRN).json(); ok(st["current"] == 1, "vidéo regardée 30 s : ne fait pas un jour actif")
+cur.execute("update watch_progress set position_ms=90000 where user_id=%s and talk_id=%s", (ulrn, tid))
+st = requests.get(f"{B}/me/learning/streak", headers=LRN).json(); ok(st["current"] == 2, "vidéo regardée 90 s hier : jour actif, série de 2")
+cur.execute("delete from watch_progress where user_id=%s and talk_id=%s", (ulrn, tid))
 ok(len(d["recent"]) >= 3 and d["recent"][0]["title"], "dernières tentatives listées")
 s = next(x for x in d["series"] if x["id"] == sid); ok(s["complete"] is True and s["average"] == 100, "série complète")
 r = requests.post(f"{B}/me/learning/attestations", headers=LRN, json={"seriesId": sid}); a = r.json()
@@ -120,7 +133,7 @@ ok(requests.delete(f"{B}/me/learning/attestations/{a['code']}", headers=LRN).sta
 # --- l'historique d'un abonné standard est conservé : il le retrouve en passant au palier supérieur
 play(STD, eps[1], [0, 0, 0]); subscribe(ustd, "learning")
 d = requests.get(f"{B}/me/learning", headers=STD).json()
-ok(d["quizzesPassed"] == 2 and d["score"] == 100 and any(b["id"] == "first_quiz" and b["earned"] for b in d["badges"]), "passer à Apprentissage : l'historique des quiz déjà passés est repris")
+ok(d["quizzesPassed"] == 2 and d["score"] == 100, "passer à Apprentissage : l'historique des quiz déjà passés est repris")
 
 # --- érosion du score
 cur.execute("update quiz_attempts set created_at = now() - interval '60 days' where user_id=%s", (ulrn,))

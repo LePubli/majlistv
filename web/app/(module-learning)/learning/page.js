@@ -1,5 +1,5 @@
 'use client';
-// Mon apprentissage (palier « Apprentissage ») : score, courbe, badges, progression par série et attestations de suivi.
+// Mon apprentissage (palier « Apprentissage ») : score, courbe, série de jours, progression par série et attestations de suivi.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,8 +17,8 @@ import Athkar from '../../../components/Athkar';
 import TodayBlock from '../../../components/TodayBlock';
 import EmptyState from '../../../components/EmptyState';
 import InviteCard from '../../../components/InviteCard';
+import StreakCard from '../../../components/StreakCard';
 
-const BADGE_ICON = { first_quiz: '🌱', passed_5: '📘', passed_10: '📚', perfect: '🎯', comeback: '💪', streak_3: '🔥', explorer: '🧭', series_done: '🏆' };
 
 // Courbe d'apprentissage : tracé simple en SVG (aucune bibliothèque).
 function Curve({ points, locale, t }) {
@@ -158,7 +158,6 @@ export default function Learning() {
     await call(`/me/learning/attestations/${s.attestation.code}`, { method: 'DELETE' });
     load();
   };
-  const earned = d.badges.filter((b) => b.earned).length;
   const first = cont[0];
   const pct = first && first.durationMs > 0 ? Math.min(100, Math.round((first.positionMs / first.durationMs) * 100)) : null;
   const leftMin = first && first.durationMs > 0 ? Math.max(1, Math.round((first.durationMs - first.positionMs) / 60000)) : null;
@@ -344,6 +343,7 @@ export default function Learning() {
       )}
 
       <h2 className="lg-h2">{t('lgProgress')}</h2>
+      <StreakCard />
       <section className="lr-top">
         <div className="lr-score" aria-label={t('lrScore')}>
           <b>{d.score}</b><span>/100</span>
@@ -351,7 +351,6 @@ export default function Learning() {
         </div>
         <div className="lr-facts">
           <p><b>{d.quizzesPassed}</b> {t('lrPassed')}</p>
-          <p><b>{earned}</b> / {d.badges.length} {t('lrBadgesWon')}</p>
           <p className="meta small">{t('lrDecay').replace('{p}', Math.round((1 - d.decay.floor) * 100)).replace('{d}', d.decay.days)}</p>
         </div>
       </section>
@@ -359,20 +358,6 @@ export default function Learning() {
       <section className="lr-block">
         <h2>{t('lrCurve')}</h2>
         <Curve points={d.curve} locale={locale} t={t} />
-      </section>
-
-      <section className="lr-block">
-        <h2>{t('lrBadges')}</h2>
-        <ul className="lr-badges">
-          {d.badges.map((b) => (
-            <li key={b.id} className={b.earned ? 'on' : ''}>
-              <span className="lr-ico" aria-hidden="true">{BADGE_ICON[b.id]}</span>
-              <b>{t(`bdg_${b.id}`)}</b>
-              <span className="meta small">{t(`bdgD_${b.id}`)}</span>
-              {b.earned ? <span className="lr-when">{date(b.earnedAt)}</span> : <span className="lr-when locked">{t('lrLocked')}</span>}
-            </li>
-          ))}
-        </ul>
       </section>
 
       {d.recent.length > 0 && (

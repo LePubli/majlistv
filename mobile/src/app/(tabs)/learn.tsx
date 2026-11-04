@@ -12,7 +12,7 @@ import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { SITE_URL } from '@/lib/config';
 import { ApiError } from '@/lib/api';
-import { STATUSES, isBadgeId, isLearningRequired, sortCommitments } from '@/lib/learn';
+import { STATUSES, isLearningRequired, sortCommitments } from '@/lib/learn';
 import { SECTION_LABEL, cardsToday, groupOf, groupsFor, pickSection, type CardsResponse, type SectionId } from '@/lib/learnHub';
 import type { Card, Commitment, LearningResponse, PracticeMine, PracticeStatus, QuizTodoCard, RevisionResponse } from '@/lib/types';
 import type { Key } from '@/lib/i18n';
@@ -24,6 +24,7 @@ import { TodayBlock } from '@/components/TodayBlock';
 import { QuranPlan } from '@/components/QuranPlan';
 import { MemoryCards } from '@/components/learn/MemoryCards';
 import { SelfCheck } from '@/components/learn/SelfCheck';
+import { StreakCard } from '@/components/learn/StreakCard';
 
 type Series = LearningResponse['series'][number] & { attestation?: { code: string; issuedAt: string } | null };
 type Learning = Omit<LearningResponse, 'series'> & { series: Series[] };
@@ -205,6 +206,7 @@ function Dashboard({ learning, cont, revN, cardsN, practice, go }: {
           {feat('memorycards') && cardsN > 0 ? <><Txt weight="bold" size={14}>{t('lgCardsN', { n: cardsN })}</Txt><Button label={t('lgCardsGo')} variant="dark" onPress={() => go('cards')} /></> : null}
         </Panel>
       ) : null}
+      {learning ? <StreakCard /> : null}
       {learning ? <ScorePanel learning={learning} /> : null}
     </View>
   );
@@ -212,22 +214,12 @@ function Dashboard({ learning, cont, revN, cardsN, practice, go }: {
 
 function ScorePanel({ learning }: { learning: Learning }) {
   const { t, locale } = useSession();
-  const earned = learning.badges.filter((b) => b.earned).length;
   return (
     <Panel>
       <Eyebrow>{t('lgProgress')}</Eyebrow>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
         <Txt weight="extrabold" size={40} color={colors.goldLight}>{learning.score}</Txt>
-        <Txt size={13} color={colors.muted}>/100 · {t('learn.quizzes', { n: learning.quizzesPassed })} · {earned} / {learning.badges.length} {t('lrBadgesWon')}</Txt>
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {learning.badges.map((b) => (
-          <View key={b.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, borderWidth: 1,
-            borderColor: b.earned ? colors.goldLine : colors.border, backgroundColor: b.earned ? colors.goldTint : 'transparent', opacity: b.earned ? 1 : 0.5 }}>
-            <Feather name={b.earned ? 'award' : 'lock'} size={14} color={b.earned ? colors.goldLight : colors.muted} />
-            <Txt size={12} weight="bold" color={b.earned ? colors.goldLight : colors.muted}>{isBadgeId(b.id) ? t(`badge.${b.id}` as Key) : b.id}</Txt>
-          </View>
-        ))}
+        <Txt size={13} color={colors.muted}>/100 · {t('learn.quizzes', { n: learning.quizzesPassed })}</Txt>
       </View>
       {learning.recent.length > 0 ? (
         <View style={{ gap: 6 }}>
