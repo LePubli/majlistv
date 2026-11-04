@@ -13,7 +13,7 @@ import { configureNotifications, notificationPermission, registerPush, syncPraye
 type Prefs = ReturnType<typeof resolvePrefs>;
 type Items = ReturnType<typeof buildSchedule>;
 type Stored = Partial<ReturnType<typeof storable>> | null;
-export type PrayerCfg = { defaultEnabled?: boolean; pill?: boolean; method?: string; asr?: string; blockMinutes?: number; maxBlockMinutes?: number; city?: string };
+export type PrayerCfg = { defaultEnabled?: boolean; pill?: boolean; method?: string; asr?: string; blockMinutes?: number; maxBlockMinutes?: number; city?: string; hijriOffset?: number };
 
 const K_PREFS = 'mejliss.prayerPrefs';
 const K_NOTIFY = 'mejliss.prayerNotify';

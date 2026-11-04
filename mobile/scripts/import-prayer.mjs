@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '../src/lib/prayer');
 mkdirSync(out, { recursive: true });
-for (const f of ['prayerTimes.js', 'prayerCities.js', 'prayerLogic.js']) {
+for (const f of ['prayerTimes.js', 'prayerCities.js', 'prayerLogic.js', 'prayerExtras.js']) {
   const src = readFileSync(join(here, '../../web/lib', f), 'utf8');
   writeFileSync(join(out, f), `// COPIE de web/lib/${f} — ne pas modifier ici : node scripts/import-prayer.mjs\n${src}`);
   console.log('copié :', f);

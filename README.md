@@ -7305,3 +7305,19 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 - Vérifié : calcul de la Qibla contre des valeurs de référence et par recalcul de l'arrivée à la Kaaba (196 contrôles) ; compilation ; essai réel dans un navigateur (ordinateur et 390 px, français et arabe en miroir, aucun débordement) ; logique de la boussole avec des mesures **simulées** (cap lissé, alignement, tourner à droite / à gauche, absence de capteur).
 - **Pas testé** : la boussole sur un vrai téléphone (iPhone / Android : précision, étalonnage, écran tourné), l'impression sur papier, l'application mobile (pas de page Prière dans l'application : étape à part), les horaires comparés à ceux de votre mosquée (calcul astronomique, comme décidé le 22/10).
 - Limites : la date hégirienne change à minuit (pas au coucher du soleil) ; calendrier Umm al-Qura (peut différer d'un jour de l'observation) ; sur téléphone le tableau du mois défile horizontalement ; la distance de la Qibla est un calcul à vol d'oiseau (grand cercle).
+
+### Amélioration 4.3 — la même page dans l'application Android (04/11)
+
+**Ce que c'est.** L'écran « Prière » de l'application (`mobile/src/app/prayer.tsx`) reprend les 4 onglets du site : **Aujourd'hui** (prochaine prière + compte à rebours, date du jour, date hégirienne, horaires), **Calendrier du mois** (une carte par jour : date hégirienne, jours blancs, 6 horaires ; flèches mois précédent / suivant), **Qibla** (cadran + flèche dorée, direction en degrés, boussole du téléphone) et **Réglages** (l'ancien écran, inchangé, déplacé dans `PrayerSettingsPanel.tsx`). Accès : menu de l'application (« Prière »), pastille de l'en-tête (bouton « Ouvrir la page Prière »), Compte.
+
+**Même calcul que le site.** `prayerExtras.js` est copié de `web/lib` par `node scripts/import-prayer.mjs` (le test `notif.test.ts` vérifie que les copies sont à jour) ; les textes viennent du site (`node scripts/import-web-texts.mjs`, préfixe `pq`) : FR / EN / AR (RTL).
+
+**Boussole.** Elle utilise `expo-location` (`watchHeadingAsync`), déjà présent dans l'application : **aucun nouveau module natif, aucune nouvelle permission** → même version d'exécution, donc livrable par **mise à jour du contenu (OTA)**, sans nouvel APK. L'autorisation de position est demandée au moment où l'on active l'interrupteur ; refus → message + la direction en degrés reste affichée ; aucune mesure au bout de 2,5 s → « pas de capteur ».
+
+**Date hégirienne.** Sur le téléphone, le moteur JavaScript (Hermes) peut ignorer le calendrier Umm al-Qura. Un auto-contrôle (`HIJRI_OK` : 18/02/2026 doit donner 1er Ramadan 1447) masque alors **toute** date hégirienne et les jours blancs plutôt que d'afficher une date fausse.
+
+**Déploiement.** Rien côté serveur (le décalage hégirien vient déjà de `/config`). Côté application : publier la mise à jour du contenu comme d'habitude (`scripts/publish-update.mjs`, voir « Mises à jour du contenu »). Pas de changement de `app.json`.
+
+**Debug.** `cd mobile && npm run check` (typage + 198 tests, dont `tests/prayerExtras.test.ts`). Boussole muette : vérifier l'autorisation de position de l'application, éloigner le téléphone des aimants, dessiner un « 8 ». Aucune date hégirienne affichée : le moteur du téléphone ne sait pas la calculer (voir ci-dessus).
+
+**Limites (honnêtes).** Testé : calculs (Qibla, hégirien, mois, choix du cap), typage, export du paquet Android. **Non testé** : rendu et boussole sur un vrai téléphone, écran tourné en paysage (le cap n'est pas corrigé de la rotation), arabe sur téléphone. Pas d'impression du calendrier dans l'application.

@@ -1,6 +1,6 @@
 // Amélioration 4.3 : Qibla, date hégirienne, calendrier du mois. Lancement : node web/tests/prayer_extras.mjs
 import assert from 'node:assert/strict';
-import { qibla, compassIndex, turnTo, smoothHeading, hijriOfCivil, isWhiteDay, monthTable, shiftMonth, KAABA } from '../lib/prayerExtras.js';
+import { qibla, compassIndex, turnTo, smoothHeading, hijriOfCivil, isWhiteDay, monthTable, shiftMonth, KAABA, HIJRI_OK } from '../lib/prayerExtras.js';
 import { dayTimes } from '../lib/prayerTimes.js';
 import { CITIES, cityById } from '../lib/prayerCities.js';
 let n = 0; const ok = (c, m) => { assert.ok(c, m); n += 1; };
@@ -34,6 +34,7 @@ ok(smoothHeading(null, 370) === 10, 'premier cap');
 // --- Date hégirienne : repères du registre (Ramadan 1447 : 18/02/2026 → 19/03/2026)
 let h = hijriOfCivil({ y: 2026, m: 2, d: 18 }); ok(h.year === 1447 && h.month === 9 && h.day === 1, `1er Ramadan 1447 : ${JSON.stringify(h)}`);
 h = hijriOfCivil({ y: 2026, m: 3, d: 19 }); ok(h.year === 1447 && h.month === 9 && h.day === 30, `30 Ramadan : ${JSON.stringify(h)}`);
+ok(HIJRI_OK === true, 'HIJRI_OK : le moteur sait calculer la date hégirienne (auto-contrôle)');
 h = hijriOfCivil({ y: 2026, m: 3, d: 20 }); ok(h.month === 10 && h.day === 1, `1er Chawwal : ${JSON.stringify(h)}`);
 const h0 = hijriOfCivil({ y: 2026, m: 11, d: 4 }); const h1 = hijriOfCivil({ y: 2026, m: 11, d: 4 }, 1); const hm1 = hijriOfCivil({ y: 2026, m: 11, d: 4 }, -1);
 ok(h1.day === h0.day + 1 || h1.day === 1, 'décalage +1'); ok(hm1.day === h0.day - 1 || hm1.month !== h0.month, 'décalage -1');

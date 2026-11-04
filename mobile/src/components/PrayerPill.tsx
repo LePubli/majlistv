@@ -70,7 +70,7 @@ export function PrayerPill({ compact = false }: { compact?: boolean }) {
             {msg ? <Txt size={12} color={colors.goldLight}>{msg}</Txt> : null}
             <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
               <Button variant="dark" label={t('pryLocate')} style={{ flex: 1 }} onPress={async () => { setMsg(t('pryLocating')); const r = await prayer.locate(); setMsg(r.ok ? '' : t('pryLocateDenied')); }} />
-              <Button variant="gold" label={t('np.prayerSettings')} style={{ flex: 1 }} onPress={() => { setOpen(false); router.push('/prayer'); }} />
+              <Button variant="gold" label={t('pqOpenPage')} style={{ flex: 1 }} onPress={() => { setOpen(false); router.push('/prayer'); }} />
             </View>
           </Pressable>
         </Pressable>

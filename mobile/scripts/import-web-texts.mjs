@@ -12,7 +12,7 @@ const { DICT } = await import(pathToFileURL(join(tmp, 'i18n.mjs')).href);
 
 // Préfixes de clés repris du site (une famille = un écran ou une fonction).
 const PREFIXES = ['lic', 'hero', 'row', 'cit', 'fm', 'kdBand', 'rev', 'qp', 'pz', 'wb', 'nt', 'lk', 'pv', 'th', 'lv', 'spd', 'aud', 'cn', 'ep', 'season', 'ser', 'tab',
-  'err', 'reg', 'hm', 'fav', 'search', 'sr', 'up', 'play', 'prev', 'next', 'share', 'rp', 'lr', 'col', 'ch', 'sp', 'pr', 'sub', 'follow', 'welcome', 'cat', 'fmt', 'ft', 'pc', 'tp', 'pry', 'kd', 'kc', 'ka', 'kr',
+  'err', 'reg', 'hm', 'fav', 'search', 'sr', 'up', 'play', 'prev', 'next', 'share', 'rp', 'lr', 'col', 'ch', 'sp', 'pr', 'sub', 'follow', 'welcome', 'cat', 'fmt', 'ft', 'pc', 'tp', 'pry', 'pq', 'kd', 'kc', 'ka', 'kr',
   // Étape M5 : Apprendre (onglets, cartes mémoire, bilan, évolution, assistant, offre).
   'lg', 'tb', 'mc', 'sc', 'ev', 'ask', 'lz', 'pz',
   // Étape M6 : premiers pas, visite guidée, parrainage, cartes cadeaux.

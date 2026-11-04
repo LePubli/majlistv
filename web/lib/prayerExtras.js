@@ -52,6 +52,12 @@ export function hijriOfCivil({ y, m, d }, offsetDays = 0) {
   return { year: parseInt(p.year, 10), month: parseInt(p.month, 10), day: parseInt(p.day, 10) };
 }
 
+/**
+ * Vrai si cet appareil sait calculer la date hégirienne (Umm al-Qura). Auto-contrôle sur une date connue : 18/02/2026 = 1 Ramadan 1447.
+ * Certains moteurs (téléphones) ignorent le calendrier demandé et rendraient une date grégorienne : on n'affiche alors AUCUNE date hégirienne.
+ */
+export const HIJRI_OK = (() => { try { const h = hijriOfCivil({ y: 2026, m: 2, d: 18 }); return h.year === 1447 && h.month === 9 && h.day === 1; } catch { return false; } })();
+
 /** « Jours blancs » : 13, 14 et 15 de chaque mois hégirien (jeûne recommandé). */
 export const isWhiteDay = (h) => h.day >= 13 && h.day <= 15;
 

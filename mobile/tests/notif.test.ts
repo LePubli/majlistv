@@ -64,7 +64,7 @@ test('planPrayers : change d\'heure d\'été sans trou ni doublon (nuit du 24 au
 test('copie du calcul du site : identique à web/lib (relancer scripts/import-prayer.mjs sinon)', () => {
   const web = join(__dirname, '../../web/lib');
   if (!existsSync(web)) return; // dépôt réduit à mobile/ : rien à comparer
-  for (const f of ['prayerTimes.js', 'prayerCities.js', 'prayerLogic.js']) {
+  for (const f of ['prayerTimes.js', 'prayerCities.js', 'prayerLogic.js', 'prayerExtras.js']) {
     const copy = readFileSync(join(__dirname, '../src/lib/prayer', f), 'utf8').split('\n').slice(1).join('\n');
     assert.equal(copy, readFileSync(join(web, f), 'utf8'), `${f} n'est plus à jour`);
   }
