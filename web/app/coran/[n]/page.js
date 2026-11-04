@@ -127,7 +127,7 @@ export default function SuraPage() {
               {reciters.map((x) => <option key={x.slug} value={x.slug}>{x.name}</option>)}
             </select>
           </label>
-          <label className="chk"><input type="checkbox" checked={prefs.chain} onChange={(e) => set({ chain: e.target.checked })} /> {t('qrChain')}</label>
+          <label className="chk"><input type="checkbox" role="switch" checked={prefs.chain} onChange={(e) => set({ chain: e.target.checked })} /> {t('qrChain')}</label>
         </section>
       )}
       {audioErr && <p className="error" role="alert">{t('qrAudioErr')}</p>}
@@ -176,7 +176,7 @@ export default function SuraPage() {
               </select>
             </label>
           )}
-          {d.transliterations.length > 0 && <label className="chk"><input type="checkbox" checked={prefs.ph} onChange={(e) => set({ ph: e.target.checked })} /> {t('qrPhonetic')}</label>}
+          {d.transliterations.length > 0 && <label className="chk"><input type="checkbox" role="switch" checked={prefs.ph} onChange={(e) => set({ ph: e.target.checked })} /> {t('qrPhonetic')}</label>}
           {d.tafsirs.length > 0 && (
             <label>{t('qrTafsir')}
               <select value={prefs.tafsir} onChange={(e) => { set({ tafsir: e.target.value }); setOpen({}); }}>
@@ -185,7 +185,7 @@ export default function SuraPage() {
               </select>
             </label>
           )}
-          {d.wordsMeta && locale !== 'ar' && <label className="chk"><input type="checkbox" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
+          {d.wordsMeta && locale !== 'ar' && <label className="chk"><input type="checkbox" role="switch" checked={prefs.wbw} onChange={(e) => set({ wbw: e.target.checked })} /> {t('qrWbw')}</label>}
           {/* Interface arabe : pas de sens des mots par défaut ; option pour choisir une langue (fr, en…). */}
           {d.wordsList?.length > 0 && locale === 'ar' && (
             <label>{t('qrWbwLang')}
@@ -195,7 +195,7 @@ export default function SuraPage() {
               </select>
             </label>
           )}
-          {d.tajweedMeta && <label className="chk"><input type="checkbox" checked={prefs.taj} onChange={(e) => set({ taj: e.target.checked })} /> {t('qrTajweed')}</label>}
+          {d.tajweedMeta && <label className="chk"><input type="checkbox" role="switch" checked={prefs.taj} onChange={(e) => set({ taj: e.target.checked })} /> {t('qrTajweed')}</label>}
           <label>{t('qrSize')}
             <input type="range" min="1" max="4" value={prefs.size} onChange={(e) => set({ size: Number(e.target.value) })} />
           </label>

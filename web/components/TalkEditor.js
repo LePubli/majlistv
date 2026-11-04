@@ -195,7 +195,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
           </div>
           <span className="meta small">{t('kdStudioHelp')}</span>
           {f.kidsBands.length > 0 && (
-            <label className="kd-check"><input type="checkbox" checked={f.showAdults} onChange={(e) => patch({ showAdults: e.target.checked })} /> <span>{t('txShowAdults')}</span></label>
+            <label className="kd-check"><input type="checkbox" role="switch" checked={f.showAdults} onChange={(e) => patch({ showAdults: e.target.checked })} /> <span>{t('txShowAdults')}</span></label>
           )}
         </div>
 

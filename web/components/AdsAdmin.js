@@ -97,7 +97,7 @@ function AdForm({ ad, limits, onDone, onCancel }) {
         <label>Fin (date et heure, facultatif)<input type="datetime-local" value={o.endsAt} onChange={set('endsAt')} /></label>
       </div>
       <small className="meta">Sans date : la publicité est montrée dès l’enregistrement et jusqu’à ce que vous la mettiez en pause. Les heures sont celles de cet ordinateur.</small>
-      <label className="check"><input type="checkbox" checked={o.active} onChange={set('active')} /> Active</label>
+      <label className="check"><input type="checkbox" role="switch" checked={o.active} onChange={set('active')} /> Active</label>
       {busy && pct != null && <progress value={pct} max="100" style={{ width: '100%' }} aria-label="Progression de l’envoi" />}
       {file && !busy && <small className="meta">Fichier choisi : {file.name} ({(file.size / 1048576).toFixed(1)} Mo)</small>}
       {err && <p className="error" role="alert">{err}</p>}

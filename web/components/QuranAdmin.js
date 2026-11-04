@@ -194,7 +194,7 @@ export default function QuranAdmin() {
           <label>Licence (telle que publiée par la source)<input maxLength={300} value={form.license} onChange={set('license')} /></label>
           <label>Crédit à afficher<input maxLength={300} value={form.credit} onChange={set('credit')} /></label>
           <label>Ordre (le plus petit d’abord ; sert au choix par défaut)<input type="number" min="0" max="1000" value={form.position} onChange={set('position')} dir="ltr" /></label>
-          <label className="chk"><input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> Affichée sur le site (possible seulement une fois importée)</label>
+          <label className="chk"><input type="checkbox" role="switch" checked={form.enabled} onChange={set('enabled')} /> Affichée sur le site (possible seulement une fois importée)</label>
           <p><button className="btn" disabled={busy}>{t('seasonSave')}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
       )}

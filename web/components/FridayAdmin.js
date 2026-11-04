@@ -36,11 +36,11 @@ function Form({ d, onSaved }) {
   );
   return (
     <form className="reg-form" onSubmit={save}>
-      <label className="chk"><input type="checkbox" checked={f.enabled} onChange={set('enabled')} /> Activer le vendredi (carte sur l’accueil chaque vendredi, heure de Paris)</label>
-      <label className="chk"><input type="checkbox" checked={f.showKahf} onChange={set('showKahf')} /> Bouton « Lire la sourate Al-Kahf » (si le Coran est importé)</label>
-      <label className="chk"><input type="checkbox" checked={f.showGhusl} onChange={set('showGhusl')} /> Rappel de la grande ablution</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.enabled} onChange={set('enabled')} /> Activer le vendredi (carte sur l’accueil chaque vendredi, heure de Paris)</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.showKahf} onChange={set('showKahf')} /> Bouton « Lire la sourate Al-Kahf » (si le Coran est importé)</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.showGhusl} onChange={set('showGhusl')} /> Rappel de la grande ablution</label>
       {f.showGhusl && texts('ghusl', 'Texte du rappel de la grande ablution')}
-      <label className="chk"><input type="checkbox" checked={f.showSalawat} onChange={set('showSalawat')} /> Rappel de la prière sur le Prophète</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.showSalawat} onChange={set('showSalawat')} /> Rappel de la prière sur le Prophète</label>
       {f.showSalawat && texts('salawat', 'Texte du rappel de la prière sur le Prophète')}
       <label>Collection « Vidéos du vendredi » (rangée sous la carte)
         <select value={f.collectionId} onChange={set('collectionId')}>
@@ -48,7 +48,7 @@ function Form({ d, onSaved }) {
           {d.collections.map((c) => <option key={c.id} value={c.id}>{c.title}{c.published ? '' : ' (non publiée : ne s’affichera pas)'}</option>)}
         </select>
       </label>
-      <label className="chk"><input type="checkbox" checked={f.notify} onChange={set('notify')} /> Notification le vendredi aux membres qui ont activé les notifications</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.notify} onChange={set('notify')} /> Notification le vendredi aux membres qui ont activé les notifications</label>
       {f.notify && (
         <>
           <label>Heure d’envoi (heure de Paris)<input type="number" min="0" max="23" value={f.notifyHour} onChange={set('notifyHour')} dir="ltr" /></label>

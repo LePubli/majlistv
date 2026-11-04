@@ -85,7 +85,7 @@ function MenuList({ items, builtin, icons, required = [], at, errors, lang, onCh
             <li key={it.id} className={`pe-block${open === it.id ? ' open' : ''}${bad ? ' bad' : ''}${it.hidden ? ' ne-off' : ''}`}>
               <div className="pe-block-head">
                 <label className="ne-vis" title={fixed ? 'Obligatoire' : 'Afficher'}>
-                  <input type="checkbox" checked={!it.hidden} disabled={fixed} onChange={(e) => upd(i, { ...it, hidden: e.target.checked ? undefined : true })} aria-label={`Afficher « ${nameOf(it)} »`} />
+                  <input type="checkbox" role="switch" checked={!it.hidden} disabled={fixed} onChange={(e) => upd(i, { ...it, hidden: e.target.checked ? undefined : true })} aria-label={`Afficher « ${nameOf(it)} »`} />
                 </label>
                 <button type="button" className="pe-block-main" aria-expanded={open === it.id} onClick={() => setOpen(open === it.id ? null : it.id)}>
                   <strong>{nameOf(it)}</strong>

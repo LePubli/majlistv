@@ -54,7 +54,7 @@ export default function PricingRegionsAdmin() {
           <label>{t('regPLM')}<input value={form.priceLearnMonthly || ''} onChange={set('priceLearnMonthly')} dir="ltr" /></label>
           <label>{t('regPLY')}<input value={form.priceLearnYearly || ''} onChange={set('priceLearnYearly')} dir="ltr" /></label>
           <p className="meta small">{t('regLearnNote')}</p>
-          <label><input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> {t('regEnabled')}</label>
+          <label><input type="checkbox" role="switch" checked={form.enabled} onChange={set('enabled')} /> {t('regEnabled')}</label>
           <p><button className="btn" disabled={busy}>{t('regSave')}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
       )}

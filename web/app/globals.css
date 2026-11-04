@@ -4350,3 +4350,46 @@ html, body { overflow-x: clip; }
 .lic-list { list-style: none; margin: 8px 0 18px; padding: 0; display: grid; gap: 12px; }
 .lic-item { padding: 12px 14px; border: 1px solid var(--border, rgba(255,255,255,.14)); border-radius: 14px; overflow-wrap: anywhere; }
 .lic-page h3 { margin: 18px 0 4px; }
+
+/* ===== Cases à cocher et interrupteurs : style « C » (rond, ON / OFF) choisi par Epok =====
+   Un seul endroit pour tout le site (public + admin) : plus de accent-color natif.
+   - input[type=checkbox]                  → case ronde dorée (sélection dans une liste)
+   - input[type=checkbox][role=switch]     → interrupteur ON / OFF (activer, désactiver)
+   Logique (inset-inline) : fonctionne aussi en arabe (RTL). */
+input[type=checkbox]:not([role=switch]) {
+  -webkit-appearance: none; appearance: none; flex: none; box-sizing: border-box;
+  width: 22px !important; height: 22px !important; min-width: 22px !important; min-height: 22px !important;
+  padding: 0 !important; display: inline-grid; place-content: center; vertical-align: middle;
+  border-radius: 50%; border: 2px solid var(--line-strong); background: transparent; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+input[type=checkbox]:not([role=switch])::after {
+  content: "✓"; font-size: 14px; font-weight: 700; line-height: 1; color: var(--on-accent); opacity: 0; transition: opacity .1s;
+}
+input[type=checkbox]:not([role=switch]):checked { background: var(--accent); border-color: var(--accent); }
+input[type=checkbox]:not([role=switch]):checked::after { opacity: 1; }
+input[type=checkbox]:not([role=switch]):hover:not(:disabled):not(:checked) { border-color: var(--accent); }
+
+input[type=checkbox][role=switch] {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none; box-sizing: border-box;
+  width: 62px !important; height: 28px !important; min-width: 62px !important; min-height: 28px !important;
+  padding: 0 !important; margin-block: 0 !important; border: 0 !important; border-radius: 99px;
+  background: var(--line); cursor: pointer; vertical-align: middle; transition: background .15s;
+}
+input[type=checkbox][role=switch]::before {
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text-2); transition: inset-inline-start .15s, background .15s;
+}
+input[type=checkbox][role=switch]::after {
+  content: "OFF"; position: absolute; top: 0; inset-inline-end: 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  line-height: 28px; color: var(--muted);
+}
+input[type=checkbox][role=switch]:checked { background: var(--accent); }
+input[type=checkbox][role=switch]:checked::before { inset-inline-start: calc(100% - 25px); background: var(--on-accent); }
+input[type=checkbox][role=switch]:checked::after { content: "ON"; inset-inline-end: auto; inset-inline-start: 9px; color: var(--on-accent); }
+
+input[type=checkbox]:disabled { opacity: .4; cursor: not-allowed; }
+input[type=checkbox]:focus-visible { outline: 3px solid var(--accent-hover); outline-offset: 3px; }
+@media (forced-colors: active) {
+  input[type=checkbox]:not([role=switch]), input[type=checkbox][role=switch] { forced-color-adjust: auto; border: 2px solid CanvasText !important; }
+}

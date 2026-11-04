@@ -24,15 +24,15 @@ export default function EmailPrefs() {
     <section className="billing" id="emails" aria-labelledby="emails-h">
       <h2 id="emails-h">{t('nfTitle')}</h2>
       <label className="rv-email">
-        <input type="checkbox" checked={d.prefs.speakers} disabled={!d.available.speakers} onChange={(e) => set('speakers', e.target.checked)} />
+        <input type="checkbox" role="switch" checked={d.prefs.speakers} disabled={!d.available.speakers} onChange={(e) => set('speakers', e.target.checked)} />
         <span>{t('nfSpeakers')}{!d.available.speakers && <small className="meta"> — {t('nfPaused')}</small>}</span>
       </label>
       <label className="rv-email">
-        <input type="checkbox" checked={d.prefs.weekly} disabled={!d.available.weekly} onChange={(e) => set('weekly', e.target.checked)} />
+        <input type="checkbox" role="switch" checked={d.prefs.weekly} disabled={!d.available.weekly} onChange={(e) => set('weekly', e.target.checked)} />
         <span>{t('nfWeekly')}{!d.available.weekly && <small className="meta"> — {t('nfPaused')}</small>}</span>
       </label>
       <label className="rv-email">
-        <input type="checkbox" checked={d.prefs.lifecycle !== false} onChange={(e) => set('lifecycle', e.target.checked)} />
+        <input type="checkbox" role="switch" checked={d.prefs.lifecycle !== false} onChange={(e) => set('lifecycle', e.target.checked)} />
         <span>{t('nfLife')}</span>
       </label>
       <p className="meta small" role="status" aria-live="polite">{saved ? `✓ ${t('nfSaved')}` : ' '}</p>

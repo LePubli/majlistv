@@ -132,7 +132,7 @@ export default function KidsParent() {
       {manage && (
         <section className="kd-manage" aria-label={t('kdManage')}>
           <PinForm t={t} call={call} hasPin={d.hasPin} onDone={load} />
-          <label className="chk kp-pref"><input type="checkbox" checked={d.pendingEmail !== false} onChange={(e) => savePendingEmail(e.target.checked)} /> {t('kpEmail')}</label>
+          <label className="chk kp-pref"><input type="checkbox" role="switch" checked={d.pendingEmail !== false} onChange={(e) => savePendingEmail(e.target.checked)} /> {t('kpEmail')}</label>
           <div className="panel">
             <h2 className="panel-title">{t('kdProfiles')} ({d.profiles.length}/{d.max})</h2>
             {!d.learning && <p className="meta small">{t('kdLimitUpgrade')}</p>}

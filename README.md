@@ -7234,3 +7234,30 @@ Suite aux maquettes validées par Epok (canevas « Maquette Adhkar — admin et 
 
 **Tests** : `api/tests/test_athkar.py` (+ 10 contrôles : thème déduit, choisi, refusé, en lot, note jamais montrée, restauration) ; `test_athkar_content.mjs` ; `test_athkar_run.mjs`. Les tests d'audit et de restauration (253 fournis → 249 distincts) ont été corrigés (ils échouaient déjà avant cette étape). Construction du site (`next build`) et essai à l'écran en 1440, 1280 et 390 px avec des données d'essai.
 **Pas testé** : essai sur vrai téléphone, interface en arabe (RTL) à l'écran, lecture réelle d'un récitateur, import réel du Coran (pas d'accès réseau dans l'environnement de test).
+
+
+## Étape 45E — Cases à cocher et interrupteurs (style « C »)
+
+**Description.** Epok a choisi le style C de la maquette : cases rondes dorées, interrupteurs « ON / OFF ». Tout est dans un seul bloc CSS à la fin de `web/app/globals.css` (« Cases à cocher et interrupteurs »), sans composant ni dépendance :
+- `input[type=checkbox]` → case ronde 22 px (contour brun, or une fois cochée, coche sombre) ;
+- `input[type=checkbox][role="switch"]` → interrupteur 62 × 28 px avec « OFF » / « ON » écrit dedans ;
+- états désactivé, survol et focus clavier (contour doré) ; positions en `inset-inline` : miroir automatique en arabe (RTL).
+
+**Quoi est un interrupteur.** Les réglages marche/arrêt portent `role="switch"` : Coran (Enchaîner, Phonétique, Mot à mot, Couleurs du tajwid, Affichée, Proposé), notifications e-mail, rappels de prière, préférences parents Kids, publicités (Active), régions de prix, Vendredi, Saisons, Ramadan (Validée / Affichée), « Seulement les textes modifiés », menus (Afficher), « Afficher aux adultes » (Kids). Les sélections dans une liste, les cases de consentement et les choix multiples restent des cases.
+
+**Prérequis / déploiement.** Aucun changement d'API ni de base. Redéployer seulement `majlistv-web` (DockPanel → Git Deploy → Redeploy), puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Une case à l'ancien aspect : vider le cache du navigateur (Ctrl+F5). Pour transformer une case en interrupteur, ajouter `role="switch"` sur l'`<input type="checkbox">` ; aucune autre modification.
+
+**Exemples.**
+```
+<label className="chk"><input type="checkbox" /> Sélectionner</label>
+<label className="chk"><input type="checkbox" role="switch" /> Mot à mot</label>
+```

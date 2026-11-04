@@ -28,9 +28,9 @@ export default function PrayerSettings() {
       <h2>{t('prySetTitle')}</h2>
       <p className="meta">{t('prySetIntro')}</p>
 
-      <label className="chk"><input type="checkbox" checked={prefs.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> <span>{t('prySetPause')}</span></label>
+      <label className="chk"><input type="checkbox" role="switch" checked={prefs.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> <span>{t('prySetPause')}</span></label>
       {!prefs.enabled && <p className="meta small">{t('prySetOff')}</p>}
-      <label className="chk"><input type="checkbox" checked={prefs.pill} onChange={(e) => set({ pill: e.target.checked })} /> <span>{t('prySetPill')}</span></label>
+      <label className="chk"><input type="checkbox" role="switch" checked={prefs.pill} onChange={(e) => set({ pill: e.target.checked })} /> <span>{t('prySetPill')}</span></label>
 
       <fieldset className="pry-fs">
         <legend>{t('prySetPlace')}</legend>

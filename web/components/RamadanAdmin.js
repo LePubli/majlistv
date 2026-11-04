@@ -82,8 +82,8 @@ export default function RamadanAdmin() {
           <label>Lien vers une page du site (ex. /coran/2, /collections/…)<input maxLength={300} value={form.link} onChange={set('link')} dir="ltr" placeholder="/…" /></label>
           <label>Référence (facultatif)<input maxLength={500} value={form.reference} onChange={set('reference')} /></label>
           <label>Ordre<input type="number" min="0" max="10000" value={form.position} onChange={set('position')} dir="ltr" /></label>
-          <label className="chk"><input type="checkbox" checked={form.validated} onChange={set('validated')} /> Validée : texte et référence relus par une personne qualifiée</label>
-          <label className="chk"><input type="checkbox" checked={form.enabled} disabled={!form.validated} onChange={set('enabled')} /> Affichée aux membres (seulement si validée)</label>
+          <label className="chk"><input type="checkbox" role="switch" checked={form.validated} onChange={set('validated')} /> Validée : texte et référence relus par une personne qualifiée</label>
+          <label className="chk"><input type="checkbox" role="switch" checked={form.enabled} disabled={!form.validated} onChange={set('enabled')} /> Affichée aux membres (seulement si validée)</label>
           <p><button className="btn">Enregistrer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
       )}

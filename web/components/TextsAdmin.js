@@ -213,7 +213,7 @@ export default function TextsAdmin() {
             {LANGS.map(([l, name]) => <option key={l} value={l}>{name}</option>)}
           </select>
         </label>
-        <label className="tt-check"><input type="checkbox" checked={onlyMod} onChange={(e) => setOnlyMod(e.target.checked)} /> Seulement les textes modifiés</label>
+        <label className="tt-check"><input type="checkbox" role="switch" checked={onlyMod} onChange={(e) => setOnlyMod(e.target.checked)} /> Seulement les textes modifiés</label>
         <details className="ap-more">
           <summary className="btn ghost">Plus</summary>
           <div className="ap-more-menu">

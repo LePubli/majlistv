@@ -34,7 +34,7 @@ function SeasonCard({ s, collections, onSaved }) {
       <h3>{s.name} <span className="meta">{st.active ? (s.enabled ? '· visible maintenant' : '· période en cours (désactivée)') : ''}</span></h3>
       <p className="meta">Prochaine période : {day(st.startsOn)} → {day(st.endsOn)} (année {st.hijriYear}). Annonce {s.leadDays ?? s.defaultLead} jour(s) avant.
         {s.lastNotifiedYear ? ` Notification déjà envoyée pour l'année ${s.lastNotifiedYear}.` : ''}</p>
-      <label className="chk"><input type="checkbox" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} /> {t('seasonEnabled')}</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} /> {t('seasonEnabled')}</label>
       <label>{t('seasonCollection')}
         <select value={f.collectionId} onChange={(e) => setF({ ...f, collectionId: e.target.value })}>
           <option value="">{t('seasonNoCollection')}</option>
@@ -51,8 +51,8 @@ function SeasonCard({ s, collections, onSaved }) {
           <label>{t('seasonTextLbl')}<input maxLength={300} value={f.text[k]} placeholder={s.defaults.text[k]} dir={k === 'ar' ? 'rtl' : 'ltr'} onChange={(e) => setF({ ...f, text: { ...f.text, [k]: e.target.value } })} /></label>
         </fieldset>
       ))}
-      <label className="chk"><input type="checkbox" checked={f.notify} onChange={(e) => setF({ ...f, notify: e.target.checked })} /> {t('seasonNotify')}</label>
-      <label className="chk"><input type="checkbox" checked={f.theme} onChange={(e) => setF({ ...f, theme: e.target.checked })} /> {t('seasonTheme')}</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.notify} onChange={(e) => setF({ ...f, notify: e.target.checked })} /> {t('seasonNotify')}</label>
+      <label className="chk"><input type="checkbox" role="switch" checked={f.theme} onChange={(e) => setF({ ...f, theme: e.target.checked })} /> {t('seasonTheme')}</label>
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       <p><button className="btn" disabled={busy}>{t('seasonSave')}</button>{' '}<button type="button" className="btn ghost" onClick={test}>{t('seasonTest')}</button></p>
