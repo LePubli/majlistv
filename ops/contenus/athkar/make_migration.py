@@ -18,6 +18,7 @@ TITLES = {
     'athkar-epreuves.json': 'Contenus 6 : dhikr des épreuves (tristesse, détresse, peur, dette, doute, maladie, mauvais œil, fin de vie)',
     'athkar-priere.json': 'Contenus 7 : dhikr de la prière (appel, ouverture, inclinaison, prosternation, tashahhud, avant le salut, istikhara, qunut, witr)',
     'athkar-deuil.json': 'Contenus 8 : dhikr du deuil (malheur, défunt, prière funéraire, condoléances, mise en terre, visite des tombes)',
+    'athkar-meteo-jeune.json': 'Contenus 9 : dhikr du quotidien du croyant (vent, tonnerre, pluie, nouvelle lune, jeûne, nourriture offerte, premiers fruits, éternuement)',
 }
 TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else TITLES.get(FILES[0], 'Contenus : dhikr du recueil')
 

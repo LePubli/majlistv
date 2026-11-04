@@ -7170,3 +7170,12 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-deuil.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 600"` → 14.
 - Régénérer : `python3 ops/contenus/athkar/build_deuil.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/097_athkar_deuil.sql athkar-deuil.json`.
+
+### Contenus 9 — Dhikr du quotidien du croyant (04/11)
+
+- 19 entrées (catégorie « général ») : vent (2), tonnerre, demande de pluie (3), pluie, après la pluie, pour que la pluie cesse, nouvelle lune, rupture du jeûne (2), « nourris celui qui m'a nourri », rupture du jeûne chez quelqu'un, jeûneur insulté, premiers fruits, éternuement (3 formules). Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil traduits, français de l'assistant, phonétique par règles. Positions 700 et suivantes.
+- Non repris : la consigne « l'invité qui jeûne doit faire une invocation » (pas de formule). L'éternuement est découpé en trois formules d'après le hadith du chapitre.
+- **Non validées et non affichées** : migration `098_athkar_meteo_jeune.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
+- Relire `docs/contenus/athkar-meteo-jeune.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 700"` → 19.
+- Régénérer : `python3 ops/contenus/athkar/build_meteo_jeune.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/098_athkar_meteo_jeune.sql athkar-meteo-jeune.json`.
