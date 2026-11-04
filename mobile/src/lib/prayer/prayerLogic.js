@@ -17,6 +17,7 @@ export function normalizeConfig(cfg) {
     maxBlockMinutes: maxBlock,
     blockMinutes: Math.min(maxBlock, num(c.blockMinutes, 10, 1, 120)),
     city: cityById(c.city) ? c.city : DEFAULT_CITY,
+    hijriOffset: num(c.hijriOffset, 0, -2, 2),
   };
 }
 

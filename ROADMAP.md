@@ -601,4 +601,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - A1 récitateurs verset par verset (catalogues EveryAyah / Islamic Network, `{ayahg}`, CSP automatique) et mot à mot selon la langue (arabe : option) : livré (README « Étape A1 »). À faire par Epok : licences, choix des récitateurs, import des fichiers QUL fr / en.
 - Suite : tajwid (source à trouver), autres chapitres de Hisn al-Muslim, relecture vendredi / saisons.
 - 45D2 / 45B3 refonte des pages Adhkar et Coran (admin et membre) d'après les maquettes validées : livré (README « Étape 45D2 + 45B3 »), à valider par Epok (classement par thèmes, essai téléphone et arabe).
-- 45E cases à cocher et interrupteurs (style C choisi par Epok) : livré et validé par Epok le 04/11 (README « Étape 45E »).
+- Cases à cocher et interrupteurs (style C choisi par Epok) : livré et validé par Epok le 04/11 (README « Amélioration — Cases à cocher »).
+- Amélioration 4.3 « Prière complète » (page /priere : horaires du jour, date hégirienne, calendrier du mois imprimable, Qibla avec boussole du téléphone) : livré (README « Amélioration 4.3 »), à valider par Epok (essai téléphone). Reste : version application mobile.

@@ -25,13 +25,13 @@ export const MENUS = {
     label: 'Menu principal', hint: 'Les liens de l’en-tête (ordinateur) et du menu ☰ du téléphone.',
     // Étape B : Accueil · Catalogue · Shorts (20/10) · Séries · Apprendre · Kids ; Collections, Ouvrages et Bibliothèque restent dans le menu latéral (masqués ici par défaut, à réafficher dans l'éditeur).
     builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['shorts', 'Shorts'], ['series', 'Séries'], ['learning', 'Apprendre'], ['kids', 'Mejliss Kids'],
-      ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['library', 'Ma bibliothèque', true]],
+      ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['library', 'Ma bibliothèque', true]],
   },
   side: {
     label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur), en cinq groupes ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
     groups: [['discover', 'Découvrir'], ['space', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
-      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['quran', 'Coran'], ['ramadan', 'Ramadan'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
+      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['quran', 'Coran'], ['ramadan', 'Ramadan'], ['prayer', 'Prière'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
       space: [['learning', 'Mon parcours'], ['quranlearn', 'Coran'], ['athkar', 'Adhkar'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
       account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],
@@ -45,7 +45,7 @@ export const MENUS = {
   },
   footer: {
     label: 'Liens du pied de page', hint: 'Les trois liens légaux sont obligatoires : on peut les déplacer ou les renommer, pas les retirer.',
-    builtin: [['channels', 'Chaînes'], ['app', 'Télécharger l’application'], ['mentions', 'Mentions légales'], ['cgv', 'Conditions générales de vente'], ['privacy', 'Politique de confidentialité']],
+    builtin: [['channels', 'Chaînes'], ['app', 'Télécharger l’application'], ['mentions', 'Mentions légales'], ['cgv', 'Conditions générales de vente'], ['privacy', 'Politique de confidentialité'], ['licences', 'Licences']],
     required: ['mentions', 'cgv', 'privacy'],
   },
 };

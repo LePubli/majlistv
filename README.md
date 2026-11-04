@@ -7236,7 +7236,7 @@ Suite aux maquettes validées par Epok (canevas « Maquette Adhkar — admin et 
 **Pas testé** : essai sur vrai téléphone, interface en arabe (RTL) à l'écran, lecture réelle d'un récitateur, import réel du Coran (pas d'accès réseau dans l'environnement de test).
 
 
-## Étape 45E — Cases à cocher et interrupteurs (style « C »)
+## Amélioration — Cases à cocher et interrupteurs (style « C », 04/11)
 
 **Description.** Epok a choisi le style C de la maquette : cases rondes dorées, interrupteurs « ON / OFF ». Tout est dans un seul bloc CSS à la fin de `web/app/globals.css` (« Cases à cocher et interrupteurs »), sans composant ni dépendance :
 - `input[type=checkbox]` → case ronde 22 px (contour brun, or une fois cochée, coche sombre) ;
@@ -7261,3 +7261,47 @@ bash /root/verify-deploy.sh
 <label className="chk"><input type="checkbox" /> Sélectionner</label>
 <label className="chk"><input type="checkbox" role="switch" /> Mot à mot</label>
 ```
+
+## Amélioration 4.3 — Prière complète : page « Prière », calendrier du mois, Qibla (04/11)
+
+**Description.** `/priere` devient une vraie page, gratuite et ouverte à tous (visiteur : réglages gardés sur l'appareil ; membre : réglages du compte), en 4 onglets :
+- **Aujourd'hui** : prochaine prière en grand avec compte à rebours (si c'est celle de demain, l'écran le dit et ne surligne rien dans la liste du jour), les 5 prières + lever du soleil, date du jour et **date hégirienne** (français, anglais, arabe).
+- **Calendrier du mois** : tableau jour par jour (horaires + date hégirienne), « jours blancs » (13, 14, 15 de chaque mois hégirien), navigation de mois en mois, bouton **Imprimer** (mise en page propre : tableau seul).
+- **Qibla** : direction en degrés et point cardinal depuis le lieu choisi, distance jusqu'à la Kaaba, cadran avec flèche dorée ; **boussole du téléphone** en option (interrupteur) : le cadran tourne avec l'appareil, message « Tournez vers la droite de 40° » puis « ✓ Vous faites face à la Qibla ».
+- **Réglages** : l'écran de l'étape 23a (ville, « Me localiser », méthode, école d'Asr, pause), inchangé ; Compte → Prière l'affiche toujours.
+
+Liens : la pastille d'en-tête mène à la page (« Ouvrir la page Prière ») ; entrée **« Prière »** dans le menu latéral des membres (Découvrir) ; disponible, masquée par défaut, dans le menu principal et modifiable dans Admin → Pages → Menus. `/priere?tab=month`, `?tab=qibla`, `?tab=settings` ouvrent directement un onglet.
+
+**Fichiers.** `web/lib/prayerExtras.js` (calcul pur : Qibla, date hégirienne, calendrier du mois ; aucune dépendance), `web/components/PrayerPage.js`, `web/app/priere/page.js`, textes `pq*` dans `web/lib/i18n.js` (fr / en / ar), styles « Page Prière » à la fin de `web/app/globals.css`. API : `GET /config` → `prayer.hijriOffset` (réglage existant Admin → Paramètres → Saisons → « Décalage du calendrier hégirien », -2 à +2). Copie du calcul dans l'application (`mobile/src/lib/prayer/prayerLogic.js`) tenue à jour ; l'application n'a pas encore la page (voir limites).
+
+**Prérequis.** Aucun service, aucune variable, aucune migration.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy `majlistv-api` (pour `hijriOffset`), puis `majlistv-web`. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Ctrl+F5 après le redéploiement du site.
+
+**Tests (poste de développement).**
+```
+node web/tests/prayer_extras.mjs     # Qibla (6 villes de référence + 97 villes intégrées), hégire (1er Ramadan 1447 = 18/02/2026), calendrier : « 196 contrôles : TOUT EST OK »
+node web/tests/prayer.mjs            # calcul des horaires (étape 23a) : « TOUT EST OK »
+cd api && python3 tests/test_prayer_cfg.py   # /config → prayer.hijriOffset (défaut, ±2, fonction coupée)
+cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
+```
+
+**Debug.**
+- Page « fonction désactivée » : Admin → Fonctions → « Prière : pause et horaires ».
+- Date hégirienne d'un jour de décalage par rapport à votre pays : Admin → Paramètres → Saisons → « Décalage du calendrier hégirien » (-2 à +2).
+- Boussole muette : le navigateur doit autoriser les capteurs de mouvement (iPhone : une fenêtre d'autorisation s'ouvre au clic sur l'interrupteur ; Android : Chrome ; en HTTP simple les capteurs sont bloqués, le site est en HTTPS). Sans capteur (ordinateur), le message le dit et la direction en degrés reste affichée.
+- Cap qui tremble ou faux : s'éloigner des objets en métal et des aimants, dessiner un « 8 » avec le téléphone (étalonnage).
+
+**Exemples.** Paris, 4 novembre 2026 : Qibla 119° (sud-est), environ 4 496 km ; Fajr 06:31, Dhuhr 12:34, Asr 15:00, Maghrib 17:25, Isha 18:36 (UOIF). `/priere?tab=month` : calendrier de novembre 2026.
+
+**Honnêteté sur les essais.**
+- Vérifié : calcul de la Qibla contre des valeurs de référence et par recalcul de l'arrivée à la Kaaba (196 contrôles) ; compilation ; essai réel dans un navigateur (ordinateur et 390 px, français et arabe en miroir, aucun débordement) ; logique de la boussole avec des mesures **simulées** (cap lissé, alignement, tourner à droite / à gauche, absence de capteur).
+- **Pas testé** : la boussole sur un vrai téléphone (iPhone / Android : précision, étalonnage, écran tourné), l'impression sur papier, l'application mobile (pas de page Prière dans l'application : étape à part), les horaires comparés à ceux de votre mosquée (calcul astronomique, comme décidé le 22/10).
+- Limites : la date hégirienne change à minuit (pas au coucher du soleil) ; calendrier Umm al-Qura (peut différer d'un jour de l'observation) ; sur téléphone le tableau du mois défile horizontalement ; la distance de la Qibla est un calcul à vol d'oiseau (grand cercle).

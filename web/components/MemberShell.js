@@ -15,6 +15,7 @@ import AppPromo from './AppPromo';
 import { KidsPendingBadge } from './KidsPending';
 
 const ICONS = {
+  prayer: 'M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z',
   shorts: 'M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5z',
   home: 'M4 11l8-7 8 7v9H4z', series: 'M4 6h16M4 12h16M4 18h10', col: 'M12 3L3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5', books: 'M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3zM8 20v-3',
   people: 'M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8',
@@ -85,6 +86,7 @@ export default function MemberShell({ children }) {
     series: { key: 'series', href: '/series', label: t('seriesNav'), icon: ICONS.series, on: hasSeries },
     collections: { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.col, on: feat('collections') },
     ramadan: { key: 'ramadan', href: '/ramadan', label: t('rzNav'), icon: ICONS.tag, on: feat('ramadan') },
+    prayer: { key: 'prayer', href: '/priere', label: t('pqNav'), icon: ICONS.prayer, on: feat('prayer') },
     quran: { key: 'quran', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
     athkar: { key: 'athkar', href: '/learning?tab=athkar', label: t('atTab'), icon: ICONS.bilan, on: learn && feat('athkar') },
     quranlearn: { key: 'quranlearn', href: '/learning?tab=quran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },

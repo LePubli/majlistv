@@ -143,6 +143,8 @@ app.get('/config', async () => {
   const prayer = features.prayer ? {
     defaultEnabled: await on('mod_prayer_default_enabled'), pill: await on('mod_prayer_pill'), method: await getSetting('mod_prayer_method'), asr: await getSetting('mod_prayer_asr'),
     blockMinutes: await getNumber('mod_prayer_block_minutes'), maxBlockMinutes: await getNumber('mod_prayer_max_block_minutes'), city: await getSetting('mod_prayer_city'),
+    // Amélioration 4.3 : même décalage de la date hégirienne que les saisons (Admin → Paramètres → Saisons), -2 à +2 jours.
+    hijriOffset: Math.max(-2, Math.min(2, Math.round(await getNumber('hijri_offset_days')) || 0)),
   } : null;
   return {
     // Thème visuel (« Classique » ou « Nuit et or ») : celui par défaut et le choix laissé au visiteur.

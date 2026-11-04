@@ -4393,3 +4393,80 @@ input[type=checkbox]:focus-visible { outline: 3px solid var(--accent-hover); out
 @media (forced-colors: active) {
   input[type=checkbox]:not([role=switch]), input[type=checkbox][role=switch] { forced-color-adjust: auto; border: 2px solid CanvasText !important; }
 }
+
+/* ===== Page Prière (amélioration 4.3) : horaires, calendrier du mois, Qibla ===== */
+.pq { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.pq > *, .pq-month { min-width: 0; }
+.pq-place { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.pq-place .link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; min-height: 44px; }
+.pq-tabs { display: flex; flex-wrap: wrap; gap: 4px 22px; border-bottom: 1px solid var(--line-soft); }
+.pq-tabs button { min-height: 48px; padding: 10px 2px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.pq-tabs button.on { color: #fff; font-weight: 700; border-bottom-color: var(--accent); }
+.pq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 18px; }
+.pq-next { background: linear-gradient(120deg, var(--gold-soft), var(--surface) 70%); border: 1px solid var(--line-strong); border-radius: 16px; padding: 22px 24px; display: grid; gap: 6px; align-content: center; }
+.pq-kicker { margin: 0; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.pq-bigname { margin: 0; font-size: clamp(28px, 6vw, 44px); line-height: 1.1; font-weight: 700; color: #fff; }
+.pq-bigname span { color: var(--accent-light); }
+.pq-tomorrow { font-size: .45em; font-weight: 500; color: var(--muted); }
+.pq-left { margin: 0; color: var(--muted); font-size: 18px; }
+.pq-dates { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 2px; }
+.pq-dates p { margin: 0; color: var(--text-2); }
+.pq-dates b { color: #fff; }
+.pq-times { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 16px; padding: 8px; }
+.pq-times ul { list-style: none; margin: 0; padding: 0; }
+.pq-times li { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 52px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent; }
+.pq-times li.is-sun { opacity: .8; }
+.pq-times li.is-next { background: var(--gold-soft); border-color: var(--accent); }
+.pq-n { color: #fff; font-weight: 500; }
+.pq-t { font-size: 22px; font-weight: 700; color: var(--text-2); }
+.pq-times li.is-next .pq-t { color: var(--accent-light); }
+.pq-monthbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.pq-nav { display: flex; align-items: center; gap: 10px; }
+.pq-nav h2 { margin: 0; min-width: 190px; text-align: center; font-size: 22px; text-transform: capitalize; }
+.pq-nav .btn { min-width: 48px; min-height: 48px; padding: 0; font-size: 20px; }
+.pq-printtitle { display: none; }
+.pq-tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 16px; margin-top: 12px; }
+.pq-table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 15px; }
+.pq-table th, .pq-table td { padding: 10px 8px; text-align: center; white-space: nowrap; }
+.pq-table thead th { color: var(--muted); font-size: 13px; font-weight: 500; }
+.pq-table tbody th { text-align: start; padding-inline-start: 16px; font-weight: 500; color: #fff; text-transform: capitalize; }
+.pq-table tbody td:nth-child(2) { text-align: start; color: var(--text-2); }
+.pq-table tbody tr { border-top: 1px solid var(--line-soft); }
+.pq-table tr.is-today { background: var(--gold-soft); }
+.pq-table tr.is-today th, .pq-table tr.is-today td { font-weight: 700; }
+.pq-badge { margin-inline-start: 8px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--gold-soft); border: 1px solid var(--line-strong); color: var(--accent-light); }
+.pq-qibla { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 16px; padding: 22px; display: grid; justify-items: center; gap: 10px; }
+.pq-dial { max-width: 100%; height: auto; }
+.pq-ring { fill: var(--bg); stroke: var(--line); stroke-width: 2; }
+.pq-dial.is-aligned .pq-ring { stroke: var(--ok); stroke-width: 4; }
+.pq-n-main { fill: var(--accent); font-size: 18px; font-weight: 700; }
+.pq-n-other { fill: var(--muted); font-size: 16px; }
+.pq-needle { fill: var(--accent); }
+.pq-kaaba { fill: var(--accent-hover); }
+.pq-hub { fill: var(--text-2); }
+.pq-deg { margin: 0; font-size: 34px; font-weight: 700; color: var(--accent-light); }
+.pq-deg span { font-size: 18px; font-weight: 500; color: var(--text-2); }
+.pq-from { margin: 0; text-align: center; }
+.pq-live { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 16px; padding: 22px; display: grid; gap: 14px; align-content: start; }
+.pq-live h2, .pq-live p { margin: 0; }
+.pq-switch { min-height: 48px; display: flex; align-items: center; gap: 14px; }
+.pq-aim { padding: 12px 16px; border-radius: 12px; background: var(--gold-soft); border: 1px solid var(--line-strong); color: var(--accent-light); }
+.pq-aim.ok { border-color: var(--ok); color: var(--ok); }
+@media (max-width: 600px) {
+  .pq-next { padding: 16px; }
+  .pq-times li { padding: 0 12px; }
+  .pq-t { font-size: 19px; }
+  .pq-nav h2 { min-width: 0; flex: 1; font-size: 18px; }
+  .pq-monthbar { justify-content: center; }
+}
+@media print {
+  header, nav, footer, aside, .pq-noprint, .pq-place { display: none !important; }
+  body, .page { background: #fff !important; color: #000 !important; }
+  .pq-printtitle { display: block; margin: 0 0 8px; color: #000; text-transform: capitalize; }
+  .pq-tablewrap { border: 0; overflow: visible; background: #fff; }
+  .pq-table { min-width: 0; font-size: 11px; color: #000; }
+  .pq-table th, .pq-table td, .pq-table tbody th { color: #000 !important; padding: 3px 4px; }
+  .pq-table tr.is-today, .pq-table tr.is-white { background: #eee; }
+  .pq-badge { border-color: #000; color: #000; background: none; }
+  .pq h1, .pq h2, .meta { color: #000 !important; }
+}

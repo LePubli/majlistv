@@ -68,7 +68,7 @@ export default function PrayerPill() {
           {msg && <p className="pry-msg" role="status">{msg}</p>}
           <div className="pry-actions">
             <button type="button" className="btn ghost small" onClick={locate}>{t('pryLocate')}</button>
-            {!kidMode && <Link className="link u" href="/priere" onClick={() => setOpen(false)}>{t('pryAllSettings')}</Link>}
+            {!kidMode && <Link className="link u" href="/priere" onClick={() => setOpen(false)}>{t("pqOpenPage")}</Link>}
           </div>
         </div>
       )}
