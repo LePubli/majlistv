@@ -7102,3 +7102,11 @@ bash /root/verify-deploy.sh
 **Debug.** « Catalogue injoignable depuis le serveur » : le VPS ne joint pas la source (tester `docker exec dockpanel-git-majlistv-api wget -qO- https://api.alquran.cloud/v1/edition?format=audio | head -c 200`). « ▶ 1:1 » muet sur le site : vérifier l'en-tête `curl -sI https://majlisstv.le-publicitaire.fr/coran/1 | grep -io "media-src[^;]*"`. Mot à mot absent : ressource non affichée, langue différente, ou verset non aligné.
 
 **Tests.** `api/tests/test_quran_a1.mjs` (numéro global, modèles, catalogues EveryAyah / Islamic Network avec faux téléchargement, alignement basmala, formats QUL) ; `api/tests/test_quran.py` et `test_quran_lib.mjs` toujours OK ; `web/tests/test_quran_web.mjs` (adresse {ayahg}, langue du mot à mot, CSP) ; application : `npm test` (193). Essai réel sur la base de test avec le vrai texte Tanzil et un mot à mot fictif fr / en : alignement de la basmala (2:1 → 4 mots sans sens + « Alif-Lam-Mim »), verset non aligné écarté et signalé à l'import, choix de la langue (fr, en, arabe → en), récitateur `{ayahg}` accepté, catalogue refusé proprement sans Internet ; capture du site en arabe (option « معاني الكلمات », sens anglais du mot touché). **Pas testé** : lecture des vrais fichiers audio et des vrais catalogues (sites bloqués depuis l'environnement de Claude), vrai fichier QUL (format exact à confirmer), rendu sur téléphone.
+
+### A1b — Importer le mot à mot (QUL) dans l'admin (04/11)
+
+1. Sur qul.tarteel.ai → Resources → « Word by word translation » : télécharger le JSON français (décompresser le .zip).
+2. Admin → Coran → bloc « Mot à mot » → **Importer le mot à mot français** → choisir le fichier → Importer.
+3. Dans le tableau, **Modifier** (renseigner la licence) puis cocher **Affichée**.
+4. Résultat attendu avec le fichier QUL français : 6 232 versets alignés ; 2:181, 8:6, 13:37 et 37:130 sans mot à mot (un mot de moins que le texte arabe).
+Debug : « Fichier trop lourd » → utiliser le fichier JSON décompressé ; rien au clic sur un mot → vérifier « Affichée » et, en arabe, l'option « Sens des mots ».

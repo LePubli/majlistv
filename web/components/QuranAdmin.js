@@ -92,6 +92,21 @@ export default function QuranAdmin() {
     if (!r.ok) { setErr(errOf(r, t)); return; }
     setImp(null); setMsg(`Import terminé : ${r.data.imported} versets, ${r.data.suras} sourate(s)${r.data.skipped ? `, ${r.data.skipped} ligne(s) ignorée(s)` : ''}.${r.data.warning ? ` ⚠ ${r.data.warning}` : ''}`); load();
   };
+  // Mot à mot : crée la ressource (si absente) puis ouvre directement l'import avec choix du fichier QUL.
+  const startWords = async (lang) => {
+    setErr(''); setMsg('');
+    const slug = `${lang}-qul-mot-a-mot`;
+    let res = d.resources.find((y) => y.slug === slug);
+    if (!res) {
+      const meta = { slug, kind: 'words', lang, name: lang === 'fr' ? 'Mot à mot — français' : 'Word by word — English', author: 'Quranic Universal Library (QUL)',
+        sourceUrl: 'https://qul.tarteel.ai/resources/word-by-word-translation', license: '', credit: 'Mot à mot : Quranic Universal Library (qul.tarteel.ai)', enabled: false, position: lang === 'fr' ? 20 : 21 };
+      const c = await call('/admin/quran/resources', { method: 'POST', body: JSON.stringify(meta) });
+      if (!c.ok) { setErr(errOf(c, t)); return; }
+      res = { ...meta, id: c.data.id };
+      load();
+    }
+    setImp({ res, format: 'json', url: '', content: '' }); setForm(null);
+  };
   const readFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => setImp((s) => ({ ...s, content: String(rd.result || ''), url: '' })); rd.readAsText(f); };
 
   if (err && !d) return <p className="error" role="alert">{err}</p>;
@@ -106,6 +121,13 @@ export default function QuranAdmin() {
           <h3>{t('qrAdPresetTitle')}</h3>
           <p className="meta small">{t('qrAdPresetText')}</p>
           <p><button type="button" className="btn" disabled={busy} onClick={addComplete}>{busy ? t('qrAdPresetBusy') : t('qrAdPresetBtn')}</button></p>
+        </section>
+      )}
+      {!form && !imp && (
+        <section className="qr-preset">
+          <h3>Mot à mot (sens de chaque mot au clic)</h3>
+          <p className="meta small">Sur qul.tarteel.ai → Resources → « Word by word translation », téléchargez le fichier JSON (décompressez le .zip). Cliquez ensuite sur la langue, choisissez le fichier, puis cochez « Affichée » dans le tableau. Renseignez la licence via « Modifier ».</p>
+          <p><button type="button" className="btn" onClick={() => startWords('fr')}>Importer le mot à mot français</button>{' '}<button type="button" className="btn ghost" onClick={() => startWords('en')}>Importer le mot à mot anglais</button></p>
         </section>
       )}
       {msg && <p className="meta" role="status">✓ {msg}</p>}
