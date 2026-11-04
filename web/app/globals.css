@@ -4493,3 +4493,7 @@ input[type=checkbox]:focus-visible { outline: 3px solid var(--accent-hover); out
   .fc-note { border-color: #999; background: none; }
   .fc section { break-inside: avoid-page; }
 }
+
+/* Mode édition : bouton replié = simple crayon rond, sans texte (demande d'Epok, 04/11) */
+.em-bar:not(.on) { padding: 4px; }
+.em-pen { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; display: inline-grid; place-items: center; }

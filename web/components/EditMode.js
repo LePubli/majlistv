@@ -254,7 +254,7 @@ export default function EditMode() {
             <span className="em-hint">{note || 'Mode édition : cliquez un bloc ou un texte'}</span>
             <button type="button" className="btn pe-mini" onClick={() => { setOn(false); setSel(null); setNote(''); }}>Terminer</button>
           </>
-        ) : <button type="button" className="btn pe-mini" onClick={() => setOn(true)}>✎ Modifier cette page</button>}
+        ) : <button type="button" className="btn pe-mini em-pen" onClick={() => setOn(true)} aria-label="Modifier cette page" title="Modifier cette page">✎</button>}
       </div>
       {on && sel && (
         <aside className="em-panel" role="dialog" aria-label={sel.kind === 'block' ? 'Modifier le bloc' : 'Modifier le texte'} dir="ltr" lang="fr">
