@@ -23,7 +23,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 2.1 | ✅ (étape 40 ; à valider sur vrais appareils) **Notifications web (navigateur / site installé)** — absentes aujourd'hui sur le site (existent dans l'application) | Rappel des nouveautés et de la révision sans e-mail | M | ★★★ |
 | 2.2 | ✅ (étape 34) **Lettre hebdomadaire automatique** « Cette semaine sur Mejliss TV » personnalisée (nouveautés des chaînes suivies, à réviser) | Retour régulier, canal qui t'appartient | M | ★★★ |
 | 2.3 | **Séries de jours, objectifs de la semaine et badges** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
-| 2.4 | **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |
+| 2.4 | ⏸ (mis de côté par Epok, 04/11) **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |
 | 2.5 | ✅ (Amélioration D1 ; listes partageables déjà existantes) **« À regarder plus tard »** distinct des favoris ; **listes partageables** | Moins de conférences perdues, partage entre amis | S | ★★ |
 | 2.6 | **Recommandations plus fines** (« Pour vous ») à partir de l'historique, des quiz et des thèmes | Plus de temps de visionnage par membre | M–L | ★★ |
 
@@ -33,7 +33,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 3.1 | ✅ (étape 38 ; reste mobile et e-mail quotidien) **Cartes mémoire automatiques** tirées des résumés et du quiz, intégrées à la révision espacée | Retient mieux, justifie la formule Apprentissage | M | ★★★ |
 | 3.2 | ✅ étapes 41A et 41B faites (site) ; reste la version application mobile **« Pose une question sur cette conférence »** (assistant IA limité au contenu de la conférence, réponses avec le passage horodaté, jamais d'avis religieux inventé) | Compréhension, engagement, argument fort de l'offre ; coût IA et modération à cadrer | L | ★★ |
 | 3.3 | ✅ (Amélioration 3.3, site) **Fiche PDF imprimable** (résumé, chapitres, points clés, notes du membre) | Utile en cercle d'étude, pour l'imprimer ou l'envoyer | S | ★★ |
-| 3.4 | **Glossaire des termes arabes** (définition au survol dans la transcription, liste par conférence) | Accessibilité pour les débutants, enseignement plus fin | M | ★★ |
+| 3.4 | ⏸ (mis de côté par Epok, 04/11 ; demande des définitions validées) **Glossaire des termes arabes** (définition au survol dans la transcription, liste par conférence) | Accessibilité pour les débutants, enseignement plus fin | M | ★★ |
 | 3.5 | **Références repérées automatiquement** : versets et hadiths cités dans la conférence, avec lien vers le verset (module Citations existant) | Vérification facile, valeur pédagogique | M | ★★ |
 | 3.6 | **Attestation vérifiable** (QR code, page de vérification) pour les parcours terminés | Crédibilité, partage sur LinkedIn ou en association | S | ★ |
 | 3.7 | **Espace « Classe »** : un enseignant suit un groupe, propose des conférences et un quiz à faire | Usage en école et en association ; prolongement du groupe 1.6 | L | ★ |
