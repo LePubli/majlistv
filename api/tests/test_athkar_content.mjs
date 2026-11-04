@@ -11,6 +11,7 @@ const LOTS = [
   { file: 'athkar-vie-quotidienne.json', total: 23, parCategorie: { general: 23 } },
   { file: 'athkar-voyage.json', total: 14, parCategorie: { general: 14 } },
   { file: 'athkar-epreuves.json', total: 26, parCategorie: { general: 26 } },
+  { file: 'athkar-priere.json', total: 43, parCategorie: { general: 43 } },
 ];
 const positions = new Set();
 for (const lot of LOTS) {

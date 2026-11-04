@@ -7151,3 +7151,12 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Relire `docs/contenus/athkar-epreuves.md`, puis valider / afficher dans Admin → Adhkar.
 - Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 400"` → 26.
 - Régénérer : `python3 ops/contenus/athkar/build_epreuves.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/095_athkar_epreuves.sql athkar-epreuves.json`.
+
+### Contenus 7 — Dhikr de la prière (04/11)
+
+- 43 entrées (catégorie « général ») : réponse à l'appel et invocation après l'adhan, 6 ouvertures de prière, inclinaison, relèvement, prosternation, assis entre les deux prosternations, prosternation de récitation, tashahhud, prière sur le Prophète, 11 invocations avant le salut, istikhara, qunut du witr (2 textes), formule après le salut du witr. Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil traduits (renvoi d'origine en arabe dans la fiche), français de l'assistant, phonétique par règles.
+- Classées en « général » : la catégorie « après la prière » est réservée à ce qui suit le salut. Les formules communes à plusieurs endroits (inclinaison / prosternation, prosternation / qunut) sont reprises une fois, avec la mention des deux emplacements (l'application écarte les doublons). Positions 500 et suivantes.
+- **Non validées et non affichées** : migration `096_athkar_priere.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar).
+- Relire `docs/contenus/athkar-priere.md`, puis valider / afficher dans Admin → Adhkar.
+- Contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 500"` → 43.
+- Régénérer : `python3 ops/contenus/athkar/build_priere.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/096_athkar_priere.sql athkar-priere.json`.
