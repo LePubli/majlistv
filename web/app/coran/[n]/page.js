@@ -106,7 +106,6 @@ export default function SuraPage() {
 
   if (missing) return <main className="page"><Link href="/coran" className="back">← {t('qrTitle')}</Link><p className="soon">{t('qrNotFound')}</p></main>;
   if (!d) return <main className="page"><p className="meta">…</p></main>;
-  const credits = [d.text, d.translation, d.transliteration, ...(tafsir ? d.tafsirs.filter((x) => x.slug === tafsir.slug) : [])].filter(Boolean);
   return (
     <main className="page qr-page">
       <Link href="/coran" className="back">← {t('qrTitle')}</Link>
@@ -189,10 +188,6 @@ export default function SuraPage() {
         {num > 1 ? <Link className="btn ghost" href={`/coran/${num - 1}`}>← {t('qrPrev')}</Link> : <span />}
         {num < 114 ? <Link className="btn ghost" href={`/coran/${num + 1}`}>{t('qrNext')} →</Link> : <span />}
       </nav>
-      <footer className="qr-credits meta small">
-        <b>{t('qrSources')}</b>
-        <ul>{credits.concat(reciter ? [{ slug: 'rc', name: reciter.name, credit: reciter.credit, license: reciter.license, sourceUrl: reciter.sourceUrl }] : [], prefs.wbw && d.wordsMeta ? [d.wordsMeta] : [], prefs.taj && d.tajweedMeta ? [d.tajweedMeta] : []).map((c) => <li key={c.slug}>{c.name}{c.author ? ` — ${c.author}` : ''}{c.credit ? ` · ${c.credit}` : ''}{c.license ? ` · ${c.license}` : ''}{c.sourceUrl ? <> · <a className="link u" href={c.sourceUrl} target="_blank" rel="noopener noreferrer">{t('qrSource')}</a></> : null}</li>)}</ul>
-      </footer>
     </main>
   );
 }

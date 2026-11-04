@@ -7118,3 +7118,10 @@ Debug : « Fichier trop lourd » → utiliser le fichier JSON décompressé ; ri
 3. Dans le tableau : cocher **Affichée**.
 Résultat attendu avec le fichier d'origine : 5 999 versets importés ; les versets décalés (≈174) sont écartés et s'affichent sans couleurs (message d'avertissement).
 Debug : « Importez et activez d'abord le texte arabe » → activer la ressource texte arabe.
+
+### A3 — Page « Licences et crédits » (04/11)
+
+- Les « Sources » ne s'affichent plus sous les sourates (site et application).
+- Page publique `/licences` : lit `GET /quran/resources` et `GET /quran/reciters` (ressources et récitateurs **activés** dans Admin → Coran). Pour y faire figurer ou retirer une licence : renseigner / modifier les champs Auteur, Licence, Crédit, Source dans Admin → Coran (ou Récitateurs) ; désactiver une ressource la retire de la page.
+- Lien « Licences » : pied de page du site (menu « Liens du pied de page », renommable) et menu de l'application.
+- Debug : page vide → aucune ressource activée ou fonction « Coran » coupée.

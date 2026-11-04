@@ -2,7 +2,7 @@
 // tafsir, récitation verset par verset (lue directement chez la source, enchaînement possible), mot à mot (sens du mot touché)
 // et couleurs du tajwid. Réglages gardés sur le téléphone. ?aya=5 : ouvre la sourate sur le verset 5.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Linking, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEventListener } from 'expo';
@@ -12,7 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import {
   ARABIC_SIZES, DEFAULT_PREFS, arLabel, nextAya, paint, readPrefs, reciterUrl, suraNum, suraQuery, tajColor, tajLegend, tokens, wordMode,
-  type QuranPrefs, type Reciter, type ResourceMeta, type SuraData, type Verse,
+  type QuranPrefs, type Reciter, type SuraData, type Verse,
 } from '@/lib/quran';
 import { colors, radius } from '@/lib/theme';
 import { Button, Chip, ErrorBox, Loading, ScreenHeader, Txt, screenStyle } from '@/components/ui';
@@ -114,10 +114,6 @@ export default function SuraScreen() {
   }
 
   const tafsirMeta = tafsir ? d.tafsirs.find((x) => x.slug === tafsir.slug) : undefined;
-  const credits: ResourceMeta[] = [d.text, d.translation, d.transliteration, tafsirMeta].filter(Boolean) as ResourceMeta[];
-  if (reciter) credits.push({ slug: 'rc', lang: 'ar', name: reciter.name, credit: reciter.credit, license: reciter.license, sourceUrl: reciter.sourceUrl });
-  if (d.words && d.wordsMeta) credits.push(d.wordsMeta);
-  if (prefs.taj && d.tajweedMeta) credits.push(d.tajweedMeta);
 
   const head = (
     <View style={{ gap: 12, paddingBottom: 8 }}>
@@ -151,15 +147,6 @@ export default function SuraScreen() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
         {num > 1 ? <Button variant="dark" label={t('qrPrev')} onPress={() => router.replace({ pathname: '/quran/[n]', params: { n: String(num - 1) } })} style={{ flex: 1 }} /> : <View style={{ flex: 1 }} />}
         {num < 114 ? <Button variant="dark" label={t('qrNext')} onPress={() => router.replace({ pathname: '/quran/[n]', params: { n: String(num + 1) } })} style={{ flex: 1 }} /> : <View style={{ flex: 1 }} />}
-      </View>
-      <View style={{ gap: 4 }}>
-        <Txt weight="bold" size={12} color={colors.muted}>{t('qrSources')}</Txt>
-        {credits.map((c) => (
-          <Txt key={c.slug + c.name} size={12} color={colors.muted}>
-            {c.name}{c.author ? ` — ${c.author}` : ''}{c.credit ? ` · ${c.credit}` : ''}{c.license ? ` · ${c.license}` : ''}
-            {c.sourceUrl && /^https?:\/\//i.test(c.sourceUrl) ? <Txt size={12} color={colors.goldLight} onPress={() => { void Linking.openURL(c.sourceUrl as string); }}> · {t('qrSource')}</Txt> : null}
-          </Txt>
-        ))}
       </View>
     </View>
   );

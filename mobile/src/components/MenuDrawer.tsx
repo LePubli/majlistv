@@ -40,6 +40,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     { key: 'downloads', label: t('dl.open'), icon: 'download', go: nav('/downloads'), on: feat('offline') },
     { key: 'tour', label: t('tourMenu'), icon: 'help-circle', go: () => { onClose(); router.navigate({ pathname: '/', params: { tour: '1' } }); }, on: feat('onboarding') },
     { key: 'kids', label: t('kdNav'), icon: 'smile', go: nav('/kids'), on: feat('kids') },
+    { key: 'licences', label: t('licNav'), icon: 'file-text', go: site('/licences'), on: true },
   ];
 
   return (

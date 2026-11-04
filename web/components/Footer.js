@@ -23,6 +23,7 @@ export default function Footer() {
     { key: 'mentions', href: '/legal/mentions-legales', label: t('legalNotice'), on: true },
     { key: 'cgv', href: '/legal/cgv', label: t('legalTerms'), on: true },
     { key: 'privacy', href: '/legal/confidentialite', label: t('legalPrivacy'), on: true },
+    { key: 'licences', href: '/licences', label: t('licNav'), on: true },
   ], { user, lang: locale, required: MENUS.footer.required });
   const renderEl = (el) => {
     if (el.key !== 'links' && (el.hidden || !audienceOk(el.show?.audience, user))) return null;
