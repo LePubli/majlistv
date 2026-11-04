@@ -511,14 +511,14 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             {feat('favorites') && <ActionTile icon={fav ? ICONS.heartOn : ICONS.heart} label={t('wbFav')} pressed={fav} onClick={toggleFav} title={fav ? t('removeFav') : t('addFav')} act="fav" />}
             {feat('watchlater') && <ActionTile icon={laterOn ? ICONS.clockOn : ICONS.clock} label={t('wbLater')} pressed={laterOn} onClick={onLater} title={laterOn ? t('wlRemove') : t('wlAdd')} act="later" />}
             {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.plus} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
-            <ActionTile icon={ICONS.share} label={t('wbShare')} onClick={share} act="share" />
             {laterMsg && <span className="wl-msg" role="status">{laterMsg}</span>}
-            {user && hasPlayer && !talk.locked && <ActionTile icon={ICONS.bookmark} label={bmFlash ? t('ntBookmarked') : t('wbBookmark')} onClick={() => addNote('')} title={t('ntBookmarkHelp')} act="bookmark" />}
+            {hasPlayer && <ActionTile icon={ICONS.cinema} label={t('wbCinema')} pressed={cinema} onClick={() => setCinema((v) => !v)} title={cinema ? t('cnOff') : t('cnOn')} act="cinema" />}
             <MoreMenu label={t('wbMore')}>
-              {hasPlayer && <button type="button" className={`wb-item${cinema ? ' on' : ''}`} aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={t('cnHelp')} data-act="cinema">{ICONS.cinema}<span>{cinema ? t('cnOff') : t('cnOn')}</span></button>}
+              <button type="button" className="wb-item" onClick={share} data-act="share" data-close>{ICONS.share}<span>{t('wbShare')}</span></button>
+              {user && hasPlayer && !talk.locked && <button type="button" className="wb-item" onClick={() => addNote('')} title={t('ntBookmarkHelp')} data-act="bookmark" data-close>{ICONS.bookmark}<span>{bmFlash ? t('ntBookmarked') : t('wbBookmark')}</span></button>}
               {ctx && ctx.prev && <Link className="wb-item" href={`/talks/${ctx.prev.id}`}>{locale === 'ar' ? ICONS.next : ICONS.prev}<span>{t('prevEp')}</span></Link>}
               {ctx && ctx.next && <Link className="wb-item" href={`/talks/${ctx.next.id}`}>{locale === 'ar' ? ICONS.prev : ICONS.next}<span>{t('nextEp')}</span></Link>}
-              {!talk.locked && <Link className="wb-item" href={`/fiche/${id}`} data-act="fiche">{ICONS.bookmark}<span>{t('fcOpen')}</span></Link>}
+              {!talk.locked && <Link className="wb-item" href={`/fiche/${id}`} data-act="fiche" data-close>{ICONS.doc}<span>{t('fcOpen')}</span></Link>}
               <ReportButton talkId={id} t={t} call={call} />
             </MoreMenu>
             <span className="share-note" role="status" aria-live="polite">{shared === null ? '' : shared > 0 ? t('shareCopiedAt').replace('{t}', clockS(shared)) : t('shareCopied')}</span>

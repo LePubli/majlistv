@@ -18,6 +18,7 @@ export const ICONS = {
   speed: <svg {...S}><path d="M12 13l4-4M4.5 18a9 9 0 1 1 15 0" /></svg>,
   prev: <svg {...S}><path d="M15 6l-6 6 6 6" /></svg>,
   next: <svg {...S}><path d="M9 6l6 6-6 6" /></svg>,
+  doc: <svg {...S}><path d="M7 3h7l4 4v14H7zM14 3v4h4M9.5 12h5M9.5 16h5" /></svg>,
   gear: <svg {...S}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>,
 };
 
@@ -45,7 +46,7 @@ export function MoreMenu({ label, children }) {
   return (
     <div className="wb-more" ref={box}>
       <ActionTile icon={ICONS.more} label={label} expanded={open} onClick={() => setOpen((v) => !v)} act="more" />
-      {open && <div className="wb-menu" role="dialog" aria-label={label}>{children}</div>}
+      {open && <div className="wb-menu" role="dialog" aria-label={label} onClick={(e) => { if (e.target.closest('[data-close]')) setOpen(false); }}>{children}</div>}
     </div>
   );
 }

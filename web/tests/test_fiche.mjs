@@ -7,7 +7,7 @@ import { join } from 'node:path';
 copyFileSync(new URL('../lib/i18n.js', import.meta.url), join(tmpdir(), 'i18n_fiche.mjs'));
 const { DICT } = await import(pathToFileURL(join(tmpdir(), 'i18n_fiche.mjs')).href);
 let n = 0; const ok = (c, m) => { n += 1; if (!c) { console.error('ÉCHEC :', m); process.exit(1); } };
-const KEYS = ['fcOpen', 'fcBack', 'fcTitle', 'fcPrint', 'fcHint', 'fcLocked', 'fcNone', 'fcNotes', 'fcBookmark', 'fcFooter'];
+const KEYS = ['wbCinema', 'fcOpen', 'fcBack', 'fcTitle', 'fcPrint', 'fcHint', 'fcLocked', 'fcNone', 'fcNotes', 'fcBookmark', 'fcFooter'];
 for (const l of ['fr', 'en', 'ar']) for (const k of KEYS) ok(typeof DICT[l][k] === 'string' && DICT[l][k].length > 2, `${l}.${k}`);
 for (const l of ['fr', 'en', 'ar']) ok(DICT[l].fcFooter.includes('{date}') && DICT[l].fcFooter.includes('{site}'), `${l}.fcFooter jetons`);
 const page = readFileSync(new URL('../app/fiche/[id]/page.js', import.meta.url), 'utf8');

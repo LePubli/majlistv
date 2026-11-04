@@ -7337,3 +7337,6 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 **Exemples.** Ouvrir une vidéo → « ⋯ » → « Fiche à imprimer » → « Imprimer / enregistrer en PDF » → destination « Enregistrer au format PDF ».
 
 **Limites (honnêtes).** Testé : page en français et en arabe (RTL), 390 et 1280 px, génération d'un PDF A4 à une page avec le moteur de test, sans débordement. Le résumé et les chapitres restent ceux de l'IA (mention sur la fiche). Non testé : impression papier, Safari / iPhone. Le PDF n'est pas fabriqué par le serveur (choix volontaire : l'arabe s'imprime correctement par le navigateur). Pas de fiche dans l'application Android pour l'instant (le site s'ouvre depuis le navigateur du téléphone).
+
+**Barre d'actions de la vidéo (correction du 04/11, demandée par Epok).** Sur téléphone la barre passait sur deux lignes. Elle contient maintenant 5 boutons : Favori · Plus tard · Ma liste · **Cinéma** · Plus. **Partager**, **Marque-page** et **Fiche à imprimer** sont dans le menu « Plus » (qui se ferme après le choix). Testé à 360, 390 et 1280 px, en français et en arabe : une seule ligne.
+
