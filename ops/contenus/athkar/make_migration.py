@@ -12,7 +12,11 @@ import sys
 SRC, OUT = sys.argv[1], sys.argv[2]
 # Sans 3e argument : migration 088 (contenus 1 et 2). Sinon : liste de fichiers (ex. 093 = athkar-vie-quotidienne.json).
 FILES = sys.argv[3:] or ['athkar-matin-soir.json', 'athkar-priere-sommeil-reveil.json']
-TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else 'Contenus 3 : dhikr de la vie quotidienne (toilettes, ablutions, maison, mosquée, vêtements, repas, marché, assemblée)'
+TITLES = {
+    'athkar-vie-quotidienne.json': 'Contenus 3 : dhikr de la vie quotidienne (toilettes, ablutions, maison, mosquée, vêtements, repas, marché, assemblée)',
+    'athkar-voyage.json': 'Contenus 5 : dhikr du voyage et des nouvelles (monture, départ, villages, retour, présages)',
+}
+TITLE = 'Contenus 1 et 2 : dhikr du matin et du soir, après la prière, du sommeil et du réveil' if not sys.argv[3:] else TITLES.get(FILES[0], 'Contenus : dhikr du recueil')
 
 
 def q(s):

@@ -7132,3 +7132,13 @@ Debug : « Importez et activez d'abord le texte arabe » → activer la ressourc
 - Elles arrivent **non validées et non affichées** : migration `093_athkar_vie_quotidienne.sql` au redéploiement de l'API (idempotente), ou bouton « Restaurer les dhikr fournis » (Admin → Athkar).
 - Relire la fiche `docs/contenus/athkar-vie-quotidienne.md`, puis valider / afficher dans Admin → Athkar (actions en lot possibles).
 - Régénérer : `python3 ops/contenus/athkar/build_vie_quotidienne.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/093_athkar_vie_quotidienne.sql athkar-vie-quotidienne.json`.
+
+### Contenus 5 — Dhikr du voyage (04/11)
+
+- 14 entrées (catégorie « général ») : réponse à « Barak Allahu fik », aversion pour les présages, invocation en montant sur sa monture, invocation de voyage, entrée dans un village, adieux (voyageur / celui qui reste), takbir et tasbih du trajet, aube, halte, retour de voyage, bonne ou mauvaise nouvelle. Arabe voyellé de Hisn al-Muslim (rn0x/Adhkar-json), renvois du recueil traduits, français de l'assistant, phonétique par règles.
+- Elles arrivent **non validées et non affichées** : migration `094_athkar_voyage.sql` au redéploiement de l'API (idempotente), ou « Restaurer les dhikr fournis » (Admin → Adhkar). Positions 300 et suivantes.
+- « Quand la monture trébuche : Au nom d'Allah » n'est pas ajouté : même texte arabe qu'une entrée existante (l'application écarte les doublons). Le renvoi (Abu Dawud 4/296) figure dans la fiche.
+- Dans les versets cités, la source sépare les deux moitiés par « * » : remplacé par « ، » ; à confirmer à la relecture.
+- Relire `docs/contenus/athkar-voyage.md`, puis valider / afficher dans Admin → Adhkar.
+- Prérequis : aucun. Debug : si rien n'apparaît après redéploiement, vérifier dans Admin → Adhkar le filtre « non validés ». Exemple de contrôle SQL : `docker exec dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select count(*) from athkar_items where position >= 300"` → 14.
+- Régénérer : `python3 ops/contenus/athkar/build_voyage.py <Adhkar-json> <hisn_almuslim_json> docs/contenus`, copier le JSON dans `api/content/athkar/`, puis `python3 ops/contenus/athkar/make_migration.py docs/contenus api/migrations/094_athkar_voyage.sql athkar-voyage.json`.
