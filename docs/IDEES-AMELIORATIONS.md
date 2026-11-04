@@ -37,6 +37,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 3.5 | **Références repérées automatiquement** : versets et hadiths cités dans la conférence, avec lien vers le verset (module Citations existant) | Vérification facile, valeur pédagogique | M | ★★ |
 | 3.6 | **Attestation vérifiable** (QR code, page de vérification) pour les parcours terminés | Crédibilité, partage sur LinkedIn ou en association | S | ★ |
 | 3.7 | **Espace « Classe »** : un enseignant suit un groupe, propose des conférences et un quiz à faire | Usage en école et en association ; prolongement du groupe 1.6 | L | ★ |
+| 3.8 | 💭 (idée d'Epok, 04/11 — **à réfléchir ensemble, rien n'est décidé**) **Planning de révisions** : un calendrier qui organise ce que le membre doit revoir et quand (quiz à refaire, cartes mémoire, vidéos). Existe déjà : révision espacée automatique J+1 / J+3 / J+7 / J+21 et cartes mémoire ; manque une **vue planning** et la possibilité d'**organiser soi-même**. Questions ouvertes : planning automatique ou choisi par le membre ? par jour, semaine ou mois ? rappels (notification, e-mail) ? objectif lié à la série de jours ? | Rendre la révision visible et planifiable, pas seulement « à faire aujourd'hui » | M–L | à décider |
 
 ## 4. Contenu et prière
 | # | Idée | Apport | Effort | Prio |
