@@ -6,7 +6,8 @@ import { presignGet } from '../../storage.js';
 import { hasLearningTier } from '../../access.js';
 import { getSetting } from '../../settings.js';
 import { FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, scoreAt, curveOf } from '../../learning.js';
-import { streakSummary, goalOf } from '../../learningStreak.js';
+import { streakSummary, goalOf, parisToday } from '../../learningStreak.js';
+import { planWindow, windowOk, dayAllowed, isDay } from '../../learningPlan.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };
@@ -30,6 +31,89 @@ export default async function learningRoutes(app) {
       }))),
       recent: attempts.slice(-8).reverse().map((a) => ({ talkId: a.talk_id, title: a.title, percent: a.percent, passed: a.passed, at: a.created_at })),
     };
+  });
+
+  // ─── Planning de révisions (étape 1) ───
+  const dayS = z.string().refine(isDay, 'Date invalide (AAAA-MM-JJ)');
+  const MAX_ITEMS_PER_DAY = 20;
+
+  // Fenêtre de planning : révisions automatiques + séances choisies + jours de repos + jours déjà faits.
+  app.get('/me/learning/plan', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const q = z.object({ from: dayS, to: dayS }).parse(req.query);
+    if (!windowOk(q.from, q.to)) return reply.code(400).send({ error: 'Fenêtre de dates invalide (62 jours au plus)' });
+    return planWindow(req.user.sub, q.from, q.to);
+  });
+
+  // Ajoute une séance : une vidéo à regarder, un quiz à passer, ou une note libre.
+  app.post('/me/learning/plan', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const b = z.object({
+      day: dayS, kind: z.enum(['video', 'quiz', 'custom']), talkId: z.string().uuid().optional(), note: z.string().trim().max(120).optional(),
+    }).parse(req.body ?? {});
+    const today = await parisToday();
+    if (!dayAllowed(b.day, today)) return reply.code(400).send({ error: "Choisissez un jour entre aujourd'hui et dans un an" });
+    if (b.kind === 'custom' && !b.note) return reply.code(400).send({ error: 'Écrivez ce que vous voulez faire' });
+    if (b.kind !== 'custom') {
+      if (!b.talkId) return reply.code(400).send({ error: 'Choisissez une vidéo' });
+      const ok = (await pool.query(`SELECT 1 FROM talks WHERE id = $1 AND video_status = 'ready'`, [b.talkId])).rowCount;
+      if (!ok) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    }
+    const n = (await pool.query('SELECT count(*)::int AS n FROM learning_plan_items WHERE user_id = $1 AND day = $2', [req.user.sub, b.day])).rows[0].n;
+    if (n >= MAX_ITEMS_PER_DAY) return reply.code(409).send({ error: 'Cette journée est déjà bien remplie', code: 'day_full' });
+    const { rows } = await pool.query(
+      `INSERT INTO learning_plan_items(user_id, day, kind, talk_id, note) VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, day::text AS day, kind, talk_id AS "talkId", note, false AS done`,
+      [req.user.sub, b.day, b.kind, b.kind === 'custom' ? null : b.talkId, b.note ?? '']);
+    // Une séance posée sur un jour de repos annule ce repos : le membre a changé d'avis.
+    await pool.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = $2', [req.user.sub, b.day]);
+    return reply.code(201).send(rows[0]);
+  });
+
+  // Déplace une séance, la coche comme faite (ou la décoche), ou change sa note.
+  app.patch('/me/learning/plan/:id', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const b = z.object({ day: dayS.optional(), done: z.boolean().optional(), note: z.string().trim().max(120).optional() })
+      .refine((x) => x.day !== undefined || x.done !== undefined || x.note !== undefined, 'Rien à modifier').parse(req.body ?? {});
+    const cur = (await pool.query('SELECT kind FROM learning_plan_items WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
+    if (!cur) return reply.code(404).send({ error: 'Séance introuvable' });
+    if (b.day !== undefined) {
+      const today = await parisToday();
+      if (!dayAllowed(b.day, today)) return reply.code(400).send({ error: "Choisissez un jour entre aujourd'hui et dans un an" });
+    }
+    if (b.note !== undefined && cur.kind === 'custom' && !b.note) return reply.code(400).send({ error: 'La note ne peut pas être vide' });
+    const { rows } = await pool.query(
+      `UPDATE learning_plan_items SET day = COALESCE($3::date, day), note = COALESCE($4, note),
+              done_at = CASE WHEN $5::boolean IS NULL THEN done_at WHEN $5 THEN COALESCE(done_at, now()) ELSE NULL END
+        WHERE id = $1 AND user_id = $2
+        RETURNING id, day::text AS day, kind, talk_id AS "talkId", note, (done_at IS NOT NULL) AS done`,
+      [id, req.user.sub, b.day ?? null, b.note ?? null, b.done ?? null]);
+    if (b.day !== undefined) await pool.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = $2', [req.user.sub, b.day]);
+    return rows[0];
+  });
+
+  app.delete('/me/learning/plan/:id', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    await pool.query('DELETE FROM learning_plan_items WHERE id = $1 AND user_id = $2', [id, req.user.sub]);
+    return reply.code(204).send();
+  });
+
+  // Marque (ou retire) un jour de repos. Un jour de repos n'efface pas les séances déjà posées ce jour-là : on refuse plutôt.
+  app.put('/me/learning/plan/rest', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const b = z.object({ day: dayS, rest: z.boolean() }).parse(req.body ?? {});
+    const today = await parisToday();
+    if (!dayAllowed(b.day, today)) return reply.code(400).send({ error: "Choisissez un jour entre aujourd'hui et dans un an" });
+    if (b.rest) {
+      const n = (await pool.query('SELECT count(*)::int AS n FROM learning_plan_items WHERE user_id = $1 AND day = $2', [req.user.sub, b.day])).rows[0].n;
+      if (n > 0) return reply.code(409).send({ error: 'Il y a déjà des séances ce jour-là : déplacez-les ou supprimez-les d\'abord', code: 'day_not_empty' });
+      await pool.query('INSERT INTO learning_rest_days(user_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user.sub, b.day]);
+    } else {
+      await pool.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = $2', [req.user.sub, b.day]);
+    }
+    return { day: b.day, rest: b.rest };
   });
 
   // Délivre l'attestation d'une série dont tous les quiz sont réussis (une seule par série et par membre).

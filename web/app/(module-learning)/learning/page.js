@@ -18,6 +18,7 @@ import TodayBlock from '../../../components/TodayBlock';
 import EmptyState from '../../../components/EmptyState';
 import InviteCard from '../../../components/InviteCard';
 import StreakCard from '../../../components/StreakCard';
+import PlanningClient from '../../../components/PlanningClient';
 
 
 // Courbe d'apprentissage : tracé simple en SVG (aucune bibliothèque).
@@ -87,6 +88,7 @@ export default function Learning() {
     ...(feat('quran') ? [{ id: 'quran', label: t('qrNav') }] : []),
     ...(feat('athkar') ? [{ id: 'athkar', label: t('atTab') }] : []),
     ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
+    ...(feat('revision') ? [{ id: 'plan', label: t('pnTab') }] : []),
     ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
     ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
     ...(feat('selfcheck') ? [{ id: 'bilan', label: t('msBilan') }] : []),
@@ -98,7 +100,7 @@ export default function Learning() {
   const GROUPS = [
     { id: 'g_today', label: t('lgGToday'), intro: 'lgGTodayTx', subs: ['dash'] },
     { id: 'g_quran', label: t('lgGQuran'), intro: 'lgGQuranTx', subs: ['quran', 'athkar'] },
-    { id: 'g_talks', label: <>{t('lgGTalks')}{revN + cardsN > 0 && <span className="lg-badge" aria-label={String(revN + cardsN)}>{revN + cardsN}</span>}</>, plain: t('lgGTalks'), intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
+    { id: 'g_talks', label: <>{t('lgGTalks')}{revN + cardsN > 0 && <span className="lg-badge" aria-label={String(revN + cardsN)}>{revN + cardsN}</span>}</>, plain: t('lgGTalks'), intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards', 'plan'] },
     { id: 'g_progress', label: t('lgGProgress'), intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
   ].map((g) => ({ ...g, subs: g.subs.filter((id) => tabs.some((x) => x.id === id)) })).filter((g) => g.subs.length);
   const group = GROUPS.find((g) => g.subs.includes(tab)) || GROUPS[0];
@@ -407,6 +409,10 @@ export default function Learning() {
         </section>
       )}
 
+      </TabPanel>
+
+      <TabPanel id="plan" current={tab}>
+        <PlanningClient />
       </TabPanel>
 
       <TabPanel id="cards" current={tab}>

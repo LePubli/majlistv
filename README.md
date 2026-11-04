@@ -7381,3 +7381,35 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 **Exemples.** Lundi quiz, mardi vidéo de 5 min, mercredi rien, jeudi révision → série de 3 jours actifs (le mercredi est le jour de repos de la semaine) ; si le vendredi est aussi manqué, la série repart de zéro.
 
 **Limites (honnêtes).** La « vidéo regardée 1 minute » se mesure à la **position atteinte** (1 min ou plus), pas au temps réellement passé ; pour une vidéo, seul son **dernier** jour de lecture est connu (une vidéo revue écrase l'ancien jour) : les jours passés où l'on a seulement regardé des vidéos peuvent donc manquer dans l'historique ; quiz, révisions et cartes sont exacts. Testé : calcul, API + base, site (FR / AR, 390 et 1280 px), 201 tests mobile, typage. **Non testé** : affichage réel dans l'application, changement de semaine en conditions réelles (dimanche → lundi).
+
+## Amélioration 3.8 — Mon planning de révisions, étape 1 sur 4 (04/11)
+
+**Description.** Nouvel onglet **Apprendre → Vidéos → Mon planning** (palier **Apprentissage** seulement). Trois vues : **Jour** (bandeau des 7 jours, liste à cocher ; vue d'ouverture sur téléphone), **Semaine** (7 colonnes, 4 sur portable, 1 sur téléphone), **Mois** (grille avec pastilles). Chaque jour rassemble : les **révisions automatiques** (quiz espacés J+1/3/7/21 et un bloc « N cartes à revoir »), les **séances choisies** par le membre (regarder une vidéo, passer un quiz, ou une note libre de 120 caractères : on peut les ajouter, cocher, déplacer, supprimer), un **jour de repos** marquable, et un ✓ vert sur les jours où le membre a réellement appris. Les révisions en retard sont regroupées sur **aujourd'hui**. Une ligne rappelle l'objectif de la semaine (« 2 / 3 jours faits »). Maquette validée par Epok (« Go »).
+
+**Hors de cette étape (à venir).** Étape 2 : échéances avec étalement automatique des révisions ; étape 3 : rappels (notification + e-mail) et lien plus poussé avec l'objectif ; étape 4 : application Android. Le texte « Bientôt… » en bas de l'écran le dit au membre. Un jour de repos du planning est pour l'instant un **repère visuel** : il ne change pas encore le calcul de la série de jours.
+
+**API** (palier Apprentissage, sinon 403 `learning_required`) :
+- `GET /me/learning/plan?from=AAAA-MM-JJ&to=AAAA-MM-JJ` (62 jours au plus) → `{ today, from, to, auto: [{type:'revision', day, talkId, title, stage} | {type:'cards', day, count}], items: [{id, day, kind, talkId, title, note, done}], rest: [jours], active: [jours], week, goal, monday }`
+- `POST /me/learning/plan` `{ day, kind: 'video'|'quiz'|'custom', talkId?, note? }` (de aujourd'hui à +1 an ; 20 séances par jour au plus, sinon 409 `day_full`)
+- `PATCH /me/learning/plan/:id` `{ day?, done?, note? }` ; `DELETE /me/learning/plan/:id`
+- `PUT /me/learning/plan/rest` `{ day, rest }` (409 `day_not_empty` si le jour a déjà des séances ; poser une séance sur un jour de repos annule le repos).
+Migration **104** : tables `learning_plan_items` et `learning_rest_days` (privées au membre, exportées et supprimées avec le compte). Les révisions automatiques ne sont **pas stockées** : calculées depuis `revision_items` et `memory_card_progress`.
+
+**Fichiers.** API : `src/learningPlan.js`, `migrations/104_learning_plan.sql`, `modules/learning/routes.js`. Site : `web/components/PlanningClient.js`, page `learning`, styles `.pn-*`, textes `pn*` (FR / EN / AR, arabe en RTL). Tests : `api/tests/test_plan_unit.mjs`, `api/tests/test_plan.py`.
+
+**Prérequis / `.env`.** Aucun.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy **`majlistv-api`** (migration 104 au démarrage), puis **`majlistv-web`**, puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+(résultat attendu : 0 échec). Rien à redéployer côté worker / transcriber / translator / dubbing.
+
+**Debug.** `cd api && DATABASE_URL=postgres://x JWT_SECRET=test-secret-test-secret-test-secret node tests/test_plan_unit.mjs` (8 contrôles) ; `tests/test_plan.py` (API + base, 37 contrôles : accès par palier, isolation entre membres, révisions et cartes automatiques). Planning vide alors qu'on attend des révisions : une révision n'apparaît que si la vidéo est visible, prête et possède des questions approuvées. Message « Apprentissage requis » : le membre n'est pas au palier Apprentissage.
+
+**Exemples.** Mercredi : « Quiz · Les épreuves » (révision J+7, automatique) + « 8 cartes à revoir » + ma séance « Vidéo · Al-Kahf 2/2 ». Je clique ↔ pour déplacer la séance au vendredi, ✓ pour la cocher, ✕ pour la supprimer.
+
+**Testé / non testé (honnête).** Testé : validations pures, API + base (37 contrôles), compilation du site, parcours automatisé (ajout, cochage, suppression d'une séance), captures semaine / mois / jour en FR et en AR (390 et 1280 px, aucun débordement). **Non testé** : sur un vrai téléphone, Safari / iPhone, passage à l'heure d'hiver, très gros volumes de révisions.
