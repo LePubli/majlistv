@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img">
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#e8a317"/></linearGradient>
+<linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".5" stop-color="#e8b630"/><stop offset="1" stop-color="#9a6a08"/></linearGradient>
+<radialGradient id="skyA" cx=".5" cy=".3" r=".9"><stop offset="0" stop-color="#3b3f86"/><stop offset="1" stop-color="#0d1033"/></radialGradient>
+<radialGradient id="skyB" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="#1f3a3a"/><stop offset="1" stop-color="#090d0d"/></radialGradient>
+</defs>
+<circle cx="60" cy="58" r="56" fill="url(#ring)"/>
+<circle cx="60" cy="58" r="51" fill="#17110a"/><circle cx="60" cy="58" r="49" fill="none" stroke="url(#ring)" stroke-width="1.2" opacity=".8"/>
+<circle cx="60" cy="58" r="46" fill="url(#skyB)"/><path d="M60.00,14.00 L71.48,30.28 L91.11,26.89 L87.72,46.52 L104.00,58.00 L87.72,69.48 L91.11,89.11 L71.48,85.72 L60.00,102.00 L48.52,85.72 L28.89,89.11 L32.28,69.48 L16.00,58.00 L32.28,46.52 L28.89,26.89 L48.52,30.28Z" fill="none" stroke="#E8B630" stroke-opacity=".22" stroke-width="1.4"/><path d="M76.84,17.35 L81.21,36.79 L100.65,41.16 L90.00,58.00 L100.65,74.84 L81.21,79.21 L76.84,98.65 L60.00,88.00 L43.16,98.65 L38.79,79.21 L19.35,74.84 L30.00,58.00 L19.35,41.16 L38.79,36.79 L43.16,17.35 L60.00,28.00Z" fill="none" stroke="#E8B630" stroke-opacity=".22" stroke-width="1.4"/><circle cx="60" cy="58" r="30" fill="none" stroke="#E8B630" stroke-opacity=".15"/>
+<g stroke="#2b1a05" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+<path d="M42 90 C40 82 46 80 60 80 C74 80 80 82 78 90Z" fill="#8a5a2b"/>
+<path d="M60 80 C60 66 60 56 60 44" fill="none" stroke-width="5" stroke="#2b1a05"/><path d="M60 80 C60 66 60 56 60 44" fill="none" stroke-width="2.6" stroke="#5fcf65"/>
+<path d="M60 58 C44 60 34 50 34 36 C50 34 60 42 60 58Z" fill="#5fcf65"/>
+<path d="M60 48 C74 50 86 42 88 28 C72 26 60 34 60 48Z" fill="#8fe08f"/>
+<path d="M44 44 C50 46 54 50 56 56 M74 38 C70 40 66 44 64 50" fill="none" stroke="#2b1a05" stroke-width="1.3"/></g>
+</svg>

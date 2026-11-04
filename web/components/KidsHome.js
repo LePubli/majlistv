@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from './Providers';
-import { AVATAR_EMOJI, BADGE_CODES, BADGE_ICON, Stars } from '../lib/kids';
+import { AVATAR_EMOJI, BADGE_CODES, Stars } from '../lib/kids';
+import KidBadge from './KidBadge';
 import { useKidTime, leftMin } from '../lib/kidTime';
 import KidsBanner from './KidsBanner';
 import { KidActions } from './KidsActions';
@@ -55,7 +56,7 @@ export default function KidsHome() {
   const Badges = ({ detail }) => sum?.learning && (
     <ul className={detail ? 'kd-badges kd-badges-big' : 'kd-badges'} aria-label={t('kdBadges')}>
       {BADGE_CODES.map((c) => { const got = sum.badges.some((b) => b.code === c); return (
-        <li key={c} className={got ? 'kd-badge on' : 'kd-badge'} title={t(`kdB_${c}`) + ' — ' + t(`kdBd_${c}`)}><span aria-hidden="true">{BADGE_ICON[c]}</span><span className="kd-badge-name">{t(`kdB_${c}`)}</span>{detail && <small>{t(`kdBd_${c}`)}</small>}</li>
+        <li key={c} className={got ? 'kd-badge on' : 'kd-badge'} title={t(`kdB_${c}`) + ' — ' + t(`kdBd_${c}`)}><KidBadge code={c} size={detail ? 84 : 56} /><span className="kd-badge-name">{t(`kdB_${c}`)}</span>{detail && <small>{t(`kdBd_${c}`)}</small>}</li>
       ); })}
     </ul>
   );

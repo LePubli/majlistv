@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img">
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#e8a317"/></linearGradient>
+<linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".5" stop-color="#e8b630"/><stop offset="1" stop-color="#9a6a08"/></linearGradient>
+<radialGradient id="skyA" cx=".5" cy=".3" r=".9"><stop offset="0" stop-color="#3b3f86"/><stop offset="1" stop-color="#0d1033"/></radialGradient>
+<radialGradient id="skyB" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="#1f3a3a"/><stop offset="1" stop-color="#090d0d"/></radialGradient>
+</defs>
+<circle cx="60" cy="58" r="56" fill="url(#ring)"/>
+<circle cx="60" cy="58" r="51" fill="#17110a"/><circle cx="60" cy="58" r="49" fill="none" stroke="url(#ring)" stroke-width="1.2" opacity=".8"/>
+<circle cx="60" cy="58" r="46" fill="url(#skyB)"/><path d="M60.00,14.00 L71.48,30.28 L91.11,26.89 L87.72,46.52 L104.00,58.00 L87.72,69.48 L91.11,89.11 L71.48,85.72 L60.00,102.00 L48.52,85.72 L28.89,89.11 L32.28,69.48 L16.00,58.00 L32.28,46.52 L28.89,26.89 L48.52,30.28Z" fill="none" stroke="#E8B630" stroke-opacity=".22" stroke-width="1.4"/><path d="M76.84,17.35 L81.21,36.79 L100.65,41.16 L90.00,58.00 L100.65,74.84 L81.21,79.21 L76.84,98.65 L60.00,88.00 L43.16,98.65 L38.79,79.21 L19.35,74.84 L30.00,58.00 L19.35,41.16 L38.79,36.79 L43.16,17.35 L60.00,28.00Z" fill="none" stroke="#E8B630" stroke-opacity=".22" stroke-width="1.4"/><circle cx="60" cy="58" r="30" fill="none" stroke="#E8B630" stroke-opacity=".15"/>
+<g stroke="#2b1a05" stroke-width="1.8" stroke-linejoin="round">
+<path d="M44 82 C40 76 36 78 34 74 C38 74 40 70 46 70Z M76 82 C80 76 84 78 86 74 C82 74 80 70 74 70Z" fill="#fff" stroke="none" opacity=".0"/>
+<path d="M60 22 C74 32 77 54 72 72 L48 72 C43 54 46 32 60 22Z" fill="#fdf6e3"/>
+<path d="M60 22 C66 26 70 32 72 38 L48 38 C50 32 54 26 60 22Z" fill="#e5484d"/>
+<circle cx="60" cy="52" r="8" fill="#4cc3ff"/><circle cx="60" cy="52" r="8" fill="none"/><path d="M56 49 A5 5 0 0 1 62 47" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M48 62 L36 78 L50 74Z M72 62 L84 78 L70 74Z" fill="#e5484d"/>
+<path d="M52 74 L60 96 L68 74Z" fill="#ff9d1c"/><path d="M56 74 L60 87 L64 74Z" fill="#fff0a8" stroke="none"/></g>
+</svg>

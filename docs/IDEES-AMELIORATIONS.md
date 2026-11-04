@@ -22,7 +22,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 |---|---|---|---|---|
 | 2.1 | ✅ (étape 40 ; à valider sur vrais appareils) **Notifications web (navigateur / site installé)** — absentes aujourd'hui sur le site (existent dans l'application) | Rappel des nouveautés et de la révision sans e-mail | M | ★★★ |
 | 2.2 | ✅ (étape 34) **Lettre hebdomadaire automatique** « Cette semaine sur Mejliss TV » personnalisée (nouveautés des chaînes suivies, à réviser) | Retour régulier, canal qui t'appartient | M | ★★★ |
-| 2.3 | **Séries de jours, objectifs de la semaine et badges** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
+| 2.3 | (décision Epok 04/11 : **pas de badges pour les adultes** ; série de jours + objectif de la semaine seulement ; badges enfants illustrés livrés = Amélioration 8.4) **Séries de jours, objectifs de la semaine** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
 | 2.4 | ⏸ (mis de côté par Epok, 04/11) **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |
 | 2.5 | ✅ (Amélioration D1 ; listes partageables déjà existantes) **« À regarder plus tard »** distinct des favoris ; **listes partageables** | Moins de conférences perdues, partage entre amis | S | ★★ |
 | 2.6 | **Recommandations plus fines** (« Pour vous ») à partir de l'historique, des quiz et des thèmes | Plus de temps de visionnage par membre | M–L | ★★ |

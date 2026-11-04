@@ -2,7 +2,8 @@
 // Quiz de l'espace enfant : une question à la fois, grands boutons, aucun chronomètre. Résultat en étoiles (1 à 3), jamais « raté ».
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';
-import { BADGE_ICON, Stars } from '../lib/kids';
+import { Stars } from '../lib/kids';
+import KidBadge from './KidBadge';
 import { KidActions } from './KidsActions';
 
 export default function KidsQuiz({ talkId, onClose, onDone }) {
@@ -45,7 +46,7 @@ export default function KidsQuiz({ talkId, onClose, onDone }) {
         <p>{t('kdScore').replace('{n}', res.score).replace('{t}', res.total)}</p>
         {res.newBadges.length > 0 && (
           <div className="kd-newbadge" role="status"><b>{t('kdNewBadge')}</b>
-            <ul>{res.newBadges.map((b) => <li key={b}><span aria-hidden="true">{BADGE_ICON[b]}</span> {t(`kdB_${b}`)}</li>)}</ul></div>
+            <ul>{res.newBadges.map((b) => <li key={b}><KidBadge code={b} size={44} /> {t(`kdB_${b}`)}</li>)}</ul></div>
         )}
         <div className="ka-after"><KidActions limit={3} onlyOpen hideEmpty title={t('kaAfterQuiz')} /></div>
         {res.nextReview && <p className="meta">{t('kdNextReview').replace('{date}', new Date(res.nextReview + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</p>}

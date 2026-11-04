@@ -7,9 +7,10 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { useAsync } from '@/lib/useAsync';
-import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, badgeIcon, dueCards, leftMin, resolveShelves, rubricName, searchTerm, shelfTitle } from '@/lib/kids';
+import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, dueCards, leftMin, resolveShelves, rubricName, searchTerm, shelfTitle } from '@/lib/kids';
 import type { KidCard, KidCatalog, KidSummary } from '@/lib/types';
 import { KButton, KChip, KScreen, KTxt, KidVideoCard } from '@/components/kids/KidUi';
+import { KidBadge } from '@/components/kids/KidBadge';
 import { KidActionsList } from '@/components/kids/KidActionsList';
 import { KidRamadan } from '@/components/kids/KidRamadan';
 
@@ -153,7 +154,7 @@ export default function KidsHome() {
                   {BADGE_CODES.map((c) => { const got = sm.badges.some((b) => b.code === c); return (
                     <View key={c} accessibilityLabel={`${t(`kdB_${c}` as never)}${got ? '' : ' — ' + t(`kdBd_${c}` as never)}`}
                       style={{ width: 92, alignItems: 'center', gap: 4, padding: 10, borderRadius: 18, backgroundColor: KC.surface, borderWidth: 2, borderColor: got ? KC.accent : KC.line, opacity: got ? 1 : 0.45 }}>
-                      <KTxt size={28} style={{ lineHeight: 36 }}>{badgeIcon(c)}</KTxt>
+                      <KidBadge code={c} size={56} />
                       <KTxt size={11} weight="bold" numberOfLines={2} style={{ textAlign: 'center' }} color={got ? KC.text : KC.muted}>{t(`kdB_${c}` as never)}</KTxt>
                     </View>); })}
                 </View>

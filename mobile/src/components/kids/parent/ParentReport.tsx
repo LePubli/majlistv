@@ -3,9 +3,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
-import { KC, avatarEmoji, badgeIcon, dayLetter, fmtMinutes, reportDays, usageBars } from '@/lib/kids';
+import { KC, avatarEmoji, dayLetter, fmtMinutes, reportDays, usageBars } from '@/lib/kids';
 import type { KidReport } from '@/lib/types';
 import { KButton, KChip, KTxt } from '@/components/kids/KidUi';
+import { KidBadge } from '@/components/kids/KidBadge';
 
 const Tile = ({ label, value }: { label: string; value: string | number }) => (
   <View style={{ minWidth: 96, flexGrow: 1, padding: 12, borderRadius: 16, backgroundColor: KC.surface2, borderWidth: 1, borderColor: KC.line, gap: 2 }}>
@@ -65,7 +66,7 @@ export function ParentReport() {
                     ))}
                   </View>
                 ) : null}
-                {p.badges.length > 0 ? <KTxt>{t('krBadges')} : {p.badges.map((c) => badgeIcon(c)).join(' ')}</KTxt> : null}
+                {p.badges.length > 0 ? <View style={{ gap: 6 }}><KTxt>{t('krBadges')} :</KTxt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{p.badges.map((c) => <KidBadge key={c} code={c} size={32} />)}</View></View> : null}
                 {p.retry.length > 0 ? <KTxt size={13} color={KC.text2}>{t('krRetry')} : {p.retry.map((x) => `« ${x} »`).join(', ')}</KTxt> : null}
               </>
             )}

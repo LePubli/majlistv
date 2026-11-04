@@ -2,7 +2,8 @@
 // Rapport de progression pour le parent : un bloc par enfant, sans classement ni comparaison.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
-import { AVATAR_EMOJI, BADGE_ICON } from '../lib/kids';
+import { AVATAR_EMOJI } from '../lib/kids';
+import KidBadge from './KidBadge';
 
 const dayLetter = (iso, locale) => new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : locale === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(iso + 'T12:00:00Z'));
 const fmtMin = (m, t) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : t('kcMin').replace('{n}', m));
@@ -48,7 +49,7 @@ export default function KidsReport({ hasProfiles }) {
                       {p.usage.map((u) => <span key={u.day} className="kd-bar" title={`${u.day} · ${Math.round(u.seconds / 60)} min`}><i style={{ height: `${Math.round((100 * u.seconds) / peak)}%` }} />{p.usage.length <= 7 && <em>{dayLetter(u.day, locale)}</em>}</span>)}
                     </div>
                   )}
-                  {p.badges.length > 0 && <p>{t('krBadges')} : {p.badges.map((c) => <span key={c} title={t(`kdB_${c}`)}>{BADGE_ICON[c]} </span>)}</p>}
+                  {p.badges.length > 0 && <p>{t('krBadges')} : {p.badges.map((c) => <span key={c} title={t(`kdB_${c}`)} className="kd-badge-inline"><KidBadge code={c} size={28} /> </span>)}</p>}
                   {p.retry.length > 0 && <p className="meta">{t('krRetry')} : {p.retry.map((x) => `« ${x} »`).join(', ')}</p>}
                 </>
               )}

@@ -5,9 +5,10 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { ApiError } from '@/lib/api';
-import { KC, badgeIcon, clampStars, isTimeUp, quizAnswers, reviewDate, starsMessageKey } from '@/lib/kids';
+import { KC, clampStars, isTimeUp, quizAnswers, reviewDate, starsMessageKey } from '@/lib/kids';
 import type { KidQuizQuestion, KidQuizResult } from '@/lib/types';
 import { KButton, KTxt, starsText } from '@/components/kids/KidUi';
+import { KidBadge } from '@/components/kids/KidBadge';
 import { KidActionsList } from '@/components/kids/KidActionsList';
 
 type Props = { talkId: string; onClose: () => void; onDone?: (r: KidQuizResult) => void };
@@ -62,7 +63,7 @@ export function KidQuiz({ talkId, onClose, onDone }: Props) {
       {res.newBadges.length > 0 ? (
         <View style={{ padding: 16, borderRadius: 20, backgroundColor: KC.surface2, borderWidth: 2, borderColor: KC.accent, gap: 6 }} accessibilityRole="alert">
           <KTxt weight="extrabold" size={16} color={KC.accent}>{t('kdNewBadge')}</KTxt>
-          {res.newBadges.map((b) => <KTxt key={b} weight="bold">{badgeIcon(b)} {t(`kdB_${b}` as never)}</KTxt>)}
+          {res.newBadges.map((b) => <View key={b} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><KidBadge code={b} size={44} /><KTxt weight="bold">{t(`kdB_${b}` as never)}</KTxt></View>)}
         </View>
       ) : null}
       <KidActionsList limit={3} onlyOpen hideEmpty title={t('kaAfterQuiz')} />

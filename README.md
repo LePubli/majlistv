@@ -7340,3 +7340,21 @@ cd ../mobile && npx tsx --test tests/notif.test.ts   # copie du calcul identique
 
 **Barre d'actions de la vidéo (correction du 04/11, demandée par Epok).** Sur téléphone la barre passait sur deux lignes. Elle contient maintenant 5 boutons : Favori · Plus tard · Ma liste · **Cinéma** · Plus. **Partager**, **Marque-page** et **Fiche à imprimer** sont dans le menu « Plus » (qui se ferme après le choix). Testé à 360, 390 et 1280 px, en français et en arabe : une seule ligne.
 
+
+## Amélioration 8.4 — Badges enfants illustrés (04/11)
+
+**Description.** Les 7 badges de Mejliss TV Kids (Premier envol, Trois étoiles, Champion du quiz, Explorateur, Grand spectateur, Je progresse, Étoile brillante) passent des emojis à de vraies illustrations : dessin en couleurs à contour, médaille dorée, fond sombre à rosace dorée (version « B » choisie par Epok le 04/11 parmi deux propositions). Les badges pas encore gagnés restent grisés comme avant. Les règles d'attribution ne changent pas.
+
+**Où.** Site : accueil Kids (liste et détail), résultat d'un quiz (nouveaux badges), rapport parent. Application : accueil Kids, résultat d'un quiz, rapport parent.
+
+**Fichiers.** Site : `web/public/kids/badges/<code>.svg` (vectoriel), `web/components/KidBadge.js`, styles `.kd-badge-img` en fin de `globals.css`. Application : `mobile/assets/badges/<code>.png` (256 px), `mobile/src/lib/kidBadges.ts`, `mobile/src/components/kids/KidBadge.tsx`. Un code de badge inconnu garde l'ancien emoji (aucune casse si un badge s'ajoute côté serveur).
+
+**Prérequis / `.env`.** Aucun. Aucune migration, aucune nouvelle bibliothèque ni permission : **la mise à jour du contenu de l'application (OTA) suffit**, pas de nouvel APK.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy de `majlistv-web` (l'API ne change pas), puis les commandes VPS habituelles ; publier la mise à jour du contenu de l'application (`scripts/publish-update.mjs`).
+
+**Debug.** `cd mobile && npm run check` (200 tests, dont `kidBadges.test.ts` : chaque badge a son PNG 256 px et son SVG). Image absente sur le site : vérifier `/kids/badges/<code>.svg` dans le navigateur.
+
+**Ajouter un badge.** Ajouter le code côté API (`KID_BADGES`), le dessin SVG + PNG, la ligne dans `kidBadges.ts` et dans `BADGE_ICON` (web et mobile), puis les textes `kdB_` / `kdBd_`.
+
+**Limites (honnêtes).** Testé : planche de rendu (obtenu / grisé / 48 px), typage, 200 tests, compilation du site, export Android avec les images. **Non testé** : affichage réel dans les écrans Kids du site et de l'application (compte enfant), arabe. Les dessins sont faits en SVG « maison » : un illustrateur pourrait les affiner plus tard en gardant les mêmes noms de fichiers.

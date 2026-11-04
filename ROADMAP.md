@@ -604,4 +604,6 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Cases à cocher et interrupteurs (style C choisi par Epok) : livré et validé par Epok le 04/11 (README « Amélioration — Cases à cocher »).
 - Amélioration 4.3 « Prière complète » (page /priere : horaires du jour, date hégirienne, calendrier du mois imprimable, Qibla avec boussole du téléphone) : livré (README « Amélioration 4.3 »), validé par Epok (04/11). Version application Android livrée (README « la même page dans l'application »), validée par Epok (04/11) ; mise à jour OTA, sans nouvel APK.
 - Amélioration 3.3 « Fiche imprimable » (page /fiche/<id> : résumé, points clés, chapitres, notes du membre ; impression / PDF) : livré (README « Amélioration 3.3 »), à valider par Epok. Reste : version application Android (non demandée).
+- Amélioration 8.4 « Badges enfants illustrés » (7 badges dessinés, site + application ; version B choisie par Epok) : livré (README « Amélioration 8.4 »), à valider par Epok.
+- Décisions d'Epok 04/11 : badges supprimés pour les adultes (jamais) ; à venir côté adultes : série de jours + objectif de la semaine, sans badges.
 

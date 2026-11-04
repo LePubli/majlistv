@@ -4497,3 +4497,10 @@ input[type=checkbox]:focus-visible { outline: 3px solid var(--accent-hover); out
 /* Mode édition : bouton replié = simple crayon rond, sans texte (demande d'Epok, 04/11) */
 .em-bar:not(.on) { padding: 4px; }
 .em-pen { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; display: inline-grid; place-items: center; }
+
+/* Badges enfants illustrés (version « rosace dorée », 04/11) */
+.kd-badge { font-size: 1rem; }
+.kd-badge-img { display: inline-block; vertical-align: middle; width: 56px; height: 56px; object-fit: contain; }
+.kd-badges-big .kd-badge-img { width: 84px; height: 84px; }
+.kd-badge-inline { display: inline-flex; vertical-align: middle; margin-inline-end: 4px; }
+.kd-badge-inline .kd-badge-img { width: 28px; height: 28px; }
