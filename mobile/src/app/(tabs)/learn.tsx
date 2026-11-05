@@ -25,6 +25,7 @@ import { QuranPlan } from '@/components/QuranPlan';
 import { MemoryCards } from '@/components/learn/MemoryCards';
 import { SelfCheck } from '@/components/learn/SelfCheck';
 import { StreakCard } from '@/components/learn/StreakCard';
+import { Planning } from '@/components/learn/Planning';
 
 type Series = LearningResponse['series'][number] & { attestation?: { code: string; issuedAt: string } | null };
 type Learning = Omit<LearningResponse, 'series'> & { series: Series[] };
@@ -116,6 +117,7 @@ function LearnBody() {
       {section === 'cards' ? <MemoryCards onCount={() => { void cards.reload(); }} /> : null}
       {section === 'commit' ? <Commitments practice={practice.data} reload={practice.reload} /> : null}
       {section === 'bilan' ? <SelfCheck /> : null}
+      {section === 'plan' ? <Planning go={setSection} /> : null}
       {section === 'att' ? <SeriesBlock mode="att" data={learning.data} reload={learning.reload} /> : null}
       {learning.loading && !learning.data ? <View style={{ height: 80 }}><Loading /></View> : null}
     </ScrollView>

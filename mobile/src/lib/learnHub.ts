@@ -4,12 +4,13 @@
 import type { Key } from './i18n';
 
 // ---------------------------------------------------------------- Onglets
-export type SectionId = 'dash' | 'quran' | 'athkar' | 'path' | 'rev' | 'cards' | 'commit' | 'bilan' | 'att';
-export type GroupId = 'g_today' | 'g_quran' | 'g_talks' | 'g_progress';
+export type SectionId = 'dash' | 'quran' | 'athkar' | 'path' | 'rev' | 'cards' | 'commit' | 'bilan' | 'att' | 'plan';
+export type GroupId = 'g_today' | 'g_plan' | 'g_quran' | 'g_talks' | 'g_progress';
 export type Group = { id: GroupId; label: Key; intro: Key; subs: SectionId[] };
 
 const ALL_GROUPS: Group[] = [
   { id: 'g_today', label: 'lgGToday', intro: 'lgGTodayTx', subs: ['dash'] },
+  { id: 'g_plan', label: 'pnTab', intro: 'lgGPlanTx', subs: ['plan'] },
   { id: 'g_quran', label: 'lgGQuran', intro: 'lgGQuranTx', subs: ['quran', 'athkar'] },
   { id: 'g_talks', label: 'lgGTalks', intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
   { id: 'g_progress', label: 'lgGProgress', intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
@@ -30,7 +31,7 @@ export function pickSection(groups: Group[], tab: unknown): SectionId {
 export const groupOf = (groups: Group[], s: SectionId): Group => groups.find((g) => g.subs.includes(s)) ?? groups[0];
 /** Libellé d'une section (sous-onglet). */
 export const SECTION_LABEL: Record<SectionId, Key> = {
-  dash: 'tbDash', quran: 'qrNav', athkar: 'atTab', path: 'tbPath', rev: 'tbQuizRev', cards: 'mcTab', commit: 'tbCommit', bilan: 'msBilan', att: 'tbAtt',
+  dash: 'tbDash', quran: 'qrNav', athkar: 'atTab', path: 'tbPath', rev: 'tbQuizRev', cards: 'mcTab', commit: 'tbCommit', bilan: 'msBilan', att: 'tbAtt', plan: 'pnTab',
 };
 
 // ---------------------------------------------------------------- Cartes mémoire

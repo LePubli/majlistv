@@ -210,3 +210,14 @@ export type KidReportProfile = {
   minutes: number; activeDays: number; watched: number; watchedTitles: string[]; quizzes: number; avgPercent: number | null; starsGained: number; stars: number; badges: string[]; retry: string[]; active: boolean;
 };
 export type KidReport = { days: number; since: string; profiles: KidReportProfile[]; learning: boolean; email: boolean };
+
+// ---------------------------------------------------------------- Mon planning (GET /me/learning/plan)
+export type PlanAuto = { day: string; type: 'revision' | 'cards' | 'quran' | 'athkar' | 'action' | 'bilan'; done?: boolean; title?: string; talkId?: string; stage?: number; count?: number; juz?: number; goal?: number };
+export type PlanItem = { id: string; day: string; kind: 'video' | 'quiz' | 'custom' | 'cards' | 'quran' | 'athkar' | 'action' | 'bilan'; talkId?: string | null; title?: string | null; note?: string | null; done: boolean; deadlineId?: string | null };
+export type PlanDeadline = { id: string; title: string; dueOn: string; daysLeft: number; done: number; total: number };
+export type PlanResponse = {
+  today: string; from: string; to: string; auto: PlanAuto[]; items: PlanItem[]; deadlines: PlanDeadline[]; rest: string[]; active: string[];
+  week: { done: number }; goal: number; outlook: { reachable: boolean; missing: number } | null; monday: string;
+};
+export type PlanPrefs = { push: boolean; email: boolean; morning: boolean; deadline: boolean; streak: boolean; morningHour: number };
+export type DeadlinePreview = { id?: string; count: number; talks: number; days: number; perDayMax: number; busy: boolean };

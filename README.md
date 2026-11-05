@@ -7473,3 +7473,18 @@ bash /root/verify-deploy.sh
 **Exemples.** Je coche « E-mail » et « Récapitulatif du matin » à 7 h : chaque matin entre 7 h et 10 h, si j'ai des choses prévues, je reçois « 4 à faire aujourd'hui » avec la liste en nombres et « Objectif de la semaine : 2 / 3 jours — atteint si vous suivez votre plan ». La veille de mon examen : « Demain : Examen de fin de cycle — séances faites : 12 sur 15 ».
 
 **Testé / non testé (honnête).** Testé : API + base, 34 contrôles de rappels (heure, canaux, une fois par jour, jamais de texte personnel, trois langues), site FR / AR 390 et 1280 px. **Non testé** : envoi réel de notification (clé Firebase) et d'e-mail (SMTP réel) depuis le serveur de production, appareil réel, changement d'heure d'hiver. Limite : ces e-mails n'ont pas de lien « se désabonner en un clic » (comme « À réviser aujourd'hui ») : le membre les coupe dans le bloc Rappels.
+
+## Amélioration 3.8 — Mon planning, étape 4 sur 4 : le planning dans l'application Android (05/11)
+
+**Description.** L'onglet « Apprendre » de l'application a un nouveau groupe **Mon planning** (palier « Apprentissage »), identique au site : vues jour / semaine / mois, révisions automatiques (quiz, cartes, Coran, adhkar, actions, bilan), séances choisies (ajout, case à cocher, déplacement, suppression), jours de repos, échéances avec aperçu avant validation et bandeau d'avancement, ligne « objectif de la semaine », rappels (notification, e-mail, matin + heure, veille d'échéance, série à sauver). Sur téléphone la vue « jour » s'ouvre par défaut. Les dates se choisissent par boutons −7 / −1 / +1 / +7 (aucun calendrier natif, donc **aucune dépendance native** ajoutée). Textes repris du site (préfixe `pn`), arabe en RTL.
+
+**Prérequis.** API de l'étape 3 déployée (migrations 104 à 107). Aucun changement d'API dans cette étape. Pas de nouveau build : mise à jour **OTA** (publiée automatiquement par GitHub Actions au push sur `mobile/`).
+
+**Déploiement.** Rien à faire côté serveur. Dès que l'action GitHub « OTA » est verte, rouvrir l'application deux fois (la 1re télécharge, la 2e applique). Fichiers : `mobile/src/components/learn/Planning.tsx`, `mobile/src/lib/plan.ts`, `learnHub.ts` (groupe `g_plan`), `learn.tsx`.
+
+**Debug.** `cd mobile && npm run check` (tsc + 207 tests dont `tests/plan.test.ts`). Si le groupe n'apparaît pas : compte sans palier « Apprentissage » (l'API répond `learning_required`) ou OTA pas encore appliquée. Si un texte s'affiche sous forme de clé : `node scripts/import-web-texts.mjs`.
+
+**Exemples.** Apprendre → Mon planning → « + Ajouter » → type « Quiz » → chercher la vidéo → Enregistrer. Échéance : « Nouvelle échéance » → nom, date (boutons), série → l'aperçu indique le nombre de séances → Créer.
+
+**Testé / non testé (honnête).** Testé : compilation TypeScript, 207 tests, export Android (bundle Hermes OK). **Non testé** : sur un vrai téléphone (disposition, clavier dans les fenêtres, arabe RTL réel), vraies notifications reçues. Les vues sont à valider par Epok sur son appareil.
+

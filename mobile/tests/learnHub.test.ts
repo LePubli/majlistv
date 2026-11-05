@@ -11,11 +11,11 @@ import { DICT } from '../src/lib/i18n';
 
 test('onglets : 4 groupes, sections selon les fonctions activées', () => {
   const all = groupsFor(() => true);
-  assert.deepEqual(all.map((g) => g.id), ['g_today', 'g_quran', 'g_talks', 'g_progress']);
-  assert.deepEqual(all[2].subs, ['path', 'rev', 'cards']);
+  assert.deepEqual(all.map((g) => g.id), ['g_today', 'g_plan', 'g_quran', 'g_talks', 'g_progress']);
+  assert.deepEqual(all[3].subs, ['path', 'rev', 'cards']);
   const few = groupsFor((id) => !['quran', 'athkar', 'memorycards', 'selfcheck'].includes(id));
-  assert.deepEqual(few.map((g) => g.id), ['g_today', 'g_talks', 'g_progress'], 'groupe Coran caché sans Coran ni athkar');
-  assert.deepEqual(few[1].subs, ['path', 'rev']);
+  assert.deepEqual(few.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress'], 'groupe Coran caché sans Coran ni athkar');
+  assert.deepEqual(few[2].subs, ['path', 'rev']);
   assert.equal(pickSection(all, 'cards'), 'cards');
   assert.equal(pickSection(all, 'inconnu'), 'dash');
   assert.equal(pickSection(few, 'cards'), 'dash', 'section coupée → tableau de bord');
