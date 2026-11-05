@@ -1,9 +1,9 @@
 """Entonnoir et cohortes (amélioration 7.1) : droits, définitions (payant, fidélité, activité), mois d'activité enregistré à l'usage, RGPD.
-Prérequis : API (3070), PG de test (5602), compte admin admin@test.local. Les chiffres sont comparés AVANT/APRÈS (la base de test contient d'autres comptes)."""
+Prérequis : API (3055), PG de test (5544), compte admin admin@test.local. Les chiffres sont comparés AVANT/APRÈS (la base de test contient d'autres comptes)."""
 import sys, time, uuid, requests, psycopg2
 
-B = "http://127.0.0.1:3070"
-db = psycopg2.connect(host="127.0.0.1", port=5602, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
+B = "http://127.0.0.1:3055"
+db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
 
 
 def ok(c, m):

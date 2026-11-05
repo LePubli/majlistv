@@ -11,6 +11,8 @@ import type { Insights, Note, Talk, TranscriptData } from '@/lib/types';
 import { colors, fonts, radius } from '@/lib/theme';
 import { Button, Txt } from '../ui';
 import { AskPanel } from './AskPanel';
+import { canSend, canSuggest, errorKey, keyOf } from '@/lib/corrections';
+import { ApiError } from '@/lib/api';
 
 export type TabKey = 'summary' | 'chapters' | 'transcript' | 'notes' | 'ask' | 'about';
 
@@ -101,8 +103,12 @@ function Chapters({ insights, positionMs, onSeek }: { insights: Insights | null;
 }
 
 function Transcript({ talk, lang, positionMs, onSeek }: { talk: Talk; lang: string; positionMs: number; onSeek: (ms: number) => void }) {
-  const { api, t } = useSession();
+  const { api, t, user, config, isRTL } = useSession();
   const [chosen, setChosen] = useState<string | undefined>(undefined);
+  // Amélioration 4.1 : proposer une correction d'une phrase (relue par une personne avant d'être appliquée).
+  const suggestOn = canSuggest({ loggedIn: Boolean(user), featureOn: config?.features?.corrections !== false, locked: Boolean((talk as { locked?: boolean }).locked), hasToken: Boolean(talk.playbackToken) });
+  const [fix, setFix] = useState<{ i: number; text: string; busy: boolean; msg: string; ok: boolean } | null>(null);
+  const [sent, setSent] = useState<Record<string, boolean>>({});
   const tr = useAsync(
     async () => (talk.playbackToken ? await api.get<TranscriptData>(`/talks/${talk.id}/transcript`, { t: talk.playbackToken, lang: chosen ?? lang }).catch(() => null) : null),
     [talk.id, chosen, lang],
@@ -110,6 +116,18 @@ function Transcript({ talk, lang, positionMs, onSeek }: { talk: Talk; lang: stri
   if (tr.loading && !tr.data) return <Txt color={colors.muted}>{t('common.loading')}</Txt>;
   if (!tr.data || !tr.data.segments.length) return <Txt color={colors.muted}>{talk.transcriptStatus === 'processing' ? t('transcribing') : t('noTalks')}</Txt>;
   const activeIdx = tr.data.segments.reduce((a, s, i) => (s.s <= positionMs ? i : a), -1);
+  const curLang = tr.data.lang;
+  async function sendFix(original: string) {
+    if (!fix || fix.busy || !canSend(original, fix.text)) return;
+    setFix({ ...fix, busy: true, msg: '' });
+    try {
+      await api.post(`/talks/${talk.id}/corrections`, { t: talk.playbackToken, lang: curLang, idx: fix.i, text: fix.text });
+      setSent((m) => ({ ...m, [keyOf(curLang, fix.i)]: true }));
+      setFix({ ...fix, busy: false, ok: true, msg: t('corSent') });
+    } catch (e) {
+      setFix({ ...fix, busy: false, ok: false, msg: t(errorKey(e instanceof ApiError ? (e.code as string | undefined) : undefined)) });
+    }
+  }
   return (
     <View style={{ gap: 10 }}>
       {tr.data.languages.length > 1 ? (
@@ -123,13 +141,37 @@ function Transcript({ talk, lang, positionMs, onSeek }: { talk: Talk; lang: stri
         </View>
       ) : null}
       <View style={{ gap: 2 }}>
-        {tr.data.segments.map((s, i) => (
-          <Pressable key={i} accessibilityRole="button" onPress={() => onSeek(s.s)}
-            style={{ flexDirection: 'row', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: i === activeIdx ? colors.goldTint : 'transparent' }}>
-            <Txt weight="bold" size={12} color={colors.goldLight} style={{ minWidth: 44 }}>{formatClock(s.s / 1000)}</Txt>
-            <Txt size={14} color={i === activeIdx ? colors.text : colors.text2} style={{ flex: 1 }}>{s.t}</Txt>
-          </Pressable>
-        ))}
+        {tr.data.segments.map((s, i) => {
+          const idx = s.i ?? i;
+          const done = sent[keyOf(curLang, idx)];
+          return (
+            <View key={i}>
+              <Pressable accessibilityRole="button" onPress={() => onSeek(s.s)}
+                style={{ flexDirection: 'row', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: i === activeIdx ? colors.goldTint : 'transparent' }}>
+                <Txt weight="bold" size={12} color={colors.goldLight} style={{ minWidth: 44 }}>{formatClock(s.s / 1000)}</Txt>
+                <Txt size={14} color={i === activeIdx ? colors.text : colors.text2} style={{ flex: 1 }}>{s.t}</Txt>
+                {suggestOn ? (done
+                  ? <Txt size={12} color={colors.goldLight}>✓</Txt>
+                  : <Pressable accessibilityRole="button" accessibilityLabel={`${t('corReport')} · ${formatClock(s.s / 1000)}`} hitSlop={10} onPress={() => setFix({ i: idx, text: s.t, busy: false, msg: '', ok: false })}>
+                    <Txt size={14} color={colors.muted}>✎</Txt>
+                  </Pressable>) : null}
+              </Pressable>
+              {suggestOn && fix && fix.i === idx ? (
+                <View style={{ gap: 8, padding: 12, marginTop: 4, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border }}>
+                  <Txt weight="bold" size={13} color={colors.text2}>{t('corLabel')}</Txt>
+                  <TextInput value={fix.text} onChangeText={(v) => setFix({ ...fix, text: v, msg: '' })} multiline maxLength={2000}
+                    style={{ minHeight: 70, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlign: isRTL ? 'right' : 'left', textAlignVertical: 'top' }} />
+                  {fix.msg ? <Txt size={13} color={fix.ok ? colors.goldLight : colors.text2}>{fix.msg}</Txt> : null}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {!fix.ok ? <Button label={t('corSend')} disabled={fix.busy || !canSend(s.t, fix.text)} onPress={() => sendFix(s.t)} /> : null}
+                    <Button label={fix.ok ? t('corClose') : t('cancelBtn')} variant="ghost" onPress={() => setFix(null)} />
+                  </View>
+                  <Txt size={12} color={colors.muted}>{t('corNote')}</Txt>
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
       </View>
     </View>
   );

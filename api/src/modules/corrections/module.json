@@ -1,0 +1,12 @@
+{
+  "id": "corrections",
+  "name": "Corrections des sous-titres",
+  "version": "1.0.0",
+  "description": "Un membre propose une correction d'une phrase de la transcription ou des sous-titres traduits ; l'organisateur ou un modérateur l'accepte ou la refuse dans Studio. Les corrections acceptées survivent à une retraduction.",
+  "feature": "corrections",
+  "requires": [],
+  "settings": [
+    { "key": "daily_max", "type": "number", "label": "Suggestions maximum par membre et par jour", "def": "20", "min": 1, "max": 200,
+      "help": "Limite l'abus : au-delà, le membre doit attendre le lendemain. Chaque suggestion est de toute façon relue par une personne avant d'être appliquée." }
+  ]
+}

@@ -64,3 +64,4 @@ test_ramadan_bilan.py
 test_quran.py
 test_references.py
 test_growth.py
+test_corrections.py

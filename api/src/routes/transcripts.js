@@ -15,7 +15,7 @@ export default async function transcriptRoutes(app) {
     const code = lang || talk.rows[0].transcript_language;
     if (!code) return { lang: null, segments: [], languages: [] };
     const [seg, langs] = await Promise.all([
-      pool.query('SELECT start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1 AND lang = $2 ORDER BY idx', [id, code]),
+      pool.query('SELECT idx, start_ms, end_ms, text FROM transcript_segments WHERE talk_id = $1 AND lang = $2 ORDER BY idx', [id, code]),
       pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]),
     ]);
     return { lang: code, segments: seg.rows, languages: langs.rows.map((r) => r.lang) };
@@ -30,7 +30,7 @@ export default async function transcriptRoutes(app) {
     return {
       lang: data.lang,
       languages: data.languages,
-      segments: data.segments.map((s) => ({ s: s.start_ms, e: s.end_ms, t: s.text })),
+      segments: data.segments.map((s) => ({ i: s.idx, s: s.start_ms, e: s.end_ms, t: s.text })), // i = numéro de la phrase (corrections des membres)
     };
   });
 

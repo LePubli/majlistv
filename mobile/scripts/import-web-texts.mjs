@@ -24,7 +24,9 @@ const EXACT = ['home', 'library', 'navCatalogue', 'navLearn', 'seriesNav', 'colN
   'processingMsg', 'previewMsg', 'transcribing', 'insightsWaiting', 'epN', 'seasonN', 'sShort', 'eShort', 'seasonCount', 'episodeCount', 'watchedOf', 'seriesTag', 'nextEp', 'prevEp',
   'upNextIn', 'playNow', 'cancelBtn', 'tabsLabel', 'tabAbout', 'trial', 'shareCopied', 'shareCopiedAt', 'errInvalid', 'errExists', 'errGeneric', 'bkNav', 'shrTitle', 'msCats', 'watchNow', 'moreInfo', 'continueWatching', 'epOf', 'sameVein', 'nextTitle', 'nowPlaying', 'watched', 'kids', 'kdNav', 'tierLearn', 'tierStd',
   // Clés construites (t(`atCat_${c}`)) : non détectées automatiquement.
-  'atCat_morning', 'atCat_evening', 'atCat_after_prayer', 'atCat_sleep', 'atCat_general', 'msBilan', 'save', 'saving'];
+  'atCat_morning', 'atCat_evening', 'atCat_after_prayer', 'atCat_sleep', 'atCat_general', 'msBilan', 'save', 'saving',
+  // Amélioration 4.1 : messages d'erreur choisis selon le code de l'API (corrections.ts).
+  'corErr', 'corErrSame', 'corErrEmpty', 'corErrLong', 'corErrLink', 'corErrDaily', 'corErrPending'];
 const keep = (k) => EXACT.includes(k) || PREFIXES.some((p) => k.startsWith(p) && /^[A-Z0-9]/.test(k.slice(p.length) || 'A') || k === p);
 
 // Toute clé utilisée dans le code (t('clé')) et présente sur le site est aussi importée : plus besoin de la lister à la main.

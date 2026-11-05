@@ -449,6 +449,25 @@ def still_wanted(talk_id, lang):
     return bool(rows)
 
 
+def reapply_corrections(cur, talk_id, lang, source_lang):
+    """Amélioration 4.1 : après une (re)traduction, remet les corrections de sous-titres déjà ACCEPTÉES par un relecteur, à condition que la phrase
+    d'origine soit restée identique à celle qui avait été corrigée (sinon la correction ne correspond plus : on garde la traduction fraîche).
+    Sans le module « corrections » (table absente) : ne fait rien. Renvoie le nombre de phrases remises."""
+    cur.execute("SELECT to_regclass('public.subtitle_corrections') IS NOT NULL AS ok")
+    row = cur.fetchone()
+    if not (row["ok"] if isinstance(row, dict) else row[0]):
+        return 0
+    cur.execute(
+        """UPDATE transcript_segments s SET text = c.final_text
+             FROM (SELECT DISTINCT ON (idx) idx, final_text, source_snapshot FROM subtitle_corrections
+                    WHERE talk_id = %s AND lang = %s AND status = 'accepted' AND final_text IS NOT NULL AND source_snapshot IS NOT NULL
+                    ORDER BY idx, reviewed_at DESC) c
+             JOIN transcript_segments src ON src.talk_id = %s AND src.lang = %s AND src.idx = c.idx AND src.text = c.source_snapshot
+            WHERE s.talk_id = %s AND s.lang = %s AND s.idx = c.idx""",
+        (talk_id, lang, talk_id, source_lang, talk_id, lang))
+    return cur.rowcount
+
+
 def process(job):
     talk_id, lang = str(job["talk_id"]), job["lang"]
     source = (job["source_lang"] or "").split("-")[0].lower()
@@ -515,7 +534,10 @@ def process(job):
                 psycopg2.extras.execute_values(
                     cur, "INSERT INTO transcript_segments (talk_id, lang, idx, start_ms, end_ms, text) VALUES %s",
                     out_rows, page_size=500)
+                reapplied = reapply_corrections(cur, talk_id, lang, job["source_lang"])
             conn.commit()
+            if reapplied:
+                log(f"{tag} {reapplied} correction(s) validée(s) par l'équipe réappliquée(s)")
         except Exception:
             conn.rollback()
             raise

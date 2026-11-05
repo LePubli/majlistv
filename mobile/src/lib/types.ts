@@ -90,7 +90,7 @@ export type SeriesCtx = {
   episodes: { id: string; title: string; number: number; seasonNumber?: number | null; durationSeconds?: number; positionMs?: number; completed?: boolean; current?: boolean; posterUrl?: string | null; access?: string }[];
 };
 
-export type TranscriptData = { lang: string; languages: string[]; segments: { s: number; e: number; t: string }[] };
+export type TranscriptData = { lang: string; languages: string[]; segments: { i?: number; s: number; e: number; t: string }[] };
 export type Note = { id: string; positionMs: number; body: string };
 
 export type Insights = {

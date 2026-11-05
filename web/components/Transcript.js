@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ShareCardModal from './ShareCardModal';
+import { useApp } from './Providers';
 import { clockLabel, isRtlText } from '../lib/shareCard';
 
 const clock = (ms) => {
@@ -16,7 +17,12 @@ export const langName = (code, locale) => {
 };
 
 // Transcription cliquable : un clic saute à l'instant correspondant, la phrase en cours est surlignée.
-export default function Transcript({ talkId, token, langs, defaultLang, videoRef, locale, t, shareInfo }) {
+export default function Transcript({ talkId, token, langs, defaultLang, videoRef, locale, t, shareInfo, canSuggest = false }) {
+  const { call, user, feat } = useApp();
+  const suggestOn = Boolean(canSuggest && user && feat('corrections')); // amélioration 4.1 : proposer une correction d'une phrase
+  const [fix, setFix] = useState(null);   // { i, text, comment, busy, msg, ok }
+  const [mine, setMine] = useState({});   // « lang:i » → statut de ma suggestion
+  const rtl = (l) => ['ar', 'he', 'fa', 'ur'].includes(l);
   const [lang, setLang] = useState(defaultLang || langs[0]);
   const [data, setData] = useState(null);
   const [active, setActive] = useState(-1);
@@ -33,6 +39,33 @@ export default function Transcript({ talkId, token, langs, defaultLang, videoRef
       .catch(() => {});
     return () => { off = true; };
   }, [talkId, token, lang]);
+
+  useEffect(() => {
+    if (!suggestOn) return;
+    let off = false;
+    call(`/talks/${talkId}/corrections/mine`).then((r) => {
+      if (off || !r.ok) return;
+      const m = {};
+      for (const x of r.data.items) if (!m[`${x.lang}:${x.idx}`] || x.status === 'pending') m[`${x.lang}:${x.idx}`] = x.status;
+      setMine(m);
+    });
+    return () => { off = true; };
+  }, [suggestOn, call, talkId]);
+  useEffect(() => { setFix(null); }, [lang]);
+
+  const sendFix = async () => {
+    if (!fix || fix.busy) return;
+    setFix({ ...fix, busy: true, msg: '' });
+    const r = await call(`/talks/${talkId}/corrections`, { method: 'POST', body: JSON.stringify({ t: token, lang, idx: fix.i, text: fix.text, comment: fix.comment }) });
+    if (r.ok) {
+      setMine((m) => ({ ...m, [`${lang}:${fix.i}`]: 'pending' }));
+      setFix({ ...fix, busy: false, ok: true, msg: t('corSent') });
+      return;
+    }
+    const code = r.data?.code;
+    const known = { same: 'corErrSame', empty: 'corErrEmpty', too_long: 'corErrLong', link: 'corErrLink', daily_limit: 'corErrDaily', already_pending: 'corErrPending' }[code];
+    setFix({ ...fix, busy: false, ok: false, msg: known ? t(known) : t('corErr') });
+  };
 
   // Suit la lecture : trouve la dernière phrase commencée.
   useEffect(() => {
@@ -92,6 +125,25 @@ export default function Transcript({ talkId, token, langs, defaultLang, videoRef
               <span className="ts">{clock(s.s)}</span> {s.t}
             </button>
             {shareInfo && <button type="button" className="seg-share" onClick={() => setShare(s)} aria-label={`${t('shImage')} · ${clock(s.s)}`} title={t('shImage')}>↗ {t('shShort')}</button>}
+            {suggestOn && s.i != null && (mine[`${lang}:${s.i}`] === 'pending'
+              ? <span className="seg-share cr-done" title={t('corPendingHint')}>✓ {t('corPending')}</span>
+              : <button type="button" className="seg-share cr-btn" onClick={() => setFix({ i: s.i, text: s.t, comment: '', busy: false, msg: '', ok: false })} aria-label={`${t('corReport')} · ${clock(s.s)}`} title={t('corReport')}>✎ {t('corShort')}</button>)}
+            {suggestOn && fix && fix.i === s.i && (
+              <form className="cr-form" onSubmit={(e) => { e.preventDefault(); sendFix(); }}>
+                <label>{t('corLabel')}
+                  <textarea value={fix.text} dir={rtl(lang) ? 'rtl' : 'ltr'} rows={3} maxLength={2000} onChange={(e) => setFix({ ...fix, text: e.target.value, msg: '' })} />
+                </label>
+                <label>{t('corComment')}
+                  <input value={fix.comment} maxLength={500} onChange={(e) => setFix({ ...fix, comment: e.target.value })} />
+                </label>
+                {fix.msg && <p className={fix.ok ? 'meta cr-ok' : 'error'} role="status">{fix.msg}</p>}
+                <div className="cr-actions">
+                  {!fix.ok && <button className="btn" type="submit" disabled={fix.busy || fix.text.trim() === s.t.trim()}>{t('corSend')}</button>}
+                  <button className="btn ghost" type="button" onClick={() => setFix(null)}>{fix.ok ? t('corClose') : t('cancelBtn')}</button>
+                </div>
+                <small className="meta">{t('corNote')}</small>
+              </form>
+            )}
           </div>
         ))}
       </div>
