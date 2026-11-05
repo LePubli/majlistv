@@ -29,6 +29,7 @@ export default function PlanningClient() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [form, setForm] = useState(null); // { day } quand le formulaire d'ajout est ouvert
+  const [dlForm, setDlForm] = useState(false); // formulaire « Nouvelle échéance »
   const [moving, setMoving] = useState(null); // id de la séance dont on choisit un nouveau jour
 
   // Sur téléphone, la vue « jour » est plus lisible : on y démarre une seule fois.
@@ -53,6 +54,9 @@ export default function PlanningClient() {
   const rest = useMemo(() => new Set(data?.rest || []), [data]);
   const active = useMemo(() => new Set(data?.active || []), [data]);
   const of = (d) => byDay.get(d) || { auto: [], mine: [] };
+  const dls = data?.deadlines || [];
+  const dlOn = (d) => dls.filter((x) => x.dueOn === d);
+  const delDl = async (x) => { if (!window.confirm(t('pnDlDelConfirm'))) return; await act(() => call(`/me/learning/deadlines/${x.id}`, { method: 'DELETE' })); };
 
   const act = async (fn) => { setErr(''); const r = await fn(); if (!r.ok) setErr(r.data?.error || t('pnErr')); await load(); return r.ok; };
   const toggle = (it) => act(() => call(`/me/learning/plan/${it.id}`, { method: 'PATCH', body: JSON.stringify({ done: !it.done }) }));
@@ -98,7 +102,7 @@ export default function PlanningClient() {
       <li key={i.id} className={`pn-it pn-mine${i.done ? ' is-done' : ''}`}>
         <div className="pn-row">
           <button type="button" className={`pn-ck${i.done ? ' on' : ''}`} aria-pressed={i.done} aria-label={i.done ? t('pnUncheck') : t('pnCheck')} onClick={() => toggle(i)}>{i.done ? '✓' : ''}</button>
-          <div className="pn-body"><span className="pn-tag">{bare ? mineTag(i) : `${t('pnMine')} · ${mineTag(i)}`}</span>{h ? <Link href={h} className="pn-ti">{text}</Link> : <span className="pn-ti">{text}</span>}</div>
+          <div className="pn-body"><span className="pn-tag">{i.deadlineId ? '⚑ ' : ''}{bare ? mineTag(i) : `${t('pnMine')} · ${mineTag(i)}`}</span>{h ? <Link href={h} className="pn-ti">{text}</Link> : <span className="pn-ti">{text}</span>}</div>
         </div>
         <div className={`pn-acts${bare ? ' compact' : ''}`}>
           {moving === i.id ? (
@@ -114,9 +118,10 @@ export default function PlanningClient() {
 
   const DayList = ({ d, bare }) => {  // appelé comme une fonction (pas un composant) pour ne pas remonter le DOM à chaque rendu
     const x = of(d);
-    const empty = !x.auto.length && !x.mine.length;
+    const empty = !x.auto.length && !x.mine.length && !dlOn(d).length;
     return (
       <>
+        {dlOn(d).map((x) => <p key={x.id} className="pn-flag">⚑ {t('pnDlFlag')} · {x.title}</p>)}
         {rest.has(d) && <p className="pn-rest">{t('pnRest')}</p>}
         {active.has(d) && !bare && <p className="pn-actv">✓ {t('pnDoneDay')}</p>}
         {(x.auto.length > 0 || x.mine.length > 0) && <ul className="pn-list">{x.auto.map((a, k) => Auto({ a, k }))}{x.mine.map((i) => Mine({ i, bare }))}</ul>}
@@ -169,9 +174,10 @@ export default function PlanningClient() {
         {Array.from({ length: 42 }, (_, k) => addDays(first, k)).map((d) => {
           const x = of(d); const n = x.auto.length + x.mine.length;
           return (
-            <button key={d} type="button" role="gridcell" className={`pn-c${d.slice(0, 7) !== cur ? ' other' : ''}${d === today ? ' is-today' : ''}${rest.has(d) ? ' is-rest' : ''}`} onClick={() => { setCursor(d); setView('day'); }} aria-label={`${fmt(d, { dateStyle: 'full' })}${n ? ` — ${n}` : ''}`}>
+            <button key={d} type="button" role="gridcell" className={`pn-c${d.slice(0, 7) !== cur ? ' other' : ''}${d === today ? ' is-today' : ''}${rest.has(d) ? ' is-rest' : ''}`} onClick={() => { setCursor(d); setView('day'); }} aria-label={`${fmt(d, { dateStyle: 'full' })}${n ? ` — ${n}` : ''}${dlOn(d).length ? ` — ${t('pnDlFlag')}` : ''}`}>
               <b>{fmt(d, { day: 'numeric' })}</b>
-              {active.has(d) && <span className="pn-ok" aria-hidden="true">✓</span>}
+              {dlOn(d).length > 0 && <span className="pn-fl" aria-hidden="true">⚑</span>}
+              {active.has(d) && !dlOn(d).length && <span className="pn-ok" aria-hidden="true">✓</span>}
               {n > 0 && <span className="pn-dots" aria-hidden="true">{x.auto.length > 0 && <i />}{x.mine.length > 0 && <i className="m" />}{n > 1 && <em>{n}</em>}</span>}
             </button>
           );
@@ -194,13 +200,28 @@ export default function PlanningClient() {
         </div>
         <b className="pn-title">{title}</b>
         <span className="pn-sp" />
+        <button type="button" className="btn ghost" onClick={() => setDlForm(true)}>{t('pnDl')}</button>
         <button type="button" className="btn" onClick={() => setForm({ day: canPlan(cursor) ? cursor : today })}>+ {t('pnAdd')}</button>
       </div>
+      {dls.length > 0 && (
+        <ul className="pn-dls">
+          {dls.map((x) => (
+            <li key={x.id} className="pn-dl">
+              <span className="pn-dd">{t('pnDlLeft').replace('{n}', x.daysLeft)}</span>
+              <div className="pn-dm"><b>{x.title}</b><small>{fmt(x.dueOn, { day: 'numeric', month: 'long', year: 'numeric' })} · {t('pnDlProgress').replace('{a}', x.done).replace('{b}', x.total)}</small>
+                <div className="pn-pb" role="progressbar" aria-valuemin={0} aria-valuemax={x.total} aria-valuenow={x.done}><i style={{ width: `${x.total ? Math.round((x.done / x.total) * 100) : 0}%` }} /></div></div>
+              <button type="button" className="link u small" onClick={() => { setCursor(x.dueOn); setView('month'); }}>{t('pnMonth')}</button>
+              <button type="button" className="link u small" onClick={() => delDl(x)}>{t('pnDlDelete')}</button>
+            </li>
+          ))}
+        </ul>
+      )}
       {data && <p className="pn-goal">{t('pnGoal').replace('{a}', data.week.done).replace('{b}', data.goal)}</p>}
       {err && <p className="error" role="alert">{err}</p>}
       {body}
       <p className="pn-legend"><span><i className="a" />{t('pnLegAuto')}</span><span><i className="m" />{t('pnLegMine')}</span><span><i className="d" />{t('pnLegDone')}</span></p>
       <p className="meta small">{t('pnSoon')}</p>
+      {dlForm && <DeadlineForm today={today} onClose={() => setDlForm(false)} onSaved={() => { setDlForm(false); load(); }} />}
       {form && <AddForm day={form.day} today={today} onClose={() => setForm(null)} onSaved={() => { setForm(null); load(); }} />}
     </section>
   );
@@ -266,6 +287,80 @@ function AddForm({ day, today, onClose, onSaved }) {
         )}
         {err && <p className="error" role="alert">{err}</p>}
         <div className="pn-fa"><button type="submit" className="btn" disabled={!ready || busy}>{t('pnSave')}</button><button type="button" className="btn ghost" onClick={onClose}>{t('pnCancel')}</button></div>
+      </form>
+    </div>
+  );
+}
+
+// Nouvelle échéance : nom, date, vidéos à revoir (une série et/ou des vidéos), rythme ; aperçu du nombre de séances avant de valider.
+function DeadlineForm({ today, onClose, onSaved }) {
+  const { t, call } = useApp();
+  const tomorrow = addDays(today, 1);
+  const [title, setTitle] = useState('');
+  const [dueOn, setDueOn] = useState(addDays(today, 30));
+  const [series, setSeries] = useState([]);
+  const [seriesId, setSeriesId] = useState('');
+  const [talks, setTalks] = useState([]); // vidéos choisies une à une
+  const [q, setQ] = useState('');
+  const [res, setRes] = useState(null);
+  const [pace, setPace] = useState('normal');
+  const [prev, setPrev] = useState(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { call('/series?limit=100').then((r) => setSeries(r.ok && Array.isArray(r.data) ? r.data : [])); }, [call]);
+  useEffect(() => {
+    if (q.trim().length < 2) { setRes(null); return undefined; }
+    const h = setTimeout(() => call(`/talks?q=${encodeURIComponent(q.trim())}&limit=6`).then((r) => setRes(r.ok && Array.isArray(r.data) ? r.data : [])), 250);
+    return () => clearTimeout(h);
+  }, [q, call]);
+  useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
+
+  const body = (extra) => ({ title: title.trim() || '-', dueOn, pace, ...(seriesId ? { seriesId } : {}), talkIds: talks.map((x) => x.id), ...extra });
+  const hasTalks = !!seriesId || talks.length > 0;
+  // Aperçu (sans rien créer) dès que le choix est complet.
+  useEffect(() => {
+    if (!hasTalks || dueOn < tomorrow) { setPrev(null); return undefined; }
+    let alive = true;
+    const h = setTimeout(() => call('/me/learning/deadlines', { method: 'POST', body: JSON.stringify(body({ dryRun: true })) }).then((r) => { if (alive) { setPrev(r.ok ? r.data : null); setErr(r.ok ? '' : (r.data?.error || t('pnErr'))); } }), 300);
+    return () => { alive = false; clearTimeout(h); };
+  }, [seriesId, talks, pace, dueOn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (busy || !title.trim() || !hasTalks) return;
+    setBusy(true); setErr('');
+    const r = await call('/me/learning/deadlines', { method: 'POST', body: JSON.stringify(body({})) });
+    setBusy(false);
+    if (r.ok) onSaved(); else setErr(r.data?.error || t('pnErr'));
+  };
+
+  return (
+    <div className="pn-modal" role="dialog" aria-modal="true" aria-label={t('pnDl')} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <form className="pn-form" onSubmit={save}>
+        <h3>{t('pnDl')}</h3>
+        <label>{t('pnDlName')}<input type="text" maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus required /></label>
+        <label>{t('pnDlDate')}<input type="date" min={tomorrow} value={dueOn} onChange={(e) => e.target.value && setDueOn(e.target.value)} required /></label>
+        <label>{t('pnDlSeries')}
+          <select value={seriesId} onChange={(e) => setSeriesId(e.target.value)}>
+            <option value="">{t('pnDlNone')}</option>
+            {series.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </select>
+        </label>
+        <div>
+          <label>{t('pnDlTalks')}<input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('pnSearch')} /></label>
+          {res && res.length === 0 && <p className="meta small">{t('pnNoResult')}</p>}
+          {res && res.length > 0 && <ul className="pn-res">{res.filter((x) => !talks.some((y) => y.id === x.id)).map((x) => <li key={x.id}><button type="button" onClick={() => { setTalks((l) => [...l, x]); setQ(''); setRes(null); }}><b>{x.title}</b>{x.speaker ? <small>{x.speaker}</small> : null}</button></li>)}</ul>}
+          {talks.length > 0 && <p className="pn-chips">{talks.map((x) => <button key={x.id} type="button" className="pn-chip" onClick={() => setTalks((l) => l.filter((y) => y.id !== x.id))} aria-label={`${t('pnDelete')} ${x.title}`}>{x.title} ✕</button>)}</p>}
+        </div>
+        <fieldset className="pn-kinds"><legend>{t('pnDlPace')}</legend>
+          {[['light', 'pnPaceLight'], ['normal', 'pnPaceNormal'], ['intense', 'pnPaceIntense']].map(([k, key]) => (
+            <label key={k} className={pace === k ? 'on' : ''}><input type="radio" name="pn-pace" checked={pace === k} onChange={() => setPace(k)} />{t(key)}</label>
+          ))}
+        </fieldset>
+        {prev && <p className="meta small" aria-live="polite">{t('pnDlPreview').replace('{n}', prev.count).replace('{d}', prev.days)}{prev.busy ? <><br /><b className="pn-warn">{t('pnDlBusy').replace('{n}', prev.perDayMax)}</b></> : null}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        <div className="pn-fa"><button type="submit" className="btn" disabled={busy || !title.trim() || !hasTalks}>{t('pnDlCreate')}</button><button type="button" className="btn ghost" onClick={onClose}>{t('pnCancel')}</button></div>
       </form>
     </div>
   );

@@ -7,7 +7,10 @@ import { hasLearningTier } from '../../access.js';
 import { getSetting } from '../../settings.js';
 import { FLOOR, DECAY_DAYS, attemptsOf, seriesProgress, scoreAt, curveOf } from '../../learning.js';
 import { streakSummary, goalOf, parisToday } from '../../learningStreak.js';
-import { planWindow, windowOk, dayAllowed, isDay, KINDS } from '../../learningPlan.js';
+import { planWindow, windowOk, dayAllowed, isDay, KINDS, deadlinesOf, MAX_AHEAD } from '../../learningPlan.js';
+import { spread, PACES } from '../../planSpread.js';
+import { visibleSql } from '../../visibility.js';
+import { addDays } from '../../learningStreak.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };
@@ -114,6 +117,60 @@ export default async function learningRoutes(app) {
       await pool.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = $2', [req.user.sub, b.day]);
     }
     return { day: b.day, rest: b.rest };
+  });
+
+  // ─── Échéances (étape 2) : une date limite, des vidéos à revoir, un rythme ; les séances sont réparties automatiquement ───
+  const MAX_DEADLINES = 5;
+  const MAX_TALKS = 20;
+  const deadlineBody = z.object({
+    title: z.string().trim().min(1).max(80), dueOn: dayS, pace: z.enum(Object.keys(PACES)),
+    seriesId: z.string().uuid().optional(), talkIds: z.array(z.string().uuid()).max(MAX_TALKS).optional(), dryRun: z.boolean().optional(),
+  });
+
+  app.get('/me/learning/deadlines', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    return deadlinesOf(req.user.sub, await parisToday());
+  });
+
+  // Crée une échéance et répartit ses séances. dryRun : calcule seulement (aperçu avant de valider).
+  app.post('/me/learning/deadlines', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const b = deadlineBody.parse(req.body ?? {});
+    const today = await parisToday();
+    if (b.dueOn <= today || b.dueOn > addDays(today, MAX_AHEAD)) return reply.code(400).send({ error: "Choisissez une date entre demain et dans un an", code: 'bad_date' });
+    // Vidéos : celles de la série (dans l'ordre de la série), puis celles choisies une à une ; sans doublon, visibles et prêtes seulement.
+    let ids = [];
+    if (b.seriesId) ids = (await pool.query('SELECT talk_id FROM series_episodes WHERE series_id = $1 ORDER BY position', [b.seriesId])).rows.map((r) => r.talk_id);
+    ids = [...new Set([...ids, ...(b.talkIds || [])])];
+    const okTalks = new Set((await pool.query(`SELECT t.id FROM talks t WHERE t.id = ANY($1::uuid[]) AND t.video_status = 'ready' AND ${visibleSql('t')}`, [ids])).rows.map((r) => r.id));
+    ids = ids.filter((id) => okTalks.has(id));
+    if (!ids.length) return reply.code(400).send({ error: 'Choisissez au moins une vidéo (ou une série) à revoir', code: 'no_talks' });
+    if (ids.length > MAX_TALKS) return reply.code(400).send({ error: `Vingt vidéos au plus par échéance`, code: 'too_many' });
+    const rest = new Set((await pool.query('SELECT day::text AS day FROM learning_rest_days WHERE user_id = $1 AND day BETWEEN $2::date AND $3::date', [req.user.sub, today, b.dueOn])).rows.map((r) => r.day));
+    const plan = spread({ today, dueOn: b.dueOn, pace: b.pace, talkIds: ids, rest });
+    if (plan.error) return reply.code(400).send({ error: 'Impossible de répartir les séances avant cette date', code: 'bad_date' });
+    const summary = { count: plan.items.length, talks: ids.length, days: plan.days, perDayMax: plan.perDayMax, busy: plan.busy };
+    if (b.dryRun) return summary;
+    if ((await deadlinesOf(req.user.sub, today)).length >= MAX_DEADLINES) return reply.code(409).send({ error: `Cinq échéances en cours au plus : supprimez-en une d'abord`, code: 'too_many_deadlines' });
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      const d = (await c.query('INSERT INTO learning_deadlines(user_id, title, due_on, pace) VALUES ($1, $2, $3, $4) RETURNING id', [req.user.sub, b.title, b.dueOn, b.pace])).rows[0];
+      for (const it of plan.items) await c.query('INSERT INTO learning_plan_items(user_id, day, kind, talk_id, deadline_id) VALUES ($1, $2, $3, $4, $5)', [req.user.sub, it.day, it.kind, it.talkId, d.id]);
+      // Une journée d'étude n'est plus un jour de repos.
+      await c.query('DELETE FROM learning_rest_days WHERE user_id = $1 AND day = ANY($2::date[])', [req.user.sub, [...new Set(plan.items.map((i) => i.day))]]);
+      await c.query('COMMIT');
+      return reply.code(201).send({ id: d.id, ...summary });
+    } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { c.release(); }
+  });
+
+  // Supprime l'échéance et ses séances pas encore faites (les séances faites restent dans l'historique du planning).
+  app.delete('/me/learning/deadlines/:id', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    await pool.query('DELETE FROM learning_plan_items WHERE deadline_id = $1 AND user_id = $2 AND done_at IS NULL', [id, req.user.sub]);
+    await pool.query('DELETE FROM learning_deadlines WHERE id = $1 AND user_id = $2', [id, req.user.sub]);
+    return reply.code(204).send();
   });
 
   // Délivre l'attestation d'une série dont tous les quiz sont réussis (une seule par série et par membre).

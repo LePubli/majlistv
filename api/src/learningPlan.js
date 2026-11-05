@@ -104,27 +104,39 @@ async function autoBilan(userId, from, to) {
 /** Séances choisies par le membre. */
 async function ownItems(userId, from, to) {
   const { rows } = await pool.query(
-    `SELECT i.id, i.day::text AS day, i.kind, i.talk_id AS "talkId", COALESCE(t.title, '') AS title, i.note, (i.done_at IS NOT NULL) AS done
+    `SELECT i.id, i.day::text AS day, i.kind, i.talk_id AS "talkId", COALESCE(t.title, '') AS title, i.note, (i.done_at IS NOT NULL) AS done, i.deadline_id AS "deadlineId"
        FROM learning_plan_items i LEFT JOIN talks t ON t.id = i.talk_id
       WHERE i.user_id = $1 AND i.day BETWEEN $2::date AND $3::date
       ORDER BY i.day, i.created_at`, [userId, from, to]);
   return rows;
 }
 
+/** Échéances à venir (aujourd'hui ou plus tard) avec leur avancement : séances faites / séances prévues. */
+export async function deadlinesOf(userId, today) {
+  const { rows } = await pool.query(
+    `SELECT d.id, d.title, d.due_on::text AS "dueOn", d.pace, (d.due_on - $2::date)::int AS "daysLeft",
+            count(i.id)::int AS total, (count(i.id) FILTER (WHERE i.done_at IS NOT NULL))::int AS done
+       FROM learning_deadlines d LEFT JOIN learning_plan_items i ON i.deadline_id = d.id
+      WHERE d.user_id = $1 AND d.due_on >= $2::date
+      GROUP BY d.id ORDER BY d.due_on, d.created_at`, [userId, today]);
+  return rows;
+}
+
 /** Réponse complète de GET /me/learning/plan. */
 export async function planWindow(userId, from, to) {
   const today = await parisToday();
-  const [autos, items, rest, active, g] = await Promise.all([
+  const [autos, items, rest, active, g, deadlines] = await Promise.all([
     Promise.all([autoRevisions(userId, from, to, today), autoCards(userId, from, to, today), autoQuran(userId, from, to), autoAthkar(userId, from, to), autoActions(userId, from, to, today), autoBilan(userId, from, to)]),
     ownItems(userId, from, to),
     pool.query('SELECT day::text AS day FROM learning_rest_days WHERE user_id = $1 AND day BETWEEN $2::date AND $3::date ORDER BY day', [userId, from, to]),
-    activeDaysOf(userId), goalOf(userId),
+    activeDaysOf(userId), goalOf(userId), deadlinesOf(userId, today),
   ]);
   const act = [...active].filter((d) => d >= from && d <= to).sort();
   return {
     today, from, to,
     auto: autos.flat(),
     items,
+    deadlines, // toutes les échéances à venir : le site en tire le bandeau « J-n » et les drapeaux des vues
     rest: rest.rows.map((r) => r.day),
     active: act, // jours où le membre a réellement appris (déjà fait)
     week: weekOf(active, today, g.goal),

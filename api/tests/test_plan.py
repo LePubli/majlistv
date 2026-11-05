@@ -146,6 +146,43 @@ ok(len(b) >= 4 and any(x["day"] == d(3) for x in b) and all(not x["done"] for x 
 cur.execute("insert into self_checkins(goal_id, week, status) values (%s, date_trunc('week', %s::date)::date, 'progress')", (gid, d(3)))
 b = [x for x in auto() if x["type"] == "bilan"]
 ok(any(x["day"] == d(3) and x["done"] for x in b), "Bilan : « fait » quand le point de la semaine est enregistré")
+
+# ─── échéances (étape 2)
+cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds) values (%s,'d','Cheikh','youtube','abc',%s,'published','ready','free',600) returning id", ("Plan B " + uuid.uuid4().hex[:5], aid))
+tid2 = cur.fetchone()[0]
+dl = f"{B}/me/learning/deadlines"
+body = {"title": "Examen de fin de cycle", "dueOn": d(20), "pace": "normal", "talkIds": [str(tid), str(tid2)]}
+ok(requests.post(dl, headers=STD, json=body).status_code == 403, "échéance : refusée hors palier Apprentissage")
+r = requests.post(dl, headers=H, json={**body, "dryRun": True}); j = r.json()
+ok(r.status_code == 200 and j["count"] == 6 and j["talks"] == 2 and j["busy"] is False, "aperçu : 2 vidéos × 3 séances = 6")
+ok(requests.get(dl, headers=H).json() == [], "l'aperçu ne crée rien")
+ok(requests.post(dl, headers=H, json={**body, "dueOn": d(0)}).status_code == 400, "échéance aujourd'hui refusée")
+ok(requests.post(dl, headers=H, json={**body, "dueOn": d(500)}).status_code == 400, "échéance à plus d'un an refusée")
+ok(requests.post(dl, headers=H, json={**body, "talkIds": []}).status_code == 400, "sans vidéo refusée")
+ok(requests.post(dl, headers=H, json={**body, "talkIds": [str(uuid.uuid4())]}).status_code == 400, "vidéo inconnue refusée")
+ok(requests.post(dl, headers=H, json={**body, "pace": "turbo"}).status_code == 400, "rythme inconnu refusé")
+ok(requests.post(dl, headers=H, json={**body, "title": "  "}).status_code == 400, "nom vide refusé")
+r = requests.post(dl, headers=H, json=body); ok(r.status_code == 201 and r.json()["count"] == 6, "échéance créée, 6 séances réparties")
+did = r.json()["id"]
+w = requests.get(f"{B}/me/learning/plan", headers=H, params={"from": d(0), "to": d(40)}).json()
+mine = [i for i in w["items"] if i["deadlineId"] == did]
+ok(len(mine) == 6 and all(d(0) <= i["day"] < d(20) for i in mine), "séances rattachées à l'échéance, toutes avant la date")
+ok(w["deadlines"][0]["id"] == did and w["deadlines"][0]["daysLeft"] == 20 and w["deadlines"][0]["total"] == 6 and w["deadlines"][0]["done"] == 0, "échéance listée : J-20, 0 / 6")
+requests.patch(f"{B}/me/learning/plan/{mine[0]['id']}", headers=H, json={"done": True})
+requests.patch(f"{B}/me/learning/plan/{mine[1]['id']}", headers=H, json={"day": d(2)})
+w = requests.get(f"{B}/me/learning/plan", headers=H, params={"from": d(0), "to": d(40)}).json()
+ok(w["deadlines"][0]["done"] == 1 and w["deadlines"][0]["total"] == 6, "avancement : 1 / 6 après avoir coché une séance")
+ok(requests.get(dl, headers=OTH).json() == [], "les échéances d'un autre membre sont invisibles")
+ok(requests.delete(f"{dl}/{did}", headers=OTH).status_code == 204 and len(requests.get(dl, headers=H).json()) == 1, "un autre membre ne peut pas supprimer mon échéance")
+ok(requests.delete(f"{dl}/{did}", headers=H).status_code == 204 and requests.get(dl, headers=H).json() == [], "échéance supprimée")
+w = requests.get(f"{B}/me/learning/plan", headers=H, params={"from": d(0), "to": d(40)}).json()
+left = [i for i in w["items"] if i["kind"] in ("video", "quiz") and i["title"].startswith("Plan test") or i["title"].startswith("Plan B")]
+ok(len([i for i in left if i["done"]]) == 1 and not [i for i in left if not i["done"] and i["deadlineId"]], "séances non faites supprimées, la séance faite reste")
+for i in range(5):
+    requests.post(dl, headers=H, json={**body, "title": f"E{i}"})
+ok(requests.post(dl, headers=H, json={**body, "title": "de trop"}).status_code == 409, "cinq échéances en cours au plus")
+cur.execute("delete from talks where id=%s", (tid2,))
+
 # suppression
 ok(requests.delete(f"{B}/me/learning/plan/{vid}", headers=H).status_code == 204, "séance supprimée")
 cur.execute("delete from talks where id=%s", (tid,))

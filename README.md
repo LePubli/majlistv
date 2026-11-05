@@ -7415,3 +7415,34 @@ bash /root/verify-deploy.sh
 **Exemples.** Mercredi : « Quiz · Les épreuves » (révision J+7, automatique) + « 8 cartes à revoir » + ma séance « Vidéo · Al-Kahf 2/2 ». Je clique ↔ pour déplacer la séance au vendredi, ✓ pour la cocher, ✕ pour la supprimer.
 
 **Testé / non testé (honnête).** Testé : validations pures, API + base (50 contrôles), compilation du site, parcours automatisé (ajout, cochage, suppression d'une séance), captures semaine / mois / jour en FR et en AR (390 et 1280 px, aucun débordement). **Non testé** : coupure d'une fonction dans l'admin (la fonction éteinte masque sa source : prévu, non vérifié), sur un vrai téléphone, Safari / iPhone, passage à l'heure d'hiver, très gros volumes de révisions.
+
+## Amélioration 3.8 — Mon planning, étape 2 sur 4 : échéances avec étalement automatique (05/11)
+
+**Description.** Dans **Apprendre → Mon planning**, le bouton **Nouvelle échéance** crée une date limite (examen, point d'étape…) : le membre donne un **nom**, une **date** (de demain à dans un an), les vidéos à revoir (**une série** et/ou **des vidéos précises**, 20 au plus) et un **rythme**. Les séances sont **réparties automatiquement** jusqu'à la veille, puis restent modifiables une à une (déplacer ↔, cocher, supprimer ✕). Un **aperçu** (« N séances réparties… ») s'affiche avant de valider. Un **bandeau « J-n »** par échéance montre le nom, la date, l'avancement (« 1 / 6 séances faites ») et une barre ; un drapeau ⚑ marque le jour de l'échéance (jour, semaine, mois) et les séances qui en font partie. Cinq échéances en cours au plus. Supprimer une échéance supprime ses séances **pas encore faites** ; les séances faites restent.
+
+**Règle d'étalement (à valider par Epok).** Chaque vidéo reçoit **3 séances**, dans cet ordre : « revoir la vidéo », « quiz », « quiz final ». Jours d'étude par semaine (lundi → dimanche) : **léger 3**, **normal 4**, **intensif 6**, bien répartis, en évitant les **jours de repos** du membre. On étudie d'aujourd'hui jusqu'à la **veille** de l'échéance, et les séances sont étalées régulièrement (les « quiz finaux » tombent donc en fin de période). Si une journée dépasse **3 séances**, l'aperçu prévient (« Journées chargées… ») et propose un rythme plus intensif ou une date plus lointaine ; rien n'est refusé pour autant. Ce « 3 séances par vidéo » est ma proposition : ajustable.
+
+**API** (palier Apprentissage, sinon 403 `learning_required`) :
+- `POST /me/learning/deadlines` `{ title, dueOn, pace: 'light'|'normal'|'intense', seriesId?, talkIds?, dryRun? }` → `{ id, count, talks, days, perDayMax, busy }` (201) ; avec `dryRun: true` : aperçu seulement (200, rien n'est créé). Erreurs 400 : `bad_date`, `no_talks`, `too_many` ; 409 `too_many_deadlines`.
+- `GET /me/learning/deadlines` → `[{ id, title, dueOn, pace, daysLeft, total, done }]` ; `DELETE /me/learning/deadlines/:id` (204).
+- `GET /me/learning/plan` renvoie aussi `deadlines` et `deadlineId` sur chaque séance.
+Migration **106** : table `learning_deadlines` + colonne `learning_plan_items.deadline_id` (privées au membre, exportées et supprimées avec le compte). Seules les vidéos **prêtes et visibles** sont retenues.
+
+**Fichiers.** API : `src/planSpread.js` (calcul pur), `migrations/106_learning_deadlines.sql`, `src/learningPlan.js`, `modules/learning/routes.js`. Site : `web/components/PlanningClient.js` (`DeadlineForm`, bandeau), styles `.pn-dl*`, textes `pnDl*`. Tests : `api/tests/test_spread_unit.mjs` (19 contrôles), `api/tests/test_plan.py` (+ 20 contrôles d'échéances).
+
+**Prérequis / `.env`.** Aucun.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy **`majlistv-api`** (migration 106 au démarrage), puis **`majlistv-web`**, puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+(0 échec attendu). Rien à redéployer côté worker / transcriber / translator / dubbing.
+
+**Debug.** `cd api && DATABASE_URL=postgres://x JWT_SECRET=test-secret-test-secret-test-secret node tests/test_spread_unit.mjs` ; `tests/test_plan.py` (API + base, 70 contrôles, même `PRACTICE_KEY` que l'API de test). « Choisissez au moins une vidéo » : la série choisie n'a aucune vidéo prête / visible, ou aucune vidéo n'a été ajoutée. « Vingt vidéos au plus » : une série de plus de 20 vidéos ne peut pas être prise en entier (ajouter ses vidéos une à une).
+
+**Exemples.** Examen le 20 décembre, série « Comprendre la foi » (5 vidéos), rythme normal → 15 séances sur ~4 jours par semaine, les « quiz finaux » dans les dernières semaines ; je décale une séance au samedi avec ↔ ; l'avancement passe à « 3 / 15 ».
+
+**Testé / non testé (honnête).** Testé : calcul d'étalement (19), API + base (70 contrôles au total), compilation, parcours automatisé (création avec aperçu, bandeau, suppression) en FR et en AR, captures 390 et 1280 px sans débordement. **Non testé** : téléphone réel, Safari, série de plus de 20 vidéos en conditions réelles, rythme sur plusieurs mois. Les **rappels** (notification, e-mail) et l'**application Android** restent aux étapes 3 et 4.
