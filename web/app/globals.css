@@ -4662,3 +4662,21 @@ a.pn-ti:hover { text-decoration: underline; }
 .rf-ar, .rf-fr, .rf-quote { overflow-wrap: anywhere; }
 .rf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 @media (max-width: 480px) { .rf-panel { padding: 10px 12px; } .rf-ar { font-size: 1.25rem; } }
+
+/* Amélioration 7.1 — Croissance (Admin → Statistiques) */
+.gr { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gr h3 { margin: 8px 0 0; }
+.gr-card { display: flex; flex-direction: column; gap: 10px; }
+.gr-hint { margin: 0; font-size: 12.5px; line-height: 1.5; }
+.gr-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gr-fhead { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.gr-fhead strong { font-variant-numeric: tabular-nums; font-size: 1.15rem; }
+.gr-track { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; margin: 4px 0 2px; }
+.gr-track i { display: block; height: 100%; background: var(--gold); border-radius: 6px; }
+.gr-wrap { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.gr-table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.gr-table th, .gr-table td { padding: 7px 9px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--line-soft); }
+.gr-table thead th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.gr-table th[scope='row'] { text-align: start; font-weight: 600; position: sticky; inset-inline-start: 0; background: var(--surface); }
+.gr-cell { color: var(--text); }
+.gr-empty { color: var(--muted); }

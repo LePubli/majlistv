@@ -16,6 +16,7 @@ const always = async () => true;
 // Catalogue des points d'extension et événements connus du socle (documentation et Admin → Modules).
 export const CATALOG = {
   'talk.quiz': 'Quiz proposé pour une vidéo : { available, count } (fiche vidéo, vitrine)',
+  'user.active': 'Événement : un membre connecté vient d’utiliser le site ou l’application (identifiant) — le module Statistiques en garde le mois (cohortes)',
   'talk.references': 'Références citées (versets, hadiths) validées pour une vidéo : { available, count }',
   'talk.practice': 'Écran « Et maintenant ? » d’une vidéo : { available, count }',
   'kids.canSee': 'Une vidéo est-elle visible par ce profil enfant ? (oui / non)',

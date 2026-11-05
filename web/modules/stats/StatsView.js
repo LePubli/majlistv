@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
+import GrowthPanel from './GrowthPanel';
 
 const RANGES = [7, 30, 90, 365];
 
@@ -265,6 +266,8 @@ export default function StatsView({ endpoint, site }) {
           </div>
         )}
       </section>
+
+      {wide && !kids && <GrowthPanel days={days} />}
 
       <p className="meta st-privacy">{t('stPrivacy')}{kids ? ' ' + t('stKidsNote') : ''}</p>
     </section>

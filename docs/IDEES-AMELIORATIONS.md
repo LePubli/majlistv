@@ -71,7 +71,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 ## 7. Pilotage
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 7.1 | **Entonnoir et cohortes** : visiteurs → inscrits → essais → payants, et rétention mois par mois (des statistiques existent déjà) | Savoir où l'on perd les gens, décider avec des chiffres | M | ★★ |
+| 7.1 | **Entonnoir et cohortes** : visiteurs → inscrits → essais → payants, et rétention mois par mois (des statistiques existent déjà) | Savoir où l'on perd les gens, décider avec des chiffres | M | ★★ — **livrée (05/11)** : Admin → Statistiques → Croissance |
 | 7.2 | **Tests A/B** (bannière d'accueil, textes, prix) | Améliorer la conversion sans deviner | M–L | ★ |
 
 ## 8. Mejliss TV Kids

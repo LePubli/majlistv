@@ -7512,3 +7512,24 @@ bash /root/verify-deploy.sh
 
 **Testé / non testé (honnête).** Testé : 28 contrôles Python (extraits, concordance arabe/français, statuts, doublons, réponses invalides), ~60 contrôles API + base (droits, file, ajout, correction, validation, texte de la source, vidéo non publiée), site (fiche vidéo et Studio, FR et AR, 390 et 1280 px, sans débordement), application (tsc, 210 tests, export Android). **Non testé** : appel réel au moteur d'IA (le service est testé avec des réponses simulées), qualité de la détection sur de vraies conférences, vidéos très longues (> 14 fenêtres : les 14 premières seulement), téléphone réel. La concordance d'un verset cité en français est souvent < 60 % (traduction différente de celle du site) : ces versets arrivent en brouillon, c'est voulu.
 
+
+
+## Amélioration 7.1 — Entonnoir et cohortes (Admin → Statistiques → Croissance) (05/11)
+
+**Description.** Sous les statistiques du site, une section **Croissance** (administrateur seulement) montre : (1) l'**entonnoir** sur la période choisie (7 / 30 / 90 / 365 jours) : visiteurs → inscrits → essais démarrés → abonnés payants, avec le taux à chaque étape et la répartition Apprentissage / standard ; (2) la **fidélité des abonnés** : pour chaque mois de premier paiement, la part encore abonnée à la fin de chaque mois suivant ; (3) l'**activité des membres** : pour chaque mois d'inscription, la part ayant utilisé le site ou l'application chaque mois. 12 cohortes. Chiffres agrégés, aucune identité ; sous 5 personnes une cohorte affiche le nombre, pas un pourcentage trompeur.
+
+**Définitions (à connaître pour lire les chiffres).**
+- *Visiteurs* = visiteurs uniques par jour additionnés (mesure anonyme sans cookie : une personne revenue 3 jours compte 3 fois).
+- *Inscrits* = comptes « membre » créés dans la période (organisateurs, modérateurs, administrateurs exclus). *Essais* et *payants* se comptent parmi ces inscrits, à ce jour : les inscrits récents n'ont pas eu le temps de convertir.
+- *Payant* = abonnement Stripe réellement facturé : sans essai, dès la création ; avec essai, essai terminé sans résiliation pendant l'essai. Cartes cadeaux et accès offerts exclus. La date du 1er paiement n'étant pas enregistrée, on prend la fin d'essai (ou la création).
+- *Activité* : table `user_activity_month` (compte + mois, rien d'autre), alimentée quand un membre connecté utilise le site/l'application (une écriture par compte et par mois). Le passé est **reconstitué** à la migration (inscription, quiz, notes, favoris, questions, engagements, lecture) : estimation plutôt sous-estimée ; la mesure exacte commence au déploiement. Les jetons « enfant » et les visiteurs n'enregistrent rien.
+
+**Prérequis.** Module Statistiques actif (déjà le cas). Aucun nouveau réglage, aucune nouvelle clé.
+
+**Déploiement (DockPanel).** Redeploy `majlistv-api` (migration `modules/stats/migrations/001_user_activity.sql` au démarrage), puis `majlistv-web`. Rien d'autre. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** `GET /admin/stats/growth?days=30` (jeton administrateur) renvoie le JSON brut. Tests : `cd api && node tests/test_growth_lib.mjs` (avec DATABASE_URL, JWT_SECRET, SETTINGS_KEY, PRACTICE_KEY, ADMIN_EMAIL, ADMIN_PASSWORD définis) et `python3 tests/test_growth.py` (API + PostgreSQL de test, compte admin ; dans la CI : `ci-suite.txt`). Si la section affiche « … » : l'API n'a pas été redéployée avant le site.
+
+**Exemples.** « Sur 30 jours : 83 inscrits, 8 essais (9,6 %), 46 payants » ; ligne « sept. 26 » du tableau de fidélité : 3 abonnés, 2 encore abonnés à la fin d'octobre.
+
+**Testé / non testé (honnête).** Testé : 14 contrôles de fonctions pures, ~30 contrôles API + base (droits, définitions payant/essai, cohortes, enregistrement à l'usage, visiteur anonyme, export et suppression RGPD), build web, captures FR/AR à 390 et 1280 px sans débordement. **Non testé** : vraies données de production, très gros volumes, durée du passage de la migration sur une grande base.

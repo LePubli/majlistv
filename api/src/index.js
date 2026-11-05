@@ -79,6 +79,7 @@ app.decorate('authenticate', async (req, reply) => {
   const user = await currentUser(req.user.sub, req.user.iat);
   if (!user) return reply.code(401).send({ error: 'Compte indisponible' });
   req.user.role = user.role;
+  if (!req.user.kid) void ext.emit('user.active', req.user.sub).catch(() => {}); // mois d'activité (cohortes) : sans attendre, sans jamais gêner la requête
   // Jeton « espace enfant » : il ne sert qu'aux routes marquées config.kidOk (étape 26.1) ; partout ailleurs il est refusé.
   if (req.user.kid && !req.routeOptions?.config?.kidOk) return reply.code(403).send({ error: 'Espace enfant : action réservée au parent', code: 'kid_mode' });
 });
@@ -87,7 +88,9 @@ app.decorate('authenticate', async (req, reply) => {
 app.decorate('optionalUser', async (req) => {
   try { await req.jwtVerify(); } catch { return null; }
   if (req.user.kid) return null; // un jeton enfant est traité comme un visiteur anonyme, sauf là où l'espace enfant est prévu (kidContext)
-  return currentUser(req.user.sub, req.user.iat);
+  const u = await currentUser(req.user.sub, req.user.iat);
+  if (u) void ext.emit('user.active', req.user.sub).catch(() => {});
+  return u;
 });
 
 // Contexte « espace enfant » : { profile, parent } si le jeton est un jeton enfant valide, sinon null.
