@@ -31,6 +31,7 @@ import { ExternalVideo, PlayerHandle } from '@/components/ExternalVideo';
 import { TalkTabs, type TabKey } from '@/components/talk/TalkTabs';
 import { PlayerControls } from '@/components/talk/PlayerControls';
 import { ActionTile, LearnCard, LockCard, SeriesPanel } from '@/components/talk/Panels';
+import { TalkReferences } from '@/components/talk/TalkReferences';
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -342,6 +343,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
         </View>
 
         {!locked ? <LearnCard talk={talk} /> : null}
+        {!locked ? <TalkReferences talk={talk} onSeek={seekMs} /> : null}
         {series.data ? <SeriesPanel ctx={series.data} /> : null}
         {similar.data && similar.data.length ? <Rail title={t('sameVein')} items={similar.data} render={(c, w) => <TalkCard talk={c} width={w} />} /> : null}
       </ScrollView>

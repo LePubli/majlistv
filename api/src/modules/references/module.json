@@ -1,0 +1,14 @@
+{
+  "id": "references",
+  "name": "Références citées",
+  "version": "1.0.0",
+  "description": "Versets et hadiths cités dans une conférence : repérés par l'IA, vérifiés dans le texte de la source, relus par un humain, avec lien vers le passage.",
+  "feature": "references",
+  "requires": [],
+  "settings": [
+    { "key": "auto", "type": "bool", "label": "Repérer automatiquement les références des nouvelles vidéos", "def": "false",
+      "help": "Désactivé par défaut : chaque détection utilise le moteur d'IA des résumés (coût). Sans cela, la détection se lance à la main depuis Studio → vidéo → Références." },
+    { "key": "quran_auto", "type": "bool", "label": "Publier sans relecture les versets dont le texte correspond à la source", "def": "true",
+      "help": "Un verset n'est publié seul que si la référence existe ET si le passage de la transcription correspond au texte du Coran. Les hadiths sont TOUJOURS relus avant publication." }
+  ]
+}

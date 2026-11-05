@@ -7488,3 +7488,27 @@ bash /root/verify-deploy.sh
 
 **Testé / non testé (honnête).** Testé : compilation TypeScript, 207 tests, export Android (bundle Hermes OK). **Non testé** : sur un vrai téléphone (disposition, clavier dans les fenêtres, arabe RTL réel), vraies notifications reçues. Les vues sont à valider par Epok sur son appareil.
 
+## Amélioration 3.5 — Références citées : versets et hadiths repérés dans la conférence (05/11)
+
+**Description.** Sous la vidéo, un bloc repliable **« Références citées »** liste les versets du Coran et les hadiths cités par l'intervenant : référence lisible (« Coran 2:153 (Al-Baqara) », « Sahih al-Boukhari, n° 1 »), minute cliquable qui ramène la vidéo au passage, texte arabe + français **de la source** (jamais de l'IA), crédit de la traduction. Même bloc dans l'application Android. Nouveau module `references` (Admin → Fonctions → « Références citées »).
+
+**Comment ça marche (anti-hallucination).**
+1. Studio → vidéo → onglet **Références** → « Repérer les références » (ou réglage « automatique », désactivé par défaut) : le service *translator* lit la transcription par fenêtres.
+2. L'IA indique seulement **où** (extrait copié mot pour mot, retrouvé dans la transcription, sinon écarté) et **laquelle** (sourate:verset ; recueil + numéro **seulement si l'intervenant les dit**). Elle n'écrit aucun texte religieux.
+3. Le système vérifie : la référence existe-t-elle (Coran importé, sinon corpus de citations) ? Quelle **concordance** entre l'extrait et le texte de la source (arabe et français) ?
+4. **Verset** : publié d'office seulement s'il est trouvé, que l'extrait est prouvé et que la concordance atteint 60 % (réglage « Publier sans relecture… », activé par défaut). Sinon **brouillon**.
+5. **Hadith : TOUJOURS brouillon**, relu par un humain. Sans recueil ni numéro dits, il reste « Hadith cité — source non précisée » : la source n'est jamais devinée.
+6. Le relecteur valide, refuse, corrige (sourate, verset, recueil, numéro, minute) ou ajoute à la main. Seules les références **validées** sont publiques. Une relance remplace les brouillons de l'IA ; validées, refusées et saisies à la main restent.
+
+**Prérequis.** Un moteur d'IA configuré (Admin → Paramètres → Résumés et chapitres : le même que les résumés, aucune nouvelle clé) ; transcription prête. Pour afficher le texte : importer le Coran (Admin → Coran) et/ou le corpus (Studio → Rappels → Importer) ; sans texte, la référence s'affiche avec sa source seule.
+
+**Déploiement (DockPanel).** Redeploy `majlistv-api` (migration du module `references/001_talk_references.sql` au démarrage), puis `majlistv-web`, puis `majlistv-translator` (nouveau fichier `references.py`). L'application se met à jour par OTA. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Réglages.** Admin → Modules → « Références citées » : *Repérer automatiquement les nouvelles vidéos* (défaut : non — chaque détection consomme de l'IA ; 3 vidéos au plus par passage, une file à la fois), *Publier sans relecture les versets dont le texte correspond* (défaut : oui).
+
+**Debug.** `python3 translator/tests/test_references_clean.py` (vérification des extraits, sans base) ; `cd api && … python3 tests/test_references.py` (API + base ; ports 3055/5544) ; `cd mobile && npm run check`. Si la détection reste « en cours » : voir les journaux du conteneur `dockpanel-git-majlistv-translator` (lignes `[références …]`). « Aucune référence valide » : l'IA n'a rien trouvé de prouvable dans la transcription (normal pour une vidéo sans citation).
+
+**Exemples.** Une conférence cite « sourate Al-Baqara, verset 153 » : après détection, le verset apparaît dans l'onglet Références avec « Concordance 90 % » et, s'il est publié d'office, sur la page de la vidéo. Un hadith cité « rapporté par Boukhari, numéro 1 » arrive en brouillon avec le texte du corpus : on le valide après vérification.
+
+**Testé / non testé (honnête).** Testé : 28 contrôles Python (extraits, concordance arabe/français, statuts, doublons, réponses invalides), ~60 contrôles API + base (droits, file, ajout, correction, validation, texte de la source, vidéo non publiée), site (fiche vidéo et Studio, FR et AR, 390 et 1280 px, sans débordement), application (tsc, 210 tests, export Android). **Non testé** : appel réel au moteur d'IA (le service est testé avec des réponses simulées), qualité de la détection sur de vraies conférences, vidéos très longues (> 14 fenêtres : les 14 premières seulement), téléphone réel. La concordance d'un verset cité en français est souvent < 60 % (traduction différente de celle du site) : ces versets arrivent en brouillon, c'est voulu.
+

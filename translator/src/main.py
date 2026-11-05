@@ -26,6 +26,7 @@ from insights import Insights
 from quiz import Quiz
 from practice import Practice
 from citations import Citations
+from references import References
 from settings import Settings
 
 
@@ -129,6 +130,7 @@ last_ok = None
 insights = None
 quiz = None
 practice = None
+references = None
 
 
 def log(*args):
@@ -543,6 +545,7 @@ class Health(BaseHTTPRequestHandler):
                            "insights": {"provider": insights.provider, "lastOk": insights.last_ok} if insights else None,
                            "quiz": {"provider": quiz.provider, "lastOk": quiz.last_ok} if quiz else None,
                            "practice": {"provider": practice.provider, "lastOk": practice.last_ok} if practice else None,
+                           "references": {"provider": references.provider, "lastOk": references.last_ok} if references else None,
                            "citations": {"provider": citations.provider, "lastOk": citations.last_ok} if citations else None}).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
@@ -569,10 +572,11 @@ def main():
     global current
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
-    global insights, quiz, citations, practice
+    global insights, quiz, citations, practice, references
     insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     quiz = Quiz(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     practice = Practice(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
+    references = References(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     citations = Citations(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -592,6 +596,7 @@ def main():
     quiz.start()
     practice.start()
     citations.start()
+    references.start()
     while not stopping:
         job = None
         try:

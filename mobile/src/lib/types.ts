@@ -62,6 +62,7 @@ export type Talk = Card & {
   insightsPending?: boolean;
   quiz?: { available: boolean; count: number };
   practice?: { available: boolean };
+  references?: { available: boolean; count: number };
 };
 
 export type AppConfig = {

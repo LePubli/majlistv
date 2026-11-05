@@ -15,7 +15,7 @@ const BY_ID = Object.fromEntries(WEB_MODULES.map((m) => [m.id, m]));
 // fonction (feature) → module qui la porte
 const FEATURE_MODULE = Object.fromEntries(WEB_MODULES.flatMap((m) => (m.features || [m.id]).map((f) => [f, m.id])));
 // Fonctions qui appartiennent à un module (même si sa partie web est absente) : liste figée, comme api/src/featuresList.js.
-export const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
+export const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
   'channels', 'shorts', 'follow', 'weekly', 'announce', 'citations', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 
 export const webModule = (id) => BY_ID[id] || null;

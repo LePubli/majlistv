@@ -349,6 +349,7 @@ export default async function talksRoutes(app) {
     delete talk.audio_status;
     talk.quiz = await ext.call('talk.quiz', { available: false, count: 0 }, id);
     talk.practice = await ext.call('talk.practice', { available: false, count: 0 }, id);
+    talk.references = await ext.call('talk.references', { available: false, count: 0 }, id);
     talk.themes = await talkThemes(id);
     await withPosters([talk]);
     return talk;
