@@ -57,12 +57,18 @@ export async function kidReport(parentId, days = 7, learning = false, db = pool)
       `SELECT t.id, t.title FROM (SELECT DISTINCT ON (talk_id) talk_id, percent FROM kid_quiz_attempts
                 WHERE profile_id = $1 AND (created_at AT TIME ZONE '${TZ}')::date >= $2::date ORDER BY talk_id, created_at DESC) a
          JOIN talks t ON t.id = a.talk_id WHERE a.percent < 60 LIMIT 5`, [p.id, since])).rows;
+    // Amélioration 8.1 « ce qui a été appris » : vidéos terminées + vidéos dont le quiz a été bien réussi (60 % ou plus) pendant la période. Titres publics seulement.
+    const mastered = (await db.query(
+      `SELECT t.title FROM (SELECT talk_id, max(percent) AS best, max(created_at) AS last FROM kid_quiz_attempts
+                WHERE profile_id = $1 AND (created_at AT TIME ZONE '${TZ}')::date >= $2::date GROUP BY talk_id) a
+         JOIN talks t ON t.id = a.talk_id WHERE a.best >= 60 ORDER BY a.last DESC LIMIT 5`, [p.id, since])).rows.map((x) => x.title);
+    const learned = [...new Set([...watched.slice(0, 5).map((x) => x.title), ...mastered])].slice(0, 5);
     const badges = learning ? (await db.query(
       `SELECT code FROM kid_badges WHERE profile_id = $1 AND (earned_at AT TIME ZONE '${TZ}')::date >= $2::date ORDER BY earned_at`, [p.id, since])).rows.map((r) => r.code) : [];
     const seconds = usage.reduce((s, x) => s + x.seconds, 0);
     out.push({ id: p.id, name: p.name, avatar: p.avatar, band: p.band, dailyLimitMin: p.daily_limit_min, catalogMode: p.catalog_mode,
       usage, minutes: Math.round(seconds / 60), activeDays: usage.filter((x) => x.seconds > 0).length,
-      watched: watched.length, watchedTitles: watched.slice(0, 5).map((x) => x.title), quizzes: q.n, avgPercent: q.n ? q.avg : null,
+      watched: watched.length, watchedTitles: watched.slice(0, 5).map((x) => x.title), learned, quizzes: q.n, avgPercent: q.n ? q.avg : null,
       starsGained: Math.max(0, total - before), stars: total, badges, retry: retry.map((x) => x.title), active: seconds > 0 || watched.length > 0 || q.n > 0 });
   }
   return { days: d, since, profiles: out, learning };

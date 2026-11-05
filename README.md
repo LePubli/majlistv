@@ -7552,3 +7552,20 @@ bash /root/verify-deploy.sh
 **Exemples.** Un membre lit « Le prophete a dit la vérité » et propose « Le prophète a dit la vérité » ; le relecteur voit *prophete* barré et *prophète* en vert, clique « Accepter » : la transcription et les sous-titres sont corrigés, le membre voit « ✓ Proposée ».
 
 **Testé / non testé (honnête).** Testé : 17 contrôles de fonctions pures (nettoyage, diff), 35 contrôles API + base (droits, anonymat, règles anti-abus, limite quotidienne, application, doublons, retraduction réelle, RGPD), mobile (tsc, 214 tests, export Android), build web, captures FR/AR à 390 et 1280 px sans débordement. **Non testé** : vrais membres et vraies vidéos, téléphone réel, volumes importants de suggestions. Limites connues : pas de notification au membre quand sa suggestion est acceptée ou refusée (le statut se voit dans le lecteur) ; l'application n'affiche pas le champ « mot d'explication ».
+
+
+## Amélioration 8.1 — E-mail hebdomadaire aux parents : « ce qui a été appris » (05/11)
+
+**Description.** Le rapport hebdomadaire aux parents existait déjà (étape 26.3 : temps passé, vidéos terminées, quiz et moyenne, étoiles, badges, « à reprendre en douceur »). Il lui manquait ce que l'enfant a **appris**. Sous la ligne de chiffres de chaque enfant actif, l'e-mail ajoute : **« ↳ Appris cette semaine : « Titre 1 », « Titre 2 » »** — les titres (publics) des vidéos terminées et des vidéos dont le quiz a été bien réussi (60 % ou plus) pendant les 7 jours ; 4 titres au plus, raccourcis à 70 caractères. Un quiz raté n'apparaît pas ici : il reste dans « à reprendre en douceur ». Sans rien d'appris, la ligne n'apparaît pas. FR / EN / AR.
+
+**Rappel du fonctionnement (inchangé).** Un e-mail par parent, au jour et à l'heure réglés (Admin → Paramètres → Kids : `kids_report_weekday`, `kids_report_hour`, heure de Paris), jamais deux le même jour, seulement si un enfant a été actif, pour les parents abonnés ; le parent peut le désactiver dans l'espace Kids. Aucun classement, aucune comparaison.
+
+**Prérequis.** Un envoi d'e-mails configuré (SMTP) et le rapport activé (`kids_report_enabled`). Aucune clé, aucun réglage nouveau.
+
+**Déploiement (DockPanel).** Redeploy `majlistv-api` uniquement (aucune migration), puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** `cd api && node tests/test_kids_report.mjs` (PostgreSQL de test, environnement de l'API chargé). Pour voir l'e-mail sans attendre le jour prévu : depuis l'espace Kids, « Envoyer le rapport maintenant » (si disponible dans votre version), ou `runWeekly(null, { force: true })` dans un script.
+
+**Exemples.** « Yacine — 42 min · 3 vidéos terminées · 2 quiz (moyenne 80 %) » puis « ↳ Appris cette semaine : « La patience », « Le bon voisin » ».
+
+**Testé / non testé (honnête).** Testé : 21 contrôles (lignes FR/EN/AR, limites de titres, enfant inactif, e-mail réel mis en file avec une vidéo terminée, un quiz réussi et un quiz raté) et le rendu HTML / texte de l'e-mail. **Non testé** : envoi réel par SMTP et lecture dans une vraie boîte mail (déjà signalé au point 97).

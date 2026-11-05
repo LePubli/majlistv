@@ -13,6 +13,11 @@ const W = {
   en: { none: 'no activity', min: 'min', vid: (n) => `${n} video${n > 1 ? 's' : ''} finished`, quiz: (n, a) => `${n} quiz${n > 1 ? 'zes' : ''} (average ${a}%)`, stars: (g, t) => `+${g} star${g > 1 ? 's' : ''} (total ${t})`, badges: (n) => `${n} badge${n > 1 ? 's' : ''}`, and: ' and ' },
   ar: { none: 'لا نشاط', min: 'دقيقة', vid: (n) => `${n} فيديو مكتمل`, quiz: (n, a) => `${n} اختبار (المعدل ${a}%)`, stars: (g, t) => `+${g} نجمة (المجموع ${t})`, badges: (n) => `${n} شارة`, and: ' و' },
 };
+const LEARNED = {
+  fr: (t) => `↳ Appris cette semaine : ${t}`,
+  en: (t) => `↳ Learned this week: ${t}`,
+  ar: (t) => `↳ تعلّم هذا الأسبوع: ${t}`,
+};
 const lang = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
 
 // Une ligne par enfant.
@@ -27,6 +32,15 @@ export function childLine(c, locale) {
   return `${c.name} — ${bits.join(' · ')}`;
 }
 
+// Amélioration 8.1 : « ce qui a été appris » — titres (publics) des vidéos terminées ou au quiz bien réussi ; '' s'il n'y en a pas. Au plus 4 titres de 70 caractères.
+export function learnedLine(c, locale) {
+  const titles = (c.learned || []).slice(0, 4).map((x) => { const t = String(x).replace(/\s+/g, ' ').trim(); return `« ${t.length > 70 ? t.slice(0, 69) + '…' : t} »`; });
+  return titles.length ? LEARNED[lang(locale)](titles.join(', ')) : '';
+}
+
+// Bloc d'un enfant dans l'e-mail : sa ligne de chiffres, puis ce qu'il a appris.
+export const childBlock = (c, locale) => [childLine(c, locale), c.active ? learnedLine(c, locale) : ''].filter(Boolean).join('\n');
+
 // Met en file le rapport d'un parent. Renvoie false s'il n'a aucun profil. `onlyIfActive` : rien si aucun enfant n'a été actif.
 export async function queueReport(userId, { days = 7, onlyIfActive = false, dedupeKey = null } = {}) {
   const u = (await pool.query('SELECT locale FROM users WHERE id = $1', [userId])).rows[0];
@@ -36,7 +50,7 @@ export async function queueReport(userId, { days = 7, onlyIfActive = false, dedu
   if (onlyIfActive && !rep.profiles.some((p) => p.active)) return false;
   const names = rep.profiles.map((p) => p.name);
   const retry = [...new Set(rep.profiles.flatMap((p) => p.retry))].slice(0, 5).map((x) => `« ${x} »`).join(', ');
-  const lines = rep.profiles.map((p) => childLine(p, u.locale));
+  const lines = rep.profiles.map((p) => childBlock(p, u.locale));
   await enqueueForUser(pool, userId, 'kids_report', {
     children: names.join(', '), days: rep.days, summary: lines.join('\n'), retry, path: '/kids',
   }, dedupeKey);
