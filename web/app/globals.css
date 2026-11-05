@@ -4637,3 +4637,10 @@ a.pn-ti:hover { text-decoration: underline; }
 .pn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
 .pn-chip { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: .8rem; cursor: pointer; }
 .pn-warn { color: #ff9a8d; }
+
+.pn-rem { margin-top: 14px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: var(--surface); }
+.pn-rem summary { cursor: pointer; font-weight: 700; }
+.pn-remg { display: grid; gap: 8px; margin: 10px 0; }
+.pn-sw { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pn-sw input { width: 20px; height: 20px; accent-color: var(--accent); }
+.pn-sw select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font: inherit; }

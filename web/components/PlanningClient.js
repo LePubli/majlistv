@@ -216,11 +216,17 @@ export default function PlanningClient() {
           ))}
         </ul>
       )}
-      {data && <p className="pn-goal">{t('pnGoal').replace('{a}', data.week.done).replace('{b}', data.goal)}</p>}
+      {data && (
+        <p className="pn-goal">
+          {t('pnGoal').replace('{a}', data.week.done).replace('{b}', data.goal)}
+          {data.outlook && (data.outlook.reachable ? t('pnGoalOk') : t('pnGoalMiss').replace('{n}', data.outlook.missing))}
+          {data.outlook && !data.outlook.reachable && <> <button type="button" className="link u small" onClick={() => setForm({ day: today })}>+ {t('pnAdd')}</button></>}
+        </p>
+      )}
       {err && <p className="error" role="alert">{err}</p>}
       {body}
       <p className="pn-legend"><span><i className="a" />{t('pnLegAuto')}</span><span><i className="m" />{t('pnLegMine')}</span><span><i className="d" />{t('pnLegDone')}</span></p>
-      <p className="meta small">{t('pnSoon')}</p>
+      <Reminders />
       {dlForm && <DeadlineForm today={today} onClose={() => setDlForm(false)} onSaved={() => { setDlForm(false); load(); }} />}
       {form && <AddForm day={form.day} today={today} onClose={() => setForm(null)} onSaved={() => { setForm(null); load(); }} />}
     </section>
@@ -363,5 +369,38 @@ function DeadlineForm({ today, onClose, onSaved }) {
         <div className="pn-fa"><button type="submit" className="btn" disabled={busy || !title.trim() || !hasTalks}>{t('pnDlCreate')}</button><button type="button" className="btn ghost" onClick={onClose}>{t('pnCancel')}</button></div>
       </form>
     </div>
+  );
+}
+
+// Rappels du planning : canaux (notification, e-mail) et types (matin, veille d'échéance, série à sauver). Rien n'est envoyé sans canal choisi.
+function Reminders() {
+  const { t, call } = useApp();
+  const [p, setP] = useState(null);
+  useEffect(() => { call('/me/learning/plan/prefs').then((r) => { if (r.ok) setP(r.data); }); }, [call]);
+  if (!p) return null;
+  const save = async (patch) => { setP((v) => ({ ...v, ...patch })); const r = await call('/me/learning/plan/prefs', { method: 'PUT', body: JSON.stringify(patch) }); if (r.ok) setP(r.data); };
+  const sw = (key, label, extra) => (
+    <label className="pn-sw"><input type="checkbox" checked={!!p[key]} onChange={(e) => save({ [key]: e.target.checked })} /><span>{label}</span>{extra}</label>
+  );
+  return (
+    <details className="pn-rem">
+      <summary>{t('pnRem')}</summary>
+      <p className="meta small">{t('pnRemSub')}</p>
+      <div className="pn-remg">
+        {sw('push', t('pnRemPush'))}
+        {sw('email', t('pnRemEmail'))}
+      </div>
+      {p.push && <p className="meta small">{t('pnRemPushHint')}</p>}
+      <div className="pn-remg">
+        {sw('morning', t('pnRemMorning'), (
+          <select aria-label={t('pnRemHour')} value={p.morningHour} onChange={(e) => save({ morningHour: Number(e.target.value) })}>
+            {[5, 6, 7, 8, 9, 10, 11, 12].map((h) => <option key={h} value={h}>{t('pnRemHour')} {h} h</option>)}
+          </select>
+        ))}
+        {sw('deadline', t('pnRemDeadline'))}
+        {sw('streak', t('pnRemStreak'))}
+      </div>
+      <p className="meta small">{t('pnRemNote')}</p>
+    </details>
   );
 }

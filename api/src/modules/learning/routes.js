@@ -11,6 +11,7 @@ import { planWindow, windowOk, dayAllowed, isDay, KINDS, deadlinesOf, MAX_AHEAD 
 import { spread, PACES } from '../../planSpread.js';
 import { visibleSql } from '../../visibility.js';
 import { addDays } from '../../learningStreak.js';
+import { prefsOf as planPrefsOf } from '../../planReminders.js';
 
 export default async function learningRoutes(app) {
   const auth = { preHandler: app.authenticate };
@@ -171,6 +172,26 @@ export default async function learningRoutes(app) {
     await pool.query('DELETE FROM learning_plan_items WHERE deadline_id = $1 AND user_id = $2 AND done_at IS NULL', [id, req.user.sub]);
     await pool.query('DELETE FROM learning_deadlines WHERE id = $1 AND user_id = $2', [id, req.user.sub]);
     return reply.code(204).send();
+  });
+
+  // ─── Rappels du planning (étape 3) : canaux et types choisis par le membre ; rien n'est envoyé tant qu'aucun canal n'est activé ───
+  app.get('/me/learning/plan/prefs', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    return planPrefsOf(req.user.sub);
+  });
+  app.put('/me/learning/plan/prefs', auth, async (req, reply) => {
+    if (!(await hasLearningTier(req.user.sub))) return required(reply);
+    const b = z.object({
+      push: z.boolean().optional(), email: z.boolean().optional(), morning: z.boolean().optional(), deadline: z.boolean().optional(),
+      streak: z.boolean().optional(), morningHour: z.number().int().min(5).max(12).optional(),
+    }).refine((x) => Object.keys(x).length > 0, 'Rien à modifier').parse(req.body ?? {});
+    const cur = await planPrefsOf(req.user.sub);
+    const n = { ...cur, ...b };
+    await pool.query(
+      `INSERT INTO learning_plan_prefs(user_id, push, email, morning, deadline, streak, morning_hour) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (user_id) DO UPDATE SET push = $2, email = $3, morning = $4, deadline = $5, streak = $6, morning_hour = $7, updated_at = now()`,
+      [req.user.sub, n.push, n.email, n.morning, n.deadline, n.streak, n.morningHour]);
+    return n;
   });
 
   // Délivre l'attestation d'une série dont tous les quiz sont réussis (une seule par série et par membre).

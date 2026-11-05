@@ -7446,3 +7446,30 @@ bash /root/verify-deploy.sh
 **Exemples.** Examen le 20 décembre, série « Comprendre la foi » (5 vidéos), rythme normal → 15 séances sur ~4 jours par semaine, les « quiz finaux » dans les dernières semaines ; je décale une séance au samedi avec ↔ ; l'avancement passe à « 3 / 15 ».
 
 **Testé / non testé (honnête).** Testé : calcul d'étalement (19), API + base (70 contrôles au total), compilation, parcours automatisé (création avec aperçu, bandeau, suppression) en FR et en AR, captures 390 et 1280 px sans débordement. **Non testé** : téléphone réel, Safari, série de plus de 20 vidéos en conditions réelles, rythme sur plusieurs mois. Les **rappels** (notification, e-mail) et l'**application Android** restent aux étapes 3 et 4.
+
+## Amélioration 3.8 — Mon planning, étape 3 sur 4 : rappels (notification + e-mail) et objectif de la semaine (05/11)
+
+**Description.** Dans **Apprendre → Mon planning**, le bloc repliable **Rappels** laisse le membre choisir : les **canaux** (Notification, E-mail — **rien n'est envoyé tant qu'aucun n'est coché**) et les **types** : **récapitulatif du matin** (heure au choix de 5 h à 12 h, 8 h par défaut), **veille d'une échéance**, **le soir si ma série est à sauver**. Par défaut : aucun canal ; une fois un canal choisi, matin et veille d'échéance sont actifs, « série à sauver » ne l'est pas (à cocher). Chaque rappel part **une seule fois par jour** : récapitulatif et veille d'échéance entre l'heure choisie et +3 h ; série à sauver entre **18 h et 21 h** (heure de Paris) et seulement si la série est réellement en jeu. Pas de récapitulatif s'il n'y a rien à faire ce jour-là. **Les rappels n'affichent jamais le texte des engagements ni du bilan** : seulement des nombres (et des titres de vidéos du catalogue). Pas de doublon : si le récapitulatif du planning est activé sur un canal, l'ancien rappel « À réviser aujourd'hui » n'est plus envoyé **sur ce canal**.
+
+**Lien avec l'objectif de la semaine.** La ligne sous la barre du planning devient : « Objectif de la semaine : 2 / 3 jours faits — atteint si vous suivez votre plan » ou « … il manque N jour(s) à prévoir » (avec un lien « + Ajouter une séance »). Le calcul compte les jours **encore prévus d'ici dimanche qui sont des jours actifs au sens de la série** (vidéo, quiz, révision, cartes). Le Coran, les adhkar, les actions et le bilan **ne comptent pas** comme jour actif (règle de la série) : ils ne servent donc pas à « atteindre l'objectif ». Le récapitulatif du matin (e-mail) reprend la même ligne.
+
+**API** (palier Apprentissage, sinon 403 `learning_required`) : `GET` / `PUT /me/learning/plan/prefs` `{ push?, email?, morning?, deadline?, streak?, morningHour?: 5–12 }` (modification partielle). `GET /me/learning/plan` renvoie aussi `outlook: { done, goal, planned, reachable, missing }`. Migration **107** : table `learning_plan_prefs` (privée au membre, exportée et supprimée avec le compte). Nouveaux modèles d'e-mail `plan_daily`, `plan_deadline`, `plan_streak` (FR / EN / AR) et textes de notification du même nom. Boucle de fond (toutes les 10 min) lancée par le module « Parcours et attestations » (`start`), coupée avec cette fonction dans Admin → Fonctions.
+
+**Prérequis / `.env`.** Aucun nouveau. Pour que les rappels partent réellement : **notifications** = clé Firebase (Admin → Paramètres → Notifications) et/ou notifications du navigateur activées, et le membre doit avoir autorisé les notifications ; **e-mails** = SMTP configuré (comme pour les autres e-mails du site). Sans canal configuré, rien n'est mis en file.
+
+**Fichiers.** API : `src/planReminders.js`, `src/learningPlan.js` (`agendaOf`, `weekOutlook`), `src/push.js`, `src/emails.js`, `src/revisionMailer.js`, `modules/learning/{index,routes}.js`, `migrations/107_learning_plan_prefs.sql`. Site : `web/components/PlanningClient.js` (`Reminders`, ligne d'objectif), textes `pnRem*` / `pnGoal*`. Tests : `api/tests/test_plan_reminders.mjs` (34 contrôles), `api/tests/test_plan.py` (+ 7 contrôles).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy **`majlistv-api`** (migration 107 au démarrage), puis **`majlistv-web`**, puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+(0 échec attendu).
+
+**Debug.** `cd api && DATABASE_URL=… JWT_SECRET=… SETTINGS_KEY=… PRACTICE_KEY=… node tests/test_plan_reminders.mjs` (base de test, SMTP factice, notifications simulées) ; `tests/test_plan.py`. Aucun rappel reçu : vérifier le canal coché, les notifications autorisées sur l'appareil (Mon compte), la clé Firebase / le SMTP, l'heure (Paris) et que le rappel n'est pas déjà parti aujourd'hui. Logs : « Rappels du planning : N envoi(s). ».
+
+**Exemples.** Je coche « E-mail » et « Récapitulatif du matin » à 7 h : chaque matin entre 7 h et 10 h, si j'ai des choses prévues, je reçois « 4 à faire aujourd'hui » avec la liste en nombres et « Objectif de la semaine : 2 / 3 jours — atteint si vous suivez votre plan ». La veille de mon examen : « Demain : Examen de fin de cycle — séances faites : 12 sur 15 ».
+
+**Testé / non testé (honnête).** Testé : API + base, 34 contrôles de rappels (heure, canaux, une fois par jour, jamais de texte personnel, trois langues), site FR / AR 390 et 1280 px. **Non testé** : envoi réel de notification (clé Firebase) et d'e-mail (SMTP réel) depuis le serveur de production, appareil réel, changement d'heure d'hiver. Limite : ces e-mails n'ont pas de lien « se désabonner en un clic » (comme « À réviser aujourd'hui ») : le membre les coupe dans le bloc Rappels.

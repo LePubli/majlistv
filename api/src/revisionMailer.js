@@ -22,6 +22,9 @@ export async function candidates(today) {
 
 // Prépare l'e-mail d'un membre ; renvoie false s'il n'y a rien à réviser.
 async function sendFor(userId, today, mailOn = true, pushOn = false) {
+  // Si le membre reçoit déjà le récapitulatif de son planning par un canal, on n'envoie pas en plus « à réviser » par ce canal (pas de doublon).
+  const pp = (await pool.query('SELECT push, email, morning FROM learning_plan_prefs WHERE user_id = $1', [userId])).rows[0];
+  if (pp?.morning) { if (pp.email) mailOn = false; if (pp.push) pushOn = false; }
   const { items, total } = await dueTalks(userId);
   if (!items.length) return false;
   const { rows: talks } = await pool.query('SELECT id, title FROM talks WHERE id = ANY($1::uuid[])', [items.map((x) => x.id)]);

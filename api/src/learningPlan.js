@@ -111,6 +111,35 @@ async function ownItems(userId, from, to) {
   return rows;
 }
 
+/** Ce qui reste à faire un jour donné (aujourd'hui) : sert aux rappels. Les textes d'engagements et de bilan ne sortent jamais d'ici : seulement des nombres. */
+export async function agendaOf(userId, day) {
+  const [rev, cards, quran, athkar, actions, bilan, mine] = await Promise.all([
+    autoRevisions(userId, day, day, day), autoCards(userId, day, day, day), autoQuran(userId, day, day), autoAthkar(userId, day, day),
+    autoActions(userId, day, day, day), autoBilan(userId, day, day), ownItems(userId, day, day),
+  ]);
+  const todo = mine.filter((i) => !i.done);
+  const cardsN = cards.reduce((n, c) => n + c.count, 0);
+  return {
+    revisions: rev.map((r) => r.title), cards: cardsN, quran: quran.filter((q) => !q.done).length, athkar: athkar.filter((a) => !a.done).length,
+    actions: actions.length, bilan: bilan.filter((b) => !b.done).length, mine: todo.length, mineTitles: todo.filter((i) => i.title).map((i) => i.title),
+    total: rev.length + (cardsN ? 1 : 0) + quran.filter((q) => !q.done).length + athkar.filter((a) => !a.done).length + actions.length + bilan.filter((b) => !b.done).length + todo.length,
+  };
+}
+
+/**
+ * Objectif de la semaine et plan : combien de jours actifs (au sens de la série : vidéo, quiz, révision ou carte) sont encore PRÉVUS
+ * d'aujourd'hui à dimanche. Les adhkar, le Coran, les actions et le bilan ne comptent pas comme « jour actif » : on ne les compte donc pas ici.
+ */
+export async function weekOutlook(userId, today, active, goal) {
+  const monday = mondayOf(today); const sunday = addDays(monday, 6);
+  const done = [...active].filter((d) => d >= monday && d <= today).length;
+  const [rev, cards, mine] = await Promise.all([autoRevisions(userId, today, sunday, today), autoCards(userId, today, sunday, today), ownItems(userId, today, sunday)]);
+  const days = new Set([...rev.map((x) => x.day), ...cards.map((x) => x.day), ...mine.filter((i) => !i.done && ['video', 'quiz', 'cards'].includes(i.kind)).map((i) => i.day)]);
+  for (const d of [...days]) if (active.has(d)) days.delete(d); // un jour déjà actif est déjà compté dans « done »
+  const planned = days.size;
+  return { done, goal, planned, reachable: done + planned >= goal, missing: Math.max(0, goal - done - planned) };
+}
+
 /** Échéances à venir (aujourd'hui ou plus tard) avec leur avancement : séances faites / séances prévues. */
 export async function deadlinesOf(userId, today) {
   const { rows } = await pool.query(
@@ -140,6 +169,7 @@ export async function planWindow(userId, from, to) {
     rest: rest.rows.map((r) => r.day),
     active: act, // jours où le membre a réellement appris (déjà fait)
     week: weekOf(active, today, g.goal),
+    outlook: await weekOutlook(userId, today, active, g.goal), // l'objectif de la semaine sera-t-il atteint si le plan est suivi ?
     goal: g.goal,
     monday: mondayOf(today),
   };

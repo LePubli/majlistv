@@ -114,6 +114,21 @@ const TEXTS = {
     en: (v) => ({ title: 'Mejliss Kids', body: v.count > 1 ? `${v.count} actions by ${v.names} are waiting for your approval.` : `${v.names} is waiting for your approval.` }),
     ar: (v) => ({ title: 'مجلس كيدز', body: v.count > 1 ? `${v.count} أعمال لـ${v.names} بانتظار تأكيدك.` : `${v.names} بانتظار تأكيدك.` }),
   },
+  plan_daily: { // planning (étape 3) : récapitulatif du matin, nombre seulement
+    fr: (v) => ({ title: 'Votre planning du jour', body: v.count > 1 ? `${v.count} choses à faire aujourd’hui.` : '1 chose à faire aujourd’hui.' }),
+    en: (v) => ({ title: 'Your plan for today', body: v.count > 1 ? `${v.count} things to do today.` : '1 thing to do today.' }),
+    ar: (v) => ({ title: 'مخطط اليوم', body: v.count > 1 ? `${v.count} أمور للإنجاز اليوم.` : 'أمر واحد للإنجاز اليوم.' }),
+  },
+  plan_deadline: { // veille d'une échéance choisie par le membre
+    fr: (v) => ({ title: 'Demain : ' + cut(v.title, 50), body: v.left > 0 ? `Il reste ${v.left} séance(s) prévue(s) pour cette échéance.` : 'Toutes vos séances sont faites.' }),
+    en: (v) => ({ title: 'Tomorrow: ' + cut(v.title, 50), body: v.left > 0 ? `${v.left} planned session(s) left for this deadline.` : 'All your sessions are done.' }),
+    ar: (v) => ({ title: 'غدًا: ' + cut(v.title, 50), body: v.left > 0 ? `بقيت ${v.left} جلسات مخططة لهذا الموعد.` : 'أنجزت كل جلساتك.' }),
+  },
+  plan_streak: { // le soir, si la série est à sauver
+    fr: (v) => ({ title: 'Gardez votre série', body: `Votre série de ${v.n} jour(s) est à sauver : quelques minutes suffisent aujourd’hui.` }),
+    en: (v) => ({ title: 'Keep your streak', body: `Your ${v.n}-day streak is at stake: a few minutes today are enough.` }),
+    ar: (v) => ({ title: 'حافظ على سلسلتك', body: `سلسلتك من ${v.n} أيام مهددة: دقائق قليلة اليوم تكفي.` }),
+  },
   revision_daily: {
     fr: (v) => ({ title: 'À réviser aujourd’hui', body: v.count > 1 ? `${v.count} vidéos à réviser` : '1 vidéo à réviser' }),
     en: (v) => ({ title: 'To review today', body: v.count > 1 ? `${v.count} talks to review` : '1 talk to review' }),

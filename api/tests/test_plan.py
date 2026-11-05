@@ -183,6 +183,18 @@ for i in range(5):
 ok(requests.post(dl, headers=H, json={**body, "title": "de trop"}).status_code == 409, "cinq échéances en cours au plus")
 cur.execute("delete from talks where id=%s", (tid2,))
 
+
+# ─── rappels et objectif (étape 3)
+pf = f"{B}/me/learning/plan/prefs"
+ok(requests.get(pf, headers=STD).status_code == 403, "rappels : refusés hors palier Apprentissage")
+r = requests.get(pf, headers=H).json(); ok(r["push"] is False and r["email"] is False and r["morning"] is True and r["deadline"] is True and r["streak"] is False and r["morningHour"] == 8, "rappels : rien d'actif par défaut (aucun canal)")
+r = requests.put(pf, headers=H, json={"push": True, "email": True, "streak": True, "morningHour": 7}); ok(r.status_code == 200 and r.json()["push"] and r.json()["streak"] and r.json()["morningHour"] == 7, "rappels : réglages enregistrés")
+r = requests.put(pf, headers=H, json={"morning": False}).json(); ok(r["morning"] is False and r["push"] is True and r["morningHour"] == 7, "rappels : modification partielle, le reste est conservé")
+ok(requests.put(pf, headers=H, json={"morningHour": 3}).status_code == 400 and requests.put(pf, headers=H, json={}).status_code == 400, "rappels : heure hors 5-12 et requête vide refusées")
+ok(requests.get(pf, headers=OTH).json()["push"] is False, "rappels : réglages privés à chaque membre")
+o = requests.get(f"{B}/me/learning/plan", headers=H, params=win).json()["outlook"]
+ok(set(o) == {"done", "goal", "planned", "reachable", "missing"} and o["goal"] == 3 and o["planned"] >= 1, "objectif : le plan indique les jours actifs encore prévus cette semaine")
+
 # suppression
 ok(requests.delete(f"{B}/me/learning/plan/{vid}", headers=H).status_code == 204, "séance supprimée")
 cur.execute("delete from talks where id=%s", (tid,))
