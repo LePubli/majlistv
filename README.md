@@ -7569,3 +7569,26 @@ bash /root/verify-deploy.sh
 **Exemples.** « Yacine — 42 min · 3 vidéos terminées · 2 quiz (moyenne 80 %) » puis « ↳ Appris cette semaine : « La patience », « Le bon voisin » ».
 
 **Testé / non testé (honnête).** Testé : 21 contrôles (lignes FR/EN/AR, limites de titres, enfant inactif, e-mail réel mis en file avec une vidéo terminée, un quiz réussi et un quiz raté) et le rendu HTML / texte de l'e-mail. **Non testé** : envoi réel par SMTP et lecture dans une vraie boîte mail (déjà signalé au point 97).
+
+## Correctif Coran — la récitation continue (06/11)
+
+**Description.** La récitation d'une sourate (verset après verset) s'arrêtait après 2-3 versets, dès qu'on changeait de page ou que le téléphone se verrouillait. Désormais un **lecteur unique** vit à la racine du site et de l'application : il continue pendant la navigation et écran verrouillé, avec les commandes de l'écran de verrouillage (pause / lecture ; sur le site aussi verset suivant / précédent). Une **mini-barre** apparaît sur toutes les pages tant qu'une récitation joue : toucher le titre rouvre la sourate au verset lu, le carré arrête. Si un fichier de verset échoue, il est **retenté 2 fois** (0,8 s puis 1,6 s) avant d'afficher « La récitation ne peut pas être lue ».
+
+**Prérequis.** Aucun nouveau. Pas de changement d'API ni de base. Application : mise à jour **OTA** (aucune dépendance native ajoutée ; la lecture en arrière-plan et la notification utilisent expo-video, déjà configuré dans `app.json`).
+
+**Fichiers.** Site : `web/components/QuranPlayer.js`, `web/lib/quranQueue.js`, `web/components/Providers.js`, `web/app/coran/[n]/page.js`, CSS `.qpl-*`. App : `mobile/src/lib/quranPlayer.tsx`, `quranQueue.ts`, `components/QuranMiniBar.tsx`, `app/_layout.tsx`, `app/quran/[n].tsx`.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy **majlistv-web** (l'API n'a pas changé). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Application : publier la mise à jour OTA habituelle (aucun nouveau build).
+
+**Debug.** Si « La récitation ne peut pas être lue » apparaît : ouvrir Admin → Coran → récitateurs, tester le bouton « ▶ 1:1 » ; une source qui refuse ou limite les requêtes (everyayah / cdn.islamic.network) échouera aussi. Changer de récitateur pour comparer.
+
+**Exemples.** Lancer ▶ au verset 1 d'Al-Kahf, retourner à l'accueil : la barre « Al-Kahf — Verset N » reste, la récitation continue ; verrouiller : la notification affiche le titre et le récitateur.
+
+**Testé / non testé (honnête).** Testé : règles de relance et d'enchaînement (site `web/tests/test_quran_player.mjs`, app `mobile/tests/quranQueue.test.ts`), typage de l'application, compilation du site. **Non testé** : le comportement réel sur Android et iPhone (écran verrouillé, enchaînement entre fichiers) et la lecture depuis les serveurs de récitation (inaccessibles depuis mon environnement). Si le téléphone coupe encore entre deux versets, il faudra un lecteur à file d'attente natif (nouveau build).

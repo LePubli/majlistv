@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import { reciterUrl, wordsParam } from '../../../lib/quranAudio';
+import { useQuranPlayer } from '../../../components/QuranPlayer';
 
 const KEY = 'qr-prefs';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
@@ -55,10 +56,7 @@ export default function SuraPage() {
   const [missing, setMissing] = useState(false);
   const [prefs, setPrefs] = useState({ translation: undefined, ph: true, tafsir: '', size: 2, reciter: '', chain: true, wbw: false, wbwLang: '', taj: false });
   const [reciters, setReciters] = useState([]);
-  const [playing, setPlaying] = useState(null); // numéro du verset en cours de lecture
-  const [audioErr, setAudioErr] = useState(false);
   const [sel, setSel] = useState(null); // { aya, i } : mot touché
-  const audioRef = useRef(null);
   const [tafsir, setTafsir] = useState(null); // { slug, items: Map }
   const [open, setOpen] = useState({});
   useEffect(() => { setPrefs((p) => ({ ...p, ...load() })); }, []);
@@ -78,18 +76,19 @@ export default function SuraPage() {
   const reciter = reciters.find((x) => x.slug === prefs.reciter) || reciters[0] || null;
   // Adresse du verset : {sura3}{aya3}, {sura}/{aya} ou {ayahg} (numéro de 1 à 6236, étape A1).
   const urlOf = useCallback((aya) => reciter && reciterUrl(reciter.urlTemplate, num, aya), [reciter, num]);
-  const stop = useCallback(() => { const a = audioRef.current; if (a) { a.pause(); a.removeAttribute('src'); a.load(); } setPlaying(null); }, []);
+  // Récitation : lecteur GLOBAL (components/QuranPlayer) — continue en changeant de page ou écran verrouillé.
+  const qp = useQuranPlayer();
+  const playing = qp.current && qp.current.sura === num ? qp.current.aya : null;
+  const audioErr = qp.err;
+  const stop = qp.stop;
   const play = useCallback((aya) => {
-    const a = audioRef.current; const url = urlOf(aya);
-    if (!a || !url) return;
-    setAudioErr(false); setPlaying(aya); saveLast(num, aya);
-    a.src = url;
-    a.play().catch(() => { setAudioErr(true); setPlaying(null); });
-    document.getElementById(`v${aya}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [urlOf, num]);
+    if (!d || !reciter || !urlOf(aya)) return;
+    saveLast(num, aya);
+    qp.start({ sura: num, aya, ayas: d.verses.map((v) => v.aya), chain: prefs.chain, urlOf, suraName: d.sura.en, verseWord: t('qrVerse'), artist: reciter.name });
+  }, [d, reciter, urlOf, num, prefs.chain, t, qp]);
+  useEffect(() => { if (playing) document.getElementById(`v${playing}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, [playing]);
   useEffect(() => { if (d) saveLast(num, 1); }, [num, d?.sura?.n]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { const a = audioRef.current; if (a) a.pause(); }, []);
-  useEffect(() => { stop(); setSel(null); }, [num, prefs.reciter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setSel(null); qp.clearErr(); }, [num]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!(num >= 1 && num <= 114)) { setMissing(true); return undefined; }
     let dead = false;
@@ -132,7 +131,6 @@ export default function SuraPage() {
       )}
       {audioErr && <p className="error" role="alert">{t('qrAudioErr')}</p>}
       {prefs.taj && d.tajweed && <TajLegend d={d} locale={locale} t={t} />}
-      <audio ref={audioRef} preload="none" onEnded={() => { const next = playing + 1; if (prefs.chain && d.verses.some((x) => x.aya === next)) play(next); else setPlaying(null); }} onError={() => { if (playing) { setAudioErr(true); setPlaying(null); } }} />
       <ol className={`qr-verses qr-size-${prefs.size}`}>
         {d.verses.map((v) => {
           const tf = tafsir?.items.get(v.aya);

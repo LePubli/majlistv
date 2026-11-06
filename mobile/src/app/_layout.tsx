@@ -21,6 +21,8 @@ import { AdGate } from '@/components/AdGate';
 import { LogoIntro } from '@/components/LogoIntro';
 import { WidgetSync } from '@/components/WidgetSync';
 import { AppUpdate } from '@/components/AppUpdate';
+import { QuranPlayerProvider } from '@/lib/quranPlayer';
+import { QuranMiniBar } from '@/components/QuranMiniBar';
 import { colors } from '@/lib/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -101,6 +103,7 @@ function Shell() {
         <Stack.Screen name="quran/index" />
         <Stack.Screen name="quran/[n]" />
       </Stack>
+      <QuranMiniBar />
       <AdGate />
       <LogoIntro />
     </>
@@ -114,7 +117,9 @@ export default function RootLayout() {
         <KidProvider>
           <PrayerProvider>
             <DownloadProvider>
-              <Shell />
+              <QuranPlayerProvider>
+                <Shell />
+              </QuranPlayerProvider>
             </DownloadProvider>
           </PrayerProvider>
         </KidProvider>

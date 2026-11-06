@@ -1,5 +1,6 @@
 'use client';
 // Contexte global : textes (i18n), session utilisateur (token en localStorage) et appels API.
+import { QuranPlayerProvider } from './QuranPlayer';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrayerState } from '../lib/usePrayer';
@@ -115,5 +116,5 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
-    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, later, toggleLater, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}>{children}</Ctx.Provider>;
+    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, later, toggleLater, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}><QuranPlayerProvider t={t}>{children}</QuranPlayerProvider></Ctx.Provider>;
 }

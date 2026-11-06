@@ -5,13 +5,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEventListener } from 'expo';
-import { useVideoPlayer } from 'expo-video';
 import * as SecureStore from 'expo-secure-store';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
+import { useQuranPlayer } from '@/lib/quranPlayer';
 import {
-  ARABIC_SIZES, DEFAULT_PREFS, arLabel, nextAya, paint, readPrefs, reciterUrl, suraNum, suraQuery, tajColor, tajLegend, tokens, wordMode,
+  ARABIC_SIZES, DEFAULT_PREFS, arLabel, paint, readPrefs, reciterUrl, suraNum, suraQuery, tajColor, tajLegend, tokens, wordMode,
   type QuranPrefs, type Reciter, type SuraData, type Verse,
 } from '@/lib/quran';
 import { colors, radius } from '@/lib/theme';
@@ -31,8 +30,6 @@ export default function SuraScreen() {
   const [reciters, setReciters] = useState<Reciter[]>([]);
   const [tafsir, setTafsir] = useState<{ slug: string; items: Map<number, string> } | null>(null);
   const [showOpts, setShowOpts] = useState(false);
-  const [playing, setPlaying] = useState<number | null>(null);
-  const [audioErr, setAudioErr] = useState(false);
   const listRef = useRef<FlatList<Verse>>(null);
   const jumped = useRef(false);
 
@@ -68,28 +65,27 @@ export default function SuraScreen() {
     return () => { dead = true; };
   }, [api, prefs.tafsir, num, d?.sura.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Récitation : lecteur audio sans image (expo-video lit aussi les MP3), fichier lu directement chez la source.
+  // Récitation : lecteur GLOBAL (lib/quranPlayer) — continue en changeant de page ou écran verrouillé.
   const reciter = reciters.find((x) => x.slug === prefs.reciter) || reciters[0] || null;
-  const player = useVideoPlayer(null, (p) => { p.staysActiveInBackground = true; });
-  const playingRef = useRef<number | null>(null);
-  const play = useCallback(async (aya: number) => {
-    const url = reciter && num ? reciterUrl(reciter.urlTemplate, num, aya) : null;
-    if (!url) return;
-    setAudioErr(false); setPlaying(aya); playingRef.current = aya;
-    try { await player.replaceAsync({ uri: url }); player.play(); } catch { setAudioErr(true); setPlaying(null); playingRef.current = null; }
-    const i = d?.verses.findIndex((v) => v.aya === aya) ?? -1;
+  const qp = useQuranPlayer();
+  const playing = qp.current && qp.current.sura === num ? qp.current.aya : null;
+  const audioErr = qp.err;
+  const play = useCallback((aya: number) => {
+    if (!reciter || !num || !d) return;
+    qp.start({
+      sura: num, aya, ayas: d.verses.map((v) => v.aya), chain: prefs.chain,
+      urlOf: (a) => reciterUrl(reciter.urlTemplate, num, a),
+      suraName: d.sura.en, verseWord: t('qrVerse'), artist: reciter.name,
+    });
+  }, [reciter, num, d, prefs.chain, t, qp]);
+  const stop = qp.stop;
+  // La liste suit le verset lu (la récitation, elle, continue même quand l'écran est quitté).
+  useEffect(() => {
+    if (playing == null || !d) return;
+    const i = d.verses.findIndex((v) => v.aya === playing);
     if (i >= 0) listRef.current?.scrollToIndex({ index: i, viewPosition: 0.3, animated: true });
-  }, [reciter, num, player, d]);
-  const stop = useCallback(() => { try { player.pause(); } catch { /* lecteur libéré */ } setPlaying(null); playingRef.current = null; }, [player]);
-  useEventListener(player, 'playToEnd', () => {
-    const cur = playingRef.current;
-    const next = cur && d ? nextAya(d.verses, cur, prefs.chain) : null;
-    if (next) void play(next); else { setPlaying(null); playingRef.current = null; }
-  });
-  useEventListener(player, 'statusChange', ({ status }) => {
-    if (status === 'error' && playingRef.current) { setAudioErr(true); setPlaying(null); playingRef.current = null; }
-  });
-  useEffect(() => { stop(); }, [num, prefs.reciter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { qp.clearErr(); }, [num]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Aller au verset demandé (?aya=…) une fois la sourate affichée.
   useEffect(() => {
@@ -167,7 +163,7 @@ export default function SuraScreen() {
         }}
         renderItem={({ item }) => (
           <VerseCard v={item} d={d} prefs={prefs} playing={playing === item.aya} canPlay={!!reciter}
-            onPlay={() => (playing === item.aya ? stop() : void play(item.aya))} tafsirText={tafsir?.items.get(item.aya)} tafsirLang={tafsirMeta?.lang} />
+            onPlay={() => (playing === item.aya ? stop() : play(item.aya))} tafsirText={tafsir?.items.get(item.aya)} tafsirLang={tafsirMeta?.lang} />
         )}
       />
     </SafeAreaView>
