@@ -50,7 +50,8 @@
         "expo-notifications",
         {
           "color": "#E6A739",
-          "defaultChannel": "news"
+          "defaultChannel": "news",
+          "sounds": ["./assets/sounds/adhan-1.mp3", "./assets/sounds/adhan-2.mp3", "./assets/sounds/adhan-3.mp3", "./assets/sounds/adhan-4.mp3", "./assets/sounds/adhan-5.mp3"]
         }
       ],
       [
