@@ -617,3 +617,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 8.1 « Résumé hebdomadaire pour les parents » : déjà livré à l'étape 26.3 ; ajout « ce qui a été appris » dans l'e-mail (README « Amélioration 8.1 »).
 - Correctif Coran « lecture continue » (lecteur global site + app, notification écran verrouillé, mini-barre, nouvelles tentatives) : livré (README « Correctif Coran »), à valider sur téléphone.
 - Amélioration prière « Mode d'alerte » (silencieux / vibreur / adhan, app Android + iPhone) : livré sans fichier d'adhan (README « Amélioration prière — mode d'alerte »), fichier + nouveau build à venir.
+- Amélioration prière « Choix de l'adhan » (catalogue d'adhans, choix + écoute dans les réglages) : livré, catalogue vide en attendant les fichiers (README « Amélioration prière — choix de l'adhan »).

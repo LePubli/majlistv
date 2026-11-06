@@ -11,7 +11,9 @@ import { METHOD_IDS, PRAYERS, fmtTime } from '@/lib/prayer/prayerTimes';
 import { askExactAlarms, exactAlarmsAllowed, notificationPermission, PermState } from '@/lib/notifications';
 import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Panel, Txt } from '@/components/ui';
-import { ALERT_MODES, type AlertMode } from '@/lib/prayerAlert';
+import { ALERT_MODES, pickAdhan, type AlertMode } from '@/lib/prayerAlert';
+import { ADHANS } from '@/lib/adhans.generated';
+import { useVideoPlayer } from 'expo-video';
 import { prayerNameKey, todayRows } from '@/components/PrayerPill';
 
 function Row({ label, help, value, onChange }: { label: string; help?: string; value: boolean; onChange: (v: boolean) => void }) {
@@ -25,6 +27,38 @@ function Row({ label, help, value, onChange }: { label: string; help?: string; v
     </View>
   );
 }
+// Choix de l'adhan : une ligne par adhan du catalogue, avec écoute d'essai (fichier embarqué dans l'application).
+function AdhanPicker() {
+  const { t, isRTL } = useSession();
+  const prayer = usePrayer();
+  const player = useVideoPlayer(null, (p) => { p.loop = false; });
+  const [listening, setListening] = useState<string | null>(null);
+  const chosen = pickAdhan(ADHANS, prayer.adhanId);
+  useEffect(() => () => { try { player.pause(); } catch { /* lecteur libéré */ } }, [player]);
+  const listen = async (id: string, asset: number) => {
+    if (listening === id) { player.pause(); setListening(null); return; }
+    setListening(id);
+    try { await player.replaceAsync(asset); player.play(); } catch { setListening(null); }
+  };
+  if (ADHANS.length === 0) return null;
+  return (
+    <View style={{ gap: 8 }}>
+      <Txt weight="bold" style={{ textAlign: isRTL ? 'right' : 'left' }}>{t('np.adhanChoose')}</Txt>
+      {ADHANS.map((a) => {
+        const on = chosen?.id === a.id;
+        return (
+          <View key={a.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Chip label={`${on ? '✓ ' : ''}${a.name}`} active={on} onPress={() => void prayer.setAdhanId(a.id)} />
+            </View>
+            <Button variant="dark" label={listening === a.id ? t('np.adhanStop') : t('np.adhanPreview')} onPress={() => void listen(a.id, a.asset)} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export function PrayerSettingsPanel() {
   const { t, locale, isRTL } = useSession();
   const prayer = usePrayer();
@@ -69,6 +103,7 @@ export function PrayerSettingsPanel() {
                   ))}
                 </View>
                 <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeHelp')}</Txt>
+                {prayer.mode === 'adhan' ? <AdhanPicker /> : null}
                 {Platform.OS === 'ios' ? <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeIos')}</Txt> : null}
               </View>
             ) : null}

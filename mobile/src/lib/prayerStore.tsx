@@ -19,6 +19,7 @@ export type PrayerCfg = { defaultEnabled?: boolean; pill?: boolean; method?: str
 const K_PREFS = 'mejliss.prayerPrefs';
 const K_NOTIFY = 'mejliss.prayerNotify';
 const K_MODE = 'mejliss.prayerAlertMode';
+const K_ADHAN = 'mejliss.prayerAdhan';
 const K_DONE = 'mejliss.prayerDone';
 const K_ASKED = 'mejliss.notifAsked';
 const get = async (k: string) => { try { return await SecureStore.getItemAsync(k); } catch { return null; } };
@@ -42,6 +43,9 @@ type PrayerCtx = {
   /** Mode d'alerte à l'heure de la prière : silencieux, vibreur ou adhan (la notification s'affiche toujours). */
   mode: AlertMode;
   setMode: (m: AlertMode) => Promise<void>;
+  /** Adhan choisi dans le catalogue (id), ou null = premier / son par défaut. */
+  adhanId: string | null;
+  setAdhanId: (id: string) => Promise<void>;
   /** Prières déjà traitées (« J'ai prié » / « Continuer » / fin de la pause) : { clé: instant }. */
   done: Record<string, number>;
   markDone: (key: string) => void;
@@ -57,6 +61,7 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
   const [stored, setStored] = useState<Stored>(null);
   const [notify, setNotifyState] = useState(true);
   const [mode, setModeState] = useState<AlertMode>('adhan');
+  const [adhanId, setAdhanIdState] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
   const [dayKey, setDayKey] = useState('');
@@ -67,6 +72,7 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
       setStored(parse<Stored>(await get(K_PREFS), null));
       setNotifyState((await get(K_NOTIFY)) !== '0'); // activé par défaut
       setModeState(readAlertMode(await get(K_MODE)));
+      setAdhanIdState((await get(K_ADHAN)) || null);
       setDone(parse(await get(K_DONE), {}));
       setLoaded(true);
     })();
@@ -122,18 +128,20 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
 
   const setMode = useCallback(async (m: AlertMode) => { setModeState(m); await put(K_MODE, m); }, []);
 
+  const setAdhanId = useCallback(async (id: string) => { setAdhanIdState(id); await put(K_ADHAN, id); }, []);
+
   const markDone = useCallback((key: string) => {
     setDone((d) => { const n = rememberDone(d, key, Date.now()); void put(K_DONE, JSON.stringify(n)); return n; });
   }, []);
 
   // Rappels sur le téléphone : reprogrammés à chaque changement de réglage ou de langue, et à chaque retour dans l'application.
-  const syncRef = useRef({ on, notify, prefs, locale, mode });
-  syncRef.current = { on, notify, prefs, locale, mode };
+  const syncRef = useRef({ on, notify, prefs, locale, mode, adhanId });
+  syncRef.current = { on, notify, prefs, locale, mode, adhanId };
   const resync = useCallback(() => {
     const s = syncRef.current;
-    void syncPrayerNotifications({ enabled: s.on && s.notify, prefs: s.prefs, locale: s.locale, mode: s.mode });
+    void syncPrayerNotifications({ enabled: s.on && s.notify, prefs: s.prefs, locale: s.locale, mode: s.mode, adhanId: s.adhanId });
   }, []);
-  useEffect(() => { if (loaded && sessionReady) resync(); }, [loaded, sessionReady, on, notify, mode, prefs, locale, resync]);
+  useEffect(() => { if (loaded && sessionReady) resync(); }, [loaded, sessionReady, on, notify, mode, adhanId, prefs, locale, resync]);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (st) => { if (st === 'active') resync(); });
     return () => sub.remove();
@@ -151,8 +159,8 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [sessionReady, loaded, user?.id, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const value = useMemo<PrayerCtx>(() => ({ on, ready: loaded, prefs, cfg, items, save, locate, notify, setNotify, mode, setMode, done, markDone, deviceTz }),
-    [on, loaded, prefs, cfg, items, save, locate, notify, setNotify, mode, setMode, done, markDone, deviceTz]);
+  const value = useMemo<PrayerCtx>(() => ({ on, ready: loaded, prefs, cfg, items, save, locate, notify, setNotify, mode, setMode, adhanId, setAdhanId, done, markDone, deviceTz }),
+    [on, loaded, prefs, cfg, items, save, locate, notify, setNotify, mode, setMode, adhanId, setAdhanId, done, markDone, deviceTz]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

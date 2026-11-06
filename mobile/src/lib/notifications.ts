@@ -13,7 +13,8 @@ import { translate } from './i18n';
 import { planPrayers } from './prayerPlan';
 import { fmtTime } from './prayer/prayerTimes';
 import type { buildSchedule } from './prayer/prayerLogic';
-import { ADHAN_FILE, channelFor, contentSound, playSoundInForeground, type AlertMode } from './prayerAlert';
+import { channelFor, contentSound, pickAdhan, playSoundInForeground, type AlertMode } from './prayerAlert';
+import { ADHANS } from './adhans.generated';
 
 type Prefs = Parameters<typeof buildSchedule>[1];
 const PUSH_TOKEN_KEY = 'mejliss.pushToken';
@@ -32,7 +33,10 @@ export async function configureNotifications(): Promise<void> {
     await Notifications.deleteNotificationChannelAsync(CHANNEL_PRAYER).catch(() => {}); // ancien canal unique
     await Notifications.setNotificationChannelAsync(channelFor('silent'), { name: 'Prière — silencieux', importance: A.DEFAULT, sound: null, enableVibrate: false, lightColor: '#E8A93A' }).catch(() => {});
     await Notifications.setNotificationChannelAsync(channelFor('vibrate'), { name: 'Prière — vibreur', importance: A.HIGH, sound: null, enableVibrate: true, vibrationPattern: [0, 500, 250, 500, 250, 500], lightColor: '#E8A93A' }).catch(() => {});
-    await Notifications.setNotificationChannelAsync(channelFor('adhan'), { name: 'Prière — adhan', importance: A.HIGH, sound: ADHAN_FILE || 'default', enableVibrate: true, vibrationPattern: [0, 250, 250, 250], lightColor: '#E8A93A' }).catch(() => {});
+    // Un canal par adhan du catalogue (ou un canal « son par défaut » si le catalogue est vide).
+    const adhanOpts = { importance: A.HIGH, enableVibrate: true, vibrationPattern: [0, 250, 250, 250], lightColor: '#E8A93A' };
+    if (ADHANS.length === 0) await Notifications.setNotificationChannelAsync(channelFor('adhan'), { name: 'Prière — adhan', sound: 'default', ...adhanOpts }).catch(() => {});
+    for (const a of ADHANS) await Notifications.setNotificationChannelAsync(channelFor('adhan', a), { name: `Prière — adhan (${a.name})`, sound: a.file, ...adhanOpts }).catch(() => {});
     await Notifications.setNotificationChannelAsync(CHANNEL_NEWS, { name: 'Actualités', importance: Notifications.AndroidImportance.DEFAULT }).catch(() => {});
   }
 }
@@ -60,20 +64,21 @@ export async function askExactAlarms(): Promise<void> {
  * (Re)programme les rappels de prière. Annule d'abord les anciens rappels de prière (jamais les autres notifications),
  * puis programme ceux des 7 prochains jours si `enabled` et si les notifications sont autorisées. Renvoie le nombre programmé.
  */
-export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; mode?: AlertMode; nowMs?: number }): Promise<number> {
+export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; mode?: AlertMode; adhanId?: string | null; nowMs?: number }): Promise<number> {
   try {
     const pending = await Notifications.getAllScheduledNotificationsAsync();
     await Promise.all(pending.filter((n) => (n.content.data as { kind?: string } | null)?.kind === 'prayer')
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
     if (!o.enabled || (await notificationPermission(false)) !== 'granted') return 0;
     const mode: AlertMode = o.mode ?? 'adhan';
+    const adhan = pickAdhan(ADHANS, o.adhanId);
     const plan = planPrayers(o.nowMs ?? Date.now(), o.prefs);
     for (const p of plan) {
       const name = translate(o.locale, ('pry' + p.id[0].toUpperCase() + p.id.slice(1)) as never);
       await Notifications.scheduleNotificationAsync({
         identifier: `prayer:${p.key}`,
-        content: { title: translate(o.locale, 'np.prayerTitle'), body: translate(o.locale, 'np.prayerBody', { name, time: fmtTime(p.at, o.prefs.loc.tz, o.locale) }), data: { kind: 'prayer', path: '/', mode }, sound: contentSound(mode) },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: channelFor(mode) },
+        content: { title: translate(o.locale, 'np.prayerTitle'), body: translate(o.locale, 'np.prayerBody', { name, time: fmtTime(p.at, o.prefs.loc.tz, o.locale) }), data: { kind: 'prayer', path: '/', mode }, sound: contentSound(mode, adhan) },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: channelFor(mode, adhan) },
       });
     }
     return plan.length;

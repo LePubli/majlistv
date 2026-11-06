@@ -7610,3 +7610,28 @@ Application : publier la mise à jour OTA habituelle (aucun nouveau build).
 **Exemples.** Mode Vibreur : à l'heure d'Asr, la notification s'affiche et le téléphone vibre trois fois, sans son. Mode Silencieux : notification seule.
 
 **Testé / non testé (honnête).** Testé : règles de choix du canal et du son, lecture du réglage, textes FR/EN/AR (tests `prayerAlert.test.ts`), typage. **Non testé** : le rendu réel sur Android et iPhone (vibration, mode silencieux du téléphone). iPhone : l'API ne permet pas un « vibreur seul » ; le mode Vibreur y est une notification sans son.
+
+## Amélioration prière — choix de l'adhan (06/11)
+
+**Description.** En mode « Adhan » (Prière → Réglages), l'utilisateur voit la liste des adhans disponibles, en choisit un (✓) et peut l'**écouter** avant. Son choix sert à toutes les notifications de prière de son téléphone. S'il n'y a qu'un seul adhan, c'est celui-là ; s'il n'y en a aucun, le son par défaut du téléphone est utilisé et le sélecteur n'apparaît pas.
+
+**Limite importante.** Le son d'une notification est embarqué **dans l'application** (Android et iPhone) : on ne peut pas ajouter un adhan à distance depuis l'admin. **Ajouter ou retirer un adhan = un nouveau build** de l'application. Les silencieux / vibreur / choix restent, eux, en OTA.
+
+**Ajouter un adhan (à faire à chaque nouvel adhan).**
+1. Copier le MP3 dans `mobile/assets/sounds/` (nom en minuscules, sans espace, ex. `makkah.mp3`). Droits d'utilisation obligatoires ; idéalement moins de 30 s (l'iPhone coupe au-delà).
+2. Ajouter une ligne dans `mobile/assets/sounds/adhans.json` :
+```
+[
+  { "id": "makkah", "name": "La Mecque", "file": "makkah.mp3" }
+]
+```
+3. Lancer, depuis le dossier `mobile` : `node scripts/sync-adhans.mjs` (met à jour `app.json` et `src/lib/adhans.generated.ts`).
+4. Commit, push, puis nouveau build EAS. (Les tests refusent un catalogue non synchronisé.)
+
+**Prérequis / déploiement.** Site et API inchangés. Application : nouveau build uniquement quand un adhan est ajouté.
+
+**Debug.** « adhan introuvable » au sync : le fichier n'est pas dans `assets/sounds/` ou le nom diffère (casse, espace). Mauvais son sur Android : un canal garde son son d'origine, désinstaller/réinstaller ou vider les réglages de notification de l'application après un changement de fichier de même nom (donner un nouvel `id` à un adhan modifié). Pas de son : voir « Debug » du mode d'alerte.
+
+**Exemples.** Deux adhans (La Mecque, Médine) : l'utilisateur coche Médine, appuie sur « Écouter » pour l'entendre, et la prochaine notification de prière jouera Médine.
+
+**Testé / non testé (honnête).** Testé : script de synchronisation (aller-retour avec deux faux adhans, puis retour au catalogue vide), choix de l'adhan et du canal, textes FR/EN/AR, typage. **Non testé** : l'écoute d'essai et le son à l'heure de prière sur de vrais téléphones, et aucun vrai MP3 n'a encore été intégré.
