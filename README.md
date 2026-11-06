@@ -7660,3 +7660,17 @@ bash /root/verify-deploy.sh
 **Testé / non testé (honnête).** Testé : règles (heure, fenêtre de 90 s, une seule fois, prières décochées, lever du soleil), lecture du réglage, catalogue identique à l'app, présence des fichiers, compilation du site. **Non testé** : le son réel sur Chrome, Safari et Firefox (règles de lecture automatique), sur téléphone et onglet en arrière-plan.
 
 **Correctif (06/11) — noms de fichiers.** Android refuse les tirets dans le nom d'un son de notification (« Resource name is not valid ») : le build de l'application avait échoué. Les fichiers s'appellent maintenant `adhan_1.mp3` … `adhan_5.mp3` (soulignés, pas de tiret) ; à respecter pour tout nouvel adhan. Vérifié par un vrai « expo prebuild android » (les 5 sons sont bien copiés dans l'application).
+
+## Correctif lecteur — plein écran en paysage et compteur (06/11)
+
+**Description.** Dans l'application Android (vidéos YouTube / Vimeo / Dailymotion, mais aussi vidéos hébergées) : en **tournant le téléphone en paysage**, la vidéo passe en plein écran réel, sans barre d'état ni la barre « Retenir / Noter » qui cachait le bas de l'image et les sous-titres. **Toucher l'image** affiche des commandes (lecture/pause, barre de progression, −10 s, chapitres, vitesse) en bandeau translucide, qui se masque seul après 3,5 s. Revenir en portrait rétablit la fiche normale (onglets, notes). Le compteur de temps d'une vidéo intégrée n'est plus perturbé par le lecteur natif.
+
+**Prérequis / déploiement.** Aucun : mise à jour **OTA** de l'application (pas de nouveau build, API et site inchangés). Fermer complètement l'application puis la rouvrir deux fois.
+
+**Fichiers.** `mobile/src/app/talk/[id].tsx`, test `mobile/tests/talkLandscape.test.ts`.
+
+**Debug.** Pas de plein écran : l'orientation automatique de Android est-elle activée (réglages rapides) ? Compteur encore faux : noter la plateforme (YouTube, Vimeo ou Dailymotion) et l'instant, pour examiner les messages de temps de la page intégrée (`mobile/src/lib/embed.ts`).
+
+**Exemples.** Vidéo YouTube en portrait → tourner en paysage : plein écran ; toucher : le bandeau de commandes apparaît ; 3,5 s plus tard il disparaît.
+
+**Testé / non testé (honnête).** Testé : typage, export de l'application, structure du code (tests). **Non testé** : sur téléphone réel (rotation, comportement du plein écran YouTube/Vimeo, sous-titres YouTube). La cause du saut du compteur est une hypothèse (lecteur natif concurrent) ; si le défaut persiste après la mise à jour, il faudra examiner les messages de temps de la page intégrée. Pas de bouton plein écran en portrait pour YouTube/Vimeo : il faudrait un module natif de rotation (nouveau build).

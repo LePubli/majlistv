@@ -1,7 +1,8 @@
 // Fiche et lecteur d'une vidéo, fidèle à la PWA : lecteur (vidéo du serveur, archive.org, YouTube/Vimeo intégrés),
 // actions, « Apprendre », onglets (résumé, chapitres, transcription, notes, à propos), série, « À suivre », aperçu verrouillé.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, BackHandler, Pressable, ScrollView, Share, View } from 'react-native';
+import { AppState, BackHandler, Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -80,6 +81,16 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   const [following, setFollowing] = useState(false);
   const [fs, setFs] = useState(false); // plein écran natif : les commandes d'origine reviennent
   const [moreOpen, setMoreOpen] = useState(false);
+  // Paysage = plein écran : vidéo seule, commandes qui apparaissent au toucher puis se masquent (rien ne cache l'image ni les sous-titres).
+  const { width: winW, height: winH } = useWindowDimensions();
+  const [showCtl, setShowCtl] = useState(false);
+  const ctlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const poke = () => {
+    setShowCtl(true);
+    if (ctlTimer.current) clearTimeout(ctlTimer.current);
+    ctlTimer.current = setTimeout(() => setShowCtl(false), 3500);
+  };
+  useEffect(() => () => { if (ctlTimer.current) clearTimeout(ctlTimer.current); }, []);
   const [tab, setTab] = useState<TabKey | null>(null);
   const scroll = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null);
   const tabsY = useRef(0);
@@ -132,6 +143,8 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
     [api, talk.id, user?.id, locked], // eslint-disable-line react-hooks/exhaustive-deps
   );
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
+    // Vidéo YouTube / Vimeo : le temps vient de la page intégrée ; le lecteur natif (sans source) renvoie 0 et ferait sauter le compteur.
+    if (src.embed) return;
     setPos(currentTime);
     tracker.update(currentTime * 1000, (player.duration || 0) * 1000, player.playing);
     // Fichier public (archive.org) : l'aperçu est limité ici, le serveur ne peut pas le couper.
@@ -207,6 +220,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   }
 
   const playable = !!src.uri || !!src.embed;
+  const landscape = playable && winW > winH && !cast;
   const pip = !!src.uri && !audioMode && isPictureInPictureSupported();
   const nextEp = series.data?.next;
   const durSec = (src.embed ? embedDuration : player.duration) || talk.durationSeconds || 0;
@@ -228,10 +242,11 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
   const sheetTile = (node: React.ReactNode, key: string) => <View key={key} style={{ width: '48%' }}>{node}</View>;
 
   return (
-    <SafeAreaView style={[screenStyle, dirStyle]} edges={['top', 'bottom']}>
-      {/* Lecteur épinglé en haut */}
-      <View style={{ backgroundColor: '#000' }}>
-        <View style={{ aspectRatio: 16 / 9, width: '100%', backgroundColor: '#000', justifyContent: 'center' }}>
+    <SafeAreaView style={[screenStyle, dirStyle, landscape ? { backgroundColor: '#000' } : null]} edges={landscape ? ['left', 'right'] : ['top', 'bottom']}>
+      {landscape ? <StatusBar hidden /> : null}
+      {/* Lecteur épinglé en haut (plein écran en paysage) */}
+      <View style={landscape ? { flex: 1, backgroundColor: '#000' } : { backgroundColor: '#000' }}>
+        <View style={landscape ? { flex: 1, width: '100%', backgroundColor: '#000', justifyContent: 'center' } : { aspectRatio: 16 / 9, width: '100%', backgroundColor: '#000', justifyContent: 'center' }}>
           {src.embed ? (
             <ExternalVideo ref={embedRef} kind={src.embed.kind} id={src.embed.id} playerId={config?.dailymotionPlayerId} startSeconds={startMs / 1000} limitSeconds={locked ? talk.previewSeconds || 120 : 0} onMessage={onEmbed} />
           ) : src.uri && !audioMode ? (
@@ -273,17 +288,31 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
               <Button label={t('fromStart')} variant="dark" onPress={() => seekMs(0)} />
             </View>
           ) : null}
+          {landscape ? (
+            <>
+              {/* Toucher l'image : afficher / masquer les commandes (pour une vidéo YouTube/Vimeo, la page intégrée n'a pas de commandes) */}
+              {showCtl ? null : <Pressable accessibilityRole="button" accessibilityLabel={t('talk.play')} onPress={poke} style={{ position: 'absolute', top: 0, bottom: 0, start: 0, end: 0 }} />}
+              {showCtl ? (
+                <View style={{ position: 'absolute', start: 0, end: 0, bottom: 0, backgroundColor: veil(0.78) }}>
+                  <PlayerControls positionSec={pos} durationSec={durSec} playing={isPlaying} speed={speed} hasChapters={chapters.length > 0}
+                    onToggle={() => { poke(); if (isPlaying) pause(); else play(); }} onSeekSec={(sec) => { poke(); seekMs(sec * 1000); }} onPrev={() => { poke(); goPrev(); }} onNext={() => { poke(); goNext(); }} onSpeed={() => { poke(); cycleSpeed(); }} />
+                </View>
+              ) : null}
+            </>
+          ) : null}
+          {landscape && !showCtl ? null : (
           <View style={{ position: 'absolute', top: 8, start: 8 }}>
             <IconButton label={t('common.close')} onPress={goBack} style={{ backgroundColor: veil(0.55), borderWidth: 0 }}>
               <Feather name={isRTL ? 'arrow-right' : 'arrow-left'} size={20} color={colors.text} />
             </IconButton>
           </View>
-          {chIndex >= 0 && chapters[chIndex] ? (
+          )}
+          {!landscape && chIndex >= 0 && chapters[chIndex] ? (
             <View pointerEvents="none" style={{ position: 'absolute', bottom: 8, start: 8, maxWidth: '70%', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: veil(0.7) }}>
               <Txt weight="bold" size={12} color={colors.goldLight} numberOfLines={1}>{t('talk.chapNow', { n: chIndex + 1, title: chapters[chIndex].t })}</Txt>
             </View>
           ) : null}
-          {src.uri && !audioMode && !cast ? (
+          {!landscape && src.uri && !audioMode && !cast ? (
             <View style={{ position: 'absolute', bottom: 4, end: 4 }}>
               <IconButton label={t('talk.fullscreen')} onPress={() => { void videoRef.current?.enterFullscreen(); }} style={{ backgroundColor: veil(0.55), borderWidth: 0 }}>
                 <Feather name="maximize" size={20} color={colors.text} />
@@ -294,12 +323,12 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
       </View>
 
       {/* Commandes d'étude collées sous le lecteur */}
-      {playable ? (
+      {playable && !landscape ? (
         <PlayerControls positionSec={pos} durationSec={durSec} playing={isPlaying} speed={speed} hasChapters={chapters.length > 0}
           onToggle={() => (isPlaying ? pause() : play())} onSeekSec={(sec) => seekMs(sec * 1000)} onPrev={goPrev} onNext={goNext} onSpeed={cycleSpeed} />
       ) : null}
 
-      <ScrollView ref={scroll as never} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 96 + insets.bottom }}>
+      <ScrollView ref={scroll as never} style={landscape ? { display: 'none' } : undefined} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 96 + insets.bottom }}>
         {/* Titre compact + favori + « plus d'actions » */}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
           <View style={{ flex: 1, gap: 4 }}>
@@ -349,10 +378,10 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
       </ScrollView>
 
       {/* Barre du bas : retenir / noter */}
-      <View style={{ position: 'absolute', start: 0, end: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 + insets.bottom, flexDirection: 'row', gap: 10, backgroundColor: veil(0.94), borderTopWidth: 1, borderTopColor: colors.border }}>
+      {landscape ? null : <View style={{ position: 'absolute', start: 0, end: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 + insets.bottom, flexDirection: 'row', gap: 10, backgroundColor: veil(0.94), borderTopWidth: 1, borderTopColor: colors.border }}>
         {quizOn && !locked ? <View style={{ flex: 1 }}><Button label={t('talk.quizBtn')} onPress={goQuiz} /></View> : null}
         <View style={{ flex: 1 }}><Button label={t('talk.noteBtn')} variant="dark" onPress={() => needLogin(openNote)} /></View>
-      </View>
+      </View>}
 
       {/* « Plus d'actions » */}
       {/* Pas de <Modal> : le pont Chromecast / AirPlay doit rester monté (il pilote le lecteur) même feuille fermée. */}
