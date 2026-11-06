@@ -2,11 +2,11 @@
 // (mobile/assets/sounds/adhans.json) ; les fichiers sont servis depuis /adhan/ (public/adhan).
 // Réglage propre à ce navigateur (localStorage), jamais envoyé au serveur.
 export const ADHANS = [
-  { id: 'adhan-1', name: 'Adhan 1', file: 'adhan-1.mp3' },
-  { id: 'adhan-2', name: 'Adhan 2', file: 'adhan-2.mp3' },
-  { id: 'adhan-3', name: 'Adhan 3', file: 'adhan-3.mp3' },
-  { id: 'adhan-4', name: 'Adhan 4', file: 'adhan-4.mp3' },
-  { id: 'adhan-5', name: 'Adhan 5', file: 'adhan-5.mp3' },
+  { id: 'adhan-1', name: 'Adhan 1', file: 'adhan_1.mp3' },
+  { id: 'adhan-2', name: 'Adhan 2', file: 'adhan_2.mp3' },
+  { id: 'adhan-3', name: 'Adhan 3', file: 'adhan_3.mp3' },
+  { id: 'adhan-4', name: 'Adhan 4', file: 'adhan_4.mp3' },
+  { id: 'adhan-5', name: 'Adhan 5', file: 'adhan_5.mp3' },
 ];
 export const ADHAN_KEY = 'prayerAdhan';
 export const ADHAN_DONE_KEY = 'prayerAdhanDone';

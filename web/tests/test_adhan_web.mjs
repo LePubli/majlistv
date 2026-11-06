@@ -7,7 +7,7 @@ assert.deepEqual(readAdhanPrefs('pas du json'), { mode: 'silent', id: 'adhan-1' 
 assert.deepEqual(readAdhanPrefs(JSON.stringify({ mode: 'adhan', id: 'adhan-3' })), { mode: 'adhan', id: 'adhan-3' });
 assert.equal(readAdhanPrefs(JSON.stringify({ mode: 'adhan', id: 'inconnu' })).id, 'adhan-1');
 assert.equal(readAdhanPrefs(JSON.stringify({ mode: 'bruit' })).mode, 'silent');
-assert.equal(pickAdhan('adhan-2').file, 'adhan-2.mp3'); assert.equal(adhanUrl(pickAdhan('adhan-2')), '/adhan/adhan-2.mp3');
+assert.equal(pickAdhan('adhan-2').file, 'adhan_2.mp3'); assert.equal(adhanUrl(pickAdhan('adhan-2')), '/adhan/adhan_2.mp3');
 
 const T = Date.UTC(2026, 10, 6, 12, 0);
 const items = [{ id: 'fajr', at: T - 6 * 3600e3 }, { id: 'sunrise', at: T - 5 * 3600e3 }, { id: 'dhuhr', at: T }, { id: 'asr', at: T + 3 * 3600e3 }];

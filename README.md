@@ -7653,8 +7653,10 @@ bash /root/verify-deploy.sh
 ```
 **Ajouter un adhan** : mêmes étapes que pour l'application (README « choix de l'adhan »), puis copier aussi le MP3 dans `web/public/adhan/` et ajouter la ligne dans `web/lib/adhanWeb.js` ; le test `test_adhan_web.mjs` échoue si les deux catalogues diffèrent. Sur le site, aucun nouveau build d'application n'est nécessaire (simple redéploiement).
 
-**Debug.** Rien ne sonne : le réglage est-il sur « Jouer l'adhan » ? la prière est-elle cochée ? a-t-on cliqué sur la page depuis l'ouverture (règle du navigateur) ? le navigateur coupe-t-il le son du site (icône de l'onglet) ? Fichier non lu : vérifier que `https://majlisstv.le-publicitaire.fr/adhan/adhan-1.mp3` répond.
+**Debug.** Rien ne sonne : le réglage est-il sur « Jouer l'adhan » ? la prière est-elle cochée ? a-t-on cliqué sur la page depuis l'ouverture (règle du navigateur) ? le navigateur coupe-t-il le son du site (icône de l'onglet) ? Fichier non lu : vérifier que `https://majlisstv.le-publicitaire.fr/adhan/adhan_1.mp3` répond.
 
 **Exemples.** Réglage « Adhan 2 » : à 12:00 (Dhuhr), si le site est ouvert dans un onglet, l'adhan 2 joue et le bandeau « Adhan en cours » apparaît.
 
 **Testé / non testé (honnête).** Testé : règles (heure, fenêtre de 90 s, une seule fois, prières décochées, lever du soleil), lecture du réglage, catalogue identique à l'app, présence des fichiers, compilation du site. **Non testé** : le son réel sur Chrome, Safari et Firefox (règles de lecture automatique), sur téléphone et onglet en arrière-plan.
+
+**Correctif (06/11) — noms de fichiers.** Android refuse les tirets dans le nom d'un son de notification (« Resource name is not valid ») : le build de l'application avait échoué. Les fichiers s'appellent maintenant `adhan_1.mp3` … `adhan_5.mp3` (soulignés, pas de tiret) ; à respecter pour tout nouvel adhan. Vérifié par un vrai « expo prebuild android » (les 5 sons sont bien copiés dans l'application).
