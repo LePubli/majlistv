@@ -7637,3 +7637,24 @@ Application : publier la mise à jour OTA habituelle (aucun nouveau build).
 **Testé / non testé (honnête).** Testé : script de synchronisation (aller-retour avec deux faux adhans, puis retour au catalogue vide), choix de l'adhan et du canal, textes FR/EN/AR, typage. **Non testé** : l'écoute d'essai et le son à l'heure de prière sur de vrais téléphones, et aucun vrai MP3 n'a encore été intégré.
 
 **État au 06/11 :** 5 adhans intégrés (`adhan-1` à `adhan-5`, noms « Adhan 1 » à « Adhan 5 », à renommer dans `adhans.json` si tu veux de vrais noms ; renommer l'affichage = OTA seulement si l'`id` et le fichier ne changent pas, mais `adhans.json` est lu à la construction : prévoir un build). Durées de 2 min 32 à 3 min 46 : **Android** joue le fichier en entier ; **iPhone** n'accepte que 30 s maximum pour un son de notification et retombe sinon sur le son par défaut : si l'adhan complet est voulu sur iPhone, il faudra une version de 30 s (au choix d'Epok, car couper un adhan est une décision de contenu).
+
+## Amélioration prière — adhan sur le site (06/11)
+
+**Description.** Page Prière → Réglages (et Mon compte → Prière) : bloc « Adhan sur ce navigateur ». **Silencieux** par défaut (le site ne sonne jamais sans que le visiteur l'ait demandé) ou **Jouer l'adhan à l'heure de la prière**, avec le choix parmi les 5 adhans et un bouton « Écouter ». Seules les prières cochées dans les réglages comptent (pas le lever du soleil). Si les notifications du navigateur sont autorisées (bouton proposé), une notification s'affiche aussi. Un bandeau « Adhan en cours » avec un bouton ■ permet d'arrêter.
+
+**Limites (inhérentes à un site).** Le site ne peut sonner que **s'il est ouvert** ; fermé, il ne peut rien : c'est le rôle de l'application. Les navigateurs refusent le son tant que la page n'a reçu aucun clic/toucher ; sur téléphone, un onglet en arrière-plan peut être endormi. L'adhan ne sonne que dans les 90 secondes après l'heure de la prière (pas si on ouvre la page plus tard). Réglage propre au navigateur, non synchronisé avec le compte.
+
+**Prérequis / déploiement.** Aucun changement d'API ni de base. DockPanel → Git Deploy → Redeploy **majlistv-web** seulement, puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+**Ajouter un adhan** : mêmes étapes que pour l'application (README « choix de l'adhan »), puis copier aussi le MP3 dans `web/public/adhan/` et ajouter la ligne dans `web/lib/adhanWeb.js` ; le test `test_adhan_web.mjs` échoue si les deux catalogues diffèrent. Sur le site, aucun nouveau build d'application n'est nécessaire (simple redéploiement).
+
+**Debug.** Rien ne sonne : le réglage est-il sur « Jouer l'adhan » ? la prière est-elle cochée ? a-t-on cliqué sur la page depuis l'ouverture (règle du navigateur) ? le navigateur coupe-t-il le son du site (icône de l'onglet) ? Fichier non lu : vérifier que `https://majlisstv.le-publicitaire.fr/adhan/adhan-1.mp3` répond.
+
+**Exemples.** Réglage « Adhan 2 » : à 12:00 (Dhuhr), si le site est ouvert dans un onglet, l'adhan 2 joue et le bandeau « Adhan en cours » apparaît.
+
+**Testé / non testé (honnête).** Testé : règles (heure, fenêtre de 90 s, une seule fois, prières décochées, lever du soleil), lecture du réglage, catalogue identique à l'app, présence des fichiers, compilation du site. **Non testé** : le son réel sur Chrome, Safari et Firefox (règles de lecture automatique), sur téléphone et onglet en arrière-plan.

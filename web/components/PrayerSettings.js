@@ -1,11 +1,58 @@
 'use client';
 // Réglages de la prière (étape 23a) : utilisés par la page /priere et par l'onglet « Prière » de Mon compte.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { searchCities } from '../lib/prayerCities';
+import { ADHANS, ADHAN_KEY, adhanUrl, readAdhanPrefs } from '../lib/adhanWeb';
 import { METHOD_IDS, PRAYERS, fmtTime, civilDate } from '../lib/prayerTimes';
 
 const nameKey = (id) => 'pry' + id[0].toUpperCase() + id.slice(1);
+
+// Adhan sur ce navigateur : silencieux (par défaut) ou adhan à l'heure de la prière quand le site est ouvert ; choix parmi le catalogue, avec écoute.
+function AdhanSettings({ t }) {
+  const [p, setP] = useState({ mode: 'silent', id: ADHANS[0].id });
+  const [listening, setListening] = useState(null);
+  const [perm, setPerm] = useState('default');
+  const au = useRef(null);
+  useEffect(() => {
+    try { setP(readAdhanPrefs(localStorage.getItem(ADHAN_KEY))); } catch { /* stockage indisponible */ }
+    try { if ('Notification' in window) setPerm(Notification.permission); else setPerm('unsupported'); } catch { setPerm('unsupported'); }
+    return () => { if (au.current) au.current.pause(); };
+  }, []);
+  const save = (patch) => {
+    const n = { ...p, ...patch }; setP(n);
+    try { localStorage.setItem(ADHAN_KEY, JSON.stringify(n)); window.dispatchEvent(new Event('adhan-prefs')); } catch { /* ignoré */ }
+  };
+  const listen = (a) => {
+    if (au.current) au.current.pause();
+    if (listening === a.id) { setListening(null); return; }
+    const x = new Audio(adhanUrl(a)); au.current = x; setListening(a.id);
+    x.addEventListener('ended', () => setListening(null));
+    x.play().catch(() => setListening(null));
+  };
+  const ask = async () => { try { setPerm(await Notification.requestPermission()); } catch { /* ignoré */ } };
+  return (
+    <fieldset className="pry-fs">
+      <legend>{t('adhTitle')}</legend>
+      <p className="meta small">{t('adhHelp')}</p>
+      <label className="chk"><input type="radio" name="adh-mode" checked={p.mode === 'silent'} onChange={() => save({ mode: 'silent' })} /> <span>{t('adhSilent')}</span></label>
+      <label className="chk"><input type="radio" name="adh-mode" checked={p.mode === 'adhan'} onChange={() => save({ mode: 'adhan' })} /> <span>{t('adhOn')}</span></label>
+      {p.mode === 'adhan' && (
+        <>
+          <p><b>{t('adhChoose')}</b></p>
+          {ADHANS.map((a) => (
+            <div key={a.id} className="pry-row">
+              <label className="chk"><input type="radio" name="adh-id" checked={p.id === a.id} onChange={() => save({ id: a.id })} /> <span>{a.name}</span></label>
+              <button type="button" className="btn ghost small" onClick={() => listen(a)}>{listening === a.id ? t('adhStop') : t('adhListen')}</button>
+            </div>
+          ))}
+          {perm === 'default' && <button type="button" className="btn ghost small" onClick={ask}>{t('adhNotif')}</button>}
+          {perm === 'granted' && <p className="meta small">{t('adhNotifOn')}</p>}
+        </>
+      )}
+    </fieldset>
+  );
+}
 
 export default function PrayerSettings() {
   const { prayer, t, locale } = useApp();
@@ -31,6 +78,8 @@ export default function PrayerSettings() {
       <label className="chk"><input type="checkbox" role="switch" checked={prefs.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> <span>{t('prySetPause')}</span></label>
       {!prefs.enabled && <p className="meta small">{t('prySetOff')}</p>}
       <label className="chk"><input type="checkbox" role="switch" checked={prefs.pill} onChange={(e) => set({ pill: e.target.checked })} /> <span>{t('prySetPill')}</span></label>
+
+      <AdhanSettings t={t} />
 
       <fieldset className="pry-fs">
         <legend>{t('prySetPlace')}</legend>

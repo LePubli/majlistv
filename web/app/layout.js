@@ -30,6 +30,7 @@ import { webFeatures, hasWebModule } from '../lib/modules'; // étape M3b : fonc
 import TopBar from '../components/TopBar';
 import PwaRegister from '../components/PwaRegister'; // étape 22a : site installable
 import SeasonTheme from '../components/SeasonTheme'; // étape 45H : thème de saison
+import AdhanPlayer from '../components/AdhanPlayer'; // adhan à l'heure de la prière (site ouvert)
 import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
 
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,7 @@ export default async function RootLayout({ children }) {
           <PwaRegister />
           <SeasonTheme />
           <PrayerGate />
+          <AdhanPlayer />
           <ResponsiveTables />
           <SkipLink />
           <TopBar />

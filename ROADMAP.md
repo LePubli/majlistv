@@ -618,3 +618,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Correctif Coran « lecture continue » (lecteur global site + app, notification écran verrouillé, mini-barre, nouvelles tentatives) : livré (README « Correctif Coran »), à valider sur téléphone.
 - Amélioration prière « Mode d'alerte » (silencieux / vibreur / adhan, app Android + iPhone) : livré sans fichier d'adhan (README « Amélioration prière — mode d'alerte »), fichier + nouveau build à venir.
 - Amélioration prière « Choix de l'adhan » (catalogue d'adhans, choix + écoute dans les réglages) : livré, catalogue vide en attendant les fichiers (README « Amélioration prière — choix de l'adhan »).
+- Amélioration prière « Adhan sur le site » (silencieux / adhan quand le site est ouvert, 5 adhans au choix avec écoute) : livré (README « Amélioration prière — adhan sur le site »), à valider sur navigateurs réels.
