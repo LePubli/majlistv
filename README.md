@@ -7592,3 +7592,21 @@ Application : publier la mise à jour OTA habituelle (aucun nouveau build).
 **Exemples.** Lancer ▶ au verset 1 d'Al-Kahf, retourner à l'accueil : la barre « Al-Kahf — Verset N » reste, la récitation continue ; verrouiller : la notification affiche le titre et le récitateur.
 
 **Testé / non testé (honnête).** Testé : règles de relance et d'enchaînement (site `web/tests/test_quran_player.mjs`, app `mobile/tests/quranQueue.test.ts`), typage de l'application, compilation du site. **Non testé** : le comportement réel sur Android et iPhone (écran verrouillé, enchaînement entre fichiers) et la lecture depuis les serveurs de récitation (inaccessibles depuis mon environnement). Si le téléphone coupe encore entre deux versets, il faudra un lecteur à file d'attente natif (nouveau build).
+
+## Amélioration prière — mode d'alerte : silencieux, vibreur ou adhan (06/11)
+
+**Description.** Dans l'application, Prière → Réglages → « À l'heure de la prière » : trois choix, **Silencieux**, **Vibreur**, **Adhan**. La notification s'affiche toujours ; seul ce qui l'accompagne change. Réglage propre au téléphone, appliqué aussitôt (les 7 jours de rappels sont reprogrammés). Par défaut : Adhan (comme avant).
+
+**Prérequis.** Aucun pour silencieux et vibreur (mise à jour OTA). Pour un **vrai adhan** : un fichier MP3 dont tu as les droits (idéalement moins de 30 secondes pour l'iPhone, qui coupe au-delà) et un **nouveau build** (le son d'une notification est embarqué dans l'application).
+
+**Fonctionnement technique.** Android : un canal par mode (`prayer_silent`, `prayer_vibrate`, `prayer_adhan`), car le son d'un canal ne change plus après sa création. iPhone : le son est porté par la notification. Application ouverte, le son n'est joué qu'en mode Adhan. Fichiers : `mobile/src/lib/prayerAlert.ts`, `notifications.ts`, `prayerStore.tsx`, `components/PrayerSettingsPanel.tsx`, textes `np.mode*`.
+
+**Intégrer l'adhan (quand le fichier est fourni).** 1) copier le MP3 dans `mobile/assets/sounds/adhan.mp3` ; 2) `app.json` → plugin `expo-notifications` → `"sounds": ["./assets/sounds/adhan.mp3"]` ; 3) `ADHAN_FILE = 'adhan.mp3'` dans `prayerAlert.ts` ; 4) nouveau build EAS.
+
+**Déploiement.** Site et API inchangés. Application : OTA habituelle (silencieux / vibreur / adhan avec son par défaut du téléphone).
+
+**Debug.** Pas de son ni de vibration : vérifier l'autorisation des notifications, le mode « Ne pas déranger » et, sur Android, Paramètres → Applications → Mejliss TV → Notifications → « Prière — vibreur / adhan ». Heure décalée : activer les alarmes exactes (déjà proposé dans le même écran).
+
+**Exemples.** Mode Vibreur : à l'heure d'Asr, la notification s'affiche et le téléphone vibre trois fois, sans son. Mode Silencieux : notification seule.
+
+**Testé / non testé (honnête).** Testé : règles de choix du canal et du son, lecture du réglage, textes FR/EN/AR (tests `prayerAlert.test.ts`), typage. **Non testé** : le rendu réel sur Android et iPhone (vibration, mode silencieux du téléphone). iPhone : l'API ne permet pas un « vibreur seul » ; le mode Vibreur y est une notification sans son.

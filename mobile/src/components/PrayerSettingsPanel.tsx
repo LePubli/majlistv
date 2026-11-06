@@ -2,6 +2,7 @@
 // Mêmes réglages et mêmes limites que la page /priere du site (web/components/PrayerSettings.js).
 import React, { useEffect, useState } from 'react';
 import { AppState, Linking, Switch, TextInput, View } from 'react-native';
+import { Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { usePrayer } from '@/lib/prayerStore';
@@ -10,6 +11,7 @@ import { METHOD_IDS, PRAYERS, fmtTime } from '@/lib/prayer/prayerTimes';
 import { askExactAlarms, exactAlarmsAllowed, notificationPermission, PermState } from '@/lib/notifications';
 import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Panel, Txt } from '@/components/ui';
+import { ALERT_MODES, type AlertMode } from '@/lib/prayerAlert';
 import { prayerNameKey, todayRows } from '@/components/PrayerPill';
 
 function Row({ label, help, value, onChange }: { label: string; help?: string; value: boolean; onChange: (v: boolean) => void }) {
@@ -58,6 +60,18 @@ export function PrayerSettingsPanel() {
           <Panel>
             <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('np.title')}</Txt>
             <Row label={t('np.prayer')} help={t('np.prayerHelp')} value={prayer.notify} onChange={(v) => { void prayer.setNotify(v).then(refresh); }} />
+            {prayer.notify ? (
+              <View style={{ gap: 8 }}>
+                <Txt weight="bold" style={sideAlign}>{t('np.mode')}</Txt>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {ALERT_MODES.map((m: AlertMode) => (
+                    <Chip key={m} label={`${prayer.mode === m ? '✓ ' : ''}${t(('np.mode' + m[0].toUpperCase() + m.slice(1)) as never)}`} active={prayer.mode === m} onPress={() => void prayer.setMode(m)} />
+                  ))}
+                </View>
+                <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeHelp')}</Txt>
+                {Platform.OS === 'ios' ? <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeIos')}</Txt> : null}
+              </View>
+            ) : null}
             {prayer.notify && perm !== 'granted' ? (
               <View style={{ gap: 8 }}>
                 <Txt size={13} color={colors.goldLight}>{t('np.denied')}</Txt>

@@ -616,3 +616,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 4.1 « Corrections des sous-titres » (suggestions des membres, relecture humaine dans Studio, corrections conservées après retraduction ; module `corrections`, site + application) : livré (README « Amélioration 4.1 »), à valider avec de vrais membres.
 - Amélioration 8.1 « Résumé hebdomadaire pour les parents » : déjà livré à l'étape 26.3 ; ajout « ce qui a été appris » dans l'e-mail (README « Amélioration 8.1 »).
 - Correctif Coran « lecture continue » (lecteur global site + app, notification écran verrouillé, mini-barre, nouvelles tentatives) : livré (README « Correctif Coran »), à valider sur téléphone.
+- Amélioration prière « Mode d'alerte » (silencieux / vibreur / adhan, app Android + iPhone) : livré sans fichier d'adhan (README « Amélioration prière — mode d'alerte »), fichier + nouveau build à venir.

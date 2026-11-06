@@ -13,6 +13,7 @@ import { translate } from './i18n';
 import { planPrayers } from './prayerPlan';
 import { fmtTime } from './prayer/prayerTimes';
 import type { buildSchedule } from './prayer/prayerLogic';
+import { ADHAN_FILE, channelFor, contentSound, playSoundInForeground, type AlertMode } from './prayerAlert';
 
 type Prefs = Parameters<typeof buildSchedule>[1];
 const PUSH_TOKEN_KEY = 'mejliss.pushToken';
@@ -22,11 +23,16 @@ export const CHANNEL_NEWS = 'news';
 /** À appeler une fois au démarrage : comportement en premier plan et canaux Android. */
 export async function configureNotifications(): Promise<void> {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+    handleNotification: async (n) => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: playSoundInForeground(n.request.content.data as { kind?: unknown; mode?: unknown } | null), shouldSetBadge: false }),
   });
   if (Platform.OS === 'android') {
-    // Les noms des canaux sont visibles dans les réglages du téléphone ; leur son et leur importance se règlent là-bas.
-    await Notifications.setNotificationChannelAsync(CHANNEL_PRAYER, { name: 'Prière', importance: Notifications.AndroidImportance.HIGH, vibrationPattern: [0, 250, 250, 250], lightColor: '#E8A93A' }).catch(() => {});
+    // Les noms des canaux sont visibles dans les réglages du téléphone. Un canal par mode d'alerte de prière (silencieux / vibreur / adhan) :
+    // le son et la vibration d'un canal Android ne se changent plus après sa création, d'où trois canaux.
+    const A = Notifications.AndroidImportance;
+    await Notifications.deleteNotificationChannelAsync(CHANNEL_PRAYER).catch(() => {}); // ancien canal unique
+    await Notifications.setNotificationChannelAsync(channelFor('silent'), { name: 'Prière — silencieux', importance: A.DEFAULT, sound: null, enableVibrate: false, lightColor: '#E8A93A' }).catch(() => {});
+    await Notifications.setNotificationChannelAsync(channelFor('vibrate'), { name: 'Prière — vibreur', importance: A.HIGH, sound: null, enableVibrate: true, vibrationPattern: [0, 500, 250, 500, 250, 500], lightColor: '#E8A93A' }).catch(() => {});
+    await Notifications.setNotificationChannelAsync(channelFor('adhan'), { name: 'Prière — adhan', importance: A.HIGH, sound: ADHAN_FILE || 'default', enableVibrate: true, vibrationPattern: [0, 250, 250, 250], lightColor: '#E8A93A' }).catch(() => {});
     await Notifications.setNotificationChannelAsync(CHANNEL_NEWS, { name: 'Actualités', importance: Notifications.AndroidImportance.DEFAULT }).catch(() => {});
   }
 }
@@ -54,19 +60,20 @@ export async function askExactAlarms(): Promise<void> {
  * (Re)programme les rappels de prière. Annule d'abord les anciens rappels de prière (jamais les autres notifications),
  * puis programme ceux des 7 prochains jours si `enabled` et si les notifications sont autorisées. Renvoie le nombre programmé.
  */
-export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; nowMs?: number }): Promise<number> {
+export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; mode?: AlertMode; nowMs?: number }): Promise<number> {
   try {
     const pending = await Notifications.getAllScheduledNotificationsAsync();
     await Promise.all(pending.filter((n) => (n.content.data as { kind?: string } | null)?.kind === 'prayer')
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
     if (!o.enabled || (await notificationPermission(false)) !== 'granted') return 0;
+    const mode: AlertMode = o.mode ?? 'adhan';
     const plan = planPrayers(o.nowMs ?? Date.now(), o.prefs);
     for (const p of plan) {
       const name = translate(o.locale, ('pry' + p.id[0].toUpperCase() + p.id.slice(1)) as never);
       await Notifications.scheduleNotificationAsync({
         identifier: `prayer:${p.key}`,
-        content: { title: translate(o.locale, 'np.prayerTitle'), body: translate(o.locale, 'np.prayerBody', { name, time: fmtTime(p.at, o.prefs.loc.tz, o.locale) }), data: { kind: 'prayer', path: '/' }, sound: true },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: CHANNEL_PRAYER },
+        content: { title: translate(o.locale, 'np.prayerTitle'), body: translate(o.locale, 'np.prayerBody', { name, time: fmtTime(p.at, o.prefs.loc.tz, o.locale) }), data: { kind: 'prayer', path: '/', mode }, sound: contentSound(mode) },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: channelFor(mode) },
       });
     }
     return plan.length;
