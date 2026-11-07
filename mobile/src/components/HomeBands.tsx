@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import type { FormatItem, KidsHome } from '@/lib/types';
+import { fmtWhen, type LiveEvent } from '@/lib/events';
+import { EventBadge, useNow } from './EventParts';
 import { colors, radius } from '@/lib/theme';
 import { minutesLabel, thumbOf } from '@/lib/media';
 import { Button, Txt } from './ui';
@@ -75,6 +77,36 @@ export function KidsBand({ data }: { data: KidsHome }) {
         })}
       </View>
       <Button label={t('kdBandCta')} onPress={open} style={{ backgroundColor: '#FFC83D' }} />
+    </View>
+  );
+}
+
+
+/** Accueil : « Prochains événements en direct » (3 au plus). Invisible sans événement ou si la fonction est coupée. */
+export function EventsBand() {
+  const { api, t, locale, feat, user } = useSession();
+  const on = feat('events');
+  const list = useAsync(async () => (on ? (await api.get<LiveEvent[]>('/events', { scope: 'upcoming' }, false).catch(() => [])).filter((e) => e.phase !== 'cancelled').slice(0, 3) : []), [on, user?.id]);
+  const items = list.data ?? [];
+  const now = useNow(items.length > 0);
+  if (!on || items.length === 0) return null;
+  return (
+    <View style={{ gap: 10, paddingHorizontal: GUTTER }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Txt weight="extrabold" size={18} accessibilityRole="header">{t('evn.band')}</Txt>
+        <Pressable accessibilityRole="link" onPress={() => router.navigate('/events')}><Txt size={13} color={colors.goldLight}>{t('evn.seeAll')}</Txt></Pressable>
+      </View>
+      {items.map((e) => (
+        <Pressable key={e.id} accessibilityRole="link" accessibilityLabel={e.title} onPress={() => router.navigate({ pathname: '/events/[id]', params: { id: e.id } })}
+          style={({ pressed }) => ({ gap: 6, padding: 14, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel, opacity: pressed ? 0.85 : 1 })}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <EventBadge ev={e} now={now} />
+            <Txt size={12} color={colors.muted}>{fmtWhen(e.startsAt, locale)}</Txt>
+          </View>
+          <Txt weight="bold" size={15} numberOfLines={2}>{e.title}</Txt>
+          {e.speaker ? <Txt size={13} color={colors.text2} numberOfLines={1}>{e.speaker}</Txt> : null}
+        </Pressable>
+      ))}
     </View>
   );
 }

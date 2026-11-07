@@ -7855,3 +7855,22 @@ Le message indique la date et l'heure **en heure de Paris**, dans la langue du m
 **Exemple.** Événement samedi 20 h, membre inscrit mercredi : il reçoit le rappel « jour » vendredi dès le passage suivant après 20 h (24 h avant), puis « ça commence » à partir de 19 h 30 samedi.
 
 **Testé.** `api/tests/test_events_reminders.mjs` (base réelle, envois simulés : fenêtres, pas de doublon, annulation, compte désactivé, brouillon, deux langues, sans canal, e-mail seul, modèles FR/EN/AR) et `test_events.py` (inscription tardive, heure déplacée) — tous deux dans la suite GitHub ; tests de notifications existants relancés. **Non testé** : un vrai envoi (SMTP, téléphone, navigateur) et le passage réel de la tâche de fond toutes les 5 minutes (la logique est testée avec une heure simulée).
+
+
+## Événements en direct — étape 4 sur 4 : application mobile (Amélioration 4.2, 07/11)
+
+**Description.** L'application affiche les événements en direct comme le site :
+- **Menu ☰ → « Événements en direct »** (`/events`) : onglets « À venir » et « Passés », pastille « En direct » ou décompte, rappel activé, rediffusion indiquée ; la liste se relit toutes les minutes.
+- **Fiche** (`/events/<id>`) : décompte ; le **direct YouTube / Vimeo** s'ouvre dans l'écran à l'heure d'ouverture (même lecteur intégré que les autres vidéos externes) ; « Me rappeler » (inscription, même rappel que sur le site : notifications du téléphone + e-mail) ; « Ajouter à mon agenda » (ouvre le fichier `.ics`) ; « Voir la rediffusion » quand elle est rattachée. Un visiteur non connecté est envoyé vers la connexion.
+- **Accueil** : bande « Prochains événements en direct » (3 au plus), invisible s'il n'y en a pas ou si la fonction est coupée.
+- Textes FR / EN / AR (préfixe `evn.*`), arabe de droite à gauche.
+
+**Prérequis.** Étapes 1 à 3 déployées. **Aucun module natif ajouté** : mise à jour en ligne (OTA), pas de nouvel APK.
+
+**Déploiement.** Rien côté serveur. Publier la mise à jour de l'application comme d'habitude (Admin → Mises à jour de l'application, ou ta procédure habituelle). Sur le téléphone : fermer et rouvrir l'application deux fois pour recevoir la mise à jour.
+
+**Debug.** Menu sans « Événements en direct » : la fonction est coupée (Admin → Fonctions) ou l'application n'a pas encore reçu la mise à jour. Lecteur noir : la vidéo YouTube du direct n'autorise pas l'intégration. « Ajouter à mon agenda » : le téléphone ouvre le fichier `.ics` avec son application Agenda ; sans application associée, rien ne s'ajoute (limite connue : l'ajout direct à l'agenda demanderait un module natif, donc un nouvel APK).
+
+**Exemple.** Menu ☰ → Événements en direct → toucher un événement → « Me rappeler » ; à l'heure, la fiche affiche le direct.
+
+**Testé.** `mobile/tests/events.test.ts` (décompte, dates FR/EN, relecture de la fiche, identifiants du lecteur, textes dans les 3 langues, branchements) ; `npm run check` (tsc + 249 tests) ; `npx expo export` (le paquet se construit). **Non testé** : l'application sur un vrai téléphone (écrans, direct dans la WebView, ouverture du `.ics`, arabe de droite à gauche à l'écran).

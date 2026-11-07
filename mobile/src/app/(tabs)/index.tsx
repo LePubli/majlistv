@@ -19,7 +19,7 @@ import { Rail } from '@/components/Rail';
 import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
-import { FormatTiles, KidsBand } from '@/components/HomeBands';
+import { EventsBand, FormatTiles, KidsBand } from '@/components/HomeBands';
 import { TodayBlock } from '@/components/TodayBlock';
 import { FridayBand, SeasonBand } from '@/components/SeasonBands';
 import { StartCards, TourModal } from '@/components/Onboarding';
@@ -75,6 +75,7 @@ export default function HomeScreen() {
 
         {(laterList.data ?? []).length > 0 ? <Rail title={t('wlRow')} items={laterList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'later' } })} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
+        <EventsBand />
         {user ? <FormatTiles /> : null}
 
         {rows.length === 0 ? <Txt color={colors.muted} style={{ paddingHorizontal: 16 }}>{t('noTalks')}</Txt> : null}
