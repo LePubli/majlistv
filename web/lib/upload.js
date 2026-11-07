@@ -13,10 +13,11 @@ function putPart(url, blob, onProgress) {
 }
 
 // Renvoie l'identifiant d'upload à associer à la vidéo.
-export async function uploadFile(file, call, onProgress) {
-  const start = await call('/uploads', {
+// opts (facultatif) : autre famille d'envois (ex. Audyn) — { startPath, startBody, abortPath(id), completePath(id) }.
+export async function uploadFile(file, call, onProgress, opts = {}) {
+  const start = await call(opts.startPath || '/uploads', {
     method: 'POST',
-    body: JSON.stringify({ filename: file.name, size: file.size, contentType: file.type }),
+    body: JSON.stringify(opts.startBody || { filename: file.name, size: file.size, contentType: file.type }),
   });
   if (!start.ok) throw new Error(start.status === 413 ? 'tooBig' : 'start');
   const { id, partSize, urls } = start.data;
@@ -47,10 +48,10 @@ export async function uploadFile(file, call, onProgress) {
   try {
     await Promise.all([worker(), worker(), worker()]);
   } catch (err) {
-    await call('/uploads/' + id, { method: 'DELETE' });
+    await call(opts.abortPath ? opts.abortPath(id) : '/uploads/' + id, { method: 'DELETE' });
     throw err;
   }
-  const done = await call(`/uploads/${id}/complete`, { method: 'POST', body: JSON.stringify({ parts }) });
+  const done = await call(opts.completePath ? opts.completePath(id) : `/uploads/${id}/complete`, { method: 'POST', body: JSON.stringify({ parts }) });
   if (!done.ok) throw new Error('complete');
-  return id;
+  return opts.completePath ? done.data : id;
 }

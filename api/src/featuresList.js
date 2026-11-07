@@ -44,6 +44,8 @@ export const FEATURES = [
     rules: [{ re: '^/(collections|studio/collections)(/|$)' }] },
   { id: 'books', group: 'catalog', label: 'Ouvrages', hint: 'Livres et PDF liés aux vidéos',
     rules: [{ re: '^/(books|studio/books|studio/books-targets|talks/[^/]+/books|series/[^/]+/books)(/|$)' }] },
+  { id: 'audyn', group: 'catalog', label: 'Audyn — livres audio et histoires du soir', hint: 'Contenus audio avec chapitres : livres audio pour les adultes, histoires du soir pour les enfants. Formule « Apprentissage », aperçu gratuit',
+    rules: [{ re: '^/(audyn|studio/audyn|studio/audyn-rights)(/|$)' }] },
   // Apprentissage
   { id: 'quiz', group: 'learning', label: 'Quiz', hint: 'Questions après chaque vidéo, avec explication',
     rules: [{ re: '^/(talks/[^/]+/(studio/)?quiz|studio/quiz|me/quiz)(/|$)' }] },
@@ -117,7 +119,7 @@ export const FEATURES = [
 // Étape M3a : module qui porte chaque fonction (dossier api/src/modules/<module>). Si ce dossier est absent, la fonction est
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' };
-const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
+const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'audyn', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
   'channels', 'shorts', 'follow', 'citations', 'prayer', 'appupdates', 'offline', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 

@@ -1,0 +1,14 @@
+{
+  "id": "audyn",
+  "name": "Audyn — livres audio et histoires du soir",
+  "version": "1.0.0",
+  "description": "Contenus audio : livres audio pour les adultes (Audyn) et histoires du soir pour les enfants. Envoi des fichiers MP3 / M4A, chapitres, couverture, attestation de droits, aperçu gratuit ; réservé à la formule « Apprentissage ».",
+  "feature": "audyn",
+  "requires": [],
+  "settings": [
+    { "key": "preview_seconds", "type": "number", "label": "Aperçu gratuit (secondes)", "def": "120", "min": 10, "max": 900,
+      "help": "Durée écoutable sans abonnement « Apprentissage », sur le premier chapitre. Elle est imposée par le serveur (le fichier envoyé est coupé), pas seulement par l'application." },
+    { "key": "max_mb", "type": "number", "label": "Poids maximum d'un fichier audio (Mo)", "def": "500", "min": 5, "max": 2000,
+      "help": "Un livre se découpe en chapitres : un fichier par chapitre. Le stockage (Garage) est plafonné à 30 Go au total." }
+  ]
+}

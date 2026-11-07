@@ -7674,3 +7674,29 @@ bash /root/verify-deploy.sh
 **Exemples.** Vidéo YouTube en portrait → tourner en paysage : plein écran ; toucher : le bandeau de commandes apparaît ; 3,5 s plus tard il disparaît.
 
 **Testé / non testé (honnête).** Testé : typage, export de l'application, structure du code (tests). **Non testé** : sur téléphone réel (rotation, comportement du plein écran YouTube/Vimeo, sous-titres YouTube). La cause du saut du compteur est une hypothèse (lecteur natif concurrent) ; si le défaut persiste après la mise à jour, il faudra examiner les messages de temps de la page intégrée. Pas de bouton plein écran en portrait pour YouTube/Vimeo : il faudrait un module natif de rotation (nouveau build).
+
+
+## Audyn — livres audio et histoires du soir, étape 1 sur 4 : socle et gestion (07/11)
+
+**Description.** Première brique de l'idée 8.2. **Audyn** = livres audio pour adultes ; **Histoires du soir** = histoires audio pour l'espace Kids. Cette étape ne livre que le **socle et la gestion par l'administrateur** : **aucun lecteur n'est encore visible pour les membres** (lecteur de l'application = étape 2, site = étape 3, contrôle parental par enfant + ligne dans l'e-mail hebdomadaire = étape 4). Studio → **Audyn** : créer un livre ou une histoire (titre, auteur / narrateur, description, langue, public : adultes / enfants / les deux), envoyer une couverture, envoyer des **chapitres audio** (MP3 ou M4A, un fichier par chapitre, envoi par morceaux comme les vidéos), réordonner, renommer, supprimer, publier. **Chaque envoi exige de cocher l'attestation de droits** ; elle est journalisée (Studio → API `/studio/audyn-rights`) avec l'administrateur, la date et le fichier. **Aperçu gratuit** : le premier chapitre est écoutable sans abonnement sur la durée réglée (120 s par défaut) ; la coupure est **imposée par le serveur** (le fichier envoyé est tronqué), pas seulement par l'application. Écoute complète réservée aux membres de la formule **Apprentissage** (et aux administrateurs). Les contenus « enfants » ne sont pas dans la liste publique adulte (ils seront servis par l'espace Kids à l'étape 4).
+
+**Prérequis.** Stockage Garage opérationnel (`S3_*` déjà en place). Nouvelle table créée automatiquement au démarrage de l'API (migration du module `audyn`). Fonction activable : Admin → Fonctions → « Audyn ». Réglages : Admin → Paramètres (module Audyn) : `Aperçu gratuit (secondes)` 10–900 (120), `Poids maximum d'un fichier (Mo)` 5–2000 (500).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy **majlistv-api** (migration au démarrage), puis **majlistv-web**. Rien d'autre (worker, transcripteur… inchangés ; application mobile inchangée à cette étape). Sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Résultat attendu : 0 échec.
+
+**Utilisation.** Admin → Fonctions → activer Audyn → Studio → Audyn → « Nouveau » → remplir → « Ajouter un chapitre » (cocher l'attestation, choisir le fichier) → glisser / flèches pour l'ordre → « Publié ».
+
+**Fichiers.** `api/src/modules/audyn/` (module.json, migrations/001_audyn.sql, lib.js, routes.js, index.js), `api/src/featuresList.js`, `web/lib/modules.js`, `web/modules/audyn/module.js`, `web/app/studio/(module-audyn)/audyn/…`, `web/lib/upload.js`, `web/lib/i18n.js` (clés `ay*`), tests `api/tests/test_audyn.py`, `api/tests/test_audyn_lib.mjs`, `web/tests/test_audyn_web.mjs`.
+
+**Debug.** « Stockage non configuré » à l'envoi : variables `S3_*` de l'API. Envoi refusé > 64 Mo d'un coup : normal côté Nginx, l'envoi se fait par morceaux de 32 Mo (vérifier `apply-limits.sh`). Aperçu qui s'arrête trop tôt/tard : pour du **M4A**, exporter en « faststart » (sinon préférer le MP3, recommandé). Chapitre sans durée : la durée est lue à l'envoi ; sinon l'aperçu est calculé à ~32 ko/s.
+
+**Exemples.** `GET /audyn` (livres publiés, adultes) ; `GET /audyn/:id/chapters/:cid/preview` (premières secondes, sans compte) ; `GET /audyn/:id/chapters/:cid/play` (lien d'écoute complet, membre Apprentissage).
+
+**Testé / non testé (honnête).** Testé : 73 contrôles de l'API contre un faux S3 (moto) — création, envoi par morceaux, attestation obligatoire + journal, ordre, aperçu tronqué, refus sans abonnement, journal d'audit ; tests unitaires ; construction du site. **Non testé** : sur le vrai Garage et derrière le vrai Nginx (limite 64 Mo) ; M4A non « faststart » ; aucune écoute réelle (pas de lecteur avant l'étape 2). Les tests de l'API sont ajoutés à la suite automatique GitHub.

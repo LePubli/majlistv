@@ -78,7 +78,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
 | 8.1 | **Résumé hebdomadaire pour les parents** par e-mail (temps passé, étoiles, ce qui a été appris) | Parents rassurés et fidèles | S–M | ★★ — **livrée** : rapport hebdomadaire déjà en place depuis l'étape 26.3 ; « ce qui a été appris » ajouté le 05/11 |
-| 8.2 | **Histoires audio du soir** et mode veille | Nouvel usage pour les familles | M | ★ |
+| 8.2 | **Histoires audio du soir** et mode veille (+ **Audyn**, livres audio adultes) | Nouvel usage pour les familles | M | ★ — **en cours** : étape 1/4 (socle + gestion) livrée ; lecteur app, site, contrôle parental à venir |
 | 8.3 | **Activités à imprimer** (coloriages, jeux) liées aux contenus | Prolonge l'apprentissage hors écran ; contenu partageable | S | ★ |
 
 ## Ce que je conseillerais en premier (7 étapes)
