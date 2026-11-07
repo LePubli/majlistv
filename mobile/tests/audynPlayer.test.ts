@@ -40,3 +40,28 @@ test('tous les textes aud.* existent en fr / en / ar', () => {
   assert.ok(used.size >= 30);
   for (const loc of ['fr', 'en', 'ar'] as const) for (const k of used) assert.ok((APP_DICT[loc] as Record<string, string>)[k], `${k} manquant en ${loc}`);
 });
+
+test('histoires du soir : écrans enfant, jeton enfant, temps compté à part, arrêt à la sortie', () => {
+  const layout = r('../src/app/kids/_layout.tsx');
+  assert.match(layout, /name="stories"/); assert.match(layout, /name="story\/\[id\]"/);
+  const p = r('../src/lib/audynPlayer.tsx');
+  assert.match(p, /\(book\.kids \? kidApi : api\)/);                 // les histoires passent par le jeton enfant
+  assert.match(p, /kidApi\.post\('\/kids\/stories\/ping'\)/);          // temps d'écoute compté à part
+  assert.match(p, /book\.kids && book\.autoStopMin/);                  // arrêt automatique réglé par le parent
+  assert.match(p, /if \(!kid && stRef\.current\.book\?\.kids\) stop\(\)/); // sortie de l'espace enfant = arrêt
+  const story = r('../src/app/kids/story/[id].tsx');
+  assert.match(story, /canSetTimer\(book\)/);                          // minuteur seulement si autorisé
+  assert.doesNotMatch(story, /pricing/);                                // jamais de lien d'abonnement pour un enfant
+  assert.match(r('../src/app/kids/home.tsx'), /feat\('audyn'\)/);
+  assert.match(r('../src/components/kids/parent/ParentProfile.tsx'), /StoriesSettings/);
+  assert.match(r('../src/components/AudynMiniBar.tsx'), /kids\/story\/\[id\]/);
+});
+
+test('textes aud.k* / aud.p* présents en fr / en / ar', () => {
+  const used = new Set<string>();
+  for (const f of ['../src/app/kids/stories.tsx', '../src/app/kids/story/[id].tsx', '../src/app/kids/home.tsx', '../src/components/kids/parent/ParentProfile.tsx']) {
+    for (const m of r(f).matchAll(/\bt\('(aud\.[A-Za-z0-9]+)'/g)) used.add(m[1]);
+  }
+  assert.ok(used.size >= 10);
+  for (const loc of ['fr', 'en', 'ar'] as const) for (const k of used) assert.ok((APP_DICT[loc] as Record<string, string>)[k], `${k} manquant en ${loc}`);
+});

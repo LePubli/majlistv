@@ -4751,3 +4751,8 @@ a.pn-ti:hover { text-decoration: underline; }
 body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 @media (max-width: 900px) { body:has(.ms-bar) .aw-bar { bottom: calc(70px + env(safe-area-inset-bottom)); } body:has(.ms-bar):has(.qpl-bar) .aw-bar { bottom: calc(142px + env(safe-area-inset-bottom)); } }
 .aw-dark { position: fixed; inset: 0; z-index: 200; background: #000; border: 0; color: #3a3a3a; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 48px; cursor: pointer; font: inherit; }
+
+/* Histoires du soir (espace Kids) : mêmes cartes que Audyn, aux couleurs de l'espace enfant */
+.kd-theme .aw-card, .kd-theme .aw-chapters button, .kd-theme .aw-ctl, .kd-theme .aw-box { background: var(--kd-surface, #16215F); border-color: var(--kd-line, #34459F); }
+.kd-theme .aw-btn { background: var(--kd-surface, #16215F); border-color: var(--kd-line, #34459F); min-width: 52px; height: 52px; }
+.kd-theme .aw-btn.gold { background: #FFC83D; color: #1B1300; }

@@ -9,9 +9,9 @@ import { kidReport } from './kidsControl.js';
 import { parisHour, todayParis, TZ } from './revision.js';
 
 const W = {
-  fr: { none: 'pas d\'activité', min: 'min', vid: (n) => `${n} vidéo${n > 1 ? 's' : ''} terminée${n > 1 ? 's' : ''}`, quiz: (n, a) => `${n} quiz (moyenne ${a} %)`, stars: (g, t) => `+${g} étoile${g > 1 ? 's' : ''} (total ${t})`, badges: (n) => `${n} badge${n > 1 ? 's' : ''}`, and: ' et ' },
-  en: { none: 'no activity', min: 'min', vid: (n) => `${n} video${n > 1 ? 's' : ''} finished`, quiz: (n, a) => `${n} quiz${n > 1 ? 'zes' : ''} (average ${a}%)`, stars: (g, t) => `+${g} star${g > 1 ? 's' : ''} (total ${t})`, badges: (n) => `${n} badge${n > 1 ? 's' : ''}`, and: ' and ' },
-  ar: { none: 'لا نشاط', min: 'دقيقة', vid: (n) => `${n} فيديو مكتمل`, quiz: (n, a) => `${n} اختبار (المعدل ${a}%)`, stars: (g, t) => `+${g} نجمة (المجموع ${t})`, badges: (n) => `${n} شارة`, and: ' و' },
+  fr: { none: 'pas d\'activité', min: 'min', vid: (n) => `${n} vidéo${n > 1 ? 's' : ''} terminée${n > 1 ? 's' : ''}`, quiz: (n, a) => `${n} quiz (moyenne ${a} %)`, stars: (g, t) => `+${g} étoile${g > 1 ? 's' : ''} (total ${t})`, badges: (n) => `${n} badge${n > 1 ? 's' : ''}`, and: ' et ', stories: (n) => `${n} min d'histoires du soir` },
+  en: { none: 'no activity', min: 'min', vid: (n) => `${n} video${n > 1 ? 's' : ''} finished`, quiz: (n, a) => `${n} quiz${n > 1 ? 'zes' : ''} (average ${a}%)`, stars: (g, t) => `+${g} star${g > 1 ? 's' : ''} (total ${t})`, badges: (n) => `${n} badge${n > 1 ? 's' : ''}`, and: ' and ', stories: (n) => `${n} min of bedtime stories` },
+  ar: { none: 'لا نشاط', min: 'دقيقة', vid: (n) => `${n} فيديو مكتمل`, quiz: (n, a) => `${n} اختبار (المعدل ${a}%)`, stars: (g, t) => `+${g} نجمة (المجموع ${t})`, badges: (n) => `${n} شارة`, and: ' و', stories: (n) => `${n} دقيقة من قصص النوم` },
 };
 const LEARNED = {
   fr: (t) => `↳ Appris cette semaine : ${t}`,
@@ -24,7 +24,8 @@ const lang = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String
 export function childLine(c, locale) {
   const w = W[lang(locale)];
   if (!c.active) return `${c.name} — ${w.none}`;
-  const bits = [`${Math.max(1, c.minutes)} ${w.min}`];
+  const bits = c.minutes > 0 || !c.storyMinutes ? [`${Math.max(1, c.minutes)} ${w.min}`] : [];
+  if (c.storyMinutes) bits.push(w.stories(c.storyMinutes)); // Audyn étape 4 : histoires du soir, comptées à part
   if (c.watched) bits.push(w.vid(c.watched));
   if (c.quizzes) bits.push(w.quiz(c.quizzes, c.avgPercent));
   if (c.starsGained) bits.push(w.stars(c.starsGained, c.stars));

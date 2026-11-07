@@ -11,6 +11,8 @@ export default function AudynControls() {
   const [sheet, setSheet] = useState(false);
   const timerText = au.timer.endOfChapter ? t('awSleepLeftEnd') : au.timerLeftMs != null ? t('awSleepLeft').replace('{t}', fmtClock(au.timerLeftMs / 1000)) : '';
   if (!au.book || !au.chapter) return null;
+  const kids = Boolean(au.book.kids);
+  const canTimer = !kids || au.book.timerAllowed; // espace Kids : minuteur réglable par l'enfant seulement si le parent l'a autorisé
   return (
     <section className="aw-ctl" aria-label={t('awPlayer')}>
       <div className="aw-now"><strong>{au.chapter.title}</strong></div>
@@ -28,14 +30,18 @@ export default function AudynControls() {
         <button type="button" className="aw-btn" aria-label={t('awNextCh')} onClick={au.next} disabled={au.index >= au.book.chapters.length - 1}>⏭</button>
       </div>
       {au.err && <p className="err" role="alert">{t('awErr')}</p>}
-      {au.previewEnded && <p className="aw-box" role="status">{t('awPreviewEnded')} <a className="btn" href="/pricing">{t('awSubscribe')}</a></p>}
+      {au.previewEnded && (kids
+        ? <p className="aw-box" role="status">{t('awkPreviewEnded')}</p>
+        : <p className="aw-box" role="status">{t('awPreviewEnded')} <a className="btn" href="/pricing">{t('awSubscribe')}</a></p>)}
       <div className="aw-row wrap">
         <button type="button" className="btn ghost" onClick={au.cycleSpeed}>{t('awSpeed').replace('{x}', String(au.speed))}</button>
-        <button type="button" className="btn ghost" aria-expanded={sheet} onClick={() => setSheet((v) => !v)}>🌙 {timerText || t('awSleep')}</button>
+        {canTimer
+          ? <button type="button" className="btn ghost" aria-expanded={sheet} onClick={() => setSheet((v) => !v)}>🌙 {timerText || t('awSleep')}</button>
+          : timerText && <span className="meta" role="status">🌙 {timerText}</span>}
         <button type="button" className="btn ghost" onClick={() => au.setDark(true)}>{t('awDark')}</button>
         <button type="button" className="btn ghost" onClick={au.stop}>{t('awStop')}</button>
       </div>
-      {sheet && (
+      {sheet && canTimer && (
         <div className="aw-sheet" role="group" aria-label={t('awSleep')}>
           <p className="meta">{t('awSleepHelp')}</p>
           <div className="aw-row wrap">

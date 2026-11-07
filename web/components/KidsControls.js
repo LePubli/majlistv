@@ -6,21 +6,24 @@ import { useApp } from './Providers';
 const LIMITS = [null, 15, 30, 45, 60, 90, 120, 180];
 
 export default function KidsControls({ profile, onClose }) {
-  const { t, call } = useApp();
+  const { t, call, feat } = useApp();
   const [c, setC] = useState(null);
   const [cat, setCat] = useState(null);
   const [msg, setMsg] = useState('');
+  const [st, setSt] = useState(null); // Audyn : histoires du soir
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([call(`/me/kids/profiles/${profile.id}/controls`), call(`/me/kids/profiles/${profile.id}/catalog`)]);
     if (a.ok) setC(a.data);
     if (b.ok) setCat(b.data);
-  }, [call, profile.id]);
+    if (feat('audyn')) { const c = await call(`/me/kids/profiles/${profile.id}/stories`); if (c.ok) setSt(c.data); }
+  }, [call, profile.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   if (!c) return <div className="panel kd-ctrl" />;
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 2500); };
   const put = async (body) => { const r = await call(`/me/kids/profiles/${profile.id}/controls`, { method: 'PUT', body: JSON.stringify(body) }); if (r.ok) { flash(t('kcSaved')); await load(); } };
   const setAllowed = async (ids, allowed) => { setCat((x) => (x ? { ...x, talks: x.talks.map((y) => (ids.includes(y.id) ? { ...y, allowed } : y)) } : x)); const r = await call(`/me/kids/profiles/${profile.id}/catalog`, { method: 'PUT', body: JSON.stringify({ talkIds: ids, allowed }) }); if (r.ok) flash(t('kcSaved')); await load(); };
+  const putStories = async (body) => { const r = await call(`/me/kids/profiles/${profile.id}/stories`, { method: 'PUT', body: JSON.stringify(body) }); if (r.ok) { flash(t('kcSaved')); setSt((x) => ({ ...x, ...r.data })); } };
   const talks = cat?.talks || [];
   const ids = talks.map((x) => x.id).slice(0, 200);
   const usedMin = Math.round(c.usedSec / 60);
@@ -33,6 +36,17 @@ export default function KidsControls({ profile, onClose }) {
           {LIMITS.map((m) => <option key={m ?? 'none'} value={m ?? ''}>{m == null ? t('kcNoLimit') : t('kcMin').replace('{n}', m)}</option>)}
         </select></label>
       <p className="meta small">{t('kcTimeHelp')} {t('kcUsedToday').replace('{n}', usedMin)}</p>
+
+      {st && (
+        <fieldset className="kd-pick" aria-label={t('awkNav')}><legend>🌙 {t('awkNav')}</legend>
+          <label className="kd-check"><input type="checkbox" checked={st.timerAllowed} onChange={(e) => putStories({ timerAllowed: e.target.checked })} /> <span>{t('awkTimerAllowed').replace('{name}', profile.name)}</span></label>
+          <label className="fld"><span>{t('awkAutoStop')}</span>
+            <select value={st.autoStopMin ?? ''} onChange={(e) => putStories({ autoStopMin: e.target.value === '' ? null : Number(e.target.value) })}>
+              {[null, 10, 20, 30, 45, 60].map((m) => <option key={m ?? 'none'} value={m ?? ''}>{m == null ? t('awkAutoOff') : t('kcMin').replace('{n}', m)}</option>)}
+            </select></label>
+          <p className="meta small">{t('awkHelp')} {t('awkWeek').replace('{n}', st.minutesWeek)}</p>
+        </fieldset>
+      )}
 
       <fieldset className="kd-pick"><legend>{t('kcCatalog')}</legend>
         <button type="button" className={c.catalogMode === 'all' ? 'pill on' : 'pill'} aria-pressed={c.catalogMode === 'all'} onClick={() => c.catalogMode !== 'all' && put({ catalogMode: 'all' })}>{t('kcModeAll')}</button>

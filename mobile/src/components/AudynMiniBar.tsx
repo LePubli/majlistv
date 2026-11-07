@@ -17,13 +17,13 @@ export function AudynMiniBar() {
   const insets = useSafeAreaInsets();
   const path = usePathname();
   const segments = useSegments() as string[];
-  if (!au.book || !au.chapter || path === '/audyn/player') return null;
+  if (!au.book || !au.chapter || path === '/audyn/player' || path === `/kids/story/${au.book.id}`) return null;
   const onTabs = segments[0] === '(tabs)';
   const bottom = (onTabs ? 58 : 0) + insets.bottom + 8 + (quran.current ? 64 : 0);
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 12, right: 12, bottom, zIndex: 50 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, paddingStart: 14, borderRadius: radius.panel, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.gold }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t('aud.open')} — ${au.book.title}`} onPress={() => router.push('/audyn/player')}
+        <Pressable accessibilityRole="button" accessibilityLabel={`${t('aud.open')} — ${au.book.title}`} onPress={() => (au.book?.kids ? router.push({ pathname: '/kids/story/[id]', params: { id: au.book.id } }) : router.push('/audyn/player'))}
           style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}>
           <Txt weight="bold" size={14} color={colors.goldLight} numberOfLines={1}>{au.book.title}</Txt>
           <Txt size={12} color={colors.text2} numberOfLines={1}>{au.chapter.title}</Txt>

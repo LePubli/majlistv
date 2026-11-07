@@ -28,7 +28,7 @@ export function ParentProfile({ profile, onChanged, initial = null }: { profile:
         {feat('ramadan') ? <KChip label={`🌙 ${t('kzOpen')}`} active={open === 'ramadan'} onPress={() => toggle('ramadan')} /> : null}
         <KChip label={`✏️ ${t('kdEdit')}`} active={open === 'profile'} onPress={() => toggle('profile')} />
       </View>
-      {open === 'time' ? <TimeAndCatalogMode profile={profile} onChanged={onChanged} /> : null}
+      {open === 'time' ? <><TimeAndCatalogMode profile={profile} onChanged={onChanged} /><StoriesSettings profile={profile} /></> : null}
       {open === 'catalog' ? <CatalogList profile={profile} onChanged={onChanged} /> : null}
       {open === 'actions' ? <ActionsManager profile={profile} /> : null}
       {open === 'ramadan' ? <KidRamadanParent profile={profile} /> : null}
@@ -67,6 +67,33 @@ function TimeAndCatalogMode({ profile, onChanged }: { profile: KidProfileFull; o
         <KChip label={t('kcModeSel')} active={c.catalogMode === 'selected'} onPress={() => c.catalogMode !== 'selected' && void put({ catalogMode: 'selected' })} />
       </View>
       <KTxt size={12} color={KC.muted}>{c.catalogMode === 'all' ? t('kcHelpAll') : t('kcHelpSel')}</KTxt>
+      {msg ? <KTxt size={13} color={KC.ok} accessibilityRole="alert">{msg}</KTxt> : null}
+    </View>
+  );
+}
+
+// Audyn étape 4 : histoires du soir — minuteur de sommeil autorisé à l'enfant, arrêt automatique réglé par le parent.
+type StoriesCfg = { timerAllowed: boolean; autoStopMin: number | null; minutesWeek: number };
+const AUTO_STOP = [null, 10, 20, 30, 45, 60] as const;
+function StoriesSettings({ profile }: { profile: KidProfileFull }) {
+  const { t, api, feat } = useSession();
+  const [c, setC] = useState<StoriesCfg | null>(null);
+  const { msg, flash } = useFlash();
+  const base = `/me/kids/profiles/${profile.id}/stories`;
+  useEffect(() => { if (feat('audyn')) void api.get<StoriesCfg>(base).then(setC).catch(() => setC(null)); }, [api, base, feat]);
+  if (!c) return null;
+  const put = async (body: { timerAllowed?: boolean; autoStopMin?: number | null }) => {
+    try { const r = await api.put<Pick<StoriesCfg, 'timerAllowed' | 'autoStopMin'>>(base, body); setC({ ...c, ...r }); flash(t('kcSaved')); } catch (e) { flash(e instanceof ApiError ? e.message : t('common.error')); }
+  };
+  return (
+    <View style={{ gap: 10 }}>
+      <KTxt weight="bold" color={KC.text2}>🌙 {t('aud.pTitle')}</KTxt>
+      <KChip label={`${c.timerAllowed ? '✓ ' : ''}${t('aud.pTimer', { name: profile.name })}`} active={c.timerAllowed} onPress={() => void put({ timerAllowed: !c.timerAllowed })} />
+      <KTxt weight="bold" color={KC.text2}>{t('aud.pAuto')}</KTxt>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {AUTO_STOP.map((m) => <KChip key={m ?? 'none'} label={m == null ? t('aud.pAutoOff') : t('kcMin', { n: m })} active={c.autoStopMin === m} onPress={() => c.autoStopMin !== m && void put({ autoStopMin: m })} />)}
+      </View>
+      <KTxt size={12} color={KC.muted}>{t('aud.pHelp')} {t('aud.pWeek', { n: c.minutesWeek })}</KTxt>
       {msg ? <KTxt size={13} color={KC.ok} accessibilityRole="alert">{msg}</KTxt> : null}
     </View>
   );

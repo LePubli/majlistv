@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   fmtClock, fmtLong, resumeKey, encodeResume, decodeResume, resumePoint, nextPlayable, prevPlayable,
-  startSleep, fadeVolume, sleepTick, nextSpeed, seekTarget, shouldSaveResume, NO_TIMER, type AudynChapter,
+  startSleep, fadeVolume, audynBase, audynResumeId, canSetTimer, STORY_PING_MS, sleepTick, nextSpeed, seekTarget, shouldSaveResume, NO_TIMER, type AudynChapter,
 } from '../src/lib/audyn';
 
 const ch = (id: string, playable = true, d = 600): AudynChapter => ({ id, title: id, durationSeconds: d, playable });
@@ -67,4 +67,14 @@ test('vitesse, saut et fréquence d\'enregistrement', () => {
   assert.equal(nextSpeed(1), 1.25); assert.equal(nextSpeed(2), 0.8); assert.equal(nextSpeed(3), 0.8);
   assert.equal(seekTarget(10, -15, 100), 0); assert.equal(seekTarget(95, 15, 100), 100); assert.equal(seekTarget(50, 15, 0), 65);
   assert.equal(shouldSaveResume(0, 5), false); assert.equal(shouldSaveResume(0, 10), true); assert.equal(shouldSaveResume(NaN, 1), true);
+});
+
+test('histoires du soir : adresses, reprise propre à l\'enfant, minuteur selon l\'autorisation du parent', () => {
+  assert.equal(audynBase({}), '/audyn'); assert.equal(audynBase({ kids: true }), '/kids/stories');
+  assert.equal(audynResumeId({ id: 'b1' }), 'b1'); assert.equal(audynResumeId({ id: 'b1', resumeId: 'kid-p1-b1' }), 'kid-p1-b1');
+  assert.notEqual(resumeKey(audynResumeId({ id: 'b1', resumeId: 'kid-p1-b1' })), resumeKey(audynResumeId({ id: 'b1', resumeId: 'kid-p2-b1' }))); // deux enfants, deux reprises
+  assert.equal(canSetTimer({}), true);                                   // adulte : toujours
+  assert.equal(canSetTimer({ kids: true }), false);                      // enfant : interdit par défaut
+  assert.equal(canSetTimer({ kids: true, timerAllowed: true }), true);   // enfant : si le parent l'accorde
+  assert.equal(STORY_PING_MS, 30000);
 });

@@ -69,6 +69,7 @@ export default function KidsHome() {
           <KTxt size={56} style={{ lineHeight: 68 }}>🌙</KTxt>
           <KTxt weight="extrabold" size={24} style={{ textAlign: 'center' }}>{t('kdTimeUpTitle')}</KTxt>
           <KTxt style={{ textAlign: 'center' }} color={KC.text2}>{t('kdTimeUpText')}</KTxt>
+          {feat('audyn') ? <KButton label={`🌙 ${t('aud.kTitle')}`} onPress={() => router.push('/kids/stories')} /> : null}
           <KButton label={t('kdLeave')} variant="soft" icon={<Feather name="lock" size={18} color={KC.text} />} onPress={() => router.push('/kids/exit')} />
         </View>
       </KScreen>
@@ -108,6 +109,7 @@ export default function KidsHome() {
         <View style={{ paddingHorizontal: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <KChip label={`${mine ? '✓ ' : ''}${t('kcOnlyMyAge')}`} active={mine} onPress={() => setMine(!mine)} />
           {feat('shorts') ? <KChip label={`🎬 ${t('shrTitle')}`} onPress={() => router.push('/kids/shorts')} /> : null}
+          {feat('audyn') ? <KChip label={`🌙 ${t('aud.kTitle')}`} onPress={() => router.push('/kids/stories')} /> : null}
           {sm ? <View style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 999, justifyContent: 'center', backgroundColor: KC.surface2, borderWidth: 2, borderColor: KC.accent }} accessibilityLabel={t('kdStarsTotal', { n: sm.stars })}>
             <KTxt weight="extrabold" size={15} color={KC.accent}>⭐ {t('kdStarsTotal', { n: sm.stars })}</KTxt></View> : null}
         </View>

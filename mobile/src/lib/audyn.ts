@@ -11,6 +11,11 @@ export type AudynDetail = {
   coverUrl: string | null; durationSeconds: number;
   access: { full: boolean; previewSeconds: number; learningRequired: boolean };
   chapters: AudynChapter[];
+  // Histoires du soir (espace Kids) : renseigné par l'écran enfant, jamais par l'API publique.
+  kids?: boolean;
+  resumeId?: string;           // clé de reprise propre à l'enfant
+  timerAllowed?: boolean;      // l'enfant peut régler le minuteur de sommeil (accordé par le parent)
+  autoStopMin?: number | null; // arrêt automatique réglé par le parent
 };
 export type AudynList = { items: AudynItem[]; categories: string[] };
 export type PlayInfo = { preview: boolean; url: string; limitSeconds?: number };
@@ -30,6 +35,15 @@ export function fmtLong(sec: number): string {
   if (h > 0) return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
   return `${m} min`;
 }
+
+/** Adresses de l'API : livres audio (adultes) ou histoires du soir (jeton enfant). */
+export const audynBase = (b: { kids?: boolean }) => (b.kids ? '/kids/stories' : '/audyn');
+/** Identifiant de reprise : propre à l'enfant pour les histoires du soir. */
+export const audynResumeId = (b: { id: string; resumeId?: string }) => b.resumeId || b.id;
+/** Le minuteur est-il réglable par la personne qui écoute ? (adulte : toujours ; enfant : si le parent l'a autorisé.) */
+export const canSetTimer = (b: { kids?: boolean; timerAllowed?: boolean }) => !b.kids || Boolean(b.timerAllowed);
+/** Temps d'écoute des histoires envoyé au serveur toutes les 30 s (compté à part pour le rapport du parent). */
+export const STORY_PING_MS = 30000;
 
 // ---------------------------------------------------------------- Reprise
 export type Resume = { cid: string; pos: number; at: number };

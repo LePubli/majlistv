@@ -31,7 +31,7 @@ export function KidCard({ x, t }) {
 }
 
 export default function KidsHome() {
-  const { t, call, kid } = useApp();
+  const { t, call, kid, feat } = useApp();
   const tab0 = useSearchParams().get('tab');
   const [d, setD] = useState(null);
   const [sum, setSum] = useState(null);
@@ -43,7 +43,8 @@ export default function KidsHome() {
     <main className="page kd-page kd-home">
       <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>
       <section className="kd-timeup" role="status"><p className="kd-moon" aria-hidden="true">🌙</p><h2>{t('kdTimeUpTitle')}</h2><p>{t('kdTimeUpText')}</p>
-        {sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>}</section>
+        {sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>}
+        {feat('audyn') && <p><Link href="/kids/histoires" className="btn">🌙 {t('awkNav')}</Link></p>}</section>
     </main>
   );
   const tab = ['watch', 'learn', 'act'].includes(tab0) ? tab0 : 'home';
@@ -104,6 +105,7 @@ export default function KidsHome() {
             {d && d.resume.length > 0 && (
               <section aria-labelledby="kd-cont"><h2 id="kd-cont">{t('kdContinue')}</h2><ul className="kd-grid">{d.resume.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
             )}
+            {feat('audyn') && <section aria-labelledby="kd-st"><h2 id="kd-st">🌙 {t('awkNav')}</h2><p><Link href="/kids/histoires" className="btn">{t('awkIntro')}</Link></p></section>}
             <KidShorts />
             <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
               {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.slice(0, 8).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}

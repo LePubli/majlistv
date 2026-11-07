@@ -66,10 +66,12 @@ export async function kidReport(parentId, days = 7, learning = false, db = pool)
     const badges = learning ? (await db.query(
       `SELECT code FROM kid_badges WHERE profile_id = $1 AND (earned_at AT TIME ZONE '${TZ}')::date >= $2::date ORDER BY earned_at`, [p.id, since])).rows.map((r) => r.code) : [];
     const seconds = usage.reduce((s, x) => s + x.seconds, 0);
+    // Audyn étape 4 : temps d'écoute des « Histoires du soir », compté à part (hors limite quotidienne).
+    const storySeconds = (await db.query(`SELECT COALESCE(sum(seconds), 0)::int AS s FROM kid_story_usage WHERE profile_id = $1 AND day >= $2::date`, [p.id, since]).catch(() => ({ rows: [{ s: 0 }] }))).rows[0].s;
     out.push({ id: p.id, name: p.name, avatar: p.avatar, band: p.band, dailyLimitMin: p.daily_limit_min, catalogMode: p.catalog_mode,
-      usage, minutes: Math.round(seconds / 60), activeDays: usage.filter((x) => x.seconds > 0).length,
+      usage, minutes: Math.round(seconds / 60), storyMinutes: Math.round(storySeconds / 60), activeDays: usage.filter((x) => x.seconds > 0).length,
       watched: watched.length, watchedTitles: watched.slice(0, 5).map((x) => x.title), learned, quizzes: q.n, avgPercent: q.n ? q.avg : null,
-      starsGained: Math.max(0, total - before), stars: total, badges, retry: retry.map((x) => x.title), active: seconds > 0 || watched.length > 0 || q.n > 0 });
+      starsGained: Math.max(0, total - before), stars: total, badges, retry: retry.map((x) => x.title), active: seconds > 0 || storySeconds > 0 || watched.length > 0 || q.n > 0 });
   }
   return { days: d, since, profiles: out, learning };
 }

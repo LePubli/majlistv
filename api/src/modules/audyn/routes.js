@@ -18,6 +18,7 @@ import { config } from '../../config.js';
 import { getNumber } from '../../settings.js';
 import { hasLearningTier } from '../../access.js';
 import { storage, presignGet, presignPut, headObject, deleteKeys } from '../../storage.js';
+import kidsStories from './kidsStories.js';
 import { AUDIENCES, ACCESS, COVER_MAX_MB, audioInfo, coverInfo, clean, fullAccess, previewBytes, publishError, sumDuration, validOrder } from './lib.js';
 
 const PART_SIZE = 32 * 1024 * 1024; // sous la limite de 64 Mo de Nginx (comme les envois de vidéos)
@@ -325,7 +326,7 @@ export default async function audynRoutes(app) {
   app.get('/audyn/:id/chapters/:cid/preview', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {
     if (!storage) return off(reply);
     const { id, cid } = chSchema.parse(req.params);
-    const r = await publicItem(id);
+    const r = (await pool.query("SELECT i.* FROM audyn_items i WHERE i.id = $1 AND i.status = 'published'", [id])).rows[0]; // livres adultes ET histoires du soir
     if (!r) return reply.code(404).send({ error: 'Contenu introuvable' });
     const chapters = await chaptersOf(id);
     const c = chapters[0];
@@ -335,4 +336,7 @@ export default async function audynRoutes(app) {
     reply.header('Content-Type', c.content_type).header('Content-Length', String(n)).header('Cache-Control', 'private, max-age=300').header('Accept-Ranges', 'none');
     return reply.send(obj.Body);
   });
+
+  // ------------------------------------------------------------------ Histoires du soir (espace Kids)
+  await kidsStories(app, { chaptersOf, cover, chapterRow, off });
 }

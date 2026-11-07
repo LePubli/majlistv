@@ -15,6 +15,10 @@ const noop = () => {};
 const Ctx = createContext({ ...EMPTY, chapter: null, open: async () => {}, openResume: async () => {}, toggle: noop, skip: noop, seekTo: noop, next: noop, prev: noop, cycleSpeed: noop, setSleep: noop, stop: noop, savedFor: () => null, dark: false, setDark: noop });
 export const useAudyn = () => useContext(Ctx);
 
+// Histoires du soir (espace Kids) : même lecteur, autres adresses (jeton enfant), temps d'écoute compté à part, reprise propre à l'enfant.
+const base = (b) => (b.kids ? '/kids/stories' : '/audyn');
+const rid = (b) => b.resumeId || b.id;
+const PING_EVERY_MS = 30000;
 const URL_LIFETIME_MS = 50 * 60 * 1000; // liens d'écoute valables 1 h : renouvelés avant
 
 const readSaved = (id) => { try { return decodeResume(localStorage.getItem(resumeKey(id))); } catch { return null; } };
@@ -44,7 +48,7 @@ export function AudynPlayerProvider({ children, t, call }) {
   const save = useCallback((pos) => {
     const s = stRef.current; const ch = s.book?.chapters[s.index];
     if (!s.book || !ch || s.preview) return;
-    lastSaved.current = pos; writeSaved(s.book.id, { cid: ch.id, pos, at: Date.now() });
+    lastSaved.current = pos; writeSaved(rid(s.book), { cid: ch.id, pos, at: Date.now() });
   }, []);
 
   const media = (book, ch) => {
@@ -64,7 +68,7 @@ export function AudynPlayerProvider({ children, t, call }) {
     const my = ++token.current;
     patch({ book, index, loading: true, err: false, previewEnded: false, pos, dur: ch.durationSeconds });
     try {
-      const r = await call(`/audyn/${book.id}/chapters/${ch.id}/play`);
+      const r = await call(`${base(book)}/${book.id}/chapters/${ch.id}/play`);
       if (my !== token.current) return;
       if (!r.ok) throw new Error('play');
       let src = r.data.url;
@@ -97,11 +101,14 @@ export function AudynPlayerProvider({ children, t, call }) {
   }, [call, patch]);
 
   const open = useCallback(async (book, index = 0, pos = 0) => {
-    quran.stop(); retries.current = 0; lastSaved.current = NaN; patch({ timer: NO_TIMER, timerLeftMs: null });
+    quran.stop(); retries.current = 0; lastSaved.current = NaN;
+    // Arrêt automatique réglé par le parent (histoires du soir) : démarre avec la lecture.
+    const tm = book.kids && book.autoStopMin ? startSleep(book.autoStopMin, Date.now()) : NO_TIMER;
+    patch({ timer: tm, timerLeftMs: tm.endAt ? tm.endAt - Date.now() : null });
     await load(book, index, pos, true);
   }, [load, patch, quran]);
   const savedFor = useCallback((id) => readSaved(id), []);
-  const openResume = useCallback(async (book) => { const rp = resumePoint(book.chapters, readSaved(book.id)); await open(book, rp.index, rp.pos); }, [open]);
+  const openResume = useCallback(async (book) => { const rp = resumePoint(book.chapters, readSaved(rid(book))); await open(book, rp.index, rp.pos); }, [open]);
 
   const stop = useCallback(() => {
     token.current += 1; retries.current = 0; save(stRef.current.pos);
@@ -157,11 +164,11 @@ export function AudynPlayerProvider({ children, t, call }) {
         a.volume = 1; loaded.current = null;
         const target = n >= 0 ? n : s.index;
         patch({ timer: NO_TIMER, timerLeftMs: null, playing: false, index: target, pos: 0 });
-        writeSaved(s.book.id, { cid: s.book.chapters[target].id, pos: 0, at: Date.now() });
+        writeSaved(rid(s.book), { cid: s.book.chapters[target].id, pos: 0, at: Date.now() });
         return;
       }
       if (n >= 0) goTo(n);
-      else { loaded.current = null; writeSaved(s.book.id, { cid: s.book.chapters[0].id, pos: 0, at: Date.now() }); patch({ playing: false, index: 0, pos: 0 }); }
+      else { loaded.current = null; writeSaved(rid(s.book), { cid: s.book.chapters[0].id, pos: 0, at: Date.now() }); patch({ playing: false, index: 0, pos: 0 }); }
     };
     const onErr = () => {
       const s = stRef.current; if (!s.book || s.loading || !loaded.current) return;
@@ -194,6 +201,15 @@ export function AudynPlayerProvider({ children, t, call }) {
     return () => clearInterval(h);
   }, [st.timer, patch, save]);
 
+  // Histoires du soir : « ping » toutes les 30 s pendant l'écoute (temps compté à part, pour le rapport du parent ; aucune limite).
+  const kidsPlaying = Boolean(st.book?.kids && st.playing);
+  useEffect(() => {
+    if (!kidsPlaying) return undefined;
+    const ping = () => { call('/kids/stories/ping', { method: 'POST', body: '{}' }).catch(() => {}); };
+    ping(); const h = setInterval(ping, PING_EVERY_MS);
+    return () => clearInterval(h);
+  }, [kidsPlaying, call]);
+
   // Enregistre aussi la position quand l'onglet se ferme / passe en arrière-plan
   useEffect(() => {
     const f = () => { if (stRef.current.book) save(stRef.current.pos); };
@@ -213,7 +229,7 @@ export function AudynPlayerProvider({ children, t, call }) {
       {children}
       {st.book && chapter && !dark && (
         <div className="aw-bar" role="region" aria-label={t('awPlayer')}>
-          <Link href={`/audyn/${st.book.id}`} className="aw-title"><strong>{st.book.title}</strong><span>{chapter.title}</span></Link>
+          <Link href={st.book.kids ? `/kids/histoires/${st.book.id}` : `/audyn/${st.book.id}`} className="aw-title"><strong>{st.book.title}</strong><span>{chapter.title}</span></Link>
           <button type="button" className="aw-btn gold" aria-label={st.playing ? t('awPause') : t('awPlay')} onClick={toggle} disabled={st.loading}>{st.playing ? '❚❚' : '▶'}</button>
           <button type="button" className="aw-btn" aria-label={t('awStop')} onClick={stop}>✕</button>
         </div>

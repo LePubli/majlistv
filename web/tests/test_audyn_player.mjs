@@ -40,4 +40,12 @@ for (const f of ['../components/AudynPlayer.js', '../components/AudynControls.js
 keys.add('awNav');
 assert.ok(keys.size >= 30, `${keys.size} textes`);
 for (const k of keys) assert.equal(i18n.split(` ${k}:`).length - 1, 3, `texte ${k} manquant en fr / en / ar`);
+// Histoires du soir (étape 4)
+for (const re of [/b\.kids \? '\/kids\/stories' : '\/audyn'/, /\/kids\/stories\/ping/, /book\.kids && book\.autoStopMin/, /resumeId/, /\/kids\/histoires\//]) assert.match(pl, re);
+const ctl = r('../components/AudynControls.js');
+assert.match(ctl, /!kids \|\| au\.book\.timerAllowed/); assert.doesNotMatch(r('../app/(module-kids)/kids/histoires/[id]/page.js') + r('../app/(module-kids)/kids/histoires/page.js'), /pricing/);
+assert.match(ctl, /awkPreviewEnded/);
+assert.match(r('../components/KidsControls.js'), /\/stories`/); assert.match(r('../components/KidsHome.js'), /\/kids\/histoires/);
+for (const f of ['../app/(module-kids)/kids/histoires/page.js', '../app/(module-kids)/kids/histoires/[id]/page.js', '../components/KidsControls.js', '../components/KidsHome.js', '../components/AudynControls.js'])
+  for (const m of r(f).matchAll(/\bt\('(awk[A-Za-z0-9]+)'\)/g)) assert.equal(i18n.split(` ${m[1]}:`).length - 1, 3, `texte ${m[1]} manquant en fr / en / ar`);
 console.log('OK test_audyn_player');

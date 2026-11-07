@@ -7,11 +7,12 @@ import { useEventListener } from 'expo';
 import { useVideoPlayer } from 'expo-video';
 import * as SecureStore from 'expo-secure-store';
 import { useSession } from '@/lib/session';
+import { useKid } from '@/lib/kidSession';
 import { useQuranPlayer } from '@/lib/quranPlayer';
 import { absoluteUrl } from '@/lib/api';
 import { API_URL } from '@/lib/config';
 import {
-  NO_TIMER, decodeResume, encodeResume, nextPlayable, nextSpeed, prevPlayable, resumeKey, resumePoint, seekTarget, shouldSaveResume,
+  NO_TIMER, STORY_PING_MS, audynBase, audynResumeId, decodeResume, encodeResume, nextPlayable, nextSpeed, prevPlayable, resumeKey, resumePoint, seekTarget, shouldSaveResume,
   sleepTick, startSleep, type AudynChapter, type AudynDetail, type PlayInfo, type SleepTimer,
 } from '@/lib/audyn';
 
@@ -59,6 +60,7 @@ const URL_LIFETIME_MS = 50 * 60 * 1000; // les liens d'écoute durent 1 h : on l
 
 export function AudynPlayerProvider({ children }: { children: React.ReactNode }) {
   const { api } = useSession();
+  const { kidApi, kid } = useKid();
   const quran = useQuranPlayer();
   const player = useVideoPlayer(null, (p) => {
     p.staysActiveInBackground = true;
@@ -81,7 +83,7 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
     const s = stRef.current; const ch = s.book?.chapters[s.index];
     if (!s.book || !ch || s.preview) return;
     lastSaved.current = pos;
-    SecureStore.setItemAsync(resumeKey(s.book.id), encodeResume({ cid: ch.id, pos, at: Date.now() })).catch(() => {});
+    SecureStore.setItemAsync(resumeKey(audynResumeId(s.book)), encodeResume({ cid: ch.id, pos, at: Date.now() })).catch(() => {});
   }, []);
 
   const savedFor = useCallback(async (itemId: string) => {
@@ -95,7 +97,7 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
     const my = ++token.current;
     patch({ book, index, loading: true, err: false, previewEnded: false, pos, dur: ch.durationSeconds });
     try {
-      const info = await api.get<PlayInfo>(`/audyn/${book.id}/chapters/${ch.id}/play`);
+      const info = await (book.kids ? kidApi : api).get<PlayInfo>(`${audynBase(book)}/${book.id}/chapters/${ch.id}/play`);
       if (my !== token.current) return;
       const uri = absoluteUrl(API_URL, info.url);
       limit.current = info.preview ? Number(info.limitSeconds) || 0 : 0;
@@ -113,17 +115,19 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
       retries.current = 0;
       patch({ loading: false, err: true, playing: false });
     }
-  }, [api, player, patch]);
+  }, [api, kidApi, player, patch]);
 
   const open = useCallback(async (book: AudynDetail, index = 0, pos = 0) => {
     quran.stop();
     retries.current = 0; lastSaved.current = NaN;
-    patch({ timer: NO_TIMER, timerLeftMs: null });
+    // Histoires du soir : l'arrêt automatique réglé par le parent démarre avec la lecture.
+    const tm = book.kids && book.autoStopMin ? startSleep(book.autoStopMin, Date.now()) : NO_TIMER;
+    patch({ timer: tm, timerLeftMs: tm.endAt ? tm.endAt - Date.now() : null });
     await load(book, index, pos, true);
   }, [load, patch, quran]);
 
   const openResume = useCallback(async (book: AudynDetail) => {
-    const rp = resumePoint(book.chapters, await savedFor(book.id));
+    const rp = resumePoint(book.chapters, await savedFor(audynResumeId(book)));
     await open(book, rp.index, rp.pos);
   }, [open, savedFor]);
 
@@ -199,13 +203,13 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
       player.volume = 1; loaded.current = null;
       const target = n >= 0 ? n : s.index;
       patch({ timer: NO_TIMER, timerLeftMs: null, playing: false, index: target, pos: 0 });
-      SecureStore.setItemAsync(resumeKey(s.book.id), encodeResume({ cid: s.book.chapters[target].id, pos: 0, at: Date.now() })).catch(() => {});
+      SecureStore.setItemAsync(resumeKey(audynResumeId(s.book)), encodeResume({ cid: s.book.chapters[target].id, pos: 0, at: Date.now() })).catch(() => {});
       return;
     }
     if (n >= 0) goTo(n);
     else { // livre terminé
       loaded.current = null;
-      SecureStore.setItemAsync(resumeKey(s.book.id), encodeResume({ cid: s.book.chapters[0].id, pos: 0, at: Date.now() })).catch(() => {});
+      SecureStore.setItemAsync(resumeKey(audynResumeId(s.book)), encodeResume({ cid: s.book.chapters[0].id, pos: 0, at: Date.now() })).catch(() => {});
       patch({ playing: false, index: 0, pos: 0 });
     }
   });
@@ -228,6 +232,19 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
     }, 1000);
     return () => clearInterval(h);
   }, [st.timer, player, patch, save]);
+
+  // Histoires du soir : « ping » toutes les 30 s pendant l'écoute (temps compté à part pour le rapport du parent ; aucune limite).
+  const kidsPlaying = Boolean(st.book?.kids && st.playing);
+  useEffect(() => {
+    if (!kidsPlaying) return undefined;
+    const ping = () => { kidApi.post('/kids/stories/ping').catch(() => {}); };
+    ping();
+    const h = setInterval(ping, STORY_PING_MS);
+    return () => clearInterval(h);
+  }, [kidsPlaying, kidApi]);
+
+  // Un parent sort de l'espace enfant : l'histoire s'arrête (elle ne continue jamais dans l'espace parent).
+  useEffect(() => { if (!kid && stRef.current.book?.kids) stop(); }, [kid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // La récitation du Coran démarre : on met le livre en pause (un seul son à la fois).
   useEffect(() => { if (quran.current && stRef.current.playing) { player.pause(); } }, [quran.current]); // eslint-disable-line react-hooks/exhaustive-deps

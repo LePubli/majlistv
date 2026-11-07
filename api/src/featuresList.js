@@ -45,7 +45,7 @@ export const FEATURES = [
   { id: 'books', group: 'catalog', label: 'Ouvrages', hint: 'Livres et PDF liés aux vidéos',
     rules: [{ re: '^/(books|studio/books|studio/books-targets|talks/[^/]+/books|series/[^/]+/books)(/|$)' }] },
   { id: 'audyn', group: 'catalog', label: 'Audyn — livres audio et histoires du soir', hint: 'Contenus audio avec chapitres : livres audio pour les adultes, histoires du soir pour les enfants. Formule « Apprentissage », aperçu gratuit',
-    rules: [{ re: '^/(audyn|studio/audyn|studio/audyn-rights)(/|$)' }] },
+    rules: [{ re: '^/(audyn|studio/audyn|studio/audyn-rights|kids/stories|me/kids/profiles/[^/]+/stories)(/|$)' }] },
   // Apprentissage
   { id: 'quiz', group: 'learning', label: 'Quiz', hint: 'Questions après chaque vidéo, avec explication',
     rules: [{ re: '^/(talks/[^/]+/(studio/)?quiz|studio/quiz|me/quiz)(/|$)' }] },

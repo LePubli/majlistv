@@ -334,6 +334,19 @@ const fr = {
   'aud.dark': 'Mode veille',
   'aud.darkHint': 'Touche l\'écran pour revenir',
   'aud.progress': 'Position dans le chapitre',
+  'aud.kBack': 'Retour',
+  'aud.kTitle': 'Histoires du soir',
+  'aud.kIntro': 'Des histoires à écouter avant de dormir.',
+  'aud.kEmpty': 'Pas encore d\'histoire pour le moment.',
+  'aud.kMissing': 'Histoire introuvable.',
+  'aud.kLocked': 'À écouter avec l\'accord de tes parents.',
+  'aud.kPreviewEnded': 'Fin de l\'extrait. Demande à tes parents pour écouter la suite.',
+  'aud.pTitle': 'Histoires du soir',
+  'aud.pTimer': 'Laisser {name} régler le minuteur de sommeil',
+  'aud.pAuto': 'Arrêt automatique des histoires',
+  'aud.pAutoOff': 'Aucun',
+  'aud.pHelp': 'Les histoires du soir ne comptent pas dans la limite quotidienne ; leur durée est indiquée à part dans le rapport.',
+  'aud.pWeek': 'Cette semaine : {n} min d\'histoires.',
 };
 
 export type AppKey = keyof typeof fr;
@@ -668,6 +681,19 @@ const en: Record<AppKey, string> = {
   'aud.dark': 'Sleep mode',
   'aud.darkHint': 'Tap the screen to return',
   'aud.progress': 'Position in the chapter',
+  'aud.kBack': 'Back',
+  'aud.kTitle': 'Bedtime stories',
+  'aud.kIntro': 'Stories to listen to before sleeping.',
+  'aud.kEmpty': 'No stories yet.',
+  'aud.kMissing': 'Story not found.',
+  'aud.kLocked': 'To listen to with your parents\' permission.',
+  'aud.kPreviewEnded': 'End of the preview. Ask your parents to hear the rest.',
+  'aud.pTitle': 'Bedtime stories',
+  'aud.pTimer': 'Let {name} set the sleep timer',
+  'aud.pAuto': 'Automatic stop for stories',
+  'aud.pAutoOff': 'None',
+  'aud.pHelp': 'Bedtime stories do not count toward the daily limit; their time is shown separately in the report.',
+  'aud.pWeek': 'This week: {n} min of stories.',
 };
 
 const ar: Record<AppKey, string> = {
@@ -998,6 +1024,19 @@ const ar: Record<AppKey, string> = {
   'aud.dark': 'وضع النوم',
   'aud.darkHint': 'المس الشاشة للعودة',
   'aud.progress': 'الموضع في الفصل',
+  'aud.kBack': 'رجوع',
+  'aud.kTitle': 'قصص النوم',
+  'aud.kIntro': 'قصص للاستماع قبل النوم.',
+  'aud.kEmpty': 'لا توجد قصص بعد.',
+  'aud.kMissing': 'القصة غير موجودة.',
+  'aud.kLocked': 'للاستماع بموافقة والديك.',
+  'aud.kPreviewEnded': 'انتهت المعاينة. اطلب من والديك سماع البقية.',
+  'aud.pTitle': 'قصص النوم',
+  'aud.pTimer': 'السماح لـ {name} بضبط مؤقّت النوم',
+  'aud.pAuto': 'إيقاف تلقائي للقصص',
+  'aud.pAutoOff': 'بدون',
+  'aud.pHelp': 'قصص النوم لا تُحتسب ضمن الحد اليومي؛ ويظهر وقتها منفصلًا في التقرير.',
+  'aud.pWeek': 'هذا الأسبوع: {n} دقيقة من القصص.',
 };
 
 export const APP_DICT: Record<Locale, Record<AppKey, string>> = { fr, en, ar };
