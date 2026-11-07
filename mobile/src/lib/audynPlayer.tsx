@@ -74,6 +74,8 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
   const token = useRef(0);
   const retries = useRef(0);
   const lastSaved = useRef(NaN);
+  const limit = useRef(0); // aperçu : durée écoutable (le fichier reçu est coupé mais sa durée annoncée reste celle du livre)
+  const capDur = (d: number) => (limit.current > 0 ? Math.min(d, limit.current) : d);
 
   const save = useCallback((pos: number) => {
     const s = stRef.current; const ch = s.book?.chapters[s.index];
@@ -96,6 +98,7 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
       const info = await api.get<PlayInfo>(`/audyn/${book.id}/chapters/${ch.id}/play`);
       if (my !== token.current) return;
       const uri = absoluteUrl(API_URL, info.url);
+      limit.current = info.preview ? Number(info.limitSeconds) || 0 : 0;
       await player.replaceAsync({ uri, metadata: { title: ch.title || book.title, artist: book.narrator || book.author || book.title, artwork: book.coverUrl ?? undefined } });
       if (my !== token.current) return;
       loaded.current = { cid: ch.id, at: Date.now() };
@@ -177,7 +180,7 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const s = stRef.current;
     if (!s.book || !loaded.current) return;
-    const d = player.duration > 0 ? player.duration : s.dur;
+    const d = capDur(player.duration > 0 ? player.duration : s.dur);
     patch({ pos: currentTime, dur: d });
     if (s.playing && shouldSaveResume(lastSaved.current, currentTime)) save(currentTime);
   });
