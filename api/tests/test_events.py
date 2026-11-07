@@ -117,6 +117,19 @@ ok(requests.delete(f"{B}/studio/events/{E1}", headers=O).status_code == 204 and 
 cur.execute("select count(*) from event_reminders where event_id=%s", (E1,)); ok(cur.fetchone()[0] == 0, "suppression : inscriptions supprimées")
 fid = requests.get(B + "/admin/features", headers=A).json()
 ok(any((x.get("id") == "events") for x in (fid if isinstance(fid, list) else fid.get("features", []))), "Admin → Fonctions : « Événements en direct » listée")
+# Rappels : inscription tardive et heure déplacée (étape 3)
+cur.execute("insert into events(title,source,video_ref,starts_at,duration_minutes,status,created_by) values(%s,'youtube','dQw4w9WgXcQ',now() + interval '10 hours',60,'published',%s) returning id", (f"Tardif {tag}", oid)); LT = cur.fetchone()[0]
+cur.execute("insert into events(title,source,video_ref,starts_at,duration_minutes,status,created_by) values(%s,'youtube','dQw4w9WgXcQ',now() + interval '4 days',60,'published',%s) returning id", (f"Lointain {tag}", oid)); FR = cur.fetchone()[0]
+requests.put(f"{B}/me/events/{LT}/remind", headers=M); requests.put(f"{B}/me/events/{FR}/remind", headers=M)
+cur.execute("select day_sent_at is not null from event_reminders where event_id=%s and user_id=%s", (LT, mid)); ok(cur.fetchone()[0], "inscrit à moins de 24 h du début : rappel « jour » déjà passé")
+cur.execute("select day_sent_at is null from event_reminders where event_id=%s and user_id=%s", (FR, mid)); ok(cur.fetchone()[0], "inscrit longtemps avant : rappel « jour » encore dû")
+cur.execute("update event_reminders set day_sent_at=now(), soon_sent_at=now() where event_id=%s", (FR,))
+requests.patch(f"{B}/studio/events/{FR}", headers=O, json={"startsAt": iso(dt.timedelta(days=5))})
+cur.execute("select day_sent_at is null and soon_sent_at is null from event_reminders where event_id=%s", (FR,)); ok(cur.fetchone()[0], "heure déplacée : les rappels déjà envoyés sont remis à zéro")
+cur.execute("update event_reminders set day_sent_at=now() where event_id=%s", (FR,))
+requests.patch(f"{B}/studio/events/{FR}", headers=O, json={"title": "Autre titre"})
+cur.execute("select day_sent_at is not null from event_reminders where event_id=%s", (FR,)); ok(cur.fetchone()[0], "autre modification : rappels conservés")
+
 requests.put(B + "/admin/settings", headers=A, json={"values": {"feat_events": "false"}})
 ok(requests.get(B + "/events").status_code in (403, 404) and requests.get(B + "/studio/events", headers=O).status_code in (403, 404), "fonction coupée : routes fermées")
 requests.put(B + "/admin/settings", headers=A, json={"values": {"feat_events": "true"}})

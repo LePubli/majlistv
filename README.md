@@ -7830,3 +7830,28 @@ curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/studio/events/<id> -H 
 **Exemple.** Studio → Événements en direct → « Nouvel événement » : titre, lien `https://www.youtube.com/watch?v=…`, date et heure, état « Publié » → Enregistrer. Le membre voit l'événement sur l'accueil et sur `/events`.
 
 **Testé.** `web/tests/test_events_web.mjs` (textes dans les 3 langues, décompte, adresses d'intégration, menus) ; `next build` ; essai réel dans Chromium contre l'API (liste, pastille, décompte, lecteur seulement en direct, lien du direct absent de la page avant l'heure, rappel d'un membre, bande d'accueil, arabe RTL, 390 px sans défilement horizontal, création par le formulaire du Studio, aucune erreur de console ni de politique de sécurité). **Non testé** : lecture réelle d'un direct (l'environnement n'a pas accès à YouTube), Safari / iPhone, vrai téléphone.
+
+
+## Événements en direct — étape 3 sur 4 : rappels par notification et par e-mail (Amélioration 4.2, 07/11)
+
+**Description.** Les membres qui ont cliqué « Me rappeler » reçoivent, **par notification (téléphone et navigateur) et par e-mail**, selon les canaux disponibles :
+- **Rappel « jour »** : une seule fois, quand il reste entre 24 h et 3 h avant le début. Un membre qui s'inscrit à moins de 24 h du début ne le reçoit pas (il reçoit le suivant).
+- **« Ça commence »** : une seule fois, dans les 30 minutes avant le début (jusqu'à 5 minutes après).
+- **Annulation** : une seule fois, si l'événement est annulé avant sa fin prévue.
+Le message indique la date et l'heure **en heure de Paris**, dans la langue du membre (FR / EN / AR), avec un lien vers la fiche de l'événement. Si l'organisateur **change l'heure**, les rappels déjà envoyés sont remis à zéro et le nouveau créneau est rappelé ; une autre modification (titre, description…) ne renvoie rien.
+
+**Règles.**
+- Un passage toutes les 5 minutes (tâche de fond du module `events`, premier passage 70 s après le démarrage de l'API). Chaque envoi est réservé en base avant de partir : jamais deux fois le même, même si deux passages se chevauchent.
+- Rien n'est envoyé aux comptes désactivés, aux événements en brouillon, ni sans canal : sans SMTP **et** sans notification configurée, le rappel reste « dû » (il partira dès qu'un canal existe, tant que la fenêtre n'est pas passée).
+- Les notifications suivent l'interrupteur « notifications » du compte (déjà existant) ; l'e-mail utilise le SMTP déjà configuré. Pas de lien de désinscription : le membre se désinscrit en cliquant de nouveau sur « Rappel activé » (c'est un rappel qu'il a demandé).
+- Fonction coupée (Admin → Fonctions → « Événements en direct ») : plus aucun rappel.
+
+**Prérequis.** Étapes 1 et 2 déployées ; migration `002_reminders.sql` (trois colonnes d'horodatage sur `event_reminders`) appliquée au démarrage de l'API. Pour que quelque chose parte : SMTP configuré (Admin → E-mails) et/ou notifications (Admin → Notifications) ; pour les navigateurs, la fonction « Notifications dans le navigateur » active.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api` uniquement (rien côté site). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Aucun rappel reçu : vérifier (1) que l'événement est « Publié » et le membre bien inscrit (Studio → nombre d'inscrits) ; (2) un canal est configuré ; (3) les journaux de l'API : `docker logs dockpanel-git-majlistv-api 2>&1 | grep -i "Rappels d'événements"` (une ligne « N envoi(s) » à chaque passage utile, un avertissement si une erreur survient) ; (4) l'heure : la fenêtre « jour » est 24 h → 3 h avant, « ça commence » 30 min avant. E-mails en attente : table `email_outbox` (envoi toutes les 15 s).
+
+**Exemple.** Événement samedi 20 h, membre inscrit mercredi : il reçoit le rappel « jour » vendredi dès le passage suivant après 20 h (24 h avant), puis « ça commence » à partir de 19 h 30 samedi.
+
+**Testé.** `api/tests/test_events_reminders.mjs` (base réelle, envois simulés : fenêtres, pas de doublon, annulation, compte désactivé, brouillon, deux langues, sans canal, e-mail seul, modèles FR/EN/AR) et `test_events.py` (inscription tardive, heure déplacée) — tous deux dans la suite GitHub ; tests de notifications existants relancés. **Non testé** : un vrai envoi (SMTP, téléphone, navigateur) et le passage réel de la tâche de fond toutes les 5 minutes (la logique est testée avec une heure simulée).

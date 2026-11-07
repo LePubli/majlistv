@@ -73,6 +73,10 @@ export async function sendToDevice(conf, deviceToken, { title, body, path = '/',
 // --- Textes (fr / en / ar) : titre court, message court.
 const LANG = (l) => (['fr', 'en', 'ar'].includes(String(l).slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
 const cut = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
+// Événements en direct (4.2) : « samedi 7 novembre à 17:00 » en heure de Paris, dans la langue de l'appareil.
+const EV_INTL = { fr: 'fr-FR', en: 'en-GB', ar: 'ar' };
+export const evWhen = (at, locale) => new Intl.DateTimeFormat(EV_INTL[LANG(locale)], { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(new Date(at));
+
 const TEXTS = {
   speaker_new: {
     fr: (v) => ({ title: v.count > 1 ? `${v.count} nouvelles vidéos` : 'Nouvelle vidéo', body: cut(v.titles.join(' · '), 140) + (v.speakers ? ` — ${cut(v.speakers, 60)}` : '') }),
@@ -113,6 +117,21 @@ const TEXTS = {
     fr: (v) => ({ title: 'Mejliss Kids', body: v.count > 1 ? `${v.count} actions de ${v.names} attendent votre validation.` : `${v.names} attend votre validation.` }),
     en: (v) => ({ title: 'Mejliss Kids', body: v.count > 1 ? `${v.count} actions by ${v.names} are waiting for your approval.` : `${v.names} is waiting for your approval.` }),
     ar: (v) => ({ title: 'مجلس كيدز', body: v.count > 1 ? `${v.count} أعمال لـ${v.names} بانتظار تأكيدك.` : `${v.names} بانتظار تأكيدك.` }),
+  },
+  event_reminder: { // rappel d'un événement en direct auquel le membre s'est inscrit
+    fr: (v) => ({ title: cut(v.title, 60), body: `Direct : ${evWhen(v.at, 'fr')} (heure de Paris).` }),
+    en: (v) => ({ title: cut(v.title, 60), body: `Live: ${evWhen(v.at, 'en')} (Paris time).` }),
+    ar: (v) => ({ title: cut(v.title, 60), body: `بث مباشر: ${evWhen(v.at, 'ar')} (بتوقيت باريس).` }),
+  },
+  event_soon: {
+    fr: (v) => ({ title: cut(v.title, 60), body: 'Le direct commence dans quelques minutes.' }),
+    en: (v) => ({ title: cut(v.title, 60), body: 'The live stream starts in a few minutes.' }),
+    ar: (v) => ({ title: cut(v.title, 60), body: 'يبدأ البث المباشر بعد دقائق.' }),
+  },
+  event_cancelled: {
+    fr: (v) => ({ title: 'Annulé : ' + cut(v.title, 50), body: `L'événement prévu ${evWhen(v.at, 'fr')} est annulé.` }),
+    en: (v) => ({ title: 'Cancelled: ' + cut(v.title, 50), body: `The event planned ${evWhen(v.at, 'en')} has been cancelled.` }),
+    ar: (v) => ({ title: 'أُلغيت: ' + cut(v.title, 50), body: `أُلغيت الفعالية المقررة ${evWhen(v.at, 'ar')}.` }),
   },
   plan_daily: { // planning (étape 3) : récapitulatif du matin, nombre seulement
     fr: (v) => ({ title: 'Votre planning du jour', body: v.count > 1 ? `${v.count} choses à faire aujourd’hui.` : '1 chose à faire aujourd’hui.' }),

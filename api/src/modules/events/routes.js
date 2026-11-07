@@ -93,7 +93,9 @@ export default async function eventsRoutes(app) {
     const { rows } = await pool.query("SELECT * FROM events WHERE id = $1 AND status = 'published'", [id]);
     if (!rows[0]) return reply.code(404).send({ error: 'Événement introuvable' });
     if (publicShape(rows[0], { openMinutes: 0 }).phase === 'ended') return reply.code(409).send({ error: 'Cet événement est terminé', code: 'ended' });
-    await pool.query('INSERT INTO event_reminders(event_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, req.user.sub]);
+    // Inscrit à moins de 24 h du début : le rappel « jour » est sans objet (il reste le rappel « ça commence »).
+    const soon = new Date(rows[0].starts_at).getTime() - Date.now() < 24 * 3600000;
+    await pool.query('INSERT INTO event_reminders(event_id, user_id, day_sent_at) VALUES ($1, $2, CASE WHEN $3 THEN now() END) ON CONFLICT DO NOTHING', [id, req.user.sub, soon]);
     return { reminded: true };
   });
 
@@ -146,6 +148,8 @@ export default async function eventsRoutes(app) {
     }
     if (!sets.length) return reply.code(400).send({ error: 'Rien à modifier' });
     const { rows } = await pool.query(`UPDATE events SET ${sets.join(', ')}, updated_at = now() WHERE id = $1 RETURNING *`, vals);
+    // Heure ou statut changés : les rappels déjà envoyés pour l'ancienne heure ne comptent plus (le nouveau créneau sera rappelé).
+    if (b.startsAt !== undefined && new Date(b.startsAt).getTime() !== new Date(ev.starts_at).getTime()) await pool.query('UPDATE event_reminders SET day_sent_at = NULL, soon_sent_at = NULL WHERE event_id = $1', [id]);
     rows[0].reminders = (await pool.query('SELECT count(*)::int AS n FROM event_reminders WHERE event_id = $1', [id])).rows[0].n;
     return studioShape(rows[0], await openMinutes());
   });
