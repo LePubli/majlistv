@@ -84,7 +84,7 @@ export default function HomeScreen() {
               <Rail title={t('rowSeries')} items={r.series ?? []} onSeeAll={() => router.navigate('/series')} render={(x, w) => <SeriesCard series={x} width={w} />} />
             ) : (
               <Rail
-                title={r.key === 'new' ? t('rowNew') : r.key === 'beginner' ? t('rowBeginner') : (r.title ?? '')}
+                title={r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : (r.title ?? '')}
                 badge={r.forYou ? `★ ${t('forYou')}` : null}
                 items={r.talks ?? []}
                 onSeeAll={r.categoryId && (r.total ?? 0) > (r.talks?.length ?? 0) ? () => router.navigate({ pathname: '/talks', params: { cat: String(r.categoryId) } }) : undefined}

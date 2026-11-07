@@ -109,7 +109,7 @@ function HomeInner() {
                 <Row id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
               ) : (
                 <Row id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
-                  title={r.key === 'new' ? t('rowNew') : r.key === 'beginner' ? t('rowBeginner') : r.title}
+                  title={r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.title}
                   onSeeAll={r.categoryId && r.total > r.talks.length ? () => { setCat(String(r.categoryId)); window.scrollTo({ top: 0 }); } : undefined} />
               )}
               {i === 0 && <KidsBand data={kids} />}

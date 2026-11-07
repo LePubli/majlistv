@@ -25,7 +25,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 2.3 | ✅ (Amélioration 2.3) (décision Epok 04/11 : **pas de badges pour les adultes** ; série de jours + objectif de la semaine seulement ; badges enfants illustrés livrés = Amélioration 8.4) **Séries de jours, objectifs de la semaine** (apprentissage) | Habitude de revenir ; ludique, en phase avec le 360° | M | ★★ |
 | 2.4 | ⏸ (mis de côté par Epok, 04/11) **Écoute seule type podcast** : flux RSS privé par membre (la piste audio est déjà fabriquée) + lecture écran éteint | Usage en voiture, en marchant ; nouvelle façon de consommer | M | ★★★ |
 | 2.5 | ✅ (Amélioration D1 ; listes partageables déjà existantes) **« À regarder plus tard »** distinct des favoris ; **listes partageables** | Moins de conférences perdues, partage entre amis | S | ★★ |
-| 2.6 | **Recommandations plus fines** (« Pour vous ») à partir de l'historique, des quiz et des thèmes | Plus de temps de visionnage par membre | M–L | ★★ |
+| 2.6 | ✅ (Amélioration 2.6 ; signaux voulus : favoris et « plus tard » seulement) **Recommandations plus fines** (« Pour vous ») à partir de l'historique, des quiz et des thèmes | Plus de temps de visionnage par membre | M–L | ★★ |
 
 ## 3. Apprendre : renforcer le 360°
 | # | Idée | Apport | Effort | Prio |

@@ -278,12 +278,13 @@ function CatRowsBlock({ p }) {
   useEffect(() => { // avec le jeton du compte, les thèmes préférés passent en premier
     let dead = false;
     if (!ready) return undefined;
-    call('/home').then((r) => { if (!dead) setRows(r.ok ? r.data.rows.filter((x) => String(x.key).startsWith('cat:')) : []); });
+    call('/home').then((r) => { if (!dead) setRows(r.ok ? r.data.rows.filter((x) => String(x.key).startsWith('cat:') || x.key === 'foryou') : []); });
     return () => { dead = true; };
   }, [ready, call]);
-  const shown = rows.slice(0, Number(p.max) || 4);
+  const fy = rows.filter((x) => x.key === 'foryou'); // « Pour vous » s'ajoute aux rangées de catégories, sans compter dans le maximum
+  const shown = [...fy, ...rows.filter((x) => x.key !== 'foryou').slice(0, Number(p.max) || 4)];
   return shown.map((r) => (
-    <Row key={r.key} id={`hb-${r.key.replace(':', '-')}`} talks={r.talks} t={t} title={r.title} badge={r.forYou ? `★ ${t('forYou')}` : null}
+    <Row key={r.key} id={`hb-${r.key.replace(':', '-')}`} talks={r.talks} t={t} title={r.key === 'foryou' ? t('forYou') : r.title} badge={r.forYou ? `★ ${t('forYou')}` : null}
       onSeeAll={r.categoryId && r.total > r.talks.length ? () => router.push(`/?cat=${r.categoryId}`) : undefined} />
   ));
 }

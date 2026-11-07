@@ -67,3 +67,4 @@ test_growth.py
 test_corrections.py
 test_audyn.py
 test_audyn_kids.py
+test_foryou.py

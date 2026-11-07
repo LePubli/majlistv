@@ -7758,3 +7758,22 @@ Résultat attendu : 0 échec.
 **Exemples.** Studio → Audyn → « Nouveau » → audience **Enfants** → chapitres → publier. Parent : Kids → profil → Contrôle parental → « Histoires du soir » → cocher « Laisser Yacine régler le minuteur » et « Arrêt automatique : 20 minutes ». L'enfant ouvre 🌙 Histoires du soir → écoute → l'histoire s'arrête seule au bout de 20 min (volume en baisse sur les 30 dernières secondes).
 
 **Testé / non testé (honnête).** Testé : 38 contrôles de l'API (accès enfant / parent, formule du parent, brouillons et livres adultes invisibles, hors limite quotidienne, comptage séparé, réglages et leurs refus, ligne du rapport en 3 langues, aperçu et lecture avec faux S3) ; essai réel dans Chromium côté enfant (liste, lecture, arrêt automatique, minuteur absent puis autorisé, aperçu et message « Demande à tes parents », aucun lien d'abonnement, temps compté, reprise après rechargement, aucune erreur JavaScript) ; 242 tests de l'application, typage, export Android. **Non testé** : l'application sur téléphone réel (écrans « Histoires du soir », lecture écran éteint, arrêt à la sortie de l'espace enfant, arabe RTL), Safari / iPhone, vrai Garage, envoi réel de l'e-mail. Les écrans « rapport » du parent (site et application) ne montrent pas encore les minutes d'histoires : elles figurent dans l'e-mail et, par enfant, dans les réglages « Histoires du soir » (« Cette semaine : N min »).
+
+
+## Amélioration 2.6 — Rangée « Pour vous » sur l'accueil (07/11)
+
+**Description.** Un membre connecté qui a mis des vidéos en favoris ou « à regarder plus tard » voit, juste après « Nouveautés », une rangée **« Pour vous »** : des vidéos proches de ce qu'il a déjà retenu. Signaux retenus par Epok : **uniquement les favoris (poids 2) et « à regarder plus tard » (poids 1)**. L'historique de visionnage et les résultats de quiz ne comptent pas comme signaux.
+
+**Calcul (côté serveur, `GET /home`).** Pour chaque vidéo candidate : score = poids de l'intervenant en commun × 2 + poids des catégories en commun (catégorie principale et catégories supplémentaires). Classement par score puis par date. Sont exclues : les vidéos déjà dans les favoris ou « à regarder plus tard », celles déjà terminées, les brouillons, les conversions en cours, les vidéos réservées aux enfants. Si une des deux fonctions (Favoris, À regarder plus tard) est désactivée dans Admin → Fonctions, ses vidéos ne comptent plus. Sans signal, ou visiteur non connecté : pas de rangée.
+
+**Où.** Site (accueil classique et bloc « Rangées par catégorie » de l'accueil en blocs) et application mobile (accueil). Titre `forYou` (déjà traduit FR / EN / AR).
+
+**Prérequis.** Aucun : pas de migration, pas de nouvelle variable. Un réglage : Admin → Paramètres → Accueil → « Afficher la rangée « Pour vous » » (`home_row_foryou`, activé par défaut).
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Pas de nouvel APK : l'application se met à jour en OTA (fermer et rouvrir deux fois). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** La rangée n'apparaît pas : vérifier qu'il y a au moins un favori ou un « plus tard » dont l'intervenant ou la catégorie est partagé par une autre vidéo en ligne non terminée ; vérifier le réglage `home_row_foryou` et les fonctions Favoris / À regarder plus tard.
+
+**Exemple.** `curl -s -H "Authorization: Bearer <jeton>" https://api-majlisstv.le-publicitaire.fr/home` → la rangée `{ "key": "foryou", "talks": [...] }` est en deuxième position.
+
+**Testé.** `api/tests/test_foryou.py` (14 contrôles, dans la suite GitHub) ; `npm run check` mobile (242 tests) ; `test_home.py` non rejoué en entier ici (il demande le stockage S3 de test). **Non testé** : rendu visuel sur le site et sur téléphone, accueil en blocs en navigateur.

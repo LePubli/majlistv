@@ -28,6 +28,30 @@ async function card(r, { withDescription = false } = {}) { // summary : extrait 
 // Adresse de bouton acceptée : chemin du site ou lien https.
 const safeLink = (u) => (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u) ? u : '');
 
+// « Pour vous » (Amélioration 2.6) : conférences proches de celles que le membre a mises en favoris (poids 2) ou « à regarder plus tard » (poids 1).
+// Proximité = même intervenant (poids ×2) + catégories communes. Sont exclues : les conférences déjà dans ces deux listes et celles déjà terminées.
+async function forYouTalks(userId, vis, size) {
+  const useFav = await featureOn('favorites'); const useLater = await featureOn('watchlater');
+  if (!useFav && !useLater) return [];
+  const seeds = [useFav ? 'SELECT talk_id, 2 AS w FROM favorites WHERE user_id = $1' : '', useLater ? 'SELECT talk_id, 1 AS w FROM watch_later WHERE user_id = $1' : ''].filter(Boolean).join(' UNION ALL ');
+  const { rows } = await pool.query(
+    `WITH seeds AS (${seeds}),
+          sp AS (SELECT lower(t.speaker) AS s, sum(sd.w)::int AS w FROM seeds sd JOIN talks t ON t.id = sd.talk_id WHERE coalesce(t.speaker, '') <> '' GROUP BY 1),
+          cat AS (SELECT cid, sum(w)::int AS w FROM (
+                    SELECT t.category_id AS cid, sd.w FROM seeds sd JOIN talks t ON t.id = sd.talk_id WHERE t.category_id IS NOT NULL
+                    UNION ALL SELECT tc.category_id, sd.w FROM seeds sd JOIN talk_categories tc ON tc.talk_id = sd.talk_id) x GROUP BY cid)
+     SELECT * FROM (
+       SELECT ${CARD}, COALESCE((SELECT w FROM sp WHERE sp.s = lower(t.speaker)), 0) * 2
+                + COALESCE((SELECT sum(w) FROM cat WHERE cat.cid = t.category_id OR cat.cid IN (SELECT tc.category_id FROM talk_categories tc WHERE tc.talk_id = t.id)), 0) AS score,
+              COALESCE(t.publish_at, t.created_at) AS recent
+         ${FROM}
+        WHERE t.video_status = 'ready' AND ${vis}
+          AND t.id NOT IN (SELECT talk_id FROM seeds)
+          AND NOT EXISTS (SELECT 1 FROM watch_progress wp WHERE wp.user_id = $1 AND wp.talk_id = t.id AND wp.completed)) z
+      WHERE score > 0 ORDER BY score DESC, recent DESC LIMIT $2`, [userId, size]);
+  return rows.map(({ score, recent, ...x }) => x);
+}
+
 export default async function homeRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
 
@@ -77,6 +101,11 @@ export default async function homeRoutes(app) {
       const r = await pool.query(`SELECT ${CARD} ${FROM} WHERE t.video_status = 'ready' AND ${vis} ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $1`, [size]);
       if (r.rows.length) rows.push({ key: 'new', title: null, talks: await Promise.all(r.rows.map((x) => card(x))) });
     }
+    // « Pour vous » : seulement pour un membre connecté qui a des favoris ou des conférences à regarder plus tard.
+    if (viewer && isOn(await getSetting('home_row_foryou'))) {
+      const fy = await forYouTalks(viewer.sub, vis, size);
+      if (fy.length) rows.push({ key: 'foryou', title: null, talks: await Promise.all(fy.map((x) => card(x))) });
+    }
     if (isOn(await getSetting('home_row_series')) && (await featureOn('series'))) {
       const list = await ext.call('series.list', [], { limit: size });
       if (list.length) rows.push({ key: 'series', title: null, series: list });
@@ -104,7 +133,7 @@ export default async function homeRoutes(app) {
       const fav = favIds.length ? (await pool.query('SELECT DISTINCT COALESCE(parent_id, id) AS top FROM categories WHERE id = ANY($1::int[])', [favIds])).rows.map((r) => r.top) : [];
       if (fav.length) {
         for (const r of rows) r.forYou = r.categoryId != null && fav.includes(r.categoryId);
-        const top = (r) => ['new', 'series', 'beginner'].includes(r.key);
+        const top = (r) => ['new', 'foryou', 'series', 'beginner'].includes(r.key);
         const head = rows.filter(top); const mine = rows.filter((r) => !top(r) && r.forYou); const rest = rows.filter((r) => !top(r) && !r.forYou);
         rows.splice(0, rows.length, ...head, ...mine, ...rest);
       }
