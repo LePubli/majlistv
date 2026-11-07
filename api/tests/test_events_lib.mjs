@@ -6,7 +6,7 @@ import { parseLiveUrl, phaseOf, buildIcs, icsDate, publicShape } from '../src/mo
 assert.deepEqual(parseLiveUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), { source: 'youtube', ref: 'dQw4w9WgXcQ' });
 assert.deepEqual(parseLiveUrl('https://youtu.be/dQw4w9WgXcQ?t=5'), { source: 'youtube', ref: 'dQw4w9WgXcQ' });
 assert.deepEqual(parseLiveUrl('https://www.youtube.com/live/dQw4w9WgXcQ'), { source: 'youtube', ref: 'dQw4w9WgXcQ' });
-assert.deepEqual(parseLiveUrl('https://vimeo.com/event/123456'), { source: 'vimeo', ref: '123456' });
+assert.equal(parseLiveUrl('https://vimeo.com/event/123456'), null, 'les événements Vimeo ne sont pas acceptés');
 assert.deepEqual(parseLiveUrl('https://vimeo.com/987654321'), { source: 'vimeo', ref: '987654321' });
 for (const bad of ['', 'n’importe quoi', 'https://example.org/x', 'ftp://youtu.be/dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=court', 'https://dailymotion.com/video/x7tgad0']) assert.equal(parseLiveUrl(bad), null, bad);
 

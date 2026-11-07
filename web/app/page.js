@@ -16,6 +16,7 @@ import SeasonBand from '../components/SeasonBand';
 import FridayBand from '../components/FridayBand';
 import TodayBlock from '../components/TodayBlock';
 import { StartCards, Tour } from '../components/Onboarding';
+import EventsBand from '../components/EventsBand';
 
 // Première rangée de vidéos de l'accueil (nouveautés) : elle sert de « Dernières vidéos » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -101,6 +102,7 @@ function HomeInner() {
           {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
+          <EventsBand />
           {user && <FormatTiles />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r, i) => (

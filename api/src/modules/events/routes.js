@@ -116,7 +116,7 @@ export default async function eventsRoutes(app) {
   app.post('/studio/events', studio, async (req, reply) => {
     const b = base.parse(req.body ?? {});
     const v = parseLiveUrl(b.url);
-    if (!v) return reply.code(400).send({ error: 'Adresse YouTube ou Vimeo attendue pour le direct' });
+    if (!v) return reply.code(400).send({ error: 'Adresse YouTube ou Vimeo (vidéo) attendue pour le direct' });
     const { rows } = await pool.query(
       `INSERT INTO events(title, speaker, description, language, source, video_ref, starts_at, duration_minutes, status, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
@@ -139,7 +139,7 @@ export default async function eventsRoutes(app) {
     const b = patchBody.parse(req.body ?? {});
     const sets = []; const vals = [id];
     const add = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
-    if (b.url !== undefined) { const v = parseLiveUrl(b.url); if (!v) return reply.code(400).send({ error: 'Adresse YouTube ou Vimeo attendue pour le direct' }); add('source', v.source); add('video_ref', v.ref); }
+    if (b.url !== undefined) { const v = parseLiveUrl(b.url); if (!v) return reply.code(400).send({ error: 'Adresse YouTube ou Vimeo (vidéo) attendue pour le direct' }); add('source', v.source); add('video_ref', v.ref); }
     if (b.talkId !== undefined) { if (b.talkId !== null && !(await checkTalk(req, b.talkId))) return reply.code(400).send({ error: 'Conférence introuvable ou qui ne vous appartient pas' }); add('talk_id', b.talkId); }
     for (const [k, col] of [['title', 'title'], ['speaker', 'speaker'], ['description', 'description'], ['language', 'language'], ['startsAt', 'starts_at'], ['durationMinutes', 'duration_minutes'], ['status', 'status']]) {
       if (b[k] !== undefined) add(col, b[k]);

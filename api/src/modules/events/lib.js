@@ -15,7 +15,7 @@ export function parseLiveUrl(raw) {
     const id = m ? m[1] : u.searchParams.get('v');
     return id && yt.test(id) ? { source: 'youtube', ref: id } : null;
   }
-  if (host === 'vimeo.com') { const m = u.pathname.match(/^\/(?:event\/)?(\d+)/); return m ? { source: 'vimeo', ref: m[1] } : null; }
+  if (host === 'vimeo.com') { const m = u.pathname.match(/^\/(\d+)(?:\/|$)/); return m ? { source: 'vimeo', ref: m[1] } : null; }
   return null;
 }
 

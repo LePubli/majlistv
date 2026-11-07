@@ -7807,3 +7807,26 @@ curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/studio/events/<id> -H 
 ```
 
 **Testé.** `api/tests/test_events_lib.mjs` (adresses, phases, agenda) et `api/tests/test_events.py` (droits, isolation des organisateurs, lien caché puis donné, agenda, rappel, rediffusion, annulation, suppression, fonction coupée), tous deux dans la suite GitHub. **Non testé** : ouverture du fichier `.ics` dans Google Agenda / Apple Calendrier / Outlook, direct réel YouTube / Vimeo. `test_modules.py` (hors suite GitHub) échoue déjà : sa liste de 26 modules est périmée.
+
+
+## Événements en direct — étape 2 sur 4 : pages du site (Amélioration 4.2, 07/11)
+
+**Description.** Le site affiche maintenant les événements en direct :
+- **`/events`** : onglets « À venir » et « Passés », pastille « En direct » ou décompte (« Dans 2 j 03 h 15 min »), « Me rappeler », « Ajouter à mon agenda » (fichier `.ics`), « Voir la rediffusion » quand elle est rattachée.
+- **`/events/<id>`** : fiche avec le **direct YouTube / Vimeo intégré** (lecteur `youtube-nocookie` ou `player.vimeo.com`, déjà autorisés par la politique de sécurité) qui s'ouvre tout seul à l'heure d'ouverture (la fiche se relit à ce moment et toutes les minutes ensuite). Avant l'ouverture, ni le lecteur ni le lien du direct ne sont dans la page. Après : renvoi vers la rediffusion.
+- **Studio → Événements en direct** (`/studio/events`, organisateur et administrateur) : créer, modifier, publier, annuler, supprimer, rattacher la rediffusion (une de ses conférences), voir le nombre d'inscrits au rappel. L'heure se saisit dans le fuseau de l'appareil.
+- **Accueil** : bande « Prochains événements en direct » (3 au plus), invisible s'il n'y en a pas. Elle figure sur l'accueil classique ; **elle n'est pas dans l'accueil « en blocs »** (à ajouter comme bloc si tu l'utilises).
+- **Menu latéral** (Découvrir → « Événements en direct ») : se règle comme les autres entrées dans Admin → Menus.
+- Textes FR / EN / AR (préfixe `evn*`), arabe de droite à gauche, adapté de 390 à 1440 px.
+
+**Changement côté serveur.** Les liens Vimeo « événement » (`vimeo.com/event/…`) sont désormais refusés (ils ne s'intègrent pas comme une vidéo) ; seuls YouTube et les vidéos Vimeo sont acceptés.
+
+**Prérequis.** Étape 1 déployée. Aucune migration, aucune variable.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Pas de nouvel APK (l'application reçoit l'étape 4 plus tard). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Page `/events` vide : aucun événement publié (le brouillon n'est visible que de son auteur). Lecteur absent à l'heure : la fiche se relit à l'heure d'ouverture (réglage du module, 10 min) ; recharger la page. Lecteur noir : la vidéo YouTube du direct n'autorise peut-être pas l'intégration (réglage « Autoriser l'intégration » dans YouTube Studio).
+
+**Exemple.** Studio → Événements en direct → « Nouvel événement » : titre, lien `https://www.youtube.com/watch?v=…`, date et heure, état « Publié » → Enregistrer. Le membre voit l'événement sur l'accueil et sur `/events`.
+
+**Testé.** `web/tests/test_events_web.mjs` (textes dans les 3 langues, décompte, adresses d'intégration, menus) ; `next build` ; essai réel dans Chromium contre l'API (liste, pastille, décompte, lecteur seulement en direct, lien du direct absent de la page avant l'heure, rappel d'un membre, bande d'accueil, arabe RTL, 390 px sans défilement horizontal, création par le formulaire du Studio, aucune erreur de console ni de politique de sécurité). **Non testé** : lecture réelle d'un direct (l'environnement n'a pas accès à YouTube), Safari / iPhone, vrai téléphone.
