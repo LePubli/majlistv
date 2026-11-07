@@ -7777,3 +7777,33 @@ Résultat attendu : 0 échec.
 **Exemple.** `curl -s -H "Authorization: Bearer <jeton>" https://api-majlisstv.le-publicitaire.fr/home` → la rangée `{ "key": "foryou", "talks": [...] }` est en deuxième position.
 
 **Testé.** `api/tests/test_foryou.py` (14 contrôles, dans la suite GitHub) ; `npm run check` mobile (242 tests) ; `test_home.py` non rejoué en entier ici (il demande le stockage S3 de test). **Non testé** : rendu visuel sur le site et sur téléphone, accueil en blocs en navigateur.
+
+
+## Événements en direct — étape 1 sur 4 : socle et gestion (Amélioration 4.2, 07/11)
+
+**Description.** Nouveau module `events` : on annonce une conférence en direct (titre, intervenant, date et heure, durée, lien YouTube ou Vimeo du direct). Le direct reste chez YouTube / Vimeo ; Mejliss TV l'intègre dans sa page (étape 2) et ne diffuse rien depuis le VPS. Cette étape livre le serveur : gestion, liste et fiche publiques, fichier agenda `.ics`, « Me rappeler » (inscription), rattachement de la rediffusion. Les écrans du site (étape 2), les rappels par notification et e-mail (étape 3) et l'application (étape 4) suivent.
+
+**Règles.**
+- Qui gère : l'organisateur ses événements, l'administrateur tous (`/studio/events`). Statuts : brouillon (visible de son auteur seulement), publié, annulé.
+- Phases calculées à chaque requête : `upcoming` (annoncé), `live` (de « ouverture avant l'heure » jusqu'à la fin prévue), `ended`, `cancelled`. Le **lien du direct n'est donné au public qu'en phase `live`** (l'auteur et l'administrateur le voient toujours).
+- Réglage du module : « Ouverture du direct avant l'heure » (10 min par défaut), dans Admin → Modules → Événements en direct. Fonction activable : Admin → Fonctions → Communauté → « Événements en direct ».
+- Rediffusion : après l'événement, l'auteur rattache une de **ses** conférences (l'administrateur : n'importe laquelle) ; la fiche renvoie vers elle seulement si elle est publique.
+- Agenda : `GET /events/<id>/calendar.ics` (heure en UTC, rappel 1 h avant, lien vers la fiche `<web_url>/events/<id>`, sans le lien du direct).
+- « Me rappeler » refusé pour un événement terminé ; les inscriptions sont supprimées avec l'événement. Les rappels eux-mêmes viennent à l'étape 3.
+
+**Prérequis.** Aucun. Migration `001_events.sql` appliquée au démarrage de l'API (tables `events`, `event_reminders`). Aucune nouvelle variable. Pour le lien de la fiche dans l'agenda : réglage « web_url » renseigné (déjà utilisé par les e-mails).
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api` (migration au démarrage). Il n'y a pas encore d'écran : rien à redéployer côté site ni application. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Un 404 sur `/events` : la fonction est coupée (Admin → Fonctions) ou le module absent. Pas de lien du direct dans la fiche : normal avant l'ouverture. Agenda sans lien : renseigner `web_url`.
+
+**Exemples** (jeton d'organisateur ou d'administrateur) :
+```
+curl -s -X POST https://api-majlisstv.le-publicitaire.fr/studio/events -H "Authorization: Bearer $JETON" -H "content-type: application/json" \
+  -d '{"title":"Soirée questions-réponses","speaker":"Cheikh","url":"https://www.youtube.com/watch?v=XXXXXXXXXXX","startsAt":"2026-12-05T20:00:00+01:00","durationMinutes":90,"status":"published"}'
+curl -s https://api-majlisstv.le-publicitaire.fr/events
+curl -s -o evenement.ics https://api-majlisstv.le-publicitaire.fr/events/<id>/calendar.ics
+curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/studio/events/<id> -H "Authorization: Bearer $JETON" -H "content-type: application/json" -d '{"talkId":"<id de la conférence enregistrée>"}'
+```
+
+**Testé.** `api/tests/test_events_lib.mjs` (adresses, phases, agenda) et `api/tests/test_events.py` (droits, isolation des organisateurs, lien caché puis donné, agenda, rappel, rediffusion, annulation, suppression, fonction coupée), tous deux dans la suite GitHub. **Non testé** : ouverture du fichier `.ics` dans Google Agenda / Apple Calendrier / Outlook, direct réel YouTube / Vimeo. `test_modules.py` (hors suite GitHub) échoue déjà : sa liste de 26 modules est périmée.

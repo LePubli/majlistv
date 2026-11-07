@@ -43,7 +43,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
 | 4.1 | **Correction collaborative des sous-titres** : un membre signale une erreur, un modérateur valide | Qualité des traductions qui progresse sans effort de ton côté | M | ★★ — **livrée (05/11)** : module `corrections`, relecture humaine obligatoire |
-| 4.2 | **Conférences en direct et événements** : annonce, rappel dans l'agenda (.ics), rediffusion automatique | Rendez-vous réguliers, lien fort avec les intervenants | L | ★★ |
+| 4.2 | 🟡 **étape 1 sur 4 livrée** (07/11 ; décisions Epok : direct YouTube/Vimeo intégré au site, rediffusion rattachée à la main, page publique + rappel pour les inscrits) **Conférences en direct et événements** : annonce, rappel dans l'agenda (.ics), rediffusion automatique | Rendez-vous réguliers, lien fort avec les intervenants | L | ★★ |
 | 4.3 | ✅ (Amélioration 4.3, site + application) **Prière : date hégirienne, direction de la Qibla, calendrier du mois** (ni date hégirienne ni Qibla aujourd'hui) | Usage quotidien du site, raison d'ouvrir l'application | S–M | ★★ |
 | 4.4 | **Avis et notes** sur les conférences (étoiles, modérées) | Aide au choix, alimente les recommandations | M | ★ |
 | 4.5 | **Questions à l'intervenant** (avec réponses modérées) plutôt que des commentaires libres | Lien avec la communauté sans le risque d'un fil de commentaires ouvert | M | ★ |

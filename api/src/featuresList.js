@@ -71,6 +71,8 @@ export const FEATURES = [
     rules: [{ re: '^/me/favorites(/|$)' }] },
   { id: 'watchlater', group: 'community', label: 'À regarder plus tard', hint: 'Liste personnelle distincte des favoris : bouton sur les vignettes et la page de la vidéo, onglet dans Ma bibliothèque, rangée sur l’accueil',
     rules: [{ re: '^/me/watchlater(/|$)' }] },
+  { id: 'events', group: 'community', label: 'Événements en direct', hint: 'Annonce de conférences en direct : page des événements, fichier agenda (.ics), « Me rappeler », direct YouTube / Vimeo intégré, rediffusion rattachée à une conférence',
+    rules: [{ re: '^/(events|me/events|studio/events)(/|$)' }] },
   { id: 'lists', group: 'community', label: 'Listes de lecture', hint: 'Listes personnelles et partage par lien',
     rules: [{ re: '^/(me/lists|lists/shared)(/|$)' }] },
   { id: 'channels', group: 'catalog', label: 'Chaînes', hint: 'Pages de chaînes (ex-intervenants), propriétaire organisateur, Studio « Ma chaîne »',
@@ -119,7 +121,7 @@ export const FEATURES = [
 // Étape M3a : module qui porte chaque fonction (dossier api/src/modules/<module>). Si ce dossier est absent, la fonction est
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' };
-const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'audyn', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists',
+const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'audyn', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists', 'events',
   'channels', 'shorts', 'follow', 'citations', 'prayer', 'appupdates', 'offline', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 

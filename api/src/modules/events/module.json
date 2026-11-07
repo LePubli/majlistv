@@ -1,0 +1,12 @@
+{
+  "id": "events",
+  "name": "Événements en direct",
+  "version": "1.0.0",
+  "description": "Annonce de conférences en direct : page publique des événements, fichier agenda (.ics), « Me rappeler », direct YouTube / Vimeo intégré au moment venu, rattachement de la rediffusion à une conférence.",
+  "feature": "events",
+  "requires": [],
+  "settings": [
+    { "key": "open_minutes", "type": "number", "label": "Ouverture du direct avant l'heure (minutes)", "def": "10", "min": 0, "max": 120,
+      "help": "À partir de ce délai avant l'heure annoncée, le lecteur du direct apparaît sur la fiche de l'événement (le lien n'est pas donné avant)." }
+  ]
+}
