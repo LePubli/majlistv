@@ -1,7 +1,7 @@
 """Audyn (étape 4) : histoires du soir dans l'espace Kids — liste/fiche/lecture pour l'enfant, accès selon la formule du parent, temps d'écoute
 compté à part (hors limite quotidienne), réglages par enfant (minuteur autorisé, arrêt automatique), ligne du rapport hebdomadaire.
 Prérequis : API (3055), PG de test (5544), admin admin@test.local. Avec le stockage de test (moto 5599) la lecture et l'aperçu sont aussi testés."""
-import sys, time, uuid, requests, psycopg2
+import os, sys, time, uuid, requests, psycopg2
 
 B = "http://127.0.0.1:3055"
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
@@ -87,10 +87,11 @@ ok(requests.get(f"{B}/kids/stories/{SL}", headers=K1).json()["autoStopMin"] == 2
 
 # --- Rapport hebdomadaire : ligne « histoires du soir »
 import subprocess, os, json
-js = """import { kidReport } from '/home/claude/majlistv/api/src/kidsControl.js'; import { childLine } from '/home/claude/majlistv/api/src/kidsReportMailer.js';
+API_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+js = """import { kidReport } from './src/kidsControl.js'; import { childLine } from './src/kidsReportMailer.js';
 const r = await kidReport(process.argv[1], 7, true); console.log(JSON.stringify({ m: r.profiles[0].storyMinutes, a: r.profiles[0].active, fr: childLine(r.profiles[0], 'fr'), en: childLine(r.profiles[0], 'en'), ar: childLine(r.profiles[0], 'ar') })); process.exit(0);"""
 env = dict(os.environ, DATABASE_URL="postgres://majlis:pw@127.0.0.1:5544/majlis", JWT_SECRET="0123456789abcdef0123456789abcdef-test", SETTINGS_KEY="test-settings-key-0123456789", PRACTICE_KEY="practice-key-for-tests-0123456789")
-out = subprocess.run(["node", "--input-type=module", "-e", js, str(U1)], capture_output=True, text=True, env=env, cwd="/home/claude/majlistv/api")
+out = subprocess.run(["node", "--input-type=module", "-e", js, str(U1)], capture_output=True, text=True, env=env, cwd=API_DIR)
 ok(out.returncode == 0, "rapport : calcul sans erreur" + ("" if out.returncode == 0 else " → " + out.stderr[-300:]))
 rep = json.loads(out.stdout.strip().splitlines()[-1])
 ok(rep["m"] == 1 and rep["a"] is True, "rapport : minutes d'histoires comptées et enfant actif")
