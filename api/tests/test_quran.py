@@ -182,14 +182,14 @@ ok(all(x["slug"] != "zt-wbw" for x in j["translations"] + j["tafsirs"]), "le mot
 
 r = requests.post(B + "/admin/quran/resources", headers=ADM, json=meta(slug="zt-taj", kind="tajweed", lang="ar", name="Tajwid fictif", position=6)); TJ = r.json()["id"]
 cur.execute("select char_length(text) from quran_verses where resource_id=%s and sura=1 and aya=1", (AR,)); L = cur.fetchone()[0]
-taj = [{"surah": 1, "ayah": 1, "annotations": [{"rule": "ghunnah", "start": 1, "end": 3}, {"rule": "madd_2", "start": 4, "end": L}]},
+taj = [{"surah": 1, "ayah": 1, "annotations": [{"rule": "idgham", "start": 1, "end": 3}, {"rule": "madd_2", "start": 4, "end": L}]},
        {"surah": 1, "ayah": 2, "annotations": [{"rule": "ikhfa", "start": 0, "end": 999}]},
        {"surah": 2, "ayah": 1, "annotations": [{"rule": "Mauvaise Règle", "start": 0, "end": 2}]}]
 r = requests.post(f"{B}/admin/quran/resources/{TJ}/import", headers=ADM, json={"format": "json", "content": json.dumps(taj)}); j = r.json()
 ok(r.status_code == 200 and j["imported"] == 1 and j["skipped"] == 2, "tajwid : verset hors du texte ou règle invalide écartés")
 requests.put(f"{B}/admin/quran/resources/{TJ}", headers=ADM, json={k: v for k, v in meta(slug="zt-taj", kind="tajweed", lang="ar", name="Tajwid fictif", position=6, enabled=True).items() if k not in ("slug", "kind")})
 j = requests.get(B + "/quran/suras/1?lang=fr&tajweed=1").json()
-ok(j["tajweedMeta"]["slug"] == "zt-taj" and j["tajweed"] == {"1": [["ghunnah", 1, 3], ["madd_2", 4, L]]}, "lecteur : positions du tajwid à la demande")
+ok(j["tajweedMeta"]["slug"] == "zt-taj" and j["tajweed"] == {"1": [["idgham", 1, 3], ["madd_2", 4, L]]}, "lecteur : positions du tajwid à la demande")
 res = [x["slug"] for x in requests.get(B + "/quran/resources").json()]
 ok("zt-wbw" in res and "zt-taj" in res, "crédits : mot à mot et tajwid listés avec les ressources")
 ok(requests.get(B + "/quran/search", params={"q": "trois"}).json()["results"] == [], "le mot à mot n'est pas fouillé")

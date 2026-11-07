@@ -138,7 +138,7 @@ ok(requests.get(f"{SP}&audience=kids", headers=O1).json()["practice"] is None, "
 raw = str(requests.get(SP, headers=O1).json()["practice"])
 ok(not any(u in raw for u in users + [lid]), "aucune identité dans la réponse")
 csv_txt = requests.get(SP + "&format=csv", headers=O1).text
-ok("Après la conférence" in csv_txt, "export CSV : section retour anonyme")
+ok("Après la vidéo" in csv_txt, "export CSV : section retour anonyme")
 
 # --- effacement du compte : cascade
 cur.execute("delete from users where id=%s", (lid,))
