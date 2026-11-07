@@ -23,6 +23,8 @@ import { WidgetSync } from '@/components/WidgetSync';
 import { AppUpdate } from '@/components/AppUpdate';
 import { QuranPlayerProvider } from '@/lib/quranPlayer';
 import { QuranMiniBar } from '@/components/QuranMiniBar';
+import { AudynPlayerProvider } from '@/lib/audynPlayer';
+import { AudynMiniBar } from '@/components/AudynMiniBar';
 import { colors } from '@/lib/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -102,8 +104,12 @@ function Shell() {
         <Stack.Screen name="ramadan" />
         <Stack.Screen name="quran/index" />
         <Stack.Screen name="quran/[n]" />
+        <Stack.Screen name="audyn/index" />
+        <Stack.Screen name="audyn/[id]" />
+        <Stack.Screen name="audyn/player" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
       <QuranMiniBar />
+      <AudynMiniBar />
       <AdGate />
       <LogoIntro />
     </>
@@ -118,7 +124,9 @@ export default function RootLayout() {
           <PrayerProvider>
             <DownloadProvider>
               <QuranPlayerProvider>
-                <Shell />
+                <AudynPlayerProvider>
+                  <Shell />
+                </AudynPlayerProvider>
               </QuranPlayerProvider>
             </DownloadProvider>
           </PrayerProvider>
