@@ -130,10 +130,12 @@ export default function ExperimentsAdmin() {
     if (r.ok) { if (okText) setMsg({ ok: true, text: okText(r.data) }); load(); } else setMsg({ ok: false, text: r.data?.error || 'Action impossible.' });
   };
   const keep = (e, v) => {
-    const text = v.key === 'A'
+    const manual = data.zones.find((z) => z.id === e.zone)?.manual;
+    const text = manual ? `Terminer le test « ${e.name} » et retenir ${v.key === 'A' ? 'l’original' : `la variante ${v.key}`} ? Les textes de l’application ne changent pas tout seuls : la variante retenue est à intégrer dans l’application (mise à jour en ligne).`
+      : v.key === 'A'
       ? `Terminer le test « ${e.name} » et garder l’original ? Le site ne change pas.`
       : `Terminer le test « ${e.name} » et appliquer la variante ${v.key} au site ? Ses textes remplaceront les textes actuels (modifiables ensuite dans Admin → Textes) et ses réglages de présentation seront enregistrés (Admin → Paramètres → Paiement).`;
-    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s), ${d.appliedOptions} réglage(s)).`));
+    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' && !manual }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : manual ? `Test terminé : variante ${v.key} retenue (à intégrer dans l’application).` : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s), ${d.appliedOptions} réglage(s)).`));
   };
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;

@@ -103,6 +103,7 @@ const fr = {
   'auth.passwordHint': '8 caractères au moins',
   'auth.name': 'Prénom (facultatif)',
   'auth.toRegister': "Pas encore de compte ? Créer un compte",
+  'auth.pitch': '', // phrase d'accroche de l'écran « Créer un compte » : vide = rien (sert aux tests A/B)
   'auth.toLogin': 'Déjà un compte ? Se connecter',
   'auth.forgot': 'Mot de passe oublié ?',
   'auth.2fa.title': 'Vérification en deux étapes',
@@ -477,6 +478,7 @@ const en: Record<AppKey, string> = {
   'auth.passwordHint': 'At least 8 characters',
   'auth.name': 'First name (optional)',
   'auth.toRegister': 'No account yet? Create one',
+  'auth.pitch': '',
   'auth.toLogin': 'Already have an account? Sign in',
   'auth.forgot': 'Forgot your password?',
   'auth.2fa.title': 'Two-step verification',
@@ -847,6 +849,7 @@ const ar: Record<AppKey, string> = {
   'auth.passwordHint': '8 أحرف على الأقل',
   'auth.name': 'الاسم الأول (اختياري)',
   'auth.toRegister': 'ليس لديك حساب؟ أنشئ حسابًا',
+  'auth.pitch': '',
   'auth.toLogin': 'لديك حساب؟ سجّل الدخول',
   'auth.forgot': 'نسيت كلمة المرور؟',
   'auth.2fa.title': 'التحقق على خطوتين',

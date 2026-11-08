@@ -7992,3 +7992,24 @@ curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "A
 **Debug.** Le visiteur ne voit pas la variante : voir l'étape 1 (suivi refusé, test en pause, cache de 10 s). Après « Garder la variante », le site web met jusqu'à 10 s à afficher les nouveaux textes. `curl -s https://api-majlisstv.le-publicitaire.fr/billing/plans` montre les réglages actuels dans `layout`.
 
 **Testé.** `test_experiments.py` (valeurs et réglages inconnus refusés — aucun moyen de toucher aux prix —, variante « réglage seulement » acceptée, variante qui ne change rien refusée, variante B servie avec textes et réglages, application du gagnant : 1 texte + 2 réglages, réglages publiés par `/billing/plans`), `test_experiments_lib.mjs`, `test_experiments_web.mjs`, essai Chromium (création dans l'admin avec réglages + texte ; visiteur A = page d'origine ; visiteur B = titre changé, annuelle d'abord, mensuelle en avant ; visiteurs comptés ; « garder la variante » ; la page reflète ensuite la variante gardée pour tous), capture vérifiée (prix intacts). **Non testé** : le clic sur le bouton d'essai et l'inscription depuis cette page (le bouton n'est un lien que si Stripe est configuré, ce qui n'est pas le cas dans mon environnement de test) ; avec du vrai trafic ; en arabe.
+
+## Tests A/B — étape 3 sur 4 : application mobile (Amélioration 7.2, 08/11)
+
+**Description.** Le moteur de tests A/B (étapes 1-2) sait maintenant tester l'écran **« Créer un compte »** de l'application. Zone *Application mobile : écran « Créer un compte »* (Admin → Tests A/B) ; textes modifiables : titre et bouton « Créer un compte » (`auth.register`), lien « Pas encore de compte ? » (`auth.toRegister`), phrase d'accroche au-dessus du formulaire (`auth.pitch`, absente de l'original). Objectif : inscription, 50/50, tu tranches. Un visiteur est compté quand il **voit l'écran d'inscription** ; l'inscription est comptée juste après la création du compte.
+
+**Différence avec le site.** Les textes de l'appli sont dans son code : « Garder la variante » **retient** le gagnant (test terminé) mais **ne modifie rien tout seul** ; la variante gagnante est ensuite à intégrer dans l'appli (par Claude, mise à jour en ligne).
+
+**Confidentialité.** Identifiant aléatoire gardé dans le coffre du téléphone (`mejliss.xp`) ; le serveur n'en garde que l'empreinte. Fonction coupée (Admin → Fonctions → Tests A/B) ou hors connexion : l'original s'affiche.
+
+**Prérequis.** Étapes 1-2 déployées.
+
+**Déploiement.**
+1. DockPanel → majlistv-api → Redeploy ; puis majlistv-web → Redeploy (admin : zone « manuelle »).
+2. Mise à jour en ligne de l'appli (JS seulement, **pas de nouvel APK**) ; fermer puis rouvrir l'appli deux fois.
+3. VPS : `/root/apply-limits.sh` ; `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*` ; `nginx -t && systemctl reload nginx` ; `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Variante non reçue : l'API met les tests en cache 10 s ; l'appli ne demande les tests qu'une fois par lancement (relancer l'appli). Compteur à 0 : vérifier que le test est « en cours » et que la fonction est active.
+
+**Exemple.** Admin → Tests A/B → Nouveau test → zone « Application mobile… » → variante B : titre « Rejoindre Mejliss TV », accroche « 7 jours gratuits » → Démarrer.
+
+**Testé.** API (règles + essai complet : variante reçue, fin sans écriture dans les textes du site), appli (typage + 254 tests). **Non testé** : affichage sur un vrai téléphone (à vérifier après la mise à jour en ligne).

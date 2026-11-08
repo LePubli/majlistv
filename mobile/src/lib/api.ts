@@ -80,7 +80,7 @@ export function createApi(opts: ApiOptions) {
 
   return {
     get: <T>(path: string, query?: ReqOptions['query'], auth?: boolean) => request<T>('GET', path, { query, auth }),
-    post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body: body ?? {} }),
+    post: <T>(path: string, body?: unknown, auth?: boolean) => request<T>('POST', path, { body: body ?? {}, auth }),
     put: <T>(path: string, body?: unknown) => request<T>('PUT', path, { body: body ?? {} }),
     patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, { body: body ?? {} }),
     del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, { body }),

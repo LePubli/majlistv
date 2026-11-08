@@ -43,4 +43,7 @@ r = cleanConfig('pricing', { texts: { fr: { pricingTitle: 'Titre' } }, options: 
 assert.deepEqual(r, { texts: { fr: { pricingTitle: 'Titre' } }, options: { highlight: 'month' } }); ok('tarifs : textes et réglages, réglage vide ignoré');
 assert.ok(cleanConfig('pricing', { options: { highlight: 'zzz' } }).error && cleanConfig('pricing', { options: { price: '1' } }).error && cleanConfig('vitrine_hero', { options: { highlight: 'month' } }).error); ok('tarifs : valeur ou réglage inconnu refusé (les prix ne sont pas modifiables)');
 assert.ok(cleanConfig('pricing', { texts: { fr: { vtLead: 'x' } } }).error); ok('tarifs : un texte d\'une autre zone est refusé');
+r = cleanConfig('mobile_register', { texts: { fr: { 'auth.register': 'Rejoindre', 'auth.pitch': 'Gratuit 7 jours' } } });
+assert.deepEqual(r, { texts: { fr: { 'auth.register': 'Rejoindre', 'auth.pitch': 'Gratuit 7 jours' } }, options: {} }); ok('appli : textes de l\'écran « Créer un compte » acceptés');
+assert.ok(cleanConfig('mobile_register', { texts: { fr: { vtLead: 'x' } } }).error && cleanConfig('mobile_register', { options: { highlight: 'month' } }).error); ok('appli : texte ou réglage d\'une autre zone refusé');
 console.log('OK  experiments lib');

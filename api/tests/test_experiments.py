@@ -134,6 +134,25 @@ cur.execute("delete from app_settings where key in ('pricing_highlight','pricing
 cur.execute("delete from site_texts where key='pricingTitle' and value like %s", (f"%{tag}",))
 ok(requests.delete(f"{B}/admin/experiments/{pid}", headers=A).status_code == 200, "tarifs : test supprimé")
 
+# ---------- Zone « application mobile » : la variante gardée ne touche à rien toute seule ----------
+cur.execute("delete from experiments where zone='mobile_register'")
+mv = [{"name": "Original", "weight": 50, "texts": {}}, {"name": "Rejoindre", "weight": 50, "texts": {"fr": {"auth.register": f"Rejoindre {tag}", "auth.pitch": "Gratuit"}}}]
+ok(requests.post(B + "/admin/experiments", headers=A, json={"name": "Appli", "zone": "mobile_register", "variants": [mv[0], {"name": "B", "weight": 50, "texts": {"fr": {"vtLead": "x"}}}]}).status_code == 400, "appli : texte d'une autre zone refusé")
+mid = requests.post(B + "/admin/experiments", headers=A, json={"name": f"Appli {tag}", "zone": "mobile_register", "variants": mv}).json()["id"]
+ok(any(z["id"] == "mobile_register" and z["manual"] for z in requests.get(B + "/admin/experiments", headers=A).json()["zones"]), "appli : zone déclarée « à intégrer à la main »")
+ok(requests.post(f"{B}/admin/experiments/{mid}/start", headers=A).status_code == 200, "appli : démarré")
+time.sleep(11)
+seenM = None
+for i in range(40):
+    x = [e for e in active(f"m{i:03d}-" + uuid.uuid4().hex) if e["zone"] == "mobile_register"][0]
+    if x["variant"] == "B": seenM = x; break
+ok(seenM and seenM["texts"]["fr"]["auth.register"] == f"Rejoindre {tag}", "appli : le visiteur B reçoit les textes de l'appli")
+r = requests.post(f"{B}/admin/experiments/{mid}/end", headers=A, json={"winner": "B", "apply": True}).json()
+ok(r["applied"] == 0 and r["appliedOptions"] == 0, "appli : « garder la variante » n'écrit rien dans les textes du site")
+cur.execute("select count(*) from site_texts where key like 'auth.%%'")
+ok(cur.fetchone()[0] == 0, "appli : aucun texte du site créé")
+ok(requests.delete(f"{B}/admin/experiments/{mid}", headers=A).status_code == 200, "appli : test supprimé")
+
 # Nettoyage
 cur.execute("delete from site_texts where key in ('vtLead','heroCta') and (value like %s or value = 'Je commence' or value like %s)", (f"%{tag}", f"%{tag}"))
 ok(requests.delete(f"{B}/admin/experiments/{eid}", headers=A).status_code == 200 and requests.delete(f"{B}/admin/experiments/{other}", headers=A).status_code == 200, "tests terminés/brouillons supprimables")

@@ -103,7 +103,7 @@ export default async function experimentsRoutes(app) {
 
   app.get('/admin/experiments', adminOnly, async () => ({
     experiments: await load(),
-    zones: Object.entries(ZONES).map(([id, z]) => ({ id, label: z.label, keys: z.keys, options: z.options || {} })),
+    zones: Object.entries(ZONES).map(([id, z]) => ({ id, label: z.label, manual: !!z.manual, keys: z.keys, options: z.options || {} })),
     langs: LANGS,
   }));
 
@@ -189,7 +189,7 @@ export default async function experimentsRoutes(app) {
     if (b.winner && !win) return reply.code(400).send({ error: 'Variante inconnue' });
     // Réglages de présentation de la variante gardée (ex. formule mise en avant) : enregistrés d'abord, comme dans Admin → Paramètres.
     let appliedOptions = 0;
-    if (win && b.apply && win.key !== 'A') {
+    if (win && b.apply && win.key !== 'A' && !ZONES[e.zone]?.manual) {
       const z = ZONES[e.zone];
       const values = {};
       for (const [k, v] of Object.entries(win.options || {})) if (z.options?.[k]) values[z.options[k].setting] = v;
@@ -199,7 +199,7 @@ export default async function experimentsRoutes(app) {
     try {
       await client.query('BEGIN');
       let applied = 0;
-      if (win && b.apply && win.key !== 'A') {
+      if (win && b.apply && win.key !== 'A' && !ZONES[e.zone]?.manual) {
         for (const [lang, map] of Object.entries(win.texts)) for (const [k, v] of Object.entries(map)) {
           await client.query(`INSERT INTO site_texts(key, lang, value, updated_by) VALUES ($1,$2,$3,$4)
             ON CONFLICT (key, lang) DO UPDATE SET value = EXCLUDED.value, updated_at = now(), updated_by = EXCLUDED.updated_by`, [k, lang, v, req.user.sub]);
@@ -210,7 +210,7 @@ export default async function experimentsRoutes(app) {
       await client.query('COMMIT');
       if (applied) resetTextsCache();
       dropCache();
-      req.auditSummary = `Test A/B « ${e.name} » terminé${win ? ` : variante ${win.key} ${b.apply && win.key !== 'A' ? 'appliquée au site' : 'retenue'}` : ''}`;
+      req.auditSummary = `Test A/B « ${e.name} » terminé${win ? ` : variante ${win.key} ${b.apply && win.key !== 'A' && !ZONES[e.zone]?.manual ? 'appliquée au site' : 'retenue'}` : ''}`;
       return { ok: true, applied, appliedOptions };
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
   });

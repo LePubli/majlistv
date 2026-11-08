@@ -1,5 +1,5 @@
 // Connexion / création de compte (fenêtre qui monte du bas).
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,12 +7,14 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
 import { verifyErrorKey } from '@/lib/twoFactor';
+import { reportSignup, useExperiment } from '@/lib/useExperiment';
 import { SITE_URL } from '@/lib/config';
 import { colors, fonts, radius } from '@/lib/theme';
 import { Button, IconButton, Txt, screenStyle, Title } from '@/components/ui';
 
 export default function LoginScreen() {
-  const { login, verifyTwoFactor, register, t, dirStyle, isRTL } = useSession();
+  const { login, verifyTwoFactor, register, t, dirStyle, isRTL, api } = useSession();
+  const xp = useExperiment('mobile_register'); // test A/B éventuel sur les textes de « Créer un compte » (amélioration 7.2)
   const params = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<'login' | 'register'>(params.mode === 'register' ? 'register' : 'login');
   const [email, setEmail] = useState('');
@@ -22,6 +24,9 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [challenge, setChallenge] = useState<string | null>(null); // 2e étape : code de la double authentification
   const [code, setCode] = useState('');
+
+  // Le test compte un visiteur quand il voit l'écran « Créer un compte » (une seule fois par visiteur côté serveur).
+  useEffect(() => { if (mode === 'register' && !challenge && xp.variant) xp.expose(); }, [mode, challenge, xp.variant]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const input = {
     minHeight: 52, paddingHorizontal: 16, borderRadius: radius.input, backgroundColor: colors.panel, borderWidth: 1,
@@ -35,7 +40,7 @@ export default function LoginScreen() {
       if (mode === 'login') {
         const pending = await login(email, password);
         if (pending) { setChallenge(pending.challenge); setCode(''); return; }
-      } else await register(email, password, name);
+      } else { await register(email, password, name); void reportSignup(api); }
       router.back();
     } catch (err) {
       const e = err as ApiError;
@@ -98,10 +103,11 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 18, gap: 16 }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Title>{mode === 'login' ? t('auth.login') : t('auth.register')}</Title>
+            <Title>{mode === 'login' ? t('auth.login') : xp.tx('auth.register', t('auth.register'))}</Title>
             <IconButton label={t('common.close')} onPress={() => router.back()}><Feather name="x" size={20} color={colors.text} /></IconButton>
           </View>
 
+          {mode === 'register' && xp.tx('auth.pitch', t('auth.pitch')) ? <Txt color={colors.muted}>{xp.tx('auth.pitch', t('auth.pitch'))}</Txt> : null}
           {mode === 'register' ? (
             <TextInput value={name} onChangeText={setName} placeholder={t('auth.name')} placeholderTextColor={colors.muted}
               accessibilityLabel={t('auth.name')} autoCapitalize="words" style={input} />
@@ -114,10 +120,10 @@ export default function LoginScreen() {
 
           {error ? <Txt color={colors.danger} accessibilityRole="alert">{error}</Txt> : null}
 
-          <Button label={mode === 'login' ? t('auth.login') : t('auth.register')} onPress={submit} loading={busy} disabled={!email || !password} />
+          <Button label={mode === 'login' ? t('auth.login') : xp.tx('auth.register', t('auth.register'))} onPress={submit} loading={busy} disabled={!email || !password} />
 
           <Pressable accessibilityRole="button" onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Txt weight="semibold" color={colors.goldLight} style={{ textAlign: 'center' }}>{mode === 'login' ? t('auth.toRegister') : t('auth.toLogin')}</Txt>
+            <Txt weight="semibold" color={colors.goldLight} style={{ textAlign: 'center' }}>{mode === 'login' ? xp.tx('auth.toRegister', t('auth.toRegister')) : t('auth.toLogin')}</Txt>
           </Pressable>
           {mode === 'login' ? (
             <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`${SITE_URL}/forgot`)} style={{ minHeight: 44, justifyContent: 'center' }}>

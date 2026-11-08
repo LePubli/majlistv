@@ -17,6 +17,13 @@ ZONES.pricing = {
     order: { label: 'Ordre des formules', setting: 'pricing_order', def: 'month_first', values: { month_first: 'Mensuelle puis annuelle', year_first: 'Annuelle puis mensuelle' } },
   },
 };
+// Zone « application mobile » : écran « Créer un compte ». Les clés sont celles de mobile/src/lib/i18n.ts (pas celles du site).
+// `manual` : « garder la variante » ne modifie rien tout seul (les textes de l'appli sont dans son code, à mettre à jour par une mise à jour en ligne).
+ZONES.mobile_register = {
+  label: "Application mobile : écran « Créer un compte »",
+  manual: true,
+  keys: { 'auth.register': 'Titre et bouton « Créer un compte »', 'auth.toRegister': 'Lien « Pas encore de compte ? »', 'auth.pitch': "Phrase d'accroche au-dessus du formulaire (absente de l'original)" },
+};
 export const LANGS = ['fr', 'en', 'ar'];
 export const VARIANT_KEYS = ['A', 'B', 'C'];
 export const VISITOR_RE = /^[A-Za-z0-9-]{16,64}$/;

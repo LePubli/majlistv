@@ -78,7 +78,7 @@ test('langues : mêmes clés partout, mêmes variables {x}, sens d’écriture',
       // {s} = suffixe de pluriel : propre au français / à l’anglais, absent en arabe.
       const vars = (s: string) => [...new Set(s.match(/\{\w+\}/g) || [])].filter((v) => v !== "{s}").sort().join();
       assert.equal(vars(DICT[l][k as keyof typeof DICT.fr]), vars(DICT.fr[k as keyof typeof DICT.fr]), `variables de ${l}.${k}`);
-      assert.ok(DICT[l][k as keyof typeof DICT.fr].trim().length > 0, `${l}.${k} vide`);
+      if (k !== 'auth.pitch') assert.ok(DICT[l][k as keyof typeof DICT.fr].trim().length > 0, `${l}.${k} vide`); // « auth.pitch » est vide exprès (texte d'un test A/B)
     }
   }
   assert.equal(DIR.ar, 'rtl');
