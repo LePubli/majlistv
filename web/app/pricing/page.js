@@ -6,13 +6,13 @@ import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import { safePath, pricingPath, authPath } from '../../lib/nav';
 import { COUNTRY_CODES, countryName, guessCountry } from '../../lib/countries';
-import { useExperiment } from '../../lib/experiments';
+import { useExperiment, visitorId } from '../../lib/experiments';
 
 const fill = (text, n) => text.replace('{n}', n);
 
 // Page des formules : les montants viennent de Stripe (aucun prix écrit dans le code).
 export default function Pricing() {
-  const { t, locale, user, ready, call } = useApp();
+  const { t, locale, user, ready, call, feat } = useApp();
   const [info, setInfo] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState('');
@@ -35,8 +35,11 @@ export default function Pricing() {
   }, []);
   useEffect(() => {
     if (country === null) return;
-    call(`/billing/plans${country ? `?country=${country}` : ''}`).then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] }));
-  }, [call, country]);
+    // Test de prix (7.2) : l'identifiant du visiteur permet au serveur de lui montrer (et de lui facturer) les prix de sa variante.
+    const v = feat('experiments') ? visitorId() : null;
+    const q = [country ? `country=${country}` : '', v ? `visitor=${encodeURIComponent(v)}` : ''].filter(Boolean).join('&');
+    call(`/billing/plans${q ? `?${q}` : ''}`).then((r) => setInfo(r.ok ? r.data : { enabled: false, plans: [], methods: ['card'] }));
+  }, [call, country, feat]);
   const pickCountry = (e) => {
     setCountry(e.target.value);
     try { localStorage.setItem('pay_country', e.target.value); } catch { /* stockage indisponible */ }
@@ -111,7 +114,7 @@ export default function Pricing() {
                   ) : active ? (
                     <button className="btn" disabled={busy !== ''} onClick={() => go('/billing/portal', null, 'portal')}>{current ? t('manageSub') : t('changePlan')}</button>
                   ) : user ? (
-                    <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, tier: tier.key, waiver: true, ...(from ? { returnTo: from } : {}), ...(info.regionalPricing && country ? { country } : {}) }, `${tier.key}-${interval}`)}>
+                    <button className="btn" disabled={busy !== '' || !waiver} title={waiver ? undefined : t('waiverFirst')} onClick={() => go('/billing/checkout', { interval, tier: tier.key, waiver: true, ...(feat('experiments') && visitorId() ? { visitor: visitorId() } : {}), ...(from ? { returnTo: from } : {}), ...(info.regionalPricing && country ? { country } : {}) }, `${tier.key}-${interval}`)}>
                       {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
                     </button>
                   ) : (

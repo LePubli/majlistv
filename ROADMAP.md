@@ -635,3 +635,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 7.2 « Tests A/B » — **étape 1 sur 4** (moteur, écran Admin → Tests A/B, zone « bannière de l'accueil visiteur », mesure des inscriptions) : livré (README « Tests A/B — étape 1 »). Suite : page Tarifs, application mobile, test de prix.
 - Amélioration 7.2 « Tests A/B » — **étape 2 sur 4** (page Tarifs : textes, formule mise en avant, ordre des formules) : livré (README « Tests A/B — étape 2 »). Suite : application mobile, test de prix.
 - Amélioration 7.2 « Tests A/B » — **étape 3 sur 4** (application mobile : écran « Créer un compte », mise à jour en ligne) : livré (README « Tests A/B — étape 3 »). Suite : test de prix.
+- Amélioration 7.2 « Tests A/B » — **étape 4 sur 4** (test de prix : prix Stripe par variante, abonnés / revenu mesurés, « garder » applique les prix) : livré (README « Tests A/B — étape 4 »). **7.2 terminée.**

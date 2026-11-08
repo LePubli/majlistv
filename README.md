@@ -8013,3 +8013,32 @@ curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "A
 **Exemple.** Admin → Tests A/B → Nouveau test → zone « Application mobile… » → variante B : titre « Rejoindre Mejliss TV », accroche « 7 jours gratuits » → Démarrer.
 
 **Testé.** API (règles + essai complet : variante reçue, fin sans écriture dans les textes du site), appli (typage + 254 tests). **Non testé** : affichage sur un vrai téléphone (à vérifier après la mise à jour en ligne).
+
+## Tests A/B — étape 4 sur 4 : test de prix (Amélioration 7.2, 08/11)
+
+**Description.** Admin → Tests A/B → zone **« Prix de l'abonnement (formule standard) »** : compare le prix actuel (A, original) à 1 ou 2 autres prix, sur des visiteurs tirés au sort 50/50 (ou autre part). Chaque variante porte un **prix mensuel** et/ou **annuel** : ce sont des prix **créés par toi dans Stripe** (Produits → ton abonnement → Ajouter un prix) dont tu colles l'identifiant `price_…`. Le site ne crée rien chez Stripe.
+
+**Règles de sécurité.**
+- **Prix affiché = prix facturé** : la page Tarifs et l'accueil lisent les montants **chez Stripe** pour la variante du visiteur ; le paiement n'applique le prix d'une variante qu'à un visiteur **à qui ce prix a été réellement montré** (sinon prix normal). Le navigateur ne peut pas se fabriquer une variante (`/xp/expose` est ignoré pour ce test).
+- Chaque prix est **vérifié chez Stripe** à la création et au démarrage : existe, actif, récurrent, bonne durée (mensuel/annuel), **même devise** que les prix du site, différent du prix actuel.
+- **Abonnés actuels : jamais de changement de prix.** Seuls les nouveaux abonnements en sont concernés.
+- **Pays à tarification par pays** (Admin → Tarifs par pays) : **hors test**, ils gardent leur prix. Formule Apprentissage : pas de test.
+- Un test de prix et un test de la **page Tarifs** ne tournent pas en même temps (chiffres faussés) ; un seul test de prix à la fois.
+- Visiteur qui refuse le suivi (DNT/GPC), robot, fonction « Tests A/B » coupée : prix normal, non compté.
+
+**Mesure.** Verdict sur les **abonnements démarrés** (essai gratuit compris : l'essai de 7 jours retarde les paiements). Affichés en plus : abonnés payants (première facture payée), **revenu encaissé** (somme des factures payées, remboursements non déduits) et **revenu par visiteur** — un prix plus bas peut gagner en abonnés mais rapporter moins : regarde ces colonnes avant de trancher. Les chiffres viennent des webhooks Stripe (`customer.subscription.*`, `invoice.paid`) : l'abonnement porte `xp_exp` / `xp_vh` (identifiant du test + empreinte du visiteur) dans ses métadonnées.
+
+**« Garder la variante ».** Remplace les identifiants `stripe_price_monthly` / `stripe_price_yearly` (Admin → Paramètres → Paiement) par ceux de la variante gardée (si elle n'a qu'un des deux prix, l'autre ne bouge pas). Opération notée au journal d'audit.
+
+**Prérequis.** Étapes 1-3 déployées ; Stripe configuré (clés, prix du site, webhook).
+
+**Déploiement.**
+1. DockPanel → majlistv-api → Redeploy (migration **111**) ; puis majlistv-web → Redeploy.
+2. VPS : `/root/apply-limits.sh` ; `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*` ; `nginx -t && systemctl reload nginx` ; `bash /root/verify-deploy.sh` (0 échec).
+3. Dans Stripe : créer les prix à tester (même devise, même durée que les prix du site).
+
+**Debug.** « introuvable chez Stripe » : mauvais identifiant ou clé secrète d'un autre compte. « archivé » : réactiver ou recréer le prix. Aucun visiteur compté : le test est-il « en cours » ? (cache de 10 s) la fonction « Tests A/B » est-elle active ? Abonnés à 0 alors que des gens s'abonnent : vérifier que le webhook Stripe est bien reçu (Stripe → Développeurs → Webhooks). Un visiteur qui garde la page ouverte pendant la pause/fin du test voit l'ancien prix mais la page de paiement Stripe affiche toujours le prix réellement facturé.
+
+**Exemple.** Nouveau test → zone « Prix de l'abonnement » → B : mensuel `price_1Nxxxx` (5,99 €) → Créer → Démarrer → attendre au moins 100 visiteurs par variante et 10 abonnements → comparer abonnés **et** revenu par visiteur → « Garder la variante B » ou « Garder l'original ».
+
+**Testé.** Règles (`test_experiments_lib.mjs`), essai complet avec **faux Stripe** (`api/tests/test_experiments_price.py` : refus des mauvais prix, répartition, prix facturés, pays régionaux, robots, webhooks, rejeu, revenu, application des prix), site (build + tests). **Non testé** : avec le vrai Stripe (prix réels, webhooks réels, remboursement) et l'affichage dans le navigateur — à vérifier avec un test à 1 visiteur avant de lancer. Le test avec faux Stripe n'est pas dans la CI GitHub (il lui faut le faux serveur Stripe) : lancer à la main (voir en-tête du fichier).

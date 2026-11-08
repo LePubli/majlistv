@@ -8,7 +8,7 @@ import CitationCard from './CitationCard';
 import Row from './Row';
 import { thumbOf } from './TalkCard';
 import { clock } from '../lib/clock';
-import { useExperiment } from '../lib/experiments';
+import { useExperiment, visitorId } from '../lib/experiments';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 const DAYS = [1, 3, 7, 21]; // calendrier de révision espacée (api/src/revision.js)
@@ -62,7 +62,7 @@ export default function Vitrine({ cit, latest, wait, hero }) {
   const [d, setD] = useState(undefined);   // undefined = chargement, null = pas d'exemple disponible
   const [plans, setPlans] = useState(null);
   useEffect(() => { call(`/showcase?lang=${encodeURIComponent(locale)}`, {}, null).then((r) => setD(r.ok && r.data.available ? r.data : null)); }, [call, locale]);
-  useEffect(() => { call('/billing/plans', {}, null).then((r) => setPlans(r.ok ? r.data : null)); }, [call]);
+  useEffect(() => { const v = feat('experiments') ? visitorId() : null; call(`/billing/plans${v ? `?visitor=${encodeURIComponent(v)}` : ''}`, {}, null).then((r) => setPlans(r.ok ? r.data : null)); }, [call, feat]);
 
   const from = (list) => {
     const p = (list || []).filter((x) => x.amount > 0).sort((a, b) => a.amount - b.amount)[0];

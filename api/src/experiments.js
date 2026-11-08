@@ -24,6 +24,14 @@ ZONES.mobile_register = {
   manual: true,
   keys: { 'auth.register': 'Titre et bouton « Créer un compte »', 'auth.toRegister': 'Lien « Pas encore de compte ? »', 'auth.pitch': "Phrase d'accroche au-dessus du formulaire (absente de l'original)" },
 };
+// Zone « prix » : chaque variante porte ses propres prix Stripe (price_…), créés par l'administrateur chez Stripe. Rien d'autre ne change.
+ZONES.price = {
+  label: "Prix de l'abonnement (formule standard)",
+  goal: 'subscription',
+  priceTest: true,
+  keys: {},
+};
+export const PRICE_ID_RE = /^price_[A-Za-z0-9_]{1,80}$/;
 export const LANGS = ['fr', 'en', 'ar'];
 export const VARIANT_KEYS = ['A', 'B', 'C'];
 export const VISITOR_RE = /^[A-Za-z0-9-]{16,64}$/;
@@ -60,6 +68,18 @@ export function cleanConfig(zone, config) {
     }
   }
   // Réglages de présentation : une valeur choisie s'applique telle quelle (vide = on garde le réglage actuel du site).
+  // Test de prix : uniquement des identifiants de prix Stripe (mensuel et/ou annuel) ; aucun texte.
+  const prices = {};
+  if (z.priceTest) {
+    if (Object.keys(out).length) return { error: 'Un test de prix ne modifie aucun texte' };
+    for (const [k, v] of Object.entries(config?.prices || {})) {
+      if (k !== 'month' && k !== 'year') return { error: `Prix inconnu : ${k}` };
+      const id = String(v ?? '').trim();
+      if (!id) continue;
+      if (!PRICE_ID_RE.test(id)) return { error: 'Identifiant de prix invalide (il commence par price_)' };
+      prices[k] = id;
+    }
+  } else if (Object.keys(config?.prices || {}).length) return { error: 'Les prix ne se testent que dans la zone « prix »' };
   const options = {};
   for (const [k, v] of Object.entries(config?.options || {})) {
     const o = z.options?.[k];
@@ -68,7 +88,7 @@ export function cleanConfig(zone, config) {
     if (!(v in o.values)) return { error: `Valeur inconnue pour « ${o.label} »` };
     options[k] = v;
   }
-  return { texts: out, options };
+  return { texts: out, options, prices };
 }
 
 // Fonction de répartition de la loi normale (approximation d'Abramowitz-Stegun, erreur < 1e-7).

@@ -16,7 +16,7 @@ assert.match(admin, /PricingRegionsAdmin/, 'écran Admin → Tarifs par pays');
 assert.match(admin, /regions: 'Tarifs par pays'/, "titre de l'écran (sinon le tableau de bord s'affiche à la place)");
 assert.match(read('../components/AdminShell.js'), /'regions'/, 'menu Admin');
 const pricing = read('../app/pricing/page.js');
-assert.match(pricing, /billing\/plans\$\{country/, 'tarif lu pour le pays choisi');
+assert.match(pricing, /country=\${country}/, 'tarif lu pour le pays choisi');
 assert.match(pricing, /info\.regionalPricing && country \? \{ country \}/, 'pays envoyé au paiement');
 assert.match(pricing, /info\.wallets/, 'Apple Pay / Google Pay annoncés sur demande');
 const { COUNTRY_CODES, countryName } = await import('../lib/countries.js');

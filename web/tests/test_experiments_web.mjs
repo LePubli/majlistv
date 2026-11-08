@@ -21,4 +21,10 @@ assert.ok(r('../components/AuthForm.js').includes('reportSignup(call, r.data.tok
 const lib = r('../lib/experiments.js');
 assert.ok(lib.includes('doNotTrack') && lib.includes('globalPrivacyControl'), 'suivi refusé (DNT / GPC) respecté');
 assert.ok(r('../components/AdminShell.js').includes("experiments: 'experiments'"), 'écran admin rattaché à la fonction « Tests A/B »');
+// Étape 4 : test de prix — l'identifiant du visiteur accompagne la lecture des prix et le paiement.
+assert.ok(pr.includes('visitor=${encodeURIComponent(v)}') && pr.includes("visitor: visitorId()"), 'Tarifs : le visiteur est envoyé avec les prix et le paiement');
+assert.ok(v.includes('visitor=${encodeURIComponent(v)}'), 'Vitrine : prix « à partir de » lus avec le visiteur');
+const adm = r('../components/ExperimentsAdmin.js');
+assert.ok(adm.includes('priceTest') && adm.includes("e.goal === 'subscription'") && adm.includes('appliedPrices'), 'Admin : formulaire, chiffres et application d\'un test de prix');
+assert.ok(zones.includes('ZONES.price') && zones.includes('priceTest: true'), 'zone « prix » déclarée');
 console.log('OK  experiments web');

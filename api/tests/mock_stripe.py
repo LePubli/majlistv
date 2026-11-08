@@ -12,6 +12,9 @@ PRICES = {"price_m": {"id": "price_m", "object": "price", "unit_amount": 990, "c
           "price_rlm": {"id": "price_rlm", "object": "price", "unit_amount": 599, "currency": "eur", "recurring": {"interval": "month"}},
           "price_rly": {"id": "price_rly", "object": "price", "unit_amount": 5999, "currency": "eur", "recurring": {"interval": "year"}},
           "price_usd": {"id": "price_usd", "object": "price", "unit_amount": 499, "currency": "usd", "recurring": {"interval": "month"}},
+          "price_tm": {"id": "price_tm", "object": "price", "unit_amount": 790, "currency": "eur", "active": True, "recurring": {"interval": "month"}},
+          "price_ty": {"id": "price_ty", "object": "price", "unit_amount": 7900, "currency": "eur", "active": True, "recurring": {"interval": "year"}},
+          "price_old": {"id": "price_old", "object": "price", "unit_amount": 590, "currency": "eur", "active": False, "recurring": {"interval": "month"}},
           "price_once": {"id": "price_once", "object": "price", "unit_amount": 499, "currency": "eur"}}
 class H(BaseHTTPRequestHandler):
     def _send(self, obj, code=200):

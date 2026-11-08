@@ -9,6 +9,7 @@ import { enqueueForUser } from '../mailer.js';
 import { fmtDate, fmtMoney } from '../emails.js';
 import { hasLearningTier } from '../access.js';
 import { anyRegion, learningPriceIds, normalizeCountry, regionForCountry } from '../pricingRegions.js';
+import { priceAssignment, recordPriceExposure, priceShown, xpMeta } from '../xpRuntime.js'; // 7.2 : test de prix
 import * as ext from '../ext.js'; // étape M3a : cartes cadeaux et rémunération réagissent aux événements de paiement
 
 // Texte de renonciation au droit de rétractation (contenu numérique). Changer le texte = changer la version.
@@ -84,7 +85,8 @@ export default async function billingRoutes(app) {
   // au code) ; sinon ce sont les prix saisis dans le back-office, et le paiement est annoncé « bientôt disponible » (enabled: false).
   let plansCache = { sig: '', at: 0, data: null };
   const priceMemo = new Map();
-  app.get('/billing/plans', async (req) => {
+  app.get('/billing/plans', async (req, reply) => {
+    if (req.query?.visitor) reply.header('cache-control', 'no-store'); // réponse propre à ce visiteur (test de prix)
     const ctx = await stripeContext();
     const trialDays = await getNumber('trial_days');
     const methods = await methodsList();
@@ -133,6 +135,18 @@ export default async function billingRoutes(app) {
       } catch (err) {
         req.log.error(err); // prix de groupe illisible : tarif général plutôt qu'une page cassée
         region = null; standard = plansCache.data.standard; learnPlans = plansCache.data.learning;
+      }
+    }
+    // Amélioration 7.2 — test de prix : ce visiteur voit les prix de sa variante (lus chez Stripe, donc égaux à ce qui sera facturé).
+    // Pays à tarification régionale : pas de test. Exposition enregistrée seulement si les prix de la variante ont bien été lus.
+    const pa = await priceAssignment(req.query?.visitor, req.headers['user-agent'], Boolean(region));
+    if (pa) {
+      try {
+        if (pa.key !== 'A' && (pa.prices.month || pa.prices.year)) standard = await readPrices({ month: pa.prices.month || ctx.prices.month, year: pa.prices.year || ctx.prices.year });
+        await recordPriceExposure(pa);
+      } catch (err) {
+        req.log.error(err); // prix de test illisible : prix normal, et le visiteur n'est pas compté
+        standard = region ? standard : plansCache.data.standard;
       }
     }
     // Palier Apprentissage non configuré chez Stripe : on montre les prix saisis, sans bouton de paiement.
@@ -186,7 +200,7 @@ export default async function billingRoutes(app) {
   app.post('/billing/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {
     const ctx = await stripeContext();
     if (!ctx) return off(reply);
-    const { interval, tier, waiver, returnTo, country } = z.object({ interval: z.enum(['month', 'year']), tier: z.enum(['standard', 'learning']).default('standard'), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional(), country: z.string().max(2).optional() }).parse(req.body);
+    const { interval, tier, waiver, returnTo, visitor, country } = z.object({ interval: z.enum(['month', 'year']), tier: z.enum(['standard', 'learning']).default('standard'), waiver: z.boolean().optional(), returnTo: z.string().max(300).optional(), visitor: z.string().max(64).optional(), country: z.string().max(2).optional() }).parse(req.body);
     if (tier === 'learning' && !ctx.learn) return reply.code(503).send({ error: "La formule Apprentissage n'est pas encore disponible" });
     // Étape 44 : prix du groupe de pays choisi par le membre (Apprentissage : prix du groupe s'il existe, sinon prix général).
     const region = await regionForCountry(country);
@@ -194,6 +208,16 @@ export default async function billingRoutes(app) {
     if (region) {
       const own = tier === 'learning' ? (interval === 'month' ? region.learnMonth : region.learnYear) : (interval === 'month' ? region.month : region.year);
       if (own) priceId = own;
+    }
+    // Amélioration 7.2 — test de prix (formule standard, hors pays à tarification régionale) : le prix facturé est celui de la variante
+    // MONTRÉE à ce visiteur (une ligne d'exposition existe), jamais un prix qu'il n'a pas vu.
+    let xp = null;
+    if (tier === 'standard' && !region) {
+      const pa = await priceAssignment(visitor, req.headers['user-agent'], false);
+      if (pa && await priceShown(pa)) {
+        xp = pa;
+        if (pa.key !== 'A' && pa.prices[interval]) priceId = pa.prices[interval];
+      }
     }
     // Page à retrouver après le paiement (ex. la vidéo qui a donné envie de s'abonner) : chemin du site uniquement.
     const back = returnTo && /^\/(?![\/\\])/.test(returnTo) ? returnTo : '';
@@ -207,7 +231,7 @@ export default async function billingRoutes(app) {
     const customer = await customerFor(ctx.stripe, req.user.sub);
     const trialDays = await getNumber('trial_days');
     const webUrl = await getSetting('web_url');
-    const subscription_data = { metadata: { user_id: req.user.sub, ...(region ? { pricing_region: region.name.slice(0, 80) } : {}) } };
+    const subscription_data = { metadata: { user_id: req.user.sub, ...(region ? { pricing_region: region.name.slice(0, 80) } : {}), ...(xp ? { xp_exp: xp.id, xp_vh: xp.hash } : {}) } };
     const trialApplies = trialDays > 0 && !before.rowCount;
     if (trialApplies) subscription_data.trial_period_days = trialDays;
     // Essai sans carte : Stripe ne demande aucun moyen de paiement pendant l'essai ; à son terme, sans carte ajoutée, l'abonnement est annulé.
@@ -302,6 +326,11 @@ export default async function billingRoutes(app) {
           learnIds.includes(item?.price?.id) ? 'learning' : 'standard']
       );
       if (customerId) await client.query('UPDATE users SET stripe_customer_id = COALESCE(stripe_customer_id, $2) WHERE id = $1', [userId, customerId]);
+      // Test de prix (7.2) : abonnement démarré (essai gratuit compris) par un visiteur à qui une variante a été montrée.
+      const xm = xpMeta(sub.metadata);
+      if (xm && ['trialing', 'active'].includes(sub.status)) {
+        await client.query('UPDATE experiment_exposures SET subscribed_at = COALESCE(subscribed_at, now()) WHERE experiment_id = $1 AND visitor_hash = $2', [xm.exp, xm.vh]);
+      }
       return true;
     }
 
@@ -368,6 +397,10 @@ export default async function billingRoutes(app) {
             await notify(client, event);
           } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
             await notify(client, event);
+            if (event.type === 'invoice.paid' && obj.amount_paid > 0) { // test de prix (7.2) : première facture payée + revenu encaissé
+              const xm = xpMeta(obj.subscription_details?.metadata || obj.lines?.data?.[0]?.metadata);
+              if (xm) await client.query('UPDATE experiment_exposures SET paid_at = COALESCE(paid_at, now()), revenue_cents = revenue_cents + $3 WHERE experiment_id = $1 AND visitor_hash = $2', [xm.exp, xm.vh, obj.amount_paid]);
+            }
             if (event.type === 'invoice.paid') await ext.emit('stripe.invoice.paid', client, obj); // module revenue : base de la rémunération des chaînes
           } else if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && obj.mode === 'payment') {
             await ext.emit('stripe.checkout.payment', client, obj); // paiement unique : carte cadeau (module gifts)

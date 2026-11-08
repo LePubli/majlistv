@@ -16,7 +16,7 @@ const VERDICT = {
 };
 const pct = (n) => `${String(n).replace('.', ',')} %`;
 const day = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
-const blank = (n) => ({ name: n === 0 ? 'Original' : `Variante ${'ABC'[n]}`, weight: 50, texts: {}, options: {} });
+const blank = (n) => ({ name: n === 0 ? 'Original' : `Variante ${'ABC'[n]}`, weight: 50, texts: {}, options: {}, prices: {} });
 
 function Form({ zones, langs, onDone, onCancel }) {
   const { call } = useApp();
@@ -27,12 +27,13 @@ function Form({ zones, langs, onDone, onCancel }) {
   const [busy, setBusy] = useState(false);
   const z = zones.find((x) => x.id === zone);
   const upd = (i, patch) => setVars((vs) => vs.map((v, k) => (k === i ? { ...v, ...patch } : v)));
+  const setPrice = (i, k, val) => setVars((vs) => vs.map((v, n) => (n === i ? { ...v, prices: { ...v.prices, [k]: val } } : v)));
   const setOpt = (i, k, val) => setVars((vs) => vs.map((v, n) => (n === i ? { ...v, options: { ...v.options, [k]: val } } : v)));
   const setText = (i, lang, key, val) => setVars((vs) => vs.map((v, k) => (k === i ? { ...v, texts: { ...v.texts, [lang]: { ...(v.texts[lang] || {}), [key]: val } } } : v)));
   const total = vars.reduce((s, v) => s + Number(v.weight || 0), 0);
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true);
-    const body = { name, zone, variants: vars.map((v) => ({ name: v.name, weight: Number(v.weight), texts: v.texts, options: v.options })) };
+    const body = { name, zone, variants: vars.map((v) => ({ name: v.name, weight: Number(v.weight), texts: v.texts, options: v.options, prices: v.prices })) };
     const r = await call('/admin/experiments', { method: 'POST', body: JSON.stringify(body) });
     setBusy(false);
     if (r.ok) onDone(); else setErr(r.data?.error || 'Enregistrement impossible.');
@@ -42,9 +43,10 @@ function Form({ zones, langs, onDone, onCancel }) {
       <h2>Nouveau test</h2>
       <div className="form-grid">
         <label>Nom du test<input required maxLength={120} value={name} placeholder="Ex. accroche courte" onChange={(e) => setName(e.target.value)} /></label>
-        <label>Zone testée<select value={zone} onChange={(e) => { setZone(e.target.value); setVars((vs) => vs.map((v) => ({ ...v, texts: {}, options: {} }))); }}>{zones.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+        <label>Zone testée<select value={zone} onChange={(e) => { setZone(e.target.value); setVars((vs) => vs.map((v) => ({ ...v, texts: {}, options: {}, prices: {} }))); }}>{zones.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
       </div>
-      <p className="meta">L’objectif est l’<b>inscription</b> d’un visiteur. La variante <b>A est toujours l’original</b> (textes actuels du site). Pour B (et C), changez seulement ce que vous voulez tester (textes, et réglages de présentation s’il y en a) ; un champ vide garde l’existant. Les parts sont des poids : 50 / 50 = moitié-moitié.</p>
+      {z?.priceTest && <p className="meta"><b>Test de prix.</b> Créez d’abord dans Stripe (Produits → votre abonnement → Ajouter un prix) les prix à comparer, puis collez ici leurs identifiants <code>price_…</code>. Chaque prix est vérifié chez Stripe (existe, actif, bonne durée, même devise). Le visiteur voit et paie le prix de sa variante ; <b>les abonnés actuels ne changent jamais de prix</b>. Les pays à tarification par pays gardent leur prix (hors test). Objectif : <b>abonnements démarrés</b> (essai gratuit compris) ; abonnés payants et revenu sont affichés en plus. Un seul test de prix à la fois, et pas en même temps qu’un test de la page Tarifs.</p>}
+      {!z?.priceTest && <p className="meta">L’objectif est l’<b>inscription</b> d’un visiteur. La variante <b>A est toujours l’original</b> (textes actuels du site). Pour B (et C), changez seulement ce que vous voulez tester (textes, et réglages de présentation s’il y en a) ; un champ vide garde l’existant. Les parts sont des poids : 50 / 50 = moitié-moitié.</p>}
       {vars.map((v, i) => (
         <fieldset key={i} className="xp-var">
           <legend>Variante {'ABC'[i]}{i === 0 ? ' — original' : ''}</legend>
@@ -52,6 +54,12 @@ function Form({ zones, langs, onDone, onCancel }) {
             <label>Nom<input required maxLength={60} value={v.name} onChange={(e) => upd(i, { name: e.target.value })} /></label>
             <label>Part du trafic ({total ? Math.round((v.weight / total) * 100) : 0} %)<input type="number" min={1} max={100} required value={v.weight} onChange={(e) => upd(i, { weight: e.target.value })} /></label>
           </div>
+          {i > 0 && z?.priceTest && (
+            <div className="form-grid">
+              <label>Prix mensuel à tester (price_…)<input maxLength={90} value={v.prices?.month || ''} placeholder="Vide = prix mensuel actuel du site" onChange={(e) => setPrice(i, 'month', e.target.value)} /></label>
+              <label>Prix annuel à tester (price_…)<input maxLength={90} value={v.prices?.year || ''} placeholder="Vide = prix annuel actuel du site" onChange={(e) => setPrice(i, 'year', e.target.value)} /></label>
+            </div>
+          )}
           {i > 0 && Object.keys(z?.options || {}).length > 0 && (
             <div className="form-grid">
               {Object.entries(z.options).map(([k, o]) => (
@@ -89,17 +97,19 @@ function Form({ zones, langs, onDone, onCancel }) {
   );
 }
 
+const eur = (c) => `${(c / 100).toFixed(2).replace('.', ',')} €`;
 function Results({ e, onKeep }) {
   const best = e.variants.find((v) => v.verdict === 'better');
+  const price = e.goal === 'subscription'; // test de prix : on tranche sur les abonnements démarrés
   return (
     <div className="adm-table-wrap">
       <table className="adm-table xp-table">
-        <thead><tr><th>Variante</th><th>Part</th><th>Visiteurs</th><th>Clics bouton</th><th>Inscriptions</th><th>Taux d’inscription</th><th>Écart</th><th>Confiance</th><th>Verdict</th></tr></thead>
+        <thead><tr><th>Variante</th><th>Part</th><th>Visiteurs</th>{price ? <><th>Abonnés (essai compris)</th><th>Taux d’abonnement</th><th>Abonnés payants</th><th>Revenu encaissé</th><th>Revenu / visiteur</th></> : <><th>Clics bouton</th><th>Inscriptions</th><th>Taux d’inscription</th></>}<th>Écart</th><th>Confiance</th><th>Verdict</th></tr></thead>
         <tbody>
           {e.variants.map((v) => (
             <tr key={v.key} className={v.verdict === 'better' ? 'xp-best' : undefined}>
               <td><b>{v.key}</b> {v.name}{v.key === e.winner ? ' 🏆' : ''}</td>
-              <td>{v.weight}</td><td>{v.visitors}</td><td>{v.clicks} ({pct(v.clickRate)})</td><td>{v.conversions}</td><td>{pct(v.rate)}</td>
+              <td>{v.weight}</td><td>{v.visitors}</td>{price ? <><td>{v.conversions}</td><td>{pct(v.rate)}</td><td>{v.paid}</td><td>{eur(v.revenue)}</td><td>{eur(v.revenuePerVisitor)}</td></> : <><td>{v.clicks} ({pct(v.clickRate)})</td><td>{v.conversions}</td><td>{pct(v.rate)}</td></>}
               <td>{v.lift == null ? '—' : `${v.lift > 0 ? '+' : ''}${String(v.lift).replace('.', ',')} %`}</td>
               <td>{v.confidence == null ? '—' : pct(v.confidence)}</td>
               <td>{VERDICT[v.verdict]}</td>
@@ -113,7 +123,7 @@ function Results({ e, onKeep }) {
         </div>
       )}
       {best && e.status !== 'ended' && <p className="meta ok">La variante {best.key} fait mieux que l’original avec {pct(best.confidence)} de confiance : vous pouvez la garder.</p>}
-      <p className="meta small">« Pas assez de données » : il faut au moins 100 visiteurs par variante et 10 inscriptions au total. « Confiance » = probabilité que l’écart ne soit pas dû au hasard ; en dessous de 95 %, ne concluez pas. Ne terminez pas un test trop tôt : laissez-le tourner au moins une à deux semaines.</p>
+      <p className="meta small">« Pas assez de données » : il faut au moins 100 visiteurs par variante et 10 {price ? 'abonnements' : 'inscriptions'} au total.{price ? ' Le verdict compte les abonnements démarrés (l’essai gratuit retarde les paiements) : un prix plus bas peut gagner en abonnés mais rapporter moins ; regardez aussi le revenu par visiteur avant de trancher. Les remboursements ne sont pas déduits du revenu.' : ''} « Confiance » = probabilité que l’écart ne soit pas dû au hasard ; en dessous de 95 %, ne concluez pas. Ne terminez pas un test trop tôt : laissez-le tourner au moins une à deux semaines.</p>
     </div>
   );
 }
@@ -131,11 +141,12 @@ export default function ExperimentsAdmin() {
   };
   const keep = (e, v) => {
     const manual = data.zones.find((z) => z.id === e.zone)?.manual;
-    const text = manual ? `Terminer le test « ${e.name} » et retenir ${v.key === 'A' ? 'l’original' : `la variante ${v.key}`} ? Les textes de l’application ne changent pas tout seuls : la variante retenue est à intégrer dans l’application (mise à jour en ligne).`
+    const isPrice = data.zones.find((z) => z.id === e.zone)?.priceTest;
+    const text = isPrice && v.key !== 'A' ? `Terminer le test « ${e.name} » et appliquer les prix de la variante ${v.key} ? Les NOUVEAUX abonnés paieront ces prix (Admin → Paramètres → Paiement : identifiants de prix mis à jour). Les abonnés actuels gardent leur prix.` : manual ? `Terminer le test « ${e.name} » et retenir ${v.key === 'A' ? 'l’original' : `la variante ${v.key}`} ? Les textes de l’application ne changent pas tout seuls : la variante retenue est à intégrer dans l’application (mise à jour en ligne).`
       : v.key === 'A'
       ? `Terminer le test « ${e.name} » et garder l’original ? Le site ne change pas.`
       : `Terminer le test « ${e.name} » et appliquer la variante ${v.key} au site ? Ses textes remplaceront les textes actuels (modifiables ensuite dans Admin → Textes) et ses réglages de présentation seront enregistrés (Admin → Paramètres → Paiement).`;
-    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' && !manual }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : manual ? `Test terminé : variante ${v.key} retenue (à intégrer dans l’application).` : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s), ${d.appliedOptions} réglage(s)).`));
+    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' && !manual }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : manual ? `Test terminé : variante ${v.key} retenue (à intégrer dans l’application).` : isPrice ? `Test terminé : prix de la variante ${v.key} appliqués (${d.appliedPrices} prix du site changé(s)).` : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s), ${d.appliedOptions} réglage(s)).`));
   };
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;
@@ -156,11 +167,11 @@ export default function ExperimentsAdmin() {
                 <b>{e.name}</b>
                 <small className={cls}>{label}{e.startedAt ? ` · démarré le ${day(e.startedAt)}` : ''}{e.endedAt ? ` · terminé le ${day(e.endedAt)}` : ''}</small>
               </div>
-              <small className="meta">Zone : {e.zoneLabel} · objectif : inscription</small>
+              <small className="meta">Zone : {e.zoneLabel} · objectif : {e.goal === 'subscription' ? 'abonnement' : 'inscription'}</small>
               <Results e={e} onKeep={(v) => keep(e, v)} />
               {e.variants.filter((v) => v.key !== 'A').map((v) => (
                 <details key={v.key} className="meta"><summary>Changements de la variante {v.key} — {v.name}</summary>
-                  <ul>{Object.entries(v.options || {}).map(([k, val]) => { const o = data.zones.find((z) => z.id === e.zone)?.options?.[k]; return <li key={k}><b>{o?.label || k}</b> : {o?.values?.[val] || val}</li>; })}
+                  <ul>{Object.entries(v.prices || {}).map(([k, id]) => <li key={k}><b>Prix {k === 'month' ? 'mensuel' : 'annuel'}</b> : <code>{id}</code></li>)}{Object.entries(v.options || {}).map(([k, val]) => { const o = data.zones.find((z) => z.id === e.zone)?.options?.[k]; return <li key={k}><b>{o?.label || k}</b> : {o?.values?.[val] || val}</li>; })}
                     {Object.entries(v.texts).flatMap(([lang, map]) => Object.entries(map).map(([k, t]) => <li key={lang + k}><b>{LANG_NAME[lang]}</b> · {data.zones.find((z) => z.id === e.zone)?.keys[k] || k} : « {t} »</li>))}</ul>
                 </details>
               ))}
