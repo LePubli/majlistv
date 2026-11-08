@@ -1,6 +1,6 @@
 // Étape 24c — Publicité plein écran au lancement de l'application.
-//   GET   /ads/next?after=<id>      public : publicités à montrer (rotation), vide pour un enfant, un abonné payant (selon le réglage) ou sans publicité en cours
-//   POST  /ads/:id/impression       public : compte un affichage
+//   GET   /ads/next?after=<id>&lang=fr   public : publicités à montrer (rotation), vide pour un enfant, un abonné payant (selon le réglage) ou sans publicité en cours
+//   POST  /ads/:id/impression       public : compte un affichage (corps facultatif { lang } → répartition par langue)
 //   POST  /ads/:id/click            public : compte un clic sur le bouton
 //   POST  /ads/:id/skip             public : compte un « Passer »
 //   GET   /admin/campaigns                administrateur : liste, situation, compteurs
@@ -15,7 +15,7 @@ import { pool } from '../db.js';
 import { storage, presignGet, presignPut, headObject, deleteObject } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { getSetting, getNumber } from '../settings.js';
-import { mediaInfo, keyInfo, safeLink, adStatus, pickAds, clickRate, MEDIA_KEY_RE } from '../ads.js';
+import { mediaInfo, keyInfo, safeLink, adStatus, pickAds, clickRate, MEDIA_KEY_RE, AD_LANGS, normLang, matchesLang, langBreakdown } from '../ads.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const date = z.union([z.string().datetime({ offset: true }), z.null()]);
@@ -29,16 +29,17 @@ const fields = {
   active: z.boolean(),
   startsAt: date,
   endsAt: date,
+  languages: z.array(z.enum(AD_LANGS)).max(3),
 };
 const createSchema = z.object({
   advertiser: fields.advertiser, title: fields.title, sentence: fields.sentence.default(''), ctaLabel: fields.ctaLabel.default('En savoir plus'),
-  linkUrl: fields.linkUrl, mediaKey: fields.mediaKey, active: fields.active.default(true), startsAt: fields.startsAt.default(null), endsAt: fields.endsAt.default(null),
+  linkUrl: fields.linkUrl, mediaKey: fields.mediaKey, active: fields.active.default(true), startsAt: fields.startsAt.default(null), endsAt: fields.endsAt.default(null), languages: fields.languages.default([]),
 });
 const patchSchema = z.object(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.optional()]))).refine((b) => Object.keys(b).length > 0, 'Aucun changement');
-const nextQuery = z.object({ after: z.string().uuid().optional() });
+const nextQuery = z.object({ after: z.string().uuid().optional(), lang: z.string().max(12).optional() });
 const uploadSchema = z.object({ contentType: z.string().max(60), size: z.number().int().positive() });
 
-const COLS = `a.id, a.advertiser, a.title, a.sentence, a.cta_label, a.link_url, a.media_kind, a.media_key, a.media_type, a.active, a.starts_at, a.ends_at, a.created_at`;
+const COLS = `a.id, a.advertiser, a.title, a.sentence, a.cta_label, a.link_url, a.media_kind, a.media_key, a.media_type, a.active, a.starts_at, a.ends_at, a.created_at, a.languages`;
 const publicView = async (a) => ({
   id: a.id, advertiser: a.advertiser, title: a.title, sentence: a.sentence, cta: a.cta_label, linkUrl: a.link_url,
   mediaKind: a.media_kind, mediaUrl: await presignGet(a.media_key),
@@ -53,23 +54,29 @@ export default async function adsRoutes(app) {
   app.get('/ads/next', async (req) => {
     const none = { ads: [], skipSeconds: 5, imageSeconds: 6 };
     if (!storage) return none;
-    const { after } = nextQuery.parse(req.query);
+    const { after, lang: rawLang } = nextQuery.parse(req.query);
+    const lang = normLang(rawLang);
     if (await app.kidContext(req)) return none; // jamais de publicité dans l'espace enfant
     const user = await app.optionalUser(req);
     if (user && (await getSetting('ads_paid_subscribers')) !== 'afficher' && (await hasActiveSubscription(user.id ?? user.sub))) return none;
     const { rows } = await pool.query(
       `SELECT ${COLS} FROM ads a WHERE a.active AND (a.starts_at IS NULL OR a.starts_at <= now()) AND (a.ends_at IS NULL OR a.ends_at > now()) ORDER BY a.created_at, a.id`);
-    const picked = pickAds(rows, after, await getNumber('ads_per_launch'));
+    const picked = pickAds(rows.filter((a) => matchesLang(a.languages, lang)), after, await getNumber('ads_per_launch'));
     return { ads: await Promise.all(picked.map(publicView)), skipSeconds: await getNumber('ads_skip_seconds'), imageSeconds: await getNumber('ads_image_seconds') };
   });
 
+  // Compte un évènement : total du jour (comme avant) + répartition par langue (la langue vient du corps de la requête ; absente = inconnue).
   const count = (column) => async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     if (await app.kidContext(req)) return { ok: true };
+    const lang = normLang(req.body?.lang ?? req.query?.lang);
     const r = await pool.query(
       `INSERT INTO ad_stats(ad_id, day, ${column}) SELECT id, current_date, 1 FROM ads WHERE id = $1
        ON CONFLICT (ad_id, day) DO UPDATE SET ${column} = ad_stats.${column} + 1`, [id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Publicité introuvable' });
+    await pool.query(
+      `INSERT INTO ad_stats_lang(ad_id, day, lang, ${column}) VALUES ($1, current_date, $2, 1)
+       ON CONFLICT (ad_id, day, lang) DO UPDATE SET ${column} = ad_stats_lang.${column} + 1`, [id, lang]);
     return { ok: true };
   };
   app.post('/ads/:id/impression', count('impressions'));
@@ -84,6 +91,7 @@ export default async function adsRoutes(app) {
               coalesce(sum(s.impressions) FILTER (WHERE s.day >= current_date - 6), 0)::int AS impressions7,
               coalesce(sum(s.clicks) FILTER (WHERE s.day >= current_date - 6), 0)::int AS clicks7
          FROM ads a LEFT JOIN ad_stats s ON s.ad_id = a.id GROUP BY a.id ORDER BY a.created_at, a.id`);
+    const langRows = (await pool.query('SELECT ad_id, lang, sum(impressions)::int AS impressions, sum(clicks)::int AS clicks, sum(skips)::int AS skips FROM ad_stats_lang GROUP BY ad_id, lang')).rows;
     const now = new Date();
     const ads = [];
     for (const a of rows) {
@@ -92,6 +100,7 @@ export default async function adsRoutes(app) {
         mediaKind: a.media_kind, mediaUrl: storage ? await presignGet(a.media_key) : null, active: a.active,
         startsAt: a.starts_at, endsAt: a.ends_at, createdAt: a.created_at, status: adStatus(a, now),
         impressions: a.impressions, clicks: a.clicks, skips: a.skips, ctr: clickRate(a.impressions, a.clicks), impressions7: a.impressions7, clicks7: a.clicks7,
+        languages: a.languages, byLang: langBreakdown({ impressions: a.impressions, clicks: a.clicks, skips: a.skips }, langRows.filter((x) => x.ad_id === a.id)),
       });
     }
     return { ads, storage: Boolean(storage), limits: { imageMb: mediaInfo('image/png').maxMb, videoMb: mediaInfo('video/mp4').maxMb } };
@@ -125,9 +134,9 @@ export default async function adsRoutes(app) {
     const info = await checkMedia(b.mediaKey, reply);
     if (reply.sent) return reply;
     const { rows } = await pool.query(
-      `INSERT INTO ads(advertiser, title, sentence, cta_label, link_url, media_kind, media_key, media_type, active, starts_at, ends_at, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-      [b.advertiser, b.title, b.sentence, b.ctaLabel, link, info.kind, b.mediaKey, info.type, b.active, b.startsAt, b.endsAt, req.user.sub]);
+      `INSERT INTO ads(advertiser, title, sentence, cta_label, link_url, media_kind, media_key, media_type, active, starts_at, ends_at, created_by, languages)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+      [b.advertiser, b.title, b.sentence, b.ctaLabel, link, info.kind, b.mediaKey, info.type, b.active, b.startsAt, b.endsAt, req.user.sub, [...new Set(b.languages)]]);
     return reply.code(201).send({ id: rows[0].id });
   });
 
@@ -151,6 +160,7 @@ export default async function adsRoutes(app) {
       put('media_key', b.mediaKey); put('media_kind', info.kind); put('media_type', info.type); oldKey = cur.media_key;
     }
     for (const [k, col] of [['advertiser', 'advertiser'], ['title', 'title'], ['sentence', 'sentence'], ['ctaLabel', 'cta_label'], ['active', 'active']]) if (b[k] !== undefined) put(col, b[k]);
+    if (b.languages !== undefined) put('languages', [...new Set(b.languages)]);
     if (set.length) await pool.query(`UPDATE ads SET ${set.join(', ')} WHERE id = $1`, args);
     if (oldKey && storage) await deleteObject(oldKey).catch(() => {});
     return { ok: true };

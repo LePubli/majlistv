@@ -121,7 +121,7 @@ function AdScreen({ ad, skipSeconds, imageSeconds, onFinish }: { ad: Ad; skipSec
 }
 
 export function AdGate() {
-  const { api, feat, ready } = useSession();
+  const { api, feat, ready, locale } = useSession();
   const { kid, ready: kidReady } = useKid();
   const prayer = usePrayer();
   const [reply, setReply] = useState<AdsReply | null>(null);
@@ -140,7 +140,7 @@ export function AdGate() {
       try {
         let after: string | null = null;
         try { after = await SecureStore.getItemAsync(K_LAST); } catch { /* coffre indisponible : on commence au début */ }
-        const r = parseAds(await api.get<unknown>('/ads/next', after ? { after } : undefined));
+        const r = parseAds(await api.get<unknown>('/ads/next', after ? { after, lang: locale } : { lang: locale }));
         // La publicité vient après l'animation du logo ; si elle n'est pas prête 3 s après la fin de l'animation, on y renonce.
         if (r.ads.length) onIntroEnd(() => { if (!tooLate(Date.now() - introEndedAt(), 3000)) setReply(r); });
       } catch { /* hors ligne ou erreur : pas de publicité, l'application démarre normalement */ }
@@ -152,16 +152,16 @@ export function AdGate() {
   // Affichage compté une fois par publicité ; on retient la dernière montrée pour la rotation.
   useEffect(() => {
     if (!ad) return;
-    void api.post(`/ads/${ad.id}/impression`).catch(() => { /* compteur non essentiel */ });
+    void api.post(`/ads/${ad.id}/impression`, { lang: locale }).catch(() => { /* compteur non essentiel */ });
     void SecureStore.setItemAsync(K_LAST, ad.id).catch(() => { /* idem */ });
   }, [ad?.id, api]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onFinish = useCallback((how: 'end' | 'skip' | 'click') => {
     if (!ad || !reply) return;
-    if (how === 'click') void api.post(`/ads/${ad.id}/click`).catch(() => {});
-    if (how === 'skip') void api.post(`/ads/${ad.id}/skip`).catch(() => {});
+    if (how === 'click') void api.post(`/ads/${ad.id}/click`, { lang: locale }).catch(() => {});
+    if (how === 'skip') void api.post(`/ads/${ad.id}/skip`, { lang: locale }).catch(() => {});
     if (how === 'click' || index + 1 >= reply.ads.length) setReply(null); else setIndex(index + 1);
-  }, [ad, reply, index, api]);
+  }, [ad, reply, index, api, locale]);
 
   if (!reply || !ad) return null;
   return (

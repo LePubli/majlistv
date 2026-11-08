@@ -45,3 +45,18 @@ assert.equal(ids(pickAds(L, undefined, 0)), 'a');
 assert.equal(clickRate(200, 5), 2.5);
 assert.equal(clickRate(0, 0), 0);
 console.log('OK  ads lib');
+
+// ---- Amélioration 5.3 : langue ----
+{
+  const { normLang, matchesLang, langBreakdown } = await import('../src/ads.js');
+  assert.equal(normLang('fr-FR'), 'fr'); assert.equal(normLang('EN'), 'en'); assert.equal(normLang('ar'), 'ar');
+  for (const v of ['de', '', null, undefined, 'x', 42]) assert.equal(normLang(v), '');
+  assert.ok(matchesLang([], 'fr') && matchesLang(undefined, 'ar') && matchesLang(null, ''), 'sans langue choisie : partout');
+  assert.ok(matchesLang(['fr'], 'fr') && !matchesLang(['fr'], 'ar') && matchesLang(['fr', 'ar'], 'ar'));
+  assert.ok(matchesLang(['fr'], ''), 'langue inconnue (application ancienne) : publicité montrée');
+  const b = langBreakdown({ impressions: 10, clicks: 3, skips: 2 }, [{ lang: 'fr', impressions: 4, clicks: 2, skips: 1 }, { lang: 'ar', impressions: 3, clicks: 0, skips: 0 }, { lang: '', impressions: 1, clicks: 0, skips: 0 }]);
+  assert.deepEqual(b.fr, { impressions: 4, clicks: 2, skips: 1 }); assert.deepEqual(b.en, { impressions: 0, clicks: 0, skips: 0 });
+  assert.deepEqual(b.none, { impressions: 3, clicks: 1, skips: 1 }, 'sans langue = total − langues connues');
+  assert.equal(langBreakdown({ impressions: 1, clicks: 0, skips: 0 }, [{ lang: 'fr', impressions: 5, clicks: 0, skips: 0 }]).none.impressions, 0, 'jamais négatif');
+  console.log('OK  ads lang');
+}

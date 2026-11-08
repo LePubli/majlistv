@@ -7874,3 +7874,29 @@ Le message indique la date et l'heure **en heure de Paris**, dans la langue du m
 **Exemple.** Menu ☰ → Événements en direct → toucher un événement → « Me rappeler » ; à l'heure, la fiche affiche le direct.
 
 **Testé.** `mobile/tests/events.test.ts` (décompte, dates FR/EN, relecture de la fiche, identifiants du lecteur, textes dans les 3 langues, branchements) ; `npm run check` (tsc + 249 tests) ; `npx expo export` (le paquet se construit). **Non testé** : l'application sur un vrai téléphone (écrans, direct dans la WebView, ouverture du `.ics`, arabe de droite à gauche à l'écran).
+
+
+## Publicités — étape 1 sur 2 : ciblage par langue et chiffres par langue (Amélioration 5.3, 08/11)
+
+**Description.** Chaque publicité (Admin → Publicités) peut être limitée à une ou plusieurs **langues de l'application** (français, anglais, arabe). Aucune case cochée = montrée dans toutes les langues. L'application envoie sa langue en demandant les publicités et en comptant affichages, clics et « Passer » ; les chiffres sont répartis **par langue** dans la liste des publicités. Le rapport annonceur (lien de suivi + PDF) vient à l'étape 2.
+
+**Règles.**
+- Une publicité visée « fr » n'est montrée qu'aux applications en français ; sans langue cochée, elle est montrée partout.
+- Une application **ancienne**, qui n'envoie pas sa langue, voit toutes les publicités (aucune exclusion) et ses chiffres sont comptés « sans langue ».
+- Les totaux du jour (`ad_stats`) restent comptés comme avant ; la répartition par langue (`ad_stats_lang`) s'y ajoute. « Sans langue » = total − langues connues, donc les chiffres d'avant la mise à jour y apparaissent.
+- Pas de ciblage par pays (décision d'Epok). Aucune donnée personnelle.
+
+**Prérequis.** Migration `108_ads_languages.sql` (colonne `ads.languages`, table `ad_stats_lang`), appliquée au démarrage de l'API.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Application : mise à jour en ligne (pas de nouvel APK) ; fermer et rouvrir l'application deux fois. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Une publicité ne s'affiche pas : vérifier ses langues (Admin → Publicités → « Langues visées ») et la langue de l'application du téléphone. Chiffres « sans langue » qui augmentent : des téléphones n'ont pas encore reçu la mise à jour en ligne. Requête de contrôle : `docker exec -i dockpanel-app-postgres-majlisstv psql -U <utilisateur> -d <base> -c "select ad_id, lang, sum(impressions), sum(clicks) from ad_stats_lang group by 1,2"`.
+
+**Exemples.**
+```
+curl -s "https://api-majlisstv.le-publicitaire.fr/ads/next?lang=ar"
+curl -s -X POST https://api-majlisstv.le-publicitaire.fr/ads/<id>/impression -H "content-type: application/json" -d '{"lang":"fr"}'
+curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/admin/campaigns/<id> -H "Authorization: Bearer $JETON" -H "content-type: application/json" -d '{"languages":["fr","ar"]}'
+```
+
+**Testé.** `test_ads_lang.py` (comptage par langue, totaux, « sans langue », droits, doublons — dans la suite GitHub), `test_ads_lib.mjs` (règles pures), `test_ads.py` (rotation filtrée par langue, avec stockage de test), `ads.test.ts` mobile (la langue accompagne la demande et les 3 compteurs), `npm run check` (250 tests), `next build`, essai Chromium de l'écran Admin → Publicités (cases de langues, chiffres par langue). **Non testé** : l'application sur un vrai téléphone (envoi réel de la langue).

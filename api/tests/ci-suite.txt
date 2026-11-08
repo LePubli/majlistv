@@ -69,3 +69,4 @@ test_audyn.py
 test_audyn_kids.py
 test_foryou.py
 test_events.py
+test_ads_lang.py

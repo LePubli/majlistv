@@ -54,3 +54,17 @@ export function pickAds(live, afterId, count) {
 
 /** Taux de clic en % (une décimale) ; 0 sans affichage. */
 export const clickRate = (impressions, clicks) => (impressions > 0 ? Math.round((clicks / impressions) * 1000) / 10 : 0);
+
+// ---- Ciblage par langue (amélioration 5.3) ----
+export const AD_LANGS = ['fr', 'en', 'ar'];
+/** « fr-FR », « EN », « ar » → 'fr' | 'en' | 'ar' ; toute autre valeur (ou rien) → '' (langue inconnue). */
+export const normLang = (v) => { const l = String(v ?? '').trim().toLowerCase().slice(0, 2); return AD_LANGS.includes(l) ? l : ''; };
+/** Une publicité sans langue choisie est montrée partout ; langue inconnue (version ancienne de l'application) : montrée aussi. */
+export const matchesLang = (languages, lang) => !languages || languages.length === 0 || !lang || languages.includes(lang);
+/** Répartition par langue : une ligne par langue (fr, en, ar) + « none » (sans langue) = total général − langues connues. */
+export function langBreakdown(total, rows) {
+  const out = Object.fromEntries([...AD_LANGS, 'none'].map((k) => [k, { impressions: 0, clicks: 0, skips: 0 }]));
+  for (const r of rows) if (AD_LANGS.includes(r.lang)) { out[r.lang].impressions += r.impressions; out[r.lang].clicks += r.clicks; out[r.lang].skips += r.skips; }
+  for (const k of ['impressions', 'clicks', 'skips']) out.none[k] = Math.max(0, total[k] - AD_LANGS.reduce((s, l) => s + out[l][k], 0));
+  return out;
+}

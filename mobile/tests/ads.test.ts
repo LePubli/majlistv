@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // Publicité au lancement (étape 24c) : lecture sûre de la réponse, lien, règles d'affichage, compte à rebours.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -50,4 +51,11 @@ test('tooLate, skipRemaining, adRatio', () => {
   assert.equal(adRatio(9, 6), 1);
   assert.equal(adRatio(1, 0), 0);
   assert.equal(adRatio(NaN, 6), 0);
+});
+
+test('5.3 : la langue de l\'application accompagne la demande et les compteurs', () => {
+  const g = readFileSync(new URL('../src/components/AdGate.tsx', import.meta.url), 'utf8');
+  assert.match(g, /const \{ api, feat, ready, locale \} = useSession\(\)/);
+  assert.match(g, /'\/ads\/next', after \? \{ after, lang: locale \} : \{ lang: locale \}/);
+  for (const k of ['impression', 'click', 'skip']) assert.match(g, new RegExp('/ads/\\$\\{ad\\.id\\}/' + k + '`, \\{ lang: locale \\}'));
 });

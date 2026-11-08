@@ -6,7 +6,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 
-const EMPTY = { advertiser: '', title: '', sentence: '', ctaLabel: 'En savoir plus', linkUrl: '', active: true, startsAt: '', endsAt: '' };
+const EMPTY = { advertiser: '', title: '', sentence: '', ctaLabel: 'En savoir plus', linkUrl: '', active: true, startsAt: '', endsAt: '', languages: [] };
+const LANGS = [['fr', 'Français'], ['en', 'Anglais'], ['ar', 'Arabe']];
+const langNames = (l) => (l && l.length ? l.map((x) => (LANGS.find((y) => y[0] === x) || [x, x])[1]).join(', ') : 'toutes les langues');
 const STATUS = { live: ['En cours', 'ok'], scheduled: ['Programmée', 'meta'], ended: ['Terminée', 'meta'], paused: ['En pause', 'meta'] };
 // Valeur d'un champ « date et heure » (heure locale) ⇄ instant ISO.
 const toLocal = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -41,7 +43,7 @@ function Preview({ ad }) {
 
 function AdForm({ ad, limits, onDone, onCancel }) {
   const { call } = useApp();
-  const [o, setO] = useState(ad ? { advertiser: ad.advertiser, title: ad.title, sentence: ad.sentence, ctaLabel: ad.ctaLabel, linkUrl: ad.linkUrl, active: ad.active, startsAt: toLocal(ad.startsAt), endsAt: toLocal(ad.endsAt) } : EMPTY);
+  const [o, setO] = useState(ad ? { advertiser: ad.advertiser, title: ad.title, sentence: ad.sentence, ctaLabel: ad.ctaLabel, linkUrl: ad.linkUrl, active: ad.active, startsAt: toLocal(ad.startsAt), endsAt: toLocal(ad.endsAt), languages: ad.languages || [] } : EMPTY);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -69,7 +71,7 @@ function AdForm({ ad, limits, onDone, onCancel }) {
         key = u.data.key;
       }
       setPct(null);
-      const body = { advertiser: o.advertiser, title: o.title, sentence: o.sentence, ctaLabel: o.ctaLabel || 'En savoir plus', linkUrl: o.linkUrl, active: o.active, startsAt: toIso(o.startsAt), endsAt: toIso(o.endsAt), ...(key ? { mediaKey: key } : {}) };
+      const body = { advertiser: o.advertiser, title: o.title, sentence: o.sentence, ctaLabel: o.ctaLabel || 'En savoir plus', linkUrl: o.linkUrl, active: o.active, startsAt: toIso(o.startsAt), endsAt: toIso(o.endsAt), languages: o.languages, ...(key ? { mediaKey: key } : {}) };
       const r = ad ? await call(`/admin/campaigns/${ad.id}`, { method: 'PATCH', body: JSON.stringify(body) }) : await call('/admin/campaigns', { method: 'POST', body: JSON.stringify(body) });
       if (!r.ok) throw new Error(r.data?.error || 'Enregistrement impossible.');
       onDone();
@@ -96,6 +98,13 @@ function AdForm({ ad, limits, onDone, onCancel }) {
         <label>Début (date et heure, facultatif)<input type="datetime-local" value={o.startsAt} onChange={set('startsAt')} /></label>
         <label>Fin (date et heure, facultatif)<input type="datetime-local" value={o.endsAt} onChange={set('endsAt')} /></label>
       </div>
+      <fieldset className="check-group">
+        <legend>Langues de l’application visées</legend>
+        {LANGS.map(([k, name]) => (
+          <label key={k} className="check"><input type="checkbox" checked={o.languages.includes(k)} onChange={(e) => setO((x) => ({ ...x, languages: e.target.checked ? [...x.languages, k] : x.languages.filter((y) => y !== k) }))} /> {name}</label>
+        ))}
+        <small className="meta">Aucune case cochée = montrée dans toutes les langues. Une application ancienne, qui n’envoie pas sa langue, voit toutes les publicités.</small>
+      </fieldset>
       <small className="meta">Sans date : la publicité est montrée dès l’enregistrement et jusqu’à ce que vous la mettiez en pause. Les heures sont celles de cet ordinateur.</small>
       <label className="check"><input type="checkbox" role="switch" checked={o.active} onChange={set('active')} /> Active</label>
       {busy && pct != null && <progress value={pct} max="100" style={{ width: '100%' }} aria-label="Progression de l’envoi" />}
@@ -149,6 +158,8 @@ export default function AdsAdmin() {
                 <small className={cls}>{label}{a.startsAt ? ` · du ${when(a.startsAt, locale)}` : ''}{a.endsAt ? ` · jusqu’au ${when(a.endsAt, locale)}` : ''}</small>
                 <small className="meta"><a href={a.linkUrl} target="_blank" rel="noopener noreferrer">{a.ctaLabel}</a> · {a.mediaKind === 'video' ? 'vidéo' : 'photo'}</small>
                 <small className="meta">{a.impressions} affichage(s) · {a.clicks} clic(s) ({a.ctr} %) · {a.skips} « passer » — 7 derniers jours : {a.impressions7} affichage(s), {a.clicks7} clic(s)</small>
+                <small className="meta">Langues visées : {langNames(a.languages)}</small>
+                {a.byLang ? <small className="meta">Par langue — {[['fr', 'FR'], ['en', 'EN'], ['ar', 'AR'], ['none', 'sans langue']].map(([k, n]) => `${n} : ${a.byLang[k].impressions} aff. / ${a.byLang[k].clicks} clic(s)`).join(' · ')}</small> : null}
                 <div className="studio-tools">
                   <button type="button" className="btn ghost" onClick={() => { setMsg(null); setForm(a); window.scrollTo?.({ top: 0 }); }}>Modifier</button>
                   <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>

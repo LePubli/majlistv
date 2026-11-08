@@ -53,7 +53,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 |---|---|---|---|---|
 | 5.1 | **Soutenir une chaîne ou un intervenant** (don ponctuel ou mensuel, via Stripe) | Revenus pour les chaînes, fidélise les créateurs | M | ★★ |
 | 5.2 | **Boutique d'ouvrages** reliée aux conférences (vente ou affiliation) ; le module Ouvrages existe déjà | Revenu complémentaire | M–L | ★ |
-| 5.3 | **Publicités : rapport annonceur** (PDF ou lien de suivi), ciblage par langue ou pays | Facilite la vente d'espaces, meilleur tarif | M | ★ |
+| 5.3 | 🟡 **étape 1 sur 2 livrée** (08/11 : ciblage par langue + chiffres par langue ; décisions Epok : lien de suivi + PDF, langue de l'application seulement, répartition visible de l'annonceur) **Publicités : rapport annonceur** (PDF ou lien de suivi), ciblage par langue ou pays | Facilite la vente d'espaces, meilleur tarif | M | ★ |
 
 ## 6. Fiabilité, sécurité, exploitation
 | # | Idée | Apport | Effort | Prio |
