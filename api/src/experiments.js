@@ -1,0 +1,78 @@
+// Amélioration 7.2 — Tests A/B : règles pures (testées sans base) utilisées par routes/experiments.js.
+import crypto from 'node:crypto';
+
+/** Zones du site que l'on peut tester. `keys` = textes (clés de web/lib/i18n.js) que les variantes peuvent remplacer. */
+export const ZONES = {
+  vitrine_hero: {
+    label: "Bannière de l'accueil visiteur",
+    keys: { vtTitle1: 'Titre, ligne 1', vtTitle2: 'Titre, ligne 2 (en or)', vtLead: "Phrase d'accroche", heroCta: 'Bouton principal (avec essai gratuit)' },
+  },
+};
+export const LANGS = ['fr', 'en', 'ar'];
+export const VARIANT_KEYS = ['A', 'B', 'C'];
+export const VISITOR_RE = /^[A-Za-z0-9-]{16,64}$/;
+export const hashVisitor = (visitor) => crypto.createHash('sha256').update(String(visitor)).digest('hex');
+
+/** Position stable du visiteur dans [0, 1) pour ce test : le même visiteur reçoit toujours la même variante. */
+export function bucket(visitor, experimentId) {
+  const h = crypto.createHash('sha256').update(`${experimentId}:${visitor}`).digest();
+  return h.readUInt32BE(0) / 0x100000000;
+}
+
+/** Variante d'un visiteur selon les poids ([{ key, weight }]). */
+export function assign(visitor, experimentId, variants) {
+  const total = variants.reduce((s, v) => s + v.weight, 0);
+  let x = bucket(visitor, experimentId) * total;
+  for (const v of variants) { if (x < v.weight) return v.key; x -= v.weight; }
+  return variants[variants.length - 1].key;
+}
+
+/** Vérifie et nettoie les textes d'une variante pour une zone ; retourne { texts } ou { error }. */
+export function cleanConfig(zone, config) {
+  const z = ZONES[zone];
+  if (!z) return { error: 'Zone inconnue' };
+  const out = {};
+  for (const [lang, map] of Object.entries(config?.texts || {})) {
+    if (!LANGS.includes(lang)) return { error: `Langue inconnue : ${lang}` };
+    for (const [k, v] of Object.entries(map || {})) {
+      if (!z.keys[k]) return { error: `Texte non modifiable dans cette zone : ${k}` };
+      const s = String(v ?? '').trim();
+      if (!s) continue; // vide = on garde le texte d'origine
+      if (s.length > 300) return { error: 'Texte trop long (300 caractères maximum)' };
+      if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(s)) return { error: 'Caractère de contrôle interdit' };
+      (out[lang] ||= {})[k] = s;
+    }
+  }
+  return { texts: out };
+}
+
+// Fonction de répartition de la loi normale (approximation d'Abramowitz-Stegun, erreur < 1e-7).
+export function normalCdf(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp((-z * z) / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+}
+
+export const MIN_VISITORS = 100;   // par variante
+export const MIN_CONVERSIONS = 10; // au total
+/** Statistiques : rows = [{ key, visitors, clicks, conversions }] ; la variante A est la référence. */
+export function computeStats(rows) {
+  const ctl = rows.find((r) => r.key === 'A');
+  return rows.map((r) => {
+    const rate = r.visitors ? r.conversions / r.visitors : 0;
+    const out = { ...r, rate: Math.round(rate * 10000) / 100, clickRate: r.visitors ? Math.round((r.clicks / r.visitors) * 10000) / 100 : 0, lift: null, confidence: null, verdict: r.key === 'A' ? 'reference' : 'collecting' };
+    if (r.key === 'A' || !ctl) return out;
+    const enough = r.visitors >= MIN_VISITORS && ctl.visitors >= MIN_VISITORS && r.conversions + ctl.conversions >= MIN_CONVERSIONS;
+    const pc = ctl.visitors ? ctl.conversions / ctl.visitors : 0;
+    out.lift = pc > 0 ? Math.round(((rate - pc) / pc) * 1000) / 10 : null; // en % relatif
+    if (!enough) return out;
+    const pool = (r.conversions + ctl.conversions) / (r.visitors + ctl.visitors);
+    const se = Math.sqrt(pool * (1 - pool) * (1 / r.visitors + 1 / ctl.visitors));
+    const z = se > 0 ? (rate - pc) / se : 0;
+    const p = 2 * (1 - normalCdf(Math.abs(z)));
+    out.confidence = Math.round((1 - p) * 1000) / 10;
+    out.verdict = p < 0.05 ? (rate > pc ? 'better' : 'worse') : 'inconclusive';
+    return out;
+  });
+}

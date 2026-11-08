@@ -13,7 +13,7 @@ import AdminPalette from './AdminPalette';
 
 // Entrées qui mènent à l'écran d'un module : disparaissent si le module est coupé ou absent.
 // Entrées liées à une fonction activable du cœur (Admin → Fonctions).
-const FEATURE_OF_TAB = { watch: 'watch', ads: 'ads' };
+const FEATURE_OF_TAB = { watch: 'watch', ads: 'ads', experiments: 'experiments' };
 const MODULE_OF_TAB = { stats: 'stats', gifts: 'gifts', revenue: 'revenue', kidrubrics: 'kids' };
 
 export default function AdminShell({ children }) {
@@ -41,7 +41,7 @@ export default function AdminShell({ children }) {
   // [onglet, libellé, icône]
   const groups = [
     { key: 'pilot', title: t('adGrpPilot'), items: [['dashboard', t('admDashboard'), ICONS.dash], ['users', t('admUsers'), ICONS.users], ['stats', t('adStats'), ICONS.chart], ['revenue', t('adRevenue'), ICONS.tag], ['health', t('admHealth'), ICONS.gear], ['errors', t('admErrors'), ICONS.shield], ['ask', t('admAsk'), ICONS.shield], ['lifecycle', t('admLifecycle'), ICONS.gear]] },
-    { key: 'cat', title: t('adGrpCat'), items: [['categories', t('adCatFmt'), ICONS.tag], ['speakers', t('adSpeakers'), ICONS.users], ['watch', t('admWatch'), ICONS.eye], ['ads', t('admAds'), ICONS.tag], ['gifts', t('admGifts'), ICONS.heart], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['seasons', t('seasonAdmin'), ICONS.eye], ['friday', t('fdAdminNav'), ICONS.eye], ['athkar', t('atTab'), ICONS.note], ['ramadan', t('rzNav'), ICONS.eye], ['quran', t('qrAdNav'), ICONS.note], ['kidrubrics', t('krAdminNav'), ICONS.tag]] },
+    { key: 'cat', title: t('adGrpCat'), items: [['categories', t('adCatFmt'), ICONS.tag], ['speakers', t('adSpeakers'), ICONS.users], ['watch', t('admWatch'), ICONS.eye], ['ads', t('admAds'), ICONS.tag], ['experiments', 'Tests A/B', ICONS.chart], ['gifts', t('admGifts'), ICONS.heart], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['seasons', t('seasonAdmin'), ICONS.eye], ['friday', t('fdAdminNav'), ICONS.eye], ['athkar', t('atTab'), ICONS.note], ['ramadan', t('rzNav'), ICONS.eye], ['quran', t('qrAdNav'), ICONS.note], ['kidrubrics', t('krAdminNav'), ICONS.tag]] },
     { key: 'set', title: t('adGrpSet'), items: [['features', t('admFeatures'), ICONS.gear], ['modules', t('admModules'), ICONS.layers], ['settings', t('admSettings'), ICONS.gear], ['appearance', t('admAppearance'), ICONS.brush], ['pages', t('admPages'), ICONS.doc], ['texts', t('admTexts'), ICONS.doc], ['legal', t('admLegal'), ICONS.doc]] },
     { key: 'sec', title: t('adGrpSec'), items: [['audit', t('admAudit'), ICONS.shield]] },
   ];

@@ -8,6 +8,7 @@ import CitationCard from './CitationCard';
 import Row from './Row';
 import { thumbOf } from './TalkCard';
 import { clock } from '../lib/clock';
+import { useExperiment } from '../lib/experiments';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 const DAYS = [1, 3, 7, 21]; // calendrier de révision espacée (api/src/revision.js)
@@ -55,6 +56,9 @@ function QuizStep({ talkId, question, t, call }) {
 
 export default function Vitrine({ cit, latest, wait, hero }) {
   const { t, locale, user, trialDays, call, feat } = useApp();
+  const xp = useExperiment('vitrine_hero'); // test A/B de la bannière (7.2) : sans test en cours, xp.tx(clé) = t(clé)
+  const tx = xp.tx;
+  useEffect(() => { if (xp.ready && xp.variant && !wait && !user) xp.expose(); }, [xp.ready, xp.variant, xp.expose, wait, user]); // eslint-disable-line react-hooks/exhaustive-deps
   const [d, setD] = useState(undefined);   // undefined = chargement, null = pas d'exemple disponible
   const [plans, setPlans] = useState(null);
   useEffect(() => { call(`/showcase?lang=${encodeURIComponent(locale)}`, {}, null).then((r) => setD(r.ok && r.data.available ? r.data : null)); }, [call, locale]);
@@ -64,7 +68,7 @@ export default function Vitrine({ cit, latest, wait, hero }) {
     const p = (list || []).filter((x) => x.amount > 0).sort((a, b) => a.amount - b.amount)[0];
     return p ? new Intl.NumberFormat(locale, { style: 'currency', currency: p.currency.toUpperCase(), minimumFractionDigits: p.amount % 100 ? 2 : 0 }).format(p.amount / 100) : null;
   };
-  const cta = trialDays > 0 ? t('heroCta') : t('register');
+  const cta = trialDays > 0 ? tx('heroCta') : t('register');
   const talk = d?.talk;
   const thumb = talk ? thumbOf({ posterUrl: talk.posterUrl, source: talk.source, video_ref: talk.video_ref }) : null;
   const mins = talk ? Math.max(1, Math.round(talk.durationSeconds / 60)) : 0;
@@ -79,13 +83,13 @@ export default function Vitrine({ cit, latest, wait, hero }) {
         <div className="vt-hero-in">
           <div className="vt-hero-txt">
             <span className="vt-badge">{t('vtBadge')}</span>
-            <h1>{t('vtTitle1')}<br /><span>{t('vtTitle2')}</span></h1>
-            <p className="vt-lead">{t('vtLead')}</p>
+            <h1>{tx('vtTitle1')}<br /><span>{tx('vtTitle2')}</span></h1>
+            <p className="vt-lead">{tx('vtLead')}</p>
             <ul className="vt-pills" aria-hidden="true">
               <li>▶ {t('vtS1')}</li><li>✦ {t('vtS2')}</li><li>? {t('vtS3')}</li><li>↻ {t('vtS4')}</li>
             </ul>
             <div className="vt-cta">
-              {feat('registration') && <Link href="/register" className="btn btn-lg">{cta}</Link>}
+              {feat('registration') && <Link href="/register" className="btn btn-lg" onClick={xp.click}>{cta}</Link>}
               {d && <a href="#vt-example" className="btn ghost btn-lg">{t('vtSee')}</a>}
             </div>
             {trialDays > 0 && feat('registration') && <p className="hero-note">{t('heroNote').replace('{n}', trialDays)}</p>}

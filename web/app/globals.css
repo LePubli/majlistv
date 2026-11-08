@@ -4807,3 +4807,16 @@ body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .adp-none { cursor: default; }
 .adp-foot { margin: 0; }
 .adm-bulk { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; margin: 8px 0; }
+
+/* Amélioration 7.2 : tests A/B */
+.xp-form fieldset { border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px; margin: 10px 0; }
+.xp-lang { margin-top: 10px; }
+.xp-table td, .xp-table th { vertical-align: top; }
+.xp-best { background: rgba(212,175,55,.12); }
+.xp-item { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin-bottom: 12px; }
+.xp-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 12px; }
+.xp-item { width: 100%; box-sizing: border-box; }
+.card.xp-item, .card.xp-form { max-width: none; margin: 0 0 12px; padding: 16px; }
+.card.xp-form { display: grid; gap: 12px; margin-top: 12px; }
+.xp-list > li, .xp-item { min-width: 0; }
+.xp-item .adm-table-wrap { overflow-x: auto; max-width: 100%; }

@@ -72,3 +72,4 @@ test_events.py
 test_ads_lang.py
 test_ads_report.py
 test_admin_bulk.py
+test_experiments.py

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { safePath } from '../lib/nav';
+import { reportSignup } from '../lib/experiments';
 
 // Formulaire partagé : mode = 'login' ou 'register'.
 export default function AuthForm({ mode }) {
@@ -30,6 +31,7 @@ export default function AuthForm({ mode }) {
     setBusy(false);
     if (r.ok && r.data.twoFactor) { setChallenge(r.data.challenge); setCode(''); return; }
     if (r.ok && isReg && qs.get('ref')) await call('/me/referral/claim', { method: 'POST', body: JSON.stringify({ code: qs.get('ref') }) }, r.data.token).catch(() => {}); // échec sans gravité : l'inscription réussit quand même
+    if (r.ok && isReg) await reportSignup(call, r.data.token); // test A/B (7.2) : compte l'inscription, sans gravité en cas d'échec
     if (r.ok) { login(r.data.token, r.data.user); router.push(isReg ? `/welcome?next=${encodeURIComponent(next)}` : next); return; }
     setErr(r.status === 401 ? t('errInvalid') : r.status === 409 ? t('errExists') : t('errGeneric'));
   };

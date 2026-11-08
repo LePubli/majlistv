@@ -81,6 +81,8 @@ export const FEATURES = [
     rules: [{ re: '^/(shorts|studio/shorts)(/|$)' }] },
   { id: 'ads', group: 'catalog', label: 'Publicité au lancement de l\'application', hint: 'Publicité plein écran (photo ou vidéo) au lancement de l\'application, passable ; jamais dans l\'espace Kids ni pendant l\'heure de prière. Gérée dans Admin → Publicités',
     rules: [{ re: '^/(ads|admin/campaigns)(/|$)' }] },
+  { id: 'experiments', group: 'catalog', label: 'Tests A/B', hint: 'Compare deux versions d\'une zone du site (ex. la bannière de l\'accueil visiteur) et mesure laquelle donne le plus d\'inscriptions. Gérés dans Admin → Tests A/B ; sans test en cours, le site est inchangé',
+    rules: [{ re: '^/(xp|admin/experiments)(/|$)' }] },
   { id: 'media_import', group: 'catalog', label: 'Import de vidéos externes', hint: 'Copier chez nous une vidéo YouTube, Vimeo, archive.org ou d\'un autre site (déclaration des droits obligatoire, journal) pour la monter, la doubler et la mettre en extraits',
     rules: [{ re: '^/(talks/[^/]+/import|studio/imports)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre, alertes par e-mail et notifications sur téléphone',

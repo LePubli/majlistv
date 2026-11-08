@@ -7945,3 +7945,29 @@ curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "A
 ```
 
 **Testé.** `test_admin_bulk.py` (recherche, droits, jokers, rôle en lot avec les cas ignorés, suppression en lot, droits de l'organisateur, journal — dans la suite GitHub), `web/tests/test_admin_search.mjs` (filtre des écrans, textes FR/EN/AR), essai Chromium (Ctrl + K, « publi » + Entrée, membre via la palette, Échap, rôle en lot, suppression en lot), affichage à 390 px. **Non testé** : sur le serveur réel ; recherche de conférences par la palette dans le navigateur (testée côté API seulement) ; arabe/RTL de la palette (textes d'administration en français, comme le reste de l'administration).
+
+
+## Tests A/B — étape 1 sur 4 : moteur, écran d'administration, bannière de l'accueil visiteur (Amélioration 7.2, 08/11)
+
+**Description.** Admin → **Tests A/B** : on compare l'**original** d'une zone du site à 1 ou 2 variantes de **textes** (FR / EN / AR), sur des visiteurs tirés au sort ; l'objectif est l'**inscription** (décision d'Epok). Première zone : la **bannière de l'accueil visiteur** (titre ligne 1, titre ligne 2 en or, phrase d'accroche, bouton principal). Variante A = toujours l'original ; B (et C) = les textes à changer (champ vide = texte d'origine ; en dessous de chaque champ, le texte actuel est montré en grisé). Pour un visiteur, « bannière » et « textes de l'accueil » sont la même zone ; l'autre bannière (HomeHero) n'est vue que par les membres connectés et ne peut pas mesurer d'inscriptions.
+
+**Fonctionnement.**
+- Un visiteur reçoit **toujours la même variante** (calcul à partir d'un identifiant aléatoire gardé dans son navigateur) ; répartition selon les parts choisies (50 / 50 par défaut), vérifiée sur 20 000 visiteurs.
+- Mesures : visiteurs (comptés une fois), clics sur le bouton principal, **inscriptions** (comptées quand le visiteur s'inscrit, si son compte a moins de 15 minutes et son exposition moins de 30 jours), taux, écart relatif avec l'original, **confiance** statistique (test de deux proportions) et verdict : « pas assez de données » (moins de 100 visiteurs par variante ou 10 inscriptions au total), « meilleure », « moins bonne », « pas de différence nette ».
+- Un test démarré **ne se modifie plus** (les chiffres seraient faussés) ; un seul test en cours par zone ; pause / reprise possibles.
+- **« Garder la variante B »** : termine le test et copie ses textes dans Admin → Textes (donc modifiables ensuite) ; « Garder l'original » ou « Terminer sans rien appliquer » : le site ne change pas.
+- Les robots (Googlebot, Lighthouse, aperçus de liens…) ne sont pas comptés. Les actions (créer, démarrer, pause, fin) sont au journal des actions.
+
+**Vie privée.** Aucune donnée personnelle : l'identifiant est un nombre aléatoire gardé dans le navigateur (clé `mtv_xp`), le serveur n'en garde que l'empreinte (sha256). Un visiteur qui demande de ne pas être suivi (**Do Not Track** ou **Global Privacy Control**) ne reçoit jamais de variante et n'est pas compté. Il n'y a pas de bannière de consentement sur le site : à Epok de vérifier que la « Politique de confidentialité » mentionne ce stockage (ce n'est pas un avis juridique).
+
+**Prérequis.** Migration `110_experiments.sql` (tables `experiments`, `experiment_variants`, `experiment_exposures`), appliquée au démarrage de l'API. Fonction « Tests A/B » (Admin → Fonctions, activée par défaut ; sans test en cours le site est strictement inchangé).
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec). Pas de mise à jour de l'application à cette étape.
+
+**Utilisation.** Admin → Tests A/B → « Nouveau test » → nom, zone, textes de la variante B (au moins un) → « Créer le test (brouillon) » → « Démarrer ». Laisser tourner **au moins une à deux semaines** ; ne conclure qu'avec **95 % de confiance ou plus**, puis « Garder la variante B » (ou l'original).
+
+**Debug.** La variante n'apparaît pas chez un visiteur : son navigateur refuse le suivi (DNT / GPC), ou le test est en pause (le cache serveur dure 10 s). Pour forcer la variante en essai : console du navigateur → `localStorage.removeItem('mtv_xp')` puis recharger ; `curl -s "https://api-majlisstv.le-publicitaire.fr/xp/active?visitor=<identifiant>"` montre la variante servie.
+
+**Limites.** Textes seulement (pas d'images ni de couleurs) ; une seule zone pour l'instant ; l'objectif est l'inscription seulement ; pas de bascule automatique vers le gagnant (décision d'Epok : tu tranches). Les chiffres d'un test terminé restent consultables jusqu'à sa suppression.
+
+**Testé.** `test_experiments_lib.mjs` (affectation stable, 50/50 et 80/10/10, indépendance entre tests, statistiques, validation des textes), `test_experiments.py` (droits, cycle brouillon → démarré → pause → fin, un test par zone, comptage unique, robots, clic, inscription et conversions refusées, application du gagnant dans les textes, journal — dans la suite GitHub), `test_experiments_web.mjs`, essai Chromium complet (création et démarrage dans l'admin, visiteur A = original, visiteur « Do Not Track » = original et non compté, visiteur B = variante, clic puis inscription réelle par le formulaire, chiffres en base et dans l'admin, « garder la variante »), affichage de l'écran vérifié. **Non testé** : avec du vrai trafic ; en arabe de bout en bout.
