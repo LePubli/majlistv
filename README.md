@@ -7900,3 +7900,24 @@ curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/admin/campaigns/<id> -
 ```
 
 **Testé.** `test_ads_lang.py` (comptage par langue, totaux, « sans langue », droits, doublons — dans la suite GitHub), `test_ads_lib.mjs` (règles pures), `test_ads.py` (rotation filtrée par langue, avec stockage de test), `ads.test.ts` mobile (la langue accompagne la demande et les 3 compteurs), `npm run check` (250 tests), `next build`, essai Chromium de l'écran Admin → Publicités (cases de langues, chiffres par langue). **Non testé** : l'application sur un vrai téléphone (envoi réel de la langue).
+
+
+## Publicités — étape 2 sur 2 : rapport annonceur, lien de suivi et PDF (Amélioration 5.3, 08/11)
+
+**Description.** Pour chaque publicité, l'administrateur crée un **lien de suivi secret** (Admin → Publicités → « Créer le lien de suivi »). L'annonceur ouvre ce lien **sans compte** et voit : affichages, clics, taux de clic, « Passer », la courbe des affichages sur 90 jours et la répartition par langue de l'application ; un bouton télécharge le même rapport en **PDF**. Le lien peut être copié, renouvelé (l'ancien cesse de marcher) ou désactivé.
+
+**Ce que voit l'annonceur** : uniquement des totaux (aucune donnée personnelle), le titre, son nom, la situation de la campagne et les langues visées. Pas le lien du bouton, pas le visuel, pas les autres campagnes. Le lien est secret (32 caractères) mais **n'est pas protégé par un compte** : quiconque le possède voit le rapport. La page n'est pas indexée par les moteurs de recherche.
+
+**Adresses.** Page : `https://majlisstv.le-publicitaire.fr/rapport-annonceur/<jeton>` ; API : `GET /ad-report/<jeton>` et `GET /ad-report/<jeton>/pdf`. Elles restent lisibles même si la fonction « Publicité » est coupée (un rapport déjà remis ne doit pas disparaître) ; la suppression de la publicité supprime le lien.
+
+**Prérequis.** Étape 1 livrée ; migration `109_ads_report_token.sql` (colonne `ads.report_token`, vide = lien désactivé), appliquée au démarrage de l'API. Aucun nouvel APK ni mise à jour de l'application.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Utilisation.** Admin → Publicités → sur la publicité : « Créer le lien de suivi » → « Copier le lien » → l'envoyer à l'annonceur. Fin de campagne ou lien diffusé par erreur : « Désactiver le lien » ou « Renouveler le lien de suivi ».
+
+**Debug.** « Lien inconnu ou désactivé » : le lien a été renouvelé/désactivé, ou la publicité supprimée. PDF vide de chiffres : vérifier que l'application envoie bien la langue (étape 1). Contrôle : `curl -s https://api-majlisstv.le-publicitaire.fr/ad-report/<jeton>`.
+
+**Limites connues.** Page et PDF en français seulement. Le PDF ne contient que des caractères latins (le titre ou l'annonceur en arabe s'afficherait avec des « ? » dans le PDF, la page web les affiche correctement). Les chiffres d'avant l'étape 1 sont en « Sans langue ».
+
+**Testé.** `test_ads_report.py` (création, renouvellement, désactivation, droits, rapport sans connexion, absence de jeton/lien/visuel dans la réponse, PDF, fonction coupée, suppression — dans la suite GitHub), `test_ads_lib.mjs` (courbe, jeton, taux, PDF), essai Chromium complet (admin crée et copie le lien, annonceur sans connexion à 390 px : chiffres, courbe 90 jours, pas de défilement horizontal, PDF téléchargé, lien désactivé = message clair), PDF vérifié visuellement, `next build`. **Non testé** : sur le serveur réel avec de vrais chiffres.

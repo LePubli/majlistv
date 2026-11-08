@@ -130,6 +130,15 @@ export default function AdsAdmin() {
     const r = await call(path, opts);
     if (r.ok) { if (okText) flash(true, okText); load(); } else flash(false, r.data?.error || 'Action impossible.');
   };
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const reportUrl = (a) => `${origin}/rapport-annonceur/${a.reportToken}`;
+  const makeLink = async (a) => {
+    if (a.reportToken && !window.confirm('Renouveler le lien ? L’ancien lien cessera de fonctionner (l’annonceur devra recevoir le nouveau).')) return;
+    await act(`/admin/campaigns/${a.id}/report-link`, { method: 'POST' }, a.reportToken ? 'Nouveau lien de suivi créé.' : 'Lien de suivi créé : copiez-le pour l’annonceur.');
+  };
+  const copyLink = async (a) => {
+    try { await navigator.clipboard.writeText(reportUrl(a)); flash(true, 'Lien copié.'); } catch { flash(false, 'Copie impossible : sélectionnez le lien et copiez-le à la main.'); }
+  };
   const remove = (a) => { if (window.confirm(`Supprimer la publicité « ${a.title} » (${a.advertiser}) ? Son visuel et ses compteurs seront effacés.`)) act(`/admin/campaigns/${a.id}`, { method: 'DELETE' }, 'Publicité supprimée.'); };
 
   if (!data) return <p className="meta">Chargement…</p>;
@@ -160,7 +169,11 @@ export default function AdsAdmin() {
                 <small className="meta">{a.impressions} affichage(s) · {a.clicks} clic(s) ({a.ctr} %) · {a.skips} « passer » — 7 derniers jours : {a.impressions7} affichage(s), {a.clicks7} clic(s)</small>
                 <small className="meta">Langues visées : {langNames(a.languages)}</small>
                 {a.byLang ? <small className="meta">Par langue — {[['fr', 'FR'], ['en', 'EN'], ['ar', 'AR'], ['none', 'sans langue']].map(([k, n]) => `${n} : ${a.byLang[k].impressions} aff. / ${a.byLang[k].clicks} clic(s)`).join(' · ')}</small> : null}
+                <small className="meta adr-link">Rapport annonceur : {a.reportToken ? <a href={reportUrl(a)} target="_blank" rel="noopener noreferrer">{reportUrl(a)}</a> : 'aucun lien (désactivé)'}</small>
                 <div className="studio-tools">
+                  <button type="button" className="btn ghost" onClick={() => makeLink(a)}>{a.reportToken ? 'Renouveler le lien de suivi' : 'Créer le lien de suivi'}</button>
+                  {a.reportToken && <button type="button" className="btn ghost" onClick={() => copyLink(a)}>Copier le lien</button>}
+                  {a.reportToken && <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver le lien</button>}
                   <button type="button" className="btn ghost" onClick={() => { setMsg(null); setForm(a); window.scrollTo?.({ top: 0 }); }}>Modifier</button>
                   <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>
                   <button type="button" className="btn ghost" onClick={() => remove(a)}>Supprimer</button>

@@ -4780,3 +4780,16 @@ body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .evn-form label { display: grid; gap: 4px; }
 .evn-row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .evn-band { margin: 18px 0; }
+
+/* Amélioration 5.3 (étape 2) : rapport annonceur */
+.adr-page { max-width: 760px; margin-inline: auto; }
+.adr-kpis { list-style: none; padding: 0; margin: 16px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.adr-kpis li { display: flex; flex-direction: column; gap: 4px; padding: 14px; }
+.adr-kpis b { font-size: 1.6rem; color: var(--gold, #d4af37); }
+.adr-curve { margin: 0 0 16px; }
+.adr-curve svg { width: 100%; height: 170px; display: block; }
+.adr-axis { display: flex; justify-content: space-between; }
+.adr-table-wrap { overflow-x: auto; }
+.adr-table { width: 100%; border-collapse: collapse; }
+.adr-table th, .adr-table td { text-align: start; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.adr-link { word-break: break-all; }

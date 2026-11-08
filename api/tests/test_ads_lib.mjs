@@ -60,3 +60,22 @@ console.log('OK  ads lib');
   assert.equal(langBreakdown({ impressions: 1, clicks: 0, skips: 0 }, [{ lang: 'fr', impressions: 5, clicks: 0, skips: 0 }]).none.impressions, 0, 'jamais négatif');
   console.log('OK  ads lang');
 }
+
+// ---- Amélioration 5.3, étape 2 : rapport annonceur ----
+{
+  const { fillDays, newReportToken, TOKEN_RE, buildReport, reportPdf } = await import('../src/adReport.js');
+  const days = fillDays([{ day: '2026-11-07', impressions: 4, clicks: 1 }, { day: '2020-01-01', impressions: 9, clicks: 9 }], '2026-11-08', 90);
+  const t = (c, m) => { if (!c) { console.error('FAIL ' + m); process.exit(1); } console.log('OK   ' + m); };
+  t(days.length === 90 && days[89].day === '2026-11-08' && days[0].day === '2026-08-11', 'courbe : 90 jours se terminant aujourd\'hui');
+  t(days[88].impressions === 4 && days[89].impressions === 0, 'courbe : jours sans donnée à zéro, hors période ignorés');
+  const a = newReportToken(), b = newReportToken();
+  t(a !== b && TOKEN_RE.test(a) && a.length === 32, 'jeton secret : 32 caractères, unique, valide');
+  t(!TOKEN_RE.test('court') && !TOKEN_RE.test('x'.repeat(30) + '/..'), 'jeton invalide refusé');
+  const lang = (i, c) => ({ impressions: i, clicks: c, skips: 0 });
+  const rep = buildReport({ advertiser: 'Café Élan', title: 'Offre d’été — 20 %', starts_at: null, ends_at: null, created_at: new Date(), languages: ['fr'], impressions: 10, clicks: 2, skips: 1 },
+    [{ day: '2026-11-08', impressions: 10, clicks: 2 }], { fr: lang(6, 2), en: lang(0, 0), ar: lang(0, 0), none: lang(4, 0) }, '2026-11-08', 'live');
+  t(rep.totals.ctr === 20 && rep.byLang.fr.ctr > 33 && rep.byLang.none.ctr === 0, 'rapport : taux de clic total et par langue');
+  t(!JSON.stringify(rep).includes('token') && !JSON.stringify(rep).includes('link'), 'rapport : ni jeton ni lien');
+  const pdf = await reportPdf({ ...rep, title: 'Offre d’été — العربية 20 %' });
+  t(pdf.subarray(0, 5).toString() === '%PDF-' && pdf.length > 1500, 'PDF généré (accents gérés, caractères non gérés remplacés)');
+}

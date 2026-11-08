@@ -8,6 +8,10 @@
 //   POST  /admin/campaigns                administrateur : créer
 //   PATCH /admin/campaigns/:id            administrateur : modifier (texte, lien, dates, active, nouveau visuel)
 //   DELETE /admin/campaigns/:id           administrateur : supprimer (visuel compris)
+//   POST   /admin/campaigns/:id/report-link    administrateur : créer ou renouveler le lien de suivi secret (l'ancien cesse de marcher)
+//   DELETE /admin/campaigns/:id/report-link    administrateur : désactiver le lien de suivi
+//   GET  /ad-report/:token          public (sans compte, jeton secret) : rapport de l'annonceur en JSON
+//   GET  /ad-report/:token/pdf      public (jeton secret) : rapport en PDF
 // Fonction « Publicité » (Admin → Fonctions) : coupée, toutes ces routes répondent 404 et l'application n'affiche rien.
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -15,6 +19,7 @@ import { pool } from '../db.js';
 import { storage, presignGet, presignPut, headObject, deleteObject } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { getSetting, getNumber } from '../settings.js';
+import { newReportToken, TOKEN_RE, buildReport, reportPdf } from '../adReport.js';
 import { mediaInfo, keyInfo, safeLink, adStatus, pickAds, clickRate, MEDIA_KEY_RE, AD_LANGS, normLang, matchesLang, langBreakdown } from '../ads.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
@@ -39,7 +44,7 @@ const patchSchema = z.object(Object.fromEntries(Object.entries(fields).map(([k, 
 const nextQuery = z.object({ after: z.string().uuid().optional(), lang: z.string().max(12).optional() });
 const uploadSchema = z.object({ contentType: z.string().max(60), size: z.number().int().positive() });
 
-const COLS = `a.id, a.advertiser, a.title, a.sentence, a.cta_label, a.link_url, a.media_kind, a.media_key, a.media_type, a.active, a.starts_at, a.ends_at, a.created_at, a.languages`;
+const COLS = `a.id, a.advertiser, a.title, a.sentence, a.cta_label, a.link_url, a.media_kind, a.media_key, a.media_type, a.active, a.starts_at, a.ends_at, a.created_at, a.languages, a.report_token`;
 const publicView = async (a) => ({
   id: a.id, advertiser: a.advertiser, title: a.title, sentence: a.sentence, cta: a.cta_label, linkUrl: a.link_url,
   mediaKind: a.media_kind, mediaUrl: await presignGet(a.media_key),
@@ -100,7 +105,7 @@ export default async function adsRoutes(app) {
         mediaKind: a.media_kind, mediaUrl: storage ? await presignGet(a.media_key) : null, active: a.active,
         startsAt: a.starts_at, endsAt: a.ends_at, createdAt: a.created_at, status: adStatus(a, now),
         impressions: a.impressions, clicks: a.clicks, skips: a.skips, ctr: clickRate(a.impressions, a.clicks), impressions7: a.impressions7, clicks7: a.clicks7,
-        languages: a.languages, byLang: langBreakdown({ impressions: a.impressions, clicks: a.clicks, skips: a.skips }, langRows.filter((x) => x.ad_id === a.id)),
+        reportToken: a.report_token, languages: a.languages, byLang: langBreakdown({ impressions: a.impressions, clicks: a.clicks, skips: a.skips }, langRows.filter((x) => x.ad_id === a.id)),
       });
     }
     return { ads, storage: Boolean(storage), limits: { imageMb: mediaInfo('image/png').maxMb, videoMb: mediaInfo('video/mp4').maxMb } };
@@ -172,5 +177,47 @@ export default async function adsRoutes(app) {
     if (!r.rowCount) return reply.code(404).send({ error: 'Publicité introuvable' });
     if (storage) await deleteObject(r.rows[0].media_key).catch(() => {});
     return { deleted: true };
+  });
+
+  // ---------- Rapport annonceur (lien secret, sans compte) ----------
+  const reportLink = { preHandler: app.requireRole('admin') };
+  app.post('/admin/campaigns/:id/report-link', reportLink, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const r = await pool.query('UPDATE ads SET report_token = $2 WHERE id = $1 RETURNING report_token', [id, newReportToken()]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Publicité introuvable' });
+    return { token: r.rows[0].report_token };
+  });
+  app.delete('/admin/campaigns/:id/report-link', reportLink, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const r = await pool.query('UPDATE ads SET report_token = NULL WHERE id = $1', [id]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Publicité introuvable' });
+    return { ok: true };
+  });
+
+  // Données du rapport pour un jeton ; null si le jeton est inconnu ou désactivé.
+  async function loadReport(token) {
+    if (!TOKEN_RE.test(token)) return null;
+    const ad = (await pool.query(
+      `SELECT a.advertiser, a.title, a.active, a.starts_at, a.ends_at, a.created_at, a.languages, a.id,
+              coalesce(sum(s.impressions), 0)::int AS impressions, coalesce(sum(s.clicks), 0)::int AS clicks, coalesce(sum(s.skips), 0)::int AS skips
+         FROM ads a LEFT JOIN ad_stats s ON s.ad_id = a.id WHERE a.report_token = $1 GROUP BY a.id`, [token])).rows[0];
+    if (!ad) return null;
+    const today = (await pool.query("SELECT to_char(current_date, 'YYYY-MM-DD') AS d")).rows[0].d;
+    const daily = (await pool.query(
+      "SELECT to_char(day, 'YYYY-MM-DD') AS day, impressions, clicks FROM ad_stats WHERE ad_id = $1 AND day > current_date - 90", [ad.id])).rows;
+    const langRows = (await pool.query('SELECT lang, sum(impressions)::int AS impressions, sum(clicks)::int AS clicks, sum(skips)::int AS skips FROM ad_stats_lang WHERE ad_id = $1 GROUP BY lang', [ad.id])).rows;
+    return buildReport(ad, daily, langBreakdown({ impressions: ad.impressions, clicks: ad.clicks, skips: ad.skips }, langRows.map((x) => ({ ...x, ad_id: ad.id }))), today, adStatus(ad, new Date()));
+  }
+  app.get('/ad-report/:token', async (req, reply) => {
+    const r = await loadReport(String(req.params.token));
+    if (!r) return reply.code(404).send({ error: 'Lien de suivi inconnu ou désactivé' });
+    reply.header('cache-control', 'no-store').header('x-robots-tag', 'noindex');
+    return r;
+  });
+  app.get('/ad-report/:token/pdf', async (req, reply) => {
+    const r = await loadReport(String(req.params.token));
+    if (!r) return reply.code(404).send({ error: 'Lien de suivi inconnu ou désactivé' });
+    const name = `rapport-${r.title.normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 40) || 'campagne'}.pdf`;
+    return reply.header('content-type', 'application/pdf').header('content-disposition', `attachment; filename="${name}"`).header('cache-control', 'no-store').header('x-robots-tag', 'noindex').send(await reportPdf(r));
   });
 }
