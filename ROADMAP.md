@@ -631,3 +631,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 4.2 « Événements en direct » — **étape 4 sur 4** (application mobile : liste, fiche, direct intégré, Me rappeler, agenda, bande d'accueil, menu) : livré (README « Événements en direct — étape 4 »). **Idée 4.2 terminée** ; à valider sur vrais appareils.
 \n- Amélioration 5.3 « Publicités : rapport annonceur » — **étape 1 sur 2** (ciblage par langue de l'application, chiffres par langue dans l'admin) : livré (README « Publicités — étape 1 »). Suite : lien de suivi et PDF pour l'annonceur.\n
 - Amélioration 5.3 « Publicités : rapport annonceur » — **étape 2 sur 2** (lien de suivi secret, page de rapport sans compte, PDF) : livré (README « Publicités — étape 2 »). Idée 5.3 terminée.
+- Amélioration 6.9 « Administration : recherche globale (Ctrl + K) et actions en masse » : livré (README « Administration — recherche globale et actions en masse »).

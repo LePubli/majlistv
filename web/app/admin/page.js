@@ -709,6 +709,9 @@ function Users({ me }) {
   const [data, setData] = useState({ total: 0, users: [] });
   const [counts, setCounts] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [sel, setSel] = useState(() => new Set());   // membres cochés (changement de rôle en lot, 6.9)
+  const [bulkRole, setBulkRole] = useState('organizer');
+  const [bulkMsg, setBulkMsg] = useState(null);
   const open = sp.get('user');            // fiche ouverte (dans l'adresse : on peut la partager / recharger)
   const LIMIT = 25;
   const openSheet = (uid) => router.replace(uid ? `/admin?tab=users&user=${uid}` : '/admin?tab=users', { scroll: false });
@@ -724,6 +727,17 @@ function Users({ me }) {
   }, [call, q, role, status, sort, page]);
   useEffect(() => { const id = setTimeout(load, 250); return () => clearTimeout(id); }, [load]);
 
+  const toggleOne = (id) => setSel((s0) => { const n = new Set(s0); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allShown = data.users.length > 0 && data.users.every((u) => sel.has(u.id));
+  const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) data.users.forEach((u) => n.delete(u.id)); else data.users.forEach((u) => n.add(u.id)); return n; });
+  const applyRole = async () => {
+    if (!window.confirm(`Passer ${sel.size} membre(s) en « ${ROLE_LABEL[bulkRole]} » ?`)) return;
+    const r = await call('/admin/users/bulk-role', { method: 'POST', body: JSON.stringify({ ids: [...sel], role: bulkRole }) });
+    if (!r.ok) { setBulkMsg({ ok: false, text: r.data?.error || 'Action impossible.' }); return; }
+    const sk = r.data.skipped;
+    setBulkMsg({ ok: true, text: `${r.data.updated} membre(s) modifié(s).${sk.length ? ` Ignorés : ${sk.map((x) => `${x.name} (${x.reason})`).join(' ; ')}.` : ''}` });
+    setSel(new Set()); load();
+  };
   const pages = Math.max(1, Math.ceil(data.total / LIMIT));
   const subLabel = (u) => (u.premiumUntil && new Date(u.premiumUntil) > new Date() ? `Offert → ${fmt(u.premiumUntil)}` : (SUB_LABEL[u.subscriptionStatus] || '—'));
   return (
@@ -748,13 +762,26 @@ function Users({ me }) {
           <option value="recent">Plus récents</option><option value="oldest">Plus anciens</option><option value="name">Nom (A → Z)</option><option value="activity">Dernière lecture</option>
         </select>
       </div>
-      <p className="meta">{data.total} utilisateur(s) — clique sur une ligne pour ouvrir la fiche.</p>
+      <p className="meta">{data.total} utilisateur(s) — clique sur une ligne pour ouvrir la fiche ; coche des lignes pour changer leur rôle en une fois.</p>
+      {bulkMsg && <p className={bulkMsg.ok ? 'meta ok' : 'error'} role="status">{bulkMsg.text}</p>}
+      {sel.size > 0 && (
+        <div className="adm-bulk card" role="region" aria-label="Changement de rôle en lot">
+          <strong>{sel.size} sélectionné(s)</strong>
+          <select value={bulkRole} onChange={(e) => setBulkRole(e.target.value)} aria-label="Nouveau rôle">
+            {['user', 'organizer', 'moderator'].map((k) => <option key={k} value={k}>{ROLE_LABEL[k]}</option>)}
+          </select>
+          <button type="button" className="btn" onClick={applyRole}>Appliquer le rôle</button>
+          <button type="button" className="btn ghost" onClick={() => setSel(new Set())}>Tout désélectionner</button>
+          <small className="meta">Les administrateurs et ton propre compte sont ignorés ; on ne peut pas nommer d’administrateur en lot.</small>
+        </div>
+      )}
       <div className="adm-table-wrap">
         <table className="adm-table users-table">
-          <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Abonnement</th><th>Conf.</th><th>Dernière lecture</th><th>Inscrit</th></tr></thead>
+          <thead><tr><th><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label="Tout cocher" /></th><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Abonnement</th><th>Conf.</th><th>Dernière lecture</th><th>Inscrit</th></tr></thead>
           <tbody>
             {data.users.map((u) => (
               <tr key={u.id} className={`${u.disabledAt ? 'adm-off ' : ''}row-click${open === u.id ? ' sel' : ''}`} tabIndex={0} onClick={() => openSheet(u.id)} onKeyDown={(e) => e.key === 'Enter' && openSheet(u.id)}>
+                <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(u.id)} onChange={() => toggleOne(u.id)} aria-label={`Cocher ${u.name}`} /></td>
                 <td>{u.name}{u.disabledAt && <span className="chip failed"> suspendu</span>}</td>
                 <td>{u.email}</td>
                 <td>{ROLE_LABEL[u.role]}</td>
@@ -764,7 +791,7 @@ function Users({ me }) {
                 <td>{fmt(u.createdAt)}</td>
               </tr>
             ))}
-            {!data.users.length && <tr><td colSpan={7} className="meta">Aucun résultat.</td></tr>}
+            {!data.users.length && <tr><td colSpan={8} className="meta">Aucun résultat.</td></tr>}
           </tbody>
         </table>
       </div>

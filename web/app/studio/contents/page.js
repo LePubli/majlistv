@@ -76,6 +76,14 @@ export default function StudioTalks() {
   const shown = rows.filter((r) => match(r, filter) && (!needle || text(r).includes(needle)));
   const allShown = shown.length > 0 && shown.every((r) => sel.has(r.id));
   const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) shown.forEach((r) => n.delete(r.id)); else shown.forEach((r) => n.add(r.id)); return n; });
+  // Suppression en lot (6.9) : confirmation, puis /talks/bulk-delete ; le résultat dit combien ont été supprimées ou refusées.
+  const removeSelected = async () => {
+    if (!window.confirm(t('bkDeleteConfirm').replace('{n}', sel.size))) return;
+    const r = await call('/talks/bulk-delete', { method: 'POST', body: JSON.stringify({ ids: [...sel] }) });
+    if (!r.ok) { setFlash(r.data?.error || 'Erreur'); return; }
+    setSel(new Set()); setFlash([t('bkDeleted').replace('{n}', r.data.deleted), r.data.notDeleted ? t('bkNotDeleted').replace('{n}', r.data.notDeleted) : ''].filter(Boolean).join(' '));
+    load(); setTimeout(() => setFlash(''), 6000);
+  };
   const toggleOne = (id) => setSel((s0) => { const n = new Set(s0); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   const dateTime = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -129,6 +137,7 @@ export default function StudioTalks() {
         <div className="bk-bar" role="region" aria-label={t('bkEdit')}>
           <strong>{t('bkSelected').replace('{n}', sel.size)}</strong>
           <button type="button" className="btn" onClick={() => setBulk(true)}>{t('bkEdit')}</button>
+          <button type="button" className="btn ghost" onClick={removeSelected}>{t('bkRemove')}</button>
           <button type="button" className="btn ghost" onClick={() => setSel(new Set())}>{t('bkClear')}</button>
         </div>
       )}

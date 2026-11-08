@@ -689,9 +689,8 @@ export default async function talksRoutes(app) {
     return reply.code(202).send({ status: 'pending' });
   });
 
-  // Un organisateur supprime ses vidéos ; un admin peut supprimer toutes les vidéos.
-  app.delete('/talks/:id', { preHandler: app.authenticate }, async (req, reply) => {
-    const { id } = idSchema.parse(req.params);
+  // Supprime une vidéo (fichiers compris) si elle appartient à l'utilisateur, ou quelle qu'elle soit pour un admin ; false si introuvable.
+  async function removeTalk(req, id) {
     const admin = req.user.role === 'admin';
     // Les modules effacent d'abord leurs fichiers liés (shorts publiés, rendus de l'éditeur) : la base les supprime en cascade,
     // mais pas le stockage (registre n°48).
@@ -703,7 +702,7 @@ export default async function talksRoutes(app) {
       'DELETE FROM talks WHERE id = $1 AND ($3 OR organizer_id = $2) RETURNING id, source, video_ref',
       [id, req.user.sub, admin]
     );
-    if (!rows[0]) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    if (!rows[0]) return false;
     for (const k of importKeys) await deleteObject(k).catch(() => {});
     if (importKeys.length && rows[0].source !== 'upload') await deletePrefix(`hls/${rows[0].id}/`).catch(() => {});
     await deletePrefix(`posters/${rows[0].id}/`).catch(() => {});
@@ -712,6 +711,25 @@ export default async function talksRoutes(app) {
       await deletePrefix(`hls/${rows[0].id}/`).catch(() => {});
       await pool.query('DELETE FROM uploads WHERE object_key = $1', [rows[0].video_ref]);
     }
+    return true;
+  }
+
+  // Un organisateur supprime ses vidéos ; un admin peut supprimer toutes les vidéos.
+  app.delete('/talks/:id', { preHandler: app.authenticate }, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    if (!(await removeTalk(req, id))) return reply.code(404).send({ error: 'Vidéo introuvable' });
     return reply.code(204).send();
+  });
+
+  // Suppression en lot (Studio → Contenus : on coche, puis « Supprimer »). Mêmes droits que la suppression d'une vidéo ; les vidéos
+  // qui ne sont pas à l'utilisateur (ou déjà supprimées) sont comptées à part, sans rien casser.
+  app.post('/talks/bulk-delete', { preHandler: app.authenticate }, async (req, reply) => {
+    const { ids } = z.object({ ids: z.array(z.string().uuid()).min(1).max(50) }).parse(req.body ?? {});
+    const unique = [...new Set(ids)];
+    const titles = new Map((await pool.query('SELECT id, title FROM talks WHERE id = ANY($1::uuid[])', [unique])).rows.map((r) => [r.id, r.title]));
+    const gone = [];
+    for (const id of unique) if (await removeTalk(req, id)) gone.push(titles.get(id) || id);
+    req.auditSummary = `Suppression en lot : ${gone.length} vidéo(s) — ${gone.slice(0, 5).map((x) => `« ${x} »`).join(', ')}${gone.length > 5 ? '…' : ''}`;
+    return { deleted: gone.length, notDeleted: unique.length - gone.length };
   });
 }

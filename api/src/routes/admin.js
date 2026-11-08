@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { forgetUser } from '../userstate.js';
+import { speakerSlug } from '../speakers.js';
 import { enqueueEmail } from '../mailer.js';
 import { createHash } from 'node:crypto';
 
@@ -75,6 +76,41 @@ export default async function adminRoutes(app) {
       [...params, limit, offset]
     );
     return { total, users: rows };
+  });
+
+  // Recherche globale (palette Ctrl + K de l'administration) : conférences, membres, intervenants / chaînes.
+  app.get('/admin/search', adminOnly, async (req) => {
+    const { q } = z.object({ q: z.string().trim().min(2).max(100) }).parse(req.query);
+    const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+    const [talks, users, names] = await Promise.all([
+      pool.query('SELECT id, title, speaker, publication FROM talks WHERE title ILIKE $1 OR speaker ILIKE $1 ORDER BY created_at DESC LIMIT 6', [like]),
+      pool.query('SELECT id, name, email, role FROM users WHERE name ILIKE $1 OR email ILIKE $1 ORDER BY created_at DESC LIMIT 6', [like]),
+      pool.query(`SELECT name FROM (SELECT trim(speaker) AS name FROM talks UNION SELECT trim(name) FROM speakers) x WHERE name <> '' AND name ILIKE $1 ORDER BY name LIMIT 20`, [like]),
+    ]);
+    const seen = new Set();
+    const speakers = [];
+    for (const r of names.rows) { const slug = speakerSlug(r.name); if (slug && !seen.has(slug)) { seen.add(slug); speakers.push({ slug, name: r.name }); } }
+    return { talks: talks.rows, users: users.rows, speakers: speakers.slice(0, 6) };
+  });
+
+  // Changement de rôle en lot : jamais vers « administrateur », jamais sur un administrateur ni sur soi-même (ces cas sont ignorés et expliqués).
+  app.post('/admin/users/bulk-role', adminOnly, async (req) => {
+    const { ids, role } = z.object({ ids: z.array(z.string().uuid()).min(1).max(100), role: z.enum(['user', 'organizer', 'moderator']) }).parse(req.body ?? {});
+    const unique = [...new Set(ids)];
+    const found = new Map((await pool.query('SELECT id, name, role FROM users WHERE id = ANY($1::uuid[])', [unique])).rows.map((r) => [r.id, r]));
+    const todo = []; const skipped = [];
+    for (const id of unique) {
+      const u = found.get(id);
+      if (!u) skipped.push({ id, name: id, reason: 'introuvable' });
+      else if (id === req.user.sub) skipped.push({ id, name: u.name, reason: 'ton propre compte' });
+      else if (u.role === 'admin') skipped.push({ id, name: u.name, reason: 'administrateur (change son rôle depuis sa fiche)' });
+      else if (u.role === role) skipped.push({ id, name: u.name, reason: 'a déjà ce rôle' });
+      else todo.push(id);
+    }
+    if (todo.length) await pool.query('UPDATE users SET role = $1 WHERE id = ANY($2::uuid[])', [role, todo]);
+    for (const id of todo) forgetUser(id);
+    req.auditSummary = `Rôle « ${role} » appliqué à ${todo.length} membre(s) en lot`;
+    return { updated: todo.length, skipped };
   });
 
   // Compteurs des filtres (pastilles au-dessus du tableau).

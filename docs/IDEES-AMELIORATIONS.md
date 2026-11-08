@@ -66,7 +66,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 6.6 | ✅ (étape 36) **Droits RGPD en libre-service** : exporter ses données, supprimer son compte (à vérifier ce qui existe) | Conformité, confiance | S–M | ★★ |
 | 6.7 | **Cache et diffusion vidéo (CDN)** pour les internautes éloignés et les pointes d'audience | Lecture plus rapide à l'étranger, VPS moins chargé | M | ★★ |
 | 6.8 | **Audit de vitesse (Core Web Vitals) et d'accessibilité** sur les pages principales | Meilleur référencement, confort sur téléphone modeste | M | ★★ |
-| 6.9 | **Recherche globale dans l'admin** (Ctrl + K) et actions en masse | Gain de temps quotidien pour toi | S–M | ★ |
+| 6.9 | ✅ **livrée (08/11)** **Recherche globale dans l'admin** (Ctrl + K) et actions en masse | Gain de temps quotidien pour toi | S–M | ★ |
 
 ## 7. Pilotage
 | # | Idée | Apport | Effort | Prio |

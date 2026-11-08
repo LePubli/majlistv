@@ -9,6 +9,7 @@ import { useApp } from './Providers';
 import { featureForPath } from '../lib/features';
 import { hasWebModule } from '../lib/modules';
 import ManageShell, { ICONS } from './ManageShell';
+import AdminPalette from './AdminPalette';
 
 // Entrées qui mènent à l'écran d'un module : disparaissent si le module est coupé ou absent.
 // Entrées liées à une fonction activable du cœur (Admin → Fonctions).
@@ -59,5 +60,7 @@ export default function AdminShell({ children }) {
     { href: '/studio', label: t('sdToStudio'), icon: ICONS.back },
     { href: '/', label: t('viewSite'), icon: ICONS.eye },
   ];
-  return <ManageShell space="admin" groups={shown} links={links} isOn={isOn}>{children}</ManageShell>;
+  // Écrans pour la recherche Ctrl + K : ceux du menu (déjà filtrés selon les fonctions et modules actifs).
+  const screens = shown.flatMap((g) => g.items.map(([href, label]) => ({ href, label, group: g.title })));
+  return <ManageShell space="admin" groups={shown} links={links} isOn={isOn}><div className="adp-bar"><AdminPalette screens={screens} /></div>{children}</ManageShell>;
 }

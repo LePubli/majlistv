@@ -4793,3 +4793,17 @@ body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .adr-table { width: 100%; border-collapse: collapse; }
 .adr-table th, .adr-table td { text-align: start; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
 .adr-link { word-break: break-all; }
+
+/* Amélioration 6.9 : recherche globale de l'administration (Ctrl + K) */
+.adp-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.adp-kbd { margin-inline-start: 8px; padding: 1px 6px; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; font-size: .75rem; }
+.adp-back { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.65); display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+.adp { width: min(640px, 100%); max-height: 70vh; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.adp-input { width: 100%; font-size: 1.05rem; }
+.adp-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.adp-list li { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 9px 10px; border-radius: 10px; cursor: pointer; }
+.adp-list li.on { background: rgba(212,175,55,.18); outline: 1px solid rgba(212,175,55,.5); }
+.adp-kind { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gold, #d4af37); min-width: 84px; }
+.adp-none { cursor: default; }
+.adp-foot { margin: 0; }
+.adm-bulk { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; margin: 8px 0; }

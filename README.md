@@ -7921,3 +7921,27 @@ curl -s -X PATCH https://api-majlisstv.le-publicitaire.fr/admin/campaigns/<id> -
 **Limites connues.** Page et PDF en français seulement. Le PDF ne contient que des caractères latins (le titre ou l'annonceur en arabe s'afficherait avec des « ? » dans le PDF, la page web les affiche correctement). Les chiffres d'avant l'étape 1 sont en « Sans langue ».
 
 **Testé.** `test_ads_report.py` (création, renouvellement, désactivation, droits, rapport sans connexion, absence de jeton/lien/visuel dans la réponse, PDF, fonction coupée, suppression — dans la suite GitHub), `test_ads_lib.mjs` (courbe, jeton, taux, PDF), essai Chromium complet (admin crée et copie le lien, annonceur sans connexion à 390 px : chiffres, courbe 90 jours, pas de défilement horizontal, PDF téléchargé, lien désactivé = message clair), PDF vérifié visuellement, `next build`. **Non testé** : sur le serveur réel avec de vrais chiffres.
+
+
+## Administration — recherche globale et actions en masse (Amélioration 6.9, 08/11)
+
+**Description.** Trois gains de temps pour l'administrateur.
+1. **Recherche Ctrl + K** (⌘ K sur Mac, ou bouton « Rechercher » en haut de chaque écran de l'administration, utile sur téléphone). Sans saisie : tous les écrans de l'administration (ceux du menu, selon les fonctions et modules actifs). Avec saisie (2 lettres mini) : les écrans correspondants, plus les **conférences** (titre ou intervenant → fiche d'édition), les **membres** (nom ou e-mail → fiche du membre) et les **intervenants / chaînes** (→ leur page). Flèches ↑ ↓, Entrée, Échap.
+2. **Changer le rôle de plusieurs membres** (Admin → Utilisateurs : cocher des lignes → choisir le rôle → « Appliquer le rôle »). Jamais vers « administrateur » ; les administrateurs, ton propre compte, les comptes inconnus et ceux qui ont déjà ce rôle sont ignorés, et la liste des ignorés avec la raison s'affiche.
+3. **Supprimer plusieurs vidéos** (Studio → Contenus : cocher → « Supprimer », avec confirmation). Mêmes droits que la suppression d'une vidéo : un organisateur ne supprime que les siennes, l'administrateur toutes ; fichiers vidéo, miniatures et fichiers liés effacés. 50 vidéos maximum à la fois. **Déjà existant avant 6.9** : la modification en lot (publier / dépublier, catégorie, accès, niveau…) dans la même page (bouton « Modifier »).
+
+**Journal des actions.** Les deux actions en lot sont inscrites avec un résumé (nombre et titres / rôle).
+
+**Prérequis.** Aucune migration, aucun nouvel APK. Réservé aux administrateurs (recherche et rôle en lot) ; suppression en lot selon les droits ci-dessus.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** La recherche ne trouve rien : au moins 2 lettres ; `%` et `_` sont des lettres normales. Un écran manque dans la liste : sa fonction ou son module est coupé (Admin → Fonctions / Modules). Test rapide : `curl -s -H "Authorization: Bearer $JETON" "https://api-majlisstv.le-publicitaire.fr/admin/search?q=zebulon"`.
+
+**Exemples.**
+```
+curl -s -X POST https://api-majlisstv.le-publicitaire.fr/admin/users/bulk-role -H "Authorization: Bearer $JETON" -H "content-type: application/json" -d '{"ids":["<id1>","<id2>"],"role":"organizer"}'
+curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "Authorization: Bearer $JETON" -H "content-type: application/json" -d '{"ids":["<id1>","<id2>"]}'
+```
+
+**Testé.** `test_admin_bulk.py` (recherche, droits, jokers, rôle en lot avec les cas ignorés, suppression en lot, droits de l'organisateur, journal — dans la suite GitHub), `web/tests/test_admin_search.mjs` (filtre des écrans, textes FR/EN/AR), essai Chromium (Ctrl + K, « publi » + Entrée, membre via la palette, Échap, rôle en lot, suppression en lot), affichage à 390 px. **Non testé** : sur le serveur réel ; recherche de conférences par la palette dans le navigateur (testée côté API seulement) ; arabe/RTL de la palette (textes d'administration en français, comme le reste de l'administration).
