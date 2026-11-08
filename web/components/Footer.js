@@ -30,7 +30,7 @@ export default function Footer() {
     switch (el.key || el.type) {
       case 'brand': return (
         <span className="footer-brand">
-          <img src="/brand/emblem.png" alt="" width="26" height="28" />
+          <img src="/brand/emblem-s.png" alt="" width="26" height="28" />
           <span>© {new Date().getFullYear()} {appName} · {t('tagline')}</span>
         </span>
       );

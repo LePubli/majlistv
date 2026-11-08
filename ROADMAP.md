@@ -636,3 +636,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 7.2 « Tests A/B » — **étape 2 sur 4** (page Tarifs : textes, formule mise en avant, ordre des formules) : livré (README « Tests A/B — étape 2 »). Suite : application mobile, test de prix.
 - Amélioration 7.2 « Tests A/B » — **étape 3 sur 4** (application mobile : écran « Créer un compte », mise à jour en ligne) : livré (README « Tests A/B — étape 3 »). Suite : test de prix.
 - Amélioration 7.2 « Tests A/B » — **étape 4 sur 4** (test de prix : prix Stripe par variante, abonnés / revenu mesurés, « garder » applique les prix) : livré (README « Tests A/B — étape 4 »). **7.2 terminée.**
+- Amélioration 6.8 « Audit de vitesse et d'accessibilité » : livré (README « Audit de vitesse et d'accessibilité » ; `ops/audit/`). Mobile : performance 80 → 88, CLS 0,18 → 0,01, accessibilité 100. Reste : blocage du fil principal sur mobile, décalage de l'en-tête membre sur ordinateur.

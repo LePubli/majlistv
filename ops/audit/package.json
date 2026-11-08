@@ -1,0 +1,13 @@
+{
+  "name": "majlistv-audit",
+  "private": true,
+  "type": "module",
+  "description": "Audit de vitesse (Lighthouse) et d'accessibilité (axe) du site Mejliss TV — amélioration 6.8",
+  "scripts": { "audit": "node audit.mjs" },
+  "dependencies": {
+    "axe-core": "^4.10.0",
+    "chrome-launcher": "^1.1.2",
+    "lighthouse": "^12.2.0",
+    "playwright-core": "^1.48.0"
+  }
+}

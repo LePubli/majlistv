@@ -4820,3 +4820,6 @@ body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .card.xp-form { display: grid; gap: 12px; margin-top: 12px; }
 .xp-list > li, .xp-item { min-width: 0; }
 .xp-item .adm-table-wrap { overflow-x: auto; max-width: 100%; }
+
+/* 6.8 — le pied de page ne saute plus pendant le chargement (CLS) : la zone de page occupe au moins un écran. */
+.page-shell { min-height: 100vh; min-height: 100svh; }

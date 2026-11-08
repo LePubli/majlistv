@@ -89,7 +89,8 @@ export default async function RootLayout({ children }) {
           <SkipLink />
           <TopBar />
           <Header />
-          <MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell>
+          {/* Zone de page d'au moins un écran : le pied de page reste sous la ligne de flottaison pendant le chargement des données (sinon il « saute » vers le bas : décalage de mise en page, CLS) */}
+          <div className="page-shell"><MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell></div>
           <Footer />
           <EditMode />
         </Providers>

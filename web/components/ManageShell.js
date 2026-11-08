@@ -59,14 +59,14 @@ export default function ManageShell({ space, groups, links, isOn, extra, childre
     <div className={`studio studio-${space}${col ? ' col' : ''}${open ? ' menu-open' : ''}`}>
       <div className="studio-bar">
         <button type="button" className="studio-burger" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="studio-menu" aria-label={t('menuOpen')}><Icon d={ICONS.list} /></button>
-        <Link href={home} className="studio-bar-title" aria-label={`Mejliss TV ${label}`}><img src="/brand/emblem.png" alt="" width="30" height="33" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></Link>
+        <Link href={home} className="studio-bar-title" aria-label={`Mejliss TV ${label}`}><img src="/brand/emblem-s.png" alt="" width="30" height="33" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></Link>
       </div>
       <button type="button" className="studio-backdrop" tabIndex={-1} aria-label={t('menuClose')} onClick={() => setOpen(false)} />
       <aside className="studio-side" id="studio-menu" onClick={(e) => { if (e.target.closest('a')) setOpen(false); }}>
         <button type="button" className="ms-toggle studio-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <Link href={home} className="studio-brand" aria-label={`Mejliss TV ${label}`}>
-          <img src="/brand/emblem.png" alt="" width="35" height="38" />
-          <span><img src="/brand/wordmark.png" alt="Mejliss TV" width="78" height="16" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></span>
+          <img src="/brand/emblem-s.png" alt="" width="35" height="38" />
+          <span><img src="/brand/wordmark-s.png" alt="Mejliss TV" width="78" height="16" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></span>
         </Link>
         <nav className="studio-nav" aria-label={space === 'admin' ? t('adminNav') : t('studioNav')}>
           {groups.map((g) => (

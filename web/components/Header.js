@@ -41,7 +41,7 @@ function KidHeader() {
   return (
     <header className="header kd-header">
       <Link href="/kids" className="logo" aria-label={appName}>
-        <img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" />
+        <img className="logo-emblem" src="/brand/emblem-s.png" alt="" width="37" height="40" />
         <span className="kd-brand"><span className="kd-brand-name">{appName}</span> <KidsWord /></span>
       </Link>
       <nav aria-label={t('mainNav')}>
@@ -167,8 +167,8 @@ function MainHeader() {
     switch (el.key || el.type) {
       case 'logo': return (
         <Link href="/" className="logo" aria-label={appName}>
-          <img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" />
-          <img className="logo-word" src="/brand/wordmark.png" alt={appName} width="108" height="22" />
+          <img className="logo-emblem" src="/brand/emblem-s.png" alt="" width="37" height="40" />
+          <img className="logo-word" src="/brand/wordmark-s.png" alt={appName} width="108" height="22" />
         </Link>
       );
       case 'menu': return (
@@ -207,7 +207,7 @@ function MainHeader() {
         <div className="dr-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setDrawer(false); }}>
           <aside className="dr" role="dialog" aria-modal="true" aria-label={t('hmMenu')} onKeyDown={(e) => { if (e.key === 'Escape') setDrawer(false); }}>
             <div className="dr-top">
-              <Link href="/" className="logo" aria-label={appName}><img className="logo-emblem" src="/brand/emblem.png" alt="" width="37" height="40" /><img className="logo-word" src="/brand/wordmark.png" alt={appName} width="108" height="22" /></Link>
+              <Link href="/" className="logo" aria-label={appName}><img className="logo-emblem" src="/brand/emblem-s.png" alt="" width="37" height="40" /><img className="logo-word" src="/brand/wordmark-s.png" alt={appName} width="108" height="22" /></Link>
               <button type="button" className="hd-icon" autoFocus onClick={() => setDrawer(false)} aria-label={t('hmClose')}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>

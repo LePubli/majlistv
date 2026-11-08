@@ -28,7 +28,7 @@ export default function KidsBanner({ variant = 'full' }) {
     <section className={`kd-banner ${variant}`} aria-label={t('kdTitle')}>
       <div className="kd-banner-top">
         <div className="kd-banner-brand">
-          <img className="kd-banner-emblem" src="/brand/emblem.png" alt="" width="40" height="43" />
+          <img className="kd-banner-emblem" src="/brand/emblem-s.png" alt="" width="40" height="43" />
           <div className="kd-banner-id">
             <p className="kd-banner-name">{appName}</p>
             <KidsWord className="big" />
@@ -66,7 +66,7 @@ export function KidsBand({ data }) {
     <section className="kd-band" aria-labelledby="kd-band-h">
       <div className="kd-band-head">
         <div className="kd-banner-brand">
-          <img className="kd-banner-emblem" src="/brand/emblem.png" alt="" width="44" height="47" />
+          <img className="kd-banner-emblem" src="/brand/emblem-s.png" alt="" width="44" height="47" />
           <div>
             <h2 id="kd-band-h" className="kd-band-title"><span className="kd-band-name">{appName}</span> <KidsWord /></h2>
             <p className="kd-tagline small">{t('kdBandSub')}</p>
@@ -77,7 +77,7 @@ export function KidsBand({ data }) {
       <ul className="kd-band-list">
         {data.talks.map((x) => (
           <li key={x.id}>
-            <Link href="/kids" className="kd-card" aria-label={`${x.title} — ${age(x.kidsBands)}`}>
+            <Link href="/kids" className="kd-card">
               <span className="kd-thumb" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined}>
                 <span className="kd-age">{age(x.kidsBands)}</span>
                 {x.durationSeconds ? <span className="dur">{mins(x.durationSeconds)}</span> : null}

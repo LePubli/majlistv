@@ -25,7 +25,7 @@ export default async function Attestation({ params }) {
   return (
     <main className="page attest-page" dir={DIR[locale]}>
       <article className="attest" aria-labelledby="att-title">
-        <img className="attest-logo" src="/brand/emblem.png" alt="" width="52" height="56" />
+        <img className="attest-logo" src="/brand/emblem-s.png" alt="" width="52" height="56" />
         <p className="eyebrow">Mejliss TV</p>
         <h1 id="att-title">{t('attTitle')}</h1>
         <p className="attest-lead">{t('attCertifies')}</p>

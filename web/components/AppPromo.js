@@ -20,7 +20,7 @@ export default function AppPromo({ variant = 'side' }) {
   return (
     <div className={`app-promo app-promo-${variant}`}>
       <Link href="/application" className="app-promo-link" title={t('promoTitle')}>
-        <img className="app-promo-logo" src="/brand/emblem.png" alt="" width="34" height="36" />
+        <img className="app-promo-logo" src="/brand/emblem-s.png" alt="" width="34" height="36" />
         <span className="app-promo-text">
           <b>{t('promoTitle')}</b>
           <small>{t('promoText')}</small>

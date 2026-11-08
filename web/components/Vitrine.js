@@ -95,7 +95,7 @@ export default function Vitrine({ cit, latest, wait, hero }) {
             {trialDays > 0 && feat('registration') && <p className="hero-note">{t('heroNote').replace('{n}', trialDays)}</p>}
           </div>
           {talk && (
-            <Link href={`/talks/${talk.id}`} className="vt-hero-card" aria-label={talk.title}>
+            <Link href={`/talks/${talk.id}`} className="vt-hero-card">
               <span className="vt-hero-thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}><span className="vt-play" aria-hidden="true">▶</span></span>
               <span className="vt-hero-meta"><small>{t('vtExNote')}</small><b>{talk.title}</b><em>{talk.speaker} · {t('vtMin').replace('{n}', mins)}</em></span>
             </Link>
@@ -165,7 +165,7 @@ export default function Vitrine({ cit, latest, wait, hero }) {
 
       {feat('kids') && (
         <section className="vt-kidsban" aria-label="Mejliss Kids">
-          <Link href="/kids" className="vt-kidsban-img"><img src="/brand/kids-banner.jpg" alt={`Mejliss TV Kids : ${t('vtKidsT')}`} width="2048" height="768" loading="lazy" /></Link>
+          <Link href="/kids" className="vt-kidsban-img"><img src="/brand/kids-banner.jpg" srcSet="/brand/kids-banner-960.jpg 960w, /brand/kids-banner.jpg 2048w" sizes="(max-width: 1000px) 100vw, 1000px" alt={`Mejliss TV Kids : ${t('vtKidsT')}`} width="2048" height="768" loading="lazy" /></Link>
           <p className="vt-kidsban-cta"><Link href="/kids" className="btn">{t('vtKidsCta')}</Link></p>
         </section>
       )}

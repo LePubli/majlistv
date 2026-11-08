@@ -8042,3 +8042,43 @@ curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "A
 **Exemple.** Nouveau test → zone « Prix de l'abonnement » → B : mensuel `price_1Nxxxx` (5,99 €) → Créer → Démarrer → attendre au moins 100 visiteurs par variante et 10 abonnements → comparer abonnés **et** revenu par visiteur → « Garder la variante B » ou « Garder l'original ».
 
 **Testé.** Règles (`test_experiments_lib.mjs`), essai complet avec **faux Stripe** (`api/tests/test_experiments_price.py` : refus des mauvais prix, répartition, prix facturés, pays régionaux, robots, webhooks, rejeu, revenu, application des prix), site (build + tests). **Non testé** : avec le vrai Stripe (prix réels, webhooks réels, remboursement) et l'affichage dans le navigateur — à vérifier avec un test à 1 visiteur avant de lancer. Le test avec faux Stripe n'est pas dans la CI GitHub (il lui faut le faux serveur Stripe) : lancer à la main (voir en-tête du fichier).
+
+## Audit de vitesse et d'accessibilité — Amélioration 6.8 (08/11)
+
+**Description.** Mesure de 15 pages (visiteur : accueil, Tarifs, connexion, inscription, catalogue, conférence, chaînes, Kids, thèmes, prière ; membre : accueil, catalogue, conférence, bibliothèque, compte) en **mobile** (Moto G, 4G simulée) et **ordinateur**, avec **Lighthouse** et **axe** (WCAG 2 A/AA), puis corrections et garde-fous.
+
+**Résultats (moyennes sur 15 pages, avant → après).**
+
+| | Mobile | Ordinateur |
+|---|---|---|
+| Score performance | 80,5 → **88,3** | 99,0 → 99,5 |
+| Score accessibilité | 99,9 → **100** | 99,9 → **100** |
+| Décalage de mise en page (CLS, bon < 0,1) | 0,183 → **0,009** | 0,056 → 0,017 |
+| Affichage du plus gros élément (LCP) | 1,66 s → 1,65 s | 0,44 s → 0,49 s |
+
+Pires pages avant : conférence visiteur mobile 58 (CLS 0,34), catalogue 71 (CLS 0,30), accueil membre 69 (CLS 0,31), prière (CLS 0,36), Tarifs (CLS 0,23). Après : toutes ≥ 78 en mobile, CLS ≤ 0,04 (sauf ordinateur membre, voir « Reste à faire »).
+
+**Corrigé.**
+- **Pied de page qui « sautait »** pendant le chargement des données (cause du CLS partout) : la zone de page occupe au moins un écran (`.page-shell`).
+- **Images trop lourdes** : logo 147 → 32 Ko, mot-symbole 103 → 24 Ko (`emblem-s.png`, `wordmark-s.png`), bannière Kids servie en 960 px sur téléphone (323 → 83 Ko, `srcset`).
+- **Lien « Aller au contenu »** sans cible sur Tarifs et sur les pages membre (le `<main>` apparaît ou est recréé après coup) : l'ancre est remise automatiquement.
+- **Libellés accessibles** qui ne correspondaient pas au texte visible (WCAG 2.5.3) : carte d'exemple de l'accueil, cartes Kids, pastille de prière.
+- **Lien sans nom** : vignette de l'étape 1 de l'accueil visiteur (lecteurs d'écran).
+- **JavaScript** : `browserslist` modernisé (Chrome/Edge/Firefox ≥ 90, Safari/iOS ≥ 14, Samsung ≥ 15) — moins de code de compatibilité.
+
+**Garde-fous.** `web/tests/test_perf_a11y.mjs` (lancé par la CI) : toute image a un `alt`, les composants n'utilisent pas les logos lourds, le pied de page ne saute pas, le lien d'évitement s'adapte, pas de libellé différent du texte visible. **Audit complet** à relancer à la demande : `ops/audit/` (voir son README) ; il échoue si CLS > 0,1, accessibilité < 95 ou violation axe grave.
+
+**Reste à faire (non corrigé).**
+- Blocage du fil principal (TBT) sur mobile : 650 à 960 ms sur l'accueil et la conférence (simulation d'un téléphone 4 fois plus lent que le serveur). Piste : charger les blocs d'accueil plus bas dans la page seulement quand ils arrivent à l'écran.
+- Ordinateur, membre connecté : léger décalage (CLS 0,02 à 0,15 selon les essais) quand l'en-tête passe en menu latéral après la vérification de la connexion. Piste : mémoriser le mode d'en-tête dans un cookie pour le connaître dès le premier affichage.
+- Compression des réponses de l'API : à vérifier côté nginx du serveur (Lighthouse signale `/api/home` non compressé en local).
+
+**Prérequis.** Aucun (corrections du site uniquement ; pas de migration).
+
+**Déploiement.** DockPanel → majlistv-web → Redeploy (l'API ne change pas). Puis sur le VPS : `/root/apply-limits.sh` ; `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*` ; `nginx -t && systemctl reload nginx` ; `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Anciennes images (logo) encore affichées : vider le cache du navigateur (le service worker garde l'ancien logo jusqu'à sa mise à jour). Page blanche sous le pied de page : normal sur les pages très courtes (connexion) — la zone de page fait au moins un écran.
+
+**Exemple.** `cd ops/audit && npm install && SITE=http://localhost:3100 API=http://127.0.0.1:3000 CHROME_PATH=$(which chromium) node audit.mjs`.
+
+**Testé.** Mesures Lighthouse 12 + axe 4.10 sur le site compilé en production, sur le poste de développement (réseau et processeur simulés). **Non testé** : vrai téléphone, serveur de production (nginx, cache, miniatures réelles hébergées sur le stockage). Les scores varient d'environ ±5 points d'un essai à l'autre.

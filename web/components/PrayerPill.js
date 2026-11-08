@@ -35,7 +35,8 @@ export default function PrayerPill() {
   const soon = left <= 10 * 60_000;
   const name = t(nameKey(nowPrayer ? st.current.id : st.next.id));
   const time = countdown(left);
-  const label = nowPrayer ? t('pryAriaNow').replace('{name}', name) : t('pryAria').replace('{name}', name).replace('{time}', time);
+  // Le nom accessible commence par le texte visible (nom + décompte) : exigence WCAG 2.5.3 « étiquette dans le nom ».
+  const label = nowPrayer ? t('pryAriaNow').replace('{name}', name) : `${name} ${time} — ${t('pryNext')}`;
 
   // Horaires d'aujourd'hui (jour civil du lieu choisi).
   const today = civilDate(now, prefs.loc.tz);
@@ -51,7 +52,7 @@ export default function PrayerPill() {
         aria-haspopup="dialog" aria-expanded={open} aria-label={label} title={t('pryNext')}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" /></svg>
         <span className="pry-name">{name}</span>
-        <span className="pry-time" dir="ltr">{nowPrayer ? '●' : time}</span>
+        <span className="pry-time" dir="ltr" aria-hidden={nowPrayer ? 'true' : undefined}>{nowPrayer ? '●' : time}</span>
       </button>
       {open && (
         <div className="pry-pop" role="dialog" aria-label={t('pryToday')}>
