@@ -106,6 +106,34 @@ ok(requests.post(f"{B}/admin/experiments/{eid}/end", headers=A, json={}).status_
 cur.execute("select summary from audit_log where route like '/admin/experiments%%' order by id desc limit 3")
 ok(any("appliquée au site" in (x[0] or "") for x in cur.fetchall()), "journal : la fin du test et l'application sont inscrites")
 
+
+# ---------- Zone « page Tarifs » : textes + réglages de présentation ----------
+PV = [{"name": "Original", "weight": 50, "texts": {}}, {"name": "Mensuelle en avant", "weight": 50, "texts": {"fr": {"pricingTitle": f"Choisissez {tag}"}}, "options": {"highlight": "month", "order": "year_first"}}]
+mkp = lambda v: requests.post(B + "/admin/experiments", headers=A, json={"name": f"Tarifs {tag}", "zone": "pricing", "variants": v})
+ok(mkp([PV[0], {"name": "B", "weight": 50, "texts": {}, "options": {"highlight": "zzz"}}]).status_code == 400, "tarifs : valeur de réglage inconnue refusée")
+ok(mkp([PV[0], {"name": "B", "weight": 50, "texts": {}, "options": {"prix": "1"}}]).status_code == 400, "tarifs : réglage inconnu refusé (aucun moyen de toucher aux prix)")
+ok(mkp([PV[0], {"name": "B", "weight": 50, "texts": {}, "options": {}}]).status_code == 400, "tarifs : une variante qui ne change rien est refusée")
+ok(mkp([PV[0], {"name": "B", "weight": 50, "texts": {}, "options": {"highlight": "month"}}]).status_code == 201, "tarifs : une variante avec seulement un réglage est acceptée")
+cur.execute("delete from experiments where zone='pricing'")
+pid = mkp(PV).json()["id"]
+pv = {x["key"]: x for x in get(pid)["variants"]}
+ok(pv["B"]["options"] == {"highlight": "month", "order": "year_first"}, "tarifs : réglages de la variante B enregistrés")
+ok(requests.post(f"{B}/admin/experiments/{pid}/start", headers=A).status_code == 200, "tarifs : démarré en même temps que d'autres zones (une zone = un test)")
+time.sleep(11)
+seenB = None
+for i in range(40):
+    x = [e for e in active(f"p{i:03d}-" + uuid.uuid4().hex) if e["zone"] == "pricing"][0]
+    if x["variant"] == "B": seenB = x; break
+ok(seenB and seenB["options"] == {"highlight": "month", "order": "year_first"} and seenB["texts"]["fr"]["pricingTitle"] == f"Choisissez {tag}", "tarifs : le visiteur B reçoit textes et réglages")
+lay = requests.get(B + "/billing/plans").json()["layout"]
+ok(lay == {"highlight": "year", "order": "month_first"}, "tarifs : réglages du site par défaut (annuelle en avant, mensuelle d'abord)")
+r = requests.post(f"{B}/admin/experiments/{pid}/end", headers=A, json={"winner": "B", "apply": True}).json()
+ok(r["applied"] == 1 and r["appliedOptions"] == 2, "tarifs : gagnant appliqué (1 texte, 2 réglages)")
+ok(requests.get(B + "/billing/plans").json()["layout"] == {"highlight": "month", "order": "year_first"}, "tarifs : les réglages gagnants sont ceux du site")
+cur.execute("delete from app_settings where key in ('pricing_highlight','pricing_order')")
+cur.execute("delete from site_texts where key='pricingTitle' and value like %s", (f"%{tag}",))
+ok(requests.delete(f"{B}/admin/experiments/{pid}", headers=A).status_code == 200, "tarifs : test supprimé")
+
 # Nettoyage
 cur.execute("delete from site_texts where key in ('vtLead','heroCta') and (value like %s or value = 'Je commence' or value like %s)", (f"%{tag}", f"%{tag}"))
 ok(requests.delete(f"{B}/admin/experiments/{eid}", headers=A).status_code == 200 and requests.delete(f"{B}/admin/experiments/{other}", headers=A).status_code == 200, "tests terminés/brouillons supprimables")

@@ -10,6 +10,13 @@ for (const k of keys) assert.equal(i18n.split(`${k}:`).length - 1, 3, `texte ${k
 const v = r('../components/Vitrine.js');
 for (const k of keys.filter((x) => x !== 'heroCta')) assert.ok(v.includes(`tx('${k}')`), `Vitrine : ${k} passe par la variante`);
 assert.ok(v.includes("tx('heroCta')") && v.includes("useExperiment('vitrine_hero')") && v.includes('onClick={xp.click}'), 'Vitrine : bouton, exposition et clic branchés');
+const pz = zones.slice(zones.indexOf('ZONES.pricing'));
+const pkeys = [...pz.slice(pz.indexOf('keys: {'), pz.indexOf('},', pz.indexOf('keys: {'))).matchAll(/(\w+): ['"]/g)].map((m) => m[1]);
+assert.deepEqual(pkeys, ['pricingTitle', 'tierStdTag', 'startTrial', 'trialNote', 'trialNoCardNote', 'freeMonths'], 'clés testables de la zone Tarifs');
+for (const k of pkeys) assert.equal(i18n.split(`${k}:`).length - 1, 3, `texte ${k} manquant en fr / en / ar`);
+const pr = r('../app/pricing/page.js');
+for (const k of ['pricingTitle', 'tierStdTag', 'startTrial', 'trialNote', 'freeMonths']) assert.ok(pr.includes(`tx('${k}')`) || pr.includes(`tx(info.trialNoCard`) , `Tarifs : ${k} passe par la variante`);
+assert.ok(pr.includes("useExperiment('pricing')") && pr.includes('layout.highlight') && pr.includes("layout.order === 'year_first'") && pr.includes('onClick={xp.click}'), 'Tarifs : exposition, clic, mise en avant et ordre branchés');
 assert.ok(r('../components/AuthForm.js').includes('reportSignup(call, r.data.token)'), 'inscription : conversion comptée');
 const lib = r('../lib/experiments.js');
 assert.ok(lib.includes('doNotTrack') && lib.includes('globalPrivacyControl'), 'suivi refusé (DNT / GPC) respecté');

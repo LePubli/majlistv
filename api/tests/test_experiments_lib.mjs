@@ -39,4 +39,8 @@ assert.ok(cleanConfig('vitrine_hero', { texts: { fr: { pricingTitle: 'x' } } }).
 assert.ok(cleanConfig('vitrine_hero', { texts: { fr: { vtLead: 'x'.repeat(301) } } }).error); ok('texte trop long refusé');
 assert.ok(cleanConfig('vitrine_hero', { texts: { fr: { vtLead: 'a\u0000b' } } }).error); ok('caractère de contrôle refusé');
 assert.ok(cleanConfig('zone_inconnue', {}).error); ok('zone inconnue refusée');
+r = cleanConfig('pricing', { texts: { fr: { pricingTitle: 'Titre' } }, options: { highlight: 'month', order: '' } });
+assert.deepEqual(r, { texts: { fr: { pricingTitle: 'Titre' } }, options: { highlight: 'month' } }); ok('tarifs : textes et réglages, réglage vide ignoré');
+assert.ok(cleanConfig('pricing', { options: { highlight: 'zzz' } }).error && cleanConfig('pricing', { options: { price: '1' } }).error && cleanConfig('vitrine_hero', { options: { highlight: 'month' } }).error); ok('tarifs : valeur ou réglage inconnu refusé (les prix ne sont pas modifiables)');
+assert.ok(cleanConfig('pricing', { texts: { fr: { vtLead: 'x' } } }).error); ok('tarifs : un texte d\'une autre zone est refusé');
 console.log('OK  experiments lib');

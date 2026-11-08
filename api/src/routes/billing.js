@@ -90,8 +90,9 @@ export default async function billingRoutes(app) {
     const methods = await methodsList();
     const trialNoCard = trialDays > 0 && isOn(await getSetting('trial_no_card'));
     // `plans` : formule standard (inchangé). `learning` : palier Apprentissage (mêmes champs).
+    const layout = async () => ({ highlight: await getSetting('pricing_highlight'), order: await getSetting('pricing_order') }); // présentation de la page Tarifs (7.2)
     const fromSettings = async () => ({
-      enabled: false, source: 'settings', plans: await listedPlans(), trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), regionalPricing: false, region: null,
+      layout: await layout(), enabled: false, source: 'settings', plans: await listedPlans(), trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), regionalPricing: false, region: null,
       learning: { enabled: false, plans: await listedPlans('learning') },
     });
     if (!ctx) return fromSettings();
@@ -136,7 +137,7 @@ export default async function billingRoutes(app) {
     }
     // Palier Apprentissage non configuré chez Stripe : on montre les prix saisis, sans bouton de paiement.
     const learning = ctx.learn ? { enabled: true, plans: learnPlans } : { enabled: false, plans: await listedPlans('learning') };
-    return { enabled: true, source: 'stripe', plans: standard, trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), learning,
+    return { layout: await layout(), enabled: true, source: 'stripe', plans: standard, trialDays, trialNoCard, methods, wallets: isOn(await getSetting('payment_wallets_shown')), learning,
       regionalPricing, region: region ? { id: region.id, name: region.name, country } : null };
   });
 

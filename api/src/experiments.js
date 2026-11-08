@@ -8,6 +8,15 @@ export const ZONES = {
     keys: { vtTitle1: 'Titre, ligne 1', vtTitle2: 'Titre, ligne 2 (en or)', vtLead: "Phrase d'accroche", heroCta: 'Bouton principal (avec essai gratuit)' },
   },
 };
+// Zone « page Tarifs » : textes + deux réglages de présentation (valeurs = réglages Admin → Paramètres → Paiement).
+ZONES.pricing = {
+  label: 'Page Tarifs (visiteurs non inscrits)',
+  keys: { pricingTitle: 'Titre de la page', tierStdTag: 'Sous-titre de la formule standard', startTrial: 'Bouton « essai » (utiliser {n} pour le nombre de jours)', trialNote: 'Phrase sur l\'essai gratuit (carte demandée)', trialNoCardNote: 'Phrase sur l\'essai gratuit (sans carte)', freeMonths: 'Mois offerts par l\'annuelle (utiliser {n})' },
+  options: {
+    highlight: { label: 'Formule mise en avant', setting: 'pricing_highlight', def: 'year', values: { year: 'L\'annuelle', month: 'La mensuelle', none: 'Aucune' } },
+    order: { label: 'Ordre des formules', setting: 'pricing_order', def: 'month_first', values: { month_first: 'Mensuelle puis annuelle', year_first: 'Annuelle puis mensuelle' } },
+  },
+};
 export const LANGS = ['fr', 'en', 'ar'];
 export const VARIANT_KEYS = ['A', 'B', 'C'];
 export const VISITOR_RE = /^[A-Za-z0-9-]{16,64}$/;
@@ -43,7 +52,16 @@ export function cleanConfig(zone, config) {
       (out[lang] ||= {})[k] = s;
     }
   }
-  return { texts: out };
+  // Réglages de présentation : une valeur choisie s'applique telle quelle (vide = on garde le réglage actuel du site).
+  const options = {};
+  for (const [k, v] of Object.entries(config?.options || {})) {
+    const o = z.options?.[k];
+    if (!o) return { error: `Réglage non modifiable dans cette zone : ${k}` };
+    if (v === '' || v == null) continue;
+    if (!(v in o.values)) return { error: `Valeur inconnue pour « ${o.label} »` };
+    options[k] = v;
+  }
+  return { texts: out, options };
 }
 
 // Fonction de répartition de la loi normale (approximation d'Abramowitz-Stegun, erreur < 1e-7).

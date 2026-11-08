@@ -6,6 +6,7 @@ import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import { safePath, pricingPath, authPath } from '../../lib/nav';
 import { COUNTRY_CODES, countryName, guessCountry } from '../../lib/countries';
+import { useExperiment } from '../../lib/experiments';
 
 const fill = (text, n) => text.replace('{n}', n);
 
@@ -20,6 +21,9 @@ export default function Pricing() {
   const [gifts, setGifts] = useState(false);
   const [country, setCountry] = useState(null); // null = pas encore lu (localStorage) ; '' = non choisi
   const qs = useSearchParams();
+  const xp = useExperiment('pricing'); // test A/B de la page Tarifs (7.2) : sans test en cours, xp.tx(clé) = t(clé) et xp.options = {}
+  const tx = xp.tx;
+  useEffect(() => { if (xp.ready && xp.variant && ready && !user && info) xp.expose(); }, [xp.ready, xp.variant, xp.expose, ready, user, info]); // eslint-disable-line react-hooks/exhaustive-deps
   const canceled = qs.get('canceled');
   const from = safePath(qs.get('from')); // page d'origine (ex. la vidéo verrouillée)
 
@@ -53,19 +57,20 @@ export default function Pricing() {
   // Deux paliers : « Mejliss » (visionnage) et « Mejliss Apprentissage » (score, courbe, série de jours, attestations).
   const learnPlans = info.learning?.plans || [];
   const tiers = [
-    { key: 'standard', title: t('tierStd'), tag: t('tierStdTag'), plans: info.plans, enabled: info.enabled, bullets: ['planB1', 'planB2', 'planB3', 'planB4'] },
+    { key: 'standard', title: t('tierStd'), tag: tx('tierStdTag'), plans: info.plans, enabled: info.enabled, bullets: ['planB1', 'planB2', 'planB3', 'planB4'] },
     ...(learnPlans.length ? [{ key: 'learning', title: t('tierLearn'), tag: t('tierLearnTag'), plans: learnPlans, enabled: Boolean(info.learning?.enabled), bullets: ['planL0', 'planL1', 'planL2', 'planL3', 'planL4'] }] : []),
   ];
   const anyPlans = tiers.some((x) => x.plans.length > 0);
+  const layout = { highlight: 'year', order: 'month_first', ...(info.layout || {}), ...xp.options }; // réglages Admin → Paramètres, puis variante du test
 
   return (
     <main className="page pricing">
       {from && <Link className="link small back" href={from}>← {t('backTo')}</Link>}
       {!active && <Steps current={user ? 2 : 1} t={t} />}
-      <h1>{t('pricingTitle')}</h1>
+      <h1>{tx('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
       {!info.enabled && <p className="soon">{anyPlans ? t('pricingSoon') : t('billingUnavailable')}</p>}
-      {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(t(info.trialNoCard ? 'trialNoCardNote' : 'trialNote'), info.trialDays)}</p>}
+      {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(tx(info.trialNoCard ? 'trialNoCardNote' : 'trialNote'), info.trialDays)}</p>}
       {info.regionalPricing && (
         <p className="pay-country">
           <label>{t('payCountry')}{' '}
@@ -94,11 +99,11 @@ export default function Pricing() {
             </div>
             <p className="meta tier-tag">{tier.tag}</p>
             <div className="plans">
-              {[['month', month], ['year', year]].filter(([, p]) => p).map(([interval, p]) => (
-                <section key={interval} className={`plan ${interval === 'year' ? 'best' : ''}`}>
+              {(layout.order === 'year_first' ? [['year', year], ['month', month]] : [['month', month], ['year', year]]).filter(([, p]) => p).map(([interval, p]) => (
+                <section key={interval} className={`plan ${interval === layout.highlight ? 'best' : ''}`}>
                   <h3>{t(interval === 'year' ? 'yearly' : 'monthly')}</h3>
                   <p className="price">{money(p)} <span>{t(interval === 'year' ? 'perYear' : 'perMonth')}</span></p>
-                  {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(t('freeMonths'), freeMonths)}</p>}
+                  {interval === 'year' && freeMonths >= 1 && <p className="plan-save">{fill(tx('freeMonths'), freeMonths)}</p>}
                   {interval === 'year' && freeMonths < 1 && saving > 0 && <p className="plan-save">{fill(t('saveN'), saving)}</p>}
                   <ul className="plan-list">{tier.bullets.map((k) => <li key={k}>{t(k)}</li>)}</ul>
                   {!tier.enabled ? (
@@ -110,7 +115,7 @@ export default function Pricing() {
                       {info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('subscribe')}
                     </button>
                   ) : (
-                    <Link className="btn" href={authPath('register', pricingPath(from))}>{info.trialDays > 0 ? fill(t('startTrial'), info.trialDays) : t('register')}</Link>
+                    <Link className="btn" href={authPath('register', pricingPath(from))} onClick={xp.click}>{info.trialDays > 0 ? fill(tx('startTrial'), info.trialDays) : t('register')}</Link>
                   )}
                 </section>
               ))}

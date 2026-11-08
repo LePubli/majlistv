@@ -96,6 +96,11 @@ export const FIELDS = [
   { key: 'plan_learn_price_monthly', group: 'payment', type: 'price', label: 'Apprentissage : prix mensuel affiché (TTC)', env: 'PLAN_LEARN_PRICE_MONTHLY', def: '9.99', help: 'Même principe que le prix mensuel standard. 0 = palier Apprentissage non affiché.' },
   { key: 'plan_learn_price_yearly', group: 'payment', type: 'price', label: 'Apprentissage : prix annuel affiché (TTC)', env: 'PLAN_LEARN_PRICE_YEARLY', def: '99.99', help: 'Vide ou 0 = pas de formule annuelle Apprentissage.' },
   { key: 'plan_currency', group: 'payment', type: 'select', options: ['eur', 'usd', 'gbp', 'chf', 'cad'], label: 'Devise affichée', env: 'PLAN_CURRENCY', def: 'eur' },
+  // Amélioration 7.2 (étape 2) : présentation de la page Tarifs (modifiés aussi par « Garder la variante » d'un test A/B).
+  { key: 'pricing_highlight', group: 'payment', type: 'select', options: ['year', 'month', 'none'], label: 'Page Tarifs : formule mise en avant (carte dorée)', env: 'PRICING_HIGHLIGHT', def: 'year',
+    help: 'year = l\'annuelle (défaut) ; month = la mensuelle ; none = aucune.' },
+  { key: 'pricing_order', group: 'payment', type: 'select', options: ['month_first', 'year_first'], label: 'Page Tarifs : ordre des formules', env: 'PRICING_ORDER', def: 'month_first',
+    help: 'month_first = mensuelle puis annuelle (défaut) ; year_first = annuelle puis mensuelle.' },
   { key: 'paypal_enabled', group: 'payment', type: 'bool', label: 'Proposer PayPal en plus de la carte bancaire', env: 'PAYPAL_ENABLED', def: 'false',
     help: 'À activer APRÈS avoir activé PayPal dans Stripe (Paramètres → Moyens de paiement). Si PayPal est refusé par Stripe, le paiement retombe automatiquement sur la carte bancaire.' },
   { key: 'trial_no_card', group: 'payment', type: 'bool', label: "Essai gratuit sans carte bancaire", env: 'TRIAL_NO_CARD', def: 'false',

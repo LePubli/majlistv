@@ -36,7 +36,7 @@ function active(call) {
 
 /**
  * Variante de ce visiteur pour une zone.
- * Retourne { ready, variant, tx(clé), expose(), click() } : tx(clé) donne le texte de la variante (dans la langue de la page) ou, à défaut, le texte normal.
+ * Retourne { ready, variant, options, tx(clé), expose(), click() } (options = réglages de présentation de la variante, ex. { highlight: 'month' }) : tx(clé) donne le texte de la variante (dans la langue de la page) ou, à défaut, le texte normal.
  * Tant que `ready` est faux, le site montre l'original (aucun clignotement : la variante n'est connue qu'après la réponse).
  */
 export function useExperiment(zone) {
@@ -61,7 +61,7 @@ export function useExperiment(zone) {
     send('/xp/expose');
   }, [exp, send]);
   const click = useCallback(() => send('/xp/click'), [send]);
-  return { ready, variant: exp?.variant || null, tx, expose, click };
+  return { ready, variant: exp?.variant || null, options: exp?.options || {}, tx, expose, click };
 }
 
 /** Appelé juste après une inscription réussie : compte l'inscription pour les tests auxquels ce visiteur a été exposé. */

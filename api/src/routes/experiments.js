@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { ZONES, LANGS, VARIANT_KEYS, VISITOR_RE, hashVisitor, assign, cleanConfig, computeStats } from '../experiments.js';
 import { resetTextsCache } from './texts.js';
+import { saveSettings } from '../settings.js';
 
 const idSchema = z.object({ id: z.string().uuid() });
 const BOT = /bot|crawl|spider|headless|lighthouse|preview|curl|python-requests/i;
@@ -29,7 +30,7 @@ async function running() {
   return cache.list;
 }
 
-const variantIn = z.object({ name: z.string().trim().min(1).max(60), weight: z.number().int().min(1).max(100), texts: z.record(z.record(z.string())).default({}) });
+const variantIn = z.object({ name: z.string().trim().min(1).max(60), weight: z.number().int().min(1).max(100), texts: z.record(z.record(z.string())).default({}), options: z.record(z.string()).default({}) });
 const createSchema = z.object({ name: z.string().trim().min(1).max(120), zone: z.string(), variants: z.array(variantIn).min(2).max(3) });
 const patchSchema = z.object({ name: z.string().trim().min(1).max(120).optional(), variants: z.array(variantIn).min(2).max(3).optional() }).refine((b) => Object.keys(b).length > 0, 'Aucun changement');
 
@@ -46,7 +47,8 @@ export default async function experimentsRoutes(app) {
     const out = [];
     for (const e of await running()) {
       const key = assign(visitor, e.id, e.variants);
-      out.push({ id: e.id, zone: e.zone, variant: key, texts: e.variants.find((v) => v.key === key)?.config?.texts || {} });
+      const cfg = e.variants.find((v) => v.key === key)?.config || {};
+      out.push({ id: e.id, zone: e.zone, variant: key, texts: cfg.texts || {}, options: cfg.options || {} });
     }
     return { experiments: out };
   });
@@ -94,14 +96,14 @@ export default async function experimentsRoutes(app) {
       return {
         id: e.id, name: e.name, zone: e.zone, zoneLabel: ZONES[e.zone]?.label || e.zone, status: e.status, goal: e.goal, winner: e.winner,
         createdAt: e.created_at, startedAt: e.started_at, endedAt: e.ended_at,
-        variants: mine.map((v) => ({ key: v.key, name: v.name, weight: v.weight, texts: v.config?.texts || {}, ...stats.find((s) => s.key === v.key) })),
+        variants: mine.map((v) => ({ key: v.key, name: v.name, weight: v.weight, texts: v.config?.texts || {}, options: v.config?.options || {}, ...stats.find((s) => s.key === v.key) })),
       };
     });
   }
 
   app.get('/admin/experiments', adminOnly, async () => ({
     experiments: await load(),
-    zones: Object.entries(ZONES).map(([id, z]) => ({ id, label: z.label, keys: z.keys })),
+    zones: Object.entries(ZONES).map(([id, z]) => ({ id, label: z.label, keys: z.keys, options: z.options || {} })),
     langs: LANGS,
   }));
 
@@ -111,10 +113,10 @@ export default async function experimentsRoutes(app) {
     for (let i = 0; i < variants.length; i++) {
       const key = VARIANT_KEYS[i];
       if (i === 0) { rows.push({ key, name: variants[i].name, weight: variants[i].weight, config: {} }); continue; }
-      const c = cleanConfig(zone, { texts: variants[i].texts });
+      const c = cleanConfig(zone, { texts: variants[i].texts, options: variants[i].options });
       if (c.error) return { error: c.error };
-      if (!Object.keys(c.texts).length) return { error: `La variante ${key} ne change aucun texte : remplissez au moins un texte` };
-      rows.push({ key, name: variants[i].name, weight: variants[i].weight, config: { texts: c.texts } });
+      if (!Object.keys(c.texts).length && !Object.keys(c.options).length) return { error: `La variante ${key} ne change rien : modifiez au moins un texte ou un réglage` };
+      rows.push({ key, name: variants[i].name, weight: variants[i].weight, config: { texts: c.texts, options: c.options } });
     }
     return { rows };
   }
@@ -185,6 +187,14 @@ export default async function experimentsRoutes(app) {
     if (e.status === 'ended' || e.status === 'draft') return reply.code(409).send({ error: `Action impossible : le test est « ${e.status} »`, code: 'bad_state' });
     const win = b.winner ? e.variants.find((v) => v.key === b.winner) : null;
     if (b.winner && !win) return reply.code(400).send({ error: 'Variante inconnue' });
+    // Réglages de présentation de la variante gardée (ex. formule mise en avant) : enregistrés d'abord, comme dans Admin → Paramètres.
+    let appliedOptions = 0;
+    if (win && b.apply && win.key !== 'A') {
+      const z = ZONES[e.zone];
+      const values = {};
+      for (const [k, v] of Object.entries(win.options || {})) if (z.options?.[k]) values[z.options[k].setting] = v;
+      if (Object.keys(values).length) { await saveSettings(values, req.user.sub); appliedOptions = Object.keys(values).length; }
+    }
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -201,7 +211,7 @@ export default async function experimentsRoutes(app) {
       if (applied) resetTextsCache();
       dropCache();
       req.auditSummary = `Test A/B « ${e.name} » terminé${win ? ` : variante ${win.key} ${b.apply && win.key !== 'A' ? 'appliquée au site' : 'retenue'}` : ''}`;
-      return { ok: true, applied };
+      return { ok: true, applied, appliedOptions };
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
   });
 

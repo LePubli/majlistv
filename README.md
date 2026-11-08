@@ -7971,3 +7971,24 @@ curl -s -X POST https://api-majlisstv.le-publicitaire.fr/talks/bulk-delete -H "A
 **Limites.** Textes seulement (pas d'images ni de couleurs) ; une seule zone pour l'instant ; l'objectif est l'inscription seulement ; pas de bascule automatique vers le gagnant (décision d'Epok : tu tranches). Les chiffres d'un test terminé restent consultables jusqu'à sa suppression.
 
 **Testé.** `test_experiments_lib.mjs` (affectation stable, 50/50 et 80/10/10, indépendance entre tests, statistiques, validation des textes), `test_experiments.py` (droits, cycle brouillon → démarré → pause → fin, un test par zone, comptage unique, robots, clic, inscription et conversions refusées, application du gagnant dans les textes, journal — dans la suite GitHub), `test_experiments_web.mjs`, essai Chromium complet (création et démarrage dans l'admin, visiteur A = original, visiteur « Do Not Track » = original et non compté, visiteur B = variante, clic puis inscription réelle par le formulaire, chiffres en base et dans l'admin, « garder la variante »), affichage de l'écran vérifié. **Non testé** : avec du vrai trafic ; en arabe de bout en bout.
+
+
+## Tests A/B — étape 2 sur 4 : page Tarifs (Amélioration 7.2, 08/11)
+
+**Description.** Nouvelle zone testable dans Admin → Tests A/B : **« Page Tarifs (visiteurs non inscrits) »**. Une variante peut changer :
+- des **textes** (FR / EN / AR) : titre de la page, sous-titre de la formule standard, bouton « essai » (garder `{n}` pour le nombre de jours), phrases sur l'essai gratuit (avec ou sans carte), « mois offerts » (garder `{n}`) ;
+- deux **réglages de présentation** : *formule mise en avant* (annuelle — défaut —, mensuelle ou aucune) et *ordre des formules* (mensuelle d'abord — défaut — ou annuelle d'abord). Les deux paliers (Mejliss et Mejliss Apprentissage) suivent le même réglage.
+
+**Les prix ne peuvent pas être modifiés** : aucune variante ne touche aux montants (ils viennent de Stripe) ; le test de prix est l'étape 4, séparée.
+
+**Fonctionnement.** Identique à l'étape 1 (même moteur, même mesure : l'**inscription**). Seuls les visiteurs **non connectés** sont comptés sur cette page. Le visiteur est compté quand il voit la page ; le clic sur le bouton d'essai est compté ; l'inscription ensuite est rattachée au test. Un test par zone : un test « bannière » et un test « Tarifs » peuvent tourner en même temps (un visiteur peut être compté dans les deux).
+
+**Garder la variante.** Les textes vont dans Admin → Textes ; les deux réglages de présentation sont enregistrés dans **Admin → Paramètres → Paiement** (« Page Tarifs : formule mise en avant » / « ordre des formules »), où tu peux aussi les changer à la main. Sans test, ces réglages valent « annuelle en avant, mensuelle d'abord » : la page est inchangée.
+
+**Prérequis.** Étape 1 livrée ; **aucune migration**. Pas de mise à jour de l'application.
+
+**Déploiement (DockPanel).** Redéployer `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Le visiteur ne voit pas la variante : voir l'étape 1 (suivi refusé, test en pause, cache de 10 s). Après « Garder la variante », le site web met jusqu'à 10 s à afficher les nouveaux textes. `curl -s https://api-majlisstv.le-publicitaire.fr/billing/plans` montre les réglages actuels dans `layout`.
+
+**Testé.** `test_experiments.py` (valeurs et réglages inconnus refusés — aucun moyen de toucher aux prix —, variante « réglage seulement » acceptée, variante qui ne change rien refusée, variante B servie avec textes et réglages, application du gagnant : 1 texte + 2 réglages, réglages publiés par `/billing/plans`), `test_experiments_lib.mjs`, `test_experiments_web.mjs`, essai Chromium (création dans l'admin avec réglages + texte ; visiteur A = page d'origine ; visiteur B = titre changé, annuelle d'abord, mensuelle en avant ; visiteurs comptés ; « garder la variante » ; la page reflète ensuite la variante gardée pour tous), capture vérifiée (prix intacts). **Non testé** : le clic sur le bouton d'essai et l'inscription depuis cette page (le bouton n'est un lien que si Stripe est configuré, ce qui n'est pas le cas dans mon environnement de test) ; avec du vrai trafic ; en arabe.

@@ -16,7 +16,7 @@ const VERDICT = {
 };
 const pct = (n) => `${String(n).replace('.', ',')} %`;
 const day = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
-const blank = (n) => ({ name: n === 0 ? 'Original' : `Variante ${'ABC'[n]}`, weight: 50, texts: {} });
+const blank = (n) => ({ name: n === 0 ? 'Original' : `Variante ${'ABC'[n]}`, weight: 50, texts: {}, options: {} });
 
 function Form({ zones, langs, onDone, onCancel }) {
   const { call } = useApp();
@@ -27,11 +27,12 @@ function Form({ zones, langs, onDone, onCancel }) {
   const [busy, setBusy] = useState(false);
   const z = zones.find((x) => x.id === zone);
   const upd = (i, patch) => setVars((vs) => vs.map((v, k) => (k === i ? { ...v, ...patch } : v)));
+  const setOpt = (i, k, val) => setVars((vs) => vs.map((v, n) => (n === i ? { ...v, options: { ...v.options, [k]: val } } : v)));
   const setText = (i, lang, key, val) => setVars((vs) => vs.map((v, k) => (k === i ? { ...v, texts: { ...v.texts, [lang]: { ...(v.texts[lang] || {}), [key]: val } } } : v)));
   const total = vars.reduce((s, v) => s + Number(v.weight || 0), 0);
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true);
-    const body = { name, zone, variants: vars.map((v) => ({ name: v.name, weight: Number(v.weight), texts: v.texts })) };
+    const body = { name, zone, variants: vars.map((v) => ({ name: v.name, weight: Number(v.weight), texts: v.texts, options: v.options })) };
     const r = await call('/admin/experiments', { method: 'POST', body: JSON.stringify(body) });
     setBusy(false);
     if (r.ok) onDone(); else setErr(r.data?.error || 'Enregistrement impossible.');
@@ -41,9 +42,9 @@ function Form({ zones, langs, onDone, onCancel }) {
       <h2>Nouveau test</h2>
       <div className="form-grid">
         <label>Nom du test<input required maxLength={120} value={name} placeholder="Ex. accroche courte" onChange={(e) => setName(e.target.value)} /></label>
-        <label>Zone testée<select value={zone} onChange={(e) => setZone(e.target.value)}>{zones.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+        <label>Zone testée<select value={zone} onChange={(e) => { setZone(e.target.value); setVars((vs) => vs.map((v) => ({ ...v, texts: {}, options: {} }))); }}>{zones.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
       </div>
-      <p className="meta">L’objectif est l’<b>inscription</b> d’un visiteur. La variante <b>A est toujours l’original</b> (textes actuels du site). Pour B (et C), remplissez seulement les textes à changer ; un champ vide garde le texte d’origine. Les parts sont des poids : 50 / 50 = moitié-moitié.</p>
+      <p className="meta">L’objectif est l’<b>inscription</b> d’un visiteur. La variante <b>A est toujours l’original</b> (textes actuels du site). Pour B (et C), changez seulement ce que vous voulez tester (textes, et réglages de présentation s’il y en a) ; un champ vide garde l’existant. Les parts sont des poids : 50 / 50 = moitié-moitié.</p>
       {vars.map((v, i) => (
         <fieldset key={i} className="xp-var">
           <legend>Variante {'ABC'[i]}{i === 0 ? ' — original' : ''}</legend>
@@ -51,6 +52,18 @@ function Form({ zones, langs, onDone, onCancel }) {
             <label>Nom<input required maxLength={60} value={v.name} onChange={(e) => upd(i, { name: e.target.value })} /></label>
             <label>Part du trafic ({total ? Math.round((v.weight / total) * 100) : 0} %)<input type="number" min={1} max={100} required value={v.weight} onChange={(e) => upd(i, { weight: e.target.value })} /></label>
           </div>
+          {i > 0 && Object.keys(z?.options || {}).length > 0 && (
+            <div className="form-grid">
+              {Object.entries(z.options).map(([k, o]) => (
+                <label key={k}>{o.label}
+                  <select value={v.options[k] || ''} onChange={(e) => setOpt(i, k, e.target.value)}>
+                    <option value="">Comme actuellement sur le site</option>
+                    {Object.entries(o.values).map(([val, name]) => <option key={val} value={val}>{name}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+          )}
           {i > 0 && langs.map((lang) => (
             <div key={lang} className="xp-lang">
               <b>{LANG_NAME[lang]}</b>
@@ -119,8 +132,8 @@ export default function ExperimentsAdmin() {
   const keep = (e, v) => {
     const text = v.key === 'A'
       ? `Terminer le test « ${e.name} » et garder l’original ? Le site ne change pas.`
-      : `Terminer le test « ${e.name} » et appliquer la variante ${v.key} au site ? Ses textes remplaceront les textes actuels (modifiables ensuite dans Admin → Textes).`;
-    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s)).`));
+      : `Terminer le test « ${e.name} » et appliquer la variante ${v.key} au site ? Ses textes remplaceront les textes actuels (modifiables ensuite dans Admin → Textes) et ses réglages de présentation seront enregistrés (Admin → Paramètres → Paiement).`;
+    if (window.confirm(text)) act(`/admin/experiments/${e.id}/end`, { method: 'POST', body: JSON.stringify({ winner: v.key, apply: v.key !== 'A' }) }, (d) => (v.key === 'A' ? 'Test terminé : l’original est gardé.' : `Test terminé : variante ${v.key} appliquée (${d.applied} texte(s), ${d.appliedOptions} réglage(s)).`));
   };
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;
@@ -144,8 +157,9 @@ export default function ExperimentsAdmin() {
               <small className="meta">Zone : {e.zoneLabel} · objectif : inscription</small>
               <Results e={e} onKeep={(v) => keep(e, v)} />
               {e.variants.filter((v) => v.key !== 'A').map((v) => (
-                <details key={v.key} className="meta"><summary>Textes de la variante {v.key} — {v.name}</summary>
-                  <ul>{Object.entries(v.texts).flatMap(([lang, map]) => Object.entries(map).map(([k, t]) => <li key={lang + k}><b>{LANG_NAME[lang]}</b> · {data.zones.find((z) => z.id === e.zone)?.keys[k] || k} : « {t} »</li>))}</ul>
+                <details key={v.key} className="meta"><summary>Changements de la variante {v.key} — {v.name}</summary>
+                  <ul>{Object.entries(v.options || {}).map(([k, val]) => { const o = data.zones.find((z) => z.id === e.zone)?.options?.[k]; return <li key={k}><b>{o?.label || k}</b> : {o?.values?.[val] || val}</li>; })}
+                    {Object.entries(v.texts).flatMap(([lang, map]) => Object.entries(map).map(([k, t]) => <li key={lang + k}><b>{LANG_NAME[lang]}</b> · {data.zones.find((z) => z.id === e.zone)?.keys[k] || k} : « {t} »</li>))}</ul>
                 </details>
               ))}
               <div className="studio-tools">

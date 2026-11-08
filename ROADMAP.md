@@ -633,3 +633,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Amélioration 5.3 « Publicités : rapport annonceur » — **étape 2 sur 2** (lien de suivi secret, page de rapport sans compte, PDF) : livré (README « Publicités — étape 2 »). Idée 5.3 terminée.
 - Amélioration 6.9 « Administration : recherche globale (Ctrl + K) et actions en masse » : livré (README « Administration — recherche globale et actions en masse »).
 - Amélioration 7.2 « Tests A/B » — **étape 1 sur 4** (moteur, écran Admin → Tests A/B, zone « bannière de l'accueil visiteur », mesure des inscriptions) : livré (README « Tests A/B — étape 1 »). Suite : page Tarifs, application mobile, test de prix.
+- Amélioration 7.2 « Tests A/B » — **étape 2 sur 4** (page Tarifs : textes, formule mise en avant, ordre des formules) : livré (README « Tests A/B — étape 2 »). Suite : application mobile, test de prix.
