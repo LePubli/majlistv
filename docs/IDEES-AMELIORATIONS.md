@@ -35,7 +35,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 3.3 | ✅ (Amélioration 3.3, site) **Fiche PDF imprimable** (résumé, chapitres, points clés, notes du membre) | Utile en cercle d'étude, pour l'imprimer ou l'envoyer | S | ★★ |
 | 3.4 | ⏸ (mis de côté par Epok, 04/11 ; demande des définitions validées) **Glossaire des termes arabes** (définition au survol dans la transcription, liste par conférence) | Accessibilité pour les débutants, enseignement plus fin | M | ★★ |
 | 3.5 | **Références repérées automatiquement** : versets et hadiths cités dans la conférence, avec lien vers le verset (module Citations existant) | Vérification facile, valeur pédagogique | M | ★★ — **livrée (05/11)** : module `references`, validation obligatoire des hadiths |
-| 3.6 | **Attestation vérifiable** (QR code, page de vérification) pour les parcours terminés | Crédibilité, partage sur LinkedIn ou en association | S | ★ |
+| 3.6 | ⏸ (mis de côté par Epok, 09/11) **Attestation vérifiable** (QR code, page de vérification) pour les parcours terminés | Crédibilité, partage sur LinkedIn ou en association | S | ★ |
 | 3.7 | ⏸ (mis de côté par Epok, 07/11 ; dépend de 1.6 non faite) **Espace « Classe »** : un enseignant suit un groupe, propose des conférences et un quiz à faire | Usage en école et en association ; prolongement du groupe 1.6 | L | ★ |
 | 3.8 | (idée d'Epok, 04/11 ; réponses : automatique + choisi, 3 vues, notification + e-mail, lien avec l'objectif, échéance choisie, palier Apprentissage seul) **Planning de révisions** : un calendrier qui organise ce que le membre doit revoir et quand (quiz à refaire, cartes mémoire, vidéos). Existe déjà : révision espacée automatique J+1 / J+3 / J+7 / J+21 et cartes mémoire ; manque une **vue planning** et la possibilité d'**organiser soi-même**. Questions ouvertes : planning automatique ou choisi par le membre ? par jour, semaine ou mois ? rappels (notification, e-mail) ? objectif lié à la série de jours ? | Rendre la révision visible et planifiable, pas seulement « à faire aujourd'hui » | M–L | 🟡 **étapes 1 à 4 sur 4 livrées** (étape 4 : application Android, 05/11) (04–05/11 : vues, séances, repos, tout le cycle, échéances avec étalement, rappels) ; reste l'application Android |
 
@@ -45,13 +45,13 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 4.1 | **Correction collaborative des sous-titres** : un membre signale une erreur, un modérateur valide | Qualité des traductions qui progresse sans effort de ton côté | M | ★★ — **livrée (05/11)** : module `corrections`, relecture humaine obligatoire |
 | 4.2 | ✅ **livrée (07/11, 4 étapes : serveur, site, rappels, application)** ( décisions Epok : direct YouTube/Vimeo intégré au site, rediffusion rattachée à la main, page publique + rappel pour les inscrits) **Conférences en direct et événements** : annonce, rappel dans l'agenda (.ics), rediffusion automatique | Rendez-vous réguliers, lien fort avec les intervenants | L | ★★ |
 | 4.3 | ✅ (Amélioration 4.3, site + application) **Prière : date hégirienne, direction de la Qibla, calendrier du mois** (ni date hégirienne ni Qibla aujourd'hui) | Usage quotidien du site, raison d'ouvrir l'application | S–M | ★★ |
-| 4.4 | **Avis et notes** sur les conférences (étoiles, modérées) | Aide au choix, alimente les recommandations | M | ★ |
+| 4.4 | ⏸ (mis de côté par Epok, 09/11) **Avis et notes** sur les conférences (étoiles, modérées) | Aide au choix, alimente les recommandations | M | ★ |
 | 4.5 | **Questions à l'intervenant** (avec réponses modérées) plutôt que des commentaires libres | Lien avec la communauté sans le risque d'un fil de commentaires ouvert | M | ★ |
 
 ## 5. Argent
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
-| 5.1 | **Soutenir une chaîne ou un intervenant** (don ponctuel ou mensuel, via Stripe) | Revenus pour les chaînes, fidélise les créateurs | M | ★★ |
+| 5.1 | ⏸ (mis de côté par Epok, 09/11) **Soutenir une chaîne ou un intervenant** (don ponctuel ou mensuel, via Stripe) | Revenus pour les chaînes, fidélise les créateurs | M | ★★ |
 | 5.2 | **Boutique d'ouvrages** reliée aux conférences (vente ou affiliation) ; le module Ouvrages existe déjà | Revenu complémentaire | M–L | ★ |
 | 5.3 | ✅ **livrée (2 étapes, 08/11)** — étape 1 : (08/11 : ciblage par langue + chiffres par langue ; décisions Epok : lien de suivi + PDF, langue de l'application seulement, répartition visible de l'annonceur) **Publicités : rapport annonceur** (PDF ou lien de suivi), ciblage par langue ou pays | Facilite la vente d'espaces, meilleur tarif | M | ★ |
 
@@ -65,7 +65,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 6.5 | ✅ (étape 39 ; ni mobile ni services annexes) **Suivi des erreurs** (site, API, application) avec alerte | Je vois les bugs avant que tu ne me les signales | M | ★★ |
 | 6.6 | ✅ (étape 36) **Droits RGPD en libre-service** : exporter ses données, supprimer son compte (à vérifier ce qui existe) | Conformité, confiance | S–M | ★★ |
 | 6.7 | **Cache et diffusion vidéo (CDN)** pour les internautes éloignés et les pointes d'audience | Lecture plus rapide à l'étranger, VPS moins chargé | M | ★★ |
-| 6.8 | ✅ **livrée (08/11)** **Audit de vitesse (Core Web Vitals) et d'accessibilité** sur les pages principales | Meilleur référencement, confort sur téléphone modeste | M | ★★ |
+| 6.8 | ✅ **livrée (08/11), validée par Epok (09/11)** **Audit de vitesse (Core Web Vitals) et d'accessibilité** sur les pages principales | Meilleur référencement, confort sur téléphone modeste | M | ★★ |
 | 6.9 | ✅ **livrée (08/11)** **Recherche globale dans l'admin** (Ctrl + K) et actions en masse | Gain de temps quotidien pour toi | S–M | ★ |
 
 ## 7. Pilotage
@@ -79,7 +79,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 |---|---|---|---|---|
 | 8.1 | **Résumé hebdomadaire pour les parents** par e-mail (temps passé, étoiles, ce qui a été appris) | Parents rassurés et fidèles | S–M | ★★ — **livrée** : rapport hebdomadaire déjà en place depuis l'étape 26.3 ; « ce qui a été appris » ajouté le 05/11 |
 | 8.2 | **Histoires audio du soir** et mode veille (+ **Audyn**, livres audio adultes) | Nouvel usage pour les familles | M | ★ — **livrée** (4 étapes : socle + gestion, lecteur de l'app, site, histoires du soir Kids + contrôle parental) ; à valider sur téléphone |
-| 8.3 | **Activités à imprimer** (coloriages, jeux) liées aux contenus | Prolonge l'apprentissage hors écran ; contenu partageable | S | ★ |
+| 8.3 | ⏸ (mis de côté par Epok, 09/11) **Activités à imprimer** (coloriages, jeux) liées aux contenus | Prolonge l'apprentissage hors écran ; contenu partageable | S | ★ |
 
 ## Ce que je conseillerais en premier (7 étapes)
 1. **6.1 Santé du serveur + alerte disque** et **6.4 tests automatiques** : socle de fiabilité.
