@@ -12,7 +12,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | 1.3 | ✅ (étape 32) **Générateur de cartes citation** (verset, hadith, extrait) en image aux couleurs Mejliss TV, à partager | Viralité, marque visible ; s'appuie sur « Citation du jour » existante | S | ★★★ |
 | 1.4 | ✅ (étape 42) **Essai sans carte bancaire** (option Stripe) | Moins de friction à l'inscription, plus d'essais | S | ★★ |
 | 1.5 | ✅ (étape 43) **Parrainage** : un mois offert au parrain et au filleul | Bouche-à-oreille mesurable ; réutilise les cartes cadeaux | M | ★★ |
-| 1.6 | **Abonnement groupe / association / école** (une facture, plusieurs comptes) | Nouveau marché (mosquées, écoles, associations), revenus récurrents plus gros | L | ★★ |
+| 1.6 | ⏸ (mis de côté par Epok, 09/11) **Abonnement groupe / association / école** (une facture, plusieurs comptes) | Nouveau marché (mosquées, écoles, associations), revenus récurrents plus gros | L | ★★ |
 | 1.7 | ✅ (étape 33, 3 e-mails ; fin d'essai déjà existante) **E-mails automatiques de cycle de vie** : relance avant la fin de l'essai, « tu n'as pas fini ta conférence », réactivation après résiliation | Meilleure conversion essai → payant, moins de départs | M | ★★★ |
 | 1.8 | ✅ (étape 44) **Apple Pay / Google Pay et moyens locaux** (activés dans Stripe) ; **tarifs adaptés par pays** | Paiement en 2 clics sur mobile, accès aux pays à pouvoir d'achat plus faible | S–M | ★★ |
 | 1.9 | ✅ (étape 45) **Pages saisonnières automatiques** (Ramadan, Hajj, Mawlid, Achoura) selon le calendrier hégirien : bannière, rangées, notifications | Contenu pertinent au bon moment, pics d'audience | M | ★★ |
@@ -52,7 +52,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 | # | Idée | Apport | Effort | Prio |
 |---|---|---|---|---|
 | 5.1 | ⏸ (mis de côté par Epok, 09/11) **Soutenir une chaîne ou un intervenant** (don ponctuel ou mensuel, via Stripe) | Revenus pour les chaînes, fidélise les créateurs | M | ★★ |
-| 5.2 | **Boutique d'ouvrages** reliée aux conférences (vente ou affiliation) ; le module Ouvrages existe déjà | Revenu complémentaire | M–L | ★ |
+| 5.2 | ⏸ (mis de côté par Epok, 09/11) **Boutique d'ouvrages** reliée aux conférences (vente ou affiliation) ; le module Ouvrages existe déjà | Revenu complémentaire | M–L | ★ |
 | 5.3 | ✅ **livrée (2 étapes, 08/11)** — étape 1 : (08/11 : ciblage par langue + chiffres par langue ; décisions Epok : lien de suivi + PDF, langue de l'application seulement, répartition visible de l'annonceur) **Publicités : rapport annonceur** (PDF ou lien de suivi), ciblage par langue ou pays | Facilite la vente d'espaces, meilleur tarif | M | ★ |
 
 ## 6. Fiabilité, sécurité, exploitation
