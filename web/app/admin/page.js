@@ -4,6 +4,7 @@
 import WatchAdmin from '../../components/WatchAdmin';
 import AdsAdmin from '../../components/AdsAdmin';
 import ExperimentsAdmin from '../../components/ExperimentsAdmin';
+import MenusAdmin from '../../components/MenusAdmin';
 import HealthAdmin from '../../components/HealthAdmin';
 import ErrorsAdmin from '../../components/ErrorsAdmin';
 import AskAdmin from '../../components/AskAdmin';
@@ -1167,7 +1168,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', menus: 'Menus', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1187,6 +1188,7 @@ export default function Admin() {
       {tab === 'watch' && <WatchAdmin />}
       {tab === 'ads' && <AdsAdmin />}
       {tab === 'experiments' && <ExperimentsAdmin />}
+      {tab === 'menus' && <MenusAdmin />}
       {tab === 'health' && <HealthAdmin />}
       {tab === 'errors' && <ErrorsAdmin />}
       {tab === 'ask' && <AskAdmin />}

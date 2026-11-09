@@ -8085,3 +8085,28 @@ Pires pages avant : conférence visiteur mobile 58 (CLS 0,34), catalogue 71 (CLS
 
 ### Correctif 09/11 — Recherche de l'administration en loupe
 La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la barre du haut (téléphone : à droite du titre ADMIN ; ordinateur : en haut à droite). Un clic (ou Ctrl K / Cmd K) ouvre la fenêtre de recherche. Déploiement : Redeploy `majlistv-web` seulement. Testé dans Chromium (390 et 1440 px) ; non testé sur vrai téléphone.
+
+## Menus — étape 1 sur 3 : écran Admin → Menus, site et PWA (projet Menus, 09/11)
+
+**Ce que c'est.** Un écran **Admin → Menus** (administrateurs seulement) pour créer, renommer, dupliquer, modifier et supprimer des **menus nommés**, y placer des liens (comme sur WordPress), avec **un niveau de sous-menus déroulants**, puis choisir **quel menu s'affiche à quel emplacement**. Six emplacements : *Site — menu du haut*, *menu latéral des membres*, *barre du bas (téléphone)*, *pied de page*, *Application — menu ☰*, *onglets du bas* (les deux emplacements de l'application sont préparés ; leur affichage dans l'appli est l'étape 2). Le site est aussi la PWA : un menu du site se voit donc à l'identique dans la PWA installée.
+
+**Types de liens** : lien d'origine du site (Accueil, Catalogue… avec leurs conditions : une fonction coupée le fait toujours disparaître), page du site ou adresse externe (`/…`, `https://`, `mailto:`, `tel:`), conférence, série, collection, chaîne (le texte reprend le titre du contenu si on n'en met pas), page créée dans Admin → Pages, écran de l'application, titre sans lien (titre de groupe ou parent d'un sous-menu). Pour chaque élément : texte FR/EN/AR, icône, public (tout le monde / visiteurs / membres / équipe), appareils (téléphone / tablette / ordinateur), masqué, nouvel onglet.
+
+**Règles.** Sans menu affecté, un emplacement garde le **menu d'origine** (réglages I4) : rien ne change tant qu'on n'affecte rien. Supprimer un menu rend ses emplacements au menu d'origine. Un contenu supprimé ou dépublié disparaît tout seul du menu public. Pied de page : les trois liens légaux restent obligatoires (ni masqués, ni limités à un public/appareil). Barre du bas et onglets : 5 éléments, sans sous-menu. Public et appareils règlent l'**affichage seulement** : ce n'est pas une protection d'accès. Le menu latéral personnalisé n'ajoute plus tout seul le groupe « Catégories » : le point de départ « Comme le menu actuel » le crée en liens ordinaires modifiables.
+
+**Prérequis.** Rien de nouveau (PostgreSQL, API, site). Migration `112_menus.sql` (tables `menus`, `menu_locations`). Fonction coupe-circuit **Admin → Fonctions → « Menus personnalisés »** (activée par défaut) : coupée, le site reprend ses menus d'origine.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy **majlistv-api** (migration 112 au démarrage), puis **majlistv-web**. Rien d'autre. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Utilisation.**
+1. Admin → **Menus** → **Nouveau menu** → nom + point de départ (*vide*, *comme le menu actuel : …* ou *copie d'un menu*).
+2. **Modifier les éléments** → **+ Ajouter un élément** ; **+ Sous-élément** sur un élément pour créer un déroulant ; ↑ ↓ pour l'ordre ; **Enregistrer le menu**.
+3. En haut de l'écran, à l'emplacement voulu, choisir le menu : le site le reprend en ~10 secondes.
+4. Pour revenir en arrière : choisir « Menu d'origine du site » (ou couper la fonction).
+
+**API** (`api/src/routes/menus.js`) : `GET /menus/resolved` (public, adresses résolues) ; administrateur : `GET/POST /admin/menus`, `PATCH/DELETE /admin/menus/:id`, `PUT /admin/menus/locations`, `GET /admin/menus/lookup?kind=&q=`. Les actions sont inscrites au journal d'audit.
+
+**Debug.** Le menu ne change pas : attendre 10 s (cache du site), vérifier l'affectation (Admin → Menus, haut de l'écran) et que la fonction « Menus personnalisés » est active ; `curl https://api-majlisstv.le-publicitaire.fr/menus/resolved` montre ce que le site reçoit. Un lien absent : son contenu est supprimé/dépublié, ou son public/appareil l'exclut, ou la fonction qu'il représente est coupée. L'enregistrement est refusé avec un message précis (adresse invalide, deuxième niveau de sous-menu, liens légaux manquants…).
+
+**Tests.** `api/tests/test_menus.py` (bout en bout, dans la CI), `api/tests/test_menus_lib.mjs` (validation, copies identiques API ↔ site, résolution), `web/tests/test_menus_web.mjs` (branchement du site). **Non testé** : sur de vrais téléphones et en arabe (RTL) — le déroulant et l'accordéon utilisent des propriétés logiques (`inset-inline-*`), vérifiées seulement par lecture et par captures à 1280 et 390 px en français. **Étapes suivantes** : 2 = application mobile (menu ☰ et onglets lus depuis ces menus, mise à jour en ligne), 3 = finitions (l'ancien onglet « menus » de Admin → Pages renverra vers l'écran).
+

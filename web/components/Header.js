@@ -12,7 +12,8 @@ import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
 import { memberShellOn } from '../lib/shell';
 import NavLink from './NavLink';
-import { resolveList, audienceOk, deviceClass, withHid } from '../lib/menus';
+import { resolveList, resolveMenu, audienceOk, deviceClass, withHid } from '../lib/menus';
+import { MenuDropdown, MenuAccordion, MenuLink } from './MenuDropdown';
 import { defaultHeader, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 import { NAV_ICON_PATHS } from '../lib/navicons';
@@ -125,7 +126,14 @@ function MainHeader() {
     library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: Boolean(user) && (feat('favorites') || feat('lists')) },
     kids: { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.price, on: feat('kids'), kids: true },
   };
-  const pages = resolveList(nav?.menus?.main, withHid(MENUS.main.builtin, mainD), { user, lang: locale });
+  // Projet Menus : un menu affecté à « Site — menu du haut » (Admin → Menus) remplace le menu d'origine ; sans affectation, rien ne change.
+  const customTop = layout?.menus?.web_top;
+  const pages = customTop
+    ? resolveMenu(customTop, Object.values(mainD), { user, lang: locale })
+    : resolveList(nav?.menus?.main, withHid(MENUS.main.builtin, mainD), { user, lang: locale });
+  const isCur = (href) => Boolean(href) && cur(href) === 'page';
+  // Un lien qui porte un sous-menu garde sa propre adresse : elle devient le premier choix de sa liste.
+  const withSelf = (it) => (it.href ? { ...it, children: [{ ...it, key: `${it.key}-self`, children: undefined, cls: '' }, ...it.children] } : it);
   const iconOf = (it) => (it.custom ? NAV_ICON_PATHS[it.icon] || NAV_ICON_PATHS.link : it.icon);
   const hz = nav?.header || defaultHeader();
   const logoutNow = () => { logout(); setMenu(false); setDrawer(false); router.push('/'); };
@@ -173,7 +181,9 @@ function MainHeader() {
       );
       case 'menu': return (
         <nav className="hd-nav" aria-label={t('mainNav')}>
-          {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}{it.kids && <KidsPendingBadge />}</NavLink>)}
+          {pages.map((it) => (it.children?.length
+            ? <MenuDropdown key={it.key} item={withSelf(it)} isCurrent={isCur} />
+            : <MenuLink key={it.key} it={it} current={isCur(it.href)} className={[it.kids && 'hd-kids', it.cls].filter(Boolean).join(' ') || undefined}>{it.label}{it.kids && <KidsPendingBadge />}</MenuLink>))}
         </nav>
       );
       // Étape 23a : la pastille « Prochaine prière » se place juste à côté de la loupe, où que l'administrateur la mette.
@@ -215,7 +225,9 @@ function MainHeader() {
             {user && <div className="dr-who"><span className="hd-avatar" aria-hidden="true">{initial}</span><div><b>{user.name || user.email}</b><small>{user.email}</small></div></div>}
             <nav aria-label={t('mainNav')} className="dr-nav">
               <p className="hd-menu-title">{t('hmDiscover')}</p>
-              {pages.map((it) => <NavLink key={it.key} href={it.href} aria-current={cur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined}><Ico d={iconOf(it)} />{it.label}{it.kids && <KidsPendingBadge />}</NavLink>)}
+              {pages.map((it) => (it.children?.length
+                ? <MenuAccordion key={it.key} item={withSelf(it)} isCurrent={isCur} onNavigate={() => setDrawer(false)} />
+                : <MenuLink key={it.key} it={it} current={isCur(it.href)} className={[it.kids && 'dr-kids', it.cls].filter(Boolean).join(' ') || undefined} onNavigate={() => setDrawer(false)}><Ico d={iconOf(it)} />{it.label}{it.kids && <KidsPendingBadge />}</MenuLink>))}
               {cats?.length > 0 && (
                 <>
                   <p className="hd-menu-title dr-sep">{t('msCats')}</p>

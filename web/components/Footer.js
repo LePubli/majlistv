@@ -2,9 +2,10 @@
 import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import NavLink from './NavLink';
+import { MenuLink } from './MenuDropdown';
 import SkinPicker from './SkinPicker';
 import { LayoutZone } from './PageBlocks';
-import { resolveList, audienceOk, deviceClass } from '../lib/menus';
+import { resolveList, resolveMenu, audienceOk, deviceClass } from '../lib/menus';
 import { defaultFooter, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 
@@ -17,14 +18,19 @@ export default function Footer() {
   if (kid || path.startsWith('/studio') || path.startsWith('/admin')) return null; // espace enfant : pas de liens hors de Kids
   const nav = layout?.nav;
   const fz = nav?.footer || defaultFooter();
-  const links = resolveList(nav?.menus?.footer, [
+  const footerDefaults = [
     { key: 'channels', href: '/chaines', label: t('spTitle'), on: feat('channels') },
     { key: 'app', href: '/application', label: t('pwaNav'), on: feat('app_install') }, // étape 22a
     { key: 'mentions', href: '/legal/mentions-legales', label: t('legalNotice'), on: true },
     { key: 'cgv', href: '/legal/cgv', label: t('legalTerms'), on: true },
     { key: 'privacy', href: '/legal/confidentialite', label: t('legalPrivacy'), on: true },
     { key: 'licences', href: '/licences', label: t('licNav'), on: true },
-  ], { user, lang: locale, required: MENUS.footer.required });
+  ];
+  // Projet Menus : un menu affecté à « Site — pied de page » (Admin → Menus) remplace la liste d'origine ; les liens légaux restent obligatoires.
+  const customFooter = layout?.menus?.web_footer;
+  const links = customFooter
+    ? resolveMenu(customFooter, footerDefaults, { user, lang: locale, required: MENUS.footer.required })
+    : resolveList(nav?.menus?.footer, footerDefaults, { user, lang: locale, required: MENUS.footer.required });
   const renderEl = (el) => {
     if (el.key !== 'links' && (el.hidden || !audienceOk(el.show?.audience, user))) return null;
     switch (el.key || el.type) {
@@ -34,7 +40,7 @@ export default function Footer() {
           <span>© {new Date().getFullYear()} {appName} · {t('tagline')}</span>
         </span>
       );
-      case 'links': return <nav aria-label={t('legalNav')}>{links.map((it) => <NavLink key={it.key} href={it.href} className={it.cls || undefined}>{it.label}</NavLink>)}</nav>;
+      case 'links': return <nav aria-label={t('legalNav')}>{links.map((it) => <MenuLink key={it.key} it={it} className={it.cls || undefined}>{it.label}</MenuLink>)}</nav>;
       case 'text': { const l = tx(el.label, locale); return l ? <span className="ft-text">{l}</span> : null; }
       case 'link': { const l = tx(el.label, locale); return l && el.url ? <NavLink href={el.url}>{l}</NavLink> : null; }
       default: return null;

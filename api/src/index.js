@@ -36,6 +36,7 @@ import gdprRoutes from './routes/gdpr.js'; // étape 36 : exporter / supprimer s
 import lifecycleRoutes from './routes/lifecycle.js'; // étape 33 : e-mails de cycle de vie
 import { startLifecycle } from './lifecycle.js';
 import experimentsRoutes from './routes/experiments.js'; // amélioration 7.2 : tests A/B
+import menusRoutes from './routes/menus.js'; // projet Menus : menus nommés et emplacements
 import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran au lancement de l'application
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
@@ -182,6 +183,7 @@ await app.register(importRoutes);
 await app.register(watchRoutes);
 await app.register(adsRoutes);
 await app.register(experimentsRoutes);
+await app.register(menusRoutes);
 await app.register(healthRoutes);
 await app.register(backupRoutes);
 await app.register(errorsRoutes);

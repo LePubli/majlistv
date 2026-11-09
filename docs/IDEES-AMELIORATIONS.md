@@ -89,3 +89,7 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 5. **2.1 Notifications web** et **3.1 Cartes mémoire**.
 6. **2.4 Mode podcast (RSS privé)**.
 7. **4.3 Prière complète** (hégirien, Qibla, calendrier).
+
+## Projet « Menus » (demande d'Epok, 09/11)
+- **Étape 1 ✅ livrée (09/11)** : Admin → Menus, menus nommés, 6 emplacements, sous-menus déroulants, liens catalogue / pages / écrans d'appli ; site et PWA.
+- Étape 2 : application mobile (menu ☰ et onglets du bas lus depuis les menus ; mise à jour en ligne). Étape 3 : finitions. Hors périmètre : TV (pas d'application TV).

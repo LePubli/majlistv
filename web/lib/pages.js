@@ -37,16 +37,30 @@ export async function publicPages() {
 // Étape I4 — « En-tête, menus et pied de page » publié : { nav, zones: { topbar, footerTop }, targeted } (blocs « tout le monde » seulement ; 10 s en mémoire).
 let layoutCache = null;
 let layoutAt = 0;
+// Projet Menus : menus créés dans Admin → Menus et affectés à un emplacement (null = menus d'origine). Ajoutés au même objet.
+async function siteMenus() {
+  try {
+    const res = await fetch(`${API}/menus/resolved`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    if (!res.ok) return null; // fonction « menus » coupée, ou API en difficulté : menus d'origine
+    const j = await res.json();
+    return j.locations && Object.keys(j.locations).length ? j.locations : null;
+  } catch { return null; }
+}
 export async function siteLayout() {
   if (layoutCache !== null && Date.now() - layoutAt < 10_000) return layoutCache || null;
+  let base = layoutCache || null; // dernier réglage connu si l'API ne répond pas
+  let known = false;
   try {
     const res = await fetch(`${API}/pages/view?path=%2F_layout&ssr=1`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
-    if (res.status === 404) { layoutCache = false; layoutAt = Date.now(); return null; }
-    if (res.ok) {
+    if (res.status === 404) { base = null; known = true; }
+    else if (res.ok) {
       const j = await res.json();
-      layoutCache = { nav: j.nav || null, zones: { topbar: j.zones?.topbar || [], footerTop: j.zones?.footerTop || [] }, targeted: Boolean(j.targeted) };
-      layoutAt = Date.now();
+      base = { nav: j.nav || null, zones: { topbar: j.zones?.topbar || [], footerTop: j.zones?.footerTop || [] }, targeted: Boolean(j.targeted) };
+      known = true;
     }
   } catch { /* API injoignable : derniers réglages connus, ou menus d'origine */ }
-  return layoutCache || null;
+  const menus = await siteMenus();
+  const out = menus ? { ...(base || { nav: null, zones: { topbar: [], footerTop: [] }, targeted: false }), menus } : base;
+  if (known || menus) { layoutCache = out || false; layoutAt = Date.now(); }
+  return out || null;
 }

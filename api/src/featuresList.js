@@ -83,6 +83,8 @@ export const FEATURES = [
     rules: [{ re: '^/(ads|admin/campaigns)(/|$)' }] },
   { id: 'experiments', group: 'catalog', label: 'Tests A/B', hint: 'Compare deux versions d\'une zone du site (ex. la bannière de l\'accueil visiteur) et mesure laquelle donne le plus d\'inscriptions. Gérés dans Admin → Tests A/B ; sans test en cours, le site est inchangé',
     rules: [{ re: '^/(xp|admin/experiments)(/|$)' }] },
+  { id: 'menus', group: 'catalog', label: 'Menus personnalisés', hint: 'Les menus créés dans Admin → Menus (haut, latéral, barre du bas, pied de page, application). Coupée : le site et l\'application reprennent leurs menus d\'origine',
+    rules: [{ re: '^/(menus|admin/menus)(/|$)' }] },
   { id: 'media_import', group: 'catalog', label: 'Import de vidéos externes', hint: 'Copier chez nous une vidéo YouTube, Vimeo, archive.org ou d\'un autre site (déclaration des droits obligatoire, journal) pour la monter, la doubler et la mettre en extraits',
     rules: [{ re: '^/(talks/[^/]+/import|studio/imports)(/|$)' }] },
   { id: 'follow', group: 'community', label: 'Suivre un intervenant', hint: 'Bouton Suivre, alertes par e-mail et notifications sur téléphone',

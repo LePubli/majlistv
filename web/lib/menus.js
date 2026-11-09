@@ -57,3 +57,34 @@ export function resolveList(cfg, defaults, { user, lang, required = [] }) {
 
 // Éléments d'origine d'un menu (navcfg MENUS) avec leur condition : applique le drapeau « masqué par défaut » (3e valeur).
 export const withHid = (builtin, D) => builtin.map(([k, , hid]) => ({ ...D[k], ...(hid ? { hid: true } : {}) }));
+
+// Projet Menus — liste finale d'un menu créé dans Admin → Menus (déjà résolu par l'API : adresses des contenus, pages, titres).
+//   items    : éléments publics de /menus/resolved (kind, key | href | screen, label {fr,en,ar}, children…)
+//   defaults : éléments d'origine du site de cet emplacement (mêmes objets que pour resolveList)
+//   required : clés d'origine toujours visibles (liens légaux du pied de page)
+// Résultat : [{ key, href, label, icon, custom, cls, newTab, heading, children: […] }]
+// Un lien d'origine garde sa condition (fonction coupée = lien absent) ; un écran d'application n'apparaît pas sur le site ;
+// un titre sans sous-menu ne reste que s'il sépare des sections (`keepHeadings`, menu latéral).
+export function resolveMenu(items, defaults, { user, lang, required = [], keepHeadings = false }) {
+  const byKey = new Map(defaults.map((d) => [d.key, d]));
+  const one = (it) => {
+    const fixed = it.kind === 'builtin' && required.includes(it.key);
+    if (!fixed && !audienceOk(it.audience, user)) return null;
+    const cls = fixed ? '' : deviceClass({ devices: it.devices });
+    const label = tx(it.label, lang);
+    if (it.kind === 'builtin') {
+      const d = byKey.get(it.key);
+      if (!d || !d.on) return null;
+      return { ...d, label: label || d.label, cls };
+    }
+    if (it.kind === 'appscreen') return null;
+    const kids = (it.children || []).map(one).filter(Boolean);
+    if (it.kind === 'heading') {
+      if (!kids.length && !keepHeadings) return null;
+      return label ? { key: it.id, heading: true, label, icon: it.icon || null, custom: true, cls, children: kids } : null;
+    }
+    if (!it.href || !label) return null;
+    return { key: it.id, href: it.href, label, icon: it.icon || 'link', custom: true, cls, newTab: Boolean(it.newTab), children: kids };
+  };
+  return (items || []).map(one).filter(Boolean);
+}

@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { memberShellOn, NO_SHELL } from '../lib/shell';
 import NavLink from './NavLink';
-import { resolveList, withHid } from '../lib/menus';
+import { resolveList, resolveMenu, withHid } from '../lib/menus';
 import { MENUS } from '../lib/navcfg';
 import { NAV_ICON_PATHS } from '../lib/navicons';
 import { tx } from '../lib/blocks';
@@ -112,22 +112,39 @@ export default function MemberShell({ children }) {
     admin: { key: 'admin', href: '/admin', label: t('adminNav'), icon: ICONS.admin, on: user?.role === 'admin' },
   };
   const GROUP_TITLE = { discover: t('hmDiscover'), space: t('navLearn'), library: t('library'), account: t('msMyAccount'), manage: t('hmManage') };
-  const groups = MENUS.side.groups.map(([g]) => ({
-    key: g,
-    title: tx(cfg?.side?.titles?.[g], locale) || GROUP_TITLE[g],
-    items: resolveList(cfg?.side?.[g], MENUS.side.builtin[g].map(([k]) => D[k]), opts),
-  })).filter((g) => g.items.length);
-  // Groupe « Catégories » : rempli tout seul depuis Admin → Catégories (mêmes noms partout), juste après « Découvrir ».
-  if (cats?.length) {
-    const at = groups.findIndex((g) => g.key === 'discover');
-    groups.splice(at + 1, 0, { key: 'cats', title: t('msCats'), items: cats.map((c) => ({ key: 'c' + c.id, href: `/catalogue?cat=${c.id}`, label: c.name, icon: ICONS.tag, cls: '' })) });
+  // Projet Menus : un menu affecté à « Site — menu latéral » (Admin → Menus) remplace le menu d'origine. Chaque « Titre de groupe »
+  // ouvre un groupe ; les liens qui portent un sous-menu sont suivis de leurs sous-liens (en retrait).
+  const customSide = layout?.menus?.web_side;
+  let groups;
+  if (customSide) {
+    groups = [];
+    let cur = null;
+    const flush = () => { if (cur && cur.items.length) groups.push(cur); cur = null; };
+    const add = (it, sub) => { if (!cur) cur = { key: `g${groups.length}`, title: '', items: [] }; cur.items.push(sub ? { ...it, cls: `${it.cls || ''} ms-sub`.trim() } : it); };
+    for (const it of resolveMenu(customSide, Object.values(D), { user, lang: locale, keepHeadings: true })) {
+      if (it.heading) { flush(); cur = { key: it.key, title: it.label, items: [] }; (it.children || []).forEach((c) => { add(c); (c.children || []).forEach((cc) => add(cc, true)); }); continue; }
+      add(it); (it.children || []).forEach((c) => add(c, true));
+    }
+    flush();
+  } else {
+    groups = MENUS.side.groups.map(([g]) => ({
+      key: g,
+      title: tx(cfg?.side?.titles?.[g], locale) || GROUP_TITLE[g],
+      items: resolveList(cfg?.side?.[g], MENUS.side.builtin[g].map(([k]) => D[k]), opts),
+    })).filter((g) => g.items.length);
+    // Groupe « Catégories » : rempli tout seul depuis Admin → Catégories (mêmes noms partout), juste après « Découvrir ».
+    if (cats?.length) {
+      const at = groups.findIndex((g) => g.key === 'discover');
+      groups.splice(at + 1, 0, { key: 'cats', title: t('msCats'), items: cats.map((c) => ({ key: 'c' + c.id, href: `/catalogue?cat=${c.id}`, label: c.name, icon: ICONS.tag, cls: '' })) });
+    }
   }
   const iconOf = (it) => (it.custom ? NAV_ICON_PATHS[it.icon] || NAV_ICON_PATHS.link : it.icon);
 
   // Barre du bas (téléphone) : 5 entrées au plus ; le reste reste dans le menu ☰ de l'en-tête.
   // D'origine : Accueil · Catalogue · Séries · Apprendre · Kids (sans série en bibliothèque, « Collections » remplace « Séries »).
   const barD = { ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') } };
-  const barItems = resolveList(cfg?.bar, withHid(MENUS.bar.builtin, barD), opts).slice(0, 5);
+  const customBar = layout?.menus?.web_bar;
+  const barItems = (customBar ? resolveMenu(customBar, Object.values(barD), opts) : resolveList(cfg?.bar, withHid(MENUS.bar.builtin, barD), opts)).slice(0, 5);
   const bar = (
     <nav className="ms-bar" aria-label={member ? t('msBar') : t('barVisitor')}>
       {barItems.map((it) => (
@@ -144,7 +161,7 @@ export default function MemberShell({ children }) {
         <nav aria-label={t('msSide')}>
           {groups.map((g) => (
             <div key={g.key} className="ms-group">
-              <div className="ms-title">{g.title}</div>
+              {g.title && <div className="ms-title">{g.title}</div>}
               {g.items.map((it) => (
                 <NavLink key={it.key} href={it.href} title={col ? it.label : undefined} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span>{it.key === 'kids' && <KidsPendingBadge />}</NavLink>
               ))}
