@@ -54,8 +54,8 @@ export default function AdminPalette({ screens }) {
 
   return (
     <>
-      <button type="button" className="btn ghost adp-open" onClick={() => setOpen(true)} aria-keyshortcuts="Control+K Meta+K">
-        <span aria-hidden="true">⌕</span> Rechercher <kbd className="adp-kbd">Ctrl K</kbd>
+      <button type="button" className="adp-open" onClick={() => setOpen(true)} aria-keyshortcuts="Control+K Meta+K" aria-label="Rechercher dans l’administration (Ctrl K)" title="Rechercher (Ctrl K)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
       </button>
       {open && (
         <div className="adp-back" onMouseDown={(e) => e.target === e.currentTarget && close()}>

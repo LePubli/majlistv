@@ -38,7 +38,7 @@ export const Icon = ({ d }) => (
 
 // space : 'studio' | 'admin' ; groups : [{ key, title, items: [[href, libellé, icône, pastille?]] }] ;
 // links : liens du pied [{ href, label, icon }] ; isOn(href) : l'entrée est-elle la page courante ? ; extra : encart au-dessus du pied (facultatif)
-export default function ManageShell({ space, groups, links, isOn, extra, children }) {
+export default function ManageShell({ barExtra, space, groups, links, isOn, extra, children }) {
   const { t, user, logout, locale } = useApp();
   const router = useRouter();
   const [col, toggle] = useCollapsed();
@@ -60,6 +60,7 @@ export default function ManageShell({ space, groups, links, isOn, extra, childre
       <div className="studio-bar">
         <button type="button" className="studio-burger" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="studio-menu" aria-label={t('menuOpen')}><Icon d={ICONS.list} /></button>
         <Link href={home} className="studio-bar-title" aria-label={`Mejliss TV ${label}`}><img src="/brand/emblem-s.png" alt="" width="30" height="33" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></Link>
+        {barExtra && <div className="studio-bar-extra">{barExtra}</div>}
       </div>
       <button type="button" className="studio-backdrop" tabIndex={-1} aria-label={t('menuClose')} onClick={() => setOpen(false)} />
       <aside className="studio-side" id="studio-menu" onClick={(e) => { if (e.target.closest('a')) setOpen(false); }}>

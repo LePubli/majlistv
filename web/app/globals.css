@@ -428,10 +428,17 @@ mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: va
 .studio .import { margin-top: 0; }
 
 /* Studio et Administration sur tablette et mobile : barre fine en haut + menu latéral dépliant (tiroir) */
-.studio-bar, .studio-backdrop { display: none; }
+.studio-backdrop { display: none; }
+/* Barre du haut : sur téléphone (≤ 900 px) menu + titre + loupe ; sur ordinateur seulement la loupe de la recherche (administration), en haut à droite. */
+.studio { position: relative; }
+.studio-bar { display: flex; align-items: center; position: absolute; top: 12px; inset-inline-end: 16px; z-index: 40; }
+.studio-burger, .studio-bar-title { display: none; }
+.studio-bar-extra { margin-inline-start: auto; }
+.adp-open { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--line-soft); border-radius: 12px; background: transparent; color: var(--text); cursor: pointer; }
+.adp-open:hover { background: var(--surface); }
 @media (max-width: 900px) {
   .studio { flex-direction: column; }
-  .studio-bar { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 40; height: 56px; padding: 0 12px; background: var(--studio-side-bg); border-bottom: 1px solid var(--line-soft); }
+  .studio-bar { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; inset-inline-end: auto; z-index: 40; height: 56px; padding: 0 12px; background: var(--studio-side-bg); border-bottom: 1px solid var(--line-soft); }
   .studio-burger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--line-soft); border-radius: 12px; background: transparent; color: var(--text); cursor: pointer; }
   .studio-burger:hover { background: var(--surface); }
   .studio-bar-title { display: flex; align-items: center; gap: 10px; min-width: 0; font-weight: 700; color: var(--text); }

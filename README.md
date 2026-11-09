@@ -8082,3 +8082,6 @@ Pires pages avant : conférence visiteur mobile 58 (CLS 0,34), catalogue 71 (CLS
 **Exemple.** `cd ops/audit && npm install && SITE=http://localhost:3100 API=http://127.0.0.1:3000 CHROME_PATH=$(which chromium) node audit.mjs`.
 
 **Testé.** Mesures Lighthouse 12 + axe 4.10 sur le site compilé en production, sur le poste de développement (réseau et processeur simulés). **Non testé** : vrai téléphone, serveur de production (nginx, cache, miniatures réelles hébergées sur le stockage). Les scores varient d'environ ±5 points d'un essai à l'autre.
+
+### Correctif 09/11 — Recherche de l'administration en loupe
+La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la barre du haut (téléphone : à droite du titre ADMIN ; ordinateur : en haut à droite). Un clic (ou Ctrl K / Cmd K) ouvre la fenêtre de recherche. Déploiement : Redeploy `majlistv-web` seulement. Testé dans Chromium (390 et 1440 px) ; non testé sur vrai téléphone.

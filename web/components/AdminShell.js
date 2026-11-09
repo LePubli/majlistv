@@ -62,5 +62,5 @@ export default function AdminShell({ children }) {
   ];
   // Écrans pour la recherche Ctrl + K : ceux du menu (déjà filtrés selon les fonctions et modules actifs).
   const screens = shown.flatMap((g) => g.items.map(([href, label]) => ({ href, label, group: g.title })));
-  return <ManageShell space="admin" groups={shown} links={links} isOn={isOn}><div className="adp-bar"><AdminPalette screens={screens} /></div>{children}</ManageShell>;
+  return <ManageShell space="admin" groups={shown} links={links} isOn={isOn} barExtra={<AdminPalette screens={screens} />}>{children}</ManageShell>;
 }
