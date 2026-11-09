@@ -8110,3 +8110,21 @@ La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la ba
 
 **Tests.** `api/tests/test_menus.py` (bout en bout, dans la CI), `api/tests/test_menus_lib.mjs` (validation, copies identiques API ↔ site, résolution), `web/tests/test_menus_web.mjs` (branchement du site). **Non testé** : sur de vrais téléphones et en arabe (RTL) — le déroulant et l'accordéon utilisent des propriétés logiques (`inset-inline-*`), vérifiées seulement par lecture et par captures à 1280 et 390 px en français. **Étapes suivantes** : 2 = application mobile (menu ☰ et onglets lus depuis ces menus, mise à jour en ligne), 3 = finitions (l'ancien onglet « menus » de Admin → Pages renverra vers l'écran).
 
+## Menus — étape 2 sur 3 : application mobile (projet Menus, 09/11)
+
+**Ce que c'est.** Les deux emplacements « **Application — menu ☰** » et « **Application — onglets du bas** » d'Admin → Menus sont maintenant lus par l'application Android. Sans menu affecté, l'application garde ses menus d'origine (liste ☰ et 5 onglets Accueil · Catalogue · Apprendre · Bibliothèque · Compte).
+
+**Liens utilisables dans l'application** : *écran de l'application* (Accueil, Catalogue, Apprendre, Ma bibliothèque, Mon compte, Recherche, Shorts, Coran, Adhkar, Prière, Ramadan, Mejliss Kids, Téléchargements, Événements, Séries, Collections, Audyn), *conférence*, *série*, *collection*, *chaîne* (ouvrent l'écran correspondant de l'appli), *page du site / page créée dans Admin → Pages / adresse https* (ouvertes dans le navigateur), *mailto:* et *tel:*. Les liens « d'origine du site » ne servent pas dans l'application (le serveur les refuse pour ces deux emplacements). Un titre avec sous-éléments devient un groupe qui se déplie dans le menu ☰ ; un lien qui porte un sous-menu garde son adresse en premier choix de la liste.
+
+**Règles.** L'élément n'apparaît que s'il convient au public (visiteur / membre / équipe) et au **téléphone** (appareils : « téléphone » coché) ; un écran dont la fonction est coupée (Admin → Fonctions), ou réservé aux membres alors que l'utilisateur n'est pas connecté, disparaît tout seul. Onglets : 5 au plus, sans sous-menu ; l'onglet de la page affichée est en or. Les menus sont lus au démarrage de l'application (une fois, sans jeton) ; hors connexion ou fonction « Menus personnalisés » coupée, ce sont les menus d'origine.
+
+**Prérequis.** Étape 1 déployée (API + site). Aucune migration nouvelle. L'API ajoute seulement l'identifiant du contenu (`ref`) dans `/menus/resolved` et retire deux écrans qui n'ont pas de liste (« Mes engagements », « Quiz ») de la liste des écrans d'appli ; ajoute « Audyn ».
+
+**Déploiement.** Redeploy **majlistv-api** (DockPanel), puis **majlistv-web** (liste des écrans d'appli de l'écran Menus). Application : changement 100 % JavaScript, **sans nouvel APK** : mise à jour en ligne (fermer et rouvrir l'application **deux fois** après la publication). Puis les commandes VPS habituelles (`/root/apply-limits.sh`, `grep -n proxy_pass …`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`).
+
+**Utilisation.** Admin → Menus → créer un menu → y ajouter des éléments de type « Écran de l'application » (ou conférence, série…) → l'affecter à « Application — menu ☰ » ou « Application — onglets du bas ». Pour revenir au menu d'origine : choisir « Menu d'origine du site ».
+
+**Debug.** Rien ne change dans l'appli : fermer/rouvrir deux fois (mise à jour en ligne puis relance), vérifier que `https://api-majlisstv.le-publicitaire.fr/menus/resolved` contient `app_drawer` / `app_tabs`, et que le menu a des éléments visibles pour un visiteur (un menu dont tous les éléments sont filtrés laisse le tiroir vide ; onglets : si aucun onglet n'est valide, la barre d'origine revient).
+
+**Tests.** `mobile/tests/menus.test.ts` (adresses, public, téléphone, fonctions coupées, sous-menus, onglets), `npm run check` (typage + 260 tests) ; `api/tests/test_menus.py`. **Non testé** : sur un vrai téléphone (affichage du tiroir, de la barre, arabe RTL) ; le typage et les règles sont vérifiés, pas le rendu.
+

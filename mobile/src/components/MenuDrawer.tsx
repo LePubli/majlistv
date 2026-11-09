@@ -1,5 +1,5 @@
 // Menu latéral (comme le tiroir du site) : pages à découvrir, catégories, compte, langue.
-import React from 'react';
+import React, { useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -14,16 +14,26 @@ import { colors } from '@/lib/theme';
 import { Button, Chip, Txt } from './ui';
 import { useKidsPending } from '@/lib/kidsPending';
 import { badgeText } from '@/lib/ramadan';
+import { resolveAppMenu, type AppItem, type Target } from '@/lib/menus';
 
 type Item = { key: string; label: string; icon: React.ComponentProps<typeof Feather>['name']; go: () => void; on: boolean };
 
 export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { t, user, config, feat, api, locale, setLocale, logout, dirStyle } = useSession();
+  const { t, user, config, menus, feat, api, locale, setLocale, logout, dirStyle } = useSession();
   const pending = useKidsPending();
   const insets = useSafeAreaInsets();
   const cats = useAsync(async () => (await api.get<Category[]>('/categories').catch(() => [])).filter((c) => c.parentId == null), []);
   const site = (path: string) => () => { onClose(); void Linking.openURL(`${SITE_URL}${path}`); };
   const nav = (path: Parameters<typeof router.navigate>[0]) => () => { onClose(); router.navigate(path); };
+
+  // Projet Menus : un menu affecté à « Application — menu ☰ » (Admin → Menus) remplace la liste d'origine et les catégories.
+  const custom = resolveAppMenu(menus?.app_drawer, { locale, loggedIn: !!user, role: user?.role, hasSeries: !!config?.hasSeries, feat, siteUrl: SITE_URL });
+  const open = (tg: Target | null) => {
+    if (!tg) return;
+    onClose();
+    if (tg.type === 'route') router.navigate({ pathname: tg.pathname, params: tg.params } as never);
+    else void Linking.openURL(tg.url);
+  };
 
   const items: Item[] = [
     { key: 'home', label: t('home'), icon: 'home', go: nav('/'), on: true },
@@ -58,6 +68,8 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
             <Pressable accessibilityRole="button" accessibilityLabel={t('hmClose')} onPress={onClose} hitSlop={10}><Feather name="x" size={22} color={colors.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24, gap: 2 }}>
+            {custom ? custom.map((i) => <CustomRow key={i.key} item={i} open={open} />) : (
+              <>
             <Txt weight="bold" size={11} color={colors.muted} style={{ letterSpacing: 1, textTransform: 'uppercase', padding: 8 }}>{t('hmDiscover')}</Txt>
             {items.filter((i) => i.on).map((i) => (
               <Pressable key={i.key} accessibilityRole="link" onPress={i.go} style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
@@ -82,6 +94,8 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
                 ))}
               </>
             ) : null}
+              </>
+            )}
             <View style={{ height: 1, backgroundColor: colors.borderSoft, marginVertical: 12 }} />
             <Pressable accessibilityRole="link" onPress={nav('/account')} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10 }}>
               <Feather name="user" size={19} color={colors.goldLight} /><Txt weight="medium" size={15}>{user ? t('account') : t('login')}</Txt>
@@ -100,5 +114,40 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
         <Pressable accessibilityLabel={t('hmClose')} onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} />
       </View>
     </Modal>
+  );
+}
+
+// Un élément d'un menu personnalisé : lien, ou titre qui déplie ses sous-liens (un lien qui porte un sous-menu garde son adresse en premier choix).
+function CustomRow({ item, open }: { item: AppItem; open: (t: Target | null) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const row = { minHeight: 48, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14, paddingHorizontal: 10, borderRadius: 12 };
+  if (!item.children.length) {
+    return (
+      <Pressable accessibilityRole="link" onPress={() => open(item.target)} style={({ pressed }) => ({ ...row, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+        <Feather name={item.icon as never} size={19} color={colors.goldLight} />
+        <Txt weight="medium" size={15}>{item.label}</Txt>
+      </Pressable>
+    );
+  }
+  const kids: AppItem[] = item.target ? [{ ...item, children: [] }, ...item.children] : item.children;
+  return (
+    <View>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded((v) => !v)} style={({ pressed }) => ({ ...row, justifyContent: 'space-between', backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Feather name={(item.target ? item.icon : 'folder') as never} size={19} color={colors.goldLight} />
+          <Txt weight="bold" size={15}>{item.label}</Txt>
+        </View>
+        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
+      </Pressable>
+      {expanded ? (
+        <View style={{ marginStart: 22, paddingStart: 8, borderStartWidth: 1, borderColor: colors.border }}>
+          {kids.map((k) => (
+            <Pressable key={k.key} accessibilityRole="link" onPress={() => open(k.target)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+              <Txt size={14} color={colors.text2}>{k.label}</Txt>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }

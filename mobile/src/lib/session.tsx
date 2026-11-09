@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { getLocales } from 'expo-localization';
 import { createApi, Api, ApiError } from './api';
 import { API_URL } from './config';
+import { MENUS_PATH, parseMenus, type AppMenus } from './menus';
 import { DIR, Key, Locale, pickLocale, translate } from './i18n';
 import type { AppConfig, User } from './types';
 import { unregisterPush } from './notifications';
@@ -38,6 +39,8 @@ type Session = {
   isRTL: boolean;
   /** Configuration publique du site (fonctions activées, essai gratuit, nom) ; null tant qu'elle n'est pas lue. */
   config: AppConfig | null;
+  /** Menus de l'application créés dans Admin → Menus (menu ☰, onglets) ; null = menus d'origine. */
+  menus: AppMenus | null;
   /** Une fonction est-elle activée sur le site ? (Admin → Fonctions). Vrai par défaut tant que la configuration n'est pas lue. */
   feat: (id: string) => boolean;
   /** Favoris du membre (identifiants) et bascule. */
@@ -66,6 +69,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [locale, setLocaleState] = useState<Locale>('fr');
   const [config, setConfig] = useState<AppConfig | null>(null);
+  const [menus, setMenus] = useState<AppMenus | null>(null);
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [later, setLater] = useState<Set<string>>(new Set());
   const [skin, setSkin] = useState<Skin>(currentSkin());
@@ -95,6 +99,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
     api.get<AppConfig>('/config', undefined, false).then((c) => { if (alive) setConfig(c); }).catch(() => { /* hors connexion : valeurs par défaut */ });
+    // Projet Menus : menus de l'application affectés dans Admin → Menus. Sans réponse (hors connexion, fonction coupée) : menus d'origine.
+    api.get<unknown>(MENUS_PATH, undefined, false).then((d) => { if (alive) setMenus(parseMenus(d)); }).catch(() => { /* menus d'origine */ });
     return () => { alive = false; };
   }, [api]);
 
@@ -212,11 +218,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback((key: Key, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
 
   const value = useMemo<Session>(() => ({
-    ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, feat, favs, toggleFav,
+    ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, menus, feat, favs, toggleFav,
     later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser]);
+  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, menus, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

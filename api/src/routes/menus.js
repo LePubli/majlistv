@@ -102,6 +102,7 @@ async function resolveTree(items) {
       const f = found[it.kind].get(it.ref);
       if (!f || !f.ok) return null;
       o.href = f.href;
+      o.ref = it.ref; // l'application ouvre ses propres écrans (identifiant de la conférence, de la série…)
       if (!o.label) o.label = { fr: f.title };
     }
     if (it.children) { const ch = it.children.map(conv).filter(Boolean); if (ch.length) o.children = ch; }

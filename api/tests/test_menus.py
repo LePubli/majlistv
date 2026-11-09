@@ -137,6 +137,7 @@ wt = res["web_top"]
 ok(wt[0] == {"id": "a1", "kind": "builtin", "key": "home"}, "lien d'origine : clé seule (le site connaît son adresse)")
 ch = wt[1]["children"]
 ok(wt[1]["kind"] == "heading" and wt[1]["label"]["ar"] and ch[0]["href"] == f"/conferences/{tslug}" and ch[0]["label"]["fr"], "titre + sous-menu : conférence résolue en adresse lisible, texte repris du titre")
+ok(ch[0]["ref"] == tid, "le contenu garde son identifiant (l'application ouvre ses propres écrans)")
 ok(ch[1]["href"] == f"/p/menu-{tag}" and ch[1]["label"]["fr"] == f"Page menu {tag}", "page créée dans Admin → Pages résolue")
 ok(ch[2]["newTab"] and ch[2]["href"] == "https://example.org/x", "adresse externe, nouvel onglet")
 ok(wt[2]["audience"] == "member" and wt[2]["devices"] == ["m", "d"], "public et appareils conservés")

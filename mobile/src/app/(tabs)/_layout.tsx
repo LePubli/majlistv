@@ -6,12 +6,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { colors, fonts } from '@/lib/theme';
 import { AppHeader } from '@/components/AppHeader';
+import { MenuTabBar } from '@/components/MenuTabBar';
+import { resolveTabs } from '@/lib/menus';
+import { SITE_URL } from '@/lib/config';
 
 export default function TabsLayout() {
-  const { t, dirStyle } = useSession();
+  const { t, dirStyle, menus, user, config, feat, locale } = useSession();
   const insets = useSafeAreaInsets();
+  // Projet Menus : onglets choisis dans Admin → Menus (« Application — onglets du bas ») ; sans menu affecté, la barre d'origine.
+  const tabs = resolveTabs(menus?.app_tabs, { locale, loggedIn: !!user, role: user?.role, hasSeries: !!config?.hasSeries, feat, siteUrl: SITE_URL });
   return (
     <Tabs
+      tabBar={tabs && tabs.length ? () => <MenuTabBar tabs={tabs} /> : undefined}
       screenOptions={{
         headerShown: true,
         header: () => <AppHeader />,
