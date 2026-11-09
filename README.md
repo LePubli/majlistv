@@ -8138,3 +8138,19 @@ La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la ba
 
 **Tests.** `web/tests/test_menus_web.mjs` (section étape 3), compilation du site. **Non testé** : l'avertissement n'a pas été vérifié par capture d'écran. **Projet Menus terminé** (3 étapes). Hors périmètre, annoncé dès le départ : télévision (pas d'application TV ; les menus du site fonctionnent dans un navigateur TV) ; le public et les appareils règlent l'affichage seulement, pas l'accès.
 
+## Nouvelle vidéo : titre, intervenant et description lus automatiquement (09/11)
+
+**Ce que c'est.** Quand on colle un lien dans Studio → Nouvelle vidéo et qu'on valide, le formulaire interroge la plateforme d'origine et remplit **Titre**, **Intervenant** (le nom de la chaîne, à corriger si besoin) et **Description**. Seuls les champs encore **vides** sont remplis : ce que tu as déjà tapé n'est jamais écrasé. Un message sous le lien indique « Lecture… », puis « repris depuis YouTube… » ou « Impossible de lire… ». Si la lecture échoue, rien ne bloque : tout se saisit à la main comme avant. La description est de toute façon complétée après l'enregistrement par le transcripteur si elle est restée vide (comportement existant).
+
+**D'où viennent les informations.** YouTube, Vimeo, Dailymotion : service « oEmbed » public de la plateforme (titre + nom de la chaîne ; Vimeo donne aussi la description ; YouTube : description lue sur la page de la vidéo, au mieux). archive.org : API de métadonnées (titre, auteur, description). Tout autre site : titre et description de la page (balises Open Graph), auteur si la page l'indique.
+
+**Prérequis.** Aucun (le serveur de l'API doit pouvoir joindre ces sites : c'est déjà le cas pour les imports). Aucune migration, aucune variable obligatoire. **Sécurité** : adresses publiques seulement (adresses internes, `localhost`, `169.254…` refusées, y compris après redirection), 3 redirections, 6 secondes, 600 Ko lus au plus, 30 demandes par minute, réservé aux organisateurs et administrateurs.
+
+**Déploiement (DockPanel).** Redeploy **majlistv-api**, puis **majlistv-web**. Puis les commandes VPS habituelles (`/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`). L'application mobile n'est pas concernée.
+
+**Utilisation.** Studio → Nouvelle vidéo → coller le lien → « Continuer » : les champs se remplissent en 1 à 3 secondes.
+
+**Debug.** Message « Impossible de lire » : tester depuis le VPS `curl -s "https://www.youtube.com/oembed?format=json&url=https%3A%2F%2Fyoutu.be%2FIDENTIFIANT"` (doit renvoyer un JSON avec `title` et `author_name`) ; sinon le VPS est bloqué ou la plateforme limite les requêtes. Titre lu mais pas de description sur YouTube : normal si YouTube n'envoie pas sa page au serveur (elle sera reprise après l'enregistrement). Intervenant = nom de la chaîne, pas du conférencier : à corriger à la main (ou à choisir dans le sélecteur de chaîne).
+
+**Tests.** `api/tests/test_link_info.mjs` (lecture de chaque type de source avec de faux serveurs, nettoyage, sécurité), `api/tests/test_link_info_route.py` (droits, refus d'adresses), compilation du site, test de parité des textes FR/EN/AR. **Non testé** : la lecture réelle chez YouTube, Vimeo, Dailymotion et archive.org (le serveur de test n'a pas accès à Internet) ; les formats attendus sont ceux documentés de ces services. À vérifier dès le déploiement avec un vrai lien.
+

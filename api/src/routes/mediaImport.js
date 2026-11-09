@@ -6,6 +6,7 @@
 // La création d'une vidéo avec une adresse quelconque (« importVideo ») est dans routes/talks.js (POST /talks).
 // Fonction désactivable : Admin → Fonctions (media_import).
 import { z } from 'zod';
+import { linkInfo } from '../linkInfo.js';
 import { pool } from '../db.js';
 import { storage, deleteObject } from '../storage.js';
 import { viaChannel } from '../channelAccess.js';
@@ -104,6 +105,14 @@ export default async function mediaImportRoutes(app) {
     if (!r.done) return reply.code(409).send({ error: 'La conversion est déjà lancée : elle va jusqu\'au bout', code: 'running' });
     req.auditSummary = 'Import de la vidéo annulé';
     return { canceled: true };
+  });
+
+  // Pré-remplissage de « Nouvelle vidéo » : titre, intervenant (nom de la chaîne) et description lus chez la plateforme d'origine.
+  // Toujours 200 : si la plateforme ne répond pas, `found` est faux et les champs restent à saisir.
+  app.get('/studio/link-info', { ...organizer, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const r = await linkInfo(String(req.query?.url || ''));
+    if (r.error) return reply.code(400).send({ error: r.error, code: r.code });
+    return r;
   });
 
   // Journal : l'administrateur voit tout, un organisateur voit les imports qu'il a demandés ou qui concernent ses vidéos.

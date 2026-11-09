@@ -71,6 +71,7 @@ export default function NewTalk() {
   const [file, setFile] = useState(null);
   const [link, setLink] = useState('');
   const [linkErr, setLinkErr] = useState('');
+  const [info, setInfo] = useState({ state: 'idle', src: '' }); // lecture du titre / de l'intervenant : idle | loading | done | none
   const [drag, setDrag] = useState(false);
   const [up, setUp] = useState({ state: 'idle', pct: 0, id: null }); // idle | sending | done | failed
   const [frame, setFrame] = useState(null);
@@ -79,6 +80,7 @@ export default function NewTalk() {
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', formatId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
   const token = useRef(0);
+  const infoToken = useRef(0);
   const fileInput = useRef(null);
   const parsed = link ? parseLink(link) : null;
   const mode = file ? 'file' : 'link';
@@ -111,8 +113,21 @@ export default function NewTalk() {
     e.preventDefault();
     if (!parsed && !isWebUrl(link)) { setLinkErr(t('impBadUrl')); return; }
     setLinkErr(''); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setImportIt(false); setStep(2);
+    readInfo(link.trim());
   };
-  const back = () => { token.current++; setStep(1); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setErr(''); };
+  // Pré-remplit titre, intervenant (nom de la chaîne) et description d'après la plateforme d'origine. Ne remplace jamais ce que
+  // l'organisateur a déjà tapé ; en cas d'échec, tout reste à saisir à la main.
+  const readInfo = async (url) => {
+    const mine = ++infoToken.current;
+    setInfo({ state: 'loading', src: '' });
+    const r = await call(`/studio/link-info?url=${encodeURIComponent(url)}`);
+    if (mine !== infoToken.current) return;
+    if (!r.ok || !r.data?.found) { setInfo({ state: 'none', src: '' }); return; }
+    const d = r.data;
+    setF((x) => ({ ...x, title: x.title || d.title || '', speaker: x.speaker || d.speaker || '', description: x.description || d.description || '' }));
+    setInfo({ state: 'done', src: { youtube: 'YouTube', vimeo: 'Vimeo', dailymotion: 'Dailymotion', archive: 'archive.org' }[d.origin] || t('nwInfoSite') });
+  };
+  const back = () => { token.current++; infoToken.current++; setInfo({ state: 'idle', src: '' }); setStep(1); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setErr(''); };
 
   const toggleLang = (code) => patch({ translateTo: f.translateTo.includes(code) ? f.translateTo.filter((c) => c !== code) : [...f.translateTo, code] });
   const canTranslate = mode === 'file' || f.rightsConfirmed; // importer = déclarer les droits : la transcription et la traduction sont alors permises
@@ -190,6 +205,11 @@ export default function NewTalk() {
               </div>
             )}
             {mode === 'link' && <p className="meta linkline">{link.trim()}</p>}
+            {mode === 'link' && info.state !== 'idle' && (
+              <p className={`meta${info.state === 'none' ? ' warn' : ''}`} role="status" aria-live="polite">
+                {info.state === 'loading' ? t('nwInfoLoading') : info.state === 'done' ? t('nwInfoDone', { src: info.src }) : t('nwInfoNone')}
+              </p>
+            )}
 
             <label className="fld"><span>{t('talkTitle')}</span>
               <input required maxLength={200} placeholder={t('nwTitlePh')} value={f.title} onChange={(e) => patch({ title: e.target.value })} /></label>
