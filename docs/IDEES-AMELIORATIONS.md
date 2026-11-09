@@ -92,4 +92,4 @@ Hors périmètre (décision d'Epok du 27/10) : applications iPhone, Android TV, 
 
 ## Projet « Menus » (demande d'Epok, 09/11)
 - **Étape 1 ✅ livrée (09/11)** : Admin → Menus, menus nommés, 6 emplacements, sous-menus déroulants, liens catalogue / pages / écrans d'appli ; site et PWA.
-- **Étape 2 ✅ livrée (09/11)** : application mobile (menu ☰ et onglets du bas lus depuis les menus ; mise à jour en ligne). Étape 3 : finitions. Hors périmètre : TV (pas d'application TV).
+- **Étape 2 ✅ livrée (09/11)** : application mobile (menu ☰ et onglets du bas lus depuis les menus ; mise à jour en ligne). **Étape 3 ✅ livrée (09/11) : projet terminé.** Hors périmètre : TV (pas d'application TV).

@@ -39,3 +39,12 @@ assert.match(read('components/AdminShell.js'), /menus: 'menus'/, 'écran masqué
 const css = read('app/globals.css');
 for (const k of ['.mn-dd-list', '.mn-acc-list', '.mn-row', '.ms-side a.ms-sub']) assert.ok(css.includes(k), `style ${k}`);
 console.log('web menus OK');
+// Étape 3 : l'ancien éditeur renvoie vers Admin → Menus et signale les emplacements remplacés.
+{
+  const na = read('components/NavAdmin.js');
+  assert.match(na, /\/admin\/menus/, 'l’ancien éditeur lit les affectations');
+  assert.match(na, /href="\/admin\?tab=menus"/, 'lien vers Admin → Menus');
+  assert.match(na, /Ces emplacements utilisent un menu d’Admin → Menus/, 'avertissement quand un menu remplace les réglages');
+  assert.match(read('components/PagesAdmin.js'), /href="\/admin\?tab=menus"/, 'Admin → Pages renvoie vers Admin → Menus');
+  console.log('web menus étape 3 OK');
+}

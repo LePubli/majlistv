@@ -8128,3 +8128,13 @@ La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la ba
 
 **Tests.** `mobile/tests/menus.test.ts` (adresses, public, téléphone, fonctions coupées, sous-menus, onglets), `npm run check` (typage + 260 tests) ; `api/tests/test_menus.py`. **Non testé** : sur un vrai téléphone (affichage du tiroir, de la barre, arabe RTL) ; le typage et les règles sont vérifiés, pas le rendu.
 
+## Menus — étape 3 sur 3 : finitions (projet Menus, 09/11)
+
+**Ce que c'est.** L'ancien éditeur « En-tête, menus et pied de page » (Admin → Pages, étape I4) renvoie maintenant vers **Admin → Menus** (lien en tête de l'éditeur et dans le bloc d'Admin → Pages). Quand un menu d'Admin → Menus est affecté à un emplacement du site, l'éditeur I4 l'indique en rouge (« Ces emplacements utilisent un menu d'Admin → Menus : les réglages de menu ci-dessous ne s'y appliquent pas — … ») pour éviter de modifier un menu qui n'est plus affiché. Les **zones de l'en-tête** (logo, loupe, langue, compte, bouton « S'abonner ») et du pied de page (marque, liens) se règlent toujours dans Admin → Pages ; les **menus** (listes de liens) se règlent dans Admin → Menus.
+
+**Prérequis / déploiement.** Étapes 1 et 2 déployées. Redeploy **majlistv-web** seulement (aucun changement d'API ni d'application), puis les commandes VPS habituelles (`/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`).
+
+**Debug.** L'avertissement n'apparaît pas alors qu'un menu est affecté : recharger Admin → Pages (il lit les affectations à l'ouverture) ; la fonction « Menus personnalisés » coupée masque l'écran Menus mais pas cet avertissement lu côté API (qui répond alors par une erreur : l'avertissement est simplement absent). Pour tout remettre comme avant : Admin → Menus → choisir « Menu d'origine du site » à chaque emplacement.
+
+**Tests.** `web/tests/test_menus_web.mjs` (section étape 3), compilation du site. **Non testé** : l'avertissement n'a pas été vérifié par capture d'écran. **Projet Menus terminé** (3 étapes). Hors périmètre, annoncé dès le départ : télévision (pas d'application TV ; les menus du site fonctionnent dans un navigateur TV) ; le public et les appareils règlent l'affichage seulement, pas l'accès.
+

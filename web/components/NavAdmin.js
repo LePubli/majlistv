@@ -5,7 +5,8 @@
 // réordonner, les masquer, changer leur texte (par langue), les réserver à un appareil ou à un public. On peut aussi
 // ajouter ses propres liens. L'en-tête se range en trois zones (gauche, centre, droite), le pied de page en deux.
 // Tout est enregistré dans le brouillon de la page (voir PagesAdmin) et validé par l'API.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useApp } from './Providers';
 import { TextField, UrlField } from './PageFields';
 import { DEVICES, DEVICE_LABELS, tx } from '../lib/blocks';
 import {
@@ -182,7 +183,25 @@ const TABS = [
   ['main', 'Menu principal'], ['side', 'Menu latéral'], ['bar', 'Barre du bas'], ['footerLinks', 'Liens du pied de page'], ['header', 'En-tête'], ['footerZones', 'Pied de page'],
 ];
 
+// Projet Menus : emplacements du site dont le menu vient d'Admin → Menus (ils remplacent les menus d'origine réglés ici).
+const SITE_LOCS = { web_top: 'menu du haut', web_side: 'menu latéral', web_bar: 'barre du bas', web_footer: 'liens du pied de page' };
+function useAssignedMenus() {
+  const { call } = useApp();
+  const [list, setList] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    call('/admin/menus').then((r) => {
+      if (!alive || !r.ok) return;
+      const names = new Map(r.data.menus.map((m) => [m.id, m.name]));
+      setList(Object.entries(SITE_LOCS).filter(([k]) => r.data.locations[k]).map(([k, label]) => `${label} (« ${names.get(r.data.locations[k])} »)`));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [call]);
+  return list;
+}
+
 export default function NavEditor({ nav, onChange, lang, errors, viewAs, onViewAs }) {
+  const overridden = useAssignedMenus();
   const [tab, setTab] = useState('main');
   const base = materializeNav(nav);
   const setMenu = (name, val) => onChange({ ...base, menus: { ...base.menus, [name]: val } });
@@ -210,6 +229,8 @@ export default function NavEditor({ nav, onChange, lang, errors, viewAs, onViewA
           {nav && <button type="button" className="btn ghost pe-mini" onClick={resetAll}>Tout rétablir</button>}
         </span>
       </div>
+      <p className="meta small"><b>Nouveau :</b> pour créer vos propres menus (sous-menus déroulants, liens vers des conférences, des pages, l’application…), utilisez <a href="/admin?tab=menus">Admin → Menus</a>. Les menus d’origine ci-dessous restent utilisés tant qu’aucun menu n’est affecté à l’emplacement.</p>
+      {overridden.length > 0 && <p className="error" role="status">Ces emplacements utilisent un menu d’Admin → Menus : les réglages de menu ci-dessous ne s’y appliquent pas — {overridden.join(' ; ')}. L’en-tête (zones) et le pied de page (zones) se règlent toujours ici. <a href="/admin?tab=menus">Gérer les menus</a></p>}
       <p className="meta small">{nav ? 'Réglages personnalisés en cours.' : 'Aucun réglage : le site garde ses menus d’origine. Toute modification ci-dessous les personnalise (brouillon, puis « Publier »).'} Une fonction coupée dans Admin → Fonctions disparaît toujours des menus.</p>
       <div className="ap-seg ne-tabs" role="tablist" aria-label="Partie à modifier">
         {TABS.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
