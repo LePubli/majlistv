@@ -113,7 +113,6 @@ export async function recordActivity(userId) {
   if (seen.size > 50000) seen.clear();
   try { await pool.query('INSERT INTO user_activity_month(user_id, month) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, m]); } catch { seen.delete(userId); }
 }
-export const forgetActivityCache = () => seen.clear(); // tests
 export function startActivityMaintenance(log) {
   const run = () => pool.query(`DELETE FROM user_activity_month WHERE month < (date_trunc('month', now()) - interval '26 months')::date`).catch((e) => log?.error?.(e, 'Entretien des mois d\'activité'));
   run();

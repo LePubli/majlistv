@@ -68,4 +68,3 @@ export function talkProgress(steps) {
   return null;
 }
 
-export const isBusy = (x) => talkKind(x) === 'run';

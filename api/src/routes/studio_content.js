@@ -41,7 +41,6 @@ export default async function studioContentRoutes(app) {
   });
 
   // Téléchargement des sous-titres d'une langue au format WebVTT (version enregistrée), pour l'organisateur de la vidéo.
-  // Sert aussi de fichier d'entrée au banc d'essai du doublage (dubbing/d3bench).
   app.get('/talks/:id/studio/subs/:file', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const m = String(req.params.file).match(/^(.+)\.vtt$/);

@@ -29,7 +29,6 @@ export function exitMessage(err: { status?: number; code?: string; data?: Record
 // ---- Session enfant (gardée dans le coffre sécurisé : l'application reste en mode enfant après un redémarrage) ----
 export type KidSessionData = { token: string; profile: KidProfile; issuedAt: number };
 /** Le jeton enfant dure 12 h côté serveur ; on le renouvelle (avec la session du parent) bien avant. */
-export const KID_TOKEN_TTL_MS = 12 * 3600_000;
 export const KID_RENEW_AFTER_MS = 9 * 3600_000;
 export const needsRenew = (s: KidSessionData, now = Date.now()) => now - s.issuedAt >= KID_RENEW_AFTER_MS;
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Étape 30 — Lance les tests de l'API (GitHub Actions ou poste local).
 # Prérequis : API de test sur http://127.0.0.1:3055 et PostgreSQL de test sur 127.0.0.1:5544 (base/utilisateur « majlis », mot de passe « pw »),
-# python3 + paquets requests et psycopg2-binary, Node 22. Voir README « Étape 30 » pour la mise en route locale.
+# python3 + paquets requests et psycopg2-binary, Node 22. Voir docs/historique/ETAPES.md « Étape 30 » pour la mise en route locale.
 # Sortie : une ligne par test (OK / ÉCHEC), détail des échecs à la fin ; code de sortie 1 s'il y a au moins un échec.
 set -u
 cd "$(dirname "$0")/../.."

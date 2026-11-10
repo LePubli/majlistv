@@ -41,7 +41,6 @@ const manifestSchema = z.object({
 
 // Registre en mémoire : id → { manifest, dir, fields:[clés de réglages], enabledKey, error, loaded }
 const registry = new Map();
-export const listRegistered = () => [...registry.values()];
 
 const prefix = (id) => `mod_${id.replace(/-/g, '_')}_`;
 

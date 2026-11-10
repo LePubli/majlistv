@@ -206,19 +206,6 @@ export default async function adminRoutes(app) {
     return (await pool.query(`SELECT ${USER_COLS} FROM users u WHERE u.id = $1`, [id])).rows[0];
   });
 
-  // Ancienne route conservée pour compatibilité.
-  app.patch('/admin/users/:id/role', adminOnly, async (req, reply) => {
-    const { id } = idSchema.parse(req.params);
-    const { role } = z.object({ role: z.enum(ROLES) }).parse(req.body);
-    if (id === req.user.sub) return reply.code(400).send({ error: 'Impossible de modifier son propre rôle' });
-    const cur = (await pool.query('SELECT role FROM users WHERE id = $1', [id])).rows[0];
-    if (!cur) return reply.code(404).send({ error: 'Utilisateur introuvable' });
-    if (cur.role === 'admin' && role !== 'admin' && (await adminCount(id)) === 0) return reply.code(400).send({ error: 'Il doit rester au moins un administrateur actif' });
-    await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
-    forgetUser(id);
-    return { id, role };
-  });
-
   // Nouveau mot de passe (fourni, ou généré et affiché une seule fois).
   app.post('/admin/users/:id/password', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);

@@ -11,7 +11,6 @@ Registre n°32 (décision d'Epok du 20/10) : quand plusieurs personnes comptent 
 On le devine au mouvement de la bouche (petite image de la bouche, comparée d'une image examinée à la suivante) ; on ne change
 de personne que si l'autre parle nettement plus pendant un moment (pas de va-et-vient). Une seule personne : rien ne change.
 """
-import math
 
 SAMPLE_FPS = 3          # images examinées par seconde de vidéo
 MAX_KEYS = 60           # points clés gardés au plus (l'expression FFmpeg reste courte)

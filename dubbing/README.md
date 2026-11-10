@@ -93,6 +93,3 @@ Prérequis du second : API locale (3055), PostgreSQL de test (5544), stockage S3
 - Le service lit les phrases françaises **corrigées** dans le Studio (`transcript_segments`), les phrases cochées **« Voix d'origine »** (`dub_segments.keep_original`, ou ancien préfixe « # ») et le **glossaire de prononciation** actif (`dub_glossary`) au début de chaque travail.
 - Le glossaire ne change que **ce que la voix lit** (`say`) ; le rapport et les sous-titres gardent le texte écrit. La règle de remplacement (`src/glossary.py`) est la même que celle de l'API (`api/src/modules/dubbing/glossary.js`) : termes les plus longs d'abord, mot entier par défaut, majuscules ignorées sauf demande.
 - Si l'API n'a pas encore appliqué la migration `004_review.sql`, le service continue sans marquage ni glossaire (redéployer l'API d'abord).
-
-## Banc d'essai
-Le dossier `etape0/` contient le banc d'essai des étapes 0 à 0 quater (mesures du 16/10/2026). Il n'est pas utilisé par ce service.

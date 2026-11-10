@@ -14,7 +14,7 @@ import os
 import re
 import socket
 import subprocess
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit
 
 import external
 

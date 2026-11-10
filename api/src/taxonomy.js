@@ -23,10 +23,3 @@ export const categoryIdsSql = (alias) => `COALESCE((SELECT array_agg(DISTINCT x 
     UNION SELECT cc.parent_id FROM categories cc WHERE cc.parent_id IS NOT NULL AND (cc.id = ${alias}.category_id OR cc.id IN (SELECT category_id FROM talk_categories WHERE talk_id = ${alias}.id))) y
   WHERE x IS NOT NULL), '{}')`;
 
-// Libellé court de tranches d'âge (« 3-10 », « 7-14 ») : de la plus jeune à la plus âgée.
-export function agesRange(bands) {
-  const order = BANDS.filter((b) => (bands || []).includes(b));
-  if (!order.length) return null;
-  const lo = order[0].split('-')[0]; const hi = order[order.length - 1].split('-')[1];
-  return `${lo}-${hi}`;
-}

@@ -22,7 +22,6 @@ export async function vapidKeys() {
   try { cache = { publicKey: row.public_key, privateKey: decrypt(row.private_enc) }; } catch { return null; } // SETTINGS_KEY changée : clé illisible
   return cache;
 }
-export const resetVapidCache = () => { cache = null; };
 
 function subject() {
   const m = String(process.env.ADMIN_EMAIL || '').trim();

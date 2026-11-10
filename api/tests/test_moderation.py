@@ -36,7 +36,7 @@ atexit.register(lambda: cur.execute("update app_settings set value='false' where
 O1, o1, o1mail = user("organizer"); O2, o2, _ = user("organizer"); MOD, mid, _ = user(); U, uid, _ = user(); U2, u2, _ = user()
 
 # --- rôle modérateur (attribué par l'administrateur)
-ok(requests.patch(f"{B}/admin/users/{mid}/role", headers=ADM, json={"role": "moderator"}).status_code == 200, "l'administrateur donne le rôle modérateur")
+ok(requests.patch(f"{B}/admin/users/{mid}", headers=ADM, json={"role": "moderator"}).status_code == 200, "l'administrateur donne le rôle modérateur")
 ok(requests.get(B + "/admin/users", headers=MOD).status_code == 403, "le modérateur n'a pas accès à l'administration")
 ok(requests.get(B + "/moderation/summary", headers=MOD).status_code == 200 and requests.get(B + "/moderation/summary", headers=U).status_code == 403
    and requests.get(B + "/moderation/summary").status_code in (401, 403), "file de modération : modérateur et admin seulement")
@@ -127,7 +127,7 @@ ok("droits" in {x["id"]: x for x in requests.get(B + "/me/talks", headers=O1).js
 # --- journal
 A = requests.get(B + "/admin/audit?days=1&limit=500", headers=ADM).json()
 rows = A["items"]
-ok(any(r["route"] == "PATCH /admin/users/:id/role".split(" ", 1)[1] and f"id={mid}" in r["target"] for r in rows), "journal : changement de rôle enregistré")
+ok(any(r["route"] == "/admin/users/:id" and f"id={mid}" in r["target"] for r in rows), "journal : changement de rôle enregistré")
 ok(any(r["actorRole"] == "moderator" and "refusée" in r["summary"].lower() or "retirée" in r["summary"] for r in rows), "journal : décisions du modérateur avec leur motif")
 requests.post(f"{B}/admin/users/{uid}/password", headers=ADM, json={"password": "Secret-Tres-Long-9876"})
 rows = requests.get(B + "/admin/audit?days=1&q=password&limit=50", headers=ADM).json()["items"]
