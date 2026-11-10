@@ -18,50 +18,18 @@ const pad = (s) => String(s || '');
 let seq = 0;
 const nid = (p) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`.slice(0, 40).toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
-// Réglages d'origine du site (étape I4) → éléments d'un menu : sert de point de départ « comme aujourd'hui ».
-async function currentNav() {
-  const r = (await pool.query("SELECT published FROM site_pages WHERE path = '/_layout'")).rows[0];
-  return r?.published?.nav?.menus || {};
-}
-function fromLegacy(list, builtin) {
-  const defs = builtin.map(([key, , hid]) => ({ key, hid: Boolean(hid) }));
-  const out = [];
-  const seen = new Set();
-  const push = (it) => out.push({ id: nid('i'), ...it });
-  if (Array.isArray(list)) {
-    for (const it of list) {
-      if (it.key) {
-        seen.add(it.key);
-        const o = { kind: 'builtin', ref: it.key };
-        if (it.label) o.label = it.label;
-        if (it.hidden) o.hidden = true;
-        if (it.show?.audience && it.show.audience !== 'all') o.audience = it.show.audience;
-        if (it.show?.devices?.length && it.show.devices.length < 3) o.devices = it.show.devices;
-        push(o);
-      } else if (it.url && it.label) {
-        const o = { kind: 'url', ref: it.url, label: it.label };
-        if (it.icon) o.icon = it.icon;
-        if (it.hidden) o.hidden = true;
-        if (it.show?.audience && it.show.audience !== 'all') o.audience = it.show.audience;
-        push(o);
-      }
-    }
-  }
-  for (const d of defs) if (!seen.has(d.key)) push({ kind: 'builtin', ref: d.key, ...((Array.isArray(list) || d.hid) ? { hidden: true } : {}) });
-  // Sans réglage enregistré : les éléments « masqués par défaut » restent masqués (comme sur le site).
-  return out;
-}
+// Menu d'origine du site → éléments d'un menu : sert de point de départ « comme aujourd'hui ».
+// Les éléments « masqués par défaut » restent masqués (comme sur le site).
+const fromDefaults = (builtin) => builtin.map(([key, , hid]) => ({ id: nid('i'), kind: 'builtin', ref: key, ...(hid ? { hidden: true } : {}) }));
 export async function templateItems(loc) {
-  const cfg = await currentNav();
-  if (loc === 'web_top') return fromLegacy(cfg.main, MENUS.main.builtin);
-  if (loc === 'web_bar') return fromLegacy(cfg.bar, MENUS.bar.builtin);
-  if (loc === 'web_footer') return fromLegacy(cfg.footer, MENUS.footer.builtin);
+  if (loc === 'web_top') return fromDefaults(MENUS.main.builtin);
+  if (loc === 'web_bar') return fromDefaults(MENUS.bar.builtin);
+  if (loc === 'web_footer') return fromDefaults(MENUS.footer.builtin);
   if (loc === 'web_side') {
     const out = [];
     for (const [g, title] of MENUS.side.groups) {
-      const items = fromLegacy(cfg.side?.[g], MENUS.side.builtin[g]);
-      out.push({ id: nid('h'), kind: 'heading', label: cfg.side?.titles?.[g] || { fr: title } });
-      out.push(...items);
+      out.push({ id: nid('h'), kind: 'heading', label: { fr: title } });
+      out.push(...fromDefaults(MENUS.side.builtin[g]));
     }
     // Le menu d'origine remplit « Catégories » tout seul ; dans un menu personnalisé ce sont des liens ordinaires, modifiables.
     try {

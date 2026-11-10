@@ -8182,7 +8182,7 @@ La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la ba
 
 **Gardé volontairement.** Les deux accueils (décision d'Epok) ; les anciennes adresses redirigées (`/talks/<id>`, `/organizer`, `/lists`, `/intervenants`) ; les routes `GET /me/events/ids`, `GET /admin/theme/schema`, `GET /admin/status` (non appelées par le site mais utilisées par les tests ; à revoir à l'étape sécurité) ; les fichiers tenus en double entre l'API et le site (un test vérifie leur égalité).
 
-**Reste à faire dans cette étape.** Anciens réglages de menus (I4) : conversion puis suppression de l'ancien éditeur, après lecture des réglages réels du site (commande donnée à Epok).
+**Anciens réglages de menus (I4) — retirés le 10/11 au soir.** Lecture faite sur le site par Epok : aucun réglage enregistré dans l'ancien éditeur, aucun menu affecté ; il n'y avait donc rien à convertir. Admin → Pages → « En-tête et pied de page » ne règle plus que la place des éléments de l'en-tête et du pied de page ; les menus (liens, ordre, sous-menus) se règlent uniquement dans Admin → Menus. Sans menu affecté, le site garde ses menus d'origine, comme avant. Un ancien contenu qui porterait encore `nav.menus` est accepté et ignoré. Fichiers : `api/src/navcfg.js` = `web/lib/navcfg.js`, `api/src/routes/menus.js`, `web/lib/menus.js` (`defaultList`), `web/components/NavAdmin.js` (294 → 181 lignes), `Header.js`, `Footer.js`, `MemberShell.js` ; tests `api/tests/test_layout.py`, `web/tests/test_menus_web.mjs`.
 
 **Déploiement.** DockPanel → Redeploy : majlistv-api, majlistv-web, majlistv-transcriber. Puis sur le VPS :
 ```bash

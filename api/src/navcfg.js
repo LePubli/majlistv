@@ -1,10 +1,12 @@
-// Étape I4 — Navigation : éléments d'origine des menus, de l'en-tête et du pied de page, et validation des réglages.
+// Navigation : éléments d'origine des menus, de l'en-tête et du pied de page, et validation des réglages de l'en-tête
+// et du pied de page (zones).
 //
 // Ce fichier est en DEUX copies identiques (api/src/navcfg.js et web/lib/navcfg.js) : l'API refuse tout réglage invalide,
-// le site et l'éditeur s'en servent pour dessiner les menus. Un test vérifie qu'elles sont égales.
-// Principe : les éléments « d'origine » (Accueil, Séries, Mentions légales…) gardent leur adresse et leurs conditions
-// (une fonction coupée dans Admin → Fonctions les fait toujours disparaître) ; on peut les réordonner, les masquer,
-// renommer leur texte, et ajouter ses propres liens. Aucun réglage enregistré = le site d'origine, à l'identique.
+// le site et l'éditeur s'en servent pour dessiner l'en-tête et le pied de page. Un test vérifie qu'elles sont égales.
+// Les MENUS d'origine (Accueil, Séries, Mentions légales…) sont ceux du site tant qu'aucun menu d'Admin → Menus n'est
+// affecté à l'emplacement ; ils servent aussi de point de départ « comme aujourd'hui » dans Admin → Menus.
+// Audit 11/2026 : les anciens réglages de menus (étape I4, « nav.menus ») ont été retirés, Admin → Menus les remplace ;
+// un ancien contenu qui en porterait encore est accepté et ignoré.
 import { DEVICES, validUrl, cleanShortText } from './blocks.js';
 
 export const NAV_AUDIENCES = [
@@ -67,20 +69,10 @@ export const defaultHeader = () => ({
 });
 export const defaultFooter = () => ({ left: [{ id: 'f-brand', key: 'brand' }], right: [{ id: 'f-links', key: 'links' }] });
 
-// Liste complète pour l'éditeur : les éléments enregistrés, puis les éléments d'origine qui manquent (nouvelle fonction, première modification).
-export function materializeList(list, builtin) {
-  const out = Array.isArray(list) ? list.map((x) => ({ ...x })) : [];
-  const have = new Set(out.filter((x) => x.key).map((x) => x.key));
-  for (const [key, , hid] of builtin) if (!have.has(key)) out.push({ id: `m-${key}`, key, ...(hid ? { hidden: true } : {}) });
-  return out;
-}
+// Réglages complets pour l'éditeur : ce qui est enregistré, sinon l'en-tête et le pied de page d'origine.
 export function materializeNav(nav) {
   const n = nav && typeof nav === 'object' ? nav : {};
-  const m = n.menus || {};
-  const side = { titles: { ...(m.side?.titles || {}) } };
-  for (const [g] of MENUS.side.groups) side[g] = materializeList(m.side?.[g], MENUS.side.builtin[g]);
   return {
-    menus: { main: materializeList(m.main, MENUS.main.builtin), side, bar: materializeList(m.bar, MENUS.bar.builtin), footer: materializeList(m.footer, MENUS.footer.builtin) },
     header: n.header ? { left: n.header.left || [], center: n.header.center || [], right: n.header.right || [] } : defaultHeader(),
     footer: n.footer ? { left: n.footer.left || [], right: n.footer.right || [] } : defaultFooter(),
   };
@@ -161,54 +153,6 @@ export function cleanNav(raw, strict = true) {
   if (typeof raw !== 'object' || Array.isArray(raw)) return { value: undefined, errors: { nav: 'Réglages de navigation invalides' } };
   for (const k of Object.keys(raw)) if (!['menus', 'header', 'footer'].includes(k)) err(`nav.${k}`, 'Réglage inconnu');
   const out = {};
-
-  // Menus
-  if (raw.menus !== undefined) {
-    const mr = raw.menus;
-    if (!mr || typeof mr !== 'object' || Array.isArray(mr)) err('nav.menus', 'Menus invalides');
-    else {
-      const menus = {};
-      for (const k of Object.keys(mr)) if (!Object.hasOwn(MENUS, k)) err(`nav.menus.${k}`, 'Menu inconnu');
-      const base = (def) => ({ keys: new Set(def.map(([k]) => k)), types: ['link'], icons: true, strict });
-      menus.main = cleanList(mr.main, 'nav.menus.main', { ...base(MENUS.main.builtin), icons: false }, err);
-      menus.bar = cleanList(mr.bar, 'nav.menus.bar', base(MENUS.bar.builtin), err);
-      if (menus.bar && strict && menus.bar.filter((x) => !x.hidden).length > BAR_MAX) err('nav.menus.bar', `${BAR_MAX} liens affichés au plus : masquez-en pour garder ${BAR_MAX}`);
-      menus.footer = cleanList(mr.footer, 'nav.menus.footer', { ...base(MENUS.footer.builtin), icons: false }, err);
-      if (menus.footer && strict) {
-        for (const key of MENUS.footer.required) {
-          const it = menus.footer.find((x) => x.key === key);
-          if (!it) err('nav.menus.footer', 'Les liens légaux (mentions légales, conditions de vente, confidentialité) sont obligatoires');
-          else if (it.hidden) err('nav.menus.footer', 'Les liens légaux ne peuvent pas être masqués');
-        }
-      }
-      if (mr.side !== undefined) {
-        const sr = mr.side;
-        if (!sr || typeof sr !== 'object' || Array.isArray(sr)) err('nav.menus.side', 'Menu invalide');
-        else {
-          const side = {}; const groups = MENUS.side.groups.map(([g]) => g);
-          const seenIds = new Set();
-          for (const k of Object.keys(sr)) if (!groups.includes(k) && k !== 'titles') err(`nav.menus.side.${k}`, 'Groupe inconnu');
-          for (const g of groups) {
-            const l = cleanList(sr[g], `nav.menus.side.${g}`, { keys: new Set(MENUS.side.builtin[g].map(([k]) => k)), types: ['link'], icons: true, strict }, err, { seenIds });
-            if (l) side[g] = l;
-          }
-          if (sr.titles !== undefined) {
-            if (!sr.titles || typeof sr.titles !== 'object' || Array.isArray(sr.titles)) err('nav.menus.side.titles', 'Titres invalides');
-            else {
-              side.titles = {};
-              for (const g of Object.keys(sr.titles)) {
-                if (!groups.includes(g)) { err(`nav.menus.side.titles.${g}`, 'Groupe inconnu'); continue; }
-                try { const v = cleanShortText(sr.titles[g], 40); if (v) side.titles[g] = v; } catch (e) { err(`nav.menus.side.titles.${g}`, e.message); }
-              }
-            }
-          }
-          menus.side = side;
-        }
-      }
-      for (const k of Object.keys(menus)) if (menus[k] === undefined) delete menus[k];
-      if (Object.keys(menus).length) out.menus = menus;
-    }
-  }
 
   // En-tête et pied de page : trois / deux zones, chaque élément une seule fois sur l'ensemble des zones.
   for (const [name, def] of [['header', HEADER], ['footer', FOOTER]]) {

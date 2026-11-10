@@ -3,7 +3,7 @@
 // Deux sortes de pages :
 //   custom : page créée dans l'administration, adresse /p/<nom> (zone « main »).
 //   slot   : blocs ajoutés avant / après une page EXISTANTE du site (adresse exacte, ex. /pricing).
-//   layout : « En-tête, menus et pied de page » : barre d'annonce et blocs au-dessus du pied de page (zones topbar / footerTop) + réglages de navigation (content.nav). Une seule (/_layout).
+//   layout : « En-tête et pied de page » : barre d'annonce et blocs au-dessus du pied de page (zones topbar / footerTop) + réglages de navigation (content.nav). Une seule (/_layout).
 //   home   : l'accueil des membres entièrement composé en blocs (adresse interne /_home, zone « main »). Une seule. Non publiée : l'accueil d'origine reste.
 // Chaque page a une version publiée et un brouillon (comme les thèmes de l'étape I1).
 //
@@ -152,7 +152,7 @@ export default async function pagesRoutes(app) {
     } else if (b.kind === 'home') {
       path = HOME_PATH; title = 'Accueil des membres';
     } else if (b.kind === 'layout') {
-      path = LAYOUT_PATH; title = 'En-tête, menus et pied de page';
+      path = LAYOUT_PATH; title = 'En-tête et pied de page';
     } else {
       path = (b.path || '').replace(/\/+$/, '') || '/';
       if (!/^\/[a-z0-9_/-]{0,98}$/.test(path) || path.includes('//')) return reply.code(400).send({ error: 'Adresse invalide (ex. /pricing)' });

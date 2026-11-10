@@ -5,7 +5,7 @@ import NavLink from './NavLink';
 import { MenuLink } from './MenuDropdown';
 import SkinPicker from './SkinPicker';
 import { LayoutZone } from './PageBlocks';
-import { resolveList, resolveMenu, audienceOk, deviceClass } from '../lib/menus';
+import { defaultList, resolveMenu, audienceOk, deviceClass } from '../lib/menus';
 import { defaultFooter, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 
@@ -30,7 +30,7 @@ export default function Footer() {
   const customFooter = layout?.menus?.web_footer;
   const links = customFooter
     ? resolveMenu(customFooter, footerDefaults, { user, lang: locale, required: MENUS.footer.required })
-    : resolveList(nav?.menus?.footer, footerDefaults, { user, lang: locale, required: MENUS.footer.required });
+    : defaultList(footerDefaults);
   const renderEl = (el) => {
     if (el.key !== 'links' && (el.hidden || !audienceOk(el.show?.audience, user))) return null;
     switch (el.key || el.type) {

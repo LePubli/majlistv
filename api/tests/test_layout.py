@@ -66,24 +66,23 @@ def publish_bad(nav, path_sub, msg):
     ok(r.status_code == 400 and any(path_sub in k for k in e), msg + f" -> {list(e)[:3]}")
 
 bad({"foo": 1}, "nav.foo", "réglage inconnu refusé")
-bad({"menus": {"main": [{"id": "abc", "key": "nope"}]}}, "nav.menus.main.0.key", "clé d'origine inconnue refusée")
-bad({"menus": {"main": [{"id": "abc", "key": "home"}, {"id": "abd", "key": "home"}]}}, "nav.menus.main.1.key", "doublon de clé refusé")
-bad({"menus": {"main": [{"id": "abc", "type": "link", "label": {"fr": "X"}, "url": "javascript:alert(1)"}]}}, "nav.menus.main.0.url", "URL javascript: refusée")
-bad({"menus": {"main": [{"id": "abc", "type": "link", "label": {"fr": "X"}, "url": "/a", "icon": "star"}]}}, "nav.menus.main.0.icon", "icône refusée dans le menu principal")
-bad({"menus": {"side": {"discover": [{"id": "abc", "type": "link", "label": {"fr": "X"}, "url": "/a", "icon": "zzz"}]}}}, "nav.menus.side.discover.0.icon", "icône inconnue refusée")
-bad({"menus": {"main": [{"id": "ab", "key": "home"}]}}, "nav.menus.main.0.id", "identifiant trop court refusé")
-bad({"menus": {"main": [{"id": "abc", "key": "home", "show": {"devices": [], "audience": "all"}}]}}, "show.devices", "aucun appareil refusé")
+bad({"header": {"left": [{"id": "abc", "key": "logo"}, {"id": "abd", "type": "link", "label": {"fr": "X"}, "url": "javascript:alert(1)"}], "center": [], "right": [{"id": "abe", "key": "account"}]}}, "nav.header.left.1.url", "URL javascript: refusée")
+bad({"header": {"left": [{"id": "ab", "key": "logo"}], "center": [], "right": [{"id": "abe", "key": "account"}]}}, "nav.header.left.0.id", "identifiant trop court refusé")
+bad({"header": {"left": [{"id": "abc", "key": "logo", "show": {"devices": [], "audience": "all"}}], "center": [], "right": [{"id": "abe", "key": "account"}]}}, "show.devices", "aucun appareil refusé")
 bad({"header": {"left": [{"id": "abc", "key": "logo"}], "middle": []}}, "nav.header.middle", "zone inconnue refusée")
 bad({"header": {"left": [{"id": "abc", "key": "logo"}, {"id": "abd", "key": "logo"}]}}, "nav.header", "logo en double refusé")
 publish_bad({"header": {"left": [{"id": "abc", "key": "logo"}], "center": [], "right": []}}, "nav.header", "publication sans compte refusée")
-publish_bad({"menus": {"footer": [{"id": "m-channels", "key": "channels"}]}}, "nav.menus.footer", "liens légaux manquants refusés")
-publish_bad({"menus": {"footer": [{"id": "a1x", "key": "mentions", "hidden": True}, {"id": "a2x", "key": "cgv"}, {"id": "a3x", "key": "privacy"}]}}, "nav.menus.footer", "lien légal masqué refusé")
-publish_bad({"menus": {"main": [{"id": "abc", "type": "link", "label": {"fr": "X"}}]}}, "url", "lien personnalisé sans adresse refusé à la publication")
-publish_bad({"menus": {"bar": [{"id": f"b{i}x", "key": k} for i, k in enumerate(["home", "series", "learning", "library", "account", "collections"])]}}, "nav.menus.bar", "barre du bas : plus de 5 liens refusé")
+publish_bad({"header": {"left": [{"id": "abc", "key": "logo"}, {"id": "abd", "type": "link", "label": {"fr": "X"}}], "center": [], "right": [{"id": "abe", "key": "account"}]}}, "url", "lien personnalisé sans adresse refusé à la publication")
 
-# Brouillon lenient : lien sans adresse accepté en brouillon
-c = copy.deepcopy(base); c["nav"] = {"menus": {"main": [{"id": "abc", "type": "link", "label": {"fr": "X"}}]}}
+# Brouillon : lien sans adresse accepté
+c = copy.deepcopy(base); c["nav"] = {"header": {"left": [{"id": "abc", "key": "logo"}, {"id": "abd", "type": "link", "label": {"fr": "X"}}], "center": [], "right": [{"id": "abe", "key": "account"}]}}
 ok(put(c).status_code == 200, "brouillon : lien sans adresse accepté")
+
+# Audit 11/2026 : les anciens réglages de menus (nav.menus) sont acceptés et ignorés (Admin → Menus les remplace)
+c = copy.deepcopy(base); c["nav"] = {"menus": {"main": [{"id": "abc", "key": "nope"}]}}
+r = put(c)
+ok(r.status_code == 200, "ancien réglage de menus : accepté")
+ok("nav" not in requests.get(B + f"/admin/pages/{L}", headers=A).json()["content"], "ancien réglage de menus : ignoré (rien n'est gardé)")
 
 # Réglages valides complets
 nav = {
@@ -113,7 +112,7 @@ ok(r.status_code == 200, f"brouillon valide accepté {r.text[:200] if r.status_c
 r = requests.post(B + f"/admin/pages/{L}/publish", headers=A)
 ok(r.status_code == 200 and r.json()["live"], f"publication valide {r.text[:300] if r.status_code != 200 else ''}")
 v = requests.get(B + "/pages/view", params={"path": "/_layout", "ssr": 1}).json()
-ok(v.get("nav", {}).get("menus", {}).get("main", [{}])[0].get("label", {}).get("fr") == "Salon", "nav servie au public (ssr)")
+ok("menus" not in v.get("nav", {}) and v.get("nav", {}).get("header", {}).get("right", [{}, {}])[1].get("label", {}).get("fr") == "Faire un don", "nav servie au public (ssr) : en-tête, sans anciens menus")
 ok(len(v["zones"]["topbar"]) == 1, "bloc de la barre d'annonce servi")
 v2 = requests.get(B + "/pages/view", params={"path": "/_layout"}).json()
 ok("nav" in v2 and len(v2["zones"]["topbar"]) == 1, "nav servie aussi hors ssr")

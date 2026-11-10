@@ -413,8 +413,8 @@ export default function PagesAdmin() {
       </div>
 
       <div className="panel">
-        <h2 className="panel-title">En-tête, menus et pied de page</h2>
-        <p className="meta small"><b>Pour créer vos propres menus</b> (sous-menus, liens vers des contenus, application), allez dans <a href="/admin?tab=menus">Admin → Menus</a>. Ici : Réorganisez l’en-tête (gauche, centre, droite), les menus (principal, latéral, barre du bas téléphone) et le pied de page ; masquez, renommez ou ajoutez des liens, avec une visibilité par appareil et par public. Les liens légaux restent toujours affichés. Vous pouvez aussi placer des blocs (annonce, adresse, réseaux…) tout en haut du site et au-dessus du pied de page. Sans réglage, le site garde ses menus d’origine.</p>
+        <h2 className="panel-title">En-tête et pied de page</h2>
+        <p className="meta small"><b>Pour créer vos propres menus</b> (sous-menus, liens vers des contenus, application), allez dans <a href="/admin?tab=menus">Admin → Menus</a>. Ici : réorganisez l’en-tête (gauche, centre, droite) et le pied de page ; ajoutez des liens, boutons ou textes, avec une visibilité par appareil et par public. Vous pouvez aussi placer des blocs (annonce, adresse, réseaux…) tout en haut du site et au-dessus du pied de page. Sans réglage, le site garde ses menus d’origine.</p>
         {layoutPage ? (
           <ul className="pe-pages">
             <li>

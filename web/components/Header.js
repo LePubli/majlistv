@@ -12,7 +12,7 @@ import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/i18n';
 import { memberShellOn } from '../lib/shell';
 import NavLink from './NavLink';
-import { resolveList, resolveMenu, audienceOk, deviceClass, withHid } from '../lib/menus';
+import { defaultList, resolveMenu, audienceOk, deviceClass, withHid } from '../lib/menus';
 import { MenuDropdown, MenuAccordion, MenuLink } from './MenuDropdown';
 import { defaultHeader, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
@@ -112,7 +112,7 @@ function MainHeader() {
   const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) ? 'page' : undefined);
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
-  // Menu principal : éléments d'origine (avec leurs conditions) mis dans l'ordre et au gré des réglages de Admin → Pages (étape I4).
+  // Menu principal : éléments d'origine (avec leurs conditions) ; l'en-tête (zones) se règle dans Admin → Pages.
   const nav = layout?.nav;
   const mainD = {
     home: { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
@@ -130,7 +130,7 @@ function MainHeader() {
   const customTop = layout?.menus?.web_top;
   const pages = customTop
     ? resolveMenu(customTop, Object.values(mainD), { user, lang: locale })
-    : resolveList(nav?.menus?.main, withHid(MENUS.main.builtin, mainD), { user, lang: locale });
+    : defaultList(withHid(MENUS.main.builtin, mainD));
   const isCur = (href) => Boolean(href) && cur(href) === 'page';
   // Un lien qui porte un sous-menu garde sa propre adresse : elle devient le premier choix de sa liste.
   const withSelf = (it) => (it.href ? { ...it, children: [{ ...it, key: `${it.key}-self`, children: undefined, cls: '' }, ...it.children] } : it);

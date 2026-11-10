@@ -7,10 +7,9 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { memberShellOn, NO_SHELL } from '../lib/shell';
 import NavLink from './NavLink';
-import { resolveList, resolveMenu, withHid } from '../lib/menus';
+import { defaultList, resolveMenu, withHid } from '../lib/menus';
 import { MENUS } from '../lib/navcfg';
 import { NAV_ICON_PATHS } from '../lib/navicons';
-import { tx } from '../lib/blocks';
 import AppPromo from './AppPromo';
 import { KidsPendingBadge } from './KidsPending';
 
@@ -75,9 +74,7 @@ export default function MemberShell({ children }) {
   const manager = Boolean(user) && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user?.role === 'moderator';
 
-  // Menus d'origine, avec leurs conditions ; l'ordre, la visibilité, les textes et les liens ajoutés viennent des réglages
-  // de Admin → Pages → En-tête, menus et pied de page (étape I4). Sans réglage : exactement le menu d'origine.
-  const cfg = layout?.nav?.menus;
+  // Menus d'origine, avec leurs conditions ; un menu affecté dans Admin → Menus les remplace.
   const opts = { user, lang: locale };
   const learn = feat('learning');
   const D = {
@@ -129,8 +126,8 @@ export default function MemberShell({ children }) {
   } else {
     groups = MENUS.side.groups.map(([g]) => ({
       key: g,
-      title: tx(cfg?.side?.titles?.[g], locale) || GROUP_TITLE[g],
-      items: resolveList(cfg?.side?.[g], MENUS.side.builtin[g].map(([k]) => D[k]), opts),
+      title: GROUP_TITLE[g],
+      items: defaultList(MENUS.side.builtin[g].map(([k]) => D[k])),
     })).filter((g) => g.items.length);
     // Groupe « Catégories » : rempli tout seul depuis Admin → Catégories (mêmes noms partout), juste après « Découvrir ».
     if (cats?.length) {
@@ -144,7 +141,7 @@ export default function MemberShell({ children }) {
   // D'origine : Accueil · Catalogue · Séries · Apprendre · Kids (sans série en bibliothèque, « Collections » remplace « Séries »).
   const barD = { ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') } };
   const customBar = layout?.menus?.web_bar;
-  const barItems = (customBar ? resolveMenu(customBar, Object.values(barD), opts) : resolveList(cfg?.bar, withHid(MENUS.bar.builtin, barD), opts)).slice(0, 5);
+  const barItems = (customBar ? resolveMenu(customBar, Object.values(barD), opts) : defaultList(withHid(MENUS.bar.builtin, barD))).slice(0, 5);
   const bar = (
     <nav className="ms-bar" aria-label={member ? t('msBar') : t('barVisitor')}>
       {barItems.map((it) => (
