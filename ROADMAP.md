@@ -641,3 +641,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Projet « Menus » — **étape 2 sur 3** (application mobile : menu ☰ avec sous-menus dépliables et onglets du bas lus depuis Admin → Menus ; mise à jour en ligne) : livré (README « Menus — étape 2 »). Suite : étape 3 finitions.
 - Projet « Menus » — **étape 3 sur 3** (finitions : l'ancien éditeur I4 renvoie vers Admin → Menus et signale les emplacements remplacés) : livré (README « Menus — étape 3 »). **Projet Menus terminé.**
 - Studio → Nouvelle vidéo : titre, intervenant et description lus automatiquement depuis le lien collé (YouTube, Vimeo, Dailymotion, archive.org, autres sites) : livré (README « Nouvelle vidéo : titre, intervenant… »).
+- Studio → Nouvelle vidéo : titre et description lus dans la langue de la vidéo (version localisée YouTube si elle existe) : livré (README « Nouvelle vidéo : titre et description dans la langue de la vidéo »).

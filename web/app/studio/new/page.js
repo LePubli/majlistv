@@ -120,7 +120,7 @@ export default function NewTalk() {
   const readInfo = async (url) => {
     const mine = ++infoToken.current;
     setInfo({ state: 'loading', src: '' });
-    const r = await call(`/studio/link-info?url=${encodeURIComponent(url)}`);
+    const r = await call(`/studio/link-info?url=${encodeURIComponent(url)}&lang=${base(f.language)}`);
     if (mine !== infoToken.current) return;
     if (!r.ok || !r.data?.found) { setInfo({ state: 'none', src: '' }); return; }
     const d = r.data;

@@ -8154,3 +8154,13 @@ La recherche globale (Ctrl K) n'occupe plus une ligne : une **loupe** dans la ba
 
 **Tests.** `api/tests/test_link_info.mjs` (lecture de chaque type de source avec de faux serveurs, nettoyage, sécurité), `api/tests/test_link_info_route.py` (droits, refus d'adresses), compilation du site, test de parité des textes FR/EN/AR. **Non testé** : la lecture réelle chez YouTube, Vimeo, Dailymotion et archive.org (le serveur de test n'a pas accès à Internet) ; les formats attendus sont ceux documentés de ces services. À vérifier dès le déploiement avec un vrai lien.
 
+### Nouvelle vidéo : titre et description dans la langue de la vidéo (10/11)
+
+**Ce que c'est.** YouTube peut proposer un titre et une description traduits (doublage automatique « Français - dubbed ») selon la langue du compte. Le formulaire demande désormais la page dans la **langue choisie pour la vidéo** (champ Langue) : si une version localisée existe, elle est reprise ; sinon on garde le titre et la description d'origine. Le transcripteur demande aussi à yt-dlp les métadonnées dans la langue déclarée.
+
+**Limites (honnêtes).** Le son du lecteur YouTube intégré reste celui choisi par YouTube/le spectateur (piste d'origine) : Mejliss ne peut pas l'imposer. Une description déjà enregistrée n'est jamais écrasée. Non testé sur les vraies réponses YouTube (pas d'Internet ici).
+
+**Déploiement.** DockPanel → Redeploy : majlistv-api, majlistv-web, majlistv-transcriber ; puis sur le VPS `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Tests.** `node api/tests/test_link_info.mjs`, `python3 transcriber/tests/test_external.py`.
+

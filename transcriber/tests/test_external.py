@@ -121,5 +121,9 @@ o = external.ydl_options("/tmp/claude-0", cookies="# Netscape HTTP Cookie File\n
 ok(o["cookiefile"] == "/tmp/claude-0/cookies.txt" and oct(os.stat(o["cookiefile"]).st_mode)[-3:] == "600" and o["proxy"] == "http://p:1", "cookies écrits (droits 600) et proxy transmis")
 os.remove(o["cookiefile"])
 
+m = external.metadata_language_options("fr-FR")
+ok(m["extractor_args"] == {"youtube": {"lang": ["fr"]}} and m["http_headers"]["Accept-Language"].startswith("fr,"), "métadonnées demandées dans la langue déclarée")
+ok(external.metadata_language_options("") == {} and external.metadata_language_options("x; rm") == {}, "langue vide ou invalide : aucune option")
+
 print("TOUT OK" if not fails else f"{fails} ÉCHEC(S)")
 sys.exit(1 if fails else 0)

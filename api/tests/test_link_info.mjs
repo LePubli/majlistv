@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 process.env.DATABASE_URL ||= 'postgres://x:x@127.0.0.1:1/x'; // le module des imports charge la base (aucune connexion n'est ouverte ici)
 process.env.JWT_SECRET ||= 'test-secret-test-secret-test-secret-123456';
-const { decodeEntities, fromOembed, fromArchive, fromHtml, youtubeDescription, linkInfo, finish } = await import('../src/linkInfo.js');
+const { decodeEntities, fromOembed, fromArchive, fromHtml, youtubeDescription, youtubeLocalized, linkInfo, finish } = await import('../src/linkInfo.js');
 
 // --- Fonctions pures
 assert.equal(decodeEntities('L&#39;&eacute;cole &amp; &quot;vie&quot; &#x41;'), "L'&eacute;cole & \"vie\" A".replace('&eacute;', '&eacute;'));
@@ -28,6 +28,14 @@ assert.equal(fromHtml('<meta name="author" content="https://x.test/profil"><titl
 assert.equal(youtubeDescription('..."shortDescription":"Ligne 1\\nLigne \\"2\\" \\u00e9t\\u00e9"...'), 'Ligne 1\nLigne "2" été');
 assert.equal(youtubeDescription('<meta property="og:description" content="Résumé">'), 'Résumé', 'repli sur og:description');
 assert.equal(youtubeDescription('rien'), '');
+
+// YouTube localisé : titre différent de celui d'oEmbed = version française proposée par YouTube
+let y = youtubeLocalized('<meta property="og:title" content="Comment a-t-on fait de Jésus un dieu"><meta property="og:description" content="Résumé en français"> "shortDescription":"Original EN"', { title: 'How Jesus Was Turned Into a God!' });
+assert.deepEqual([y.localized, y.title, y.description], [true, 'Comment a-t-on fait de Jésus un dieu', 'Résumé en français']);
+y = youtubeLocalized('<meta property="og:title" content="Same title"> "shortDescription":"Texte complet"', { title: 'Same title' });
+assert.deepEqual([y.localized, y.title, y.description], [false, 'Same title', 'Texte complet'], 'pas de version localisée : titre d\'origine et description complète');
+y = youtubeLocalized('', { title: 'T' });
+assert.deepEqual([y.localized, y.title, y.description], [false, 'T', '']);
 
 // --- Avec un faux serveur
 const server = http.createServer((req, res) => {

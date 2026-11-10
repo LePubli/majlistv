@@ -46,6 +46,16 @@ def ydl_options(work_dir, cookies="", proxy="", extra=None):
     return opts
 
 
+def metadata_language_options(lang):
+    """Titre et description dans la langue déclarée de la vidéo, quand YouTube en propose une version (traduction du créateur ou
+    doublage automatique) : sans cela, le serveur reçoit la version d'origine (souvent l'anglais) alors que le public francophone
+    voit la version française. Sans version dans cette langue, YouTube renvoie l'original : rien ne casse."""
+    code = (lang or "").split("-")[0].lower()
+    if not re.fullmatch(r"[a-z]{2,3}", code):
+        return {}
+    return {"extractor_args": {"youtube": {"lang": [code]}}, "http_headers": {"Accept-Language": f"{code},en;q=0.5"}}
+
+
 def readable_error(err):
     """Traduit les erreurs yt-dlp les plus courantes en un message compréhensible."""
     msg = str(err)

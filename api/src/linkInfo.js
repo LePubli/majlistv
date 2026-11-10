@@ -73,6 +73,16 @@ export function youtubeDescription(html) {
   return metaContent(String(html || ''), ['og:description']);
 }
 
+// Page YouTube demandée dans la langue de la vidéo : si YouTube a une version localisée (traduction du créateur, doublage
+// automatique), son titre diffère de celui d'oEmbed (toujours l'original) : on prend alors le titre et le résumé localisés.
+export function youtubeLocalized(html, oembed) {
+  const ogTitle = oneLine(metaContent(String(html || ''), ['og:title']), 200);
+  const localized = Boolean(ogTitle && oembed.title && ogTitle !== oembed.title);
+  const ogDesc = multiLine(metaContent(String(html || ''), ['og:description']), 5000);
+  const full = multiLine(youtubeDescription(html), 5000);
+  return { title: localized ? ogTitle : oembed.title, description: localized ? (ogDesc || full) : full, localized };
+}
+
 // ---------- Téléchargement sûr : adresses publiques, 3 redirections, durée et taille limitées ----------
 async function assertPublic(u) {
   if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password) throw new Error('adresse non acceptée');
@@ -102,7 +112,7 @@ const getJson = async (url) => JSON.parse(await getText(url, { accept: 'applicat
 
 // ---------- Point d'entrée ----------
 // Retourne { origin, title, speaker, description } (champs vides si inconnus) ou { error, code }.
-export async function linkInfo(rawUrl) {
+export async function linkInfo(rawUrl, lang = '') {
   let c = classifyUrl(rawUrl);
   if (c.error && c.code === 'private_url' && process.env.LINKINFO_ALLOW_PRIVATE === '1') c = { url: String(rawUrl).trim(), origin: 'web', archive: null }; // tests seulement
   if (c.error) return c;
@@ -111,10 +121,14 @@ export async function linkInfo(rawUrl) {
   try {
     if (c.origin === 'youtube') {
       info = fromOembed(await getJson(`${B.youtube}?format=json&url=${encodeURIComponent(c.url)}`));
-      // Description : page de la vidéo (au mieux ; sinon reprise après l'enregistrement).
+      // Titre / description : page de la vidéo demandée dans la langue choisie (au mieux ; sinon reprise après l'enregistrement).
       try {
-        const html = await getText(c.url, { accept: 'text/html', headers: { cookie: 'CONSENT=YES+1; SOCS=CAI' } });
-        info.description = multiLine(youtubeDescription(html), 5000);
+        const code = /^[a-z]{2,3}$/.test(lang) ? lang : 'fr';
+        const page = new URL(c.url); page.searchParams.set('hl', code);
+        const html = await getText(page.toString(), { accept: 'text/html', headers: { cookie: 'CONSENT=YES+1; SOCS=CAI', 'accept-language': `${code},en;q=0.5` } });
+        const y = youtubeLocalized(html, info);
+        info.title = y.title || info.title;
+        info.description = y.description;
       } catch { /* sans description : le transcripteur la reprendra après l'enregistrement */ }
     } else if (c.origin === 'vimeo') {
       info = fromOembed(await getJson(`${B.vimeo}?url=${encodeURIComponent(c.url)}`));

@@ -638,6 +638,7 @@ def process_external(job, talk_id, work):
     opts = external_options(work)
     url = external.video_url(job["source"], job["video_ref"])
     declared = (job["language"] or "").split("-")[0].lower()
+    opts.update(external.metadata_language_options(declared))  # description dans la langue déclarée si YouTube la propose
 
     log(f"[{talk_id}] lecture des informations {job['source']} {job['video_ref']}")
     info = external.fetch_info(url, opts)

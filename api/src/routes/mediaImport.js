@@ -110,7 +110,8 @@ export default async function mediaImportRoutes(app) {
   // Pré-remplissage de « Nouvelle vidéo » : titre, intervenant (nom de la chaîne) et description lus chez la plateforme d'origine.
   // Toujours 200 : si la plateforme ne répond pas, `found` est faux et les champs restent à saisir.
   app.get('/studio/link-info', { ...organizer, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const r = await linkInfo(String(req.query?.url || ''));
+    const lang = String(req.query?.lang || '').split('-')[0].toLowerCase();
+    const r = await linkInfo(String(req.query?.url || ''), /^[a-z]{2,3}$/.test(lang) ? lang : '');
     if (r.error) return reply.code(400).send({ error: r.error, code: r.code });
     return r;
   });
