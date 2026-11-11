@@ -44,11 +44,9 @@ ok(requests.post(B + "/admin/menus", headers=ADM, json={"name": f"Copie {tag}", 
 ok(requests.post(B + "/admin/menus", headers=ADM, json={"name": f"Autre {tag}", "from": "copy:" + str(uuid.uuid4())}).status_code == 404, "copie d'un menu inconnu refusée")
 
 # --- contenus à relier
-cur.execute("select id, slug from talks where slug is not null limit 1")
-t = cur.fetchone()
-if not t:
-    tid = requests.post(B + "/talks", headers=ADM, json={"title": f"Conf menu {tag}", "language": "fr", "translateTo": [], "videoUrl": "https://youtu.be/" + (tag + "abcdefghijk")[:11], "rightsConfirmed": True, "publication": "published"}).json()["id"]
-    cur.execute("select id, slug from talks where id=%s", (tid,)); t = cur.fetchone()
+# Une conférence créée ici, publiée : prendre « la première venue » donnait parfois un brouillon laissé par un autre test (lien alors masqué).
+tid = requests.post(B + "/talks", headers=ADM, json={"title": f"Conf menu {tag}", "language": "fr", "translateTo": [], "videoUrl": "https://youtu.be/" + (tag + "abcdefghijk")[:11], "rightsConfirmed": True, "publication": "published"}).json()["id"]
+cur.execute("select id, slug from talks where id=%s", (tid,)); t = cur.fetchone()
 tid, tslug = str(t[0]), t[1]
 cur.execute("insert into site_pages (kind, path, title, published, live) values ('custom', %s, %s, '{}'::jsonb, true) on conflict do nothing", (f"/p/menu-{tag}", f"Page menu {tag}"))
 cur.execute("insert into site_pages (kind, path, title, published, live) values ('custom', %s, %s, '{}'::jsonb, false) on conflict do nothing", (f"/p/brouillon-{tag}", f"Brouillon {tag}"))
