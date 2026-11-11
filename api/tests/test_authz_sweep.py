@@ -79,7 +79,9 @@ for method, path in routes:
                 ok(s in want, f"{label} : {method} {path} → {s} (attendu 403)")
     elif method != "GET" and (method, path) not in PUBLIC_WRITES:
         s = call(method, path, anon); n += 1
-        ok(s == 401, f"sans connexion, écriture : {method} {path} → {s} (attendu 401 ; si l'écriture publique est voulue, l'ajouter à PUBLIC_WRITES)")
+        # /app/publish/* : protégé par un jeton de publication (jamais un compte) ; 503 tant que le jeton n'est pas réglé, 401 ensuite.
+        want = (401, 503) if path.startswith("/app/publish/") else (401,)
+        ok(s in want, f"sans connexion, écriture : {method} {path} → {s} (attendu 401 ; si l'écriture publique est voulue, l'ajouter à PUBLIC_WRITES)")
 
 print(f"{n} appels sur {len(routes)} routes")
 if fails:
