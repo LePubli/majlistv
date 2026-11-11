@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
-import { memberShellOn, NO_SHELL } from '../lib/shell';
+import { memberShellOn, NO_SHELL, WATCH_PATH } from '../lib/shell';
+import { sectionOf } from './SectionTabs';
 import NavLink from './NavLink';
 import { defaultList, resolveMenu, withHid } from '../lib/menus';
 import { MENUS } from '../lib/navcfg';
@@ -49,6 +50,8 @@ export default function MemberShell({ children }) {
   const path = usePathname();
   const params = useSearchParams();
   const [col, toggle] = useCollapsed();
+  // Groupes ouverts ou fermés à la main (clé du groupe → vrai / faux) ; sans choix, seul le groupe de la page est ouvert.
+  const [openG, setOpenG] = useState({});
   const member = memberShellOn(path, user, kid);
   // Visiteur : pas de menu latéral, mais la même barre du bas sur téléphone (Accueil · Catalogue · Séries · Apprendre · Kids).
   const visitorBar = !user && !kid && !NO_SHELL.test(path || '/');
@@ -70,7 +73,8 @@ export default function MemberShell({ children }) {
     return true;
   };
   // La barre du bas marque l'espace entier (ex. « Apprendre » reste allumé sur tous les onglets de /learning).
-  const isOnBar = (href) => { const p = href.split('?')[0]; return p === '/' ? path === '/' : path === p || path.startsWith(p + '/'); };
+  const SECTION_HOME = { '/catalogue': 'catalogue', '/pratique': 'pratique' };
+  const isOnBar = (href) => { const p = href.split('?')[0]; return p === '/' ? path === '/' : path === p || path.startsWith(p + '/') || (SECTION_HOME[p] ? sectionOf(path) === SECTION_HOME[p] : false); };
   const manager = Boolean(user) && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user?.role === 'moderator';
 
@@ -87,7 +91,8 @@ export default function MemberShell({ children }) {
     quran: { key: 'quran', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
     events: { key: 'events', href: '/events', label: t('evnNav'), icon: ICONS.bell, on: feat('events') },
     audyn: { key: 'audyn', href: '/audyn', label: t('awNav'), icon: ICONS.books, on: feat('audyn') },
-    athkar: { key: 'athkar', href: '/learning?tab=athkar', label: t('atTab'), icon: ICONS.bilan, on: learn && feat('athkar') },
+    athkar: { key: 'athkar', href: '/adhkar', label: t('atTab'), icon: ICONS.bilan, on: feat('athkar') },
+    pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), icon: ICONS.prayer, on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },
     quranlearn: { key: 'quranlearn', href: '/learning?tab=quran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
     books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
     channels: { key: 'channels', href: '/chaines', label: t('spTitle'), icon: ICONS.people, on: feat('channels') },
@@ -109,7 +114,10 @@ export default function MemberShell({ children }) {
     studio: { key: 'studio', href: modOnly ? '/studio/moderation' : '/studio', label: modOnly ? t('modNav') : t('studioNav'), icon: ICONS.studio, on: manager },
     admin: { key: 'admin', href: '/admin', label: t('adminNav'), icon: ICONS.admin, on: user?.role === 'admin' },
   };
-  const GROUP_TITLE = { discover: t('hmDiscover'), space: t('navLearn'), library: t('library'), account: t('msMyAccount'), manage: t('hmManage') };
+  // Navigation de novembre 2026 (lot F) : un groupe par destination ; le titre du groupe remplace les anciens liens en double
+  // (Accueil, Catalogue, Séries étaient à la fois en haut et ici). Dans le groupe « Catalogue », l'entrée /catalogue s'appelle « Vidéos ».
+  const GROUP_TITLE = { catalogue: t('navCatalogue'), space: t('navLearn'), pratique: t('pqHub'), library: t('library'), account: t('msMyAccount'), manage: t('hmManage') };
+  const sideD = { ...D, catalogue: { ...D.catalogue, label: t('stVideos') }, audyn: { ...D.audyn, label: t('stAudio') }, events: { ...D.events, label: t('stLive') } };
   // Projet Menus : un menu affecté à « Site — menu latéral » (Admin → Menus) remplace le menu d'origine. Chaque « Titre de groupe »
   // ouvre un groupe ; les liens qui portent un sous-menu sont suivis de leurs sous-liens (en retrait).
   const customSide = layout?.menus?.web_side;
@@ -128,11 +136,11 @@ export default function MemberShell({ children }) {
     groups = MENUS.side.groups.map(([g]) => ({
       key: g,
       title: GROUP_TITLE[g],
-      items: defaultList(MENUS.side.builtin[g].map(([k]) => D[k])),
+      items: defaultList(withHid(MENUS.side.builtin[g], sideD)),
     })).filter((g) => g.items.length);
-    // Groupe « Catégories » : rempli tout seul depuis Admin → Catégories (mêmes noms partout), juste après « Découvrir ».
+    // Groupe « Catégories » : rempli tout seul depuis Admin → Catégories (mêmes noms partout), juste après « Catalogue ».
     if (cats?.length) {
-      const at = groups.findIndex((g) => g.key === 'discover');
+      const at = groups.findIndex((g) => g.key === 'catalogue');
       groups.splice(at + 1, 0, { key: 'cats', title: t('msCats'), items: cats.map((c) => ({ key: 'c' + c.id, href: `/catalogue?cat=${c.id}`, label: c.name, icon: ICONS.tag, cls: '' })) });
     }
   }
@@ -140,7 +148,7 @@ export default function MemberShell({ children }) {
 
   // Barre du bas (téléphone) : 5 entrées au plus ; le reste reste dans le menu ☰ de l'en-tête.
   // D'origine : Accueil · Catalogue · Séries · Apprendre · Kids (sans série en bibliothèque, « Collections » remplace « Séries »).
-  const barD = { ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') } };
+  const barD = { ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') }, library: { ...D.library, label: t('msLibShort') } };
   const customBar = layout?.menus?.web_bar;
   const barItems = (customBar ? resolveMenu(customBar, Object.values(barD), opts) : defaultList(withHid(MENUS.bar.builtin, barD))).slice(0, 5);
   const bar = (
@@ -150,7 +158,16 @@ export default function MemberShell({ children }) {
       ))}
     </nav>
   );
-  if (!member) return <>{children}{bar}</>;
+  // Page d'une vidéo : pas de menu latéral, le lecteur prend toute la largeur (la barre du bas du téléphone reste).
+  if (!member || WATCH_PATH.test(path || '/')) return <>{children}{bar}</>;
+
+  // Menu latéral en accordéon : seul le groupe qui contient la page courante est ouvert (à défaut, le premier) ; un clic sur
+  // un titre ouvre ou ferme son groupe. Menu réduit aux icônes : tout reste visible.
+  const hasCurrent = (g) => g.items.some((it) => isOn(it.href)) || (g.key === 'cats' && Boolean(catParam));
+  const sec = sectionOf(path || '/');
+  const SEC_GROUP = { catalogue: 'catalogue', pratique: 'pratique' };
+  const curKey = (groups.find(hasCurrent) || groups.find((g) => g.key === SEC_GROUP[sec]) || (path.startsWith('/learning') ? groups.find((g) => g.key === 'space') : null) || (path.startsWith('/library') ? groups.find((g) => g.key === 'library') : null) || (path.startsWith('/account') ? groups.find((g) => g.key === 'account') : null) || groups[0] || {}).key;
+  const isOpen = (g) => col || !g.title || (g.key in openG ? openG[g.key] : g.key === curKey);
 
   return (
     <div className={`ms${col ? ' col' : ''}`}>
@@ -158,9 +175,9 @@ export default function MemberShell({ children }) {
         <button type="button" className="ms-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
         <nav aria-label={t('msSide')}>
           {groups.map((g) => (
-            <div key={g.key} className="ms-group">
-              {g.title && <div className="ms-title">{g.title}</div>}
-              {g.items.map((it) => (
+            <div key={g.key} className={`ms-group${isOpen(g) ? '' : ' shut'}`}>
+              {g.title && <button type="button" className="ms-title" aria-expanded={isOpen(g)} onClick={() => setOpenG((o) => ({ ...o, [g.key]: !isOpen(g) }))}><span>{g.title}</span><i aria-hidden="true" /></button>}
+              {isOpen(g) && g.items.map((it) => (
                 <NavLink key={it.key} href={it.href} title={col ? it.label : undefined} className={[isOn(it.href) ? 'on' : '', it.cls].filter(Boolean).join(' ')} aria-current={isOn(it.href) ? 'page' : undefined}><Ico d={iconOf(it)} /><span>{it.label}</span>{it.key === 'kids' && <KidsPendingBadge />}</NavLink>
               ))}
             </div>

@@ -32,7 +32,7 @@ const pl = r('../components/AudynPlayer.js');
 for (const re of [/mediaSession/, /setActionHandler\('seekforward'/, /setActionHandler\('nexttrack'/, /quran\.stop\(\)/, /sleepTick/, /URL_LIFETIME_MS/, /localStorage/, /createObjectURL/]) assert.match(pl, re);
 assert.match(r('../components/MemberShell.js'), /audyn: \{ key: 'audyn', href: '\/audyn'/);
 assert.equal(r('../lib/navcfg.js'), readFileSync(new URL('../../api/src/navcfg.js', import.meta.url), 'utf8'), 'navcfg identique côté API et site');
-assert.match(r('../lib/navcfg.js'), /\['audyn', 'Audyn'\]/);
+assert.match(r('../lib/navcfg.js'), /\['audyn', 'Audio'\]/);
 
 // Textes aw* présents en fr / en / ar
 const i18n = r('../lib/i18n.js'); const keys = new Set();

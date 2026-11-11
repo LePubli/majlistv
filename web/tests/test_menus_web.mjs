@@ -18,7 +18,7 @@ const ms = read('components/MemberShell.js');
 assert.match(ms, /layout\?\.menus\?\.web_side/, 'menu latéral');
 assert.match(ms, /layout\?\.menus\?\.web_bar/, 'barre du bas');
 assert.match(ms, /\.slice\(0, 5\)/, 'barre du bas : 5 liens au plus');
-assert.match(ms, /defaultList\(MENUS\.side\.builtin\[g\]/, 'menu latéral d’origine conservé');
+assert.match(ms, /defaultList\(withHid\(MENUS\.side\.builtin\[g\], sideD\)\)/, 'menu latéral d’origine conservé');
 
 const ft = read('components/Footer.js');
 assert.match(ft, /layout\?\.menus\?\.web_footer/, 'pied de page');

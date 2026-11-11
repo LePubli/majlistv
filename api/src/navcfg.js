@@ -25,16 +25,18 @@ export const MAX_CUSTOM = 20;
 export const MENUS = {
   main: {
     label: 'Menu principal', hint: 'Les liens de l’en-tête (ordinateur) et du menu ☰ du téléphone.',
-    // Étape B : Accueil · Catalogue · Shorts (20/10) · Séries · Apprendre · Kids ; Collections, Ouvrages et Bibliothèque restent dans le menu latéral (masqués ici par défaut, à réafficher dans l'éditeur).
-    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['shorts', 'Shorts'], ['series', 'Séries'], ['learning', 'Apprendre'], ['kids', 'Mejliss Kids'],
-      ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['library', 'Ma bibliothèque', true]],
+    // Navigation de novembre 2026 : cinq destinations — Accueil · Catalogue · Apprendre · Pratique · Ma bibliothèque — puis Kids.
+    // Séries, Shorts, Collections, Ouvrages sont des onglets de la page Catalogue ; Prière est dans Pratique (masqués ici par défaut).
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids'],
+      ['shorts', 'Shorts', true], ['series', 'Séries', true], ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true]],
   },
   side: {
-    label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur), en cinq groupes ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
-    groups: [['discover', 'Découvrir'], ['space', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
+    label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur) : un groupe par destination ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
+    groups: [['catalogue', 'Catalogue'], ['space', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
-      discover: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['collections', 'Collections'], ['quran', 'Coran'], ['audyn', 'Audyn'], ['events', 'Événements en direct'], ['ramadan', 'Ramadan'], ['prayer', 'Prière'], ['books', 'Ouvrages'], ['channels', 'Chaînes'], ['shorts', 'Shorts']],
-      space: [['learning', 'Aujourd’hui'], ['quranlearn', 'Coran'], ['athkar', 'Adhkar'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan']],
+      catalogue: [['catalogue', 'Vidéos'], ['series', 'Séries'], ['shorts', 'Shorts'], ['collections', 'Collections'], ['channels', 'Chaînes'], ['audyn', 'Audio'], ['books', 'Ouvrages'], ['events', 'En direct'], ['home', 'Accueil', true]],
+      space: [['learning', 'Aujourd’hui'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan'], ['quranlearn', 'Coran', true]],
+      pratique: [['prayer', 'Prière'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['ramadan', 'Ramadan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
       account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],
       manage: [['studio', 'Studio'], ['admin', 'Administration']],
@@ -42,8 +44,8 @@ export const MENUS = {
   },
   bar: {
     label: 'Barre du bas (téléphone)', hint: `La barre de ${BAR_MAX} liens en bas de l’écran du téléphone, pour les membres connectés.`,
-    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['series', 'Séries'], ['learning', 'Apprendre'], ['kids', 'Mejliss Kids'],
-      ['library', 'Ma bibliothèque', true], ['account', 'Mon compte', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true], ['shorts', 'Shorts', true]],
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'],
+      ['kids', 'Mejliss Kids', true], ['series', 'Séries', true], ['account', 'Mon compte', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true], ['shorts', 'Shorts', true]],
   },
   footer: {
     label: 'Liens du pied de page', hint: 'Les trois liens légaux sont obligatoires : on peut les déplacer ou les renommer, pas les retirer.',

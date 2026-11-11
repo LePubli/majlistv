@@ -15,6 +15,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RouteGate from '../components/RouteGate';
 import MemberShell from '../components/MemberShell';
+import SectionTabs from '../components/SectionTabs';
 import StatsBeacon from '../components/StatsBeacon';
 import ErrorReporter from '../components/ErrorReporter'; // étape 39 : suivi des erreurs du navigateur
 import ResponsiveTables from '../components/ResponsiveTables';
@@ -91,7 +92,7 @@ export default async function RootLayout({ children }) {
           <TopBar />
           <Header />
           {/* Zone de page d'au moins un écran : le pied de page reste sous la ligne de flottaison pendant le chargement des données (sinon il « saute » vers le bas : décalage de mise en page, CLS) */}
-          <div className="page-shell"><MemberShell><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell></div>
+          <div className="page-shell"><MemberShell><SectionTabs /><RouteGate><PageSlots slots={slots}>{children}</PageSlots></RouteGate></MemberShell></div>
           <Footer />
           <EditMode />
         </Providers>

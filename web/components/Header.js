@@ -10,7 +10,8 @@ import PrayerPill from './PrayerPill';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
 import { LOCALES } from '../lib/locales';
-import { memberShellOn } from '../lib/shell';
+import { sideMenuOn } from '../lib/shell';
+import { sectionOf } from './SectionTabs';
 import NavLink from './NavLink';
 import { defaultList, resolveMenu, audienceOk, deviceClass, withHid } from '../lib/menus';
 import { MenuDropdown, MenuAccordion, MenuLink } from './MenuDropdown';
@@ -130,7 +131,9 @@ function MainHeader() {
   }, [menu]);
   // Studio et administration ont leur propre menu (components/StudioShell.js).
   if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
-  const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) ? 'page' : undefined);
+  // Une destination reste allumée sur toutes les pages de sa rubrique (ex. « Catalogue » sur /series, « Pratique » sur /coran).
+  const SECTION_HOME = { '/catalogue': 'catalogue', '/pratique': 'pratique' };
+  const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) || (SECTION_HOME[href] && sectionOf(path) === SECTION_HOME[href]) ? 'page' : undefined);
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
   // Menu principal : éléments d'origine (avec leurs conditions) ; l'en-tête (zones) se règle dans Admin → Pages.
@@ -144,6 +147,7 @@ function MainHeader() {
     collections: { key: 'collections', href: '/collections', label: t('colNav'), icon: ICONS.series, on: feat('collections') },
     books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
     learning: { key: 'learning', href: '/learning', label: t('navLearn'), icon: ICONS.learn, on: feat('learning') },
+    pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), icon: ICONS.prayer, on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },
     library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: Boolean(user) && (feat('favorites') || feat('lists')) },
     kids: { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.price, on: feat('kids'), kids: true },
   };
@@ -210,6 +214,8 @@ function MainHeader() {
       // Étape 23a : la pastille « Prochaine prière » se place juste à côté de la loupe, où que l'administrateur la mette.
       case 'search': return (
         <span className="hd-search-wrap">
+          {/* Téléphone : Kids n'est plus dans la barre du bas (elle porte les cinq destinations) ; il garde son bouton coloré ici. */}
+          {feat('kids') && <Link href="/kids" className="hd-kids hd-kids-m">{t('kdNavShort')}</Link>}
           <PrayerPill />
           <button type="button" className="hd-icon hd-round" onClick={() => setSearch(true)} aria-label={t('hmSearch')} aria-haspopup="dialog">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
@@ -226,7 +232,7 @@ function MainHeader() {
   };
   const zone = (name) => (hz[name] || []).map((el) => { const n = renderEl(el); return n ? <div key={el.id} className={`hd-el ${deviceClass(el.show)}`.trim()}>{n}</div> : null; });
   return (
-    <header className={`header hd${memberShellOn(path, user, null) ? ' hd-side' : ''}`}>
+    <header className={`header hd${sideMenuOn(path, user, null) ? ' hd-side' : ''}`}>
       <button type="button" className="hd-icon hd-burger" onClick={() => setDrawer(true)} aria-label={t('hmMenu')} aria-expanded={drawer}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
       </button>

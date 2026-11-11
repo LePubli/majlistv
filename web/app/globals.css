@@ -3930,3 +3930,34 @@ body:has(.qpl-bar) .aw-bar { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .ms.col .ms-side a.ms-sub { padding-inline-start: 0; }
 
 /* ---- Admin → Menus ---- */
+
+/* ---- Navigation de novembre 2026 (lots D, E, F) ---- */
+/* Onglets d'une destination (Catalogue, Pratique) : pastilles sur une ligne, qui défilent au doigt sur téléphone. */
+.sec-tabs { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 14px var(--gutter) 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.sec-tabs::-webkit-scrollbar { display: none; }
+.sec-tabs a { flex: 0 0 auto; min-height: 38px; display: inline-flex; align-items: center; padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.sec-tabs a:hover { border-color: var(--accent); }
+.sec-tabs a.on { background: var(--gold-soft); border-color: var(--accent); font-weight: 700; }
+.sec-tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Page « Pratique » */
+.pq-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+.pq-hub-card { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: var(--radius, 16px); border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); text-decoration: none; }
+.pq-hub-card:hover { border-color: var(--accent); }
+.pq-hub-card b { font-size: 1.1rem; }
+.pq-hub-card span { color: var(--muted); font-size: 14px; }
+.pq-hub-card i { font-style: normal; color: var(--accent); font-weight: 700; font-size: 14px; margin-top: 6px; }
+[dir="rtl"] .pq-hub-card i { direction: rtl; }
+/* Menu latéral en accordéon : le titre d'un groupe est un bouton. */
+button.ms-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: none; border: 0; cursor: pointer; text-align: start; font-family: inherit; min-height: 32px; padding: 6px 12px; border-radius: 8px; }
+button.ms-title:hover { color: var(--text); }
+button.ms-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-135deg); margin-inline-end: 4px; flex: 0 0 auto; }
+.ms-group.shut button.ms-title i { transform: rotate(45deg); }
+.ms.col button.ms-title { display: none; }
+/* Bouton Kids de l'en-tête sur téléphone (il n'est plus dans la barre du bas). */
+.header a.hd-kids-m { display: none; }
+@media (max-width: 900px) {
+  .header a.hd-kids-m { display: inline-flex; align-items: center; min-height: 34px; padding: 4px 12px; border-radius: 999px; color: #fff; font-family: var(--font-kids); font-weight: 600; font-size: 14px; text-decoration: none; background: linear-gradient(90deg, #7c4dff, #ff5e9c, #ffb02e); }
+}
+/* Très petit téléphone : le nom à côté de l'emblème cède la place au bouton Kids et à la recherche. */
+@media (max-width: 380px) { .header.hd .logo .logo-word { display: none; } }

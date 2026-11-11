@@ -44,3 +44,34 @@ assert.match(read('components/MemberShell.js'), /learning: \{ key: 'learning', h
 assert.ok(i18n.includes('    lgGQuran: "Coran et adhkar",'), 'une seule orthographe : adhkar');
 assert.ok(!/"[^"\n]*\bathkar\b[^"\n]*",$/im.test(i18n), 'plus de « athkar » dans les textes affichés');
 console.log('navigation lots A B C OK');
+
+// --- Lots D, E, F : cinq destinations, onglets de rubrique, menu latéral par destination, lecteur pleine largeur
+{
+  const nav = read('lib/navcfg.js');
+  assert.match(nav, /builtin: \[\['home', 'Accueil'\], \['catalogue', 'Catalogue'\], \['learning', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\], \['kids', 'Mejliss Kids'\],\n\s+\['shorts', 'Shorts', true\]/, 'menu du haut : cinq destinations puis Kids');
+  assert.match(nav, /builtin: \[\['home', 'Accueil'\], \['catalogue', 'Catalogue'\], \['learning', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\],\n\s+\['kids', 'Mejliss Kids', true\]/, 'barre du téléphone : les mêmes cinq, Kids masqué');
+  assert.match(nav, /groups: \[\['catalogue', 'Catalogue'\], \['space', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\], \['account', 'Mon compte'\], \['manage', 'Gestion'\]\]/, 'menu latéral : un groupe par destination');
+  assert.equal(nav, read('../api/src/navcfg.js'), 'navcfg identique côté API');
+  // aucune ancienne clé perdue (un menu enregistré dans Admin → Menus peut encore s'en servir)
+  for (const k of ['home', 'catalogue', 'series', 'collections', 'quran', 'audyn', 'events', 'ramadan', 'prayer', 'books', 'channels', 'shorts', 'learning', 'quranlearn', 'athkar', 'quiz', 'practice', 'bilan']) assert.ok(nav.includes(`['${k}', `), `clé ${k} toujours connue`);
+
+  const st = read('components/SectionTabs.js');
+  for (const p of ['/catalogue', '/series', '/shorts', '/collections', '/chaines', '/audyn', '/books', '/events', '/pratique', '/priere', '/coran', '/adhkar', '/ramadan']) assert.ok(st.includes(`'${p}'`), `onglet ${p}`);
+  assert.match(st, /SECTION_PATHS\[s\]\.includes\(path\)/, 'barre seulement sur les pages de liste (adresse exacte)');
+  assert.match(read('app/layout.js'), /<MemberShell><SectionTabs \/><RouteGate>/, 'onglets posés au-dessus de chaque page');
+  for (const f of ['app/pratique/page.js', 'app/adhkar/page.js']) assert.ok(fs.existsSync(join(web, f)), `${f} existe`);
+  assert.match(read('app/adhkar/page.js'), /<Athkar \/>/, '/adhkar montre le même écran que l’onglet d’Apprendre');
+  for (const k of ['stVideos', 'stAudio', 'stLive', 'stLabel', 'pqHub', 'pqHubIntro', 'pqHubPrayerTx', 'pqHubQuranTx', 'pqHubAthkarTx', 'pqHubRamadanTx', 'pqHubOpen', 'pqHubLogin', 'msLibShort', 'kdNavShort']) has3(k);
+
+  const sh = read('lib/shell.js');
+  assert.match(sh, /WATCH_PATH = \/\^\\\/\(conferences\|talks\)\\\/\[\^\/\]\+\\\/\?\$\//, 'page d’une vidéo reconnue');
+  const ms = read('components/MemberShell.js');
+  assert.match(ms, /if \(!member \|\| WATCH_PATH\.test\(path \|\| '\/'\)\) return <>\{children\}\{bar\}<\/>;/, 'vidéo : pas de menu latéral, la barre du bas reste');
+  assert.match(ms, /aria-expanded=\{isOpen\(g\)\}/, 'groupes du menu latéral repliables');
+  assert.match(ms, /athkar: \{ key: 'athkar', href: '\/adhkar'/, 'Adhkar pointe vers sa page');
+  const hd2 = read('components/Header.js');
+  assert.match(hd2, /pratique: \{ key: 'pratique', href: '\/pratique'/, 'Pratique dans le menu du haut');
+  assert.match(hd2, /className="hd-kids hd-kids-m"/, 'bouton Kids dans l’en-tête du téléphone');
+  assert.match(read('app/globals.css'), /@media \(max-width: 900px\) \{\s+\.header a\.hd-kids-m \{ display: inline-flex;/, 'bouton Kids visible sur téléphone seulement');
+  console.log('navigation lots D E F OK');
+}

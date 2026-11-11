@@ -8325,3 +8325,37 @@ bash /root/verify-deploy.sh
 **Debug.** Une entrée du Studio ou de l'Admin introuvable : elle a changé de groupe, pas d'adresse ; Ctrl + K dans l'Admin la retrouve par son nom.
 
 **Tests.** `web/tests/test_nav_lots_web.mjs` (les 31 écrans de l'Admin présents une seule fois, groupes du Studio, en-tête Kids, vocabulaire).
+
+
+## Navigation — lots D, E, F (11/11, audit étape 5)
+
+**Ce que c'est.** Le site public passe à cinq destinations, les mêmes en haut de l'écran sur ordinateur et dans la barre du bas sur téléphone : **Accueil · Catalogue · Apprendre · Pratique · Ma bibliothèque**. Kids garde son bouton coloré (dans l'en-tête, y compris sur téléphone) ; le compte reste sous l'avatar.
+
+**Lot D — Catalogue.** Vidéos, Séries, Shorts, Collections, Chaînes, Audio, Ouvrages et En direct sont les onglets d'une même rubrique : une barre d'onglets en haut de chacune de ces pages (`web/components/SectionTabs.js`, posée dans `app/layout.js`). Chaque page garde son adresse. La barre n'apparaît que sur les pages de liste, pas sur une fiche. Un onglet disparaît si sa fonction est coupée ou s'il n'y a pas de contenu (séries, ouvrages).
+
+**Lot E — Pratique.** Nouvelle page `/pratique` : le bloc « Aujourd'hui » (membre connecté) et une carte par geste — Prière (`/priere`), Coran (`/coran`), Adhkar, Ramadan (`/ramadan`). Les adhkar ont leur adresse, `/adhkar` (même écran que l'onglet d'Apprendre ; `/learning?tab=athkar` reste valable). Mêmes onglets de rubrique sur ces cinq pages.
+
+**Lot F — menu latéral et lecteur.** Le menu latéral du membre a un groupe par destination (Catalogue, Catégories, Apprendre, Pratique, Ma bibliothèque, Mon compte, Gestion). Seul le groupe de la page ouverte est déplié ; un clic sur un titre ouvre ou ferme son groupe. Les liens en double avec le menu du haut ont disparu. Sur la page d'une vidéo (`/conferences/…`), il n'y a plus de menu latéral : le lecteur prend toute la largeur ; la barre du bas du téléphone reste.
+
+**Téléphone (site).** Barre du bas : Accueil · Catalogue · Apprendre · Pratique · Bibliothèque. Kids est un bouton coloré dans l'en-tête. Sous 380 px de large, le nom « Mejliss TV » à côté de l'emblème s'efface pour laisser la place.
+
+**Ce qui ne change pas.** Toutes les adresses. Un menu créé dans Admin → Menus et affecté à un emplacement remplace toujours le menu d'origine (toutes les anciennes clés restent connues ; nouvelle clé `pratique`). Les onglets de la page Apprendre.
+
+**Écarts et points ouverts.**
+- La page Apprendre garde son onglet « Coran et adhkar » (plan de lecture et adhkar) : le Coran et les adhkar sont donc accessibles des deux côtés. À décider : les retirer d'Apprendre.
+- Les catégories restent dans le menu latéral (décision du 16/10), pas en filtres dans la page.
+- L'application mobile n'est pas encore alignée (lot G).
+
+**Vérifié.** Captures en 1440, 390 et 360 px, en français et en arabe, visiteur et membre : accueil, catalogue, séries, shorts, pratique, prière, coran, adhkar, apprendre, bibliothèque, page d'une vidéo ; aucun débordement horizontal. Non vérifié : vrai téléphone, un compte sans abonnement, un menu personnalisé affecté.
+
+**Déploiement.** DockPanel → Redeploy : majlistv-api, puis majlistv-web. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Revenir à l'ancien menu du haut sans redéployer : Admin → Menus, créer un menu « comme aujourd'hui », y remettre les liens voulus (Séries, Shorts…) et l'affecter à « Site — menu du haut ».
+
+**Tests.** `web/tests/test_nav_lots_web.mjs` (lots A à F), `api/tests/test_menus.py`, `api/tests/test_layout.py`.

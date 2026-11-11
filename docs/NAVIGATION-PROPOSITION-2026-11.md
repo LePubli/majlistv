@@ -37,4 +37,5 @@ A à C : sans changement d'adresse, risque faible. D à G : risque moyen.
 
 ## Avancement
 - Lots A, B, C livrés le 11/11 (détail : `docs/historique/ETAPES.md`, « Navigation — lots A, B, C »). Écart : sous-titres et corrections côte à côte, pas encore fusionnés.
-- Restent D, E, F, G, chacun sur « go ».
+- Lots D, E, F livrés le 11/11 (« Navigation — lots D, E, F »). Point ouvert : Coran et adhkar encore présents dans l'onglet « Coran et adhkar » d'Apprendre.
+- Reste G (application mobile : mêmes cinq onglets, compte en haut).

@@ -24,7 +24,8 @@ assert.match(read('../app/coran/[n]/page.js'), /dir="rtl"/, 'texte arabe de droi
 assert.match(read('../components/QuranAdmin.js'), /raw\.githubusercontent\.com\/risan\/quran-json\/[0-9a-f]{40}\//, 'Coran complet : adresses figées sur une version précise');
 assert.match(read('../app/coran/[n]/page.js'), /qr-notes/, 'notes de bas de page');
 console.log('web quran OK');
-assert.match(read('../lib/navcfg.js'), /space: \[\['learning', 'Aujourd’hui'\], \['quranlearn', 'Coran'\]/, 'raccourci Coran dans l\'espace Apprendre');
+assert.match(read('../lib/navcfg.js'), /pratique: \[\['prayer', 'Prière'\], \['quran', 'Coran'\]/, 'Coran dans la rubrique Pratique');
+assert.match(read('../lib/navcfg.js'), /\['quranlearn', 'Coran', true\]/, 'raccourci vers l\'onglet Coran d\'Apprendre gardé (masqué par défaut)');
 assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/learning\?tab=quran'/, 'raccourci vers l\'onglet Coran d\'Apprendre');
 console.log('web quran shortcut OK');
 // 45B2 : récitation, mot à mot, tajwid
