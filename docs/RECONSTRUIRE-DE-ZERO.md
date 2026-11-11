@@ -104,6 +104,7 @@ SETTINGS_KEY=<la même que l'ancienne installation>
 PRACTICE_KEY=<la même que l'ancienne installation>
 APP_NAME=Mejliss TV
 CORS_ORIGIN=https://majlisstv.le-publicitaire.fr
+TRUST_PROXY=loopback,uniquelocal,<adresse IP publique du serveur>   # le site appelle l'API par son adresse publique : sans cela, tous ses visiteurs portent l'adresse du serveur (limites de débit communes)
 ADMIN_EMAIL=<votre e-mail>
 ADMIN_PASSWORD=<mot de passe long>      # utilisé seulement si aucun administrateur n'existe encore
 S3_ENDPOINT=https://s3-majlisstv.le-publicitaire.fr

@@ -105,6 +105,12 @@ if docker inspect "$API_C" >/dev/null 2>&1; then
   # Quelle adresse l'API voit-elle pour les visiteurs ? (une seule adresse privée pour tous = limites de débit communes à tous)
   ips=$(docker logs --tail 3000 "$API_C" 2>&1 | grep -o '"remoteAddress":"[^"]*"' | sort | uniq -c | sort -rn | head -5 | awk '{print $2" ×"$1}' | sed 's/"remoteAddress"://;s/"//g' | tr '\n' ' ')
   info "adresses de visiteurs retenues par l'API (3 000 dernières lignes du journal) : ${ips:-aucune} — une seule adresse privée (172.x, 10.x) pour presque tout = tous les visiteurs partagent les mêmes limites"
+  # Le site appelle-t-il l'API par son adresse publique ? Alors l'adresse du serveur doit être de confiance, sinon elle remplace celle des visiteurs.
+  wapi=$(docker exec "$WEB_C" printenv API_URL 2>/dev/null)
+  case "$wapi" in https://*|http://*.*)
+    if [ -n "${myip:-}" ] && ! echo "$tp" | grep -q "$myip"; then warn "le site appelle l'API par son adresse publique ($wapi) : régler TRUST_PROXY=loopback,uniquelocal,$myip sur majlistv-api, sinon les visiteurs du site portent tous l'adresse du serveur"
+    else ok "adresse du serveur déclarée de confiance (TRUST_PROXY) : l'adresse des visiteurs du site arrive jusqu'à l'API"; fi ;;
+  esac
   code=$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://$API/admin/users"); [ "$code" = 401 ] && ok "API : /admin/users sans connexion → 401" || warn "API : /admin/users sans connexion → $code (401 attendu)"
   code=$(curl -s -m 15 -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -d '{"email":"controle@example.invalid","password":"x"}' "https://$API/auth/login"); case "$code" in 401|429) ok "API : connexion avec un compte inconnu → $code";; *) warn "API : connexion avec un compte inconnu → $code";; esac
 else warn "conteneur $API_C introuvable"; fi

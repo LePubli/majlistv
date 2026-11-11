@@ -26,4 +26,15 @@ assert.equal(await ip('8.8.8.8', '1.1.1.1'), '8.8.8.8', 'connexion directe : en-
 // Sans en-tête (appel interne) : adresse de la connexion.
 assert.equal(await ip('172.17.0.5'), '172.17.0.5', 'sans en-tête : adresse de la connexion');
 await app.close();
+
+// Site qui appelle l'API par son adresse PUBLIQUE (API_URL = https://api-…) : la requête ressort par l'adresse publique du
+// serveur, que nginx ajoute à la fin. Il faut alors la déclarer de confiance : TRUST_PROXY=loopback,uniquelocal,<adresse du serveur>.
+const parse = (v) => v.split(',').map((s) => s.trim()).filter(Boolean); // même lecture que config.js
+const app2 = Fastify({ trustProxy: parse('loopback, uniquelocal, 82.22.77.159') });
+app2.get('/ip', async (req) => ({ ip: req.ip }));
+const ip2 = async (xff) => (await app2.inject({ method: 'GET', url: '/ip', remoteAddress: '172.17.0.1', headers: { 'x-forwarded-for': xff } })).json().ip;
+assert.equal(await ip2('92.184.147.243, 82.22.77.159'), '92.184.147.243', 'site par l’adresse publique : adresse du visiteur');
+assert.equal(await ip2('9.9.9.9, 92.184.147.243, 82.22.77.159'), '92.184.147.243', 'idem, fausse adresse annoncée ignorée');
+assert.equal(await ip2('82.22.77.159, 92.184.147.243'), '92.184.147.243', 'un visiteur qui annonce l’adresse du serveur ne gagne rien');
+await app2.close();
 console.log('trust proxy OK');
