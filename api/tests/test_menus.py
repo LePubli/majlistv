@@ -46,7 +46,9 @@ ok(requests.post(B + "/admin/menus", headers=ADM, json={"name": f"Autre {tag}", 
 # --- contenus à relier
 # Une conférence créée ici, publiée : prendre « la première venue » donnait parfois un brouillon laissé par un autre test (lien alors masqué).
 tid = requests.post(B + "/talks", headers=ADM, json={"title": f"Conf menu {tag}", "language": "fr", "translateTo": [], "videoUrl": "https://youtu.be/" + (tag + "abcdefghijk")[:11], "rightsConfirmed": True, "publication": "published"}).json()["id"]
+requests.get(B + f"/seo/talks/{tid}")  # l'adresse lisible d'une conférence est créée à sa première lecture publique
 cur.execute("select id, slug from talks where id=%s", (tid,)); t = cur.fetchone()
+ok(bool(t[1]), "conférence de test : adresse lisible créée")
 tid, tslug = str(t[0]), t[1]
 cur.execute("insert into site_pages (kind, path, title, published, live) values ('custom', %s, %s, '{}'::jsonb, true) on conflict do nothing", (f"/p/menu-{tag}", f"Page menu {tag}"))
 cur.execute("insert into site_pages (kind, path, title, published, live) values ('custom', %s, %s, '{}'::jsonb, false) on conflict do nothing", (f"/p/brouillon-{tag}", f"Brouillon {tag}"))
