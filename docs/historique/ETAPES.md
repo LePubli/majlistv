@@ -8295,3 +8295,33 @@ cd /root && curl -fsSL https://raw.githubusercontent.com/LePubli/majlistv/main/o
 - Revenir à l'ancien comportement : variable `TRUST_PROXY=loopback` sur majlistv-api, puis Redeploy.
 
 **Complément du 11/11 au soir (relevé du serveur par Epok : 40 OK, 0 attention).** Le site appelle l'API par son adresse publique (`API_URL=https://api-majlisstv.le-publicitaire.fr`) : la requête ressort par l'adresse publique du serveur (82.22.77.159), que nginx ajoute à la fin de `X-Forwarded-For` ; l'API retenait donc l'adresse du serveur pour tous les visiteurs du site. Réglage à poser sur majlistv-api (DockPanel → Variables), puis Redeploy de l'API : `TRUST_PROXY=loopback,uniquelocal,82.22.77.159`. Aucun changement de code ; test ajouté dans `api/tests/test_trust_proxy.mjs` ; `security-check.sh` signale le cas. À refaire si l'adresse du serveur change.
+
+
+## Navigation — lots A, B, C (11/11, audit étape 5)
+
+**Décisions d'Epok (11/11).** Cinq destinations partout : Accueil · Catalogue · Apprendre · Pratique · Bibliothèque (le mot « Catalogue » est gardé, pas « Explorer ») ; rubrique « Pratique » séparée d'« Apprendre » ; Kids sort de la barre du bas sur téléphone (bouton coloré en haut) ; ordre : lots A, B, C puis D à G. Proposition complète : `docs/NAVIGATION-PROPOSITION-2026-11.md`.
+
+**Lot A — Studio et Admin rangés par métier.** Aucun écran retiré, aucune adresse changée.
+- Studio : Tableau de bord · **Publication** (Contenus, Audyn, Événements en direct, Shorts) · **Production** (Sous-titres, Corrections de sous-titres, Audio et doublage, Éditeur, Activité) · **Audience** (Données analytiques, Modération) · **Réglages** (Paramètres, Références). Les entrées ajoutées par un module se rangent d'après leur adresse (`STUDIO_GROUP_OF` dans `web/components/StudioShell.js`) ; une entrée inconnue va dans « Publication ». Le menu du modérateur ne change pas.
+- Admin : **Pilotage** (Tableau de bord, Utilisateurs, Statistiques, Chiffre d'affaires) · **Catalogue** (Catégories et formats, Intervenants, Veille) · **Pratique et saisons** (Coran, Adhkar, Ramadan, Saisons, Vendredi, Rubriques Kids) · **Croissance** (Publicités, Tests A/B, Cartes cadeaux, Parrainages, Tarifs par pays, E-mails de cycle de vie) · **Site** (Apparence, Pages, Menus, Textes, Pages légales, Fonctions, Modules, Paramètres) · **Technique** (Santé du serveur, Erreurs, Questions IA, Journal des actions). La recherche d'écran (Ctrl + K) suit.
+- Écart avec la proposition : « Sous-titres » et « Corrections de sous-titres » sont côte à côte, pas encore fusionnés en un écran ; Séries, Collections et Ouvrages restent où ils étaient (dans Contenus et Paramètres).
+
+**Lot B — en-tête Kids pour le parent.** Un parent connecté qui ouvre `/kids` (« Qui regarde ? », espace parents) voit l'en-tête Kids : logo Kids et un bouton « Retour au site ». Le visiteur non connecté garde l'en-tête du site (il doit pouvoir s'inscrire). L'enfant entré dans son profil garde son en-tête (sortie par le code parental). Couleurs et logos Kids inchangés.
+
+**Lot C — un seul vocabulaire dans Apprendre.** L'entrée du menu latéral qui ouvre `/learning` s'appelle « Aujourd'hui », comme l'onglet sur lequel on arrive (avant : « Mon parcours », qui est le nom d'un sous-onglet de « Vidéos »). Une seule orthographe : « adhkar » (l'onglet disait « Coran et athkar »).
+
+**Vérifié.** Captures en 1440 px et 390 px, en français et en arabe, du Studio, de l'Admin, de Kids et d'Apprendre : menus complets, aucun défilement horizontal. Non vérifié : vrai téléphone, compte modérateur et compte organisateur à l'écran (couverts par le test du code seulement).
+
+**À savoir.** En arabe, « Tests A/B » et « Menus » restent en français dans le menu de l'Admin (c'était déjà le cas).
+
+**Déploiement.** DockPanel → Redeploy : majlistv-api (une seule ligne changée, le libellé d'origine du menu), puis majlistv-web. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Une entrée du Studio ou de l'Admin introuvable : elle a changé de groupe, pas d'adresse ; Ctrl + K dans l'Admin la retrouve par son nom.
+
+**Tests.** `web/tests/test_nav_lots_web.mjs` (les 31 écrans de l'Admin présents une seule fois, groupes du Studio, en-tête Kids, vocabulaire).

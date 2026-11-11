@@ -36,6 +36,10 @@ export function studioSection(path) {
   return '';
 }
 
+// Groupe du menu pour les entrées ajoutées par les modules (audit 11/2026, lot A).
+const STUDIO_GROUP_OF = { '/studio/corrections': 'prod', '/studio/references': 'settings' };
+const STUDIO_AFTER = { '/studio/corrections': '/studio/subtitles' };
+
 export default function StudioShell({ children }) {
   const { t, user, ready, feat, locale, modUsable } = useApp();
   const path = usePathname();
@@ -87,9 +91,18 @@ export default function StudioShell({ children }) {
     ['/studio/activity', t('sdActivity'), ICONS.pulse, actCount > 0 ? String(actCount) : '', 'activity'],
     ['/studio/settings', t('sdSettings'), ICONS.gear, '', 'settings'],
   ];
+  // Audit 11/2026 (navigation, lot A) : les mêmes écrans, rangés par métier. Aucune adresse ne change.
+  //   (sans titre) Tableau de bord · Publication · Production · Audience · Réglages
+  const row = (href) => { const r = full.find((x) => x[0] === href); return [r[0], r[1], r[2], r[3]]; };
   const groups = [];
-  if (!isModOnly) groups.push({ key: 'studio', title: '', items: full.map(([h, l, i, b]) => [h, l, i, b]) });
-  if (isAdmin) groups.push({ key: 'mod', title: '', items: [['/studio/moderation', t('modNav'), ICONS.check]] });
+  if (!isModOnly) {
+    groups.push({ key: 'dash', title: '', items: [row('/studio')] });
+    groups.push({ key: 'publish', title: t('sdGrpPublish'), items: [row('/studio/contents')] });
+    groups.push({ key: 'prod', title: t('sdGrpProd'), items: [row('/studio/subtitles'), row('/studio/dubbing'), row('/studio/editor'), row('/studio/activity')] });
+    groups.push({ key: 'audience', title: t('sdGrpAudience'), items: [row(analyticsHref)] });
+    groups.push({ key: 'settings', title: t('sdGrpSettings'), items: [row('/studio/settings')] });
+  }
+  if (isAdmin) groups.find((g) => g.key === 'audience').items.push(['/studio/moderation', t('modNav'), ICONS.check]);
   if (isModOnly) {
     // Un modérateur retrouve ici ses outils d'avant : file de modération, collections, toutes les chaînes, mise en pratique.
     groups.push({ key: 'mod', title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/channel', t('chNavAll'), ICONS.users], ['/studio/practice', t('pzNav'), ICONS.list]] });
@@ -98,8 +111,14 @@ export default function StudioShell({ children }) {
   for (const l of MODULE_STUDIO_LINKS) {
     if (l.group === 'admin') continue; // les entrées d'administration passent par AdminShell
     if (l.group === 'settings') continue; // les entrées « Paramètres » (ex. Stockage et archivage) sont dans Studio → Paramètres
-    const g = groups.find((x) => x.key === (l.group === 'mod' ? 'mod' : 'studio'));
-    if (g && (!l.roles || l.roles.includes(user.role))) g.items.push([l.href, t(l.label), ICONS[l.icon] || ICONS.doc]);
+    // Place d'une entrée de module : son groupe d'après son adresse ; une entrée inconnue va dans « Publication ».
+    const key = l.group === 'mod' ? (isModOnly ? 'mod' : 'audience') : (isModOnly ? '' : (STUDIO_GROUP_OF[l.href] || 'publish'));
+    const g = groups.find((x) => x.key === key);
+    if (!g || (l.roles && !l.roles.includes(user.role))) continue;
+    const item = [l.href, t(l.label), ICONS[l.icon] || ICONS.doc];
+    // Les corrections de sous-titres se rangent juste après « Sous-titres ».
+    const after = STUDIO_AFTER[l.href] ? g.items.findIndex(([h]) => h === STUDIO_AFTER[l.href]) : -1;
+    if (after >= 0) g.items.splice(after + 1, 0, item); else g.items.push(item);
   }
   // Une entrée disparaît si sa fonction est coupée ou si la partie web de son module est absente.
   const visible = (href) => {

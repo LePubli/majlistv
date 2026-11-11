@@ -92,7 +92,8 @@ export default function MemberShell({ children }) {
     books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
     channels: { key: 'channels', href: '/chaines', label: t('spTitle'), icon: ICONS.people, on: feat('channels') },
     shorts: { key: 'shorts', href: '/shorts', label: t('shrTitle'), icon: ICONS.shorts, on: feat('shorts') },
-    learning: { key: 'learning', href: '/learning', label: t('msPath'), icon: ICONS.learn, on: learn },
+    // Audit 11/2026 (lot C) : même mot que l'onglet sur lequel on arrive (« Aujourd'hui »), et non « Mon parcours » (qui est un sous-onglet de « Vidéos »).
+    learning: { key: 'learning', href: '/learning', label: t('lgGToday'), icon: ICONS.learn, on: learn },
     quiz: { key: 'quiz', href: '/learning?tab=rev', label: t('msQuiz'), icon: ICONS.bilan, on: learn && feat('revision') },
     practice: { key: 'practice', href: '/learning?tab=commit', label: t('msPractice'), icon: ICONS.note, on: learn },
     bilan: { key: 'bilan', href: '/learning?tab=bilan', label: t('msBilan'), icon: ICONS.tag, on: learn && feat('selfcheck') },

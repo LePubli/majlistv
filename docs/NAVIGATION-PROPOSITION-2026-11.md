@@ -1,4 +1,4 @@
-# Navigation et parcours — proposition du 11/11/2026 (audit, étape 5) — À VALIDER PAR EPOK, aucun code écrit
+# Navigation et parcours — proposition du 11/11/2026 (audit, étape 5) — VALIDÉE par Epok le 11/11
 
 Page de présentation (constats, écrans avant / après, lots, décisions) : https://claude.ai/artifact/2ajhEdcydv2Pq2zgQdmpmU
 
@@ -31,3 +31,10 @@ A à C : sans changement d'adresse, risque faible. D à G : risque moyen.
 
 ## Décisions attendues
 1. Les cinq destinations ? 2. « Explorer » ou « Catalogue » ? 3. « Pratique » séparée d'« Apprendre » ? 4. Kids hors de la barre du bas sur téléphone ? 5. Par quel lot commencer (recommandé : A, B, C) ?
+
+## Décisions d'Epok (11/11 au soir)
+1. Cinq destinations : oui. 2. Le mot **« Catalogue »** est gardé (pas « Explorer ») : destinations = Accueil · Catalogue · Apprendre · Pratique · Bibliothèque. 3. Rubrique « Pratique » séparée : oui. 4. Kids hors de la barre du bas sur téléphone : oui. 5. Ordre : A, B, C puis D à G.
+
+## Avancement
+- Lots A, B, C livrés le 11/11 (détail : `docs/historique/ETAPES.md`, « Navigation — lots A, B, C »). Écart : sous-titres et corrections côte à côte, pas encore fusionnés.
+- Restent D, E, F, G, chacun sur « go ».

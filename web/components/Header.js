@@ -66,9 +66,30 @@ function KidHeader() {
   );
 }
 
+// Audit 11/2026 (navigation, lot B) — un parent connecté qui ouvre l'espace Kids (« Qui regarde ? », espace parents) voit
+// l'en-tête de Kids, pas le menu du site adulte : le logo Kids et un seul lien de retour. Un visiteur non connecté garde
+// l'en-tête du site (il doit pouvoir s'inscrire) ; un enfant entré dans son profil a son propre en-tête (KidHeader, sortie par code).
+function KidsParentHeader() {
+  const { appName, t } = useApp();
+  return (
+    <header className="header kd-header">
+      <Link href="/kids" className="logo" aria-label={appName}>
+        <img className="logo-emblem" src="/brand/emblem-s.png" alt="" width="37" height="40" />
+        <span className="kd-brand"><span className="kd-brand-name">{appName}</span> <KidsWord /></span>
+      </Link>
+      <nav aria-label={t('mainNav')}>
+        <Link href="/" className="btn ghost kd-back">{t('kdBackSite')}</Link>
+      </nav>
+    </header>
+  );
+}
+
 export default function Header() {
-  const { kid } = useApp();
-  return kid ? <KidHeader /> : <MainHeader />;
+  const { kid, user, ready } = useApp();
+  const path = usePathname();
+  if (kid) return <KidHeader />;
+  if (ready && user && path && path.startsWith('/kids')) return <KidsParentHeader />;
+  return <MainHeader />;
 }
 
 const Ico = ({ d, size = 22 }) => (
