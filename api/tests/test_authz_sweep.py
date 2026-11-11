@@ -5,12 +5,13 @@ Les routes sont lues dans le code (app.get / post / put / patch / delete), puis 
   - en simple membre : toute route /admin, /studio, /moderation doit répondre 403 ;
   - en organisateur et en modérateur : toute route /admin doit répondre 403 ;
   - sans connexion, toute écriture (POST / PUT / PATCH / DELETE) doit répondre 401, sauf la liste connue des écritures publiques.
-Une route d'un module désactivé répond 404 avant tout (liste MODULE_OFF) : acceptée telle quelle.
+Une route d'un module désactivé répond 404 avant tout contrôle : le test ACTIVE donc tous les modules le temps du
+balayage (puis remet chacun dans son état), pour que le contrôle d'accès de chaque route soit réellement exercé.
 Une nouvelle route oubliée sans contrôle d'accès fait donc échouer ce test.
 
     python3 api/tests/test_authz_sweep.py        (API de test sur :3055, base sur :5544)
 """
-import os, re, sys, glob, uuid
+import os, re, sys, glob, uuid, atexit
 import psycopg2, requests
 
 B = "http://127.0.0.1:3055"
@@ -42,9 +43,17 @@ def call(method, path, headers):
 
 admin_like = lambda p: p.startswith("/admin")
 back_like = lambda p: p.startswith("/admin") or p.startswith("/studio") or "/studio/" in p or p.startswith("/moderation")
-# Modules désactivés par défaut : leurs routes répondent 404 (module éteint) avant le contrôle d'accès.
-MODULE_OFF = ("/admin/revenue", "/studio/revenue", "/studio/storage")
-off = lambda p: p.startswith(MODULE_OFF)
+# Tous les modules sont activés pour le balayage (un module éteint répond 404 avant le contrôle d'accès), puis remis en l'état.
+ADM = {"authorization": "Bearer " + requests.post(B + "/auth/login", json={"email": os.environ.get("ADMIN_EMAIL", "admin@test.local"), "password": os.environ.get("ADMIN_PASSWORD", "AdminPassw0rd-test")}).json()["token"]}
+mods = lambda: requests.get(B + "/admin/modules", headers=ADM).json()["modules"]
+was_off = [m["id"] for m in mods() if m["status"] != "on"]
+def switch(mid, on): return requests.put(B + f"/admin/modules/{mid}", headers=ADM, json={"enabled": on}).status_code
+atexit.register(lambda: [switch(mid, False) for mid in reversed(was_off)])
+for _ in range(4):  # plusieurs passes : un module peut en demander un autre
+    for mid in [m["id"] for m in mods() if m["status"] != "on"]: switch(mid, True)
+still_off = [m["id"] for m in mods() if m["status"] != "on"]
+ok(not still_off, f"tous les modules activés pour le balayage (restent éteints : {still_off})")
+off = lambda p: False
 # Écritures ouvertes sans connexion, voulues (chacune a sa propre protection : limite de débit, signature, jeton, validation).
 PUBLIC_WRITES = {
     ("POST", "/auth/register"), ("POST", "/auth/login"), ("POST", "/auth/forgot"), ("POST", "/auth/reset"), ("POST", "/auth/2fa/verify"),
