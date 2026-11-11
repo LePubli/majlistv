@@ -19,7 +19,7 @@ import StatsBeacon from '../components/StatsBeacon';
 import ErrorReporter from '../components/ErrorReporter'; // étape 39 : suivi des erreurs du navigateur
 import ResponsiveTables from '../components/ResponsiveTables';
 import SkipLink from '../components/SkipLink';
-import { DIR, getLocale } from '../lib/i18n';
+import { DIR, getLocale } from '../lib/locales';
 import { seoSite } from '../lib/seo';
 import { siteTheme, themeBg } from '../lib/theme';
 import { dictFor } from '../lib/texts';

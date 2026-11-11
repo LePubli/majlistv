@@ -1,31 +1,34 @@
 'use client';
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
-import WatchAdmin from '../../components/WatchAdmin';
-import AdsAdmin from '../../components/AdsAdmin';
-import ExperimentsAdmin from '../../components/ExperimentsAdmin';
-import MenusAdmin from '../../components/MenusAdmin';
-import HealthAdmin from '../../components/HealthAdmin';
-import ErrorsAdmin from '../../components/ErrorsAdmin';
-import AskAdmin from '../../components/AskAdmin';
-import ReferralAdmin from '../../components/ReferralAdmin';
-import PricingRegionsAdmin from '../../components/PricingRegionsAdmin';
-import SeasonsAdmin from '../../components/SeasonsAdmin';
-import FridayAdmin from '../../components/FridayAdmin';
-import AthkarAdmin from '../../components/AthkarAdmin';
-import RamadanAdmin from '../../components/RamadanAdmin';
-import QuranAdmin from '../../components/QuranAdmin';
-import LifecycleAdmin from '../../components/LifecycleAdmin';
 import { SectionHeader, SettingsHub } from '../../components/SettingsHub';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
-import AppearanceAdmin from '../../components/AppearanceAdmin';
-import ModulesAdmin from '../../components/ModulesAdmin';
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
-import TextsAdmin from '../../components/TextsAdmin';
-import PagesAdmin from '../../components/PagesAdmin';
+
+// Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
+// (avant : tous les écrans étaient téléchargés dès l'arrivée sur /admin).
+const WatchAdmin = lazy(() => import('../../components/WatchAdmin'));
+const AdsAdmin = lazy(() => import('../../components/AdsAdmin'));
+const ExperimentsAdmin = lazy(() => import('../../components/ExperimentsAdmin'));
+const MenusAdmin = lazy(() => import('../../components/MenusAdmin'));
+const HealthAdmin = lazy(() => import('../../components/HealthAdmin'));
+const ErrorsAdmin = lazy(() => import('../../components/ErrorsAdmin'));
+const AskAdmin = lazy(() => import('../../components/AskAdmin'));
+const ReferralAdmin = lazy(() => import('../../components/ReferralAdmin'));
+const PricingRegionsAdmin = lazy(() => import('../../components/PricingRegionsAdmin'));
+const SeasonsAdmin = lazy(() => import('../../components/SeasonsAdmin'));
+const FridayAdmin = lazy(() => import('../../components/FridayAdmin'));
+const AthkarAdmin = lazy(() => import('../../components/AthkarAdmin'));
+const RamadanAdmin = lazy(() => import('../../components/RamadanAdmin'));
+const QuranAdmin = lazy(() => import('../../components/QuranAdmin'));
+const LifecycleAdmin = lazy(() => import('../../components/LifecycleAdmin'));
+const AppearanceAdmin = lazy(() => import('../../components/AppearanceAdmin'));
+const ModulesAdmin = lazy(() => import('../../components/ModulesAdmin'));
+const TextsAdmin = lazy(() => import('../../components/TextsAdmin'));
+const PagesAdmin = lazy(() => import('../../components/PagesAdmin'));
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
 const SUB_LABEL = { trialing: 'Essai', active: 'Abonné', past_due: 'Paiement en retard', canceled: 'Résilié', incomplete: 'Incomplet', unpaid: 'Impayé' };
@@ -1173,33 +1176,35 @@ export default function Admin() {
   return (
     <main className="admin studio-page">
       <h1 className="studio-title">{moduleTab ? moduleTab.title : titles[tab] || titles.dashboard}</h1>
-      {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && <Dashboard />}
-      {tab === 'users' && <Users me={user.id} />}
-      {tab === 'features' && <FeaturesAdmin />}
-      {tab === 'modules' && <ModulesAdmin />}
-      {tab === 'appearance' && <AppearanceAdmin />}
-      {tab === 'texts' && <TextsAdmin />}
-      {tab === 'pages' && <PagesAdmin />}
-      {tab === 'settings' && <Settings />}
-      {tab === 'legal' && <LegalPages />}
-      {tab === 'categories' && <><Categories /><Formats /></>}
-      {tab === 'speakers' && <Speakers />}
-      {tab === 'audit' && <AuditLog />}
-      {tab === 'watch' && <WatchAdmin />}
-      {tab === 'ads' && <AdsAdmin />}
-      {tab === 'experiments' && <ExperimentsAdmin />}
-      {tab === 'menus' && <MenusAdmin />}
-      {tab === 'health' && <HealthAdmin />}
-      {tab === 'errors' && <ErrorsAdmin />}
-      {tab === 'ask' && <AskAdmin />}
-      {tab === 'referral' && <ReferralAdmin />}
-      {tab === 'seasons' && <SeasonsAdmin />}
-      {tab === 'friday' && <FridayAdmin />}
-      {tab === 'athkar' && <AthkarAdmin />}
-      {tab === 'ramadan' && <RamadanAdmin />}
-      {tab === 'quran' && <QuranAdmin />}
-      {tab === 'regions' && <PricingRegionsAdmin />}
-      {tab === 'lifecycle' && <LifecycleAdmin />}
+      <Suspense fallback={<p className="meta" role="status">Chargement…</p>}>
+        {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && <Dashboard />}
+        {tab === 'users' && <Users me={user.id} />}
+        {tab === 'features' && <FeaturesAdmin />}
+        {tab === 'modules' && <ModulesAdmin />}
+        {tab === 'appearance' && <AppearanceAdmin />}
+        {tab === 'texts' && <TextsAdmin />}
+        {tab === 'pages' && <PagesAdmin />}
+        {tab === 'settings' && <Settings />}
+        {tab === 'legal' && <LegalPages />}
+        {tab === 'categories' && <><Categories /><Formats /></>}
+        {tab === 'speakers' && <Speakers />}
+        {tab === 'audit' && <AuditLog />}
+        {tab === 'watch' && <WatchAdmin />}
+        {tab === 'ads' && <AdsAdmin />}
+        {tab === 'experiments' && <ExperimentsAdmin />}
+        {tab === 'menus' && <MenusAdmin />}
+        {tab === 'health' && <HealthAdmin />}
+        {tab === 'errors' && <ErrorsAdmin />}
+        {tab === 'ask' && <AskAdmin />}
+        {tab === 'referral' && <ReferralAdmin />}
+        {tab === 'seasons' && <SeasonsAdmin />}
+        {tab === 'friday' && <FridayAdmin />}
+        {tab === 'athkar' && <AthkarAdmin />}
+        {tab === 'ramadan' && <RamadanAdmin />}
+        {tab === 'quran' && <QuranAdmin />}
+        {tab === 'regions' && <PricingRegionsAdmin />}
+        {tab === 'lifecycle' && <LifecycleAdmin />}
+      </Suspense>
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}
     </main>
   );

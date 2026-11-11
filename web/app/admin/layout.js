@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import '../back.css'; // styles du Studio et de l'administration, chargés ici seulement (audit 11/2026)
 import AdminShell from '../../components/AdminShell';
 
 // Espace privé : jamais indexé par les moteurs de recherche.

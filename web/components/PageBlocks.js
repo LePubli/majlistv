@@ -15,7 +15,7 @@ import { useApp } from './Providers';
 import TalkCard from './TalkCard';
 import { DataBlock } from './HomeBlocks';
 import { tx, validUrl, validMedia, colorCss, videoEmbed, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
-import { DIR } from '../lib/i18n';
+import { DIR } from '../lib/locales';
 
 const media = (id) => (validMedia(id) ? `/api/pages/media/${id}` : null);
 

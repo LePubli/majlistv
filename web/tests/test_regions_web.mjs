@@ -6,9 +6,10 @@ const i18n = fs.readFileSync(new URL('../lib/i18n.js', import.meta.url), 'utf8')
 const KEYS = ['payCountry', 'payCountryPick', 'payRegionNote', 'paySepa', 'regAdmin', 'regTitle', 'regIntro', 'regName', 'regCountries', 'regPM', 'regPY', 'regPLM', 'regPLY', 'regEnabled',
   'regSave', 'regNew', 'regEdit', 'regDelete', 'regConfirmDelete', 'regNone', 'regSaved', 'regCancel', 'regLearnNote'];
 for (const lang of ['fr', 'en', 'ar']) {
-  const line = i18n.split('\n').find((l) => l.startsWith(`  ${lang}: {`));
+  // Bloc d'une langue : de « lang: { » à la fin de son objet (un texte par ligne).
+  const from = i18n.indexOf(`\n  ${lang}: {`); const line = from < 0 ? '' : i18n.slice(from, i18n.indexOf('\n  },', from));
   assert.ok(line, `langue ${lang}`);
-  for (const k of KEYS) assert.ok(new RegExp(`(^|[ ,{])${k}:`).test(line), `${lang} : clé ${k}`);
+  for (const k of KEYS) assert.ok(new RegExp(`(^|[ ,{])${k}:`, 'm').test(line), `${lang} : clé ${k}`);
 }
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 const admin = read('../app/admin/page.js');

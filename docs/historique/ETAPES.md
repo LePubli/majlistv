@@ -8196,3 +8196,51 @@ Application mobile : rien à faire (une constante inutilisée retirée).
 **Debug.** Un texte s'affiche sous forme de nom technique (ex. `mtZoomHint`) ou un élément a perdu sa mise en forme : me le signaler avec la page concernée, le texte ou le style se remet depuis l'historique Git (`git show b3c0220:web/lib/i18n.js`).
 
 **Tests.** Suite de l'API (`bash ops/ci/run-api-tests.sh`), construction du site, tests du site, `npm run check` de l'application (260 tests).
+
+
+## Audit de novembre 2026 — étape 3 : optimisations (11/11)
+
+**Ce que c'est.** Troisième étape de l'audit (`docs/AUDIT-2026-11.md`) : le site se charge plus vite, sans changement visible.
+
+**Mesures (construction du site, JavaScript téléchargé au premier chargement).**
+
+| Page | Avant | Après |
+|---|---|---|
+| Accueil | 342 Ko | 152 Ko |
+| Catalogue | 320 Ko | 130 Ko |
+| Admin | 412 Ko | 140 Ko |
+| Feuille de style du site public (compressée) | 68 Ko | 56 Ko |
+
+**Ce qui a changé.**
+- **Langues (P1).** Les trois langues complètes (191 Ko compressés) partaient dans le navigateur de chaque visiteur, parce que l'en-tête importait la liste des langues depuis le fichier des textes. Nouveau fichier léger `web/lib/locales.js` (langues et sens d'écriture) pour les écrans du navigateur ; `web/lib/i18n.js` reste sur le serveur, qui n'envoie que les textes de la langue du visiteur. Les écrans d'admin qui ont besoin des trois langues (Textes, Tests A/B) les chargent à l'ouverture.
+- **Textes, un par ligne (V6).** `web/lib/i18n.js` tenait sur 9 lignes (une de 190 Ko par langue) ; il en fait 11 965, une par texte. Contenu identique (vérifié par comparaison automatique des 3 983 textes × 3 langues).
+- **Admin (P2).** Chaque écran d'administration (19 écrans) se charge à l'ouverture de son onglet au lieu d'être téléchargé d'un bloc.
+- **Styles (P3).** 880 règles qui ne servent qu'au Studio et à l'administration sont sorties de `globals.css` vers `web/app/back.css`, chargé seulement sur `/studio` et `/admin`. Une règle n'a été déplacée que si l'ordre des feuilles ne peut pas changer le rendu (723 règles gardées dans `globals.css` par prudence).
+- **Bibliothèques (P6).** API : fastify 5.12.8, nodemailer 10.5.0, fast-uri, AWS SDK (3 failles connues sur 4 corrigées ; il reste `zod`, version majeure, étape 4). Site : Next.js 15.5.29.
+- `getLocale` refusait mal une langue inconnue portant le nom d'une propriété interne (`constructor`) : corrigé.
+
+**Contrôle.** Styles calculés de chaque élément relevés sur 58 pages (31 onglets d'admin, 11 écrans du Studio, 16 pages publiques) en 1280 px et 390 px, avant et après, y compris par rapport à la feuille d'avant le nettoyage de l'étape 2 : aucune différence hors survol de la souris. Limites : base de test (peu de contenu), français seulement, fenêtres de dialogue non ouvertes, thème par défaut.
+
+**Nouveaux tests (tournent sur GitHub).** `web/tests/test_locales_web.mjs` (aucun écran du navigateur n'importe les trois langues ; `locales.js` = `i18n.js`), `web/tests/test_css_back.mjs` (aucune classe réservée au Studio / à l'admin n'est utilisée par le site public).
+
+**Nouveau script (lecture seule).** `ops/audit/db-check.sh` : taille de la base, tables lues en entier, index inutilisés, clés étrangères sans index, requêtes lentes. Sur le VPS :
+```bash
+cd /root && curl -fsSL https://raw.githubusercontent.com/LePubli/majlistv/main/ops/audit/db-check.sh -o db-check.sh && bash db-check.sh
+```
+Avec 86 conférences et 8 comptes, la base n'est pas un sujet aujourd'hui ; ce relevé servira de point de comparaison.
+
+**Règles pour la suite.**
+- Un composant « use client » n'importe jamais `lib/i18n` (utiliser `lib/locales` ; pour les textes, `useApp().t`).
+- Un style utilisé par une page publique va dans `globals.css` ; `back.css` est réservé à `/studio` et `/admin` (le test le rappelle).
+
+**Non fait, proposé.** Les textes de la langue du visiteur (≈ 190 Ko, 55 Ko compressés) sont encore inclus dans le HTML de chaque page ouverte directement (page d'accueil : 236 Ko, 71 Ko compressés). Les servir comme fichier mis en cache par le navigateur ferait gagner ≈ 55 Ko par page, mais touche au démarrage de toutes les pages : à décider. Mises à jour majeures (Next 16, React 19, zod 4, Stripe 23) : une par une, sur décision.
+
+**Déploiement.** DockPanel → Redeploy : majlistv-api, puis majlistv-web. Puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Un écran d'admin reste sur « Chargement… » : recharger la page (un ancien onglet ouvert avant le déploiement cherche des fichiers qui n'existent plus). Un élément du Studio ou de l'admin sans mise en forme : me donner la page, la règle se remet dans `globals.css`.

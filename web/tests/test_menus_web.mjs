@@ -36,7 +36,7 @@ for (const k of ['/admin/menus/lookup', '/admin/menus/locations', "method: 'PATC
 assert.match(read('app/admin/page.js'), /tab === 'menus' && <MenusAdmin \/>/, 'onglet Admin → Menus');
 assert.match(read('components/AdminShell.js'), /\['menus', 'Menus'/, 'entrée du menu Admin');
 assert.match(read('components/AdminShell.js'), /menus: 'menus'/, 'écran masqué si la fonction « menus » est coupée');
-const css = read('app/globals.css');
+const css = (read('app/globals.css') + read('app/back.css'));
 for (const k of ['.mn-dd-list', '.mn-acc-list', '.mn-row', '.ms-side a.ms-sub']) assert.ok(css.includes(k), `style ${k}`);
 console.log('web menus OK');
 // Audit 11/2026 : l'ancien éditeur ne règle plus les menus (double emploi avec Admin → Menus) ; il garde l'en-tête et le pied de page.

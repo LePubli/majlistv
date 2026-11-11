@@ -9,7 +9,7 @@ import SearchPanel from './SearchPanel';
 import PrayerPill from './PrayerPill';
 import { useApp } from './Providers';
 import { AVATAR_EMOJI } from '../lib/kids';
-import { LOCALES } from '../lib/i18n';
+import { LOCALES } from '../lib/locales';
 import { memberShellOn } from '../lib/shell';
 import NavLink from './NavLink';
 import { defaultList, resolveMenu, audienceOk, deviceClass, withHid } from '../lib/menus';

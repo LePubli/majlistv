@@ -2,7 +2,7 @@
 // contenu pour Google) ; les blocs réservés à un public sont chargés ensuite par le navigateur, selon la connexion.
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getLocale } from '../../../lib/i18n';
+import { getLocale } from '../../../lib/locales';
 import { customPage } from '../../../lib/pages';
 import { tx } from '../../../lib/blocks';
 import { seoSite } from '../../../lib/seo';

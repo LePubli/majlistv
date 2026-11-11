@@ -111,3 +111,9 @@ Ces trois contrôles tournent sur GitHub à chaque envoi (Actions → « Tests a
 | `docs/ETAPE-F-VERIFICATIONS.md` | Essais réels à faire sur le serveur et les téléphones |
 | `docs/AUDIT-2026-11.md` | Audit de novembre 2026 (nettoyage, optimisations, sécurité, parcours) |
 | `docs/IDEES-AMELIORATIONS.md` | Idées d'améliorations |
+
+## Règles de code à connaître
+
+- Textes du site : `web/lib/i18n.js` (un texte par ligne, trois langues). Un composant « use client » ne l'importe jamais : `web/lib/locales.js` pour la liste des langues, `useApp().t` pour les textes.
+- Styles : `web/app/globals.css` pour tout ce qu'une page publique utilise ; `web/app/back.css` pour le Studio et l'administration seulement.
+- Fichiers tenus en double entre l'API et le site (`navcfg.js`, `menus.js` / `menusCfg.js`, blocs, thème) : modifier les deux, un test vérifie leur égalité.

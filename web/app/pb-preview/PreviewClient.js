@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { BlocksView } from '../../components/PageBlocks';
 import { useApp } from '../../components/Providers';
-import { DIR } from '../../lib/i18n';
+import { DIR } from '../../lib/locales';
 
 // Messages attendus :
 //   { type: 'pb-content', zones: { main | before | after: [blocs] }, locale, pickedId }   (pages en blocs)

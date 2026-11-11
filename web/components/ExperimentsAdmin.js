@@ -3,7 +3,6 @@
 // mesurer les inscriptions, puis « garder » la meilleure (ses textes deviennent ceux du site, modifiables dans Admin → Textes).
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
-import { DICT } from '../lib/i18n';
 
 const STATUS = { draft: ['Brouillon', 'meta'], running: ['En cours', 'ok'], paused: ['En pause', 'meta'], ended: ['Terminé', 'meta'] };
 const LANG_NAME = { fr: 'Français', en: 'Anglais', ar: 'Arabe' };
@@ -25,6 +24,9 @@ function Form({ zones, langs, onDone, onCancel }) {
   const [vars, setVars] = useState([blank(0), blank(1)]);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  // Textes d'origine (exemples dans les champs) : chargés à l'ouverture du formulaire seulement (fichier lourd, voir lib/locales.js).
+  const [DICT, setDICT] = useState({});
+  useEffect(() => { let on = true; import('../lib/i18n').then((m) => { if (on) setDICT(m.DICT); }); return () => { on = false; }; }, []);
   const z = zones.find((x) => x.id === zone);
   const upd = (i, patch) => setVars((vs) => vs.map((v, k) => (k === i ? { ...v, ...patch } : v)));
   const setPrice = (i, k, val) => setVars((vs) => vs.map((v, n) => (n === i ? { ...v, prices: { ...v.prices, [k]: val } } : v)));

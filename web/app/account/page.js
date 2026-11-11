@@ -13,7 +13,7 @@ import TwoFactor from '../../components/TwoFactor';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
-import { LOCALES } from '../../lib/i18n';
+import { LOCALES } from '../../lib/locales';
 
 const date = (d, locale) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 

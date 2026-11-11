@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
-import { LOCALES } from '../lib/i18n';
+import { LOCALES } from '../lib/locales';
 import { useCollapsed, ChevIco } from './MemberShell';
 
 export const ICONS = {
