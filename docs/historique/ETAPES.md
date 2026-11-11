@@ -8244,3 +8244,52 @@ bash /root/verify-deploy.sh
 ```
 
 **Debug.** Un écran d'admin reste sur « Chargement… » : recharger la page (un ancien onglet ouvert avant le déploiement cherche des fichiers qui n'existent plus). Un élément du Studio ou de l'admin sans mise en forme : me donner la page, la règle se remet dans `globals.css`.
+
+
+## Audit de novembre 2026 — étape 4 : sécurité (11/11)
+
+**Ce que c'est.** Quatrième étape de l'audit : contrôle des droits, des données privées, des entrées, des sessions, des secrets et des bibliothèques ; corrections ; tests permanents ; script de contrôle du serveur.
+
+**Ce qui a été contrôlé, et le résultat.**
+
+| Contrôle | Méthode | Résultat |
+|---|---|---|
+| Droits des 689 routes | chaque route appelée sans connexion, en membre, en organisateur, en modérateur (2 756 appels) | aucune route d'admin, de Studio ou de modération accessible sans le bon rôle ; aucune écriture anonyme hors des 17 prévues |
+| Données d'un autre compte | brouillon d'un organisateur attaqué par un autre organisateur, un membre et un visiteur sur toutes les routes de conférence ; lecture du code des listes, envois, imports, suppressions | rien de lisible ni de modifiable ; le brouillon est intact |
+| Injection SQL | les 171 expressions insérées dans du texte SQL classées ; les variables vérifiées une à une | toutes viennent du code (constantes, listes fermées validées) ; les valeurs des visiteurs sont toujours passées en paramètres |
+| HTML brut (XSS) | les 7 insertions du site, les liens saisis, les blocs vidéo | données structurées et CSS échappés ; liens limités à http(s) ; pas de HTML libre |
+| Appels vers l'extérieur (SSRF) | import de vidéos, lecture d'un lien, ressources du Coran | adresses privées refusées, redirections suivies une à une |
+| Sessions et mots de passe | lecture du code | bcrypt coût 12, jetons de 7 jours annulés au changement de mot de passe, liens de réinitialisation hachés, à usage unique, 1 h |
+| Paiement | lecture du code | signature Stripe vérifiée sur le webhook |
+| Espace enfant | lecture du code | code parental haché, blocage après échecs, jeton enfant refusé hors des routes prévues |
+| Secrets | dépôt et tout son historique | aucun secret, aucune clé |
+| Bibliothèques | npm audit | API : il reste `zod` (voir plus bas) ; site : 0 ; application : alertes dans les outils de fabrication seulement |
+
+**Failles trouvées et corrigées.**
+
+1. **Tous les visiteurs partageaient les mêmes limites de débit (S6).** Derrière Docker, l'API voyait pour tout le monde l'adresse de la passerelle Docker ou du conteneur du site, pas celle du visiteur. Conséquences : 100 requêtes par minute pour l'ensemble des visiteurs (au-delà : erreurs 429 pour tous), 10 essais de connexion par minute pour tout le monde (un attaquant pouvait empêcher chacun de se connecter), et l'adresse enregistrée comme preuve de consentement (paiement, cartes cadeaux) était celle du serveur. Corrigé : l'API croit le nginx de la machine et le réseau privé Docker (`trustProxy: loopback + uniquelocal`), le serveur du site transmet l'adresse du visiteur (`web/lib/visitorIp.js`, proxy `/api` et appels du rendu des pages). Une connexion directe depuis Internet n'est jamais crue. **Condition : le nginx du serveur doit poser `X-Forwarded-For`** (contrôlé par `security-check.sh`).
+2. **Pas de frein par compte aux essais de mot de passe.** La seule limite était par adresse. Ajouté : 10 échecs en 15 minutes sur un compte → connexion à ce compte refusée (429) jusqu'à la fin des 15 minutes, même avec le bon mot de passe ; « Mot de passe oublié » reste possible (`api/src/loginGuard.js`).
+3. **Le temps de réponse de la connexion disait si une adresse e-mail avait un compte.** Un compte inconnu répondait plus vite. Corrigé : même calcul dans les deux cas.
+
+**Non corrigé, à décider.**
+- `zod` (validation des données de l'API) : faille « épuisement de mémoire sur de très grandes listes », corrigée seulement en version 4 (majeure, ~700 schémas à relire). Exposition faible : un visiteur ne peut pas envoyer plus de 1 Mo ; les envois plus gros sont réservés aux organisateurs et à l'admin.
+- L'inscription dit « Email déjà utilisé » (on peut donc savoir si une adresse a un compte) : choix d'ergonomie courant ; le changer demande un parcours « vérifiez votre boîte ».
+- Le jeton de connexion est gardé dans le navigateur (localStorage) ; la politique de sécurité du contenu (CSP avec nonce) limite le risque. Passer à un cookie protégé est un chantier à part.
+- 50 tests de l'API demandent un faux stockage / faux Stripe / worker et ne tournent pas sur GitHub : à brancher (non fait dans cette étape).
+
+**Nouveaux tests (tournent sur GitHub).** `api/tests/test_authz_sweep.py` (toute nouvelle route d'admin ou de Studio sans contrôle d'accès fait échouer les tests), `api/tests/test_login_guard.py`, `api/tests/test_trust_proxy.mjs`, `web/tests/test_visitor_ip_web.mjs`.
+
+**Script de contrôle du serveur (lecture seule, aucun secret affiché).** `ops/audit/security-check.sh` : mises à jour de sécurité, SSH, fail2ban, pare-feu, ports ouverts sur Internet, nginx (X-Forwarded-For, certificats, anciens protocoles), en-têtes du site, réglages de l'API (longueur des secrets, réglages de test oubliés), adresse des visiteurs vue par l'API, ports de la base et des services.
+```bash
+cd /root && curl -fsSL https://raw.githubusercontent.com/LePubli/majlistv/main/ops/audit/security-check.sh -o security-check.sh && bash security-check.sh
+```
+
+**Déploiement — dans cet ordre.**
+1. AVANT de redéployer, sur le VPS : `grep -n "X-Forwarded-For" /etc/nginx/sites-enabled/*majlisstv*` — il doit y avoir une ligne pour le site et une pour l'API. S'il n'y en a pas : ne pas redéployer, me prévenir.
+2. DockPanel → Redeploy : majlistv-api, puis majlistv-web.
+3. Sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`, puis le script de contrôle ci-dessus.
+
+**Debug.**
+- « Trop d'essais sur ce compte » : attendre 15 minutes ou passer par « Mot de passe oublié » ; un redémarrage de l'API remet les compteurs à zéro.
+- Erreurs 429 inattendues après le déploiement : `docker logs --tail 200 dockpanel-git-majlistv-api 2>&1 | grep -o '"remoteAddress":"[^"]*"' | sort | uniq -c` — si une seule adresse privée apparaît, nginx ne transmet pas l'adresse des visiteurs.
+- Revenir à l'ancien comportement : variable `TRUST_PROXY=loopback` sur majlistv-api, puis Redeploy.

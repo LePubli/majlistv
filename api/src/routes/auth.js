@@ -7,6 +7,7 @@ import { enqueueEmail } from '../mailer.js';
 import { forgetUser } from '../userstate.js';
 import { startChallenge } from '../twofactor.js';
 import { TRANSLATION_LANGS } from '../langs.js';
+import { lockedFor, noteFailure, noteSuccess } from '../loginGuard.js';
 
 const registerSchema = z.object({
   email: z.string().email().max(254).transform((s) => s.toLowerCase()),
@@ -23,6 +24,9 @@ const loginSchema = z.object({
 // AUTH_RATE_MAX (facultatif) : réservé aux tests automatiques, qui se connectent bien plus de 10 fois par minute. En production : 10 / minute.
 const AUTH_MAX = Number(process.env.AUTH_RATE_MAX) || 0;
 const strictLimit = { config: { rateLimit: { max: AUTH_MAX || 10, timeWindow: '1 minute' } } };
+
+// Empreinte d'un mot de passe que personne ne connaît (même coût que les vraies) : sert quand le compte n'existe pas.
+const DUMMY_HASH = bcrypt.hashSync(randomBytes(24).toString('hex'), 12);
 
 export default async function authRoutes(app) {
   const sign = (user) => app.jwt.sign({ sub: user.id, role: user.role });
@@ -55,8 +59,13 @@ export default async function authRoutes(app) {
       [email]
     );
     const found = rows[0];
-    const ok = found && (await bcrypt.compare(password, found.password_hash));
-    if (!ok) return reply.code(401).send({ error: 'Identifiants invalides' });
+    // Trop d'échecs sur ce compte : refus sans même comparer (audit 11/2026, voir loginGuard.js).
+    const wait = lockedFor(email);
+    if (wait) return reply.code(429).header('retry-after', String(wait * 60)).send({ error: `Trop d'essais sur ce compte. Réessayez dans ${wait} min, ou utilisez « Mot de passe oublié ».`, code: 'login_locked', minutes: wait });
+    // Compte inconnu : on compare quand même à une empreinte factice, pour que le temps de réponse ne dise pas si l'adresse existe.
+    const ok = (await bcrypt.compare(password, found ? found.password_hash : DUMMY_HASH)) && Boolean(found);
+    if (!ok) { noteFailure(email); return reply.code(401).send({ error: 'Identifiants invalides' }); }
+    noteSuccess(email);
     if (found.disabled_at) return reply.code(403).send({ error: 'Compte suspendu' });
     // Double authentification activée : pas de jeton tant que le code n'est pas donné (POST /auth/2fa/verify).
     if (found.totp_enabled_at) return { twoFactor: true, challenge: await startChallenge(found.id) };

@@ -1,12 +1,13 @@
 // Étape 22a — manifeste du site installable (PWA), servi à /manifest.webmanifest.
 // Nom du site : Admin → Paramètres ; couleurs : thème publié (Admin → Apparence). Icônes : public/icon-*.png.
 import { siteTheme, themeBg } from '../lib/theme';
+import { visitorHeaders } from '../lib/visitorIp';
 
 export const dynamic = 'force-dynamic';
 
 async function appName() {
   try {
-    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(2000) });
     const c = await res.json();
     if (c.appName) return c.appName;
   } catch { /* API injoignable : nom de secours */ }

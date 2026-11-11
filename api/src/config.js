@@ -17,7 +17,11 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001',
   // Proxys de confiance devant l'API. Détermine la vraie adresse IP du visiteur, qui sert de clé
   // aux limites de débit (anti-force brute sur /auth/login).
-  //   'loopback' : nginx tourne sur la même machine et transmet à 127.0.0.1 -> cas de ce serveur.
+  //   'loopback' : nginx tourne sur la même machine et transmet à 127.0.0.1.
+  //   'uniquelocal' : adresses privées (10.x, 172.16-31.x, 192.168.x). Avec Docker, la connexion du nginx de la machine
+  //     arrive par la passerelle du réseau Docker (172.17.0.1) et celle du site par l'adresse de son conteneur : sans cette
+  //     confiance, TOUS les visiteurs portaient la même adresse et partageaient une seule limite (audit 11/2026).
+  //     Une connexion directe depuis Internet a une adresse publique : son en-tête n'est jamais cru.
   //   Ne JAMAIS mettre « true » : l'adresse retenue serait celle que le visiteur annonce dans
   //   l'en-tête X-Forwarded-For, donc usurpable, et les limites de débit deviendraient inopérantes.
   //   Un nombre ne convient pas non plus avec Fastify 5 : l'en-tête est alors ignoré et tous les
@@ -25,7 +29,7 @@ export const config = {
   // Si un jour l'API passe derrière un proxy distant (CDN), mettre ici ses adresses, séparées par des virgules.
   trustProxy: process.env.TRUST_PROXY
     ? process.env.TRUST_PROXY.split(',').map((s) => s.trim()).filter(Boolean)
-    : 'loopback',
+    : ['loopback', 'uniquelocal'],
   s3: {
     endpoint: process.env.S3_ENDPOINT,
     region: process.env.S3_REGION || 'garage',

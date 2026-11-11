@@ -1,6 +1,7 @@
 // Étape I2 — Textes du site modifiables (Admin → Textes), lus côté serveur et superposés aux textes d'origine (lib/i18n.js).
 // Gardés 10 secondes en mémoire : une modification est visible au plus tard 10 s après (l'API garde aussi sa copie).
 import { DICT } from './i18n';
+import { visitorHeaders } from './visitorIp';
 
 const API = process.env.API_URL || 'http://localhost:3000';
 let cached = null;
@@ -9,7 +10,7 @@ let at = 0;
 export async function siteTexts() {
   if (cached && Date.now() - at < 10_000) return cached;
   try {
-    const res = await fetch(`${API}/texts`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${API}/texts`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       const t = await res.json();
       if (t && typeof t.texts === 'object') { cached = t; at = Date.now(); }

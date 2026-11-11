@@ -32,12 +32,13 @@ import PwaRegister from '../components/PwaRegister'; // étape 22a : site instal
 import SeasonTheme from '../components/SeasonTheme'; // étape 45H : thème de saison
 import AdhanPlayer from '../components/AdhanPlayer'; // adhan à l'heure de la prière (site ouvert)
 import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
+import { visitorHeaders } from '../lib/visitorIp';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
 async function siteConfig() {
   try {
-    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/config`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(2000) });
     const c = await res.json();
     if (c.appName) return { skin: c.skin || null, appName: c.appName, trialDays: Number(c.trialDays) || 0, prayer: c.prayer || null, cards: c.cards || null, hasSeries: Boolean(c.hasSeries), hasBooks: Boolean(c.hasBooks), stats: c.stats !== false, features: c.features || {}, modules: c.modules || {} };
   } catch { /* API injoignable : valeurs de secours */ }

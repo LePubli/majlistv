@@ -75,3 +75,5 @@ test_admin_bulk.py
 test_experiments.py
 test_menus.py
 test_link_info_route.py
+test_authz_sweep.py
+test_login_guard.py

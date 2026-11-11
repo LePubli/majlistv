@@ -5,12 +5,13 @@ import { notFound } from 'next/navigation';
 import { DICT, DIR, getLocale } from '../../../../lib/i18n';
 import { dictFor } from '../../../../lib/texts';
 import PrintButton from './PrintButton';
+import { visitorHeaders } from '../../../../lib/visitorIp';
 
 export const metadata = { title: 'Attestation de suivi', robots: { index: false, follow: false } };
 
 async function load(code) {
   try {
-    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/attestations/${encodeURIComponent(code)}`, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${process.env.API_URL || 'http://localhost:3000'}/attestations/${encodeURIComponent(code)}`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(4000) });
     return res.ok ? await res.json() : null;
   } catch { return null; }
 }

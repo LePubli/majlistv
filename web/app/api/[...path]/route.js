@@ -1,5 +1,7 @@
 // Proxy same-origin vers l'API (adresse lue au runtime via API_URL) : évite CORS et le rebuild.
 export const dynamic = 'force-dynamic';
+import { forwardedFor } from '../../../lib/visitorIp';
+
 const API = process.env.API_URL || 'http://localhost:3000';
 
 async function handler(req, { params }) {
@@ -9,6 +11,9 @@ async function handler(req, { params }) {
     const v = req.headers.get(h);
     if (v) headers[h] = v;
   }
+  // Adresse du visiteur : sans elle, l'API verrait tous les visiteurs sous l'adresse de ce serveur (limites de débit communes).
+  const xff = forwardedFor((k) => req.headers.get(k));
+  if (xff) headers['x-forwarded-for'] = xff;
   // Statistiques d'audience : l'API doit connaître le navigateur, la langue et (pour compter un visiteur une seule fois) l'adresse du
   // visiteur, que le proxy local lui masquerait. L'adresse n'est jamais enregistrée : elle sert à calculer l'empreinte du jour.
   if (/^(stats|kids\/stats)(\/|$)/.test(params.path.join('/'))) {

@@ -1,10 +1,11 @@
 // Aides « référencement » côté serveur : lecture des données publiques de l'API (/seo/…), adresses absolues, JSON-LD.
+import { visitorHeaders } from './visitorIp';
 const API = () => process.env.API_URL || 'http://localhost:3000';
 
 // GET /seo/… : null si introuvable ou API injoignable (la page se rend alors sans balises riches, jamais en erreur).
 export async function seoGet(path) {
   try {
-    const res = await fetch(`${API()}/seo/${path}`, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${API()}/seo/${path}`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(4000) });
     return res.ok ? await res.json() : null;
   } catch { return null; }
 }
@@ -31,7 +32,7 @@ export const jsonLd = (data) => ({ __html: JSON.stringify(data).replace(/</g, '\
 // GET public de l'API (hors /seo) : null si introuvable ou API injoignable.
 export async function apiGet(path) {
   try {
-    const res = await fetch(`${API()}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${API()}${path}`, { cache: 'no-store', headers: await visitorHeaders(), signal: AbortSignal.timeout(4000) });
     return res.ok ? await res.json() : null;
   } catch { return null; }
 }
