@@ -16,6 +16,7 @@ export const SCREENS: Record<string, { pathname: string; icon: Feather; feat?: s
   home: { pathname: '/', icon: 'home' },
   talks: { pathname: '/talks', icon: 'film' },
   learn: { pathname: '/learn', icon: 'book-open', feat: 'learning' },
+  practice: { pathname: '/practice', icon: 'moon' },
   library: { pathname: '/library', icon: 'bookmark', member: true },
   account: { pathname: '/account', icon: 'user' },
   search: { pathname: '/search', icon: 'search' },

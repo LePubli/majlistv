@@ -2,7 +2,7 @@
 // Mon apprentissage (palier « Apprentissage ») : score, courbe, série de jours, progression par série et attestations de suivi.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import PracticeList from '../../../components/PracticeList';
 import SelfCheck from '../../../components/SelfCheck';
@@ -12,8 +12,6 @@ import { thumbOf } from '../../../components/TalkCard';
 import { TabBar, TabPanel, useTab } from '../../../components/Tabs';
 import Row from '../../../components/Row';
 import MemoryCards from '../../../components/MemoryCards';
-import QuranIndex from '../../../components/QuranIndex';
-import Athkar from '../../../components/Athkar';
 import TodayBlock from '../../../components/TodayBlock';
 import EmptyState from '../../../components/EmptyState';
 import InviteCard from '../../../components/InviteCard';
@@ -85,8 +83,6 @@ export default function Learning() {
   const tabs = [
     { id: 'dash', label: t('tbDash') },
     { id: 'path', label: t('tbPath') },
-    ...(feat('quran') ? [{ id: 'quran', label: t('qrNav') }] : []),
-    ...(feat('athkar') ? [{ id: 'athkar', label: t('atTab') }] : []),
     ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
     { id: 'plan', label: t('pnTab') },
     ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
@@ -95,12 +91,15 @@ export default function Learning() {
     { id: 'att', label: t('tbAtt') },
   ];
   const [tab, go] = useTab(tabs);
-  // Étape B6 — 4 onglets au lieu de 9 : chaque groupe réunit des sections (sous-onglets). Les anciennes adresses (?tab=athkar,
+  // Navigation de novembre 2026 : le Coran et les adhkar sont dans « Pratique ». Les anciennes adresses (liens enregistrés,
+  // e-mails, notifications) y mènent tout seul.
+  const oldTab = useSearchParams().get('tab');
+  useEffect(() => { if (oldTab === 'quran') router.replace('/coran'); else if (oldTab === 'athkar') router.replace('/adhkar'); }, [oldTab, router]);
+  // Étape B6 — des onglets regroupés (Aujourd'hui, Mon planning, Vidéos, Mes progrès) au lieu de 9 : chaque groupe réunit des sections (sous-onglets). Les anciennes adresses (?tab=athkar,
   // ?tab=cards, ?tab=rev…) restent valables : l'onglet du groupe se déduit de la section ouverte.
   const GROUPS = [
     { id: 'g_today', label: t('lgGToday'), intro: 'lgGTodayTx', subs: ['dash'] },
     { id: 'g_plan', label: t('pnTab'), intro: 'lgGPlanTx', subs: ['plan'] },
-    { id: 'g_quran', label: t('lgGQuran'), intro: 'lgGQuranTx', subs: ['quran', 'athkar'] },
     { id: 'g_talks', label: <>{t('lgGTalks')}{revN + cardsN > 0 && <span className="lg-badge" aria-label={String(revN + cardsN)}>{revN + cardsN}</span>}</>, plain: t('lgGTalks'), intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
     { id: 'g_progress', label: t('lgGProgress'), intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
   ].map((g) => ({ ...g, subs: g.subs.filter((id) => tabs.some((x) => x.id === id)) })).filter((g) => g.subs.length);
@@ -428,12 +427,6 @@ export default function Learning() {
       <PracticeList t={t} call={call} locale={locale} />
       </TabPanel>
 
-      <TabPanel id="quran" current={tab}>
-      <div className="qr-page qr-in-tab"><QuranIndex embedded /></div>
-      </TabPanel>
-      <TabPanel id="athkar" current={tab}>
-      {tab === 'athkar' && <Athkar />}
-      </TabPanel>
       <TabPanel id="att" current={tab}>
       {seriesBlock('att')}
       </TabPanel>

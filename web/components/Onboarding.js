@@ -16,7 +16,7 @@ export function startCards(feat) {
   const all = [
     { id: 'talk', on: true, href: '/catalogue', title: 'obTalk', text: 'obTalkTx', icon: 'M7 4l13 8-13 8z' },
     { id: 'quran', on: feat('quran') && feat('quranplan'), href: '/coran', title: 'obQuran', text: 'obQuranTx', icon: 'M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h7M8 11h7' },
-    { id: 'athkar', on: feat('athkar'), href: '/learning?tab=athkar', title: 'obAthkar', text: 'obAthkarTx', badge: 'obLearnBadge', icon: 'M12 3a9 9 0 1 0 9 9M12 7v5l3 3' },
+    { id: 'athkar', on: feat('athkar'), href: '/adhkar', title: 'obAthkar', text: 'obAthkarTx', badge: 'obLearnBadge', icon: 'M12 3a9 9 0 1 0 9 9M12 7v5l3 3' },
     { id: 'ramadan', on: feat('ramadan'), href: '/ramadan', title: 'obRamadan', text: 'obRamadanTx', icon: 'M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z' },
   ];
   return all.filter((c) => c.on).slice(0, 3);

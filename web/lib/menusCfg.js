@@ -21,7 +21,7 @@ export const KIND_KEYS = KINDS.map(([k]) => k);
 
 // Écrans de l'application mobile (identifiants stables ; l'application les traduit en écrans, étape 2).
 export const APP_SCREENS = [
-  ['home', 'Accueil'], ['talks', 'Catalogue'], ['learn', 'Apprendre'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['search', 'Recherche'],
+  ['home', 'Accueil'], ['talks', 'Catalogue'], ['learn', 'Apprendre'], ['practice', 'Pratique'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['search', 'Recherche'],
   ['shorts', 'Shorts'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['prayer', 'Prière'], ['ramadan', 'Ramadan'], ['kids', 'Mejliss Kids'],
   ['downloads', 'Téléchargements'], ['events', 'Événements en direct'], ['series', 'Séries'], ['collections', 'Collections'], ['audyn', 'Audyn'],
 ];

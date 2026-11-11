@@ -1,6 +1,6 @@
 'use client';
 // Navigation de novembre 2026 (lot E) — les adhkar à leur propre adresse, dans « Pratique ».
-// Même écran que l'onglet « Adhkar » d'Apprendre (components/Athkar.js) ; /learning?tab=athkar reste valable.
+// L'écran des adhkar (components/Athkar.js), qui était un onglet d'Apprendre ; /learning?tab=athkar y mène toujours.
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import Athkar from '../../components/Athkar';

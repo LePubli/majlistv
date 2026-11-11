@@ -1,6 +1,6 @@
 'use client';
 // Lecture du Coran en 30 jours (étape 45E) : 1 juz par jour, case « lu », progression, rappel quotidien facultatif.
-// Gratuit pour tout membre connecté ; affichée en haut de la page Coran (et de l'onglet Coran d'Apprendre).
+// Gratuit pour tout membre connecté ; affichée en haut de la page Coran.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';

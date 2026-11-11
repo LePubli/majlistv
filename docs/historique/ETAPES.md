@@ -8342,7 +8342,7 @@ bash /root/verify-deploy.sh
 **Ce qui ne change pas.** Toutes les adresses. Un menu créé dans Admin → Menus et affecté à un emplacement remplace toujours le menu d'origine (toutes les anciennes clés restent connues ; nouvelle clé `pratique`). Les onglets de la page Apprendre.
 
 **Écarts et points ouverts.**
-- La page Apprendre garde son onglet « Coran et adhkar » (plan de lecture et adhkar) : le Coran et les adhkar sont donc accessibles des deux côtés. À décider : les retirer d'Apprendre.
+- La page Apprendre garde son onglet « Coran et adhkar » (plan de lecture et adhkar) : le Coran et les adhkar sont donc accessibles des deux côtés. À décider : les retirer d'Apprendre. → **réglé au lot G ci-dessous.**
 - Les catégories restent dans le menu latéral (décision du 16/10), pas en filtres dans la page.
 - L'application mobile n'est pas encore alignée (lot G).
 
@@ -8359,3 +8359,38 @@ bash /root/verify-deploy.sh
 **Debug.** Revenir à l'ancien menu du haut sans redéployer : Admin → Menus, créer un menu « comme aujourd'hui », y remettre les liens voulus (Séries, Shorts…) et l'affecter à « Site — menu du haut ».
 
 **Tests.** `web/tests/test_nav_lots_web.mjs` (lots A à F), `api/tests/test_menus.py`, `api/tests/test_layout.py`.
+
+## Navigation — lot G et retrait du Coran / adhkar d'Apprendre (11/11, audit étape 5)
+
+**Ce que c'est.** Deux décisions d'Epok du 11/11 : (1) le Coran et les adhkar quittent la page Apprendre, ils vivent dans **Pratique** ; (2) l'application mobile prend les mêmes cinq onglets que le site.
+
+**Site — Apprendre.** La page Apprendre a quatre groupes d'onglets : Aujourd'hui · Mon planning · Vidéos · Mes progrès. Le groupe « Coran et adhkar » est retiré (`web/app/(module-learning)/learning/page.js`). Les anciens liens ne cassent pas : `/learning?tab=quran` ouvre `/coran`, `/learning?tab=athkar` ouvre `/adhkar` (redirection dans la page). Le plan de lecture du Coran reste sur `/coran`. L'accueil des nouveaux membres et le menu latéral pointent vers `/adhkar` et `/coran`. Textes `lgGQuran` et `lgGQuranTx` supprimés (fr, en, ar).
+
+**Application — lot G.** Barre du bas : **Accueil · Catalogue · Apprendre · Pratique · Bibliothèque** (`mobile/src/app/(tabs)/_layout.tsx`). Nouvel écran `mobile/src/app/(tabs)/practice.tsx` : le bloc « Aujourd'hui » et une carte par geste (Prière, Coran, Adhkar, Ramadan), selon les fonctions activées (`mobile/src/lib/practice.ts`) ; les adhkar demandent un compte. L'onglet disparaît si aucune de ces fonctions n'est activée. **Mon compte** sort de la barre : on y va par le menu ☰ en haut de l'écran (l'écran lui-même ne change pas). Dans Apprendre de l'application, les sections Coran et Adhkar sont retirées ; un ancien lien ou une notification vers ces sections ouvre l'écran Coran ou Adhkar (`movedTab` dans `mobile/src/lib/learnHub.ts`). Admin → Menus propose l'écran « Pratique » pour l'application (`api/src/menus.js` ≡ `web/lib/menusCfg.js`).
+
+**Ce qui ne change pas.** Les adresses du site, les écrans Coran / Adhkar / Prière / Ramadan, le plan de lecture, les rappels. Les liens `/learning?tab=athkar` envoyés par l'API (notifications, « Aujourd'hui ») sont gardés tels quels : une application installée plus ancienne les comprend, et le site comme la nouvelle application les redirigent. Un menu « onglets du bas » créé dans Admin → Menus remplace toujours la barre d'origine.
+
+**Prérequis.** Aucun réglage, aucune migration.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy : `majlistv-api`, puis `majlistv-web`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+Application : rien à installer. La mise à jour part toute seule (GitHub → « Application Android (APK) ») ; fermer et rouvrir l'application deux fois.
+
+**Debug.**
+- L'onglet Pratique n'apparaît pas dans l'application : l'application n'a pas encore pris la mise à jour (fermer / rouvrir deux fois), ou un menu « Application — onglets du bas » existe dans Admin → Menus (il remplace la barre d'origine : y ajouter l'écran « Pratique »).
+- « Mon compte » introuvable dans l'application : menu ☰ en haut à gauche.
+- Un lien ouvre encore Apprendre au lieu des adhkar : vider le cache du navigateur (ancienne version de la page).
+
+**Exemples.** Site : `https://majlisstv.le-publicitaire.fr/learning?tab=athkar` → arrive sur `/adhkar`. Application : onglet Pratique → carte « Coran » → écran Coran avec le plan de lecture.
+
+**Tests.** Site : `web/tests/test_learning_groups_web.mjs`, `test_quran_web.mjs`, `test_athkar_web.mjs`, `test_nav_lots_web.mjs`. Application : `mobile/tests/practice.test.ts` (nouveau), `learnHub.test.ts` — 263 tests verts. Vérifié dans un navigateur (390 px) : les deux redirections et les quatre onglets d'Apprendre. **Non testé : l'application sur un vrai téléphone** (seulement les tests et la vérification des types).
+
+**Écarts.** Le compte de l'application passe par le menu ☰, pas par un bouton « avatar » dédié dans l'en-tête comme sur le site.
+

@@ -93,7 +93,7 @@ export default function MemberShell({ children }) {
     audyn: { key: 'audyn', href: '/audyn', label: t('awNav'), icon: ICONS.books, on: feat('audyn') },
     athkar: { key: 'athkar', href: '/adhkar', label: t('atTab'), icon: ICONS.bilan, on: feat('athkar') },
     pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), icon: ICONS.prayer, on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },
-    quranlearn: { key: 'quranlearn', href: '/learning?tab=quran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
+    quranlearn: { key: 'quranlearn', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
     books: { key: 'books', href: '/books', label: t('bkNav'), icon: ICONS.books, on: hasBooks },
     channels: { key: 'channels', href: '/chaines', label: t('spTitle'), icon: ICONS.people, on: feat('channels') },
     shorts: { key: 'shorts', href: '/shorts', label: t('shrTitle'), icon: ICONS.shorts, on: feat('shorts') },

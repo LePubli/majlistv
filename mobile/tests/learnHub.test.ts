@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SECTION_LABEL, addDays, askErrorKey, cardsToday, clock, dropTurn, goalsFull, groupOf, groupsFor, markReported, pickSection, pushTurn,
+  SECTION_LABEL, addDays, askErrorKey, cardsToday, clock, dropTurn, goalsFull, groupOf, groupsFor, markReported, movedTab, pickSection, pushTurn,
   replaceGoal, replayAt, requeue, shortDate, validQuestion, type Goal, type SelfCheckResponse,
 } from '../src/lib/learnHub';
 import { routeForPath } from '../src/lib/notifRoute';
@@ -11,14 +11,16 @@ import { DICT } from '../src/lib/i18n';
 
 test('onglets : 4 groupes, sections selon les fonctions activées', () => {
   const all = groupsFor(() => true);
-  assert.deepEqual(all.map((g) => g.id), ['g_today', 'g_plan', 'g_quran', 'g_talks', 'g_progress']);
-  assert.deepEqual(all[3].subs, ['path', 'rev', 'cards']);
-  const few = groupsFor((id) => !['quran', 'athkar', 'memorycards', 'selfcheck'].includes(id));
-  assert.deepEqual(few.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress'], 'groupe Coran caché sans Coran ni athkar');
+  assert.deepEqual(all.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress'], 'Coran et adhkar sont dans « Pratique », plus dans Apprendre');
+  assert.deepEqual(all[2].subs, ['path', 'rev', 'cards']);
+  const few = groupsFor((id) => !['memorycards', 'selfcheck'].includes(id));
+  assert.deepEqual(few.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress']);
   assert.deepEqual(few[2].subs, ['path', 'rev']);
   assert.equal(pickSection(all, 'cards'), 'cards');
   assert.equal(pickSection(all, 'inconnu'), 'dash');
   assert.equal(pickSection(few, 'cards'), 'dash', 'section coupée → tableau de bord');
+  assert.equal(pickSection(all, 'athkar'), 'dash', 'ancienne section : plus dans Apprendre');
+  assert.equal(movedTab('athkar'), '/athkar'); assert.equal(movedTab('quran'), '/quran'); assert.equal(movedTab('rev'), null); assert.equal(movedTab(undefined), null);
   assert.equal(groupOf(all, 'bilan').id, 'g_progress');
   for (const k of Object.values(SECTION_LABEL)) assert.ok(k);
 });
@@ -69,7 +71,7 @@ test('liens vers Apprendre : section gardée', () => {
 });
 
 test('textes Apprendre présents dans les trois langues', () => {
-  const keys = ['lgGToday', 'lgGQuran', 'lgGTalks', 'lgGProgress', 'lgGTodayTx', 'lgGQuranTx', 'lgGTalksTx', 'lgGProgressTx', 'lgGotIt', 'lgSub', 'tbLabel', 'tbDash', 'tbPath', 'tbQuizRev', 'tbCommit', 'tbAtt', 'msBilan',
+  const keys = ['lgGToday', 'lgGTalks', 'lgGProgress', 'lgGTodayTx', 'lgGTalksTx', 'lgGProgressTx', 'lgGotIt', 'lgSub', 'tbLabel', 'tbDash', 'tbPath', 'tbQuizRev', 'tbCommit', 'tbAtt', 'msBilan',
     'mcTab', 'mcTitle', 'mcIntro', 'mcDue', 'mcNew', 'mcLearning', 'mcMastered', 'mcStart', 'mcFree', 'mcFreeHint', 'mcFreeNote', 'mcNone', 'mcNoneToday', 'mcMore', 'mcProgress', 'mcQuit', 'mcFromTalk', 'mcNewBadge', 'mcFlip',
     'mcKnown', 'mcAgain', 'mcAnswer', 'mcWhy', 'mcPassage', 'mcReplay', 'mcDoneTitle', 'mcDoneText', 'mcDoneMastered', 'mcDoneAgain', 'mcBack', 'mcErr',
     'scTitle', 'scIntro', 'scWeekHead', 'scFrise', 'scWeekOf', 'scNoCheck', 'scSt_achieved', 'scSt_progress', 'scSt_not_yet', 'scThisWeek', 'scLinked', 'scLink', 'scNotePh', 'scNoteFirst', 'scUnarchive', 'scArchive',

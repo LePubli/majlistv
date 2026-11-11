@@ -13,7 +13,7 @@ import { useAsync } from '@/lib/useAsync';
 import { SITE_URL } from '@/lib/config';
 import { ApiError } from '@/lib/api';
 import { STATUSES, isLearningRequired, sortCommitments } from '@/lib/learn';
-import { SECTION_LABEL, cardsToday, groupOf, groupsFor, pickSection, type CardsResponse, type SectionId } from '@/lib/learnHub';
+import { SECTION_LABEL, cardsToday, groupOf, groupsFor, movedTab, pickSection, type CardsResponse, type SectionId } from '@/lib/learnHub';
 import type { Card, Commitment, LearningResponse, PracticeMine, PracticeStatus, QuizTodoCard, RevisionResponse } from '@/lib/types';
 import type { Key } from '@/lib/i18n';
 import { progressOf } from '@/lib/media';
@@ -21,7 +21,6 @@ import { colors, radius } from '@/lib/theme';
 import { Button, Chip, Eyebrow, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
 import { TodayBlock } from '@/components/TodayBlock';
-import { QuranPlan } from '@/components/QuranPlan';
 import { MemoryCards } from '@/components/learn/MemoryCards';
 import { SelfCheck } from '@/components/learn/SelfCheck';
 import { StreakCard } from '@/components/learn/StreakCard';
@@ -53,7 +52,7 @@ function LearnBody() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const groups = useMemo(() => groupsFor(feat), [feat]);
   const [section, setSection] = useState<SectionId>(() => pickSection(groups, params.tab));
-  useEffect(() => { if (params.tab) setSection(pickSection(groups, params.tab)); }, [params.tab, groups]);
+  useEffect(() => { const moved = movedTab(params.tab); if (moved) router.replace(moved); else if (params.tab) setSection(pickSection(groups, params.tab)); }, [params.tab, groups]);
 
   const rev = useAsync(() => api.get<RevisionFull>('/me/revision'), [user?.id]);
   const todo = useAsync(() => api.get<QuizTodoCard[]>('/me/quiz/todo'), [user?.id]);
@@ -110,14 +109,12 @@ function LearnBody() {
       ) : null}
 
       {section === 'dash' ? <Dashboard learning={learning.data} cont={cont.data ?? []} revN={revN} cardsN={cardsN} practice={practice.data} go={setSection} /> : null}
-      {section === 'quran' ? <QuranSection /> : null}
-      {section === 'athkar' ? <LinkPanel icon="sun" title={t('atTab')} text={`${t('atCats')} : ${t('atCat_morning')}, ${t('atCat_evening')}…`} onPress={() => router.push('/athkar')} /> : null}
       {section === 'path' ? <SeriesBlock mode="path" data={learning.data} reload={learning.reload} /> : null}
       {section === 'rev' ? <Revision rev={rev.data} todo={todo.data ?? []} reload={rev.reload} /> : null}
       {section === 'cards' ? <MemoryCards onCount={() => { void cards.reload(); }} /> : null}
       {section === 'commit' ? <Commitments practice={practice.data} reload={practice.reload} /> : null}
       {section === 'bilan' ? <SelfCheck /> : null}
-      {section === 'plan' ? <Planning go={setSection} /> : null}
+      {section === 'plan' ? <Planning go={(x) => { if (x === 'quran') router.push('/quran'); else if (x === 'athkar') router.push('/athkar'); else setSection(x); }} /> : null}
       {section === 'att' ? <SeriesBlock mode="att" data={learning.data} reload={learning.reload} /> : null}
       {learning.loading && !learning.data ? <View style={{ height: 80 }}><Loading /></View> : null}
     </ScrollView>
@@ -236,17 +233,6 @@ function ScorePanel({ learning }: { learning: Learning }) {
         </View>
       ) : null}
     </Panel>
-  );
-}
-
-// ------------------------------------------------------------------ Coran et athkar
-function QuranSection() {
-  const { t, feat } = useSession();
-  return (
-    <View style={{ gap: 12 }}>
-      {feat('quranplan') ? <QuranPlan /> : null}
-      <LinkPanel icon="book" title={t('qrTitle')} text={t('qrIntro')} onPress={() => router.push('/quran')} />
-    </View>
   );
 }
 

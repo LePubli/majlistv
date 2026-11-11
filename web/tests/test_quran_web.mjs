@@ -26,7 +26,7 @@ assert.match(read('../app/coran/[n]/page.js'), /qr-notes/, 'notes de bas de page
 console.log('web quran OK');
 assert.match(read('../lib/navcfg.js'), /pratique: \[\['prayer', 'Prière'\], \['quran', 'Coran'\]/, 'Coran dans la rubrique Pratique');
 assert.match(read('../lib/navcfg.js'), /\['quranlearn', 'Coran', true\]/, 'raccourci vers l\'onglet Coran d\'Apprendre gardé (masqué par défaut)');
-assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/learning\?tab=quran'/, 'raccourci vers l\'onglet Coran d\'Apprendre');
+assert.match(read('../components/MemberShell.js'), /quranlearn: \{ key: 'quranlearn', href: '\/coran'/, 'raccourci vers l\'onglet Coran d\'Apprendre');
 console.log('web quran shortcut OK');
 // 45B2 : récitation, mot à mot, tajwid
 const page = read('../app/coran/[n]/page.js');
@@ -37,8 +37,7 @@ assert.match(read('../components/QuranAdmin.js'), /QuranReciters/, 'récitateurs
 for (const k of ['qrReciter', 'qrWbw', 'qrWbwLang', 'qrTajweed', 'qrListen', 'qrAudioErr', 'qrRcTitle']) assert.equal((read('../lib/i18n.js').match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 console.log('web quran 45B2 OK');
 const lp = read('../app/(module-learning)/learning/page.js');
-assert.match(lp, /feat\('quran'\) \? \[\{ id: 'quran', label: t\('qrNav'\) \}\]/, 'onglet « Coran » dans Apprendre (avec Tableau de bord, Progression…)');
-assert.match(lp, /<TabPanel id="quran"[\s\S]{0,120}<QuranIndex embedded \/>/, 'l\'onglet affiche la liste des sourates et la recherche');
+assert.doesNotMatch(lp, /id: 'quran'/, 'le Coran n’est plus un onglet d’Apprendre : il est dans Pratique (/coran)');
 assert.match(lp, /feat\('quran'\) && <p className="lg-quran"><Link className="btn ghost" href="\/coran">/, 'écran verrouillé : lien vers le Coran gratuit');
 assert.equal((read('../lib/i18n.js').match(/lgQuran:/g) || []).length, 3, 'lgQuran en fr/en/ar');
 console.log('web quran lien Apprendre OK');

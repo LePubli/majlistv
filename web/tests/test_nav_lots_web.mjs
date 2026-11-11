@@ -41,7 +41,6 @@ has3('kdBackSite');
 
 // --- C : Apprendre
 assert.match(read('components/MemberShell.js'), /learning: \{ key: 'learning', href: '\/learning', label: t\('lgGToday'\)/, 'menu latéral : même mot que l’onglet d’arrivée');
-assert.ok(i18n.includes('    lgGQuran: "Coran et adhkar",'), 'une seule orthographe : adhkar');
 assert.ok(!/"[^"\n]*\bathkar\b[^"\n]*",$/im.test(i18n), 'plus de « athkar » dans les textes affichés');
 console.log('navigation lots A B C OK');
 

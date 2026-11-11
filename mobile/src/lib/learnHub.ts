@@ -4,25 +4,27 @@
 import type { Key } from './i18n';
 
 // ---------------------------------------------------------------- Onglets
-export type SectionId = 'dash' | 'quran' | 'athkar' | 'path' | 'rev' | 'cards' | 'commit' | 'bilan' | 'att' | 'plan';
-export type GroupId = 'g_today' | 'g_plan' | 'g_quran' | 'g_talks' | 'g_progress';
+export type SectionId = 'dash' | 'path' | 'rev' | 'cards' | 'commit' | 'bilan' | 'att' | 'plan';
+export type GroupId = 'g_today' | 'g_plan' | 'g_talks' | 'g_progress';
 export type Group = { id: GroupId; label: Key; intro: Key; subs: SectionId[] };
 
 const ALL_GROUPS: Group[] = [
   { id: 'g_today', label: 'lgGToday', intro: 'lgGTodayTx', subs: ['dash'] },
   { id: 'g_plan', label: 'pnTab', intro: 'lgGPlanTx', subs: ['plan'] },
-  { id: 'g_quran', label: 'lgGQuran', intro: 'lgGQuranTx', subs: ['quran', 'athkar'] },
   { id: 'g_talks', label: 'lgGTalks', intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
   { id: 'g_progress', label: 'lgGProgress', intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
 ];
 // Fonction nécessaire à chaque section (comme les onglets du site) ; sans fonction = toujours là.
-const NEEDS: Partial<Record<SectionId, string>> = { quran: 'quran', athkar: 'athkar', rev: 'revision', cards: 'memorycards', commit: 'practice', bilan: 'selfcheck' };
+const NEEDS: Partial<Record<SectionId, string>> = { rev: 'revision', cards: 'memorycards', commit: 'practice', bilan: 'selfcheck' };
 
 /** Groupes visibles selon les fonctions activées (Admin → Fonctions) ; un groupe sans section disparaît. */
 export function groupsFor(feat: (id: string) => boolean): Group[] {
   return ALL_GROUPS.map((g) => ({ ...g, subs: g.subs.filter((s) => !NEEDS[s] || feat(NEEDS[s] as string)) })).filter((g) => g.subs.length > 0);
 }
-/** Section demandée par un lien (?tab=rev, ?tab=cards, ?tab=athkar…) ou la première. Anciens noms du site acceptés. */
+/** Le Coran et les adhkar sont dans « Pratique » (navigation de novembre 2026) : un ancien lien ?tab=quran ou ?tab=athkar
+ * ouvre leur écran. */
+export const movedTab = (tab: unknown): '/quran' | '/athkar' | null => (tab === 'quran' ? '/quran' : tab === 'athkar' ? '/athkar' : null);
+/** Section demandée par un lien (?tab=rev, ?tab=cards…) ou la première. */
 export function pickSection(groups: Group[], tab: unknown): SectionId {
   const all = groups.flatMap((g) => g.subs);
   const v = typeof tab === 'string' ? tab : '';
@@ -31,7 +33,7 @@ export function pickSection(groups: Group[], tab: unknown): SectionId {
 export const groupOf = (groups: Group[], s: SectionId): Group => groups.find((g) => g.subs.includes(s)) ?? groups[0];
 /** Libellé d'une section (sous-onglet). */
 export const SECTION_LABEL: Record<SectionId, Key> = {
-  dash: 'tbDash', quran: 'qrNav', athkar: 'atTab', path: 'tbPath', rev: 'tbQuizRev', cards: 'mcTab', commit: 'tbCommit', bilan: 'msBilan', att: 'tbAtt', plan: 'pnTab',
+  dash: 'tbDash', path: 'tbPath', rev: 'tbQuizRev', cards: 'mcTab', commit: 'tbCommit', bilan: 'msBilan', att: 'tbAtt', plan: 'pnTab',
 };
 
 // ---------------------------------------------------------------- Cartes mémoire

@@ -1,4 +1,5 @@
-// Barre de navigation du bas : Accueil, Vidéos, Apprendre, Bibliothèque, Compte.
+// Barre de navigation du bas (navigation de novembre 2026) : Accueil, Catalogue, Apprendre, Pratique, Bibliothèque —
+// les mêmes cinq destinations que le site. Le compte s'ouvre depuis le menu ☰ de l'en-tête (son écran reste un onglet caché).
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -9,6 +10,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { MenuTabBar } from '@/components/MenuTabBar';
 import { resolveTabs } from '@/lib/menus';
 import { SITE_URL } from '@/lib/config';
+import { practiceOn } from '@/lib/practice';
 
 export default function TabsLayout() {
   const { t, dirStyle, menus, user, config, feat, locale } = useSession();
@@ -35,8 +37,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color as string} /> }} />
       <Tabs.Screen name="talks" options={{ title: t('navCatalogue'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
       <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="practice" options={{ title: t('pqHub'), href: practiceOn(feat) ? undefined : null, tabBarIcon: ({ color }) => <Feather name="moon" size={22} color={color as string} /> }} />
       <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color as string} /> }} />
-      <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="account" options={{ title: t('tabs.account'), href: null }} />
     </Tabs>
   );
 }
