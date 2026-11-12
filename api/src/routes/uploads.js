@@ -19,7 +19,7 @@ const startSchema = z.object({
   size: z.number().int().positive(),
   contentType: z.string().regex(/^video\/[\w.+-]+$/),
 });
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const completeSchema = z.object({
   parts: z.array(z.object({
     PartNumber: z.number().int().min(1).max(10000),

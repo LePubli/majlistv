@@ -11,7 +11,7 @@ import { DEFAULTS, LANGS, getRow, lang, notifVars, parisDay, publicFriday } from
 const trio = z.object({ fr: z.string().max(300).default(''), en: z.string().max(300).default(''), ar: z.string().max(300).default('') });
 const bodySchema = z.object({
   enabled: z.boolean(), showKahf: z.boolean(), showGhusl: z.boolean(), showSalawat: z.boolean(),
-  ghusl: trio, salawat: trio, notif: trio, collectionId: z.string().uuid().nullable(), notify: z.boolean(), notifyHour: z.number().int().min(0).max(23),
+  ghusl: trio, salawat: trio, notif: trio, collectionId: z.guid().nullable(), notify: z.boolean(), notifyHour: z.number().int().min(0).max(23),
 });
 
 export default async function fridayRoutes(app) {

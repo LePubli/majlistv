@@ -11,7 +11,7 @@ export default async function cardsRoutes(app) {
   // - YouTube / Vimeo : uniquement si la vidéo est gratuite.
   // - archive.org : pas d'aperçu (miniature seulement).
   app.get('/talks/:id/hover', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const none = { kind: 'none' };
     if (!isOn(await getSetting('card_preview'))) return none;
     const { rows } = await pool.query(

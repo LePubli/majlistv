@@ -12,7 +12,7 @@ import { cardOf, clampInt, nextState, planSession } from '../../memoryCardsLib.j
 
 const TZ = 'Europe/Paris';
 const TODAY = `(now() AT TIME ZONE '${TZ}')::date`;
-const qidSchema = z.object({ qid: z.string().uuid() });
+const qidSchema = z.object({ qid: z.guid() });
 
 export default async function memoryCardsRoutes(app) {
   const auth = { preHandler: app.authenticate };

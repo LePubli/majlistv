@@ -10,7 +10,7 @@ import { pool } from '../db.js';
 import { stripeContext } from './billing.js';
 import { parseCountries } from '../pricingRegions.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const priceId = z.string().trim().regex(/^price_[A-Za-z0-9_]{1,80}$/, 'Identifiant de prix invalide (il commence par price_)');
 const bodySchema = z.object({
   name: z.string().trim().min(2).max(80),

@@ -13,7 +13,7 @@ import { pool } from '../db.js';
 import { enqueueForUser } from '../mailer.js';
 import { visibleSql } from '../visibility.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 export const REASONS = ['copyright', 'inappropriate', 'misleading', 'doctrinal', 'technical', 'other'];
 const csvCell = (v) => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
@@ -131,7 +131,7 @@ export default async function moderationRoutes(app) {
   app.get('/admin/audit', adminOnly, async (req, reply) => {
     const q = z.object({
       days: z.coerce.number().int().min(1).max(730).default(30),
-      actor: z.string().uuid().optional(),
+      actor: z.guid().optional(),
       role: z.enum(['admin', 'moderator']).optional(),
       q: z.string().trim().max(100).optional(),
       limit: z.coerce.number().int().min(1).max(500).default(100),

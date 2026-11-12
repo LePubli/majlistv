@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 
-const idSchema = z.object({ id: z.string().uuid() });
-const ridSchema = z.object({ rid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const ridSchema = z.object({ rid: z.guid() });
 const MAX_MS = 48 * 3600 * 1000;
 const textSchema = z.string().trim().min(5).max(800);
 

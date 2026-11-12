@@ -21,7 +21,7 @@ import { enqueue, isRunning, sweep, FILE_TTL_MIN, DONE_GRACE_MIN } from './prepa
 import { issueLicense } from './license.js';
 import { buildPack } from './pack.js';
 
-const idParam = z.object({ id: z.string().uuid() });
+const idParam = z.object({ id: z.guid() });
 const rate = { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } };
 
 /** Vidéo téléchargeable par cet utilisateur ? → { talk } ou { code, error } */
@@ -127,8 +127,8 @@ export default async function offlineRoutes(app) {
   // Renouvellement. Ancienne forme : { talkIds } (sans licence). Forme actuelle : { files: [{ talkId, kind, height, sha256 }] } → une licence neuve par fichier.
   app.post('/me/offline/renew', auth, async (req) => {
     const b = z.object({
-      talkIds: z.array(z.string().uuid()).min(1).max(50).optional(),
-      files: z.array(z.object({ talkId: z.string().uuid(), kind: z.enum(OFFLINE_KIND), height: z.number().int().min(0).max(4320).default(0), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).strict()).min(1).max(100).optional(),
+      talkIds: z.array(z.guid()).min(1).max(50).optional(),
+      files: z.array(z.object({ talkId: z.guid(), kind: z.enum(OFFLINE_KIND), height: z.number().int().min(0).max(4320).default(0), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).strict()).min(1).max(100).optional(),
     }).strict().refine((v) => v.talkIds || v.files, { message: 'talkIds ou files requis' }).parse(req.body ?? {});
     const days = await getNumber('mod_offline_valid_days');
     const now = Date.now();

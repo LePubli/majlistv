@@ -148,7 +148,7 @@ export default async function appUpdatesRoutes(app) {
       launchAsset: z.object({ sha256: z.string().regex(SHA_RE) }).strict(),
       assets: z.array(z.object({ sha256: z.string().regex(SHA_RE), key: z.string().regex(MD5_RE), contentType: z.string().regex(/^[\w.+-]+\/[\w.+-]+$/).max(80),
         fileExtension: z.string().regex(/^\.[A-Za-z0-9]{1,10}$/).optional() }).strict()).max(600),
-      expoClient: z.record(z.any()).default({}), notes: z.string().max(500).default(''),
+      expoClient: z.record(z.string(), z.any()).default({}), notes: z.string().max(500).default(''),
     }).strict().parse(req.body ?? {});
     if (JSON.stringify(b.expoClient).length > 100_000) return reply.code(413).send({ error: 'expoClient trop volumineux' });
     for (const sha of new Set([b.launchAsset.sha256, ...b.assets.map((a) => a.sha256)])) {

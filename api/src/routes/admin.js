@@ -2,6 +2,7 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { isoDateTime } from '../zpatch.js';
 import { pool } from '../db.js';
 import { forgetUser } from '../userstate.js';
 import { speakerSlug } from '../speakers.js';
@@ -9,7 +10,7 @@ import { enqueueEmail } from '../mailer.js';
 import { createHash } from 'node:crypto';
 
 const ROLES = ['user', 'organizer', 'moderator', 'admin'];
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const listSchema = z.object({
   q: z.string().trim().max(100).optional(),
   role: z.enum(ROLES).optional(),
@@ -33,7 +34,7 @@ const patchSchema = z.object({
   role: z.enum(ROLES).optional(),
   locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).optional(),
   disabled: z.boolean().optional(),                       // suspendre / réactiver
-  premiumUntil: z.string().datetime().nullable().optional(), // accès premium offert (null = retirer)
+  premiumUntil: isoDateTime().nullable().optional(), // accès premium offert (null = retirer)
 });
 
 // Mot de passe provisoire lisible (affiché une seule fois à l'admin).
@@ -95,7 +96,7 @@ export default async function adminRoutes(app) {
 
   // Changement de rôle en lot : jamais vers « administrateur », jamais sur un administrateur ni sur soi-même (ces cas sont ignorés et expliqués).
   app.post('/admin/users/bulk-role', adminOnly, async (req) => {
-    const { ids, role } = z.object({ ids: z.array(z.string().uuid()).min(1).max(100), role: z.enum(['user', 'organizer', 'moderator']) }).parse(req.body ?? {});
+    const { ids, role } = z.object({ ids: z.array(z.guid()).min(1).max(100), role: z.enum(['user', 'organizer', 'moderator']) }).parse(req.body ?? {});
     const unique = [...new Set(ids)];
     const found = new Map((await pool.query('SELECT id, name, role FROM users WHERE id = ANY($1::uuid[])', [unique])).rows.map((r) => [r.id, r]));
     const todo = []; const skipped = [];
@@ -220,7 +221,7 @@ export default async function adminRoutes(app) {
   // Suppression : refusée tant que l'utilisateur possède des vidéos (à transférer) ou un abonnement actif.
   app.delete('/admin/users/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { transferTo } = z.object({ transferTo: z.string().uuid().optional() }).parse(req.query);
+    const { transferTo } = z.object({ transferTo: z.guid().optional() }).parse(req.query);
     if (id === req.user.sub) return reply.code(400).send({ error: 'Tu ne peux pas supprimer ton propre compte' });
     const cur = (await pool.query('SELECT id, role FROM users WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Utilisateur introuvable' });

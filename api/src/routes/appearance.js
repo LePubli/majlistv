@@ -75,7 +75,7 @@ export default async function appearanceRoutes(app) {
   });
 
   app.get('/theme/fonts/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const f = (await pool.query('SELECT storage_key, format FROM theme_fonts WHERE id = $1', [id])).rows[0];
     if (!f) return reply.code(404).send({ error: 'Police introuvable' });
     const buf = await getObjectBuffer(f.storage_key);
@@ -94,7 +94,7 @@ export default async function appearanceRoutes(app) {
   }));
 
   app.post('/admin/themes', admin, async (req, reply) => {
-    const body = z.object({ name: nameSchema, copyFrom: z.number().int().positive().optional(), values: z.record(z.string()).optional() }).parse(req.body ?? {});
+    const body = z.object({ name: nameSchema, copyFrom: z.number().int().positive().optional(), values: z.record(z.string(), z.string()).optional() }).parse(req.body ?? {});
     let values = {};
     if (body.values) {
       const res = cleanValues(body.values, (await fontList()).map((x) => x.family));
@@ -136,7 +136,7 @@ export default async function appearanceRoutes(app) {
 
   app.put('/admin/themes/:id/draft', admin, async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const { values } = z.object({ values: z.record(z.string()) }).parse(req.body ?? {});
+    const { values } = z.object({ values: z.record(z.string(), z.string()) }).parse(req.body ?? {});
     const fonts = await fontList();
     const res = cleanValues(values, fonts.map((x) => x.family));
     if (Object.keys(res.errors).length) return reply.code(400).send({ error: 'Réglages invalides', errors: res.errors });
@@ -247,7 +247,7 @@ export default async function appearanceRoutes(app) {
   });
 
   app.delete('/admin/theme/fonts/:id', admin, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const f = (await pool.query('SELECT family, storage_key FROM theme_fonts WHERE id = $1', [id])).rows[0];
     if (!f) return reply.code(404).send({ error: 'Police introuvable' });
     // Encore utilisée ? (seulement si c'est le dernier fichier de cette famille)

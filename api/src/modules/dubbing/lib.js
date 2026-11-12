@@ -22,7 +22,7 @@ export const PRESETS = {
 export const BUILTIN = Object.fromEntries(Object.entries(PARAMS).map(([k, p]) => [k, p.def]));
 
 const num = (k) => z.number().min(PARAMS[k].min, `${k} : ${PARAMS[k].min} minimum`).max(PARAMS[k].max, `${k} : ${PARAMS[k].max} maximum`);
-const uuid = z.string().uuid();
+const uuid = z.guid();
 // Valeurs envoyées : toutes facultatives (une vidéo ne garde que ce qui diffère des réglages par défaut).
 export const paramsSchema = z.object({
   ...Object.fromEntries(Object.keys(PARAMS).map((k) => [k, num(k).optional()])),

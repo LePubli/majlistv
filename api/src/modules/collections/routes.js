@@ -3,11 +3,12 @@
 //   GET /studio/collections[/:id]                 équipe (modérateur, administrateur) : toutes les collections
 //   POST /studio/collections, PATCH/DELETE /studio/collections/:id, PUT /studio/collections/:id/items
 import { z } from 'zod';
+import { patchOf } from '../../zpatch.js';
 import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const KINDS = ['cycle', 'speaker', 'theme'];
 export const MAX_ITEMS = 100;
 import { CARD, cards, visibleItems } from '../../talkCards.js'; // fiches de vidéos partagées (socle), étape M3a
@@ -72,7 +73,7 @@ export default async function collectionsRoutes(app) {
 
   app.patch('/studio/collections/:id', staff, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const b = body.partial().parse(req.body ?? {});
+    const b = patchOf(body).parse(req.body ?? {});
     const cur = (await pool.query('SELECT * FROM collections WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Collection introuvable' });
     const m = { ...cur, ...b };
@@ -92,7 +93,7 @@ export default async function collectionsRoutes(app) {
   // Remplace la liste des vidéos ; l'ordre du tableau est l'ordre d'affichage.
   app.put('/studio/collections/:id/items', staff, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { talkIds } = z.object({ talkIds: z.array(z.string().uuid()).max(MAX_ITEMS) }).parse(req.body ?? {});
+    const { talkIds } = z.object({ talkIds: z.array(z.guid()).max(MAX_ITEMS) }).parse(req.body ?? {});
     const ids = [...new Set(talkIds)];
     const cur = (await pool.query('SELECT title FROM collections WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Collection introuvable' });

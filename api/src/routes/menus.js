@@ -12,7 +12,7 @@ import { pool } from '../db.js';
 import { LOCATIONS, LOCATION_KEYS, KINDS, APP_SCREENS, cleanMenuGeneric, fitsLocation, MAX_NAME } from '../menus.js';
 import { MENUS } from '../navcfg.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const nameSchema = z.string().trim().min(1).max(MAX_NAME);
 const pad = (s) => String(s || '');
 let seq = 0;
@@ -175,7 +175,7 @@ export default async function menusRoutes(app) {
   });
 
   // Affectation : { web_top: <id>|null, … } ; seuls les emplacements cités changent.
-  const locSchema = z.record(z.string().uuid().nullable());
+  const locSchema = z.record(z.string(), z.guid().nullable());
   app.put('/admin/menus/locations', adminOnly, async (req, reply) => {
     const b = locSchema.parse(req.body);
     const entries = Object.entries(b);

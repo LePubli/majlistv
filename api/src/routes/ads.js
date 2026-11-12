@@ -15,6 +15,7 @@
 // Fonction « Publicité » (Admin → Fonctions) : coupée, toutes ces routes répondent 404 et l'application n'affiche rien.
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { isoDateTime } from '../zpatch.js';
 import { pool } from '../db.js';
 import { storage, presignGet, presignPut, headObject, deleteObject } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
@@ -22,8 +23,8 @@ import { getSetting, getNumber } from '../settings.js';
 import { newReportToken, TOKEN_RE, buildReport, reportPdf } from '../adReport.js';
 import { mediaInfo, keyInfo, safeLink, adStatus, pickAds, clickRate, MEDIA_KEY_RE, AD_LANGS, normLang, matchesLang, langBreakdown } from '../ads.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
-const date = z.union([z.string().datetime({ offset: true }), z.null()]);
+const idSchema = z.object({ id: z.guid() });
+const date = z.union([isoDateTime({ offset: true }), z.null()]);
 const fields = {
   advertiser: z.string().trim().min(1, "Nom de l'annonceur obligatoire").max(80),
   title: z.string().trim().min(1, 'Titre obligatoire').max(120),
@@ -41,7 +42,7 @@ const createSchema = z.object({
   linkUrl: fields.linkUrl, mediaKey: fields.mediaKey, active: fields.active.default(true), startsAt: fields.startsAt.default(null), endsAt: fields.endsAt.default(null), languages: fields.languages.default([]),
 });
 const patchSchema = z.object(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.optional()]))).refine((b) => Object.keys(b).length > 0, 'Aucun changement');
-const nextQuery = z.object({ after: z.string().uuid().optional(), lang: z.string().max(12).optional() });
+const nextQuery = z.object({ after: z.guid().optional(), lang: z.string().max(12).optional() });
 const uploadSchema = z.object({ contentType: z.string().max(60), size: z.number().int().positive() });
 
 const COLS = `a.id, a.advertiser, a.title, a.sentence, a.cta_label, a.link_url, a.media_kind, a.media_key, a.media_type, a.active, a.starts_at, a.ends_at, a.created_at, a.languages, a.report_token`;

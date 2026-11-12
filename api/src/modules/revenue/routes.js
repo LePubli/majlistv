@@ -82,7 +82,7 @@ export default async function revenueRoutes(app) {
   });
 
   app.post('/admin/revenue/lines/:id/paid', admin, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const { note } = z.object({ note: z.string().max(300).optional() }).parse(req.body ?? {});
     const { rows } = await pool.query(
       "UPDATE payout_lines SET status = 'paid', paid_at = now(), note = COALESCE($2, note) WHERE id = $1 AND status = 'due' RETURNING channel_name, amount_cents + carried_in_cents AS total, to_char(month, 'YYYY-MM') AS month",

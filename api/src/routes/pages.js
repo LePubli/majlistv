@@ -121,7 +121,7 @@ export default async function pagesRoutes(app) {
   });
 
   app.get('/pages/media/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const m = (await pool.query('SELECT storage_key, content_type FROM site_page_media WHERE id = $1', [id])).rows[0];
     if (!m) return reply.code(404).send({ error: 'Image introuvable' });
     const buf = await getObjectBuffer(m.storage_key);
@@ -300,7 +300,7 @@ export default async function pagesRoutes(app) {
   });
 
   app.delete('/admin/page-media/:id', admin, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const m = (await pool.query('SELECT name, storage_key FROM site_page_media WHERE id = $1', [id])).rows[0];
     if (!m) return reply.code(404).send({ error: 'Image introuvable' });
     // Encore utilisée dans une page (publiée ou brouillon, ou historique récent) ? On ne supprime pas.

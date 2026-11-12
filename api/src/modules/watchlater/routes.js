@@ -9,7 +9,7 @@ import { visibleSql } from '../../visibility.js';
 import { CARD, cards } from '../../talkCards.js';
 
 export const MAX_ITEMS = 200;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
 // Une vidéo regardée jusqu'au bout n'a plus sa place dans « plus tard ».
 async function dropFinished(userId) {

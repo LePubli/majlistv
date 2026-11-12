@@ -11,7 +11,7 @@ import { todayStr } from '../../stats.js';
 const query = z.object({
   days: z.coerce.number().int().refine((n) => [7, 30, 90, 365].includes(n), 'days').default(30),
   audience: z.enum(['web', 'kids']).default('web'),
-  talk: z.string().uuid().optional(),
+  talk: z.guid().optional(),
   format: z.enum(['json', 'csv']).default('json'),
 });
 

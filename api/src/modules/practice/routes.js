@@ -12,8 +12,8 @@ import { hasLearningTier } from '../../access.js';
 import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 import { sealText, openText, practiceKeyReady } from '../../practiceCrypto.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
-const sidSchema = z.object({ sid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const sidSchema = z.object({ sid: z.guid() });
 const MAX_MS = 48 * 3600 * 1000;
 
 const sugg = {
@@ -189,7 +189,7 @@ export default async function practiceRoutes(app) {
 
   // Prendre un engagement : proposition de la liste ou action écrite par le membre. Réservé à l'offre Apprentissage.
   const commitBody = z.object({
-    suggestionId: z.string().uuid().optional(),
+    suggestionId: z.guid().optional(),
     text: z.string().trim().min(3).max(300).optional(),
     niyya: z.string().trim().max(500).default(''),
     due: z.enum(DUE_KINDS).nullable().default(null),

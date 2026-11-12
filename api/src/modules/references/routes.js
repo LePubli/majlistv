@@ -4,13 +4,14 @@
 //  • Public : seules les références VALIDÉES s'affichent (« Références citées »), avec la minute et le texte de la source.
 // Les hadiths sont toujours relus par un humain ; un verset n'est publié seul que si le service a vérifié l'extrait et le texte (réglage).
 import { z } from 'zod';
+import { patchOf } from '../../zpatch.js';
 import { pool } from '../../db.js';
 import { visibleSql } from '../../visibility.js';
 import { viaChannel } from '../../channelAccess.js';
 import { COLLECTIONS, MAX_VERSES, fromRow, publicShape, refKey, resolveTexts, studioShape } from './lib.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
-const ridSchema = z.object({ rid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const ridSchema = z.object({ rid: z.guid() });
 const MAX_MS = 48 * 3600 * 1000;
 const STAFF = new Set(['admin', 'moderator']);
 
@@ -140,7 +141,7 @@ export default async function referenceRoutes(app) {
     return reply.code(201).send(shaped);
   });
 
-  const patchBody = refBody.partial().extend({ status: z.enum(['draft', 'approved', 'rejected']).optional() })
+  const patchBody = patchOf(refBody).extend({ status: z.enum(['draft', 'approved', 'rejected']).optional() })
     .refine((b) => Object.keys(b).length > 0, { message: 'Rien à modifier' });
   app.patch('/studio/references/:rid', organizer, async (req, reply) => {
     const { rid } = ridSchema.parse(req.params);

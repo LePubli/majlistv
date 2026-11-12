@@ -5,6 +5,7 @@ import { speakerNames, speakerSlug } from '../speakers.js';
 import { inCategorySql, adultSql, BANDS, MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
 import { timeState } from '../kidsControl.js';
 import { z } from 'zod';
+import { isoDateTime } from '../zpatch.js';
 import { pool } from '../db.js';
 import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js';
 import { visibleSql } from '../visibility.js';
@@ -65,7 +66,7 @@ const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(24),
   offset: z.coerce.number().int().min(0).default(0),
 });
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const talkSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(5000).default(''),
@@ -80,7 +81,7 @@ const talkSchema = z.object({
   // Niveau de difficulté (étape 24.1) : vide = tous niveaux.
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   videoUrl: z.string().url().max(500).optional(),
-  uploadId: z.string().uuid().optional(),
+  uploadId: z.guid().optional(),
   // Langues des sous-titres à générer automatiquement (vidéos envoyées uniquement).
   translateTo: z.array(z.enum(TRANSLATION_LANGS)).max(TRANSLATION_LANGS.length).default([]),
   // YouTube / Vimeo : l'organisateur déclare avoir l'accord de l'auteur -> transcription, traductions, résumé, recherche.
@@ -89,7 +90,7 @@ const talkSchema = z.object({
   importVideo: z.boolean().default(false),
   // Étape 10.4 : brouillon ou publication programmée.
   publication: z.enum(['draft', 'scheduled', 'published']).default('published'),
-  publishAt: z.string().datetime({ offset: true }).optional(),
+  publishAt: isoDateTime({ offset: true }).optional(),
 });
 
 // Modification d'une vidéo existante (tous les champs sont facultatifs).
@@ -105,7 +106,7 @@ const patchSchema = z.object({
   kidsBands: z.array(z.enum(BANDS)).max(9), // Mejliss Kids : tranches d'âge (liste vide = pas pour les enfants)
   showAdults: z.boolean(), // visible dans le catalogue adultes
   publication: z.enum(['draft', 'scheduled', 'published']),
-  publishAt: z.string().datetime({ offset: true }).nullable(),
+  publishAt: isoDateTime({ offset: true }).nullable(),
   // 0..2 : une des 3 images tirées de la vidéo ; -1 : miniature de la plateforme d'origine (YouTube, Vimeo, archive.org).
   posterChoice: z.number().int().min(-1).max(2),
   featured: z.boolean(), // mise en avant sur l'accueil : réservé aux administrateurs
@@ -153,7 +154,7 @@ function checkPublication(publication, publishAt) {
 
 // Modification en lot (étape 27.1) : mêmes règles que PATCH /talks/:id, appliquées à plusieurs vidéos d'un coup.
 const bulkSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
+  ids: z.array(z.guid()).min(1).max(200),
   bandsMode: z.enum(['replace', 'add', 'remove']).default('replace'), // façon de modifier les tranches Kids
   changes: z.object({
     categoryId: z.number().int().positive().nullable(),
@@ -597,7 +598,7 @@ export default async function talksRoutes(app) {
   });
 
   // Ajoute une langue de sous-titres à une vidéo (ou relance une traduction échouée).
-  const trParams = z.object({ id: z.string().uuid(), lang: z.enum(TRANSLATION_LANGS) });
+  const trParams = z.object({ id: z.guid(), lang: z.enum(TRANSLATION_LANGS) });
   async function ownedUpload(req, reply, id) {
     const { rows } = await pool.query('SELECT organizer_id, source, language, transcript_language, rights_confirmed FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
@@ -724,7 +725,7 @@ export default async function talksRoutes(app) {
   // Suppression en lot (Studio → Contenus : on coche, puis « Supprimer »). Mêmes droits que la suppression d'une vidéo ; les vidéos
   // qui ne sont pas à l'utilisateur (ou déjà supprimées) sont comptées à part, sans rien casser.
   app.post('/talks/bulk-delete', { preHandler: app.authenticate }, async (req, reply) => {
-    const { ids } = z.object({ ids: z.array(z.string().uuid()).min(1).max(50) }).parse(req.body ?? {});
+    const { ids } = z.object({ ids: z.array(z.guid()).min(1).max(50) }).parse(req.body ?? {});
     const unique = [...new Set(ids)];
     const titles = new Map((await pool.query('SELECT id, title FROM talks WHERE id = ANY($1::uuid[])', [unique])).rows.map((r) => [r.id, r.title]));
     const gone = [];

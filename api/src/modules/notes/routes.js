@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 
 const MAX_PER_TALK = 300;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const createSchema = z.object({
   positionMs: z.number().int().min(0).max(86_400_000),
   body: z.string().trim().max(2000).default(''),

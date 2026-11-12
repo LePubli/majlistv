@@ -13,8 +13,8 @@ import { parentAllowed } from '../kids/routes.js';
 import { fullAccess, sumDuration } from './lib.js';
 
 const TODAY = `(now() AT TIME ZONE '${TZ}')::date`;
-const idSchema = z.object({ id: z.string().uuid() });
-const chSchema = z.object({ id: z.string().uuid(), cid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const chSchema = z.object({ id: z.guid(), cid: z.guid() });
 export const MIN_STOP = 5, MAX_STOP = 120;
 const kidsWhere = "i.status = 'published' AND i.audience IN ('kids', 'both') AND EXISTS (SELECT 1 FROM audyn_chapters c WHERE c.item_id = i.id)";
 

@@ -30,7 +30,7 @@ export default async function legalRoutes(app) {
 
   // Preuves de consentement d'un utilisateur (en cas de litige).
   app.get('/admin/users/:id/consents', adminOnly, async (req) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const { rows } = await pool.query(
       'SELECT kind, version, text, context, ip, created_at AS "createdAt" FROM consents WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [id]);
     return rows;

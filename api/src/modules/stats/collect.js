@@ -11,7 +11,7 @@ import { todayStr, isBot, fingerprint, firstToday, classifySource, deviceOf, lan
 
 const hitBody = z.object({
   type: z.enum(['page', 'view', 'play', 'progress', 'quartile', 'complete']),
-  talkId: z.string().uuid().optional(),
+  talkId: z.guid().optional(),
   ref: z.string().max(300).optional(),      // page d'origine (envoyée à la première page de la visite seulement)
   entry: z.boolean().optional(),
   seconds: z.number().int().min(0).max(65).optional(),
@@ -88,7 +88,7 @@ export default async function statsCollectRoutes(app) {
   // Espace enfant : compteurs par vidéo seulement. Le temps passé dans l'espace enfant vient déjà de kid_usage (mesuré par le serveur).
   const kidBody = z.object({
     type: z.enum(['view', 'play', 'progress', 'quartile', 'complete']),
-    talkId: z.string().uuid(),
+    talkId: z.guid(),
     seconds: z.number().int().min(0).max(65).optional(),
     q: z.union([z.literal(25), z.literal(50), z.literal(75)]).optional(),
   });

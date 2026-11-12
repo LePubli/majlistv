@@ -8,21 +8,22 @@
 //  Studio (organisateur : ses événements ; administrateur : tous) :
 //   GET|POST /studio/events · GET|PATCH|DELETE /studio/events/:id   (PATCH : { talkId } rattache la rediffusion)
 import { z } from 'zod';
+import { patchOf, isoDateTime } from '../../zpatch.js';
 import { pool } from '../../db.js';
 import { getNumber } from '../../settings.js';
 import { baseVars } from '../../mailer.js';
 import { visibleSql } from '../../visibility.js';
 import { parseLiveUrl, publicShape, buildIcs, STATUSES } from './lib.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const base = z.object({
   title: z.string().trim().min(1).max(200), speaker: z.string().trim().max(200).default(''), description: z.string().trim().max(4000).default(''),
   language: z.string().trim().regex(/^[a-z]{2,3}$/).default('fr'),
   url: z.string().trim().max(500),
-  startsAt: z.string().datetime({ offset: true }), durationMinutes: z.number().int().min(5).max(600).default(60),
+  startsAt: isoDateTime({ offset: true }), durationMinutes: z.number().int().min(5).max(600).default(60),
   status: z.enum(STATUSES).default('draft'),
 }).strict();
-const patchBody = base.partial().extend({ talkId: z.string().uuid().nullable().optional() }).strict();
+const patchBody = patchOf(base).extend({ talkId: z.guid().nullable().optional() }).strict();
 
 export default async function eventsRoutes(app) {
   const studio = { preHandler: app.requireRole('organizer', 'admin') };

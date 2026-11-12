@@ -8,7 +8,7 @@ import { pool } from '../../db.js';
 import { presignGet, putObject, deleteObject } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
 
-const uuid = z.string().uuid();
+const uuid = z.guid();
 const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const idParam = z.object({ id: uuid });
 const seriesBody = z.object({

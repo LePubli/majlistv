@@ -18,9 +18,9 @@ import { saveSettings } from '../settings.js';
 import { BOT, running, dropCache, visitorOf } from '../xpRuntime.js';
 import { stripeContext } from './billing.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
-const variantIn = z.object({ name: z.string().trim().min(1).max(60), weight: z.number().int().min(1).max(100), texts: z.record(z.record(z.string())).default({}), options: z.record(z.string()).default({}), prices: z.record(z.string()).default({}) });
+const variantIn = z.object({ name: z.string().trim().min(1).max(60), weight: z.number().int().min(1).max(100), texts: z.record(z.string(), z.record(z.string(), z.string())).default({}), options: z.record(z.string(), z.string()).default({}), prices: z.record(z.string(), z.string()).default({}) });
 const createSchema = z.object({ name: z.string().trim().min(1).max(120), zone: z.string(), variants: z.array(variantIn).min(2).max(3) });
 const patchSchema = z.object({ name: z.string().trim().min(1).max(120).optional(), variants: z.array(variantIn).min(2).max(3).optional() }).refine((b) => Object.keys(b).length > 0, 'Aucun changement');
 
@@ -43,7 +43,7 @@ export default async function experimentsRoutes(app) {
 
   // Enregistre l'exposition (ou le clic) d'un visiteur ; la variante est recalculée ici, jamais crue sur parole.
   const track = (column) => async (req) => {
-    const { visitor: raw, experiment } = z.object({ visitor: z.string().max(64), experiment: z.string().uuid() }).parse(req.body ?? {});
+    const { visitor: raw, experiment } = z.object({ visitor: z.string().max(64), experiment: z.guid() }).parse(req.body ?? {});
     const visitor = visitorOf(raw);
     if (!visitor || BOT.test(req.headers['user-agent'] || '')) return { ok: true };
     const e = (await running()).find((x) => x.id === experiment);

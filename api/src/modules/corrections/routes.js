@@ -10,8 +10,8 @@ import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { getNumber } from '../../settings.js';
 import { cleanSuggestion, wordDiff } from './lib.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
-const cidSchema = z.object({ cid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const cidSchema = z.object({ cid: z.guid() });
 const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 const STAFF = new Set(['admin', 'moderator']);
 
@@ -64,7 +64,7 @@ export default async function correctionRoutes(app) {
   }
 
   app.get('/studio/corrections', reviewer, async (req) => {
-    const q = z.object({ status: z.enum(['pending', 'accepted', 'rejected']).default('pending'), talk: z.string().uuid().optional(), limit: z.coerce.number().int().min(1).max(200).default(100) }).parse(req.query);
+    const q = z.object({ status: z.enum(['pending', 'accepted', 'rejected']).default('pending'), talk: z.guid().optional(), limit: z.coerce.number().int().min(1).max(200).default(100) }).parse(req.query);
     const staff = STAFF.has(req.user.role);
     const speakers = staff ? [] : await managedSpeakers(req.user.sub);
     const scope = staff ? 'true' : `(t.organizer_id = $4 OR lower(trim(t.speaker)) = ANY($5::text[]))`;

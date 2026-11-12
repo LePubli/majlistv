@@ -18,7 +18,7 @@ import { fold, foldSql } from '../../fold.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { parentAllowed } from './routes.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const rid = z.object({ id: z.coerce.number().int().positive() });
 const names = z.object({
   fr: z.string().trim().min(1).max(60), en: z.string().trim().max(60).optional().default(''), ar: z.string().trim().max(60).optional().default(''),
@@ -109,7 +109,7 @@ export default async function kidCatalogRoutes(app) {
 
   // En lot : { ids, rubricIds, mode: 'add' | 'replace' | 'remove' }.
   app.post('/studio/kids/rubrics/bulk', orgAdmin, async (req, reply) => {
-    const b = z.object({ ids: z.array(z.string().uuid()).min(1).max(500), rubricIds: z.array(z.number().int().positive()).max(20), mode: z.enum(['add', 'replace', 'remove']) }).parse(req.body ?? {});
+    const b = z.object({ ids: z.array(z.guid()).min(1).max(500), rubricIds: z.array(z.number().int().positive()).max(20), mode: z.enum(['add', 'replace', 'remove']) }).parse(req.body ?? {});
     const talks = (await pool.query(
       'SELECT id FROM talks WHERE id = ANY($1::uuid[]) AND ($2::boolean OR organizer_id = $3 OR lower(trim(speaker)) = ANY($4::text[]))',
       [b.ids, req.user.role === 'admin', req.user.sub, await managedSpeakers(req.user.sub)])).rows.map((r) => r.id);

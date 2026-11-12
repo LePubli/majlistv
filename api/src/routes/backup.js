@@ -14,7 +14,7 @@ const body = z.object({
   kind: z.enum(KINDS),
   ok: z.boolean(),
   summary: z.string().max(600).default(''),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
 });
 
 export default async function backupRoutes(app) {

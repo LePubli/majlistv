@@ -131,7 +131,7 @@ export default async function ramadanRoutes(app) {
   });
 
   const ownKid = async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const p = (await pool.query('SELECT id, name FROM kid_profiles WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
     if (!p) { reply.code(404).send({ error: 'Profil introuvable' }); return null; }
     return p;

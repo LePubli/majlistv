@@ -5,7 +5,7 @@ import { visibleSql } from '../../visibility.js';
 import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category,
   t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
 

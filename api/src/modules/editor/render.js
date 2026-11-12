@@ -160,7 +160,7 @@ export default async function renderRoutes(app, { guard, editable, cuesOf, viewe
   });
 
   async function loadRender(req, reply) {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const r = (await pool.query('SELECT r.*, t.organizer_id, t.title AS talk_title FROM editor_renders r JOIN talks t ON t.id = r.talk_id WHERE r.id = $1', [id])).rows[0];
     if (!r || !(req.user.role === 'admin' || r.organizer_id === req.user.sub)) { reply.code(404).send({ error: 'Rendu introuvable' }); return null; }
     return r;

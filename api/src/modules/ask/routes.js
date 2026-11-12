@@ -13,9 +13,9 @@ import { MAX_QUESTION, buildPassages, buildPrompt, lang, selectPassages, validat
 
 const TZ = 'Europe/Paris';
 const DAY_START = `(date_trunc('day', now() AT TIME ZONE '${TZ}') AT TIME ZONE '${TZ}')`;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const bodySchema = z.object({ question: z.string().trim().min(3).max(MAX_QUESTION) });
-const entrySchema = z.object({ id: z.string().uuid(), qid: z.string().uuid() });
+const entrySchema = z.object({ id: z.guid(), qid: z.guid() });
 const HISTORY = 30; // derniers échanges d'un membre sur une vidéo
 
 export async function purgeAsk() {
@@ -167,7 +167,7 @@ export default async function askRoutes(app) {
   });
 
   app.put('/admin/ask/:qid/review', adminOnly, async (req, reply) => {
-    const { qid } = z.object({ qid: z.string().uuid() }).parse(req.params);
+    const { qid } = z.object({ qid: z.guid() }).parse(req.params);
     const { action } = z.object({ action: z.enum(['ok', 'delete']) }).parse(req.body ?? {});
     if (action === 'delete') {
       const r = await pool.query('DELETE FROM ask_log WHERE id = $1', [qid]);

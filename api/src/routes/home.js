@@ -143,7 +143,7 @@ export default async function homeRoutes(app) {
 
   // « Dans la même veine » (fiche vidéo) : même intervenant d'abord, puis même catégorie, puis les plus récentes pour compléter.
   app.get('/talks/:id/similar', async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const vis = `${visibleSql('t')} AND ${adultSql('t')}`;
     const cur = (await pool.query('SELECT speaker, category_id FROM talks WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Vidéo introuvable' });

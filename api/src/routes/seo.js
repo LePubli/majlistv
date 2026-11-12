@@ -14,7 +14,7 @@ import { publicSpeakers, speakerBio, speakerSlug } from '../speakers.js';
 import { paragraphs } from '../seoTranscript.js';
 import { channelImages, channelProfile } from '../channels.js';
 
-const idParam = z.object({ id: z.string().uuid() });
+const idParam = z.object({ id: z.guid() });
 const refParam = z.object({ id: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/i) }); // UUID ou slug
 const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const clip = (s, n) => { const x = clean(s); return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x; };

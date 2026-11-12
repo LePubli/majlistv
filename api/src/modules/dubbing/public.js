@@ -9,7 +9,7 @@ import { playbackLevel } from '../../playback.js';
 import { hasActiveSubscription } from '../../access.js';
 import { visibleSql } from '../../visibility.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
 export default async function publicRoutes(app) {
   async function visibleTalk(id) {

@@ -10,7 +10,7 @@ import {
 import { pool } from '../../db.js';
 import { PROVIDERS } from './rclone.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const PROVIDER_NAMES = { planethoster: 'PlanetHoster (SFTP)', s3: 'Stockage S3', webdav: 'WebDAV', none: 'Aucun' };
 
 async function pendingOriginals(s) {

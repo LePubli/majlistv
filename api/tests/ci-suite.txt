@@ -77,3 +77,4 @@ test_menus.py
 test_link_info_route.py
 test_authz_sweep.py
 test_login_guard.py
+test_patch_defaults.py

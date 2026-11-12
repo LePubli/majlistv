@@ -53,7 +53,7 @@ export default async function learningRoutes(app) {
   app.post('/me/learning/plan', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
     const b = z.object({
-      day: dayS, kind: z.enum(KINDS), talkId: z.string().uuid().optional(), note: z.string().trim().max(120).optional(),
+      day: dayS, kind: z.enum(KINDS), talkId: z.guid().optional(), note: z.string().trim().max(120).optional(),
     }).parse(req.body ?? {});
     const today = await parisToday();
     if (!dayAllowed(b.day, today)) return reply.code(400).send({ error: "Choisissez un jour entre aujourd'hui et dans un an" });
@@ -77,7 +77,7 @@ export default async function learningRoutes(app) {
   // Déplace une séance, la coche comme faite (ou la décoche), ou change sa note.
   app.patch('/me/learning/plan/:id', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const b = z.object({ day: dayS.optional(), done: z.boolean().optional(), note: z.string().trim().max(120).optional() })
       .refine((x) => x.day !== undefined || x.done !== undefined || x.note !== undefined, 'Rien à modifier').parse(req.body ?? {});
     const cur = (await pool.query('SELECT kind FROM learning_plan_items WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
@@ -99,7 +99,7 @@ export default async function learningRoutes(app) {
 
   app.delete('/me/learning/plan/:id', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     await pool.query('DELETE FROM learning_plan_items WHERE id = $1 AND user_id = $2', [id, req.user.sub]);
     return reply.code(204).send();
   });
@@ -125,7 +125,7 @@ export default async function learningRoutes(app) {
   const MAX_TALKS = 20;
   const deadlineBody = z.object({
     title: z.string().trim().min(1).max(80), dueOn: dayS, pace: z.enum(Object.keys(PACES)),
-    seriesId: z.string().uuid().optional(), talkIds: z.array(z.string().uuid()).max(MAX_TALKS).optional(), dryRun: z.boolean().optional(),
+    seriesId: z.guid().optional(), talkIds: z.array(z.guid()).max(MAX_TALKS).optional(), dryRun: z.boolean().optional(),
   });
 
   app.get('/me/learning/deadlines', auth, async (req, reply) => {
@@ -168,7 +168,7 @@ export default async function learningRoutes(app) {
   // Supprime l'échéance et ses séances pas encore faites (les séances faites restent dans l'historique du planning).
   app.delete('/me/learning/deadlines/:id', auth, async (req, reply) => {
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     await pool.query('DELETE FROM learning_plan_items WHERE deadline_id = $1 AND user_id = $2 AND done_at IS NULL', [id, req.user.sub]);
     await pool.query('DELETE FROM learning_deadlines WHERE id = $1 AND user_id = $2', [id, req.user.sub]);
     return reply.code(204).send();
@@ -214,7 +214,7 @@ export default async function learningRoutes(app) {
   });
 
   app.post('/me/learning/attestations', auth, async (req, reply) => {
-    const { seriesId } = z.object({ seriesId: z.string().uuid() }).parse(req.body ?? {});
+    const { seriesId } = z.object({ seriesId: z.guid() }).parse(req.body ?? {});
     if (!(await hasLearningTier(req.user.sub))) return required(reply);
     const attempts = await attemptsOf(req.user.sub);
     const s = (await seriesProgress(req.user.sub, attempts)).find((x) => x.id === seriesId);

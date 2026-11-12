@@ -24,7 +24,7 @@ import { channelImages } from '../../channels.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { makePoster } from './poster.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const listSchema = z.object({
   channel: z.string().max(120).regex(/^[a-z0-9-]+$/).optional(),
   limit: z.coerce.number().int().min(1).max(30).default(12),
@@ -172,7 +172,7 @@ export default async function shortsRoutes(app) {
   }
 
   app.post('/studio/shorts', manager, async (req, reply) => {
-    const b = z.object({ projectId: z.string().uuid(), title: z.string().trim().max(TITLE_MAX).optional(), status: OWN.default('draft') }).parse(req.body ?? {});
+    const b = z.object({ projectId: z.guid(), title: z.string().trim().max(TITLE_MAX).optional(), status: OWN.default('draft') }).parse(req.body ?? {});
     const src = await sourceOf(req, b.projectId);
     if (!src) return reply.code(404).send({ error: 'Extrait introuvable, ou sans rendu prêt : lancez d’abord le rendu de l’extrait dans l’éditeur.', code: 'no_render' });
     if ((await pool.query('SELECT 1 FROM public_shorts WHERE project_id = $1', [b.projectId])).rowCount) return reply.code(409).send({ error: 'Cet extrait est déjà publié ou en brouillon : modifiez-le dans la liste.', code: 'already' });

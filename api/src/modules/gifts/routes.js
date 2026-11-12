@@ -21,7 +21,7 @@ export const GIFT_TERMS_TEXT = {
 };
 const lang2 = (l) => (['fr', 'en', 'ar'].includes(String(l || '').slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
 const toCents = (v) => { const n = Math.round(Number(String(v || '').replace(',', '.')) * 100); return Number.isFinite(n) && n > 0 ? n : 0; };
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
 // Durées réellement en vente, avec leur prix en centimes.
 export async function giftOptions() {

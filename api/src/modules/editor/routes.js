@@ -54,7 +54,7 @@ const MUSIC_ONLY = "a.kind = 'music'";
 
 export const LOCK_TTL_S = 75;
 const AUTO_KEEP = 30;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const session = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, 'Séance invalide');
 
 // Vidéo + projet, avec l'état du verrou calculé par la base (même horloge pour tout le monde).
@@ -199,7 +199,7 @@ export default async function routes(app) {
 
   // Nouveau montage d'une vidéo (ou le montage existant s'il y en a déjà un).
   app.post('/studio/editor/projects', viewer, async (req, reply) => {
-    const { talkId } = z.object({ talkId: z.string().uuid() }).parse(req.body ?? {});
+    const { talkId } = z.object({ talkId: z.guid() }).parse(req.body ?? {});
     const t = (await pool.query('SELECT id, organizer_id, title, source, video_status, duration_seconds FROM talks WHERE id = $1', [talkId])).rows[0];
     if (!t || !canSee(req.user, t)) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const existing = (await pool.query("SELECT id FROM editor_projects WHERE talk_id = $1 AND kind = 'main'", [talkId])).rows[0];
@@ -262,7 +262,7 @@ export default async function routes(app) {
   // Sauvegarde automatique.
   app.put('/studio/editor/projects/:id', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
-    const body = z.object({ timeline: z.unknown(), rev: z.number().int().min(1), session }).parse(req.body ?? {});
+    const body = z.object({ timeline: z.unknown().optional(), rev: z.number().int().min(1), session }).parse(req.body ?? {});
     const v = lockView(row, req.user, body.session);
     // Verrou expiré sans que personne ne l'ait pris (veille de l'ordinateur…) : on le reprend en silence.
     if (!v.mine && v.active) return reply.code(423).send({ error: `Projet en cours de modification par ${row.lock_name || 'une autre personne'}.`, code: 'locked', lock: v });
@@ -506,7 +506,7 @@ export default async function routes(app) {
   const tplView = (r, user) => ({ id: r.id, name: r.name, scope: r.channel_slug ? 'channel' : 'all', channel: r.channel_slug, dress: r.dress, createdBy: r.created_name || null,
     canDelete: user.role === 'admin' || r.created_by === user.sub });
   app.get('/studio/editor/templates', viewer, async (req, reply) => {
-    const { project } = z.object({ project: z.string().uuid() }).parse(req.query ?? {});
+    const { project } = z.object({ project: z.guid() }).parse(req.query ?? {});
     const row = await loadProject(project);
     if (!row || !canSee(req.user, row)) return reply.code(404).send({ error: 'Projet introuvable' });
     const slug = speakerSlug(row.speaker);
@@ -516,7 +516,7 @@ export default async function routes(app) {
     return { templates: rows.map((r) => tplView(r, req.user)), channel: slug };
   });
   app.post('/studio/editor/templates', viewer, async (req, reply) => {
-    const b = z.object({ projectId: z.string().uuid(), name: z.string().trim().min(1, 'Donnez un nom au modèle').max(80), scope: z.enum(['channel', 'all']).default('channel'), dress: z.unknown() }).parse(req.body ?? {});
+    const b = z.object({ projectId: z.guid(), name: z.string().trim().min(1, 'Donnez un nom au modèle').max(80), scope: z.enum(['channel', 'all']).default('channel'), dress: z.unknown().optional() }).parse(req.body ?? {});
     const row = await loadProject(b.projectId);
     if (!row || !canSee(req.user, row)) return reply.code(404).send({ error: 'Projet introuvable' });
     if (b.scope === 'all' && req.user.role !== 'admin') return reply.code(403).send({ error: 'Seul un administrateur crée un modèle pour toutes les chaînes.' });
@@ -547,7 +547,7 @@ export default async function routes(app) {
   let framing = 0;
   app.post('/studio/editor/projects/:id/frame', viewer, async (req, reply) => {
     const row = await guard(req, reply); if (!row) return reply;
-    const b = z.object({ timeline: z.unknown(), at: z.union([z.number().min(0), z.enum(['intro', 'outro'])]) }).parse(req.body ?? {});
+    const b = z.object({ timeline: z.unknown().optional(), at: z.union([z.number().min(0), z.enum(['intro', 'outro'])]) }).parse(req.body ?? {});
     if (!editable(row)) return reply.code(409).send({ error: 'Cette vidéo ne peut pas être montée.', code: 'not_editable' });
     if (!(await hasFfmpeg())) return reply.code(503).send({ error: 'FFmpeg est absent de l’image de l’API : redéployez majlistv-api.', code: 'no_ffmpeg' });
     const chk = checkTimeline(b.timeline, row.duration_seconds, { logos: await knownLogos(logoAssets(b.timeline)) });

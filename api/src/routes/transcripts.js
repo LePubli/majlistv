@@ -4,7 +4,7 @@ import { pool } from '../db.js';
 import { checkPlaybackToken, playbackLevel } from '../playback.js';
 import { toVtt } from '../vtt.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 
 export default async function transcriptRoutes(app) {

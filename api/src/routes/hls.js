@@ -10,7 +10,7 @@ import { pool } from '../db.js';
 
 export default async function hlsRoutes(app) {
   app.get('/hls/:id/*', async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const path = req.params['*'];
     const token = req.query.t;
     if (!HLS_PATH.test(path)) return reply.code(404).send({ error: 'Introuvable' });

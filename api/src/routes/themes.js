@@ -13,7 +13,7 @@ import { dueOn, DUE_KINDS } from '../dueDates.js';
 import { visibleSql } from '../visibility.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const themeIdSchema = z.string().regex(/^[QDA]\d{1,2}$/);
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 

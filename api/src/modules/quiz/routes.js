@@ -12,8 +12,8 @@ import { learningBrief } from '../../learning.js';
 import { recordAttempt } from '../../revision.js';
 import { featureOn } from '../../features.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
-const qidSchema = z.object({ qid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const qidSchema = z.object({ qid: z.guid() });
 const MAX_MS = 48 * 3600 * 1000;
 
 const optionsSchema = z.array(z.string().trim().min(1).max(300)).min(3).max(4);
@@ -272,7 +272,7 @@ export default async function quizRoutes(app) {
     };
   });
 
-  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.string().uuid(), index: z.number().int().min(0).max(3) })).max(20) });
+  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.guid(), index: z.number().int().min(0).max(3) })).max(20) });
   app.post('/talks/:id/quiz/submit', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const b = submitBody.parse(req.body ?? {});

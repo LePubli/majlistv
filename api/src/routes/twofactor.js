@@ -103,7 +103,7 @@ export default async function twoFactorRoutes(app) {
   });
 
   app.post('/admin/users/:id/2fa/reset', { preHandler: app.requireRole('admin') }, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const r = await pool.query('UPDATE users SET totp_secret = NULL, totp_pending = NULL, totp_enabled_at = NULL, totp_last_step = NULL, totp_failures = 0, totp_locked_until = NULL, sessions_valid_after = now() WHERE id = $1 RETURNING email', [id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Utilisateur introuvable' });
     await pool.query('DELETE FROM two_factor_recovery WHERE user_id = $1', [id]);

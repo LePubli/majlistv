@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const ALLOWED_HOSTS = /^(www\.|m\.|music\.|geo\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly|archive\.org)$/i;
 
 const urlSchema = z.string().trim().url().max(500).refine((u) => {

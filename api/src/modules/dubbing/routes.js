@@ -10,7 +10,7 @@ import { compile as compileGlossary, apply as applyGlossary } from './glossary.j
 import * as ext from '../../ext.js';
 import speakerRoutes, { loadSpeakers, speakerJob, resolveSpeaker, freezeSpeakers, speechBySpeaker, refreshTotals } from './speakers.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 // Étape D1b : une phrase est gardée en voix d'origine si elle est marquée dans le Studio (dub_segments) ou commence par « # ».
 export const KEPT = `(COALESCE(f.keep_original, false) OR left(ltrim(s.text), 1) = '#')`;
 export const SEGS_FROM = `transcript_segments s LEFT JOIN dub_segments f ON f.talk_id = s.talk_id AND f.idx = s.idx`;

@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
+import { z } from 'zod';
 import { config } from './config.js';
 import { pool, migrate, ensureAdmin } from './db.js';
 import authRoutes from './routes/auth.js';
@@ -113,6 +114,9 @@ app.decorate('requireRole', (...roles) => async (req, reply) => {
     return reply.code(403).send({ error: 'Accès refusé' });
   }
 });
+
+// Messages de validation par défaut en français (zod 4) ; les messages écrits à la main dans les schémas restent prioritaires.
+z.config(z.locales.fr());
 
 // Erreurs de validation (zod) -> 400.
 app.setErrorHandler((err, req, reply) => {

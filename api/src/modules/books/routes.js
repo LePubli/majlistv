@@ -11,7 +11,7 @@ import { visibleSql } from '../../visibility.js';
 import { storage, presignGet, presignPut, putObject, deleteObject, headObject, getObjectBuffer } from '../../storage.js';
 import { watermarkPdf, inspectPdf, signDownload, verifyDownload } from '../../books.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const langSchema = z.string().regex(/^[a-z]{2,3}$/);
 const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
@@ -20,8 +20,8 @@ const patchBody = z.object({
   author: z.string().trim().max(200).optional(),
   description: z.string().trim().max(5000).optional(),
   published: z.boolean().optional(),
-  talkIds: z.array(z.string().uuid()).max(100).optional(),
-  seriesIds: z.array(z.string().uuid()).max(100).optional(),
+  talkIds: z.array(z.guid()).max(100).optional(),
+  seriesIds: z.array(z.guid()).max(100).optional(),
 }).refine((b) => Object.keys(b).length > 0, { message: 'Rien à modifier' });
 
 export default async function bookRoutes(app) {
@@ -328,7 +328,7 @@ export default async function bookRoutes(app) {
   });
   app.delete('/studio/books/:id/links/:lid', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { lid } = z.object({ lid: z.string().uuid() }).parse(req.params);
+    const { lid } = z.object({ lid: z.guid() }).parse(req.params);
     const b = await owned(req, reply, id);
     if (!b) return;
     const r = await pool.query('DELETE FROM book_links WHERE id = $1 AND book_id = $2', [lid, id]);

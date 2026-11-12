@@ -15,7 +15,7 @@ const THEME_BY_ID = new Map(THEMES.map((t) => [t.id, t]));
 export const MAX_ACTIVE_GOALS = 20;
 export const HISTORY_WEEKS = 8;
 const STATUSES = ['achieved', 'progress', 'not_yet'];
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
 // Lundi de la semaine en cours (jour de Paris), au format AAAA-MM-JJ.
 const WEEK_NOW = `to_char(date_trunc('week', now() AT TIME ZONE 'Europe/Paris')::date, 'YYYY-MM-DD')`;
@@ -91,7 +91,7 @@ export default async function selfcheckRoutes(app) {
     nature: z.enum(['quality', 'defect']),
     title: z.string().trim().min(3).max(200).optional(),
     themeId: z.string().regex(/^[QD]\d{1,2}$/).optional(),
-    commitmentId: z.string().uuid().nullable().optional(),
+    commitmentId: z.guid().nullable().optional(),
     consent: z.boolean().optional(),
   }).refine((b) => b.title || b.themeId, { message: 'Choisissez un thème ou écrivez votre objectif' });
 
@@ -125,7 +125,7 @@ export default async function selfcheckRoutes(app) {
   const patchGoal = z.object({
     title: z.string().trim().min(3).max(200).optional(),
     archived: z.boolean().optional(),
-    commitmentId: z.string().uuid().nullable().optional(),
+    commitmentId: z.guid().nullable().optional(),
   }).refine((b) => Object.keys(b).length > 0, { message: 'Rien à modifier' });
 
   app.patch('/me/selfcheck/goals/:id', auth, async (req, reply) => {

@@ -5,13 +5,14 @@
 //   GET /lists/shared/:token                     lecture publique d'une liste partagée (jamais l'identité du membre)
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
+import { patchOf } from '../../zpatch.js';
 import { pool } from '../../db.js';
 import { visibleSql } from '../../visibility.js';
 import { visibleItems } from '../../talkCards.js';
 
 export const MAX_LISTS = 20;
 export const MAX_LIST_ITEMS = 200;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const newToken = () => randomBytes(16).toString('base64url');
 
 export default async function listsRoutes(app) {
@@ -30,7 +31,7 @@ export default async function listsRoutes(app) {
   });
 
   app.get('/me/lists/containing/:talkId', auth, async (req) => {
-    const { talkId } = z.object({ talkId: z.string().uuid() }).parse(req.params);
+    const { talkId } = z.object({ talkId: z.guid() }).parse(req.params);
     const { rows } = await pool.query('SELECT list_id FROM user_list_items i JOIN user_lists l ON l.id = i.list_id WHERE l.user_id = $1 AND i.talk_id = $2', [req.user.sub, talkId]);
     return rows.map((r) => r.list_id);
   });
@@ -55,7 +56,7 @@ export default async function listsRoutes(app) {
 
   app.patch('/me/lists/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const b = body.partial().parse(req.body ?? {});
+    const b = patchOf(body).parse(req.body ?? {});
     const l = await owned(req, reply, id); if (!l) return;
     await pool.query('UPDATE user_lists SET title = $2, description = $3, updated_at = now() WHERE id = $1', [id, b.title ?? l.title, b.description ?? l.description]);
     return { ok: true };
@@ -70,7 +71,7 @@ export default async function listsRoutes(app) {
   // Ajoute (à la fin) ou réordonne : { talkIds } remplace l'ordre/le contenu ; PUT .../items/:talkId ajoute une vidéo.
   app.put('/me/lists/:id/items', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const { talkIds } = z.object({ talkIds: z.array(z.string().uuid()).max(MAX_LIST_ITEMS) }).parse(req.body ?? {});
+    const { talkIds } = z.object({ talkIds: z.array(z.guid()).max(MAX_LIST_ITEMS) }).parse(req.body ?? {});
     const l = await owned(req, reply, id); if (!l) return;
     const ids = [...new Set(talkIds)];
     const c = await pool.connect();
@@ -87,7 +88,7 @@ export default async function listsRoutes(app) {
   });
 
   app.put('/me/lists/:id/items/:talkId', auth, async (req, reply) => {
-    const { id, talkId } = z.object({ id: z.string().uuid(), talkId: z.string().uuid() }).parse(req.params);
+    const { id, talkId } = z.object({ id: z.guid(), talkId: z.guid() }).parse(req.params);
     const l = await owned(req, reply, id); if (!l) return;
     const t = (await pool.query(`SELECT 1 FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [talkId])).rowCount;
     if (!t) return reply.code(404).send({ error: 'Vidéo introuvable' });
@@ -99,7 +100,7 @@ export default async function listsRoutes(app) {
   });
 
   app.delete('/me/lists/:id/items/:talkId', auth, async (req, reply) => {
-    const { id, talkId } = z.object({ id: z.string().uuid(), talkId: z.string().uuid() }).parse(req.params);
+    const { id, talkId } = z.object({ id: z.guid(), talkId: z.guid() }).parse(req.params);
     const l = await owned(req, reply, id); if (!l) return;
     await pool.query('DELETE FROM user_list_items WHERE list_id = $1 AND talk_id = $2', [id, talkId]);
     return reply.code(204).send();

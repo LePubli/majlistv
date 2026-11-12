@@ -9,6 +9,7 @@
 // Enfant (jeton enfant, routes marquées kidOk — le jeton est refusé partout ailleurs, et traité en visiteur sur les routes publiques)
 //   GET  /kids/me · GET /kids/talks · PUT /kids/progress/:id · POST /kids/exit (code parental → jeton du parent)
 import { z } from 'zod';
+import { patchOf } from '../../zpatch.js';
 import bcrypt from 'bcryptjs';
 import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
@@ -24,7 +25,7 @@ import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUES
 export const BANDS = ['3-6', '7-10', '11-14'];
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'];
 const MAX_FAILS = 5, LOCK_MINUTES = 10;
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const profileBody = z.object({
   name: z.string().trim().min(1).max(30),
   avatar: z.enum(AVATARS).default('lion'),
@@ -130,7 +131,7 @@ export default async function kidsRoutes(app) {
 
   app.patch('/me/kids/profiles/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const b = profileBody.partial().refine((x) => Object.keys(x).length > 0).parse(req.body ?? {});
+    const b = patchOf(profileBody).refine((x) => Object.keys(x).length > 0).parse(req.body ?? {});
     const cur = (await pool.query('SELECT * FROM kid_profiles WHERE id = $1 AND user_id = $2', [id, req.user.sub])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Profil introuvable' });
     try {
@@ -242,7 +243,7 @@ export default async function kidsRoutes(app) {
     return { questions: qs.map((q) => ({ id: q.id, question: q.question, options: q.options })) };
   });
 
-  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.string().uuid(), index: z.number().int().min(0).max(3) })).min(1).max(KID_QUESTIONS) });
+  const submitBody = z.object({ answers: z.array(z.object({ questionId: z.guid(), index: z.number().int().min(0).max(3) })).min(1).max(KID_QUESTIONS) });
   app.post('/kids/talks/:id/quiz/submit', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
     const { id } = idSchema.parse(req.params);
@@ -361,7 +362,7 @@ export default async function kidsRoutes(app) {
 
   app.put('/me/kids/profiles/:id/catalog', auth, async (req, reply) => {
     const p = await ownProfile(req, reply); if (!p) return;
-    const b = z.object({ talkIds: z.array(z.string().uuid()).min(1).max(200), allowed: z.boolean() }).parse(req.body ?? {});
+    const b = z.object({ talkIds: z.array(z.guid()).min(1).max(200), allowed: z.boolean() }).parse(req.body ?? {});
     // Mode « tout sauf » : seul le blocage est enregistré ; mode « sélection » : seule l'autorisation est enregistrée.
     const keep = p.catalog_mode === 'selected' ? b.allowed : !b.allowed;
     await pool.query('DELETE FROM kid_catalog WHERE profile_id = $1 AND talk_id = ANY($2::uuid[])', [p.id, b.talkIds]);
@@ -410,7 +411,7 @@ export default async function kidsRoutes(app) {
   // Le parent propose des actions concrètes à un enfant ; l'enfant dit « je l'ai fait » ; le parent valide. L'enfant ne peut jamais valider.
   const MAX_OPEN_ACTIONS = 20;
   const actionBody = z.object({ title: z.string().trim().min(1).max(120) });
-  const actionIds = z.object({ id: z.string().uuid(), aid: z.string().uuid() });
+  const actionIds = z.object({ id: z.guid(), aid: z.guid() });
   const actionCounts = async (profileId) => {
     const r = (await pool.query(`SELECT count(*) FILTER (WHERE status = 'todo')::int AS todo, count(*) FILTER (WHERE status = 'claimed')::int AS claimed,
         count(*) FILTER (WHERE status = 'validated')::int AS validated FROM kid_actions WHERE profile_id = $1`, [profileId])).rows[0];
@@ -455,7 +456,7 @@ export default async function kidsRoutes(app) {
   });
   app.post('/kids/actions/:aid/claim', kidAuth, async (req, reply) => {
     const c = await ctx(req, reply); if (!c) return;
-    const { aid } = z.object({ aid: z.string().uuid() }).parse(req.params);
+    const { aid } = z.object({ aid: z.guid() }).parse(req.params);
     const r = await pool.query(`UPDATE kid_actions SET status = 'claimed', claimed_at = now() WHERE id = $1 AND profile_id = $2 AND status = 'todo'`, [aid, c.profile.id]);
     if (!r.rowCount) return reply.code(404).send({ error: 'Action introuvable' });
     return { ok: true };

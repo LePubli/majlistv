@@ -8,7 +8,7 @@ import { hasLearningTier, hasActiveSubscription } from '../access.js';
 import * as ext from '../ext.js'; // étape M3a : séries et rémunération fournies par leurs modules
 import { dueTalks, upcoming, reminderOfTheDay } from '../revision.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const progressSchema = z.object({
   positionMs: z.number().int().min(0).max(86_400_000),
   durationMs: z.number().int().min(0).max(86_400_000).default(0),

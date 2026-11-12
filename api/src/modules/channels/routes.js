@@ -93,7 +93,7 @@ export default async function channelRoutes(app) {
     name: z.string().trim().min(1).max(120).optional(), bio: z.string().max(3000).optional(),
     tagline: z.string().trim().max(100).optional(), website: httpsUrl.optional(), contactEmail: emailField.optional(),
     socials: socialsBody.optional(), country: z.string().trim().max(80).optional(),
-    mainLanguage: z.string().trim().regex(/^([a-z]{2,3})?$/).optional(), featuredTalkId: z.string().uuid().nullable().optional(),
+    mainLanguage: z.string().trim().regex(/^([a-z]{2,3})?$/).optional(), featuredTalkId: z.guid().nullable().optional(),
   }).refine((b) => Object.keys(b).length > 0, { message: 'Rien à modifier' });
   const LABELS = { name: 'nom', bio: 'présentation', tagline: 'accroche', website: 'site', contactEmail: 'contact', socials: 'réseaux', country: 'pays', mainLanguage: 'langue', featuredTalkId: 'vidéo à la une' };
   app.put('/studio/channels/:slug', anyManager, async (req, reply) => {
@@ -182,7 +182,7 @@ export default async function channelRoutes(app) {
     return reply.code(201).send(await teamOf(slug));
   });
   app.delete('/studio/channels/:slug/members/:userId', anyManager, async (req, reply) => {
-    const { slug, userId } = z.object({ slug: slugParam.shape.slug, userId: z.string().uuid() }).parse(req.params);
+    const { slug, userId } = z.object({ slug: slugParam.shape.slug, userId: z.guid() }).parse(req.params);
     const c = await teamGuard(req, reply, slug); if (!c) return undefined;
     await pool.query('DELETE FROM channel_members WHERE slug = $1 AND user_id = $2', [slug, userId]);
     req.auditSummary = `Chaîne « ${c.name || slug} » : éditeur retiré`;
@@ -229,7 +229,7 @@ export default async function channelRoutes(app) {
 
   app.put('/studio/channels/:slug/owner', staff, async (req, reply) => {
     const { slug } = slugParam.parse(req.params);
-    const { ownerId } = z.object({ ownerId: z.string().uuid().nullable() }).parse(req.body ?? {});
+    const { ownerId } = z.object({ ownerId: z.guid().nullable() }).parse(req.body ?? {});
     const c = (await pool.query('SELECT name FROM speakers WHERE slug = $1', [slug])).rows[0];
     if (!c) return reply.code(404).send({ error: 'Chaîne introuvable' });
     let who = null;

@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { getNumber } from '../settings.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const HOSTS = {
   youtube: /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be)$/i,
   dailymotion: /^(www\.|m\.|geo\.)?(dailymotion\.com|dai\.ly)$/i,
@@ -31,10 +31,10 @@ const addSchema = z.object({
 const patchSchema = z.object({ active: z.boolean().optional(), label: z.string().trim().max(120).optional() }).refine((b) => Object.keys(b).length > 0, 'Aucun changement');
 const itemsQuery = z.object({
   status: z.enum(['new', 'ignored', 'added', 'seen']).default('new'),
-  sourceId: z.string().uuid().optional(),
+  sourceId: z.guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
-const ignoreSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
+const ignoreSchema = z.object({ ids: z.array(z.guid()).min(1).max(500) });
 const addItemSchema = z.object({
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().nullable().optional(),

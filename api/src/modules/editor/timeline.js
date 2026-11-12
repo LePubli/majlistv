@@ -59,20 +59,20 @@ export const audioSchema = z.object({
     gainDb: rng('Volume de la voix d’origine (dB)', -40, 12).default(0),
     mute: z.boolean().default(false),
     joinFadeMs: rng('Fondu aux raccords (ms)', 0, 1000).default(30),
-    denoise: z.enum(DENOISE, { errorMap: () => ({ message: 'Réduction du bruit : off, light ou strong' }) }).default('off'),
-  }).default({}),
+    denoise: z.enum(DENOISE, { error: 'Réduction du bruit : off, light ou strong' }).default('off'),
+  }).prefault({}),
   dub: z.object({
     use: z.boolean().default(true),
     gainDb: rng('Volume de la voix française (dB)', -40, 12).default(0),
     duck: rng('Voix d’origine sous la voix française (%)', 0, 100).default(15),
     fade: rng('Fondu d’entrée / sortie (s)', 0, 3).default(0.5),
-  }).default({}),
+  }).prefault({}),
   music: z.array(music).max(MAX_MUSIC, `${MAX_MUSIC} musiques au plus`).default([]),
-  loudness: z.object({ on: z.boolean().default(true), target: rng('Niveau sonore visé (LUFS)', -30, -9).default(-16) }).default({}),
+  loudness: z.object({ on: z.boolean().default(true), target: rng('Niveau sonore visé (LUFS)', -30, -9).default(-16) }).prefault({}),
 });
 
 export const timelineSchema = z.object({
-  v: z.literal(1, { errorMap: () => ({ message: 'Version du montage inconnue' }) }),
+  v: z.literal(1, { error: 'Version du montage inconnue' }),
   duration: num.positive(),
   clips: z.array(clip).min(1, 'Le montage doit garder au moins un extrait').max(MAX_CLIPS),
   audio: audioSchema.optional(),

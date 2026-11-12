@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 import { checkVoices, getVoice, listVoices } from './lib.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const SPK_COLS = `n, label, seconds::float AS seconds, phrases, f0::float AS f0, guess, base_voice AS "baseVoice", target_voice AS "targetVoice", pitch::float AS pitch`;
 export const MAX_SPEAKERS = 10;
 
@@ -143,7 +143,7 @@ export default function speakerRoutes(app, { admin }) {
     const num = n.parse(req.params.n);
     const b = z.object({
       label: z.string().trim().min(1, 'Nom vide').max(40).optional(),
-      baseVoice: z.string().uuid().nullable().optional(), targetVoice: z.string().uuid().nullable().optional(),
+      baseVoice: z.guid().nullable().optional(), targetVoice: z.guid().nullable().optional(),
       pitch: z.number().min(-4, 'Hauteur : -4 demi-tons minimum').max(4, 'Hauteur : 4 demi-tons maximum').multipleOf(0.5, 'Hauteur : par pas de 0,5 demi-ton').nullable().optional(),
     }).strict().parse(req.body ?? {});
     if (!(await pool.query('SELECT 1 FROM dub_speakers WHERE talk_id = $1 AND n = $2', [id, num])).rowCount) return reply.code(404).send({ error: 'Intervenant introuvable' });

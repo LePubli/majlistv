@@ -12,7 +12,7 @@ import { LANGS, allRows, lang, nowDate, offsetDays, publicSeason, stateOf, textO
 const idSchema = z.object({ id: z.enum(SEASON_IDS) });
 const trio = z.object({ fr: z.string().max(300).default(''), en: z.string().max(300).default(''), ar: z.string().max(300).default('') });
 const bodySchema = z.object({
-  enabled: z.boolean(), collectionId: z.string().uuid().nullable(), leadDays: z.number().int().min(0).max(60).nullable(),
+  enabled: z.boolean(), collectionId: z.guid().nullable(), leadDays: z.number().int().min(0).max(60).nullable(),
   title: trio, text: trio, notify: z.boolean(), theme: z.boolean().default(false),
 });
 const hijriText = (now, offset) => new Intl.DateTimeFormat('fr-u-ca-islamic-umalqura', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date(now.getTime() + offset * 86400000));

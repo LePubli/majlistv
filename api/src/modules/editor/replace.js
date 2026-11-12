@@ -92,7 +92,7 @@ export async function talkReplacements(talkId) {
 // ===================================================================================== Routes
 export default async function replaceRoutes(app, { viewer, editable }) {
   async function renderFor(req, reply) {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const r = (await pool.query(
       `SELECT r.*, t.organizer_id, t.title AS talk_title, t.speaker, t.source, t.video_status, t.duration_seconds, t.poster_key, t.video_ref, t.media_prefix, t.external_thumb
          FROM editor_renders r JOIN talks t ON t.id = r.talk_id WHERE r.id = $1`, [id])).rows[0];
@@ -152,7 +152,7 @@ export default async function replaceRoutes(app, { viewer, editable }) {
   });
 
   async function repFor(req, reply) {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const r = (await pool.query(`SELECT r.*, t.organizer_id, t.title AS talk_title FROM editor_replacements r JOIN talks t ON t.id = r.talk_id WHERE r.id = $1`, [id])).rows[0];
     if (!r || !(req.user.role === 'admin' || r.organizer_id === req.user.sub)) { reply.code(404).send({ error: 'Remplacement introuvable' }); return null; }
     return r;
@@ -160,7 +160,7 @@ export default async function replaceRoutes(app, { viewer, editable }) {
 
   // État (suivi de la page) : remplacements de la vidéo du projet.
   app.get('/studio/editor/talks/:id/replacements', viewer, async (req, reply) => {
-    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { id } = z.object({ id: z.guid() }).parse(req.params);
     const t = (await pool.query('SELECT organizer_id FROM talks WHERE id = $1', [id])).rows[0];
     if (!t || !(req.user.role === 'admin' || t.organizer_id === req.user.sub)) return reply.code(404).send({ error: 'Vidéo introuvable' });
     return { ...(await talkReplacements(id)), keepDays: await keepDays(), archiving: await storageOn() };

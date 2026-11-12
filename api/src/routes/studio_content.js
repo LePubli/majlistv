@@ -6,7 +6,7 @@ import { pool } from '../db.js';
 import { toVtt } from '../vtt.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const langRe = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 
 export default async function studioContentRoutes(app) {

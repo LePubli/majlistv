@@ -42,12 +42,12 @@ const rng = (label, min, max) => num.min(min, `${label} : entre ${min} et ${max}
 const text = (label, max) => z.string().max(max, `${label} : ${max} caractères au plus`).default('');
 const id = (what) => z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, `Identifiant de ${what} invalide`);
 const trans = z.object({
-  type: z.enum(TRANSITIONS, { errorMap: () => ({ message: 'Transition : cut, dip, dipwhite ou dissolve' }) }),
+  type: z.enum(TRANSITIONS, { error: 'Transition : cut, dip, dipwhite ou dissolve' }),
   len: rng('Durée de la transition (s)', 0.2, 3).default(0.8),
 });
 const item = z.object({
   id: id('titre'),
-  kind: z.enum(['title', 'banner'], { errorMap: () => ({ message: 'Type de titre : title ou banner' }) }),
+  kind: z.enum(['title', 'banner'], { error: 'Type de titre : title ou banner' }),
   text: text('Texte', 200),
   sub: text('Deuxième ligne', 200),
   start: num.min(0),
@@ -63,7 +63,7 @@ const card = (len) => z.object({
   len: rng('Durée (s)', 1, 15).default(len),
   title: text('Titre', 160),
   sub: text('Sous-titre', 160),
-}).default({});
+}).prefault({});
 export const dressSchema = z.object({
   items: z.array(item).max(MAX_ITEMS, `${MAX_ITEMS} titres au plus`).default([]),
   logo: z.object({
@@ -76,20 +76,20 @@ export const dressSchema = z.object({
     y: pct('Position verticale du logo'),
     from: num.min(0).default(0),
     to: num.min(0).nullable().default(null),
-  }).default({}),
+  }).prefault({}),
   intro: card(4),
   outro: card(5),
   transitions: z.object({
     all: trans.nullable().default(null),
     byClip: z.record(z.string(), trans).default({}),
-  }).default({}),
+  }).prefault({}),
   subs: z.object({
     burn: z.boolean().default(false),
     scale: rng('Taille des sous-titres (%)', 50, 200).default(100),
     pos: z.enum(['bottom', 'top']).default('bottom'),
     box: z.boolean().default(true),
     y: pct('Position verticale des sous-titres'),
-  }).default({}),
+  }).prefault({}),
 });
 
 export const dressDefaults = (d) => dressSchema.parse(d || {});

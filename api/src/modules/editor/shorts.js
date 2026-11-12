@@ -13,7 +13,7 @@ import { buildPath, checkManual, manualSchema } from './follow.js';
 import { cancelTrack } from './jobs.js';
 import { shortConfigSchema, shortDefaults, checkPassage, shortTimeline, chunkCaptions, MIN_SHORT, MAX_SHORT, MAX_SHORTS } from './short.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 const SHORT_SQL = `
   SELECT p.*, t.organizer_id, t.title AS talk_title, t.speaker, t.duration_seconds, t.source, t.video_status,
          COALESCE(t.transcript_language, t.language) AS lang

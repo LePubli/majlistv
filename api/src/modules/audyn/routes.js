@@ -9,6 +9,7 @@
 //  Accès : formule « Apprentissage » (ou contenu marqué « ouvert à tous ») ; sinon aperçu gratuit du premier chapitre, coupé par le serveur.
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { patchOf } from '../../zpatch.js';
 import {
   CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, GetObjectCommand,
 } from '@aws-sdk/client-s3';
@@ -23,19 +24,19 @@ import { AUDIENCES, ACCESS, COVER_MAX_MB, audioInfo, coverInfo, clean, fullAcces
 
 const PART_SIZE = 32 * 1024 * 1024; // sous la limite de 64 Mo de Nginx (comme les envois de vidéos)
 const bucket = config.s3.bucket;
-const idSchema = z.object({ id: z.string().uuid() });
-const uidSchema = z.object({ uid: z.string().uuid() });
-const chSchema = z.object({ id: z.string().uuid(), cid: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
+const uidSchema = z.object({ uid: z.guid() });
+const chSchema = z.object({ id: z.guid(), cid: z.guid() });
 const itemBody = z.object({
   title: z.string().trim().min(1).max(200), narrator: z.string().trim().max(200).default(''), author: z.string().trim().max(200).default(''),
   description: z.string().trim().max(4000).default(''), audience: z.enum(AUDIENCES).default('adults'), category: z.string().trim().max(80).default(''),
   language: z.string().trim().regex(/^[a-z]{2,3}$/).default('fr'), access: z.enum(ACCESS).default('learning'),
 }).strict();
-const itemPatch = itemBody.partial().extend({ status: z.enum(['draft', 'published']).optional() }).strict();
+const itemPatch = patchOf(itemBody).extend({ status: z.enum(['draft', 'published']).optional() }).strict();
 const startBody = z.object({
   filename: z.string().trim().min(1).max(255), size: z.number().int().positive(), contentType: z.string().max(60),
   title: z.string().trim().max(200).default(''), durationSeconds: z.number().int().min(0).max(172800).default(0),
-  rights: z.literal(true, { errorMap: () => ({ message: "Cochez l'attestation : vous avez les droits de diffusion de ce fichier" }) }),
+  rights: z.literal(true, { error: "Cochez l'attestation : vous avez les droits de diffusion de ce fichier" }),
 }).strict();
 const completeBody = z.object({
   parts: z.array(z.object({ PartNumber: z.number().int().min(1).max(10000), ETag: z.string().min(1) })).min(1).max(10000),
@@ -245,7 +246,7 @@ export default async function audynRoutes(app) {
 
   app.put('/studio/audyn/:id/chapters-order', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const b = z.object({ ids: z.array(z.string().uuid()).max(500) }).strict().parse(req.body ?? {});
+    const b = z.object({ ids: z.array(z.guid()).max(500) }).strict().parse(req.body ?? {});
     const cur = await chaptersOf(id);
     const ids = validOrder(b.ids, cur.map((c) => c.id));
     if (!ids) return reply.code(400).send({ error: "L'ordre doit contenir exactement les chapitres du contenu", code: 'bad_order' });

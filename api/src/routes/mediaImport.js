@@ -12,7 +12,7 @@ import { storage, deleteObject } from '../storage.js';
 import { viaChannel } from '../channelAccess.js';
 import { talkSourceUrl, classifyUrl, insertImport, newObjectKey, storageProblem, cancelImport, ACTIVE } from '../mediaImport.js';
 
-const idSchema = z.object({ id: z.string().uuid() });
+const idSchema = z.object({ id: z.guid() });
 
 export const importView = (m) => m && ({
   id: m.id, status: m.status, stage: m.stage, progress: m.progress, error: m.error, origin: m.origin, sourceUrl: m.source_url, newTalk: m.new_talk,
@@ -39,7 +39,7 @@ export default async function mediaImportRoutes(app) {
   app.post('/talks/:id/import', organizer, async (req, reply) => {
     if (!storage) return reply.code(503).send({ error: 'Stockage non configuré' });
     const { id } = idSchema.parse(req.params);
-    z.object({ rightsConfirmed: z.literal(true, { errorMap: () => ({ message: 'Confirmez détenir les droits sur cette vidéo' }) }) }).parse(req.body ?? {});
+    z.object({ rightsConfirmed: z.literal(true, { error: 'Confirmez détenir les droits sur cette vidéo' }) }).parse(req.body ?? {});
     const talk = await mine(req, reply, id);
     if (!talk) return;
 

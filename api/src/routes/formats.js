@@ -3,6 +3,7 @@
 // POST/PATCH/DELETE   : administrateur (Admin → Catégories et formats).
 // GET /catalogue      : une rangée par format (+ « Nouveautés ») et la bannière à la une ; mêmes règles de visibilité que l'accueil.
 import { z } from 'zod';
+import { patchOf } from '../zpatch.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
@@ -30,7 +31,7 @@ const body = z.object({
   nameAr: z.string().trim().max(60).default(''),
   position: z.number().int().min(0).max(9999).optional(),
 });
-const patch = body.omit({ slug: true }).partial().refine((x) => Object.keys(x).length > 0);
+const patch = patchOf(body, ['slug']).refine((x) => Object.keys(x).length > 0);
 const idP = z.object({ id: z.coerce.number().int().positive() });
 const SEL = 'SELECT id, slug, name_fr AS "nameFr", name_en AS "nameEn", name_ar AS "nameAr", position FROM formats';
 
