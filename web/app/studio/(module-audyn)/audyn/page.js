@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import StudioTabs from '../../../../components/StudioTabs';
+import AudynChannelImport from '../../../../components/AudynChannelImport';
 
 export const AUDIENCE_KEY = { kids: 'ayAudKids', adults: 'ayAudAdults', both: 'ayAudBoth' };
 export const clock = (sec) => { const s = Math.round(sec || 0); const h = Math.floor(s / 3600); return `${h ? h + ' h ' : ''}${String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, '0')} min`; };
@@ -17,6 +18,7 @@ export default function StudioAudyn() {
   const [data, setData] = useState(null);
   const [rights, setRights] = useState(null);
   const [open, setOpen] = useState(false);
+  const [chan, setChan] = useState(false); // « Importer une chaîne ou une playlist »
   const [f, setF] = useState({ title: '', audience: 'adults', author: '', description: '' });
   const [link, setLink] = useState('');
   const [frLink, setFrLink] = useState(true);
@@ -25,7 +27,8 @@ export default function StudioAudyn() {
   const [info, setInfo] = useState(''); // '' | 'loading' | 'done' | 'none'
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} })); }, [call]);
+  const reload = () => call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} }));
+  useEffect(() => { reload(); }, [call]); // eslint-disable-line react-hooks/exhaustive-deps
   // Lien collé : titre, auteur (nom de la chaîne) et description repris de la vidéo, sans écraser ce qui est déjà tapé.
   const readLink = async () => {
     const url = link.trim();
@@ -56,11 +59,15 @@ export default function StudioAudyn() {
     <main className="studio-page">
       <div className="studio-head">
         <h1 className="studio-title">{t('ayNav')}</h1>
-        <button className="btn" onClick={() => setOpen((v) => !v)}>{t('ayNew')}</button>
+        <div className="ay-head-btns">
+          <button className="btn ghost" onClick={() => setChan((v) => !v)} aria-expanded={chan}>{t('ayChOpen')}</button>
+          <button className="btn" onClick={() => setOpen((v) => !v)}>{t('ayNew')}</button>
+        </div>
       </div>
       <StudioTabs />
       <p className="meta">{t('ayIntro')}</p>
       {data && !data.storage && <p className="error" role="alert">{t('ayNoStorage')}</p>}
+      {chan && <AudynChannelImport onDone={reload} />}
       {open && (
         <form className="panel ay-form" onSubmit={create}>
           <label className="fld"><span>{t('ayNewFromLink')}</span>

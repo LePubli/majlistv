@@ -75,6 +75,32 @@ export function resumePoint(chapters: AudynChapter[], saved: Resume | null): { i
   return { index: i, pos: Math.max(0, saved.pos - 3) }; // reculer de 3 s pour retrouver le fil
 }
 
+// ---------------------------------------------------------------- « Continuer l'écoute » (accueil Audyn)
+export const CONTINUE_MAX = 8;
+/** Livres de la liste qui ont une position enregistrée, du plus récemment écouté au plus ancien. */
+export function continueCandidates<T extends { id: string }>(items: T[], saved: Record<string, Resume | null>, limit = CONTINUE_MAX): { item: T; saved: Resume }[] {
+  const out: { item: T; saved: Resume }[] = [];
+  for (const it of items || []) { const s = saved[it.id]; if (s && s.at > 0) out.push({ item: it, saved: s }); }
+  return out.sort((a, b) => b.saved.at - a.saved.at).slice(0, limit);
+}
+
+/** Où en est l'écoute : null si pas vraiment commencé (< 5 s du premier chapitre), fini (moins de 30 s avant la fin du dernier
+ *  chapitre jouable) ou chapitre disparu. Sinon { index, count, left (secondes restantes), pct }. */
+export function listenState(chapters: AudynChapter[], saved: Resume | null): { index: number; count: number; left: number; pct: number } | null {
+  if (!saved || !Array.isArray(chapters) || !chapters.length) return null;
+  const i = chapters.findIndex((c) => c.id === saved.cid);
+  if (i < 0 || !chapters[i].playable) return null;
+  let last = -1; chapters.forEach((c, k) => { if (c.playable) last = k; });
+  const dur = Number(chapters[i].durationSeconds) || 0;
+  const pos = Math.max(0, Math.min(Number(saved.pos) || 0, dur || Infinity));
+  if (i === Math.max(0, chapters.findIndex((c) => c.playable)) && pos < 5) return null;
+  if (i >= last && dur > 0 && pos >= dur - 30) return null;
+  const total = chapters.reduce((a, c) => a + (Number(c.durationSeconds) || 0), 0);
+  const before = chapters.slice(0, i).reduce((a, c) => a + (Number(c.durationSeconds) || 0), 0);
+  const done = before + pos;
+  return { index: i, count: chapters.length, left: Math.max(0, total - done), pct: total > 0 ? Math.min(1, done / total) : 0 };
+}
+
 /** Chapitre suivant jouable (pas de bouclage), sinon -1. */
 export function nextPlayable(chapters: AudynChapter[], index: number): number {
   for (let i = index + 1; i < chapters.length; i++) if (chapters[i].playable) return i;

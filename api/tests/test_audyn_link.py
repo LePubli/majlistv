@@ -190,6 +190,47 @@ ok(R(manual, {"rights": True}).status_code == 409, "déjà demandé : refusé")
 requests.post(f"{B}/studio/audyn/link-imports/{r.json()['id']}/cancel", headers=A)
 cur.execute("delete from audyn_chapters where id=%s", (manual,))
 
+# O) chaîne / playlist entière : un contenu par vidéo
+L = f"{B}/studio/audyn/listings"
+ok(requests.post(L, headers=O, json={"url": "https://www.youtube.com/@chaine"}).status_code == 403, "liste : réservée à l'administration")
+ok(requests.post(L, headers=A, json={"url": "https://exemple.fr/chaine"}).status_code == 400, "liste : site non pris en charge refusé")
+r = requests.post(L, headers=A, json={"url": f"https://www.youtube.com/@podcast{tag}"}); ok(r.status_code == 202 and r.json()["status"] == "listing", f"liste demandée ({r.text[:80]})")
+lid = r.json()["id"]
+cur.execute("select purpose from import_jobs where id=%s", (lid,)); ok(cur.fetchone()[0] == "audyn", "liste marquée « audyn »")
+ok(all(x["id"] != lid for x in requests.get(B + "/imports", headers=A).json()) and requests.get(f"{B}/imports/{lid}", headers=A).status_code == 404, "la liste Audyn n'apparaît pas dans l'import de vidéos")
+ok(requests.post(f"{B}/imports/{lid}/confirm", headers=A, json={"ids": ["x"]}).status_code == 404, "et ne peut pas y être importée en vidéos")
+ok(requests.get(f"{L}/{lid}", headers=A).json()["status"] == "listing", "lecture en cours visible")
+C = lambda body: requests.post(f"{L}/{lid}/confirm", headers=A, json=body)
+r = C({"ids": ["aaaaaaaaaaa"], "rights": True}); ok(r.status_code == 409 and r.json()["code"] == "not_ready", "pas encore lue : refus")
+already = "https://www.youtube.com/watch?v=dejadansaud"
+cur.execute("insert into audyn_chapters(item_id, position, title, audio_key, content_type, size, source_url) values (%s, 50, 'x', 'audyn/x/z.mp3', 'audio/mpeg', 1, %s) returning id", (iid, already)); dup_ch = cur.fetchone()[0]
+entries = [{"id": f"ep{n}xxxxxxxx"[:11], "source": "youtube", "title": f"Épisode {n}", "duration": 3600 * n, "thumb": None} for n in (1, 2, 3)] + [{"id": "dejadansaud", "source": "youtube", "title": "Déjà là"}]
+cur.execute("update import_jobs set status='listed', title='Podcast test', entries=%s where id=%s", (json.dumps(entries), lid))
+g = requests.get(f"{L}/{lid}", headers=A).json()
+ok(g["status"] == "listed" and len(g["entries"]) == 4 and g["entries"][3]["inAudyn"] is True and g["entries"][0]["url"] == "https://www.youtube.com/watch?v=ep1xxxxxxxx", "liste lue : vidéos, adresse, « déjà dans Audyn »")
+ok(C({"ids": ["ep1xxxxxxxx"]}).status_code == 400, "attestation des droits obligatoire")
+ok(C({"ids": [], "rights": True}).status_code == 400, "aucune vidéo cochée : refus")
+r = C({"ids": ["ep3xxxxxxxx", "ep1xxxxxxxx", "dejadansaud"], "rights": True, "category": "Ma série", "access": "free", "audience": "both", "language": "ar", "audioLang": "original", "split": False, "publish": True})
+ok(r.status_code == 202 and r.json() == {"created": 2, "skipped": 1}, f"2 contenus créés, 1 déjà présent ignoré ({r.text})")
+cur.execute("""select i.id, i.title, i.category, i.access, i.audience, i.language, i.status, j.source_url, j.audio_lang, j.split, j.fill_meta, j.publish, j.cover, j.seq
+               from audyn_items i join audyn_imports j on j.item_id = i.id where i.title like 'Épisode %%' and i.created_at > now() - interval '5 minutes' order by j.seq""")
+made = cur.fetchall()
+ok([m[1] for m in made] == ["Épisode 1", "Épisode 3"], f"un contenu par vidéo, dans l'ordre de la chaîne ({[m[1] for m in made]})")
+ok(all(m[2:7] == ("Ma série", "free", "both", "ar", "draft") for m in made), "réglages appliqués ; brouillon tant que le son n'est pas prêt")
+ok(all(m[8] is None and m[9] is False and m[10] and m[11] and m[12] == "auto" for m in made) and made[0][7] == "https://www.youtube.com/watch?v=ep1xxxxxxxx", "demandes : voix d'origine, sans découpage, informations et publication à la fin")
+cur.execute("select status, imported from import_jobs where id=%s", (lid,)); ok(cur.fetchone() == ("imported", 2), "liste marquée importée")
+ok(C({"ids": ["ep1xxxxxxxx"], "rights": True}).json() == {"created": 0, "skipped": 1}, "deuxième fois : déjà dans Audyn, rien de créé")
+cur.execute("delete from audyn_chapters where id=%s", (dup_ch,))
+# Traitement d'un épisode (son local) : auteur et description de la vidéo, publié à la fin
+ep = str(made[0][0])
+cur.execute("update audyn_imports set status='canceled' where status='pending' and item_id <> %s", (ep,))
+cur.execute("update audyn_imports set source_url=%s, origin='web' where item_id=%s", (BASE + "/v12.mp4", ep))
+res = once(TEST_META_JSON=json.dumps({"title": "Épisode 1 (titre vidéo)", "uploader": "La chaîne du podcast", "description": "Dans cet épisode, nous parlons de…"}), TEST_THUMB=BASE + "/thumb.jpg")
+ok(res.get("claimed"), "épisode traité")
+cur.execute("select title, author, description, status, cover_key is not null, (select count(*) from audyn_chapters c where c.item_id = i.id) from audyn_items i where id=%s", (ep,)); it = cur.fetchone()
+ok(it[0] == "Épisode 1" and it[1] == "La chaîne du podcast" and it[2].startswith("Dans cet épisode") and it[3] == "published" and it[4] and it[5] == 1, f"auteur, description, couverture repris de la vidéo ; publié ({it})")
+for m in made: requests.delete(f"{B}/studio/audyn/{m[0]}", headers=A)
+
 # H) suppression du contenu : chapitres, couverture et demandes effacés
 ok(requests.delete(f"{B}/studio/audyn/{iid}", headers=A).status_code == 204, "contenu supprimé")
 cur.execute("select count(*) from audyn_imports where item_id=%s", (iid,)); ok(cur.fetchone()[0] == 0 and not keys(f"audyn/{iid}/"), "demandes et fichiers effacés avec le contenu")

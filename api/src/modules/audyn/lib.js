@@ -49,3 +49,13 @@ export function publishError(item, chapters) {
 export const fullAccess = (item, hasLearning) => item.access === 'free' || Boolean(hasLearning);
 
 export const sumDuration = (chapters) => chapters.reduce((a, c) => a + (Number(c.duration_seconds ?? c.durationSeconds) || 0), 0);
+
+// Adresse d'une vidéo listée (mêmes formes que le transcripteur, transcriber/src/audyn_import.py : entry_url).
+export function listingEntryUrl(e) {
+  const id = String(e?.id || '');
+  if (e?.source === 'youtube' && /^[\w-]{11}$/.test(id)) return `https://www.youtube.com/watch?v=${id}`;
+  if (e?.source === 'vimeo' && /^\d+$/.test(id)) return `https://vimeo.com/${id}`;
+  if (e?.source === 'dailymotion' && /^[A-Za-z0-9]{5,16}$/.test(id)) return `https://www.dailymotion.com/video/${id}`;
+  if (e?.source === 'archive' && /^[A-Za-z0-9][\w.-]{0,99}$/.test(id)) return `https://archive.org/details/${id}`;
+  return null;
+}

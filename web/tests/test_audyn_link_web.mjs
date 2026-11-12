@@ -36,4 +36,16 @@ assert.match(list, /disabled=\{busy \|\| !f\.title\.trim\(\) \|\| \(link\.trim\(
 assert.match(list, /cover: 'auto'/, 'couverture posée si le contenu n\'en a pas');
 
 assert.match(read('app/back.css'), /\.ay-jobs li\.bad/); assert.doesNotMatch(read('app/globals.css'), /\.ay-jobs/);
+// Import d'une chaîne ou d'une playlist (un contenu par vidéo)
+for (const k of ['ayChOpen', 'ayChTitle', 'ayChHelp', 'ayChRead', 'ayChListing', 'ayChFound', 'ayChAll', 'ayChNone', 'ayChSelected', 'ayChAlready', 'ayChPublish', 'ayChRights', 'ayChImport', 'ayChDone', 'ayChSkipped'])
+  assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
+const ch = read('components/AudynChannelImport.js');
+assert.match(ch, /call\('\/studio\/audyn\/listings', \{ method: 'POST'/, 'liste demandée au serveur');
+assert.match(ch, /if \(r\.data\.status === 'listing'\) \{ timer = setTimeout\(tick, 3000\); return; \}/, 'suivi pendant la lecture, arrêté ensuite');
+assert.match(ch, /setSel\(new Set\(r\.data\.entries\.filter\(\(e\) => !e\.inAudyn\)\.map\(\(e\) => e\.id\)\)\)/, 'tout coché sauf ce qui est déjà dans Audyn');
+assert.match(ch, /disabled=\{x\.inAudyn\}/, 'déjà dans Audyn : non cochable');
+assert.match(ch, /disabled=\{busy \|\| sel\.size === 0 \|\| !o\.rights\}/, 'import bloqué sans attestation ni vidéo cochée');
+assert.match(ch, /publish: false, rights: false/, 'publication automatique décochée d\'origine');
+assert.match(ch, /fr: true, split: true/, 'voix française et découpage cochés d\'origine');
+assert.match(list, /\{chan && <AudynChannelImport onDone=\{reload\} \/>\}/, 'panneau ouvert depuis la page Audyn du Studio');
 console.log('OK — Audyn : import depuis un lien (Studio)');

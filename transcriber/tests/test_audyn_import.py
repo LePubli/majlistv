@@ -81,6 +81,11 @@ ok(ai.file_title({"name": "dir/livre_01_auteur_64kb.mp3"}) == "livre 01 auteur 6
 external._archive_get = lambda path, params=None: {"metadata": {"title": "Livre audio"}, "files": librivox}
 info = ai.archive_audio("livre-audio")
 ok(info["title"] == "Livre audio" and len(info["files"]) == 3 and info["files"][1]["title"] == "Chapitre 2", "élément archive.org : trois pistes")
+external._archive_get = lambda path, params=None: {"metadata": {"title": "L", "creator": ["A. Auteur", "B. Lecteur"], "description": "<p>Ligne 1</p><br>Ligne <b>2</b>"}, "files": librivox}
+info = ai.archive_audio("livre-audio")
+ok(info["author"] == "A. Auteur, B. Lecteur" and "Ligne 1" in info["description"] and "<" not in info["description"], f"archive.org : auteur et description sans balises ({info['description']!r})")
+ok(ai.video_meta({"origin": "youtube", "source_url": "u"}, {"uploader": "Ma chaîne", "description": "Desc"}) == {"author": "Ma chaîne", "description": "Desc"}
+   and ai.video_meta({"origin": "web", "source_url": "u"}, {}) == {"author": "", "description": ""}, "informations de la vidéo pour un contenu créé depuis une chaîne")
 external._archive_get = lambda path, params=None: {"metadata": {"title": "X", "access-restricted-item": "true"}, "files": librivox}
 ok(raises(external.Blocked, lambda: ai.archive_audio("x")) is not None, "accès restreint : refus lisible")
 ok(raises(external.Blocked, lambda: ai.archive_audio("../etc")) is not None, "identifiant invalide refusé")

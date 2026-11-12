@@ -8,6 +8,9 @@
 //  par le service de transcription, transcriber/src/audyn_import.py) :
 //   GET|POST /studio/audyn/:id/link-imports · POST /studio/audyn/link-imports/:jid/cancel · POST /studio/audyn/:id/cover-from-link
 //   POST /studio/audyn/:id/chapters/:cid/resplit (« Redécouper » un chapitre importé selon les chapitres de la vidéo)
+//  Import d'une chaîne ou d'une playlist (un contenu audio par vidéo) : le transcripteur liste les vidéos (table import_jobs,
+//  purpose 'audyn'), l'administrateur coche celles à importer, chacune devient un contenu Audyn avec sa demande d'import :
+//   POST /studio/audyn/listings · GET /studio/audyn/listings/:lid · POST /studio/audyn/listings/:lid/confirm
 //  Public (les livres audio adultes ; les histoires du soir enfants passent par l'espace Kids, étape 4) :
 //   GET /audyn · GET /audyn/:id · GET /audyn/:id/chapters/:cid/play (lien d'écoute) · GET /audyn/:id/chapters/:cid/preview (aperçu coupé par le serveur)
 //  Accès : formule « Apprentissage » (ou contenu marqué « ouvert à tous ») ; sinon aperçu gratuit du premier chapitre, coupé par le serveur.
@@ -25,7 +28,7 @@ import { hasLearningTier } from '../../access.js';
 import { storage, presignGet, presignPut, headObject, deleteKeys } from '../../storage.js';
 import { classifyUrl, storageProblem, userLabel } from '../../mediaImport.js';
 import kidsStories from './kidsStories.js';
-import { AUDIENCES, ACCESS, COVER_MAX_MB, audioInfo, coverInfo, clean, fullAccess, previewBytes, publishError, sumDuration, validOrder } from './lib.js';
+import { AUDIENCES, ACCESS, COVER_MAX_MB, audioInfo, coverInfo, clean, fullAccess, listingEntryUrl, previewBytes, publishError, sumDuration, validOrder } from './lib.js';
 
 const PART_SIZE = 32 * 1024 * 1024; // sous la limite de 64 Mo de Nginx (comme les envois de vidéos)
 const bucket = config.s3.bucket;
@@ -70,7 +73,17 @@ const jobRow = (j) => ({
   chapterId: j.chapter_id || null, active: LINK_ACTIVE.includes(j.status), createdAt: j.created_at, finishedAt: j.finished_at,
 });
 const jidSchema = z.object({ jid: z.guid() });
-
+const lidSchema = z.object({ lid: z.guid() });
+const LIST_HOSTS = /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly|archive\.org)$/i;
+const listingUrl = z.string().trim().url().max(500).refine((u) => { try { return LIST_HOSTS.test(new URL(u).hostname); } catch { return false; } },
+  'Adresse YouTube, Vimeo, Dailymotion ou archive.org attendue (chaîne, playlist ou collection)');
+const confirmBody = z.object({
+  ids: z.array(z.string().regex(/^[\w.-]{1,100}$/)).min(1).max(500),
+  audience: z.enum(AUDIENCES).default('adults'), category: z.string().trim().max(80).default(''),
+  language: z.string().trim().regex(/^[a-z]{2,3}$/).default('fr'), access: z.enum(ACCESS).default('learning'),
+  audioLang: z.enum(['fr', 'original']).default('fr'), split: z.boolean().default(true), publish: z.boolean().default(false),
+  rights: z.literal(true, { error: "Cochez l'attestation : vous avez les droits de diffusion de ces sons" }),
+}).strict();
 export default async function audynRoutes(app) {
   const adminOnly = { preHandler: app.requireRole('admin') };
   const pub = { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } };
@@ -358,6 +371,75 @@ export default async function audynRoutes(app) {
     const r = await openJob(id, { url: ch.source_url, cover: 'none', split: true, audioLang: prev && !prev.audio_lang ? 'original' : 'fr', title: ch.title }, 'audio', req, cid);
     if (r.code === 202) req.auditSummary = `Audyn : redécoupage du chapitre « ${ch.title} » selon les chapitres de la vidéo (droits attestés)`;
     return reply.code(r.code).send(r.body);
+  });
+
+  // ------------------------------------------------------------------ Studio : chaîne ou playlist entière (un contenu par vidéo)
+  // Vidéos déjà dans Audyn : un chapitre ou une demande en cours / finie avec la même adresse.
+  const inAudyn = async (urls) => {
+    if (!urls.length) return new Set();
+    const { rows } = await pool.query(
+      `SELECT source_url FROM audyn_chapters WHERE source_url = ANY($1)
+       UNION SELECT source_url FROM audyn_imports WHERE source_url = ANY($1) AND kind = 'audio' AND status IN ('pending', 'downloading', 'done')`, [urls]);
+    return new Set(rows.map((r) => r.source_url));
+  };
+  const listingOf = async (lid) => (await pool.query("SELECT * FROM import_jobs WHERE id = $1 AND purpose = 'audyn'", [lid])).rows[0];
+
+  app.post('/studio/audyn/listings', { ...adminOnly, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const { url } = z.object({ url: listingUrl }).strict().parse(req.body ?? {});
+    const running = await pool.query("SELECT count(*)::int AS n FROM import_jobs WHERE purpose = 'audyn' AND status = 'listing'");
+    if (running.rows[0].n >= 3) return reply.code(429).send({ error: 'Trois listes sont déjà en cours de lecture, patientez' });
+    const { rows } = await pool.query("INSERT INTO import_jobs(organizer_id, url, purpose) VALUES ($1, $2, 'audyn') RETURNING id, status", [req.user.sub, url]);
+    return reply.code(202).send({ id: rows[0].id, status: rows[0].status });
+  });
+
+  app.get('/studio/audyn/listings/:lid', adminOnly, async (req, reply) => {
+    const { lid } = lidSchema.parse(req.params);
+    const j = await listingOf(lid);
+    if (!j) return reply.code(404).send({ error: 'Liste introuvable' });
+    const entries = Array.isArray(j.entries) ? j.entries : [];
+    const have = await inAudyn(entries.map(listingEntryUrl).filter(Boolean));
+    return {
+      id: j.id, url: j.url, status: j.status, title: j.title || '', error: j.error || null, imported: j.imported,
+      entries: entries.map((e) => {
+        const url = listingEntryUrl(e);
+        return { id: e.id, source: e.source, title: e.title || e.id, duration: e.duration ?? null, thumb: e.thumb || null, url, inAudyn: Boolean(url && have.has(url)) };
+      }),
+    };
+  });
+
+  app.post('/studio/audyn/listings/:lid/confirm', adminOnly, async (req, reply) => {
+    if (!storage) return off(reply);
+    const { lid } = lidSchema.parse(req.params);
+    const b = confirmBody.parse(req.body ?? {});
+    const j = await listingOf(lid);
+    if (!j) return reply.code(404).send({ error: 'Liste introuvable' });
+    if (!['listed', 'imported'].includes(j.status)) return reply.code(409).send({ error: "La liste n'est pas encore prête", code: 'not_ready' });
+    const full = await storageProblem();
+    if (full) return reply.code(409).send({ error: full, code: 'storage_full' });
+    // Dans l'ordre de la liste (celui de la chaîne), les vidéos cochées, sans celles déjà dans Audyn.
+    const wanted = new Set(b.ids);
+    const picked = (Array.isArray(j.entries) ? j.entries : []).filter((e) => wanted.has(String(e.id)) && listingEntryUrl(e));
+    const have = await inAudyn(picked.map(listingEntryUrl));
+    const todo = picked.filter((e) => !have.has(listingEntryUrl(e)));
+    const who = await userLabel(req.user.sub);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (let i = 0; i < todo.length; i += 1) {
+        const e = todo[i];
+        const item = (await client.query(
+          `INSERT INTO audyn_items(title, audience, category, language, access, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+          [clean(e.title || e.id, 200) || 'Épisode', b.audience, clean(b.category, 80), b.language, b.access, req.user.sub])).rows[0];
+        await client.query(
+          `INSERT INTO audyn_imports(item_id, seq, kind, source_url, origin, audio_lang, cover, split, fill_meta, publish, requested_by, requested_by_name)
+           VALUES ($1,$2,'audio',$3,$4,$5,'auto',$6,true,$7,$8,$9)`,
+          [item.id, i + 1, listingEntryUrl(e), e.source, b.audioLang === 'fr' ? 'fr' : null, b.split, b.publish, req.user.sub, who]);
+      }
+      await client.query("UPDATE import_jobs SET status = 'imported', imported = imported + $2, updated_at = now() WHERE id = $1", [lid, todo.length]);
+      await client.query('COMMIT');
+    } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
+    req.auditSummary = `Audyn : ${todo.length} vidéo(s) de « ${j.title || j.url} » mises en file (un contenu par vidéo, droits attestés)`;
+    return reply.code(202).send({ created: todo.length, skipped: picked.length - todo.length });
   });
 
   app.post('/studio/audyn/link-imports/:jid/cancel', adminOnly, async (req, reply) => {

@@ -1,6 +1,7 @@
 // Import de playlists, de chaînes ou d'albums, de comptes YouTube / Vimeo / Dailymotion :
 // 1) l'organisateur colle l'adresse -> le transcripteur liste les vidéos (sans rien télécharger) ;
 // 2) il coche celles à importer -> les vidéos sont créées (transcription si l'accord de l'auteur est confirmé).
+// Seulement les listes « videos » : celles d'Audyn (purpose = 'audyn', son de chaque vidéo) ont leurs propres routes (module Audyn).
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
@@ -30,13 +31,13 @@ const view = (j) => ({
 export default async function importRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
   const mine = async (req, id) => {
-    const { rows } = await pool.query('SELECT * FROM import_jobs WHERE id = $1 AND ($2 OR organizer_id = $3)', [id, req.user.role === 'admin', req.user.sub]);
+    const { rows } = await pool.query("SELECT * FROM import_jobs WHERE id = $1 AND purpose = 'videos' AND ($2 OR organizer_id = $3)", [id, req.user.role === 'admin', req.user.sub]);
     return rows[0];
   };
 
   app.post('/imports', { ...organizer, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const { url } = z.object({ url: urlSchema }).parse(req.body);
-    const running = await pool.query("SELECT count(*)::int AS n FROM import_jobs WHERE organizer_id = $1 AND status = 'listing'", [req.user.sub]);
+    const running = await pool.query("SELECT count(*)::int AS n FROM import_jobs WHERE organizer_id = $1 AND status = 'listing' AND purpose = 'videos'", [req.user.sub]);
     if (running.rows[0].n >= 3) return reply.code(429).send({ error: 'Trois analyses sont déjà en cours, patientez' });
     const { rows } = await pool.query('INSERT INTO import_jobs(organizer_id, url) VALUES ($1, $2) RETURNING *', [req.user.sub, url]);
     return reply.code(202).send(view(rows[0]));
@@ -45,7 +46,7 @@ export default async function importRoutes(app) {
   app.get('/imports', organizer, async (req) => {
     const { rows } = await pool.query(
       `SELECT id, url, status, title, error, imported, created_at, jsonb_array_length(entries) AS n
-       FROM import_jobs WHERE organizer_id = $1 ORDER BY created_at DESC LIMIT 20`, [req.user.sub]);
+       FROM import_jobs WHERE organizer_id = $1 AND purpose = 'videos' ORDER BY created_at DESC LIMIT 20`, [req.user.sub]);
     return rows.map((j) => ({ id: j.id, url: j.url, status: j.status, title: j.title, error: j.error, imported: j.imported, createdAt: j.created_at, count: j.n }));
   });
 

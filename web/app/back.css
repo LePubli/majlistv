@@ -927,3 +927,14 @@
 .ay-jobs li.bad { border-color: var(--danger, #d9534f); }
 .ay-job-t { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .ay-jobs .error, .ay-jobs .meta.small { flex-basis: 100%; }
+/* Audyn : import d'une chaîne ou d'une playlist (un contenu par vidéo). */
+.ay-head-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.ay-ch-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ay-ch-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; max-height: 460px; overflow-y: auto; }
+.ay-ch-list li.off { opacity: 0.55; }
+.ay-ch-row { display: flex !important; align-items: center; gap: 10px; font-weight: 500 !important; padding: 6px 8px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+.ay-ch-row img, .ay-ch-ph { width: 96px; height: 54px; border-radius: 8px; object-fit: cover; flex: none; background: var(--surface); display: flex; align-items: center; justify-content: center; }
+.ay-ch-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ay-ch-opts { display: grid; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
+@media (max-width: 520px) { .ay-ch-row img, .ay-ch-ph { width: 72px; height: 40px; } }
+.ay-ch-row > .meta { flex: none; white-space: nowrap; }

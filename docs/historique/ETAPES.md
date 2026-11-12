@@ -8608,3 +8608,54 @@ docker logs --since 2h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[audy
 
 **Tests.** `transcriber/tests/test_audyn_import.py` (35 vérifications, dont les règles de découpage et un vrai découpage ffmpeg au bon endroit) ; `api/tests/test_audyn_link.py` (53 : 3 chapitres de la vidéo → 3 chapitres Audyn de la bonne durée, case décochée, vidéo sans chapitres, « Redécouper » à sa place avec décalage des suivants et ancien fichier effacé, refus sans chapitres, chapitre supprimé entre-temps, route de l'API) ; `web/tests/test_audyn_link_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé : une vraie vidéo YouTube à chapitres** (l'environnement de développement n'a pas accès à YouTube ; les chapitres y sont simulés) — à essayer sur le VPS.
 
+## Audyn — « Continuer l'écoute » et import d'une chaîne entière (12/11)
+
+Deux demandes d'Epok du 12/11. Décisions : un contenu Audyn par vidéo ; la catégorie est choisie au moment de l'import.
+
+### 1. Rangée « Continuer l'écoute »
+
+**Ce que c'est.** En haut de la page Audyn (site) et de l'accueil Audyn (application), une rangée des livres et podcasts **commencés sur cet appareil**, les plus récemment écoutés d'abord (8 au plus). Chaque carte : couverture, titre, « Chapitre 2 sur 7 · reste 1 h 12 min », barre d'avancement, bouton **Reprendre** (relance au point d'arrêt, 3 secondes plus tôt). La rangée n'apparaît que sur la liste complète (pas pendant une recherche ou un filtre de catégorie).
+
+**Règles.** Un livre à peine commencé (moins de 5 secondes du premier chapitre) ou **fini** (moins de 30 secondes avant la fin du dernier chapitre) n'y figure pas ; un livre dont le chapitre enregistré n'existe plus (par exemple après « Redécouper ») non plus. `continueCandidates` et `listenState` dans `web/lib/audyn.js` et `mobile/src/lib/audyn.ts` (mêmes règles).
+
+**Limite connue.** La position est gardée **sur l'appareil** (navigateur ou téléphone), comme avant : la rangée du téléphone et celle de l'ordinateur sont différentes. (Garder la position sur le compte est une autre étape, non demandée.)
+
+**Fichiers.** `web/app/audyn/page.js`, styles `.aw-cont…` dans `web/app/globals.css`, textes `awContinue`, `awChapterOf`, `awLeft`, `awListenBar` (fr / en / ar) ; `mobile/src/app/audyn/index.tsx`, textes `aud.continue`, `aud.chapterOf`, `aud.left` dans `mobile/src/lib/i18n.ts`.
+
+### 2. Importer une chaîne ou une playlist dans Audyn (un contenu par vidéo)
+
+**Ce que c'est.** Studio → Audyn → **« Importer une chaîne »** : coller l'adresse d'une chaîne YouTube, d'une playlist, d'un compte Vimeo / Dailymotion ou d'une collection archive.org → **« Lire la liste »** (le serveur liste les vidéos sans rien télécharger, 200 au plus, réglage `import_max_videos`) → cocher les vidéos (celles déjà dans Audyn sont grisées) → régler Public, Catégorie, Accès, Langue, voix française, découpage par chapitres, **publication automatique** (décochée d'origine : les contenus restent en brouillon) → attestation de droits → **« Importer N vidéo(s) »**.
+
+**Ce que devient chaque vidéo.** Un contenu Audyn à part : titre de la vidéo ; **auteur** (nom de la chaîne), **description** et **couverture** repris de la vidéo pendant la récupération du son ; son seul en MP3, découpé selon les chapitres de la vidéo ; une attestation par chapitre dans le journal des droits. Les vidéos sont traitées une après l'autre par le serveur, dans l'ordre de la chaîne ; le suivi se voit sur la page de chaque contenu.
+
+**Comment c'est fait.**
+- Migration `api/migrations/114_import_jobs_purpose.sql` : les listes lues par le serveur ont un usage (`videos` ou `audyn`). L'import de vidéos du catalogue ne voit que les siennes, Audyn que les siennes.
+- Migration du module `api/src/modules/audyn/migrations/005_channel_import.sql` (`fill_meta`, `publish`) ; module Audyn en version 1.3.0.
+- API : `POST /studio/audyn/listings`, `GET /studio/audyn/listings/:lid`, `POST /studio/audyn/listings/:lid/confirm` (`api/src/modules/audyn/routes.js`, `listingEntryUrl` dans `lib.js`).
+- Service : la lecture de la liste est celle de l'import de vidéos (inchangée) ; `transcriber/src/audyn_import.py` remplit auteur et description (`finish_item`, `video_meta` ; archive.org : créateur et description de l'élément) et publie si demandé.
+- Site : `web/components/AudynChannelImport.js`, bouton dans `web/app/studio/(module-audyn)/audyn/page.js`, styles `.ay-ch-…` dans `web/app/back.css`, 15 textes × 3 langues (`ayCh…`).
+
+**Limites connues.** Les vidéos passent une par une : une chaîne de 100 épisodes d'une heure prend plusieurs heures. Si YouTube bloque le serveur, les demandes échouent avec le message habituel (cookies). Les miniatures archive.org ne s'affichent pas dans la liste (seules celles de YouTube, Vimeo et Dailymotion sont autorisées par le site) ; la couverture finale, elle, est bien récupérée.
+
+### Prérequis, déploiement, debug (les deux points)
+
+Aucun réglage. DockPanel → Git Deploy → Redeploy, dans cet ordre : `majlistv-api` (migrations), `majlistv-web`, `majlistv-transcriber`. L'application se met à jour d'elle-même (fermer et rouvrir deux fois). Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+```bash
+# Lecture de la liste et import de chaque vidéo
+docker logs --since 3h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[import .*(lecture de la liste|vidéo\(s\) trouvée|échec)|\[audyn "
+```
+
+- « Lire la liste » reste en cours : `majlistv-transcriber` n'a pas été redéployé, ou YouTube bloque le serveur (voir le journal ci-dessus).
+- Un épisode reste en brouillon : la case « Publier » n'était pas cochée — le publier depuis sa page.
+- La rangée « Continuer l'écoute » est vide : rien n'a été écouté sur cet appareil depuis la mise à jour, ou tous les livres commencés sont finis.
+
+**Tests.** `web/tests/test_audyn_continue_web.mjs` et `mobile/tests/audyn.test.ts` (règles de la rangée) ; `api/tests/test_audyn_lib.mjs` (adresses des vidéos listées) ; `api/tests/test_audyn_link.py` (72 vérifications, dont : liste réservée à l'administration et séparée de l'import de vidéos, « déjà dans Audyn », un contenu par vidéo dans l'ordre avec les réglages, doublons ignorés, puis un épisode traité de bout en bout : auteur, description, couverture repris et publication) ; `transcriber/tests/test_audyn_import.py` (37). Écrans vérifiés à 1440 px et 390 px, en français et en arabe. Vérifié à la main : l'import de vidéos d'une playlist fonctionne toujours. **Non testé : une vraie chaîne YouTube** (pas d'accès à YouTube ici) et la rangée sur un vrai téléphone.
+

@@ -231,11 +231,16 @@ def archive_audio(identifier):
     if str(md.get("access-restricted-item")) == "true" or data.get("is_dark"):
         raise external.Blocked("Élément en accès restreint sur archive.org (prêt uniquement).")
     title = str(md.get("title") or "")[:200]
+    desc = md.get("description") or ""
+    desc = "\n".join(desc) if isinstance(desc, list) else str(desc)
+    desc = external.clean_description(re.sub(r"<[^>]+>", "", re.sub(r"<br\s*/?>|</?p[^>]*>", "\n", desc, flags=re.I)))[:5000]
+    creator = md.get("creator") or ""
+    creator = (", ".join(creator) if isinstance(creator, list) else str(creator))[:200]
     files = pick_archive_audio(data.get("files"))
     if files:
-        return {"title": title, "files": [{"name": f["name"], "title": file_title(f)} for f in files]}
+        return {"title": title, "description": desc, "author": creator, "files": [{"name": f["name"], "title": file_title(f)} for f in files]}
     video = external.archive_item(identifier)  # pas de son seul : la vidéo, dont on gardera le son
-    return {"title": title, "files": [{"name": video["file"], "title": title or file_title({"name": video["file"]})}]}
+    return {"title": title, "description": desc, "author": creator, "files": [{"name": video["file"], "title": title or file_title({"name": video["file"]})}]}
 
 
 def fetch_audio(job, work, opts, max_bytes, on_progress, check, report):
@@ -420,6 +425,29 @@ class ChapterGone(Exception):
     """« Redécouper » : le chapitre à remplacer a été supprimé entre-temps."""
 
 
+def video_meta(job, report):
+    """Auteur (nom de la chaîne) et description de la vidéo, pour un contenu créé depuis une chaîne ou une playlist."""
+    if job["origin"] == "archive":
+        try:
+            info = archive_audio(importer.archive_ident(job["source_url"]))
+            return {"author": info.get("author") or "", "description": info.get("description") or ""}
+        except Exception:  # noqa: BLE001 — les informations sont un plus : leur absence ne fait pas échouer la demande
+            return {"author": "", "description": ""}
+    return {"author": report.get("uploader") or "", "description": report.get("description") or ""}
+
+
+def finish_item(job, ctx, report):
+    """Contenu créé pour cette vidéo (import d'une chaîne) : auteur et description remplis s'ils sont vides ; publié si demandé."""
+    if job.get("fill_meta"):
+        m = video_meta(job, report)
+        ctx.q("""UPDATE audyn_items SET author = CASE WHEN author = '' THEN %s ELSE author END,
+                                        description = CASE WHEN description = '' THEN %s ELSE description END, updated_at = now()
+                 WHERE id = %s""", (re.sub(r"\s+", " ", m["author"]).strip()[:200], (m["description"] or "")[:4000], job["item_id"]))
+    if job.get("publish"):
+        ctx.q("""UPDATE audyn_items SET status = 'published', updated_at = now()
+                 WHERE id = %s AND status = 'draft' AND title <> '' AND EXISTS (SELECT 1 FROM audyn_chapters c WHERE c.item_id = audyn_items.id)""", (job["item_id"],))
+
+
 def add_chapters(job, ctx, files, audio_used):
     """Chapitres ajoutés (à la fin du contenu, ou à la place du chapitre à redécouper), attestations notées, demande close : tout ou
     rien. files = [{key, size, duration, title}]. Renvoie (premier chapitre, clé du fichier remplacé ou None)."""
@@ -562,6 +590,7 @@ def run(job, ctx):
         uploaded.clear()
         if old_key:
             ctx.drop([old_key])  # l'ancien long fichier, remplacé par les morceaux
+        finish_item(job, ctx, report)
         ctx.log(f"[audyn {jid}] {len(files)} chapitre(s) {'à la place de l’ancien' if replacing else 'ajouté(s)'} : "
                 f"{', '.join('« ' + f['title'] + ' »' for f in files[:5])}{'…' if len(files) > 5 else ''}")
         notes = []

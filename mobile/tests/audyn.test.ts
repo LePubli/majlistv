@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  fmtClock, fmtLong, resumeKey, encodeResume, decodeResume, resumePoint, nextPlayable, prevPlayable,
+  fmtClock, fmtLong, resumeKey, encodeResume, decodeResume, resumePoint, nextPlayable, prevPlayable, continueCandidates, listenState, CONTINUE_MAX,
   startSleep, fadeVolume, audynBase, audynResumeId, canSetTimer, STORY_PING_MS, sleepTick, nextSpeed, seekTarget, shouldSaveResume, NO_TIMER, type AudynChapter,
 } from '../src/lib/audyn';
+import { DICT } from '../src/lib/i18n';
 
 const ch = (id: string, playable = true, d = 600): AudynChapter => ({ id, title: id, durationSeconds: d, playable });
 
@@ -78,3 +79,18 @@ test('histoires du soir : adresses, reprise propre à l\'enfant, minuteur selon 
   assert.equal(canSetTimer({ kids: true, timerAllowed: true }), true);   // enfant : si le parent l'accorde
   assert.equal(STORY_PING_MS, 30000);
 });
+
+test("continuer l'écoute : commencés, pas finis, les plus récents d'abord", () => {
+  const ch = [{ id: 'a', title: 'A', playable: true, durationSeconds: 600 }, { id: 'b', title: 'B', playable: true, durationSeconds: 1200 }, { id: 'c', title: 'C', playable: true, durationSeconds: 300 }];
+  assert.equal(listenState(ch, null), null);
+  assert.equal(listenState(ch, { cid: 'a', pos: 3, at: 1 }), null);
+  assert.deepEqual(listenState(ch, { cid: 'a', pos: 60, at: 1 }), { index: 0, count: 3, left: 2040, pct: 60 / 2100 });
+  assert.equal(listenState(ch, { cid: 'c', pos: 280, at: 1 }), null, 'fini');
+  assert.equal(listenState(ch, { cid: 'zz', pos: 200, at: 1 }), null, 'chapitre disparu');
+  assert.ok(listenState(ch, { cid: 'b', pos: 1199, at: 1 }));
+  const items = [{ id: '1' }, { id: '2' }, { id: '3' }];
+  assert.deepEqual(continueCandidates(items, { 1: { cid: 'a', pos: 10, at: 100 }, 2: null, 3: { cid: 'a', pos: 10, at: 300 } }).map((x) => x.item.id), ['3', '1']);
+  assert.equal(continueCandidates(Array.from({ length: 20 }, (_, i) => ({ id: String(i) })), Object.fromEntries(Array.from({ length: 20 }, (_, i) => [String(i), { cid: 'a', pos: 9, at: 5 }]))).length, CONTINUE_MAX);
+  for (const k of ['aud.continue', 'aud.chapterOf', 'aud.left'] as const) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${k} (${l})`);
+});
+

@@ -1,6 +1,6 @@
 // Audyn (étape 1) : règles pures. node tests/test_audyn_lib.mjs
 import assert from 'node:assert/strict';
-import { audioInfo, coverInfo, previewBytes, clean, validOrder, publishError, fullAccess, sumDuration } from '../src/modules/audyn/lib.js';
+import { audioInfo, coverInfo, previewBytes, clean, validOrder, publishError, fullAccess, sumDuration, listingEntryUrl } from '../src/modules/audyn/lib.js';
 
 assert.deepEqual(audioInfo('audio/mpeg'), { ext: 'mp3', type: 'audio/mpeg' });
 assert.deepEqual(audioInfo('AUDIO/MP3'), { ext: 'mp3', type: 'audio/mpeg' });
@@ -33,4 +33,10 @@ assert.equal(fullAccess({ access: 'free' }, false), true);
 assert.equal(fullAccess({ access: 'learning' }, false), false);
 assert.equal(fullAccess({ access: 'learning' }, true), true);
 assert.equal(sumDuration([{ duration_seconds: 60 }, { durationSeconds: 30 }, {}]), 90);
+// Import d'une chaîne : adresse de chaque vidéo listée (mêmes formes que le transcripteur)
+assert.equal(listingEntryUrl({ source: 'youtube', id: 'abcdefghi-_' }), 'https://www.youtube.com/watch?v=abcdefghi-_');
+assert.equal(listingEntryUrl({ source: 'vimeo', id: '123' }), 'https://vimeo.com/123');
+assert.equal(listingEntryUrl({ source: 'dailymotion', id: 'x8abc12' }), 'https://www.dailymotion.com/video/x8abc12');
+assert.equal(listingEntryUrl({ source: 'archive', id: 'livre-audio_01' }), 'https://archive.org/details/livre-audio_01');
+for (const bad of [{ source: 'youtube', id: 'court' }, { source: 'vimeo', id: 'abc' }, { source: 'archive', id: '../x' }, { source: 'autre', id: 'x' }, null, {}]) assert.equal(listingEntryUrl(bad), null);
 console.log('OK test_audyn_lib');
