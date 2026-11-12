@@ -114,9 +114,14 @@ MODEL_NAME, THREADS, BEAM, LANG_MODE = "small", 4, 3, "declared"  # remplacés p
 CONTROLS = {"on": True}
 
 
+# Migration 113 : talks.audio_track = 'fr' quand la vidéo hébergée porte la piste française de sa plateforme d'origine.
+AUDIO_COL = {"on": True}
+
+
 def claim():
     cond = "AND activity_allows('transcript') AND NOT activity_paused('transcript', id::text)" if CONTROLS["on"] else ""
     order = "activity_priority('transcript', id::text) DESC, created_at" if CONTROLS["on"] else "created_at"
+    extra = ", audio_track" if AUDIO_COL["on"] else ""
     try:
         rows = query(
             f"""UPDATE talks SET transcript_status = 'processing', transcript_progress = 0, transcript_error = NULL,
@@ -126,9 +131,15 @@ def claim():
                              AND ((source = 'upload' AND video_status = 'ready') OR (source IN ('youtube', 'vimeo', 'dailymotion', 'archive') AND rights_confirmed))
                              {cond}
                            ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
-               RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts""",
+               RETURNING id, source, video_ref, language, description, duration_seconds, external_thumb, external_file, transcript_attempts{extra}""",
             fetch=True,
         )
+    except psycopg2.errors.UndefinedColumn:
+        if not AUDIO_COL["on"]:
+            raise
+        AUDIO_COL["on"] = False
+        log("Colonne talks.audio_track absente (migration 113 de l'API pas encore passée) : transcription sans piste française forcée")
+        return claim()
     except psycopg2.errors.UndefinedFunction:
         if not CONTROLS["on"]:
             raise
@@ -292,10 +303,11 @@ class Stop(Exception):
     pass
 
 
-def transcribe_wav(talk_id, wav, declared):
-    """Transcrit un fichier audio (WAV 16 kHz) avec Whisper. Renvoie (segments, langue) ; segments vides = pas de parole."""
+def transcribe_wav(talk_id, wav, declared, force=False):
+    """Transcrit un fichier audio (WAV 16 kHz) avec Whisper. Renvoie (segments, langue) ; segments vides = pas de parole.
+    force : la langue est imposée même en détection automatique (piste française récupérée à l'import : on sait que c'est du français)."""
     duration = audio_duration(wav)
-    language = declared if LANG_MODE == "declared" and declared in WHISPER_LANGS else None
+    language = declared if (force or LANG_MODE == "declared") and declared in WHISPER_LANGS else None
     model = get_model()
     log(f"[{talk_id}] transcription de {duration:.0f} s (langue : {language or 'détection auto'})")
     started = time.time()
@@ -339,11 +351,17 @@ def store(talk_id, cues, lang, method):
     except psycopg2.errors.ForeignKeyViolation:
         log(f"[{talk_id}] conférence supprimée entre-temps, abandon")
         return
-    query(
+    # Exception : pendant cette transcription, la vidéo a reçu la piste française de sa plateforme et attend d'être transcrite
+    # en français (import : statut remis à « pending »). Un résultat dans une autre langue ne doit pas la marquer « prête ».
+    done = query(
         """UPDATE talks SET transcript_status = 'ready', transcript_progress = 100, transcript_error = NULL,
-                  transcript_language = %s, transcript_text = %s, transcript_method = %s WHERE id = %s""",
-        (lang, full_text, method, talk_id),
+                  transcript_language = %s, transcript_text = %s, transcript_method = %s
+            WHERE id = %s AND NOT (transcript_status = 'pending' AND COALESCE(to_jsonb(talks)->>'audio_track', '') = 'fr' AND %s NOT LIKE 'fr%%')""",
+        (lang, full_text, method, talk_id, lang),
     )
+    if not done:
+        log(f"[{talk_id}] résultat en {lang} mis de côté : la vidéo attend sa transcription sur la piste française")
+        return
     log(f"[{talk_id}] terminé : {len(rows)} segments, langue {lang}, méthode {method}")
     last_ok = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -618,7 +636,8 @@ def process_upload(job, talk_id, work):
     extract_audio(src, wav)
     os.remove(src)
     declared = (job["language"] or "").split("-")[0].lower()
-    rows, lang = transcribe_wav(talk_id, wav, declared)
+    french = job.get("audio_track") == "fr"  # la vidéo porte la piste française de sa plateforme : c'est elle qu'on transcrit
+    rows, lang = transcribe_wav(talk_id, wav, "fr" if french else declared, force=french)
     if not rows:
         return no_speech(talk_id)
     store(talk_id, rows, lang, "whisper")

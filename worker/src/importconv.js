@@ -4,7 +4,8 @@
 // du catalogue reste lue depuis sa plateforme (rien ne disparaît) ; une conférence créée pour l'import reste en « importing ».
 //
 // Piste française (migration 113) : si le transcripteur a pris la piste audio française de la plateforme (audio_used = 'fr'), la
-// conférence est marquée (audio_track = 'fr', langue 'fr') et le doublage maison éventuel est retiré (il fait double emploi).
+// conférence est marquée (audio_track = 'fr', langue 'fr'), le doublage maison éventuel est retiré (il fait double emploi) et la
+// transcription est refaite sur la piste française : les sous-titres d'origine deviennent une langue de sous-titres parmi les autres.
 // « Récupérer la voix française » (reimport) : la conférence est DÉJÀ hébergée. Rien n'est touché avant que la nouvelle conversion
 // soit prête ; puis les fichiers sont remplacés au même endroit. Si le remplacement échoue en cours de route, la vidéo est
 // reconvertie depuis l'ancien fichier (toujours en place) : on ne reste jamais sans vidéo.
@@ -34,6 +35,28 @@ export function makeImportClaim(pool, log = () => {}) {
       throw err;
     }
   };
+}
+
+// La conférence parle maintenant français : ses sous-titres « d'origine » doivent suivre le son.
+//   - la transcription existante (langue d'origine, par exemple l'anglais) n'est pas perdue : elle devient une langue de sous-titres
+//     comme les traductions (mêmes phrases, mêmes horaires : la piste doublée suit la même vidéo) ;
+//   - l'ancienne traduction française est retirée (le français devient la langue d'origine) ;
+//   - la transcription repart (« pending ») : le transcripteur écoute la piste française (Whisper, langue imposée).
+// Rien à faire si la transcription est déjà en français, ou si la vidéo n'a pas de transcription (statut « unavailable »).
+export async function retranscribeInFrench(db, talkId) {
+  const { rows } = await db.query('SELECT transcript_status, transcript_language FROM talks WHERE id = $1', [talkId]);
+  const t = rows[0];
+  if (!t || !['ready', 'failed', 'processing', 'pending'].includes(t.transcript_status)) return false;
+  const lang = String(t.transcript_language || '');
+  if (t.transcript_status === 'ready' && lang.startsWith('fr')) return false;
+  if (t.transcript_status === 'ready' && /^[a-z]{2,3}$/.test(lang)) {
+    await db.query(
+      `INSERT INTO transcript_translations(talk_id, lang, status, progress) VALUES ($1, $2, 'ready', 100)
+       ON CONFLICT (talk_id, lang) DO UPDATE SET status = 'ready', progress = 100, error = NULL, updated_at = now()`, [talkId, lang]);
+  }
+  await db.query(`DELETE FROM transcript_translations WHERE talk_id = $1 AND lang = 'fr'`, [talkId]);
+  await db.query(`UPDATE talks SET transcript_status = 'pending', transcript_progress = 0, transcript_attempts = 0, transcript_error = NULL WHERE id = $1`, [talkId]);
+  return true;
 }
 
 // La conférence porte la piste française de sa plateforme : le doublage maison (module « Doublage français ») fait double emploi.
@@ -134,6 +157,7 @@ export async function processImport({ job, pool, workDir, threads = 0, log = () 
             WHERE id = $1 AND (source <> 'upload' OR video_status = 'importing')`,
           [job.talk_id, job.object_key, audio, Math.round(info.duration), `${prefix}poster.jpg`, posters, job.source_url, job.origin, french ? 'fr' : null]);
       flipped = t.rowCount;
+      if (flipped && french) await retranscribeInFrench(client, job.talk_id);
       if (flipped) await client.query(`UPDATE media_imports SET status = 'done', stage = NULL, progress = 100, error = NULL, finished_at = now(), updated_at = now() WHERE id = $1`, [job.id]);
       await client.query('COMMIT');
     } catch (err) {
