@@ -27,6 +27,7 @@ from settings import Settings
 import external
 import watch
 import importer
+import audyn_import
 import align
 import speakers
 
@@ -1026,6 +1027,41 @@ def media_import_loop():
             time.sleep(10)
 
 
+# --- Audyn : son d'une vidéo importé comme chapitre (fil séparé, sa propre connexion ; voir audyn_import.py) -------------------------
+def audyn_import_loop():
+    conn = None
+    requeued = False
+    conf = None
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+
+                def local_query(sql, params=None, fetch=False):
+                    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                        cur.execute(sql, params)
+                        return cur.fetchall() if fetch else cur.rowcount
+
+                conf = Settings(local_query, lambda *a: log(*a))
+            if not requeued:
+                audyn_import.requeue_interrupted(conn)
+                requeued = True
+            conf.refresh()
+            job = audyn_import.claim(conn)
+            if not job:
+                time.sleep(5)
+                continue
+            ctx = audyn_import.Ctx(conn, s3, BUCKET, lambda work: external_options(work, conf), conf, log, lambda: stopping, WORK_DIR)
+            audyn_import.run(job, ctx)
+        except psycopg2.errors.UndefinedTable:
+            time.sleep(60)  # module Audyn absent ou migration 003 pas encore passée
+        except Exception as err:  # noqa: BLE001
+            log("Audyn, import depuis un lien : erreur base :", err)
+            conn = None
+            time.sleep(10)
+
+
 def update_ytdlp():
     """yt-dlp doit suivre les changements de YouTube : mise à jour au démarrage (désactivable : YTDLP_AUTO_UPDATE=0)."""
     if env("YTDLP_AUTO_UPDATE", "1") != "1":
@@ -1109,6 +1145,7 @@ def main():
     update_ytdlp()
     threading.Thread(target=import_loop, daemon=True).start()
     threading.Thread(target=media_import_loop, daemon=True).start()
+    threading.Thread(target=audyn_import_loop, daemon=True).start()
     threading.Thread(target=watch_loop, daemon=True).start()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 

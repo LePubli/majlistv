@@ -151,10 +151,11 @@ def download_direct(url, work, max_bytes, on_progress, check=assert_public_url, 
     return path
 
 
-def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=assert_public_url, audio_lang=None, require_audio=False, report=None):
+def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=assert_public_url, audio_lang=None, require_audio=False, report=None, fmt=None):
     """YouTube, Vimeo et tout site connu de yt-dlp (page contenant une vidéo, lien direct, flux HLS…).
     audio_lang : piste audio voulue ('fr') ; require_audio : échec si la plateforme ne l'a pas (vidéo déjà importée : on ne la
-    remplace pas pour rien) ; report : dictionnaire rempli avec « audio_used » et « audio_langs »."""
+    remplace pas pour rien) ; report : dictionnaire rempli avec « audio_used », « audio_langs », « title », « thumb » et « duration » ;
+    fmt : sélecteur yt-dlp imposé (Audyn : le son seul)."""
     from yt_dlp import YoutubeDL
 
     state = {"error": None}
@@ -172,7 +173,7 @@ def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=as
                 state["error"] = err
                 raise
 
-    o = dict(opts, format=format_selector(max_height, audio_lang), merge_output_format="mp4", noplaylist=True, progress_hooks=[hook],
+    o = dict(opts, format=fmt or format_selector(max_height, audio_lang), merge_output_format="mp4", noplaylist=True, progress_hooks=[hook],
              outtmpl=os.path.join(work, "media.%(ext)s"), max_filesize=max_bytes)
     try:
         with YoutubeDL(o) as ydl:
@@ -191,6 +192,9 @@ def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=as
             if report is not None:
                 report["audio_used"] = used
                 report["audio_langs"] = audio_languages(info)
+                report["title"] = str(info.get("title") or "")[:200]
+                report["thumb"] = external.best_thumbnail(info)
+                report["duration"] = info.get("duration")
             if require_audio and audio_lang and not used:
                 raise external.Blocked(NO_TRACK.get(audio_lang, "Cette vidéo ne propose pas la piste audio demandée sur sa plateforme d'origine."))
             ydl.process_ie_result(info, download=True)

@@ -1,5 +1,7 @@
 'use client';
 // Studio → Audyn : liste des contenus audio (livres audio adultes, histoires du soir enfants), création, journal des attestations de droits.
+// Création depuis un lien (facultatif) : titre, auteur et description repris de la vidéo ; le son devient le premier chapitre et
+// l'image de la vidéo la couverture (le travail se fait ensuite sur le serveur, suivi sur la page du contenu).
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,15 +17,36 @@ export default function StudioAudyn() {
   const [data, setData] = useState(null);
   const [rights, setRights] = useState(null);
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ title: '', audience: 'adults' });
+  const [f, setF] = useState({ title: '', audience: 'adults', author: '', description: '' });
+  const [link, setLink] = useState('');
+  const [frLink, setFrLink] = useState(true);
+  const [linkRights, setLinkRights] = useState(false);
+  const [info, setInfo] = useState(''); // '' | 'loading' | 'done' | 'none'
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   useEffect(() => { call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} })); }, [call]);
+  // Lien collé : titre, auteur (nom de la chaîne) et description repris de la vidéo, sans écraser ce qui est déjà tapé.
+  const readLink = async () => {
+    const url = link.trim();
+    if (!/^https?:\/\//i.test(url)) return;
+    setInfo('loading');
+    const r = await call(`/studio/link-info?url=${encodeURIComponent(url)}&lang=fr`);
+    if (!r.ok || !r.data?.found) { setInfo('none'); return; }
+    setF((x) => ({ ...x, title: x.title || r.data.title || '', author: x.author || r.data.speaker || '', description: x.description || r.data.description || '' }));
+    setInfo('done');
+  };
   const create = async (e) => {
-    e.preventDefault(); setBusy(true); setErr('');
-    const r = await call('/studio/audyn', { method: 'POST', body: JSON.stringify(f) });
-    setBusy(false);
-    if (!r.ok) { setErr(r.data?.error || t('errGeneric')); return; }
+    e.preventDefault();
+    const url = link.trim();
+    if (url && !linkRights) { setErr(t('ayLinkNeedRights')); return; }
+    setBusy(true); setErr('');
+    const r = await call('/studio/audyn', { method: 'POST', body: JSON.stringify({ ...f, description: (f.description || '').slice(0, 4000) }) });
+    if (!r.ok) { setBusy(false); setErr(r.data?.error || t('errGeneric')); return; }
+    if (url) {
+      const j = await call(`/studio/audyn/${r.data.id}/link-imports`, { method: 'POST', body: JSON.stringify({ url, rights: true, audioLang: frLink ? 'fr' : 'original', cover: 'auto' }) });
+      // Le contenu existe déjà : en cas de refus du lien, on ouvre quand même sa page (le message y sera repris).
+      if (!j.ok) { setBusy(false); router.push(`/studio/audyn/${r.data.id}?linkError=${encodeURIComponent(j.data?.error || '')}`); return; }
+    }
     router.push(`/studio/audyn/${r.data.id}`);
   };
   const showRights = async () => { const r = await call('/studio/audyn-rights'); setRights(r.ok ? r.data : []); };
@@ -39,14 +62,26 @@ export default function StudioAudyn() {
       {data && !data.storage && <p className="error" role="alert">{t('ayNoStorage')}</p>}
       {open && (
         <form className="panel ay-form" onSubmit={create}>
+          <label className="fld"><span>{t('ayNewFromLink')}</span>
+            <input type="url" inputMode="url" dir="ltr" maxLength={1000} value={link} placeholder="https://www.youtube.com/watch?v=…"
+              onChange={(e) => { setLink(e.target.value); setInfo(''); }} onBlur={readLink} />
+          </label>
+          {link.trim() && <p className="meta small">{info === 'loading' ? t('ayLinkReading') : info === 'none' ? t('ayLinkNoInfo') : t('ayNewFromLinkHelp')}</p>}
           <label className="fld"><span>{t('ayTitleF')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+          {link.trim() && <label className="fld"><span>{t('ayAuthor')}</span><input maxLength={200} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></label>}
           <label className="fld"><span>{t('ayAudience')}</span>
             <select value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value })}>
               {['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}
             </select>
           </label>
+          {link.trim() && (
+            <>
+              <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
+              <label className="chk"><input type="checkbox" checked={linkRights} onChange={(e) => setLinkRights(e.target.checked)} /> <span>{t('ayLinkRights')}</span></label>
+            </>
+          )}
           {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn" disabled={busy || !f.title.trim()}>{t('ayCreate')}</button>
+          <button className="btn" disabled={busy || !f.title.trim() || (link.trim() && !linkRights)}>{t('ayCreate')}</button>
         </form>
       )}
       {!data ? <p className="meta">{t('ayLoading')}</p> : data.items.length === 0 ? <p className="meta">{t('ayEmpty')}</p> : (

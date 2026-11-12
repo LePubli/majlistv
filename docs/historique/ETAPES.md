@@ -8515,3 +8515,54 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 
 **Tests.** `transcriber/tests/test_importer.py` (56 vérifications ; le choix de piste passe par le vrai moteur de sélection de yt-dlp sur une vidéo simulée à plusieurs pistes) ; `api/tests/test_import_audio.py` (29) ; `api/tests/test_media_import_e2e.py` (premier import avec et sans piste française, sous-titres relancés et langue d'origine gardée, remplacement complet, vidéo changée entre-temps, conversion en échec, panne de stockage pendant le remplacement, attente, garde-fou du transcripteur) ; `web/tests/test_import_audio_web.mjs`. Ces tests d'import demandent un stockage simulé : ils tournent sur le poste de développement, **pas sur GitHub** (seul le test du site y tourne). Vérifié dans un navigateur à 1440 px et 390 px. **Non testé : un vrai téléchargement depuis YouTube** (l'environnement de développement n'a pas accès à YouTube) — c'est l'essai réel ci-dessus.
 
+## Audyn — son d'une vidéo importé depuis un lien (12/11)
+
+**Ce que c'est.** Dans Audyn (livres audio, podcasts, histoires du soir), on peut maintenant ajouter un chapitre **depuis un lien** au lieu d'envoyer un fichier : vidéo YouTube, archive.org, Vimeo, Dailymotion, autre site, ou lien direct vers un fichier audio / vidéo. Le serveur **garde seulement le son** (converti en MP3 128 kb/s) et l'ajoute comme chapitre. **L'image de la vidéo devient la couverture** si le contenu n'en a pas, mise au carré **sans rien couper** : l'image entière, centrée sur un fond fait de la même image floutée. Décisions d'Epok du 12/11 : couverture « image entière sur fond flou », playlists découpées en chapitres, voix française en priorité.
+
+**Pour l'administrateur (Studio → Audyn).**
+- *Contenu existant* → section Chapitres → **« Ajouter depuis un lien »** : coller le lien, cocher l'attestation de droits (la même case que pour l'envoi de fichiers), « Ajouter ». Case **« Prendre la voix française si la vidéo en propose une »** cochée d'origine.
+- *Playlist YouTube / chaîne / showcase Vimeo* : **un chapitre par vidéo**, dans l'ordre, 50 au plus. *Élément archive.org à plusieurs fichiers audio* (livre audio LibriVox, par exemple) : **un chapitre par piste**, une seule version de chaque piste (les originaux, sinon un seul format de copie), dans l'ordre des pistes.
+- Les demandes s'affichent sous le formulaire, avec leur état (en attente, récupération du son… %, chapitre ajouté, échec avec la raison) et un bouton Annuler. La page se met à jour seule.
+- *Couverture* → **« Utiliser l'image de la vidéo »** (visible dès qu'un chapitre vient d'un lien) : remplace la couverture par l'image de la vidéo du premier chapitre importé.
+- *Nouveau contenu audio* : champ **« Lien d'une vidéo ou d'un podcast (facultatif) »**. Le titre, l'auteur (nom de la chaîne) et la description sont repris de la vidéo ; le son devient le premier chapitre et l'image la couverture.
+- Chaque chapitre importé est noté dans le **journal des attestations de droits**, avec le lien d'origine.
+
+**Comment c'est fait.**
+- Migration du module : `api/src/modules/audyn/migrations/003_link_import.sql` (table `audyn_imports`, colonne `source_url` sur les chapitres et le journal). Module Audyn en version 1.1.0.
+- API (`api/src/modules/audyn/routes.js`) : `GET|POST /studio/audyn/:id/link-imports`, `POST /studio/audyn/link-imports/:jid/cancel`, `POST /studio/audyn/:id/cover-from-link`. Même contrôle des adresses que l'import de vidéos (adresses privées refusées), stockage presque plein refusé, réservé aux administrateurs comme le reste d'Audyn.
+- Travail sur le serveur : `transcriber/src/audyn_import.py`, dans le service **majlistv-transcriber** (fil à part, qui n'attend pas la transcription des vidéos). yt-dlp télécharge le son seul (`ba[language^=fr]/ba/b`) ; ffmpeg le convertit en MP3 et fabrique la couverture carrée 1000 × 1000. Toutes les adresses suivies passent par le contrôle anti-SSRF. Trois essais au plus ; un refus définitif (vidéo muette, introuvable, bloquée) est expliqué sur la demande.
+- Site : `web/app/studio/(module-audyn)/audyn/[id]/page.js`, `web/app/studio/(module-audyn)/audyn/page.js`, styles `.ay-sub`, `.ay-link`, `.ay-jobs` dans `web/app/back.css`, 24 textes × 3 langues (`ayLink…`, `ayCoverFromLink…`, `ayNewFromLink…`).
+
+**Limites connues.**
+- La limite de poids d'un chapitre (Admin → Modules → Audyn, 500 Mo d'origine) s'applique au MP3 obtenu : à 128 kb/s, environ 9 heures par chapitre.
+- Si YouTube bloque le serveur (« confirmez que vous n'êtes pas un robot »), la demande échoue avec ce message : il faut les cookies (Admin → Paramètres → « Vidéos YouTube, Vimeo et Dailymotion »).
+- Un lien direct vers un fichier n'a pas d'image : la couverture n'est pas changée (la demande l'indique).
+- Les messages d'erreur venus du serveur sont en français, comme ailleurs sur le site.
+
+**Prérequis.** Module Audyn activé, stockage configuré. Aucun réglage nouveau.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy, dans cet ordre : `majlistv-api` (migration du module au démarrage), `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Exemple (essai réel).** Studio → Audyn → Nouveau contenu audio → coller `https://youtu.be/4cf0si1xff4` → le titre se remplit → cocher l'attestation → Créer. Sur la page du contenu, la demande passe de « En attente » à « Chapitre ajouté (voix française) » ; la couverture apparaît.
+
+**Debug.**
+
+```bash
+# Ce que le service a fait (demande prise, piste audio retenue, chapitre ajouté, couverture, échec)
+docker logs --since 2h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[audyn "
+# Les dernières demandes
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT created_at::timestamp(0), kind, status, progress, added, audio_used, left(coalesce(error, note), 80) AS message, left(source_url, 60) AS lien FROM audyn_imports ORDER BY created_at DESC LIMIT 10;"'
+```
+
+- La demande reste « En attente » : le service `majlistv-transcriber` n'a pas été redéployé, ou il est occupé (une demande à la fois).
+- « relation audyn_imports does not exist » dans le journal du transcripteur : `majlistv-api` n'a pas été redéployé (migration du module).
+
+**Tests.** `transcriber/tests/test_audyn_import.py` (23 vérifications : choix du son par le vrai moteur de yt-dlp, playlists, archive.org, conversion MP3 et couverture avec le vrai ffmpeg) ; `api/tests/test_audyn_link.py` (35 : droits, validation, anti-SSRF, file, annulation, et de bout en bout avec un serveur local : vidéo → MP3, chapitre, journal, couverture posée puis remplacée, playlist et archive.org découpés, vidéo muette, fichier introuvable, suppression du contenu) ; `web/tests/test_audyn_link_web.mjs`. Les deux premiers demandent un stockage simulé et ffmpeg : ils tournent sur le poste de développement, **pas sur GitHub** (le test du site y tourne). Écrans vérifiés dans un navigateur à 1440 px et 390 px, en français et en arabe. **Non testé : un vrai téléchargement depuis YouTube ou archive.org** (l'environnement de développement n'y a pas accès) — c'est l'essai réel ci-dessus.
+
