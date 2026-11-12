@@ -1,5 +1,6 @@
 // Étape « Import » : copier chez nous une vidéo externe pour qu'elle devienne une vidéo hébergée.
-//   POST /talks/:id/import          { rightsConfirmed: true }  vidéo YouTube / Vimeo / archive.org du catalogue, ou relance d'un import échoué
+//   POST /talks/:id/import          { rightsConfirmed: true, audioLang? }  vidéo YouTube / Vimeo / archive.org du catalogue, relance d'un import échoué,
+//                                   ou « Récupérer la voix française » d'une vidéo déjà importée (remplace la vidéo hébergée si la piste existe)
 //   GET  /talks/:id/import          dernière demande de la vidéo (état, progression, erreur)
 //   POST /talks/:id/import/cancel   annule la demande en cours (si la conversion n'est pas encore lancée)
 //   GET  /studio/imports            journal des imports : qui, quand, quelle adresse, déclaration des droits (admin : tous)
@@ -10,7 +11,7 @@ import { linkInfo } from '../linkInfo.js';
 import { pool } from '../db.js';
 import { storage, deleteObject } from '../storage.js';
 import { viaChannel } from '../channelAccess.js';
-import { talkSourceUrl, classifyUrl, insertImport, newObjectKey, storageProblem, cancelImport, ACTIVE } from '../mediaImport.js';
+import { talkSourceUrl, classifyUrl, insertImport, newObjectKey, storageProblem, cancelImport, ACTIVE, AUDIO_CHOICES, AUDIO_ORIGINS, audioLangOf } from '../mediaImport.js';
 
 const idSchema = z.object({ id: z.guid() });
 
@@ -18,7 +19,12 @@ export const importView = (m) => m && ({
   id: m.id, status: m.status, stage: m.stage, progress: m.progress, error: m.error, origin: m.origin, sourceUrl: m.source_url, newTalk: m.new_talk,
   active: ACTIVE.includes(m.status), cancelable: ACTIVE.includes(m.status) && !(m.status === 'converting' && m.stage),
   createdAt: m.created_at, finishedAt: m.finished_at, requestedByName: m.requested_by_name, rightsConfirmedAt: m.rights_confirmed_at,
+  audioLang: m.audio_lang || null, audioUsed: m.audio_used || null, reimport: Boolean(m.reimport),
 });
+
+// « Récupérer la voix française » : vidéo copiée depuis une plateforme, prête, qui ne porte pas déjà la piste française.
+export const canFetchAudio = (talk) => talk.source === 'upload' && talk.video_status === 'ready' && Boolean(talk.imported_from)
+  && AUDIO_ORIGINS.includes(talk.imported_origin) && talk.audio_track !== 'fr';
 
 export default async function mediaImportRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
@@ -26,7 +32,7 @@ export default async function mediaImportRoutes(app) {
   // Vidéo visible pour la personne : son créateur, l'administrateur, ou un éditeur de la chaîne.
   async function mine(req, reply, id) {
     const { rows } = await pool.query(
-      'SELECT id, organizer_id, speaker, source, video_ref, video_status, external_file FROM talks WHERE id = $1', [id]);
+      'SELECT id, organizer_id, speaker, source, video_ref, video_status, external_file, imported_from, imported_origin, audio_track, media_prefix FROM talks WHERE id = $1', [id]);
     const talk = rows[0];
     if (!talk || (req.user.role !== 'admin' && talk.organizer_id !== req.user.sub && !(await viaChannel(req.user, talk)))) {
       reply.code(404).send({ error: 'Vidéo introuvable' });
@@ -34,16 +40,24 @@ export default async function mediaImportRoutes(app) {
     }
     return talk;
   }
+  // Un montage publié (module Éditeur) a remplacé la vidéo : la copie d'origine n'est plus celle qui est diffusée.
+  const hasMontage = async (talkId) => {
+    try { return (await pool.query('SELECT 1 FROM editor_replacements WHERE talk_id = $1 LIMIT 1', [talkId])).rowCount > 0; }
+    catch (err) { if (err.code === '42P01') return false; throw err; }
+  };
   const latest = async (talkId) => (await pool.query('SELECT * FROM media_imports WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 1', [talkId])).rows[0];
 
   app.post('/talks/:id/import', organizer, async (req, reply) => {
     if (!storage) return reply.code(503).send({ error: 'Stockage non configuré' });
     const { id } = idSchema.parse(req.params);
-    z.object({ rightsConfirmed: z.literal(true, { error: 'Confirmez détenir les droits sur cette vidéo' }) }).parse(req.body ?? {});
+    const b = z.object({
+      rightsConfirmed: z.literal(true, { error: 'Confirmez détenir les droits sur cette vidéo' }),
+      audioLang: z.enum(AUDIO_CHOICES).default('fr'),
+    }).parse(req.body ?? {});
     const talk = await mine(req, reply, id);
     if (!talk) return;
 
-    let src; let retry = null;
+    let src; let retry = null; let reimport = false;
     if (talk.source !== 'upload') {
       src = talkSourceUrl(talk);
     } else {
@@ -54,6 +68,16 @@ export default async function mediaImportRoutes(app) {
         if (c.error) return reply.code(400).send({ error: c.error, code: c.code });
         src = { url: c.url, origin: last.origin, archiveFile: last.archive_file };
         retry = last;
+      } else if (canFetchAudio(talk) && b.audioLang === 'fr') {
+        // Vidéo déjà importée : on retourne chercher la même vidéo avec sa piste française. La vidéo en place ne bouge pas tant que
+        // la nouvelle n'est pas prête ; si la plateforme n'a pas de piste française, rien n'est remplacé.
+        if (talk.media_prefix || (await hasMontage(id))) {
+          return reply.code(409).send({ error: 'Cette vidéo a été remplacée par un montage : la voix française ne peut plus être récupérée automatiquement', code: 'edited' });
+        }
+        const c = classifyUrl(talk.imported_from);
+        if (c.error) return reply.code(400).send({ error: c.error, code: c.code });
+        src = { url: c.url, origin: talk.imported_origin, archiveFile: null };
+        reimport = true;
       }
     }
     if (!src) return reply.code(400).send({ error: 'Cette vidéo est déjà hébergée chez nous', code: 'not_importable' });
@@ -65,7 +89,7 @@ export default async function mediaImportRoutes(app) {
     try {
       await client.query('BEGIN');
       if (retry) await client.query(`UPDATE talks SET video_status = 'importing', video_error = NULL, video_progress = 0, video_ref = $2 WHERE id = $1`, [id, key]);
-      else {
+      else if (!reimport) {
         // La déclaration des droits vaut aussi accord pour la transcription (comme le bouton « Activer la transcription »).
         await client.query(
           `UPDATE talks SET transcript_status = CASE WHEN transcript_status = 'unavailable' AND NOT rights_confirmed THEN 'pending' ELSE transcript_status END,
@@ -76,11 +100,12 @@ export default async function mediaImportRoutes(app) {
       const importId = await insertImport(client, {
         talkId: id, userId: req.user.sub, url: src.url, origin: src.origin, archiveFile: src.archiveFile,
         newTalk: Boolean(retry), prevSource: retry ? null : talk.source, objectKey: key,
+        audioLang: retry ? retry.audio_lang : audioLangOf(b.audioLang), reimport,
       });
       await client.query('COMMIT');
       if (retry) await deleteObject(retry.object_key).catch(() => {}); // reste éventuel de l'essai précédent
-      req.auditSummary = `Import de la vidéo (${src.origin}) : ${src.url}`;
-      return reply.code(202).send({ id: importId, status: 'pending' });
+      req.auditSummary = reimport ? `Voix française demandée (${src.origin}) : ${src.url}` : `Import de la vidéo (${src.origin}) : ${src.url}`;
+      return reply.code(202).send({ id: importId, status: 'pending', reimport });
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
       if (err.code === '23505') return reply.code(409).send({ error: 'Un import est déjà en cours pour cette vidéo', code: 'import_active' });
@@ -92,8 +117,10 @@ export default async function mediaImportRoutes(app) {
 
   app.get('/talks/:id/import', organizer, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    if (!(await mine(req, reply, id))) return;
-    return { import: importView(await latest(id)) };
+    const talk = await mine(req, reply, id);
+    if (!talk) return;
+    const last = await latest(id);
+    return { import: importView(last), canFetchAudio: canFetchAudio(talk) && !ACTIVE.includes(last?.status), audioTrack: talk.audio_track || null };
   });
 
   app.post('/talks/:id/import/cancel', organizer, async (req, reply) => {

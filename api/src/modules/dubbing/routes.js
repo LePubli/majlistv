@@ -177,6 +177,7 @@ export default async function routes(app, ctx) {
                   FROM ${SEGS_FROM} WHERE s.lang = 'fr' GROUP BY s.talk_id) s ON s.talk_id = t.id
        LEFT JOIN dub_talk_settings d ON d.talk_id = t.id
        WHERE COALESCE(t.transcript_language, t.language) NOT LIKE 'fr%'
+         AND COALESCE(t.audio_track, '') <> 'fr' -- la vidéo porte déjà la piste française de sa plateforme d'origine
          AND ($1 = '' OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%')
        ORDER BY (COALESCE(s.n, 0) > 0) DESC, requests DESC, t.created_at DESC LIMIT 300`, [q]);
     return {

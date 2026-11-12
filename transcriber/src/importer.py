@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlsplit
 
 import external
 
+NO_TRACK = {"fr": "Cette vidéo ne propose pas de piste audio en français sur sa plateforme d'origine : rien n'a été changé."}
 DIRECT_EXT = re.compile(r"\.(mp4|m4v|mov|webm|mkv|ogv|avi|ts)$", re.I)
 MAX_REDIRECTS = 5
 
@@ -72,9 +73,36 @@ def _largest(work, prefix="media"):
     return max(files, key=os.path.getsize) if files else None
 
 
-def format_selector(max_height):
+def format_selector(max_height, audio_lang=None):
+    """Meilleure vidéo sous la hauteur permise + meilleur son. Avec `audio_lang` ('fr'), la piste audio de cette langue passe
+    d'abord quand la plateforme en propose une (YouTube : pistes doublées) ; sinon la voix d'origine, comme sans l'option."""
     h = int(max_height)
-    return f"bv*[height<={h}]+ba/b[height<={h}]/bv*+ba/b"
+    base = f"bv*[height<={h}]+ba/b[height<={h}]/bv*+ba/b"
+    if not audio_lang:
+        return base
+    lang = re.sub(r"[^a-z]", "", str(audio_lang).lower())[:3]
+    # « bv » (vidéo SANS son) et non « bv* » : un format déjà mixé porte la voix d'origine, et yt-dlp n'y ajouterait pas l'autre piste.
+    return f"bv[height<={h}]+ba[language^={lang}]/bv+ba[language^={lang}]/{base}" if lang else base
+
+
+def audio_track_used(info, audio_lang):
+    """Langue de la piste audio retenue par yt-dlp si c'est bien celle demandée ('fr'), sinon None (voix d'origine)."""
+    if not audio_lang or not isinstance(info, dict):
+        return None
+    for f in info.get("requested_formats") or [info]:
+        if (f.get("acodec") or "none") != "none" and str(f.get("language") or "").lower().split("-")[0] == audio_lang:
+            return audio_lang
+    return None
+
+
+def audio_languages(info):
+    """Langues des pistes audio proposées par la plateforme, sans doublon (pour le journal)."""
+    seen = []
+    for f in (info or {}).get("formats") or []:
+        lang = str(f.get("language") or "").lower().split("-")[0]
+        if lang and (f.get("acodec") or "none") != "none" and lang not in seen:
+            seen.append(lang)
+    return seen
 
 
 def download_direct(url, work, max_bytes, on_progress, check=assert_public_url, session=None):
@@ -123,8 +151,10 @@ def download_direct(url, work, max_bytes, on_progress, check=assert_public_url, 
     return path
 
 
-def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=assert_public_url):
-    """YouTube, Vimeo et tout site connu de yt-dlp (page contenant une vidéo, lien direct, flux HLS…)."""
+def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=assert_public_url, audio_lang=None, require_audio=False, report=None):
+    """YouTube, Vimeo et tout site connu de yt-dlp (page contenant une vidéo, lien direct, flux HLS…).
+    audio_lang : piste audio voulue ('fr') ; require_audio : échec si la plateforme ne l'a pas (vidéo déjà importée : on ne la
+    remplace pas pour rien) ; report : dictionnaire rempli avec « audio_used » et « audio_langs »."""
     from yt_dlp import YoutubeDL
 
     state = {"error": None}
@@ -142,7 +172,7 @@ def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=as
                 state["error"] = err
                 raise
 
-    o = dict(opts, format=format_selector(max_height), merge_output_format="mp4", noplaylist=True, progress_hooks=[hook],
+    o = dict(opts, format=format_selector(max_height, audio_lang), merge_output_format="mp4", noplaylist=True, progress_hooks=[hook],
              outtmpl=os.path.join(work, "media.%(ext)s"), max_filesize=max_bytes)
     try:
         with YoutubeDL(o) as ydl:
@@ -157,6 +187,12 @@ def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=as
             for u in urls:
                 if u and str(u).startswith(("http://", "https://")):
                     check(u)
+            used = audio_track_used(info, audio_lang)
+            if report is not None:
+                report["audio_used"] = used
+                report["audio_langs"] = audio_languages(info)
+            if require_audio and audio_lang and not used:
+                raise external.Blocked(NO_TRACK.get(audio_lang, "Cette vidéo ne propose pas la piste audio demandée sur sa plateforme d'origine."))
             ydl.process_ie_result(info, download=True)
     except (Canceled, external.Blocked):
         raise
@@ -178,10 +214,14 @@ def archive_ident(url):
     return parts[1]
 
 
-def fetch(job, work, opts, max_bytes, max_height, on_progress, check=assert_public_url):
-    """Télécharge la vidéo de la demande `job` (origin, source_url, archive_file) dans `work` et renvoie le chemin du fichier."""
+def fetch(job, work, opts, max_bytes, max_height, on_progress, check=assert_public_url, report=None):
+    """Télécharge la vidéo de la demande `job` (origin, source_url, archive_file, audio_lang, reimport) dans `work` et renvoie le chemin
+    du fichier. `report` (dictionnaire) reçoit « audio_used » : la piste audio demandée a-t-elle été trouvée."""
     origin, url = job["origin"], job["source_url"]
+    audio_lang, require = job.get("audio_lang") or None, bool(job.get("reimport"))
     check(url)
+    if require and (origin == "archive" or (origin == "web" and looks_direct(url))):
+        raise external.Blocked("Cette vidéo vient d'un fichier direct : il n'a qu'une seule piste audio.")
     if origin == "archive":
         ident = archive_ident(url)
         item = external.archive_item(ident, job.get("archive_file"))
@@ -192,7 +232,7 @@ def fetch(job, work, opts, max_bytes, max_height, on_progress, check=assert_publ
         except external.Blocked as err:
             if "page web" not in str(err):
                 raise
-    return download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=check)
+    return download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=check, audio_lang=audio_lang, require_audio=require, report=report)
 
 
 # --- Contrôle du fichier -----------------------------------------------------------------------------------------------------------

@@ -886,7 +886,7 @@ def claim_media_import(conn, use_controls):
                            WHERE status = 'pending' AND NOT cancel_requested AND attempts < {MEDIA_MAX_ATTEMPTS}
                              AND updated_at < now() - make_interval(secs => 30 * attempts) {cond}
                            ORDER BY {order} LIMIT 1 FOR UPDATE SKIP LOCKED)
-               RETURNING id, talk_id, source_url, origin, archive_file, object_key, new_talk, attempts"""
+               RETURNING id, talk_id, source_url, origin, archive_file, object_key, new_talk, attempts, audio_lang, reimport"""
         )
         return cur.fetchone()
 
@@ -929,7 +929,12 @@ def run_media_import(job, conn, conf):
         if shutil.disk_usage(work).free < 2 * 1024 ** 3:
             raise RuntimeError("Plus assez de place disque sur le serveur de conversion (moins de 2 Go libres)")
         log(f"[import {jid}] {job['origin']} : {job['source_url']}")
-        path = importer.fetch(job, work, external_options(work, conf), max_bytes, max_height, lambda d, t: touch("download", d, t))
+        report = {}
+        path = importer.fetch(job, work, external_options(work, conf), max_bytes, max_height, lambda d, t: touch("download", d, t), report=report)
+        if job.get("audio_lang"):
+            offered = ", ".join(report.get("audio_langs") or []) or "une seule"
+            kept = report.get("audio_used") or "voix d'origine"
+            log(f"[import {jid}] piste audio demandée : {job['audio_lang']} ; proposées : {offered} ; retenue : {kept}")
         info = importer.check_video(path)
         size = os.path.getsize(path)
         if size > max_bytes:
@@ -937,8 +942,8 @@ def run_media_import(job, conn, conf):
         log(f"[import {jid}] téléchargée : {round(size / 1024 ** 2)} Mo, {round(info['duration'])} s, {info['height']}p : envoi dans le stockage")
         last["t"] = 0.0
         importer.upload(s3, BUCKET, path, job["object_key"], lambda d, t: touch("upload", d, t))
-        ok = q("UPDATE media_imports SET status = 'converting', stage = NULL, progress = 0, bytes = %s, error = NULL, updated_at = now() "
-               "WHERE id = %s AND status = 'downloading' AND NOT cancel_requested RETURNING id", (size, job["id"]), fetch=True)
+        ok = q("UPDATE media_imports SET status = 'converting', stage = NULL, progress = 0, bytes = %s, error = NULL, audio_used = %s, updated_at = now() "
+               "WHERE id = %s AND status = 'downloading' AND NOT cancel_requested RETURNING id", (size, report.get("audio_used"), job["id"]), fetch=True)
         if not ok:
             raise importer.Canceled()
         log(f"[import {jid}] fichier dans le stockage : en attente de conversion par le worker")

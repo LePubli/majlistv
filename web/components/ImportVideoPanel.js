@@ -2,6 +2,8 @@
 // Studio → fiche d'une vidéo : « Copier cette vidéo chez nous » (étape Import).
 // Une vidéo YouTube / Vimeo / archive.org est copiée dans notre stockage pour devenir une vidéo hébergée ; une vidéo créée
 // pour l'import (adresse quelconque) affiche ici l'avancement, l'annulation et la relance. Masqué si la fonction est désactivée.
+// Piste audio : à l'import, la voix française de la plateforme est prise quand elle existe (case cochée d'origine) ; pour une vidéo
+// déjà importée, « Récupérer la voix française » relance la copie (la vidéo en place ne change que si la piste existe).
 import { useCallback, useEffect, useState } from 'react';
 
 export const importLabel = (m, t) => {
@@ -12,8 +14,9 @@ export const importLabel = (m, t) => {
   return t(`impSt_${m.status}`);
 };
 
-export default function ImportVideoPanel({ talk, imp, setImp, reload, t, call, sourceName }) {
+export default function ImportVideoPanel({ talk, imp, setImp, canFetchAudio = false, setCanFetchAudio, reload, t, call, sourceName }) {
   const [rights, setRights] = useState(false);
+  const [frAudio, setFrAudio] = useState(true);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const active = Boolean(imp?.active);
@@ -21,9 +24,11 @@ export default function ImportVideoPanel({ talk, imp, setImp, reload, t, call, s
   // Suivi de la demande en cours ; quand elle se termine, la fiche est rechargée (la vidéo est devenue hébergée).
   const refresh = useCallback(async () => {
     const r = await call(`/talks/${talk.id}/import`);
-    if (r.ok) setImp(r.data.import || null);
+    if (r.ok) { setImp(r.data.import || null); setCanFetchAudio?.(Boolean(r.data.canFetchAudio)); }
     return r;
-  }, [call, talk.id, setImp]);
+  }, [call, talk.id, setImp, setCanFetchAudio]);
+  // NB : pas de demande au montage ici. La page charge l'état une fois (import + canFetchAudio) et le passe en propriétés :
+  // ce panneau est remonté à chaque rendu de la page, une demande au montage tournerait en boucle.
   useEffect(() => {
     if (!active) return undefined;
     const h = setInterval(async () => {
@@ -33,13 +38,13 @@ export default function ImportVideoPanel({ talk, imp, setImp, reload, t, call, s
     return () => clearInterval(h);
   }, [active, refresh, reload]);
 
-  const start = async () => {
+  const start = async (fetchAudio = false) => {
     if (!rights) { setMsg({ ok: false, text: t('impRightsNeeded') }); return; }
     setBusy(true); setMsg(null);
-    const r = await call(`/talks/${talk.id}/import`, { method: 'POST', body: JSON.stringify({ rightsConfirmed: true }) });
+    const r = await call(`/talks/${talk.id}/import`, { method: 'POST', body: JSON.stringify({ rightsConfirmed: true, audioLang: fetchAudio || frAudio ? 'fr' : 'original' }) });
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: r.data?.error || t('errGeneric') }); return; }
-    setMsg({ ok: true, text: t('impStarted') }); setRights(false);
+    setMsg({ ok: true, text: fetchAudio ? t('impAudioStarted') : t('impStarted') }); setRights(false);
     await refresh(); reload();
   };
   const cancel = async () => {
@@ -59,21 +64,34 @@ export default function ImportVideoPanel({ talk, imp, setImp, reload, t, call, s
     <div className="imp-panel" data-testid="import-panel">
       {active && (
         <div role="status">
-          <p className="meta small"><b>{t('impRunning')}</b> · {importLabel(imp, t)}</p>
+          <p className="meta small"><b>{imp.reimport ? t('impAudioRunning') : t('impRunning')}</b> · {importLabel(imp, t)}</p>
           <progress max="100" value={imp.status === 'pending' ? 0 : imp.progress || 0} />
           {imp.cancelable && <div><button type="button" className="link u" disabled={busy} onClick={cancel}>{t('impCancel')}</button></div>}
         </div>
       )}
       {!active && imp?.status === 'done' && <p className="meta small">{t('impDone').replace('{u}', imp.sourceUrl)}</p>}
+      {!active && imp?.status === 'done' && imp.audioLang === 'fr' && (
+        <p className="meta small" data-testid="import-audio">{imp.audioUsed === 'fr' ? t('impAudioGot') : t('impAudioNone')}</p>
+      )}
       {!active && imp && ['failed', 'canceled'].includes(imp.status) && (
-        <p className="error small" role="alert">{t('impFailed')}{imp.error ? ` : ${imp.error}` : imp.status === 'canceled' ? ` (${t('impSt_canceled').toLowerCase()})` : ''}</p>
+        <p className="error small" role="alert">{imp.reimport ? t('impAudioFailed') : t('impFailed')}{imp.error ? ` : ${imp.error}` : imp.status === 'canceled' ? ` (${t('impSt_canceled').toLowerCase()})` : ''}</p>
       )}
       {canStart && (
         <>
           {!imp?.newTalk && <p className="meta small">{t('impHelp').replaceAll('{s}', sourceName || '')}</p>}
+          {!imp?.newTalk && talk.source !== 'archive' && (
+            <label className="check rights"><input type="checkbox" checked={frAudio} onChange={(e) => setFrAudio(e.target.checked)} /> {t('impAudioOpt')}</label>
+          )}
           <label className="check rights"><input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} /> {t('impRights')}</label>
-          <button type="button" className="btn ghost" disabled={busy || !rights} onClick={start}>{imp?.newTalk ? t('impRetry') : t('impStart')}</button>
+          <button type="button" className="btn ghost" disabled={busy || !rights} onClick={() => start(false)}>{imp?.newTalk ? t('impRetry') : t('impStart')}</button>
         </>
+      )}
+      {!canStart && !active && hosted && canFetchAudio && (
+        <div data-testid="import-audio-fetch">
+          <p className="meta small">{t('impAudioFetchHelp')}</p>
+          <label className="check rights"><input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} /> {t('impRights')}</label>
+          <button type="button" className="btn ghost" disabled={busy || !rights} onClick={() => start(true)}>{t('impAudioFetch')}</button>
+        </div>
       )}
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
     </div>

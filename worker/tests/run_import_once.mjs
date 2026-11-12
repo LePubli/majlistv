@@ -1,5 +1,5 @@
 // Étape Import — outil de test : le worker prend UNE vidéo copiée à convertir (même code que le service).
-// Variables : DATABASE_URL, S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION, S3_BUCKET, WORK_DIR (facultatif), FFMPEG_THREADS.
+// Variables : TEST_FAIL_UPLOAD (facultatif), DATABASE_URL, S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION, S3_BUCKET, WORK_DIR (facultatif), FFMPEG_THREADS.
 // Sortie : une ligne JSON { claimed, id, ok, error }.
 import os from 'node:os';
 import pg from 'pg';
@@ -15,6 +15,8 @@ const s3 = new S3Client({ endpoint: process.env.S3_ENDPOINT, region: process.env
 const job = await makeImportClaim(pool, (...a) => console.error(...a))();
 if (!job) { console.log(JSON.stringify({ claimed: false })); await pool.end(); process.exit(0); }
 const r = await processImport({ job, pool, workDir: process.env.WORK_DIR || os.tmpdir(), threads: Number(process.env.FFMPEG_THREADS || 2),
-  log: (...a) => console.error(...a), ...makeFiles(s3, bucket) });
+  log: (...a) => console.error(...a), ...makeFiles(s3, bucket),
+  // TEST_FAIL_UPLOAD=1 : l'envoi des fichiers convertis échoue (panne de stockage simulée pendant le remplacement).
+  ...(process.env.TEST_FAIL_UPLOAD ? { uploadDir: async () => { throw new Error('stockage en panne (test)'); } } : {}) });
 console.log(JSON.stringify({ claimed: true, id: job.id, ...r }));
 await pool.end();

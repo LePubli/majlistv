@@ -86,6 +86,7 @@ export default function NewTalk() {
   const mode = file ? 'file' : 'link';
   const [importIt, setImportIt] = useState(false); // copier la vidéo chez nous (facultatif pour YouTube / Vimeo / archive.org)
   const wantImport = mode === 'link' && (importIt || (Boolean(link) && !parsed));
+  const [frAudio, setFrAudio] = useState(true); // import : voix française de la plateforme si elle existe
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   const patch = (o) => setF((x) => ({ ...x, ...o }));
@@ -140,7 +141,7 @@ export default function NewTalk() {
     setSaving(true);
     const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, formatId: f.formatId ? Number(f.formatId) : undefined, level: f.level || undefined };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
-    if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else { body.videoUrl = link.trim(); if (wantImport) body.importVideo = true; }
+    if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else { body.videoUrl = link.trim(); if (wantImport) { body.importVideo = true; body.importAudio = frAudio ? 'fr' : 'original'; } }
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
     if (r.ok) { router.push(`/studio/${r.data.id}`); return; }
     setSaving(false);
@@ -280,6 +281,12 @@ export default function NewTalk() {
               </div>
             )}
             {wantImport && !parsed && <p className="meta small">{t('impNewForced')}</p>}
+            {wantImport && (
+              <div className="fld">
+                <label className="check"><input type="checkbox" checked={frAudio} onChange={(e) => setFrAudio(e.target.checked)} /> {t('impAudioOpt')}</label>
+                <span className="meta small">{t('impAudioOptHelp')}</span>
+              </div>
+            )}
             {mode === 'link' && (
               <label className="check rights"><input type="checkbox" checked={f.rightsConfirmed} onChange={(e) => patch({ rightsConfirmed: e.target.checked })} /> {wantImport ? t('impRights') : t('rightsConfirm')}</label>
             )}

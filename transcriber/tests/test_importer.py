@@ -75,6 +75,29 @@ p = importer.fetch(job("web", BASE + "/v.mp4"), tempfile.mkdtemp(), {}, 10 ** 8,
 ok(raises(external.Blocked, lambda: importer.fetch(job("web", "http://10.0.0.5/a.mp4"), tempfile.mkdtemp(), {}, 10 ** 8, 1080, lambda d, t: None, check=strict_except_local)) is not None, "fetch : adresse privée refusée dès le départ")
 ok(importer.format_selector(720) == "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b", "sélecteur de format")
 
+# --- piste audio française (YouTube : vidéos à plusieurs pistes audio) : le vrai moteur de choix de yt-dlp, sans réseau ---
+ok(importer.format_selector(720, None) == importer.format_selector(720), "sans langue : sélecteur inchangé")
+ok(importer.format_selector(720, "fr") == "bv[height<=720]+ba[language^=fr]/bv+ba[language^=fr]/bv*[height<=720]+ba/b[height<=720]/bv*+ba/b", "sélecteur avec piste française d'abord")
+ok(importer.format_selector(720, "f'r;") == importer.format_selector(720, "fr") and importer.format_selector(720, "!!") == importer.format_selector(720), "langue nettoyée")
+from yt_dlp import YoutubeDL as RealYDL
+_v = lambda i, h: dict(format_id=str(i), url=f"https://cdn.example.org/{i}", ext="mp4", vcodec="avc1.64", acodec="none", height=h, width=h * 16 // 9, tbr=h * 3, vbr=h * 3, protocol="https")
+_a = lambda i, lang, pref, abr: dict(format_id=i, url=f"https://cdn.example.org/{i}", ext="webm", vcodec="none", acodec="opus", abr=abr, tbr=abr, language=lang, language_preference=pref, protocol="https")
+def formats(french, tall=False):
+    f = [_v(136, 720), _v(137, 1080)] + ([_v(313, 2160)] if tall else []) + [_a("249-18", "en", 10, 50), _a("251-18", "en", 10, 130), _a("251-3", "ar", -1, 130)]
+    if french: f += [_a("249-17", "fr", -1, 50), _a("251-9", "fr", -1, 130), _a("140-5", "fr-FR", -1, 129)]
+    return f + [dict(format_id="18", url="https://cdn.example.org/18", ext="mp4", vcodec="avc1.42", acodec="mp4a.40", height=360, width=640, tbr=500, language="en", protocol="https")]
+def chosen(lang, french, tall=False, height=1080):
+    with RealYDL({"quiet": True, "format": importer.format_selector(height, lang), "simulate": True}) as y:
+        return y.process_ie_result({"id": "x", "title": "t", "extractor": "youtube", "extractor_key": "Youtube", "webpage_url": "https://www.youtube.com/watch?v=x", "formats": formats(french, tall)}, download=False)
+i = chosen("fr", True); ok(i["format_id"] == "137+251-9" and importer.audio_track_used(i, "fr") == "fr", f"piste française prise, meilleure qualité audio ({i['format_id']})")
+i = chosen("fr", True, tall=True); ok(i["format_id"] == "137+251-9", "piste française : la hauteur maximale reste respectée")
+i = chosen("fr", True, height=720); ok(i["format_id"] == "136+251-9", "piste française en 720p")
+i = chosen("fr", False); ok(i["format_id"] == "137+251-18" and importer.audio_track_used(i, "fr") is None, "pas de piste française : voix d'origine, et c'est signalé")
+i = chosen(None, True); ok(i["format_id"] == "137+251-18" and importer.audio_track_used(i, None) is None, "sans demande : voix d'origine même si une piste française existe")
+ok(sorted(importer.audio_languages(chosen("fr", True))) == ["ar", "en", "fr"], "langues proposées (journal)")
+ok(importer.audio_track_used({"requested_formats": [{"acodec": "none", "language": "fr"}, {"acodec": "opus", "language": "fr-CA"}]}, "fr") == "fr", "fr-CA compte comme français")
+ok(importer.audio_track_used({"acodec": "mp4a", "language": "en"}, "fr") is None and importer.audio_track_used(None, "fr") is None and importer.audio_languages(None) == [], "cas limites")
+
 # --- yt-dlp simulé ---
 import yt_dlp
 calls = {}
@@ -103,6 +126,27 @@ ok(raises(external.Blocked, lambda: importer.download_ytdlp("https://x.example/i
 e = raises(Exception, lambda: importer.download_ytdlp("https://x.example/boom", tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub)); ok(e is not None and "cookies" in str(e).lower(), f"blocage YouTube : message lisible ({str(e)[:60]})")
 ok(raises(importer.Canceled, lambda: importer.download_ytdlp("https://x.example/ok", tempfile.mkdtemp(), {}, 10 ** 8, 720, cancel, check=pub)) is not None, "yt-dlp : annulation propagée")
 ok(raises(importer.TooBig, lambda: importer.download_ytdlp("https://x.example/ok", tempfile.mkdtemp(), {}, 5, 720, lambda d, t: None, check=pub)) is not None, "yt-dlp : taille maximale")
+
+
+# --- piste audio : compte rendu et refus quand la piste est exigée (vidéo déjà importée) ---
+class LangYDL(FakeYDL):
+    def extract_info(self, url, download=False):
+        fr = "avecfr" in url
+        return {"id": 1, "webpage_url": url, "formats": [{"acodec": "opus", "language": "en"}] + ([{"acodec": "opus", "language": "fr"}] if fr else []),
+                "requested_formats": [{"url": "https://cdn.example.org/v", "acodec": "none"}, {"url": "https://cdn.example.org/a", "acodec": "opus", "language": "fr" if fr else "en"}]}
+yt_dlp.YoutubeDL = LangYDL
+rep = {}; importer.download_ytdlp("https://www.youtube.com/watch?v=avecfr", tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", report=rep)
+ok(rep == {"audio_used": "fr", "audio_langs": ["en", "fr"]} and "ba[language^=fr]" in calls["opts"]["format"], f"piste française : compte rendu ({rep})")
+rep = {}; importer.download_ytdlp("https://www.youtube.com/watch?v=sans", tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", report=rep)
+ok(rep["audio_used"] is None, "premier import sans piste française : la voix d'origine est gardée, sans erreur")
+wr = tempfile.mkdtemp(); e = raises(external.Blocked, lambda: importer.download_ytdlp("https://www.youtube.com/watch?v=sans", wr, {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", require_audio=True))
+ok(e and "piste audio en français" in str(e) and not os.listdir(wr), "vidéo déjà importée sans piste française : refus AVANT tout téléchargement")
+rep = {}; importer.fetch(job("youtube", "https://www.youtube.com/watch?v=avecfr", audio_lang="fr", reimport=True), tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub, report=rep)
+ok(rep["audio_used"] == "fr", "fetch : langue et exigence transmises")
+e = raises(external.Blocked, lambda: importer.fetch(job("web", BASE + "/v.mp4", audio_lang="fr", reimport=True), tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=permissive))
+ok(e and "fichier direct" in str(e), "vidéo venue d'un fichier direct : pas de seconde piste à chercher")
+p2 = importer.fetch(job("web", BASE + "/v.mp4", audio_lang="fr"), tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=permissive); ok(os.path.getsize(p2) == len(DATA), "premier import d'un lien direct : la demande de langue est sans effet")
+yt_dlp.YoutubeDL = FakeYDL
 
 # --- envoi S3 simulé ---
 try:

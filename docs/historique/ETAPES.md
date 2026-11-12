@@ -8457,3 +8457,59 @@ docker exec dockpanel-git-majlistv-api node -e "console.log(require('zod/package
 docker logs --tail 30 dockpanel-git-majlistv-api
 ```
 
+## Import — voix française de la plateforme d'origine (12/11)
+
+**Ce que c'est.** Certaines vidéos YouTube ont plusieurs pistes audio (doublages, souvent faits automatiquement par YouTube pour la chaîne). Quand une vidéo est **copiée chez nous** (« Importer chez nous »), on prend maintenant la **piste française** si elle existe, à la place de la voix d'origine. Décision d'Epok : français seul (la voix d'origine n'est pas gardée en plus). Essai réel du 12/11 sur le VPS : la vidéo d'exemple propose 19 langues, dont le français, et notre serveur y a accès.
+
+**Ce que ça ne fait pas.** Une vidéo seulement *lue depuis YouTube* (lecteur intégré) n'est pas concernée : YouTube ne donne aucun réglage officiel pour imposer la piste audio de son lecteur. Il faut copier la vidéo chez nous.
+
+**Pour l'organisateur.**
+- *Nouvelle vidéo* (Studio → Nouvelle vidéo → coller un lien → « Importer la vidéo chez nous ») : une case **« Prendre la voix française si la vidéo en propose une »**, cochée d'origine. Décochée : voix d'origine.
+- *Vidéo du catalogue lue depuis YouTube / Vimeo* (fiche de la vidéo → « Importer chez nous ») : la même case.
+- *Vidéo déjà importée* (fiche de la vidéo) : bouton **« Récupérer la voix française »**. La vidéo en place reste en ligne pendant la copie. S'il n'y a pas de piste française, rien n'est changé et le message le dit.
+- Après l'import, la fiche indique « Piste audio : voix française de la plateforme d'origine » ou « Pas de piste française… la voix d'origine a été gardée ».
+
+**Ce qui change sur la vidéo quand la piste française est prise.** Langue de la vidéo : français. Doublage maison (module « Doublage français ») : retiré pour cette vidéo (piste et fichiers effacés, doublages en attente annulés, demandes des abonnés closes), et la vidéo n'est plus proposée dans Studio → Audio et doublage ; côté spectateur, plus de carte « version française » ni de bouton « Demander ». Sous-titres : ils ne sont **pas refaits**. Ceux qui existent déjà (faits sur la voix d'origine, ce qui est le cas le plus courant pour une vidéo YouTube, transcrite dès sa création) restent tels quels ; seule une vidéo pas encore transcrite au moment où elle devient hébergée le sera sur la piste française.
+
+**Comment c'est fait.**
+- Migration `api/migrations/113_import_audio.sql` : `media_imports.audio_lang` (langue demandée), `audio_used` (piste réellement prise), `reimport` (remplacement d'une vidéo déjà hébergée) ; `talks.audio_track` (`fr` = la vidéo porte la piste française).
+- API : `POST /talks` accepte `importAudio` (`fr` d'origine, ou `original`) ; `POST /talks/:id/import` accepte `audioLang` et sert aussi au bouton « Récupérer la voix française » ; `GET /talks/:id/import` renvoie `canFetchAudio`. Fichiers : `api/src/mediaImport.js`, `api/src/routes/mediaImport.js`, `api/src/routes/talks.js`, `api/src/modules/dubbing/public.js` et `routes.js`.
+- Transcripteur (`transcriber/src/importer.py`) : le choix de format de yt-dlp demande d'abord la vidéo sans son + la piste audio française (`bv[height<=H]+ba[language^=fr]`), puis retombe sur le choix habituel. Le journal note les langues proposées et la piste retenue. Pour une vidéo déjà importée, l'absence de piste française arrête la demande **avant** tout téléchargement.
+- Worker (`worker/src/importconv.js`) : marque la vidéo, retire le doublage maison. Remplacement d'une vidéo déjà hébergée : rien n'est touché tant que la nouvelle conversion n'est pas prête ; puis les fichiers sont remplacés au même endroit (la vidéo affiche « conversion en cours » pendant ce court moment). Si le remplacement casse en route, la vidéo d'avant est reconvertie depuis son fichier, toujours en place.
+- Site : `web/components/ImportVideoPanel.js`, `web/app/studio/new/page.js`, `web/app/studio/[id]/page.js`, `web/modules/dubbing/TalkAudio.js`, 9 textes × 3 langues (`impAudio…`).
+
+**Limites connues.**
+- « Récupérer la voix française » est refusé pour une vidéo remplacée par un montage (module Éditeur), pour une vidéo venue d'archive.org ou d'un lien direct (une seule piste), et pour une vidéo envoyée par fichier.
+- La qualité des pistes doublées dépend de YouTube (doublage automatique le plus souvent).
+- Si YouTube bloque le serveur pour une vidéo (« confirmez que vous n'êtes pas un robot »), l'import échoue comme avant : il faut les cookies (Admin → Paramètres).
+
+**Prérequis.** Aucun réglage. La fonction « Import de vidéos » doit être activée (Admin → Fonctions), comme avant.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy, dans cet ordre : `majlistv-api` (migration 113 au démarrage), `majlistv-web`, `majlistv-worker`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Exemple (essai réel à faire).** Studio → Nouvelle vidéo → coller `https://youtu.be/4cf0si1xff4` → cocher « Importer la vidéo chez nous » (la case « voix française » est cochée) → déclarer les droits → créer. Suivre dans Studio → Activité. À la fin, la fiche doit indiquer « Piste audio : voix française de la plateforme d'origine » et la vidéo doit parler français.
+
+**Debug.**
+
+```bash
+# Ce que le transcripteur a vu et choisi (langues proposées, piste retenue)
+docker logs --since 2h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[import .*(piste audio|échec|téléchargée)"
+# La conversion et le remplacement
+docker logs --since 2h dockpanel-git-majlistv-worker 2>&1 | grep -E "\[import "
+# Les dernières demandes : langue demandée, piste prise, remplacement ou non, erreur
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT created_at::timestamp(0), status, origin, audio_lang, audio_used, reimport, left(error, 90) AS erreur FROM media_imports ORDER BY created_at DESC LIMIT 8;"'
+```
+
+- « Voix française non récupérée : Cette vidéo ne propose pas de piste audio en français… » : normal, YouTube n'a pas de piste française pour cette vidéo ; rien n'a été changé.
+- La fiche dit « voix d'origine gardée » alors que YouTube montre une piste française : regarder la ligne « piste audio demandée » du journal du transcripteur (langues proposées au serveur).
+- Bouton « Récupérer la voix française » absent : la vidéo n'a pas été importée depuis une plateforme, elle est déjà en français, une demande est en cours, ou elle a été remplacée par un montage.
+
+**Tests.** `transcriber/tests/test_importer.py` (56 vérifications ; le choix de piste passe par le vrai moteur de sélection de yt-dlp sur une vidéo simulée à plusieurs pistes) ; `api/tests/test_import_audio.py` (29) ; `api/tests/test_media_import_e2e.py` (premier import avec et sans piste française, remplacement complet, vidéo changée entre-temps, conversion en échec, panne de stockage pendant le remplacement, attente) ; `web/tests/test_import_audio_web.mjs`. Ces tests d'import demandent un stockage simulé : ils tournent sur le poste de développement, **pas sur GitHub** (seul le test du site y tourne). Vérifié dans un navigateur à 1440 px et 390 px. **Non testé : un vrai téléchargement depuis YouTube** (l'environnement de développement n'a pas accès à YouTube) — c'est l'essai réel ci-dessus.
+

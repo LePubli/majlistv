@@ -99,7 +99,7 @@ export default function TalkAudio({ talk, talkId, videoRef, audioMode, setAudioM
     if (r.ok) { setD({ ...d, ...r.data }); setMsg(on ? t('dbReqSent') : ''); } else setMsg(r.data?.error || t('dbError'));
   };
 
-  if (!d) return null;
+  if (!d || d.native) return null; // native : la vidéo porte déjà la piste française de sa plateforme d'origine
   if (!d.available) {
     // Rien à proposer pour une conférence déjà en français.
     if (String(spokenLang || '').startsWith('fr')) return null;

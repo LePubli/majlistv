@@ -11,7 +11,7 @@ import psycopg2, psycopg2.extras  # noqa: E402
 import importer, main  # noqa: E402
 
 _fetch = importer.fetch
-importer.fetch = lambda job, work, opts, mb, mh, cb, check=None: _fetch(job, work, opts, mb, mh, cb, check=lambda u: u)
+importer.fetch = lambda job, work, opts, mb, mh, cb, check=None, **kw: _fetch(job, work, opts, mb, mh, cb, check=lambda u: u, **kw)
 conn = psycopg2.connect(**main.conn_params(main.DATABASE_URL)); conn.autocommit = True
 def local_query(sql, params=None, fetch=False):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:

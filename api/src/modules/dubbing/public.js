@@ -13,7 +13,7 @@ const idSchema = z.object({ id: z.guid() });
 
 export default async function publicRoutes(app) {
   async function visibleTalk(id) {
-    return (await pool.query(`SELECT t.id, t.source FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [id])).rows[0] || null;
+    return (await pool.query(`SELECT t.id, t.source, t.audio_track FROM talks t WHERE t.id = $1 AND ${visibleSql('t')}`, [id])).rows[0] || null;
   }
   async function canRequest(user) {
     if (!user) return false;
@@ -31,6 +31,8 @@ export default async function publicRoutes(app) {
     const talk = await visibleTalk(id);
     if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
     const user = await app.optionalUser(req);
+    // La vidéo est déjà en français (piste de la plateforme d'origine, récupérée à l'import) : rien à proposer ni à demander.
+    if (talk.audio_track === 'fr') return { available: false, native: true, requests: 0, requested: false, canRequest: false, signedIn: Boolean(user) };
     const tr = (await pool.query(
       `SELECT tr.mix_key, tr.voice_key, tr.duration_s::float AS "durationS", tr.created_at AS "createdAt", j.params->>'duck' AS duck
        FROM dub_tracks tr LEFT JOIN dub_jobs j ON j.id = tr.job_id WHERE tr.talk_id = $1`, [id])).rows[0];
@@ -49,7 +51,9 @@ export default async function publicRoutes(app) {
 
   app.post('/talks/:id/dub/request', { preHandler: app.authenticate }, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    if (!(await visibleTalk(id))) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    const talk = await visibleTalk(id);
+    if (!talk) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    if (talk.audio_track === 'fr') return reply.code(409).send({ error: 'Cette vidéo est déjà en français', code: 'available' });
     const user = await app.optionalUser(req);
     if (!(await canRequest(user))) return reply.code(403).send({ error: 'Réservé aux abonnés', code: 'subscribers_only' });
     if ((await pool.query('SELECT 1 FROM dub_tracks WHERE talk_id = $1', [id])).rowCount) return reply.code(409).send({ error: 'La version française existe déjà', code: 'available' });

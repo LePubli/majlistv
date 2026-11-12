@@ -51,9 +51,10 @@ export default function ManageTalk() {
   const [x, setX] = useState(undefined);
   const [msg, setMsg] = useState(null);
   const [imp, setImp] = useState(null); // dernière demande d'import de la vidéo (étape Import)
+  const [canAudio, setCanAudio] = useState(false); // vidéo déjà importée dont on peut récupérer la voix française
   const load = useCallback(() => call('/me/talks').then((r) => { if (r.ok) setX(r.data.find((d) => d.id === id) || null); }), [call, id]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { call(`/talks/${id}/import`).then((r) => r.ok && setImp(r.data.import || null)); }, [call, id]);
+  useEffect(() => { call(`/talks/${id}/import`).then((r) => { if (r.ok) { setImp(r.data.import || null); setCanAudio(Boolean(r.data.canFetchAudio)); } }); }, [call, id]);
 
   const steps = x ? talkSteps(x) : null;
   const kind = x ? talkKind(x, steps) : null;
@@ -136,7 +137,7 @@ export default function ManageTalk() {
               : steps.video === 'err' ? <>{t('convFailed')}{x.videoError ? ` : ${x.videoError}` : ''} <button className="link u" onClick={reconvert}>{t('retryConv')}</button></>
               : steps.video === 'run' ? `${t('converting')}${steps.videoPct != null ? ` ${steps.videoPct} %` : ''}` : t('videoReady')}
           </p>
-          <ImportVideoPanel talk={x} imp={imp} setImp={setImp} reload={load} t={t} call={call} sourceName={sourceLabel(x.source)} />
+          <ImportVideoPanel talk={x} imp={imp} setImp={setImp} canFetchAudio={canAudio} setCanFetchAudio={setCanAudio} reload={load} t={t} call={call} sourceName={sourceLabel(x.source)} />
         </Row>
         <Row letter="T" state={steps.transcript} title={t('stepTranscript')}>
           {external && !x.rightsConfirmed ? (

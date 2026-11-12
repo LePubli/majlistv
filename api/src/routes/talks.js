@@ -16,7 +16,7 @@ import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 import { featureOn } from '../features.js';
-import { classifyUrl, insertImport, newObjectKey, storageProblem } from '../mediaImport.js';
+import { classifyUrl, insertImport, newObjectKey, storageProblem, AUDIO_CHOICES, audioLangOf } from '../mediaImport.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo, Dailymotion ou archive.org.
 export function parseVideoUrl(raw) {
@@ -88,6 +88,7 @@ const talkSchema = z.object({
   rightsConfirmed: z.boolean().default(false),
   // Étape Import : copier la vidéo chez nous (déclaration des droits obligatoire). Une adresse d'un autre site que YouTube / Vimeo / archive.org n'est acceptée qu'ainsi.
   importVideo: z.boolean().default(false),
+  importAudio: z.enum(AUDIO_CHOICES).default('fr'), // piste audio de l'import : française si la plateforme en propose une, ou voix d'origine
   // Étape 10.4 : brouillon ou publication programmée.
   publication: z.enum(['draft', 'scheduled', 'published']).default('published'),
   publishAt: isoDateTime({ offset: true }).optional(),
@@ -441,6 +442,7 @@ export default async function talksRoutes(app) {
           await insertImport(pool, {
             talkId: rows[0].id, userId: req.user.sub, url: importReq.url, origin: importReq.origin, archiveFile: importReq.archiveFile,
             newTalk: Boolean(video.importing), prevSource: video.importing ? null : video.source, objectKey: video.importing ? video.ref : newObjectKey(),
+            audioLang: audioLangOf(b.importAudio),
           });
         } catch (err) {
           await pool.query('DELETE FROM talks WHERE id = $1', [rows[0].id]).catch(() => {});

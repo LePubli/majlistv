@@ -14,6 +14,11 @@ export const RIGHTS_VERSION = 'v1';
 export const RIGHTS_TEXT = 'Je certifie détenir les droits sur cette vidéo, ou disposer d\'une licence ou d\'une autorisation m\'autorisant à la copier, '
   + 'à la diffuser sur Mejliss TV et à la modifier (montage, sous-titres, doublage). J\'assume la responsabilité de cet import.';
 export const ACTIVE = ['pending', 'downloading', 'converting'];
+// Piste audio voulue à l'import : 'fr' = la piste française de la plateforme si elle existe (sinon la voix d'origine) ; 'original' = la voix d'origine.
+export const AUDIO_CHOICES = ['fr', 'original'];
+export const audioLangOf = (choice) => (choice === 'original' ? null : 'fr');
+// Plateformes dont on peut choisir la piste audio (yt-dlp). archive.org et les liens directs servent un fichier tel quel.
+export const AUDIO_ORIGINS = ['youtube', 'vimeo', 'dailymotion', 'web'];
 
 // --- Adresses ------------------------------------------------------------------------------------------------------------------
 // Contrôle de forme : le transcripteur refait le vrai contrôle (résolution DNS) avant tout téléchargement.
@@ -73,12 +78,13 @@ export async function storageProblem() {
 }
 
 // Ouvre une demande (le client peut être une transaction). Lève l'erreur 23505 si une demande est déjà active pour la vidéo.
-export async function insertImport(db, { talkId, userId, url, origin, archiveFile = null, newTalk, prevSource = null, objectKey }) {
+export async function insertImport(db, { talkId, userId, url, origin, archiveFile = null, newTalk, prevSource = null, objectKey, audioLang = null, reimport = false }) {
   const { rows } = await db.query(
     `INSERT INTO media_imports(talk_id, requested_by, requested_by_name, source_url, origin, archive_file, new_talk, prev_source, object_key,
-                               rights_confirmed_at, rights_text)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10) RETURNING id`,
-    [talkId, userId, await userLabel(userId), url, origin, archiveFile, newTalk, prevSource, objectKey, `${RIGHTS_VERSION} : ${RIGHTS_TEXT}`]);
+                               rights_confirmed_at, rights_text, audio_lang, reimport)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10, $11, $12) RETURNING id`,
+    [talkId, userId, await userLabel(userId), url, origin, archiveFile, newTalk, prevSource, objectKey, `${RIGHTS_VERSION} : ${RIGHTS_TEXT}`,
+      AUDIO_ORIGINS.includes(origin) ? audioLang : null, reimport]);
   return rows[0].id;
 }
 
