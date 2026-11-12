@@ -10,7 +10,7 @@
 //   POST /studio/audyn/:id/chapters/:cid/resplit (« Redécouper » un chapitre importé selon les chapitres de la vidéo)
 //  Import d'une chaîne ou d'une playlist (un contenu audio par vidéo) : le transcripteur liste les vidéos (table import_jobs,
 //  purpose 'audyn'), l'administrateur coche celles à importer, chacune devient un contenu Audyn avec sa demande d'import :
-//   POST /studio/audyn/listings · GET /studio/audyn/listings/:lid · POST /studio/audyn/listings/:lid/confirm
+//   POST /studio/audyn/listings · GET /studio/audyn/listings/:lid · POST /studio/audyn/listings/:lid/details · POST /studio/audyn/listings/:lid/confirm
 //  Catégories (liste gérée dans le Studio) : GET|POST /studio/audyn/categories · PATCH|DELETE /studio/audyn/categories/:cat
 //  Public (les livres audio adultes ; les histoires du soir enfants passent par l'espace Kids, étape 4) :
 //   GET /audyn · GET /audyn/:id · GET /audyn/:id/chapters/:cid/play (lien d'écoute) · GET /audyn/:id/chapters/:cid/preview (aperçu coupé par le serveur)
@@ -85,6 +85,8 @@ const confirmBody = z.object({
   audience: z.enum(AUDIENCES).default('adults'), category: z.string().trim().max(80).default(''),
   language: z.string().trim().regex(/^[a-z]{2,3}$/).default('fr'), access: z.enum(ACCESS).default('learning'),
   audioLang: z.enum(['fr', 'original']).default('fr'), split: z.boolean().default(true), publish: z.boolean().default(false),
+  // Catégorie propre à certaines vidéos (sinon celle de « category ») : { "<id vidéo>": "Catégorie" }.
+  categories: z.record(z.string().regex(/^[\w.-]{1,100}$/), z.string().trim().max(80)).default({}),
   rights: z.literal(true, { error: "Cochez l'attestation : vous avez les droits de diffusion de ces sons" }),
 }).strict();
 export default async function audynRoutes(app) {
@@ -410,13 +412,35 @@ export default async function audynRoutes(app) {
     if (!j) return reply.code(404).send({ error: 'Liste introuvable' });
     const entries = Array.isArray(j.entries) ? j.entries : [];
     const have = await inAudyn(entries.map(listingEntryUrl).filter(Boolean));
+    const details = j.details && typeof j.details === 'object' ? j.details : {};
     return {
       id: j.id, url: j.url, status: j.status, title: j.title || '', error: j.error || null, imported: j.imported,
       entries: entries.map((e) => {
         const url = listingEntryUrl(e);
-        return { id: e.id, source: e.source, title: e.title || e.id, duration: e.duration ?? null, thumb: e.thumb || null, url, inAudyn: Boolean(url && have.has(url)) };
+        return {
+          id: e.id, source: e.source, title: e.title || e.id, duration: e.duration ?? null, thumb: e.thumb || null, url, inAudyn: Boolean(url && have.has(url)),
+          detail: details[String(e.id)] || null, // lu à la demande (POST …/details) : { status: wanted|done|failed, description, uploader, date, chapters… }
+        };
       }),
     };
+  });
+
+  // Détail de vidéos de la liste, lu par le serveur (description, chaîne, date, chapitres, langues audio) avant de les importer.
+  app.post('/studio/audyn/listings/:lid/details', { ...adminOnly, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const { lid } = lidSchema.parse(req.params);
+    const { ids, again } = z.object({ ids: z.array(z.string().regex(/^[\w.-]{1,100}$/)).min(1).max(50), again: z.boolean().default(false) }).strict().parse(req.body ?? {});
+    const j = await listingOf(lid);
+    if (!j) return reply.code(404).send({ error: 'Liste introuvable' });
+    if (!['listed', 'imported'].includes(j.status)) return reply.code(409).send({ error: "La liste n'est pas encore prête", code: 'not_ready' });
+    const known = new Set((Array.isArray(j.entries) ? j.entries : []).map((e) => String(e.id)));
+    const cur = j.details && typeof j.details === 'object' ? j.details : {};
+    // Déjà lu (ou en cours) : pas redemandé, sauf « again » après un échec.
+    const ask = ids.filter((id) => known.has(id) && (!cur[id] || (again && cur[id].status === 'failed')));
+    if (ask.length) {
+      await pool.query('UPDATE import_jobs SET details = details || $2::jsonb WHERE id = $1',
+        [lid, JSON.stringify(Object.fromEntries(ask.map((id) => [id, { status: 'wanted' }])))]);
+    }
+    return reply.code(202).send({ wanted: ask.length });
   });
 
   app.post('/studio/audyn/listings/:lid/confirm', adminOnly, async (req, reply) => {
@@ -437,9 +461,17 @@ export default async function audynRoutes(app) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const category = todo.length ? await canonCategory(client, b.category) : '';
+      // Catégorie de chaque vidéo : la sienne si elle a été choisie, sinon celle de toute la liste (écriture de la liste reprise).
+      const canon = new Map();
+      const categoryOf = async (e) => {
+        const raw = Object.hasOwn(b.categories, String(e.id)) ? b.categories[String(e.id)] : b.category;
+        const k = raw.toLowerCase();
+        if (!canon.has(k)) canon.set(k, await canonCategory(client, raw));
+        return canon.get(k);
+      };
       for (let i = 0; i < todo.length; i += 1) {
         const e = todo[i];
+        const category = await categoryOf(e);
         const item = (await client.query(
           `INSERT INTO audyn_items(title, audience, category, language, access, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
           [clean(e.title || e.id, 200) || 'Épisode', b.audience, category, b.language, b.access, req.user.sub])).rows[0];

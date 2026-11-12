@@ -8745,3 +8745,42 @@ Demande d'Epok du 12/11 : « l'appli s'installe-t-elle sur Android Auto ? » →
 **Limites connues.** Le lecteur de la voiture et celui de l'application sont séparés : lancer un livre dans la voiture n'affiche pas le lecteur de l'application (mais les positions suivent). Pas de vitesse de lecture ni de minuteur dans la voiture. **Publication pour le grand public** : Google réserve Android Auto aux applications du Play Store (étape « magasins »), avec une vérification de l'application par Google.
 
 **Tests.** `mobile/tests/audynCar.test.ts` (6 tests : déclaration Android Auto, arborescence, reprise, aperçu, format des positions, jeton chiffré, textes fr/en/ar, branchement dans l'application) ; `npm run check` (270 tests + typage) ; module détecté par Expo (`expo-modules-autolinking`) ; APK fabriqué par GitHub Actions. **Non testé : dans une vraie voiture ou le simulateur d'Android Auto** (impossible ici) — c'est l'essai à faire.
+
+## Audyn — import d'une chaîne : catégorie et détail par vidéo, titres en français (13/11)
+
+Demandes d'Epok du 13/11 : « choisir individuellement la catégorie de chaque vidéo et voir leur détail avant de les importer » ; « pourquoi les titres sont en anglais alors que les vidéos sont en français ».
+
+### 1. Catégorie de chaque vidéo
+
+Sous chaque vidéo de la liste, un menu : **« Catégorie de la liste »** (d'origine : la vidéo prend la catégorie choisie plus bas pour toute la liste), « Sans catégorie », une des catégories, ou « + Nouvelle catégorie… » (tapée, ajoutée à la liste des catégories). API : `categories: { "<id vidéo>": "Catégorie" }` dans `POST /studio/audyn/listings/:lid/confirm` (écriture de la liste reprise, comme ailleurs).
+
+### 2. Détail de chaque vidéo avant l'import
+
+Bouton **« Détails »** sur chaque vidéo (et « Détails des vidéos cochées », 50 au plus à la fois) : le serveur lit la vidéo (sans la télécharger) et affiche en quelques secondes : chaîne, date, durée, lien « Voir la vidéo », **langues audio** (« voix française disponible »), **chapitres** (= nombre de sons si « Découper » est coché) et **description**. Vidéo privée ou supprimée : « Détail illisible » + « Réessayer ».
+- Migration `api/migrations/116_import_job_details.sql` (`import_jobs.details`).
+- API : `POST /studio/audyn/listings/:lid/details` (`{ ids, again }`), détail rendu dans `GET /studio/audyn/listings/:lid` (`entries[].detail`).
+- Transcripteur : `transcriber/src/listing_details.py`, appelé par le fil des listes quand il n'a pas de liste à lire (3 vidéos par passage).
+
+### 3. Titres en français
+
+**Cause.** YouTube répond au serveur (situé hors de France, sans langue précisée) avec ses **titres traduits automatiquement en anglais**, même pour une chaîne francophone. **Correction** : la liste d'une chaîne (`external.list_videos`, aussi pour l'import de vidéos du catalogue) et la récupération du son dans Audyn (titre des chapitres, description) demandent désormais le français (langue du contenu pour Audyn) ; sans version française, YouTube renvoie le titre d'origine. Les contenus **déjà importés** gardent leur titre : à corriger sur leur fiche, ou à supprimer puis réimporter.
+
+### Déploiement, debug
+
+DockPanel → Git Deploy → Redeploy : `majlistv-api` (migration 116), `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+```bash
+docker logs --since 1h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[import .*(détail|vidéo\(s\) trouvée|échec)"
+```
+
+- « Lecture du détail… » qui ne finit pas : `majlistv-transcriber` pas redéployé, ou une longue liste est en cours de lecture (le détail passe après).
+- Titres encore en anglais : la liste a été lue avant le redéploiement du transcripteur — relire la liste.
+
+**Tests.** `api/tests/test_audyn_link.py` (détails : réservés à l'administration, pas de double demande, lecture par le transcripteur, chapitres, langues, échec et « Réessayer » ; catégorie propre à une vidéo, nouvelle catégorie ajoutée à la liste, identifiant invalide refusé) ; `transcriber/tests/test_external.py` (liste demandée en français) ; `web/tests/test_audyn_channel_detail_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé : sur une vraie chaîne YouTube** (pas d'accès à YouTube ici).

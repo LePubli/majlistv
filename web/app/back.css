@@ -945,3 +945,15 @@
 .ay-cat-btns { display: flex; gap: 6px; margin-inline-start: auto; }
 .ay-cat-list > li > form { flex: 1 1 100%; }
 .btn.ay-cat-del { color: #FF9C8C; }
+/* Audyn — import d'une chaîne : catégorie et détail par vidéo */
+.ay-ch-list > li { display: grid; gap: 6px; }
+.ay-ch-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-inline-start: 34px; }
+.ay-ch-cat { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 220px; min-width: 0; }
+.ay-ch-cat select, .ay-ch-cat input { flex: 1 1 180px; min-width: 0; max-width: 100%; }
+.ay-ch-detail { display: grid; gap: 8px; margin-inline-start: 34px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 12px; }
+.ay-ch-detail summary { cursor: pointer; color: #fff; }
+.ay-ch-desc { white-space: pre-wrap; overflow-wrap: anywhere; color: #fff; max-height: 240px; overflow-y: auto; font-size: 14px; line-height: 1.5; }
+.ay-ch-chap { margin: 6px 0 0; padding-inline-start: 22px; display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+.ay-ch-fr { color: var(--gold, #E6A739); }
+.ay-ch-list { max-height: 640px; }
+@media (max-width: 520px) { .ay-ch-ctl, .ay-ch-detail { padding-inline-start: 0; margin-inline-start: 0; } }

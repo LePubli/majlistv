@@ -80,7 +80,8 @@ ok(not isinstance(external.readable_error(Exception("timeout")), external.Blocke
 # --- Liste (faux yt-dlp) -----------------------------------------------------------------------
 class FakeYDL:
     calls = []
-    def __init__(self, opts): self.opts = opts
+    last_opts = {}
+    def __init__(self, opts): self.opts = opts; FakeYDL.last_opts = opts
     def __enter__(self): return self
     def __exit__(self, *a): return False
     def extract_info(self, url, download=False):
@@ -107,6 +108,8 @@ title, entries = external.list_videos("https://www.youtube.com/@MaChaine", exter
 ok(title == "Ma Chaîne" and [x["id"] for x in entries] == ["aaaaaaaaaaa", "bbbbbbbbbbb", "76979871"], f"chaîne : vidéos sans doublon ni onglet, titre nettoyé ({title}, {[x['id'] for x in entries]})")
 ok(entries[0]["thumb"] == "t2" and entries[0]["duration"] == 3600 and entries[2]["source"] == "vimeo", "miniature, durée, source détectées")
 ok(FakeYDL.calls[-1] == ("https://www.youtube.com/@MaChaine/videos", "in_playlist", 50), "liste à plat, limite transmise")
+ok(FakeYDL.last_opts.get("extractor_args", {}).get("youtube", {}).get("lang") == ["fr"] and FakeYDL.last_opts["http_headers"]["Accept-Language"].startswith("fr,"),
+   "liste : titres demandés en français (sinon YouTube répond au serveur en anglais)")
 _, two = external.list_videos("https://www.youtube.com/playlist?list=PL1", external.ydl_options("/tmp"), 2)
 ok(len(two) == 2, "limite du nombre de vidéos respectée")
 _, single = external.list_videos("https://www.youtube.com/watch?v=ccccccccccc", external.ydl_options("/tmp"), 50)

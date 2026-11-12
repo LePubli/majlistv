@@ -525,6 +525,11 @@ def run(job, ctx):
         if shutil.disk_usage(work).free < 1024 ** 3:
             raise RuntimeError("Plus assez de place disque sur le serveur (moins de 1 Go libre)")
         opts = ctx.opts(work)
+        # Titre, chapitres et description dans la langue du contenu (français d'origine) : sinon YouTube répond au serveur en anglais.
+        with ctx.conn.cursor() as cur:
+            cur.execute("SELECT language FROM audyn_items WHERE id = %s", (job["item_id"],))
+            row = cur.fetchone()
+        opts.update(external.metadata_language_options((row[0] if row else None) or "fr"))
         ctx.log(f"[audyn {jid}] {job['kind']} ({job['origin']}) : {job['source_url']}")
         if job["kind"] == "cover":
             thumb = find_thumbnail(job, {}, opts)

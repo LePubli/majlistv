@@ -797,6 +797,9 @@ def import_loop():
                 )
                 job = cur.fetchone()
             if not job:
+                # Pas de liste à lire : détail des vidéos demandé depuis le Studio (import d'une chaîne dans Audyn, migration 116).
+                if details_pass(local_query, conf):
+                    continue
                 time.sleep(5)
                 continue
             work = os.path.join(WORK_DIR, "import-" + str(job["id"]))
@@ -1032,6 +1035,19 @@ def media_import_loop():
 
 
 # --- Audyn : son d'une vidéo importé comme chapitre (fil séparé, sa propre connexion ; voir audyn_import.py) -------------------------
+def details_pass(local_query, conf):
+    """Détail de quelques vidéos d'une liste Audyn (listing_details.py). Renvoie True s'il y en avait."""
+    import listing_details
+    work = os.path.join(WORK_DIR, "details")
+    os.makedirs(work, exist_ok=True)
+    try:
+        return listing_details.run_once(local_query, external_options(work, conf), log) > 0
+    except psycopg2.errors.UndefinedColumn:
+        return False  # migration 116 de l'API pas encore passée
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def description_loop():
     """Description des conférences reprise de la vidéo d'origine quand elle est vide (description_fill.py, migration 115)."""
     import description_fill

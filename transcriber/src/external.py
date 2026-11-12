@@ -434,12 +434,14 @@ def _entry(e):
     }
 
 
-def list_videos(url, opts, limit):
+def list_videos(url, opts, limit, lang="fr"):
     """Liste les vidéos d'une playlist, d'une chaîne ou d'un album, sans rien télécharger.
-    Renvoie (titre, [entrées])."""
+    Renvoie (titre, [entrées]). Titres demandés en français (sinon YouTube répond au serveur avec ses titres traduits en anglais,
+    même pour une chaîne francophone) ; sans version française, YouTube renvoie le titre d'origine."""
     if is_archive_url(url):
         return list_archive(url, limit)
     o = dict(opts, extract_flat="in_playlist", noplaylist=False, playlistend=limit, lazy_playlist=False)
+    o.update(metadata_language_options(lang))
     info = fetch_info(normalize_list_url(url), o)
     if info.get("_type") not in ("playlist", "multi_video"):
         one = _entry(info)

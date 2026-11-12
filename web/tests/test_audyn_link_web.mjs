@@ -41,7 +41,7 @@ for (const k of ['ayChOpen', 'ayChTitle', 'ayChHelp', 'ayChRead', 'ayChListing',
   assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
 const ch = read('components/AudynChannelImport.js');
 assert.match(ch, /call\('\/studio\/audyn\/listings', \{ method: 'POST'/, 'liste demandée au serveur');
-assert.match(ch, /if \(r\.data\.status === 'listing'\) \{ timer = setTimeout\(tick, 3000\); return; \}/, 'suivi pendant la lecture, arrêté ensuite');
+assert.match(ch, /const waiting = r\.data\.status === 'listing' \|\| r\.data\.entries\.some\(\(e\) => e\.detail\?\.status === 'wanted'\);\n\s+if \(waiting\) timer = setTimeout\(tick, 3000\);/, 'suivi pendant la lecture (et les détails demandés), arrêté ensuite');
 assert.match(ch, /setSel\(new Set\(r\.data\.entries\.filter\(\(e\) => !e\.inAudyn\)\.map\(\(e\) => e\.id\)\)\)/, 'tout coché sauf ce qui est déjà dans Audyn');
 assert.match(ch, /disabled=\{x\.inAudyn\}/, 'déjà dans Audyn : non cochable');
 assert.match(ch, /disabled=\{busy \|\| sel\.size === 0 \|\| !o\.rights\}/, 'import bloqué sans attestation ni vidéo cochée');

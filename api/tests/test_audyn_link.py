@@ -208,6 +208,36 @@ entries = [{"id": f"ep{n}xxxxxxxx"[:11], "source": "youtube", "title": f"Épisod
 cur.execute("update import_jobs set status='listed', title='Podcast test', entries=%s where id=%s", (json.dumps(entries), lid))
 g = requests.get(f"{L}/{lid}", headers=A).json()
 ok(g["status"] == "listed" and len(g["entries"]) == 4 and g["entries"][3]["inAudyn"] is True and g["entries"][0]["url"] == "https://www.youtube.com/watch?v=ep1xxxxxxxx", "liste lue : vidéos, adresse, « déjà dans Audyn »")
+# Détail des vidéos avant l'import (lu par le transcripteur à la demande)
+D = lambda body, h=A: requests.post(f"{L}/{lid}/details", headers=h, json=body)
+ok(D({"ids": ["ep1xxxxxxxx"]}, O).status_code == 403, "détails : réservés à l'administration")
+r = D({"ids": ["ep1xxxxxxxx", "ep2xxxxxxxx", "inconnue"]}); ok(r.status_code == 202 and r.json()["wanted"] == 2, f"détails demandés pour 2 vidéos de la liste ({r.text})")
+ok(D({"ids": ["ep1xxxxxxxx"]}).json()["wanted"] == 0, "déjà demandé : pas redemandé")
+g = requests.get(f"{L}/{lid}", headers=A).json()
+ok(g["entries"][0]["detail"] == {"status": "wanted"} and g["entries"][2]["detail"] is None, "détail « en cours » visible dans la liste")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "transcriber", "src"))
+import listing_details  # noqa: E402
+import psycopg2.extras  # noqa: E402
+def lq(sql, params=None, fetch=False):
+    with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as c2:
+        c2.execute(sql, params)
+        return c2.fetchall() if fetch else c2.rowcount
+def fake_info(url, opts):
+    if "ep2" in url: raise RuntimeError("Video unavailable")
+    return {"title": "Épisode 1", "description": "Résumé de l'épisode", "uploader": "Podcast", "upload_date": "20240131", "duration": 3600,
+            "chapters": [{"title": "Intro", "start_time": 0}, {"title": "Suite", "start_time": 600}],
+            "formats": [{"language": "en", "acodec": "mp4a"}, {"language": "fr-FR", "acodec": "opus"}], "thumbnails": [{"url": "https://i.ytimg.com/vi/x/hq.jpg", "width": 480, "height": 360}]}
+done_n = 0
+for _ in range(5): done_n += listing_details.run_once(lq, {}, lambda *a: None, fetch=fake_info)
+ok(done_n == 2, f"le transcripteur lit les 2 détails demandés ({done_n})")
+g = requests.get(f"{L}/{lid}", headers=A).json()
+d1 = g["entries"][0]["detail"]
+ok(d1["status"] == "done" and d1["description"] == "Résumé de l'épisode" and d1["uploader"] == "Podcast" and d1["date"] == "2024-01-31", f"détail : description, chaîne, date ({d1})")
+ok([c["title"] for c in d1["chapters"]] == ["Intro", "Suite"] and d1["chapters"][1]["start"] == 600 and d1["audioLangs"] == ["en", "fr"], "détail : chapitres et langues audio (voix française repérée)")
+ok(g["entries"][1]["detail"]["status"] == "failed", "vidéo illisible : échec affiché")
+ok(D({"ids": ["ep2xxxxxxxx"]}).json()["wanted"] == 0 and D({"ids": ["ep2xxxxxxxx"], "again": True}).json()["wanted"] == 1, "échec : redemandé seulement avec « Réessayer »")
+ok(D({"ids": ["ep1xxxxxxxx"], "again": True}).json()["wanted"] == 0, "détail lu : jamais relu")
+cur.execute("update import_jobs set details = details - 'ep2xxxxxxxx' where id=%s", (lid,))
 ok(C({"ids": ["ep1xxxxxxxx"]}).status_code == 400, "attestation des droits obligatoire")
 ok(C({"ids": [], "rights": True}).status_code == 400, "aucune vidéo cochée : refus")
 r = C({"ids": ["ep3xxxxxxxx", "ep1xxxxxxxx", "dejadansaud"], "rights": True, "category": "Ma série", "access": "free", "audience": "both", "language": "ar", "audioLang": "original", "split": False, "publish": True})
@@ -230,6 +260,16 @@ ok(res.get("claimed"), "épisode traité")
 cur.execute("select title, author, description, status, cover_key is not null, (select count(*) from audyn_chapters c where c.item_id = i.id) from audyn_items i where id=%s", (ep,)); it = cur.fetchone()
 ok(it[0] == "Épisode 1" and it[1] == "La chaîne du podcast" and it[2].startswith("Dans cet épisode") and it[3] == "published" and it[4] and it[5] == 1, f"auteur, description, couverture repris de la vidéo ; publié ({it})")
 for m in made: requests.delete(f"{B}/studio/audyn/{m[0]}", headers=A)
+# Catégorie propre à une vidéo (sinon celle de la liste)
+r = C({"ids": ["ep2xxxxxxxx"], "rights": True, "category": "Ma série", "categories": {"ep2xxxxxxxx": f"  Épisodes spéciaux {tag} "}})
+ok(r.status_code == 202 and r.json()["created"] == 1, f"vidéo importée avec sa propre catégorie ({r.text[:120]})")
+cur.execute("select id, category from audyn_items where title = 'Épisode 2' and created_at > now() - interval '5 minutes'")
+e2 = cur.fetchone(); ok(e2[1] == f"Épisodes spéciaux {tag}", f"sa catégorie, pas celle de la liste ({e2[1]})")
+ok(any(c["name"] == f"Épisodes spéciaux {tag}" for c in requests.get(B + "/studio/audyn/categories", headers=A).json()["categories"]), "nouvelle catégorie ajoutée à la liste")
+ok(C({"ids": ["ep2xxxxxxxx"], "rights": True, "categories": {"../x": "a"}}).status_code == 400, "identifiant de vidéo invalide : refus")
+cur.execute("delete from audyn_imports where item_id=%s", (e2[0],)); requests.delete(f"{B}/studio/audyn/{e2[0]}", headers=A)
+cid_e2 = [c["id"] for c in requests.get(B + "/studio/audyn/categories", headers=A).json()["categories"] if c["name"] == f"Épisodes spéciaux {tag}"]
+for c in cid_e2: requests.delete(f"{B}/studio/audyn/categories/{c}", headers=A)
 
 # G2) son ajouté depuis UN lien (création depuis un lien) : auteur et description repris s'ils sont vides, jamais écrasés
 one = requests.post(B + "/studio/audyn", headers=A, json={"title": f"Un lien {tag}"}).json()["id"]
