@@ -8705,3 +8705,43 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 - Une vidéo envoyée directement (fichier) sans description n'est pas concernée (pas de vidéo d'origine).
 
 **Tests.** `transcriber/tests/test_description_fill.py` (14 vérifications, ajouté à la suite CI : candidates, langue, jamais d'écrasement, envoi direct ignoré, 3 essais espacés) ; `api/tests/test_audyn_link.py` (90 vérifications, dont : description et auteur repris pour un son ajouté depuis un lien, jamais écrasés ; catégories réservées à l'administration, doublons refusés, écriture de la liste reprise, renommage suivi par les contenus, suppression sans perte de contenu, journal d'audit) ; `web/tests/test_audyn_categories_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé ici : une vraie vidéo YouTube** (pas d'accès à YouTube) — la lecture de la description par yt-dlp a été vérifiée sur le VPS.
+
+## Audyn dans Android Auto (12/11)
+
+Demande d'Epok du 12/11 : « l'appli s'installe-t-elle sur Android Auto ? » → oui pour Audyn.
+
+**Ce que c'est.** Une fois la nouvelle application installée (version 0.18.0), **Mejliss TV** apparaît dans Android Auto parmi les applications audio. Dans la voiture :
+- **Continuer l'écoute** : les livres commencés (sur le téléphone ou dans la voiture), les plus récents d'abord ;
+- **Tout Audyn** et **Catégories** (les catégories gérées dans le Studio) : couvertures en grille ;
+- toucher un livre le lance **là où on s'était arrêté** (3 secondes plus tôt) ; les chapitres sont en file d'attente : boutons précédent / suivant du volant = chapitre précédent / suivant ;
+- commande vocale « Écoute … sur Mejliss TV » : recherche dans Audyn ;
+- sans formule « Apprentissage » : aperçu du premier chapitre, comme dans l'application ;
+- textes en français, anglais ou arabe selon la langue de l'application. Les histoires du soir (Kids) ne sont pas proposées dans la voiture.
+
+**Positions partagées.** La voiture et le téléphone gardent chacun la position de chaque livre (même format) et s'échangent la plus récente : on reprend sur le téléphone ce qu'on écoutait dans la voiture, et inversement.
+
+**Comment c'est fait.**
+- Module natif local `mobile/modules/audyn-car` (lié automatiquement par Expo, Android seulement) :
+  - `AudynCarService.kt` : service Media3 `MediaLibraryService` (même Media3 1.9.1 que `expo-video`), lecteur ExoPlayer (voix, pause si on débranche le casque), lien du fichier demandé à l'API au moment de lire et gardé 50 minutes ;
+  - `AudynApi.kt` : mêmes adresses que l'application (`/audyn`, `/audyn/:id`, `/audyn/:id/chapters/:cid/play`) ;
+  - `CarStore.kt` : adresse de l'API, langue, jeton de connexion **chiffré par le coffre Android**, positions ;
+  - `AudynCarModule.kt` + `index.ts` : passerelle appelée par l'application (sans le module — iPhone, ancienne version — rien ne se passe) ;
+  - `AndroidManifest.xml` + `res/xml/automotive_app_desc.xml` : déclaration « application média » pour Android Auto.
+- Application : `src/lib/session.tsx` transmet compte et langue ; `src/lib/audynPlayer.tsx` échange les positions.
+- Version de l'application 0.18.0 (nouveau code natif : **réinstallation nécessaire**, la mise à jour automatique du contenu ne suffit pas).
+
+**Installer et essayer.**
+1. Installer le nouvel APK : l'application propose « Nouvelle version disponible » (ou GitHub → Actions → « Application Android (APK) » → dernière exécution → fichier `mejliss-tv-android`).
+2. Ouvrir Mejliss TV une fois et se connecter (le service reçoit le compte et la langue à ce moment-là).
+3. **Application installée hors Play Store** : Android Auto la cache par défaut. Sur le téléphone : ouvrir les réglages d'Android Auto (sur beaucoup de téléphones : Paramètres → Appareils connectés → Android Auto), toucher **10 fois « Version »** → accepter le mode développeur → menu ⋮ → **Paramètres pour les développeurs** → cocher **« Sources inconnues »**. Débrancher et rebrancher le téléphone.
+4. Dans la voiture : icône Mejliss TV (ou « Audio » → Mejliss TV).
+
+**Debug.**
+- Mejliss TV n'apparaît pas : « Sources inconnues » non coché, ou nouvel APK pas encore installé (version 0.18.0).
+- La liste affiche « Rien pour l'instant » : pas de réseau dans la voiture, ou aucun livre publié.
+- Seul l'aperçu se lance alors que vous êtes abonné : ouvrir l'application sur le téléphone une fois (compte transmis au service).
+- Journal du téléphone (ordinateur relié en USB, outils Android installés) : `adb logcat | grep -i -E "AudynCar|media3|ExoPlayer"`.
+
+**Limites connues.** Le lecteur de la voiture et celui de l'application sont séparés : lancer un livre dans la voiture n'affiche pas le lecteur de l'application (mais les positions suivent). Pas de vitesse de lecture ni de minuteur dans la voiture. **Publication pour le grand public** : Google réserve Android Auto aux applications du Play Store (étape « magasins »), avec une vérification de l'application par Google.
+
+**Tests.** `mobile/tests/audynCar.test.ts` (6 tests : déclaration Android Auto, arborescence, reprise, aperçu, format des positions, jeton chiffré, textes fr/en/ar, branchement dans l'application) ; `npm run check` (270 tests + typage) ; module détecté par Expo (`expo-modules-autolinking`) ; APK fabriqué par GitHub Actions. **Non testé : dans une vraie voiture ou le simulateur d'Android Auto** (impossible ici) — c'est l'essai à faire.

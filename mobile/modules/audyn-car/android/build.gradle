@@ -1,0 +1,23 @@
+// Audyn dans Android Auto : module natif local de l'application (lié automatiquement par Expo, dossier mobile/modules/).
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'fr.lepublicitaire.mejlisstv'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.audyncar"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Même version que expo-video (une seule copie de Media3 dans l'application).
+  def androidxMedia3Version = "1.9.1"
+  implementation "androidx.media3:media3-session:${androidxMedia3Version}"
+  implementation "androidx.media3:media3-exoplayer:${androidxMedia3Version}"
+}
