@@ -28,7 +28,8 @@ const sd = read('components/StudioShell.js');
 for (const k of ['sdGrpPublish', 'sdGrpProd', 'sdGrpAudience', 'sdGrpSettings']) { assert.ok(sd.includes(`t('${k}')`), `groupe ${k}`); has3(k); }
 for (const h of ['/studio', '/studio/contents', '/studio/subtitles', '/studio/dubbing', '/studio/editor', '/studio/activity', '/studio/settings']) assert.ok(sd.includes(`row('${h}')`), `entrée ${h} toujours au menu`);
 assert.ok(sd.includes('row(analyticsHref)') && sd.includes("'/studio/moderation'"), 'données analytiques et modération');
-assert.match(sd, /STUDIO_GROUP_OF = \{ '\/studio\/corrections': 'prod', '\/studio\/references': 'settings' \}/, 'entrées des modules rangées');
+assert.match(sd, /STUDIO_GROUP_OF = \{ '\/studio\/references': 'settings' \}/, 'entrées des modules rangées');
+assert.match(sd, /STUDIO_TAB_OF = \{ '\/studio\/corrections': '\/studio\/subtitles' \}/, 'corrections : onglet de Sous-titres, plus de ligne de menu');
 assert.match(sd, /l\.group === 'mod' \? \(isModOnly \? 'mod' : 'audience'\) : \(isModOnly \? '' :/, 'un modérateur ne reçoit pas les entrées des organisateurs');
 for (const k of ['adGrpSet', 'adGrpSec', 'msPath']) assert.ok(!i18n.includes(`    ${k}: `), `ancien texte ${k} retiré`);
 

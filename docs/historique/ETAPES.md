@@ -8394,3 +8394,66 @@ Application : rien à installer. La mise à jour part toute seule (GitHub → «
 
 **Écarts.** Le compte de l'application passe par le menu ☰, pas par un bouton « avatar » dédié dans l'en-tête comme sur le site.
 
+## Audit — points reportés : zod 4 et rubrique « Sous-titres » (12/11)
+
+Deux points laissés ouverts par l'audit de novembre, lancés sur le « go » d'Epok. (Les cookies YouTube pour la transcription en échec restent pour la fin.)
+
+### 1. API : passage de zod 3 à zod 4
+
+**Ce que c'est.** `zod` est la bibliothèque qui contrôle tout ce que l'API reçoit (94 fichiers). La version 3 avait une faille connue (épuisement de la mémoire sur de très grandes listes, avis GHSA-mrhx-c7xc-m3w5, gravité élevée) corrigée seulement en version 4. L'API passe à zod 4.6.7 : `npm audit` ne signale plus aucune faille dans l'API.
+
+**Le piège, et comment il est évité.** zod 4 change le sens de plusieurs écritures sans rien signaler. Chacune a été comparée entre les deux versions, puis neutralisée pour que l'API réponde comme avant :
+
+| Écriture | Avec zod 4, sans correction | Correction |
+|---|---|---|
+| `objet.partial()` (routes PATCH) | les champs absents reprennent leur valeur par défaut : modifier le titre d'un événement aurait remis sa langue, sa durée et son statut à zéro | `patchOf()` (`api/src/zpatch.js`) dans 7 routes : références, profils Kids, événements, Audyn, listes, collections, formats |
+| `z.string().uuid()` (132) | refuse les identifiants hors norme RFC | `z.guid()` |
+| `z.string().datetime()` (5) | refuse « 10:00Z » (sans secondes) et « +0100 » | `isoDateTime()` (`api/src/zpatch.js`), mêmes réponses que zod 3 |
+| `objet.default({})` (7, éditeur de montage) | ne remplit plus les valeurs par défaut de l'intérieur | `.prefault({})` |
+| champ `z.unknown()` (3, éditeur) | devient obligatoire | `.optional()` |
+| `z.record(valeur)` (10) | erreur | `z.record(z.string(), valeur)` |
+| `{ errorMap }` (6) | ignoré | `{ error: '…' }` |
+
+**Ce qui change pour l'utilisateur.** Rien de visible, sauf les messages de contrôle par défaut : ils étaient en anglais (« Required »), ils sont en français (« Entrée invalide : nombre attendu, indéfini reçu ») — `z.config(z.locales.fr())` dans `api/src/index.js`. Les messages écrits à la main dans le code ne changent pas. Deux refus nouveaux, voulus : un nombre infini et un entier au-delà de 2^53.
+
+**Fichiers.** `api/package.json` (+ `package-lock.json`), `api/src/zpatch.js` (nouveau), `api/src/index.js`, 67 fichiers de routes (changements mécaniques), `api/tests/test_zod4.mjs` (nouveau).
+
+**Tests.** `api/tests/test_zod4.mjs` : 47 vérifications, dont des garde-fous qui lisent le code et refusent le retour des écritures piégées (`partial()` hors liste connue, `.uuid()`, `.datetime(`, `.default({})` sur un objet…). Il est lancé par GitHub avec les autres. Comparaison zod 3 / zod 4 des schémas de l'éditeur de montage sur 12 entrées : mêmes résultats, seuls les messages par défaut diffèrent.
+
+**Prérequis.** Aucun réglage, aucune migration. Seul `majlistv-api` utilise zod.
+
+**Debug.**
+- L'API ne démarre pas, journal « patchOf : une valeur par défaut subsiste dans … » : un schéma PATCH contient une valeur par défaut cachée (par exemple `.default(x).nullable()`). Mettre `.default()` en dernier dans le champ nommé.
+- Un PATCH remet des champs à zéro : la route utilise `partial()` sur un objet à valeurs par défaut ; la passer à `patchOf()` (le test `test_zod4.mjs` le signale).
+- Retour arrière : DockPanel → `majlistv-api` → redéployer le commit précédent (aucune donnée n'est touchée par ce changement).
+
+**Exemple.** `curl -s -X POST https://api-majlisstv.le-publicitaire.fr/auth/login -H 'Content-Type: application/json' -d '{}'` → `400 {"error":"Données invalides","details":[{… "message":"Entrée invalide : …"}]}`.
+
+### 2. Studio : « Sous-titres » et « Corrections » réunis
+
+**Ce que c'est.** Le menu du Studio avait deux lignes voisines : « Sous-titres » (état des sous-titres de mes contenus) et « Corrections de sous-titres » (suggestions des membres à relire). Il n'y a plus qu'une ligne, **Sous-titres**, avec deux onglets en haut de la page : **Par contenu** et **Corrections des membres** (avec le nombre en attente). Groupe « Production » : 5 lignes → 4.
+
+**Ce qui ne change pas.** Les deux adresses (`/studio/subtitles`, `/studio/corrections`), le contenu des deux écrans, le module « Corrections des sous-titres » (activation dans Admin → Modules, droits, réglage du maximum par jour). Si le module est coupé, les onglets disparaissent et « Sous-titres » redevient l'écran seul. Un modérateur (qui n'a pas l'écran « Par contenu ») garde l'écran des corrections seul, avec son titre d'origine, à la même adresse.
+
+**Fichiers.** `web/components/SubtitleTabs.js` (nouveau), `web/app/studio/subtitles/page.js`, `web/app/studio/(module-corrections)/corrections/page.js`, `web/components/StudioShell.js` (`STUDIO_TAB_OF`, `studioSection`), `web/app/back.css` (`.sd-tabs`), 3 textes × 3 langues (`sdSubTabMine`, `sdSubTabCor`, `sdSubTabWaiting`), `web/tests/test_subtitle_tabs_web.mjs` (nouveau).
+
+**Debug.** Pas d'onglets sur la page Sous-titres : le module « Corrections des sous-titres » est coupé (Admin → Modules) ou le compte est modérateur. Le nombre en attente ne s'affiche que s'il est supérieur à zéro.
+
+### Déploiement (les deux points)
+
+DockPanel → Git Deploy → Redeploy : `majlistv-api`, puis `majlistv-web`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+Contrôle après déploiement (0 faille attendue dans l'API) :
+
+```bash
+docker exec dockpanel-git-majlistv-api node -e "console.log(require('zod/package.json').version)"
+docker logs --tail 30 dockpanel-git-majlistv-api
+```
+

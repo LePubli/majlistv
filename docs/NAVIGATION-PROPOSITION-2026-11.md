@@ -36,6 +36,6 @@ A à C : sans changement d'adresse, risque faible. D à G : risque moyen.
 1. Cinq destinations : oui. 2. Le mot **« Catalogue »** est gardé (pas « Explorer ») : destinations = Accueil · Catalogue · Apprendre · Pratique · Bibliothèque. 3. Rubrique « Pratique » séparée : oui. 4. Kids hors de la barre du bas sur téléphone : oui. 5. Ordre : A, B, C puis D à G.
 
 ## Avancement
-- Lots A, B, C livrés le 11/11 (détail : `docs/historique/ETAPES.md`, « Navigation — lots A, B, C »). Écart : sous-titres et corrections côte à côte, pas encore fusionnés.
+- Lots A, B, C livrés le 11/11 (détail : `docs/historique/ETAPES.md`, « Navigation — lots A, B, C »). Sous-titres et corrections : réunis le 12/11 en une rubrique à deux onglets.
 - Lots D, E, F livrés le 11/11 (« Navigation — lots D, E, F »). Point ouvert : Coran et adhkar encore présents dans l'onglet « Coran et adhkar » d'Apprendre.
 - G livré le 11/11 : application mobile aux mêmes cinq onglets, écran Pratique, compte par le menu ☰. Coran et adhkar retirés d'Apprendre (site et application), anciens liens redirigés. Reste : essai sur un vrai téléphone.

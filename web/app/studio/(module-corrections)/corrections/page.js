@@ -1,10 +1,11 @@
 'use client';
-// Studio → Corrections des sous-titres (amélioration 4.1) : suggestions des membres à relire, toutes vidéos confondues.
+// Studio → Sous-titres → onglet « Corrections des membres » (amélioration 4.1) : suggestions des membres à relire, toutes vidéos confondues.
 // On juge la correction, pas la personne : l'auteur n'est pas affiché. Accepter applique le texte à la phrase.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
+import SubtitleTabs, { subtitleTabsOn } from '../../../../components/SubtitleTabs';
 
 const clock = (ms) => {
   const s = Math.floor(ms / 1000), h = Math.floor(s / 3600);
@@ -52,7 +53,9 @@ function Item({ c, t, call, locale, onDone }) {
 }
 
 export default function CorrectionsReview() {
-  const { t, call, locale } = useApp();
+  const { t, call, locale, user, modUsable } = useApp();
+  // Organisateur ou administrateur : cet écran est le second onglet de « Sous-titres ». Modérateur : écran seul, comme avant.
+  const tabbed = subtitleTabsOn(user?.role, modUsable('corrections'));
   const [status, setStatus] = useState('pending');
   const [data, setData] = useState(null);
   const [err, setErr] = useState(false);
@@ -69,7 +72,8 @@ export default function CorrectionsReview() {
   }
   return (
     <main className="studio-page studio-narrow">
-      <h1 className="studio-title">{t('corTitle')}</h1>
+      <h1 className="studio-title">{tabbed ? t('sdSubs') : t('corTitle')}</h1>
+      <SubtitleTabs pending={data ? data.counts.pending : undefined} />
       <p className="meta">{t('corIntro')}</p>
       <div className="st-seg" role="tablist" aria-label={t('corTitle')}>
         {['pending', 'accepted', 'rejected'].map((s) => (

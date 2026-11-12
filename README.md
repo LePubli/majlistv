@@ -10,7 +10,7 @@ Code technique : `majlistv`. Dépôt : GitHub `LePubli/majlistv`, branche `main`
 
 | Dossier | Rôle | Technique | Déploiement DockPanel |
 |---|---|---|---|
-| `api/` | API, migrations, 37 modules (`api/src/modules/`) | Node.js 22, Fastify 5, zod, PostgreSQL | `majlistv-api` (Dockerfile **racine** : `Dockerfile`) |
+| `api/` | API, migrations, 37 modules (`api/src/modules/`) | Node.js 22, Fastify 5, zod 4, PostgreSQL | `majlistv-api` (Dockerfile **racine** : `Dockerfile`) |
 | `web/` | Site et PWA | Next.js 15, React 18 | `majlistv-web` (`web/Dockerfile`) |
 | `mobile/` | Application Android | Expo 58, React Native | APK fabriqué par GitHub Actions |
 | `worker/` | Conversion vidéo, rendus du montage | Node.js, FFmpeg | `majlistv-worker` |

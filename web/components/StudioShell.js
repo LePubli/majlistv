@@ -27,7 +27,7 @@ export function studioSection(path) {
   if (path === '/studio') return 'dash';
   if (/^\/studio\/(contents|series|collections|books|new)(\/|$)/.test(path) || UUID.test(path)) return 'contents';
   if (/^\/studio\/(stats|revenue)(\/|$)/.test(path)) return 'analytics';
-  if (/^\/studio\/subtitles/.test(path)) return 'subtitles';
+  if (/^\/studio\/(subtitles|corrections)(\/|$)/.test(path)) return 'subtitles';
   if (/^\/studio\/dubbing/.test(path)) return 'dubbing';
   if (/^\/studio\/editor/.test(path)) return 'editor';
   if (/^\/studio\/activity/.test(path)) return 'activity';
@@ -37,8 +37,10 @@ export function studioSection(path) {
 }
 
 // Groupe du menu pour les entrées ajoutées par les modules (audit 11/2026, lot A).
-const STUDIO_GROUP_OF = { '/studio/corrections': 'prod', '/studio/references': 'settings' };
-const STUDIO_AFTER = { '/studio/corrections': '/studio/subtitles' };
+const STUDIO_GROUP_OF = { '/studio/references': 'settings' };
+// Entrées de modules devenues un onglet d'une autre page : plus de ligne dans le menu (l'adresse reste).
+// « Corrections de sous-titres » est le second onglet de « Sous-titres » (components/SubtitleTabs.js).
+const STUDIO_TAB_OF = { '/studio/corrections': '/studio/subtitles' };
 
 export default function StudioShell({ children }) {
   const { t, user, ready, feat, locale, modUsable } = useApp();
@@ -111,14 +113,13 @@ export default function StudioShell({ children }) {
   for (const l of MODULE_STUDIO_LINKS) {
     if (l.group === 'admin') continue; // les entrées d'administration passent par AdminShell
     if (l.group === 'settings') continue; // les entrées « Paramètres » (ex. Stockage et archivage) sont dans Studio → Paramètres
+    if (STUDIO_TAB_OF[l.href]) continue; // onglet d'une autre page
     // Place d'une entrée de module : son groupe d'après son adresse ; une entrée inconnue va dans « Publication ».
     const key = l.group === 'mod' ? (isModOnly ? 'mod' : 'audience') : (isModOnly ? '' : (STUDIO_GROUP_OF[l.href] || 'publish'));
     const g = groups.find((x) => x.key === key);
     if (!g || (l.roles && !l.roles.includes(user.role))) continue;
     const item = [l.href, t(l.label), ICONS[l.icon] || ICONS.doc];
-    // Les corrections de sous-titres se rangent juste après « Sous-titres ».
-    const after = STUDIO_AFTER[l.href] ? g.items.findIndex(([h]) => h === STUDIO_AFTER[l.href]) : -1;
-    if (after >= 0) g.items.splice(after + 1, 0, item); else g.items.push(item);
+    g.items.push(item);
   }
   // Une entrée disparaît si sa fonction est coupée ou si la partie web de son module est absente.
   const visible = (href) => {

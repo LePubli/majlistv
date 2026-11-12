@@ -1,11 +1,13 @@
 'use client';
 // Studio → Sous-titres : pour chacun de mes contenus, la langue transcrite et l'état de chaque langue de sous-titres.
 // Les sous-titres se demandent, se relisent et se corrigent dans la fiche du contenu (bouton « Gérer »).
+// Second onglet de la rubrique : « Corrections des membres » (components/SubtitleTabs.js).
 import { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
 import useMyTalks from '../../../components/useMyTalks';
 import { langName } from '../../../components/Transcript';
+import SubtitleTabs from '../../../components/SubtitleTabs';
 
 const FILTERS = ['all', 'run', 'err', 'none'];
 
@@ -30,6 +32,7 @@ export default function StudioSubtitles() {
   return (
     <main className="studio-page">
       <div className="studio-head"><h1 className="studio-title">{t('sdSubs')}</h1></div>
+      <SubtitleTabs />
       <p className="meta">{t('sdSubsIntro')}</p>
       <div className="studio-tools">
         <label className="studio-search">
