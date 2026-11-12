@@ -1,7 +1,7 @@
 {
   "id": "audyn",
   "name": "Audyn — livres audio et histoires du soir",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Contenus audio : livres audio pour les adultes (Audyn) et histoires du soir pour les enfants. Envoi des fichiers MP3 / M4A ou import depuis un lien vidéo (seul le son est gardé, l'image devient la couverture), chapitres, couverture, attestation de droits, aperçu gratuit ; réservé à la formule « Apprentissage ».",
   "feature": "audyn",
   "requires": [],

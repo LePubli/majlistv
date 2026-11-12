@@ -27,10 +27,11 @@ d = tempfile.mkdtemp()
 def ff(*a): subprocess.run(["ffmpeg", "-v", "error", "-y", *a], check=True)
 ff("-f", "lavfi", "-i", "testsrc=size=320x180:rate=10:duration=6", "-f", "lavfi", "-i", "sine=frequency=330:duration=6", "-shortest", "-pix_fmt", "yuv420p", os.path.join(d, "v.mp4"))
 ff("-f", "lavfi", "-i", "sine=frequency=550:duration=3", "-c:a", "libmp3lame", "-b:a", "64k", os.path.join(d, "a.mp3"))
+ff("-f", "lavfi", "-i", "testsrc=size=320x180:rate=10:duration=12", "-f", "lavfi", "-i", "sine=frequency=440:duration=12", "-shortest", "-pix_fmt", "yuv420p", os.path.join(d, "v12.mp4"))
 ff("-f", "lavfi", "-i", "testsrc=size=320x180:rate=10:duration=2", "-pix_fmt", "yuv420p", os.path.join(d, "m.mp4"))
 ff("-f", "lavfi", "-i", "testsrc2=size=1280x720", "-frames:v", "1", os.path.join(d, "thumb.jpg"))
 ff("-f", "lavfi", "-i", "color=c=red:size=640x360", "-frames:v", "1", os.path.join(d, "thumb2.jpg"))
-FILES = {"/v.mp4": ("video/mp4", "v.mp4"), "/a.mp3": ("audio/mpeg", "a.mp3"), "/m.mp4": ("video/mp4", "m.mp4"), "/thumb.jpg": ("image/jpeg", "thumb.jpg"), "/thumb2.jpg": ("image/jpeg", "thumb2.jpg")}
+FILES = {"/v.mp4": ("video/mp4", "v.mp4"), "/v12.mp4": ("video/mp4", "v12.mp4"), "/a.mp3": ("audio/mpeg", "a.mp3"), "/m.mp4": ("video/mp4", "m.mp4"), "/thumb.jpg": ("image/jpeg", "thumb.jpg"), "/thumb2.jpg": ("image/jpeg", "thumb2.jpg")}
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def do_GET(self):
@@ -73,9 +74,9 @@ r = requests.post(f"{B}/studio/audyn/{iid}/cover-from-link", headers=A, json={})
 ok(requests.get(f"{B}/studio/audyn/{iid}", headers=A).json()["canCoverFromLink"] is False, "bouton « image de la vidéo » masqué sans chapitre importé")
 
 # ============ De bout en bout ============
-def job(url, origin="web", cover="auto", lang="fr", title="", archive_file=None):
-    cur.execute("""insert into audyn_imports(item_id, kind, source_url, origin, archive_file, title, audio_lang, cover, requested_by, requested_by_name)
-                   values (%s,'audio',%s,%s,%s,%s,%s,%s,%s,'Admin <admin@test.local>') returning id""", (iid, url, origin, archive_file, title, lang, cover, admin)); return str(cur.fetchone()[0])
+def job(url, origin="web", cover="auto", lang="fr", title="", archive_file=None, split=True, replace=None):
+    cur.execute("""insert into audyn_imports(item_id, kind, source_url, origin, archive_file, title, audio_lang, cover, requested_by, requested_by_name, split, replace_chapter)
+                   values (%s,'audio',%s,%s,%s,%s,%s,%s,%s,'Admin <admin@test.local>',%s,%s) returning id""", (iid, url, origin, archive_file, title, lang, cover, admin, split, replace)); return str(cur.fetchone()[0])
 def jst(j): cur.execute("select status, error, note, chapter_id, progress, added, audio_used from audyn_imports where id=%s", (j,)); return cur.fetchone()
 def chapters(): cur.execute("select id, position, title, content_type, size, duration_seconds, source_url, audio_key from audyn_chapters where item_id=%s order by position", (iid,)); return cur.fetchall()
 def cover_key(): cur.execute("select cover_key from audyn_items where id=%s", (iid,)); return cur.fetchone()[0]
@@ -141,6 +142,53 @@ jG = job(BASE + "/absent.mp4")
 for _ in range(3):
     cur.execute("update audyn_imports set updated_at = now() - interval '5 minutes' where id=%s", (jG,)); once()
 ok(jst(jG)[0] == "failed" and set(keys(f"audyn/{iid}/")) == before, "fichier introuvable : échec, rien d'ajouté")
+
+# I) chapitres de la vidéo : un fichier par chapitre, à la suite, avec le titre de l'auteur
+marks = json.dumps([{"start_time": 0, "end_time": 4, "title": "Intro"}, {"start_time": 4, "end_time": 8, "title": "Partie A"}, {"start_time": 8, "end_time": None, "title": "Fin"}])
+jI = job(BASE + "/v12.mp4", cover="none"); once(TEST_CHAPTERS_JSON=marks)
+ch = chapters(); s = jst(jI)
+ok(s[0] == "done" and len(ch) == 5 and [c[2] for c in ch[2:]] == ["Intro", "Partie A", "Fin"] and [c[1] for c in ch[2:]] == [3, 4, 5], f"3 chapitres YouTube -> 3 chapitres Audyn, à la suite ({[c[1:3] for c in ch]})")
+ok([c[5] for c in ch[2:]] == [4, 4, 4] and all(c[3] == "audio/mpeg" and c[6] == BASE + "/v12.mp4" for c in ch[2:]), f"durées 4 s chacune, MP3, lien d'origine ({[c[5] for c in ch[2:]]})")
+cur.execute("select parts from audyn_imports where id=%s", (jI,)); ok(cur.fetchone()[0] == 3, "demande : 3 chapitres créés")
+cur.execute("select count(*) from audyn_rights_log where chapter_id = any(%s::uuid[])", ([str(c[0]) for c in ch[2:]],)); ok(cur.fetchone()[0] == 3, "une attestation par chapitre")
+ok(len(set(c[7] for c in ch)) == 5 and all(c[7] in keys(c[7]) for c in ch), "un fichier distinct par chapitre dans le stockage")
+g = requests.get(U, headers=A).json(); ok(any(x["id"] == jI and x["parts"] == 3 for x in g["imports"]), "API : nombre de chapitres créés visible")
+
+# J) case « découper » décochée : un seul fichier même si la vidéo a des chapitres
+jJ = job(BASE + "/v12.mp4", cover="none", split=False); once(TEST_CHAPTERS_JSON=marks)
+ch = chapters(); ok(jst(jJ)[0] == "done" and len(ch) == 6 and ch[5][5] in (11, 12), "découpage refusé : un seul chapitre de 12 s")
+# J bis) vidéo sans chapitres (plateforme) : un seul fichier, et la demande le dit
+jJ2 = job(BASE + "/v.mp4", cover="none"); once(TEST_CHAPTERS_JSON="[]")
+ch = chapters(); s = jst(jJ2); ok(s[0] == "done" and len(ch) == 7 and "Pas de chapitres" in (s[2] or ""), f"pas de chapitres : un seul fichier, remarque ({s[2]})")
+cur.execute("delete from audyn_chapters where id=%s", (ch[6][0],)); s3.delete_object(Bucket=BUCKET, Key=ch[6][7])
+
+# K) « Redécouper » le chapitre 1 (un long fichier) : remplacé à sa place, les suivants décalés, l'ancien fichier effacé
+ch = chapters(); c1 = ch[0]; cur.execute("update audyn_chapters set source_url=%s where id=%s", (BASE + "/v.mp4", c1[0]))
+order_before = [c[0] for c in ch[1:]]
+two = json.dumps([{"start_time": 0, "end_time": 3, "title": "Un"}, {"start_time": 3, "end_time": 6, "title": "Deux"}])
+jK = job(BASE + "/v.mp4", cover="none", replace=str(c1[0]), title=c1[2]); once(TEST_CHAPTERS_JSON=two)
+ch = chapters(); s = jst(jK)
+ok(s[0] == "done" and [c[2] for c in ch[:2]] == ["Un", "Deux"] and [c[1] for c in ch] == list(range(1, len(ch) + 1)), f"chapitre remplacé à sa place par 2 morceaux ({[c[1:3] for c in ch]})")
+ok([c[0] for c in ch[2:]] == order_before and len(ch) == 7, "les autres chapitres gardent leur ordre, décalés d'un rang")
+ok(not keys(c1[7]) and str(c1[0]) not in [str(c[0]) for c in ch], "ancien long fichier effacé du stockage")
+# L) « Redécouper » une vidéo sans chapitres : refus avant téléchargement, rien ne change
+before_ch, before_keys = chapters(), set(keys(f"audyn/{iid}/"))
+jL = job(BASE + "/v.mp4", cover="none", replace=str(ch[2][0]), title=ch[2][2]); once(TEST_CHAPTERS_JSON="[]")
+s = jst(jL); ok(s[0] == "failed" and "pas de chapitres" in (s[1] or "") and chapters() == before_ch and set(keys(f"audyn/{iid}/")) == before_keys, f"pas de chapitres : rien n'a changé ({s[1]})")
+# M) chapitre supprimé entre-temps : échec expliqué, aucun fichier laissé, rien ajouté à la fin
+jM = job(BASE + "/v.mp4", cover="none", replace=str(uuid.uuid4()), title="Disparu"); once(TEST_CHAPTERS_JSON=two)
+s = jst(jM); ok(s[0] == "failed" and "supprimé entre-temps" in (s[1] or "") and chapters() == before_ch and set(keys(f"audyn/{iid}/")) == before_keys, f"chapitre disparu : rien ajouté ({s[1]})")
+# N) API « Redécouper »
+R = lambda cid, body: requests.post(f"{B}/studio/audyn/{iid}/chapters/{cid}/resplit", headers=A, json=body)
+cur.execute("insert into audyn_chapters(item_id, position, title, audio_key, content_type, size) values (%s, 99, 'Envoyé', 'audyn/x/y.mp3', 'audio/mpeg', 1) returning id", (iid,)); manual = str(cur.fetchone()[0])
+ok(R(manual, {"rights": True}).status_code == 400, "chapitre envoyé par fichier : rien à redécouper")
+ok(R(uuid.uuid4(), {"rights": True}).status_code == 404, "chapitre inconnu : 404")
+cur.execute("update audyn_chapters set source_url = %s where id = %s", ("https://www.youtube.com/watch?v=yyyyyyyyyyy", manual))
+ok(R(manual, {}).status_code == 400, "attestation des droits obligatoire")
+r = R(manual, {"rights": True}); ok(r.status_code == 202 and r.json()["replaceChapter"] == manual and r.json()["split"] and r.json()["title"] == "Envoyé", f"redécoupage demandé ({r.text[:120]})")
+ok(R(manual, {"rights": True}).status_code == 409, "déjà demandé : refusé")
+requests.post(f"{B}/studio/audyn/link-imports/{r.json()['id']}/cancel", headers=A)
+cur.execute("delete from audyn_chapters where id=%s", (manual,))
 
 # H) suppression du contenu : chapitres, couverture et demandes effacés
 ok(requests.delete(f"{B}/studio/audyn/{iid}", headers=A).status_code == 204, "contenu supprimé")

@@ -4,6 +4,7 @@ Simulations facultatives (aucun accès aux plateformes pendant les tests) :
   TEST_THUMB          adresse de l'image de la vidéo (remplace la recherche de l'image)
   TEST_LIST_JSON      résultat de external.list_videos : {"title": "...", "entries": [{"source": "youtube", "id": "...", "title": "..."}]}
   TEST_ARCHIVE_JSON   métadonnées archive.org renvoyées par external._archive_get
+  TEST_CHAPTERS_JSON  chapitres de la vidéo [{start_time, end_time, title}] (téléchargement et vérification de « Redécouper »)
 Variables : DATABASE_URL, S3_ENDPOINT, S3_BUCKET, SETTINGS_KEY. Sortie : une ligne JSON { claimed, id }."""
 import json, os, sys, types
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
@@ -19,6 +20,15 @@ if os.environ.get("TEST_THUMB"):
 if os.environ.get("TEST_LIST_JSON"):
     data = json.loads(os.environ["TEST_LIST_JSON"])
     external.list_videos = lambda url, opts, limit: (data["title"], data["entries"][:limit])
+if os.environ.get("TEST_CHAPTERS_JSON"):  # chapitres de la vidéo (comme yt-dlp les lit sur YouTube)
+    marks = json.loads(os.environ["TEST_CHAPTERS_JSON"])
+    _fetch = audyn_import.fetch_audio
+    def fetch_with_chapters(job, work, opts, max_bytes, on_progress, check, report):
+        path = _fetch(job, work, opts, max_bytes, on_progress, check, report)
+        report["chapters"] = marks
+        return path
+    audyn_import.fetch_audio = fetch_with_chapters
+    audyn_import.video_chapters = lambda job, opts: (marks, 0)
 if os.environ.get("TEST_ARCHIVE_JSON"):
     meta = json.loads(os.environ["TEST_ARCHIVE_JSON"])
     external._archive_get = lambda path, params=None: meta

@@ -35,6 +35,7 @@ export default function StudioAudynItem() {
   const coverRef = useRef(null);
   const [link, setLink] = useState('');
   const [frLink, setFrLink] = useState(true); // voix française de la vidéo si elle en propose une
+  const [splitLink, setSplitLink] = useState(true); // un chapitre par chapitre de la vidéo (repères de l'auteur)
   const [jobs, setJobs] = useState([]);       // demandes « depuis un lien » (en cours + 24 dernières heures)
   const running = useRef(new Set());
 
@@ -114,9 +115,18 @@ export default function StudioAudynItem() {
     if (!link.trim()) return;
     if (!rights) { setErr(t('ayLinkNeedRights')); return; }
     setErr('');
-    const r = await call(`/studio/audyn/${id}/link-imports`, { method: 'POST', body: JSON.stringify({ url: link.trim(), rights: true, audioLang: frLink ? 'fr' : 'original' }) });
+    const r = await call(`/studio/audyn/${id}/link-imports`, { method: 'POST', body: JSON.stringify({ url: link.trim(), rights: true, audioLang: frLink ? 'fr' : 'original', split: splitLink }) });
     if (!r.ok) { setErr(r.data?.error || t('errGeneric')); return; }
     setLink(''); flash(t('ayLinkQueued')); loadJobs();
+  };
+  // « Redécouper » : le chapitre (un long fichier importé d'une vidéo) est remplacé, à sa place, par un chapitre par chapitre de la vidéo.
+  const resplit = async (c) => {
+    if (!rights) { setErr(t('ayLinkNeedRights')); return; }
+    if (!confirm(t('ayResplitConfirm'))) return;
+    setErr('');
+    const r = await call(`/studio/audyn/${id}/chapters/${c.id}/resplit`, { method: 'POST', body: JSON.stringify({ rights: true }) });
+    if (!r.ok) { setErr(r.data?.error || t('errGeneric')); return; }
+    flash(t('ayResplitQueued')); loadJobs();
   };
   const cancelJob = async (j) => { await call(`/studio/audyn/link-imports/${j.id}/cancel`, { method: 'POST' }); loadJobs(); };
   const coverFromLink = async () => {
@@ -128,7 +138,10 @@ export default function StudioAudynItem() {
   const jobLabel = (j) => {
     if (j.status === 'downloading') return t('ayLinkStRun').replace('{n}', j.progress);
     if (j.status === 'done' && j.added) return t('ayLinkList').replace('{n}', j.added);
-    if (j.status === 'done') return j.kind === 'cover' ? t('ayLinkCoverDone') : j.audioUsed === 'fr' ? t('ayLinkDoneFr') : t('ayLinkStDone');
+    if (j.status === 'done' && j.kind === 'cover') return t('ayLinkCoverDone');
+    if (j.status === 'done' && j.replaceChapter) return t('ayResplitDone').replace('{n}', j.parts);
+    if (j.status === 'done' && j.parts > 1) return t(j.audioUsed === 'fr' ? 'ayLinkPartsFr' : 'ayLinkParts').replace('{n}', j.parts);
+    if (j.status === 'done') return j.audioUsed === 'fr' ? t('ayLinkDoneFr') : t('ayLinkStDone');
     return t({ pending: 'ayLinkStPending', failed: 'ayLinkStFailed', canceled: 'ayLinkStCanceled' }[j.status] || 'ayLinkStPending');
   };
 
@@ -194,6 +207,7 @@ export default function StudioAudynItem() {
               <span className="meta">{c.durationSeconds ? clock(c.durationSeconds) : '—'} · {(c.size / 1048576).toFixed(1)} Mo</span>
               <button className="btn ghost sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('ayUp')}>↑</button>
               <button className="btn ghost sm" disabled={i === it.chapters.length - 1} onClick={() => move(i, 1)} aria-label={t('ayDown')}>↓</button>
+              {c.sourceUrl && <button className="btn ghost sm" onClick={() => resplit(c)} title={t('ayResplitTitle')}>{t('ayResplit')}</button>}
               <button className="btn ghost sm" onClick={() => del(c)}>{t('ayDelete')}</button>
             </li>
           ))}
@@ -211,13 +225,14 @@ export default function StudioAudynItem() {
             <button className="btn" disabled={!link.trim() || !rights}>{t('ayLinkAdd')}</button>
           </div>
           <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
+          <label className="chk"><input type="checkbox" checked={splitLink} onChange={(e) => setSplitLink(e.target.checked)} /> <span>{t('ayLinkSplit')}</span></label>
           {!rights && <p className="meta">{t('ayLinkNeedRights')}</p>}
         </form>
         {jobs.length > 0 && (
           <ul className="ay-jobs" aria-live="polite">
             {jobs.map((j) => (
               <li key={j.id} className={j.status === 'failed' ? 'bad' : ''}>
-                <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : (j.title || j.url)}</span>
+                <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
                 <span className="meta">{jobLabel(j)}</span>
                 {j.active && <button type="button" className="btn ghost sm" onClick={() => cancelJob(j)}>{t('ayLinkCancel')}</button>}
                 {j.error && <span className="error small">{j.error}</span>}

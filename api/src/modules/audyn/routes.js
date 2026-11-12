@@ -7,6 +7,7 @@
 //  Import depuis un lien (vidéo YouTube, archive.org… : seul le son est gardé, l'image peut devenir la couverture ; le travail est fait
 //  par le service de transcription, transcriber/src/audyn_import.py) :
 //   GET|POST /studio/audyn/:id/link-imports · POST /studio/audyn/link-imports/:jid/cancel · POST /studio/audyn/:id/cover-from-link
+//   POST /studio/audyn/:id/chapters/:cid/resplit (« Redécouper » un chapitre importé selon les chapitres de la vidéo)
 //  Public (les livres audio adultes ; les histoires du soir enfants passent par l'espace Kids, étape 4) :
 //   GET /audyn · GET /audyn/:id · GET /audyn/:id/chapters/:cid/play (lien d'écoute) · GET /audyn/:id/chapters/:cid/preview (aperçu coupé par le serveur)
 //  Accès : formule « Apprentissage » (ou contenu marqué « ouvert à tous ») ; sinon aperçu gratuit du premier chapitre, coupé par le serveur.
@@ -59,11 +60,13 @@ const linkBody = z.object({
   rights: z.literal(true, { error: "Cochez l'attestation : vous avez les droits de diffusion de ce son" }),
   audioLang: z.enum(['fr', 'original']).default('fr'),
   cover: z.enum(['auto', 'replace', 'none']).default('auto'),
+  split: z.boolean().default(true), // un fichier par chapitre de la vidéo (repères de l'auteur), s'il y en a au moins 2
 }).strict();
 const LINK_ACTIVE = ['pending', 'downloading'];
 const jobRow = (j) => ({
   id: j.id, kind: j.kind, url: j.source_url, origin: j.origin, title: j.title, status: j.status, progress: j.progress, error: j.error || null,
   note: j.note || null, audioLang: j.audio_lang || null, audioUsed: j.audio_used || null, added: j.added, parentId: j.parent_id || null,
+  split: j.split !== false, parts: j.parts || 0, replaceChapter: j.replace_chapter || null,
   chapterId: j.chapter_id || null, active: LINK_ACTIVE.includes(j.status), createdAt: j.created_at, finishedAt: j.finished_at,
 });
 const jidSchema = z.object({ jid: z.guid() });
@@ -289,17 +292,19 @@ export default async function audynRoutes(app) {
   // ------------------------------------------------------------------ Studio : import depuis un lien
   // La demande est ouverte ici ; le service de transcription télécharge le son (une playlist devient une demande par vidéo), le convertit
   // en MP3, crée le chapitre, note l'attestation dans le journal et pose la couverture. Les erreurs sont lisibles sur la demande.
-  const openJob = async (itemId, b, kind, req) => {
+  const openJob = async (itemId, b, kind, req, replaceChapter = null) => {
     const c = classifyUrl(b.url);
     if (c.error) return { code: 400, body: { error: c.error, code: c.code } };
     const full = await storageProblem();
     if (full) return { code: 409, body: { error: full, code: 'storage_full' } };
-    const busy = await pool.query(`SELECT 1 FROM audyn_imports WHERE item_id = $1 AND source_url = $2 AND kind = $3 AND status IN ('pending', 'downloading')`, [itemId, c.url, kind]);
+    const busy = await pool.query(`SELECT 1 FROM audyn_imports WHERE item_id = $1 AND source_url = $2 AND kind = $3 AND status IN ('pending', 'downloading')
+                                     AND replace_chapter IS NOT DISTINCT FROM $4`, [itemId, c.url, kind, replaceChapter]);
     if (busy.rowCount) return { code: 409, body: { error: 'Ce lien est déjà en cours de récupération pour ce contenu', code: 'busy' } };
     const { rows } = await pool.query(
-      `INSERT INTO audyn_imports(item_id, kind, source_url, origin, archive_file, audio_lang, cover, requested_by, requested_by_name)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [itemId, kind, c.url, c.origin, c.archive?.file || null, kind === 'audio' && b.audioLang === 'fr' ? 'fr' : null, b.cover, req.user.sub, await userLabel(req.user.sub)]);
+      `INSERT INTO audyn_imports(item_id, kind, source_url, origin, archive_file, audio_lang, cover, requested_by, requested_by_name, split, replace_chapter, title)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [itemId, kind, c.url, c.origin, c.archive?.file || null, kind === 'audio' && b.audioLang === 'fr' ? 'fr' : null, b.cover, req.user.sub, await userLabel(req.user.sub),
+        b.split !== false, replaceChapter, b.title || '']);
     return { code: 202, body: jobRow(rows[0]), url: c.url };
   };
 
@@ -336,6 +341,22 @@ export default async function audynRoutes(app) {
     if (!ch) return reply.code(400).send({ error: "Aucun chapitre de ce contenu ne vient d'un lien vidéo", code: 'no_source' });
     const r = await openJob(id, { url: ch.source_url, cover: 'replace' }, 'cover', req);
     if (r.code === 202) req.auditSummary = `Audyn : couverture demandée depuis la vidéo ${r.url}`;
+    return reply.code(r.code).send(r.body);
+  });
+
+  // « Redécouper » : le son de la vidéo d'origine est retéléchargé et découpé selon ses chapitres ; le chapitre est remplacé, à sa
+  // place, par les morceaux. Rien ne change si la vidéo n'a pas (ou plus) de chapitres : le service le vérifie avant de télécharger.
+  app.post('/studio/audyn/:id/chapters/:cid/resplit', adminOnly, async (req, reply) => {
+    if (!storage) return off(reply);
+    const { id, cid } = chSchema.parse(req.params);
+    z.object({ rights: z.literal(true, { error: "Cochez l'attestation : vous avez les droits de diffusion de ce son" }) }).strict().parse(req.body ?? {});
+    const ch = (await pool.query('SELECT title, source_url FROM audyn_chapters WHERE id = $2 AND item_id = $1', [id, cid])).rows[0];
+    if (!ch) return reply.code(404).send({ error: 'Chapitre introuvable' });
+    if (!ch.source_url) return reply.code(400).send({ error: "Ce chapitre n'a pas été importé depuis une vidéo", code: 'no_source' });
+    // Même voix que lors de l'import du chapitre (voix française par défaut).
+    const prev = (await pool.query(`SELECT audio_lang FROM audyn_imports WHERE chapter_id = $1 OR replace_chapter = $1 ORDER BY created_at DESC LIMIT 1`, [cid])).rows[0];
+    const r = await openJob(id, { url: ch.source_url, cover: 'none', split: true, audioLang: prev && !prev.audio_lang ? 'original' : 'fr', title: ch.title }, 'audio', req, cid);
+    if (r.code === 202) req.auditSummary = `Audyn : redécoupage du chapitre « ${ch.title} » selon les chapitres de la vidéo (droits attestés)`;
     return reply.code(r.code).send(r.body);
   });
 

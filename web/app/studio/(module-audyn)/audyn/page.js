@@ -20,6 +20,7 @@ export default function StudioAudyn() {
   const [f, setF] = useState({ title: '', audience: 'adults', author: '', description: '' });
   const [link, setLink] = useState('');
   const [frLink, setFrLink] = useState(true);
+  const [splitLink, setSplitLink] = useState(true);
   const [linkRights, setLinkRights] = useState(false);
   const [info, setInfo] = useState(''); // '' | 'loading' | 'done' | 'none'
   const [busy, setBusy] = useState(false);
@@ -43,7 +44,7 @@ export default function StudioAudyn() {
     const r = await call('/studio/audyn', { method: 'POST', body: JSON.stringify({ ...f, description: (f.description || '').slice(0, 4000) }) });
     if (!r.ok) { setBusy(false); setErr(r.data?.error || t('errGeneric')); return; }
     if (url) {
-      const j = await call(`/studio/audyn/${r.data.id}/link-imports`, { method: 'POST', body: JSON.stringify({ url, rights: true, audioLang: frLink ? 'fr' : 'original', cover: 'auto' }) });
+      const j = await call(`/studio/audyn/${r.data.id}/link-imports`, { method: 'POST', body: JSON.stringify({ url, rights: true, audioLang: frLink ? 'fr' : 'original', cover: 'auto', split: splitLink }) });
       // Le contenu existe déjà : en cas de refus du lien, on ouvre quand même sa page (le message y sera repris).
       if (!j.ok) { setBusy(false); router.push(`/studio/audyn/${r.data.id}?linkError=${encodeURIComponent(j.data?.error || '')}`); return; }
     }
@@ -77,6 +78,7 @@ export default function StudioAudyn() {
           {link.trim() && (
             <>
               <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
+              <label className="chk"><input type="checkbox" checked={splitLink} onChange={(e) => setSplitLink(e.target.checked)} /> <span>{t('ayLinkSplit')}</span></label>
               <label className="chk"><input type="checkbox" checked={linkRights} onChange={(e) => setLinkRights(e.target.checked)} /> <span>{t('ayLinkRights')}</span></label>
             </>
           )}

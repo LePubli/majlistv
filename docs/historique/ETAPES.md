@@ -8566,3 +8566,45 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 
 **Tests.** `transcriber/tests/test_audyn_import.py` (23 vérifications : choix du son par le vrai moteur de yt-dlp, playlists, archive.org, conversion MP3 et couverture avec le vrai ffmpeg) ; `api/tests/test_audyn_link.py` (35 : droits, validation, anti-SSRF, file, annulation, et de bout en bout avec un serveur local : vidéo → MP3, chapitre, journal, couverture posée puis remplacée, playlist et archive.org découpés, vidéo muette, fichier introuvable, suppression du contenu) ; `web/tests/test_audyn_link_web.mjs`. Les deux premiers demandent un stockage simulé et ffmpeg : ils tournent sur le poste de développement, **pas sur GitHub** (le test du site y tourne). Écrans vérifiés dans un navigateur à 1440 px et 390 px, en français et en arabe. **Non testé : un vrai téléchargement depuis YouTube ou archive.org** (l'environnement de développement n'y a pas accès) — c'est l'essai réel ci-dessus.
 
+## Audyn — découpage selon les chapitres de la vidéo (12/11)
+
+**Ce que c'est.** Beaucoup de vidéos YouTube ont des **chapitres** placés par l'auteur (les repères de la barre de lecture). À l'import d'un lien dans Audyn, le son est maintenant **découpé en un fichier MP3 par chapitre** de la vidéo, au lieu d'un seul fichier de 2 h. Chaque morceau devient un chapitre Audyn, dans l'ordre, avec le titre donné par l'auteur. Décision d'Epok du 12/11 : oui, avec un bouton « Redécouper » pour les contenus déjà importés.
+
+**Pour l'administrateur (Studio → Audyn).**
+- Case **« Découper selon les chapitres de la vidéo »**, cochée d'origine, dans « Ajouter depuis un lien » et dans « Nouveau contenu audio ». Décochée : un seul fichier, comme avant.
+- Vidéo **sans chapitres** (ou un seul) : un seul fichier ; la demande l'indique (« Pas de chapitres sur cette vidéo : un seul fichier »).
+- **Playlist** : titres « Titre de la vidéo — titre du chapitre » (pour ne pas avoir dix chapitres « Introduction »).
+- Repère de **moins de 3 secondes** (souvent une erreur de l'auteur) : rattaché au chapitre précédent ; le son avant le premier repère va dans le premier chapitre.
+- Bouton **« Redécouper »** sur chaque chapitre importé depuis une vidéo (cocher l'attestation de droits, puis confirmer) : le son est retéléchargé et le chapitre est **remplacé à sa place** par les morceaux ; les chapitres suivants gardent leur ordre. Si la vidéo n'a pas de chapitres, le service s'arrête **avant de télécharger** et rien ne change. L'ancien long fichier est effacé du stockage.
+- Suivi : « 7 chapitres ajoutés (voix française) », « Redécoupé en 4 chapitres ». Une attestation par chapitre dans le journal des droits.
+
+**Comment c'est fait.**
+- Migration du module : `api/src/modules/audyn/migrations/004_split_chapters.sql` (`split`, `replace_chapter`, `parts` sur `audyn_imports`). Module Audyn en version 1.2.0.
+- API : option `split` sur `POST /studio/audyn/:id/link-imports` ; nouvelle route `POST /studio/audyn/:id/chapters/:cid/resplit` (même voix que l'import d'origine).
+- Service (`transcriber/src/audyn_import.py`) : yt-dlp donne les chapitres (`importer.download_ytdlp`, compte rendu « chapters ») ; `plan_parts` fixe les morceaux ; ffmpeg encode chaque morceau directement depuis le son téléchargé (un seul téléchargement) ; les chapitres sont ajoutés (ou remplacent l'ancien) en une seule transaction.
+- Site : `web/app/studio/(module-audyn)/audyn/[id]/page.js` et `page.js` ; 9 textes × 3 langues (`ayLinkSplit`, `ayLinkParts…`, `ayResplit…`).
+
+**Prérequis.** Aucun réglage.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy, dans cet ordre : `majlistv-api` (migration du module), `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Exemple.** Sur le contenu déjà importé en un seul fichier : cocher l'attestation de droits → bouton « Redécouper » du chapitre → confirmer. La demande passe à « Redécoupé en N chapitres ».
+
+**Debug.**
+
+```bash
+docker logs --since 2h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[audyn .*(chapitres|chapitre|échec|pas de chapitres)"
+```
+
+- « Cette vidéo n'a pas de chapitres sur sa plateforme : rien n'a été changé » : l'auteur n'a pas placé de chapitres (ou un seul) ; le chapitre reste tel quel.
+- « Le chapitre à redécouper a été supprimé entre-temps » : rien n'a été ajouté.
+
+**Tests.** `transcriber/tests/test_audyn_import.py` (35 vérifications, dont les règles de découpage et un vrai découpage ffmpeg au bon endroit) ; `api/tests/test_audyn_link.py` (53 : 3 chapitres de la vidéo → 3 chapitres Audyn de la bonne durée, case décochée, vidéo sans chapitres, « Redécouper » à sa place avec décalage des suivants et ancien fichier effacé, refus sans chapitres, chapitre supprimé entre-temps, route de l'API) ; `web/tests/test_audyn_link_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé : une vraie vidéo YouTube à chapitres** (l'environnement de développement n'a pas accès à YouTube ; les chapitres y sont simulés) — à essayer sur le VPS.
+

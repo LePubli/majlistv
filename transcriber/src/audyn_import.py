@@ -6,6 +6,11 @@ Une demande (table audyn_imports, ouverte par l'API : POST /studio/audyn/:id/lin
   2. sinon : téléchargement du SON SEUL (yt-dlp « meilleur son », voix française d'abord si demandée ; archive.org : le fichier audio,
      sinon la vidéo ; lien direct : le fichier), conversion en MP3 128 kb/s (lisible partout, aperçu gratuit coupé sans problème),
      envoi dans le stockage, chapitre ajouté à la fin du contenu, attestation notée dans le journal des droits ;
+  2 bis. chapitres de la vidéo (repères placés par l'auteur sur YouTube) : si la demande le veut (split) et qu'il y en a au moins 2,
+     le son est découpé en un MP3 par chapitre, chacun devient un chapitre Audyn (titre de l'auteur ; dans une playlist,
+     « titre de la vidéo — titre du chapitre »). Repères de moins de 3 s : rattachés au précédent.
+     « Redécouper » (replace_chapter) : un chapitre Audyn déjà importé est remplacé, à sa place, par les morceaux ; si la vidéo
+     n'a pas de chapitres, la demande s'arrête AVANT de télécharger et rien ne change.
   3. couverture : l'image de la vidéo, mise au carré SANS rien couper (image entière centrée sur un fond flou de la même image).
      « auto » : seulement si le contenu n'a pas de couverture ; « replace » : remplace l'ancienne (bouton du Studio).
 Toutes les adresses suivies passent par le contrôle anti-SSRF (importer.assert_public_url). Les erreurs sont notées sur la demande.
@@ -30,6 +35,7 @@ COVER_SIZE = 1000            # couverture carrée 1000 × 1000
 IMAGE_MAX = 15 * 1024 ** 2   # image de la vidéo : 15 Mo au plus
 AUDIO_EXT = re.compile(r"\.(mp3|m4a|aac|ogg|oga|opus|flac|wav)$", re.I)
 EXT_ORDER = ["mp3", "m4a", "aac", "ogg", "oga", "opus", "flac", "wav"]
+MIN_PART = 3.0               # secondes : un repère plus court est rattaché au chapitre précédent
 FORMAT_ORDER = ["vbr mp3", "128kbps mp3", "64kbps mp3"]
 
 
@@ -73,6 +79,63 @@ def entry_url(e):
     if src == "dailymotion":
         return f"https://www.dailymotion.com/video/{vid}"
     return None
+
+
+def plan_parts(chapters, duration, min_len=MIN_PART):
+    """Chapitres de la vidéo -> morceaux [{start, end, title}] couvrant le son du début à la fin, dans l'ordre.
+    Fin manquante : début du suivant (ou fin du son) ; repère trop court : rattaché au précédent (le premier : au suivant).
+    Moins de 2 morceaux : liste vide (pas de découpage)."""
+    try:
+        total = float(duration or 0)
+    except (TypeError, ValueError):
+        total = 0.0
+    marks = []
+    for c in chapters or []:
+        try:
+            start = max(0.0, float(c.get("start_time") or 0))
+        except (TypeError, ValueError):
+            continue
+        if total and start >= total:
+            continue
+        marks.append({"start": start, "end": c.get("end_time"), "title": str(c.get("title") or "").strip()[:200]})
+    marks.sort(key=lambda m: m["start"])
+    dedup = []
+    for m in marks:
+        if dedup and abs(m["start"] - dedup[-1]["start"]) < 0.001:
+            continue
+        dedup.append(m)
+    if not dedup:
+        return []
+    dedup[0]["start"] = 0.0  # le son avant le premier repère appartient au premier chapitre
+    parts = []
+    for i, m in enumerate(dedup):
+        nxt = dedup[i + 1]["start"] if i + 1 < len(dedup) else (total or None)
+        end = nxt if nxt is not None else m["end"]
+        try:
+            end = float(end)
+        except (TypeError, ValueError):
+            return []  # fin inconnue : on ne découpe pas au hasard
+        if total:
+            end = min(end, total)
+        if end > m["start"]:
+            parts.append({"start": m["start"], "end": end, "title": m["title"]})
+    merged = []
+    for p in parts:
+        if merged and p["end"] - p["start"] < min_len:
+            merged[-1]["end"] = p["end"]
+        else:
+            merged.append(dict(p))
+    if len(merged) > 1 and merged[0]["end"] - merged[0]["start"] < min_len:
+        first = merged.pop(0)
+        merged[0]["start"] = first["start"]
+    return merged if len(merged) >= 2 else []
+
+
+def part_title(job, part, index):
+    """Titre d'un morceau : celui de l'auteur ; dans une playlist, précédé du titre de la vidéo."""
+    video = (job.get("title") or "").strip()
+    own = (part.get("title") or "").strip() or f"Partie {index}"
+    return (f"{video} — {own}" if video and job.get("parent_id") else own)[:200]
 
 
 def _natural(name):
@@ -129,11 +192,13 @@ def probe(path):
     return {"audio": any(s.get("codec_type") == "audio" for s in data.get("streams") or []), "duration": duration}
 
 
-def to_mp3(src, dst):
-    """Son seul en MP3 128 kb/s, 44,1 kHz, stéréo au plus. Renvoie la durée en secondes. Lève Blocked s'il n'y a pas de son."""
-    if not probe(src)["audio"]:
+def to_mp3(src, dst, start=None, end=None, checked=False):
+    """Son seul en MP3 128 kb/s, 44,1 kHz, stéréo au plus (de `start` à `end` secondes si donnés). Renvoie la durée en secondes.
+    Lève Blocked s'il n'y a pas de son (checked : déjà vérifié par l'appelant)."""
+    if not checked and not probe(src)["audio"]:
         raise external.Blocked("Cette vidéo ne contient pas de son.")
-    cmd = ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", src, "-map", "0:a:0", "-vn", "-sn", "-dn", "-map_metadata", "-1",
+    cut = (["-ss", f"{float(start):.3f}"] if start else []) + (["-to", f"{float(end):.3f}"] if end else [])
+    cmd = ["ffmpeg", "-nostdin", "-y", "-v", "error", *cut, "-i", src, "-map", "0:a:0", "-vn", "-sn", "-dn", "-map_metadata", "-1",
            "-c:a", "libmp3lame", "-b:a", BITRATE, "-ar", "44100", "-ac", "2", "-id3v2_version", "3", dst]
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
     if out.returncode != 0 or not os.path.exists(dst) or os.path.getsize(dst) == 0:
@@ -190,6 +255,14 @@ def fetch_audio(job, work, opts, max_bytes, on_progress, check, report):
                 raise
     return importer.download_ytdlp(url, work, opts, max_bytes, 720, on_progress, check=check, audio_lang=job.get("audio_lang"),
                                    report=report, fmt=audio_selector(job.get("audio_lang")))
+
+
+def video_chapters(job, opts):
+    """Chapitres de la vidéo lus sur la plateforme, sans rien télécharger (« Redécouper » : vérifié avant le téléchargement)."""
+    if job["origin"] == "archive" or (job["origin"] == "web" and (importer.looks_direct(job["source_url"]) or AUDIO_EXT.search(urlsplit(job["source_url"]).path or ""))):
+        return [], 0
+    info = external.fetch_info(job["source_url"], dict(opts, noplaylist=True))
+    return info.get("chapters") or [], info.get("duration") or 0
 
 
 def find_thumbnail(job, report, opts):
@@ -343,8 +416,13 @@ def apply_cover(job, ctx, thumb, work):
     return None
 
 
-def add_chapter(job, ctx, key, size, duration, title, audio_used):
-    """Chapitre ajouté à la fin du contenu, attestation notée, demande close : tout ou rien."""
+class ChapterGone(Exception):
+    """« Redécouper » : le chapitre à remplacer a été supprimé entre-temps."""
+
+
+def add_chapters(job, ctx, files, audio_used):
+    """Chapitres ajoutés (à la fin du contenu, ou à la place du chapitre à redécouper), attestations notées, demande close : tout ou
+    rien. files = [{key, size, duration, title}]. Renvoie (premier chapitre, clé du fichier remplacé ou None)."""
     def write(cur):
         cur.execute("SELECT id, title FROM audyn_items WHERE id = %s FOR UPDATE", (job["item_id"],))
         item = cur.fetchone()
@@ -353,21 +431,35 @@ def add_chapter(job, ctx, key, size, duration, title, audio_used):
         cur.execute("SELECT 1 FROM audyn_imports WHERE id = %s AND status = 'downloading' AND NOT cancel_requested FOR UPDATE", (job["id"],))
         if not cur.fetchone():
             raise importer.Canceled()
-        cur.execute("SELECT COALESCE(max(position), 0) + 1 AS p FROM audyn_chapters WHERE item_id = %s", (job["item_id"],))
-        pos = cur.fetchone()["p"]
-        cur.execute(
-            """INSERT INTO audyn_chapters(item_id, position, title, audio_key, content_type, size, duration_seconds, source_url)
-               VALUES (%s, %s, %s, %s, 'audio/mpeg', %s, %s, %s) RETURNING id""",
-            (job["item_id"], pos, title, key, size, int(round(duration or 0)), job["source_url"]))
-        chapter = cur.fetchone()["id"]
-        cur.execute(
-            """INSERT INTO audyn_rights_log(item_id, item_title, chapter_id, filename, size, user_id, user_label, source_url)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (job["item_id"], item["title"], chapter, title, size, job.get("requested_by"), job.get("requested_by_name") or "", job["source_url"]))
+        old_key = None
+        if job.get("replace_chapter"):
+            cur.execute("SELECT position, audio_key FROM audyn_chapters WHERE id = %s AND item_id = %s", (job["replace_chapter"], job["item_id"]))
+            old = cur.fetchone()
+            if not old:
+                raise ChapterGone()
+            pos, old_key = old["position"], old["audio_key"]
+            cur.execute("DELETE FROM audyn_chapters WHERE id = %s", (job["replace_chapter"],))
+            # Les chapitres suivants reculent pour faire la place (contrainte d'unicité différée : vérifiée à la fin).
+            cur.execute("UPDATE audyn_chapters SET position = position + %s WHERE item_id = %s AND position > %s", (len(files) - 1, job["item_id"], pos))
+        else:
+            cur.execute("SELECT COALESCE(max(position), 0) + 1 AS p FROM audyn_chapters WHERE item_id = %s", (job["item_id"],))
+            pos = cur.fetchone()["p"]
+        ids = []
+        for i, f in enumerate(files):
+            cur.execute(
+                """INSERT INTO audyn_chapters(item_id, position, title, audio_key, content_type, size, duration_seconds, source_url)
+                   VALUES (%s, %s, %s, %s, 'audio/mpeg', %s, %s, %s) RETURNING id""",
+                (job["item_id"], pos + i, f["title"], f["key"], f["size"], int(round(f["duration"] or 0)), job["source_url"]))
+            ids.append(cur.fetchone()["id"])
+            cur.execute(
+                """INSERT INTO audyn_rights_log(item_id, item_title, chapter_id, filename, size, user_id, user_label, source_url)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (job["item_id"], item["title"], ids[-1], f["title"], f["size"], job.get("requested_by"), job.get("requested_by_name") or "", job["source_url"]))
         cur.execute("UPDATE audyn_items SET updated_at = now() WHERE id = %s", (job["item_id"],))
-        cur.execute("""UPDATE audyn_imports SET status = 'done', progress = 100, chapter_id = %s, audio_used = %s, title = %s,
-                              finished_at = now(), updated_at = now() WHERE id = %s""", (chapter, audio_used, title, job["id"]))
-        return chapter
+        title = job.get("title") or files[0]["title"]
+        cur.execute("""UPDATE audyn_imports SET status = 'done', progress = 100, chapter_id = %s, audio_used = %s, title = %s, parts = %s,
+                              finished_at = now(), updated_at = now() WHERE id = %s""", (ids[0], audio_used, title[:200], len(files), job["id"]))
+        return ids[0], old_key
 
     return ctx.tx(write)
 
@@ -412,27 +504,70 @@ def run(job, ctx):
             ctx.q("UPDATE audyn_imports SET status = 'done', progress = 100, finished_at = now(), updated_at = now() WHERE id = %s AND status = 'downloading'", (job["id"],))
             ctx.log(f"[audyn {jid}] couverture remplacée par l'image de la vidéo")
             return
-        if not job.get("parent_id") and expand(job, ctx, opts) is not None:
+        replacing = bool(job.get("replace_chapter"))
+        if replacing:
+            # « Redécouper » : on vérifie les chapitres AVANT de télécharger (une vidéo de 2 h pour rien, sinon).
+            marks, total = video_chapters(job, opts)
+            if not plan_parts(marks, total or 10 ** 7):
+                raise external.Blocked("Cette vidéo n'a pas de chapitres sur sa plateforme : rien n'a été changé.")
+        elif not job.get("parent_id") and expand(job, ctx, opts) is not None:
             return
         report = {}
         src = fetch_audio(job, work, opts, max_bytes, touch(0, 70), ctx.check, report)
         if job.get("audio_lang"):
             ctx.log(f"[audyn {jid}] piste audio demandée : {job['audio_lang']} ; proposées : {', '.join(report.get('audio_langs') or []) or 'une seule'} ; "
                     f"retenue : {report.get('audio_used') or 'voix d’origine'}")
-        mp3 = os.path.join(work, "chapter.mp3")
-        duration = to_mp3(src, mp3)
+        info = probe(src)
+        if not info["audio"]:
+            raise external.Blocked("Cette vidéo ne contient pas de son.")
+        parts = plan_parts(report.get("chapters"), info["duration"] or report.get("duration")) if job.get("split", True) else []
+        if replacing and not parts:
+            raise external.Blocked("Cette vidéo n'a pas de chapitres sur sa plateforme : rien n'a été changé.")
+        if not job.get("title") and report.get("title") and job.get("parent_id"):
+            job["title"] = report["title"]
+        if not parts:
+            parts = [{"start": None, "end": None, "title": (job.get("title") or report.get("title") or "").strip()[:200] or "Chapitre"}]
+            single = True
+        else:
+            single = False
+            ctx.log(f"[audyn {jid}] {len(parts)} chapitres dans la vidéo : un fichier par chapitre")
+        files = []
+        bump = touch(70, 10)
+        for i, p in enumerate(parts, start=1):
+            mp3 = os.path.join(work, f"part-{i:03d}.mp3")
+            duration = to_mp3(src, mp3, p["start"], p["end"], checked=True)
+            size = os.path.getsize(mp3)
+            if size > max_mb * 1024 ** 2:
+                raise importer.TooBig(f"Le son pèse {round(size / 1024 ** 2)} Mo : plus que la limite de {max_mb} Mo d'un chapitre (Admin → Modules → Audyn).")
+            title = p["title"] if single else part_title(job, p, i)
+            files.append({"path": mp3, "size": size, "duration": duration, "title": title})
+            bump(i, len(parts))
         os.remove(src)
-        size = os.path.getsize(mp3)
-        if size > max_mb * 1024 ** 2:
-            raise importer.TooBig(f"Le son pèse {round(size / 1024 ** 2)} Mo : plus que la limite de {max_mb} Mo d'un chapitre (Admin → Modules → Audyn).")
-        key = f"audyn/{job['item_id']}/{uuid.uuid4()}.mp3"
-        importer.upload(ctx.s3, ctx.bucket, mp3, key, touch(80, 15))
-        uploaded.append(key)
-        title = (job.get("title") or report.get("title") or "").strip()[:200] or "Chapitre"
-        add_chapter(job, ctx, key, size, duration, title, report.get("audio_used"))
+        up = touch(80, 15)
+        total_bytes = sum(f["size"] for f in files) or 1
+        sent = 0
+        for f in files:
+            f["key"] = f"audyn/{job['item_id']}/{uuid.uuid4()}.mp3"
+            importer.upload(ctx.s3, ctx.bucket, f["path"], f["key"], lambda d, t, base=sent: up(base + d, total_bytes))
+            uploaded.append(f["key"])
+            sent += f["size"]
+        try:
+            _, old_key = add_chapters(job, ctx, files, report.get("audio_used"))
+        except ChapterGone:
+            ctx.drop(uploaded)
+            uploaded.clear()
+            ctx.q("""UPDATE audyn_imports SET status = 'failed', progress = 0, error = %s, finished_at = now(), updated_at = now()
+                     WHERE id = %s AND status = 'downloading'""", ("Le chapitre à redécouper a été supprimé entre-temps : rien n'a été ajouté.", job["id"]))
+            return
         uploaded.clear()
-        ctx.log(f"[audyn {jid}] chapitre ajouté : « {title} », {round(duration)} s, {round(size / 1024 ** 2, 1)} Mo")
-        if job["cover"] != "none":
+        if old_key:
+            ctx.drop([old_key])  # l'ancien long fichier, remplacé par les morceaux
+        ctx.log(f"[audyn {jid}] {len(files)} chapitre(s) {'à la place de l’ancien' if replacing else 'ajouté(s)'} : "
+                f"{', '.join('« ' + f['title'] + ' »' for f in files[:5])}{'…' if len(files) > 5 else ''}")
+        notes = []
+        if single and job.get("split", True) and report.get("chapters") is not None and len(report.get("chapters") or []) < 2:
+            notes.append("Pas de chapitres sur cette vidéo : un seul fichier.")
+        if job["cover"] != "none" and not replacing:
             try:
                 note = apply_cover(job, ctx, find_thumbnail(job, report, opts), work)
             except ItemGone:
@@ -440,8 +575,10 @@ def run(job, ctx):
             except Exception as err:  # noqa: BLE001 — la couverture ne fait jamais échouer le chapitre
                 note = f"Couverture non récupérée : {str(err)[:200]}"
             if note:
-                ctx.q("UPDATE audyn_imports SET note = %s WHERE id = %s", (note, job["id"]))
+                notes.append(note)
                 ctx.log(f"[audyn {jid}] {note}")
+        if notes:
+            ctx.q("UPDATE audyn_imports SET note = %s WHERE id = %s", (" ".join(notes)[:500], job["id"]))
     except importer.Stopped:
         ctx.drop(uploaded)
         ctx.q("UPDATE audyn_imports SET status = 'pending', progress = 0, attempts = GREATEST(attempts - 1, 0), updated_at = now() WHERE id = %s AND status = 'downloading'", (job["id"],))

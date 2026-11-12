@@ -117,4 +117,24 @@ subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=si
 dims = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0", ai.square_cover(tall, os.path.join(tmp, "c2.jpg"))], capture_output=True, text=True).stdout.strip()
 ok(dims == "1000,1000", "image en hauteur, dimensions impaires : carrée aussi")
 ok(raises(RuntimeError, lambda: ai.square_cover(junk, os.path.join(tmp, "c3.jpg"))) is not None, "image illisible : erreur")
+# --- chapitres de la vidéo -> morceaux ---
+C = lambda *xs: [{"start_time": a, "end_time": e, "title": t} for a, e, t in xs]
+P = lambda parts: [(round(p["start"], 1), round(p["end"], 1), p["title"]) for p in parts]
+ok(P(ai.plan_parts(C((0, 600, "Introduction"), (600, 3000, "Partie 1"), (3000, 7200, "Partie 2")), 7200)) == [(0, 600, "Introduction"), (600, 3000, "Partie 1"), (3000, 7200, "Partie 2")], "trois chapitres -> trois morceaux")
+ok(P(ai.plan_parts(C((5, 100, "A"), (100, None, "B")), 300)) == [(0, 100, "A"), (100, 300, "B")], "son avant le premier repère rattaché ; fin manquante = fin du son")
+ok(P(ai.plan_parts(C((100, 200, "B"), (0, 100, "A")), 200)) == [(0, 100, "A"), (100, 200, "B")], "repères dans le désordre : remis dans l'ordre")
+ok(P(ai.plan_parts(C((0, 100, "A"), (100, 101.5, "Erreur"), (101.5, 300, "C")), 300)) == [(0, 101.5, "A"), (101.5, 300, "C")], "repère de moins de 3 s : rattaché au précédent")
+ok(P(ai.plan_parts(C((0, 2, "Générique"), (2, 300, "Cours"), (300, 600, "Questions")), 600)) == [(0, 300, "Cours"), (300, 600, "Questions")], "premier repère trop court : rattaché au suivant")
+ok(ai.plan_parts(C((0, 300, "Seul")), 300) == [] and ai.plan_parts([], 300) == [] and ai.plan_parts(None, 0) == [], "moins de deux chapitres : pas de découpage")
+ok(ai.plan_parts(C((0, 1, "a"), (1, 2, "b")), 2) == [], "chapitres tous trop courts : pas de découpage")
+ok(P(ai.plan_parts(C((0, 100, "A"), (100, 900, "B"), (950, 1000, "Après la fin")), 900)) == [(0, 100, "A"), (100, 900, "B")], "repère après la fin du son : ignoré")
+ok(P(ai.plan_parts(C((0, 100, "A"), (0, 100, "A bis"), (100, 200, "B")), 200)) == [(0, 100, "A"), (100, 200, "B")], "repères en double : un seul")
+ok(ai.plan_parts(C((0, None, "A"), (50, None, "B")), 0) == [], "fin inconnue (durée inconnue) : pas de découpage au hasard")
+ok(ai.part_title({"title": "Ma vidéo", "parent_id": "x"}, {"title": "Intro"}, 1) == "Ma vidéo — Intro" and ai.part_title({"title": "Ma vidéo"}, {"title": "Intro"}, 1) == "Intro"
+   and ai.part_title({}, {"title": ""}, 3) == "Partie 3", "titres : préfixe seulement dans une playlist ; repère sans titre numéroté")
+
+long = os.path.join(tmp, "long.mp4")
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=12", "-c:a", "aac", long], check=True)
+durs = [round(ai.to_mp3(long, os.path.join(tmp, f"p{i}.mp3"), s0, e0, checked=True), 1) for i, (s0, e0) in enumerate([(0, 4), (4, 9), (9, 12)])]
+ok(all(abs(a - b) < 0.2 for a, b in zip(durs, [4, 5, 3])), f"découpage réel au bon endroit ({durs} s)")
 print(f"TOUT EST OK ({n} vérifications)")

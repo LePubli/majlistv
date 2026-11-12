@@ -195,6 +195,7 @@ def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=as
                 report["title"] = str(info.get("title") or "")[:200]
                 report["thumb"] = external.best_thumbnail(info)
                 report["duration"] = info.get("duration")
+                report["chapters"] = info.get("chapters") or []  # repères placés par l'auteur (YouTube…)
             if require_audio and audio_lang and not used:
                 raise external.Blocked(NO_TRACK.get(audio_lang, "Cette vidéo ne propose pas la piste audio demandée sur sa plateforme d'origine."))
             ydl.process_ie_result(info, download=True)
