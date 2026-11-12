@@ -8680,7 +8680,7 @@ Deux demandes d'Epok du 12/11 : « les descriptions ne sont jamais remplies » (
 
 **Règles.** Pas de doublon (majuscules comprises) ; une catégorie tapée « valeurs » prend l'écriture de la liste (« Valeurs ») pour que le filtre public les regroupe. Renommer une catégorie renomme celle de ses contenus ; la supprimer laisse ses contenus **sans catégorie** (ils ne sont pas supprimés). Les catégories déjà tapées sur des contenus deviennent des catégories de la liste au déploiement. Actions notées au journal d'audit.
 
-**Fichiers.** Migration du module `api/src/modules/audyn/migrations/006_categories.sql` (table `audyn_categories`), module Audyn en version 1.4.0 ; routes `GET|POST /studio/audyn/categories`, `PATCH|DELETE /studio/audyn/categories/:cat` (`api/src/modules/audyn/routes.js`) ; `web/components/AudynCategories.js` (`AudynCategoryPicker`, `AudynCategoryManager`), styles `.ay-cat-…` dans `web/app/back.css`, 12 textes × 3 langues (`ayCat…`). La page publique et ses filtres sont inchangés.
+**Fichiers.** Migration du module `api/src/modules/audyn/migrations/006_categories.sql` (table `audyn_categories`), module Audyn en version 1.4.0 ; routes `GET|POST /studio/audyn/categories`, `PATCH|DELETE /studio/audyn/categories/:cat` (`api/src/modules/audyn/routes.js`) ; `web/components/AudynCategories.js` (`AudynCategoryPicker`, `AudynCategoryManager`), styles `.ay-cat-…` dans `web/app/back.css`, 12 textes × 3 langues (`ayCg…`). La page publique et ses filtres sont inchangés.
 
 ### Prérequis, déploiement, debug
 

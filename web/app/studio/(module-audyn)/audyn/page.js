@@ -62,7 +62,7 @@ export default function StudioAudyn() {
       <div className="studio-head">
         <h1 className="studio-title">{t('ayNav')}</h1>
         <div className="ay-head-btns">
-          <button className="btn ghost" onClick={() => setCats((v) => !v)} aria-expanded={cats}>{t('ayCatOpen')}</button>
+          <button className="btn ghost" onClick={() => setCats((v) => !v)} aria-expanded={cats}>{t('ayCgOpen')}</button>
           <button className="btn ghost" onClick={() => setChan((v) => !v)} aria-expanded={chan}>{t('ayChOpen')}</button>
           <button className="btn" onClick={() => setOpen((v) => !v)}>{t('ayNew')}</button>
         </div>

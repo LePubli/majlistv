@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const web = fileURLToPath(new URL('..', import.meta.url));
 const read = (p) => fs.readFileSync(join(web, p), 'utf8');
 const i18n = read('lib/i18n.js');
-for (const k of ['ayCatOpen', 'ayCatTitle', 'ayCatHelp', 'ayCatAdd', 'ayCatNewPh', 'ayCatNewOpt', 'ayCatNone', 'ayCatEmpty', 'ayCatCount', 'ayCatRename', 'ayCatDel', 'ayCatDelAsk']) {
+for (const k of ['ayCgOpen', 'ayCgTitle', 'ayCgHelp', 'ayCgAdd', 'ayCgNewPh', 'ayCgNewOpt', 'ayCgNone', 'ayCgEmpty', 'ayCgCount', 'ayCgRename', 'ayCgDel', 'ayCgDelAsk']) {
   assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
 }
 const comp = read('components/AudynCategories.js');
@@ -16,9 +16,9 @@ assert.match(comp, /call\('\/studio\/audyn\/categories'\)/, 'liste lue');
 assert.match(comp, /call\('\/studio\/audyn\/categories', \{ method: 'POST'/, 'création');
 assert.match(comp, /call\(`\/studio\/audyn\/categories\/\$\{edit\.id\}`, \{ method: 'PATCH'/, 'renommage');
 assert.match(comp, /call\(`\/studio\/audyn\/categories\/\$\{c\.id\}`, \{ method: 'DELETE' \}\)/, 'suppression');
-assert.match(comp, /if \(!confirm\(t\('ayCatDelAsk'\)/, 'suppression confirmée');
-assert.match(comp, /<option value="">\{t\('ayCatNone'\)\}<\/option>/, '« Sans catégorie »');
-assert.match(comp, /<option value=\{NEW\}>\{t\('ayCatNewOpt'\)\}<\/option>/, '« Nouvelle catégorie… »');
+assert.match(comp, /if \(!confirm\(t\('ayCgDelAsk'\)/, 'suppression confirmée');
+assert.match(comp, /<option value="">\{t\('ayCgNone'\)\}<\/option>/, '« Sans catégorie »');
+assert.match(comp, /<option value=\{NEW\}>\{t\('ayCgNewOpt'\)\}<\/option>/, '« Nouvelle catégorie… »');
 assert.match(comp, /const free = typing \|\| \(cats !== null && !known\)/, 'ancienne catégorie hors liste : champ libre');
 assert.match(comp, /dir="auto"/, 'noms en arabe ou en français');
 const item = read('app/studio/(module-audyn)/audyn/[id]/page.js');
