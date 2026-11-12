@@ -11,6 +11,7 @@ import { useKid } from '@/lib/kidSession';
 import { useQuranPlayer } from '@/lib/quranPlayer';
 import { absoluteUrl } from '@/lib/api';
 import { API_URL } from '@/lib/config';
+import { exchangeCarPositions, putCarPosition } from '../../modules/audyn-car';
 import {
   NO_TIMER, STORY_PING_MS, audynBase, audynResumeId, decodeResume, encodeResume, nextPlayable, nextSpeed, prevPlayable, resumeKey, resumePoint, seekTarget, shouldSaveResume,
   sleepTick, startSleep, type AudynChapter, type AudynDetail, type PlayInfo, type SleepTimer,
@@ -83,11 +84,19 @@ export function AudynPlayerProvider({ children }: { children: React.ReactNode })
     const s = stRef.current; const ch = s.book?.chapters[s.index];
     if (!s.book || !ch || s.preview) return;
     lastSaved.current = pos;
-    SecureStore.setItemAsync(resumeKey(audynResumeId(s.book)), encodeResume({ cid: ch.id, pos, at: Date.now() })).catch(() => {});
+    const id = audynResumeId(s.book); const raw = encodeResume({ cid: ch.id, pos, at: Date.now() });
+    SecureStore.setItemAsync(resumeKey(id), raw).catch(() => {});
+    putCarPosition(id, raw); // Android Auto : même position dans la voiture
   }, []);
 
   const savedFor = useCallback(async (itemId: string) => {
-    try { return decodeResume(await SecureStore.getItemAsync(resumeKey(itemId))) as never; } catch { return null; }
+    try {
+      // Android Auto : la position la plus récente gagne (écoute dans la voiture ou sur le téléphone).
+      let raw = await SecureStore.getItemAsync(resumeKey(itemId));
+      const car = exchangeCarPositions({ [itemId]: raw })[itemId];
+      if (car) { raw = car; SecureStore.setItemAsync(resumeKey(itemId), car).catch(() => {}); }
+      return decodeResume(raw) as never;
+    } catch { return null; }
   }, []);
 
   // Charge un chapitre (lien signé ou aperçu), se place à `pos`, lit si `play`.

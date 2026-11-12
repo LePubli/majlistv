@@ -11,6 +11,7 @@ import { unregisterPush } from './notifications';
 import { readLogin, type LoginResponse } from './twoFactor';
 import { runLogoutHooks } from './hooks';
 import { applySkin, currentSkin, pickSkin, type Skin } from './theme';
+import { setCarSession } from '../../modules/audyn-car';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
@@ -187,6 +188,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => { alive = false; };
   }, [api]);
+
+  // Android Auto (Audyn dans la voiture) : même compte et même langue que l'application ; déconnexion = visiteur (aperçus).
+  useEffect(() => {
+    if (ready) setCarSession(API_URL, tokenRef.current, locale);
+  }, [ready, user, locale]);
 
   const finish = useCallback(async (res: { token: string; user: User }) => {
     tokenRef.current = res.token;
