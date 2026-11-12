@@ -27,10 +27,18 @@ assert.deepEqual(continueCandidates(null, () => null), []);
 
 const web = fileURLToPath(new URL('..', import.meta.url));
 const page = fs.readFileSync(join(web, 'app/audyn/page.js'), 'utf8');
-assert.match(page, /const full = Boolean\(d && !d\.off && !q\.trim\(\) && !cat\)/, 'rangée seulement sur la liste complète');
+// Page au style du catalogue vidéo (13/11) : rangée « Continuer l'écoute » en tête des rangées, vignettes avec barre d'avancement.
 assert.match(page, /continueCandidates\(d\.items, au\.savedFor\)/); assert.match(page, /listenState\(r\.data\.chapters, saved\)/);
-assert.match(page, /await au\.openResume\(book\); router\.push\(`\/audyn\/\$\{book\.id\}`\)/, '« Reprendre » relance au bon endroit');
-assert.match(page, /role="progressbar"/);
+assert.match(page, /<Row id="row-aw-continue" title=\{t\('awContinue'\)\}/, 'rangée « Continuer l\'écoute »');
+assert.match(page, /progress=\{b\.st\.pct\}/, 'barre d\'avancement sur la vignette');
+assert.match(page, /await au\.openResume\(r\.data\);\n\s+router\.push\(`\/audyn\/\$\{b\.id\}`\)/, '« Écouter » relance au bon endroit');
+assert.match(page, /<AudynHero items=\{d\.items\.slice\(0, HERO_MAX\)\}/, 'bannière comme le catalogue vidéo');
+assert.match(page, /onSeeAll=\{r\.more \? \(\) => go\(r\.more\) : undefined\}/, '« Tout voir » par rangée');
+assert.match(page, /<div className="grid">\{gridItems\.map/, 'grille : recherche, catégorie, tout');
+assert.match(page, /className="thumb aw-thumb"/, 'vignettes au format des vidéos');
+const css = fs.readFileSync(join(web, 'app/globals.css'), 'utf8');
+assert.equal((css.match(/^\.aw-bar \{/gm) || []).length, 1, '« .aw-bar » = seulement la barre du lecteur (la double définition l\'écrasait en bas de l\'écran)');
+assert.match(fs.readFileSync(join(web, 'lib/i18n.js'), 'utf8'), /stAudio: "Audyn"/, 'menu : « Audyn »');
 const i18n = fs.readFileSync(join(web, 'lib/i18n.js'), 'utf8');
 for (const k of ['awContinue', 'awChapterOf', 'awLeft', 'awListenBar']) assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, k);
 console.log('OK — Audyn : continuer l\'écoute');

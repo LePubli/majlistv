@@ -568,6 +568,7 @@ export default async function audynRoutes(app) {
       items: await Promise.all(rows.map(async (r) => ({
         id: r.id, title: r.title, narrator: r.narrator, author: r.author, category: r.category, language: r.language,
         chapters: r.chapters, durationSeconds: r.duration, coverUrl: await cover(r), full: fullAccess(r, learning),
+        summary: String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 280), // bannière de la page Audyn
       }))),
       categories: cats,
     };

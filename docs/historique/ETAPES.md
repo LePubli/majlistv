@@ -8784,3 +8784,29 @@ docker logs --since 1h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[impo
 - Titres encore en anglais : la liste a été lue avant le redéploiement du transcripteur — relire la liste.
 
 **Tests.** `api/tests/test_audyn_link.py` (détails : réservés à l'administration, pas de double demande, lecture par le transcripteur, chapitres, langues, échec et « Réessayer » ; catégorie propre à une vidéo, nouvelle catégorie ajoutée à la liste, identifiant invalide refusé) ; `transcriber/tests/test_external.py` (liste demandée en français) ; `web/tests/test_audyn_channel_detail_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé : sur une vraie chaîne YouTube** (pas d'accès à YouTube ici).
+
+## Audyn — page redessinée comme le catalogue vidéo ; menu « Audyn » (13/11)
+
+Demande d'Epok du 13/11 : « redessine cette page, je veux la même chose que la page des vidéos ; dans le menu je vois Audio au lieu d'Audyn ».
+
+**Ce qui change (`web/app/audyn/page.js`).**
+- **Bannière** défilante des 5 derniers contenus, comme la page Vidéos : fond flouté tiré de la couverture, couverture nette à droite (au-dessus du texte sur téléphone), titre, auteur · chapitres · durée, début de la description, boutons **« ▶ Écouter »** (reprend là où l'on s'était arrêté) et **« Plus d'infos »**.
+- **Rangées horizontales** (même composant que les vidéos, flèches sur ordinateur, glisser sur téléphone) : « Continuer l'écoute » (barre d'avancement sur la vignette), « Nouveautés », une rangée par catégorie, « Autres » (sans catégorie), avec **« Tout voir »** (grille : `/audyn?cat=…`, `/audyn?all=1`).
+- **Vignettes au format des vidéos** (16:9, durée en bas, « Aperçu gratuit » si l'écoute complète demande la formule Apprentissage) ; la couverture carrée d'une vidéo importée montre l'image de la vidéo au centre.
+- Recherche : champ au-dessus des rangées, résultats en grille.
+- API : la liste Audyn renvoie le début de la description (`summary`, 280 caractères) pour la bannière.
+- Menu latéral et onglets : « Audio » devient **« Audyn »** (`stAudio`, en arabe « أودين »).
+- **Bug corrigé** : la classe `.aw-bar` était définie deux fois (barre du lecteur en bas d'écran et barre d'avancement de « Continuer l'écoute ») ; la seconde écrasait la première et le lecteur en bas d'écran s'affichait comme un trait doré écrasé. La barre d'avancement utilise désormais celle des vignettes vidéo.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy : `majlistv-api`, puis `majlistv-web`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Bannière sans description : `majlistv-api` pas redéployé (champ `summary`). Page vide : fonction Audyn désactivée (Admin → Fonctions).
+
+**Tests.** `web/tests/test_audyn_continue_web.mjs` (bannière, rangées, « Tout voir », grille, vignettes, une seule `.aw-bar`, menu « Audyn ») ; tous les tests du site ; écrans vérifiés à 1440 px et 390 px, en français et en arabe, avec 9 contenus de démonstration (pas de débordement, aucune erreur).
