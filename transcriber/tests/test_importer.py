@@ -136,7 +136,7 @@ class LangYDL(FakeYDL):
                 "requested_formats": [{"url": "https://cdn.example.org/v", "acodec": "none"}, {"url": "https://cdn.example.org/a", "acodec": "opus", "language": "fr" if fr else "en"}]}
 yt_dlp.YoutubeDL = LangYDL
 rep = {}; importer.download_ytdlp("https://www.youtube.com/watch?v=avecfr", tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", report=rep)
-ok(rep == {"audio_used": "fr", "audio_langs": ["en", "fr"]} and "ba[language^=fr]" in calls["opts"]["format"], f"piste française : compte rendu ({rep})")
+ok({k: rep[k] for k in ("audio_used", "audio_langs")} == {"audio_used": "fr", "audio_langs": ["en", "fr"]} and {"title", "thumb", "duration"} <= set(rep) and "ba[language^=fr]" in calls["opts"]["format"], f"piste française : compte rendu ({rep})")
 rep = {}; importer.download_ytdlp("https://www.youtube.com/watch?v=sans", tempfile.mkdtemp(), {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", report=rep)
 ok(rep["audio_used"] is None, "premier import sans piste française : la voix d'origine est gardée, sans erreur")
 wr = tempfile.mkdtemp(); e = raises(external.Blocked, lambda: importer.download_ytdlp("https://www.youtube.com/watch?v=sans", wr, {}, 10 ** 8, 720, lambda d, t: None, check=pub, audio_lang="fr", require_audio=True))
