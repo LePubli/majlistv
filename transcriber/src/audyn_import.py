@@ -437,8 +437,10 @@ def video_meta(job, report):
 
 
 def finish_item(job, ctx, report):
-    """Contenu créé pour cette vidéo (import d'une chaîne) : auteur et description remplis s'ils sont vides ; publié si demandé."""
-    if job.get("fill_meta"):
+    """Auteur et description du contenu remplis avec ceux de la vidéo s'ils sont vides : contenu créé pour cette vidéo (import d'une
+    chaîne), ou son ajouté depuis un seul lien (création depuis un lien, « Ajouter depuis un lien »). Pas pour « Redécouper » ni pour
+    les vidéos d'une playlist ajoutée à un contenu (la description d'un épisode ne décrit pas le contenu). Publié si demandé."""
+    if job.get("fill_meta") or (not job.get("parent_id") and not job.get("replace_chapter")):
         m = video_meta(job, report)
         ctx.q("""UPDATE audyn_items SET author = CASE WHEN author = '' THEN %s ELSE author END,
                                         description = CASE WHEN description = '' THEN %s ELSE description END, updated_at = now()

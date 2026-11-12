@@ -7,6 +7,7 @@
 //    pendant la récupération du son), suivi sur la page de chaque contenu.
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from './Providers';
+import { AudynCategoryPicker } from './AudynCategories';
 
 const AUDIENCE_KEY = { kids: 'ayAudKids', adults: 'ayAudAdults', both: 'ayAudBoth' };
 const LANGS = ['fr', 'en', 'ar'];
@@ -104,7 +105,7 @@ export default function AudynChannelImport({ onDone }) {
               <label className="fld"><span>{t('ayAudience')}</span>
                 <select value={o.audience} onChange={set('audience')}>{['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}</select>
               </label>
-              <label className="fld"><span>{t('ayCategory')}</span><input maxLength={80} value={o.category} onChange={set('category')} /></label>
+              <AudynCategoryPicker id="ay-ch-cat" value={o.category} onChange={(v) => setO((x) => ({ ...x, category: v }))} />
               <label className="fld"><span>{t('ayAccess')}</span>
                 <select value={o.access} onChange={set('access')}><option value="learning">{t('ayAccLearning')}</option><option value="free">{t('ayAccFree')}</option></select>
               </label>

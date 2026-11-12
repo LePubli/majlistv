@@ -966,6 +966,10 @@ def run_media_import(job, conn, conf):
                "WHERE id = %s AND status = 'downloading' AND NOT cancel_requested RETURNING id", (size, report.get("audio_used"), job["id"]), fetch=True)
         if not ok:
             raise importer.Canceled()
+        # Description de la vidéo d'origine reprise si la conférence n'en a pas (le serveur ne peut pas toujours la lire à l'enregistrement).
+        desc = external.clean_description(report.get("description") or "")[:5000]
+        if desc:
+            q("UPDATE talks SET description = %s WHERE id = %s AND description = ''", (desc, job["talk_id"]))
         log(f"[import {jid}] fichier dans le stockage : en attente de conversion par le worker")
     except importer.Stopped:
         drop_object()
@@ -1028,6 +1032,34 @@ def media_import_loop():
 
 
 # --- Audyn : son d'une vidéo importé comme chapitre (fil séparé, sa propre connexion ; voir audyn_import.py) -------------------------
+def description_loop():
+    """Description des conférences reprise de la vidéo d'origine quand elle est vide (description_fill.py, migration 115)."""
+    import description_fill
+    conn = None
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+
+            def local_query(sql, params=None, fetch=False):
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute(sql, params)
+                    return cur.fetchall() if fetch else cur.rowcount
+
+            work = os.path.join(WORK_DIR, "descriptions")
+            os.makedirs(work, exist_ok=True)
+            opts = dict(external_options(work), skip_download=True)
+            done = description_fill.run_once(local_query, opts, log)
+            time.sleep(20 if done else 120)
+        except psycopg2.errors.UndefinedColumn:
+            time.sleep(300)  # migration 115 de l'API pas encore passée
+        except Exception as err:  # noqa: BLE001
+            log("Descriptions : erreur :", err)
+            conn = None
+            time.sleep(60)
+
+
 def audyn_import_loop():
     conn = None
     requeued = False
@@ -1146,6 +1178,7 @@ def main():
     threading.Thread(target=import_loop, daemon=True).start()
     threading.Thread(target=media_import_loop, daemon=True).start()
     threading.Thread(target=audyn_import_loop, daemon=True).start()
+    threading.Thread(target=description_loop, daemon=True).start()
     threading.Thread(target=watch_loop, daemon=True).start()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 

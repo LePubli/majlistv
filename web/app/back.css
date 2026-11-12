@@ -938,3 +938,10 @@
 .ay-ch-opts { display: grid; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
 @media (max-width: 520px) { .ay-ch-row img, .ay-ch-ph { width: 72px; height: 40px; } }
 .ay-ch-row > .meta { flex: none; white-space: nowrap; }
+/* Audyn — catégories gérées (liste déroulante + panneau « Catégories ») */
+.ay-cat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ay-cat-list > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 12px; }
+.ay-cat-name { flex: 1 1 160px; min-width: 0; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+.ay-cat-btns { display: flex; gap: 6px; margin-inline-start: auto; }
+.ay-cat-list > li > form { flex: 1 1 100%; }
+.btn.ay-cat-del { color: #FF9C8C; }

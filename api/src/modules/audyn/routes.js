@@ -11,6 +11,7 @@
 //  Import d'une chaîne ou d'une playlist (un contenu audio par vidéo) : le transcripteur liste les vidéos (table import_jobs,
 //  purpose 'audyn'), l'administrateur coche celles à importer, chacune devient un contenu Audyn avec sa demande d'import :
 //   POST /studio/audyn/listings · GET /studio/audyn/listings/:lid · POST /studio/audyn/listings/:lid/confirm
+//  Catégories (liste gérée dans le Studio) : GET|POST /studio/audyn/categories · PATCH|DELETE /studio/audyn/categories/:cat
 //  Public (les livres audio adultes ; les histoires du soir enfants passent par l'espace Kids, étape 4) :
 //   GET /audyn · GET /audyn/:id · GET /audyn/:id/chapters/:cid/play (lien d'écoute) · GET /audyn/:id/chapters/:cid/preview (aperçu coupé par le serveur)
 //  Accès : formule « Apprentissage » (ou contenu marqué « ouvert à tous ») ; sinon aperçu gratuit du premier chapitre, coupé par le serveur.
@@ -74,6 +75,8 @@ const jobRow = (j) => ({
 });
 const jidSchema = z.object({ jid: z.guid() });
 const lidSchema = z.object({ lid: z.guid() });
+const catSchema = z.object({ cat: z.coerce.number().int().positive() });
+const catBody = z.object({ name: z.string().trim().min(1, 'Nom de la catégorie obligatoire').max(80) }).strict();
 const LIST_HOSTS = /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|dai\.ly|archive\.org)$/i;
 const listingUrl = z.string().trim().url().max(500).refine((u) => { try { return LIST_HOSTS.test(new URL(u).hostname); } catch { return false; } },
   'Adresse YouTube, Vimeo, Dailymotion ou archive.org attendue (chaîne, playlist ou collection)');
@@ -94,6 +97,15 @@ export default async function audynRoutes(app) {
     return (await pool.query('SELECT * FROM audyn_chapters WHERE item_id = $1 ORDER BY position', [itemId])).rows;
   }
   async function dropObjects(keys) { if (storage && keys.length) await deleteKeys(keys).catch(() => {}); }
+  // Catégorie d'un contenu : reprend l'écriture de la liste (« valeurs » → « Valeurs ») pour que le filtre public les regroupe ;
+  // une catégorie nouvelle rejoint la liste.
+  async function canonCategory(db, name) {
+    const n = clean(name, 80);
+    if (!n) return '';
+    await db.query('INSERT INTO audyn_categories(name) VALUES ($1) ON CONFLICT DO NOTHING', [n]);
+    const { rows } = await db.query('SELECT name FROM audyn_categories WHERE lower(name) = lower($1)', [n]);
+    return rows[0]?.name || n;
+  }
 
   // ------------------------------------------------------------------ Studio : contenus
   app.get('/studio/audyn', adminOnly, async () => {
@@ -113,7 +125,7 @@ export default async function audynRoutes(app) {
     const { rows } = await pool.query(
       `INSERT INTO audyn_items(title, narrator, author, description, audience, category, language, access, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [clean(b.title, 200), clean(b.narrator, 200), clean(b.author, 200), b.description, b.audience, clean(b.category, 80), b.language, b.access, req.user.sub]);
+      [clean(b.title, 200), clean(b.narrator, 200), clean(b.author, 200), b.description, b.audience, await canonCategory(pool, b.category), b.language, b.access, req.user.sub]);
     req.auditSummary = `Audyn : « ${rows[0].title} » créé`;
     return reply.code(201).send(itemRow(rows[0]));
   });
@@ -143,7 +155,7 @@ export default async function audynRoutes(app) {
     for (const k of ['title', 'narrator', 'author']) if (b[k] !== undefined) put(k, clean(b[k], 200));
     if (b.description !== undefined) put('description', b.description);
     if (b.audience !== undefined) put('audience', b.audience);
-    if (b.category !== undefined) put('category', clean(b.category, 80));
+    if (b.category !== undefined) put('category', await canonCategory(pool, b.category));
     if (b.language !== undefined) put('language', b.language);
     if (b.access !== undefined) put('access', b.access);
     if (b.status !== undefined) put('status', b.status);
@@ -425,11 +437,12 @@ export default async function audynRoutes(app) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      const category = todo.length ? await canonCategory(client, b.category) : '';
       for (let i = 0; i < todo.length; i += 1) {
         const e = todo[i];
         const item = (await client.query(
           `INSERT INTO audyn_items(title, audience, category, language, access, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-          [clean(e.title || e.id, 200) || 'Épisode', b.audience, clean(b.category, 80), b.language, b.access, req.user.sub])).rows[0];
+          [clean(e.title || e.id, 200) || 'Épisode', b.audience, category, b.language, b.access, req.user.sub])).rows[0];
         await client.query(
           `INSERT INTO audyn_imports(item_id, seq, kind, source_url, origin, audio_lang, cover, split, fill_meta, publish, requested_by, requested_by_name)
            VALUES ($1,$2,'audio',$3,$4,$5,'auto',$6,true,$7,$8,$9)`,
@@ -440,6 +453,57 @@ export default async function audynRoutes(app) {
     } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
     req.auditSummary = `Audyn : ${todo.length} vidéo(s) de « ${j.title || j.url} » mises en file (un contenu par vidéo, droits attestés)`;
     return reply.code(202).send({ created: todo.length, skipped: picked.length - todo.length });
+  });
+
+  // ------------------------------------------------------------------ Studio : catégories
+  app.get('/studio/audyn/categories', adminOnly, async () => {
+    const { rows } = await pool.query(
+      `SELECT c.id, c.name, (SELECT count(*)::int FROM audyn_items i WHERE lower(i.category) = lower(c.name)) AS count
+         FROM audyn_categories c ORDER BY lower(c.name)`);
+    return { categories: rows };
+  });
+
+  app.post('/studio/audyn/categories', adminOnly, async (req, reply) => {
+    const { name } = catBody.parse(req.body ?? {});
+    const n = clean(name, 80);
+    const { rows } = await pool.query('INSERT INTO audyn_categories(name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id, name', [n]);
+    if (!rows[0]) return reply.code(409).send({ error: 'Cette catégorie existe déjà', code: 'exists' });
+    req.auditSummary = `Audyn : catégorie « ${n} » créée`;
+    return reply.code(201).send({ ...rows[0], count: 0 });
+  });
+
+  app.patch('/studio/audyn/categories/:cat', adminOnly, async (req, reply) => {
+    const { cat } = catSchema.parse(req.params);
+    const { name } = catBody.parse(req.body ?? {});
+    const n = clean(name, 80);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const old = (await client.query('SELECT name FROM audyn_categories WHERE id = $1 FOR UPDATE', [cat])).rows[0];
+      if (!old) { await client.query('ROLLBACK'); return reply.code(404).send({ error: 'Catégorie introuvable' }); }
+      const clash = await client.query('SELECT 1 FROM audyn_categories WHERE lower(name) = lower($1) AND id <> $2', [n, cat]);
+      if (clash.rowCount) { await client.query('ROLLBACK'); return reply.code(409).send({ error: 'Cette catégorie existe déjà', code: 'exists' }); }
+      await client.query('UPDATE audyn_categories SET name = $2 WHERE id = $1', [cat, n]);
+      // Les contenus de cette catégorie suivent le nouveau nom (la page publique filtre sur le nom).
+      const moved = await client.query('UPDATE audyn_items SET category = $2, updated_at = now() WHERE lower(category) = lower($1)', [old.name, n]);
+      await client.query('COMMIT');
+      req.auditSummary = `Audyn : catégorie « ${old.name} » renommée « ${n} » (${moved.rowCount} contenu(s))`;
+      return { id: cat, name: n, count: moved.rowCount };
+    } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
+  });
+
+  app.delete('/studio/audyn/categories/:cat', adminOnly, async (req, reply) => {
+    const { cat } = catSchema.parse(req.params);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const old = (await client.query('DELETE FROM audyn_categories WHERE id = $1 RETURNING name', [cat])).rows[0];
+      if (!old) { await client.query('ROLLBACK'); return reply.code(404).send({ error: 'Catégorie introuvable' }); }
+      const left = await client.query("UPDATE audyn_items SET category = '', updated_at = now() WHERE lower(category) = lower($1)", [old.name]);
+      await client.query('COMMIT');
+      req.auditSummary = `Audyn : catégorie « ${old.name} » supprimée (${left.rowCount} contenu(s) sans catégorie)`;
+      return { deleted: true, uncategorized: left.rowCount };
+    } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
   });
 
   app.post('/studio/audyn/link-imports/:jid/cancel', adminOnly, async (req, reply) => {

@@ -8659,3 +8659,49 @@ docker logs --since 3h dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[impo
 
 **Tests.** `web/tests/test_audyn_continue_web.mjs` et `mobile/tests/audyn.test.ts` (règles de la rangée) ; `api/tests/test_audyn_lib.mjs` (adresses des vidéos listées) ; `api/tests/test_audyn_link.py` (72 vérifications, dont : liste réservée à l'administration et séparée de l'import de vidéos, « déjà dans Audyn », un contenu par vidéo dans l'ordre avec les réglages, doublons ignorés, puis un épisode traité de bout en bout : auteur, description, couverture repris et publication) ; `transcriber/tests/test_audyn_import.py` (37). Écrans vérifiés à 1440 px et 390 px, en français et en arabe. Vérifié à la main : l'import de vidéos d'une playlist fonctionne toujours. **Non testé : une vraie chaîne YouTube** (pas d'accès à YouTube ici) et la rangée sur un vrai téléphone.
 
+
+## Descriptions reprises des vidéos et catégories Audyn (12/11)
+
+Deux demandes d'Epok du 12/11 : « les descriptions ne sont jamais remplies » (import de vidéos et Audyn) ; « pouvoir créer des catégories dans Audyn ».
+
+### 1. Descriptions reprises de la vidéo d'origine
+
+**Diagnostic.** Sur le VPS, yt-dlp lit bien la description (2 839 caractères pour la vidéo d'essai). Le problème venait du code : (a) à l'enregistrement d'un lien, l'API lit la page YouTube elle-même, ce qui échoue souvent depuis un serveur ; (b) les vidéos **importées chez nous** ne reprenaient jamais la description lue au téléchargement ; (c) les vidéos lues depuis YouTube n'étaient complétées que si leur transcription tournait (droits attestés) ; (d) dans Audyn, seul l'import d'une chaîne remplissait auteur et description.
+
+**Corrections.**
+- Import d'une vidéo chez nous : la description lue au téléchargement est écrite si la conférence n'en a pas (`run_media_import`, `transcriber/src/main.py`).
+- **Rattrapage automatique** (`transcriber/src/description_fill.py`, fil `description_loop`) : le transcripteur passe sur les conférences **sans description** — vidéos YouTube, Vimeo, Dailymotion, archive.org, et vidéos importées (adresse d'origine de leur import) — et la lit avec yt-dlp, dans la langue de la conférence quand YouTube la propose. Jamais d'écrasement. 3 vidéos à la fois, une vingtaine de secondes entre deux passages ; 3 essais au plus par vidéo, espacés de 6 heures. Les vidéos **déjà en ligne** sans description sont donc complétées peu à peu après le déploiement (les plus récentes d'abord). La recherche se met à jour seule.
+- Migration `api/migrations/115_talk_meta_fill.sql` (`talks.meta_tries`, `talks.meta_checked_at`).
+- Audyn : auteur et description sont repris de la vidéo **s'ils sont vides** aussi pour « Nouveau contenu depuis un lien » et « Ajouter depuis un lien » (`finish_item`, `transcriber/src/audyn_import.py`) ; pas pour « Redécouper » ni pour les vidéos d'une playlist ajoutée à un contenu.
+
+### 2. Catégories Audyn
+
+**Ce que c'est.** Studio → Audyn → bouton **« Catégories »** : ajouter, renommer, supprimer ; nombre de contenus par catégorie. Sur la fiche d'un contenu, à la création et dans l'import d'une chaîne, la catégorie se choisit dans une **liste déroulante** (« Sans catégorie », les catégories, « + Nouvelle catégorie… » qui ouvre un champ pour en taper une, ajoutée alors à la liste).
+
+**Règles.** Pas de doublon (majuscules comprises) ; une catégorie tapée « valeurs » prend l'écriture de la liste (« Valeurs ») pour que le filtre public les regroupe. Renommer une catégorie renomme celle de ses contenus ; la supprimer laisse ses contenus **sans catégorie** (ils ne sont pas supprimés). Les catégories déjà tapées sur des contenus deviennent des catégories de la liste au déploiement. Actions notées au journal d'audit.
+
+**Fichiers.** Migration du module `api/src/modules/audyn/migrations/006_categories.sql` (table `audyn_categories`), module Audyn en version 1.4.0 ; routes `GET|POST /studio/audyn/categories`, `PATCH|DELETE /studio/audyn/categories/:cat` (`api/src/modules/audyn/routes.js`) ; `web/components/AudynCategories.js` (`AudynCategoryPicker`, `AudynCategoryManager`), styles `.ay-cat-…` dans `web/app/back.css`, 12 textes × 3 langues (`ayCat…`). La page publique et ses filtres sont inchangés.
+
+### Prérequis, déploiement, debug
+
+Aucun réglage. DockPanel → Git Deploy → Redeploy, dans cet ordre : `majlistv-api` (migrations 115 et Audyn 006), `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+```bash
+# Rattrapage des descriptions
+docker logs --since 1h dockpanel-git-majlistv-transcriber 2>&1 | grep "\[description"
+# Combien de vidéos restent sans description
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT source, count(*) FILTER (WHERE description = '\'''\'') AS sans_description, count(*) FILTER (WHERE description = '\'''\'' AND meta_tries >= 3) AS abandonnees, count(*) AS total FROM talks GROUP BY 1 ORDER BY 1;"'
+```
+
+- « lecture impossible » dans le journal : YouTube bloque le serveur (cookies) ; nouvel essai 6 heures plus tard, 3 au plus.
+- « aucune description sur la vidéo » : la vidéo n'en a pas sur sa plateforme.
+- Une vidéo envoyée directement (fichier) sans description n'est pas concernée (pas de vidéo d'origine).
+
+**Tests.** `transcriber/tests/test_description_fill.py` (14 vérifications, ajouté à la suite CI : candidates, langue, jamais d'écrasement, envoi direct ignoré, 3 essais espacés) ; `api/tests/test_audyn_link.py` (90 vérifications, dont : description et auteur repris pour un son ajouté depuis un lien, jamais écrasés ; catégories réservées à l'administration, doublons refusés, écriture de la liste reprise, renommage suivi par les contenus, suppression sans perte de contenu, journal d'audit) ; `web/tests/test_audyn_categories_web.mjs`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe. **Non testé ici : une vraie vidéo YouTube** (pas d'accès à YouTube) — la lecture de la description par yt-dlp a été vérifiée sur le VPS.

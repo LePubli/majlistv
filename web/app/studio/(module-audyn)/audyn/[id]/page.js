@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
 import StudioTabs from '../../../../../components/StudioTabs';
+import { AudynCategoryPicker } from '../../../../../components/AudynCategories';
 import { uploadFile } from '../../../../../lib/upload';
 import { AUDIENCE_KEY, clock } from '../page';
 
@@ -176,7 +177,7 @@ export default function StudioAudynItem() {
         <label className="fld"><span>{t('ayAudience')}</span>
           <select value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value })}>{['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}</select>
         </label>
-        {field('category', t('ayCategory'), { maxLength: 80 })}
+        <AudynCategoryPicker id="ay-item-cat" value={f.category} onChange={(v) => setF({ ...f, category: v })} />
         <label className="fld"><span>{t('ayLang')}</span><select value={f.language} onChange={(e) => setF({ ...f, language: e.target.value })}>{LANGS.map((l) => <option key={l} value={l}>{l}</option>)}</select></label>
         <label className="fld"><span>{t('ayAccess')}</span>
           <select value={f.access} onChange={(e) => setF({ ...f, access: e.target.value })}>

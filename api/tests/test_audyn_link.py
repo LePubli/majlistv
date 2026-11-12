@@ -231,6 +231,46 @@ cur.execute("select title, author, description, status, cover_key is not null, (
 ok(it[0] == "Épisode 1" and it[1] == "La chaîne du podcast" and it[2].startswith("Dans cet épisode") and it[3] == "published" and it[4] and it[5] == 1, f"auteur, description, couverture repris de la vidéo ; publié ({it})")
 for m in made: requests.delete(f"{B}/studio/audyn/{m[0]}", headers=A)
 
+# G2) son ajouté depuis UN lien (création depuis un lien) : auteur et description repris s'ils sont vides, jamais écrasés
+one = requests.post(B + "/studio/audyn", headers=A, json={"title": f"Un lien {tag}"}).json()["id"]
+cur.execute("update audyn_imports set status='canceled' where status='pending'")
+def job_on(item):  # même demande que POST /link-imports (l'API refuse les adresses locales du serveur de test)
+    cur.execute("""insert into audyn_imports(item_id, kind, source_url, origin, audio_lang, cover, requested_by, requested_by_name, split)
+                   values (%s,'audio',%s,'web','fr','none',%s,'Admin <admin@test.local>',false)""", (item, BASE + "/v12.mp4", admin))
+job_on(one)
+ok(once(TEST_META_JSON=json.dumps({"uploader": "Chaîne X", "description": "Description de la vidéo"})).get("claimed"), "son traité")
+cur.execute("select author, description from audyn_items where id=%s", (one,)); ok(cur.fetchone() == ("Chaîne X", "Description de la vidéo"), "auteur et description de la vidéo repris")
+requests.patch(f"{B}/studio/audyn/{one}", headers=A, json={"description": "Ma description"})
+job_on(one)
+once(TEST_META_JSON=json.dumps({"uploader": "Autre", "description": "Autre texte"}))
+cur.execute("select author, description from audyn_items where id=%s", (one,)); ok(cur.fetchone() == ("Chaîne X", "Ma description"), "ce qui est déjà rempli n'est pas écrasé")
+
+# G3) catégories gérées
+CU = B + "/studio/audyn/categories"
+ok(requests.get(CU, headers=O).status_code == 403, "catégories : réservées à l'administration")
+cats = requests.get(CU, headers=A).json()["categories"]
+ok(any(c["name"] == "Ma série" for c in cats), "la catégorie choisie à l'import de la chaîne a rejoint la liste")
+r = requests.post(CU, headers=A, json={"name": f"  Contes {tag} "}); ok(r.status_code == 201 and r.json()["name"] == f"Contes {tag}", "catégorie créée (espaces retirés)")
+cid = r.json()["id"]
+ok(requests.post(CU, headers=A, json={"name": f"CONTES {tag}"}).status_code == 409, "doublon (majuscules comprises) refusé")
+ok(requests.post(CU, headers=A, json={"name": "  "}).status_code == 400, "nom vide refusé")
+requests.patch(f"{B}/studio/audyn/{one}", headers=A, json={"category": f"contes {tag}"})
+cur.execute("select category from audyn_items where id=%s", (one,)); ok(cur.fetchone()[0] == f"Contes {tag}", "contenu : écriture de la liste reprise (« contes » → « Contes »)")
+two = requests.post(B + "/studio/audyn", headers=A, json={"title": f"Deux {tag}", "category": f"Nouvelle {tag}"}).json()["id"]
+ok(any(c["name"] == f"Nouvelle {tag}" for c in requests.get(CU, headers=A).json()["categories"]), "catégorie tapée à la création : ajoutée à la liste")
+c = [c for c in requests.get(CU, headers=A).json()["categories"] if c["id"] == cid][0]; ok(c["count"] == 1, "nombre de contenus par catégorie")
+nid = [c for c in requests.get(CU, headers=A).json()["categories"] if c["name"] == f"Nouvelle {tag}"][0]["id"]
+ok(requests.patch(f"{CU}/{cid}", headers=A, json={"name": f"nouvelle {tag}"}).status_code == 409, "renommer vers une catégorie existante : refusé")
+r = requests.patch(f"{CU}/{cid}", headers=A, json={"name": f"Histoires {tag}"}); ok(r.status_code == 200 and r.json()["count"] == 1, "catégorie renommée")
+cur.execute("select category from audyn_items where id=%s", (one,)); ok(cur.fetchone()[0] == f"Histoires {tag}", "ses contenus suivent le nouveau nom")
+r = requests.delete(f"{CU}/{nid}", headers=A); ok(r.status_code == 200 and r.json()["uncategorized"] == 1, "catégorie supprimée")
+cur.execute("select category from audyn_items where id=%s", (two,)); ok(cur.fetchone()[0] == "", "ses contenus restent, sans catégorie")
+ok(requests.delete(f"{CU}/{nid}", headers=A).status_code == 404 and requests.patch(f"{CU}/999999", headers=A, json={"name": "x"}).status_code == 404, "catégorie inconnue : 404")
+import time; time.sleep(0.5)
+cur.execute("select summary from audit_log where summary like %s", (f"%Histoires {tag}%",)); ok(cur.fetchone() is not None, "renommage noté au journal d'audit")
+requests.delete(f"{CU}/{cid}", headers=A)
+for x in (one, two): requests.delete(f"{B}/studio/audyn/{x}", headers=A)
+
 # H) suppression du contenu : chapitres, couverture et demandes effacés
 ok(requests.delete(f"{B}/studio/audyn/{iid}", headers=A).status_code == 204, "contenu supprimé")
 cur.execute("select count(*) from audyn_imports where item_id=%s", (iid,)); ok(cur.fetchone()[0] == 0 and not keys(f"audyn/{iid}/"), "demandes et fichiers effacés avec le contenu")

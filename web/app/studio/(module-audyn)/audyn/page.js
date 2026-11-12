@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import StudioTabs from '../../../../components/StudioTabs';
 import AudynChannelImport from '../../../../components/AudynChannelImport';
+import { AudynCategoryManager, AudynCategoryPicker } from '../../../../components/AudynCategories';
 
 export const AUDIENCE_KEY = { kids: 'ayAudKids', adults: 'ayAudAdults', both: 'ayAudBoth' };
 export const clock = (sec) => { const s = Math.round(sec || 0); const h = Math.floor(s / 3600); return `${h ? h + ' h ' : ''}${String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, '0')} min`; };
@@ -19,7 +20,8 @@ export default function StudioAudyn() {
   const [rights, setRights] = useState(null);
   const [open, setOpen] = useState(false);
   const [chan, setChan] = useState(false); // « Importer une chaîne ou une playlist »
-  const [f, setF] = useState({ title: '', audience: 'adults', author: '', description: '' });
+  const [cats, setCats] = useState(false); // panneau « Catégories »
+  const [f, setF] = useState({ title: '', audience: 'adults', author: '', description: '', category: '' });
   const [link, setLink] = useState('');
   const [frLink, setFrLink] = useState(true);
   const [splitLink, setSplitLink] = useState(true);
@@ -60,6 +62,7 @@ export default function StudioAudyn() {
       <div className="studio-head">
         <h1 className="studio-title">{t('ayNav')}</h1>
         <div className="ay-head-btns">
+          <button className="btn ghost" onClick={() => setCats((v) => !v)} aria-expanded={cats}>{t('ayCatOpen')}</button>
           <button className="btn ghost" onClick={() => setChan((v) => !v)} aria-expanded={chan}>{t('ayChOpen')}</button>
           <button className="btn" onClick={() => setOpen((v) => !v)}>{t('ayNew')}</button>
         </div>
@@ -67,6 +70,7 @@ export default function StudioAudyn() {
       <StudioTabs />
       <p className="meta">{t('ayIntro')}</p>
       {data && !data.storage && <p className="error" role="alert">{t('ayNoStorage')}</p>}
+      {cats && <AudynCategoryManager onChange={reload} />}
       {chan && <AudynChannelImport onDone={reload} />}
       {open && (
         <form className="panel ay-form" onSubmit={create}>
@@ -82,6 +86,7 @@ export default function StudioAudyn() {
               {['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}
             </select>
           </label>
+          <AudynCategoryPicker id="ay-new-cat" value={f.category} onChange={(v) => setF({ ...f, category: v })} />
           {link.trim() && (
             <>
               <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
