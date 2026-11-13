@@ -61,6 +61,8 @@ PUBLIC_WRITES = {
     ("POST", "/ads/:id/click"), ("POST", "/ads/:id/impression"), ("POST", "/ads/:id/skip"), ("POST", "/shorts/:id/view"),
     ("POST", "/talks/:id/quiz/submit"), ("POST", "/talks/:id/report"), ("POST", "/talks/:id/quiz/questions/:qid/report"),
     ("POST", "/backup/report"),
+    # Application TV : la télé, pas encore connectée, demande un code puis attend sa validation (secret de 32 octets, 13/11).
+    ("POST", "/auth/tv/start"), ("POST", "/auth/tv/poll"),
 }
 
 anon, member, organizer, moderator = {}, user("user"), user("organizer"), user("moderator")
