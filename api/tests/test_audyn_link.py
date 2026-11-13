@@ -260,7 +260,8 @@ cur.execute("update audyn_imports set source_url=%s, origin='web' where item_id=
 res = once(TEST_META_JSON=json.dumps({"title": "Épisode 1 (titre vidéo)", "uploader": "La chaîne du podcast", "description": "Dans cet épisode, nous parlons de…"}), TEST_THUMB=BASE + "/thumb.jpg")
 ok(res.get("claimed"), "épisode traité")
 cur.execute("select title, author, description, status, cover_key is not null, (select count(*) from audyn_chapters c where c.item_id = i.id) from audyn_items i where id=%s", (ep,)); it = cur.fetchone()
-ok(it[0] == "Épisode 1" and it[1] == "La chaîne du podcast" and it[2].startswith("Dans cet épisode") and it[3] == "published" and it[4] and it[5] == 1, f"auteur, description, couverture repris de la vidéo ; publié ({it})")
+ok(it[0] == "Épisode 1 (titre vidéo)" and it[1] == "La chaîne du podcast" and it[2].startswith("Dans cet épisode") and it[3] == "published" and it[4] and it[5] == 1,
+   f"titre (13/11 : celui de la vidéo, en français, remplace celui de la liste), auteur, description, couverture repris de la vidéo ; publié ({it})")
 for m in made: requests.delete(f"{B}/studio/audyn/{m[0]}", headers=A)
 # Catégorie propre à une vidéo (sinon celle de la liste)
 r = C({"ids": ["ep2xxxxxxxx"], "rights": True, "category": "Ma série", "categories": {"ep2xxxxxxxx": f"  Épisodes spéciaux {tag} "}})
@@ -323,6 +324,25 @@ r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "draft"}).json
 r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "delete"}).json(); ok(r["done"] == 2, "suppression groupée")
 cur.execute("select count(*) from audyn_items where id in (%s,%s)", (b1, b2)); ok(cur.fetchone()[0] == 0, "contenus supprimés (et leurs demandes)")
 cur.execute("select id from audyn_categories where name=%s", (f"lot {tag}",)); [requests.delete(f"{B}/studio/audyn/categories/{x[0]}", headers=A) for x in cur.fetchall()]
+
+# G2d) titres « repris de la vidéo » (meta_auto) : remplacés par ceux de la vidéo (français), jamais après une modification à la main
+m1 = requests.post(B + "/studio/audyn", headers=A, json={"title": f"English title {tag}"}).json()["id"]
+cur.execute("update audyn_items set meta_auto = true, author = 'Old', description = 'Old desc' where id=%s", (m1,))
+cur.execute("""insert into audyn_imports(item_id, kind, source_url, origin, audio_lang, cover, requested_by, requested_by_name, status, fill_meta)
+               values (%s,'audio',%s,'web','fr','none',%s,'Admin','done',true)""", (m1, BASE + "/v12.mp4", admin))
+ok(requests.post(B + "/studio/audyn/refresh-meta", headers=O, json={"ids": [m1]}).status_code == 403, "relire depuis la vidéo : réservé à l'administration")
+r = requests.post(B + "/studio/audyn/refresh-meta", headers=A, json={"ids": [m1, one]}).json()
+ok(r == {"queued": 1, "skipped": 1}, f"une demande « meta » (l'autre contenu n'est pas « repris de la vidéo ») ({r})")
+ok(requests.post(B + "/studio/audyn/refresh-meta", headers=A, json={"ids": [m1]}).json()["queued"] == 0, "pas de doublon tant que la demande attend")
+r = once(TEST_FETCH_INFO=json.dumps({"title": "Titre français de la vidéo", "uploader": "Chaîne FR", "description": "Description en français"}))
+ok(r.get("claimed"), f"demande « meta » traitée ({r})")
+cur.execute("select title, author, description, meta_auto from audyn_items where id=%s", (m1,))
+ok(cur.fetchone() == ("Titre français de la vidéo", "Chaîne FR", "Description en français", True), "titre, auteur et description remplacés par ceux de la vidéo")
+cur.execute("select count(*) from audyn_chapters where item_id=%s", (m1,)); ok(cur.fetchone()[0] == 0, "aucun son téléchargé")
+requests.patch(f"{B}/studio/audyn/{m1}", headers=A, json={"title": "Mon titre"})
+cur.execute("select meta_auto from audyn_items where id=%s", (m1,)); ok(cur.fetchone()[0] is False, "titre modifié à la main : plus repris de la vidéo")
+ok(requests.post(B + "/studio/audyn/refresh-meta", headers=A, json={"ids": [m1]}).json()["queued"] == 0, "plus de relecture après une modification à la main")
+requests.delete(f"{B}/studio/audyn/{m1}", headers=A)
 
 # G3) catégories gérées
 CU = B + "/studio/audyn/categories"

@@ -427,14 +427,14 @@ class ChapterGone(Exception):
 
 
 def video_meta(job, report):
-    """Auteur (nom de la chaîne) et description de la vidéo, pour un contenu créé depuis une chaîne ou une playlist."""
+    """Titre, auteur (nom de la chaîne) et description de la vidéo (demandés en français : cf. run)."""
     if job["origin"] == "archive":
         try:
             info = archive_audio(importer.archive_ident(job["source_url"]))
-            return {"author": info.get("author") or "", "description": info.get("description") or ""}
+            return {"title": info.get("title") or "", "author": info.get("author") or "", "description": info.get("description") or ""}
         except Exception:  # noqa: BLE001 — les informations sont un plus : leur absence ne fait pas échouer la demande
-            return {"author": "", "description": ""}
-    return {"author": report.get("uploader") or "", "description": report.get("description") or ""}
+            return {"title": "", "author": "", "description": ""}
+    return {"title": report.get("title") or "", "author": report.get("uploader") or "", "description": report.get("description") or ""}
 
 
 def finish_item(job, ctx, report):
@@ -443,9 +443,17 @@ def finish_item(job, ctx, report):
     les vidéos d'une playlist ajoutée à un contenu (la description d'un épisode ne décrit pas le contenu). Publié si demandé."""
     if job.get("fill_meta") or (not job.get("parent_id") and not job.get("replace_chapter")):
         m = video_meta(job, report)
-        ctx.q("""UPDATE audyn_items SET author = CASE WHEN author = '' THEN %s ELSE author END,
-                                        description = CASE WHEN description = '' THEN %s ELSE description END, updated_at = now()
-                 WHERE id = %s""", (re.sub(r"\s+", " ", m["author"]).strip()[:200], (m["description"] or "")[:4000], job["item_id"]))
+        title = re.sub(r"\s+", " ", m.get("title") or "").strip()[:200]
+        author = re.sub(r"\s+", " ", m["author"]).strip()[:200]
+        desc = (m["description"] or "")[:4000]
+        # meta_auto (import d'une chaîne, jamais modifié à la main) : titre, auteur et description REMPLACÉS par ceux de la vidéo
+        # (en français : les titres de la liste arrivaient en anglais avant le 13/11) ; sinon seulement remplis s'ils sont vides.
+        ctx.q("""UPDATE audyn_items SET
+                   title = CASE WHEN meta_auto AND %s <> '' THEN %s ELSE title END,
+                   author = CASE WHEN (meta_auto AND %s <> '') OR author = '' THEN %s ELSE author END,
+                   description = CASE WHEN (meta_auto AND %s <> '') OR description = '' THEN %s ELSE description END,
+                   updated_at = now()
+                 WHERE id = %s""", (title, title, author, author, desc, desc, job["item_id"]))
     if job.get("publish"):
         ctx.q("""UPDATE audyn_items SET status = 'published', updated_at = now()
                  WHERE id = %s AND status = 'draft' AND title <> '' AND EXISTS (SELECT 1 FROM audyn_chapters c WHERE c.item_id = audyn_items.id)""", (job["item_id"],))
@@ -532,6 +540,14 @@ def run(job, ctx):
             row = cur.fetchone()
         opts.update(external.metadata_language_options((row[0] if row else None) or "fr"))
         ctx.log(f"[audyn {jid}] {job['kind']} ({job['origin']}) : {job['source_url']}")
+        if job["kind"] == "meta":
+            info = external.fetch_info(job["source_url"], dict(opts, skip_download=True)) or {}
+            report = {"title": info.get("title"), "uploader": info.get("uploader") or info.get("channel"),
+                      "description": external.clean_description(info.get("description") or "")}
+            finish_item(dict(job, publish=False), ctx, report)
+            ctx.q("UPDATE audyn_imports SET status = 'done', progress = 100, finished_at = now(), updated_at = now() WHERE id = %s AND status = 'downloading'", (job["id"],))
+            ctx.log(f"[audyn {jid}] titre et description relus depuis la vidéo : {str(report.get('title') or '')[:80]}")
+            return
         if job["kind"] == "cover":
             thumb = find_thumbnail(job, {}, opts)
             if not thumb:

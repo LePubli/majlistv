@@ -180,6 +180,24 @@ export default async function audynRoutes(app) {
     return reply.send({ done: r.rowCount, skipped: ids.length - r.rowCount });
   });
 
+  // Titre, auteur et description relus depuis la vidéo d'origine (en français quand YouTube le propose), sans retélécharger le son :
+  // seulement les contenus dont ces informations n'ont pas été modifiées à la main (meta_auto) et qui viennent d'une vidéo.
+  app.post('/studio/audyn/refresh-meta', adminOnly, async (req) => {
+    const { ids } = z.object({ ids: z.array(z.guid()).min(1).max(500) }).strict().parse(req.body ?? {});
+    const who = await userLabel(req.user.sub);
+    const r = await pool.query(
+      `INSERT INTO audyn_imports(item_id, kind, source_url, origin, cover, split, fill_meta, requested_by, requested_by_name)
+       SELECT i.id, 'meta', a.source_url, a.origin, 'none', false, true, $2, $3
+         FROM audyn_items i
+         JOIN LATERAL (SELECT source_url, origin FROM audyn_imports x WHERE x.item_id = i.id AND x.kind = 'audio' AND x.parent_id IS NULL
+                        ORDER BY x.created_at LIMIT 1) a ON true
+        WHERE i.id = ANY($1::uuid[]) AND i.meta_auto
+          AND NOT EXISTS (SELECT 1 FROM audyn_imports p WHERE p.item_id = i.id AND p.kind = 'meta' AND p.status IN ('pending', 'downloading'))`,
+      [[...new Set(ids)], req.user.sub, who]);
+    req.auditSummary = `Audyn : titre et description relus depuis la vidéo pour ${r.rowCount} contenu(s)`;
+    return { queued: r.rowCount, skipped: ids.length - r.rowCount };
+  });
+
   app.get('/studio/audyn/:id', adminOnly, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const r = (await pool.query('SELECT * FROM audyn_items WHERE id = $1', [id])).rows[0];
@@ -204,6 +222,8 @@ export default async function audynRoutes(app) {
     const put = (col, v) => { args.push(v); set.push(`${col} = $${args.length}`); };
     for (const k of ['title', 'narrator', 'author']) if (b[k] !== undefined) put(k, clean(b[k], 200));
     if (b.description !== undefined) put('description', b.description);
+    // Titre, auteur ou description modifiés à la main : ils ne seront plus remplacés par ceux de la vidéo.
+    if (['title', 'author', 'description'].some((k) => b[k] !== undefined && String(b[k]) !== String(cur[k] ?? ''))) set.push('meta_auto = false');
     if (b.audience !== undefined) put('audience', b.audience);
     if (b.category !== undefined) put('category', await canonCategory(pool, b.category));
     if (b.language !== undefined) put('language', b.language);
@@ -521,7 +541,7 @@ export default async function audynRoutes(app) {
         const e = todo[i];
         const category = await categoryOf(e);
         const item = (await client.query(
-          `INSERT INTO audyn_items(title, audience, category, language, access, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+          `INSERT INTO audyn_items(title, audience, category, language, access, created_by, meta_auto) VALUES ($1,$2,$3,$4,$5,$6,true) RETURNING id`,
           [clean(e.title || e.id, 200) || 'Épisode', b.audience, category, b.language, b.access, req.user.sub])).rows[0];
         await client.query(
           `INSERT INTO audyn_imports(item_id, seq, kind, source_url, origin, audio_lang, cover, split, fill_meta, publish, requested_by, requested_by_name)

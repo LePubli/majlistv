@@ -8927,3 +8927,30 @@ En bas : « Se connecter » (si déconnecté), Tarifs, langues, S'abonner / Se d
 **Installer.** Mise à jour du contenu : fermer et rouvrir l'application deux fois.
 
 **Tests.** `mobile/tests/accountRefresh.test.ts` (barre du bas, menu en trois groupes, entrées retirées, textes) ; `mobile/tests/practice.test.ts` ; `npm run check` (275 tests + typage). **Non vérifié à l'écran** (pas d'appareil Android ici).
+
+## Audyn — titres et descriptions en français repris de la vidéo (13/11)
+
+**Constat.** Les contenus créés par l'import d'une chaîne gardaient le titre de la liste YouTube, en anglais (avant la correction des listes en français), et la description lue en anglais.
+
+**Correction.**
+- Nouveau repère `audyn_items.meta_auto` (migration du module `007_meta_auto.sql`, module 1.5.0) : vrai pour un contenu créé par l'import d'une chaîne ; **remis à faux dès que le titre, l'auteur ou la description sont modifiés à la main**.
+- Récupération du son (`transcriber/src/audyn_import.py`, `finish_item`) : pour un contenu `meta_auto`, **titre, auteur et description sont remplacés** par ceux de la vidéo, demandés en français ; sinon, seulement remplis s'ils sont vides (comme avant). Les **80 imports relancés** prennent donc le titre français.
+- Contenus **déjà importés** : Studio → Audyn → cocher → **« Reprendre titre et description de la vidéo »** (nouvelle demande `meta` : lecture de la vidéo sans retélécharger le son ; route `POST /studio/audyn/refresh-meta`). Ignorés : contenus modifiés à la main ou sans vidéo d'origine.
+- La migration marque `meta_auto` tous les contenus déjà créés par un import de chaîne.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy : `majlistv-api`, `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+Puis Studio → Audyn → filtre « Publiés » ou « Brouillons » → cocher tout → « Reprendre titre et description de la vidéo ». Suivi :
+
+```bash
+docker logs --since 30m dockpanel-git-majlistv-transcriber 2>&1 | grep "titre et description relus" | tail -20
+```
+
+**Tests.** `api/tests/test_audyn_link.py` (demande « meta » : réservée à l'administration, sans doublon, titre/auteur/description remplacés sans télécharger de son, plus jamais après une modification à la main ; import d'une chaîne : titre de la vidéo) ; `transcriber/tests/test_audyn_import.py`. **Non testé sur une vraie vidéo YouTube.**

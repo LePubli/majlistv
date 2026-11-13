@@ -141,6 +141,7 @@ export default function StudioAudynItem() {
     if (j.status === 'downloading') return t('ayLinkStRun').replace('{n}', j.progress);
     if (j.status === 'done' && j.added) return t('ayLinkList').replace('{n}', j.added);
     if (j.status === 'done' && j.kind === 'cover') return t('ayLinkCoverDone');
+    if (j.status === 'done' && j.kind === 'meta') return t('ayMetaDone');
     if (j.status === 'done' && j.replaceChapter) return t('ayResplitDone').replace('{n}', j.parts);
     if (j.status === 'done' && j.parts > 1) return t(j.audioUsed === 'fr' ? 'ayLinkPartsFr' : 'ayLinkParts').replace('{n}', j.parts);
     if (j.status === 'done') return j.audioUsed === 'fr' ? t('ayLinkDoneFr') : t('ayLinkStDone');
@@ -234,7 +235,7 @@ export default function StudioAudynItem() {
           <ul className="ay-jobs" aria-live="polite">
             {jobs.map((j) => (
               <li key={j.id} className={j.status === 'failed' ? 'bad' : ''}>
-                <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
+                <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.kind === 'meta' ? t('ayMetaJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
                 <span className="meta">{jobLabel(j)}</span>
                 {j.active && <button type="button" className="btn ghost sm" onClick={() => cancelJob(j)}>{t('ayLinkCancel')}</button>}
                 {j.status === 'failed' && <button type="button" className="btn ghost sm" onClick={() => retryJob(j)}>{t('ayRetry')}</button>}

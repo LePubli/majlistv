@@ -92,6 +92,13 @@ export default function StudioAudyn() {
     setSel(new Set()); setBulkCat(null); reload();
     setTimeout(() => setFlash(''), 6000);
   };
+  // Titre, auteur et description relus depuis la vidéo (en français), pour les contenus jamais modifiés à la main.
+  const refreshMeta = async () => {
+    const r = await call('/studio/audyn/refresh-meta', { method: 'POST', body: JSON.stringify({ ids: [...sel] }) });
+    if (!r.ok) { setFlash(r.data?.error || t('errGeneric')); return; }
+    setFlash(t('ayBkMetaDone').replace('{n}', r.data.queued) + (r.data.skipped ? ` ${t('ayBkMetaSkipped').replace('{n}', r.data.skipped)}` : ''));
+    setSel(new Set()); reload(); setTimeout(() => setFlash(''), 8000);
+  };
   const showRights = async () => { const r = await call('/studio/audyn-rights'); setRights(r.ok ? r.data : []); };
   const date = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   return (
@@ -171,6 +178,7 @@ export default function StudioAudyn() {
               <strong>{t('ayBkSelected').replace('{n}', sel.size)}</strong>
               <button type="button" className="btn" onClick={() => bulk('publish')}>{t('ayBkPublish')}</button>
               <button type="button" className="btn ghost" onClick={() => bulk('draft')}>{t('ayBkDraft')}</button>
+              <button type="button" className="btn ghost" onClick={refreshMeta}>{t('ayBkMeta')}</button>
               {bulkCat === null ? (
                 <button type="button" className="btn ghost" onClick={() => setBulkCat('')}>{t('ayBkCategory')}</button>
               ) : (

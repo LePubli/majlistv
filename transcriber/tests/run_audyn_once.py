@@ -42,6 +42,9 @@ if os.environ.get("TEST_BOT"):  # YouTube qui bloque le serveur (message en fran
     def bot(*a, **k):
         raise Exception("ERROR: [youtube] WMryLoMEfxE: Connectez-vous pour confirmer que vous n'êtes pas un robot. Cela nous permet de protéger notre communauté")
     audyn_import.fetch_audio = bot
+if os.environ.get("TEST_FETCH_INFO"):  # informations lues par yt-dlp sans téléchargement (demande « meta »)
+    _info = json.loads(os.environ["TEST_FETCH_INFO"])
+    external.fetch_info = lambda url, opts: _info
 if os.environ.get("TEST_ARCHIVE_JSON"):
     meta = json.loads(os.environ["TEST_ARCHIVE_JSON"])
     external._archive_get = lambda path, params=None: meta
