@@ -68,9 +68,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Fabriquer l'APK (arm64)
+      # 64 bits (arm64-v8a : téléphones récents) ET 32 bits (armeabi-v7a : autoradios Android, tablettes et téléphones d'entrée de
+      # gamme, ex. processeur Unisoc UIS8141E) : sans le 32 bits, Android répond « Application non installée ». APK plus lourd (~ +40 %).
+      - name: Fabriquer l'APK (arm64 + armv7)
         working-directory: mobile/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 
       - name: Nommer l'APK
         id: name

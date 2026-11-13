@@ -8864,3 +8864,15 @@ bash /root/verify-deploy.sh
 ```
 
 **Tests.** `api/tests/test_audyn_link.py` (liste : couverture et état ; actions groupées : réservées à l'administration, action inconnue refusée, publication limitée aux contenus publiables, catégorie, brouillon, suppression) ; tous les tests du site ; écrans vérifiés à 1440 px et 390 px, en français et en arabe (aucun débordement, aucune erreur).
+
+## Application Android : appareils 32 bits (autoradios) (13/11)
+
+**Constat (13/11).** Sur l'autoradio Android d'Epok (processeur Unisoc UIS8141E, 32 bits ; build OPM2 = Android 8.1, même si l'écran affiche « 13.0 »), l'APK affichait **« Application non installée »**. L'APK n'était construit que pour les processeurs 64 bits (`-PreactNativeArchitectures=arm64-v8a`).
+
+**Correction.** `.github/workflows/mobile-android.yml` : APK construit pour **arm64-v8a et armeabi-v7a** (téléphones récents + autoradios, tablettes et téléphones d'entrée de gamme). APK plus lourd (environ 70 Mo → une centaine de Mo ; limite du serveur : 400 Mo). Version 0.18.1 (nouvel APK à installer).
+
+**À savoir.** Un autoradio Android n'est pas Android Auto : l'application s'y installe comme sur une tablette (écran 1280 × 720 en paysage), Audyn s'écoute depuis l'application. Processeur modeste (4 cœurs 1,3 GHz) : l'application peut y être plus lente que sur un téléphone. Android Auto (téléphone branché à une voiture compatible) reste l'autre façon d'écouter Audyn en voiture.
+
+**Installer.** GitHub → Actions → « Application Android (APK) » → dernière exécution → fichier `mejliss-tv-android` (ou le lien de téléchargement du site) ; copier l'APK sur l'autoradio (clé USB ou téléchargement), l'ouvrir, autoriser les « sources inconnues » si demandé.
+
+**Tests.** `npm run check` (application) ; APK fabriqué par GitHub Actions. **Non testé ici : l'installation sur l'autoradio** (essai à faire par Epok).

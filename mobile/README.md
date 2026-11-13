@@ -94,7 +94,7 @@ Bouton « Télécharger » dans la fiche (audio seul / 360p / 720p) : le serveur
 3. Ouvrir l'exécution terminée → en bas, **Artifacts** → télécharger `mejliss-tv-android` (un zip contenant `mejliss-tv-<version>-<commit>.apk`).
 4. Sur le téléphone Android : copier l'APK, l'ouvrir, autoriser « Installer des applications inconnues » pour l'application qui l'ouvre (Fichiers, Chrome…), installer.
 
-L'APK est signé avec la clé de test d'Android : **installable directement, mais pas publiable sur Google Play** (la clé de publication sera créée à l'étape « magasins »). Il est construit pour les téléphones 64 bits (arm64), c'est-à-dire presque tous les téléphones récents.
+L'APK est signé avec la clé de test d'Android : **installable directement, mais pas publiable sur Google Play** (la clé de publication sera créée à l'étape « magasins »). Il est construit pour les appareils 64 bits (arm64) **et 32 bits (armv7)** : téléphones récents, mais aussi autoradios Android, tablettes et téléphones d'entrée de gamme (depuis le 13/11 ; avant, ces appareils affichaient « Application non installée »).
 
 ## Lancement (développement)
 
