@@ -27,6 +27,7 @@ import { AudynPlayerProvider } from '@/lib/audynPlayer';
 import { AudynMiniBar } from '@/components/AudynMiniBar';
 import { colors } from '@/lib/theme';
 import { installGlobalErrorReporting, reportAppError } from '@/lib/reportError';
+import { isTV, tvRouteFor } from '@/lib/tv';
 import { Pressable, Text, View } from 'react-native';
 import type { ErrorBoundaryProps } from 'expo-router';
 
@@ -74,6 +75,16 @@ function KidLock() {
   return null;
 }
 
+// Télé (Android TV / Google TV) : tout écran hors de l'application TV (dossier tv/) ramène à son accueil.
+function TvLock() {
+  const segments = useSegments() as string[];
+  useEffect(() => {
+    const to = tvRouteFor(segments);
+    if (to) router.replace(to as never);
+  }, [segments]);
+  return null;
+}
+
 function Shell() {
   const { ready, dirStyle, skin } = useSession();
   const kidState = useKid();
@@ -89,6 +100,19 @@ function Shell() {
   const done = ready && kidState.ready && (fontsLoaded || !!fontError);
   useEffect(() => { if (done) void SplashScreen.hideAsync(); }, [done]);
   if (!done) return null;
+  // Télé : écrans pensés pour la télécommande (src/app/tv) ; rien de ce qui suit (bandeaux du téléphone, pause de prière, publicités).
+  if (isTV()) {
+    return (
+      <>
+        <StatusBar hidden />
+        <TvLock />
+        <AppUpdate />
+        <Stack key={skin} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack.Screen name="tv" />
+        </Stack>
+      </>
+    );
+  }
   // Stack key={skin} : quand l'administrateur change de thème, toute l'application est redessinée avec les nouvelles couleurs.
   return (
     <>

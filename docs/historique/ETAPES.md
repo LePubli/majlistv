@@ -9003,3 +9003,37 @@ Demande d'Epok du 13/11 : jouer l'adhan à l'heure de la prière même quand le 
 **Installer.** Mise à jour du contenu : fermer et rouvrir l'application deux fois, puis activer l'interrupteur (les rappels sont reprogrammés aussitôt).
 
 **Tests.** `mobile/tests/prayerAlert.test.ts` (canaux « alarm », option sans effet hors mode adhan) ; `npm run check` (277 tests + typage). **Non testé sur un téléphone** : à essayer en mettant le téléphone en silencieux avant l'heure d'une prière (ou avec un horaire proche).
+
+## Application TV — étape TV-1 : socle, connexion par code, accueil, lecture (13/11)
+
+Décisions d'Epok (13/11) : **vraie application TV** (même code que l'application du téléphone, écrans pensés pour la télécommande) ; au départ : **vidéos, chaînes en direct, Audyn, Kids** ; connexion **par code à valider** sur le téléphone ou le site.
+
+**Découpage.** TV-1 (cette étape) : socle, connexion par code, accueil en rangées, fiche, lecture et reprise · TV-2 : catalogue et recherche · TV-3 : chaînes en direct et Audyn · TV-4 : Kids.
+
+**Ce que fait TV-1.**
+- **Une seule application** (version 0.19.0) : installée sur une télé Android TV / Google TV, elle apparaît dans le lanceur de la télé (bannière Mejliss TV) et affiche ses **écrans TV** (`mobile/src/app/tv/`) ; sur un téléphone, rien ne change.
+- **Menu à gauche** (Accueil, Mon compte / Se connecter), atteint avec la flèche gauche ; l'élément choisi a un contour doré.
+- **Accueil** : vidéo à la une (« ▶ Regarder »), « Continuer à regarder », puis les rangées de l'accueil du site ; flèches haut / bas = rangée, gauche / droite = vidéo.
+- **Fiche** : image, titre, intervenant, durée, description ; « Regarder » / « Reprendre » / « Depuis le début » ; vidéo réservée aux abonnés : message (l'abonnement se prend sur le site).
+- **Lecteur plein écran** : vidéos du serveur avec le lecteur natif (commandes à la télécommande : OK = lecture / pause, gauche / droite = reculer / avancer) ; YouTube / Vimeo / Dailymotion avec le lecteur de la plateforme et nos boutons « ⟲ 10 s », « Lecture / Pause », « 10 s ⟳ » ; **reprise synchronisée** avec le site et le téléphone ; « Retour » enregistre la position.
+- **Connexion par code** : la télé affiche un code de 8 caractères et un QR code ; sur le téléphone ou l'ordinateur (déjà connecté), page **/tv** du site : saisir le code (prérempli par le QR code), « Connecter la télé » ; la télé se connecte toute seule. Code valable 10 minutes, une seule fois ; refus possible.
+
+**Fichiers.** API : migration `117_tv_login.sql` (table `tv_logins`), `api/src/routes/tvLogin.js` (`POST /auth/tv/start`, `POST /auth/tv/poll`, `GET /auth/tv/code/:code`, `POST /auth/tv/approve`). Site : `web/app/tv/page.js`, textes `tv*`. Application : `plugins/withAndroidTV.js` (écran tactile et « leanback » non obligatoires, catégorie LEANBACK_LAUNCHER, bannière `assets/tv-banner.png` 320 × 180), `src/lib/tv.ts` + `tvRules.ts`, `src/lib/qr.ts` (QR code en JavaScript pur, `qrcode-generator` 1.4.4, licence MIT), `src/components/tv/` (Focusable, TvCard, TvShell, QrCode), `src/app/tv/` (accueil, fiche, lecteur, compte), `src/app/_layout.tsx` (sur une télé : écrans TV seulement), textes `tv.*`.
+
+**Installer sur une télé.**
+1. Redéployer `majlistv-api` (migration 117) puis `majlistv-web` ; commandes VPS habituelles :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+2. Sur la télé (Android TV / Google TV) : installer l'application « Downloader » (magasin de la télé), autoriser l'installation d'applications inconnues pour Downloader, ouvrir l'adresse de téléchargement de l'APK (page « Télécharger l'application » du site), installer.
+3. Ouvrir Mejliss TV, « Se connecter », valider le code depuis le téléphone (QR code) ou le site (/tv).
+
+**Debug.**
+- L'application ne s'affiche pas dans le lanceur de la télé : version antérieure à 0.19.0.
+- « Code inconnu ou expiré » : le code a plus de 10 minutes ; « Nouveau code » sur la télé.
+- Vidéo YouTube : les boutons sous la vidéo pilotent le lecteur ; la télécommande ne pilote pas directement le lecteur YouTube intégré.
+
+**Tests.** `api/tests/test_tv_login.py` (ajouté à la suite CI : code, attente, validation, jeton remis une fois, refus, expiration, compte suspendu) ; `web/tests/test_tv_link_web.mjs` ; `mobile/tests/tv.test.ts` (règles, QR code, déclaration Android TV, bannière 320 × 180, écrans, textes) ; préconstruction Android vérifiée (manifeste : leanback, LEANBACK_LAUNCHER, bannière) ; APK fabriqué par GitHub Actions. **Non testé sur une vraie télé** (pas de télé ni d'émulateur Android TV ici) : navigation à la télécommande à vérifier par Epok.

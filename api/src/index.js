@@ -28,6 +28,7 @@ import legalRoutes from './routes/legal.js';
 import importRoutes from './routes/imports.js';
 import watchRoutes from './routes/watch.js';
 import twoFactorRoutes from './routes/twofactor.js'; // étape 31 : double authentification
+import tvLoginRoutes from './routes/tvLogin.js'; // application TV : connexion par code (migration 117)
 import healthRoutes from './routes/health.js'; // étape 29 : santé du serveur
 import backupRoutes from './routes/backup.js'; // étape 37 : rapports de sauvegarde
 import errorsRoutes from './routes/errors.js'; // étape 39 : suivi des erreurs
@@ -194,6 +195,7 @@ await app.register(errorsRoutes);
 await app.register(lifecycleRoutes);
 await app.register(gdprRoutes);
 await app.register(twoFactorRoutes);
+await app.register(tvLoginRoutes);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);
