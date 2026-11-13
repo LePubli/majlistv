@@ -959,3 +959,14 @@
 @media (max-width: 520px) { .ay-ch-ctl, .ay-ch-detail { padding-inline-start: 0; margin-inline-start: 0; } }
 .ay-failed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, transparent); }
 .ay-failed p { margin: 0; flex: 1 1 280px; color: #fff; }
+/* Studio → Audyn : liste en tableau comme « Contenus » (vignette, public, chapitres, état), filtres et actions groupées */
+.ay-sthumb { display: inline-flex; align-items: center; justify-content: center; font-size: 22px; background-color: var(--surface); }
+.ay-table-list td.ay-aud { color: var(--text-2); white-space: nowrap; }
+.ay-table-list td.ay-audio { white-space: nowrap; color: #fff; }
+.ay-table-list td.ay-audio small { display: block; color: var(--text-2); }
+.ay-cat-filter { min-height: 40px; max-width: 240px; }
+.ay-bk-cat { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ay-bk-cat .fld { margin: 0; flex-direction: row; align-items: center; gap: 8px; }
+.ay-bk-cat .fld > span:first-child { display: none; }
+.btn.ay-bk-del { color: #FF9C8C; }
+@media (max-width: 700px) { .ay-table-list th:nth-child(3), .ay-table-list td.ay-aud { display: none; } }

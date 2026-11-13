@@ -305,6 +305,25 @@ r = requests.post(B + "/studio/audyn/link-imports/retry-failed", headers=A); ok(
 cur.execute("select status, attempts, error from audyn_imports where id=%s", (fj,)); ok(cur.fetchone() == ("pending", 0, None), "relance : essais remis à zéro, erreur effacée")
 cur.execute("update audyn_imports set status='canceled' where status='pending'")
 
+# G2c) liste du Studio (couverture, état de la récupération) et actions groupées
+BU = B + "/studio/audyn/bulk"
+b1 = requests.post(B + "/studio/audyn", headers=A, json={"title": f"Lot 1 {tag}"}).json()["id"]
+b2 = requests.post(B + "/studio/audyn", headers=A, json={"title": f"Lot 2 {tag}"}).json()["id"]
+cur.execute("""insert into audyn_imports(item_id, kind, source_url, origin, audio_lang, cover, requested_by, requested_by_name, status)
+               values (%s,'audio','https://www.youtube.com/watch?v=xxxxxxxxxxx','youtube','fr','none',%s,'Admin','failed')""", (b1, admin))
+lst = {x["id"]: x for x in requests.get(B + "/studio/audyn", headers=A).json()["items"]}
+ok(lst[b1]["importStatus"] == "failed" and lst[b2]["importStatus"] is None and "coverUrl" in lst[b1], "liste : état de la récupération du son et couverture")
+ok(requests.post(BU, headers=O, json={"ids": [b1], "action": "draft"}).status_code == 403, "actions groupées : réservées à l'administration")
+ok(requests.post(BU, headers=A, json={"ids": [b1], "action": "nimporte"}).status_code == 400, "action inconnue refusée")
+r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "publish"}).json(); ok(r == {"done": 0, "skipped": 2}, f"publier : contenus sans son non publiés ({r})")
+r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "category", "category": f"lot {tag}"}).json(); ok(r["done"] == 2, "catégorie donnée aux 2 contenus")
+cur.execute("select category from audyn_items where id in (%s,%s)", (b1, b2)); ok({x[0] for x in cur.fetchall()} == {f"lot {tag}"}, "catégorie enregistrée")
+cur.execute("update audyn_items set status='published' where id=%s", (b2,))
+r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "draft"}).json(); ok(r == {"done": 1, "skipped": 1}, f"brouillon : seul le publié change ({r})")
+r = requests.post(BU, headers=A, json={"ids": [b1, b2], "action": "delete"}).json(); ok(r["done"] == 2, "suppression groupée")
+cur.execute("select count(*) from audyn_items where id in (%s,%s)", (b1, b2)); ok(cur.fetchone()[0] == 0, "contenus supprimés (et leurs demandes)")
+cur.execute("select id from audyn_categories where name=%s", (f"lot {tag}",)); [requests.delete(f"{B}/studio/audyn/categories/{x[0]}", headers=A) for x in cur.fetchall()]
+
 # G3) catégories gérées
 CU = B + "/studio/audyn/categories"
 ok(requests.get(CU, headers=O).status_code == 403, "catégories : réservées à l'administration")

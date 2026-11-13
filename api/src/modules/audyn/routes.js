@@ -113,10 +113,14 @@ export default async function audynRoutes(app) {
   app.get('/studio/audyn', adminOnly, async () => {
     const { rows } = await pool.query(
       `SELECT i.*, (SELECT count(*)::int FROM audyn_chapters c WHERE c.item_id = i.id) AS chapters,
-              (SELECT COALESCE(sum(duration_seconds), 0)::int FROM audyn_chapters c WHERE c.item_id = i.id) AS duration
+              (SELECT COALESCE(sum(duration_seconds), 0)::int FROM audyn_chapters c WHERE c.item_id = i.id) AS duration,
+              -- Dernière récupération du son depuis un lien : en attente, en cours, en échec (affiché dans la colonne « État »).
+              (SELECT a.status FROM audyn_imports a WHERE a.item_id = i.id AND a.kind = 'audio' ORDER BY a.created_at DESC LIMIT 1) AS import_status
          FROM audyn_items i ORDER BY i.created_at DESC`);
     return {
-      items: rows.map((r) => itemRow(r, { chapters: r.chapters, durationSeconds: r.duration })),
+      items: await Promise.all(rows.map(async (r) => itemRow(r, {
+        chapters: r.chapters, durationSeconds: r.duration, coverUrl: await cover(r), importStatus: r.import_status || null,
+      }))),
       storage: Boolean(storage), audiences: AUDIENCES,
       limits: { maxMb: await getNumber('mod_audyn_max_mb'), previewSeconds: await getNumber('mod_audyn_preview_seconds'), coverMb: COVER_MAX_MB },
     };
@@ -130,6 +134,50 @@ export default async function audynRoutes(app) {
       [clean(b.title, 200), clean(b.narrator, 200), clean(b.author, 200), b.description, b.audience, await canonCategory(pool, b.category), b.language, b.access, req.user.sub]);
     req.auditSummary = `Audyn : « ${rows[0].title} » créé`;
     return reply.code(201).send(itemRow(rows[0]));
+  });
+
+  // Actions sur plusieurs contenus (liste du Studio) : publier, repasser en brouillon, changer de catégorie, supprimer.
+  // Publier ne touche que les contenus publiables (au moins un chapitre, etc.) : les autres sont comptés à part.
+  const bulkBody = z.object({
+    ids: z.array(z.guid()).min(1).max(500),
+    action: z.enum(['publish', 'draft', 'category', 'delete']),
+    category: z.string().trim().max(80).optional(),
+  }).strict();
+  app.post('/studio/audyn/bulk', adminOnly, async (req, reply) => {
+    const b = bulkBody.parse(req.body ?? {});
+    const ids = [...new Set(b.ids)];
+    if (b.action === 'category') {
+      const category = await canonCategory(pool, b.category ?? '');
+      const r = await pool.query('UPDATE audyn_items SET category = $2, updated_at = now() WHERE id = ANY($1::uuid[])', [ids, category]);
+      req.auditSummary = `Audyn : catégorie « ${category || '—'} » donnée à ${r.rowCount} contenu(s)`;
+      return { done: r.rowCount, skipped: ids.length - r.rowCount };
+    }
+    if (b.action === 'draft') {
+      const r = await pool.query("UPDATE audyn_items SET status = 'draft', updated_at = now() WHERE id = ANY($1::uuid[]) AND status <> 'draft'", [ids]);
+      req.auditSummary = `Audyn : ${r.rowCount} contenu(s) repassé(s) en brouillon`;
+      return { done: r.rowCount, skipped: ids.length - r.rowCount };
+    }
+    if (b.action === 'publish') {
+      const items = (await pool.query("SELECT * FROM audyn_items WHERE id = ANY($1::uuid[]) AND status <> 'published'", [ids])).rows;
+      const ok = [];
+      for (const it of items) if (!publishError(it, await chaptersOf(it.id))) ok.push(it.id);
+      if (ok.length) await pool.query("UPDATE audyn_items SET status = 'published', updated_at = now() WHERE id = ANY($1::uuid[])", [ok]);
+      req.auditSummary = `Audyn : ${ok.length} contenu(s) publié(s)`;
+      return { done: ok.length, skipped: ids.length - ok.length };
+    }
+    // Suppression : fichiers du stockage effacés ensuite (sons, couvertures, envois inachevés).
+    const items = (await pool.query('SELECT id, cover_key FROM audyn_items WHERE id = ANY($1::uuid[])', [ids])).rows;
+    const keys = [];
+    for (const it of items) {
+      keys.push(...(await chaptersOf(it.id)).map((c) => c.audio_key));
+      if (it.cover_key) keys.push(it.cover_key);
+      const pending = (await pool.query("SELECT object_key, s3_upload_id FROM audyn_uploads WHERE item_id = $1 AND status = 'pending'", [it.id])).rows;
+      if (storage) for (const u of pending) await storage.send(new AbortMultipartUploadCommand({ Bucket: bucket, Key: u.object_key, UploadId: u.s3_upload_id })).catch(() => {});
+    }
+    const r = await pool.query('DELETE FROM audyn_items WHERE id = ANY($1::uuid[])', [items.map((x) => x.id)]);
+    await dropObjects(keys);
+    req.auditSummary = `Audyn : ${r.rowCount} contenu(s) supprimé(s)`;
+    return reply.send({ done: r.rowCount, skipped: ids.length - r.rowCount });
   });
 
   app.get('/studio/audyn/:id', adminOnly, async (req, reply) => {

@@ -8843,3 +8843,24 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 ```
 
 **Tests.** `transcriber/tests/test_external.py` (blocage reconnu en français et en anglais) ; `api/tests/test_audyn_link.py` (blocage : demande remise en attente sans compter l'essai, résultat « blocked » ; comptage, relance d'un import, relance de tous, réservé à l'administration) ; `web/tests/test_audyn_link_web.mjs`. **Non testé : avec de vrais cookies sur YouTube.**
+
+## Studio → Audyn : liste redessinée comme « Contenus » (13/11)
+
+Demande d'Epok du 13/11 : « pareil, la page Audyn (Studio) est moche ».
+
+**Ce qui change (`web/app/studio/(module-audyn)/audyn/page.js`).**
+- Liste en **tableau comme Studio → Contenus** : vignette (couverture), titre, auteur · catégorie, public, chapitres et durée, **état** (Publié, Brouillon, Sans son, Son en cours de récupération, Échec de la récupération du son), « Gérer ». Sur téléphone : cartes (même rendu que Contenus).
+- **Recherche** (titre, auteur, catégorie), **filtres** avec compteurs (Tous, Publiés, Brouillons, Sans son, Son en cours, Échecs) et **filtre par catégorie**.
+- **Cases à cocher + actions groupées** : Publier (seuls les contenus publiables : les autres sont comptés à part), Repasser en brouillon, Changer la catégorie (liste des catégories ou nouvelle), Supprimer (confirmation ; fichiers audio et couvertures effacés).
+- API : `GET /studio/audyn` renvoie la couverture (`coverUrl`) et l'état de la dernière récupération du son (`importStatus`) ; nouvelle route `POST /studio/audyn/bulk` (`{ ids, action: publish|draft|category|delete, category }`, 500 contenus au plus, journal d'audit).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy : `majlistv-api`, puis `majlistv-web`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Tests.** `api/tests/test_audyn_link.py` (liste : couverture et état ; actions groupées : réservées à l'administration, action inconnue refusée, publication limitée aux contenus publiables, catégorie, brouillon, suppression) ; tous les tests du site ; écrans vérifiés à 1440 px et 390 px, en français et en arabe (aucun débordement, aucune erreur).

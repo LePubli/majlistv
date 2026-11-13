@@ -2,7 +2,7 @@
 // Studio → Audyn : liste des contenus audio (livres audio adultes, histoires du soir enfants), création, journal des attestations de droits.
 // Création depuis un lien (facultatif) : titre, auteur et description repris de la vidéo ; le son devient le premier chapitre et
 // l'image de la vidéo la couverture (le travail se fait ensuite sur le serveur, suivi sur la page du contenu).
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
@@ -11,6 +11,15 @@ import AudynChannelImport from '../../../../components/AudynChannelImport';
 import { AudynCategoryManager, AudynCategoryPicker } from '../../../../components/AudynCategories';
 
 export const AUDIENCE_KEY = { kids: 'ayAudKids', adults: 'ayAudAdults', both: 'ayAudBoth' };
+const FILTERS = ['all', 'published', 'draft', 'noaudio', 'importing', 'failed'];
+// État d'un contenu dans la liste : récupération du son en cours ou en échec d'abord, puis publié / brouillon / sans son.
+export function itemState(i) {
+  if (i.importStatus === 'pending' || i.importStatus === 'downloading') return ['importing', 'run', 'ayStImporting'];
+  if (i.importStatus === 'failed' && !i.chapters) return ['failed', 'err', 'ayStFailed'];
+  if (i.status === 'published') return ['published', 'ok', 'ayPublished'];
+  if (!i.chapters) return ['noaudio', 'muted', 'ayStNoAudio'];
+  return ['draft', 'muted', 'ayDraft'];
+}
 export const clock = (sec) => { const s = Math.round(sec || 0); const h = Math.floor(s / 3600); return `${h ? h + ' h ' : ''}${String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, '0')} min`; };
 
 export default function StudioAudyn() {
@@ -29,6 +38,12 @@ export default function StudioAudyn() {
   const [info, setInfo] = useState(''); // '' | 'loading' | 'done' | 'none'
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [catF, setCatF] = useState(''); // filtre par catégorie ('' = toutes, '__none__' = sans catégorie)
+  const [sel, setSel] = useState(new Set());
+  const [bulkCat, setBulkCat] = useState(null); // catégorie à donner aux contenus cochés (null = menu fermé)
+  const [flash, setFlash] = useState('');
   const [failed, setFailed] = useState(null); // imports en échec / en attente pour cause de blocage YouTube
   const loadFailed = () => call('/studio/audyn/link-imports/failed').then((r) => setFailed(r.ok ? r.data : null));
   const reload = () => { loadFailed(); return call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} })); };
@@ -57,6 +72,25 @@ export default function StudioAudyn() {
       if (!j.ok) { setBusy(false); router.push(`/studio/audyn/${r.data.id}?linkError=${encodeURIComponent(j.data?.error || '')}`); return; }
     }
     router.push(`/studio/audyn/${r.data.id}`);
+  };
+  const items = data?.items || [];
+  const catNames = useMemo(() => [...new Set(items.map((i) => i.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [items]);
+  const count = useMemo(() => { const c = {}; for (const i of items) { const k = itemState(i)[0]; c[k] = (c[k] || 0) + 1; } return c; }, [items]);
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return items.filter((i) => (filter === 'all' || itemState(i)[0] === filter)
+      && (!catF || (catF === '__none__' ? !i.category : i.category === catF))
+      && (!s || [i.title, i.author, i.narrator, i.category].some((x) => (x || '').toLowerCase().includes(s))));
+  }, [items, q, filter, catF]);
+  const allShown = shown.length > 0 && shown.every((i) => sel.has(i.id));
+  const toggleAll = () => setSel(allShown ? new Set() : new Set(shown.map((i) => i.id)));
+  const toggleOne = (id) => setSel((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const bulk = async (action, extra = {}) => {
+    const r = await call('/studio/audyn/bulk', { method: 'POST', body: JSON.stringify({ ids: [...sel], action, ...extra }) });
+    if (!r.ok) { setFlash(r.data?.error || t('errGeneric')); return; }
+    setFlash(t('ayBkDone').replace('{n}', r.data.done) + (r.data.skipped ? ` ${t(action === 'publish' ? 'ayBkSkippedPublish' : 'ayBkSkipped').replace('{n}', r.data.skipped)}` : ''));
+    setSel(new Set()); setBulkCat(null); reload();
+    setTimeout(() => setFlash(''), 6000);
   };
   const showRights = async () => { const r = await call('/studio/audyn-rights'); setRights(r.ok ? r.data : []); };
   const date = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -109,17 +143,83 @@ export default function StudioAudyn() {
         </form>
       )}
       {!data ? <p className="meta">{t('ayLoading')}</p> : data.items.length === 0 ? <p className="meta">{t('ayEmpty')}</p> : (
-        <ul className="ay-list">
-          {data.items.map((i) => (
-            <li key={i.id} className="panel ay-row">
-              <div>
-                <Link className="link u" href={`/studio/audyn/${i.id}`}><b>{i.title}</b></Link>
-                <p className="meta">{[i.narrator, t(AUDIENCE_KEY[i.audience]), i.category, `${i.chapters} ${t('ayChaptersN')}`, i.durationSeconds ? clock(i.durationSeconds) : ''].filter(Boolean).join(' · ')}</p>
-              </div>
-              <span className={`ay-badge ${i.status === 'published' ? 'on' : ''}`}>{i.status === 'published' ? t('ayPublished') : t('ayDraft')}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="studio-tools">
+            <label className="studio-search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <span className="sr-only">{t('search')}</span>
+              <input type="search" placeholder={t('aySearchStudio')} value={q} onChange={(e) => setQ(e.target.value)} />
+            </label>
+            <div className="pills" role="group" aria-label={t('filterBy')}>
+              {FILTERS.filter((k) => k === 'all' || count[k]).map((k) => (
+                <button key={k} type="button" aria-pressed={filter === k} className={filter === k ? 'pill on' : 'pill'} onClick={() => setFilter(k)}>
+                  {t('ayF_' + k)}{k !== 'all' ? ` (${count[k]})` : ` (${data.items.length})`}
+                </button>
+              ))}
+            </div>
+            {catNames.length > 0 && (
+              <select className="ay-cat-filter" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label={t('ayCategory')}>
+                <option value="">{t('ayAllCats')}</option>
+                {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="__none__">{t('ayCgNone')}</option>
+              </select>
+            )}
+          </div>
+          {flash && <p className="notice" role="status">{flash}</p>}
+          {sel.size > 0 && (
+            <div className="bk-bar" role="region" aria-label={t('bkEdit')}>
+              <strong>{t('ayBkSelected').replace('{n}', sel.size)}</strong>
+              <button type="button" className="btn" onClick={() => bulk('publish')}>{t('ayBkPublish')}</button>
+              <button type="button" className="btn ghost" onClick={() => bulk('draft')}>{t('ayBkDraft')}</button>
+              {bulkCat === null ? (
+                <button type="button" className="btn ghost" onClick={() => setBulkCat('')}>{t('ayBkCategory')}</button>
+              ) : (
+                <span className="ay-bk-cat">
+                  <AudynCategoryPicker id="ay-bk-cat" value={bulkCat} onChange={setBulkCat} />
+                  <button type="button" className="btn sm" onClick={() => bulk('category', { category: bulkCat.trim() })}>{t('ayBkApply')}</button>
+                </span>
+              )}
+              <button type="button" className="btn ghost ay-bk-del" onClick={() => { if (confirm(t('ayBkDeleteAsk').replace('{n}', sel.size))) bulk('delete'); }}>{t('bkRemove')}</button>
+              <button type="button" className="btn ghost" onClick={() => { setSel(new Set()); setBulkCat(null); }}>{t('bkClear')}</button>
+            </div>
+          )}
+          {shown.length === 0 ? <p className="meta">{t('noResults')}</p> : (
+            <div className="studio-table-wrap">
+              <table className="studio-table ay-table-list">
+                <thead>
+                  <tr>
+                    <th className="bk-col"><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} /></th>
+                    <th>{t('ayColItem')}</th><th>{t('ayAudience')}</th><th>{t('ayColAudio')}</th><th>{t('ayColState')}</th>
+                    <th><span className="sr-only">{t('colActions')}</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((i) => {
+                    const [, tone, label] = itemState(i);
+                    return (
+                      <tr key={i.id} className={sel.has(i.id) ? 'bk-sel' : undefined}>
+                        <td className="bk-col"><input type="checkbox" checked={sel.has(i.id)} onChange={() => toggleOne(i.id)} aria-label={i.title} /></td>
+                        <td>
+                          <Link href={`/studio/audyn/${i.id}`} className="studio-talk">
+                            <span className="studio-thumb ay-sthumb" style={i.coverUrl ? { backgroundImage: `url(${i.coverUrl})` } : undefined}>{!i.coverUrl && '🎧'}</span>
+                            <span className="studio-talk-text">
+                              <b dir="auto">{i.title}</b>
+                              <small dir="auto">{[i.author || i.narrator, i.category].filter(Boolean).join(' · ') || '—'}</small>
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="ay-aud">{t(AUDIENCE_KEY[i.audience])}</td>
+                        <td className="ay-audio">{i.chapters ? <>{i.chapters === 1 ? t('awChapter1') : t('awChapters').replace('{n}', i.chapters)}<small>{i.durationSeconds ? clock(i.durationSeconds) : ''}</small></> : '—'}</td>
+                        <td><span className={`pd-label ${tone}`}>{t(label)}</span></td>
+                        <td className="end"><Link href={`/studio/audyn/${i.id}`} className="manage">{t('manage')}</Link></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
       <h2 className="ay-h2">{t('ayRightsTitle')}</h2>
       {rights === null ? <button className="btn ghost sm" onClick={showRights}>{t('ayRightsShow')}</button> : rights.length === 0 ? <p className="meta">{t('ayRightsNone')}</p> : (
