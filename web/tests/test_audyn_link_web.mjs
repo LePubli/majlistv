@@ -49,3 +49,16 @@ assert.match(ch, /publish: false, rights: false/, 'publication automatique déco
 assert.match(ch, /fr: true, split: true/, 'voix française et découpage cochés d\'origine');
 assert.match(list, /\{chan && <AudynChannelImport onDone=\{reload\} \/>\}/, 'panneau ouvert depuis la page Audyn du Studio');
 console.log('OK — Audyn : import depuis un lien (Studio)');
+
+// 13/11 : YouTube qui bloque le serveur — imports en attente signalés, relance des échecs (un par un ou tous).
+{
+  const list = fs.readFileSync(join(web, 'app/studio/(module-audyn)/audyn/page.js'), 'utf8');
+  assert.match(list, /call\('\/studio\/audyn\/link-imports\/failed'\)/);
+  assert.match(list, /call\('\/studio\/audyn\/link-imports\/retry-failed', \{ method: 'POST' \}\)/);
+  assert.match(list, /failed\?\.waiting > 0 && <p className="error" role="alert">\{t\('ayBlockedWait'\)/);
+  const item = fs.readFileSync(join(web, 'app/studio/(module-audyn)/audyn/[id]/page.js'), 'utf8');
+  assert.match(item, /j\.status === 'failed' && <button type="button" className="btn ghost sm" onClick=\{\(\) => retryJob\(j\)\}>/);
+  const i18n = fs.readFileSync(join(web, 'lib/i18n.js'), 'utf8');
+  for (const k of ['ayRetry', 'ayRetryAll', 'ayFailedN', 'ayFailedBlocked', 'ayBlockedWait']) assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, k);
+  assert.match(i18n, /Admin → Paramètres → Vidéos YouTube, Vimeo et Dailymotion/, 'nom exact de la section des réglages');
+}

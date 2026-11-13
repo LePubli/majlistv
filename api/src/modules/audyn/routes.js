@@ -6,7 +6,7 @@
 //   PATCH|DELETE /studio/audyn/:id/chapters/:cid · PUT /studio/audyn/:id/chapters-order · GET /studio/audyn-rights
 //  Import depuis un lien (vidéo YouTube, archive.org… : seul le son est gardé, l'image peut devenir la couverture ; le travail est fait
 //  par le service de transcription, transcriber/src/audyn_import.py) :
-//   GET|POST /studio/audyn/:id/link-imports · POST /studio/audyn/link-imports/:jid/cancel · POST /studio/audyn/:id/cover-from-link
+//   GET|POST /studio/audyn/:id/link-imports · POST /studio/audyn/link-imports/:jid/cancel|retry · GET …/link-imports/failed · POST …/link-imports/retry-failed · POST /studio/audyn/:id/cover-from-link
 //   POST /studio/audyn/:id/chapters/:cid/resplit (« Redécouper » un chapitre importé selon les chapitres de la vidéo)
 //  Import d'une chaîne ou d'une playlist (un contenu audio par vidéo) : le transcripteur liste les vidéos (table import_jobs,
 //  purpose 'audyn'), l'administrateur coche celles à importer, chacune devient un contenu Audyn avec sa demande d'import :
@@ -536,6 +536,30 @@ export default async function audynRoutes(app) {
       req.auditSummary = `Audyn : catégorie « ${old.name} » supprimée (${left.rowCount} contenu(s) sans catégorie)`;
       return { deleted: true, uncategorized: left.rowCount };
     } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
+  });
+
+  // Imports qui ont échoué (ex. YouTube qui bloquait le serveur avant l'ajout des cookies) : nombre, puis relance.
+  const RETRY_SET = "status = 'pending', progress = 0, attempts = 0, error = NULL, note = NULL, finished_at = NULL, cancel_requested = false, updated_at = now()";
+  app.get('/studio/audyn/link-imports/failed', adminOnly, async () => {
+    const { rows } = await pool.query(`SELECT count(*)::int AS count,
+        count(*) FILTER (WHERE error ILIKE 'YouTube bloque%' OR error ILIKE '%pas un robot%' OR error ILIKE '%not a bot%')::int AS blocked,
+        (SELECT count(*)::int FROM audyn_imports WHERE status = 'pending' AND (error ILIKE 'YouTube bloque%')) AS waiting
+      FROM audyn_imports WHERE status = 'failed'`);
+    return rows[0];
+  });
+
+  app.post('/studio/audyn/link-imports/retry-failed', adminOnly, async (req) => {
+    const r = await pool.query(`UPDATE audyn_imports SET ${RETRY_SET} WHERE status = 'failed'`);
+    req.auditSummary = `Audyn : ${r.rowCount} import(s) échoué(s) relancé(s)`;
+    return { retried: r.rowCount };
+  });
+
+  app.post('/studio/audyn/link-imports/:jid/retry', adminOnly, async (req, reply) => {
+    const { jid } = jidSchema.parse(req.params);
+    const r = await pool.query(`UPDATE audyn_imports SET ${RETRY_SET} WHERE id = $1 AND status = 'failed' RETURNING *`, [jid]);
+    if (!r.rowCount) return reply.code(404).send({ error: 'Demande introuvable ou pas en échec' });
+    req.auditSummary = 'Audyn : import relancé';
+    return { import: jobRow(r.rows[0]) };
   });
 
   app.post('/studio/audyn/link-imports/:jid/cancel', adminOnly, async (req, reply) => {

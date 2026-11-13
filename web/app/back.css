@@ -957,3 +957,5 @@
 .ay-ch-fr { color: var(--gold, #E6A739); }
 .ay-ch-list { max-height: 640px; }
 @media (max-width: 520px) { .ay-ch-ctl, .ay-ch-detail { padding-inline-start: 0; margin-inline-start: 0; } }
+.ay-failed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, transparent); }
+.ay-failed p { margin: 0; flex: 1 1 280px; color: #fff; }

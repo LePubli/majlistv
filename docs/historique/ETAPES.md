@@ -8810,3 +8810,36 @@ bash /root/verify-deploy.sh
 **Debug.** Bannière sans description : `majlistv-api` pas redéployé (champ `summary`). Page vide : fonction Audyn désactivée (Admin → Fonctions).
 
 **Tests.** `web/tests/test_audyn_continue_web.mjs` (bannière, rangées, « Tout voir », grille, vignettes, une seule `.aw-bar`, menu « Audyn ») ; tous les tests du site ; écrans vérifiés à 1440 px et 390 px, en français et en arabe, avec 9 contenus de démonstration (pas de débordement, aucune erreur).
+
+## Audyn — YouTube qui bloque le serveur : file en pause, relance des échecs (13/11)
+
+**Constat (VPS, 13/11).** Import d'une chaîne d'une centaine de vidéos : 24 réussies, puis YouTube a bloqué le serveur (« Connectez-vous pour confirmer que vous n'êtes pas un robot ») et les 80 suivantes ont échoué en quelques minutes (3 essais chacune). Le message était en français (langue demandée en français depuis le 13/11) et n'était donc pas reconnu comme un blocage.
+
+**Corrections.**
+- `external.is_bot_block` reconnaît le blocage en anglais et en français (`transcriber/src/external.py`) ; message lisible « YouTube bloque l'accès depuis le serveur… ».
+- Audyn (`transcriber/src/audyn_import.py`, `main.py`) : en cas de blocage, la demande **n'échoue plus** : elle repasse en attente (essai non compté) et **toute la file Audyn se met en pause 15 minutes** ; elle reprend **tout de suite** dès que les cookies ou le proxy YouTube sont modifiés dans Admin → Paramètres.
+- Studio → Audyn : bandeau « YouTube bloque le serveur : N import(s) en attente… » ; encadré « N import(s) ont échoué » + bouton **« Relancer les N import(s) »** ; bouton **« Relancer »** sur chaque import en échec (page du contenu).
+- API : `GET /studio/audyn/link-imports/failed` (`count`, `blocked`, `waiting`), `POST /studio/audyn/link-imports/retry-failed`, `POST /studio/audyn/link-imports/:jid/retry` (essais remis à zéro, erreur effacée ; journal d'audit).
+
+**Ajouter les cookies YouTube** (à faire une fois ; à refaire si le blocage revient) :
+1. Navigateur en **fenêtre privée**, connecté à un **compte Google dédié** (pas votre compte personnel).
+2. Ouvrir `https://www.youtube.com/robots.txt` dans cet onglet, puis exporter les cookies de youtube.com au **format Netscape (cookies.txt)** avec une extension d'export de cookies.
+3. Fermer la fenêtre privée sans se déconnecter (sinon YouTube invalide les cookies).
+4. Coller le contenu du fichier dans Admin → Paramètres → **Vidéos YouTube, Vimeo et Dailymotion** → « Cookies YouTube », enregistrer. **Ne jamais les coller dans une conversation.**
+5. Studio → Audyn → « Relancer les N import(s) ».
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy : `majlistv-api`, `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+```bash
+docker logs --since 30m dockpanel-git-majlistv-transcriber 2>&1 | grep -E "\[audyn|Audyn :" | tail -20
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT status, count(*), max(updated_at) AS derniere_activite FROM audyn_imports GROUP BY status ORDER BY status;"'
+```
+
+**Tests.** `transcriber/tests/test_external.py` (blocage reconnu en français et en anglais) ; `api/tests/test_audyn_link.py` (blocage : demande remise en attente sans compter l'essai, résultat « blocked » ; comptage, relance d'un import, relance de tous, réservé à l'administration) ; `web/tests/test_audyn_link_web.mjs`. **Non testé : avec de vrais cookies sur YouTube.**

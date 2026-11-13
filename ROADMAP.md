@@ -657,3 +657,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Audyn dans **Android Auto** (12/11) : application 0.18.0 avec service média (Continuer l'écoute, catégories, reprise, chapitres au volant, recherche vocale). Reste : essai en voiture ; publication Play Store pour le grand public.
 - Audyn — **import d'une chaîne : catégorie et détail par vidéo**, titres YouTube en français (13/11) : livré.
 - Audyn — **page redessinée comme le catalogue vidéo** (bannière, rangées, vignettes 16:9), menu « Audyn » (13/11) : livré.
+- Audyn — **YouTube qui bloque le serveur** : file en pause au lieu d'échecs, reprise à l'ajout des cookies, relance des échecs (13/11) : livré.

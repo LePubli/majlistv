@@ -46,7 +46,9 @@ def once(**extra):
     r = subprocess.run(["python3", "transcriber/tests/run_audyn_once.py"], capture_output=True, text=True, env=dict(env, **extra), cwd=ROOT, timeout=240)
     line = [l for l in r.stdout.strip().splitlines() if l.startswith("{")]
     if not line: print(r.stdout, r.stderr[-2000:]); sys.exit(1)
-    return json.loads(line[-1])
+    d = json.loads(line[-1])
+    if d.get("result") is None: d.pop("result", None)  # « blocked » seulement si YouTube bloque
+    return d
 cur.execute("update audyn_imports set status='canceled' where status in ('pending','downloading')")  # file vide pour nos essais
 cur.execute("select id from users where email='admin@test.local'"); admin = str(cur.fetchone()[0])
 
@@ -284,6 +286,24 @@ requests.patch(f"{B}/studio/audyn/{one}", headers=A, json={"description": "Ma de
 job_on(one)
 once(TEST_META_JSON=json.dumps({"uploader": "Autre", "description": "Autre texte"}))
 cur.execute("select author, description from audyn_items where id=%s", (one,)); ok(cur.fetchone() == ("Chaîne X", "Ma description"), "ce qui est déjà rempli n'est pas écrasé")
+
+# G2b) YouTube bloque le serveur : la demande attend (essai non compté), la file se met en pause ; relance des échecs
+cur.execute("update audyn_imports set status='canceled' where status='pending'")
+job_on(one)
+r = once(TEST_BOT="1"); ok(r.get("result") == "blocked", f"blocage anti-robot (message en français) reconnu ({r})")
+cur.execute("select status, attempts, error from audyn_imports where item_id=%s order by created_at desc limit 1", (one,)); st = cur.fetchone()
+ok(st[0] == "pending" and st[1] == 0 and st[2].startswith("YouTube bloque"), f"demande remise en attente, essai non compté ({st})")
+f = requests.get(B + "/studio/audyn/link-imports/failed", headers=A).json(); ok(f["waiting"] >= 1, f"Studio : imports en attente du déblocage ({f})")
+ok(requests.get(B + "/studio/audyn/link-imports/failed", headers=O).status_code == 403, "réservé à l'administration")
+cur.execute("update audyn_imports set status='failed', attempts=3, error='ERROR: Connectez-vous pour confirmer que vous n''êtes pas un robot' where item_id=%s", (one,))
+f = requests.get(B + "/studio/audyn/link-imports/failed", headers=A).json(); ok(f["count"] >= 1 and f["blocked"] >= 1, f"échecs comptés, dont blocage ({f})")
+cur.execute("select id from audyn_imports where item_id=%s order by created_at desc limit 1", (one,)); fj = str(cur.fetchone()[0])
+r = requests.post(f"{B}/studio/audyn/link-imports/{fj}/retry", headers=A); ok(r.status_code == 200 and r.json()["import"]["status"] == "pending", "un import relancé")
+ok(requests.post(f"{B}/studio/audyn/link-imports/{fj}/retry", headers=A).status_code == 404, "déjà relancé : 404")
+cur.execute("update audyn_imports set status='failed', attempts=3 where id=%s", (fj,))
+r = requests.post(B + "/studio/audyn/link-imports/retry-failed", headers=A); ok(r.status_code == 200 and r.json()["retried"] >= 1, "tous les échecs relancés")
+cur.execute("select status, attempts, error from audyn_imports where id=%s", (fj,)); ok(cur.fetchone() == ("pending", 0, None), "relance : essais remis à zéro, erreur effacée")
+cur.execute("update audyn_imports set status='canceled' where status='pending'")
 
 # G3) catégories gérées
 CU = B + "/studio/audyn/categories"

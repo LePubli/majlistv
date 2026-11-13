@@ -29,6 +29,7 @@ import external
 import importer
 
 MAX_ATTEMPTS = 3
+BLOCK_PAUSE = 15 * 60        # YouTube bloque le serveur : file Audyn en pause 15 min (cf. run)
 LIST_LIMIT = 50              # playlist ou élément archive.org : 50 chapitres au plus par demande
 BITRATE = "128k"             # MP3 : parole et musique d'accompagnement, ~58 Mo par heure
 COVER_SIZE = 1000            # couverture carrée 1000 × 1000
@@ -627,6 +628,13 @@ def run(job, ctx):
         ctx.log(f"[audyn {jid}] contenu supprimé pendant le traitement : fichiers effacés")
     except Exception as err:  # noqa: BLE001
         ctx.drop(uploaded)
+        if external.is_bot_block(err):
+            # YouTube bloque le serveur (anti-robot) : la demande n'échoue PAS, elle attend (essai non compté) ; toute la file Audyn
+            # se met en pause (BLOCK_PAUSE) au lieu d'épuiser les essais de chaque vidéo. Reprise seule (cookies ajoutés, blocage levé).
+            ctx.log(f"[audyn {jid}] YouTube bloque le serveur : demande remise en attente, file Audyn en pause {BLOCK_PAUSE // 60} min")
+            ctx.q("""UPDATE audyn_imports SET status = 'pending', progress = 0, attempts = GREATEST(attempts - 1, 0), error = %s, updated_at = now()
+                     WHERE id = %s AND status = 'downloading'""", (external.BLOCKED_MSG, job["id"]))
+            return "blocked"
         final = job["attempts"] >= MAX_ATTEMPTS or isinstance(err, external.Blocked)
         message = str(err)[:800]
         ctx.log(f"[audyn {jid}] échec ({job['attempts']}/{MAX_ATTEMPTS}) : {message}")

@@ -29,7 +29,10 @@ export default function StudioAudyn() {
   const [info, setInfo] = useState(''); // '' | 'loading' | 'done' | 'none'
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const reload = () => call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} }));
+  const [failed, setFailed] = useState(null); // imports en échec / en attente pour cause de blocage YouTube
+  const loadFailed = () => call('/studio/audyn/link-imports/failed').then((r) => setFailed(r.ok ? r.data : null));
+  const reload = () => { loadFailed(); return call('/studio/audyn').then((r) => setData(r.ok ? r.data : { items: [], storage: true, limits: {} })); };
+  const retryAll = async () => { const r = await call('/studio/audyn/link-imports/retry-failed', { method: 'POST' }); if (r.ok) loadFailed(); };
   useEffect(() => { reload(); }, [call]); // eslint-disable-line react-hooks/exhaustive-deps
   // Lien collé : titre, auteur (nom de la chaîne) et description repris de la vidéo, sans écraser ce qui est déjà tapé.
   const readLink = async () => {
@@ -70,6 +73,13 @@ export default function StudioAudyn() {
       <StudioTabs />
       <p className="meta">{t('ayIntro')}</p>
       {data && !data.storage && <p className="error" role="alert">{t('ayNoStorage')}</p>}
+      {failed?.waiting > 0 && <p className="error" role="alert">{t('ayBlockedWait').replace('{n}', failed.waiting)}</p>}
+      {failed?.count > 0 && (
+        <div className="panel ay-failed" role="status">
+          <p>{t('ayFailedN').replace('{n}', failed.count)}{failed.blocked > 0 ? ` ${t('ayFailedBlocked').replace('{n}', failed.blocked)}` : ''}</p>
+          <button type="button" className="btn" onClick={retryAll}>{t('ayRetryAll').replace('{n}', failed.count)}</button>
+        </div>
+      )}
       {cats && <AudynCategoryManager onChange={reload} />}
       {chan && <AudynChannelImport onDone={reload} />}
       {open && (

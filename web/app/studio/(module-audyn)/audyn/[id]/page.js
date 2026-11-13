@@ -130,6 +130,7 @@ export default function StudioAudynItem() {
     flash(t('ayResplitQueued')); loadJobs();
   };
   const cancelJob = async (j) => { await call(`/studio/audyn/link-imports/${j.id}/cancel`, { method: 'POST' }); loadJobs(); };
+  const retryJob = async (j) => { await call(`/studio/audyn/link-imports/${j.id}/retry`, { method: 'POST' }); loadJobs(); };
   const coverFromLink = async () => {
     setErr('');
     const r = await call(`/studio/audyn/${id}/cover-from-link`, { method: 'POST', body: JSON.stringify({}) });
@@ -236,6 +237,7 @@ export default function StudioAudynItem() {
                 <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
                 <span className="meta">{jobLabel(j)}</span>
                 {j.active && <button type="button" className="btn ghost sm" onClick={() => cancelJob(j)}>{t('ayLinkCancel')}</button>}
+                {j.status === 'failed' && <button type="button" className="btn ghost sm" onClick={() => retryJob(j)}>{t('ayRetry')}</button>}
                 {j.error && <span className="error small">{j.error}</span>}
                 {j.note && <span className="meta small">{j.note}</span>}
               </li>

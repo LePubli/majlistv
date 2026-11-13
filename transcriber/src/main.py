@@ -1101,7 +1101,16 @@ def audyn_import_loop():
                 time.sleep(5)
                 continue
             ctx = audyn_import.Ctx(conn, s3, BUCKET, lambda work: external_options(work, conf), conf, log, lambda: stopping, WORK_DIR)
-            audyn_import.run(job, ctx)
+            if audyn_import.run(job, ctx) == "blocked":
+                # YouTube bloque le serveur : pause de la file ; reprise tout de suite si les cookies ou le proxy changent (Admin → Paramètres).
+                key = (conf.get("ytdlp_cookies", "YTDLP_COOKIES", ""), conf.get("ytdlp_proxy", "YTDLP_PROXY", ""))
+                until = time.time() + audyn_import.BLOCK_PAUSE
+                while time.time() < until and not stopping:
+                    time.sleep(10)
+                    conf.refresh()
+                    if (conf.get("ytdlp_cookies", "YTDLP_COOKIES", ""), conf.get("ytdlp_proxy", "YTDLP_PROXY", "")) != key:
+                        log("Audyn : cookies ou proxy YouTube modifiés : reprise de la file")
+                        break
         except psycopg2.errors.UndefinedTable:
             time.sleep(60)  # module Audyn absent ou migration 003 pas encore passée
         except Exception as err:  # noqa: BLE001

@@ -56,13 +56,23 @@ def metadata_language_options(lang):
     return {"extractor_args": {"youtube": {"lang": [code]}}, "http_headers": {"Accept-Language": f"{code},en;q=0.5"}}
 
 
+# Blocage anti-robot de YouTube (message en anglais, ou en français depuis que la langue est demandée en français).
+BOT_MARKS = ("sign in to confirm", "not a bot", "pas un robot", "confirmer que vous n", "http error 429", "too many requests")
+BLOCKED_MSG = ("YouTube bloque l'accès depuis le serveur. Ajoutez des cookies ou un proxy dans "
+               "Admin → Paramètres → Vidéos YouTube, Vimeo et Dailymotion, puis relancez.")
+
+
+def is_bot_block(err):
+    low = str(err).lower()
+    return any(m in low for m in BOT_MARKS) or str(err).startswith("YouTube bloque l'accès")
+
+
 def readable_error(err):
     """Traduit les erreurs yt-dlp les plus courantes en un message compréhensible."""
     msg = str(err)
     low = msg.lower()
-    if "sign in to confirm" in low or "not a bot" in low or "http error 429" in low or "too many requests" in low:
-        return Blocked("YouTube bloque l'accès depuis le serveur. Ajoutez des cookies ou un proxy dans "
-                       "Admin → Paramètres → Vidéos YouTube et Vimeo, puis relancez.")
+    if is_bot_block(msg):
+        return Blocked(BLOCKED_MSG)
     if "private video" in low or "video unavailable" in low or "has been removed" in low or "404" in low:
         return Blocked("Vidéo privée, supprimée ou introuvable sur la plateforme.")
     if "members-only" in low or "join this channel" in low or "requires payment" in low:

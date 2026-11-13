@@ -128,5 +128,11 @@ m = external.metadata_language_options("fr-FR")
 ok(m["extractor_args"] == {"youtube": {"lang": ["fr"]}} and m["http_headers"]["Accept-Language"].startswith("fr,"), "métadonnées demandées dans la langue déclarée")
 ok(external.metadata_language_options("") == {} and external.metadata_language_options("x; rm") == {}, "langue vide ou invalide : aucune option")
 
+# Blocage anti-robot de YouTube, en anglais comme en français (langue demandée en français depuis le 13/11)
+ok(external.is_bot_block("ERROR: [youtube] x: Connectez-vous pour confirmer que vous n'êtes pas un robot."), "blocage en français reconnu")
+ok(external.is_bot_block("Sign in to confirm you're not a bot") and external.is_bot_block("HTTP Error 429: Too Many Requests"), "blocage en anglais reconnu")
+ok(not external.is_bot_block("Video unavailable"), "vidéo indisponible : pas un blocage")
+ok(str(external.readable_error("Connectez-vous pour confirmer que vous n'êtes pas un robot")).startswith("YouTube bloque"), "message lisible")
+
 print("TOUT OK" if not fails else f"{fails} ÉCHEC(S)")
 sys.exit(1 if fails else 0)

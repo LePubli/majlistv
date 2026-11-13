@@ -38,6 +38,10 @@ if os.environ.get("TEST_META_JSON"):  # titre / chaîne / description lus par yt
         report.update(meta_v)
         return path
     audyn_import.fetch_audio = fetch_with_meta
+if os.environ.get("TEST_BOT"):  # YouTube qui bloque le serveur (message en français, comme sur le VPS le 13/11)
+    def bot(*a, **k):
+        raise Exception("ERROR: [youtube] WMryLoMEfxE: Connectez-vous pour confirmer que vous n'êtes pas un robot. Cela nous permet de protéger notre communauté")
+    audyn_import.fetch_audio = bot
 if os.environ.get("TEST_ARCHIVE_JSON"):
     meta = json.loads(os.environ["TEST_ARCHIVE_JSON"])
     external._archive_get = lambda path, params=None: meta
@@ -53,5 +57,5 @@ if not job:
     print(json.dumps({"claimed": False})); sys.exit(0)
 ctx = audyn_import.Ctx(conn, main.s3, main.BUCKET, lambda work: main.external_options(work, conf), conf, lambda *a: print(*a, file=sys.stderr),
                        lambda: False, main.WORK_DIR, check=lambda u: u)
-audyn_import.run(job, ctx)
-print(json.dumps({"claimed": True, "id": str(job["id"])}))
+res = audyn_import.run(job, ctx)
+print(json.dumps({"claimed": True, "id": str(job["id"]), "result": res}))
