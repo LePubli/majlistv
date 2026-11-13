@@ -89,7 +89,7 @@ export default function MemberShell({ children }) {
     ramadan: { key: 'ramadan', href: '/ramadan', label: t('rzNav'), icon: ICONS.tag, on: feat('ramadan') },
     prayer: { key: 'prayer', href: '/priere', label: t('pqNav'), icon: ICONS.prayer, on: feat('prayer') },
     quran: { key: 'quran', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
-    events: { key: 'events', href: '/events', label: t('evnNav'), icon: ICONS.bell, on: feat('events') },
+    events: { key: 'events', href: '/events', label: t('evnNav'), icon: ICONS.bell, on: feat('events') || feat('livetv') },
     audyn: { key: 'audyn', href: '/audyn', label: t('awNav'), icon: ICONS.books, on: feat('audyn') },
     athkar: { key: 'athkar', href: '/adhkar', label: t('atTab'), icon: ICONS.bilan, on: feat('athkar') },
     pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), icon: ICONS.prayer, on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },

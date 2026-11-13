@@ -3989,3 +3989,13 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .aw-talk p { color: var(--text-2, #cfc8b4); font-size: .85rem; margin: 0; }
 .aw-talk h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .aw-h1 { padding: 24px var(--gutter) 0; margin: 0; }
+/* Chaînes TV en direct (page « En direct ») */
+.lv-box { display: grid; gap: 12px; margin: 8px 0 28px; }
+.lv-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.lv-head h2 { margin: 0; }
+.lv-player { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line-soft, #2a2a2a); }
+.lv-player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lv-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e5484d; margin-inline-end: 6px; vertical-align: middle; }
+.lv-on { color: #ff6b6b; font-weight: 700; }
+.lv-off { color: var(--text-2, #cfc8b4); }
+.lv-meta { margin: 0; }

@@ -3,8 +3,10 @@
 const mod = {
   id: 'events',
   name: 'Événements en direct',
-  features: ['events'],
-  paths: [/^\/studio\/events(\/|$)/],
-  studio: [{ group: 'studio', href: '/studio/events', label: 'evnTitle', icon: 'film', roles: ['organizer', 'admin'] }],
+  features: ['events', 'livetv'],
+  paths: [/^\/studio\/events(\/|$)/, /^\/studio\/live(\/|$)/],
+  studio: [{ group: 'studio', href: '/studio/events', label: 'evnTitle', icon: 'film', roles: ['organizer', 'admin'] },
+    // Chaînes TV en direct 24 h/24 (fonction « livetv ») : gérées par l'administrateur.
+    { group: 'studio', href: '/studio/live', label: 'lvAdminTitle', icon: 'film', roles: ['admin'], feature: 'livetv' }],
 };
 export default mod;

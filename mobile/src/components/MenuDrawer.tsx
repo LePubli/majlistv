@@ -46,7 +46,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
       { key: 'series', label: t('seriesNav'), icon: 'layers', go: nav('/series'), on: !!config?.hasSeries },
       { key: 'collections', label: t('colNav'), icon: 'folder', go: nav('/collections'), on: feat('collections') },
       { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
-      { key: 'events', label: t('evn.nav'), icon: 'bell', go: nav('/events'), on: feat('events') },
+      { key: 'events', label: t('evn.nav'), icon: 'bell', go: nav('/events'), on: feat('events') || feat('livetv') },
     ] },
     { key: 'listen', title: t('mnListen'), items: [
       { key: 'audyn', label: t('aud.nav'), icon: 'headphones', go: nav('/audyn'), on: feat('audyn') },

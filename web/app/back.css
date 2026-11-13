@@ -970,3 +970,15 @@
 .ay-bk-cat .fld > span:first-child { display: none; }
 .btn.ay-bk-del { color: #FF9C8C; }
 @media (max-width: 700px) { .ay-table-list th:nth-child(3), .ay-table-list td.ay-aud { display: none; } }
+/* Studio → Chaînes TV en direct */
+.lv-admin { list-style: none; margin: 16px 0; padding: 0; display: grid; gap: 10px; }
+.lv-admin > li { display: grid; grid-template-columns: 128px 1fr; gap: 10px 14px; align-items: center; padding: 12px; border: 1px solid var(--line-soft); border-radius: 14px; }
+.lv-admin > li.off { opacity: .55; }
+.lv-thumb { width: 128px; aspect-ratio: 16 / 9; border-radius: 10px; background: var(--surface) center / cover no-repeat; }
+.lv-info { display: grid; gap: 3px; min-width: 0; }
+.lv-info b { color: #fff; }
+.lv-info a { overflow-wrap: anywhere; }
+.lv-err { color: #FF9C8C; }
+.lv-btns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.lv-preview { grid-column: 1 / -1; }
+@media (max-width: 520px) { .lv-admin > li { grid-template-columns: 1fr; } .lv-thumb { width: 100%; } }

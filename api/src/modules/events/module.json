@@ -1,7 +1,7 @@
 {
   "id": "events",
   "name": "Événements en direct",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Annonce de conférences en direct : page publique des événements, fichier agenda (.ics), « Me rappeler », direct YouTube / Vimeo intégré au moment venu, rattachement de la rediffusion à une conférence.",
   "feature": "events",
   "requires": [],

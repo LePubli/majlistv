@@ -79,3 +79,4 @@ test_authz_sweep.py
 test_login_guard.py
 test_patch_defaults.py
 ../../transcriber/tests/test_description_fill.py
+test_live_channels.py

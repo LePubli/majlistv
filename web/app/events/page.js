@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { CalendarLink, PhaseBadge, RemindButton, evDate, useNow } from '../../components/EventBits';
+import LiveChannels from '../../components/LiveChannels';
 
 export default function EventsPage() {
   const { t, call, feat, locale } = useApp();
@@ -11,15 +12,19 @@ export default function EventsPage() {
   const [list, setList] = useState(null);
   const now = useNow(scope === 'upcoming');
   useEffect(() => {
+    if (!feat('events')) return undefined;
     let dead = false; setList(null);
     call(`/events?scope=${scope}`).then((r) => { if (!dead) setList(r.ok ? r.data : []); });
     return () => { dead = true; };
-  }, [scope, call]);
-  if (!feat('events')) return <main className="page"><p className="meta">{t('evnOff')}</p></main>;
+  }, [scope, call, feat]);
+  // Chaînes TV en direct (fonction « livetv ») en tête ; la liste des événements seulement si la fonction « events » est active.
+  if (!feat('events') && !feat('livetv')) return <main className="page"><p className="meta">{t('evnOff')}</p></main>;
   const patch = (id, reminded) => setList((l) => l.map((e) => (e.id === id ? { ...e, reminded } : e)));
   return (
     <main className="page evn-page">
-      <h1>{t('evnTitle')}</h1>
+      <h1>{feat('events') ? t('evnTitle') : t('lvTitle')}</h1>
+      <LiveChannels />
+      {feat('events') && <>
       <p className="meta">{t('evnIntro')}</p>
       <div className="aw-cats" role="tablist">
         {['upcoming', 'past'].map((k) => <button key={k} type="button" role="tab" aria-selected={scope === k} className={`chip${scope === k ? ' on' : ''}`} onClick={() => setScope(k)}>{t(k === 'upcoming' ? 'evnUpcoming' : 'evnPast')}</button>)}
@@ -41,6 +46,7 @@ export default function EventsPage() {
           ))}
         </ul>
       )}
+      </>}
     </main>
   );
 }

@@ -7,6 +7,9 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'lv.title': 'Chaînes en direct',
+  'lv.live': 'En direct',
+  'lv.notLive': 'Pas de direct en ce moment : dernière diffusion',
   mnWatch: 'Regarder',
   mnListen: 'Écouter et lire',
   mnMine: 'Mon espace',
@@ -388,6 +391,9 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'lv.title': 'Live channels',
+  'lv.live': 'Live',
+  'lv.notLive': 'Not live right now: last broadcast',
   mnWatch: 'Watch',
   mnListen: 'Listen and read',
   mnMine: 'My space',
@@ -765,6 +771,9 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'lv.title': 'القنوات المباشرة',
+  'lv.live': 'مباشر',
+  'lv.notLive': 'لا بث مباشر الآن: آخر بث',
   mnWatch: 'مشاهدة',
   mnListen: 'استماع وقراءة',
   mnMine: 'مساحتي',

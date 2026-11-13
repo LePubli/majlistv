@@ -8954,3 +8954,38 @@ docker logs --since 30m dockpanel-git-majlistv-transcriber 2>&1 | grep "titre et
 ```
 
 **Tests.** `api/tests/test_audyn_link.py` (demande « meta » : réservée à l'administration, sans doublon, titre/auteur/description remplacés sans télécharger de son, plus jamais après une modification à la main ; import d'une chaîne : titre de la vidéo) ; `transcriber/tests/test_audyn_import.py`. **Non testé sur une vraie vidéo YouTube.**
+
+## Chaînes TV en direct 24 h/24 : La Mecque, Médine… (13/11)
+
+Demande d'Epok du 13/11 : « les chaînes TV Mecca en direct et Médine en direct (disponibles sur YouTube) ».
+
+**Ce que c'est.** Une section **« Chaînes en direct »** en tête de la page **« En direct »** (site et application) : un onglet par chaîne, le **lecteur YouTube officiel** du direct en cours (`youtube-nocookie`, comme les vidéos YouTube du catalogue), « ● En direct » ou « Pas de direct en ce moment : dernière diffusion ».
+- **Studio → Chaînes TV en direct** (administrateur) : nom affiché + **lien YouTube de la chaîne** (`youtube.com/@nom`, `/channel/UC…`) **ou d'un direct** (`watch?v=…`, `youtu.be/…`) ; ordre (↑ ↓), Aperçu, « Vérifier maintenant », Masquer / Afficher, Supprimer ; état et erreur de chaque chaîne.
+- Le **transcripteur** (`transcriber/src/live_channels.py`, fil `live_loop`) retrouve le direct en cours avec yt-dlp, sans rien télécharger (chaîne → page `/live` de la chaîne), **toutes les 15 minutes** (l'identifiant d'un direct 24 h/24 change de temps en temps), tout de suite après un ajout. En cas d'échec, le dernier direct connu reste affiché.
+- Fonction **« Chaînes TV en direct »** (`livetv`) dans Admin → Fonctions, portée par le module « Événements en direct » (version 1.1.0).
+
+**Fichiers.** Migration du module `api/src/modules/events/migrations/003_live_channels.sql` (table `live_channels`) ; `api/src/modules/events/lib.js` (`parseChannelUrl`, `liveChannelShape`) et `routes.js` (`GET /live`, `GET|POST /studio/live`, `PATCH|DELETE /studio/live/:cid`, `POST /studio/live/:cid/check`) ; `api/src/featuresList.js` ; site : `web/components/LiveChannels.js`, `web/app/events/page.js`, `web/app/studio/(module-events)/live/page.js`, `web/modules/events/module.js`, `web/lib/modules.js`, styles `.lv-*`, textes `lv*` ; application : `mobile/src/components/LiveChannels.tsx`, `mobile/src/app/events/index.tsx`, menu ☰ (« En direct » visible si l'une des deux fonctions est active).
+
+**Mettre en place.**
+1. Redéployer : `majlistv-api`, `majlistv-web`, `majlistv-transcriber` ; puis sur le VPS :
+```bash
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+2. Admin → Fonctions : vérifier que « Chaînes TV en direct » est active.
+3. Studio → Chaînes TV en direct : ajouter chaque chaîne avec le lien de sa chaîne YouTube officielle (copié depuis YouTube). Le direct est trouvé en quelques secondes.
+4. Application : fermer et rouvrir deux fois (mise à jour du contenu).
+
+**Debug.**
+```bash
+docker logs --since 30m dockpanel-git-majlistv-transcriber 2>&1 | grep "\[direct" | tail -20
+```
+- « Aucun direct trouvé sur cette chaîne » : la chaîne ne diffuse pas en direct en ce moment, ou le lien n'est pas celui de la chaîne officielle.
+- « YouTube bloque l'accès depuis le serveur » : cookies YouTube (Admin → Paramètres) ; le dernier direct connu reste affiché.
+- Lecteur « vidéo indisponible » : la chaîne interdit l'intégration de ses directs sur d'autres sites (réglage de la chaîne YouTube) ; choisir une autre source.
+
+**Droits.** Le lecteur officiel YouTube est utilisé (autorisé par les conditions de YouTube quand la chaîne permet l'intégration) ; aucune copie du flux.
+
+**Tests.** `api/tests/test_live_channels.py` (ajouté à la suite CI : gestion réservée à l'administration, liens acceptés et refusés, recherche du direct simulée, échec et blocage, masquer, ordre, nouveau lien, suppression, journal d'audit, fonction coupée) ; `web/tests/test_live_channels_web.mjs` ; `mobile/tests/liveChannels.test.ts`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe (lecteur simulé). **Non testé : de vraies chaînes YouTube** (pas d'accès à YouTube ici).

@@ -1048,6 +1048,33 @@ def details_pass(local_query, conf):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def live_loop():
+    """Chaînes TV en direct : direct en cours retrouvé toutes les 15 minutes (live_channels.py)."""
+    import live_channels
+    conn = None
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+
+            def local_query(sql, params=None, fetch=False):
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute(sql, params)
+                    return cur.fetchall() if fetch else cur.rowcount
+
+            work = os.path.join(WORK_DIR, "live")
+            os.makedirs(work, exist_ok=True)
+            done = live_channels.run_once(local_query, external_options(work), log)
+            time.sleep(5 if done else 20)
+        except psycopg2.errors.UndefinedTable:
+            time.sleep(300)  # module « Événements en direct » 1.1 pas encore installé
+        except Exception as err:  # noqa: BLE001
+            log("Direct : erreur :", err)
+            conn = None
+            time.sleep(60)
+
+
 def description_loop():
     """Description des conférences reprise de la vidéo d'origine quand elle est vide (description_fill.py, migration 115)."""
     import description_fill
@@ -1204,6 +1231,7 @@ def main():
     threading.Thread(target=media_import_loop, daemon=True).start()
     threading.Thread(target=audyn_import_loop, daemon=True).start()
     threading.Thread(target=description_loop, daemon=True).start()
+    threading.Thread(target=live_loop, daemon=True).start()
     threading.Thread(target=watch_loop, daemon=True).start()
     log(f"Transcripteur prêt (modèle {MODEL_NAME}, {THREADS} threads).")
 
