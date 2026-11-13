@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { reportAppError } from '@/lib/reportError';
+import { practiceOn } from '@/lib/practice';
 import { useAsync } from '@/lib/useAsync';
 import { LOCALES, Locale } from '@/lib/i18n';
 import { SITE_URL } from '@/lib/config';
@@ -38,26 +39,27 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
     void Linking.openURL(tg.url);
   };
 
-  const items: Item[] = [
-    { key: 'home', label: t('home'), icon: 'home', go: nav('/'), on: true },
-    { key: 'catalogue', label: t('navCatalogue'), icon: 'film', go: nav('/talks'), on: true },
-    { key: 'series', label: t('seriesNav'), icon: 'layers', go: nav('/series'), on: !!config?.hasSeries },
-    { key: 'collections', label: t('colNav'), icon: 'folder', go: nav('/collections'), on: feat('collections') },
-    { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
-    { key: 'books', label: t('bkNav'), icon: 'book', go: site('/books'), on: !!config?.hasBooks },
-    { key: 'quran', label: t('qrNav'), icon: 'book', go: nav('/quran'), on: feat('quran') },
-    { key: 'events', label: t('evn.nav'), icon: 'bell', go: nav('/events'), on: feat('events') },
-    { key: 'audyn', label: t('aud.nav'), icon: 'headphones', go: nav('/audyn'), on: feat('audyn') },
-    { key: 'ramadan', label: t('rzNav'), icon: 'moon', go: nav('/ramadan'), on: feat('ramadan') },
-    { key: 'prayer', label: t('pqNav'), icon: 'clock', go: nav('/prayer'), on: feat('prayer') },
-    { key: 'athkar', label: t('atTab'), icon: 'sun', go: nav('/athkar'), on: feat('athkar') && !!user },
-    { key: 'learning', label: t('navLearn'), icon: 'book-open', go: nav('/learn'), on: feat('learning') },
-    { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },
-    { key: 'downloads', label: t('dl.open'), icon: 'download', go: nav('/downloads'), on: feat('offline') },
-    { key: 'tour', label: t('tourMenu'), icon: 'help-circle', go: () => { onClose(); router.navigate({ pathname: '/', params: { tour: '1' } }); }, on: feat('onboarding') },
-    { key: 'kids', label: t('kdNav'), icon: 'smile', go: nav('/kids'), on: feat('kids') },
-    { key: 'licences', label: t('licNav'), icon: 'file-text', go: site('/licences'), on: true },
+  // Menu allégé (13/11) : ce qui est déjà dans la barre du bas (Accueil, Catalogue, Apprendre, Pratique, Mon compte) n'y est plus ;
+  // Prière, Coran, Adhkar et Ramadan sont dans l'onglet « Pratique ». Trois groupes courts, catégories repliées.
+  const groups: { key: string; title: string; items: Item[] }[] = [
+    { key: 'watch', title: t('mnWatch'), items: [
+      { key: 'series', label: t('seriesNav'), icon: 'layers', go: nav('/series'), on: !!config?.hasSeries },
+      { key: 'collections', label: t('colNav'), icon: 'folder', go: nav('/collections'), on: feat('collections') },
+      { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
+      { key: 'events', label: t('evn.nav'), icon: 'bell', go: nav('/events'), on: feat('events') },
+    ] },
+    { key: 'listen', title: t('mnListen'), items: [
+      { key: 'audyn', label: t('aud.nav'), icon: 'headphones', go: nav('/audyn'), on: feat('audyn') },
+      { key: 'books', label: t('bkNav'), icon: 'book', go: site('/books'), on: !!config?.hasBooks },
+      { key: 'quran', label: t('qrNav'), icon: 'book', go: nav('/quran'), on: feat('quran') && !practiceOn(feat) },
+    ] },
+    { key: 'mine', title: t('mnMine'), items: [
+      { key: 'library', label: t('library'), icon: 'bookmark', go: nav('/library'), on: !!user && (feat('favorites') || feat('lists')) },
+      { key: 'downloads', label: t('dl.open'), icon: 'download', go: nav('/downloads'), on: feat('offline') },
+      { key: 'kids', label: t('kdNav'), icon: 'smile', go: nav('/kids'), on: feat('kids') },
+    ] },
   ];
+  const [catsOpen, setCatsOpen] = useState(false);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -73,36 +75,52 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
           <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24, gap: 2 }}>
             {custom ? custom.map((i) => <CustomRow key={i.key} item={i} open={open} />) : (
               <>
-            <Txt weight="bold" size={11} color={colors.muted} style={{ letterSpacing: 1, textTransform: 'uppercase', padding: 8 }}>{t('hmDiscover')}</Txt>
-            {items.filter((i) => i.on).map((i) => (
-              <Pressable key={i.key} accessibilityRole="link" onPress={i.go} style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
-                <Feather name={i.icon} size={19} color={colors.goldLight} />
-                <Txt weight="medium" size={15}>{i.label}</Txt>
-                {/* Étape M4 : pastille des validations en attente sur l'entrée Kids (parent). */}
-                {i.key === 'kids' && badgeText(pending?.total ?? 0) ? (
-                  <View accessibilityLabel={t('kpBadge', { n: pending?.total ?? 0 })} style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.danger }}>
-                    <Txt weight="bold" size={12} color="#FFFFFF" style={{ writingDirection: 'ltr' }}>{badgeText(pending?.total ?? 0)}</Txt>
-                  </View>
-                ) : null}
-              </Pressable>
-            ))}
-            {(cats.data ?? []).length > 0 ? (
-              <>
-                <Txt weight="bold" size={11} color={colors.muted} style={{ letterSpacing: 1, textTransform: 'uppercase', padding: 8, marginTop: 10 }}>{t('msCats')}</Txt>
-                {(cats.data ?? []).map((c) => (
-                  <Pressable key={c.id} accessibilityRole="link" onPress={() => { onClose(); router.navigate({ pathname: '/talks', params: { cat: String(c.id) } }); }}
-                    style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
-                    <Txt size={14} color={colors.text2}>{c.name}</Txt>
-                  </Pressable>
-                ))}
-              </>
-            ) : null}
+            {groups.map((g) => {
+              const list = g.items.filter((i) => i.on);
+              if (!list.length && g.key !== 'watch') return null;
+              return (
+                <View key={g.key}>
+                  <Txt weight="bold" size={11} color={colors.muted} style={{ letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 8, paddingTop: g.key === 'watch' ? 4 : 14, paddingBottom: 4 }}>{g.title}</Txt>
+                  {list.map((i) => (
+                    <Pressable key={i.key} accessibilityRole="link" onPress={i.go} style={({ pressed }) => ({ minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+                      <Feather name={i.icon} size={19} color={colors.goldLight} />
+                      <Txt weight="medium" size={15} style={{ flex: 1 }}>{i.label}</Txt>
+                      {/* Étape M4 : pastille des validations en attente sur l'entrée Kids (parent). */}
+                      {i.key === 'kids' && badgeText(pending?.total ?? 0) ? (
+                        <View accessibilityLabel={t('kpBadge', { n: pending?.total ?? 0 })} style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.danger }}>
+                          <Txt weight="bold" size={12} color="#FFFFFF" style={{ writingDirection: 'ltr' }}>{badgeText(pending?.total ?? 0)}</Txt>
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  ))}
+                  {/* Catégories des vidéos : repliées (une seule ligne tant qu'on ne les ouvre pas). */}
+                  {g.key === 'watch' && (cats.data ?? []).length > 0 ? (
+                    <>
+                      <Pressable accessibilityRole="button" accessibilityState={{ expanded: catsOpen }} onPress={() => setCatsOpen((v) => !v)}
+                        style={({ pressed }) => ({ minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+                        <Feather name="grid" size={19} color={colors.goldLight} />
+                        <Txt weight="medium" size={15} style={{ flex: 1 }}>{t('msCats')}</Txt>
+                        <Feather name={catsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
+                      </Pressable>
+                      {catsOpen ? (cats.data ?? []).map((c) => (
+                        <Pressable key={c.id} accessibilityRole="link" onPress={() => go(() => router.navigate({ pathname: '/talks', params: { cat: String(c.id) } }), 'cat')}
+                          style={({ pressed }) => ({ minHeight: 42, justifyContent: 'center', paddingStart: 43, paddingEnd: 10, borderRadius: 12, backgroundColor: pressed ? colors.panel2 : 'transparent' })}>
+                          <Txt size={14} color={colors.text2}>{c.name}</Txt>
+                        </Pressable>
+                      )) : null}
+                    </>
+                  ) : null}
+                </View>
+              );
+            })}
               </>
             )}
             <View style={{ height: 1, backgroundColor: colors.borderSoft, marginVertical: 12 }} />
-            <Pressable accessibilityRole="link" onPress={nav('/account')} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10 }}>
-              <Feather name="user" size={19} color={colors.goldLight} /><Txt weight="medium" size={15}>{user ? t('account') : t('login')}</Txt>
-            </Pressable>
+            {!user ? (
+              <Pressable accessibilityRole="link" onPress={nav('/login')} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10 }}>
+                <Feather name="log-in" size={19} color={colors.goldLight} /><Txt weight="medium" size={15}>{t('login')}</Txt>
+              </Pressable>
+            ) : null}
             <Pressable accessibilityRole="link" onPress={site('/pricing')} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 10 }}>
               <Feather name="credit-card" size={19} color={colors.goldLight} /><Txt weight="medium" size={15}>{t('pricing')}</Txt>
             </Pressable>
@@ -111,6 +129,14 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
             </View>
             <View style={{ paddingHorizontal: 10, gap: 10 }}>
               {!user ? <Button label={t('hmSubscribe')} onPress={() => { onClose(); router.push({ pathname: '/login', params: { mode: 'register' } }); }} /> : <Button label={t('logout')} variant="dark" onPress={() => { onClose(); void logout(); }} />}
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 18, paddingTop: 16 }}>
+              {feat('onboarding') ? (
+                <Pressable accessibilityRole="link" onPress={() => go(() => router.navigate({ pathname: '/', params: { tour: '1' } }), 'tour')} hitSlop={8}>
+                  <Txt size={13} color={colors.muted}>{t('tourMenu')}</Txt>
+                </Pressable>
+              ) : null}
+              <Pressable accessibilityRole="link" onPress={site('/licences')} hitSlop={8}><Txt size={13} color={colors.muted}>{t('licNav')}</Txt></Pressable>
             </View>
           </ScrollView>
         </View>

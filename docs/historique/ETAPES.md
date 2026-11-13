@@ -8909,3 +8909,21 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 **Installer.** Mise à jour du contenu de l'application : fermer et rouvrir l'application deux fois.
 
 **Tests.** `mobile/tests/accountRefresh.test.ts` (onglet Compte sans `href: null` ; garde-fou sur le comportement d'expo-router) ; `mobile/tests/practice.test.ts` mis à jour ; `npm run check` (274 tests + typage). **Non testé sur un appareil** : à vérifier sur le téléphone et l'autoradio.
+
+## Application : « Mon compte » dans la barre du bas, menu ☰ allégé (13/11)
+
+Demande d'Epok du 13/11 : « dans la barre en bas, remplace Bibliothèque par Mon compte ; réagence le menu latéral, trop d'intitulés ».
+
+**Barre du bas** (`mobile/src/app/(tabs)/_layout.tsx`) : Accueil, Catalogue, Apprendre, Pratique, **Mon compte**. La Bibliothèque reste accessible par le menu ☰ (groupe « Mon espace ») ; son onglet est sans bouton (`tabBarButton: () => null`, jamais `href: null`, cf. correction précédente).
+
+**Menu ☰** (`mobile/src/components/MenuDrawer.tsx`) : plus rien de ce qui est déjà dans la barre du bas (Accueil, Catalogue, Apprendre, Mon compte) ni dans l'onglet Pratique (Prière, Coran, Adhkar, Ramadan). Trois groupes courts :
+- **Regarder** : Séries, Collections, Shorts, Événements, **Catégories** (repliées : une ligne, qui s'ouvre au toucher) ;
+- **Écouter et lire** : Audyn, Livres (et Coran seulement si l'onglet Pratique n'existe pas) ;
+- **Mon espace** : Bibliothèque, Téléchargements, Kids (avec la pastille des validations en attente).
+En bas : « Se connecter » (si déconnecté), Tarifs, langues, S'abonner / Se déconnecter, puis en petits liens « Visite guidée » et « Licences ». Textes `mnWatch`, `mnListen`, `mnMine` en fr / en / ar.
+
+**À savoir.** Si un menu est affecté dans **Admin → Menus** (« Application — onglets du bas » ou « Application — menu ☰ »), c'est lui qui s'affiche à la place : à modifier là.
+
+**Installer.** Mise à jour du contenu : fermer et rouvrir l'application deux fois.
+
+**Tests.** `mobile/tests/accountRefresh.test.ts` (barre du bas, menu en trois groupes, entrées retirées, textes) ; `mobile/tests/practice.test.ts` ; `npm run check` (275 tests + typage). **Non vérifié à l'écran** (pas d'appareil Android ici).

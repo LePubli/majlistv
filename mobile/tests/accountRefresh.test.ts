@@ -30,11 +30,21 @@ test('menu : écran ouvert avant la fermeture du menu', () => {
   assert.match(m, /const nav = \(path: Parameters<typeof router\.navigate>\[0\]\) => \(\) => go\(\(\) => router\.navigate\(path\), String\(path\)\);/);
 });
 
-test('onglet Compte sans « href: null » (expo-router 58 : onglet caché = redirection vers l\'accueil)', () => {
+test('« Mon compte » dans la barre du bas, bibliothèque sans bouton ; jamais « href: null » (expo-router 58 : redirection vers l\'accueil)', () => {
   const l = read('src/app/(tabs)/_layout.tsx');
-  assert.match(l, /<Tabs\.Screen name="account" options=\{\{ title: t\('tabs\.account'\), tabBarButton: \(\) => null, tabBarItemStyle: \{ display: 'none' \} \}\} \/>/);
-  assert.doesNotMatch(l, /name="account"[^\n]*href: null/);
-  // Garde-fou : le comportement d'expo-router qui causait le bug (onglet « hidden » → redirection) est toujours là.
+  assert.match(l, /<Tabs\.Screen name="account" options=\{\{ title: t\('account'\), tabBarIcon:/);
+  assert.match(l, /<Tabs\.Screen name="library" options=\{\{ title: t\('tabs\.library'\), tabBarButton: \(\) => null, tabBarItemStyle: \{ display: 'none' \} \}\} \/>/);
+  assert.doesNotMatch(l, /name="(account|library)"[^\n]*href: null/);
   const r = read('node_modules/expo-router/build/layouts/TabsClient.js');
   assert.match(r, /if \(href === null\) \{[\s\S]{0,400}hidden: true/);
+});
+
+test('menu ☰ allégé : groupes Regarder / Écouter et lire / Mon espace, catégories repliées, rien de la barre du bas', () => {
+  const m = read('src/components/MenuDrawer.tsx');
+  for (const k of ['mnWatch', 'mnListen', 'mnMine']) assert.match(m, new RegExp(`title: t\\('${k}'\\)`));
+  assert.match(m, /const \[catsOpen, setCatsOpen\] = useState\(false\)/);
+  for (const gone of ["nav('/talks')", "nav('/learn')", "nav('/prayer')", "nav('/athkar')", "nav('/ramadan')", "nav('/account')"]) assert.ok(!m.includes(gone), `${gone} plus dans le menu`);
+  assert.match(m, /on: feat\('quran'\) && !practiceOn\(feat\)/, 'Coran : dans l\'onglet Pratique');
+  const i18n = read('src/lib/i18n.ts');
+  for (const k of ['mnWatch', 'mnListen', 'mnMine']) assert.equal((i18n.match(new RegExp(`^  ${k}: `, 'gm')) || []).length, 3, k);
 });

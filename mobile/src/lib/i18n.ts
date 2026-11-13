@@ -7,6 +7,9 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  mnWatch: 'Regarder',
+  mnListen: 'Écouter et lire',
+  mnMine: 'Mon espace',
   tagline: 'Des vidéos qui éclairent',
   'tabs.home': 'Accueil',
   'tabs.talks': 'Vidéos',
@@ -385,6 +388,9 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  mnWatch: 'Watch',
+  mnListen: 'Listen and read',
+  mnMine: 'My space',
   tagline: 'Talks that enlighten',
   'tabs.home': 'Home',
   'tabs.talks': 'Talks',
@@ -759,6 +765,9 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  mnWatch: 'مشاهدة',
+  mnListen: 'استماع وقراءة',
+  mnMine: 'مساحتي',
   tagline: 'محاضرات تنير الطريق',
   'tabs.home': 'الرئيسية',
   'tabs.talks': 'المحاضرات',

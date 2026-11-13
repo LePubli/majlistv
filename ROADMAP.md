@@ -661,3 +661,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Studio → Audyn : **liste redessinée comme « Contenus »** (tableau, filtres, actions groupées) (13/11) : livré.
 - Application Android **aussi pour les appareils 32 bits** (autoradios, tablettes, téléphones d'entrée de gamme), version 0.18.1 (13/11) : livré.
 - Application : abonnement relu dans « Mon compte », erreurs de l'application dans Admin → Erreurs (13/11) : livré ; « Mon compte → accueil » sur l'autoradio : en diagnostic.
+- Application : **« Mon compte » dans la barre du bas**, menu ☰ allégé en trois groupes (13/11) : livré.

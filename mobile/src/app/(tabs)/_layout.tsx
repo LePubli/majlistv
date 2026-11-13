@@ -1,5 +1,5 @@
 // Barre de navigation du bas (navigation de novembre 2026) : Accueil, Catalogue, Apprendre, Pratique, Bibliothèque —
-// les mêmes cinq destinations que le site. Le compte s'ouvre depuis le menu ☰ de l'en-tête (son écran reste un onglet caché).
+// Depuis le 13/11 : Accueil, Catalogue, Apprendre, Pratique, Mon compte (la Bibliothèque est dans le menu ☰, « Mon espace »).
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -38,10 +38,10 @@ export default function TabsLayout() {
       <Tabs.Screen name="talks" options={{ title: t('navCatalogue'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
       <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
       <Tabs.Screen name="practice" options={{ title: t('pqHub'), href: practiceOn(feat) ? undefined : null, tabBarIcon: ({ color }) => <Feather name="moon" size={22} color={color as string} /> }} />
-      <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color as string} /> }} />
-      {/* Compte : onglet SANS bouton dans la barre. Surtout pas « href: null » : depuis expo-router 58, un onglet « href: null » est
-          traité comme interdit et ouvrir /account renvoyait sur l'accueil (bug du 13/11, menu ☰ → Mon compte). */}
-      <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+      {/* 13/11 : « Mon compte » remplace « Bibliothèque » dans la barre ; la bibliothèque reste dans le menu ☰ (Mon espace).
+          Onglets sans bouton : tabBarButton: () => null — jamais « href: null » (expo-router 58 : redirection vers l'accueil). */}
+      <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+      <Tabs.Screen name="account" options={{ title: t('account'), tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color as string} /> }} />
     </Tabs>
   );
 }
