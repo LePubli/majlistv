@@ -8897,3 +8897,15 @@ docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d 
 ```
 
 **Tests.** `mobile/tests/accountRefresh.test.ts` ; `npm run check` (273 tests + typage). **Non testé sur l'autoradio.**
+
+## Application : « Mon compte » ramenait à l'accueil — cause trouvée (13/11)
+
+**Constat.** Même sur téléphone, menu ☰ → « Mon compte » ramenait à l'accueil.
+
+**Cause.** L'écran Compte est un onglet sans bouton dans la barre du bas, caché avec `href: null`. Depuis **expo-router 58** (Expo SDK 58), un onglet `href: null` devient un onglet « caché » que le routeur traite comme interdit : l'ouvrir **redirige vers le premier onglet (Accueil)** (`node_modules/expo-router/build/standard-navigation/useVisibleTabsWithRedirect.js`).
+
+**Correction.** `mobile/src/app/(tabs)/_layout.tsx` : onglet Compte déclaré **sans bouton** (`tabBarButton: () => null`, `tabBarItemStyle: { display: 'none' }`) au lieu de `href: null`. L'onglet « Pratique » garde `href: null` uniquement quand la fonction est coupée (redirection voulue).
+
+**Installer.** Mise à jour du contenu de l'application : fermer et rouvrir l'application deux fois.
+
+**Tests.** `mobile/tests/accountRefresh.test.ts` (onglet Compte sans `href: null` ; garde-fou sur le comportement d'expo-router) ; `mobile/tests/practice.test.ts` mis à jour ; `npm run check` (274 tests + typage). **Non testé sur un appareil** : à vérifier sur le téléphone et l'autoradio.

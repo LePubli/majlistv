@@ -29,3 +29,12 @@ test('menu : écran ouvert avant la fermeture du menu', () => {
   assert.match(m, /const go = \(fn: \(\) => void, where: string\) => \{ try \{ fn\(\); \} catch \(e\) \{ reportAppError\(e, `menu \$\{where\}`\); \} onClose\(\); \};/);
   assert.match(m, /const nav = \(path: Parameters<typeof router\.navigate>\[0\]\) => \(\) => go\(\(\) => router\.navigate\(path\), String\(path\)\);/);
 });
+
+test('onglet Compte sans « href: null » (expo-router 58 : onglet caché = redirection vers l\'accueil)', () => {
+  const l = read('src/app/(tabs)/_layout.tsx');
+  assert.match(l, /<Tabs\.Screen name="account" options=\{\{ title: t\('tabs\.account'\), tabBarButton: \(\) => null, tabBarItemStyle: \{ display: 'none' \} \}\} \/>/);
+  assert.doesNotMatch(l, /name="account"[^\n]*href: null/);
+  // Garde-fou : le comportement d'expo-router qui causait le bug (onglet « hidden » → redirection) est toujours là.
+  const r = read('node_modules/expo-router/build/layouts/TabsClient.js');
+  assert.match(r, /if \(href === null\) \{[\s\S]{0,400}hidden: true/);
+});

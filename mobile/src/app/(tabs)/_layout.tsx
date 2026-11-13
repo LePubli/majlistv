@@ -39,7 +39,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
       <Tabs.Screen name="practice" options={{ title: t('pqHub'), href: practiceOn(feat) ? undefined : null, tabBarIcon: ({ color }) => <Feather name="moon" size={22} color={color as string} /> }} />
       <Tabs.Screen name="library" options={{ title: t('tabs.library'), tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color as string} /> }} />
-      <Tabs.Screen name="account" options={{ title: t('tabs.account'), href: null }} />
+      {/* Compte : onglet SANS bouton dans la barre. Surtout pas « href: null » : depuis expo-router 58, un onglet « href: null » est
+          traité comme interdit et ouvrir /account renvoyait sur l'accueil (bug du 13/11, menu ☰ → Mon compte). */}
+      <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
     </Tabs>
   );
 }
