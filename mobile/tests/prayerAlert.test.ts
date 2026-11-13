@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALERT_MODES, DEFAULT_ALERT_MODE, channelFor, contentSound, pickAdhan, playSoundInForeground, readAlertMode } from '../src/lib/prayerAlert';
 import { APP_DICT } from '../src/lib/i18n';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 test('readAlertMode : valeur gardée, sinon adhan (comportement actuel)', () => {
   assert.equal(DEFAULT_ALERT_MODE, 'adhan');
@@ -40,4 +42,17 @@ test('textes du mode en FR / EN / AR', () => {
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of ['np.mode', 'np.modeSilent', 'np.modeVibrate', 'np.modeAdhan', 'np.modeHelp', 'np.modeIos', 'np.adhanChoose', 'np.adhanPreview', 'np.adhanStop']) {
     assert.ok((APP_DICT as Record<string, Record<string, string>>)[l]?.[k], `${l} ${k}`);
   }
+});
+
+// 13/11 : « Adhan même en silencieux ou vibreur » (Android) : canaux à part, sur le volume du réveil.
+test('adhan même en silencieux : canaux « alarm » à part', () => {
+  assert.equal(channelFor('adhan', { id: 'adhan-2', file: 'adhan_2.mp3' }, true), 'prayer_adhan_alarm_adhan-2');
+  assert.equal(channelFor('adhan', null, true), 'prayer_adhan_alarm');
+  assert.equal(channelFor('adhan', { id: 'adhan-2', file: 'adhan_2.mp3' }), 'prayer_adhan_adhan-2', 'sans l’option : canal d’origine');
+  assert.equal(channelFor('vibrate', null, true), 'prayer_vibrate', 'option sans effet hors mode adhan');
+  const n = readFileSync(join(__dirname, '..', 'src/lib/notifications.ts'), 'utf8');
+  assert.match(n, /usage: Notifications\.AndroidAudioUsage\.ALARM/);
+  assert.match(n, /channelFor\(mode, adhan, Platform\.OS === 'android' && !!o\.alarm\)/);
+  const ui = readFileSync(join(__dirname, '..', 'src/components/PrayerSettingsPanel.tsx'), 'utf8');
+  assert.match(ui, /prayer\.mode === 'adhan' && Platform\.OS === 'android' \?/);
 });

@@ -37,6 +37,11 @@ export async function configureNotifications(): Promise<void> {
     const adhanOpts = { importance: A.HIGH, enableVibrate: true, vibrationPattern: [0, 250, 250, 250], lightColor: '#E8A93A' };
     if (ADHANS.length === 0) await Notifications.setNotificationChannelAsync(channelFor('adhan'), { name: 'Prière — adhan', sound: 'default', ...adhanOpts }).catch(() => {});
     for (const a of ADHANS) await Notifications.setNotificationChannelAsync(channelFor('adhan', a), { name: `Prière — adhan (${a.name})`, sound: a.file, ...adhanOpts }).catch(() => {});
+    // « Adhan même en silencieux ou vibreur » : même adhan joué sur le flux RÉVEIL (usage ALARM) : Android ne le coupe pas quand le
+    // téléphone est en silencieux ou vibreur (seulement si le volume du réveil est à zéro, ou en « Ne pas déranger » strict).
+    const alarmAudio = { usage: Notifications.AndroidAudioUsage.ALARM, contentType: Notifications.AndroidAudioContentType.SONIFICATION };
+    if (ADHANS.length === 0) await Notifications.setNotificationChannelAsync(channelFor('adhan', null, true), { name: 'Prière — adhan (même en silencieux)', sound: 'default', audioAttributes: alarmAudio, ...adhanOpts }).catch(() => {});
+    for (const a of ADHANS) await Notifications.setNotificationChannelAsync(channelFor('adhan', a, true), { name: `Prière — adhan (${a.name}, même en silencieux)`, sound: a.file, audioAttributes: alarmAudio, ...adhanOpts }).catch(() => {});
     await Notifications.setNotificationChannelAsync(CHANNEL_NEWS, { name: 'Actualités', importance: Notifications.AndroidImportance.DEFAULT }).catch(() => {});
   }
 }
@@ -64,7 +69,7 @@ export async function askExactAlarms(): Promise<void> {
  * (Re)programme les rappels de prière. Annule d'abord les anciens rappels de prière (jamais les autres notifications),
  * puis programme ceux des 7 prochains jours si `enabled` et si les notifications sont autorisées. Renvoie le nombre programmé.
  */
-export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; mode?: AlertMode; adhanId?: string | null; nowMs?: number }): Promise<number> {
+export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Prefs; locale: Locale; mode?: AlertMode; adhanId?: string | null; alarm?: boolean; nowMs?: number }): Promise<number> {
   try {
     const pending = await Notifications.getAllScheduledNotificationsAsync();
     await Promise.all(pending.filter((n) => (n.content.data as { kind?: string } | null)?.kind === 'prayer')
@@ -78,7 +83,7 @@ export async function syncPrayerNotifications(o: { enabled: boolean; prefs: Pref
       await Notifications.scheduleNotificationAsync({
         identifier: `prayer:${p.key}`,
         content: { title: translate(o.locale, 'np.prayerTitle'), body: translate(o.locale, 'np.prayerBody', { name, time: fmtTime(p.at, o.prefs.loc.tz, o.locale) }), data: { kind: 'prayer', path: '/', mode }, sound: contentSound(mode, adhan) },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: channelFor(mode, adhan) },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: channelFor(mode, adhan, Platform.OS === 'android' && !!o.alarm) },
       });
     }
     return plan.length;

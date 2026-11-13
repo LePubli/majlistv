@@ -21,10 +21,12 @@ export function readAlertMode(raw: string | null | undefined): AlertMode {
  * Canal Android du mode. Un canal Android ne peut plus changer de son une fois créé : chaque adhan du catalogue a donc
  * son propre canal (prayer_adhan_<id>) ; sans catalogue, prayer_adhan (son par défaut).
  */
-export function channelFor(mode: AlertMode, adhan: AdhanRef | null = null): string {
+export function channelFor(mode: AlertMode, adhan: AdhanRef | null = null, alarm = false): string {
   if (mode === 'silent') return 'prayer_silent';
   if (mode === 'vibrate') return 'prayer_vibrate';
-  return adhan ? `prayer_adhan_${adhan.id}` : 'prayer_adhan';
+  // « Adhan même en silencieux » (Android) : canaux à part, qui jouent l'adhan sur le volume RÉVEIL (cf. notifications.ts).
+  const base = adhan ? `prayer_adhan_${adhan.id}` : 'prayer_adhan';
+  return alarm ? base.replace('prayer_adhan', 'prayer_adhan_alarm') : base;
 }
 
 /** Son de la notification (iPhone ; sur Android le son vient du canal) : false = aucun, true = son par défaut, sinon nom du fichier. */

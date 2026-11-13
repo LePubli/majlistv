@@ -8989,3 +8989,17 @@ docker logs --since 30m dockpanel-git-majlistv-transcriber 2>&1 | grep "\[direct
 **Droits.** Le lecteur officiel YouTube est utilisé (autorisé par les conditions de YouTube quand la chaîne permet l'intégration) ; aucune copie du flux.
 
 **Tests.** `api/tests/test_live_channels.py` (ajouté à la suite CI : gestion réservée à l'administration, liens acceptés et refusés, recherche du direct simulée, échec et blocage, masquer, ordre, nouveau lien, suppression, journal d'audit, fonction coupée) ; `web/tests/test_live_channels_web.mjs` ; `mobile/tests/liveChannels.test.ts`. Écrans vérifiés à 1440 px et 390 px, en français et en arabe (lecteur simulé). **Non testé : de vraies chaînes YouTube** (pas d'accès à YouTube ici).
+
+## Prière : « Adhan même en silencieux ou vibreur » (Android) (13/11)
+
+Demande d'Epok du 13/11 : jouer l'adhan à l'heure de la prière même quand le téléphone est en silencieux ou vibreur.
+
+**Ce que c'est.** Application → réglages de la prière → mode « Adhan » → nouvel interrupteur **« Adhan même en silencieux ou vibreur »** (Android seulement, désactivé d'origine). L'adhan passe alors par le **volume du réveil** : Android ne le coupe pas en silencieux ni en vibreur. Limites : il ne sonne pas si le volume du réveil est à zéro, ni avec certains réglages stricts de « Ne pas déranger ».
+
+**iPhone : impossible** pour une application ordinaire : seules les « alertes critiques » sonnent en silencieux, et Apple ne les accorde qu'à certaines applications (santé, sécurité) après demande.
+
+**Comment c'est fait.** Un canal de notification Android ne change plus de son après sa création : nouveaux canaux `prayer_adhan_alarm_<adhan>` (« Prière — adhan (…, même en silencieux) »), avec `audioAttributes.usage = ALARM` (`mobile/src/lib/notifications.ts`) ; `channelFor(mode, adhan, alarm)` (`prayerAlert.ts`) ; réglage gardé sur le téléphone (`prayerStore.tsx`, clé `mejliss.prayerAdhanAlarm`) ; interrupteur dans `PrayerSettingsPanel.tsx` ; textes `np.alarm`, `np.alarmHelp` (fr / en / ar).
+
+**Installer.** Mise à jour du contenu : fermer et rouvrir l'application deux fois, puis activer l'interrupteur (les rappels sont reprogrammés aussitôt).
+
+**Tests.** `mobile/tests/prayerAlert.test.ts` (canaux « alarm », option sans effet hors mode adhan) ; `npm run check` (277 tests + typage). **Non testé sur un téléphone** : à essayer en mettant le téléphone en silencieux avant l'heure d'une prière (ou avec un horaire proche).

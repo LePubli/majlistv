@@ -7,6 +7,8 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'np.alarm': 'Adhan même en silencieux ou vibreur',
+  'np.alarmHelp': 'L’adhan passe par le volume du réveil : il sonne même téléphone en silencieux ou vibreur (pas si le volume du réveil est à zéro). Réglez ce volume dans les réglages du son.',
   'lv.title': 'Chaînes en direct',
   'lv.live': 'En direct',
   'lv.notLive': 'Pas de direct en ce moment : dernière diffusion',
@@ -391,6 +393,8 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'np.alarm': 'Adhan even on silent or vibrate',
+  'np.alarmHelp': 'The adhan uses the alarm volume: it plays even when the phone is on silent or vibrate (not if the alarm volume is zero). Set that volume in the sound settings.',
   'lv.title': 'Live channels',
   'lv.live': 'Live',
   'lv.notLive': 'Not live right now: last broadcast',
@@ -771,6 +775,8 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'np.alarm': 'الأذان حتى في الوضع الصامت أو الاهتزاز',
+  'np.alarmHelp': 'يُشغَّل الأذان بمستوى صوت المنبّه: يُسمع حتى إذا كان الهاتف صامتًا أو على الاهتزاز (إلا إذا كان صوت المنبّه صفرًا). اضبط هذا الصوت في إعدادات الصوت.',
   'lv.title': 'القنوات المباشرة',
   'lv.live': 'مباشر',
   'lv.notLive': 'لا بث مباشر الآن: آخر بث',

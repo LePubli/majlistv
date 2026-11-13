@@ -104,6 +104,10 @@ export function PrayerSettingsPanel() {
                 </View>
                 <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeHelp')}</Txt>
                 {prayer.mode === 'adhan' ? <AdhanPicker /> : null}
+                {/* Android : adhan sur le volume du réveil, donc même téléphone en silencieux ou vibreur. */}
+                {prayer.mode === 'adhan' && Platform.OS === 'android' ? (
+                  <Row label={t('np.alarm')} help={t('np.alarmHelp')} value={prayer.alarm} onChange={(v) => { void prayer.setAlarm(v); }} />
+                ) : null}
                 {Platform.OS === 'ios' ? <Txt size={12} color={colors.muted} style={sideAlign}>{t('np.modeIos')}</Txt> : null}
               </View>
             ) : null}

@@ -664,3 +664,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Application : **« Mon compte » dans la barre du bas**, menu ☰ allégé en trois groupes (13/11) : livré.
 - Audyn — **titres et descriptions en français repris de la vidéo** (import d'une chaîne, bouton pour les contenus déjà importés) (13/11) : livré.
 - **Chaînes TV en direct 24 h/24** (La Mecque, Médine… : page « En direct », site et application, Studio → Chaînes TV en direct) (13/11) : livré ; liens des chaînes à ajouter par Epok.
+- Prière : **adhan même en silencieux ou vibreur** (Android, volume du réveil) (13/11) : livré ; iPhone impossible (alertes critiques réservées par Apple).
