@@ -8876,3 +8876,24 @@ bash /root/verify-deploy.sh
 **Installer.** GitHub → Actions → « Application Android (APK) » → dernière exécution → fichier `mejliss-tv-android` (ou le lien de téléchargement du site) ; copier l'APK sur l'autoradio (clé USB ou téléchargement), l'ouvrir, autoriser les « sources inconnues » si demandé.
 
 **Tests.** `npm run check` (application) ; APK fabriqué par GitHub Actions. **Non testé ici : l'installation sur l'autoradio** (essai à faire par Epok).
+
+## Application : abonnement à jour dans « Mon compte », erreurs envoyées au serveur, menu (13/11)
+
+Retours d'Epok du 13/11 (application sur l'autoradio) : « Mon compte » ouvert depuis le menu ramène à l'accueil ; un abonnement pris (sur le site) reste « sans abonnement » dans l'application.
+
+**Corrections (application, mise à jour du contenu : pas de nouvel APK).**
+- **Abonnement** (`src/app/(tabs)/account.tsx`) : l'état était lu une seule fois par session (l'écran Compte reste en mémoire) ; il est maintenant relu **à chaque ouverture de l'écran** et **au retour dans l'application** (après le paiement dans le navigateur). La formule Apprentissage (et le rôle administrateur) compte comme abonné.
+- **Menu ☰** (`src/components/MenuDrawer.tsx`) : l'écran demandé est ouvert **avant** la fermeture du menu (sur un appareil lent, fermer d'abord pouvait faire perdre la navigation) ; un échec est signalé au serveur.
+- **Erreurs de l'application envoyées au serveur** (`src/lib/reportError.ts`, `src/app/_layout.tsx`) : erreurs non rattrapées et pages qui plantent → **Admin → Erreurs** (chemin « [app] … », version d'Android et de l'application) ; une page qui plante affiche un écran « Oups… » avec « ↻ » au lieu de fermer l'application.
+
+**Cause de « Mon compte → accueil » : non trouvée dans le code** (la page existe, aucune redirection vers l'accueil). Si le problème persiste après la mise à jour, l'erreur éventuelle apparaîtra dans Admin → Erreurs (« [app] »).
+
+**Installer.** Fermer et rouvrir l'application deux fois (mise à jour du contenu).
+
+**Vérifier côté serveur qu'un abonnement est bien enregistré** (remplacer l'adresse) :
+
+```bash
+docker exec dockpanel-app-postgres-majlisstv sh -c 'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-$POSTGRES_USER}" -c "SELECT u.email, s.status, s.tier, s.current_period_end, s.updated_at FROM subscriptions s JOIN users u ON u.id = s.user_id WHERE u.email = '\''adresse@exemple.fr'\'' ORDER BY s.updated_at DESC;"'
+```
+
+**Tests.** `mobile/tests/accountRefresh.test.ts` ; `npm run check` (273 tests + typage). **Non testé sur l'autoradio.**

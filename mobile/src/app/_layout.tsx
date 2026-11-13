@@ -26,8 +26,26 @@ import { QuranMiniBar } from '@/components/QuranMiniBar';
 import { AudynPlayerProvider } from '@/lib/audynPlayer';
 import { AudynMiniBar } from '@/components/AudynMiniBar';
 import { colors } from '@/lib/theme';
+import { installGlobalErrorReporting, reportAppError } from '@/lib/reportError';
+import { Pressable, Text, View } from 'react-native';
+import type { ErrorBoundaryProps } from 'expo-router';
 
 void SplashScreen.preventAutoHideAsync();
+installGlobalErrorReporting();
+
+// Écran affiché quand une page plante (au lieu de fermer l'application) ; l'erreur est envoyée au serveur (Admin → Erreurs).
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => { reportAppError(error, 'écran'); }, [error]);
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
+      <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>Oups, un problème est survenu. · Something went wrong.</Text>
+      <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>{String(error?.message || '').slice(0, 200)}</Text>
+      <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={{ paddingHorizontal: 22, paddingVertical: 12, borderRadius: 24, backgroundColor: colors.gold }}>
+        <Text style={{ color: '#000', fontWeight: '700' }}>↻</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 // Toucher une notification (application fermée, en arrière-plan ou ouverte) mène à la bonne page.
 function NotificationRouter() {

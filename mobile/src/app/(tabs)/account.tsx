@@ -2,7 +2,8 @@
 import React from 'react';
 import { Linking, ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -23,6 +24,15 @@ export default function AccountScreen() {
   const [pushOn, setPushOn] = React.useState<boolean | null>(null);
   const pushValue = pushOn ?? notif.data?.prefs.push ?? true;
   const billing = useAsync(async () => (user ? await api.get<BillingStatus>('/billing/status').catch(() => null) : null), [user?.id]);
+  // Abonnement pris sur le site (navigateur) : relu à chaque ouverture de cet écran et au retour dans l'application,
+  // sinon le compte restait « sans abonnement » jusqu'au redémarrage de l'application.
+  const reloadBilling = billing.reload;
+  useFocusEffect(React.useCallback(() => { if (user) void reloadBilling(); }, [user, reloadBilling]));
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active' && user) void reloadBilling(); });
+    return () => sub.remove();
+  }, [user, reloadBilling]);
+  const subscribed = Boolean(billing.data?.active || billing.data?.learning);
 
   return (
     <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
@@ -44,8 +54,8 @@ export default function AccountScreen() {
         {user ? (
           <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
             <Txt weight="bold" size={12} color={colors.muted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{t('account.subscription')}</Txt>
-            <Txt weight="bold" size={16} color={billing.data?.active ? colors.goldLight : colors.text2}>
-              {billing.data?.active ? t('account.active') : t('account.inactive')}
+            <Txt weight="bold" size={16} color={subscribed ? colors.goldLight : colors.text2}>
+              {subscribed ? t('account.active') : t('account.inactive')}
             </Txt>
             <Button label={t('account.manage')} variant="dark" onPress={() => Linking.openURL(`${SITE_URL}/account`)} />
           </View>

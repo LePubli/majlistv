@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
+import { reportAppError } from '@/lib/reportError';
 import { useAsync } from '@/lib/useAsync';
 import { LOCALES, Locale } from '@/lib/i18n';
 import { SITE_URL } from '@/lib/config';
@@ -24,15 +25,17 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
   const insets = useSafeAreaInsets();
   const cats = useAsync(async () => (await api.get<Category[]>('/categories').catch(() => [])).filter((c) => c.parentId == null), []);
   const site = (path: string) => () => { onClose(); void Linking.openURL(`${SITE_URL}${path}`); };
-  const nav = (path: Parameters<typeof router.navigate>[0]) => () => { onClose(); router.navigate(path); };
+  // Écran ouvert AVANT la fermeture du menu ; si la navigation échoue, la cause est envoyée au serveur (Admin → Erreurs).
+  const go = (fn: () => void, where: string) => { try { fn(); } catch (e) { reportAppError(e, `menu ${where}`); } onClose(); };
+  const nav = (path: Parameters<typeof router.navigate>[0]) => () => go(() => router.navigate(path), String(path));
 
   // Projet Menus : un menu affecté à « Application — menu ☰ » (Admin → Menus) remplace la liste d'origine et les catégories.
   const custom = resolveAppMenu(menus?.app_drawer, { locale, loggedIn: !!user, role: user?.role, hasSeries: !!config?.hasSeries, feat, siteUrl: SITE_URL });
   const open = (tg: Target | null) => {
     if (!tg) return;
-    onClose();
-    if (tg.type === 'route') router.navigate({ pathname: tg.pathname, params: tg.params } as never);
-    else void Linking.openURL(tg.url);
+    if (tg.type !== 'route') onClose();
+    if (tg.type === 'route') { go(() => router.navigate({ pathname: tg.pathname, params: tg.params } as never), tg.pathname); return; }
+    void Linking.openURL(tg.url);
   };
 
   const items: Item[] = [
