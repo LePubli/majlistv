@@ -9037,3 +9037,17 @@ bash /root/verify-deploy.sh
 - Vidéo YouTube : les boutons sous la vidéo pilotent le lecteur ; la télécommande ne pilote pas directement le lecteur YouTube intégré.
 
 **Tests.** `api/tests/test_tv_login.py` (ajouté à la suite CI : code, attente, validation, jeton remis une fois, refus, expiration, compte suspendu) ; `web/tests/test_tv_link_web.mjs` ; `mobile/tests/tv.test.ts` (règles, QR code, déclaration Android TV, bannière 320 × 180, écrans, textes) ; préconstruction Android vérifiée (manifeste : leanback, LEANBACK_LAUNCHER, bannière) ; APK fabriqué par GitHub Actions. **Non testé sur une vraie télé** (pas de télé ni d'émulateur Android TV ici) : navigation à la télécommande à vérifier par Epok.
+
+## Application TV — étape TV-2 : catalogue et recherche (14/11)
+
+**Ce que fait TV-2.**
+- Menu de gauche : **Accueil, Catalogue, Recherche, Mon compte**.
+- **Catalogue** : catégories principales à gauche (« Toutes les vidéos » + catégories), vidéos en **grille de 4** à droite ; la suite se charge en arrivant en bas (24 vidéos à la fois). Flèche droite : des catégories vers la grille.
+- **Recherche** : champ en haut (OK ouvre le clavier de la télé, ou la dictée vocale si la télécommande a un micro) ; recherche lancée 0,4 s après la dernière lettre (au moins 2 caractères), mêmes résultats que la recherche du site, en grille.
+- **Tailles adaptées aux télés** : une télé 1080p fait en général 960 points de large ; menu, vignettes (3,5 visibles par rangée, 4 par ligne en grille), titres et image de la fiche sont calculés à partir de la largeur de l'écran (`tvMenuWidth`, `tvCardWidth` dans `src/lib/tvRules.ts`).
+
+**Fichiers.** `mobile/src/app/tv/catalog.tsx`, `mobile/src/app/tv/search.tsx`, `src/components/tv/TvShell.tsx` (menu), `TvCard.tsx` (largeur), `src/app/tv/index.tsx` et `talk/[id].tsx` (tailles), textes `tv.catalog`, `tv.search`, `tv.allCategories`, `tv.searchPh`, `tv.searchHelp`, `tv.noResult`, `tv.results` (fr / en / ar).
+
+**Installer.** Mise à jour du contenu de l'application 0.19.0 : sur la télé, fermer et rouvrir Mejliss TV deux fois. Rien à redéployer sur le VPS.
+
+**Tests.** `mobile/tests/tv.test.ts` (tailles, catalogue, recherche, menu, textes) ; `npm run check` (282 tests + typage). **Non testé sur une vraie télé.**

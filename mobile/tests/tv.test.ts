@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fmtTvCode, tvResumeSeconds, tvRouteFor, tvRows } from '../src/lib/tvRules';
+import { fmtTvCode, tvCardWidth, tvMenuWidth, tvResumeSeconds, tvRouteFor, tvRows } from '../src/lib/tvRules';
 import { qrMatrix } from '../src/lib/qr';
 import { DICT } from '../src/lib/i18n';
 
@@ -45,4 +45,18 @@ test('écrans TV branchés', () => {
   assert.match(read('src/components/tv/Focusable.tsx'), /hasTVPreferredFocus=\{first\}/);
   const keys = ['tv.home', 'tv.account', 'tv.login', 'tv.featured', 'tv.watch', 'tv.resume', 'tv.fromStart', 'tv.continue', 'tv.locked', 'tv.loginTitle', 'tv.loginStep1', 'tv.loginStep2', 'tv.newCode', 'tv.scan'];
   for (const lang of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[lang] as Record<string, string>)[k], `${k} (${lang})`);
+});
+
+test('TV-2 : tailles pour une télé 1080p, catalogue et recherche', () => {
+  assert.equal(tvMenuWidth(960), 180); assert.equal(tvMenuWidth(1920), 220);
+  const w = tvCardWidth(960 - 180); assert.ok(w > 150 && w < 230, `vignette des rangées : ${w}`);
+  assert.ok(tvCardWidth(960 - 180 - 200, 4) >= 150, 'grille de 4 : jamais sous 150');
+  const c = read('src/app/tv/catalog.tsx');
+  assert.match(c, /api\.get<Card\[\]>\('\/talks', \{ category: cat \?\? undefined, limit: PAGE, offset \}\)/);
+  assert.match(c, /onEndReached=\{\(\) => \{ void load\(false\); \}\}/, 'suite chargée en bas de la grille');
+  const s = read('src/app/tv/search.tsx');
+  assert.match(s, /api\.get<SearchResult>\('\/search', \{ q: term, limit: 40 \}\)/);
+  const sh = read('src/components/tv/TvShell.tsx');
+  for (const h of ["'/tv/catalog'", "'/tv/search'"]) assert.ok(sh.includes(h), h);
+  for (const lang of ['fr', 'en', 'ar'] as const) for (const k of ['tv.catalog', 'tv.search', 'tv.allCategories', 'tv.searchPh', 'tv.searchHelp', 'tv.noResult', 'tv.results']) assert.ok((DICT[lang] as Record<string, string>)[k], `${k} (${lang})`);
 });

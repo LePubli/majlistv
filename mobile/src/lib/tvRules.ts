@@ -21,3 +21,16 @@ export function tvResumeSeconds(positionMs?: number | null, durationSeconds?: nu
   if (d && p > d - 30) return 0;
   return p;
 }
+
+/** Largeur du menu de gauche : une télé 1080p fait en général 960 points de large (densité 2). */
+export const tvMenuWidth = (screenW: number): number => (screenW >= 1200 ? 220 : 180);
+
+/**
+ * Largeur d'une vignette : `perRow` vignettes visibles dans la zone de contenu (marges de 32 et espaces de 16 compris).
+ * Rangées : 3,5 (on devine la suivante) ; grilles : 4 colonnes.
+ */
+export function tvCardWidth(contentW: number, perRow = 3.5): number {
+  const gap = 16;
+  const w = (contentW - 64 - gap * (Math.ceil(perRow) - 1)) / perRow;
+  return Math.max(150, Math.floor(w));
+}

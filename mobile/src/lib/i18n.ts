@@ -7,6 +7,13 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'tv.catalog': "Catalogue",
+  'tv.search': "Recherche",
+  'tv.allCategories': "Toutes les vidéos",
+  'tv.searchPh': "Titre, intervenant, sujet…",
+  'tv.searchHelp': "Appuyez sur OK pour écrire (ou dicter) votre recherche.",
+  'tv.noResult': "Aucun résultat.",
+  'tv.results': "{n} résultat(s)",
   'tv.home': "Accueil",
   'tv.account': "Mon compte",
   'tv.login': "Se connecter",
@@ -416,6 +423,13 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'tv.catalog': "Catalogue",
+  'tv.search': "Search",
+  'tv.allCategories': "All videos",
+  'tv.searchPh': "Title, speaker, topic…",
+  'tv.searchHelp': "Press OK to type (or speak) your search.",
+  'tv.noResult': "No result.",
+  'tv.results': "{n} result(s)",
   'tv.home': "Home",
   'tv.account': "My account",
   'tv.login': "Sign in",
@@ -821,6 +835,13 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'tv.catalog': "الفهرس",
+  'tv.search': "بحث",
+  'tv.allCategories': "كل الفيديوهات",
+  'tv.searchPh': "عنوان، محاضر، موضوع…",
+  'tv.searchHelp': "اضغط OK للكتابة (أو الإملاء الصوتي).",
+  'tv.noResult': "لا توجد نتائج.",
+  'tv.results': "{n} نتيجة",
   'tv.home': "الرئيسية",
   'tv.account': "حسابي",
   'tv.login': "تسجيل الدخول",

@@ -1,7 +1,7 @@
 // Fiche d'une vidéo sur la télé : image, titre, intervenant, description ; « Regarder » / « Reprendre » / « Depuis le début ».
 // Vidéo réservée aux abonnés et compte sans formule : message (l'abonnement se prend sur le site).
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -19,17 +19,18 @@ export default function TvTalk() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api, user, t } = useSession();
   const talk = useAsync(() => api.get<Talk>(`/talks/${id}`), [id, user?.id]);
+  const { width } = useWindowDimensions();
   if (talk.loading && !talk.data) return <Loading />;
   if (!talk.data) return <ErrorBox onRetry={talk.reload} />;
   const x = talk.data;
   const resume = tvResumeSeconds(x.resumeMs, x.durationSeconds);
   const play = (from: number) => router.push({ pathname: '/tv/play/[id]', params: { id: x.id, at: String(from) } });
   return (
-    <ScrollView contentContainerStyle={{ padding: 48, gap: 24 }} style={{ backgroundColor: colors.bg }}>
-      <View style={{ flexDirection: 'row', gap: 40 }}>
-        <View style={{ width: 520 }}><Poster talk={x} /></View>
+    <ScrollView contentContainerStyle={{ padding: 36, gap: 24 }} style={{ backgroundColor: colors.bg }}>
+      <View style={{ flexDirection: 'row', gap: 32 }}>
+        <View style={{ width: Math.round(width * 0.42) }}><Poster talk={x} /></View>
         <View style={{ flex: 1, gap: 12 }}>
-          <Txt weight="extrabold" size={32}>{x.title}</Txt>
+          <Txt weight="extrabold" size={26}>{x.title}</Txt>
           <Txt size={18} color={colors.text2}>{[x.speaker, x.durationSeconds ? formatDuration(x.durationSeconds) : null].filter(Boolean).join(' · ')}</Txt>
           {x.locked ? (
             <Txt size={17} color={colors.goldLight}>{user ? t('tv.locked') : t('tv.lockedGuest')}</Txt>
