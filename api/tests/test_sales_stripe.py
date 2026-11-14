@@ -38,7 +38,7 @@ r = requests.post(B + "/sales/checkout", headers=U, json={"kind": "talk", "id": 
 ok(r.status_code == 200 and r.json()["url"].startswith("https://checkout.stripe.test/") and r.json()["amount"] == 500, "achat : page de paiement Stripe, 5,00 €")
 body = [x for x in requests.get(M + "/_log").json() if x["path"] == "/v1/checkout/sessions"][-1]["body"]
 pid = body["metadata[sale_purchase_id]"]
-ok(body["mode"] == "payment" and body["line_items[0][price_data][unit_amount]"] == "500" and f"/talk/{T}?paid=1" in body["success_url"] and "achat" in body["line_items[0][price_data][product_data][name]"], "Stripe : paiement unique, bon montant, retour sur la vidéo")
+ok(body["mode"] == "payment" and body["line_items[0][price_data][unit_amount]"] == "500" and f"/talks/{T}?paid=1" in body["success_url"] and "achat" in body["line_items[0][price_data][product_data][name]"], "Stripe : paiement unique, bon montant, retour sur la vidéo")
 cur.execute("select status, mode, amount, stripe_session_id from sale_purchases where id=%s", (pid,)); st, mode, amt, sess = cur.fetchone()
 ok(st == "pending" and mode == "buy" and amt == 500 and sess, "achat « en attente » enregistré")
 cur.execute("select count(*) from consents where user_id=%s and kind='sale_terms' and text like %s", (uid, "%rétractation%")); ok(cur.fetchone()[0] == 1, "renonciation au délai de rétractation horodatée")

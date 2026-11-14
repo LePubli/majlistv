@@ -18,8 +18,8 @@ const block = ad.slice(ad.indexOf('const groups = ['), ad.indexOf('const visible
 const groups = [...block.matchAll(/\{ key: '(\w+)', title: t\('(\w+)'\), items: \[(.*)\] \},/g)].map((m) => ({ key: m[1], title: m[2], ids: [...m[3].matchAll(/\['(\w+)',/g)].map((x) => x[1]) }));
 assert.deepEqual(groups.map((g) => g.key), ['pilot', 'cat', 'practice', 'growth', 'site', 'tech'], 'six groupes');
 const all = groups.flatMap((g) => g.ids);
-const EXPECTED = ['dashboard', 'users', 'stats', 'revenue', 'health', 'errors', 'ask', 'lifecycle', 'categories', 'speakers', 'watch', 'ads', 'experiments', 'gifts', 'referral', 'regions', 'seasons', 'friday', 'athkar', 'ramadan', 'quran', 'kidrubrics', 'features', 'modules', 'settings', 'appearance', 'pages', 'menus', 'texts', 'legal', 'audit'];
-assert.deepEqual([...all].sort(), [...EXPECTED].sort(), 'les 31 écrans d’avant, ni plus ni moins');
+const EXPECTED = ['dashboard', 'users', 'stats', 'revenue', 'health', 'errors', 'ask', 'lifecycle', 'categories', 'speakers', 'watch', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'seasons', 'friday', 'athkar', 'ramadan', 'quran', 'kidrubrics', 'features', 'modules', 'settings', 'appearance', 'pages', 'menus', 'texts', 'legal', 'audit'];
+assert.deepEqual([...all].sort(), [...EXPECTED].sort(), 'les 31 écrans d’avant + Ventes à l’unité (C-2), ni plus ni moins');
 assert.equal(new Set(all).size, all.length, 'aucun écran en double');
 assert.ok(groups.every((g) => g.ids.length <= 8), 'aucun groupe de plus de 8 écrans');
 for (const g of groups) has3(g.title);

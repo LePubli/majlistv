@@ -6,6 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
+import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
 
 // Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
@@ -1171,7 +1172,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', menus: 'Menus', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', menus: 'Menus', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', sales: 'Ventes à l\'unité', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1203,6 +1204,7 @@ export default function Admin() {
         {tab === 'ramadan' && <RamadanAdmin />}
         {tab === 'quran' && <QuranAdmin />}
         {tab === 'regions' && <PricingRegionsAdmin />}
+        {tab === 'sales' && <SalesAdmin />}
         {tab === 'lifecycle' && <LifecycleAdmin />}
       </Suspense>
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}

@@ -1,4 +1,5 @@
 // Étape C-1 — Contenus payants à l'unité : vente (Studio), paiement Stripe, « Mes achats », administration (liste, remboursement).
+//   GET  /sales/terms                          public : texte des conditions (case à cocher avant paiement)
 //   POST /sales/checkout                       connecté : achat ou location d'un contenu → page de paiement Stripe
 //   GET  /me/purchases                         connecté : mes achats et locations (payés ou remboursés)
 //   GET|PUT|DELETE /studio/sales/:kind/:id     administrateur, ou organisateur propriétaire du contenu : prix de vente
@@ -18,7 +19,7 @@ import {
 
 const lang2 = (l) => (['fr', 'en', 'ar'].includes(String(l || '').slice(0, 2)) ? String(l).slice(0, 2) : 'fr');
 const itemParams = z.object({ kind: z.enum(SALE_KINDS), id: z.guid() });
-const pathOf = (kind, id) => (kind === 'talk' ? `/talk/${id}` : `/audyn/${id}`);
+const pathOf = (kind, id) => (kind === 'talk' ? `/talks/${id}` : `/audyn/${id}`);
 const PROD = { talk: { fr: 'Vidéo', en: 'Video', ar: 'فيديو' }, audyn: { fr: 'Audio', en: 'Audio', ar: 'صوت' } };
 const MODE = { buy: { fr: 'achat', en: 'purchase', ar: 'شراء' }, rent: { fr: 'location', en: 'rental', ar: 'استئجار' } };
 
@@ -55,6 +56,9 @@ export default async function salesRoutes(app) {
   const strict = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
   const auth = { preHandler: app.authenticate };
   const adminOnly = { preHandler: app.requireRole('admin') };
+
+  // Texte des conditions affiché à côté de la case à cocher (le même est enregistré à l'achat).
+  app.get('/sales/terms', async () => ({ version: SALE_TERMS_VERSION, text: SALE_TERMS_TEXT }));
 
   // --- Achat / location ------------------------------------------------------------------------------------------------
   app.post('/sales/checkout', { preHandler: app.authenticate, ...strict }, async (req, reply) => {

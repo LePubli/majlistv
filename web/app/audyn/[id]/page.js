@@ -1,11 +1,12 @@
 'use client';
 // Audyn : fiche d'un livre (pochette, description, chapitres) et commandes du lecteur.
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
 import { useAudyn } from '../../../components/AudynPlayer';
 import AudynControls from '../../../components/AudynControls';
+import SaleBox, { SaleOwned } from '../../../components/SaleBox'; // étape C-2 : contenu payant à l'unité
 import { fmtClock, fmtLong, resumePoint } from '../../../lib/audyn';
 
 export default function AudynBook() {
@@ -15,7 +16,8 @@ export default function AudynBook() {
   const [b, setB] = useState(null);
   const [missing, setMissing] = useState(false);
   const [saved, setSaved] = useState(null);
-  useEffect(() => { call(`/audyn/${id}`).then((r) => { if (r.ok) setB(r.data); else setMissing(true); }); }, [id, call]);
+  const load = useCallback(() => call(`/audyn/${id}`).then((r) => { if (r.ok) setB(r.data); else setMissing(true); }), [id, call]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => { if (b) { const s = au.savedFor(b.id); setSaved(s ? resumePoint(b.chapters, s) : null); } }, [b, au.index]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!feat('audyn')) return <main className="page"><p className="meta">{t('awOff')}</p></main>;
   if (missing) return <main className="page"><p className="err">{t('awMissing')}</p><Link className="btn" href="/audyn">{t('awTitle')}</Link></main>;
@@ -31,12 +33,14 @@ export default function AudynBook() {
           <h1>{b.title}</h1>
           {(b.narrator || b.author) && <p>{b.narrator ? t('awBy').replace('{name}', b.narrator) : b.author}</p>}
           <p className="meta">{b.chapters.length === 1 ? t('awChapter1') : t('awChapters').replace('{n}', b.chapters.length)} · {fmtLong(b.durationSeconds)}</p>
+          {b.sale?.owned && <p className="sale-owned-line"><SaleOwned sale={b.sale} /></p>}
           {b.chapters.length > 0 && (saved && (saved.pos > 0 || saved.index > 0)
             ? <button type="button" className="btn" onClick={() => au.openResume(b)}>▶ {t('awResume')}</button>
             : <button type="button" className="btn" onClick={() => au.open(b, firstOk, 0)}>▶ {t('awListen')}</button>)}
         </div>
       </div>
-      {!b.access.full && <p className="aw-box">{t('awPreviewBox').replace('{t}', fmtClock(b.access.previewSeconds))} <a className="btn" href="/pricing">{t('awSubscribe')}</a></p>}
+      {!b.access.full && b.sale && <SaleBox kind="audyn" id={b.id} sale={b.sale} onPaid={load} />}
+      {!b.access.full && !b.sale && <p className="aw-box">{t('awPreviewBox').replace('{t}', fmtClock(b.access.previewSeconds))} <a className="btn" href="/pricing">{t('awSubscribe')}</a></p>}
       {current && <AudynControls />}
       {b.description && <p className="aw-desc">{b.description}</p>}
       <ol className="aw-chapters">

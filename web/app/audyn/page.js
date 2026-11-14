@@ -31,7 +31,7 @@ function AudynCard({ b, t, progress = 0, sub }) {
       <Link href={`/audyn/${b.id}`} className="talk aw-talk">
         <div className="thumb aw-thumb" style={b.coverUrl ? { backgroundImage: `url(${b.coverUrl})` } : undefined}>
           {!b.coverUrl && <span className="aw-thumb-ph" aria-hidden="true">🎧</span>}
-          {!b.full && <span className="badge">{t('awFree')}</span>}
+          {b.onSale && !b.full ? <span className="badge sale">{t('slBadge')}</span> : !b.full && <span className="badge">{t('awFree')}</span>}
           {b.durationSeconds > 0 && <span className="dur"><bdi>{fmtLong(b.durationSeconds)}</bdi></span>}
           {progress > 0 && <span className="progress"><span style={{ width: `${Math.min(100, Math.round(progress * 100))}%` }} /></span>}
         </div>

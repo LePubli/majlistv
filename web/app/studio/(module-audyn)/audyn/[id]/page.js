@@ -8,6 +8,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
 import StudioTabs from '../../../../../components/StudioTabs';
 import { AudynCategoryPicker } from '../../../../../components/AudynCategories';
+import SaleEditor from '../../../../../components/SaleEditor'; // étape C-2 : vente à l'unité
 import { uploadFile } from '../../../../../lib/upload';
 import { AUDIENCE_KEY, clock } from '../page';
 
@@ -246,6 +247,8 @@ export default function StudioAudynItem() {
           </ul>
         )}
       </section>
+
+      <SaleEditor kind="audyn" id={it.id} />
 
       <section className="panel ay-form">
         <h2 className="ay-h2">{t('ayPublish')}</h2>

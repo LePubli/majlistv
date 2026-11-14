@@ -118,7 +118,7 @@ export async function applySalePaid(client, session) {
   if (!p) return false;
   if (p.user_id) {
     const u = (await client.query('SELECT locale FROM users WHERE id = $1', [p.user_id])).rows[0];
-    const path = p.kind === 'talk' ? `/talk/${p.item_id}` : `/audyn/${p.item_id}`;
+    const path = p.kind === 'talk' ? `/talks/${p.item_id}` : `/audyn/${p.item_id}`;
     await enqueueForUser(client, p.user_id, p.mode === 'buy' ? 'sale_bought' : 'sale_rented',
       { title: p.title, until: p.expires_at ? fmtDateTime(p.expires_at, u?.locale || 'fr') : '', path }, `sale-paid:${p.id}`);
   }

@@ -670,3 +670,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Application TV — TV-3** (chaînes en direct et Audyn sur la télé) (14/11) : livré. Suite : TV-4 Kids.
 - **Application TV — TV-4** (espace Kids sur la télé, verrouillé par le code parental) (14/11) : livré. Application TV terminée (TV-1 à TV-4).
 - **C-1 — Contenus payants à l'unité, côté serveur** (achat / location, prix abonnés, Stripe, remboursement) (14/11) : livré. Suite : C-2 écrans du site, C-3 appli et télé.
+- **C-2 — Contenus payants à l'unité, écrans du site** (achat / location sur les fiches, Studio, Mes achats, Admin → Ventes) (14/11) : livré. Suite : C-3 appli et télé.

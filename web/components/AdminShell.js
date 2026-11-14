@@ -13,7 +13,7 @@ import AdminPalette from './AdminPalette';
 
 // Entrées qui mènent à l'écran d'un module : disparaissent si le module est coupé ou absent.
 // Entrées liées à une fonction activable du cœur (Admin → Fonctions).
-const FEATURE_OF_TAB = { watch: 'watch', ads: 'ads', experiments: 'experiments', menus: 'menus' };
+const FEATURE_OF_TAB = { watch: 'watch', ads: 'ads', experiments: 'experiments', menus: 'menus', sales: 'sales' };
 const MODULE_OF_TAB = { stats: 'stats', gifts: 'gifts', revenue: 'revenue', kidrubrics: 'kids' };
 
 export default function AdminShell({ children }) {
@@ -44,7 +44,7 @@ export default function AdminShell({ children }) {
     { key: 'pilot', title: t('adGrpPilot'), items: [['dashboard', t('admDashboard'), ICONS.dash], ['users', t('admUsers'), ICONS.users], ['stats', t('adStats'), ICONS.chart], ['revenue', t('adRevenue'), ICONS.tag]] },
     { key: 'cat', title: t('adGrpCat'), items: [['categories', t('adCatFmt'), ICONS.tag], ['speakers', t('adSpeakers'), ICONS.users], ['watch', t('admWatch'), ICONS.eye]] },
     { key: 'practice', title: t('adGrpPractice'), items: [['quran', t('qrAdNav'), ICONS.doc], ['athkar', t('atTab'), ICONS.doc], ['ramadan', t('rzNav'), ICONS.eye], ['seasons', t('seasonAdmin'), ICONS.eye], ['friday', t('fdAdminNav'), ICONS.eye], ['kidrubrics', t('krAdminNav'), ICONS.tag]] },
-    { key: 'growth', title: t('adGrpGrowth'), items: [['ads', t('admAds'), ICONS.tag], ['experiments', 'Tests A/B', ICONS.chart], ['gifts', t('admGifts'), ICONS.heart], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['lifecycle', t('admLifecycle'), ICONS.gear]] },
+    { key: 'growth', title: t('adGrpGrowth'), items: [['ads', t('admAds'), ICONS.tag], ['experiments', 'Tests A/B', ICONS.chart], ['gifts', t('admGifts'), ICONS.heart], ['sales', t('saNav'), ICONS.tag], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['lifecycle', t('admLifecycle'), ICONS.gear]] },
     { key: 'site', title: t('adGrpSite'), items: [['appearance', t('admAppearance'), ICONS.brush], ['pages', t('admPages'), ICONS.doc], ['menus', 'Menus', ICONS.layers], ['texts', t('admTexts'), ICONS.doc], ['legal', t('admLegal'), ICONS.doc], ['features', t('admFeatures'), ICONS.gear], ['modules', t('admModules'), ICONS.layers], ['settings', t('admSettings'), ICONS.gear]] },
     { key: 'tech', title: t('adGrpTech'), items: [['health', t('admHealth'), ICONS.gear], ['errors', t('admErrors'), ICONS.shield], ['ask', t('admAsk'), ICONS.shield], ['audit', t('admAudit'), ICONS.shield]] },
   ];

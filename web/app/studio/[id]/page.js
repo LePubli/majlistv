@@ -11,6 +11,7 @@ import TalkEditor from '../../../components/TalkEditor';
 import { hasWebModule } from '../../../lib/modules';
 import Timeline from '../../../components/Timeline';
 import ImportVideoPanel from '../../../components/ImportVideoPanel';
+import SaleEditor from '../../../components/SaleEditor'; // étape C-2 : vente à l'unité
 
 // Encart « Quiz » : état et lien vers l'onglet de gestion.
 function QuizPanel({ id, t, call }) {
@@ -182,6 +183,8 @@ export default function ManageTalk() {
           </p>
         </Row>
       </ol>
+
+      <SaleEditor kind="talk" id={x.id} />
 
       <Timeline talkId={x.id} t={t} call={call} locale={locale}
         signature={[x.status, x.transcriptStatus, x.publication, (x.translations || []).map((tr) => tr.lang + tr.status).join(), (x.insights || []).map((i) => i.lang + i.status).join()].join('|')} />

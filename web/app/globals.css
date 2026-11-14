@@ -4005,3 +4005,35 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .tv-confirm { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--gold, #E6A739); border-radius: 14px; }
 .tv-btns { display: flex; flex-wrap: wrap; gap: 10px; }
 .tv-done { font-size: 1.2rem; color: #fff; font-weight: 700; }
+
+/* Étape C-2 — contenus payants à l'unité : encart d'achat / location, pastille d'accès, Studio, Mes achats. */
+.sale-box { text-align: start; }
+.sale-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0 6px; }
+.sale-opt { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'r t p' 'r h h'; gap: 4px 10px; align-items: center; padding: 14px 16px; border: 1px solid var(--card-border, var(--line-soft)); border-radius: var(--card-radius, 12px); background: var(--surface); cursor: pointer; }
+.sale-opt input { grid-area: r; width: 20px; height: 20px; accent-color: var(--accent); }
+.sale-opt-t { grid-area: t; font-weight: 700; color: #fff; }
+.sale-opt-p { grid-area: p; white-space: nowrap; }
+.sale-opt-p strong { color: var(--gold, var(--accent)); font-size: 1.15rem; }
+.sale-opt-p s { color: var(--muted); font-size: .9rem; }
+.sale-opt-h { grid-area: h; color: var(--muted); font-size: .85rem; }
+.sale-opt.on { border-color: var(--gold, var(--accent)); box-shadow: 0 0 0 1px var(--gold, var(--accent)); }
+.sale-owned { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px; background: color-mix(in srgb, var(--gold, var(--accent)) 18%, transparent); color: var(--gold, var(--accent)); font-weight: 700; font-size: .9rem; }
+.sale-owned-line { margin: 4px 0 8px; }
+.badge.sale { background: var(--gold, var(--accent)); color: var(--on-accent); font-weight: 700; }
+.se-panel .se-sum { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 12px; }
+.se-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; align-items: end; }
+.se-form .se-help, .se-form .panel-actions, .se-form .ok, .se-form .error { grid-column: 1 / -1; }
+.mp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mp-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--card-border, var(--line-soft)); border-radius: var(--card-radius, 12px); background: var(--surface); }
+.mp-kind { font-size: 1.4rem; }
+.mp-main { display: grid; gap: 2px; min-width: 0; }
+.mp-main a, .mp-main > span:first-child { color: #fff; font-weight: 700; overflow-wrap: anywhere; }
+.mp-state { color: var(--muted); font-size: .9rem; text-align: end; }
+.mp-state.ok { color: var(--gold, var(--accent)); font-weight: 700; }
+@media (max-width: 560px) {
+  .mp-list li { grid-template-columns: auto 1fr; }
+  .mp-state { grid-column: 2; text-align: start; }
+}
+.sa-admin .fld.inline { display: inline-grid; margin: 6px 0 10px; }
+.sa-admin .fld.inline select { width: auto; min-width: 160px; }
+.sa-admin .adm-table td:nth-child(3) { white-space: normal; min-width: 180px; }

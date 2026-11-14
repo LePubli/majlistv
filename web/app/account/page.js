@@ -6,6 +6,7 @@ import { useApp } from '../../components/Providers';
 import Steps from '../../components/Steps';
 import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
+import MyPurchases from '../../components/MyPurchases'; // étape C-2
 import MyReferral from '../../components/MyReferral';
 import PrayerSettings from '../../components/PrayerSettings';
 import MyData from '../../components/MyData';
@@ -77,6 +78,7 @@ export default function Account() {
     { id: 'security', label: t('tbSecurity') },
     { id: 'data', label: t('tbData') },
     ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
+    ...(feat('sales') ? [{ id: 'purchases', label: t('mpTab') }] : []),
     ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
     ...(feat('referral') ? [{ id: 'referral', label: t('refTab') }] : []),
   ];
@@ -108,6 +110,7 @@ export default function Account() {
           <TabPanel id="data" current={tab}><MyData /></TabPanel>
           <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
           <TabPanel id="referral" current={tab}><MyReferral /></TabPanel>
+          <TabPanel id="purchases" current={tab}><h2>{t('mpTitle')}</h2><MyPurchases /></TabPanel>
           <TabPanel id="gifts" current={tab}>
             <MyGifts />
             <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../components/Providers';
@@ -13,6 +13,7 @@ import BooksBlock from '../../../components/BooksBlock';
 import Insights from '../../../components/Insights';
 import { thumbOf } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
+import SaleBox, { SaleOwned } from '../../../components/SaleBox'; // étape C-2 : contenu payant à l'unité
 import { levelLabel } from '../../../lib/levels';
 import NotesPanel from '../../../components/NotesPanel';
 import AskPanel from '../../../components/AskPanel';
@@ -95,6 +96,9 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
       if (r.ok) { setFav(Boolean(r.data.favorite)); setResumeMs(r.data.resumeMs || 0); }
     });
   }, [id, call]);
+
+  // Retour du paiement d'un contenu à l'unité : relecture de la fiche (l'accès arrive avec la confirmation de Stripe).
+  const reloadTalk = useCallback(() => call('/talks/' + id).then((r) => { if (r.ok) setTalk(r.data); }), [call, id]);
 
   // Série : numéro d'épisode, précédent / suivant et liste des épisodes (avancement du compte connecté).
   useEffect(() => { call(`/talks/${id}/series`).then((r) => setCtx(r.ok ? r.data.series : null)); }, [id, call]);
@@ -341,7 +345,9 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   }
 
   // Invitation à s'abonner : visiteur → essai gratuit (inscription puis formules) ; connecté sans abonnement → formules.
-  const lock = talk.locked ? (
+  const lock = talk.locked && talk.sale ? (
+    <SaleBox kind="talk" id={id} sale={talk.sale} onPaid={reloadTalk} />
+  ) : talk.locked ? (
     <div className="lock">
       <h2>{t('lkTitle')}</h2>
       <p>{talk.preview ? t('lkIntro') : t('premiumOnly')}</p>
@@ -498,6 +504,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               </p>
             )}
             <h1>{talk.title}</h1>
+            {talk.sale?.owned && <p className="sale-owned-line"><SaleOwned sale={talk.sale} /></p>}
             <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{[audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}{trackable && resumeMs > 0 && !jumpMs && <> · {t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></>}</p>
             {talk.speaker && (
               <div className="wb-channel">

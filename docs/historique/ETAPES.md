@@ -9108,3 +9108,21 @@ bash /root/verify-deploy.sh
 **Debug.** Paiement fait mais contenu verrouillé → Admin → Ventes (C-2) ou `SELECT status, paid_at FROM sale_purchases ORDER BY created_at DESC LIMIT 5;` dans la base : `pending` = le webhook n'est pas arrivé (vérifier l'événement `checkout.session.completed` chez Stripe).
 
 **Testé.** Ici : 38 vérifications `test_sales.py`, 25 `test_sales_stripe.py` (faux Stripe), `test_sales_lib.mjs`, balayage des droits (724 routes), cartes cadeaux, hors connexion, Kids, Audyn, séries : tout passe. Non testé : un vrai paiement Stripe.
+
+## Étape C-2 : contenus payants à l'unité — écrans du site (14/11)
+
+**Description.**
+- **Fiche vidéo et fiche Audyn** : si le contenu est en vente et que la personne n'y a pas accès, l'invitation à s'abonner est remplacée par l'encart **« Ce contenu se paie à part »** : choix Achat / Location (prix barré + prix abonné quand la réduction s'applique), rappel « Abonnés : −X % » pour les non-abonnés, case des conditions (renonciation au délai de rétractation), bouton « Payer … » → Stripe. Visiteur : « Se connecter pour acheter » / « Créer un compte ». Retour de Stripe : « Merci ! Paiement reçu… », la fiche est relue toutes les 3 s (10 fois) jusqu'à la confirmation ; « Paiement annulé : rien n'a été débité » si annulé. Une fois payé : pastille « ✓ Acheté » ou « ⏳ Loué jusqu'au … » sous le titre.
+- **Liste Audyn** : badge « À l'achat » sur les contenus en vente.
+- **Studio** (fiche d'une vidéo, fiche d'un contenu Audyn) : panneau **« Vente à l'unité »** : prix d'achat, prix de location, durée (1, 2, 3, 7 ou 30 jours), réduction abonnés ; « Mettre en vente », « Enregistrer les prix », « Retirer de la vente » ; résumé (prix abonnés, nombre de ventes, montant). Visible pour l'admin et l'organisateur responsable, seulement si la fonction est activée.
+- **Mon compte → Mes achats** : achats et locations (date de fin), remboursés.
+- **Administration → Croissance → Ventes à l'unité** : encaissé total et sur 30 jours, nombre de ventes, remboursements, contenus en vente ; liste filtrable ; bouton « Rembourser » (remboursement complet, accès coupé).
+- API : `GET /sales/terms` (texte de la case à cocher, identique à celui enregistré) ; adresse de retour de Stripe corrigée (`/talks/…`).
+
+**Fichiers.** `web/components/SaleBox.js`, `SaleEditor.js`, `MyPurchases.js`, `SalesAdmin.js` ; `app/talks/[id]/TalkClient.js`, `app/audyn/[id]/page.js`, `app/audyn/page.js`, `app/studio/[id]/page.js`, `app/studio/(module-audyn)/audyn/[id]/page.js`, `app/account/page.js`, `app/admin/page.js`, `components/AdminShell.js`, `app/globals.css`, textes `sl*`, `se*`, `mp*`, `sa*` (fr/en/ar) ; test `web/tests/test_sales_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-api** (route des conditions, adresse de retour), puis **majlistv-web**. Puis les commandes habituelles du VPS. Pour l'essayer : Admin → Fonctions → « Contenus payants à l'unité » (le paiement réel attend le réglage Stripe de fin de projet).
+
+**Debug.** Pas de panneau dans le Studio → fonction coupée, ou compte qui n'est ni admin ni responsable du contenu. Encart absent sur la fiche → contenu pas en vente, ou déjà acheté (pastille). « Paiement pas encore confirmé » qui dure → webhook Stripe (`checkout.session.completed`).
+
+**Testé.** Navigateur réel (Playwright) en 1440 et 390 px, français et arabe : encart visiteur / membre, bouton désactivé tant que la case n'est pas cochée, redirection vers Stripe (faux Stripe), retour « annulé », paiement confirmé (webhook simulé) → pastille « Loué jusqu'au… », Mes achats, panneau Studio, Admin → Ventes ; aucun débordement horizontal. Tests : `test_sales_web.mjs`, `test_sales.py`, balayage des droits. Non testé : un vrai paiement Stripe.
