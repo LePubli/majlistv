@@ -7,6 +7,9 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'tv.kidsNeedSub': "Mejliss Kids est compris dans l’abonnement. Abonnez-vous sur le site, puis revenez ici.",
+  'tv.kidsSetup': "Créez d’abord le code parental et les profils des enfants dans Mejliss Kids, sur le téléphone ou sur le site. Ils apparaîtront ici.",
+  'tv.kidsManage': "Profils, durée par jour et vidéos autorisées : à régler sur le téléphone ou sur le site (espace parent).",
   'tv.live': "En direct",
   'tv.noLive': "Aucune chaîne en direct pour l’instant.",
   'tv.audynNew': "Nouveautés",
@@ -436,6 +439,9 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'tv.kidsNeedSub': "Mejliss Kids is included in the subscription. Subscribe on the website, then come back here.",
+  'tv.kidsSetup': "First create the parental code and the children’s profiles in Mejliss Kids, on the phone or the website. They will show up here.",
+  'tv.kidsManage': "Profiles, daily time and allowed videos: set them on the phone or the website (parent area).",
   'tv.live': "Live",
   'tv.noLive': "No live channel yet.",
   'tv.audynNew': "New",
@@ -861,6 +867,9 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'tv.kidsNeedSub': "مجلس كيدز مشمول في الاشتراك. اشترك على الموقع ثم عد إلى هنا.",
+  'tv.kidsSetup': "أنشئ أولاً الرمز الأبوي وملفات الأطفال في مجلس كيدز على الهاتف أو الموقع، وستظهر هنا.",
+  'tv.kidsManage': "الملفات والمدة اليومية والفيديوهات المسموح بها: تُضبط على الهاتف أو الموقع (فضاء الوالدين).",
   'tv.live': "مباشر",
   'tv.noLive': "لا توجد قناة مباشرة بعد.",
   'tv.audynNew': "الجديد",

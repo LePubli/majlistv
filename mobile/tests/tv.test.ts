@@ -79,7 +79,38 @@ test('TV-3 : écrans direct et Audyn présents, menu conditionné aux fonctions'
   const det = read('src/app/tv/audyn/[id].tsx');
   assert.match(det, /au\.openResume\(b\)/);
   assert.match(det, /router\.push\('\/tv\/audyn\/player'\)/);
-  const pl = read('src/app/tv/audyn/player.tsx');
+  const pl = read('src/components/tv/TvNowPlaying.tsx');
   for (const f of ['au.toggle', 'au.skip(-15)', 'au.skip(15)', 'au.prev', 'au.next']) assert.ok(pl.includes(f), f);
   for (const k of ['tv.live', 'tv.noLive', 'tv.listen', 'tv.chaptersTitle', 'tv.nothingPlaying']) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
+});
+
+test('TV-4 : verrou de l’espace Kids sur la télé', () => {
+  assert.equal(tvRouteFor(['tv', 'kids', 'home'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids', 'watch', '[id]'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids', 'exit'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids', 'stories'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids', 'story', '[id]'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids', 'listen'], true), null);
+  assert.equal(tvRouteFor(['tv', 'kids'], true), '/tv/kids/home', 'choix du profil fermé à l’enfant');
+  assert.equal(tvRouteFor(['tv'], true), '/tv/kids/home', 'accueil adulte fermé');
+  assert.equal(tvRouteFor(['tv', 'account'], true), '/tv/kids/home');
+  assert.equal(tvRouteFor(['tv', 'audyn', 'player'], true), '/tv/kids/home');
+  assert.equal(tvRouteFor(['(tabs)'], true), '/tv/kids/home');
+  assert.equal(tvRouteFor(['tv', 'kids'], false), null);
+});
+
+test('TV-4 : écrans Kids de la télé', () => {
+  const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8');
+  assert.match(read('src/components/tv/TvShell.tsx'), /'\/tv\/kids'[^\n]*feat\('kids'\)/);
+  assert.match(read('src/app/_layout.tsx'), /tvRouteFor\(segments, !!kid\)/);
+  const home = read('src/app/tv/kids/home.tsx');
+  assert.match(home, /hardwareBackPress', \(\) => true/, '« Retour » ne quitte pas l’espace');
+  assert.match(home, /\/tv\/kids\/exit/);
+  assert.doesNotMatch(home, /TvShell/, 'pas de menu adulte pour l’enfant');
+  assert.match(read('src/app/tv/kids/exit.tsx'), /await exit\(code\)/);
+  const w = read('src/app/tv/kids/watch/[id].tsx');
+  assert.match(w, /kidApi\.put\(`\/kids\/progress\/\$\{talk\.id\}`/);
+  assert.match(w, /isTimeUp\(err\)/);
+  assert.match(read('src/app/tv/kids/story/[id].tsx'), /kidApi\.get<AudynDetail>\(`\/kids\/stories\/\$\{id\}`\)/);
+  for (const k of ['tv.kidsNeedSub', 'tv.kidsSetup', 'tv.kidsManage']) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
 });

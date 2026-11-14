@@ -3,8 +3,15 @@
 /** Code de connexion affiché en deux groupes lisibles de loin : « ABCD 2345 ». */
 export const fmtTvCode = (code: string): string => (code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code);
 
-/** Écran de la télé vers lequel ramener un chemin de l'application téléphone (lien profond, notification) : /tv par défaut. */
-export function tvRouteFor(segments: string[]): string | null {
+/** Écrans de l'espace Kids de la télé ouverts à l'enfant (tout le reste ramène à son accueil). */
+export const TV_KID_SCREENS = ['home', 'watch', 'exit', 'stories', 'story', 'listen'];
+
+/**
+ * Écran de la télé vers lequel ramener un chemin interdit (lien profond, notification, écran du téléphone) : /tv par défaut.
+ * Enfant dans l'espace Kids : seuls ses écrans sont permis, le reste ramène à /tv/kids/home (sortie : code parental).
+ */
+export function tvRouteFor(segments: string[], kid = false): string | null {
+  if (kid) return segments[0] === 'tv' && segments[1] === 'kids' && TV_KID_SCREENS.includes(segments[2] ?? '') ? null : '/tv/kids/home';
   return segments[0] === 'tv' ? null : '/tv';
 }
 

@@ -22,6 +22,7 @@ export function TvShell({ children }: { children: React.ReactNode }) {
     { href: '/tv/search', icon: 'search', label: t('tv.search'), on: true },
     { href: '/tv/live', icon: 'radio', label: t('tv.live'), on: feat('livetv') },
     { href: '/tv/audyn', icon: 'headphones', label: 'Audyn', on: feat('audyn') },
+    { href: '/tv/kids', icon: 'smile', label: 'Kids', on: feat('kids') },
     { href: '/tv/account', icon: 'user', label: user ? t('tv.account') : t('tv.login'), on: true },
   ];
   return (

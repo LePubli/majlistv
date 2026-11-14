@@ -9065,3 +9065,21 @@ bash /root/verify-deploy.sh
 **Debug.** Entrée absente du menu → vérifier Admin → Fonctions (« Chaînes en direct », « Audyn »). « Aucune chaîne en direct » → Studio → Chaînes TV en direct (lien YouTube valide). Audyn muet → tester le même contenu sur le téléphone ; erreurs remontées dans Admin → Erreurs.
 
 **Testé.** Vérification des types et 284 tests automatiques de l'application. Non testé sur une vraie télé ici : navigation à la télécommande à vérifier par Epok.
+
+## Application TV — étape TV-4 : Mejliss Kids sur la télé (14/11)
+
+**Description.** Entrée « Kids » dans le menu de gauche (si la fonction Kids est activée) :
+- **Qui regarde ?** : profils des enfants du compte connecté sur la télé. Sans abonnement, sans code parental ou sans profil : message qui renvoie au téléphone ou au site (la création des profils et du code n'est pas faite à la télé, trop pénible à la télécommande).
+- **Accueil de l'enfant** (couleurs Kids, aucun menu adulte) : bonjour, temps restant, rangées comme sur le téléphone (reprise, de son âge, nouveautés, rubriques…), bouton « Histoires du soir » (si Audyn est activé), bouton « Sortir » (cadenas). Temps écoulé : écran « À demain » (histoires toujours permises).
+- **Lecteur** : vidéo du serveur (commandes natives) ou YouTube / Vimeo / Dailymotion (boutons −10 s, Lecture/Pause, +10 s) ; reprise propre à l'enfant (envoyée toutes les 10 s, à la pause et en quittant) ; temps compté par le serveur.
+- **Histoires du soir** : grille, fiche avec chapitres, écran « En écoute » aux couleurs Kids (même lecteur qu'Audyn).
+- **Sortie** : clavier du code parental à la télécommande (5 erreurs = blocage de 10 min, comme sur le téléphone).
+- **Verrou** : tant qu'un enfant est dans l'espace, tout autre écran ramène à son accueil ; « Retour » sur son accueil ne fait rien. La session enfant reste après redémarrage de la télé.
+
+**Fichiers.** `mobile/src/app/tv/kids/` (index, home, watch/[id], exit, stories, story/[id], listen), `src/components/tv/` (TvKidCard, TvPinPad, TvNowPlaying — écran « En écoute » partagé avec Audyn), `src/lib/tvRules.ts` (`tvRouteFor(segments, kid)`, `TV_KID_SCREENS`), `src/app/_layout.tsx` (TvLock), textes `tv.kids*`, tests `mobile/tests/tv.test.ts`.
+
+**Déploiement.** JavaScript seulement : rien sur le VPS. Fermer / rouvrir l'application TV deux fois.
+
+**Debug.** Pas d'entrée « Kids » → Admin → Fonctions. Message « créez d'abord… » → créer code parental et profils dans Mejliss Kids sur le téléphone ou le site. Code refusé → message avec essais restants ; blocage 10 min après 5 erreurs.
+
+**Testé.** Vérification des types, 286 tests automatiques de l'application. Non testé sur une vraie télé ici.

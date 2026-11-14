@@ -76,12 +76,15 @@ function KidLock() {
 }
 
 // Télé (Android TV / Google TV) : tout écran hors de l'application TV (dossier tv/) ramène à son accueil.
+// Enfant dans l'espace Kids de la télé : seuls ses écrans sont permis (même verrou que sur le téléphone).
 function TvLock() {
   const segments = useSegments() as string[];
+  const { kid, ready } = useKid();
   useEffect(() => {
-    const to = tvRouteFor(segments);
+    if (!ready) return;
+    const to = tvRouteFor(segments, !!kid);
     if (to) router.replace(to as never);
-  }, [segments]);
+  }, [segments, kid, ready]);
   return null;
 }
 
