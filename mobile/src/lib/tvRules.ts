@@ -34,3 +34,16 @@ export function tvCardWidth(contentW: number, perRow = 3.5): number {
   const w = (contentW - 64 - gap * (Math.ceil(perRow) - 1)) / perRow;
   return Math.max(150, Math.floor(w));
 }
+
+// Rangées Audyn de la télé : « Nouveautés » (20 premiers), une rangée par catégorie, « Autres » (sans catégorie).
+export function audynRows<T extends { id: string; category?: string | null }>(d: { items: T[]; categories: string[] } | null | undefined, newLabel: string, otherLabel: string): { key: string; title: string; items: T[] }[] {
+  if (!d || d.items.length === 0) return [];
+  const out = [{ key: 'new', title: newLabel, items: d.items.slice(0, 20) }];
+  for (const c of d.categories) {
+    const items = d.items.filter((x) => x.category === c);
+    if (items.length) out.push({ key: `c-${c}`, title: c, items });
+  }
+  const other = d.items.filter((x) => !x.category);
+  if (d.categories.length && other.length) out.push({ key: 'other', title: otherLabel, items: other });
+  return out;
+}

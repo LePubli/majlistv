@@ -4,4 +4,4 @@ import { Platform } from 'react-native';
 
 export const isTV = (): boolean => Boolean((Platform as unknown as { isTV?: boolean }).isTV);
 
-export { fmtTvCode, tvRouteFor, tvRows, tvResumeSeconds, tvMenuWidth, tvCardWidth } from './tvRules';
+export { fmtTvCode, tvRouteFor, tvRows, audynRows, tvResumeSeconds, tvMenuWidth, tvCardWidth } from './tvRules';

@@ -9051,3 +9051,17 @@ bash /root/verify-deploy.sh
 **Installer.** Mise à jour du contenu de l'application 0.19.0 : sur la télé, fermer et rouvrir Mejliss TV deux fois. Rien à redéployer sur le VPS.
 
 **Tests.** `mobile/tests/tv.test.ts` (tailles, catalogue, recherche, menu, textes) ; `npm run check` (282 tests + typage). **Non testé sur une vraie télé.**
+
+## Application TV — étape TV-3 : chaînes en direct et Audyn (14/11)
+
+**Description.** Deux nouvelles entrées dans le menu de gauche de l'application TV (affichées seulement si la fonction est activée dans Admin → Fonctions) :
+- **En direct** (`livetv`) : les chaînes ajoutées dans Studio → Chaînes TV en direct, en grandes vignettes (badge « En direct » quand la chaîne diffuse) ; OK ouvre le direct en plein écran (lecteur YouTube) avec un bouton Lecture / Pause ; « Retour » revient à la liste.
+- **Audyn** (`audyn`) : rangées « Nouveautés », une par catégorie, « Autres » ; fiche avec couverture, auteur, description, « Écouter » ou « Reprendre » + « Depuis le début », liste des chapitres ; écran « En écoute » : Lecture/Pause, −15 s / +15 s, chapitre précédent / suivant. La lecture continue quand on revient au menu (même lecteur que le téléphone : aperçu pour les comptes sans formule Apprentissage, reprise mémorisée).
+
+**Fichiers.** `mobile/src/app/tv/live.tsx`, `tv/embed.tsx`, `tv/audyn/index.tsx`, `tv/audyn/[id].tsx`, `tv/audyn/player.tsx`, `src/components/tv/TvSquare.tsx`, `TvShell.tsx` (menu), `src/lib/tvRules.ts` (`audynRows`), textes `tv.*` (fr/en/ar), tests `mobile/tests/tv.test.ts`.
+
+**Déploiement.** JavaScript seulement : aucune mise à jour sur le VPS. Mise à jour automatique de l'application (fermer / rouvrir l'application TV deux fois).
+
+**Debug.** Entrée absente du menu → vérifier Admin → Fonctions (« Chaînes en direct », « Audyn »). « Aucune chaîne en direct » → Studio → Chaînes TV en direct (lien YouTube valide). Audyn muet → tester le même contenu sur le téléphone ; erreurs remontées dans Admin → Erreurs.
+
+**Testé.** Vérification des types et 284 tests automatiques de l'application. Non testé sur une vraie télé ici : navigation à la télécommande à vérifier par Epok.

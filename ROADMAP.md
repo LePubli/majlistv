@@ -667,3 +667,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Prière : **adhan même en silencieux ou vibreur** (Android, volume du réveil) (13/11) : livré ; iPhone impossible (alertes critiques réservées par Apple).
 - **Application TV — TV-1** (socle, connexion par code, accueil, fiche, lecture et reprise ; application 0.19.0) (13/11) : livré. Suite : TV-2 catalogue et recherche, TV-3 direct et Audyn, TV-4 Kids.
 - **Application TV — TV-2** (catalogue, recherche, tailles adaptées aux télés) (14/11) : livré. Suite : TV-3 direct et Audyn, TV-4 Kids.
+- **Application TV — TV-3** (chaînes en direct et Audyn sur la télé) (14/11) : livré. Suite : TV-4 Kids.

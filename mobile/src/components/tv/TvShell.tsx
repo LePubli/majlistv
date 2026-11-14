@@ -13,13 +13,15 @@ import { tvMenuWidth } from '@/lib/tv';
 type Entry = { href: string; icon: React.ComponentProps<typeof Feather>['name']; label: string; on: boolean };
 
 export function TvShell({ children }: { children: React.ReactNode }) {
-  const { t, user } = useSession();
+  const { t, user, feat } = useSession();
   const path = usePathname();
   const { width } = useWindowDimensions();
   const entries: Entry[] = [
     { href: '/tv', icon: 'home', label: t('tv.home'), on: true },
     { href: '/tv/catalog', icon: 'grid', label: t('tv.catalog'), on: true },
     { href: '/tv/search', icon: 'search', label: t('tv.search'), on: true },
+    { href: '/tv/live', icon: 'radio', label: t('tv.live'), on: feat('livetv') },
+    { href: '/tv/audyn', icon: 'headphones', label: 'Audyn', on: feat('audyn') },
     { href: '/tv/account', icon: 'user', label: user ? t('tv.account') : t('tv.login'), on: true },
   ];
   return (

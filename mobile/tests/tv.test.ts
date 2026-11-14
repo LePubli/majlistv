@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fmtTvCode, tvCardWidth, tvMenuWidth, tvResumeSeconds, tvRouteFor, tvRows } from '../src/lib/tvRules';
+import { fmtTvCode, tvCardWidth, tvMenuWidth, tvResumeSeconds, tvRouteFor, tvRows, audynRows } from '../src/lib/tvRules';
 import { qrMatrix } from '../src/lib/qr';
 import { DICT } from '../src/lib/i18n';
 
@@ -59,4 +59,27 @@ test('TV-2 : tailles pour une télé 1080p, catalogue et recherche', () => {
   const sh = read('src/components/tv/TvShell.tsx');
   for (const h of ["'/tv/catalog'", "'/tv/search'"]) assert.ok(sh.includes(h), h);
   for (const lang of ['fr', 'en', 'ar'] as const) for (const k of ['tv.catalog', 'tv.search', 'tv.allCategories', 'tv.searchPh', 'tv.searchHelp', 'tv.noResult', 'tv.results']) assert.ok((DICT[lang] as Record<string, string>)[k], `${k} (${lang})`);
+});
+
+test('TV-3 : rangées Audyn (nouveautés, catégories, autres)', () => {
+  const items = [{ id: 'a', category: 'Sîra' }, { id: 'b', category: null }, { id: 'c', category: 'Fiqh' }, { id: 'd', category: 'Sîra' }];
+  const r = audynRows({ items, categories: ['Fiqh', 'Sîra', 'Vide'] }, 'Nouveautés', 'Autres');
+  assert.deepEqual(r.map((x) => [x.key, x.items.map((i) => i.id).join('')]), [['new', 'abcd'], ['c-Fiqh', 'c'], ['c-Sîra', 'ad'], ['other', 'b']]);
+  assert.deepEqual(audynRows({ items: [], categories: [] }, 'N', 'A'), []);
+  assert.deepEqual(audynRows({ items: [{ id: 'x' }], categories: [] }, 'N', 'A').map((x) => x.key), ['new']);
+});
+
+test('TV-3 : écrans direct et Audyn présents, menu conditionné aux fonctions', () => {
+  const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8');
+  const shell = read('src/components/tv/TvShell.tsx');
+  assert.match(shell, /'\/tv\/live'[^\n]*feat\('livetv'\)/);
+  assert.match(shell, /'\/tv\/audyn'[^\n]*feat\('audyn'\)/);
+  assert.match(read('src/app/tv/live.tsx'), /api\.get<\{ channels: LiveChannel\[\] \}>\('\/live'\)/);
+  assert.match(read('src/app/tv/embed.tsx'), /validEmbedId\(/);
+  const det = read('src/app/tv/audyn/[id].tsx');
+  assert.match(det, /au\.openResume\(b\)/);
+  assert.match(det, /router\.push\('\/tv\/audyn\/player'\)/);
+  const pl = read('src/app/tv/audyn/player.tsx');
+  for (const f of ['au.toggle', 'au.skip(-15)', 'au.skip(15)', 'au.prev', 'au.next']) assert.ok(pl.includes(f), f);
+  for (const k of ['tv.live', 'tv.noLive', 'tv.listen', 'tv.chaptersTitle', 'tv.nothingPlaying']) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
 });
