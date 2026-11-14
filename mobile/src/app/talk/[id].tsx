@@ -32,6 +32,7 @@ import { ExternalVideo, PlayerHandle } from '@/components/ExternalVideo';
 import { TalkTabs, type TabKey } from '@/components/talk/TalkTabs';
 import { PlayerControls } from '@/components/talk/PlayerControls';
 import { ActionTile, LearnCard, LockCard, SeriesPanel } from '@/components/talk/Panels';
+import { SaleCard, SalePill } from '@/components/SaleCard';
 import { TalkReferences } from '@/components/talk/TalkReferences';
 
 function goBack() {
@@ -55,10 +56,11 @@ export default function TalkScreen() {
     );
   }
   // key : un changement de session (connexion) ou de vidéo recrée proprement le lecteur.
-  return <TalkView key={`${talk.data.id}:${user?.id ?? 'guest'}`} talk={talk.data} atMs={Number(at) > 0 ? Number(at) : undefined} />;
+  // Contenu payant à l'unité : « locked » dans la clé recrée le lecteur quand l'achat ouvre la vidéo.
+  return <TalkView key={`${talk.data.id}:${user?.id ?? 'guest'}:${talk.data.locked ? 'l' : 'o'}`} talk={talk.data} onRefresh={talk.reload} atMs={Number(at) > 0 ? Number(at) : undefined} />;
 }
 
-function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
+function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefresh: () => void }) {
   const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, later, toggleLater, config, feat } = useSession();
   const dls = useDownloads();
   const [dlOpen, setDlOpen] = useState(false);
@@ -334,6 +336,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
           <View style={{ flex: 1, gap: 4 }}>
             {eyebrow ? <Txt weight="bold" size={12} color={colors.goldLight} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>{eyebrow}</Txt> : null}
             <Txt weight="extrabold" size={19} accessibilityRole="header">{talk.title}</Txt>
+            <SalePill sale={talk.sale} />
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               {talk.speaker ? (
                 <Pressable accessibilityRole="link" disabled={!talk.speakerSlug} onPress={() => talk.speakerSlug && router.push({ pathname: '/speaker/[slug]', params: { slug: talk.speakerSlug } })} style={{ minHeight: 32, justifyContent: 'center' }}>
@@ -365,7 +368,7 @@ function TalkView({ talk, atMs }: { talk: Talk; atMs?: number }) {
 
         {laterMsg ? <Txt size={13} weight="bold" color={colors.goldLight} accessibilityLiveRegion="polite" style={{ paddingHorizontal: 16 }}>{laterMsg}</Txt> : null}
 
-        {locked ? <LockCard talk={talk} /> : null}
+        {locked && talk.sale ? <SaleCard kind="talk" id={talk.id} sale={talk.sale} onRefresh={onRefresh} /> : locked ? <LockCard talk={talk} /> : null}
 
         <View onLayout={(e) => { tabsY.current = e.nativeEvent.layout.y; }}>
           <TalkTabs talk={talk} insights={insights.data} positionMs={pos * 1000} onSeek={seekMs} getPositionMs={() => pos * 1000} tab={tab} onTab={setTab} />

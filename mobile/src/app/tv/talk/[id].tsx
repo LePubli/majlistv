@@ -12,6 +12,8 @@ import { colors } from '@/lib/theme';
 import { ErrorBox, Loading, Txt } from '@/components/ui';
 import { Poster } from '@/components/TalkCard';
 import { Focusable } from '@/components/tv/Focusable';
+import { TvSale } from '@/components/tv/TvSale';
+import { SalePill } from '@/components/SaleCard';
 
 const btn = { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 999 } as const;
 
@@ -32,7 +34,10 @@ export default function TvTalk() {
         <View style={{ flex: 1, gap: 12 }}>
           <Txt weight="extrabold" size={26}>{x.title}</Txt>
           <Txt size={18} color={colors.text2}>{[x.speaker, x.durationSeconds ? formatDuration(x.durationSeconds) : null].filter(Boolean).join(' · ')}</Txt>
-          {x.locked ? (
+          <SalePill sale={x.sale} />
+          {x.locked && x.sale ? (
+            <TvSale kind="talk" id={x.id} sale={x.sale} onRefresh={talk.reload} />
+          ) : x.locked ? (
             <Txt size={17} color={colors.goldLight}>{user ? t('tv.locked') : t('tv.lockedGuest')}</Txt>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 8 }}>

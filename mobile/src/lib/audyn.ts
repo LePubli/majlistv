@@ -4,12 +4,15 @@
 export type AudynItem = {
   id: string; title: string; narrator: string; author: string; category: string; language: string;
   chapters: number; durationSeconds: number; coverUrl: string | null; full: boolean;
+  /** Étape C-3 : en vente à l'unité. */
+  onSale?: boolean;
 };
 export type AudynChapter = { id: string; title: string; durationSeconds: number; position?: number; playable: boolean };
 export type AudynDetail = {
   id: string; title: string; narrator: string; author: string; description: string; category: string; language: string;
   coverUrl: string | null; durationSeconds: number;
   access: { full: boolean; previewSeconds: number; learningRequired: boolean };
+  sale?: import('./sales').Sale;
   chapters: AudynChapter[];
   // Histoires du soir (espace Kids) : renseigné par l'écran enfant, jamais par l'API publique.
   kids?: boolean;

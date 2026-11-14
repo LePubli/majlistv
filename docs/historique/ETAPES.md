@@ -9126,3 +9126,16 @@ bash /root/verify-deploy.sh
 **Debug.** Pas de panneau dans le Studio → fonction coupée, ou compte qui n'est ni admin ni responsable du contenu. Encart absent sur la fiche → contenu pas en vente, ou déjà acheté (pastille). « Paiement pas encore confirmé » qui dure → webhook Stripe (`checkout.session.completed`).
 
 **Testé.** Navigateur réel (Playwright) en 1440 et 390 px, français et arabe : encart visiteur / membre, bouton désactivé tant que la case n'est pas cochée, redirection vers Stripe (faux Stripe), retour « annulé », paiement confirmé (webhook simulé) → pastille « Loué jusqu'au… », Mes achats, panneau Studio, Admin → Ventes ; aucun débordement horizontal. Tests : `test_sales_web.mjs`, `test_sales.py`, balayage des droits. Non testé : un vrai paiement Stripe.
+
+## Étape C-3 : contenus payants à l'unité — application et télé (14/11)
+
+**Description.**
+- **Application (téléphone)** : sur la fiche d'une vidéo ou d'un contenu Audyn en vente, l'encart « Ce contenu se paie à part » remplace l'invitation à s'abonner : prix d'achat et/ou de location (prix barré + prix abonné), rappel de la réduction abonnés, bouton **« Acheter sur le site »** (ouvre la fiche du site ; paiement avec le même compte). Au retour dans l'application, la fiche est relue : l'accès s'ouvre dès que Stripe a confirmé ; bouton « J'ai payé : actualiser » en secours. Pastille « ✓ Acheté » / « ⏳ Loué jusqu'au … » sous le titre. **Mon compte → Mes achats** (achats, locations, remboursés ; touche un contenu valable pour l'ouvrir).
+- **Télé** : sur la fiche (vidéo, Audyn), prix et **QR code** de la fiche du site à scanner avec le téléphone ; la fiche est relue toutes les 10 s, la lecture s'ouvre dès que c'est payé. Pastille d'accès.
+- Pourquoi le paiement passe par le site : l'application est installée depuis le site (APK). **Avant une publication sur le Play Store**, Google impose sa propre facturation pour les contenus numériques vendus dans une application : ce point sera à revoir à ce moment-là.
+
+**Fichiers.** `mobile/src/lib/sales.ts`, `src/components/SaleCard.tsx`, `src/components/tv/TvSale.tsx`, `src/app/talk/[id].tsx`, `src/app/audyn/[id].tsx`, `src/app/(tabs)/account.tsx`, `src/app/tv/talk/[id].tsx`, `src/app/tv/audyn/[id].tsx`, types, textes `sale.*`, `tv.sale*`, tests `mobile/tests/sales.test.ts`.
+
+**Déploiement.** JavaScript seulement : mise à jour automatique de l'application (fermer / rouvrir deux fois), téléphone et télé. Rien sur le VPS.
+
+**Testé.** Vérification des types et 288 tests de l'application. Non testé sur un vrai téléphone ou une vraie télé ici, ni avec un vrai paiement.

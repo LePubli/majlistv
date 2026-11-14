@@ -44,6 +44,8 @@ export type Talk = Card & {
   status?: string;
   video_status?: string;
   locked?: boolean;
+  /** Étape C-3 : contenu payant à l'unité (prix, droit possédé). */
+  sale?: import('./sales').Sale;
   preview?: boolean;
   previewSeconds?: number;
   playbackToken?: string;

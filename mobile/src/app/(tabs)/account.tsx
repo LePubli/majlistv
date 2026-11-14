@@ -15,6 +15,7 @@ import { Button, Chip, Txt, screenStyle, Title } from '@/components/ui';
 import { usePrayer } from '@/lib/prayerStore';
 import { UpdateStatus } from '@/components/UpdateStatus';
 import { GiftsBox, ReferralBox } from '@/components/account/ReferralGifts';
+import { PurchasesSection } from '@/components/SaleCard';
 
 export default function AccountScreen() {
   const { user, api, t, locale, setLocale, logout, dirStyle, skinChoice, skinPick, setSkinPick, feat } = useSession();
@@ -64,6 +65,8 @@ export default function AccountScreen() {
         {/* Étape M6 : parrainage et cartes cadeaux (l'achat se fait sur le site). */}
         {user && feat('referral') ? <ReferralBox /> : null}
         {user && feat('gifts') ? <GiftsBox /> : null}
+        {/* Étape C-3 : achats et locations à l'unité (payés sur le site). */}
+        {user && feat('sales') ? <PurchasesSection /> : null}
 
         {prayer.on || notif.data?.available.push ? (
           <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, gap: 12 }}>

@@ -13,12 +13,14 @@ import { Linking } from 'react-native';
 import { colors, radius } from '@/lib/theme';
 import { Button, ErrorBox, Loading, ScreenHeader, Txt, screenStyle } from '@/components/ui';
 import { Cover } from '@/components/AudynParts';
+import { SaleCard, SalePill } from '@/components/SaleCard';
 
 export default function AudynBook() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api, t, dirStyle } = useSession();
   const au = useAudyn();
-  const d = useAsync(() => api.get<AudynDetail>(`/audyn/${id}`), [id]);
+  const { user } = useSession();
+  const d = useAsync(() => api.get<AudynDetail>(`/audyn/${id}`), [id, user?.id]);
   const [saved, setSaved] = useState<{ index: number; pos: number } | null>(null);
   const book = d.data;
 
@@ -42,6 +44,7 @@ export default function AudynBook() {
             <Txt weight="extrabold" size={22} style={{ textAlign: 'center' }} accessibilityRole="header">{book.title}</Txt>
             {book.narrator || book.author ? <Txt color={colors.text2} style={{ textAlign: 'center' }}>{book.narrator ? t('aud.by', { name: book.narrator }) : book.author}</Txt> : null}
             <Txt size={13} color={colors.muted}>{book.chapters.length === 1 ? t('aud.chapter1') : t('aud.chapters', { n: book.chapters.length })} · {fmtLong(book.durationSeconds)}</Txt>
+            <SalePill sale={book.sale} center />
           </View>
 
           {book.chapters.length > 0 ? (
@@ -55,7 +58,8 @@ export default function AudynBook() {
             </View>
           ) : null}
 
-          {!book.access.full ? (
+          {!book.access.full && book.sale ? <SaleCard kind="audyn" id={book.id} sale={book.sale} onRefresh={d.reload} /> : null}
+          {!book.access.full && !book.sale ? (
             <View style={{ padding: 14, gap: 10, borderRadius: radius.card, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.gold }}>
               <Txt size={14}>{t('aud.previewBox', { t: fmtClock(book.access.previewSeconds) })}</Txt>
               <Button variant="dark" label={t('aud.subscribe')} onPress={() => { void Linking.openURL(`${SITE_URL}/pricing`); }} />

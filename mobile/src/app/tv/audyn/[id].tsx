@@ -11,6 +11,8 @@ import { fmtClock, fmtLong, type AudynDetail } from '@/lib/audyn';
 import { colors } from '@/lib/theme';
 import { ErrorBox, Loading, Txt } from '@/components/ui';
 import { Focusable } from '@/components/tv/Focusable';
+import { TvSale } from '@/components/tv/TvSale';
+import { SalePill } from '@/components/SaleCard';
 
 const btn = { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 999 } as const;
 
@@ -35,7 +37,8 @@ export default function TvAudynItem() {
         <View style={{ flex: 1, gap: 10 }}>
           <Txt weight="extrabold" size={26}>{b.title}</Txt>
           <Txt size={16} color={colors.text2}>{[b.author || b.narrator, `${b.chapters.length} ${t('tv.chapters')}`, b.durationSeconds ? fmtLong(b.durationSeconds) : ''].filter(Boolean).join(' · ')}</Txt>
-          {!b.access.full ? <Txt size={15} color={colors.goldLight}>{t('tv.audynPreview')}</Txt> : null}
+          <SalePill sale={b.sale} />
+          {!b.access.full && b.sale ? <TvSale kind="audyn" id={b.id} sale={b.sale} onRefresh={d.reload} /> : !b.access.full ? <Txt size={15} color={colors.goldLight}>{t('tv.audynPreview')}</Txt> : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 6 }}>
             <Focusable first accessibilityRole="button" radius={999} style={[btn, { backgroundColor: colors.gold }]} onPress={() => { void go(() => au.openResume(b)); }}>
               <Txt weight="extrabold" size={18} color="#111">▶ {saved ? t('tv.resume') : t('tv.listen')}</Txt>
