@@ -9083,3 +9083,28 @@ bash /root/verify-deploy.sh
 **Debug.** Pas d'entrée « Kids » → Admin → Fonctions. Message « créez d'abord… » → créer code parental et profils dans Mejliss Kids sur le téléphone ou le site. Code refusé → message avec essais restants ; blocage 10 min après 5 erreurs.
 
 **Testé.** Vérification des types, 286 tests automatiques de l'application. Non testé sur une vraie télé ici.
+
+## Étape C-1 : contenus payants à l'unité — serveur (14/11)
+
+**Description.** Une vidéo ou un contenu Audyn peut se vendre à part, en plus de l'abonnement :
+- **Achat définitif** et/ou **location** (durée en heures, 48 h par défaut, de 1 h à 30 jours), au choix par contenu ; prix de 0,50 à 500 €.
+- **Payant aussi pour les abonnés**, avec une **réduction abonnés** facultative (0 à 90 %).
+- **Prix fixé** par l'administrateur, ou par l'organisateur responsable du contenu (vidéo : aussi via sa chaîne). Pas de partage de revenus.
+- Le responsable du contenu, les administrateurs et les modérateurs y ont toujours accès. Les autres ont l'aperçu habituel (2 min pour une vidéo, début du 1er chapitre pour Audyn).
+- Tant qu'un contenu est en vente, il reste en accès réservé (premium / « Apprentissage ») quelle que soit la modification faite ailleurs (déclencheur en base) ; retiré de la vente, il retrouve son accès d'avant. Les achats déjà payés restent valables.
+- Location : l'accès commence au paiement. Une location ne se télécharge pas hors connexion (un achat, oui).
+- Les contenus en vente n'apparaissent pas dans l'espace enfant.
+- Paiement Stripe (carte, PayPal si activé, Stripe Tax si activé), acceptation horodatée des conditions avec renonciation au délai de rétractation (contenu numérique fourni tout de suite), e-mail de confirmation (achat ou location avec date de fin), remboursement par l'admin (accès coupé tout de suite) ou depuis Stripe (webhook).
+- Fonction **Admin → Fonctions → « Contenus payants à l'unité »**, coupée par défaut. Coupée : rien n'est vendu ni bloqué par la vente.
+
+**API.** `POST /sales/checkout` · `GET /me/purchases` · `GET|PUT|DELETE /studio/sales/:kind/:id` (kind = talk ou audyn) · `GET /admin/sales` · `POST /admin/sales/:id/refund`. La fiche vidéo (`GET /talks/:id`) et la fiche Audyn (`GET /audyn/:id`) renvoient `sale` (prix normal, prix abonné, prix pour la personne, droit possédé) ; la liste Audyn renvoie `onSale`.
+
+**Fichiers.** `api/migrations/118_sales.sql`, module Audyn `008_sale_access.sql` (v1.6.0), `api/src/sales.js`, `api/src/routes/sales.js`, accès dans `routes/talks.js`, `routes/search.js`, `modules/offline`, `modules/audyn`, listes Kids / courts ; e-mails `sale_bought`, `sale_rented` ; tests `test_sales.py` (CI), `test_sales_lib.mjs` (CI), `test_sales_stripe.py` (faux Stripe, hors CI comme les cartes cadeaux).
+
+**Déploiement.** DockPanel : redéployer **majlistv-api** (migration 118 au démarrage). Rien d'autre (pas encore d'écran : C-2). Puis les commandes habituelles du VPS.
+
+**Prérequis Stripe.** Le webhook Stripe doit envoyer `checkout.session.completed` (en plus de `checkout.session.async_payment_succeeded` et `charge.refunded`) : c'est lui qui confirme un paiement unique (cartes cadeaux comprises).
+
+**Debug.** Paiement fait mais contenu verrouillé → Admin → Ventes (C-2) ou `SELECT status, paid_at FROM sale_purchases ORDER BY created_at DESC LIMIT 5;` dans la base : `pending` = le webhook n'est pas arrivé (vérifier l'événement `checkout.session.completed` chez Stripe).
+
+**Testé.** Ici : 38 vérifications `test_sales.py`, 25 `test_sales_stripe.py` (faux Stripe), `test_sales_lib.mjs`, balayage des droits (724 routes), cartes cadeaux, hors connexion, Kids, Audyn, séries : tout passe. Non testé : un vrai paiement Stripe.

@@ -190,7 +190,7 @@ export default async function kidsRoutes(app) {
               (COALESCE(t.quiz_enabled, $5::boolean) AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $6) AS "hasQuiz",
               (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars
          FROM talks t LEFT JOIN kid_progress k ON k.talk_id = t.id AND k.profile_id = $1
-        WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 7)} AND ($3::boolean OR t.access = 'free')
+        WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 7)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)
         ORDER BY (t.kids_bands[1] = $4) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 60`,
       [c.profile.id, c.profile.band, open, c.profile.band, quizDefault, minQ, c.profile.catalog_mode]);
     for (const r of rows) {
@@ -289,7 +289,7 @@ export default async function kidsRoutes(app) {
         `SELECT t.id, t.title, t.speaker, t.source, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb
            FROM kid_revision r JOIN talks t ON t.id = r.talk_id
           WHERE r.profile_id = $1 AND r.due_on IS NOT NULL AND r.due_on <= (now() AT TIME ZONE 'Europe/Paris')::date
-            AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')
+            AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)
           ORDER BY r.due_on LIMIT 6`, [c.profile.id, c.profile.band, open, c.profile.catalog_mode]);
       for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
       out.due = rows;

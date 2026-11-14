@@ -140,7 +140,7 @@ export default async function kidCatalogRoutes(app) {
       (SELECT COALESCE(array_agg(x.rubric_id ORDER BY x.rubric_id), '{}') FROM talk_kid_rubrics x JOIN kid_rubrics r ON r.id = x.rubric_id AND r.active WHERE x.talk_id = t.id) AS "rubricIds",
       (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars`;
   const BASE = `FROM talks t LEFT JOIN kid_progress k ON k.talk_id = t.id AND k.profile_id = $1
-      WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')`;
+      WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)`;
   async function withPosters(rows) {
     for (const r of rows) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; delete r.at; delete r.pop; }
     return rows;

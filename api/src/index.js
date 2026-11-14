@@ -35,6 +35,8 @@ import errorsRoutes from './routes/errors.js'; // étape 39 : suivi des erreurs
 import { recordError, startErrors } from './errors.js';
 import { startHealth } from './health.js';
 import gdprRoutes from './routes/gdpr.js'; // étape 36 : exporter / supprimer ses données
+import salesRoutes from './routes/sales.js'; // étape C-1 : contenus payants à l'unité
+import { applySalePaid, applySaleRefund } from './sales.js';
 import lifecycleRoutes from './routes/lifecycle.js'; // étape 33 : e-mails de cycle de vie
 import { startLifecycle } from './lifecycle.js';
 import experimentsRoutes from './routes/experiments.js'; // amélioration 7.2 : tests A/B
@@ -196,6 +198,10 @@ await app.register(lifecycleRoutes);
 await app.register(gdprRoutes);
 await app.register(twoFactorRoutes);
 await app.register(tvLoginRoutes);
+await app.register(salesRoutes);
+// Paiement unique confirmé / remboursé : contenus payants à l'unité (les cartes cadeaux réagissent de leur côté).
+ext.on('stripe.checkout.payment', (client, session) => (session.metadata?.sale_purchase_id ? applySalePaid(client, session) : false));
+ext.on('stripe.charge.refunded', applySaleRefund);
 await app.register(studioContentRoutes);
 await app.register(themesRoutes);
 await app.register(appearanceRoutes);

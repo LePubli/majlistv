@@ -1,0 +1,30 @@
+// Étape C-1 : règles pures des contenus payants à l'unité (prix abonné, saisie des prix, forme publique).
+import assert from 'node:assert/strict';
+import { memberPrice, parseCents, saleShape, notOnSaleSql } from '../src/sales.js';
+
+assert.equal(memberPrice(499, 20), 399);
+assert.equal(memberPrice(199, 20), 159);
+assert.equal(memberPrice(500, 0), 500, 'sans réduction : même prix');
+assert.equal(memberPrice(60, 50), 50, 'jamais sous 0,50 (minimum Stripe)');
+assert.equal(memberPrice(1000, 95), 100, 'réduction plafonnée à 90 %');
+assert.equal(memberPrice(null, 20), null);
+assert.equal(parseCents('4,99'), 499);
+assert.equal(parseCents('4.99'), 499);
+assert.equal(parseCents(' 10 '), 1000);
+assert.equal(parseCents(''), null);
+assert.equal(parseCents(null), null);
+assert.ok(Number.isNaN(parseCents('0,20')), 'sous 0,50 refusé');
+assert.ok(Number.isNaN(parseCents('600')), 'au-dessus de 500 refusé');
+assert.ok(Number.isNaN(parseCents('abc')));
+const offer = { buy_cents: 500, rent_cents: 200, rent_hours: 48, member_discount_pct: 30 };
+const s = saleShape(offer, { member: true, currency: 'eur' });
+assert.deepEqual(s.buy, { price: 500, memberPrice: 350, yourPrice: 350 });
+assert.deepEqual(s.rent, { price: 200, memberPrice: 140, yourPrice: 140, hours: 48 });
+assert.equal(s.owned, null);
+const v = saleShape({ ...offer, rent_cents: null }, { owned: { mode: 'buy', expires_at: null } });
+assert.equal(v.buy.yourPrice, 500, 'visiteur : prix normal');
+assert.equal(v.rent, null, 'pas de location proposée');
+assert.deepEqual(v.owned, { mode: 'buy', expiresAt: null });
+assert.equal(saleShape(null), null);
+assert.match(notOnSaleSql('talk', 't.id'), /so_\.kind = 'talk' AND so_\.item_id = t\.id/);
+console.log('test_sales_lib : OK');

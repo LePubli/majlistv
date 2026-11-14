@@ -109,6 +109,8 @@ export const FEATURES = [
   { id: 'stats', group: 'community', label: 'Statistiques d\'audience', hint: 'Mesure anonyme des vues', setting: 'stats_enabled' },
   // Argent
   { id: 'gifts', group: 'money', label: 'Cartes cadeaux', hint: 'Offrir un abonnement', setting: 'gift_enabled' },
+  { id: 'sales', group: 'money', label: 'Contenus payants à l\'unité', hint: 'Vidéos et contenus Audyn vendus ou loués à part (prix fixés dans le Studio), même pour les abonnés (réduction possible) ; « Mes achats » dans Mon compte', def: 'false',
+    rules: [{ re: '^/(sales|me/purchases|studio/sales|admin/sales)(/|$)' }] },
   { id: 'regional_pricing', group: 'money', label: 'Tarifs par pays', hint: 'Prix adaptés au pays choisi par le membre sur la page Abonnement (groupes définis dans Admin → Tarifs par pays)',
     rules: [{ re: '^/admin/pricing-regions(/|$)' }] },
   { id: 'referral', group: 'money', label: 'Parrainage', hint: 'Lien personnel : un mois offert au parrain et au filleul au premier paiement du filleul',

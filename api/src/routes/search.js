@@ -7,6 +7,7 @@ import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
+import { saleMap } from '../sales.js';
 import { INDEX, meili, meiliConf, queryWords } from '../search.js';
 import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 
@@ -35,7 +36,14 @@ export default async function searchRoutes(app) {
     const p = schema.parse(req.query);
     const viewer = await app.optionalUser(req);
     const subscriber = viewer ? await hasActiveSubscription(viewer.sub) : false;
-    const canSee = (row) => row.access === 'free' || subscriber || (viewer && (viewer.role === 'admin' || viewer.sub === row.organizer_id));
+    // Contenu en vente à l'unité : transcription visible seulement après achat (canSee est complété plus bas, une fois les résultats connus).
+    let onSale = new Map();
+    const staff = (row) => viewer && (viewer.role === 'admin' || viewer.sub === row.organizer_id);
+    const canSee = (row) => {
+      const s = onSale.get(row.id);
+      if (s) return Boolean(s.owned) || staff(row);
+      return row.access === 'free' || subscriber || staff(row);
+    };
 
     let engine = 'sql';
     let ids = null;
@@ -79,6 +87,8 @@ export default async function searchRoutes(app) {
       rows = (await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE ${where}
         ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, [q, p.category ?? null, p.limit, p.offset])).rows;
     }
+
+    onSale = await saleMap('talk', rows.map((r) => r.id), viewer?.sub ?? null);
 
     // Passages horodatés (vidéos envoyées accessibles) : jusqu'à 3 par vidéo, dans l'ordre de la vidéo.
     // Mots de la requête + mots réellement trouvés par Meilisearch (corrige les fautes de frappe : « relativitée » → « relativité »).

@@ -11,6 +11,7 @@ import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js
 import { visibleSql } from '../visibility.js';
 import { makePlaybackToken, makePreviewToken } from '../playback.js';
 import { hasActiveSubscription } from '../access.js';
+import { saleAccess } from '../sales.js'; // étape C-1 : contenu payant à l'unité
 import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
@@ -314,7 +315,10 @@ export default async function talksRoutes(app) {
       }
       if (talk.external_file) archiveUrl = archiveFileUrl(talk.video_ref, talk.external_file);
     }
-    const allowed = talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub));
+    // Contenu en vente à l'unité : seuls l'achat (ou une location en cours), le propriétaire et l'équipe ouvrent la vidéo, même pour un abonné.
+    const sa = await saleAccess('talk', id, viewer?.sub ?? null, Boolean(isOwner));
+    if (sa) talk.sale = sa.sale;
+    const allowed = sa ? sa.allowed : (talk.access === 'free' || isOwner || (viewer && await hasActiveSubscription(viewer.sub)));
     if (!allowed) {
       talk.locked = true;
       if (external || talk.status === 'ready') {

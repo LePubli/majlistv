@@ -16,7 +16,8 @@ const TODAY = `(now() AT TIME ZONE '${TZ}')::date`;
 const idSchema = z.object({ id: z.guid() });
 const chSchema = z.object({ id: z.guid(), cid: z.guid() });
 export const MIN_STOP = 5, MAX_STOP = 120;
-const kidsWhere = "i.status = 'published' AND i.audience IN ('kids', 'both') AND EXISTS (SELECT 1 FROM audyn_chapters c WHERE c.item_id = i.id)";
+// Étape C-1 : un contenu vendu à l'unité n'apparaît pas dans l'espace enfant.
+const kidsWhere = "i.status = 'published' AND i.audience IN ('kids', 'both') AND EXISTS (SELECT 1 FROM audyn_chapters c WHERE c.item_id = i.id) AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'audyn' AND so_.item_id = i.id)";
 
 /** Ajoute le temps d'écoute écoulé depuis le dernier « ping » (jamais plus de 60 s d'un coup ; nouvelle séance après 2 min sans ping = 10 s). */
 export async function addStoryPing(profileId, db = pool) {

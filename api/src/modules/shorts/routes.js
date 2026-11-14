@@ -36,7 +36,7 @@ const OWN = z.enum(['draft', 'published']);
 // Conditions d'un short visible : publié, vidéo prête et publiée ; adultes : catalogue adulte ; enfant : sa tranche, son catalogue (paramètres $1 à $4).
 const BASE_WHERE = `s.status = 'published' AND t.video_status = 'ready' AND ${visibleSql('t')}`;
 const ADULT_WHERE = `${BASE_WHERE} AND ${adultSql('t')}`;
-const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free')`;
+const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)`;
 const PUBLIC_SELECT = `
   SELECT s.id, s.title, s.duration_s, s.views, s.published_at, s.video_key, s.poster_key AS short_poster,
          t.id AS talk_id, t.title AS talk_title, t.speaker, t.access, t.poster_key, t.external_thumb

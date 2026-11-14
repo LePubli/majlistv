@@ -26,6 +26,7 @@ import { pool } from '../../db.js';
 import { config } from '../../config.js';
 import { getNumber } from '../../settings.js';
 import { hasLearningTier } from '../../access.js';
+import { saleAccess, saleMap } from '../../sales.js'; // étape C-1 : contenus payants à l'unité
 import { storage, presignGet, presignPut, headObject, deleteKeys } from '../../storage.js';
 import { classifyUrl, storageProblem, userLabel } from '../../mediaImport.js';
 import kidsStories from './kidsStories.js';
@@ -656,10 +657,14 @@ export default async function audynRoutes(app) {
               (SELECT COALESCE(sum(duration_seconds), 0)::int FROM audyn_chapters c WHERE c.item_id = i.id) AS duration
          FROM audyn_items i WHERE ${where} ORDER BY i.created_at DESC LIMIT 200`, args);
     const cats = (await pool.query(`SELECT DISTINCT i.category FROM audyn_items i WHERE ${publicWhere} AND i.category <> '' ORDER BY 1`)).rows.map((r) => r.category);
+    const sales = await saleMap('audyn', rows.map((r) => r.id), viewer?.sub ?? null); // en vente à l'unité : « full » seulement si acheté
+    const staffOf = (r) => Boolean(viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || r.created_by === viewer.sub));
     return {
       items: await Promise.all(rows.map(async (r) => ({
         id: r.id, title: r.title, narrator: r.narrator, author: r.author, category: r.category, language: r.language,
-        chapters: r.chapters, durationSeconds: r.duration, coverUrl: await cover(r), full: fullAccess(r, learning),
+        chapters: r.chapters, durationSeconds: r.duration, coverUrl: await cover(r),
+        full: sales.has(r.id) ? Boolean(sales.get(r.id).owned) || staffOf(r) : fullAccess(r, learning),
+        onSale: sales.has(r.id),
         summary: String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 280), // bannière de la page Audyn
       }))),
       categories: cats,
@@ -677,8 +682,10 @@ export default async function audynRoutes(app) {
     const viewer = await app.optionalUser(req);
     const learning = viewer ? await hasLearningTier(viewer.sub) : false;
     const chapters = await chaptersOf(id);
-    const full = fullAccess(r, learning);
+    const sa = await saleAccess('audyn', id, viewer?.sub ?? null, Boolean(viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || r.created_by === viewer.sub)));
+    const full = sa ? sa.allowed : fullAccess(r, learning);
     return {
+      ...(sa ? { sale: sa.sale } : {}),
       id: r.id, title: r.title, narrator: r.narrator, author: r.author, description: r.description, category: r.category, language: r.language,
       coverUrl: await cover(r), durationSeconds: sumDuration(chapters),
       access: { full, previewSeconds: full ? 0 : await getNumber('mod_audyn_preview_seconds'), learningRequired: r.access === 'learning' },
@@ -696,8 +703,10 @@ export default async function audynRoutes(app) {
     const idx = chapters.findIndex((c) => c.id === cid);
     if (idx < 0) return reply.code(404).send({ error: 'Chapitre introuvable' });
     const viewer = await app.optionalUser(req);
-    const full = fullAccess(r, viewer ? await hasLearningTier(viewer.sub) : false);
+    const sa = await saleAccess('audyn', id, viewer?.sub ?? null, Boolean(viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || r.created_by === viewer.sub)));
+    const full = sa ? sa.allowed : fullAccess(r, viewer ? await hasLearningTier(viewer.sub) : false);
     if (full) return { preview: false, url: await presignGet(chapters[idx].audio_key), expiresIn: 3600 };
+    if (idx !== 0 && sa) return reply.code(403).send({ error: 'Ce contenu se paie à part : achetez-le ou louez-le pour tout écouter.', code: 'purchase_required' });
     if (idx !== 0) return reply.code(403).send({ error: "Ce chapitre est réservé aux membres de la formule « Apprentissage »", code: 'learning_required' });
     return { preview: true, url: `/audyn/${id}/chapters/${cid}/preview`, limitSeconds: await getNumber('mod_audyn_preview_seconds') };
   });

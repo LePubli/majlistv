@@ -81,3 +81,4 @@ test_patch_defaults.py
 ../../transcriber/tests/test_description_fill.py
 test_live_channels.py
 test_tv_login.py
+test_sales.py

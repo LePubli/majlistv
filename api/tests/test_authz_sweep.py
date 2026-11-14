@@ -53,6 +53,10 @@ for _ in range(4):  # plusieurs passes : un module peut en demander un autre
     for mid in [m["id"] for m in mods() if m["status"] != "on"]: switch(mid, True)
 still_off = [m["id"] for m in mods() if m["status"] != "on"]
 ok(not still_off, f"tous les modules activés pour le balayage (restent éteints : {still_off})")
+# Fonctions du socle coupées par défaut (pas de module) : activées aussi le temps du balayage (étape C-1 : ventes à l'unité).
+CORE_OFF = [f["id"] for f in requests.get(B + "/admin/features", headers=ADM).json()["features"] if f["id"] in ("sales",) and not f["enabled"]]
+for f in CORE_OFF: requests.put(B + "/admin/features", headers=ADM, json={"values": {f: True}})
+atexit.register(lambda: [requests.put(B + "/admin/features", headers=ADM, json={"values": {f: False}}) for f in CORE_OFF])
 off = lambda p: False
 # Écritures ouvertes sans connexion, voulues (chacune a sa propre protection : limite de débit, signature, jeton, validation).
 PUBLIC_WRITES = {

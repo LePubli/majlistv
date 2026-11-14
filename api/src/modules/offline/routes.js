@@ -13,6 +13,7 @@ import { storage, presignGet } from '../../storage.js';
 import { config } from '../../config.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { hasActiveSubscription } from '../../access.js';
+import { saleAccess } from '../../sales.js';
 import { viaChannel } from '../../channelAccess.js';
 import { visibleSql } from '../../visibility.js';
 import { versionOf } from '../../hls.js';
@@ -35,7 +36,11 @@ async function check(user, talkId) {
   if (!t.visible && !owner) return { code: 404, error: 'Vidéo introuvable' };
   if (t.source !== 'upload') return { code: 409, error: "Cette vidéo est lue depuis une autre plateforme : elle n'est pas téléchargeable.", reason: 'external' };
   if (t.video_status !== 'ready') return { code: 409, error: "La vidéo n'est pas encore prête.", reason: 'not_ready' };
-  const allowed = owner || await hasActiveSubscription(user.sub);   // abonnés seulement, même pour une vidéo en accès libre
+  // Contenu en vente à l'unité (étape C-1) : téléchargeable seulement après achat ; sinon abonnés seulement.
+  const sa = await saleAccess('talk', t.id, user.sub, Boolean(owner));
+  // Une location ne se télécharge pas (la licence hors connexion durerait plus longtemps que la location).
+  if (sa && !owner && sa.sale.owned?.mode !== 'buy') return { code: 403, error: "Ce contenu se paie à part : seul un achat permet de le télécharger.", reason: 'purchase' };
+  const allowed = owner || Boolean(sa) || await hasActiveSubscription(user.sub);   // abonnés seulement, même pour une vidéo en accès libre
   if (!allowed) return { code: 403, error: "Le téléchargement est réservé aux abonnés.", reason: 'subscription' };
   return { talk: { ...t, prefix: t.media_prefix || `hls/${t.id}/` } };
 }
