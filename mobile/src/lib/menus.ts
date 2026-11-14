@@ -27,6 +27,7 @@ export const SCREENS: Record<string, { pathname: string; icon: Feather; feat?: s
   ramadan: { pathname: '/ramadan', icon: 'moon', feat: 'ramadan' },
   kids: { pathname: '/kids', icon: 'smile', feat: 'kids' },
   downloads: { pathname: '/downloads', icon: 'download', feat: 'offline' },
+  live: { pathname: '/live', icon: 'tv', feat: 'livetv' },
   events: { pathname: '/events', icon: 'bell', feat: 'events' },
   series: { pathname: '/series', icon: 'layers', series: true },
   collections: { pathname: '/collections', icon: 'folder', feat: 'collections' },

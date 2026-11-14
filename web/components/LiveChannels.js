@@ -1,5 +1,5 @@
 'use client';
-// Chaînes TV en direct 24 h/24 (fonction « livetv ») : en tête de la page « En direct ».
+// TV en direct 24 h/24 (fonction « livetv ») : page « TV en direct » (app/live/page.js).
 // Onglets = chaînes ; lecteur YouTube officiel (youtube-nocookie, déjà autorisé par la politique de sécurité du site) du direct en
 // cours, retrouvé automatiquement par le serveur. Liste relue toutes les 5 minutes (le direct d'une chaîne change parfois).
 import { useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { useApp } from './Providers';
 
 export const liveEmbed = (ref) => (/^[\w-]{11}$/.test(String(ref || '')) ? `https://www.youtube-nocookie.com/embed/${ref}?rel=0&playsinline=1&modestbranding=1` : null);
 
-export default function LiveChannels() {
+export default function LiveChannels({ empty = null }) {
   const { t, call, feat } = useApp();
   const [list, setList] = useState(null);
   const [cur, setCur] = useState(0);
@@ -19,7 +19,8 @@ export default function LiveChannels() {
     const h = setInterval(load, 5 * 60000);
     return () => { dead = true; clearInterval(h); };
   }, [call, feat]);
-  if (!feat('livetv') || !list || list.length === 0) return null;
+  if (!feat('livetv') || !list) return null;
+  if (list.length === 0) return empty;
   const c = list[Math.min(cur, list.length - 1)];
   const src = liveEmbed(c.video?.ref);
   return (

@@ -673,3 +673,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **C-2 — Contenus payants à l'unité, écrans du site** (achat / location sur les fiches, Studio, Mes achats, Admin → Ventes) (14/11) : livré. Suite : C-3 appli et télé.
 - **C-3 — Contenus payants à l'unité dans l'application et sur la télé** (prix, achat sur le site, accès ouvert au retour, Mes achats) (14/11) : livré. C terminé.
 - **D — Pages légales** (mentions, CGV/CGU, confidentialité ; fr / en / ar ; remplies par Admin → Paramètres → Informations légales) (14/11) : livré. Reste côté Epok : saisir les informations, choisir un médiateur, relecture juridique.
+- **TV en direct indépendante** (page /live, menus, Studio → TV en direct, application ; sans le module « Événements en direct ») (14/11) : livré.

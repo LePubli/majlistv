@@ -27,14 +27,14 @@ export const MENUS = {
     label: 'Menu principal', hint: 'Les liens de l’en-tête (ordinateur) et du menu ☰ du téléphone.',
     // Navigation de novembre 2026 : cinq destinations — Accueil · Catalogue · Apprendre · Pratique · Ma bibliothèque — puis Kids.
     // Séries, Shorts, Collections, Ouvrages sont des onglets de la page Catalogue ; Prière est dans Pratique (masqués ici par défaut).
-    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids'],
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['livetv', 'TV en direct'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids'],
       ['shorts', 'Shorts', true], ['series', 'Séries', true], ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true]],
   },
   side: {
     label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur) : un groupe par destination ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
     groups: [['catalogue', 'Catalogue'], ['space', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
-      catalogue: [['catalogue', 'Vidéos'], ['series', 'Séries'], ['shorts', 'Shorts'], ['collections', 'Collections'], ['channels', 'Chaînes'], ['audyn', 'Audio'], ['books', 'Ouvrages'], ['events', 'En direct'], ['home', 'Accueil', true]],
+      catalogue: [['catalogue', 'Vidéos'], ['series', 'Séries'], ['shorts', 'Shorts'], ['collections', 'Collections'], ['channels', 'Chaînes'], ['audyn', 'Audio'], ['books', 'Ouvrages'], ['livetv', 'TV en direct'], ['events', 'Événements en direct'], ['home', 'Accueil', true]],
       space: [['learning', 'Aujourd’hui'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan'], ['quranlearn', 'Coran', true]],
       pratique: [['prayer', 'Prière'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['ramadan', 'Ramadan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],

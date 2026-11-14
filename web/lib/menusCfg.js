@@ -23,7 +23,7 @@ export const KIND_KEYS = KINDS.map(([k]) => k);
 export const APP_SCREENS = [
   ['home', 'Accueil'], ['talks', 'Catalogue'], ['learn', 'Apprendre'], ['practice', 'Pratique'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['search', 'Recherche'],
   ['shorts', 'Shorts'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['prayer', 'Prière'], ['ramadan', 'Ramadan'], ['kids', 'Mejliss Kids'],
-  ['downloads', 'Téléchargements'], ['events', 'Événements en direct'], ['series', 'Séries'], ['collections', 'Collections'], ['audyn', 'Audyn'],
+  ['downloads', 'Téléchargements'], ['live', 'TV en direct'], ['events', 'Événements en direct'], ['series', 'Séries'], ['collections', 'Collections'], ['audyn', 'Audyn'],
 ];
 export const AUDIENCES = ['all', 'visitor', 'member', 'manager'];
 export const MAX_CHILDREN = 12;

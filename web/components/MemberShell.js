@@ -15,6 +15,7 @@ import AppPromo from './AppPromo';
 import { KidsPendingBadge } from './KidsPending';
 
 const ICONS = {
+  tv: 'M3 7h18v11H3zM8 21h8M12 18v3M9 3l3 4 3-4', // TV en direct
   prayer: 'M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z',
   shorts: 'M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5z',
   home: 'M4 11l8-7 8 7v9H4z', series: 'M4 6h16M4 12h16M4 18h10', col: 'M12 3L3 8l9 5 9-5-9-5zM3 12.5l9 5 9-5', books: 'M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3zM8 20v-3',
@@ -89,7 +90,8 @@ export default function MemberShell({ children }) {
     ramadan: { key: 'ramadan', href: '/ramadan', label: t('rzNav'), icon: ICONS.tag, on: feat('ramadan') },
     prayer: { key: 'prayer', href: '/priere', label: t('pqNav'), icon: ICONS.prayer, on: feat('prayer') },
     quran: { key: 'quran', href: '/coran', label: t('qrNav'), icon: ICONS.books, on: feat('quran') },
-    events: { key: 'events', href: '/events', label: t('evnNav'), icon: ICONS.bell, on: feat('events') || feat('livetv') },
+    events: { key: 'events', href: '/events', label: t('evnNav'), icon: ICONS.bell, on: feat('events') },
+    livetv: { key: 'livetv', href: '/live', label: t('lvNav'), icon: ICONS.tv, on: feat('livetv') },
     audyn: { key: 'audyn', href: '/audyn', label: t('awNav'), icon: ICONS.books, on: feat('audyn') },
     athkar: { key: 'athkar', href: '/adhkar', label: t('atTab'), icon: ICONS.bilan, on: feat('athkar') },
     pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), icon: ICONS.prayer, on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },

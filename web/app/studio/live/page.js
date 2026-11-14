@@ -1,11 +1,11 @@
 'use client';
-// Studio → Chaînes TV en direct (administrateur) : chaînes YouTube diffusées 24 h/24 (ex. La Mecque, Médine) affichées en tête de
-// la page « En direct » du site et de l'application. On colle le lien de la chaîne (youtube.com/@nom) ou d'un direct ; le serveur
+// Studio → TV en direct (administrateur) : chaînes YouTube diffusées 24 h/24 (ex. La Mecque, Médine) affichées sur la page
+// « TV en direct » du site, de l'application et de la télé (indépendante des événements en direct depuis le 14/11). On colle le lien de la chaîne (youtube.com/@nom) ou d'un direct ; le serveur
 // retrouve le direct en cours toutes les 15 minutes (« Vérifier maintenant » pour le faire tout de suite).
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useApp } from '../../../../components/Providers';
-import { liveEmbed } from '../../../../components/LiveChannels';
+import { useApp } from '../../../components/Providers';
+import { liveEmbed } from '../../../components/LiveChannels';
 
 export default function StudioLive() {
   const { t, call, user, feat } = useApp();
@@ -77,7 +77,7 @@ export default function StudioLive() {
           ))}
         </ul>
       )}
-      <p className="meta"><Link className="link u" href="/events">{t('lvSeePage')}</Link></p>
+      <p className="meta"><Link className="link u" href="/live">{t('lvSeePage')}</Link></p>
     </main>
   );
 }

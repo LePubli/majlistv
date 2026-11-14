@@ -1,4 +1,4 @@
-"""Chaînes TV en direct 24 h/24 (module « Événements en direct », migration 003 du module, fonction « livetv »).
+"""Chaînes de la TV en direct 24 h/24 (fonction « livetv », indépendante des événements ; table créée par la migration 120 du socle).
 
 L'administrateur enregistre le lien d'une chaîne YouTube (ou d'un direct). Ce fil retrouve le direct en cours avec yt-dlp, sans
 rien télécharger : chaîne → <chaîne>/live → identifiant de la vidéo en direct ; lien d'une vidéo → cette vidéo.

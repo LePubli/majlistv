@@ -1,4 +1,4 @@
-"""Chaînes TV en direct 24 h/24 (module « Événements en direct » 1.1, fonction « livetv ») : gestion, page publique, recherche du
+"""TV en direct 24 h/24 (fonction « livetv », indépendante du module « Événements en direct » depuis le 14/11) : gestion, page publique, recherche du
 direct en cours par le transcripteur (yt-dlp simulé), fonction coupée. Prérequis : API :3055 et Postgres :5544 (comme la suite CI)."""
 import os, sys, uuid
 import psycopg2, psycopg2.extras, requests
@@ -67,6 +67,12 @@ requests.put(B + "/admin/settings", headers=A, json={"values": {"feat_livetv": "
 ok(requests.get(B + "/live").status_code in (403, 404) and requests.get(S, headers=A).status_code in (403, 404), "fonction coupée (Admin → Fonctions) : routes fermées")
 requests.put(B + "/admin/settings", headers=A, json={"values": {"feat_livetv": None}})
 ok(requests.get(B + "/live").status_code == 200, "fonction rétablie")
+
+# 5. Indépendante des événements en direct : module « Événements en direct » coupé → la TV en direct marche toujours
+requests.put(B + "/admin/modules/events", headers=A, json={"enabled": False})
+ok(requests.get(B + "/live").status_code == 200 and requests.get(S, headers=A).status_code == 200, "module « Événements en direct » coupé : TV en direct toujours ouverte")
+ok(requests.get(B + "/events").status_code in (403, 404), "… alors que les événements sont fermés")
+requests.put(B + "/admin/modules/events", headers=A, json={"enabled": True})
 q("DELETE FROM live_channels")
 print("TOUT EST OK" if not fails else f"{fails} ÉCHEC(S)")
 sys.exit(1 if fails else 0)

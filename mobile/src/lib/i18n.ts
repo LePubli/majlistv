@@ -7,6 +7,8 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'lv.nav': "TV en direct",
+  'lv.intro': "Les chaînes diffusées 24 h/24, avec le lecteur YouTube officiel.",
   'legal.notice': "Mentions légales",
   'legal.terms': "Conditions de vente",
   'legal.privacy': "Confidentialité",
@@ -465,6 +467,8 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'lv.nav': "Live TV",
+  'lv.intro': "Channels broadcasting 24/7, with the official YouTube player.",
   'legal.notice': "Legal notice",
   'legal.terms': "Terms of sale",
   'legal.privacy': "Privacy",
@@ -919,6 +923,8 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'lv.nav': "البث المباشر",
+  'lv.intro': "قنوات تبث على مدار الساعة بمشغّل YouTube الرسمي.",
   'legal.notice': "الإشعار القانوني",
   'legal.terms': "شروط البيع",
   'legal.privacy': "الخصوصية",

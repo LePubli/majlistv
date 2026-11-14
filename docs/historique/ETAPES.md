@@ -9159,3 +9159,18 @@ bash /root/verify-deploy.sh
 **À faire par Epok.** Remplir Admin → Paramètres → Informations légales ; adhérer à un médiateur de la consommation (obligatoire pour vendre à des particuliers) ; faire relire les trois pages par un professionnel du droit avant le lancement public.
 
 **Testé.** `test_legal_i18n.py` (23 vérifications), `test_legal_lib.mjs` (les 9 versions ont les mêmes sections et les mêmes informations), balayage des droits, tests web et application ; navigateur réel : les 3 pages en fr / en / ar à 1440 et 390 px, sans débordement, Admin → Pages légales et Informations légales. Non fait : relecture juridique.
+
+## TV en direct indépendante des événements (14/11)
+
+**Pourquoi.** Les chaînes en direct (La Mecque, Médine…) dépendaient du module « Événements en direct » : module coupé → ni menu, ni Studio, et la table des chaînes n'était même pas créée.
+
+**Ce qui change.**
+- **Serveur** : table `live_channels` créée par le socle (migration 120, sans effet si elle existe déjà) ; routes `/live` et `/studio/live` dans le socle (`api/src/routes/liveTv.js`, `api/src/liveTv.js`) ; fonction **« TV en direct »** (Admin → Fonctions) qui ne dépend plus d'aucun module. Le transcripteur retrouve le direct en cours comme avant.
+- **Site** : page **/live « TV en direct »** ; entrée « TV en direct » dans le menu du haut (après Catalogue) et dans le menu latéral (groupe Catalogue) ; **Studio → TV en direct** (administrateur, groupe Publication) ; la page « Événements en direct » ne montre plus que les événements. Entrées ajoutées aussi aux menus réglables (Admin → Menus : lien d'origine « TV en direct », écran d'application « TV en direct »).
+- **Application** : écran **« TV en direct »** dans le menu (☰ → Regarder) ; l'écran des événements ne porte plus les chaînes. Télé : inchangée (entrée « En direct »).
+
+**Fichiers.** `api/migrations/120_live_tv.sql`, `api/src/liveTv.js`, `api/src/routes/liveTv.js`, `api/src/index.js`, `api/src/featuresList.js`, `api/src/modules/events/{routes,lib}.js`, `api/src/navcfg.js`, `api/src/menus.js`, `transcriber/src/live_channels.py` (commentaire) ; `web/app/live/page.js`, `web/app/studio/live/page.js` (déplacée), `web/components/{LiveChannels,StudioShell,MemberShell,Header}.js`, `web/lib/{features,modules,navcfg,menusCfg,i18n}.js`, `web/modules/events/module.js`, `web/app/events/page.js` ; `mobile/src/app/live.tsx`, `src/components/{LiveChannels,MenuDrawer}.tsx`, `src/lib/menus.ts`, `src/app/events/index.tsx`, `src/app/_layout.tsx`, textes ; tests mis à jour.
+
+**Déploiement.** DockPanel : **majlistv-api** (migration 120), puis **majlistv-web**. Application : mise à jour automatique. Puis les commandes habituelles du VPS. Ensuite : Admin → Fonctions → « TV en direct » cochée, puis Studio → TV en direct → ajouter les chaînes.
+
+**Testé.** `test_live_channels.py` (avec le module « Événements en direct » coupé : la TV en direct reste ouverte, les événements sont fermés), balayage des droits, menus, événements, fonctions ; tests web et application ; navigateur réel (1440 et 390 px), module événements coupé : entrée de menu, page /live, Studio → TV en direct.

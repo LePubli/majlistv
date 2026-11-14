@@ -9,7 +9,6 @@ import { fmtWhen, type LiveEvent } from '@/lib/events';
 import { colors, radius } from '@/lib/theme';
 import { Chip, ErrorBox, Loading, ScreenHeader, Txt, screenStyle } from '@/components/ui';
 import { EventBadge, useNow } from '@/components/EventParts';
-import { LiveChannels } from '@/components/LiveChannels';
 
 export default function EventsScreen() {
   const { api, t, dirStyle, locale, user, feat } = useSession();
@@ -28,8 +27,6 @@ export default function EventsScreen() {
           keyExtractor={(e) => e.id}
           ListHeaderComponent={(
             <View style={{ gap: 12, paddingBottom: 8 }}>
-              {/* Chaînes TV en direct 24 h/24 (La Mecque, Médine…) en tête. */}
-              <LiveChannels />
               <Txt size={14} color={colors.text2}>{t('evn.intro')}</Txt>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Chip label={t('evn.upcoming')} active={scope === 'upcoming'} onPress={() => setScope('upcoming')} />

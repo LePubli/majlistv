@@ -105,6 +105,8 @@ export default function StudioShell({ children }) {
     groups.push({ key: 'settings', title: t('sdGrpSettings'), items: [row('/studio/settings')] });
   }
   if (isAdmin) groups.find((g) => g.key === 'audience').items.push(['/studio/moderation', t('modNav'), ICONS.check]);
+  // TV en direct (La Mecque, Médine…) : administrateur, fonction « livetv », indépendante du module « Événements en direct ».
+  if (isAdmin && feat('livetv')) groups.find((g) => g.key === 'publish').items.push(['/studio/live', t('lvAdminTitle'), ICONS.film]);
   if (isModOnly) {
     // Un modérateur retrouve ici ses outils d'avant : file de modération, collections, toutes les chaînes, mise en pratique.
     groups.push({ key: 'mod', title: t('modNav'), items: [['/studio/moderation', t('modQueue'), ICONS.check], ['/studio/collections', t('colNav'), ICONS.layers], ['/studio/channel', t('chNavAll'), ICONS.users], ['/studio/practice', t('pzNav'), ICONS.list]] });

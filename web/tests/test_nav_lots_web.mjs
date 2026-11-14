@@ -48,7 +48,7 @@ console.log('navigation lots A B C OK');
 // --- Lots D, E, F : cinq destinations, onglets de rubrique, menu latéral par destination, lecteur pleine largeur
 {
   const nav = read('lib/navcfg.js');
-  assert.match(nav, /builtin: \[\['home', 'Accueil'\], \['catalogue', 'Catalogue'\], \['learning', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\], \['kids', 'Mejliss Kids'\],\n\s+\['shorts', 'Shorts', true\]/, 'menu du haut : cinq destinations puis Kids');
+  assert.match(nav, /builtin: \[\['home', 'Accueil'\], \['catalogue', 'Catalogue'\], \['livetv', 'TV en direct'\], \['learning', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\], \['kids', 'Mejliss Kids'\],\n\s+\['shorts', 'Shorts', true\]/, 'menu du haut : cinq destinations, TV en direct (14/11), puis Kids');
   assert.match(nav, /builtin: \[\['home', 'Accueil'\], \['catalogue', 'Catalogue'\], \['learning', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\],\n\s+\['kids', 'Mejliss Kids', true\]/, 'barre du téléphone : les mêmes cinq, Kids masqué');
   assert.match(nav, /groups: \[\['catalogue', 'Catalogue'\], \['space', 'Apprendre'\], \['pratique', 'Pratique'\], \['library', 'Ma bibliothèque'\], \['account', 'Mon compte'\], \['manage', 'Gestion'\]\]/, 'menu latéral : un groupe par destination');
   assert.equal(nav, read('../api/src/navcfg.js'), 'navcfg identique côté API');

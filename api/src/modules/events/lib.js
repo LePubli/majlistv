@@ -69,26 +69,5 @@ export function publicShape(r, { now = new Date(), openMinutes = 10, privileged 
   return out;
 }
 
-// Chaîne TV en direct : lien YouTube accepté (chaîne @nom, /channel/UC…, /c/…, /user/…, ou un direct /watch?v=…, youtu.be, /live/…).
-// Renvoie l'adresse normalisée (https://www.youtube.com/…) ou null. Le transcripteur retrouve le direct en cours depuis cette adresse.
-export function parseChannelUrl(raw) {
-  let u;
-  try { u = new URL(String(raw || '').trim()); } catch { return null; }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
-  const host = u.hostname.replace(/^(www|m)\./, '');
-  const video = parseLiveUrl(u.href);
-  if (video?.source === 'youtube') return `https://www.youtube.com/watch?v=${video.ref}`;
-  if (host !== 'youtube.com') return null;
-  const p = u.pathname.replace(/\/+$/, '');
-  let m = p.match(/^\/(@[\w.-]{2,60})(?:\/(?:live|streams|videos|featured))?$/);
-  if (m) return `https://www.youtube.com/${m[1]}`;
-  m = p.match(/^\/channel\/(UC[\w-]{22})(?:\/(?:live|streams|videos|featured))?$/);
-  if (m) return `https://www.youtube.com/channel/${m[1]}`;
-  m = p.match(/^\/(c|user)\/([\w.-]{2,60})(?:\/(?:live|streams|videos|featured))?$/);
-  if (m) return `https://www.youtube.com/${m[1]}/${m[2]}`;
-  return null;
-}
-
-export const liveChannelShape = (r) => ({
-  id: r.id, name: r.name, live: Boolean(r.live && r.video_id), video: r.video_id ? { source: 'youtube', ref: r.video_id } : null, title: r.title || '',
-});
+// Chaînes TV en direct : déplacées dans le socle (src/liveTv.js), indépendantes de ce module ; ré-exportées pour compatibilité.
+export { parseChannelUrl, liveChannelShape } from '../../liveTv.js';

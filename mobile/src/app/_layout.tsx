@@ -149,6 +149,7 @@ function Shell() {
         <Stack.Screen name="ramadan" />
         <Stack.Screen name="quran/index" />
         <Stack.Screen name="quran/[n]" />
+        <Stack.Screen name="live" />
         <Stack.Screen name="events/index" />
         <Stack.Screen name="events/[id]" />
         <Stack.Screen name="audyn/index" />

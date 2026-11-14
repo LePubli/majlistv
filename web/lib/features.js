@@ -7,6 +7,7 @@ const CORE_RULES = [
   [/^\/register(\/|$)/, 'registration'],
   [/^\/application(\/|$)/, 'app_install'], // étape 22a
   [/^\/priere(\/|$)/, 'prayer'], // étape 23a
+  [/^\/(live|studio\/live)(\/|$)/, 'livetv'], // TV en direct, indépendante des événements (14/11)
 ];
 
 // Fonction dont dépend ce chemin (ou null).

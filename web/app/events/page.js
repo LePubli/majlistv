@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { CalendarLink, PhaseBadge, RemindButton, evDate, useNow } from '../../components/EventBits';
-import LiveChannels from '../../components/LiveChannels';
 
 export default function EventsPage() {
   const { t, call, feat, locale } = useApp();
@@ -17,13 +16,12 @@ export default function EventsPage() {
     call(`/events?scope=${scope}`).then((r) => { if (!dead) setList(r.ok ? r.data : []); });
     return () => { dead = true; };
   }, [scope, call, feat]);
-  // Chaînes TV en direct (fonction « livetv ») en tête ; la liste des événements seulement si la fonction « events » est active.
-  if (!feat('events') && !feat('livetv')) return <main className="page"><p className="meta">{t('evnOff')}</p></main>;
+  // La TV en direct a sa propre page (/live) depuis le 14/11 : cette page ne montre que les événements.
+  if (!feat('events')) return <main className="page"><p className="meta">{t('evnOff')}</p></main>;
   const patch = (id, reminded) => setList((l) => l.map((e) => (e.id === id ? { ...e, reminded } : e)));
   return (
     <main className="page evn-page">
-      <h1>{feat('events') ? t('evnTitle') : t('lvTitle')}</h1>
-      <LiveChannels />
+      <h1>{t('evnTitle')}</h1>
       {feat('events') && <>
       <p className="meta">{t('evnIntro')}</p>
       <div className="aw-cats" role="tablist">
