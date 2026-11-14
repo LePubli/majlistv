@@ -7,6 +7,9 @@ export const LOCALES: Record<Locale, string> = { fr: 'Français', en: 'English',
 export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
 
 const fr = {
+  'legal.notice': "Mentions légales",
+  'legal.terms': "Conditions de vente",
+  'legal.privacy': "Confidentialité",
   'sale.title': "Ce contenu se paie à part",
   'sale.lead': "Il n'est pas compris dans l'abonnement : achetez-le pour le garder, ou louez-le pour un temps.",
   'sale.buy': "Achat",
@@ -462,6 +465,9 @@ export type AppKey = keyof typeof fr;
 export type Key = AppKey | WebKey;
 
 const en: Record<AppKey, string> = {
+  'legal.notice': "Legal notice",
+  'legal.terms': "Terms of sale",
+  'legal.privacy': "Privacy",
   'sale.title': "This content is sold separately",
   'sale.lead': "It is not included in the subscription: buy it to keep it, or rent it for a while.",
   'sale.buy': "Purchase",
@@ -913,6 +919,9 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
+  'legal.notice': "الإشعار القانوني",
+  'legal.terms': "شروط البيع",
+  'legal.privacy': "الخصوصية",
   'sale.title': "هذا المحتوى يُدفع ثمنه على حدة",
   'sale.lead': "ليس مشمولًا في الاشتراك: اشترِه لتحتفظ به، أو استأجره لمدة.",
   'sale.buy': "شراء",

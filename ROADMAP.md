@@ -672,3 +672,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **C-1 — Contenus payants à l'unité, côté serveur** (achat / location, prix abonnés, Stripe, remboursement) (14/11) : livré. Suite : C-2 écrans du site, C-3 appli et télé.
 - **C-2 — Contenus payants à l'unité, écrans du site** (achat / location sur les fiches, Studio, Mes achats, Admin → Ventes) (14/11) : livré. Suite : C-3 appli et télé.
 - **C-3 — Contenus payants à l'unité dans l'application et sur la télé** (prix, achat sur le site, accès ouvert au retour, Mes achats) (14/11) : livré. C terminé.
+- **D — Pages légales** (mentions, CGV/CGU, confidentialité ; fr / en / ar ; remplies par Admin → Paramètres → Informations légales) (14/11) : livré. Reste côté Epok : saisir les informations, choisir un médiateur, relecture juridique.

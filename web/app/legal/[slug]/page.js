@@ -1,5 +1,6 @@
 'use client';
-// Pages légales : texte saisi dans le back-office (« ## » = titre, « - » = élément de liste, ligne vide = paragraphe).
+// Pages légales (étape D : en français, anglais ou arabe selon la langue du visiteur ; la version française fait foi) :
+// modèle rempli avec Admin → Paramètres → Informations légales, ou texte saisi dans le back-office (« ## » = titre, « - » = élément de liste, ligne vide = paragraphe).
 // Rendu sans HTML brut : rien de ce qui est saisi n'est interprété comme du code.
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -29,12 +30,13 @@ export default function LegalPage() {
   const { slug } = useParams();
   const { call, t, locale } = useApp();
   const [page, setPage] = useState(undefined);
-  useEffect(() => { call('/legal/' + slug, {}, null).then((r) => setPage(r.ok ? r.data : null)); }, [slug, call]);
+  useEffect(() => { call(`/legal/${slug}?lang=${locale}`, {}, null).then((r) => setPage(r.ok ? r.data : null)); }, [slug, call, locale]);
   if (page === undefined) return null;
   if (page === null) return <main className="page"><p>{t('errGeneric')}</p></main>;
   return (
-    <main className="page legal">
+    <main className="page legal" lang={page.lang} dir={page.lang === 'ar' ? 'rtl' : undefined}>
       <h1>{page.title}</h1>
+      {page.lang !== locale && <p className="meta small">{t('legalFrOnly')}</p>}
       {blocks(page.body).map((b, i) => (b.type === 'h2' ? <h2 key={i}>{b.text}</h2>
         : b.type === 'ul' ? <ul key={i}>{b.items.map((it, j) => <li key={j}>{linkify(it)}</li>)}</ul>
         : <p key={i}>{linkify(b.text)}</p>))}

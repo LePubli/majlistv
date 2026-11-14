@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 
 /** Thèmes et sections (identifiants de api/src/settings.js GROUPS). Une section absente d'ici tombe dans « Autres ». */
 export const THEMES = [
-  { id: 'site', label: 'Site et contenu', groups: ['general', 'home', 'cards', 'citations', 'books'] },
+  { id: 'site', label: 'Site et contenu', groups: ['general', 'legal', 'home', 'cards', 'citations', 'books'] },
   { id: 'money', label: 'Argent', groups: ['payment', 'gifts', 'revenue', 'ads'] },
   { id: 'ai', label: 'Intelligence artificielle', groups: ['translation', 'insights', 'transcription', 'quiz', 'practice'] },
   { id: 'community', label: 'Communauté et communication', groups: ['email', 'notifications', 'lifecycle', 'moderation', 'kids'] },
@@ -13,7 +13,7 @@ export const THEMES = [
 ];
 /** Icône et phrase d'explication de chaque section. */
 export const SECTION_META = {
-  general: ['⚙️', 'Nom, adresse, aperçu gratuit'], home: ['🏠', 'Bannière du haut de page'], cards: ['🎞️', 'Cartes des vidéos'],
+  general: ['⚙️', 'Nom, adresse, aperçu gratuit'], legal: ['⚖️', 'Éditeur, hébergeur, médiateur (pages légales)'], home: ['🏠', 'Bannière du haut de page'], cards: ['🎞️', 'Cartes des vidéos'],
   citations: ['📖', 'Versets et hadiths du jour'], books: ['📚', 'Ouvrages liés aux vidéos'],
   payment: ['💳', 'Abonnements, essai, taxes'], gifts: ['🎁', 'Montants et validité'], revenue: ['💰', 'Part reversée, seuil de paiement'], ads: ['📣', 'Fréquence, abonnés payants'],
   translation: ['🌐', 'Moteurs et clés'], insights: ['✨', 'Résumés et chapitres automatiques'], transcription: ['🎙️', 'Modèle, langue, cœurs'],

@@ -82,3 +82,4 @@ test_patch_defaults.py
 test_live_channels.py
 test_tv_login.py
 test_sales.py
+test_legal_i18n.py

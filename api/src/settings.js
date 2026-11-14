@@ -7,6 +7,7 @@ import { FEATURES, settingKey } from './featuresList.js';
 
 export const GROUPS = [
   { id: 'general', label: 'Général' },
+  { id: 'legal', label: 'Informations légales (éditeur, hébergeur, médiateur)' },
   { id: 'ads', label: 'Publicité au lancement' },
   { id: 'home', label: "Page d'accueil" },
   { id: 'cards', label: 'Vignettes des vidéos' },
@@ -39,6 +40,22 @@ const PROVIDERS = ['claude', 'azure', 'deepseek'];
 // type : text | secret | number | bool | select | langs | url
 export const FIELDS = [
   { key: 'app_name', group: 'general', type: 'text', label: 'Nom du site', env: 'APP_NAME', def: 'Mejliss TV' },
+  { key: 'legal_company', group: 'legal', type: 'text', label: 'Raison sociale ou nom de l’éditeur', def: '', help: 'Ex. « Le Publicitaire » ou vos nom et prénom pour une entreprise individuelle.' },
+  { key: 'legal_status', group: 'legal', type: 'text', label: 'Forme juridique', def: '', help: 'Ex. Entreprise individuelle (micro-entreprise), SAS, SARL, association…' },
+  { key: 'legal_capital', group: 'legal', type: 'text', label: 'Capital social (facultatif)', def: '', help: 'Société seulement, ex. « 1 000 € ». Vide : la ligne n’apparaît pas.' },
+  { key: 'legal_address', group: 'legal', type: 'text', label: 'Adresse du siège', def: '' },
+  { key: 'legal_siret', group: 'legal', type: 'text', label: 'Numéro SIRET', def: '' },
+  { key: 'legal_rcs', group: 'legal', type: 'text', label: 'RCS (facultatif)', def: '', help: 'Ex. « RCS Lille Métropole 123 456 789 ». Vide : la ligne n’apparaît pas.' },
+  { key: 'legal_vat', group: 'legal', type: 'text', label: 'TVA intracommunautaire (facultatif)', def: '', help: 'Vide : la ligne n’apparaît pas (franchise en base de TVA par exemple).' },
+  { key: 'legal_email', group: 'legal', type: 'text', label: 'E-mail de contact affiché', def: '', help: 'Adresse publique pour les questions, réclamations, signalements et demandes sur les données.' },
+  { key: 'legal_phone', group: 'legal', type: 'text', label: 'Téléphone (facultatif)', def: '', help: 'Vide : la ligne n’apparaît pas.' },
+  { key: 'legal_director', group: 'legal', type: 'text', label: 'Directeur de la publication', def: '', help: 'Personne responsable du contenu publié (souvent le dirigeant).' },
+  { key: 'legal_host_name', group: 'legal', type: 'text', label: 'Hébergeur : nom', def: '', help: 'Société qui héberge le serveur (raison sociale).' },
+  { key: 'legal_host_address', group: 'legal', type: 'text', label: 'Hébergeur : adresse', def: '' },
+  { key: 'legal_host_phone', group: 'legal', type: 'text', label: 'Hébergeur : téléphone (facultatif)', def: '' },
+  { key: 'legal_mediator', group: 'legal', type: 'text', label: 'Médiateur de la consommation (nom, site, adresse)', def: '', help: 'Obligatoire pour vendre à des particuliers : adhérez à un médiateur agréé et indiquez ici ses coordonnées.' },
+  { key: 'legal_court', group: 'legal', type: 'text', label: 'Tribunal compétent', def: '', help: 'Ex. « les tribunaux de Lille ».' },
+  { key: 'legal_mail_provider', group: 'legal', type: 'text', label: 'Prestataire d’envoi des e-mails', def: '', help: 'Société qui envoie les e-mails du site (serveur SMTP réglé dans E-mails), ex. Brevo, OVHcloud…' },
   { key: 'skin_default', group: 'general', type: 'select', options: ['classique', 'nuit'], label: 'Thème visuel par défaut (classique : noir et or ; nuit : « Nuit et or », bleu de nuit et arabesques)', env: 'SKIN_DEFAULT', def: 'classique' },
   { key: 'skin_choice', group: 'general', type: 'bool', label: 'Laisser chaque visiteur choisir son thème (désactivé : seul l’administrateur choisit, avec le réglage ci-dessus)', env: 'SKIN_CHOICE', def: 'false' },
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',

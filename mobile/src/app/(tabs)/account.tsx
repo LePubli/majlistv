@@ -1,6 +1,6 @@
 // Compte : connexion, langue, état de l'abonnement. L'abonnement se prend et se gère uniquement sur le site.
 import React from 'react';
-import { Linking, ScrollView, Switch, View } from 'react-native';
+import { Linking, ScrollView, Switch, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { AppState } from 'react-native';
@@ -111,6 +111,14 @@ export default function AccountScreen() {
 
         {user ? <Button label={t('account.data')} variant="dark" onPress={() => Linking.openURL(`${SITE_URL}/account?tab=data`)} /> : null}
         {user ? <Button label={t('account.logout')} variant="dark" onPress={() => { void logout(); }} /> : null}
+        {/* Étape D : pages légales (sur le site, dans la langue de l'application). */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }} accessibilityRole="menu">
+          {([['mentions-legales', 'legal.notice'], ['cgv', 'legal.terms'], ['confidentialite', 'legal.privacy']] as const).map(([slug, key]) => (
+            <Pressable key={slug} accessibilityRole="link" onPress={() => { void Linking.openURL(`${SITE_URL}/legal/${slug}`); }} style={{ minHeight: 40, justifyContent: 'center', paddingHorizontal: 8 }}>
+              <Txt size={13} color={colors.text2} style={{ textDecorationLine: 'underline' }}>{t(key)}</Txt>
+            </Pressable>
+          ))}
+        </View>
         <Txt size={12} color={colors.muted} style={{ textAlign: 'center' }}>{t('account.version', { v: Constants.expoConfig?.version ?? '' })}</Txt>
       </ScrollView>
     </SafeAreaView>

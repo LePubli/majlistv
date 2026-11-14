@@ -9139,3 +9139,23 @@ bash /root/verify-deploy.sh
 **Déploiement.** JavaScript seulement : mise à jour automatique de l'application (fermer / rouvrir deux fois), téléphone et télé. Rien sur le VPS.
 
 **Testé.** Vérification des types et 288 tests de l'application. Non testé sur un vrai téléphone ou une vraie télé ici, ni avec un vrai paiement.
+
+## Étape D : pages légales (14/11)
+
+**Description.**
+- **Trois pages réécrites** d'après le service tel qu'il est aujourd'hui :
+  - *Mentions légales* : éditeur, hébergeur, propriété intellectuelle, contenus des intervenants, contenus produits par IA (pas une fatwa), vidéos d'autres plateformes et chaînes en direct, signalement d'un contenu.
+  - *Conditions générales de vente et d'utilisation* (17 articles) : service, compte, abonnements (essai, renouvellement, codes promo, prix par pays, résiliation), contenus payants à l'unité (achat, location, pas de téléchargement d'une location), cartes cadeaux, paiement Stripe, rétractation (L221-28 ; 14 jours pour une carte cadeau non utilisée), espace enfants, usage, organisateurs et chaînes, IA, responsabilité, médiation, droit applicable.
+  - *Politique de confidentialité* : données traitées (dont prière arrondie à ~10 km, espace enfants, assistant, notifications, journaux), finalités et bases légales, prestataires (hébergeur, Stripe, e-mails, Firebase, Anthropic, DeepSeek, Azure, plateformes vidéo), transferts hors UE, durées, cookies, droits, CNIL, sécurité.
+- **En français (version qui fait foi), anglais et arabe** : la page s'affiche dans la langue du visiteur.
+- **Remplies automatiquement** avec **Admin → Paramètres → Informations légales** (16 champs : raison sociale, forme, capital, adresse, SIRET, RCS, TVA, e-mail, téléphone, directeur de la publication, hébergeur nom / adresse / téléphone, médiateur, tribunal, prestataire e-mails). Champ facultatif vide → la ligne disparaît ; champ obligatoire vide → « [à compléter : …] » visible.
+- **Admin → Pages légales** : aperçu de chaque page dans les 3 langues, liste des informations manquantes, « Personnaliser le texte » (part du modèle rempli ; texte fr / en / ar), « Revenir au modèle automatique ». Une page déjà modifiée à la main avant cette étape reste telle quelle (mode personnalisé).
+- **Application** : liens Mentions légales / Conditions de vente / Confidentialité en bas de Mon compte.
+
+**Fichiers.** `api/src/legalTemplates.js`, `api/src/routes/legal.js`, `api/migrations/119_legal_i18n.sql`, `api/src/settings.js` (groupe « legal »), `web/app/legal/[slug]/page.js`, `web/app/admin/page.js` (LegalPages), `web/components/SettingsHub.js`, textes `legalFrOnly`, `mobile/src/app/(tabs)/account.tsx`, textes `legal.*` ; tests `api/tests/test_legal_lib.mjs`, `test_legal_i18n.py` (CI), `web/tests/test_legal_web.mjs`, `mobile/tests/sales.test.ts`.
+
+**Déploiement.** DockPanel : **majlistv-api** (migration 119), puis **majlistv-web**. Application : mise à jour automatique. Puis les commandes habituelles du VPS.
+
+**À faire par Epok.** Remplir Admin → Paramètres → Informations légales ; adhérer à un médiateur de la consommation (obligatoire pour vendre à des particuliers) ; faire relire les trois pages par un professionnel du droit avant le lancement public.
+
+**Testé.** `test_legal_i18n.py` (23 vérifications), `test_legal_lib.mjs` (les 9 versions ont les mêmes sections et les mêmes informations), balayage des droits, tests web et application ; navigateur réel : les 3 pages en fr / en / ar à 1440 et 390 px, sans débordement, Admin → Pages légales et Informations légales. Non fait : relecture juridique.

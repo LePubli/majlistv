@@ -45,3 +45,10 @@ test('écrans : vidéo, Audyn, compte, télé', () => {
   for (const k of ['sale.title', 'sale.buy', 'sale.rent', 'sale.buyOnSite', 'sale.siteHelp', 'sale.refresh', 'sale.mine', 'sale.owned', 'sale.rentedUntil', 'tv.saleScan', 'tv.saleLogin'])
     for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
 });
+
+test('étape D : liens vers les pages légales dans Mon compte', () => {
+  const acc = read('src/app/(tabs)/account.tsx');
+  for (const slug of ['mentions-legales', 'cgv', 'confidentialite']) assert.ok(acc.includes(`'${slug}'`), slug);
+  assert.ok(acc.includes('`${SITE_URL}/legal/${slug}`'));
+  for (const k of ['legal.notice', 'legal.terms', 'legal.privacy']) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
+});

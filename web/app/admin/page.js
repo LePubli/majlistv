@@ -815,41 +815,87 @@ function Users({ me }) {
 }
 
 /* ---------------------------------------------------------------- Pages légales */
+// Étape D : chaque page suit le modèle à jour (fr / en / ar), rempli avec Admin → Paramètres → Informations légales,
+// ou un texte personnalisé (« Personnaliser » part du modèle rempli). « Revenir au modèle » abandonne le texte personnalisé.
+const LEGAL_LANG_LABEL = { fr: 'Français (fait foi)', en: 'English', ar: 'العربية' };
 function LegalPages() {
   const { call } = useApp();
   const [list, setList] = useState([]);
-  const [cur, setCur] = useState(null);
+  const [d, setD] = useState(null);       // réponse de GET /admin/legal/:slug
+  const [edit, setEdit] = useState(null); // { title, body, titleEn, bodyEn, titleAr, bodyAr } en mode personnalisé
+  const [lang, setLang] = useState('fr');
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { call('/legal', {}, null).then((r) => r.ok && setList(r.data)); }, [call]);
+  useEffect(() => { call('/legal?lang=fr', {}, null).then((r) => r.ok && setList(r.data)); }, [call]);
   const open = async (slug) => {
-    setMsg(null);
-    const r = await call('/legal/' + slug, {}, null);
-    if (r.ok) setCur(r.data);
+    setMsg(null); setLang('fr');
+    const r = await call('/admin/legal/' + slug);
+    if (!r.ok) return;
+    setD(r.data);
+    const sv = r.data.saved;
+    setEdit(r.data.custom && sv ? { title: sv.title, body: sv.body, titleEn: sv.titleEn, bodyEn: sv.bodyEn, titleAr: sv.titleAr, bodyAr: sv.bodyAr } : null);
+  };
+  const customize = () => {
+    const tp = d.template;
+    setEdit({ title: tp.fr.title, body: tp.fr.body, titleEn: tp.en?.title || '', bodyEn: tp.en?.body || '', titleAr: tp.ar?.title || '', bodyAr: tp.ar?.body || '' });
+    setMsg({ ok: true, text: 'Texte du modèle copié : modifiez-le puis enregistrez. Tant que vous n’enregistrez pas, la page suit toujours le modèle.' });
   };
   const save = async () => {
     setBusy(true); setMsg(null);
-    const r = await call('/admin/legal/' + cur.slug, { method: 'PUT', body: JSON.stringify({ title: cur.title, body: cur.body }) });
+    const r = await call('/admin/legal/' + d.slug, { method: 'PUT', body: JSON.stringify(edit) });
     setBusy(false);
-    setMsg(r.ok ? { ok: true, text: 'Enregistré. La page publique est à jour.' } : { ok: false, text: r.data.error || 'Erreur' });
+    if (r.ok) { setMsg({ ok: true, text: 'Texte personnalisé enregistré. La page publique est à jour.' }); open(d.slug); }
+    else setMsg({ ok: false, text: r.data.error || 'Erreur' });
   };
-  const todo = cur ? (cur.body.match(/\[[^\]]{2,80}\]/g) || []).length : 0;
+  const backToTemplate = async () => {
+    if (!window.confirm('Revenir au modèle automatique ? Le texte personnalisé ne sera plus affiché.')) return;
+    setBusy(true);
+    const r = await call(`/admin/legal/${d.slug}/custom`, { method: 'DELETE' });
+    setBusy(false);
+    if (r.ok) { setMsg({ ok: true, text: 'La page suit de nouveau le modèle automatique.' }); open(d.slug); }
+    else setMsg({ ok: false, text: r.data.error || 'Erreur' });
+  };
+  const k = { fr: ['title', 'body'], en: ['titleEn', 'bodyEn'], ar: ['titleAr', 'bodyAr'] }[lang];
+  const shown = edit ? { title: edit[k[0]], body: edit[k[1]] } : d?.template?.[lang];
+  const todo = shown ? (shown.body.match(/\[(à compléter|to be completed|يُستكمل) : [^\]]{2,120}\]/g) || []).length : 0;
   return (
     <section>
-      <p className="meta">Modèles à compléter (passages entre crochets) puis à faire relire par un professionnel. Mise en forme : une ligne « ## Titre », une ligne « - élément » pour une liste, une ligne vide entre deux paragraphes.</p>
+      <p className="meta">Mentions légales, conditions de vente et d’utilisation, politique de confidentialité, en français (version qui fait foi), anglais et arabe. Par défaut, chaque page suit un modèle tenu à jour avec les fonctions du site et rempli avec <a className="link u" href="/admin?tab=settings&amp;section=legal">Paramètres → Informations légales</a>. À faire relire par un professionnel du droit avant le lancement.</p>
       <div className="adm-row">
-        {list.map((p) => <button key={p.slug} className={cur?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
+        {list.map((p) => <button key={p.slug} className={d?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
       </div>
-      {cur && (
+      {d && (
         <div className="adm-form">
-          <label>Titre<input value={cur.title} onChange={(e) => setCur({ ...cur, title: e.target.value })} maxLength={120} /></label>
-          <label>Texte<textarea rows={22} value={cur.body} onChange={(e) => setCur({ ...cur, body: e.target.value })} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14 }} /></label>
-          {todo > 0 && <p className="error">{todo} passage(s) entre crochets restent à compléter.</p>}
-          <div className="adm-row">
-            <button className="btn" disabled={busy} onClick={save}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-            <a className="btn ghost" href={'/legal/' + cur.slug} target="_blank" rel="noreferrer">Voir la page</a>
-            {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
+          <p className={edit && d.custom ? 'adm-ok' : 'meta'}>
+            {d.custom ? '✍️ Texte personnalisé (saisi à la main) : il ne suit plus les mises à jour du modèle.' : '🔄 Modèle automatique : la page se met à jour avec le site et les informations légales.'}
+          </p>
+          {d.missing.length > 0 && (
+            <p className="error">Informations légales manquantes ({d.missing.length}) : {d.missing.map((m) => m.label).join(', ')}. Complétez-les dans <a className="link u" href="/admin?tab=settings&amp;section=legal">Paramètres → Informations légales</a>.</p>
+          )}
+          <div className="adm-row" role="tablist" aria-label="Langue">
+            {['fr', 'en', 'ar'].map((l) => <button key={l} type="button" role="tab" aria-selected={lang === l} className={lang === l ? 'btn small' : 'btn ghost small'} onClick={() => setLang(l)}>{LEGAL_LANG_LABEL[l]}</button>)}
           </div>
+          {edit ? (
+            <>
+              <label>Titre<input value={edit[k[0]]} dir={lang === 'ar' ? 'rtl' : undefined} onChange={(e) => setEdit({ ...edit, [k[0]]: e.target.value })} maxLength={120} /></label>
+              <label>Texte<textarea rows={22} dir={lang === 'ar' ? 'rtl' : undefined} value={edit[k[1]]} onChange={(e) => setEdit({ ...edit, [k[1]]: e.target.value })} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14 }} /></label>
+              <p className="meta small">Mise en forme : une ligne « ## Titre », une ligne « - élément » pour une liste, une ligne vide entre deux paragraphes. Anglais ou arabe vide : la page s’affiche en français.</p>
+            </>
+          ) : shown ? (
+            <div className="legal-preview" dir={lang === 'ar' ? 'rtl' : undefined}>
+              <h3>{shown.title}</h3>
+              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 14, maxHeight: 460, overflow: 'auto' }}>{shown.body}</pre>
+            </div>
+          ) : null}
+          {todo > 0 && <p className="error">{todo} passage(s) « à compléter » dans cette langue.</p>}
+          <div className="adm-row">
+            {edit ? <button className="btn" disabled={busy} onClick={save}>{busy ? 'Enregistrement…' : 'Enregistrer le texte personnalisé'}</button>
+              : d.hasTemplate && <button className="btn ghost" onClick={customize}>Personnaliser le texte</button>}
+            {d.custom && d.hasTemplate && <button className="btn ghost" disabled={busy} onClick={backToTemplate}>Revenir au modèle automatique</button>}
+            {edit && !d.custom && <button className="btn ghost" onClick={() => { setEdit(null); setMsg(null); }}>Annuler</button>}
+            <a className="btn ghost" href={'/legal/' + d.slug} target="_blank" rel="noreferrer">Voir la page</a>
+          </div>
+          {msg && <p className={msg.ok ? 'adm-ok' : 'error'} role="status">{msg.text}</p>}
         </div>
       )}
     </section>
