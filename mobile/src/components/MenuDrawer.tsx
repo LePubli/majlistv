@@ -46,8 +46,7 @@ export function MenuDrawer({ visible, onClose }: { visible: boolean; onClose: ()
       { key: 'series', label: t('seriesNav'), icon: 'layers', go: nav('/series'), on: !!config?.hasSeries },
       { key: 'collections', label: t('colNav'), icon: 'folder', go: nav('/collections'), on: feat('collections') },
       { key: 'shorts', label: t('shrTitle'), icon: 'zap', go: nav('/shorts'), on: feat('shorts') },
-      { key: 'live', label: t('lv.nav'), icon: 'tv', go: nav('/live'), on: feat('livetv') },
-      { key: 'events', label: t('evn.nav'), icon: 'bell', go: nav('/events'), on: feat('events') },
+      // TV en direct et événements : onglet « En direct » du Catalogue depuis l'étape N1 (15/11), plus dans ce menu.
     ] },
     { key: 'listen', title: t('mnListen'), items: [
       { key: 'audyn', label: t('aud.nav'), icon: 'headphones', go: nav('/audyn'), on: feat('audyn') },

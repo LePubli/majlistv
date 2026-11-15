@@ -1,4 +1,5 @@
-// Catalogue : titre, accès à la recherche, filtres (catégorie, format, niveau), liste en grille qui se charge au fil du défilement.
+// Catalogue : titre, accès à la recherche, entrée « En direct » (TV 24 h/24 et événements, étape N1 du 15/11), filtres
+// (catégorie, format, niveau), liste en grille qui se charge au fil du défilement.
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +17,7 @@ const LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 const LEVEL_KEY = { beginner: 'lvBeginner', intermediate: 'lvInter', advanced: 'lvAdvanced' } as const;
 
 export default function CatalogueScreen() {
-  const { api, t, dirStyle, locale } = useSession();
+  const { api, t, dirStyle, locale, feat } = useSession();
   const params = useLocalSearchParams<{ cat?: string; format?: string }>();
   const [category, setCategory] = useState<number | null>(params.cat ? Number(params.cat) : null);
   const [format, setFormat] = useState<string | null>(params.format ?? null);
@@ -51,6 +52,8 @@ export default function CatalogueScreen() {
   useEffect(() => { void load(true); }, [category, format, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fname = (f: FormatItem) => (locale === 'ar' ? f.nameAr : locale === 'en' ? f.nameEn : f.nameFr) || f.nameFr;
+  // « En direct » : la page qui réunit TV et événements ; sans la TV, directement les événements.
+  const liveHref = feat('livetv') ? '/live' : feat('events') ? '/events' : null;
   const row = (children: React.ReactNode) => <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{children}</View>;
 
   const header = (
@@ -61,6 +64,14 @@ export default function CatalogueScreen() {
         <Feather name="search" size={18} color={colors.muted} />
         <Txt color={colors.muted}>{t('hmSearch')}</Txt>
       </Pressable>
+      {liveHref ? (
+        <Pressable accessibilityRole="link" accessibilityLabel={t('lv.live')} onPress={() => router.push(liveHref)}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 16, borderRadius: radius.card, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 })}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#E5484D' }} />
+          <Txt weight="bold" style={{ flex: 1 }}>{t('lv.live')}</Txt>
+          <Feather name={dirStyle.direction === 'rtl' ? 'chevron-left' : 'chevron-right'} size={18} color={colors.muted} />
+        </Pressable>
+      ) : null}
       {row(<>
         <Chip label={t('talks.all')} active={category === null} onPress={() => setCategory(null)} />
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={category === c.id} onPress={() => setCategory(category === c.id ? null : c.id)} />)}

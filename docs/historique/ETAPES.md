@@ -9174,3 +9174,24 @@ bash /root/verify-deploy.sh
 **Déploiement.** DockPanel : **majlistv-api** (migration 120), puis **majlistv-web**. Application : mise à jour automatique. Puis les commandes habituelles du VPS. Ensuite : Admin → Fonctions → « TV en direct » cochée, puis Studio → TV en direct → ajouter les chaînes.
 
 **Testé.** `test_live_channels.py` (avec le module « Événements en direct » coupé : la TV en direct reste ouverte, les événements sont fermés), balayage des droits, menus, événements, fonctions ; tests web et application ; navigateur réel (1440 et 390 px), module événements coupé : entrée de menu, page /live, Studio → TV en direct.
+
+## N1 — Menu à 5 et « En direct » dans le Catalogue (15/11)
+
+**Pourquoi.** Première étape de la simplification de toute la plateforme (`docs/SIMPLIFICATION-PLATEFORME-2026-11.md`). Décisions d'Epok du 15/11 : la TV en direct va dans le Catalogue plutôt que dans le menu ; la barre du bas montre « Compte » partout (comme l'application depuis le 13/11).
+
+**Ce qui change.**
+- **Menu du haut (site)** : Accueil · Catalogue · Apprendre · Pratique · Ma bibliothèque, puis Kids. « TV en direct » n'y est plus par défaut (elle reste proposée, masquée, dans Admin → Menus) ; elle reste dans le menu latéral, groupe Catalogue.
+- **Onglet « En direct » du Catalogue** : il mène à **/live**, qui réunit la TV 24 h/24 puis les prochains événements en direct (lien « Voir tous les événements en direct » s'il n'y en a pas). Sans la fonction « TV en direct », l'onglet mène à /events. L'onglet reste allumé sur /live et /events. Chaque partie suit toujours sa propre fonction (TV indépendante des événements).
+- **Barre du bas du téléphone (site)** : Accueil · Catalogue · Apprendre · Pratique · **Compte** ; un visiteur y voit **Connexion**. La bibliothèque reste dans le menu ☰.
+- **Application** : entrée **« En direct »** en haut du Catalogue (→ écran « En direct » : TV puis événements ; sans la TV → événements) ; TV en direct et événements retirés du menu ☰. Barre du bas inchangée.
+- **Arabe** : « TV en direct » s'appelait comme « Événements en direct » (البث المباشر) ; elle s'appelle maintenant التلفزيون المباشر.
+
+**Fichiers.** `web/lib/navcfg.js` = `api/src/navcfg.js`, `web/components/{MemberShell,SectionTabs,EventsBand}.js`, `web/app/live/page.js`, `web/app/globals.css`, `web/lib/i18n.js` ; `mobile/src/app/(tabs)/talks.tsx`, `mobile/src/app/live.tsx`, `mobile/src/components/{HomeBands,MenuDrawer}.tsx`, `mobile/src/lib/i18n.ts` ; tests `web/tests/test_n1_web.mjs` (nouveau), `test_nav_lots_web.mjs`, `test_live_channels_web.mjs`, `mobile/tests/{liveChannels,events}.test.ts`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement (aucune migration, l'API ne change que par la copie de `navcfg.js` : redéployer aussi **majlistv-api** pour que « Admin → Menus → comme aujourd'hui » reprenne le nouveau menu). Application : mise à jour automatique (fermer / rouvrir deux fois). Puis les commandes habituelles du VPS.
+
+**Attention.** Si un menu a été affecté dans **Admin → Menus** (menu du haut ou barre du bas), c'est lui qui s'affiche : il n'est pas modifié.
+
+**Debug.** L'onglet « En direct » n'apparaît pas : Admin → Fonctions, cocher « TV en direct » ou « Événements en direct ». La page /live affiche « fonction désactivée » : « TV en direct » est décochée (l'onglet mène alors à /events).
+
+**Testé.** Tests web (tous), application (`npm run check`, 290 tests), `test_menus.py` et `test_live_channels.py` sur l'API locale ; navigateur réel : Catalogue et /live à 1440 et 390 px, en français et en arabe (onglets, menu du haut, barre membre et visiteur, aucun débordement, aucune erreur). Non testé : vrai téléphone, application installée, télé.

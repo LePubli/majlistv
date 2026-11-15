@@ -27,7 +27,7 @@ assert.match(ms, /events: \{ key: 'events', href: '\/events', label: t\('evnNav'
 assert.match(ms, /livetv: \{ key: 'livetv', href: '\/live', label: t\('lvNav'\), icon: ICONS\.tv, on: feat\('livetv'\) \}/);
 assert.match(read('components/Header.js'), /livetv: \{ key: 'livetv', href: '\/live'/);
 const nav = read('lib/navcfg.js');
-assert.match(nav, /\['catalogue', 'Catalogue'\], \['livetv', 'TV en direct'\]/); assert.match(nav, /\['livetv', 'TV en direct'\], \['events', 'Événements en direct'\]/);
+assert.match(nav, /\['books', 'Ouvrages', true\], \['livetv', 'TV en direct', true\]\]/); assert.match(nav, /\['livetv', 'TV en direct'\], \['events', 'Événements en direct'\]/);
 assert.match(read('lib/menusCfg.js'), /\['live', 'TV en direct'\]/);
 const i18n = read('lib/i18n.js');
 for (const k of ['lvNav', 'lvPageIntro', 'lvNoChannel', 'lvAddHint', 'lvTitle', 'lvLive', 'lvNotLive', 'lvAdminTitle', 'lvAdminHelp', 'lvAdminOff', 'lvName', 'lvUrl', 'lvAdd', 'lvEmpty', 'lvChecking', 'lvCheck', 'lvDel', 'lvDelAsk', 'lvSeePage'])

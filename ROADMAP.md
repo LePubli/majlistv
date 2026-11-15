@@ -674,3 +674,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **C-3 — Contenus payants à l'unité dans l'application et sur la télé** (prix, achat sur le site, accès ouvert au retour, Mes achats) (14/11) : livré. C terminé.
 - **D — Pages légales** (mentions, CGV/CGU, confidentialité ; fr / en / ar ; remplies par Admin → Paramètres → Informations légales) (14/11) : livré. Reste côté Epok : saisir les informations, choisir un médiateur, relecture juridique.
 - **TV en direct indépendante** (page /live, menus, Studio → TV en direct, application ; sans le module « Événements en direct ») (14/11) : livré.
+- **N1 — Menu à 5 et « En direct » dans le Catalogue** (TV + événements sur /live, barre du bas avec Compte sur le site comme dans l'application) (15/11) : livré. Suite : N2 Apprendre en 3 onglets (plan : docs/SIMPLIFICATION-PLATEFORME-2026-11.md).

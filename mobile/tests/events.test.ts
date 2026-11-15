@@ -44,10 +44,10 @@ test('lecteur : identifiants du serveur acceptés, douteux refusés', () => {
 
 test('textes : toutes les clés utilisées existent en fr, en et ar', () => {
   const used = new Set<string>();
-  for (const f of ['../src/app/events/index.tsx', '../src/app/events/[id].tsx', '../src/components/EventParts.tsx', '../src/components/HomeBands.tsx', '../src/components/MenuDrawer.tsx']) {
+  for (const f of ['../src/app/events/index.tsx', '../src/app/events/[id].tsx', '../src/components/EventParts.tsx', '../src/components/HomeBands.tsx', '../src/components/MenuDrawer.tsx', '../src/app/live.tsx']) {
     for (const m of r(f).matchAll(/\bt\('(evn\.[A-Za-z]+)'/g)) used.add(m[1]);
   }
-  assert.ok(used.size >= 25, `${used.size} textes utilisés`);
+  assert.ok(used.size >= 24, `${used.size} textes utilisés`); // N1 : « evn.nav » n'est plus dans le menu ☰
   for (const lang of ['fr', 'en', 'ar'] as const) for (const k of used) assert.ok((APP_DICT[lang] as Record<string, string>)[k], `${k} manquant en ${lang}`);
   for (const [k, v] of [['evn.soon', '{t}'], ['evn.starts', '{d}'], ['evn.duration', '{n}']] as const)
     for (const lang of ['fr', 'en', 'ar'] as const) assert.ok((APP_DICT[lang] as Record<string, string>)[k].includes(v), `${k} sans ${v} en ${lang}`);
@@ -56,7 +56,9 @@ test('textes : toutes les clés utilisées existent en fr, en et ar', () => {
 test('branchements : écrans déclarés, menu, accueil, aucune dépendance native ajoutée', () => {
   const layout = r('../src/app/_layout.tsx');
   assert.match(layout, /name="events\/index"/); assert.match(layout, /name="events\/\[id\]"/);
-  assert.match(r('../src/components/MenuDrawer.tsx'), /key: 'events'.*feat\('events'\)/);
+  // Étape N1 (15/11) : les événements s'ouvrent depuis « En direct » (Catalogue), plus depuis le menu ☰.
+  assert.match(r('../src/app/(tabs)/talks.tsx'), /feat\('events'\) \? '\/events'/);
+  assert.match(r('../src/app/live.tsx'), /<EventsBand gutter=\{0\}/);
   assert.match(r('../src/app/(tabs)/index.tsx'), /<EventsBand \/>/);
   for (const f of ['../src/app/events/index.tsx', '../src/app/events/[id].tsx']) assert.ok(existsSync(new URL(f, import.meta.url)));
   // Le lecteur n'est créé qu'en phase « live » avec un lien donné par le serveur

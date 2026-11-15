@@ -3999,6 +3999,7 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .lv-on { color: #ff6b6b; font-weight: 700; }
 .lv-off { color: var(--text-2, #cfc8b4); }
 .lv-meta { margin: 0; }
+.lv-ev-more { margin: 4px 0 24px; }
 /* Connexion d'une télé (/tv) */
 .tv-link .panel { display: grid; gap: 14px; max-width: 560px; }
 .tv-code { font-size: 32px; letter-spacing: .18em; text-align: center; font-weight: 700; text-transform: uppercase; min-height: 64px; }

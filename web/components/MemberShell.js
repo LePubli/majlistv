@@ -150,7 +150,11 @@ export default function MemberShell({ children }) {
 
   // Barre du bas (téléphone) : 5 entrées au plus ; le reste reste dans le menu ☰ de l'en-tête.
   // D'origine : Accueil · Catalogue · Séries · Apprendre · Kids (sans série en bibliothèque, « Collections » remplace « Séries »).
-  const barD = { ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') }, library: { ...D.library, label: t('msLibShort') } };
+  // Étape N1 (15/11) : « Compte » remplace « Ma bibliothèque » (même barre que l'application) ; un visiteur y trouve « Connexion ».
+  const barD = {
+    ...D, series: hasSeries ? D.series : { ...D.collections, key: 'series' }, learning: { ...D.learning, label: t('msLearnShort') }, library: { ...D.library, label: t('msLibShort') },
+    account: user ? { ...D.account, label: t('msAccShort') } : { ...D.account, href: '/login', label: t('login') },
+  };
   const customBar = layout?.menus?.web_bar;
   const barItems = (customBar ? resolveMenu(customBar, Object.values(barD), opts) : defaultList(withHid(MENUS.bar.builtin, barD))).slice(0, 5);
   const bar = (

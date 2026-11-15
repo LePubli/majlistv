@@ -9,6 +9,7 @@ export const DIR: Record<Locale, 'ltr' | 'rtl'> = { fr: 'ltr', en: 'ltr', ar: 'r
 const fr = {
   'lv.nav': "TV en direct",
   'lv.intro': "Les chaînes diffusées 24 h/24, avec le lecteur YouTube officiel.",
+  'lv.hubIntro': "La TV en direct 24 h/24 et les prochains événements en direct.",
   'legal.notice': "Mentions légales",
   'legal.terms': "Conditions de vente",
   'legal.privacy': "Confidentialité",
@@ -469,6 +470,7 @@ export type Key = AppKey | WebKey;
 const en: Record<AppKey, string> = {
   'lv.nav': "Live TV",
   'lv.intro': "Channels broadcasting 24/7, with the official YouTube player.",
+  'lv.hubIntro': "24/7 live TV and upcoming live events.",
   'legal.notice': "Legal notice",
   'legal.terms': "Terms of sale",
   'legal.privacy': "Privacy",
@@ -923,8 +925,9 @@ const en: Record<AppKey, string> = {
 };
 
 const ar: Record<AppKey, string> = {
-  'lv.nav': "البث المباشر",
+  'lv.nav': "التلفزيون المباشر",
   'lv.intro': "قنوات تبث على مدار الساعة بمشغّل YouTube الرسمي.",
+  'lv.hubIntro': "التلفزيون المباشر على مدار الساعة والفعاليات المباشرة القادمة.",
   'legal.notice': "الإشعار القانوني",
   'legal.terms': "شروط البيع",
   'legal.privacy': "الخصوصية",

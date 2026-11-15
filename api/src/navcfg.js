@@ -26,9 +26,10 @@ export const MENUS = {
   main: {
     label: 'Menu principal', hint: 'Les liens de l’en-tête (ordinateur) et du menu ☰ du téléphone.',
     // Navigation de novembre 2026 : cinq destinations — Accueil · Catalogue · Apprendre · Pratique · Ma bibliothèque — puis Kids.
-    // Séries, Shorts, Collections, Ouvrages sont des onglets de la page Catalogue ; Prière est dans Pratique (masqués ici par défaut).
-    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['livetv', 'TV en direct'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids'],
-      ['shorts', 'Shorts', true], ['series', 'Séries', true], ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true]],
+    // Séries, Shorts, Collections, Ouvrages et « En direct » (TV + événements, étape N1 du 15/11) sont des onglets de la page
+    // Catalogue ; Prière est dans Pratique (masqués ici par défaut, encore proposés dans Admin → Menus).
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['kids', 'Mejliss Kids'],
+      ['shorts', 'Shorts', true], ['series', 'Séries', true], ['prayer', 'Prière', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['livetv', 'TV en direct', true]],
   },
   side: {
     label: 'Menu latéral des membres', hint: 'Le menu à gauche des pages pour les membres connectés (ordinateur) : un groupe par destination ; le groupe « Catégories » se remplit tout seul depuis Admin → Catégories.',
@@ -44,8 +45,9 @@ export const MENUS = {
   },
   bar: {
     label: 'Barre du bas (téléphone)', hint: `La barre de ${BAR_MAX} liens en bas de l’écran du téléphone, pour les membres connectés.`,
-    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'],
-      ['kids', 'Mejliss Kids', true], ['series', 'Séries', true], ['account', 'Mon compte', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true], ['shorts', 'Shorts', true]],
+    // Étape N1 (15/11) : « Compte » à la place de « Ma bibliothèque », comme l'application ; la bibliothèque reste dans le menu ☰.
+    builtin: [['home', 'Accueil'], ['catalogue', 'Catalogue'], ['learning', 'Apprendre'], ['pratique', 'Pratique'], ['account', 'Compte'],
+      ['library', 'Ma bibliothèque', true], ['kids', 'Mejliss Kids', true], ['series', 'Séries', true], ['collections', 'Collections', true], ['books', 'Ouvrages', true], ['channels', 'Chaînes', true], ['shorts', 'Shorts', true]],
   },
   footer: {
     label: 'Liens du pied de page', hint: 'Les trois liens légaux sont obligatoires : on peut les déplacer ou les renommer, pas les retirer.',

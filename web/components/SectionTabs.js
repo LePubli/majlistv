@@ -11,7 +11,7 @@ import { useApp } from './Providers';
 
 // Rubrique d'une adresse (aussi utilisée par le menu du haut et le menu latéral pour marquer la destination active).
 export const SECTION_PATHS = {
-  catalogue: ['/catalogue', '/series', '/shorts', '/collections', '/chaines', '/audyn', '/books', '/events'],
+  catalogue: ['/catalogue', '/series', '/shorts', '/collections', '/chaines', '/audyn', '/books', '/live', '/events'],
   pratique: ['/pratique', '/priere', '/coran', '/adhkar', '/ramadan'],
 };
 export const sectionOf = (path) => Object.keys(SECTION_PATHS).find((s) => SECTION_PATHS[s].some((p) => path === p || path.startsWith(p + '/'))) || null;
@@ -30,7 +30,8 @@ export default function SectionTabs() {
     ['/chaines', t('spTitle'), feat('channels')],
     ['/audyn', t('stAudio'), feat('audyn')],
     ['/books', t('bkNav'), hasBooks],
-    ['/events', t('stLive'), feat('events')],
+    // Étape N1 (15/11) : « En direct » réunit la TV 24 h/24 et les événements (page /live) ; sans la TV, il mène aux événements.
+    [feat('livetv') ? '/live' : '/events', t('stLive'), feat('livetv') || feat('events'), ['/live', '/events']],
   ] : [
     ['/pratique', t('pqHub'), true],
     ['/priere', t('pqNav'), feat('prayer')],
@@ -42,7 +43,10 @@ export default function SectionTabs() {
   if (shown.length < 2) return null;
   return (
     <nav className="sec-tabs" aria-label={t('stLabel')}>
-      {shown.map(([href, label]) => <Link key={href} href={href} className={path === href ? 'on' : undefined} aria-current={path === href ? 'page' : undefined}>{label}</Link>)}
+      {shown.map(([href, label, , also]) => {
+        const on = path === href || Boolean(also?.includes(path));
+        return <Link key={href} href={href} className={on ? 'on' : undefined} aria-current={on ? 'page' : undefined}>{label}</Link>;
+      })}
     </nav>
   );
 }

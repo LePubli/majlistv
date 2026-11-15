@@ -83,15 +83,18 @@ export function KidsBand({ data }: { data: KidsHome }) {
 
 
 /** Accueil : « Prochains événements en direct » (3 au plus). Invisible sans événement ou si la fonction est coupée. */
-export function EventsBand() {
+/** Prochains événements en direct (3 au plus). Accueil : marges de l'accueil ; écran « En direct » : `gutter` 0 et `empty`
+ *  (affiché quand aucun événement n'est à venir). Fonction coupée : rien. */
+export function EventsBand({ gutter = GUTTER, empty = null }: { gutter?: number; empty?: React.ReactNode } = {}) {
   const { api, t, locale, feat, user } = useSession();
   const on = feat('events');
   const list = useAsync(async () => (on ? (await api.get<LiveEvent[]>('/events', { scope: 'upcoming' }, false).catch(() => [])).filter((e) => e.phase !== 'cancelled').slice(0, 3) : []), [on, user?.id]);
   const items = list.data ?? [];
   const now = useNow(items.length > 0);
-  if (!on || items.length === 0) return null;
+  if (!on) return null;
+  if (items.length === 0) return list.loading && !list.data ? null : <>{empty}</>;
   return (
-    <View style={{ gap: 10, paddingHorizontal: GUTTER }}>
+    <View style={{ gap: 10, paddingHorizontal: gutter }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Txt weight="extrabold" size={18} accessibilityRole="header">{t('evn.band')}</Txt>
         <Pressable accessibilityRole="link" onPress={() => router.navigate('/events')}><Txt size={13} color={colors.goldLight}>{t('evn.seeAll')}</Txt></Pressable>
