@@ -2,27 +2,33 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SECTION_LABEL, addDays, askErrorKey, cardsToday, clock, dropTurn, goalsFull, groupOf, groupsFor, markReported, movedTab, pickSection, pushTurn,
+  LEGACY_TABS, addDays, askErrorKey, cardsToday, clock, dropTurn, goalsFull, groupById, groupsFor, markReported, movedTab, pickTab, pushTurn,
   replaceGoal, replayAt, requeue, shortDate, validQuestion, type Goal, type SelfCheckResponse,
 } from '../src/lib/learnHub';
 import { routeForPath } from '../src/lib/notifRoute';
 import { todayTarget } from '../src/lib/today';
 import { DICT } from '../src/lib/i18n';
 
-test('onglets : 4 groupes, sections selon les fonctions activées', () => {
+test('onglets (étape N7, comme le site) : 3 onglets sans sous-onglets, anciens liens repris', () => {
   const all = groupsFor(() => true);
-  assert.deepEqual(all.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress'], 'Coran et adhkar sont dans « Pratique », plus dans Apprendre');
-  assert.deepEqual(all[2].subs, ['path', 'rev', 'cards']);
-  const few = groupsFor((id) => !['memorycards', 'selfcheck'].includes(id));
-  assert.deepEqual(few.map((g) => g.id), ['g_today', 'g_plan', 'g_talks', 'g_progress']);
-  assert.deepEqual(few[2].subs, ['path', 'rev']);
-  assert.equal(pickSection(all, 'cards'), 'cards');
-  assert.equal(pickSection(all, 'inconnu'), 'dash');
-  assert.equal(pickSection(few, 'cards'), 'dash', 'section coupée → tableau de bord');
-  assert.equal(pickSection(all, 'athkar'), 'dash', 'ancienne section : plus dans Apprendre');
+  assert.deepEqual(all.map((g) => g.id), ['today', 'rev', 'progress'], 'Aujourd’hui · Réviser · Mes progrès');
+  assert.deepEqual(all.map((g) => g.subs), [['dash', 'plan'], ['rev', 'cards'], ['series', 'commit', 'bilan']]);
+  const few = groupsFor((id) => !['memorycards', 'selfcheck', 'revision', 'quiz'].includes(id));
+  assert.deepEqual(few.map((g) => g.id), ['today', 'progress'], 'Réviser disparaît sans révision, quiz ni cartes');
+  assert.deepEqual(few[1].subs, ['series', 'commit']);
+  assert.deepEqual(groupsFor((id) => id === 'quiz').find((g) => g.id === 'rev')?.subs, ['rev'], 'quiz seul : Réviser reste');
+  assert.deepEqual(pickTab(all, 'cards'), { group: 'rev', section: 'cards' });
+  assert.deepEqual(pickTab(all, 'att'), { group: 'progress', section: 'series' }, 'ancienne section Attestations');
+  assert.deepEqual(pickTab(all, 'path'), { group: 'progress', section: 'series' });
+  assert.deepEqual(pickTab(all, 'plan'), { group: 'today', section: 'plan' }, 'planning : ouvre « Voir ma semaine »');
+  assert.deepEqual(pickTab(all, 'progress'), { group: 'progress', section: null });
+  assert.deepEqual(pickTab(all, 'inconnu'), { group: 'today', section: null });
+  assert.deepEqual(pickTab(few, 'cards'), { group: 'today', section: null }, 'onglet éteint → Aujourd’hui');
+  assert.deepEqual(pickTab(all, 'athkar'), { group: 'today', section: null }, 'ancienne section : plus dans Apprendre');
   assert.equal(movedTab('athkar'), '/athkar'); assert.equal(movedTab('quran'), '/quran'); assert.equal(movedTab('rev'), null); assert.equal(movedTab(undefined), null);
-  assert.equal(groupOf(all, 'bilan').id, 'g_progress');
-  for (const k of Object.values(SECTION_LABEL)) assert.ok(k);
+  assert.equal(groupById(all, 'progress').label, 'lgGProgress');
+  for (const [g, sec] of Object.values(LEGACY_TABS)) assert.ok(all.some((x) => x.id === g && (!sec || x.subs.includes(sec))), `${g}/${sec}`);
+  for (const k of ['lgTRev', 'lgTTodayTx', 'lgTRevTx', 'lgTProgTx', 'lgWeek', 'lgWeekHide', 'lgSeriesAtt'] as const) for (const l of ['fr', 'en', 'ar'] as const) assert.ok(DICT[l][k], `${k} ${l}`);
 });
 
 test('cartes : ratée = revient une fois, jamais en boucle ; passage à revoir', () => {
@@ -66,6 +72,9 @@ test('liens vers Apprendre : section gardée', () => {
   assert.equal(routeForPath('/learning?tab=rev'), '/learn?tab=rev');
   assert.equal(routeForPath('/learning#bilan'), '/learn?tab=bilan');
   assert.equal(routeForPath('/learning?tab=xyz'), '/learn');
+  assert.equal(routeForPath('/learning?tab=plan'), '/learn?tab=plan', 'rappels du planning (étape N7)');
+  assert.equal(routeForPath('/learning?tab=progress'), '/learn?tab=progress');
+  assert.deepEqual(todayTarget('/learning?tab=progress'), { app: '/learn?tab=progress' });
   assert.equal(routeForPath('/learning'), '/learn');
   assert.deepEqual(todayTarget('/learning?tab=cards'), { app: '/learn?tab=cards' });
 });

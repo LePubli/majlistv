@@ -37,7 +37,7 @@ test('écrans : vidéo, Audyn, compte, télé', () => {
   assert.match(card, /Linking\.openURL\(salePageUrl\(SITE_URL, kind, id\)\)/);
   assert.match(card, /AppState\.addEventListener\('change', \(st\) => \{ if \(st === 'active'\) onRefresh\(\); \}\)/);
   assert.match(card, /api\.get<Purchase\[\]>\('\/me\/purchases'\)/);
-  assert.match(read('src/app/(tabs)/account.tsx'), /user && feat\('sales'\) \? <PurchasesSection \/>/);
+  assert.match(read('src/app/(tabs)/account.tsx'), /user && tab === 'billing' && feat\('sales'\) \? <PurchasesSection \/>/, 'onglet « Abonnement et achats » (étape N7)');
   const tv = read('src/components/tv/TvSale.tsx');
   assert.match(tv, /<QrCode value=\{url\}/); assert.match(tv, /setInterval\(onRefresh, TV_SALE_POLL_MS\)/);
   assert.match(read('src/app/tv/talk/[id].tsx'), /x\.locked && x\.sale \? \(\s*<TvSale kind="talk"/);

@@ -1,5 +1,6 @@
-// Bibliothèque : mes favoris, « À regarder plus tard » (étape M1) et mes listes personnelles
-// (création, suppression ; le contenu d'une liste s'ouvre sur son écran).
+// Bibliothèque — étape N7 (16/11), comme le site (étape N5) : 4 onglets — Reprendre · Ma liste (favoris + « plus tard » réunis)
+// · Listes (listes personnelles ; le contenu d'une liste s'ouvre sur son écran) · Notes (notes et marque-pages de toutes les vidéos).
+// Anciens liens : ?tab=fav et ?tab=later → Ma liste.
 import React, { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,25 +14,32 @@ import { colors } from '@/lib/theme';
 import { Button, Chip, ErrorBox, Field, Loading, Panel, Txt, screenStyle, Title } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
 import { progressOf } from '@/lib/media';
+import { libTabOf, mergeMyList, type LibTab, type MyListItem } from '@/lib/mylist';
+import { clock } from '@/lib/learnHub';
 
 export default function LibraryScreen() {
   const { user, t, dirStyle, feat } = useSession();
   const params = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<'fav' | 'later' | 'lists'>(params.tab === 'later' ? 'later' : 'fav');
-  // Ouverture depuis l'accueil (« Voir tout » de la rangée « Plus tard ») : l'onglet suit le lien.
-  React.useEffect(() => { if (params.tab === 'later' || params.tab === 'fav' || params.tab === 'lists') setTab(params.tab); }, [params.tab]);
-  const laterOn = feat('watchlater');
+  const listOn = feat('favorites') || feat('watchlater');
+  const tabs: [LibTab, string][] = [
+    ['resume', t('tbResume')],
+    ...(listOn ? [['list', t('lbMyList')] as [LibTab, string]] : []),
+    ...(feat('lists') ? [['lists', t('lib.lists')] as [LibTab, string]] : []),
+    ...(feat('notes') ? [['notes', t('tbNotes')] as [LibTab, string]] : []),
+  ];
+  const valid = (x: LibTab) => (tabs.some(([k]) => k === x) ? x : 'resume');
+  const [tab, setTab] = useState<LibTab>(() => valid(libTabOf(params.tab)));
+  // Ouverture depuis l'accueil (« Tout voir » de la rangée « Ma liste ») : l'onglet suit le lien.
+  React.useEffect(() => { if (params.tab) setTab(valid(libTabOf(params.tab))); }, [params.tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}>
       <View style={{ padding: 18, paddingBottom: 8, gap: 14 }}>
         <Title>{t('lib.title')}</Title>
         {user ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Chip label={t('lib.favorites')} active={tab === 'fav'} onPress={() => setTab('fav')} />
-            {laterOn ? <Chip label={t('wlTab')} active={tab === 'later'} onPress={() => setTab('later')} /> : null}
-            <Chip label={t('lib.lists')} active={tab === 'lists'} onPress={() => setTab('lists')} />
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
+            {tabs.map(([k, label]) => <Chip key={k} label={label} active={tab === k} onPress={() => setTab(k)} />)}
+          </ScrollView>
         ) : null}
       </View>
       {!user ? (
@@ -41,45 +49,54 @@ export default function LibraryScreen() {
             <Button label={t('account.signin')} onPress={() => router.push('/login')} />
           </Panel>
         </View>
-      ) : tab === 'later' && laterOn ? <Later /> : tab === 'lists' ? <Lists /> : <Favorites />}
+      ) : tab === 'list' ? <MyList /> : tab === 'lists' ? <Lists /> : tab === 'notes' ? <Notes /> : <Resume />}
     </SafeAreaView>
   );
 }
 
-function Favorites() {
+// « Reprendre » : les vidéos commencées (la plus récente d'abord), avec leur avancement.
+function Resume() {
   const { api, user, t } = useSession();
-  const favs = useAsync(() => api.get<Card[]>('/me/favorites'), [user?.id]);
-  useFocusEffect(React.useCallback(() => { void favs.reload(); }, [])); // eslint-disable-line react-hooks/exhaustive-deps
-  if (favs.loading && !favs.data) return <Loading />;
-  if (!favs.data) return <ErrorBox onRetry={favs.reload} />;
+  const cont = useAsync(() => api.get<Card[]>('/me/continue'), [user?.id]);
+  useFocusEffect(React.useCallback(() => { void cont.reload(); }, [])); // eslint-disable-line react-hooks/exhaustive-deps
+  if (cont.loading && !cont.data) return <Loading />;
+  if (!cont.data) return <ErrorBox onRetry={cont.reload} />;
   return (
     <FlatList
-      data={favs.data}
+      data={cont.data}
       keyExtractor={(c) => c.id}
-      numColumns={1}
       contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 40 }}
       ListEmptyComponent={(
-        // État vide utile (étape M6, comme le site B3) : une action pour commencer.
         <Panel style={{ gap: 12 }}>
-          <Txt color={colors.text2}>{t('lib.noFav')}</Txt>
+          <Txt color={colors.text2}>{t('nothingToContinue')}</Txt>
           <Button label={t('esFindTalk')} variant="dark" onPress={() => router.navigate('/talks')} />
         </Panel>
       )}
-      renderItem={({ item }) => <TalkCard talk={item} />}
-      onRefresh={favs.reload}
-      refreshing={favs.loading}
+      renderItem={({ item }) => <TalkCard talk={item} progress={progressOf(item)} />}
+      onRefresh={cont.reload}
+      refreshing={cont.loading}
     />
   );
 }
 
-// « À regarder plus tard » : les plus récentes d'abord ; une vidéo regardée jusqu'au bout en sort toute seule.
-function Later() {
-  const { api, user, t, later, toggleLater } = useSession();
-  const list = useAsync(() => api.get<Card[]>('/me/watchlater'), [user?.id]);
+// « Ma liste » : favoris et « plus tard » ensemble, la plus récente d'abord ; « Retirer » enlève des deux.
+function MyList() {
+  const { api, user, t, feat, inMyList, toggleMyList } = useSession();
+  const list = useAsync(async () => {
+    const [l, f] = await Promise.all([
+      feat('watchlater') ? api.get<Card[]>('/me/watchlater').catch(() => [] as Card[]) : Promise.resolve([] as Card[]),
+      feat('favorites') ? api.get<Card[]>('/me/favorites').catch(() => [] as Card[]) : Promise.resolve([] as Card[]),
+    ]);
+    return mergeMyList(l, f);
+  }, [user?.id]);
   useFocusEffect(React.useCallback(() => { void list.reload(); }, [])); // eslint-disable-line react-hooks/exhaustive-deps
-  async function drop(id: string) {
-    list.setData((l) => (l ?? []).filter((x) => x.id !== id));
-    if (later.has(id)) await toggleLater(id); else await api.del(`/me/watchlater/${id}`).catch(() => {});
+  async function drop(x: MyListItem) {
+    list.setData((l) => (l ?? []).filter((y) => y.id !== x.id));
+    if (inMyList(x.id)) await toggleMyList(x.id);
+    else {
+      if (x.srcs.includes('fav')) await api.del(`/me/favorites/${x.id}`).catch(() => {});
+      if (x.srcs.includes('later')) await api.del(`/me/watchlater/${x.id}`).catch(() => {});
+    }
   }
   if (list.loading && !list.data) return <Loading />;
   if (!list.data) return <ErrorBox onRetry={list.reload} />;
@@ -88,26 +105,63 @@ function Later() {
       data={list.data}
       keyExtractor={(c) => c.id}
       contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 40 }}
-      ListHeaderComponent={<Txt size={13} color={colors.muted}>{t('wlIntro')}</Txt>}
+      ListHeaderComponent={<Txt size={13} color={colors.muted}>{t('lbMyListIntro')}</Txt>}
       ListEmptyComponent={(
         <Panel style={{ gap: 12 }}>
-          <Txt color={colors.text2}>{t('wl.empty')}</Txt>
-          <Button label={t('navCatalogue')} variant="dark" onPress={() => router.navigate('/talks')} />
+          <Txt color={colors.text2}>{t('lbMyListEmpty')}</Txt>
+          <Button label={t('esFindTalk')} variant="dark" onPress={() => router.navigate('/talks')} />
         </Panel>
       )}
       renderItem={({ item }) => (
         <View style={{ gap: 6 }}>
           <TalkCard talk={item} progress={progressOf(item)} />
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t('wlRemove')} : ${item.title}`} onPress={() => { void drop(item.id); }}
+          <Pressable accessibilityRole="button" accessibilityLabel={`${t('lbMyListRemove')} : ${item.title}`} onPress={() => { void drop(item); }}
             style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, opacity: pressed ? 0.7 : 1 })}>
             <Feather name="x-circle" size={16} color={colors.muted} />
-            <Txt size={13} weight="bold" color={colors.muted}>{t('wlRemove')}</Txt>
+            <Txt size={13} weight="bold" color={colors.muted}>{t('lbMyListRemove')}</Txt>
           </Pressable>
         </View>
       )}
       onRefresh={list.reload}
       refreshing={list.loading}
     />
+  );
+}
+
+// « Notes » : notes et marque-pages de toutes les vidéos ; toucher l'heure rouvre la vidéo à ce passage.
+type NoteGroup = { talkId: string; slug?: string | null; title: string; notes: { id: string; positionMs: number; body: string }[] };
+function Notes() {
+  const { api, user, t } = useSession();
+  const groups = useAsync(() => api.get<NoteGroup[]>('/me/notes'), [user?.id]);
+  useFocusEffect(React.useCallback(() => { void groups.reload(); }, [])); // eslint-disable-line react-hooks/exhaustive-deps
+  async function drop(gid: string, nid: string) {
+    groups.setData((l) => (l ?? []).map((g) => (g.talkId === gid ? { ...g, notes: g.notes.filter((n) => n.id !== nid) } : g)).filter((g) => g.notes.length));
+    await api.del(`/me/notes/${nid}`).catch(() => {});
+  }
+  if (groups.loading && !groups.data) return <Loading />;
+  if (!groups.data) return <ErrorBox onRetry={groups.reload} />;
+  return (
+    <ScrollView contentContainerStyle={{ padding: 18, gap: 14, paddingBottom: 40 }}>
+      {groups.data.length === 0 ? <Txt color={colors.muted}>{t('ntLibEmpty')}</Txt> : null}
+      {groups.data.map((g) => (
+        <Panel key={g.talkId} style={{ gap: 8 }}>
+          <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/talk/[id]', params: { id: g.talkId } })}>
+            <Txt weight="bold" size={16}>{g.title}</Txt>
+          </Pressable>
+          {g.notes.map((n) => (
+            <View key={n.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+              <Pressable accessibilityRole="link" accessibilityLabel={`${clock(n.positionMs)} : ${g.title}`} onPress={() => router.push({ pathname: '/talk/[id]', params: { id: g.talkId, at: String(n.positionMs) } })} style={{ minHeight: 40, justifyContent: 'center' }}>
+                <Txt size={14} weight="bold" color={colors.goldLight} style={{ writingDirection: 'ltr' }}>{n.body ? '📝' : '🔖'} {clock(n.positionMs)}</Txt>
+              </Pressable>
+              <View style={{ flex: 1, gap: 4, paddingTop: 9 }}>
+                <Txt size={14} color={n.body ? colors.text : colors.muted}>{n.body || t('ntBookmark')}</Txt>
+                <Txt size={13} weight="bold" color={colors.muted} onPress={() => { void drop(g.talkId, n.id); }} accessibilityRole="button">{t('ntDelete')}</Txt>
+              </View>
+            </View>
+          ))}
+        </Panel>
+      ))}
+    </ScrollView>
   );
 }
 

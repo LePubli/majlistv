@@ -49,3 +49,9 @@ Les anciennes adresses continuent de fonctionner à chaque lot.
 3. Fusionner Favoris et À regarder plus tard en « Ma liste » ?
 4. Garder la publicité au lancement de l'application ?
 5. Ordre des lots (recommandé : N1, N2, N3, puis N4 à N7).
+
+## Avancement (16/11)
+Décisions d'Epok du 15/11 : TV en direct dans le Catalogue ; « Compte » dans la barre du bas partout ; Favoris + À regarder plus tard = « Ma liste » ;
+publicité au lancement gardée (désactivable) ; commencer par N1.
+- N1 à N6 : livrés sur le site (15–16/11). N7 : application téléphone alignée (16/11) ; la télé n'avait rien à changer.
+- Reste : retours d'Epok après usage ; séance de révision unique (quiz + cartes) ; fonctions à remettre en question après 4 semaines de statistiques.

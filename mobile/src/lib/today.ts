@@ -2,6 +2,7 @@
 // Données : GET /me/today?lang=xx → { date, items: [{ kind, order, done, href, n?, total?, juz?, moment?, day?, year? }], left }.
 // Fonctions pures : testées avec Node (tests/today.test.ts).
 import type { Key } from './i18n';
+import { LEGACY_TABS } from './learnHub';
 
 export type TodayItem = {
   kind: 'quranJuz' | 'quranStart' | 'athkar' | 'ramadan' | 'ramadanBilan' | 'cards' | 'revision' | string;
@@ -29,6 +30,7 @@ export function todayLabel(it: TodayItem, t: T): string {
     case 'ramadanBilan': return t('tdRamadanBilan', { y: it.year ?? '' });
     case 'cards': return it.done ? t('tdCardsDone') : t('tdCards');
     case 'revision': return t('tdRevision');
+    case 'quiz': return t('tdQuiz'); // étape N7 : ligne « Quiz à passer » de l'accueil
     default: return '';
   }
 }
@@ -49,9 +51,18 @@ export function todayTarget(href: unknown, moment?: string): { app: string } | {
   const [path, query = ''] = h.split('#')[0].split('?');
   const tab = new URLSearchParams(query).get('tab');
   if (path === '/learning' && !tab) return { app: '/learn' };
-  if (path === '/learning' && (tab === 'rev' || tab === 'cards')) return { app: `/learn?tab=${tab}` }; // étape M5
+  if (path === '/learning' && tab && tab in LEGACY_TABS) return { app: `/learn?tab=${tab}` }; // étapes M5 et N7 (onglets et anciennes sections)
   if (path === '/coran') return { app: '/quran' }; // étape M2
   if (path === '/ramadan') return { app: /#rb-t$/.test(h) ? '/ramadan?bilan=1' : '/ramadan' }; // étape M4
   if (path === '/learning' && tab === 'athkar') return { app: moment === 'morning' || moment === 'evening' ? `/athkar?cat=${moment}` : '/athkar' }; // étape M3
   return { web: h };
+}
+
+/** Étape N7 (comme le site N3) : sur l'accueil, la carte « À faire aujourd'hui » porte aussi les quiz à passer (une ligne),
+ * à la place des rangées « À réviser » et « Quiz à rattraper ». Lignes faites en bas, puis par ordre. */
+export function withQuizLine(data: TodayResponse | null, quizN: number): TodayResponse | null {
+  if (!data || !quizN) return data;
+  const quiz: TodayItem = { kind: 'quiz', order: 35, n: quizN, done: false, href: '/learning?tab=rev' };
+  const items = [...data.items, quiz].sort((a, b) => Number(a.done) - Number(b.done) || (a.order ?? 99) - (b.order ?? 99));
+  return { ...data, items, left: (data.left || 0) + 1 };
 }

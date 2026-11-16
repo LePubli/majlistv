@@ -15,14 +15,16 @@ export function LearnCard({ talk }: { talk: Talk }) {
   const { t, user, config } = useSession();
   const quiz = talk.quiz?.available;
   const practice = talk.practice?.available;
+  const revision = config?.features?.revision !== false;
   if (!quiz && !practice) return null;
   const go = (path: '/quiz/[id]' | '/practice/[id]') => (user ? router.push({ pathname: path, params: { id: talk.id } }) : router.push({ pathname: '/login', params: { mode: 'register' } }));
   return (
     <View style={{ padding: 16, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.goldLine, gap: 12 }}>
       <Txt weight="extrabold" size={17} color={colors.goldLight}>{t('wbLearn')}</Txt>
-      {quiz ? <Step n={2} title={t('wbStep2')} sub={t('wbStep2Sub')} go={t('wbStep2Go')} onPress={() => go('/quiz/[id]')} /> : null}
-      {quiz && config?.features?.revision !== false ? <Step n={3} title={t('wbStep3')} sub={t('wbStep3Sub')} /> : null}
-      {practice ? <Step n={4} title={t('pzTitle')} sub={t('pzOfferText')} go={t('pzOfferBtn')} onPress={() => go('/practice/[id]')} /> : null}
+      {/* Étape N7 : mêmes étapes que le site — Comprendre (quiz) · Retenir (révision) · Agir (que faire maintenant). */}
+      {quiz ? <Step n={1} title={t('wbStep1')} sub={t('wbStep1Sub', { n: talk.quiz?.count ?? 0 })} go={t('wbStart')} onPress={() => go('/quiz/[id]')} /> : null}
+      {quiz && revision ? <Step n={2} title={t('wbStep2')} sub={t('wbStep2Sub')} go={t('wbStep2Go')} onPress={() => (user ? router.navigate({ pathname: '/learn', params: { tab: 'rev' } }) : router.push({ pathname: '/login', params: { mode: 'register' } }))} /> : null}
+      {practice ? <Step n={quiz ? (revision ? 3 : 2) : 1} title={t('wbStep3')} sub={t('wbStep3Sub')} go={t('wbStep3Go')} onPress={() => go('/practice/[id]')} /> : null}
     </View>
   );
 }

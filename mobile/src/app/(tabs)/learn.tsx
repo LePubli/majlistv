@@ -1,8 +1,10 @@
-// Apprendre (étape M5 : comme la page du site, étape B6) — 4 onglets qui regroupent des sections :
-//   Aujourd'hui (tableau de bord) · Coran et adhkar · Vidéos (parcours, quiz et révision, cartes) · Mes progrès (engagements, bilan, attestations).
-// Une phrase d'explication en haut de chaque onglet jusqu'à « Compris » (mémorisé sur le téléphone). ?tab=rev|cards|bilan|… ouvre une section.
+// Apprendre — étape N7 (16/11), comme le site (étape N2) : 3 onglets sans sous-onglets, sections les unes sous les autres :
+//   Aujourd'hui (tableau de bord, puis « Voir ma semaine ») · Réviser (quiz à passer et révisions, cartes) ·
+//   Mes progrès (séries et attestations, engagements, bilan).
+// Une phrase d'explication en haut de chaque onglet jusqu'à « Compris » (mémorisé sur le téléphone). ?tab=rev|cards|bilan|att|… ouvre
+// le bon onglet et descend jusqu'à la section (anciens liens compris).
 // Réservé à l'offre « Apprentissage » sauf Coran, « Aujourd'hui » et quiz à passer ; sans l'offre, un écran explique ce qu'elle apporte.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -13,7 +15,7 @@ import { useAsync } from '@/lib/useAsync';
 import { SITE_URL } from '@/lib/config';
 import { ApiError } from '@/lib/api';
 import { STATUSES, isLearningRequired, sortCommitments } from '@/lib/learn';
-import { SECTION_LABEL, cardsToday, groupOf, groupsFor, movedTab, pickSection, type CardsResponse, type SectionId } from '@/lib/learnHub';
+import { cardsToday, groupById, groupsFor, movedTab, pickTab, type CardsResponse, type GroupId, type SectionId } from '@/lib/learnHub';
 import type { Card, Commitment, LearningResponse, PracticeMine, PracticeStatus, QuizTodoCard, RevisionResponse } from '@/lib/types';
 import type { Key } from '@/lib/i18n';
 import { progressOf } from '@/lib/media';
@@ -51,8 +53,27 @@ function LearnBody() {
   const { api, user, t, feat } = useSession();
   const params = useLocalSearchParams<{ tab?: string }>();
   const groups = useMemo(() => groupsFor(feat), [feat]);
-  const [section, setSection] = useState<SectionId>(() => pickSection(groups, params.tab));
-  useEffect(() => { const moved = movedTab(params.tab); if (moved) router.replace(moved); else if (params.tab) setSection(pickSection(groups, params.tab)); }, [params.tab, groups]);
+  const [gid, setGid] = useState<GroupId>(() => pickTab(groups, params.tab).group);
+  const [focus, setFocus] = useState<SectionId | null>(() => pickTab(groups, params.tab).section);
+  const [weekOpen, setWeekOpen] = useState(false); // « Voir ma semaine » (planning replié)
+  useEffect(() => {
+    const moved = movedTab(params.tab);
+    if (moved) { router.replace(moved); return; }
+    if (params.tab) { const p = pickTab(groups, params.tab); setGid(p.group); setFocus(p.section); }
+  }, [params.tab, groups]);
+  // Aller à une section : change d'onglet si besoin, ouvre la semaine, puis fait défiler jusqu'à elle.
+  const go = useCallback((sec: SectionId) => {
+    const g = groups.find((x) => x.subs.includes(sec));
+    if (g) setGid(g.id);
+    setFocus(sec);
+  }, [groups]);
+  useEffect(() => { if (focus === 'plan') setWeekOpen(true); }, [focus]);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const ys = useRef<Partial<Record<SectionId, number>>>({});
+  const at = (sec: SectionId) => ({ onLayout: (e: { nativeEvent: { layout: { y: number } } }) => {
+    ys.current[sec] = e.nativeEvent.layout.y;
+    if (focus === sec) { scrollRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 8), animated: true }); setFocus(null); }
+  } });
 
   const rev = useAsync(() => api.get<RevisionFull>('/me/revision'), [user?.id]);
   const todo = useAsync(() => api.get<QuizTodoCard[]>('/me/quiz/todo'), [user?.id]);
@@ -70,13 +91,15 @@ function LearnBody() {
   const locked = [rev.error, learning.error, practice.error].some(isLearningRequired);
   const revN = rev.data ? rev.data.items.length + (rev.data.remaining || 0) : 0;
   const cardsN = cards.data ? cardsToday(cards.data.counts) : 0;
-  const badgeOf = (s: SectionId) => (s === 'rev' ? revN : s === 'cards' ? cardsN : 0);
+  const badgeOf = (g: GroupId) => (g === 'rev' ? revN + (feat('memorycards') ? cardsN : 0) : 0);
 
   if (locked) return <LockedLearn todo={todo.data ?? []} />;
-  const group = groupOf(groups, section);
+  const group = groupById(groups, gid);
+  const has = (sec: SectionId) => group.subs.includes(sec);
 
   return (
     <ScrollView
+      ref={scrollRef}
       contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await reloadAll(); setRefreshing(false); }} />}
     >
@@ -85,13 +108,13 @@ function LearnBody() {
         <Txt size={14} color={colors.muted}>{t('lgSub')}</Txt>
       </View>
 
-      {/* Les 4 onglets (pastille : révisions + cartes du jour sur « Vidéos »). */}
+      {/* Les 3 onglets (pastille sur « Réviser » : révisions + cartes du jour). */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist" accessibilityLabel={t('tbLabel')}>
         {groups.map((g) => {
-          const n = g.subs.reduce((a, s) => a + badgeOf(s), 0);
+          const n = badgeOf(g.id);
           const on = g.id === group.id;
           return (
-            <Pressable key={g.id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={`${t(g.label)}${n ? ` (${n})` : ''}`} onPress={() => setSection(g.subs[0])}
+            <Pressable key={g.id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={`${t(g.label)}${n ? ` (${n})` : ''}`} onPress={() => { setGid(g.id); setFocus(null); scrollRef.current?.scrollTo({ y: 0, animated: false }); }}
               style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: on ? colors.gold : colors.panel, borderWidth: on ? 0 : 1, borderColor: colors.border }}>
               <Txt weight={on ? 'extrabold' : 'semibold'} size={14} color={on ? colors.onGold : colors.text2}>{t(g.label)}</Txt>
               {n > 0 ? <Pill n={n} on={on} /> : null}
@@ -102,20 +125,18 @@ function LearnBody() {
 
       <GroupIntro id={group.id} text={t(group.intro)} />
 
-      {group.subs.length > 1 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="tablist">
-          {group.subs.map((s) => <Chip key={s} label={`${t(SECTION_LABEL[s])}${badgeOf(s) ? ` · ${badgeOf(s)}` : ''}`} active={section === s} onPress={() => setSection(s)} />)}
+      {has('dash') ? <View {...at('dash')}><Dashboard learning={learning.data} cont={cont.data ?? []} revN={revN} cardsN={cardsN} practice={practice.data} go={go} /></View> : null}
+      {has('plan') ? (
+        <View {...at('plan')} style={{ gap: 12 }}>
+          <Button label={weekOpen ? t('lgWeekHide') : t('lgWeek')} variant="dark" onPress={() => setWeekOpen((v) => !v)} />
+          {weekOpen ? <Planning go={(x) => { if (x === 'quran') router.push('/quran'); else if (x === 'athkar') router.push('/athkar'); else go(x); }} /> : null}
         </View>
       ) : null}
-
-      {section === 'dash' ? <Dashboard learning={learning.data} cont={cont.data ?? []} revN={revN} cardsN={cardsN} practice={practice.data} go={setSection} /> : null}
-      {section === 'path' ? <SeriesBlock mode="path" data={learning.data} reload={learning.reload} /> : null}
-      {section === 'rev' ? <Revision rev={rev.data} todo={todo.data ?? []} reload={rev.reload} /> : null}
-      {section === 'cards' ? <MemoryCards onCount={() => { void cards.reload(); }} /> : null}
-      {section === 'commit' ? <Commitments practice={practice.data} reload={practice.reload} /> : null}
-      {section === 'bilan' ? <SelfCheck /> : null}
-      {section === 'plan' ? <Planning go={(x) => { if (x === 'quran') router.push('/quran'); else if (x === 'athkar') router.push('/athkar'); else setSection(x); }} /> : null}
-      {section === 'att' ? <SeriesBlock mode="att" data={learning.data} reload={learning.reload} /> : null}
+      {has('rev') ? <View {...at('rev')}><Revision rev={rev.data} todo={todo.data ?? []} reload={rev.reload} /></View> : null}
+      {has('cards') ? <View {...at('cards')}><MemoryCards onCount={() => { void cards.reload(); }} /></View> : null}
+      {has('series') ? <View {...at('series')}><SeriesBlock data={learning.data} reload={learning.reload} /></View> : null}
+      {has('commit') ? <View {...at('commit')}><Commitments practice={practice.data} reload={practice.reload} /></View> : null}
+      {has('bilan') ? <View {...at('bilan')}><SelfCheck /></View> : null}
       {learning.loading && !learning.data ? <View style={{ height: 80 }}><Loading /></View> : null}
     </ScrollView>
   );
@@ -294,7 +315,8 @@ function Revision({ rev, todo, reload }: { rev: RevisionFull | null; todo: QuizT
 }
 
 // ------------------------------------------------------------------ Parcours et attestations
-function SeriesBlock({ mode, data, reload }: { mode: 'path' | 'att'; data: Learning | null; reload: () => void }) {
+function SeriesBlock({ data, reload }: { data: Learning | null; reload: () => void }) {
+  const mode = 'att' as const; // étape N7 : séries et attestations en une seule liste (comme le site)
   const { api, t, feat } = useSession();
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
@@ -313,7 +335,7 @@ function SeriesBlock({ mode, data, reload }: { mode: 'path' | 'att'; data: Learn
   ]);
   return (
     <View style={{ gap: 12 }}>
-      <Txt weight="extrabold" size={18} accessibilityRole="header">{mode === 'att' ? t('tbAtt') : t('lrSeries')}</Txt>
+      <Txt weight="extrabold" size={18} accessibilityRole="header">{t('lgSeriesAtt')}</Txt>
       {msg ? <Txt color={colors.danger} accessibilityRole="alert">{msg}</Txt> : null}
       {data.series.length === 0 ? (
         <Panel style={{ gap: 8 }}>

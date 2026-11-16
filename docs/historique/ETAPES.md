@@ -9304,3 +9304,56 @@ bash /root/verify-deploy.sh
 **Debug.** L'onglet « Questions » n'apparaît pas : Admin → Fonctions → « Assistant », ou la vidéo n'a pas encore de sous-titres. Le bouton « Ma liste » n'apparaît pas : les fonctions « Favoris » et « À regarder plus tard » sont toutes les deux éteintes. Le résumé n'apparaît pas dans « À propos » : l'analyse IA de la vidéo n'est pas encore faite.
 
 **Testé.** Tous les tests du site (dont la vraie fonction `mergeMyList`) ; navigateur réel à 1440 et 390 px, français et arabe : onglets À propos · Mes notes, barre Ma liste · Listes · Cinéma · Plus, ajout puis retrait (message annoncé), vidéo ajoutée visible dans Bibliothèque → Ma liste, un seul bouton sur la vignette, visiteur sur une vidéo premium (un seul encart), aucun débordement, aucune erreur. **Non testé** dans le navigateur : résumé, chapitres, transcription repliée et onglet Questions (la base de test n'a aucune vidéo transcrite) ; la fin de vidéo (le lecteur YouTube ne se charge pas sans Internet ici) ; la rangée « Ma liste » de l'accueil d'origine (la base de test utilise l'accueil en blocs) ; vrai téléphone.
+
+## N7 — Application téléphone et télé alignées sur le site (16/11)
+
+**Pourquoi.** Dernière étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md` : « les mêmes mots partout ». Après N1 à N6, l'application montrait encore l'ancienne organisation.
+
+**Ce qui change (application téléphone).**
+- **Apprendre** : 3 onglets sans sous-onglets, comme le site (N2).
+  - **Aujourd'hui** : tableau de bord, puis « Voir ma semaine » (planning replié).
+  - **Réviser** : quiz à passer, révisions du jour, cartes.
+  - **Mes progrès** : séries et attestations dans une seule liste, engagements, bilan.
+  - Les sections d'un onglet sont les unes sous les autres. Un ancien lien ou une notification (?tab=cards, att, plan, bilan…) ouvre le bon onglet et descend jusqu'à la section.
+- **Accueil** (comme N3) :
+  - la carte « À faire aujourd'hui » porte aussi les quiz à passer, avec un lien « Tout voir dans Apprendre » ; les rangées « À réviser » et « Quiz à rattraper » sont retirées ;
+  - une seule bande : la saison en cours, sinon le vendredi ;
+  - plus de tuiles de formats ;
+  - la rangée « À regarder plus tard » devient « Ma liste ».
+- **Bibliothèque** (comme N5) : **Reprendre · Ma liste · Listes · Notes**.
+  - Ma liste : favoris et plus tard réunis, la plus récente d'abord. « Retirer » enlève des deux.
+  - Notes : toutes les notes et marque-pages. Toucher l'heure rouvre la vidéo à ce passage.
+  - Anciens liens (?tab=fav, later) → Ma liste.
+- **Compte** (comme N5) : **Profil · Abonnement et achats · Notifications**.
+  - Profil : langue, thème, lien vers les réglages de la prière, mes données, déconnexion.
+  - Abonnement et achats : abonnement, achats, cartes cadeaux, parrainage.
+  - Le visiteur garde un seul écran.
+- **Page vidéo** (comme N6) :
+  - onglets **À propos** (résumé et points clés, chapitres, détails, transcription repliée, ouverte d'office quand on arrive à une minute précise) · **Mes notes** · **Questions** ;
+  - **un seul bouton « Ma liste »** (+ / ✓) à la place du cœur et de l'horloge ;
+  - carte « Apprendre avec cette vidéo » : Comprendre · Retenir · Agir, comme le site ;
+  - **fin de vidéo** : quiz (s'il n'est pas réussi) → « Et maintenant, que faire ? » → épisode suivant. « Plus tard » passe à l'étape suivante. Fin d'aperçu : l'invitation seulement.
+- **Télé** : rien à changer. Elle n'a ni favoris, ni Apprendre, ni compte détaillé.
+- **Shorts** : le cœur reste (il met la vidéo dans les favoris, donc dans « Ma liste »).
+
+**Fichiers.**
+- Écrans : `mobile/src/app/(tabs)/{learn,index,library,account}.tsx`, `mobile/src/app/talk/[id].tsx`.
+- Composants : `mobile/src/components/{TodayBlock,SeasonBands}.tsx`, `mobile/src/components/talk/{TalkTabs,Panels}.tsx`.
+- Bibliothèques :
+  - `mobile/src/lib/learnHub.ts` (onglets, `pickTab`, `LEGACY_TABS`) ;
+  - `mobile/src/lib/mylist.ts` (nouveau : `mergeMyList`, `myListPlan`, `libTabOf`, `accTabOf`) ;
+  - `mobile/src/lib/talkFlow.ts` (nouveau : `talkTabs`, `endSteps`) ;
+  - `mobile/src/lib/today.ts` (`withQuizLine`) ;
+  - `mobile/src/lib/notifRoute.ts` ;
+  - `mobile/src/lib/session.tsx` (`inMyList`, `toggleMyList`) ;
+  - `mobile/src/lib/webTexts.ts` (régénéré).
+- Tests : `mobile/tests/n7.test.ts` (nouveau), `learnHub.test.ts`, `today.test.ts`, `sales.test.ts`.
+
+**Déploiement.** Rien à redéployer sur le serveur : l'API et le site ne changent pas. L'application reçoit la mise à jour à distance : fermer et rouvrir l'application deux fois.
+
+**Debug.**
+- Apprendre n'a que 2 onglets : Admin → Fonctions → révision, quiz et cartes sont éteints (« Réviser » disparaît).
+- « Ma liste » n'apparaît pas : favoris et « À regarder plus tard » sont tous les deux éteints.
+- La fin de vidéo propose le quiz alors qu'il est réussi : le résultat n'a pas encore été relu, rouvrir la vidéo.
+
+**Testé.** Vérification des types, 294 tests de l'application (dont les vraies fonctions de fusion de « Ma liste », du bouton, des onglets, de la fin de vidéo et de la carte de l'accueil), compilation complète de l'application Android (bundle). **Non testé** : sur un vrai téléphone (je n'en ai pas ici), donc ni l'affichage, ni le défilement jusqu'à une section, ni la fin de vidéo en conditions réelles.

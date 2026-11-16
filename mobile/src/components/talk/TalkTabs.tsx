@@ -13,44 +13,64 @@ import { Button, Txt } from '../ui';
 import { AskPanel } from './AskPanel';
 import { canSend, canSuggest, errorKey, keyOf } from '@/lib/corrections';
 import { ApiError } from '@/lib/api';
+import { talkTabs, type TabKey } from '@/lib/talkFlow';
 
-export type TabKey = 'summary' | 'chapters' | 'transcript' | 'notes' | 'ask' | 'about';
+// Étape N7 (16/11), comme le site (N6) : 3 onglets au plus — À propos (résumé et points clés, chapitres, détails, transcription
+// repliée) · Mes notes · Questions. Les anciens onglets Résumé, Chapitres et Transcription sont des parties d'« À propos ».
+export type { TabKey } from '@/lib/talkFlow';
 
-export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs, tab: forced, onTab }: {
+export function TalkTabs({ talk, insights, positionMs, onSeek, getPositionMs, tab: forced, onTab, transcriptOpen = false }: {
   talk: Talk; insights: Insights | null; positionMs: number; onSeek: (ms: number) => void; getPositionMs: () => number;
   /** Onglet demandé de l'extérieur (ex. « Prendre une note ») ; l'écran de lecture le pilote. */
   tab?: TabKey | null; onTab?: (k: TabKey) => void;
+  /** Transcription dépliée d'office (arrivée à une minute précise). */
+  transcriptOpen?: boolean;
 }) {
   const { t, locale, user, feat } = useSession();
   const [own, setOwn] = useState<TabKey | null>(null);
-  // Par défaut : Chapitres s'il y en a (pour étudier), sinon Résumé.
-  const tab: TabKey = forced ?? own ?? (insights?.chapters?.length ? 'chapters' : 'summary');
+  const [trOpen, setTrOpen] = useState(transcriptOpen);
+  const keys = talkTabs({ loggedIn: !!user, feat, locked: !!talk.locked, hasTracks: (talk.tracks ?? []).length > 0 });
+  const want = forced ?? own ?? 'about';
+  const tab: TabKey = keys.includes(want) ? want : 'about';
   const setTab = (k: TabKey) => { setOwn(k); onTab?.(k); };
-  const tabs: { k: TabKey; label: string }[] = [
-    { k: 'summary', label: t('summary') }, { k: 'chapters', label: t('chapters') }, { k: 'transcript', label: t('transcript') },
-    { k: 'notes', label: t('ntTab') },
-    // Assistant (étape M5) : membre connecté, fonction activée ; l'offre Apprentissage est vérifiée par le serveur.
-    ...(user && feat('ask') ? [{ k: 'ask' as TabKey, label: t('askTab') }] : []),
-    { k: 'about', label: t('tabAbout') },
-  ];
+  const LABEL: Record<TabKey, string> = { about: t('tabAbout'), notes: t('ntTab'), ask: t('tpQuestions') };
+  const hasChapters = (insights?.chapters ?? []).length > 0;
+  const hasTranscript = (talk.tracks ?? []).length > 0 && !talk.locked;
   return (
     <View style={{ gap: 14 }}>
-      {/* Barre défilante : 6 onglets tiennent aussi sur un petit téléphone. */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist"
-        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }} contentContainerStyle={{ flexGrow: 1 }}>
-        {tabs.map(({ k, label }) => (
-          <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} onPress={() => setTab(k)}
-            style={{ flexGrow: 1, minHeight: 46, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: tab === k ? colors.gold : 'transparent' }}>
-            <Txt weight={tab === k ? 'bold' : 'medium'} size={13} numberOfLines={1} color={tab === k ? colors.goldLight : colors.muted}>{label}</Txt>
-          </Pressable>
-        ))}
-      </ScrollView>
-      {tab === 'summary' ? <Summary talk={talk} insights={insights} /> : null}
-      {tab === 'chapters' ? <Chapters insights={insights} positionMs={positionMs} onSeek={onSeek} /> : null}
-      {tab === 'transcript' ? <Transcript talk={talk} lang={locale} positionMs={positionMs} onSeek={onSeek} /> : null}
+      {keys.length > 1 ? (
+        <View accessibilityRole="tablist" style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          {keys.map((k) => (
+            <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} onPress={() => setTab(k)}
+              style={{ flexGrow: 1, flexBasis: 0, minHeight: 46, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: tab === k ? colors.gold : 'transparent' }}>
+              <Txt weight={tab === k ? 'bold' : 'medium'} size={14} numberOfLines={1} color={tab === k ? colors.goldLight : colors.muted}>{LABEL[k]}</Txt>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      {tab === 'about' ? (
+        <View style={{ gap: 14 }}>
+          <Summary talk={talk} insights={insights} />
+          {hasChapters ? (
+            <View style={{ gap: 6 }}>
+              <Txt weight="extrabold" size={16} accessibilityRole="header">{t('chapters')}</Txt>
+              <Chapters insights={insights} positionMs={positionMs} onSeek={onSeek} />
+            </View>
+          ) : null}
+          <About talk={talk} withDescription={Boolean(insights?.summary)} />
+          {hasTranscript ? (
+            <View style={{ gap: 10 }}>
+              <Pressable accessibilityRole="button" accessibilityState={{ expanded: trOpen }} onPress={() => setTrOpen((v) => !v)}
+                style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Txt weight="bold" size={15} color={colors.goldLight}>{trOpen ? '▾' : '▸'} {trOpen ? t('transcript') : t('tpTranscriptShow')}</Txt>
+              </Pressable>
+              {trOpen ? <Transcript talk={talk} lang={locale} positionMs={positionMs} onSeek={onSeek} /> : null}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       {tab === 'notes' ? <Notes talk={talk} loggedIn={!!user} getPositionMs={getPositionMs} onSeek={onSeek} /> : null}
       {tab === 'ask' ? <AskPanel talkId={talk.id} onSeek={onSeek} /> : null}
-      {tab === 'about' ? <About talk={talk} /> : null}
     </View>
   );
 }
@@ -219,7 +239,7 @@ function Notes({ talk, loggedIn, getPositionMs, onSeek }: { talk: Talk; loggedIn
   );
 }
 
-function About({ talk }: { talk: Talk }) {
+function About({ talk, withDescription = true }: { talk: Talk; withDescription?: boolean }) {
   const { t } = useSession();
   const rows: [string, string][] = [
     [t('dSpeaker'), talk.speaker ?? ''], [t('dCategory'), talk.category ?? ''], [t('dDuration'), formatDuration(talk.durationSeconds)],
@@ -233,7 +253,7 @@ function About({ talk }: { talk: Talk }) {
           <Txt weight="bold" size={14} style={{ flexShrink: 1 }}>{v}</Txt>
         </View>
       ))}
-      {talk.description ? <Txt size={14} color={colors.text2} style={{ lineHeight: 22, marginTop: 6 }}>{talk.description}</Txt> : null}
+      {withDescription && talk.description ? <Txt size={14} color={colors.text2} style={{ lineHeight: 22, marginTop: 6 }}>{talk.description}</Txt> : null}
     </View>
   );
 }

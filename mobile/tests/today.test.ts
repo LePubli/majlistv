@@ -50,7 +50,8 @@ test('todayTarget : écran de l\'application ou page du site, jamais d\'adresse 
 
 test('les textes td*, wl* et du thème existent dans les trois langues', () => {
   const keys = ['tdTitle', 'tdLeft', 'tdAllDone', 'tdQuranJuz', 'tdQuranStart', 'tdAthkar_morning', 'tdAthkar_evening', 'tdRamadan', 'tdRamadanBilan', 'tdCards', 'tdCardsDone', 'tdRevision', 'tdDone', 'tdTodo', 'tdAria',
-    'wlTab', 'wlRow', 'wlAdd', 'wlRemove', 'wlAdded', 'wlRemoved', 'wlIntro'] as const;
+    // Étape N7 : « Ma liste » (favoris + plus tard) remplace les textes wl* ; ligne des quiz et version accueil de la carte.
+    'lbMyList', 'lbMyListIntro', 'lbMyListEmpty', 'lbMyListRemove', 'mlAdd', 'mlRemove', 'mlAdded', 'mlRemoved', 'tdHomeTitle', 'tdOpenLearn', 'tdQuiz'] as const;
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}.${k}`);
   for (const l of ['fr', 'en', 'ar'] as const) for (const k of ['skin.title', 'skin.site', 'skin.classique', 'skin.nuit', 'wl.full', 'wl.empty', 'today.web'] as const) assert.ok(APP_DICT[l][k], `${l}.${k}`);
 });

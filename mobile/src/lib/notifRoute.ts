@@ -1,6 +1,7 @@
 // Page de l'application à ouvrir quand on touche une notification du serveur. Le serveur envoie un chemin « du site »
 // (/conferences/<slug>, /learning, /collections/<id>, /) ; ici on le traduit en écran de l'application.
 // Fonction pure : testée avec Node (tests/notif.test.ts).
+import { LEGACY_TABS } from './learnHub';
 
 /** Écran visé ; '/' = accueil. Jamais d'adresse extérieure : tout ce qui n'est pas reconnu mène à l'accueil. */
 export function routeForPath(path: unknown): string {
@@ -18,7 +19,8 @@ export function routeForPath(path: unknown): string {
   // Apprendre (étape M5) : la section demandée (?tab=rev, cards, bilan…) est gardée si elle est connue.
   if (seg[0] === 'learning') {
     const tab = /[?&]tab=([a-z]{2,8})\b/.exec(p)?.[1];
-    return tab && ['dash', 'quran', 'path', 'rev', 'cards', 'commit', 'bilan', 'att'].includes(tab) ? `/learn?tab=${tab}` : /#bilan$/.test(p) ? '/learn?tab=bilan' : '/learn';
+    // Étape N7 : les noms des 3 onglets (today, rev, progress) et les anciens (plan, path, att…) sont tous compris par l'écran.
+    return tab && (tab === 'quran' || tab in LEGACY_TABS) ? `/learn?tab=${tab}` : /#bilan$/.test(p) ? '/learn?tab=bilan' : '/learn';
   }
   // Coran (étape M2) : /coran, /coran/<sourate>#v<verset> (rappel de la lecture en 30 jours).
   if (seg[0] === 'coran' && !seg[1]) return '/quran';

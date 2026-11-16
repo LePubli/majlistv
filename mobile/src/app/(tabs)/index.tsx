@@ -2,6 +2,9 @@
 // rangées du catalogue (séries comprises), bande Kids, citation du jour. Visiteur : même accueil avec invitation à créer un compte.
 // Étape M1 : bloc « Aujourd'hui » sous la bannière et rangée « À regarder plus tard » (comme sur le site).
 // Étape M3 : bandeaux de saison et du vendredi. Étape M6 : « Par quoi commencer ? » et visite guidée.
+// Étape N7 (comme le site N3 et N6) : une carte « À faire aujourd'hui » (avec les quiz à passer) au lieu des rangées « À réviser »
+// et « Quiz à rattraper », une seule bande de saison (sinon le vendredi), plus de tuiles de formats (onglets du Catalogue),
+// rangée « Ma liste » (favoris + plus tard) au lieu de « À regarder plus tard ».
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,8 +13,8 @@ import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { useDownloads } from '@/lib/downloadStore';
 import { progressOf } from '@/lib/media';
-import { isLearningRequired } from '@/lib/learn';
-import type { Card, Citation, Home, KidsHome, RevisionResponse } from '@/lib/types';
+import type { Card, Citation, Home, KidsHome } from '@/lib/types';
+import { mergeMyList } from '@/lib/mylist';
 import { colors } from '@/lib/theme';
 import { Button, ErrorBox, Loading, Panel, Txt, screenStyle } from '@/components/ui';
 import { Hero } from '@/components/Hero';
@@ -19,9 +22,9 @@ import { Rail } from '@/components/Rail';
 import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
-import { EventsBand, FormatTiles, KidsBand } from '@/components/HomeBands';
+import { EventsBand, KidsBand } from '@/components/HomeBands';
 import { TodayBlock } from '@/components/TodayBlock';
-import { FridayBand, SeasonBand } from '@/components/SeasonBands';
+import { SeasonBands } from '@/components/SeasonBands';
 import { StartCards, TourModal } from '@/components/Onboarding';
 
 export default function HomeScreen() {
@@ -33,15 +36,21 @@ export default function HomeScreen() {
   useEffect(() => { if (params.tour === '1' && feat('onboarding')) { setTour(true); router.setParams({ tour: undefined }); } }, [params.tour]); // eslint-disable-line react-hooks/exhaustive-deps
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
-  const review = useAsync(async () => (user ? await api.get<RevisionResponse>('/me/revision').then((r) => r.items).catch((e) => (isLearningRequired(e) ? [] : [])) : []), [user?.id]);
-  const todo = useAsync(async () => (user ? await api.get<Card[]>('/me/quiz/todo').catch(() => []) : []), [user?.id]);
-  const laterList = useAsync(async () => (user && feat('watchlater') ? await api.get<Card[]>('/me/watchlater').catch(() => []) : []), [user?.id, feat('watchlater')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const listOn = feat('watchlater') || feat('favorites');
+  const myList = useAsync(async () => {
+    if (!user || !listOn) return [];
+    const [l, f] = await Promise.all([
+      feat('watchlater') ? api.get<Card[]>('/me/watchlater').catch(() => [] as Card[]) : Promise.resolve([] as Card[]),
+      feat('favorites') ? api.get<Card[]>('/me/favorites').catch(() => [] as Card[]) : Promise.resolve([] as Card[]),
+    ]);
+    return mergeMyList(l, f).slice(0, 16);
+  }, [user?.id, listOn]);
   const kids = useAsync(async () => (feat('kids') ? await api.get<KidsHome>('/home/kids', undefined, false).catch(() => null) : null), [feat('kids')]); // eslint-disable-line react-hooks/exhaustive-deps
   const cit = useAsync(async () => (feat('citations') ? await api.get<Citation>('/citation/today', undefined, false).catch(() => null) : null), [feat('citations')]); // eslint-disable-line react-hooks/exhaustive-deps
   const [refreshing, setRefreshing] = useState(false);
 
   // Au retour sur l'accueil (après avoir regardé), « Continuer à regarder » se met à jour.
-  useFocusEffect(useCallback(() => { void cont.reload(); void todo.reload(); void laterList.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
+  useFocusEffect(useCallback(() => { void cont.reload(); void myList.reload(); }, [user?.id])); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (home.loading && !home.data) return <SafeAreaView style={[screenStyle, dirStyle]} edges={[]}><Loading /></SafeAreaView>;
   if (!home.data) {
@@ -60,23 +69,19 @@ export default function HomeScreen() {
     <View style={[screenStyle, dirStyle]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40, gap: 22 }}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), review.reload(), todo.reload(), laterList.reload()]); setRefreshing(false); }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), myList.reload()]); setRefreshing(false); }} />}
       >
         <Hero hero={home.data.hero} />
 
         <StartCards onTour={() => setTour(true)} />
-        <TodayBlock />
-        <SeasonBand />
-        <FridayBand />
+        <TodayBlock home />
+        <SeasonBands />
 
-        {(review.data ?? []).length > 0 ? <Rail title={<>{t('revRow')}</>} items={review.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('lrTitle')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
-        {(todo.data ?? []).length > 0 ? <Rail title={t('qpTodoRow')} items={todo.data ?? []} onSeeAll={() => router.navigate('/learn')} seeAllLabel={t('navLearn')} render={(x, w) => <TalkCard talk={x} width={w} />} /> : null}
         {(cont.data ?? []).length > 0 ? <Rail title={t('continueWatching')} items={cont.data ?? []} onSeeAll={() => router.navigate('/library')} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
-        {(laterList.data ?? []).length > 0 ? <Rail title={t('wlRow')} items={laterList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'later' } })} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
+        {(myList.data ?? []).length > 0 ? <Rail title={t('lbMyList')} items={myList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'list' } })} seeAllLabel={t('rowSeeAll')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
         <EventsBand />
-        {user ? <FormatTiles /> : null}
 
         {rows.length === 0 ? <Txt color={colors.muted} style={{ paddingHorizontal: 16 }}>{t('noTalks')}</Txt> : null}
         {rows.map((r, i) => (

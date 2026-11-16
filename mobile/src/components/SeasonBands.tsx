@@ -2,7 +2,7 @@
 //  - saison en cours (Ramadan → écran du circuit de l'application depuis l'étape M4,, Hajj, Mawlid, Achoura…, étape 45) : réglée dans Admin → Saisons, affichée pendant la période et quelques jours avant ;
 //  - vendredi (étape 45C) : seulement le vendredi (heure de Paris) et si Admin → Vendredi est activé ; lien vers Al-Kahf, rappels.
 // Chacun suivi de sa rangée de vidéos quand une collection est choisie. Rien ne s'affiche hors période.
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSession } from '@/lib/session';
@@ -16,11 +16,13 @@ import { TalkCard } from './TalkCard';
 // Fonction (et non constante) : les couleurs suivent le thème en cours.
 const band = () => ({ marginHorizontal: 16, padding: 16, gap: 10, borderRadius: radius.panel, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.goldLine } as const);
 
-export function SeasonBand() {
+// `onState` (étape N7) : dit à l'accueil s'il y a une saison en cours (true), aucune (false) ou pas encore de réponse (null).
+export function SeasonBand({ onState }: { onState?: (has: boolean | null) => void } = {}) {
   const { api, t, locale, feat } = useSession();
   const s = useAsync(async () => (feat('seasons') ? (await api.get<{ season: Season }>('/seasons/current', { lang: locale }, false).catch(() => ({ season: null }))).season : null), [locale, feat('seasons')]); // eslint-disable-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { void s.reload(); }, [locale])); // eslint-disable-line react-hooks/exhaustive-deps
   const x = s.data;
+  useEffect(() => { if (onState) onState(s.loading && !x ? null : Boolean(x)); }, [x, s.loading]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!x) return null;
   const ramadan = x.id === 'ramadan' && feat('ramadan');
   return (
@@ -63,6 +65,17 @@ export function FridayBand() {
         {kahf ? <Button label={t('fdKahf')} onPress={() => router.push({ pathname: '/quran/[n]', params: { n: String(kahf.n) } })} /> : null}
       </View>
       {x.talks.length > 0 ? <Rail title={x.collection?.title || t('fdRow')} items={x.talks} render={(c, w) => <TalkCard talk={c} width={w} />} /> : null}
+    </>
+  );
+}
+
+/** Étape N7 (comme le site N3) : une seule bande sur l'accueil — la saison en cours si elle existe, sinon la carte du vendredi. */
+export function SeasonBands() {
+  const [has, setHas] = useState<boolean | null>(null);
+  return (
+    <>
+      <SeasonBand onState={setHas} />
+      {has === false ? <FridayBand /> : null}
     </>
   );
 }

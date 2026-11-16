@@ -34,6 +34,7 @@ import { PlayerControls } from '@/components/talk/PlayerControls';
 import { ActionTile, LearnCard, LockCard, SeriesPanel } from '@/components/talk/Panels';
 import { SaleCard, SalePill } from '@/components/SaleCard';
 import { TalkReferences } from '@/components/talk/TalkReferences';
+import { endSteps } from '@/lib/talkFlow';
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -61,7 +62,7 @@ export default function TalkScreen() {
 }
 
 function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefresh: () => void }) {
-  const { api, user, t, locale, isRTL, dirStyle, favs, toggleFav, later, toggleLater, config, feat } = useSession();
+  const { api, user, t, locale, isRTL, dirStyle, inMyList, toggleMyList, config, feat } = useSession();
   const dls = useDownloads();
   const [dlOpen, setDlOpen] = useState(false);
   const src = useMemo(() => pickSource(talk, API_URL, config?.dailymotionPlayerId), [talk, config?.dailymotionPlayerId]);
@@ -97,15 +98,14 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
   const scroll = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null);
   const tabsY = useRef(0);
   const insets = useSafeAreaInsets();
-  const fav = favs.has(talk.id);
-  const isLater = later.has(talk.id);
+  // Étape N7 (comme le site N6) : un seul bouton « Ma liste » (favoris + plus tard) + court message de confirmation.
+  const mine = inMyList(talk.id);
   const [laterMsg, setLaterMsg] = useState('');
   const laterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (laterTimer.current) clearTimeout(laterTimer.current); }, []);
-  // « À regarder plus tard » (étape M1) : bascule + court message de confirmation.
-  async function onLater() {
-    const r = await toggleLater(talk.id);
-    setLaterMsg(r === 'added' ? t('wlAdded') : r === 'removed' ? t('wlRemoved') : r === 'full' ? t('wl.full') : t('common.error'));
+  async function onMine() {
+    const r = await toggleMyList(talk.id);
+    setLaterMsg(r === 'added' ? t('mlAdded') : r === 'removed' ? t('mlRemoved') : r === 'full' ? t('wl.full') : t('common.error'));
     if (laterTimer.current) clearTimeout(laterTimer.current);
     laterTimer.current = setTimeout(() => setLaterMsg(''), 3000);
   }
@@ -225,6 +225,12 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
   const landscape = playable && winW > winH && !cast;
   const pip = !!src.uri && !audioMode && isPictureInPictureSupported();
   const nextEp = series.data?.next;
+  // Fin de vidéo (étape N7, comme le site N6) : quiz (s'il n'est pas réussi) → « que faire maintenant ? » → épisode suivant.
+  const quizState = useAsync(async () => (user && talk.quiz?.available && !locked ? await api.get<{ last?: { everPassed?: boolean } | null }>(`/talks/${talk.id}/quiz`).catch(() => null) : null), [talk.id, user?.id]);
+  const steps = endSteps({ locked, quiz: !!talk.quiz?.available, quizPassed: !!quizState.data?.last?.everPassed, practice: !!talk.practice?.available, next: !!nextEp });
+  const [skip, setSkip] = useState(0);
+  useEffect(() => { if (!ended) setSkip(0); }, [ended]);
+  const endStep = ended ? steps[skip] : undefined;
   const durSec = (src.embed ? embedDuration : player.duration) || talk.durationSeconds || 0;
   const dur = formatDuration(durSec);
   const eyebrow = [series.data?.title, talk.category].filter(Boolean).join(' · ');
@@ -283,11 +289,16 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
               <Button label={t('common.retry')} variant="dark" onPress={retry} />
             </View>
           ) : null}
-          {ended && (locked || nextEp) ? (
-            <View style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.9), alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
-              {locked ? <Txt weight="extrabold" size={16} style={{ textAlign: 'center' }}>{t('lkEndTitle')}</Txt> : <Txt weight="extrabold" size={16} style={{ textAlign: 'center' }}>{t('nextEp')}</Txt>}
-              {!locked && nextEp ? <Button label={t('playNow')} onPress={() => router.replace({ pathname: '/talk/[id]', params: { id: nextEp.id } })} /> : null}
-              <Button label={t('fromStart')} variant="dark" onPress={() => seekMs(0)} />
+          {endStep ? (
+            <View accessibilityLiveRegion="polite" style={{ position: 'absolute', inset: 0, backgroundColor: veil(0.9), alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
+              <Txt weight="extrabold" size={16} style={{ textAlign: 'center' }}>
+                {endStep === 'lock' ? t('lkEndTitle') : endStep === 'quiz' ? t('qpOfferTitle') : endStep === 'practice' ? t('pzTitle') : t('nextEp')}
+              </Txt>
+              {endStep === 'quiz' ? <Button label={t('qpStart')} onPress={goQuiz} /> : null}
+              {endStep === 'practice' ? <Button label={t('pzOfferBtn')} onPress={() => needLogin(() => router.push({ pathname: '/practice/[id]', params: { id: talk.id } }))} /> : null}
+              {endStep === 'next' && nextEp ? <Button label={t('playNow')} onPress={() => router.replace({ pathname: '/talk/[id]', params: { id: nextEp.id } })} /> : null}
+              {endStep === 'quiz' || endStep === 'practice' ? <Button label={t('qpLater')} variant="dark" onPress={() => setSkip((n) => n + 1)} /> : null}
+              {endStep === 'lock' || endStep === 'next' ? <Button label={t('fromStart')} variant="dark" onPress={() => seekMs(0)} /> : null}
             </View>
           ) : null}
           {landscape ? (
@@ -353,14 +364,11 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
               ) : null}
             </View>
           </View>
-          {feat('watchlater') ? (
-            <IconButton label={isLater ? t('wlRemove') : t('wlAdd')} onPress={() => needLogin(() => { void onLater(); })} style={isLater ? { backgroundColor: colors.goldTint, borderColor: colors.goldLine } : undefined}>
-              <Feather name={isLater ? 'check-circle' : 'clock'} size={20} color={isLater ? colors.goldLight : colors.text} />
+          {feat('favorites') || feat('watchlater') ? (
+            <IconButton label={mine ? t('mlRemove') : t('mlAdd')} onPress={() => needLogin(() => { void onMine(); })} style={mine ? { backgroundColor: colors.goldTint, borderColor: colors.goldLine } : undefined}>
+              <Feather name={mine ? 'check' : 'plus'} size={20} color={mine ? colors.goldLight : colors.text} />
             </IconButton>
           ) : null}
-          <IconButton label={fav ? t('removeFav') : t('addFav')} onPress={() => needLogin(() => { void toggleFav(talk.id); })} style={fav ? { backgroundColor: colors.goldTint, borderColor: colors.goldLine } : undefined}>
-            <Feather name="bookmark" size={20} color={fav ? colors.goldLight : colors.text} />
-          </IconButton>
           <IconButton label={t('talk.more')} onPress={() => setMoreOpen(true)}>
             <Feather name="more-horizontal" size={20} color={colors.text} />
           </IconButton>
@@ -371,7 +379,7 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
         {locked && talk.sale ? <SaleCard kind="talk" id={talk.id} sale={talk.sale} onRefresh={onRefresh} /> : locked ? <LockCard talk={talk} /> : null}
 
         <View onLayout={(e) => { tabsY.current = e.nativeEvent.layout.y; }}>
-          <TalkTabs talk={talk} insights={insights.data} positionMs={pos * 1000} onSeek={seekMs} getPositionMs={() => pos * 1000} tab={tab} onTab={setTab} />
+          <TalkTabs talk={talk} insights={insights.data} positionMs={pos * 1000} onSeek={seekMs} getPositionMs={() => pos * 1000} tab={tab} onTab={setTab} transcriptOpen={!!atMs} />
         </View>
 
         {!locked ? <LearnCard talk={talk} /> : null}

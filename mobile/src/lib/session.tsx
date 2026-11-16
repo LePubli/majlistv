@@ -12,6 +12,7 @@ import { readLogin, type LoginResponse } from './twoFactor';
 import { runLogoutHooks } from './hooks';
 import { applySkin, currentSkin, pickSkin, type Skin } from './theme';
 import { setCarSession } from '../../modules/audyn-car';
+import { myListPlan } from './mylist';
 
 const TOKEN_KEY = 'mejliss.token';
 const LOCALE_KEY = 'mejliss.locale';
@@ -50,6 +51,9 @@ type Session = {
   /** « À regarder plus tard » (identifiants) et bascule ; renvoie 'added' | 'removed' | 'full' | 'error'. */
   later: Set<string>;
   toggleLater: (talkId: string) => Promise<'added' | 'removed' | 'full' | 'error'>;
+  /** Étape N7 : « Ma liste » = favoris + plus tard (un seul bouton, comme le site). */
+  inMyList: (talkId: string) => boolean;
+  toggleMyList: (talkId: string) => Promise<'added' | 'removed' | 'full' | 'error'>;
   /** Thème visuel en cours (réglage de l'administrateur) ; changer de thème redessine toute l'application. */
   skin: Skin;
   /** Le site laisse-t-il chaque visiteur choisir son thème ? */
@@ -160,6 +164,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const feat = useCallback((id: string) => (config ? config.features[id] !== false : true), [config]);
+  // Étape N7 (comme le site N6) : un seul bouton « Ma liste ». Retirer enlève des deux listes ; ajouter va dans les favoris
+  // (ou dans « plus tard » si les favoris sont éteints).
+  const inMyList = useCallback((talkId: string) => favs.has(talkId) || later.has(talkId), [favs, later]);
+  const toggleMyList = useCallback(async (talkId: string): Promise<'added' | 'removed' | 'full' | 'error'> => {
+    const plan = myListPlan(favs.has(talkId), later.has(talkId), feat);
+    if (plan.remove.length) {
+      if (plan.remove.includes('fav')) await toggleFav(talkId);
+      if (plan.remove.includes('later')) { const r = await toggleLater(talkId); if (r === 'error') return 'error'; }
+      return 'removed';
+    }
+    if (plan.add === 'fav') { await toggleFav(talkId); return 'added'; }
+    if (plan.add === 'later') return toggleLater(talkId);
+    return 'error';
+  }, [favs, later, feat, toggleFav, toggleLater]);
+
 
   // Démarrage : langue enregistrée (sinon celle du téléphone), puis session enregistrée.
   useEffect(() => {
@@ -225,10 +244,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Session>(() => ({
     ready, user, api, login, verifyTwoFactor, register, logout, adopt: finish, locale, setLocale, t, config, menus, feat, favs, toggleFav,
-    later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser,
+    later, toggleLater, inMyList, toggleMyList, skin, skinChoice, skinPick, setSkinPick, patchUser,
     isRTL: DIR[locale] === 'rtl',
     dirStyle: { direction: DIR[locale] },
-  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, menus, feat, favs, toggleFav, later, toggleLater, skin, skinChoice, skinPick, setSkinPick, patchUser]);
+  }), [ready, user, api, login, verifyTwoFactor, register, logout, finish, locale, setLocale, t, config, menus, feat, favs, toggleFav, later, toggleLater, inMyList, toggleMyList, skin, skinChoice, skinPick, setSkinPick, patchUser]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
