@@ -4,15 +4,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
-// « Ma liste » : fusion favoris + plus tard, sans doublon (fonction pure vérifiée telle qu'écrite)
+// « Ma liste » : fusion favoris + plus tard, sans doublon, la plus récente d'abord (fonction pure de web/lib/mylist.js, depuis N6)
+const ml = read('lib/mylist.js');
+const mergeMyList = new Function(`${ml.replace(/export function/g, 'function')}; return mergeMyList;`)();
 const lib = read('app/library/page.js');
-const start = lib.indexOf('export function mergeMyList');
-const end = lib.indexOf('\n}\n', start) + 2;
-const mergeMyList = new Function(`${lib.slice(start, end).replace('export function', 'function')}; return mergeMyList;`)();
-const m = mergeMyList([{ id: 1, positionMs: 5 }, { id: 2 }], [{ id: 2 }, { id: 3 }]);
-assert.deepEqual(m.map((x) => x.id), [1, 2, 3], 'plus tard d’abord, puis favoris, sans doublon');
+assert.match(lib, /import \{ mergeMyList \} from '\.\.\/\.\.\/lib\/mylist';/);
+const m = mergeMyList([{ id: 1, positionMs: 5, addedAt: '2026-11-03' }, { id: 2, addedAt: '2026-11-01' }], [{ id: 2, favoritedAt: '2026-11-04' }, { id: 3, favoritedAt: '2026-11-02' }]);
+assert.deepEqual(m.map((x) => x.id), [2, 1, 3], 'la plus récemment ajoutée d’abord, sans doublon');
 assert.deepEqual(m.find((x) => x.id === 2).srcs, ['later', 'fav'], 'une vidéo dans les deux est retirée des deux');
-assert.equal(m[0].positionMs, 5, 'l’avancement est gardé');
+assert.equal(m.find((x) => x.id === 1).positionMs, 5, 'l’avancement est gardé');
 assert.deepEqual(mergeMyList(null, null), []);
 
 // Bibliothèque : 4 onglets, anciens onglets

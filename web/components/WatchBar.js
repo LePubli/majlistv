@@ -8,6 +8,8 @@ export const ICONS = {
   heart: <svg {...S}><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>,
   heartOn: <svg {...S} fill="currentColor"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>,
   plus: <svg {...S}><path d="M12 5v14M5 12h14" /></svg>,
+  check: <svg {...S}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
+  lists: <svg {...S}><path d="M4 6h11M4 12h11M4 18h7M18 15v6M15 18h6" /></svg>,
   clock: <svg {...S}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>,
   clockOn: <svg {...S}><circle cx="12" cy="12" r="8" fill="currentColor" fillOpacity=".25" /><path d="M8.5 12.5l2.5 2.5 4.5-5" /></svg>,
   share: <svg {...S}><path d="M7 17L17 7M9 7h8v8" /></svg>,

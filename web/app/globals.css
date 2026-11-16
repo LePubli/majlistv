@@ -2720,7 +2720,7 @@ a.ac-title:hover { color: var(--accent-hover); }
 
 /* Étape E5d : le cadre vertical suit le visage ; corrections à la main */
 .mts-manual h3 { margin: 0; font-size: .95rem; }
-.mts-track[data-track="done"] > span { color: var(--gold, #e6a93a); }
+.mts-track[data-track="done"] > span { color: var(--accent); }
 .mts-track[data-track="failed"] > span { color: var(--danger, #ff8a80); }
 .mts-manual-row input { width: 100%; min-width: 0; }
 
@@ -4069,3 +4069,13 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .acct-sec .billing:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .acct-prayer-link { margin-top: 14px; }
 .acct-sec:empty { display: none; } .acct-sec:empty + .acct-sec { margin-top: 0; padding-top: 0; border-top: 0; }
+
+/* Étape N6 (16/11) : transcription repliée dans « À propos » de la page vidéo */
+.tp-transcript { margin-top: 22px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
+.tp-transcript > summary { cursor: pointer; font-weight: 600; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+.tp-transcript > summary::-webkit-details-marker { display: none; }
+.tp-transcript > summary::before { content: '▸'; transition: transform .15s; }
+[dir="rtl"] .tp-transcript > summary::before { content: '◂'; }
+.tp-transcript[open] > summary::before { transform: rotate(90deg); }
+[dir="rtl"] .tp-transcript[open] > summary::before { transform: rotate(-90deg); }
+.tpanel .insights + .about-text { margin-top: 18px; }

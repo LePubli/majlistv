@@ -9277,3 +9277,30 @@ bash /root/verify-deploy.sh
 **Debug.** « Ma liste » n'apparaît pas : Admin → Fonctions → « Favoris » et « À regarder plus tard » sont tous les deux éteints. Le bloc « Chaînes suivies » n'apparaît pas sur /chaines : pas connecté, ou fonction « Suivre » éteinte. Le menu latéral montre encore « Favoris » : un menu personnalisé est affecté dans Admin → Menus (le lien mène quand même à Ma liste).
 
 **Testé.** Tous les tests du site (dont la vraie fonction `mergeMyList` et la table des anciens onglets) ; navigateur réel à 1440 et 390 px, français et arabe : 4 et 3 onglets, Ma liste avec favoris + plus tard sans doublon, retrait d'une vidéo présente dans les deux listes (vérifié dans la base), toutes les anciennes adresses ci-dessus, aucun débordement, aucune erreur. Non testé : vrai téléphone, un compte avec beaucoup de favoris réels, l'envoi réel d'un e-mail avec le nouveau lien.
+
+## N6 — Page vidéo (16/11)
+
+**Pourquoi.** Sixième étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md` : « toujours le même ordre : regarder → quiz → que faire maintenant ? ; sous le lecteur, 3 onglets ; un seul encart de paiement ». La page avait jusqu'à 6 onglets, trois boutons proches (Favori, Plus tard, et « Ma liste » qui ouvrait en réalité les listes personnelles), et en fin de vidéo d'une série l'épisode suivant passait avant « que faire maintenant ? ».
+
+**Ce qui change (site).**
+- **3 onglets au plus** sous le lecteur :
+  - **À propos** (toujours là) : résumé et points clés de l'IA, chapitres, description, détails, puis **la transcription repliée** (« Afficher la transcription »). Un lien avec ?t= (résultat de recherche, partage à la minute) ouvre la transcription d'office.
+  - **Mes notes** (membre, si la fonction est active).
+  - **Questions** : l'assistant (si la fonction est active et que la vidéo a des sous-titres).
+  - Avec un seul onglet, la barre d'onglets n'est pas affichée.
+- **Un seul bouton « Ma liste »** (+, puis ✓) sur la page vidéo et sur les vignettes, à la place du cœur et de « Plus tard ».
+  - Ajouter met la vidéo dans les favoris (ou dans « plus tard » si les favoris sont éteints). Retirer l'enlève des deux.
+  - L'ancien bouton qui ouvrait les listes personnelles s'appelle maintenant « Listes ».
+  - « Ma liste » est triée par date d'ajout, la plus récente d'abord. Sur l'accueil d'origine, la rangée « À regarder plus tard » devient « Ma liste ».
+- **Fin de vidéo, toujours dans le même ordre** : quiz (s'il n'est pas réussi) → « Et maintenant, que faire ? » → épisode suivant.
+  - « Plus tard » sur le quiz mène à « que faire » ; « Plus tard » sur « que faire » lance le compte à rebours de l'épisode suivant.
+- **Encart de paiement** : il était déjà unique (sous le lecteur, ou dans l'écran de fin d'aperçu). Vérifié par un test.
+- **Inchangés** : la carte « Apprendre avec cette vidéo » (Comprendre · Retenir · Agir), le menu « Plus », la liste des épisodes, « À suivre ». L'application suit en N7.
+
+**Fichiers.** `web/app/talks/[id]/TalkClient.js`, `web/components/Providers.js` (`inMyList`, `toggleMyList`), `web/components/TalkCard.js`, `web/components/WatchBar.js` (icônes ✓ et listes), `web/lib/mylist.js` (nouveau : `mergeMyList`, triée par date), `web/app/library/page.js`, `web/app/page.js`, `web/lib/i18n.js` (6 textes fr / en / ar ; « Ma liste » → « Listes » pour le bouton des listes personnelles), `web/app/globals.css` ; tests `web/tests/test_n6_web.mjs` (nouveau), `test_n5_web.mjs`, `test_watchlater_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement (l'API ne change pas). Puis les commandes habituelles du VPS.
+
+**Debug.** L'onglet « Questions » n'apparaît pas : Admin → Fonctions → « Assistant », ou la vidéo n'a pas encore de sous-titres. Le bouton « Ma liste » n'apparaît pas : les fonctions « Favoris » et « À regarder plus tard » sont toutes les deux éteintes. Le résumé n'apparaît pas dans « À propos » : l'analyse IA de la vidéo n'est pas encore faite.
+
+**Testé.** Tous les tests du site (dont la vraie fonction `mergeMyList`) ; navigateur réel à 1440 et 390 px, français et arabe : onglets À propos · Mes notes, barre Ma liste · Listes · Cinéma · Plus, ajout puis retrait (message annoncé), vidéo ajoutée visible dans Bibliothèque → Ma liste, un seul bouton sur la vignette, visiteur sur une vidéo premium (un seul encart), aucun débordement, aucune erreur. **Non testé** dans le navigateur : résumé, chapitres, transcription repliée et onglet Questions (la base de test n'a aucune vidéo transcrite) ; la fin de vidéo (le lecteur YouTube ne se charge pas sans Internet ici) ; la rangée « Ma liste » de l'accueil d'origine (la base de test utilise l'accueil en blocs) ; vrai téléphone.

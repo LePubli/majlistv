@@ -49,7 +49,7 @@ function Preview({ info, seconds, muted, onReady }) {
 
 // Fenêtre agrandie, posée en position fixe au-dessus de la vignette (elle n'est pas coupée par la rangée qui défile).
 function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
-  const { user, favs, toggleFav, feat, later, toggleLater } = useApp();
+  const { user, feat, inMyList, toggleMyList } = useApp();
   const router = useRouter();
   const [info, setInfo] = useState(null);
   const [playing, setPlaying] = useState(false);
@@ -69,12 +69,12 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
     return () => clearTimeout(timer);
   }, [talk.id, cfg.preview, cfg.previewDelay]);
 
-  const fav = favs.has(talk.id);
   const meta = [show.access && t(talk.access), show.duration && minutesOf(talk, t), show.language && talk.language && langName(String(talk.language).split('-')[0], locale), show.category && talk.category].filter(Boolean);
   const thumb = thumbOf(talk);
-  const onFav = (e) => { e.preventDefault(); if (!user) { router.push('/login'); return; } toggleFav(talk.id); };
-  const isLater = later?.has(talk.id);
-  const onLater = (e) => { e.preventDefault(); if (!user) { router.push('/login'); return; } toggleLater(talk.id); };
+  // Étape N6 (16/11) : un seul bouton « Ma liste » (remplace le cœur et « Plus tard »).
+  const mine = inMyList(talk.id);
+  const listOn = (feat('favorites') || feat('watchlater')) && (show.favorite || feat('watchlater'));
+  const onMine = (e) => { e.preventDefault(); if (!user) { router.push('/login'); return; } toggleMyList(talk.id); };
   const withVideo = info && info.kind !== 'none';
   return createPortal(
     <div className="hc" style={{ left, top, width: W }} onMouseEnter={onEnter} onMouseLeave={onLeave} role="group" aria-label={talk.title}>
@@ -89,8 +89,7 @@ function HoverCard({ talk, rect, t, locale, cfg, progress, onEnter, onLeave }) {
       <div className="hc-body">
         <div className="hc-actions">
           <Link href={`/talks/${talk.id}`} className="hc-btn play" aria-label={`${t('cardPlay')} : ${talk.title}`} title={t('cardPlay')}>▶</Link>
-          {show.favorite && feat('favorites') && <button type="button" className={`hc-btn${fav ? ' on' : ''}`} onClick={onFav} aria-pressed={fav} aria-label={fav ? t('favRemove') : t('favAdd')} title={fav ? t('favRemove') : t('favAdd')}>{fav ? '♥' : '♡'}</button>}
-          {feat('watchlater') && <button type="button" className={`hc-btn${isLater ? ' on' : ''}`} onClick={onLater} aria-pressed={Boolean(isLater)} aria-label={isLater ? t('wlRemove') : t('wlAdd')} title={isLater ? t('wlRemove') : t('wlAdd')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">{isLater ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>}</svg></button>}
+          {listOn && <button type="button" className={`hc-btn${mine ? ' on' : ''}`} onClick={onMine} aria-pressed={mine} aria-label={mine ? t('mlRemove') : t('mlAdd')} title={mine ? t('mlRemove') : t('mlAdd')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">{mine ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M12 5v14M5 12h14" />}</svg></button>}
           <Link href={`/talks/${talk.id}`} className="hc-btn more" aria-label={t('cardDetails')} title={t('cardDetails')}>⌄</Link>
         </div>
         <h3 className="hc-title">{talk.title}</h3>

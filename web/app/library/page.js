@@ -12,24 +12,14 @@ import { clock } from '../../lib/clock';
 import ListsPanel from '../../components/ListsPanel';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
+import { mergeMyList } from '../../lib/mylist';
 
 // Anciens onglets (avant N5) → nouvel onglet.
 export const LEGACY_TABS = { favs: ['list'], later: ['list'] };
 
-// « Ma liste » : vidéos gardées pour plus tard d'abord (avec leur avancement), puis les favoris, sans doublon.
-export function mergeMyList(lat, favs) {
-  const seen = new Set();
-  const out = [];
-  for (const [x, src] of [...(lat || []).map((v) => [v, 'later']), ...(favs || []).map((v) => [v, 'fav'])]) {
-    if (seen.has(x.id)) { const o = out.find((y) => y.id === x.id); o.srcs.push(src); continue; }
-    seen.add(x.id);
-    out.push({ ...x, srcs: [src] });
-  }
-  return out;
-}
 
 export default function Library() {
-  const { user, ready, t, call, feat , later, toggleLater } = useApp();
+  const { user, ready, t, call, feat, later, toggleLater, favs: favSet, toggleFav } = useApp();
   const router = useRouter();
   const [cont, setCont] = useState(null);
   const [favs, setFavs] = useState(null);
@@ -63,7 +53,7 @@ export default function Library() {
 
   const dropProgress = async (id) => { setCont((l) => l.filter((x) => x.id !== id)); await call(`/me/progress/${id}`, { method: 'DELETE' }); };
   const dropLater = async (id) => { setLat((l) => l.filter((x) => x.id !== id)); if (later?.has(id)) await toggleLater(id); else await call(`/me/watchlater/${id}`, { method: 'DELETE' }); };
-  const dropFav = async (id) => { setFavs((l) => l.filter((x) => x.id !== id)); await call(`/me/favorites/${id}`, { method: 'DELETE' }); };
+  const dropFav = async (id) => { setFavs((l) => l.filter((x) => x.id !== id)); if (favSet?.has(id)) await toggleFav(id); else await call(`/me/favorites/${id}`, { method: 'DELETE' }); };
   // Retirer de « Ma liste » : on retire des deux (favoris et plus tard) là où la vidéo se trouve.
   const dropMine = async (x) => {
     if (x.srcs.includes('later')) await dropLater(x.id);

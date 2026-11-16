@@ -5,9 +5,10 @@ const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 const pr = read('components/Providers.js');
 assert.match(pr, /\/api\/me\/watchlater\/ids/, 'état chargé une fois (Providers)'); assert.match(pr, /toggleLater/, 'bascule partagée');
 assert.match(pr, /features\.watchlater === false/, 'fonction coupée : rien n’est chargé');
-assert.match(read('components/TalkCard.js'), /feat\('watchlater'\) && <button type="button" className=\{`hc-btn/, 'bouton sur la vignette');
+// Étape N6 : un seul bouton « Ma liste » sur la vignette (favoris + plus tard)
+assert.match(read('components/TalkCard.js'), /\{listOn && <button type="button" className=\{`hc-btn/, 'bouton sur la vignette');
 const tc = read('app/talks/[id]/TalkClient.js');
-assert.match(tc, /act="later"/, 'bouton « Plus tard » de la page vidéo'); assert.match(tc, /className="wl-msg" role="status"/, 'confirmation annoncée');
+assert.match(tc, /act="mylist"/, 'bouton « Ma liste » de la page vidéo (étape N6)'); assert.match(tc, /className="wl-msg" role="status"/, 'confirmation annoncée');
 assert.doesNotMatch(tc, /window\.alert/, 'pas de fenêtre d’alerte');
 const lib = read('app/library/page.js');
 assert.match(lib, /\{ id: 'list', label: t\('lbMyList'\) \}/, 'onglet « Ma liste » de la bibliothèque (étape N5)'); assert.match(lib, /\/me\/watchlater'/, 'liste chargée');

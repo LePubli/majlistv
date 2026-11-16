@@ -14,6 +14,7 @@ import SeasonBands from '../components/SeasonBands';
 import TodayBlock from '../components/TodayBlock';
 import { StartCards, Tour } from '../components/Onboarding';
 import EventsBand from '../components/EventsBand';
+import { mergeMyList } from '../lib/mylist';
 
 // Première rangée de vidéos de l'accueil (nouveautés) : elle sert de « Dernières vidéos » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -51,8 +52,13 @@ function HomeInner() {
   // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
   useEffect(() => { if (ready && legacy) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready, legacy]);
   useEffect(() => { if (user && legacy) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call, legacy]);
-  const [later, setLater] = useState([]); // « À regarder plus tard » (amélioration 2.5)
-  useEffect(() => { if (user && legacy && feat('watchlater')) call('/me/watchlater').then((r) => setLater(r.ok ? r.data.slice(0, 16) : [])); else setLater([]); }, [user, call, legacy, feat]);
+  // Étape N6 (16/11) : rangée « Ma liste » (favoris + plus tard, la plus récente d'abord) à la place de « À regarder plus tard ».
+  const [later, setLater] = useState([]);
+  useEffect(() => {
+    if (!user || !legacy || !(feat('watchlater') || feat('favorites'))) { setLater([]); return; }
+    const get = (on, path) => (on ? call(path).then((r) => (r.ok ? r.data : [])) : Promise.resolve([]));
+    Promise.all([get(feat('watchlater'), '/me/watchlater'), get(feat('favorites'), '/me/favorites')]).then(([l, f]) => setLater(mergeMyList(l, f).slice(0, 16)));
+  }, [user, call, legacy, feat]);
 
   if (cat) return <main aria-busy="true" />; // ancienne adresse /?cat=… : on part vers le Catalogue
   // Visiteur non connecté : la vitrine (méthode, exemple, tarifs). Invisible (mais présente dans la page) le temps de connaître la session.
@@ -73,7 +79,7 @@ function HomeInner() {
       {/* Étape N3 (15/11) : « Reprendre », puis les rangées. Les révisions et quiz à passer sont dans la carte « À faire aujourd'hui » ;
           les formats sont des onglets du Catalogue. */}
       {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
-      {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=list">{t('library')}</Link></>} talks={later} t={t} />}
+      {later.length > 0 && <Row id="row-later" title={<>{t('lbMyList')} · <Link href="/library?tab=list">{t('rowSeeAll')}</Link></>} talks={later} t={t} />}
       <EventsBand />
       {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
       {rows.map((r, i) => (

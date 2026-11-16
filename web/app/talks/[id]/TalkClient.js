@@ -36,12 +36,11 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null, extra = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName, later, toggleLater } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName, inMyList, toggleMyList } = useApp();
   const [laterMsg, setLaterMsg] = useState('');
   useEffect(() => { if (!laterMsg) return undefined; const k = setTimeout(() => setLaterMsg(''), 3500); return () => clearTimeout(k); }, [laterMsg]);
   const router = useRouter();
   const [talk, setTalk] = useState(undefined);
-  const [fav, setFav] = useState(false);
   const [resumeMs, setResumeMs] = useState(0);
   const [previewEnded, setPreviewEnded] = useState(false);
   const [similar, setSimilar] = useState([]);
@@ -62,9 +61,11 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const pickAudio = (on) => { setAudioMode(on); try { localStorage.setItem('mj-audio', on ? '1' : '0'); } catch { /* ignoré */ } };
   const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette vidéo
   const [bmFlash, setBmFlash] = useState(false);
-  const [tab, setTab] = useState('summary');        // onglet affiché sous le lecteur : le Résumé d'abord (demande d'Epok du 20/10), sinon le premier disponible
+  // Étape N6 (16/11) : 3 onglets sous le lecteur — À propos (résumé, chapitres, description, transcription) · Mes notes · Questions.
+  const [tab, setTab] = useState('about');
+  const [trOpen, setTrOpen] = useState(false);      // transcription dépliée dans « À propos »
   const [cinema, setCinema] = useState(false); // mode cinéma : lecteur pleine largeur, menus masqués (Échap pour sortir)
-  const [ins, setIns] = useState({ summary: false, chapters: false, list: [] }); // ce que contient l'analyse (résumé, chapitres)
+  const [, setIns] = useState({ summary: false, chapters: false, list: [] }); // ce que contient l’analyse (résumé, chapitres) ; plus utilisé pour les onglets depuis N6
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
   const [upNext, setUpNext] = useState(null);      // compte à rebours avant l'épisode suivant (secondes), null = pas affiché
   const [quizOpen, setQuizOpen] = useState(false);   // panneau du quiz ouvert sous le lecteur
@@ -93,7 +94,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   useEffect(() => {
     call('/talks/' + id).then((r) => {
       setTalk(r.ok ? r.data : null);
-      if (r.ok) { setFav(Boolean(r.data.favorite)); setResumeMs(r.data.resumeMs || 0); }
+      if (r.ok) setResumeMs(r.data.resumeMs || 0);
     });
   }, [id, call]);
 
@@ -116,7 +117,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
   // Arrivée avec ?t= (clic sur un résultat de recherche) : on ouvre la transcription, là où se trouve le passage.
   const hasTracks = Boolean(talk && talk.tracks && talk.tracks.length);
-  useEffect(() => { setTab('summary'); }, [id]);
+  useEffect(() => { setTab('about'); setTrOpen(false); }, [id]);
   useEffect(() => {
     setNotes([]);
     if (user) call(`/talks/${id}/notes`).then((r) => r.ok && setNotes(r.data));
@@ -134,20 +135,11 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     if (r.ok) setNotes((l) => l.map((x) => (x.id === nid ? r.data : x)));
   };
   const dropNote = async (nid) => { setNotes((l) => l.filter((x) => x.id !== nid)); await call(`/me/notes/${nid}`, { method: 'DELETE' }); };
-  useEffect(() => { if (jumpMs && hasTracks) setTab('transcript'); }, [jumpMs, hasTracks, id]);
+  useEffect(() => { if (jumpMs && hasTracks) { setTab('about'); setTrOpen(true); } }, [jumpMs, hasTracks, id]);
 
-  // « Plus tard » (amélioration 2.5) : partagé avec les vignettes (Providers).
-  const laterOn = Boolean(later?.has(id));
-  const onLater = async () => { if (!user) { router.push('/login'); return; } const was = laterOn; const err = await toggleLater(id); setLaterMsg(err ? (err === 'error' ? t('errGeneric') : err) : (was ? t('wlRemoved') : t('wlAdded'))); };
-
-  // Favori : mise à jour immédiate, annulée si le serveur refuse.
-  const toggleFav = async () => {
-    if (!user) { router.push('/login'); return; }
-    const next = !fav;
-    setFav(next);
-    const r = await call(`/me/favorites/${id}`, { method: next ? 'PUT' : 'DELETE' });
-    if (!r.ok) setFav(!next);
-  };
+  // Étape N6 (16/11) : un seul bouton « Ma liste » (favoris et « plus tard » réunis, voir Providers.toggleMyList).
+  const mine = Boolean(inMyList(id));
+  const onMine = async () => { if (!user) { router.push('/login'); return; } const was = mine; const err = await toggleMyList(id); setLaterMsg(err ? (err === 'error' ? t('errGeneric') : err) : (was ? t('mlRemoved') : t('mlAdded'))); };
 
   // Reprise de lecture + enregistrement de la position (vidéos envoyées, hors aperçu premium).
   const external = Boolean(talk && talk.source !== 'upload');
@@ -208,7 +200,8 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     if (!canChain && !quizOn && !practiceOn) return undefined;
     const video = videoRef.current;
     if (!video) return undefined;
-    const onEnd = () => { if (quizOn && !quizPassed) setQuizOffer(true); else if (canChain) setUpNext(8); else if (practiceOn) setPracticeOffer(true); };
+    // Étape N6 (16/11) : toujours le même ordre — quiz, puis « que faire maintenant ? », puis l'épisode suivant.
+    const onEnd = () => { if (quizOn && !quizPassed) setQuizOffer(true); else if (practiceOn) setPracticeOffer(true); else if (canChain) setUpNext(8); };
     video.addEventListener('ended', onEnd);
     return () => video.removeEventListener('ended', onEnd);
   }, [canChain, quizOn, quizPassed, practiceOn, id]);
@@ -233,7 +226,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const laterQuiz = () => {
     addPending({ id, title: talk.title }); setPending(getPending(id));
     setQuizOffer(false);
-    if (canChain) setUpNext(8);
+    if (practiceOn) setPracticeOffer(true); else if (canChain) setUpNext(8);
   };
   // « Et maintenant, que faire ? » : on referme le quiz, on descend jusqu'à l'écran de mise en pratique et on le met en évidence un instant.
   const goPractice = () => {
@@ -381,15 +374,14 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   };
   const clockS = (sec) => clock(sec * 1000);
 
-  // Onglets : seuls ceux qui ont du contenu apparaissent (À propos est toujours là).
-  // Ordre de la proposition B : Résumé · Chapitres · Transcription · Mes notes · À propos. L'onglet d'arrivée est le premier disponible.
+  // Étape N6 (16/11) : 3 onglets au plus — À propos (toujours là : résumé et chapitres de l'IA, description, détails, transcription
+  // repliée) · Mes notes · Questions (assistant). Les anciens onglets Résumé, Chapitres et Transcription sont des parties d'« À propos ».
+  const notesTab = feat('notes') && user && hasPlayer && !talk.locked;
+  const askTab = feat('ask') && user && hasPlayer && !talk.locked && talk.tracks?.length > 0;
   const tabs = [
-    ...(hasInsights && ins.summary ? [{ key: 'summary', label: t('summary') }] : []),
-    ...(hasInsights && ins.chapters ? [{ key: 'chapters', label: t('chapters') }] : []),
-    ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
-    ...(feat('notes') && user && hasPlayer && !talk.locked ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
-    ...(feat('ask') && user && hasPlayer && !talk.locked && talk.tracks?.length > 0 ? [{ key: 'ask', label: t('askTab') }] : []),
     { key: 'about', label: t('tabAbout') },
+    ...(notesTab ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
+    ...(askTab ? [{ key: 'ask', label: t('tpQuestions') }] : []),
   ];
   const current = tabs.some((x) => x.key === tab) ? tab : tabs[0].key;
   const onTabKey = (e) => {
@@ -483,7 +475,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               <p className="meta">{t('pzOfferText')}</p>
               <div className="upnext-btns">
                 <button type="button" className="btn" onClick={goPractice}>{t('pzOfferBtn')}</button>
-                <button type="button" className="btn ghost" onClick={() => setPracticeOffer(false)}>{t('qpLater')}</button>
+                <button type="button" className="btn ghost" onClick={() => { setPracticeOffer(false); if (canChain) setUpNext(8); }}>{t('qpLater')}</button>
               </div>
             </div>
           )}
@@ -515,9 +507,8 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
           </header>
 
           <div className="wb-bar" role="toolbar" aria-label={t('wbActions')}>
-            {feat('favorites') && <ActionTile icon={fav ? ICONS.heartOn : ICONS.heart} label={t('wbFav')} pressed={fav} onClick={toggleFav} title={fav ? t('removeFav') : t('addFav')} act="fav" />}
-            {feat('watchlater') && <ActionTile icon={laterOn ? ICONS.clockOn : ICONS.clock} label={t('wbLater')} pressed={laterOn} onClick={onLater} title={laterOn ? t('wlRemove') : t('wlAdd')} act="later" />}
-            {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.plus} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
+            {(feat('favorites') || feat('watchlater')) && <ActionTile icon={mine ? ICONS.check : ICONS.plus} label={t('lbMyList')} pressed={mine} onClick={onMine} title={mine ? t('mlRemove') : t('mlAdd')} act="mylist" />}
+            {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.lists} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
             {laterMsg && <span className="wl-msg" role="status">{laterMsg}</span>}
             {hasPlayer && <ActionTile icon={ICONS.cinema} label={t('wbCinema')} pressed={cinema} onClick={() => setCinema((v) => !v)} title={cinema ? t('cnOff') : t('cnOn')} act="cinema" />}
             <MoreMenu label={t('wbMore')}>
@@ -557,15 +548,25 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
           {hasPlayer && !talk.locked && <ModulePanels talk={talk} talkId={id} videoRef={videoRef} audioMode={audioMode} setAudioMode={pickAudio} onAudioLang={setDubLang} setAudioOverride={setDubAudio} spokenLang={audioLang} />}
           {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}
           <div className="talk-tabs">
-            <div className="tablist" role="tablist" aria-label={t('tabsLabel')} onKeyDown={onTabKey}>
+            {tabs.length > 1 && <div className="tablist" role="tablist" aria-label={t('tabsLabel')} onKeyDown={onTabKey}>
               {tabs.map((x) => (
                 <button key={x.key} id={`tab-${x.key}`} type="button" role="tab" className={x.key === current ? 'tab on' : 'tab'} aria-selected={x.key === current}
-                  aria-controls={`panel-${x.key === 'chapters' || x.key === 'summary' ? 'insights' : x.key}`} tabIndex={x.key === current ? 0 : -1} onClick={() => setTab(x.key)}>{x.label}</button>
+                  aria-controls={`panel-${x.key}`} tabIndex={x.key === current ? 0 : -1} onClick={() => setTab(x.key)}>{x.label}</button>
               ))}
-            </div>
-            <div id="panel-about" role="tabpanel" aria-labelledby="tab-about" hidden={current !== 'about'} className="tpanel">
+            </div>}
+            <div id="panel-about" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-labelledby={tabs.length > 1 ? 'tab-about' : undefined} hidden={current !== 'about'} className="tpanel">
+              {hasInsights && (
+                <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t}
+                  tab="all" onData={setIns} />
+              )}
               {talk.description && <p className="about-text">{talk.description}</p>}
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
+              {showTranscript && (
+                <details className="tp-transcript" id="tp-transcript" open={trOpen} onToggle={(e) => setTrOpen(e.currentTarget.open)}>
+                  <summary>{trOpen ? t('transcript') : t('tpTranscriptShow')}</summary>
+                  <Transcript key={talk.tracks.join()} canSuggest={!talk.locked} shareInfo={talk.locked ? null : { title: talk.title, speaker: initial?.speaker || talk.speaker }} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
+                </details>
+              )}
             </div>
             {current === 'ask' && (
               <div id="panel-ask" role="tabpanel" aria-labelledby="tab-ask" className="tpanel">
@@ -575,17 +576,6 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             {notesOn && (
               <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden={current !== 'notes'} className="tpanel">
                 <NotesPanel notes={notes} onAdd={addNote} onSave={saveNote} onDelete={dropNote} onSeek={seekTo} getPos={() => curSec() * 1000} t={t} />
-              </div>
-            )}
-            {hasInsights && (
-              <div id="panel-insights" role="tabpanel" aria-labelledby={`tab-${current}`} hidden={current !== 'chapters' && current !== 'summary'} className="tpanel">
-                <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t}
-                  tab={current === 'summary' ? 'summary' : 'chapters'} onData={setIns} />
-              </div>
-            )}
-            {showTranscript && (
-              <div id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript" hidden={current !== 'transcript'} className="tpanel">
-                <Transcript key={talk.tracks.join()} canSuggest={!talk.locked} shareInfo={talk.locked ? null : { title: talk.title, speaker: initial?.speaker || talk.speaker }} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
               </div>
             )}
           </div>

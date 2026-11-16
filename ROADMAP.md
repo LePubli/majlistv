@@ -679,3 +679,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **N3 — Accueil allégé** (une carte « À faire aujourd'hui », une seule bande de saison, rangées en double et tuiles de formats retirées) (16/11) : livré. Suite : N4 Catalogue.
 - **N4 — Catalogue avec filtres** (formats, thèmes, sous-thèmes en puces, combinables ; une seule grille par thème) (16/11) : livré. Suite : N5 Bibliothèque en 4 onglets et Compte en 3.
 - **N5 — Bibliothèque en 4 onglets et Compte en 3** (« Ma liste » = favoris + plus tard ; chaînes suivies dans Catalogue → Chaînes ; réglages de la prière sur la page Prière ; anciennes adresses reprises) (16/11) : livré sur le site. Suite : N6 page vidéo (dont un seul bouton « Ma liste »).
+- **N6 — Page vidéo** (3 onglets : À propos · Mes notes · Questions ; un seul bouton « Ma liste » ; fin de vidéo : quiz → que faire → épisode suivant) (16/11) : livré sur le site. Suite : N7 application téléphone et télé alignées.

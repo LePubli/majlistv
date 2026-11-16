@@ -97,7 +97,8 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     const on = favs.has(id);
     setFavs((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
     const r = await call(`/me/favorites/${id}`, { method: on ? 'DELETE' : 'PUT' });
-    if (!r.ok) setFavs((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); // échec : on annule
+    if (!r.ok) { setFavs((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; }); return r.data?.error || 'error'; } // échec : on annule
+    return null;
   }, [favs, call]);
 
   // « Plus tard » : mise à jour immédiate, annulée si le serveur refuse (liste pleine…). Renvoie le message d'erreur éventuel.
@@ -109,6 +110,18 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     return null;
   }, [later, call]);
 
+  // Étape N6 (16/11) : un seul bouton « Ma liste » (vignettes, page vidéo). Une vidéo est dans « Ma liste » si elle est en favori
+  // ou gardée pour plus tard ; l'ajout va dans les favoris (ou dans « plus tard » si les favoris sont éteints) ; le retrait enlève des deux.
+  const inMyList = useCallback((id) => favs.has(id) || later.has(id), [favs, later]);
+  const toggleMyList = useCallback(async (id) => {
+    const f = favs.has(id);
+    const l = later.has(id);
+    if (f || l) return (f ? await toggleFav(id) : null) || (l ? await toggleLater(id) : null);
+    if (features.favorites !== false) return toggleFav(id);
+    if (features.watchlater !== false) return toggleLater(id);
+    return null;
+  }, [favs, later, toggleFav, toggleLater, features.favorites, features.watchlater]);
+
   const login = (tk, u) => { localStorage.setItem('token', tk); setToken(tk); setUser(u); setKid(null); };
   const logout = () => { localStorage.removeItem('token'); setToken(null); setUser(null); setKid(null); };
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
@@ -118,5 +131,5 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
-    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, later, toggleLater, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}><QuranPlayerProvider t={t}><AudynPlayerProvider t={t} call={call}>{children}</AudynPlayerProvider></QuranPlayerProvider></Ctx.Provider>;
+    locale, t, appName, statsOn, trialDays, prayer, hasSeries, hasBooks, cards: cards || DEFAULT_CARDS, favs, toggleFav, later, toggleLater, inMyList, toggleMyList, prefs, setPrefs, skin, skinChoice, user: viewAs === 'visitor' ? null : user, patchUser: (p) => setUser((u) => (u ? { ...u, ...p } : u)), ready, call, login, logout, kid, kidMode, enterKid, setViewAs, dict, blockEdits, setBlockEdits, textPatch, setTextPatch, layout: layoutPreview || layout, layoutIsPreview: Boolean(layoutPreview), setLayoutPreview }}><QuranPlayerProvider t={t}><AudynPlayerProvider t={t} call={call}>{children}</AudynPlayerProvider></QuranPlayerProvider></Ctx.Provider>;
 }
