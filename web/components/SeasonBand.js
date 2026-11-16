@@ -8,10 +8,17 @@ import Row from './Row';
 
 const ICON = { ramadan: '🌙', hajj: '🕋', mawlid: '✨', ashura: '🌅', eid_fitr: '🎉', rajab: '🌟', dhulqada: '🌟' };
 
-export default function SeasonBand() {
+// `onState(true|false)` : prévient l'accueil qu'une saison est (ou non) en cours, pour n'afficher qu'une bande à la fois (N3).
+export default function SeasonBand({ onState }) {
   const { t, locale, call, feat } = useApp();
   const [s, setS] = useState(null);
-  useEffect(() => { call(`/seasons/current?lang=${locale}`, {}, null).then((r) => setS(r.ok ? r.data.season : null)); }, [call, locale]);
+  useEffect(() => {
+    call(`/seasons/current?lang=${locale}`, {}, null).then((r) => {
+      const season = r.ok ? r.data.season : null;
+      setS(season);
+      onState?.(Boolean(season));
+    });
+  }, [call, locale]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!s) return null;
   const when = s.daysToStart > 0 ? t('seasonIn').replace('{n}', s.daysToStart) : (s.daysLeft === 0 ? t('seasonLast') : t('seasonLeft').replace('{n}', s.daysLeft));
   return (

@@ -9216,3 +9216,22 @@ bash /root/verify-deploy.sh
 **Debug.** Onglet « Réviser » absent : Admin → Fonctions, cocher « Révision », « Cartes mémoire » ou « Quiz ». Un ancien lien ouvre le mauvais onglet : vérifier `LEGACY_TABS` en haut de la page.
 
 **Testé.** Tous les tests du site, application (`npm run check`, 290 tests) ; navigateur réel à 1440 et 390 px, français et arabe : les 3 onglets, planning ouvert / fermé, les 7 anciennes adresses redirigées, aucun débordement, aucune erreur. Non testé : un compte avec beaucoup de données réelles (quiz à passer, séries terminées), vrai téléphone.
+
+## N3 — Accueil allégé (16/11)
+
+**Pourquoi.** Troisième étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md` : l'accueil d'un membre doit servir à reprendre et découvrir. Il montrait le bloc « Aujourd'hui » puis, plus bas, les mêmes révisions dans une rangée « À réviser » et une rangée « Quiz à passer », parfois deux bandes (saison et vendredi) l'une sous l'autre, et des tuiles de formats qui doublaient les onglets du Catalogue.
+
+**Ce qui change (site, accueil des membres).**
+- **Une seule carte « À faire aujourd'hui »** : les lignes du jour (Coran, adhkar, Ramadan, cartes, révisions) plus une ligne **« Quiz à passer »** (si la fonction Quiz est active) qui mène à Apprendre → Réviser, et un lien **« Tout voir dans Apprendre »**. La carte s'affiche aussi quand il n'y a que des quiz à passer.
+- **Rangées retirées** : « À réviser aujourd'hui » et « Quiz à passer » (déjà dans la carte), tuiles « Explorer par format » (onglets du Catalogue).
+- **Une seule bande de saison** : la saison en cours (Ramadan, Hajj…) si elle existe, sinon la carte du vendredi. Réglages inchangés (Admin → Saisons, Admin → Vendredi).
+- **Ordre** : Par quoi commencer (nouveaux comptes) · À faire aujourd'hui · bande de saison · Reprendre · À regarder plus tard · prochains événements · Nouveautés et rangées · Kids · citation.
+- Même haut de page pour l'**accueil en blocs** (Admin → Pages → Accueil des membres). La vitrine des visiteurs ne change pas.
+
+**Fichiers.** `web/app/page.js`, `web/components/TodayBlock.js` (version `home`, fonction `withQuizLine`), `web/components/SeasonBands.js` (nouveau), `web/components/SeasonBand.js` (`onState`), `web/components/FormatTiles.js` (supprimé), `web/lib/i18n.js` (3 textes fr / en / ar), `web/app/globals.css` ; tests `web/tests/test_n3_web.mjs` (nouveau), `test_today_web.mjs`, `test_onboarding_web.mjs`, `test_friday_web.mjs`, `test_seasons_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement (l'API ne change pas). Puis les commandes habituelles du VPS.
+
+**Debug.** La ligne « Quiz à passer » n'apparaît pas : Admin → Fonctions → « Quiz » ; elle ne compte que les quiz pas encore réussis des vidéos regardées. La carte du vendredi n'apparaît pas un vendredi : une saison est en cours (elle passe avant).
+
+**Testé.** Tous les tests du site (dont l'ordre des lignes de la carte avec la vraie fonction `withQuizLine`) ; navigateur réel à 1440 et 390 px, français et arabe : carte unique avec lien vers Apprendre, plus de tuiles de formats, aucun débordement, aucune erreur. Non testé en navigateur : une saison et un vendredi actifs en même temps (aucune saison dans la base de test ; la règle est vérifiée par les tests), vrai téléphone.

@@ -11,9 +11,7 @@ import CitationCard from '../components/CitationCard';
 import Vitrine from '../components/Vitrine';
 import { KidsBand } from '../components/KidsBanner';
 import { HomeBlocks } from '../components/PageBlocks';
-import FormatTiles from '../components/FormatTiles';
-import SeasonBand from '../components/SeasonBand';
-import FridayBand from '../components/FridayBand';
+import SeasonBands from '../components/SeasonBands';
 import TodayBlock from '../components/TodayBlock';
 import { StartCards, Tour } from '../components/Onboarding';
 import EventsBand from '../components/EventsBand';
@@ -57,12 +55,8 @@ function HomeInner() {
   // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
   useEffect(() => { if (ready && legacy) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready, legacy]);
   useEffect(() => { if (user && legacy) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call, legacy]);
-  const [quizTodo, setQuizTodo] = useState([]);
   const [later, setLater] = useState([]); // « À regarder plus tard » (amélioration 2.5)
   useEffect(() => { if (user && legacy && feat('watchlater')) call('/me/watchlater').then((r) => setLater(r.ok ? r.data.slice(0, 16) : [])); else setLater([]); }, [user, call, legacy, feat]);
-  const [review, setReview] = useState([]); // « À réviser aujourd'hui » (Apprentissage ; 403 sinon)
-  useEffect(() => { if (user && legacy) call('/me/revision').then((r) => setReview(r.ok ? r.data.items : [])); else setReview([]); }, [user, call, legacy]);
-  useEffect(() => { if (user && legacy) call('/me/quiz/todo').then((r) => setQuizTodo(r.ok ? r.data : [])); else setQuizTodo([]); }, [user, call, legacy]);
 
   // Catégorie choisie (« Tout voir » d'une rangée) : grille filtrée. La recherche par mot-clé est dans la loupe du header.
   useEffect(() => {
@@ -76,7 +70,8 @@ function HomeInner() {
     return <Vitrine cit={cit} latest={latest} wait={!ready} hero={home?.hero} />;
   }
   if (!cat && blocks === undefined) return <main className="pb-page" aria-busy="true" />;
-  if (!cat && blocks) return <><StartCards /><TodayBlock /><SeasonBand /><FridayBand /><HomeBlocks page={blocks} />{tour}</>;
+  // Étape N3 (15/11) : en haut de l'accueil, une seule carte « À faire aujourd'hui » et une seule bande de saison.
+  if (!cat && blocks) return <><StartCards /><TodayBlock home /><SeasonBands /><HomeBlocks page={blocks} />{tour}</>;
   const browsing = !cat; // accueil vitrine (pas de filtre)
   const catName = cats.find((c) => String(c.id) === cat);
   const rows = home?.rows || [];
@@ -84,9 +79,8 @@ function HomeInner() {
     <main>
       {browsing && <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />}
       {browsing && <StartCards />}
-      {browsing && <TodayBlock />}
-      {browsing && <SeasonBand />}
-      {browsing && <FridayBand />}
+      {browsing && <TodayBlock home />}
+      {browsing && <SeasonBands />}
       {cat ? (
         <>
           <div className="cat-bar">
@@ -98,12 +92,11 @@ function HomeInner() {
         </>
       ) : (
         <>
-          {review.length > 0 && <Row id="row-review" title={<>{t('revRow')} · <Link href="/learning">{t('lrTitle')}</Link></>} talks={review} t={t} />}
-          {quizTodo.length > 0 && <Row id="row-quiz" title={<>{t('qpTodoRow')} · <Link href="/library">{t('library')}</Link></>} talks={quizTodo} t={t} />}
+          {/* Étape N3 (15/11) : « Reprendre », puis les rangées. Les révisions et quiz à passer sont dans la carte « À faire aujourd'hui » ;
+              les formats sont des onglets du Catalogue. */}
           {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
           {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
           <EventsBand />
-          {user && <FormatTiles />}
           {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
           {rows.map((r, i) => (
             <Fragment key={r.key}>

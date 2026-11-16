@@ -13,7 +13,8 @@ for (const lang of ['fr', 'en', 'ar']) {
   assert.ok(line.includes('{n}'), `${lang} : compteur de jours`);
 }
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
-assert.match(read('../app/page.js'), /<SeasonBand \/>/, "bandeau de saison sur l'accueil");
+assert.match(read('../app/page.js'), /<SeasonBands \/>/, "bandeau de saison sur l'accueil");
+assert.match(read('../components/SeasonBands.js'), /<SeasonBand onState=\{setSeason\} \/>/, 'une seule bande à la fois (N3)');
 assert.match(read('../app/admin/page.js'), /SeasonsAdmin/, 'écran Admin → Saisons');
 assert.match(read('../app/admin/page.js'), /seasons: 'Saisons'/, "titre de l'écran Saisons (sinon le tableau de bord s'affiche)");
 assert.match(read('../components/AdminShell.js'), /'seasons'/, 'menu Admin');

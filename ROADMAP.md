@@ -676,3 +676,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **TV en direct indépendante** (page /live, menus, Studio → TV en direct, application ; sans le module « Événements en direct ») (14/11) : livré.
 - **N1 — Menu à 5 et « En direct » dans le Catalogue** (TV + événements sur /live, barre du bas avec Compte sur le site comme dans l'application) (15/11) : livré. Suite : N2 Apprendre en 3 onglets (plan : docs/SIMPLIFICATION-PLATEFORME-2026-11.md).
 - **N2 — Apprendre en 3 onglets** (Aujourd'hui · Réviser · Mes progrès, sans sous-onglets ; anciennes adresses conservées) (15/11) : livré sur le site. Suite : N3 accueil allégé ; l'application suivra en N7 ; séance de révision unique plus tard.
+- **N3 — Accueil allégé** (une carte « À faire aujourd'hui », une seule bande de saison, rangées en double et tuiles de formats retirées) (16/11) : livré. Suite : N4 Catalogue.

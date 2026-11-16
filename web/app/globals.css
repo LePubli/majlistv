@@ -4048,3 +4048,6 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .sa-admin .fld.inline { display: inline-grid; margin: 6px 0 10px; }
 .sa-admin .fld.inline select { width: auto; min-width: 160px; }
 .sa-admin .adm-table td:nth-child(3) { white-space: normal; min-width: 180px; }
+
+/* Étape N3 (15/11) — accueil : la carte « À faire aujourd'hui » se termine par un lien vers Apprendre */
+.today-more { margin: 12px 0 0; font-size: 14px; text-align: end; }
