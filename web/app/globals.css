@@ -4051,3 +4051,12 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 
 /* Étape N3 (15/11) — accueil : la carte « À faire aujourd'hui » se termine par un lien vers Apprendre */
 .today-more { margin: 12px 0 0; font-size: 14px; text-align: end; }
+
+/* Étape N4 (16/11) — filtres du Catalogue : lignes de puces (formats, thèmes, sous-thèmes) qui défilent sur téléphone */
+.cg-filters { display: grid; gap: 8px; padding: 6px var(--gutter) 14px; }
+.cg-chips { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; min-width: 0; }
+.cg-chips::-webkit-scrollbar { display: none; }
+.cg-chips a { flex: 0 0 auto; min-height: 34px; display: inline-flex; align-items: center; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line-soft); background: transparent; color: var(--text); font-size: 13px; text-decoration: none; white-space: nowrap; }
+.cg-chips a:hover, .cg-chips a:focus-visible { border-color: var(--accent); }
+.cg-chips a.on { background: var(--gold-soft); border-color: var(--accent); font-weight: 700; }
+.cg-subs a { font-size: 12.5px; min-height: 30px; }

@@ -3,7 +3,6 @@ import { Fragment, Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../components/Providers';
-import TalkCard from '../components/TalkCard';
 import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
 import SeriesCard from '../components/SeriesCard';
@@ -28,11 +27,9 @@ function HomeInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const [home, setHome] = useState(null);   // { hero, rows } : accueil vitrine
-  const [talks, setTalks] = useState(null); // grille quand une catégorie est choisie
-  const [cats, setCats] = useState([]);
-  // Catégorie choisie (« Tout voir » d'une rangée) : dans l'adresse (?cat=12), donc le bouton « retour » du navigateur fonctionne.
+  // Étape N4 (16/11) : la grille d'un thème est celle du Catalogue (avec ses filtres) ; l'ancienne adresse /?cat=12 y mène.
   const cat = /^\d{1,9}$/.test(sp.get('cat') || '') ? sp.get('cat') : '';
-  const setCat = (id) => { router.push(id ? `/?cat=${id}` : '/'); };
+  useEffect(() => { if (cat) router.replace(`/catalogue?cat=${cat}`); }, [cat, router]);
   // Visite guidée (étape B2) : /?tour=1 (bouton « Faire la visite guidée » ou menu du compte).
   const tour = user && feat('onboarding') && sp.get('tour') === '1' ? <Tour onClose={() => router.replace('/', { scroll: false })} /> : null;
   // Accueil en blocs (Admin → Pages → Accueil des membres) : s'il est publié, il remplace l'accueil d'origine. undefined = on vérifie, null = pas d'accueil en blocs.
@@ -51,69 +48,48 @@ function HomeInner() {
   useEffect(() => { if (legacy) call('/home/kids', {}, null).then((r) => setKids(r.ok ? r.data : null)); }, [call, legacy]);
   useEffect(() => { if (legacy) call('/citation/today', {}, null).then((r) => setCit(r.ok ? r.data : null)); }, [call, legacy]);
 
-  useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   // Avec le jeton du compte, l'accueil met en premier les thèmes préférés (« Pour vous »).
   useEffect(() => { if (ready && legacy) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready, legacy]);
   useEffect(() => { if (user && legacy) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); else setCont([]); }, [user, call, legacy]);
   const [later, setLater] = useState([]); // « À regarder plus tard » (amélioration 2.5)
   useEffect(() => { if (user && legacy && feat('watchlater')) call('/me/watchlater').then((r) => setLater(r.ok ? r.data.slice(0, 16) : [])); else setLater([]); }, [user, call, legacy, feat]);
 
-  // Catégorie choisie (« Tout voir » d'une rangée) : grille filtrée. La recherche par mot-clé est dans la loupe du header.
-  useEffect(() => {
-    if (!cat) { setTalks(null); return; }
-    call('/talks?' + new URLSearchParams({ category: cat }), {}, null).then((r) => setTalks(r.ok ? r.data : []));
-  }, [cat, call]);
-
+  if (cat) return <main aria-busy="true" />; // ancienne adresse /?cat=… : on part vers le Catalogue
   // Visiteur non connecté : la vitrine (méthode, exemple, tarifs). Invisible (mais présente dans la page) le temps de connaître la session.
-  if (!user && !cat && feat('showcase')) {
+  if (!user && feat('showcase')) {
     const latest = rows0(home);
     return <Vitrine cit={cit} latest={latest} wait={!ready} hero={home?.hero} />;
   }
-  if (!cat && blocks === undefined) return <main className="pb-page" aria-busy="true" />;
+  if (blocks === undefined) return <main className="pb-page" aria-busy="true" />;
   // Étape N3 (15/11) : en haut de l'accueil, une seule carte « À faire aujourd'hui » et une seule bande de saison.
-  if (!cat && blocks) return <><StartCards /><TodayBlock home /><SeasonBands /><HomeBlocks page={blocks} />{tour}</>;
-  const browsing = !cat; // accueil vitrine (pas de filtre)
-  const catName = cats.find((c) => String(c.id) === cat);
+  if (blocks) return <><StartCards /><TodayBlock home /><SeasonBands /><HomeBlocks page={blocks} />{tour}</>;
   const rows = home?.rows || [];
   return (
     <main>
-      {browsing && <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />}
-      {browsing && <StartCards />}
-      {browsing && <TodayBlock home />}
-      {browsing && <SeasonBands />}
-      {cat ? (
-        <>
-          <div className="cat-bar">
-            <button type="button" className="btn ghost" onClick={() => setCat('')}>← {t('home')}</button>
-            <h1>{catName ? (catName.fullName || catName.name) : ''}</h1>
-          </div>
-          {talks && talks.length === 0 && <p className="soon">{t('noTalks')}</p>}
-          <div className="grid">{(talks || []).map((x) => <TalkCard key={x.id} talk={x} t={t} />)}</div>
-        </>
-      ) : (
-        <>
-          {/* Étape N3 (15/11) : « Reprendre », puis les rangées. Les révisions et quiz à passer sont dans la carte « À faire aujourd'hui » ;
-              les formats sont des onglets du Catalogue. */}
-          {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
-          {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
-          <EventsBand />
-          {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
-          {rows.map((r, i) => (
-            <Fragment key={r.key}>
-              {r.key === 'series' ? (
-                <Row id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
-              ) : (
-                <Row id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
-                  title={r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.title}
-                  onSeeAll={r.categoryId && r.total > r.talks.length ? () => { setCat(String(r.categoryId)); window.scrollTo({ top: 0 }); } : undefined} />
-              )}
-              {i === 0 && <KidsBand data={kids} />}
-            </Fragment>
-          ))}
-          {rows.length === 0 && <KidsBand data={kids} />}
-          <CitationCard c={cit} t={t} framed />
-        </>
-      )}
+      <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />
+      <StartCards />
+      <TodayBlock home />
+      <SeasonBands />
+      {/* Étape N3 (15/11) : « Reprendre », puis les rangées. Les révisions et quiz à passer sont dans la carte « À faire aujourd'hui » ;
+          les formats sont des onglets du Catalogue. */}
+      {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
+      {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
+      <EventsBand />
+      {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
+      {rows.map((r, i) => (
+        <Fragment key={r.key}>
+          {r.key === 'series' ? (
+            <Row id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
+          ) : (
+            <Row id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
+              title={r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.title}
+              onSeeAll={r.categoryId && r.total > r.talks.length ? () => router.push(`/catalogue?cat=${r.categoryId}`) : undefined} />
+          )}
+          {i === 0 && <KidsBand data={kids} />}
+        </Fragment>
+      ))}
+      {rows.length === 0 && <KidsBand data={kids} />}
+      <CitationCard c={cit} t={t} framed />
       {tour}
     </main>
   );

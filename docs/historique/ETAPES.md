@@ -9235,3 +9235,22 @@ bash /root/verify-deploy.sh
 **Debug.** La ligne « Quiz à passer » n'apparaît pas : Admin → Fonctions → « Quiz » ; elle ne compte que les quiz pas encore réussis des vidéos regardées. La carte du vendredi n'apparaît pas un vendredi : une saison est en cours (elle passe avant).
 
 **Testé.** Tous les tests du site (dont l'ordre des lignes de la carte avec la vraie fonction `withQuizLine`) ; navigateur réel à 1440 et 390 px, français et arabe : carte unique avec lien vers Apprendre, plus de tuiles de formats, aucun débordement, aucune erreur. Non testé en navigateur : une saison et un vendredi actifs en même temps (aucune saison dans la base de test ; la règle est vérifiée par les tests), vrai téléphone.
+
+## N4 — Catalogue avec filtres (16/11)
+
+**Pourquoi.** Quatrième étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md`. Le Catalogue avait déjà ses onglets (Vidéos, Séries, Shorts, Collections, Chaînes, Audio, Ouvrages, En direct), mais les thèmes n'étaient atteignables que par le menu latéral (absent sur téléphone), un format et un thème ne se combinaient pas, et il existait deux grilles par thème (celle de l'accueil, /?cat=, et celle du Catalogue).
+
+**Ce qui change (site).**
+- **Filtres en puces** sous la bannière du Catalogue et en haut de chaque grille : **formats** (seulement ceux qui ont des contenus), **thèmes** (catégories principales), puis **sous-thèmes** quand le thème choisi en a. Une ligne avec moins de deux choix n'est pas affichée. Sur téléphone, chaque ligne défile horizontalement.
+- Les filtres **se combinent** : /catalogue?format=cours&cat=12 (titre « Cours · Thème »). L'adresse garde le choix, le bouton « retour » fonctionne.
+- **Une seule grille par thème**, celle du Catalogue : « Tout voir » d'une rangée de l'accueil (accueil d'origine et accueil en blocs) y mène, et l'ancienne adresse /?cat=12 aussi. L'accueil n'a plus de code de grille.
+- Le site garde en mémoire toutes les catégories (sous-catégories comprises) ; les menus continuent d'afficher seulement les catégories principales.
+- **Application** : inchangée, elle a déjà ses filtres (catégorie, format, niveau).
+
+**Fichiers.** `web/components/CatalogueFilters.js` (nouveau), `web/app/catalogue/page.js`, `web/app/page.js`, `web/components/{HomeBlocks,Providers}.js`, `web/lib/i18n.js` (6 textes fr / en / ar), `web/app/globals.css` ; tests `web/tests/test_n4_web.mjs` (nouveau), `test_onboarding_web.mjs`, `test_today_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement. Puis les commandes habituelles du VPS.
+
+**Debug.** La ligne des formats n'apparaît pas : un seul format a des contenus publiés (normal). Un thème manque : il n'existe que comme sous-catégorie (il apparaît sous son thème principal).
+
+**Testé.** Tous les tests du site (dont les fonctions d'adresse et de thème principal) ; navigateur réel à 1440 et 390 px, français et arabe : lignes formats / thèmes / sous-thèmes, combinaison format + thème, puces actives, ancienne adresse /?cat= redirigée, aucun débordement, aucune erreur. Non testé : vrai téléphone, un catalogue réel avec beaucoup de thèmes.

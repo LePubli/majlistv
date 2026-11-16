@@ -9,7 +9,7 @@ assert.match(c, /'\/\?tour=1'/, 'bouton visite guidée'); assert.match(c, /e\.ke
 assert.match(c, /aria-modal="true"/, 'bulle accessible (dialogue)'); assert.match(c, /hd-burger/, 'téléphone : bouton du menu éclairé');
 assert.match(c, /dir === 'rtl'/, 'flèches inversées en arabe');
 const home = read('app/page.js');
-assert.match(home, /\{browsing && <StartCards \/>\}/, 'accueil d’origine'); assert.match(home, /<StartCards \/><TodayBlock home \/>/, 'accueil en blocs');
+assert.match(home, /\n      <StartCards \/>\n/, 'accueil d’origine'); assert.match(home, /<StartCards \/><TodayBlock home \/>/, 'accueil en blocs');
 assert.equal((home.match(/\{tour\}/g) || []).length, 2, 'visite sur les deux accueils'); assert.match(home, /sp\.get\('tour'\) === '1'/, 'visite par ?tour=1');
 assert.equal((read('components/Header.js').match(/href="\/\?tour=1"/g) || []).length, 2, 'menu du compte et menu téléphone');
 assert.match(read('components/Providers.js'), /patchUser:/, 'mise à jour locale du compte');

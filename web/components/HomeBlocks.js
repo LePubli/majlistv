@@ -285,7 +285,7 @@ function CatRowsBlock({ p }) {
   const shown = [...fy, ...rows.filter((x) => x.key !== 'foryou').slice(0, Number(p.max) || 4)];
   return shown.map((r) => (
     <Row key={r.key} id={`hb-${r.key.replace(':', '-')}`} talks={r.talks} t={t} title={r.key === 'foryou' ? t('forYou') : r.title} badge={r.forYou ? `★ ${t('forYou')}` : null}
-      onSeeAll={r.categoryId && r.total > r.talks.length ? () => router.push(`/?cat=${r.categoryId}`) : undefined} />
+      onSeeAll={r.categoryId && r.total > r.talks.length ? () => router.push(`/catalogue?cat=${r.categoryId}`) : undefined} />
   ));
 }
 

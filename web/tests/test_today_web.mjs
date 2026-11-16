@@ -7,7 +7,7 @@ assert.match(c, /\/me\/today\?lang=/, 'données : GET /me/today'); assert.match(
 assert.match(c, /if \(!ready \|\| !user\)/, 'rien pour un visiteur');
 for (const k of ['quranJuz', 'quranStart', 'athkar', 'ramadan', 'cards', 'revision']) assert.match(c, new RegExp(`case '${k}'`), `libellé ${k}`);
 const home = read('app/page.js');
-assert.match(home, /\{browsing && <TodayBlock home \/>\}/, 'accueil d’origine (N3 : version accueil)'); assert.match(home, /<TodayBlock home \/><SeasonBands \/><HomeBlocks/, 'accueil en blocs');
+assert.match(home, /\n      <TodayBlock home \/>\n/, 'accueil d’origine (N3 : version accueil)'); assert.match(home, /<TodayBlock home \/><SeasonBands \/><HomeBlocks/, 'accueil en blocs');
 assert.match(read('app/(module-learning)/learning/page.js'), /<TabPanel id="today" current=\{tab\}>\n\s*<TodayBlock compact \/>/, 'tableau de bord d’Apprendre');
 const i18n = read('lib/i18n.js');
 for (const k of ['tdTitle', 'tdLeft', 'tdAllDone', 'tdQuranJuz', 'tdQuranStart', 'tdAthkar_morning', 'tdAthkar_evening', 'tdRamadan', 'tdCards', 'tdCardsDone', 'tdRevision', 'tdDone', 'tdTodo', 'tdAria']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);

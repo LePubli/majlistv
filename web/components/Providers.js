@@ -2,7 +2,7 @@
 // Contexte global : textes (i18n), session utilisateur (token en localStorage) et appels API.
 import { QuranPlayerProvider } from './QuranPlayer';
 import { AudynPlayerProvider } from './AudynPlayer';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrayerState } from '../lib/usePrayer';
 
@@ -26,7 +26,8 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   const [layoutPreview, setLayoutPreview] = useState(null); // aperçu de l'éditeur (Admin → Pages) : remplace les réglages publiés
   const [prefs, setPrefs] = useState(null); // préférences du compte : langue des sous-titres, thèmes
   const [formats, setFormats] = useState([]); // liste des formats (vidéo, cours…) : nom selon la langue, pour les badges et le catalogue
-  const [cats, setCats] = useState([]); // catégories principales (menu latéral et tiroir du téléphone)
+  const [allCats, setAllCats] = useState([]); // toutes les catégories, sous-catégories comprises (filtres du Catalogue, N4)
+  const cats = useMemo(() => allCats.filter((x) => x.parentId == null), [allCats]); // catégories principales (menu latéral et tiroir du téléphone)
   const [favs, setFavs] = useState(() => new Set()); // identifiants des vidéos en favoris (vignettes)
   const [later, setLater] = useState(() => new Set()); // amélioration 2.5 : vidéos gardées « pour plus tard »
   const [blockEdits, setBlockEdits] = useState({}); // mode édition sur la page : blocs modifiés (id → bloc), vus tout de suite par l'administrateur
@@ -62,7 +63,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   }, []);
 
   useEffect(() => { fetch('/api/formats').then((r) => (r.ok ? r.json() : [])).then((f) => Array.isArray(f) && setFormats(f)).catch(() => {}); }, []);
-  useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setCats(c.filter((x) => x.parentId == null))).catch(() => {}); }, []);
+  useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setAllCats(c)).catch(() => {}); }, []);
   // Nom d'un format (slug) dans la langue courante ; vide si inconnu.
   const formatName = (slug) => { const f = formats.find((x) => x.slug === slug); return f ? (f['name' + locale[0].toUpperCase() + locale.slice(1)] || f.nameFr) : ''; };
   // Favoris de l'utilisateur connecté (cœur sur les vignettes).
@@ -113,7 +114,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ formats, formatName, cats, features, feat: (id) => features[id] !== false,
+  return <Ctx.Provider value={{ formats, formatName, cats, allCats, features, feat: (id) => features[id] !== false,
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),
