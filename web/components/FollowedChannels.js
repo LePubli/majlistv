@@ -1,5 +1,5 @@
 'use client';
-// Bibliothèque → Chaînes suivies (étape C) : les chaînes dont on reçoit les nouveautés, avec « Ne plus suivre ».
+// Chaînes suivies (étape C ; depuis N5, en haut de Catalogue → Chaînes au lieu d'un onglet de la bibliothèque) : les chaînes dont on reçoit les nouveautés, avec « Ne plus suivre ».
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
@@ -21,5 +21,17 @@ export default function FollowedChannels() {
         </li>
       ))}
     </ul>
+  );
+}
+
+// Bloc « Chaînes suivies » en haut de /chaines : seulement pour un membre connecté, si le suivi est activé.
+export function FollowedSection() {
+  const { t, user, feat } = useApp();
+  if (!user || !feat('follow')) return null;
+  return (
+    <section id="suivies" className="ch-followed-sec" aria-labelledby="suivies-h">
+      <h2 id="suivies-h">{t('tbFollows')}</h2>
+      <FollowedChannels />
+    </section>
   );
 }

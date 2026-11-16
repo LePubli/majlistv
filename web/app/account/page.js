@@ -8,12 +8,18 @@ import EmailPrefs from '../../components/EmailPrefs';
 import MyGifts from '../../components/MyGifts';
 import MyPurchases from '../../components/MyPurchases'; // étape C-2
 import MyReferral from '../../components/MyReferral';
-import PrayerSettings from '../../components/PrayerSettings';
 import MyData from '../../components/MyData';
 import TwoFactor from '../../components/TwoFactor';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
-import { TabBar, TabPanel, useTab } from '../../components/Tabs';
+import { TabBar, TabPanel, useTab, useScrollToSec } from '../../components/Tabs';
+
+// Étape N5 (16/11) : 3 onglets — Profil (avec sécurité et mes données) · Abonnement et achats · Notifications.
+// Les réglages de la prière sont sur la page Prière. Anciens onglets → [nouvel onglet, section].
+export const LEGACY_TABS = {
+  emails: ['notifs'], security: ['profile', 'security'], data: ['profile', 'data'],
+  purchases: ['billing', 'purchases'], gifts: ['billing', 'gifts'], referral: ['billing', 'referral'],
+};
 import { LOCALES } from '../../lib/locales';
 
 const date = (d, locale) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
@@ -73,17 +79,14 @@ export default function Account() {
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const tabs = [
     { id: 'profile', label: t('tbProfile') },
-    { id: 'billing', label: t('tbSub') },
-    { id: 'emails', label: t('tbMails') },
-    { id: 'security', label: t('tbSecurity') },
-    { id: 'data', label: t('tbData') },
-    ...(feat('prayer') ? [{ id: 'prayer', label: t('pryTabLabel') }] : []),
-    ...(feat('sales') ? [{ id: 'purchases', label: t('mpTab') }] : []),
-    ...(feat('gifts') ? [{ id: 'gifts', label: t('tbGifts') }] : []),
-    ...(feat('referral') ? [{ id: 'referral', label: t('refTab') }] : []),
+    { id: 'billing', label: t('acTabBilling') },
+    { id: 'notifs', label: t('msNotif') },
   ];
   const qs = useSearchParams();
-  const [tab, go] = useTab(tabs, qs.get('billing') ? 'billing' : undefined); // retour du paiement : on arrive sur Abonnement
+  const [tab, go, sec] = useTab(tabs, qs.get('billing') ? 'billing' : undefined, LEGACY_TABS); // retour du paiement : on arrive sur Abonnement
+  useScrollToSec(sec, Boolean(user));
+  const wantPrayer = qs.get('tab') === 'prayer';
+  useEffect(() => { if (wantPrayer) router.replace('/priere?tab=settings'); }, [wantPrayer, router]);
   if (!user) return null;
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };
   return (
@@ -94,7 +97,7 @@ export default function Account() {
         <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} vertical />
         <div className="tabs-body">
           <TabPanel id="profile" current={tab}>
-            <section className="card-lite">
+            <section className="card-lite acct-sec" id="sec-profile">
               <p>{user.email}</p>
               <p>{t('role')} : <strong>{user.role}</strong></p>
               <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
@@ -102,19 +105,23 @@ export default function Account() {
                 <select value={locale} onChange={setLocale}>{Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               </label>
               <p className="meta small">{t('acLangHelp')}</p>
+              {feat('prayer') && <p className="acct-prayer-link"><Link className="link u" href="/priere?tab=settings">{t('acPrayerLink')}</Link></p>}
             </section>
+            <div className="acct-sec" id="sec-security"><TwoFactor /></div>
+            <div className="acct-sec" id="sec-data"><MyData /></div>
           </TabPanel>
-          <TabPanel id="billing" current={tab}><Suspense fallback={null}><Billing /></Suspense></TabPanel>
-          <TabPanel id="emails" current={tab}><EmailPrefs /></TabPanel>
-          <TabPanel id="security" current={tab}><TwoFactor /></TabPanel>
-          <TabPanel id="data" current={tab}><MyData /></TabPanel>
-          <TabPanel id="prayer" current={tab}><PrayerSettings /></TabPanel>
-          <TabPanel id="referral" current={tab}><MyReferral /></TabPanel>
-          <TabPanel id="purchases" current={tab}><h2>{t('mpTitle')}</h2><MyPurchases /></TabPanel>
-          <TabPanel id="gifts" current={tab}>
-            <MyGifts />
-            <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
+          <TabPanel id="billing" current={tab}>
+            <div className="acct-sec" id="sec-sub"><Suspense fallback={null}><Billing /></Suspense></div>
+            {feat('sales') && <section className="acct-sec" id="sec-purchases"><h2>{t('mpTitle')}</h2><MyPurchases /></section>}
+            {feat('gifts') && (
+              <div className="acct-sec" id="sec-gifts">
+                <MyGifts />
+                <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
+              </div>
+            )}
+            {feat('referral') && <div className="acct-sec" id="sec-referral"><MyReferral /></div>}
           </TabPanel>
+          <TabPanel id="notifs" current={tab}><EmailPrefs /></TabPanel>
         </div>
       </div>
     </main>

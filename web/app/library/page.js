@@ -1,17 +1,32 @@
 'use client';
-// Ma bibliothèque : "Continuer à regarder" et favoris.
+// Ma bibliothèque. Étape N5 (16/11) : 4 onglets — Reprendre · Ma liste (favoris + « à regarder plus tard » réunis) · Listes · Notes.
+// Les chaînes suivies sont dans Catalogue → Chaînes. Anciennes adresses : ?tab=favs et ?tab=later → Ma liste ; ?tab=follows → /chaines.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import TalkCard from '../../components/TalkCard';
 import EmptyState from '../../components/EmptyState';
 import SeriesCard from '../../components/SeriesCard';
 import { clock } from '../../lib/clock';
 import ListsPanel from '../../components/ListsPanel';
-import FollowedChannels from '../../components/FollowedChannels';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
+
+// Anciens onglets (avant N5) → nouvel onglet.
+export const LEGACY_TABS = { favs: ['list'], later: ['list'] };
+
+// « Ma liste » : vidéos gardées pour plus tard d'abord (avec leur avancement), puis les favoris, sans doublon.
+export function mergeMyList(lat, favs) {
+  const seen = new Set();
+  const out = [];
+  for (const [x, src] of [...(lat || []).map((v) => [v, 'later']), ...(favs || []).map((v) => [v, 'fav'])]) {
+    if (seen.has(x.id)) { const o = out.find((y) => y.id === x.id); o.srcs.push(src); continue; }
+    seen.add(x.id);
+    out.push({ ...x, srcs: [src] });
+  }
+  return out;
+}
 
 export default function Library() {
   const { user, ready, t, call, feat , later, toggleLater } = useApp();
@@ -23,15 +38,17 @@ export default function Library() {
   const [todo, setTodo] = useState([]);
   const [notes, setNotes] = useState([]);
 
+  const myList = feat('watchlater') || feat('favorites');
   const tabs = [
     { id: 'resume', label: t('tbResume') },
-    ...(feat('watchlater') ? [{ id: 'later', label: t('wlTab') }] : []),
-    ...(feat('favorites') ? [{ id: 'favs', label: t('tbFavs') }] : []),
+    ...(myList ? [{ id: 'list', label: t('lbMyList') }] : []),
     ...(feat('lists') ? [{ id: 'lists', label: t('tbLists') }] : []),
-    ...(feat('follow') && feat('channels') ? [{ id: 'follows', label: t('tbFollows') }] : []),
     ...(feat('notes') ? [{ id: 'notes', label: t('tbNotes') }] : []),
   ];
-  const [tab, go] = useTab(tabs);
+  const [tab, go] = useTab(tabs, undefined, LEGACY_TABS);
+  const params = useSearchParams();
+  const wantFollows = params.get('tab') === 'follows';
+  useEffect(() => { if (wantFollows) router.replace('/chaines#suivies'); }, [wantFollows, router]);
   useEffect(() => { if (ready && !user) router.replace('/login'); }, [ready, user, router]);
   const load = useCallback(() => {
     call('/me/continue').then((r) => setCont(r.ok ? r.data : []));
@@ -47,6 +64,13 @@ export default function Library() {
   const dropProgress = async (id) => { setCont((l) => l.filter((x) => x.id !== id)); await call(`/me/progress/${id}`, { method: 'DELETE' }); };
   const dropLater = async (id) => { setLat((l) => l.filter((x) => x.id !== id)); if (later?.has(id)) await toggleLater(id); else await call(`/me/watchlater/${id}`, { method: 'DELETE' }); };
   const dropFav = async (id) => { setFavs((l) => l.filter((x) => x.id !== id)); await call(`/me/favorites/${id}`, { method: 'DELETE' }); };
+  // Retirer de « Ma liste » : on retire des deux (favoris et plus tard) là où la vidéo se trouve.
+  const dropMine = async (x) => {
+    if (x.srcs.includes('later')) await dropLater(x.id);
+    if (x.srcs.includes('fav')) await dropFav(x.id);
+  };
+  const mine2 = mergeMyList(feat('watchlater') ? lat : [], feat('favorites') ? favs : []);
+  const listReady = (!feat('watchlater') || lat) && (!feat('favorites') || favs);
 
   const dropNote = async (gid, nid) => {
     setNotes((l) => l.map((g) => (g.talkId === gid ? { ...g, notes: g.notes.filter((n) => n.id !== nid) } : g)).filter((g) => g.notes.length));
@@ -82,24 +106,15 @@ export default function Library() {
         )}
       </TabPanel>
 
-      <TabPanel id="later" current={tab}>
-        <p className="meta">{t('wlIntro')}</p>
-        {lat && lat.length === 0 && <EmptyState text={t('wlEmpty')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />}
+      <TabPanel id="list" current={tab}>
+        <p className="meta">{t('lbMyListIntro')}</p>
+        {listReady && mine2.length === 0 && <EmptyState text={t('lbMyListEmpty')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />}
         <div className="grid">
-          {(lat || []).map((x) => <TalkCard key={x.id} talk={x} t={t} progress={x.positionMs && x.durationSeconds ? x.positionMs / (x.durationSeconds * 1000) : 0} onRemove={() => dropLater(x.id)} removeLabel={t('wlRemove')} />)}
-        </div>
-      </TabPanel>
-
-      <TabPanel id="favs" current={tab}>
-        {favs && favs.length === 0 && <p className="meta">{t('noFavorites')} <Link href="/">{t('browseCatalog')}</Link></p>}
-        <div className="grid">
-          {(favs || []).map((x) => <TalkCard key={x.id} talk={x} t={t} onRemove={() => dropFav(x.id)} removeLabel={t('removeFav')} />)}
+          {mine2.map((x) => <TalkCard key={x.id} talk={x} t={t} progress={x.positionMs && x.durationSeconds ? x.positionMs / (x.durationSeconds * 1000) : 0} onRemove={() => dropMine(x)} removeLabel={t('lbMyListRemove')} />)}
         </div>
       </TabPanel>
 
       <TabPanel id="lists" current={tab}><ListsPanel /></TabPanel>
-
-      <TabPanel id="follows" current={tab}><FollowedChannels /></TabPanel>
 
       <TabPanel id="notes" current={tab}>
         {notes.length === 0 && <p className="meta">{t('ntLibEmpty')}</p>}

@@ -39,8 +39,10 @@ export const MENUS = {
       // Étape N2 (15/11) : les trois onglets d'Apprendre ; engagements et bilan sont des sections de « Mes progrès ».
       space: [['learning', 'Aujourd’hui'], ['quiz', 'Réviser'], ['progress', 'Mes progrès'], ['practice', 'Mes engagements', true], ['bilan', 'Mon bilan', true], ['quranlearn', 'Coran', true]],
       pratique: [['prayer', 'Prière'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['ramadan', 'Ramadan']],
-      library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
-      account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],
+      // Étape N5 (16/11) : bibliothèque = Reprendre · Ma liste · Listes · Notes (chaînes suivies → Catalogue → Chaînes) ;
+      // compte = Profil · Abonnement et achats · Notifications.
+      library: [['mylist', 'Ma liste'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies', true], ['favs', 'Favoris (= Ma liste)', true]],
+      account: [['account', 'Profil'], ['billing', 'Abonnement et achats'], ['mails', 'Notifications'], ['gifts', 'Cartes cadeaux', true]],
       manage: [['studio', 'Studio'], ['admin', 'Administration']],
     },
   },

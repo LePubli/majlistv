@@ -72,7 +72,7 @@ export function compose(m, base) {
   if (cat && m.user_id && base.webUrl) {
     const token = unsubToken(m.user_id, cat);
     vars.unsubUrl = `${base.webUrl}/unsubscribe/${token}`;
-    vars.prefsUrl = `${base.webUrl}/account#emails`;
+    vars.prefsUrl = `${base.webUrl}/account?tab=notifs`;
     headers = { 'List-Unsubscribe': `<${base.webUrl}/api/unsubscribe/${token}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' };
   }
   return { ...renderEmail(m.kind, m.locale, vars), headers };

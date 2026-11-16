@@ -64,7 +64,7 @@ export async function rewardOnPaidInvoice(client, inv) {
     const r = (await extend(client, ref.referrer_id, months)).rows[0];
     await client.query('UPDATE referrals SET referrer_rewarded = true WHERE id = $1', [ref.id]);
     await enqueueForUser(client, ref.referrer_id, 'referral_reward_referrer', {
-      months: monthsLabel(months, r.locale), friend: e.name || '', date: fmtDate(r.premium_until, r.locale), path: '/account?tab=referral',
+      months: monthsLabel(months, r.locale), friend: e.name || '', date: fmtDate(r.premium_until, r.locale), path: '/account?tab=billing&s=referral',
     }, `ref-referrer:${ref.id}`);
   }
   return true;

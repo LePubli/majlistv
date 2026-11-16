@@ -109,7 +109,7 @@ ok((await wk(h4)).length === 0, 'réglage désactivé : pas d\'envoi');
 const row = (await pool.query("SELECT user_id, kind, locale, vars FROM email_outbox WHERE user_id=$1 AND kind='speaker_new'", [en])).rows[0];
 const mail = compose(row, { app: 'Mejliss TV', webUrl: 'https://tv.example' });
 ok(/^<https:\/\/tv\.example\/api\/unsubscribe\/[0-9a-f-]{36}\.speakers\.[\w-]{32}>$/.test(mail.headers['List-Unsubscribe']) && mail.headers['List-Unsubscribe-Post'] === 'List-Unsubscribe=One-Click', 'en-têtes List-Unsubscribe (RFC 8058)');
-ok(mail.html.includes('Unsubscribe in one click') && mail.html.includes('/account#emails') && mail.text.includes('/unsubscribe/'), 'anglais : lien de désinscription et gestion des e-mails');
+ok(mail.html.includes('Unsubscribe in one click') && mail.html.includes('/account?tab=notifs') && mail.text.includes('/unsubscribe/'), 'anglais : lien de désinscription et gestion des e-mails');
 const tr = compose({ ...row, kind: 'welcome', vars: { name: 'X' } }, { app: 'Mejliss TV', webUrl: 'https://tv.example' });
 ok(!tr.headers && !tr.html.includes('unsubscribe'), 'e-mails de compte (paiement, bienvenue…) : pas de lien de désinscription');
 const xss = compose({ ...row, vars: { titles: '• <img src=x onerror=alert(1)> — <b>Z</b>' } }, { app: 'Mejliss TV', webUrl: 'https://tv.example' });

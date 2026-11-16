@@ -73,7 +73,7 @@ function HomeInner() {
       {/* Étape N3 (15/11) : « Reprendre », puis les rangées. Les révisions et quiz à passer sont dans la carte « À faire aujourd'hui » ;
           les formats sont des onglets du Catalogue. */}
       {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
-      {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=later">{t('library')}</Link></>} talks={later} t={t} />}
+      {later.length > 0 && <Row id="row-later" title={<>{t('wlRow')} · <Link href="/library?tab=list">{t('library')}</Link></>} talks={later} t={t} />}
       <EventsBand />
       {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
       {rows.map((r, i) => (

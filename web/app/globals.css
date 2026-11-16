@@ -4060,3 +4060,12 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .cg-chips a:hover, .cg-chips a:focus-visible { border-color: var(--accent); }
 .cg-chips a.on { background: var(--gold-soft); border-color: var(--accent); font-weight: 700; }
 .cg-subs a { font-size: 12.5px; min-height: 30px; }
+
+/* Étape N5 (16/11) : chaînes suivies en haut de Catalogue → Chaînes ; sections regroupées dans Mon compte */
+.ch-followed-sec { scroll-margin-top: 90px; margin: 4px 0 26px; padding-bottom: 20px; border-bottom: 1px solid var(--line-soft); }
+.ch-followed-sec h2 { margin-top: 8px; }
+.acct-sec { scroll-margin-top: 90px; }
+.acct-sec + .acct-sec { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.acct-sec .billing:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.acct-prayer-link { margin-top: 14px; }
+.acct-sec:empty { display: none; } .acct-sec:empty + .acct-sec { margin-top: 0; padding-top: 0; border-top: 0; }

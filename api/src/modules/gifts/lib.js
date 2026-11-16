@@ -41,7 +41,7 @@ export async function applyGiftPaid(client, session) {
   const loc = buyer?.locale || 'fr';
   if (buyer) {
     await enqueueForUser(client, g.purchaser_id, 'gift_purchased',
-      { months: monthsLabel(g.months, loc), code: g.code, recipient: g.recipient_email || '', path: '/account#gifts' }, `gift-buy:${g.id}`);
+      { months: monthsLabel(g.months, loc), code: g.code, recipient: g.recipient_email || '', path: '/account?tab=billing&s=gifts' }, `gift-buy:${g.id}`);
   }
   if (g.recipient_email) {
     await enqueueEmail(client, { to: g.recipient_email, locale: loc, kind: 'gift_received',

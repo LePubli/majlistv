@@ -1,5 +1,5 @@
 'use client';
-// Réglages de la prière (étape 23a) : utilisés par la page /priere et par l'onglet « Prière » de Mon compte.
+// Réglages de la prière (étape 23a) : utilisés par la page /priere (onglet Réglages ; depuis N5, plus dans Mon compte).
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { searchCities } from '../lib/prayerCities';

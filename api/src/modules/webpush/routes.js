@@ -55,7 +55,7 @@ export default async function webPushRoutes(app) {
   });
 
   app.post('/me/web-push/test', { preHandler: app.authenticate, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const sent = await webPushToUser(req.user.sub, (loc) => TEST_TEXT[loc] || TEST_TEXT.fr, '/account?tab=emails', 'test', req.log);
+    const sent = await webPushToUser(req.user.sub, (loc) => TEST_TEXT[loc] || TEST_TEXT.fr, '/account?tab=notifs', 'test', req.log);
     if (!sent) return reply.code(409).send({ error: "Aucune notification n'a pu être envoyée : réactivez-les sur cet appareil", code: 'webpush_none' });
     return { sent };
   });

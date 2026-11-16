@@ -34,7 +34,7 @@ export default function Unsubscribe() {
       )}
       {info && !done && !info.subscribed && <p className="soon" role="status">{t('unAlready').replace('{what}', what)}</p>}
       {done && <p className="soon" role="status">{t('unDone')}</p>}
-      <p className="meta small"><Link className="link u" href="/account#emails">{t('unManage')}</Link> · <Link className="link u" href="/">{t('unHome')}</Link></p>
+      <p className="meta small"><Link className="link u" href="/account?tab=notifs">{t('unManage')}</Link> · <Link className="link u" href="/">{t('unHome')}</Link></p>
     </main>
   );
 }

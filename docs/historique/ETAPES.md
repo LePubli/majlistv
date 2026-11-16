@@ -9254,3 +9254,26 @@ bash /root/verify-deploy.sh
 **Debug.** La ligne des formats n'apparaît pas : un seul format a des contenus publiés (normal). Un thème manque : il n'existe que comme sous-catégorie (il apparaît sous son thème principal).
 
 **Testé.** Tous les tests du site (dont les fonctions d'adresse et de thème principal) ; navigateur réel à 1440 et 390 px, français et arabe : lignes formats / thèmes / sous-thèmes, combinaison format + thème, puces actives, ancienne adresse /?cat= redirigée, aucun débordement, aucune erreur. Non testé : vrai téléphone, un catalogue réel avec beaucoup de thèmes.
+
+## N5 — Bibliothèque en 4 onglets, Mon compte en 3 (16/11)
+
+**Pourquoi.** Cinquième étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md` (décision d'Epok du 15/11 : réunir Favoris et « À regarder plus tard » en « Ma liste »). La bibliothèque avait 6 onglets, Mon compte jusqu'à 9.
+
+**Ce qui change (site).**
+- **Bibliothèque** : Reprendre · **Ma liste** · Mes listes · Mes notes.
+  - « Ma liste » montre ensemble les vidéos gardées pour plus tard (d'abord, avec leur avancement) et les favoris, sans doublon. « Retirer de ma liste » enlève la vidéo des deux. Une vidéo « plus tard » regardée jusqu'au bout sort toujours seule.
+  - Les **chaînes suivies** sont en haut de **Catalogue → Chaînes** (bloc visible seulement pour un membre connecté, si le suivi est activé).
+- **Mon compte** : **Profil** (profil, langue, lien « Réglages de la prière », double authentification, mes données) · **Abonnement et achats** (abonnement, mes achats, cartes cadeaux, parrainage) · **Notifications**.
+  - Les réglages de la prière ne sont plus dans le compte : ils sont sur la page **Prière → Réglages** (/priere?tab=settings), qui existait déjà.
+- **Anciennes adresses** reprises : /library?tab=favs et ?tab=later → Ma liste ; ?tab=follows → /chaines#suivies ; /account?tab=emails → Notifications ; ?tab=security et ?tab=data → Profil (avec défilement jusqu'à la section) ; ?tab=purchases, gifts, referral → Abonnement et achats (section) ; ?tab=prayer → /priere?tab=settings ; /account#emails et #gifts (liens des anciens e-mails) → le bon onglet.
+- **Menu latéral** (d'origine) : Ma bibliothèque = Ma liste · Mes listes · Mes notes ; Mon compte = Profil · Abonnement et achats · Notifications. Les entrées « Favoris », « Chaînes suivies » et « Cartes cadeaux » restent proposées (masquées) dans Admin → Menus, et un menu personnalisé existant qui les contient continue de fonctionner.
+- **E-mails et notifications** : liens mis à jour (gestion des e-mails → /account?tab=notifs ; cartes cadeaux et parrainage → Abonnement et achats).
+- **Inchangé** : le cœur et le bouton « Plus tard » sur les vignettes et la page vidéo (ils alimentent tous les deux « Ma liste » ; un seul bouton viendra avec N6). L'application : N7.
+
+**Fichiers.** `web/components/Tabs.js` (anciens onglets, adresse « # », section à montrer), `web/app/library/page.js` (fonction `mergeMyList`), `web/app/account/page.js`, `web/components/FollowedChannels.js` (`FollowedSection`), `web/app/(module-channels)/chaines/page.js`, `web/components/MemberShell.js`, `web/lib/navcfg.js` = `api/src/navcfg.js`, `web/app/page.js`, `web/app/unsubscribe/[token]/page.js`, `web/lib/i18n.js` (6 textes fr / en / ar), `web/app/globals.css` ; API : `api/src/mailer.js`, `api/src/modules/{gifts/lib.js,gifts/routes.js,referral/lib.js,webpush/routes.js}` ; tests `web/tests/test_n5_web.mjs` (nouveau), `test_sales_web.mjs`, `test_watchlater_web.mjs`, `api/tests/test_notify_mail.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-api** (menus et liens des e-mails), puis **majlistv-web**. Pas de migration. Puis les commandes habituelles du VPS.
+
+**Debug.** « Ma liste » n'apparaît pas : Admin → Fonctions → « Favoris » et « À regarder plus tard » sont tous les deux éteints. Le bloc « Chaînes suivies » n'apparaît pas sur /chaines : pas connecté, ou fonction « Suivre » éteinte. Le menu latéral montre encore « Favoris » : un menu personnalisé est affecté dans Admin → Menus (le lien mène quand même à Ma liste).
+
+**Testé.** Tous les tests du site (dont la vraie fonction `mergeMyList` et la table des anciens onglets) ; navigateur réel à 1440 et 390 px, français et arabe : 4 et 3 onglets, Ma liste avec favoris + plus tard sans doublon, retrait d'une vidéo présente dans les deux listes (vérifié dans la base), toutes les anciennes adresses ci-dessus, aucun débordement, aucune erreur. Non testé : vrai téléphone, un compte avec beaucoup de favoris réels, l'envoi réel d'un e-mail avec le nouveau lien.

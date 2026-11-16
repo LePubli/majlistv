@@ -108,14 +108,18 @@ export default function MemberShell({ children }) {
     practice: { key: 'practice', href: '/learning?tab=progress&s=commit', label: t('msPractice'), icon: ICONS.note, on: learn && feat('practice') },
     bilan: { key: 'bilan', href: '/learning?tab=progress&s=bilan', label: t('msBilan'), icon: ICONS.tag, on: learn && feat('selfcheck') },
     library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: feat('favorites') || feat('lists') },
-    favs: { key: 'favs', href: '/library?tab=favs', label: t('tbFavs'), icon: ICONS.heart, on: feat('favorites') },
+    // Étape N5 (16/11) : favoris et « plus tard » réunis dans « Ma liste » ; « favs » reste pour les menus personnalisés existants.
+    mylist: { key: 'mylist', href: '/library?tab=list', label: t('lbMyList'), icon: ICONS.heart, on: feat('favorites') || feat('watchlater') },
+    favs: { key: 'favs', href: '/library?tab=list', label: t('lbMyList'), icon: ICONS.heart, on: feat('favorites') || feat('watchlater') },
     lists: { key: 'lists', href: '/library?tab=lists', label: t('tbLists'), icon: ICONS.lib, on: feat('lists') },
     notes: { key: 'notes', href: '/library?tab=notes', label: t('tbNotes'), icon: ICONS.note, on: feat('notes') },
-    follows: { key: 'follows', href: '/library?tab=follows', label: t('tbFollows'), icon: ICONS.people, on: feat('follow') && feat('channels') },
+    follows: { key: 'follows', href: '/chaines#suivies', label: t('tbFollows'), icon: ICONS.people, on: feat('follow') && feat('channels') },
     kids: { key: 'kids', href: '/kids', label: t('kdNav'), icon: ICONS.kids, on: feat('kids') },
-    account: { key: 'account', href: '/account', label: t('msProfile'), icon: ICONS.user, on: true },
-    gifts: { key: 'gifts', href: '/account?tab=gifts', label: t('tbGifts'), icon: ICONS.gift, on: feat('gifts') },
-    mails: { key: 'mails', href: '/account?tab=emails', label: t('msNotif'), icon: ICONS.bell, on: true },
+    // Étape N5 (16/11) : Mon compte en 3 onglets (Profil · Abonnement et achats · Notifications).
+    account: { key: 'account', href: '/account', label: t('tbProfile'), icon: ICONS.user, on: true },
+    billing: { key: 'billing', href: '/account?tab=billing', label: t('acTabBilling'), icon: ICONS.gift, on: true },
+    gifts: { key: 'gifts', href: '/account?tab=billing&s=gifts', label: t('tbGifts'), icon: ICONS.gift, on: feat('gifts') },
+    mails: { key: 'mails', href: '/account?tab=notifs', label: t('msNotif'), icon: ICONS.bell, on: true },
     studio: { key: 'studio', href: modOnly ? '/studio/moderation' : '/studio', label: modOnly ? t('modNav') : t('studioNav'), icon: ICONS.studio, on: manager },
     admin: { key: 'admin', href: '/admin', label: t('adminNav'), icon: ICONS.admin, on: user?.role === 'admin' },
   };

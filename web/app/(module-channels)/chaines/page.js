@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { apiGet, seoSite } from '../../../lib/seo';
 import ChannelAvatar from '../../../components/ChannelAvatar';
+import { FollowedSection } from '../../../components/FollowedChannels';
 
 export async function generateMetadata() {
   const site = await seoSite();
@@ -16,6 +17,7 @@ export default async function Page() {
   return (
     <main className="spk-page">
       <h1>Chaînes</h1>
+      <FollowedSection />
       {list.length === 0 && <p className="soon">Aucune chaîne pour l’instant.</p>}
       <ul className="spk-list">
         {list.map((s) => (

@@ -133,7 +133,7 @@ export default async function giftsRoutes(app) {
       const sub = await client.query("SELECT 1 FROM subscriptions WHERE user_id = $1 AND status IN ('trialing', 'active', 'past_due') LIMIT 1", [req.user.sub]);
       await enqueueForUser(client, req.user.sub, 'gift_activated', { date: fmtDate(u.premium_until, u.locale), path: '/' }, `gift-act:${g.id}`);
       if (g.purchaser_id && g.purchaser_id !== req.user.sub) {
-        await enqueueForUser(client, g.purchaser_id, 'gift_redeemed', { redeemer: u.name || '', months: monthsLabel(g.months, u.locale), path: '/account#gifts' }, `gift-red:${g.id}`);
+        await enqueueForUser(client, g.purchaser_id, 'gift_redeemed', { redeemer: u.name || '', months: monthsLabel(g.months, u.locale), path: '/account?tab=billing&s=gifts' }, `gift-red:${g.id}`);
       }
       await client.query('COMMIT');
       return { months: g.months, premiumUntil: u.premium_until, hasSubscription: sub.rowCount > 0 };
