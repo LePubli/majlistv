@@ -36,7 +36,8 @@ export const MENUS = {
     groups: [['catalogue', 'Catalogue'], ['space', 'Apprendre'], ['pratique', 'Pratique'], ['library', 'Ma bibliothèque'], ['account', 'Mon compte'], ['manage', 'Gestion']],
     builtin: {
       catalogue: [['catalogue', 'Vidéos'], ['series', 'Séries'], ['shorts', 'Shorts'], ['collections', 'Collections'], ['channels', 'Chaînes'], ['audyn', 'Audio'], ['books', 'Ouvrages'], ['livetv', 'TV en direct'], ['events', 'Événements en direct'], ['home', 'Accueil', true]],
-      space: [['learning', 'Aujourd’hui'], ['quiz', 'Quiz et révision'], ['practice', 'Mes engagements'], ['bilan', 'Mon bilan'], ['quranlearn', 'Coran', true]],
+      // Étape N2 (15/11) : les trois onglets d'Apprendre ; engagements et bilan sont des sections de « Mes progrès ».
+      space: [['learning', 'Aujourd’hui'], ['quiz', 'Réviser'], ['progress', 'Mes progrès'], ['practice', 'Mes engagements', true], ['bilan', 'Mon bilan', true], ['quranlearn', 'Coran', true]],
       pratique: [['prayer', 'Prière'], ['quran', 'Coran'], ['athkar', 'Adhkar'], ['ramadan', 'Ramadan']],
       library: [['favs', 'Favoris'], ['lists', 'Mes listes'], ['notes', 'Mes notes'], ['follows', 'Chaînes suivies']],
       account: [['account', 'Profil et abonnement'], ['gifts', 'Cartes cadeaux'], ['mails', 'Notifications']],

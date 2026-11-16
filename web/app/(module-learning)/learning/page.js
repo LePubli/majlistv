@@ -1,5 +1,9 @@
 'use client';
-// Mon apprentissage (palier « Apprentissage ») : score, courbe, série de jours, progression par série et attestations de suivi.
+// Apprendre (palier « Apprentissage »). Étape N2 (15/11) : trois onglets sans sous-onglets.
+//   Aujourd'hui  : bloc « Aujourd'hui », reprise de la dernière vidéo, quiz / engagement / série du moment, planning (« Voir ma semaine »).
+//   Réviser      : quiz à passer, révisions du jour, cartes mémoire.
+//   Mes progrès  : séries et attestations, engagements, bilan, statistiques (série de jours, score, courbe, résultats récents).
+// Les anciennes adresses (?tab=dash|plan|path|att|commit|bilan|cards) mènent au nouvel onglet et à la bonne section (?s=).
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,6 +22,11 @@ import InviteCard from '../../../components/InviteCard';
 import StreakCard from '../../../components/StreakCard';
 import PlanningClient from '../../../components/PlanningClient';
 
+// Anciens onglets (avant N2) → [nouvel onglet, section].
+export const LEGACY_TABS = {
+  dash: ['today'], plan: ['today', 'week'], path: ['progress', 'series'], att: ['progress', 'series'],
+  commit: ['progress', 'commit'], bilan: ['progress', 'bilan'], cards: ['rev', 'cards'],
+};
 
 // Courbe d'apprentissage : tracé simple en SVG (aucune bibliothèque).
 function Curve({ points, locale, t }) {
@@ -63,7 +72,6 @@ export default function Learning() {
   const [rv, setRv] = useState(null); // révisions du jour, rappel, e-mail
   const [cont, setCont] = useState([]); // vidéos à reprendre
   const [todo, setTodo] = useState([]); // quiz à passer
-  const [goals, setGoals] = useState(null); // objectifs du bilan (privés)
   const [cardsN, setCardsN] = useState(0); // cartes mémoire à faire aujourd'hui (à échéance + nouvelles)
   const [pz, setPz] = useState(null); // mes engagements : { items, counts } (synthèse du tableau de bord)
   const [next, setNext] = useState([]); // « Pour continuer à apprendre » (ou ce qu'on peut faire dès maintenant)
@@ -75,37 +83,40 @@ export default function Learning() {
   useEffect(() => { if (user) loadRv(); }, [user, loadRv]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok ? r.data : [])); }, [user, call]);
   useEffect(() => { if (user && feat('quiz')) call('/me/quiz/todo').then((r) => setTodo(r.ok && Array.isArray(r.data) ? r.data : (r.data?.items || []))); }, [user, call, feat]);
-  useEffect(() => { if (user && feat('selfcheck')) call('/me/selfcheck').then((r) => setGoals(r.ok ? r.data.goals || [] : null)); }, [user, call, feat]);
   useEffect(() => { if (user && d && feat('practice')) call('/me/practice').then((r) => setPz(r.ok ? r.data : null)); }, [user, d, call, feat]);
   useEffect(() => { if (user) call('/talks?limit=12', {}, null).then((r) => setNext(r.ok ? r.data : [])); }, [user, call]);
   useEffect(() => { if (user && feat('memorycards')) call('/me/cards').then((r) => { if (r.ok) setCardsN(r.data.counts.due + r.data.counts.newAvailable); }); }, [user, call, feat]);
   const revN = rv ? rv.items.length + (rv.remaining || 0) : 0;
+  const quizN = feat('quiz') ? todo.length : 0;
+  const toReview = revN + (feat('memorycards') ? cardsN : 0) + quizN;
+  const hasRev = feat('revision') || feat('memorycards') || feat('quiz');
+  // Étape N2 (15/11) : trois onglets, sans sous-onglets — Aujourd'hui (faire), Réviser (retenir), Mes progrès (où j'en suis).
   const tabs = [
-    { id: 'dash', label: t('tbDash') },
-    { id: 'path', label: t('tbPath') },
-    ...(feat('revision') ? [{ id: 'rev', label: <>{t('tbQuizRev')}{revN > 0 && <span className="lg-badge" aria-label={String(revN)}>{revN}</span>}</>, plain: t('tbQuizRev') }] : []),
-    { id: 'plan', label: t('pnTab') },
-    ...(feat('memorycards') ? [{ id: 'cards', label: <>{t('mcTab')}{cardsN > 0 && <span className="lg-badge" aria-label={String(cardsN)}>{cardsN}</span>}</>, plain: t('mcTab') }] : []),
-    ...(feat('practice') ? [{ id: 'commit', label: t('tbCommit') }] : []),
-    ...(feat('selfcheck') ? [{ id: 'bilan', label: t('msBilan') }] : []),
-    { id: 'att', label: t('tbAtt') },
+    { id: 'today', label: t('lgGToday'), intro: 'lgTTodayTx' },
+    ...(hasRev ? [{ id: 'rev', label: <>{t('lgTRev')}{toReview > 0 && <span className="lg-badge" aria-label={String(toReview)}>{toReview}</span>}</>, plain: t('lgTRev'), intro: 'lgTRevTx' }] : []),
+    { id: 'progress', label: t('lgGProgress'), intro: 'lgTProgTx' },
   ];
   const [tab, go] = useTab(tabs);
-  // Navigation de novembre 2026 : le Coran et les adhkar sont dans « Pratique ». Les anciennes adresses (liens enregistrés,
-  // e-mails, notifications) y mènent tout seul.
-  const oldTab = useSearchParams().get('tab');
-  useEffect(() => { if (oldTab === 'quran') router.replace('/coran'); else if (oldTab === 'athkar') router.replace('/adhkar'); }, [oldTab, router]);
-  // Étape B6 — des onglets regroupés (Aujourd'hui, Mon planning, Vidéos, Mes progrès) au lieu de 9 : chaque groupe réunit des sections (sous-onglets). Les anciennes adresses (?tab=athkar,
-  // ?tab=cards, ?tab=rev…) restent valables : l'onglet du groupe se déduit de la section ouverte.
-  const GROUPS = [
-    { id: 'g_today', label: t('lgGToday'), intro: 'lgGTodayTx', subs: ['dash'] },
-    { id: 'g_plan', label: t('pnTab'), intro: 'lgGPlanTx', subs: ['plan'] },
-    { id: 'g_talks', label: <>{t('lgGTalks')}{revN + cardsN > 0 && <span className="lg-badge" aria-label={String(revN + cardsN)}>{revN + cardsN}</span>}</>, plain: t('lgGTalks'), intro: 'lgGTalksTx', subs: ['path', 'rev', 'cards'] },
-    { id: 'g_progress', label: t('lgGProgress'), intro: 'lgGProgressTx', subs: ['commit', 'bilan', 'att'] },
-  ].map((g) => ({ ...g, subs: g.subs.filter((id) => tabs.some((x) => x.id === id)) })).filter((g) => g.subs.length);
-  const group = GROUPS.find((g) => g.subs.includes(tab)) || GROUPS[0];
-  const subTabs = group.subs.map((id) => tabs.find((x) => x.id === id));
-  const goGroup = (gid) => { const g = GROUPS.find((x) => x.id === gid); if (g) go(g.subs[0]); };
+  const params = useSearchParams();
+  const sec = params.get('s');
+  const [week, setWeek] = useState(false);
+  // Anciennes adresses (liens enregistrés, e-mails, notifications, menus déjà affectés) : elles mènent au nouvel onglet et à la
+  // bonne section. Le Coran et les adhkar sont dans « Pratique » depuis la navigation de novembre 2026.
+  const oldTab = params.get('tab');
+  useEffect(() => {
+    const to = LEGACY_TABS[oldTab];
+    if (oldTab === 'quran') router.replace('/coran');
+    else if (oldTab === 'athkar') router.replace('/adhkar');
+    else if (to) router.replace(`/learning?tab=${to[0]}${to[1] ? `&s=${to[1]}` : ''}`, { scroll: false });
+  }, [oldTab, router]);
+  useEffect(() => { if (sec === 'week') setWeek(true); }, [sec]);
+  // Section demandée (?s=) : on y descend une fois la page chargée.
+  useEffect(() => {
+    if (!sec || d == null) return undefined;
+    const h = setTimeout(() => document.getElementById(`lg-${sec}`)?.scrollIntoView({ block: 'start' }), 300);
+    return () => clearTimeout(h);
+  }, [sec, tab, d]);
+  const goSec = (id, s) => router.replace(`/learning?tab=${id}${s ? `&s=${s}` : ''}`, { scroll: false });
   const setEmail = async (on) => { setRv((v) => ({ ...v, dailyEmail: on })); await call('/me/learning/prefs', { method: 'PUT', body: JSON.stringify({ dailyEmail: on }) }); };
   if (ready && !user) {
     return (
@@ -166,13 +177,10 @@ export default function Learning() {
   // Parcours en cours : la série commencée la plus avancée qui n'est pas terminée (sinon la dernière terminée).
   const started = d.series.filter((x) => x.passed > 0);
   const cur = started.filter((x) => !x.complete).sort((a, b) => b.passed / b.total - a.passed / a.total)[0] || started[0] || null;
-  const since = (iso) => {
-    const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
-    return days <= 0 ? t('lgToday') : new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-days, 'day');
-  };
-  const seriesBlock = (mode) => (
+  // Séries suivies et attestations (une seule liste depuis N2 : progression, puis attestation une fois la série terminée).
+  const seriesBlock = () => (
     <section className="lr-block">
-      <h2>{mode === 'att' ? t('tbAtt') : t('lrSeries')}</h2>
+      <h2>{t('lgSeriesAtt')}</h2>
       {msg && <p className="error" role="alert">{msg}</p>}
       {d.series.length === 0 && <EmptyState compact text={t('lrNoSeries')} actions={[feat('series') && { href: '/series', label: t('esSeeSeries') }]} />}
       <ul className="lr-series">
@@ -183,47 +191,45 @@ export default function Learning() {
               <span className="meta small">{t('lrQuizOf').replace('{a}', s.passed).replace('{b}', s.total)}</span>
             </div>
             <div className="qp-bar" role="progressbar" aria-valuemin={0} aria-valuemax={s.total} aria-valuenow={s.passed}><span style={{ width: `${(s.passed / s.total) * 100}%` }} /></div>
-            {mode === 'att' && (
-              <div className="lr-series-act">
-                {s.attestation ? (
-                  <>
-                    <Link className="btn ghost" href={`/attestation/${s.attestation.code}`}>{t('lrAttView')}</Link>
-                    <button type="button" className="link u small" onClick={() => retire(s)}>{t('lrAttDel')}</button>
-                  </>
-                ) : s.complete ? (
-                  <button type="button" className="btn" disabled={busy === s.id} onClick={() => attest(s)}>{t('lrAttGet')}</button>
-                ) : <span className="meta small">{t('lrAttLeft').replace('{n}', s.total - s.passed)}</span>}
-              </div>
-            )}
+            <div className="lr-series-act">
+              {s.attestation ? (
+                <>
+                  <Link className="btn ghost" href={`/attestation/${s.attestation.code}`}>{t('lrAttView')}</Link>
+                  <button type="button" className="link u small" onClick={() => retire(s)}>{t('lrAttDel')}</button>
+                </>
+              ) : s.complete ? (
+                <button type="button" className="btn" disabled={busy === s.id} onClick={() => attest(s)}>{t('lrAttGet')}</button>
+              ) : <span className="meta small">{t('lrAttLeft').replace('{n}', s.total - s.passed)}</span>}
+            </div>
           </li>
         ))}
       </ul>
-      {mode === 'att' && <p className="meta small">{t('lrAttNote')}</p>}
+      <p className="meta small">{t('lrAttNote')}</p>
     </section>
   );
 
+  const tabNow = tabs.find((x) => x.id === tab) || tabs[0];
+  // Engagement à mettre en avant : celui en cours, sinon le prochain à faire.
+  const commitNow = feat('practice') && pz ? (pz.items.find((x) => x.status === 'doing') || pz.items.find((x) => x.status === 'todo') || null) : null;
+  // Série du moment : à continuer, ou terminée (attestation à demander, série suivante) tant que l'attestation n'est pas prise.
+  const pathNow = cur && (!cur.complete || !cur.attestation) ? cur : null;
+  const sideN = (quizN > 0 ? 1 : 0) + (commitNow ? 1 : 0) + (pathNow ? 1 : 0);
+  const nextList = next.filter((x) => !cont.some((c) => c.id === x.id)).slice(0, 8);
+
   return (
     <main className="page learning">
-      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'dash' ? [[null, group.plain || group.label], ...(subTabs.length > 1 ? [[null, tabs.find((x) => x.id === tab).plain || tabs.find((x) => x.id === tab).label]] : [])] : [])]} />
+      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'today' ? [[null, tabNow.plain || tabNow.label]] : [])]} />
       <header className="lg-head">
         <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
         <p>{t('lgSub')}</p>
       </header>
-      <TabBar tabs={GROUPS} current={group.id} onChange={goGroup} label={t('tbLabel')} />
-      <div role="tabpanel" id={`panel-${group.id}`} aria-labelledby={`tab-${group.id}`} className="lg-group">
-      <GroupIntro id={group.id} text={t(group.intro)} t={t} />
-      {subTabs.length > 1 && <div className="lg-subtabs"><TabBar tabs={subTabs} current={tab} onChange={go} label={group.plain || group.label} /></div>}
+      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+      <div className="lg-group">
+      <GroupIntro id={`n2-${tab}`} text={t(tabNow.intro)} t={t} />
 
-      <TabPanel id="dash" current={tab}>
+      <TabPanel id="today" current={tab}>
       <TodayBlock compact />
-      <section className="lg-steps" aria-label={t('lgSteps')}>
-        {[['lrStepW', t('lrStepWv').replace('{n}', cont.length)], ['lrStepQ', t('lrStepQv').replace('{n}', d.quizzesPassed)],
-          ...(feat('revision') ? [['lrStepR', t('lrStepRv').replace('{n}', revN)]] : []),
-          ...(feat('practice') ? [['lrStepP', t('lrStepPv').replace('{n}', pz ? pz.counts.todo + pz.counts.doing : 0)]] : [])].map(([n, v], i) => (
-          <div key={n} className="lg-step"><span>{i + 1} · {t(n)}</span><b>{v}</b></div>
-        ))}
-      </section>
-      <div className="lg-top">
+      <div className={`lg-top${sideN ? '' : ' solo'}`}>
         {first ? (
           <section className="lg-resume" aria-label={t('lgResumeAria')}>
             <div className="lg-poster" style={thumbOf(first) ? { backgroundImage: `url(${thumbOf(first)})` } : undefined}>
@@ -252,131 +258,70 @@ export default function Learning() {
             </div>
           </section>
         )}
-        <div className="lg-side">
-          <section className="lg-card" aria-label={t('lgYourPath')}>
-            <h2>{t('lgYourPath')}</h2>
-            {cur ? (
-              <>
-                <div className="lg-ring-row">
-                  <div className="lg-ring" style={{ '--p': `${Math.round((cur.passed / cur.total) * 100)}%` }}><div>{cur.passed} / {cur.total}</div></div>
-                  <div className="lg-ring-label">{t('lgDone')}</div>
-                </div>
-                <p className="lg-dim">
-                  {d.recent[0] && <>{t('lgLastAct').replace('{d}', since(d.recent[0].at))}<br /></>}
-                  {cur.complete ? <>{t('lgPathDone')} <button type="button" className="link u" onClick={() => go('att')}>{t('esAttest')}</button>{feat('series') && <> · <Link className="link u" href="/series">{t('esNextPath')}</Link></>}</> : t('lgQuizLeft').replace('{n}', cur.total - cur.passed)}
-                </p>
-              </>
-            ) : <p className="lg-dim">{t('lgNoPath')}{feat('series') && <> <Link className="link u" href="/series">{t('esSeeSeries')}</Link></>}</p>}
-          </section>
-          {feat('practice') && pz && (
-            <section className="lg-card" aria-label={t('lrMyCommits')}>
-              <h2>{t('lrMyCommits')}</h2>
-              {pz.items.length === 0 ? <p className="lg-txt">{t('lrNoCommit')} <Link className="link u" href="/catalogue">{t('esFindTalk')}</Link></p> : (
-                <ul className="lg-commits">
-                  {pz.items.filter((x) => x.status !== 'not_yet').slice(0, 2).map((x) => <li key={x.id} className={x.status === 'done' ? 'done' : ''}><span aria-hidden="true">{x.status === 'done' ? '✓' : '○'}</span> {x.text}</li>)}
-                </ul>
-              )}
-              <button type="button" className="lg-ghost" onClick={() => go('commit')}>{t('lrAllCommits')}</button>
-            </section>
-          )}
-          {feat('revision') && (
-            <section className="lg-card" aria-label={t('lgTodayRev')}>
-              <h2>{t('lgTodayRev')}</h2>
-              {revN > 0 ? (
-                <>
-                  <p className="lg-txt"><b>{t('lgRevN').replace('{n}', revN)}</b> {t('lgRevText')}</p>
-                  <button type="button" className="lg-ghost" onClick={() => go('rev')}>{t('lgRevStart')}</button>
-                </>
-              ) : <p className="lg-txt">{t('lgRevNone')}</p>}
-              {feat('memorycards') && cardsN > 0 && (
-                <>
-                  <p className="lg-txt"><b>{t('lgCardsN').replace('{n}', cardsN)}</b></p>
-                  <button type="button" className="lg-ghost" onClick={() => go('cards')}>{t('lgCardsGo')}</button>
-                </>
-              )}
-            </section>
-          )}
-        </div>
+        {sideN > 0 && (
+          <div className="lg-side">
+            {quizN > 0 && (
+              <section className="lg-card" aria-label={t('lgQuizTodo')}>
+                <h2>{t('lgQuizTodo')}</h2>
+                <p className="lg-txt"><b>{todo[0].title}</b>{quizN > 1 && <> · {t('lgQuizMore').replace('{n}', quizN - 1)}</>}</p>
+                <button type="button" className="lg-ghost" onClick={() => go('rev')}>{t('lgTRev')}</button>
+              </section>
+            )}
+            {commitNow && (
+              <section className="lg-card" aria-label={t('lgCommitNow')}>
+                <h2>{t('lgCommitNow')}</h2>
+                <p className="lg-txt">{commitNow.text}</p>
+                <button type="button" className="lg-ghost" onClick={() => goSec('progress', 'commit')}>{t('lrAllCommits')}</button>
+              </section>
+            )}
+            {pathNow && (
+              <section className="lg-card" aria-label={t('lgYourPath')}>
+                <h2>{t('lgYourPath')}</h2>
+                {pathNow.complete ? (
+                  <>
+                    <p className="lg-txt"><b>{pathNow.title}</b> · {t('lgPathDone')}</p>
+                    <button type="button" className="lg-ghost" onClick={() => goSec('progress', 'series')}>{t('esAttest')}</button>
+                    {feat('series') && <Link className="link u small" href="/series">{t('esNextPath')}</Link>}
+                  </>
+                ) : (
+                  <>
+                    <p className="lg-txt"><b>{pathNow.title}</b> · {t('lgPathLeft').replace('{n}', pathNow.total - pathNow.passed)}</p>
+                    <Link className="lg-ghost" href={`/series/${pathNow.id}`}>{t('lgContinuePath')}</Link>
+                  </>
+                )}
+              </section>
+            )}
+          </div>
+        )}
       </div>
 
-      <section className="lg-block" aria-labelledby="lg-yl">
-        <h2 id="lg-yl">{t('lgYourLearning')}</h2>
-        <div className="lg-three">
-          {cur && !cur.complete && (
-            <Link className="lg-mini" href={`/series/${cur.id}`}>
-              <span className="lg-thumb tone1" aria-hidden="true" />
-              <span><small>{t('lgTagPath')}</small><b>{t('lgContinuePath')}</b><em>{cur.title} · {t('lgPathLeft').replace('{n}', cur.total - cur.passed)}</em></span>
-            </Link>
-          )}
-          {todo[0] ? (
-            <Link className="lg-mini" href={`/talks/${todo[0].id}?quiz=1`}>
-              <span className="lg-thumb tone2" aria-hidden="true" style={thumbOf(todo[0]) ? { backgroundImage: `url(${thumbOf(todo[0])})` } : undefined} />
-              <span><small>{t('lgTagCatch')}</small><b>{todo[0].title}</b><em>{todo[0].speaker || ''}</em></span>
-            </Link>
-          ) : (
-            <Link className="lg-mini" href="/">
-              <span className="lg-thumb tone2" aria-hidden="true" />
-              <span><small>{t('lgTagDiscover')}</small><b>{t('lgExplore')}</b><em>{t('lgExploreSub')}</em></span>
-            </Link>
-          )}
-          <Link className="lg-mini" href="/library">
-            <span className="lg-thumb tone3" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></span>
-            <span><b>{t('lgHistory')}</b><em>{t('lgHistorySub')}</em></span>
-          </Link>
+      <section className="lg-week lg-anchor" id="lg-week" aria-label={t('pnTab')}>
+        <div className="lg-week-head">
+          <b>{t('pnTab')}</b>
+          <button type="button" className="lg-ghost" aria-expanded={week} aria-controls="lg-week-body" onClick={() => setWeek((w) => !w)}>{week ? t('lgWeekHide') : t('lgWeek')}</button>
         </div>
+        {week && <div id="lg-week-body"><PlanningClient /></div>}
       </section>
 
-      {next.filter((x) => !cont.some((c) => c.id === x.id)).length > 0 && (
-        <Row id="row-lg-next" title={t('lrNext')} talks={next.filter((x) => !cont.some((c) => c.id === x.id)).slice(0, 8)} t={t} />
-      )}
+      {nextList.length > 0 && <Row id="row-lg-next" title={t('lrNext')} talks={nextList} t={t} />}
+      </TabPanel>
 
-      {feat('selfcheck') && goals && (
-        <section className="lg-bilan" aria-label={t('msBilan')}>
-          <div className="lg-bilan-t">
-            <span className="lg-lock" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg></span>
-            <div><h2>{t('msBilan')}</h2><p>{t('lgBilanSub')}</p></div>
-          </div>
-          <div className="lg-bilan-g">
-            <small>{t('lgGoalNow')}</small>
-            <span>{goals.length ? goals[0].title : t('lgNoGoal')}</span>
-          </div>
-          <button type="button" className="lg-ghost" onClick={() => go('bilan')}>{t('lgOpenBilan')}</button>
-        </section>
-      )}
-
-      <h2 className="lg-h2">{t('lgProgress')}</h2>
-      <StreakCard />
-      <section className="lr-top">
-        <div className="lr-score" aria-label={t('lrScore')}>
-          <b>{d.score}</b><span>/100</span>
-          <p className="meta">{t('lrScore')}</p>
-        </div>
-        <div className="lr-facts">
-          <p><b>{d.quizzesPassed}</b> {t('lrPassed')}</p>
-          <p className="meta small">{t('lrDecay').replace('{p}', Math.round((1 - d.decay.floor) * 100)).replace('{d}', d.decay.days)}</p>
-        </div>
-      </section>
-
-      <section className="lr-block">
-        <h2>{t('lrCurve')}</h2>
-        <Curve points={d.curve} locale={locale} t={t} />
-      </section>
-
-      {d.recent.length > 0 && (
-        <section className="lr-block">
-          <h2>{t('lrRecent')}</h2>
-          <ul className="lr-recent">
-            {d.recent.map((r, i) => (
-              <li key={i}><Link href={`/talks/${r.talkId}`}>{r.title}</Link><span className={r.passed ? 'ok-msg' : 'meta'}>{r.percent} %</span><span className="meta small">{date(r.at)}</span></li>
+      <TabPanel id="rev" current={tab}>
+      {quizN > 0 && (
+        <section className="lr-block lg-anchor" id="lg-quiz" aria-labelledby="lg-quiz-h">
+          <h2 id="lg-quiz-h">{t('lgQuizTodo')}</h2>
+          <ul className="rv-list">
+            {todo.slice(0, 10).map((x) => (
+              <li key={x.id}>
+                <div><b>{x.title}</b>{x.speaker && <span className="meta small">{x.speaker}</span>}</div>
+                <Link className="btn" href={`/talks/${x.id}?quiz=1`}>{t('lgQuizGo')}</Link>
+              </li>
             ))}
           </ul>
         </section>
       )}
-      </TabPanel>
-
-      <TabPanel id="rev" current={tab}>
-      {rv && (
-        <section className="lr-block rv-block" aria-labelledby="rv-title">
+      {feat('revision') && rv && (
+        <section className="lr-block rv-block lg-anchor" id="lg-revision" aria-labelledby="rv-title">
           <h2 id="rv-title">{t('revTitle')}</h2>
           {rv.items.length === 0 ? (
             rv.upcoming.week > 0 ? <p className="meta">✓ {t('revNone').replace('{n}', rv.upcoming.week)}</p> : <EmptyState compact text={t('revNoneYet')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />
@@ -408,31 +353,52 @@ export default function Learning() {
           )}
         </section>
       )}
-
+      {feat('memorycards') && <div className="lg-anchor" id="lg-cards"><MemoryCards onCount={setCardsN} /></div>}
       </TabPanel>
 
-      <TabPanel id="plan" current={tab}>
-        <PlanningClient />
-      </TabPanel>
-
-      <TabPanel id="cards" current={tab}>
-        <MemoryCards onCount={setCardsN} />
-      </TabPanel>
-
-      <TabPanel id="path" current={tab}>
-      {seriesBlock('path')}
-      </TabPanel>
-
-      <TabPanel id="commit" current={tab}>
-      <PracticeList t={t} call={call} locale={locale} />
-      </TabPanel>
-
-      <TabPanel id="att" current={tab}>
-      {seriesBlock('att')}
-      </TabPanel>
-      <TabPanel id="bilan" current={tab}>
-      <SelfCheck t={t} call={call} locale={locale} />
-      <Evolution t={t} call={call} locale={locale} />
+      <TabPanel id="progress" current={tab}>
+      <nav className="lg-jump" aria-label={t('lgJump')}>
+        <a href="#lg-series">{t('lgSeriesAtt')}</a>
+        {feat('practice') && <a href="#lg-commit">{t('tbCommit')}</a>}
+        {feat('selfcheck') && <a href="#lg-bilan">{t('msBilan')}</a>}
+        <a href="#lg-stats">{t('lgStats')}</a>
+      </nav>
+      <div className="lg-anchor" id="lg-series">{seriesBlock()}</div>
+      {feat('practice') && <div className="lg-anchor" id="lg-commit"><PracticeList t={t} call={call} locale={locale} /></div>}
+      {feat('selfcheck') && (
+        <div className="lg-anchor" id="lg-bilan">
+          <SelfCheck t={t} call={call} locale={locale} />
+          <Evolution t={t} call={call} locale={locale} />
+        </div>
+      )}
+      <section className="lg-anchor" id="lg-stats" aria-labelledby="lg-stats-h">
+        <h2 id="lg-stats-h" className="lg-h2">{t('lgStats')}</h2>
+        <StreakCard />
+        <div className="lr-top">
+          <div className="lr-score" aria-label={t('lrScore')}>
+            <b>{d.score}</b><span>/100</span>
+            <p className="meta">{t('lrScore')}</p>
+          </div>
+          <div className="lr-facts">
+            <p><b>{d.quizzesPassed}</b> {t('lrPassed')}</p>
+            <p className="meta small">{t('lrDecay').replace('{p}', Math.round((1 - d.decay.floor) * 100)).replace('{d}', d.decay.days)}</p>
+          </div>
+        </div>
+        <div className="lr-block">
+          <h3>{t('lrCurve')}</h3>
+          <Curve points={d.curve} locale={locale} t={t} />
+        </div>
+        {d.recent.length > 0 && (
+          <div className="lr-block">
+            <h3>{t('lrRecent')}</h3>
+            <ul className="lr-recent">
+              {d.recent.map((r, i) => (
+                <li key={i}><Link href={`/talks/${r.talkId}`}>{r.title}</Link><span className={r.passed ? 'ok-msg' : 'meta'}>{r.percent} %</span><span className="meta small">{date(r.at)}</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
       </TabPanel>
       </div>
     </main>

@@ -86,7 +86,7 @@ export function SelfCheck() {
       <Txt size={12} color={colors.muted}>{t('scPrivacy')}</Txt>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {/* L'export (fichier JSON / CSV) se télécharge depuis le site. */}
-        <Txt size={13} weight="bold" color={colors.goldLight} onPress={() => { void Linking.openURL(`${SITE_URL}/learning?tab=bilan`); }}>{t('scExportJson')} ↗</Txt>
+        <Txt size={13} weight="bold" color={colors.goldLight} onPress={() => { void Linking.openURL(`${SITE_URL}/learning?tab=progress&s=bilan`); }}>{t('scExportJson')} ↗</Txt>
         <Txt size={13} weight="bold" color={colors.muted} onPress={erase}>{t('scErase')}</Txt>
       </View>
       <Evolution />

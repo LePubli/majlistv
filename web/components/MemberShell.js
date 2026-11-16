@@ -68,7 +68,7 @@ export default function MemberShell({ children }) {
     if (p === '/') return path === '/';
     if (!(path === p || path.startsWith(p + '/'))) return false;
     const qq = new URLSearchParams(q || '');
-    if (qq.get('tab')) return tab === qq.get('tab');
+    if (qq.get('tab')) return tab === qq.get('tab') && (params.get('s') || '') === (qq.get('s') || '');
     if (qq.get('cat')) return catParam === qq.get('cat');
     if (['/learning', '/library', '/account', '/catalogue'].includes(p)) return !tab && !catParam && !fmtParam;
     return true;
@@ -101,9 +101,12 @@ export default function MemberShell({ children }) {
     shorts: { key: 'shorts', href: '/shorts', label: t('shrTitle'), icon: ICONS.shorts, on: feat('shorts') },
     // Audit 11/2026 (lot C) : même mot que l'onglet sur lequel on arrive (« Aujourd'hui »), et non « Mon parcours » (qui est un sous-onglet de « Vidéos »).
     learning: { key: 'learning', href: '/learning', label: t('lgGToday'), icon: ICONS.learn, on: learn },
-    quiz: { key: 'quiz', href: '/learning?tab=rev', label: t('msQuiz'), icon: ICONS.bilan, on: learn && feat('revision') },
-    practice: { key: 'practice', href: '/learning?tab=commit', label: t('msPractice'), icon: ICONS.note, on: learn },
-    bilan: { key: 'bilan', href: '/learning?tab=bilan', label: t('msBilan'), icon: ICONS.tag, on: learn && feat('selfcheck') },
+    // Étape N2 (15/11) : les trois onglets d'Apprendre (Aujourd'hui · Réviser · Mes progrès) ; « Mes engagements » et
+    // « Mon bilan » restent proposés dans Admin → Menus et mènent à leur section de « Mes progrès ».
+    quiz: { key: 'quiz', href: '/learning?tab=rev', label: t('lgTRev'), icon: ICONS.bilan, on: learn && (feat('revision') || feat('memorycards') || feat('quiz')) },
+    progress: { key: 'progress', href: '/learning?tab=progress', label: t('lgGProgress'), icon: ICONS.tag, on: learn },
+    practice: { key: 'practice', href: '/learning?tab=progress&s=commit', label: t('msPractice'), icon: ICONS.note, on: learn && feat('practice') },
+    bilan: { key: 'bilan', href: '/learning?tab=progress&s=bilan', label: t('msBilan'), icon: ICONS.tag, on: learn && feat('selfcheck') },
     library: { key: 'library', href: '/library', label: t('library'), icon: ICONS.lib, on: feat('favorites') || feat('lists') },
     favs: { key: 'favs', href: '/library?tab=favs', label: t('tbFavs'), icon: ICONS.heart, on: feat('favorites') },
     lists: { key: 'lists', href: '/library?tab=lists', label: t('tbLists'), icon: ICONS.lib, on: feat('lists') },

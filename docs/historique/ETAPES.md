@@ -9195,3 +9195,24 @@ bash /root/verify-deploy.sh
 **Debug.** L'onglet « En direct » n'apparaît pas : Admin → Fonctions, cocher « TV en direct » ou « Événements en direct ». La page /live affiche « fonction désactivée » : « TV en direct » est décochée (l'onglet mène alors à /events).
 
 **Testé.** Tests web (tous), application (`npm run check`, 290 tests), `test_menus.py` et `test_live_channels.py` sur l'API locale ; navigateur réel : Catalogue et /live à 1440 et 390 px, en français et en arabe (onglets, menu du haut, barre membre et visiteur, aucun débordement, aucune erreur). Non testé : vrai téléphone, application installée, télé.
+
+## N2 — Apprendre en 3 onglets (15/11)
+
+**Pourquoi.** Apprendre était « mélangé » : 4 onglets cachant 8 sections (sous-onglets), les révisions du jour répétées à plusieurs endroits du tableau de bord, deux systèmes de révision dans deux onglets différents, et des mots proches (Tableau de bord, Mon planning, Parcours, Vidéos). Deuxième étape de `docs/SIMPLIFICATION-PLATEFORME-2026-11.md`.
+
+**Ce qui change (site).**
+- **3 onglets, sans sous-onglets** : **Aujourd'hui** (faire) · **Réviser** (retenir ; pastille = quiz à passer + révisions + cartes) · **Mes progrès** (où j'en suis). « Réviser » n'apparaît que si « Révision », « Cartes mémoire » ou « Quiz » est active.
+- **Aujourd'hui** : bloc « Aujourd'hui », reprise de la dernière vidéo, à côté au plus 3 cartes (quiz à passer, engagement du moment, série en cours ou terminée → attestation / série suivante), **Mon planning** replié derrière « Voir ma semaine », puis « Pour continuer à apprendre ». Retirés car en double : les 4 compteurs, la carte « Révisions du jour », les 3 mini-cartes « Votre apprentissage », l'aperçu du bilan ; les statistiques passent dans Mes progrès.
+- **Réviser** : quiz à passer (liste), révisions du jour, cartes mémoire, l'un sous l'autre.
+- **Mes progrès** : petit sommaire en haut, puis Mes séries et attestations (une seule liste : progression puis attestation), Mes engagements, Mon bilan et Mon évolution, Mes statistiques (série de jours, score, courbe, résultats récents).
+- **Anciennes adresses** (e-mails, notifications, favoris, menus déjà affectés) : `?tab=dash` → Aujourd'hui ; `plan` → Aujourd'hui avec le planning ouvert ; `path` / `att` → Mes progrès, séries ; `commit` / `bilan` → Mes progrès, à la section ; `cards` → Réviser, cartes ; `quran` / `athkar` → Pratique (inchangé). Nouvelles adresses : `/learning?tab=today|rev|progress&s=<section>`.
+- **Menu latéral (groupe Apprendre)** : Aujourd'hui · Réviser · Mes progrès (« Mes engagements » et « Mon bilan » restent proposés dans Admin → Menus et mènent à leur section).
+- **Application** : inchangée pour l'instant (alignement en N7) ; seul le lien « Mon bilan » vers le site utilise la nouvelle adresse.
+
+**Fichiers.** `web/app/(module-learning)/learning/page.js`, `web/components/{MemberShell,PracticeBlock}.js`, `web/lib/navcfg.js` = `api/src/navcfg.js`, `web/lib/i18n.js` (13 textes fr / en / ar), `web/app/globals.css`, `mobile/src/components/learn/SelfCheck.tsx` ; tests `web/tests/test_learning_groups_web.mjs` (réécrit pour N2), `test_empty_web.mjs`, `test_today_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-api** (copie des menus d'origine pour Admin → Menus, aucune migration), puis **majlistv-web**. Puis les commandes habituelles du VPS.
+
+**Debug.** Onglet « Réviser » absent : Admin → Fonctions, cocher « Révision », « Cartes mémoire » ou « Quiz ». Un ancien lien ouvre le mauvais onglet : vérifier `LEGACY_TABS` en haut de la page.
+
+**Testé.** Tous les tests du site, application (`npm run check`, 290 tests) ; navigateur réel à 1440 et 390 px, français et arabe : les 3 onglets, planning ouvert / fermé, les 7 anciennes adresses redirigées, aucun débordement, aucune erreur. Non testé : un compte avec beaucoup de données réelles (quiz à passer, séries terminées), vrai téléphone.

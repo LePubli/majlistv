@@ -9,7 +9,7 @@ const uses = { 'components/Athkar.js': /EmptyState title=\{t\('atEmpty'\)\}/, 'c
   'app/ramadan/page.js': /EmptyState title=\{t\('rzSoon'\)\}/, 'app/(module-learning)/learning/page.js': /EmptyState compact text=\{t\('revNoneYet'\)\}/ };
 for (const [f, re] of Object.entries(uses)) assert.match(read(f), re, `état vide utile : ${f}`);
 const lp = read('app/(module-learning)/learning/page.js');
-assert.match(lp, /go\('att'\)\}>\{t\('esAttest'\)\}/, 'parcours terminé : attestation'); assert.match(lp, /t\('esNextPath'\)/, 'parcours terminé : parcours suivant');
+assert.match(lp, /goSec\('progress', 'series'\)\}>\{t\('esAttest'\)\}/, 'parcours terminé : attestation (N2 : section de Mes progrès)'); assert.match(lp, /t\('esNextPath'\)/, 'parcours terminé : parcours suivant');
 const qp = read('components/QuranPlan.js');
 assert.match(qp, /plan\.finished && \(\n\s*<div className="kh-end"/, 'lecture complète : message de fin'); assert.match(qp, /navigator\.share/, 'partage'); assert.match(qp, /clipboard\.writeText/, 'copie si pas de partage');
 assert.match(qp, /!plan\.finished && plan\.day > 30/, '30 jours passés sans tout lire : message et suite');

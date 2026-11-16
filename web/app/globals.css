@@ -3469,6 +3469,16 @@ body[data-season]::before { content: ''; position: fixed; inset: 0 0 auto 0; hei
 .lg-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border-inline-start: 3px solid var(--accent); }
 .lg-intro p { margin: 0; color: var(--text-2); line-height: 1.45; }
 .lg-intro button { flex: none; }
+/* Étape N2 (15/11) — Apprendre en 3 onglets : planning repliable, sommaire de « Mes progrès », sections atteignables par ?s= */
+.lg-top.solo { grid-template-columns: minmax(0, 1fr); }
+.lg-week { margin: 0 0 28px; }
+.lg-week-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-soft); }
+.lg-week-head b { font-size: 18px; }
+#lg-week-body { margin-top: 18px; }
+.lg-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.lg-jump a { display: inline-flex; align-items: center; min-height: 38px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); font-size: 14px; text-decoration: none; }
+.lg-jump a:hover, .lg-jump a:focus-visible { border-color: var(--accent); background: var(--gold-soft); }
+.lg-anchor { scroll-margin-top: 96px; margin-bottom: 28px; }
 
 /* Correctif 02/11 — en-tête sur téléphone (tous thèmes) : aucun bouton de l'en-tête (« S'abonner », bouton personnalisé de
    Admin → Navigation) sous 900 px, ils sont dans le menu ; la page ne peut plus être plus large que l'écran. */
