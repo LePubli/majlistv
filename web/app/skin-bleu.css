@@ -1,0 +1,100 @@
+/* ======================================================================
+   Thème « Mejliss bleu » (étape D2, 16/11/2026) — activé par <html data-skin="bleu">.
+   Charte validée sur la planche D1-bis : bleu Mejliss #004283, bleu action #1677E8, nuit #071426, fond #F4F7FC,
+   texte #182334 / #5F6F86 ; Montserrat (titres) + Inter (textes). Contenu sur fond clair, en-tête blanc,
+   pied de page, lecteur et grandes images sur fond nuit. Kids garde ses propres couleurs (body.kd-theme).
+   Sélecteurs html[data-skin="bleu"] : plus forts que :root et body, donc prioritaires sur le thème publié (Admin → Apparence).
+   Les thèmes « Classique » (globals.css) et « Nuit et or » (skin-nuit.css) ne sont pas modifiés.
+   ====================================================================== */
+html[data-skin="bleu"] {
+  --bg: #F4F7FC; --surface: #FFFFFF; --surface-2: #EAF3FF; --line: #D5DEEA; --line-soft: #E2E8F1; --line-strong: #B9C6D8;
+  --accent: #1677E8; --accent-hover: #0866CC; --accent-light: #0866CC; --bronze: #004283; --on-accent: #FFFFFF; --gold-soft: rgba(22, 119, 232, .10);
+  --text: #182334; --text-2: #3B4A60; --muted: #5F6F86; --placeholder: #7A889C; --danger: #C93636; --ok: #13804F; --danger-bg: #D94848;
+  --font-body: 'Inter Variable', 'Noto Sans Arabic Variable', system-ui, 'Segoe UI', sans-serif;
+  --font-title: 'Montserrat Variable', 'Noto Kufi Arabic Variable', system-ui, sans-serif;
+  --quote-gold: #004283; --quote-arabic: #004283; --quote-border: rgba(22, 119, 232, .45); --quote-bg-a: #EAF3FF; --quote-bg-b: #FFFFFF;
+  --mb-brand: #004283; --mb-night: #071426; --mb-night-2: #10243D; --mb-shadow: 0 1px 2px rgba(16, 36, 61, .05), 0 8px 24px rgba(16, 36, 61, .07);
+  --gold: #1677E8; --panel: #FFFFFF; --panel-2: #F4F7FC; --border: #E2E8F1; /* anciens noms encore utilisés par quelques blocs */
+  --mb-orange: #EE6A2C; --mb-green: #20A66B; --mb-gold: #F2A93B; --mb-violet: #7357E8;
+  color-scheme: light;
+}
+html[data-skin="bleu"]:lang(ar) { --font-body: 'Noto Sans Arabic Variable', 'Inter Variable', system-ui, sans-serif; --font-title: 'Noto Kufi Arabic Variable', 'Montserrat Variable', system-ui, sans-serif; }
+html[data-skin="bleu"] body:not(.kd-theme) {
+  --title-color: #0B1F3A;
+  --header-bg: rgba(255, 255, 255, .97); --header-text: #3B4A60; --header-text-active: var(--accent); --header-border: var(--line-soft);
+  --sidebar-bg: #FFFFFF; --sidebar-text: #3B4A60; --sidebar-active-bg: #EAF3FF; --sidebar-active-text: #0866CC; --sidebar-mark: var(--accent); --sidebar-border: var(--line-soft);
+  --bottom-bg: rgba(255, 255, 255, .98); --bottom-text: #5F6F86; --bottom-active: var(--accent); --bottom-border: var(--line-soft);
+  --studio-side-bg: #FFFFFF;
+  --btn-bg: var(--accent); --btn-text: #FFFFFF; --btn-hover-bg: var(--accent-hover); --btn-ghost-text: var(--accent-hover); --btn-ghost-border: var(--accent);
+  --card-bg: #FFFFFF; --card-border: var(--line-soft); --card-title: var(--text); --card-meta: var(--muted); --progress-bar: var(--accent);
+  --badge-bg: rgba(7, 20, 38, .78); --badge-text: #FFFFFF; --badge-premium-bg: var(--accent); --badge-premium-text: #FFFFFF;
+  --input-bg: #FFFFFF; --input-bg-panel: #F4F7FC; --input-text: var(--text); --input-border: var(--line); --input-focus: var(--accent);
+  --tabs-text: var(--muted); --tabs-active: var(--accent-hover); --tabs-mark: var(--accent);
+  --footer-bg: #071426; --footer-text: #C9D6E8; --footer-link-hover: #FFFFFF; --footer-border: transparent;
+  --quote-text: var(--text);
+  background: var(--bg);
+}
+
+/* Logo : la variante bleue s'affiche à la place de la dorée (voir components/BrandImg.js). */
+html:not([data-skin="bleu"]) .sk-bleu { display: none !important; }
+html[data-skin="bleu"] .sk-classic { display: none !important; }
+
+/* Titres en bleu nuit, boutons en Inter (texte de lecture, comme sur la planche). */
+html[data-skin="bleu"] body:not(.kd-theme) :is(h1, h2, h3) { color: var(--title-color); }
+html[data-skin="bleu"] .btn { font-family: var(--font-body); font-weight: 600; }
+html[data-skin="bleu"] .btn:not(.ghost) { box-shadow: 0 6px 16px rgba(22, 119, 232, .22); }
+html[data-skin="bleu"] .eyebrow { font-family: var(--font-body); font-weight: 700; letter-spacing: .1em; color: var(--accent-hover); }
+
+/* En-tête blanc, ombre légère. */
+html[data-skin="bleu"] .header:not(.kd-header) { background: var(--header-bg); border-bottom-color: var(--header-border); box-shadow: 0 1px 0 var(--line-soft); }
+html[data-skin="bleu"] .header:not(.kd-header) nav a, html[data-skin="bleu"] .header:not(.kd-header) nav .link { color: var(--header-text); font-family: var(--font-title); font-weight: 600; }
+
+/* Cartes et panneaux : blancs, arrondis, ombre douce (au lieu des filets sombres). */
+html[data-skin="bleu"] :is(.panel, .card, .form, .insights, .plan, .waiver, .adm-group) { background: var(--surface); border-color: var(--line-soft); box-shadow: var(--mb-shadow); }
+
+/* Pied de page, lecteur et grandes images : fond nuit, textes clairs (on redéfinit les couleurs dans ces zones). */
+html[data-skin="bleu"] :is(.site-footer, .player-wrap, .hero, .kd-band) {
+  --text: #FFFFFF; --text-2: #C9D6E8; --muted: #93A6C2; --line: #1E3A5C; --line-soft: #17304E; --line-strong: #3A5A82;
+  --bg: #071426; --surface: #10243D; --surface-2: #16304F; --title-color: #FFFFFF; --accent-light: #8DBDF7; --btn-ghost-text: #FFFFFF; --btn-ghost-border: rgba(255, 255, 255, .55);
+}
+html[data-skin="bleu"] .site-footer { background: var(--mb-night); }
+/* Héros sans image (accueil) : scène de nuit dessinée (mosquée, croissant, étoiles), comme sur la planche D1-bis. */
+html[data-skin="bleu"] .hero:not(.has-image) { background: linear-gradient(90deg, rgba(4, 12, 28, .94) 0%, rgba(4, 12, 28, .72) 40%, rgba(4, 12, 28, .05) 78%), url('/brand/scene-nuit.svg') 70% 60% / cover no-repeat, var(--mb-night); }
+html[data-skin="bleu"] :is(.site-footer, .player-wrap, .hero, .kd-band) .eyebrow { color: #8DBDF7; }
+
+/* Sélection et liens de texte. */
+html[data-skin="bleu"] ::selection { background: #CFE3FF; color: #0B1F3A; }
+
+/* Zones sombres supplémentaires (héros de la page vidéo, reprise d'Apprendre, bandeaux à image) : fond nuit. */
+html[data-skin="bleu"] :is(.wb-hero, .lg-resume, .hb-hero, .lk-banner) {
+  --text: #FFFFFF; --text-2: #C9D6E8; --muted: #93A6C2; --line: #1E3A5C; --line-soft: #17304E; --line-strong: #3A5A82;
+  --bg: #071426; --surface: #10243D; --surface-2: #16304F; --title-color: #FFFFFF; --accent-light: #8DBDF7; --btn-ghost-text: #FFFFFF; --btn-ghost-border: rgba(255, 255, 255, .55);
+  color: var(--text);
+}
+html[data-skin="bleu"] .wb-hero { background: var(--mb-night); border-color: transparent; }
+html[data-skin="bleu"] .lg-resume { background: linear-gradient(135deg, #0B2550, #071426 65%); border-color: rgba(77, 160, 255, .35); box-shadow: 0 12px 34px rgba(7, 20, 38, .25); }
+html[data-skin="bleu"] .lg-empty { background: radial-gradient(480px 240px at 90% 0%, rgba(77, 160, 255, .28), transparent 70%), url('/brand/scene-nuit.svg') 80% 60% / cover no-repeat, #071426; }
+html[data-skin="bleu"] :is(.vt-poster, .vt-poster-ph, .vt-hero-thumb, .lg-poster, .hb-hero, .studio-thumb) { background-color: #0B2550; }
+html[data-skin="bleu"] :is(.vt-poster-ph, .vt-hero-thumb, .lg-poster, .hb-hero):not([style*="url"]) { background-image: linear-gradient(120deg, #071426, #0B2550 55%, #1677E8); }
+
+/* Éléments clairs qui avaient un fond brun foncé écrit en dur. */
+html[data-skin="bleu"] :is(.studio-nav a.on, .studio-avatar, .notice, .ac-count, .ac-pos, .sd-todo, .lg-lock, .dropzone.over) { background: #EAF3FF; color: #0866CC; }
+html[data-skin="bleu"] .studio-table tbody tr:hover { background: #F4F7FC; }
+html[data-skin="bleu"] .seg.dirty { background: #FFF6E0; }
+html[data-skin="bleu"] .savebar { background: #FFFFFF; box-shadow: 0 -8px 24px rgba(16, 36, 61, .12); }
+html[data-skin="bleu"] .wb-learn { background: #FFFFFF; border-color: #CFE3FF; box-shadow: var(--mb-shadow); }
+html[data-skin="bleu"] :is(.wb-menu, .wb-pset-menu, .em-panel) { background: #FFFFFF; box-shadow: 0 18px 40px rgba(16, 36, 61, .18); }
+
+/* Espace Kids : garde son ciel de nuit (le thème clair donnerait un fond blanc derrière). */
+html[data-skin="bleu"]:has(> body.kd-theme) { background: var(--kids-bg); color-scheme: dark; }
+
+/* Bandeaux de saison, du vendredi, de Ramadan : fond nuit dégradé (ils avaient un fond presque noir écrit en dur). */
+html[data-skin="bleu"] :is(.ss-band, .fd-band, .kh, .rb) {
+  --text: #FFFFFF; --text-2: #C9D6E8; --muted: #93A6C2; --bg: #071426; --surface: #10243D; --surface-2: #16304F; --title-color: #FFFFFF; --gold: #8DBDF7;
+  background: linear-gradient(135deg, #0B2550, #071426 70%); border-color: rgba(77, 160, 255, .35); color: #FFFFFF;
+}
+/* Textes écrits en blanc en dur sur des fonds qui deviennent clairs : couleur du texte du thème. */
+html[data-skin="bleu"] :is(.qr-ar, .qr-hit, .qr-tr, .qr-notes p, .qr-legend, .at-tr, .rm-day h2, .rm-items p, .pq-bigname, .pq-dates b, .pq-n, .pq-table tbody th, .sale-opt-t, .mp-main a, .mp-main > span:first-child, .em-hint, .em-head) { color: var(--text); }
+html[data-skin="bleu"] .pq-tabs button.on { color: var(--accent-hover); border-bottom-color: var(--accent); }
+html[data-skin="bleu"] .rm-days button span { color: var(--muted); }
+html[data-skin="bleu"] .rm-day { border-color: var(--line-soft); background: #FFFFFF; box-shadow: var(--mb-shadow); }

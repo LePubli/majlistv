@@ -8,6 +8,7 @@ import { LayoutZone } from './PageBlocks';
 import { defaultList, resolveMenu, audienceOk, deviceClass } from '../lib/menus';
 import { defaultFooter, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
+import BrandImg from './BrandImg';
 
 // Pied de page : marque et liens légaux obligatoires, présents sur toutes les pages.
 // Étape I4 : les éléments se placent à gauche ou à droite, on peut y ajouter textes et liens, et des blocs peuvent s'afficher au-dessus.
@@ -36,7 +37,7 @@ export default function Footer() {
     switch (el.key || el.type) {
       case 'brand': return (
         <span className="footer-brand">
-          <img src="/brand/emblem-s.png" alt="" width="26" height="28" />
+          <BrandImg kind="emblem" on="dark" alt="" width="26" height="28" />
           <span>© {new Date().getFullYear()} {appName} · {t('tagline')}</span>
         </span>
       );

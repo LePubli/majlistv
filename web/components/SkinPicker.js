@@ -1,12 +1,12 @@
 'use client';
-// Choix du thème visuel : « Classique » (noir et or) ou « Nuit et or » (bleu de nuit, arabesques).
+// Choix du thème visuel : « Classique » (noir et or), « Nuit et or » (bleu de nuit, arabesques) ou « Mejliss bleu » (étape D2).
 // Mémorisé sur l'appareil (cookie « skin », lu par le serveur : pas de clignotement au chargement). Appliqué tout de suite
 // (attribut data-skin de <html>). Masqué si l'administrateur a désactivé le choix (Admin → Paramètres → Général).
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
 
 const EVENT = 'skin-change';
-const SKINS = [['classique', 'skClassic'], ['nuit', 'skNight']];
+const SKINS = [['classique', 'skClassic'], ['nuit', 'skNight'], ['bleu', 'skBlue']]; // « bleu » : étape D2
 
 export default function SkinPicker({ className = '' }) {
   const { t, skin, skinChoice } = useApp();

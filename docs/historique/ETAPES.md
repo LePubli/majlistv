@@ -9357,3 +9357,29 @@ bash /root/verify-deploy.sh
 - La fin de vidéo propose le quiz alors qu'il est réussi : le résultat n'a pas encore été relu, rouvrir la vidéo.
 
 **Testé.** Vérification des types, 294 tests de l'application (dont les vraies fonctions de fusion de « Ma liste », du bouton, des onglets, de la fin de vidéo et de la carte de l'accueil), compilation complète de l'application Android (bundle). **Non testé** : sur un vrai téléphone (je n'en ai pas ici), donc ni l'affichage, ni le défilement jusqu'à une section, ni la fin de vidéo en conditions réelles.
+
+## D2 — Thème « Mejliss bleu » (16/11/2026)
+
+**Pourquoi.** Epok a demandé une refonte graphique (cahier des charges et planches du 16/11). Planches de design D1 puis D1-bis : https://claude.ai/artifact/UM9NJUsQctX5AgrVm49QLv (document du projet `REFONTE-DESIGN-D1.md`). D2 applique la nouvelle charte au site **comme un thème de plus**, sans toucher aux thèmes existants : on l'active, on regarde, on revient en arrière d'un clic si besoin.
+
+**Ce qui change (site, quand le thème est activé).**
+- Couleurs de la charte : fond #F4F7FC, cartes blanches, texte #182334 / #5F6F86, bleu Mejliss #004283, bleu action #1677E8 (boutons, liens, onglets actifs), nuit #071426.
+- Polices : Montserrat (titres, menus) et **Inter** (textes, boutons), auto-hébergées comme les autres (paquet `@fontsource-variable/inter` 5.2.8).
+- En-tête blanc, menu en Montserrat, cartes et panneaux blancs à ombre douce, boutons pilules bleus.
+- Zones sombres gardées en bleu nuit, avec texte clair : héros de l'accueil, avec une **scène de mosquée de nuit dessinée** (`public/brand/scene-nuit.svg`) quand il n'a pas d'image ; lecteur de la page vidéo ; carte « Reprendre » d'Apprendre ; bandeaux de saison, du vendredi et de Ramadan ; pied de page.
+- **Logo** : le même dessin, recoloré en bleu (`public/brand/*-bleu*-s.png`). Le composant `BrandImg` met les deux versions dans la page ; le thème affiche la bonne (en-tête, pied de page, menu latéral, administration).
+- **Kids** garde son ciel de nuit et ses couleurs.
+- Les blocs qui avaient un fond brun foncé ou un texte blanc écrits en dur (prière, Coran, Ramadan, administration, menus de la page vidéo…) sont adaptés au fond clair.
+- Les thèmes « Classique » (noir et or) et « Nuit et or » sont strictement inchangés : toutes les règles sont sous `html[data-skin="bleu"]`.
+
+**Ce qui ne change pas encore.** Les mises en page de la planche (accueil avec « Nos univers » et collections, catalogue avec filtres à gauche, espace Apprendre avec menu à gauche, lecteur avec chapitres à droite) : étapes suivantes. L'application téléphone et télé garde son thème actuel (elle ignore la valeur « bleu » sans erreur).
+
+**Activer / revenir en arrière.** Admin → Paramètres → Général → « Thème visuel par défaut » : `bleu` pour activer, `classique` pour revenir. Option « laisser chaque visiteur choisir » : le sélecteur du pied de page propose alors aussi « Mejliss bleu ».
+
+**Fichiers.** `web/app/skin-bleu.css` (nouveau), `web/components/BrandImg.js` (nouveau), `web/public/brand/scene-nuit.svg`, `emblem-bleu-s.png`, `emblem-bleu-clair-s.png`, `wordmark-bleu-s.png`, `wordmark-bleu-clair-s.png` (nouveaux), `web/app/layout.js`, `web/components/{Header,Footer,ManageShell,AppPromo,SkinPicker}.js`, `web/lib/i18n.js` (skBlue), `web/package.json` et `package-lock.json` (Inter), `api/src/settings.js` (valeur « bleu »), `api/src/index.js` ; tests `web/tests/test_d2_web.mjs` (nouveau), `test_skin_web.mjs`, `api/tests/test_skin.py`.
+
+**Déploiement.** DockPanel : **majlistv-api** (nouvelle valeur du réglage), puis **majlistv-web**. Pas de migration. Puis les commandes habituelles du VPS. Le site reste identique tant que le réglage n'est pas passé à « bleu ».
+
+**Debug.** Le thème ne s'applique pas : vérifier le réglage, puis recharger la page (un ancien cookie « skin » ne compte que si le choix des visiteurs est ouvert). Un texte invisible (blanc sur blanc) : noter la page et l'endroit, la règle se corrige dans `skin-bleu.css`. Le thème publié dans Admin → Apparence reste sous le thème bleu (le thème bleu est prioritaire, comme Nuit et or).
+
+**Testé.** Tous les tests du site ; navigateur réel à 1440 px et 390 px, français et arabe : accueil, catalogue, page vidéo, Apprendre, bibliothèque, compte, tarifs, prière, Coran, adhkar, Ramadan, pratique, Kids, administration ; aucun débordement, aucune erreur. **Non testé** : vraies affiches et vraies vidéos (base de test sans images), toutes les pages de l'administration et du studio, vrai téléphone.

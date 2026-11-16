@@ -56,7 +56,7 @@ export const FIELDS = [
   { key: 'legal_mediator', group: 'legal', type: 'text', label: 'Médiateur de la consommation (nom, site, adresse)', def: '', help: 'Obligatoire pour vendre à des particuliers : adhérez à un médiateur agréé et indiquez ici ses coordonnées.' },
   { key: 'legal_court', group: 'legal', type: 'text', label: 'Tribunal compétent', def: '', help: 'Ex. « les tribunaux de Lille ».' },
   { key: 'legal_mail_provider', group: 'legal', type: 'text', label: 'Prestataire d’envoi des e-mails', def: '', help: 'Société qui envoie les e-mails du site (serveur SMTP réglé dans E-mails), ex. Brevo, OVHcloud…' },
-  { key: 'skin_default', group: 'general', type: 'select', options: ['classique', 'nuit'], label: 'Thème visuel par défaut (classique : noir et or ; nuit : « Nuit et or », bleu de nuit et arabesques)', env: 'SKIN_DEFAULT', def: 'classique' },
+  { key: 'skin_default', group: 'general', type: 'select', options: ['classique', 'nuit', 'bleu'], label: 'Thème visuel par défaut (classique : noir et or ; nuit : « Nuit et or », bleu de nuit et arabesques ; bleu : « Mejliss bleu », nouvelle charte claire)', env: 'SKIN_DEFAULT', def: 'classique' },
   { key: 'skin_choice', group: 'general', type: 'bool', label: 'Laisser chaque visiteur choisir son thème (désactivé : seul l’administrateur choisit, avec le réglage ci-dessus)', env: 'SKIN_CHOICE', def: 'false' },
   { key: 'web_url', group: 'general', type: 'url', label: 'Adresse publique du site', env: 'WEB_URL',
     help: 'Utilisée pour le retour après paiement (ex. https://majlisstv.le-publicitaire.fr).' },

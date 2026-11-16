@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import '@fontsource-variable/montserrat';
 import '@fontsource-variable/fredoka';
 import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/inter'; // thème « Mejliss bleu » (étape D2)
 import '@fontsource-variable/noto-kufi-arabic';
 import '@fontsource-variable/noto-sans-arabic';
 import '@fontsource/marcellus';
@@ -10,6 +11,7 @@ import '@fontsource/amiri/400.css';
 import '@fontsource/amiri/700.css';
 import './globals.css';
 import './skin-nuit.css'; // thème « Nuit et or » (html[data-skin="nuit"])
+import './skin-bleu.css'; // thème « Mejliss bleu » (html[data-skin="bleu"], étape D2)
 import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -67,13 +69,16 @@ export const generateMetadata = async () => {
 // Couleur de la barre d'adresse des téléphones : le fond du thème publié (Admin → Apparence).
 export const generateViewport = async () => ({ themeColor: themeBg(await siteTheme()), width: 'device-width', initialScale: 1 });
 
+// Thèmes visuels : « classique » (noir et or), « nuit » (Nuit et or), « bleu » (Mejliss bleu, étape D2).
+const SKINS = ['classique', 'nuit', 'bleu'];
+
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
   const [{ appName, trialDays, prayer, cards, hasSeries, hasBooks, stats, features, modules, skin: skinCfg }, theme, dict, slots, layout] = await Promise.all([siteConfig(), siteTheme(), dictFor(locale), pageSlots(), siteLayout()]);
   // Thème visuel : choix du visiteur (cookie « skin ») s'il est permis, sinon celui par défaut (Admin → Paramètres → Général).
-  const skinDef = skinCfg?.def === 'nuit' ? 'nuit' : 'classique';
+  const skinDef = SKINS.includes(skinCfg?.def) ? skinCfg.def : 'classique';
   const wanted = cookies().get('skin')?.value;
-  const skin = skinCfg?.choice === true && (wanted === 'nuit' || wanted === 'classique') ? wanted : skinDef;
+  const skin = skinCfg?.choice === true && SKINS.includes(wanted) ? wanted : skinDef;
   return (
     <html lang={locale} dir={DIR[locale]} data-skin={skin}>
       <body>
