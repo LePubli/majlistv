@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../components/Providers';
 import HomeHero from '../components/HomeHero';
 import Row from '../components/Row';
+import { thumbOf } from '../lib/thumb';
 import SeriesCard from '../components/SeriesCard';
 import CitationCard from '../components/CitationCard';
 import Vitrine from '../components/Vitrine';
@@ -24,7 +25,7 @@ export default function Home() {
 }
 
 function HomeInner() {
-  const { t, trialDays, user, ready, call, feat } = useApp();
+  const { t, trialDays, user, ready, call, feat, skin } = useApp();
   const router = useRouter();
   const sp = useSearchParams();
   const [home, setHome] = useState(null);   // { hero, rows } : accueil vitrine
@@ -70,6 +71,48 @@ function HomeInner() {
   // Étape N3 (15/11) : en haut de l'accueil, une seule carte « À faire aujourd'hui » et une seule bande de saison.
   if (blocks) return <><StartCards /><TodayBlock home /><SeasonBands /><HomeBlocks page={blocks} />{tour}</>;
   const rows = home?.rows || [];
+  // Étape D3 (17/11) — thème « Mejliss bleu » : accueil de plateforme de streaming. Grande vidéo à la une (celles choisies dans
+  // Admin, à défaut les 5 plus récentes), puis « Continuer à regarder », « Ma liste », les nouveautés, les univers (thèmes),
+  // les autres rangées, et en bas le bloc « Mon espace Apprendre ». Mêmes données que l'accueil d'origine.
+  if (skin === 'bleu') {
+    const auto = rows0(home).slice(0, 5);
+    const hero = home?.hero?.mode === 'text' && auto.length ? { mode: 'featured', items: auto } : home?.hero;
+    const univ = rows.filter((r) => r.categoryId != null && r.talks?.length);
+    const rowOf = (r) => (r.key === 'series'
+      ? <Row key={r.key} id="row-series" title={<>{t('rowSeries')} · <Link href="/series">{t('rowSeeAll')}</Link></>} talks={r.series} t={t} renderItem={(x) => <SeriesCard series={x} t={t} />} />
+      : <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t} badge={r.forYou ? `★ ${t('forYou')}` : null}
+          title={r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.title}
+          onSeeAll={r.categoryId && r.total > r.talks.length ? () => router.push(`/catalogue?cat=${r.categoryId}`) : undefined} />);
+    return (
+      <main className="st-home">
+        <HomeHero hero={hero} t={t} user={user} trialDays={trialDays} />
+        {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('rowSeeAll')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
+        {later.length > 0 && <Row id="row-later" title={<>{t('lbMyList')} · <Link href="/library?tab=list">{t('rowSeeAll')}</Link></>} talks={later} t={t} />}
+        {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
+        {rows.slice(0, 1).map(rowOf)}
+        {univ.length > 1 && (
+          <section className="st-univ" aria-labelledby="st-univ-title">
+            <h2 id="st-univ-title">{t('hmUniverses')}</h2>
+            <ul>
+              {univ.map((r) => {
+                const img = thumbOf(r.talks[0]);
+                return <li key={r.key}><Link href={`/catalogue?cat=${r.categoryId}`} style={img ? { backgroundImage: `url(${img})` } : undefined}><b>{r.title}</b><span>{r.total}</span></Link></li>;
+              })}
+            </ul>
+          </section>
+        )}
+        <StartCards />
+        <SeasonBands />
+        {rows.slice(1, 3).map(rowOf)}
+        <KidsBand data={kids} />
+        {rows.slice(3).map(rowOf)}
+        <section className="st-learn" aria-label={t('hmLearnBand')}><TodayBlock home /></section>
+        <EventsBand />
+        <CitationCard c={cit} t={t} framed />
+        {tour}
+      </main>
+    );
+  }
   return (
     <main>
       <HomeHero hero={home?.hero} t={t} user={user} trialDays={trialDays} />

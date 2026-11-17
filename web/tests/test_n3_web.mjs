@@ -8,8 +8,8 @@ const home = read('app/page.js');
 
 assert.doesNotMatch(home, /row-review|row-quiz|FormatTiles|\/me\/revision|\/me\/quiz\/todo/, 'rangées en double retirées');
 assert.doesNotMatch(home, /<SeasonBand \/>|<FridayBand \/>/, 'les bandes passent par SeasonBands');
-assert.equal((home.match(/<TodayBlock home \/>/g) || []).length, 2, 'accueil d’origine et accueil en blocs');
-assert.equal((home.match(/<SeasonBands \/>/g) || []).length, 2);
+assert.equal((home.match(/<TodayBlock home \/>/g) || []).length, 3, 'accueil d’origine, accueil en blocs et accueil du thème bleu (D3)');
+assert.equal((home.match(/<SeasonBands \/>/g) || []).length, 3);
 assert.ok(home.indexOf('row-continue') < home.indexOf('row-later') && home.indexOf('row-later') < home.indexOf('rows.map'), 'Reprendre, Plus tard, puis les rangées');
 assert.ok(!fs.existsSync(new URL('../components/FormatTiles.js', import.meta.url)), 'composant retiré');
 

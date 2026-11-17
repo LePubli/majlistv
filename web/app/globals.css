@@ -4079,3 +4079,7 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .tp-transcript[open] > summary::before { transform: rotate(90deg); }
 [dir="rtl"] .tp-transcript[open] > summary::before { transform: rotate(-90deg); }
 .tpanel .insights + .about-text { margin-top: 18px; }
+
+/* Étape D3 (17/11) : étiquettes de la page vidéo et affiche de secours — visibles dans le thème « Mejliss bleu » (skin-bleu.css). */
+.wb-chips { display: none; }
+.ph-t { display: none; }

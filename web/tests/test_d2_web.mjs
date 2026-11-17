@@ -1,4 +1,5 @@
-// Étape D2 (16/11/2026) — thème « Mejliss bleu » (nouvelle charte de la planche D1-bis), activable et réversible.
+// Étape D2 (16/11/2026) — thème « Mejliss bleu », activable et réversible.
+// Étape D3 (17/11/2026) — le thème passe en streaming bleu nuit (planches D1-ter) : couleurs et zones mises à jour ci-dessous.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
@@ -10,7 +11,7 @@ assert.match(lay, /import '\.\/skin-bleu\.css';/, 'feuille du thème chargée');
 assert.match(lay, /import '@fontsource-variable\/inter';/, 'police Inter auto-hébergée');
 assert.match(read('package.json'), /"@fontsource-variable\/inter": "5\.2\.8"/, 'version figée');
 // Tout est sous html[data-skin="bleu"] : les thèmes Classique et Nuit et or ne bougent pas.
-const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map((r) => r.trim()).filter((r) => r.includes('{'));
+const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '').replace(/@media[^{]*\{/g, '').split('}').map((r) => r.trim()).filter((r) => r.includes('{'));
 for (const r of rules) {
   const sel = r.slice(0, r.indexOf('{')).trim();
   const parts = []; let depth = 0; let cur = '';
@@ -19,13 +20,14 @@ for (const r of rules) {
   assert.ok(parts.every((x) => /^\s*html(\[data-skin="bleu"\]|:not\(\[data-skin="bleu"\]\))/.test(x)), `règle limitée au thème bleu : ${sel}`);
 }
 // Charte : couleurs et polices de la planche.
-for (const c of ['#004283', '#1677E8', '#071426', '#F4F7FC', '#182334', '#5F6F86', '#EAF3FF']) assert.ok(css.includes(c), `couleur ${c}`);
+for (const c of ['#004283', '#1677E8', '#45A3FF', '#0D1E35', '#061022', '#FFFFFF']) assert.ok(css.includes(c), `couleur ${c}`);
 assert.match(css, /--font-body: 'Inter Variable'/); assert.match(css, /--font-title: 'Montserrat Variable'/);
-assert.match(css, /color-scheme: light;/);
+assert.match(css, /color-scheme: dark;/);
+assert.doesNotMatch(css, /#F4F7FC|color-scheme: light/, 'plus de fond clair');
 // Kids garde son ciel de nuit ; zones sombres (héros, lecteur, pied de page) redéfinies en texte clair.
-assert.match(css, /html\[data-skin="bleu"\]:has\(> body\.kd-theme\) \{ background: var\(--kids-bg\); color-scheme: dark; \}/);
+assert.match(css, /html\[data-skin="bleu"\]:has\(> body\.kd-theme\) \{ background: var\(--kids-bg\); \}/);
 assert.match(css, /body:not\(\.kd-theme\) \{/);
-for (const z of ['.site-footer', '.player-wrap', '.hero', '.wb-hero', '.lg-resume']) assert.ok(css.includes(z), `zone sombre ${z}`);
+for (const z of ['.site-footer', '.player-wrap', '.hero', '.wb-hero', '.lg-resume']) assert.ok(css.includes(z), `zone ${z}`);
 assert.match(css, /url\('\/brand\/scene-nuit\.svg'\)/, 'scène de nuit dessinée pour le héros sans image');
 assert.ok(exists('public/brand/scene-nuit.svg'));
 // Logo : même dessin recoloré, les deux versions dans la page, la bonne affichée par le thème.

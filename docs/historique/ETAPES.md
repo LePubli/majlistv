@@ -9383,3 +9383,49 @@ bash /root/verify-deploy.sh
 **Debug.** Le thème ne s'applique pas : vérifier le réglage, puis recharger la page (un ancien cookie « skin » ne compte que si le choix des visiteurs est ouvert). Un texte invisible (blanc sur blanc) : noter la page et l'endroit, la règle se corrige dans `skin-bleu.css`. Le thème publié dans Admin → Apparence reste sous le thème bleu (le thème bleu est prioritaire, comme Nuit et or).
 
 **Testé.** Tous les tests du site ; navigateur réel à 1440 px et 390 px, français et arabe : accueil, catalogue, page vidéo, Apprendre, bibliothèque, compte, tarifs, prière, Coran, adhkar, Ramadan, pratique, Kids, administration ; aucun débordement, aucune erreur. **Non testé** : vraies affiches et vraies vidéos (base de test sans images), toutes les pages de l'administration et du studio, vrai téléphone.
+
+
+## D3 — Thème « Mejliss bleu » en streaming bleu nuit : accueil, vignettes, page vidéo (17/11/2026)
+
+**Pourquoi.** Epok a jugé le thème clair de D2 trop éloigné de ses références (Kuwait+, applications de streaming, télé VIDAA). Nouvelles planches D1-ter (page « D1-ter · streaming » de https://claude.ai/artifact/UM9NJUsQctX5AgrVm49QLv), puis cahier des charges « Refonte D2 » du 17/11 : identité gardée (logo, bleu nuit #061022 / #0D1E35, bleu #1677E8 / #45A3FF / #004283, Montserrat + Inter), priorité à l'accueil ordinateur et à la page vidéo, contrôle visuel par captures réelles.
+
+**Audit de départ (captures du site avant D3).**
+
+| Écran | Défaut constaté | Correction | Priorité | Fichiers |
+|---|---|---|---|---|
+| Accueil | Fond clair, menu latéral, bannière de texte sans vidéo, carte « Par quoi commencer » avant les vidéos | Bleu nuit, menu du haut seul, vidéo à la une plein écran, « Continuer à regarder » juste dessous | 1 | `app/page.js`, `components/HomeHero.js`, `app/skin-bleu.css` |
+| Vignettes | Rectangle vide quand la vidéo n'a pas de miniature, bords fins, badges peu lisibles | Affiche de secours propre à chaque vidéo, coins arrondis, ombre, survol discret, badges lisibles | 1 | `components/TalkCard.js`, `components/SeriesCard.js`, `lib/thumb.js` |
+| Page vidéo | Lecteur plus haut que l'écran, informations en une ligne de texte, étapes « Apprendre » peu distinctes | Lecteur limité à l'écran, halo de l'affiche, étiquettes, trois cartes (quiz, révision, engagement) | 1 | `app/talks/[id]/TalkClient.js`, `app/skin-bleu.css` |
+| Catalogue, Apprendre, Pratique, bibliothèque, compte, tarifs | Fond clair | Passent en bleu nuit avec le thème ; leur mise en page détaillée reste à faire (lots suivants) | 2 | `app/skin-bleu.css` |
+| Kids | Accueil chargé | Non traité dans ce lot (lot Kids) | 3 | — |
+| Application téléphone et télé | Ancienne charte | Non traité dans ce lot (lots Mobile et TV) | 3 | `mobile/` |
+
+**Ce qui change (thème « Mejliss bleu » uniquement).**
+- **Couleurs** : tout le site en bleu nuit, textes blancs, boutons bleus ; bouton « Regarder » blanc. Les thèmes « Classique » et « Nuit et or » ne changent pas.
+- **Menu** : sur ordinateur, plus de menu latéral ; le menu du haut (Accueil, Catalogue, Apprendre, Pratique, Ma bibliothèque, Kids) et les onglets de rubrique (Vidéos, Séries, Shorts…) suffisent. Sur téléphone, la barre du bas reste.
+- **Accueil** : vidéo à la une en plein écran sous l'en-tête (dégradé sombre du côté du texte, inversé en arabe), boutons « Regarder » et « Ma liste » (vrai bouton, comme sur les vignettes), repères du carrousel, transition douce. Vidéos à la une : celles choisies dans Admin ; s'il n'y en a pas, les 5 plus récentes. Ordre : à la une → Continuer à regarder → Ma liste → Nouveautés → **Nos univers** (les thèmes réels, image de la première vidéo, nombre réel de vidéos) → Par quoi commencer → bandeaux de saison → autres rangées et Kids → **À faire aujourd'hui** (bandeau Apprendre) → événements → citation.
+- **Image de la une** : pour YouTube, la miniature haute définition est utilisée seulement si elle existe (contrôle de sa taille), sinon la miniature habituelle.
+- **Vignettes** : une vidéo sans miniature reçoit une affiche de secours à elle (teinte tirée de son identifiant, titre écrit dessus, emblème en filigrane). Aucune image commune à plusieurs vidéos.
+- **Page vidéo** : lecteur limité à la hauteur de l'écran (le titre se voit sans défiler), halo de l'affiche derrière, étiquettes (durée, langue, sous-titres, quiz, accès), bouton « Ma liste » mis en avant, « Apprendre avec cette vidéo » en trois cartes distinctes (Comprendre / Retenir / Agir), recommandations en vignettes arrondies.
+- **Logo** : variante bleue pour fond sombre partout.
+
+**Ce qui n'est pas fait dans ce lot.** Mise en page détaillée du Catalogue (grille éditoriale), d'Apprendre (tableau de bord, cartes à retourner, quiz, courbes), de Kids, de l'application téléphone et de la télé. La page `/tv` du site sert seulement à connecter une télé : l'écran télé est dans l'application Android TV.
+
+**Images.** Le site affiche les vraies miniatures des vidéos (YouTube, Vimeo, image envoyée). Aucune image n'a été ajoutée au dépôt. Aucun outil de création de photos n'est disponible ici : pour une affiche soignée par vidéo ou par série, l'envoyer depuis Studio (miniature de la vidéo, affiche de la série).
+
+**Activer / revenir en arrière.** Admin → Paramètres → Général → « Thème visuel par défaut » : `bleu` pour activer, `classique` pour revenir. Pour choisir les vidéos à la une : Admin → Paramètres → accueil, mode de bannière « vidéos à la une », puis cocher « à la une » sur les vidéos.
+
+**Fichiers.** `web/app/skin-bleu.css` (réécrit), `web/app/page.js`, `web/components/HomeHero.js`, `web/components/TalkCard.js`, `web/components/SeriesCard.js`, `web/components/BrandImg.js`, `web/lib/thumb.js` (nouveau), `web/app/talks/[id]/TalkClient.js`, `web/app/globals.css` (2 lignes), `web/lib/i18n.js` (5 textes en fr / en / ar), tests `web/tests/test_d3_web.mjs` (nouveau), `test_d2_web.mjs`, `test_n3_web.mjs`, `test_onboarding_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement (aucun changement d'API ni de base). Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** L'accueil garde l'ancienne mise en page : le thème n'est pas `bleu` (réglage ci-dessus), ou un accueil en blocs est publié (Admin → Pages), qui garde la priorité. Une vignette montre un fond bleu avec le titre : la vidéo n'a pas de miniature, en envoyer une depuis Studio. La une est floue : la vidéo YouTube n'a pas de miniature haute définition.
+
+**Testé.** Tous les tests du site (dont `test_d3_web.mjs`), construction du site. Captures réelles (Playwright) relues puis corrigées : accueil, catalogue, page vidéo, Apprendre et Kids à 1440 × 900 ; accueil, page vidéo, Apprendre et Kids à 390 × 844 ; accueil à 1920 × 1080 ; accueil en arabe ; bibliothèque, compte, Pratique, séries, tarifs à 1440. Aucun débordement horizontal, aucune erreur de page. Jeu d'essai local : 19 vidéos aux vrais titres du catalogue avec des illustrations dessinées à la place des miniatures. **Non testé** : vraies miniatures YouTube (dont le passage en haute définition) et lecture d'une vidéo, faute d'accès à YouTube depuis l'environnement d'essai ; largeurs 360, 375 et 430 px ; site réel.

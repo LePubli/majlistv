@@ -2,6 +2,8 @@
 // Bannière du haut de l'accueil : vidéos mises en avant (défilement), bannière personnalisée, ou simple titre.
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useApp } from './Providers';
 
 // Respecte « réduire les animations » : pas de défilement automatique ni de vidéo d'ambiance.
 export function useReducedMotion() {
@@ -54,7 +56,28 @@ function CustomHero({ hero, t, user, trialDays }) {
   );
 }
 
+// Étape D3 (17/11) : image de la une en grande taille. Pour YouTube, on essaie la miniature haute définition
+// (maxresdefault) et on ne la garde que si elle existe vraiment (sinon YouTube renvoie une image grise de 120 px).
+const ytThumb = (ref, q) => `https://i.ytimg.com/vi/${ref}/${q}.jpg`;
+export const heroThumb = (it) => it.posterUrl || (it.source === 'youtube' ? ytThumb(it.video_ref, 'hqdefault') : null);
+function HeroBg({ it, on }) {
+  const base = heroThumb(it);
+  const [src, setSrc] = useState(base);
+  useEffect(() => {
+    setSrc(base);
+    if (it.posterUrl || it.source !== 'youtube') return undefined;
+    let dead = false;
+    const img = new window.Image();
+    img.onload = () => { if (!dead && img.naturalWidth > 320) setSrc(img.src); };
+    img.src = ytThumb(it.video_ref, 'maxresdefault');
+    return () => { dead = true; };
+  }, [base, it.posterUrl, it.source, it.video_ref]);
+  return <div className={`banner-bg${on ? ' on' : ''}`} style={src ? { backgroundImage: `url(${src})` } : undefined} aria-hidden="true" />;
+}
+
 function FeaturedHero({ items, t }) {
+  const { user, feat, inMyList, toggleMyList } = useApp();
+  const router = useRouter();
   const reduced = useReducedMotion();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -67,25 +90,28 @@ function FeaturedHero({ items, t }) {
   }, [reduced, paused, n, i]);
   const x = items[Math.min(i, n - 1)];
   const mins = x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : '';
+  // « Ma liste » : même bouton que sur les vignettes (favoris + plus tard). Visiteur : page de connexion.
+  const listOn = feat('favorites') || feat('watchlater');
+  const mine = listOn && inMyList(x.id);
+  const onMine = () => { if (!user) { router.push('/login'); return; } toggleMyList(x.id); };
   return (
     <section className="hero banner has-image featured" aria-roledescription="carousel" aria-label={t('heroEyebrow')}
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
-      {items.map((it, k) => {
-        const u = it.posterUrl || (it.source === 'youtube' ? `https://i.ytimg.com/vi/${it.video_ref}/hqdefault.jpg` : null);
-        return <div key={it.id} className={`banner-bg${k === i ? ' on' : ''}`} style={u ? { backgroundImage: `url(${u})` } : undefined} aria-hidden="true" />;
-      })}
+      {items.map((it, k) => <HeroBg key={it.id} it={it} on={k === i} />)}
       <div className="banner-shade" aria-hidden="true" />
-      <div className="banner-body" aria-live={paused ? 'polite' : 'off'}>
+      <div className="banner-body" key={x.id} aria-live={paused ? 'polite' : 'off'}>
         <p className="eyebrow">
           <span className={`badge-inline ${x.access}`}>{t(x.access)}</span>
-          {x.category ? ` ${x.category}` : ''}
+          {x.category ? <span className="banner-cat"> {x.category}</span> : ''}
         </p>
         <h1>{x.title}</h1>
-        <p className="banner-meta">{[x.speaker, mins].filter(Boolean).join(' · ')}</p>
+        <p className="banner-meta">{[x.speaker, mins].filter(Boolean).map((m, k) => <span key={k}>{m}</span>)}</p>
         {x.summary && <p className="banner-summary">{x.summary}</p>}
         <div className="hero-cta">
-          <Link href={`/talks/${x.id}`} className="btn btn-lg">▶ {t('watchNow')}</Link>
-          <Link href={`/talks/${x.id}`} className="btn ghost btn-lg">{t('moreInfo')}</Link>
+          <Link href={`/talks/${x.id}`} className="btn btn-lg hero-play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>{t('watchNow')}</Link>
+          {listOn
+            ? <button type="button" className={`btn ghost btn-lg hero-list${mine ? ' on' : ''}`} onClick={onMine} aria-pressed={mine} title={mine ? t('mlRemove') : t('mlAdd')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">{mine ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M12 5v14M5 12h14" />}</svg>{t('lbMyList')}</button>
+            : <Link href={`/talks/${x.id}`} className="btn ghost btn-lg">{t('moreInfo')}</Link>}
         </div>
       </div>
       {n > 1 && (

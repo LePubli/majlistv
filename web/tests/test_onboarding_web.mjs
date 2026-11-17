@@ -10,7 +10,7 @@ assert.match(c, /aria-modal="true"/, 'bulle accessible (dialogue)'); assert.matc
 assert.match(c, /dir === 'rtl'/, 'flèches inversées en arabe');
 const home = read('app/page.js');
 assert.match(home, /\n      <StartCards \/>\n/, 'accueil d’origine'); assert.match(home, /<StartCards \/><TodayBlock home \/>/, 'accueil en blocs');
-assert.equal((home.match(/\{tour\}/g) || []).length, 2, 'visite sur les deux accueils'); assert.match(home, /sp\.get\('tour'\) === '1'/, 'visite par ?tour=1');
+assert.equal((home.match(/\{tour\}/g) || []).length, 3, 'visite sur les trois accueils (origine, blocs, thème bleu)'); assert.match(home, /sp\.get\('tour'\) === '1'/, 'visite par ?tour=1');
 assert.equal((read('components/Header.js').match(/href="\/\?tour=1"/g) || []).length, 2, 'menu du compte et menu téléphone');
 assert.match(read('components/Providers.js'), /patchUser:/, 'mise à jour locale du compte');
 const i18n = read('lib/i18n.js');

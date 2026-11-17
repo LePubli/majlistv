@@ -11,10 +11,11 @@ import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 import { langName } from './Transcript';
 import { levelLabel } from '../lib/levels';
+import { thumbOf, posterHue } from '../lib/thumb';
 
 const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par vidéo
 
-export const thumbOf = (talk) => talk.posterUrl || (talk.source === 'youtube' ? `https://i.ytimg.com/vi/${talk.video_ref}/hqdefault.jpg` : talk.source === 'dailymotion' ? `https://www.dailymotion.com/thumbnail/video/${talk.video_ref}` : null);
+export { thumbOf, posterHue };
 const minutesOf = (talk, t) => (talk.durationSeconds > 0 ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : '');
 
 // Extrait vidéo muet en boucle (vidéo envoyée : HLS ; YouTube / Vimeo gratuits : lecteur intégré).
@@ -146,7 +147,8 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
   return (
     <div className="talk-wrap" ref={wrap} onMouseEnter={enter} onMouseLeave={leave}>
       <Link href={talk.quizState ? `/talks/${talk.id}?quiz=1` : `/talks/${talk.id}`} className="talk">
-        <div className={fmt ? 'thumb has-fmt' : 'thumb'} style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
+        <div className={['thumb', fmt ? 'has-fmt' : '', thumb ? '' : 'no-img'].filter(Boolean).join(' ')} style={thumb ? { backgroundImage: `url(${thumb})` } : { '--ph-h': posterHue(talk.id) }}>
+          {!thumb && <span className="ph-t" aria-hidden="true">{talk.title}</span>}
           {fmt && <span className="fmt-badge">{fmt}</span>}
           {talk.quizState
             ? <span className="badge next">{talk.quizState === 'retry' ? `${t('qpRevise')} · ${talk.bestPercent} %` : talk.quizState === 'review' ? t('revBadge') : t('qpTodo')}</span>

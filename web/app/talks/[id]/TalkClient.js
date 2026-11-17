@@ -11,7 +11,7 @@ import ModulePanels from '../../../components/ModulePanels';
 import Transcript, { langName } from '../../../components/Transcript';
 import BooksBlock from '../../../components/BooksBlock';
 import Insights from '../../../components/Insights';
-import { thumbOf } from '../../../components/TalkCard';
+import { thumbOf, posterHue } from '../../../components/TalkCard';
 import { pricingPath } from '../../../lib/nav';
 import SaleBox, { SaleOwned } from '../../../components/SaleBox'; // étape C-2 : contenu payant à l'unité
 import { levelLabel } from '../../../lib/levels';
@@ -413,7 +413,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     <main className="page watch watch-b">
       <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
 
-      <section className="wb-hero" aria-label={t('wbStage')}>
+      <section className="wb-hero" aria-label={t('wbStage')} style={thumbOf(talk) ? { '--amb': `url(${thumbOf(talk)})` } : undefined}>
         <div className="player-wrap" ref={stageRef}>
           <div className={quizOpen || practiceOpen ? 'player-stage quiz-on' : 'player-stage'}>
             {player}
@@ -497,7 +497,16 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             )}
             <h1>{talk.title}</h1>
             {talk.sale?.owned && <p className="sale-owned-line"><SaleOwned sale={talk.sale} /></p>}
-            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}{[audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}{trackable && resumeMs > 0 && !jumpMs && <> · {t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></>}</p>
+            {/* Étape D3 (17/11) : les mêmes informations en étiquettes (thème « Mejliss bleu ») : thème, durée, langue, sous-titres, quiz, accès. */}
+            <ul className="wb-chips" aria-label={t('wbInfos')}>
+              {ctx && talk.category && <li>{talk.category}</li>}
+              {minutes && <li className="plain">{minutes}</li>}
+              {audioLang && <li className="plain">{langName(audioLang, locale)}</li>}
+              {(talk.tracks || []).length > 0 && <li className="plain">{t('wbSubs')} {(talk.tracks || []).map((l) => String(l).split('-')[0].toUpperCase()).join(' · ')}</li>}
+              {quizOn && <li>{t('wbQuizChip').replace('{n}', talk.quiz.count)}</li>}
+              <li className={talk.access === 'premium' ? 'prem' : 'plain'}>{t(talk.access)}</li>
+            </ul>
+            <p className="meta">{talk.level && <span className={`lvl ${talk.level}`}>{levelLabel(talk.level, t)}</span>}<span className="wb-meta-base">{[audioLang ? langName(audioLang, locale) : '', t(talk.access), minutes].filter(Boolean).join(' · ')}</span>{trackable && resumeMs > 0 && !jumpMs && <> · {t('resumedAt')} {clock(resumeMs)} · <button type="button" className="link" onClick={fromStart}>{t('fromStart')}</button></>}</p>
             {talk.speaker && (
               <div className="wb-channel">
                 {talk.speakerSlug ? <Link href={`/chaines/${talk.speakerSlug}`} className="wb-chan-name">{talk.speaker}</Link> : <span className="wb-chan-name">{talk.speaker}</span>}
@@ -654,7 +663,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               return (
                 <li key={x.id}>
                   <Link href={`/talks/${x.id}`} className="wb-card">
-                    <span className="wb-thumb" style={th ? { backgroundImage: `url(${th})` } : undefined}>
+                    <span className={th ? 'wb-thumb' : 'wb-thumb no-img'} style={th ? { backgroundImage: `url(${th})` } : { '--ph-h': posterHue(x.id) }}>
                       {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
                     </span>
                     <strong>{x.title}</strong>
