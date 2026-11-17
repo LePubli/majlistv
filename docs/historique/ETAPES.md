@@ -9429,3 +9429,33 @@ bash /root/verify-deploy.sh
 **Debug.** L'accueil garde l'ancienne mise en page : le thème n'est pas `bleu` (réglage ci-dessus), ou un accueil en blocs est publié (Admin → Pages), qui garde la priorité. Une vignette montre un fond bleu avec le titre : la vidéo n'a pas de miniature, en envoyer une depuis Studio. La une est floue : la vidéo YouTube n'a pas de miniature haute définition.
 
 **Testé.** Tous les tests du site (dont `test_d3_web.mjs`), construction du site. Captures réelles (Playwright) relues puis corrigées : accueil, catalogue, page vidéo, Apprendre et Kids à 1440 × 900 ; accueil, page vidéo, Apprendre et Kids à 390 × 844 ; accueil à 1920 × 1080 ; accueil en arabe ; bibliothèque, compte, Pratique, séries, tarifs à 1440. Aucun débordement horizontal, aucune erreur de page. Jeu d'essai local : 19 vidéos aux vrais titres du catalogue avec des illustrations dessinées à la place des miniatures. **Non testé** : vraies miniatures YouTube (dont le passage en haute définition) et lecture d'une vidéo, faute d'accès à YouTube depuis l'environnement d'essai ; largeurs 360, 375 et 430 px ; site réel.
+
+
+## D4 — Catalogue du thème « Mejliss bleu » (17/11/2026)
+
+**Pourquoi.** Lot 2 de la refonte (cahier des charges du 17/11, point D). Le Catalogue ressemblait à une deuxième page d'accueil : la même grande bannière, puis une seule rangée. Pas de recherche sur la page.
+
+**Ce qui change (thème « Mejliss bleu » uniquement).**
+- **Titre et recherche** : un champ en haut de la page. Il cherche dans les titres, les intervenants, les descriptions et les transcriptions (ce que l'API faisait déjà). L'adresse garde la recherche (`/catalogue?q=coran`), la croix l'efface, un message s'affiche quand rien ne correspond.
+- **Filtres** : mêmes filtres qu'avant (formats, thèmes, sous-thèmes), en puces plus grandes ; la puce choisie est blanche. Aucun filtre décoratif ajouté.
+- **À la une** : une mosaïque, une grande carte et jusqu'à quatre petites (les vidéos mises à la une dans Admin ; à défaut la plus récente), titre posé sur l'image.
+- **Rangées par format** quand il y a plusieurs formats, puis **« Tout le catalogue »** : la grille complète, avec « Afficher la suite ».
+- **Téléphone** : champ de recherche pleine largeur, mosaïque et grille sur deux colonnes.
+- Les autres thèmes gardent la page d'origine. La recherche par adresse (`?q=`) fonctionne dans tous les thèmes.
+
+**Fichiers.** `web/app/catalogue/page.js`, `web/app/skin-bleu.css`, `web/lib/i18n.js` (5 textes en fr / en / ar), `web/tests/test_d4_web.mjs` (nouveau).
+
+**Déploiement.** DockPanel : **majlistv-web** seulement. Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** La page garde la grande bannière : le thème n'est pas `bleu`. La mosaïque ne montre qu'une carte : aucune vidéo n'est cochée « à la une » dans Admin. Une recherche ne trouve pas une phrase : la vidéo n'a pas encore de transcription.
+
+**Exemples.** `/catalogue?q=patience` (recherche), `/catalogue?cat=12` (un thème), `/catalogue?format=cours&cat=12` (format et thème).
+
+**Testé.** Tous les tests du site, construction. Navigateur réel (Playwright) à 1440 × 900 et 390 × 844 : page, recherche (3 résultats pour « coran » sur le jeu d'essai), recherche sans résultat, effacement, filtre par thème ; aucun débordement, aucune erreur de page. **Non testé** : site réel, rangées par format (le jeu d'essai n'a pas de formats), arabe sur cette page.
