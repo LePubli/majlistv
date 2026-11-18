@@ -17,7 +17,7 @@ import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 import { featureOn } from '../features.js';
-import { classifyUrl, insertImport, newObjectKey, storageProblem, AUDIO_CHOICES, audioLangOf } from '../mediaImport.js';
+import { classifyUrl, insertImport, newObjectKey, storageProblem, AUDIO_CHOICES, audioLangOf, talkSourceUrl } from '../mediaImport.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo, Dailymotion ou archive.org.
 export function parseVideoUrl(raw) {
@@ -364,6 +364,7 @@ export default async function talksRoutes(app) {
   app.get('/me/talks', { preHandler: app.authenticate }, async (req) => {
     const { rows } = await pool.query(
       `SELECT ${COLS}, t.transcript_language AS "transcriptLanguage", t.transcript_error AS "transcriptError", t.transcript_method AS "transcriptMethod", t.poster_candidates, t.video_error AS "videoError",
+         t.imported_from AS "importedFrom", t.imported_origin AS "importedOrigin", t.audio_track AS "audioTrack",
          (SELECT COALESCE(json_agg(json_build_object('lang', tr.lang, 'status', tr.status, 'progress', tr.progress, 'error', tr.error) ORDER BY tr.lang), '[]'::json)
             FROM transcript_translations tr WHERE tr.talk_id = t.id) AS translations,
          (SELECT COALESCE(json_agg(json_build_object('lang', i.lang, 'status', i.status, 'error', i.error) ORDER BY i.lang), '[]'::json)
@@ -376,6 +377,9 @@ export default async function talksRoutes(app) {
       r.posterChoice = r.poster_candidates.indexOf(r.poster_key);
       r.posterChoices = await Promise.all(r.poster_candidates.map((k) => presignGet(k)));
       delete r.poster_candidates;
+      // Étape D5 (18/11) : adresse d'origine de la vidéo, affichée seulement dans Studio (fiche du contenu), jamais sur le site public.
+      // Vidéo lue ailleurs : son adresse sur la plateforme ; vidéo copiée chez nous : importedFrom (adresse donnée lors de l'import).
+      r.sourceUrl = talkSourceUrl(r)?.url || null;
     }
     return withPosters(rows);
   });

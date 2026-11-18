@@ -9459,3 +9459,33 @@ bash /root/verify-deploy.sh
 **Exemples.** `/catalogue?q=patience` (recherche), `/catalogue?cat=12` (un thème), `/catalogue?format=cours&cat=12` (format et thème).
 
 **Testé.** Tous les tests du site, construction. Navigateur réel (Playwright) à 1440 × 900 et 390 × 844 : page, recherche (3 résultats pour « coran » sur le jeu d'essai), recherche sans résultat, effacement, filtre par thème ; aucun débordement, aucune erreur de page. **Non testé** : site réel, rangées par format (le jeu d'essai n'a pas de formats), arabe sur cette page.
+
+
+## D5 — Adresse d'origine des vidéos et des audios dans Studio (18/11/2026)
+
+**Pourquoi.** Epok voulait retrouver, sur la fiche d'un contenu dans Studio, d'où viennent les vidéos et les audios ajoutés par lien. Avant : seule une vidéo importée montrait son adresse (texte non cliquable) ; une vidéo lue depuis YouTube, Vimeo ou archive.org n'affichait que « Lue depuis YouTube ». Demande : **Studio seulement, pas sur le site public.**
+
+**Ce qui change.**
+- **Fiche d'une vidéo** (Studio → Contenus → la vidéo), étape **Vidéo** : nouvelle ligne **« Source : »** avec le lien cliquable (nouvel onglet) :
+  - vidéo lue ailleurs : « lue depuis YouTube / Vimeo / Dailymotion / archive.org » + adresse (archive.org : nom du fichier choisi) ;
+  - vidéo copiée chez nous : « copiée chez nous depuis » + adresse donnée lors de l'import (+ « piste française reprise de la même adresse » si c'est le cas) ;
+  - fichier envoyé depuis un ordinateur : « pas d'adresse d'origine ».
+- **Fiche Audyn**, liste des chapitres : sous chaque chapitre importé par lien, « Source : » + adresse cliquable.
+- **API** : `GET /me/talks` (Studio, propriétaire ou chaîne gérée) renvoie `sourceUrl`, `importedFrom`, `importedOrigin`, `audioTrack`. Les routes publiques (fiche vidéo, catalogue) ne les renvoient pas.
+
+**Fichiers.** `api/src/routes/talks.js`, `web/app/studio/[id]/page.js`, `web/app/studio/(module-audyn)/audyn/[id]/page.js`, `web/app/globals.css`, `web/lib/i18n.js` (6 textes fr / en / ar), tests `api/tests/test_talk_source.py`, `web/tests/test_d5_web.mjs` (nouveaux).
+
+**Déploiement.** DockPanel : **majlistv-api**, puis **majlistv-web** (aucune migration). Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** La ligne « Source » n'apparaît pas : l'API n'a pas été redéployée (le site seul ne suffit pas). Pas de lien sur un chapitre Audyn : il a été envoyé comme fichier, pas importé par lien. Une vidéo importée avant l'étape Import (sans `imported_from`) affiche « fichier envoyé depuis un ordinateur ».
+
+**Testé.** `api/tests/test_talk_source.py` (YouTube, Vimeo, vidéo copiée chez nous, absence sur la fiche publique et le catalogue, autre organisateur sans accès) ; tous les tests du site ; navigateur réel à 1440 et 390 px, en français et en arabe (fiche vidéo lue depuis YouTube, fiche vidéo importée, fiche Audyn), aucun débordement. **Non testé** : site réel.
+
+**Question liée (18/11) : lire les vidéos depuis PlanetHoster ?** Non retenu. Les conditions de PlanetHoster (§5.3) interdisent les sites de diffusion vidéo sur l'hébergement mutualisé. PlanetHoster reste pour la sauvegarde chiffrée de la nuit et l'archivage (Studio → Paramètres → Stockage et archivage). Les vidéos importées sont lues depuis Garage, sur le VPS.

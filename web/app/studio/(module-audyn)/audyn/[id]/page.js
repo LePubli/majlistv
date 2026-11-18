@@ -209,6 +209,8 @@ export default function StudioAudynItem() {
             <li key={c.id} className="ay-chapter">
               <input defaultValue={c.title} maxLength={200} aria-label={t('ayChapterTitle')} onBlur={(e) => rename(c, e.target.value)} />
               <span className="meta">{c.durationSeconds ? clock(c.durationSeconds) : '—'} · {(c.size / 1048576).toFixed(1)} Mo</span>
+              {/* Étape D5 (18/11) : adresse d'où vient ce chapitre (import par lien), Studio seulement. */}
+              {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="meta u ay-src" dir="ltr" title={c.sourceUrl} data-testid="chapter-source">{t('srcLabel')} {c.sourceUrl}</a>}
               <button className="btn ghost sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('ayUp')}>↑</button>
               <button className="btn ghost sm" disabled={i === it.chapters.length - 1} onClick={() => move(i, 1)} aria-label={t('ayDown')}>↓</button>
               {c.sourceUrl && <button className="btn ghost sm" onClick={() => resplit(c)} title={t('ayResplitTitle')}>{t('ayResplit')}</button>}

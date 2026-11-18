@@ -45,6 +45,19 @@ function PracticePanel({ id, t, call }) {
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
 const base = (c) => String(c || '').split('-')[0].toLowerCase();
 
+// Étape D5 (18/11) : d'où vient la vidéo (Studio seulement). Lien cliquable vers l'original, ouvert dans un nouvel onglet.
+function SourceLink({ url }) {
+  return <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="u st-src-url" dir="ltr">{url}</a>;
+}
+export function SourceLine({ x, t }) {
+  let body;
+  if (x.sourceUrl) body = <>{t('srcExternal').replace('{s}', sourceLabel(x.source))} <SourceLink url={x.sourceUrl} />{x.source === 'archive' && x.external_file ? <> · {t('srcFile')} <code dir="ltr">{x.external_file}</code></> : null}</>;
+  else if (x.importedFrom) body = <>{t('srcImported')} <SourceLink url={x.importedFrom} />{x.audioTrack === 'fr' ? <> · {t('srcAudioFr')}</> : null}</>;
+  else if (x.source === 'upload') body = t('srcUpload');
+  else return null;
+  return <p className="meta small st-src" data-testid="talk-source"><b>{t('srcLabel')}</b> {body}</p>;
+}
+
 export default function ManageTalk() {
   const { id } = useParams();
   const { t, call, locale, user } = useApp();
@@ -138,6 +151,7 @@ export default function ManageTalk() {
               : steps.video === 'err' ? <>{t('convFailed')}{x.videoError ? ` : ${x.videoError}` : ''} <button className="link u" onClick={reconvert}>{t('retryConv')}</button></>
               : steps.video === 'run' ? `${t('converting')}${steps.videoPct != null ? ` ${steps.videoPct} %` : ''}` : t('videoReady')}
           </p>
+          <SourceLine x={x} t={t} />
           <ImportVideoPanel talk={x} imp={imp} setImp={setImp} canFetchAudio={canAudio} setCanFetchAudio={setCanAudio} reload={load} t={t} call={call} sourceName={sourceLabel(x.source)} />
         </Row>
         <Row letter="T" state={steps.transcript} title={t('stepTranscript')}>

@@ -4083,3 +4083,8 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 /* Étape D3 (17/11) : étiquettes de la page vidéo et affiche de secours — visibles dans le thème « Mejliss bleu » (skin-bleu.css). */
 .wb-chips { display: none; }
 .ph-t { display: none; }
+
+/* Étape D5 (18/11) : source d'une vidéo ou d'un chapitre audio dans Studio (adresse longue coupée proprement). */
+.st-src { margin-top: 6px; overflow-wrap: anywhere; }
+.st-src-url, .ay-src { overflow-wrap: anywhere; word-break: break-all; color: var(--accent-light, var(--accent)); text-decoration: underline; }
+.ay-src { flex-basis: 100%; font-size: 12px; }
