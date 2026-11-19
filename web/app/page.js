@@ -17,11 +17,14 @@ import { StartCards, Tour } from '../components/Onboarding';
 import EventsBand from '../components/EventsBand';
 import { mergeMyList } from '../lib/mylist';
 import { isBlueFamily } from '../lib/skin';
+import PmHome from '../components/premium/PmHome';
 
 // Première rangée de vidéos de l'accueil (nouveautés) : elle sert de « Dernières vidéos » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
 
 export default function Home() {
+  const { skin } = useApp();
+  if (skin === 'premium') return <PmHome />; // thème Premium : accueil de la maquette V20 (vraies données)
   return <Suspense fallback={null}><HomeInner /></Suspense>; // useSearchParams (?cat=…) demande une limite Suspense
 }
 

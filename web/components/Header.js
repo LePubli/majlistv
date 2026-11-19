@@ -21,6 +21,7 @@ import { NAV_ICON_PATHS } from '../lib/navicons';
 import { KidsPendingBadge } from './KidsPending';
 import SkinPicker from './SkinPicker';
 import BrandImg from './BrandImg';
+import PmHeader from './premium/PmHeader';
 
 // En-tête Mejliss TV : emblème + logotype, navigation, langue, compte.
 // Espace enfant : en-tête réduit ; on n'en sort qu'avec le code parental du parent.
@@ -87,10 +88,11 @@ function KidsParentHeader() {
 }
 
 export default function Header() {
-  const { kid, user, ready } = useApp();
+  const { kid, user, ready, skin } = useApp();
   const path = usePathname();
   if (kid) return <KidHeader />;
   if (ready && user && path && path.startsWith('/kids')) return <KidsParentHeader />;
+  if (skin === 'premium') return <PmHeader />; // thème Premium : en-tête de la maquette V20
   return <MainHeader />;
 }
 

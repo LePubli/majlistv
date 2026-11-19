@@ -1,4 +1,5 @@
 'use client';
+import PmMobileNav from './premium/PmMobileNav';
 // Étape B — Gabarit commun de l'espace membre : menu latéral à gauche (ordinateur), barre de 5 entrées en bas (téléphone).
 // Le menu suit les interrupteurs de fonctions (Admin → Fonctions) : une fonction coupée disparaît du menu.
 // Visiteurs, Studio/Administration (leur propre menu), Kids et pages d'entrée de compte : aucun changement.
@@ -47,7 +48,7 @@ export const ChevIco = () => (
 );
 
 export default function MemberShell({ children }) {
-  const { t, user, kid, feat, hasSeries, hasBooks, locale, layout, cats } = useApp();
+  const { t, user, kid, feat, hasSeries, hasBooks, locale, layout, cats, skin } = useApp();
   const path = usePathname();
   const params = useSearchParams();
   const [col, toggle] = useCollapsed();
@@ -57,6 +58,8 @@ export default function MemberShell({ children }) {
   // Visiteur : pas de menu latéral, mais la même barre du bas sur téléphone (Accueil · Catalogue · Séries · Apprendre · Kids).
   const visitorBar = !user && !kid && !NO_SHELL.test(path || '/');
   if (!member && !visitorBar) return children;
+  // Thème Premium : pas de menu latéral (menu de la maquette V20 dans l'en-tête), barre du bas de la maquette sur téléphone.
+  if (skin === 'premium') return <>{children}<PmMobileNav /></>;
 
   const tab = params.get('tab');
   const catParam = params.get('cat');

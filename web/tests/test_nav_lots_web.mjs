@@ -35,7 +35,7 @@ for (const k of ['adGrpSet', 'adGrpSec', 'msPath']) assert.ok(!i18n.includes(`  
 
 // --- B : Kids
 const hd = read('components/Header.js');
-assert.match(hd, /if \(kid\) return <KidHeader \/>;\s+if \(ready && user && path && path\.startsWith\('\/kids'\)\) return <KidsParentHeader \/>;\s+return <MainHeader \/>;/, 'ordre : enfant, parent sur /kids, sinon site');
+assert.match(hd, /if \(kid\) return <KidHeader \/>;\s+if \(ready && user && path && path\.startsWith\('\/kids'\)\) return <KidsParentHeader \/>;\s+if \(skin === 'premium'\) return <PmHeader \/>;[^\n]*\n\s+return <MainHeader \/>;/, 'ordre : enfant, parent sur /kids, thème Premium, sinon site');
 const kp = hd.slice(hd.indexOf('function KidsParentHeader'), hd.indexOf('export default function Header'));
 assert.ok(kp.includes('href="/kids"') && kp.includes("t('kdBackSite')") && !kp.includes('hd-nav') && !kp.includes('/catalogue'), 'en-tête parent : logo Kids et retour au site, pas le menu adulte');
 has3('kdBackSite');

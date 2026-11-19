@@ -7,7 +7,7 @@ assert.match(lay, /import '\.\/skin-nuit\.css'/, 'feuille du thème chargée'); 
 assert.match(lay, /cookies\(\)\.get\('skin'\)/, 'choix du visiteur lu par le serveur (pas de clignotement)');
 assert.match(lay, /skinCfg\?\.choice === true && SKINS\.includes\(wanted\) \? wanted : skinDef/, 'par défaut (et API muette) : thème choisi par l’administrateur, cookie du visiteur ignoré');
 assert.match(lay, /const SKINS = \['classique', 'nuit', 'bleu', 'premium'\];/, 'quatre thèmes connus (D2 : « Mejliss bleu » ; 19/11 : « Premium »)');
-assert.match(lay, /data-skin=\{skinAttr\(skin\)\}/, 'attribut data-skin sur <html> (premium : bâti sur bleu)');
+assert.match(lay, /data-skin=\{skin\}/, 'attribut data-skin sur <html> (premium : thème autonome)');
 const css = read('app/skin-nuit.css');
 assert.ok(!/^:root|^body \{/m.test(css), 'le thème classique n’est jamais modifié (tout est sous html[data-skin="nuit"])');
 for (const f of ['tile', 'frieze', 'rosette', 'rinceau', 'star', 'tile-card']) { assert.ok(fs.existsSync(new URL(`../public/skin/${f}.svg`, import.meta.url)), `ornement ${f}.svg`); }

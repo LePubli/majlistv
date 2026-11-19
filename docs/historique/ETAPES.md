@@ -9490,28 +9490,34 @@ bash /root/verify-deploy.sh
 
 **Question liée (18/11) : lire les vidéos depuis PlanetHoster ?** Non retenu. Les conditions de PlanetHoster (§5.3) interdisent les sites de diffusion vidéo sur l'hébergement mutualisé. PlanetHoster reste pour la sauvegarde chiffrée de la nuit et l'archivage (Studio → Paramètres → Stockage et archivage). Les vidéos importées sont lues depuis Garage, sur le VPS.
 
-## P1 — Thème « Premium » (thème V20), lot 1 (19/11/2026)
+## P1 — Thème « Premium » (thème V20), lot 1 (19/11/2026, refait à l'identique)
 
-**Pourquoi.** Epok a fourni un thème complet (« MejlissTV V13–V20 Thème complet Premium », 78 fichiers) à ajouter aux thèmes de Mejliss. Analyse : c'est une maquette web autonome (HTML/CSS/JavaScript) avec ses propres données de démonstration ; elle ne connaît ni l'API, ni les comptes, ni Stripe, ni l'application TV. On la reconstruit donc sur le vrai site, comme un thème de plus, par lots.
+**Pourquoi.** Epok a fourni un thème complet (« MejlissTV V13–V20 Thème complet Premium », 78 fichiers) à ajouter aux thèmes de Mejliss. C'est une maquette web autonome (HTML/CSS/JavaScript) avec ses propres données de démonstration ; elle ne connaît ni l'API, ni les comptes, ni Stripe, ni l'application TV.
 
-**Décisions d'Epok (19/11).** Nouveau thème « Premium » à côté de Classique, Nuit et or et Mejliss bleu ; titres en Montserrat (pas de Georgia, qui n'affiche pas ﷺ) ; vrai logo Mejliss en bleu (pas le triangle du ZIP) ; illustrations du thème gardées, sauf l'affiche « Les Prophètes en histoires » (elle n'est que dans les captures de référence, non importées).
+**Première version refusée.** Un premier lot (commit 10f3a0c) habillait le thème bleu aux couleurs V20. Epok : « Reprends le thème avec précision. Je ne veux pas que tu l'ajustes aux autres thèmes. » Le thème est donc **refait comme un thème autonome** qui reproduit la maquette à l'identique, écran par écran.
 
-**Non repris du ZIP.** Prix fictifs (6,90 € / 9,90 €, trois formules) ; contenus inventés (« Les Héritiers », « Yacine et Lina », « 284 commentaires », « 4K UHD »…) ; avatars au visage inventé ; fonctions factices enregistrées dans le navigateur (contrôle parental, favoris, objectifs) — les vraies existent déjà ; captures de référence (19 Mo) et pages de comparaison.
+**Décisions d'Epok (19/11).** Titres en Montserrat (pas de Georgia, qui n'affiche pas ﷺ) ; menu de la maquette (Accueil, Catalogue, Séries, Apprendre, Kids + loupe, cloche, avatar ; Pratique et Ma bibliothèque dans le menu de l'avatar) ; vrai logo Mejliss (dôme bleu) au lieu du triangle ; illustrations du thème, sauf l'affiche « Prophètes » ; aucun avatar au visage inventé, aucun faux prix, aucun faux contenu.
 
-**Ce qui change (lot 1).**
-- Thème « Premium » : la page reçoit `data-skin="bleu"` (toutes les mises en page du thème bleu) et `data-premium` (règles de `web/app/skin-premium.css`). Aide : `web/lib/skin.js` (`skinAttr`, `isBlueFamily`, `applySkin`).
-- Couleurs V20 : nuit profonde #031127, bleu nuit #061B35, bleu électrique #087CFF, bleu lumière #35B9FF, blanc polaire #F5F9FF, gris bleuté #A3BBD5, filets fins bleus.
-- En-tête transparent sur l'image, onglet actif en pilule bleu électrique ; boutons principaux bleu électrique lumineux, secondaires en contour clair.
-- Une de l'accueil : badges en contour, titre plus grand, « Regarder » bleu électrique, points lumineux.
-- Vignettes : filet bleu, bouton lecture rond (toujours sur « Continuer à regarder », au survol ailleurs), barre de progression en dégradé ; vidéo sans miniature : décor illustré du thème (architecture, paysages, Coran ; jamais de personnage), choisi d'après l'identifiant (`posterArt`, `web/lib/thumb.js`).
-- « Nos univers », bandeau Kids (illustration des enfants), « À faire aujourd'hui » (illustration du Coran).
-- Images : `web/public/premium/` (28 fichiers WebP, 2,1 Mo).
+**Comment c'est construit.**
+- La feuille d'origine du thème (11 fichiers CSS, dans l'ordre du thème) est convertie par `web/scripts/build-premium-css.py` en **`web/public/premium/v20.css`** : chaque classe reçoit le préfixe `v20-` et chaque règle est limitée à `.v20-app` (aucune règle ne peut toucher le reste du site) ; images `assets/` → `/premium/` ; Georgia → Montserrat ; police Google retirée (le site sert ses polices lui-même) ; captures de référence non livrées → pas d'image. Ne pas modifier `v20.css` à la main : relancer le script.
+- Cette feuille n'est chargée **que** pour le thème Premium (`<link id="v20-css">` dans `web/app/layout.js` ; `applySkin` l'ajoute si besoin).
+- Écrans de la maquette refaits en composants React (`web/components/premium/`), même structure HTML que la maquette, remplis avec les vraies données :
+  - `PmHeader.js` : en-tête (posé sur l'image de la une sur l'accueil, comme la maquette), menu de la maquette, loupe (recherche du site), cloche (réglages des notifications, sans fausse pastille), avatar (menu du compte : Pratique, Ma bibliothèque, Mon compte, Abonnement, Studio / Administration, langue, thème, déconnexion ; visiteur : Connexion).
+  - `PmHome.js` : accueil. Une (vidéos choisies dans Admin, à défaut les 5 plus récentes) avec flèches et points ; univers sur téléphone (4 premières catégories + Plus) ; « Continuer à regarder » (vraie position, minutes restantes) ; « Nouveautés » (6 affiches) ; bandeau « Mon espace Apprendre » (la progression n'apparaît que s'il y a un vrai parcours en cours, formule Apprentissage) ; tuiles Kids, application, lecteur et télé avec de vrais titres.
+  - `PmFooter.js` : pied de page (liens du site, liens légaux obligatoires, langue et choix du thème — un visiteur peut quitter le thème).
+  - `PmMobileNav.js` : barre du bas du téléphone (Accueil, Catalogue, Apprendre, Kids, Profil / Connexion).
+  - `Glyph.js` (pictogrammes de la maquette), `PmBrand.js` (« Mejliss » + « TV » en bleu).
+- Branchements : `Header.js`, `Footer.js`, `MemberShell.js` (pas de menu latéral en Premium), `app/page.js`.
+- `web/app/skin-premium.css` : couleurs V20 pour les écrans **pas encore refaits** (catalogue, fiche vidéo, compte…), menu de l'avatar, choix langue / thème, titres réels plus longs que ceux de la maquette (taille réduite, 3 lignes au plus), arabe de droite à gauche (dégradé, flèches).
+- Passer à Premium ou en sortir depuis le sélecteur recharge la page (les écrans changent).
 
-**Fichiers.** `web/app/skin-premium.css` (nouveau), `web/lib/skin.js` (nouveau), `web/app/layout.js`, `web/components/SkinPicker.js`, `web/app/page.js`, `web/app/catalogue/page.js`, `web/components/TalkCard.js`, `web/components/SeriesCard.js`, `web/app/talks/[id]/TalkClient.js`, `web/lib/thumb.js`, `web/lib/i18n.js` (skPremium fr / en / ar), `api/src/settings.js`, `api/src/index.js`, tests `web/tests/test_premium_web.mjs` (nouveau), `test_skin_web.mjs`, `test_d2_web.mjs`, `test_d3_web.mjs`, `test_d4_web.mjs`, `api/tests/test_skin.py`.
+**Différences assumées avec la maquette.** Les textes et images viennent du site (titres plus longs, miniatures des vidéos) ; « HD » et la pastille de notification ne sont pas affichés (rien ne permet de les garantir) ; une partie sans données n'est pas affichée ; l'accueil en blocs (Admin → Pages) et les autres rangées de l'accueil (Ma liste, univers, saisons…) ne sont pas repris dans ce thème, pour rester fidèle à la maquette.
+
+**Fichiers.** `web/scripts/build-premium-css.py`, `web/public/premium/v20.css` (+ 28 images WebP), `web/components/premium/*` (6 fichiers), `web/app/skin-premium.css`, `web/lib/skin.js`, `web/app/layout.js`, `web/app/page.js`, `web/components/Header.js`, `Footer.js`, `MemberShell.js`, `SkinPicker.js`, `web/lib/i18n.js` (clés `pm…` fr / en / ar), tests `web/tests/test_premium_web.mjs`, `test_skin_web.mjs`, `test_nav_lots_web.mjs`. Côté API (déjà livré avec 10f3a0c) : valeur `premium` acceptée.
 
 **Activer.** Admin → Paramètres → Général → « Thème visuel par défaut » = `premium`. Retour arrière : `bleu` ou `classique`.
 
-**Déploiement.** DockPanel : **majlistv-api** (nouvelle valeur acceptée), puis **majlistv-web**. Aucune migration. Puis sur le VPS :
+**Déploiement.** DockPanel : **majlistv-web** seulement (l'API a déjà été déployée avec le lot précédent ; si ce n'est pas le cas, **majlistv-api** d'abord). Aucune migration. Puis sur le VPS :
 
 ```
 /root/apply-limits.sh
@@ -9520,9 +9526,8 @@ nginx -t && systemctl reload nginx
 bash /root/verify-deploy.sh
 ```
 
-**Debug.** « premium » refusé dans Admin → Paramètres : l'API n'a pas été redéployée. Le site reste en bleu : vérifier l'attribut `data-premium` sur `<html>` (outils du navigateur) ; sinon le site n'a pas été redéployé. Images de décor absentes : `/premium/coran.webp` doit répondre.
+**Debug.** Le site garde l'ancien aspect : vérifier `data-skin="premium"` sur `<html>` et que `https://majlisstv.le-publicitaire.fr/premium/v20.css` répond (sinon le site n'a pas été redéployé). « premium » refusé dans Admin : redéployer majlistv-api. Mise en page cassée après une modification du thème : relancer `python3 web/scripts/build-premium-css.py <dossier du thème>`.
 
-**Testé.** Tests du site (dont `test_premium_web.mjs`) et de l'API (`test_skin.py`) ; captures réelles à 1440 × 900 (accueil complet, catalogue) et 390 × 844 (accueil en français et en arabe), aucun débordement, aucune erreur de page. **Non testé** : vraies miniatures YouTube, site réel.
+**Testé.** Tests du site (tous, dont `test_premium_web.mjs`) ; construction Next.js ; captures réelles comparées côte à côte avec la maquette : accueil 1440 × 900 (complet), 390 × 844 (complet), arabe ordinateur et téléphone, visiteur, menu de l'avatar, catalogue, compte ; aucun débordement horizontal, aucune erreur de page. **Non testé** : site réel, vraies miniatures YouTube haute définition.
 
-**Suite (sur « go »).** Lot 2 catalogue et fiche vidéo/série (panneau « Apprendre avec cette série ») ; lot 3 Apprendre ; lot 4 Kids ; lot 5 abonnement, inscription et profil (vrais prix) ; lot 6 application TV (refonte TV commencée le 19/11, mise de côté sans être envoyée).
-
+**Suite (sur « go »).** Lot 2 catalogue et fiche vidéo/série ; lot 3 Apprendre ; lot 4 Kids ; lot 5 abonnement, inscription et profil (vrais prix) ; lot 6 lecteur ; lot 7 application TV (refonte TV mise de côté le 19/11).

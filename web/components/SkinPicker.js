@@ -1,6 +1,6 @@
 'use client';
 // Choix du thème visuel : « Classique » (noir et or), « Nuit et or » (bleu de nuit, arabesques), « Mejliss bleu » (étape D2)
-// ou « Premium » (thème V20, bâti sur le bleu).
+// ou « Premium » (thème V20, autonome).
 // Mémorisé sur l'appareil (cookie « skin », lu par le serveur : pas de clignotement au chargement). Appliqué tout de suite
 // (attribut data-skin de <html>). Masqué si l'administrateur a désactivé le choix (Admin → Paramètres → Général).
 import { useEffect, useState } from 'react';
@@ -14,7 +14,7 @@ export default function SkinPicker({ className = '' }) {
   const { t, skin, skinChoice } = useApp();
   const [cur, setCur] = useState(skin);
   useEffect(() => {
-    const sync = () => setCur(document.documentElement.dataset.skinName || document.documentElement.dataset.skin || skin);
+    const sync = () => setCur(document.documentElement.dataset.skin || skin);
     sync();
     window.addEventListener(EVENT, sync);
     return () => window.removeEventListener(EVENT, sync);
@@ -22,6 +22,8 @@ export default function SkinPicker({ className = '' }) {
   if (!skinChoice) return null;
   const pick = (v) => {
     document.cookie = `skin=${v};path=/;max-age=31536000;samesite=lax`;
+    // « Premium » a ses propres écrans (en-tête, accueil…) : passer à ce thème ou en sortir recharge la page.
+    if (v !== cur && (v === 'premium' || cur === 'premium')) { window.location.reload(); return; }
     applySkin(document.documentElement, v);
     window.dispatchEvent(new Event(EVENT));
   };

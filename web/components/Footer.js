@@ -9,11 +9,17 @@ import { defaultList, resolveMenu, audienceOk, deviceClass } from '../lib/menus'
 import { defaultFooter, MENUS } from '../lib/navcfg';
 import { tx } from '../lib/blocks';
 import BrandImg from './BrandImg';
+import PmFooter from './premium/PmFooter';
 
 // Pied de page : marque et liens légaux obligatoires, présents sur toutes les pages.
 // Étape I4 : les éléments se placent à gauche ou à droite, on peut y ajouter textes et liens, et des blocs peuvent s'afficher au-dessus.
 // Les liens légaux ne peuvent ni être masqués ni changer de public ou d'appareil, même par les réglages.
 export default function Footer() {
+  const { skin } = useApp();
+  return skin === 'premium' ? <PmFooter /> : <SiteFooter />; // thème Premium : pied de page de la maquette V20
+}
+
+function SiteFooter() {
   const { t, appName, kid, feat, layout, user, locale } = useApp();
   const path = usePathname();
   if (kid || path.startsWith('/studio') || path.startsWith('/admin')) return null; // espace enfant : pas de liens hors de Kids
