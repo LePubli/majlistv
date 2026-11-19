@@ -245,3 +245,53 @@ html[data-skin="premium"] .page-shell:has(> .pm-home), html[data-skin="premium"]
 [dir="rtl"] .v20-app .v20-hv9-hero-art { -webkit-mask-image: linear-gradient(270deg, transparent 0%, transparent 41%, #000 55%); mask-image: linear-gradient(270deg, transparent 0%, transparent 41%, #000 55%); }
 [dir="rtl"] .v20-app .v20-hv9-hero:after { background: linear-gradient(270deg, #041426 0%, #06182b60 26%, transparent 60%), linear-gradient(0deg, #04192c 0%, transparent 17%, transparent 80%, #0312252a 100%); }
 @media (max-width: 700px) { [dir="rtl"] .v20-app .v20-heritage-v9 .v20-hv9-hero-copy { margin: 0 18px; } }
+
+/* ---------- Apprendre (lot 3) : « Mon espace Apprendre » de la maquette, avec de vraies données ---------- */
+/* Pas de photo de profil inventée : pastille avec l'initiale du membre, au même format que l'avatar de la maquette. */
+.v20-app .pm-ln-avatar { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 2px solid #90d4fa; background: #0b3a66; color: #fff; font-weight: 800; font-size: 16px; display: grid; place-items: center; }
+/* Image de la vidéo à reprendre (la maquette y mettait une balise <img> ; ici une image de fond, avec le décor du thème au besoin). */
+.v20-app .pm-ln-focus-art { width: 210px; height: 115px; flex: none; border-radius: 13px; border: 1px solid #6494b5; background-size: cover; background-position: center; }
+.v20-app .pm-ln-focus-empty > div { max-width: 560px; }
+/* Une seule colonne quand l'autre carte n'existe pas (rubrique désactivée). */
+.v20-app .v20-lv10-overview-grid.pm-solo, .v20-app .v20-lv10-mid-grid.pm-solo, .v20-app .v20-lv10-bottom-grid.pm-solo { grid-template-columns: 1fr; }
+.v20-app .pm-arr { display: inline-block; }
+[dir="rtl"] .v20-app .pm-arr { transform: scaleX(-1); }
+.v20-app .v20-lv10-goal input:disabled { opacity: .6; cursor: default; }
+.v20-app .pm-ln-nothing { margin: 18px 0 8px; font-size: 14px; color: #31597f; }
+.v20-app .pm-ln-extra { margin-top: 34px; }
+.v20-app .pm-ln-extra > section, .v20-app .pm-ln-extra .row { margin-top: 26px; }
+/* Onglets Réviser / Mes progrès : bandeau de la maquette (en-tête posé dessus), puis le contenu habituel sur fond du thème. */
+.v20-app.pm-ln-flow .v20-lv10-flow-art { background-image: url('/premium/mosquee-nuit.webp'); }
+.v20-app.pm-ln-flow .v20-lv10-flow-wrap { padding-top: 122px; }
+.v20-app .pm-ln-back { display: inline-block; margin-top: 16px; }
+.v20-app .pm-ln-body { max-width: 1200px; margin: 0 auto; padding: 8px 4.2% 80px; }
+/* Écrans « verrouillé » et « visiteur » d'Apprendre : l'en-tête est posé sur la page, on le dégage. */
+html[data-skin="premium"] main.page.learning:not(.pm-ln-body) { padding-top: 112px; }
+@media (max-width: 650px) {
+  .v20-app .pm-ln-focus-art { width: 120px; height: 105px; }
+  .v20-app.pm-ln-flow .v20-lv10-flow-wrap { padding-top: 112px; }
+  .v20-app .pm-ln-body { padding-inline: 16px; }
+}
+/* Arabe : image du bandeau à gauche, texte à droite (dégradés et masques retournés). */
+[dir="rtl"] .v20-app .v20-lv10-hero { background: linear-gradient(260deg, #031326 0%, #06335b 58%, #0a213e 100%); }
+[dir="rtl"] .v20-app .v20-lv10-hero-art { inset: 0 34% 0 0; -webkit-mask-image: linear-gradient(270deg, transparent 0%, #000 40%); mask-image: linear-gradient(270deg, transparent 0%, #000 40%); }
+[dir="rtl"] .v20-app .v20-lv10-hero:after { background: linear-gradient(270deg, #021329e8 0%, #031e3bad 35%, transparent 75%), linear-gradient(0deg, #03152d 0%, transparent 27%, #03142b22 100%); }
+[dir="rtl"] .v20-app .v20-lv10-hero-label { right: auto; left: 4.6%; }
+[dir="rtl"] .v20-app .v20-lv10-flow-art { inset: 0 37% 0 0; }
+.v20-app .pm-ln-extra { --gutter: 0px; }
+.v20-app .v20-lv10-review-card > .v20-lv10-primary { margin-top: 16px; }
+/* Flèche du lien « Voir ma progression » : décalage de la maquette retourné en arabe. */
+[dir="rtl"] .v20-app .v20-lv10-progress-card > .v20-lv10-inline-link { margin-left: 0; margin-right: 153px; }
+@media (max-width: 650px) { [dir="rtl"] .v20-app .v20-lv10-progress-card > .v20-lv10-inline-link { margin-right: 113px; } }
+
+/* Bandeau des onglets Réviser / Mes progrès (la feuille de la maquette ne décrit pas le conteneur : fond, image à droite, fondu). */
+.v20-app.pm-ln-flow .v20-lv10-flow-head { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(100deg, #031326 0%, #06335b 58%, #0a213e 100%); }
+.v20-app.pm-ln-flow .v20-lv10-flow-head:after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, #021329e8 0%, #031e3bad 35%, transparent 75%), linear-gradient(0deg, #03152d 0%, transparent 35%); }
+[dir="rtl"] .v20-app.pm-ln-flow .v20-lv10-flow-head { background: linear-gradient(260deg, #031326 0%, #06335b 58%, #0a213e 100%); }
+[dir="rtl"] .v20-app.pm-ln-flow .v20-lv10-flow-head:after { background: linear-gradient(270deg, #021329e8 0%, #031e3bad 35%, transparent 75%), linear-gradient(0deg, #03152d 0%, transparent 35%); }
+/* Carte des révisions : le titre ne passe plus sous le pictogramme du livre. */
+.v20-app .v20-lv10-review-card h2, .v20-app .v20-lv10-review-card .v20-lv10-kicker { padding-inline-end: 72px; }
+.v20-app .v20-lv10-review-card .v20-lv10-kicker { display: block; }
+/* Arabe : le pictogramme du livre passe à gauche (le texte commence à droite). */
+[dir="rtl"] .v20-app .v20-lv10-review-icon { right: auto; left: 28px; }
+[dir="rtl"] .v20-app .v20-lv10-review-card h2, [dir="rtl"] .v20-app .v20-lv10-review-card .v20-lv10-kicker { padding-inline-end: 0; padding-inline-start: 0; }

@@ -88,5 +88,17 @@ assert.match(ser, /lpct != null && \(/, 'progression Apprendre seulement si elle
 assert.doesNotMatch(ser, /62 %|284|VOST|2024|Tout public/, 'aucun chiffre de démonstration');
 assert.match(read('components/premium/PmHeader.js'), /\/\^\\\/series\\\/\[\^\/\]\+\$\/\.test\(path\)/, 'en-tête posé sur l’image de la fiche série');
 for (const k of ['pmSeriesTitle', 'pmCatIntro', 'pmSearchPh', 'pmResultN', 'pmSortAlpha', 'pmLearnSeries', 'pmSameTheme', 'pmEpN', 'pmQuizOf']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
+// 8. Lot 3 : Apprendre (« Mon espace Apprendre » de la maquette V20, lv10), vraies données.
+const lrn = read('components/premium/PmLearning.js');
+for (const c of ['v20-learnv10', 'v20-lv10-hero', 'v20-lv10-progress-card', 'v20-lv10-ring', 'v20-lv10-goals-card', 'v20-lv10-path-grid', 'v20-lv10-review-card', 'v20-lv10-tools-grid', 'v20-lv10-focus', 'v20-lv10-bilan-tile', 'v20-lv10-flow-head']) assert.ok(lrn.includes(c), c);
+const lpage = read('app/(module-learning)/learning/page.js');
+assert.match(lpage, /pm && tab === 'today'[\s\S]*<PmLearning /, 'tableau de bord V20 sur l’onglet Aujourd’hui');
+assert.match(lpage, /<PmLearnFlow /, 'en-tête V20 pour Réviser et Mes progrès');
+assert.match(lpage, /skin === 'premium'/);
+assert.match(read('components/premium/PmHeader.js'), /path === '\/learning'/, 'en-tête posé sur l’image d’Apprendre');
+assert.match(lrn, /call\('\/series\?limit=100'/, 'vraies affiches de séries');
+assert.match(lrn, /lastScores\.length >= 2/, 'courbe seulement avec de vrais résultats');
+assert.doesNotMatch(lrn, /avatar-reference|Le Coran|Sîra|piliers|75 ?%|Les valeurs du quotidien|2\/3/, 'aucun parcours, chiffre ou photo de démonstration');
+for (const k of ['pmLnMySpace', 'pmLnTitleEm', 'pmLnIntro', 'pmLnGoals', 'pmLnNothing', 'pmLnPaths', 'pmLnRevWait', 'pmLnToolsTitle', 'pmLnBilan', 'pmLnBack']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 void execFileSync;
 console.log('web premium OK');

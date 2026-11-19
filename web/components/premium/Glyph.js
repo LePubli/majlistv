@@ -12,6 +12,7 @@ const GLYPHS = {
   game: <><rect x="3" y="8" width="18" height="10" rx="5" /><path d="M7 13h5m-2.5-2.5v5m6-3h.01m3 2h.01" /></>,
   compass: <><circle cx="12" cy="12" r="9" /><path d="m15 9-2 4-4 2 2-4 4-2Z" /></>,
   cap: <path d="m2 9 10-5 10 5-10 5L2 9Zm4 3v5c4 3 8 3 12 0v-5m4-3v8" />,
+  clapper: <path d="M3 8h18v13H3V8Zm0-4 17-2 1 4-18 2V4Zm5 4 3-5m3 5 3-5M7 12h10M7 16h10" />,
   star: <path d="m12 2 3.2 6.7 7.3 1-5.3 5.2 1.4 7.3-6.6-3.5-6.6 3.5 1.4-7.3L1.5 9.7l7.3-1L12 2Z" />,
 };
 

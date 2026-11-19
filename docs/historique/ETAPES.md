@@ -9558,3 +9558,29 @@ bash /root/verify-deploy.sh
 
 **Testé.** `test_catalogue_facets.py` (tri, chiffres, sous-thèmes, vidéos non prêtes ou en brouillon exclues) ; tests du site ; construction ; captures réelles comparées à la maquette : catalogue, séries, fiche série en 1440 et 390 px, français et arabe, sans débordement ni erreur (séries de démonstration créées dans la base de test seulement). **Non testé** : site réel, série à plusieurs saisons, vraie progression Apprentissage d'un abonné.
 
+
+## P1 — Thème « Premium » (thème V20), lot 3 : Apprendre (20/11/2026)
+
+**Ce qui change.** La page Apprendre (`/learning`, formule « Apprentissage ») prend l'apparence de la maquette V20 « Mon espace Apprendre » (`web/components/premium/PmLearning.js`, classes `v20-lv10-…`), avec les vraies données uniquement :
+- **Onglet « Aujourd'hui » = tableau de bord** : bandeau (titre, salutation avec le prénom et une pastille à l'initiale — pas de photo inventée —, « Reprendre mon parcours » vers la dernière vidéo commencée ou la série en cours, « Mes révisions ») ; carte **progression globale** (anneau = quiz de séries réussis sur le total ; sans série suivie, le score d'apprentissage ; petite courbe seulement s'il existe au moins 2 résultats de quiz) ; carte **« À faire maintenant »** (quiz à passer, vidéos à réviser, cartes mémoire à revoir, engagement en cours : seulement ce qui existe aujourd'hui) ; **parcours** = vos séries suivies (affiche réelle, état En cours / Terminé / À découvrir, quiz réussis) ; carte **révisions** (chiffres réels) ; **outils** (Mes leçons, Révisions, Quiz, Mon bilan, selon les fonctions actives) ; **« Poursuivez votre découverte »** (vidéo à reprendre) ; **bilan personnel**. Le planning de la semaine et la rangée « Pour continuer à apprendre » restent en bas.
+- **Onglets « Réviser » et « Mes progrès »** : bandeau V20 (titre, texte d'explication, lien « Tableau de bord »), puis le contenu et les fonctions habituels (quiz, révisions, cartes, attestations, engagements, bilan, statistiques) aux couleurs du thème.
+- En-tête posé sur l'image du bandeau sur `/learning` ; arabe de droite à gauche (image, dégradés, flèches, pictogramme retournés).
+
+**API.** Aucune modification, aucune migration.
+
+**Différences assumées avec la maquette.** Elle montrait de faux parcours (« Le Coran 75 % », « Les piliers de l'Islam »…), de fausses cases cochées « objectifs de la semaine », une fausse leçon « Les valeurs du quotidien », un faux « 3 / 4 modules » et une photo de profil : rien de cela n'existe, tout est remplacé par les vraies données (ou n'est pas affiché). Les sous-écrans de la maquette (parcours, quiz, cartes, bilan) correspondent aux onglets et sections existants du site, dont les fonctions sont conservées.
+
+**Fichiers.** `web/components/premium/PmLearning.js` (nouveau), `Glyph.js` (glyphe `clapper`), `PmHeader.js`, `web/app/(module-learning)/learning/page.js` (branchement : `PmLearning` / `PmLearnFlow` selon le thème, contenu des onglets inchangé), `web/app/skin-premium.css`, `web/lib/i18n.js` (clés `pmLn…` fr / en / ar), `web/tests/test_premium_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement (l'API n'a pas changé depuis le lot 2). Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Ancienne page encore affichée : le thème actif n'est pas Premium (Admin → Paramètres → Général, ou le sélecteur dans le menu de l'avatar). Cartes « parcours » absentes : aucune série suivie (il faut réussir un quiz d'une série). Carte « À faire » vide : rien à faire aujourd'hui, c'est normal.
+
+**Testé.** Tests du site (dont `test_premium_web.mjs`), construction, captures réelles comparées à la maquette en 1440 et 390 px, français et arabe, onglets Aujourd'hui / Réviser / Mes progrès, sans débordement ni erreur de page. **Non testé** : parcours avec de vraies séries suivies et des quiz réussis (la base de test n'en a pas : cartes « parcours » vues seulement par le code), abonné réel, site réel, écrans « verrouillé » et « visiteur » (seulement dégagés sous l'en-tête).

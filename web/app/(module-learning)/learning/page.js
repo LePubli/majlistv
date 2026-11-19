@@ -21,6 +21,7 @@ import EmptyState from '../../../components/EmptyState';
 import InviteCard from '../../../components/InviteCard';
 import StreakCard from '../../../components/StreakCard';
 import PlanningClient from '../../../components/PlanningClient';
+import PmLearning, { PmLearnFlow } from '../../../components/premium/PmLearning';
 
 // Anciens onglets (avant N2) → [nouvel onglet, section].
 export const LEGACY_TABS = {
@@ -64,7 +65,7 @@ function GroupIntro({ id, text, t }) {
 }
 
 export default function Learning() {
-  const { user, ready, t, call, locale, feat } = useApp();
+  const { user, ready, t, call, locale, feat, skin } = useApp();
   const router = useRouter();
   const [d, setD] = useState(undefined); // undefined = chargement, null = palier requis
   const [msg, setMsg] = useState(null);
@@ -215,17 +216,30 @@ export default function Learning() {
   const pathNow = cur && (!cur.complete || !cur.attestation) ? cur : null;
   const sideN = (quizN > 0 ? 1 : 0) + (commitNow ? 1 : 0) + (pathNow ? 1 : 0);
   const nextList = next.filter((x) => !cont.some((c) => c.id === x.id)).slice(0, 8);
+  const pm = skin === 'premium'; // thème Premium : tableau de bord V20 (onglet « Aujourd'hui ») et en-tête V20 (autres onglets)
 
-  return (
-    <main className="page learning">
-      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'today' ? [[null, tabNow.plain || tabNow.label]] : [])]} />
-      <header className="lg-head">
-        <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
-        <p>{t('lgSub')}</p>
-      </header>
-      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+  // Planning de la semaine et rangée « Pour continuer à apprendre » : même contenu dans le thème d'origine et dans le thème Premium.
+  const weekBlock = (
+    <section className="lg-week lg-anchor" id="lg-week" aria-label={t('pnTab')}>
+      <div className="lg-week-head">
+        <b>{t('pnTab')}</b>
+        <button type="button" className="lg-ghost" aria-expanded={week} aria-controls="lg-week-body" onClick={() => setWeek((w) => !w)}>{week ? t('lgWeekHide') : t('lgWeek')}</button>
+      </div>
+      {week && <div id="lg-week-body"><PlanningClient /></div>}
+    </section>
+  );
+  const nextRow = nextList.length > 0 ? <Row id="row-lg-next" title={t('lrNext')} talks={nextList} t={t} /> : null;
+
+  if (pm && tab === 'today') {
+    return (
+      <PmLearning d={d} cont={cont} todo={todo} quizN={quizN} rv={rv} cardsN={cardsN} pz={pz} hasRev={hasRev} toReview={toReview}
+        nextExtra={<>{weekBlock}{nextRow}</>} />
+    );
+  }
+
+  const groupEl = (
       <div className="lg-group">
-      <GroupIntro id={`n2-${tab}`} text={t(tabNow.intro)} t={t} />
+      {!pm && <GroupIntro id={`n2-${tab}`} text={t(tabNow.intro)} t={t} />}
 
       <TabPanel id="today" current={tab}>
       <TodayBlock compact />
@@ -295,15 +309,9 @@ export default function Learning() {
         )}
       </div>
 
-      <section className="lg-week lg-anchor" id="lg-week" aria-label={t('pnTab')}>
-        <div className="lg-week-head">
-          <b>{t('pnTab')}</b>
-          <button type="button" className="lg-ghost" aria-expanded={week} aria-controls="lg-week-body" onClick={() => setWeek((w) => !w)}>{week ? t('lgWeekHide') : t('lgWeek')}</button>
-        </div>
-        {week && <div id="lg-week-body"><PlanningClient /></div>}
-      </section>
+      {weekBlock}
 
-      {nextList.length > 0 && <Row id="row-lg-next" title={t('lrNext')} talks={nextList} t={t} />}
+      {nextRow}
       </TabPanel>
 
       <TabPanel id="rev" current={tab}>
@@ -401,6 +409,24 @@ export default function Learning() {
       </section>
       </TabPanel>
       </div>
+  );
+
+  if (pm) {
+    return (
+      <PmLearnFlow title={tabNow.plain || tabNow.label} intro={t(tabNow.intro)} tabs={<TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />}>
+        {groupEl}
+      </PmLearnFlow>
+    );
+  }
+  return (
+    <main className="page learning">
+      <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'today' ? [[null, tabNow.plain || tabNow.label]] : [])]} />
+      <header className="lg-head">
+        <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
+        <p>{t('lgSub')}</p>
+      </header>
+      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+      {groupEl}
     </main>
   );
 }
