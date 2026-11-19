@@ -184,3 +184,64 @@ html[data-skin="premium"] .page-shell:has(> .pm-home), html[data-skin="premium"]
 .v20-app .v20-preview-tv strong.pm-long { font-size: clamp(16px, 1.4vw, 21px); line-height: 1.2; }
 .v20-app .v20-preview-player small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .v20-app .pm-footer-opts select { width: auto; max-width: 100%; }
+
+/* ======================================================================
+   Lot 2 — Catalogue, liste des séries, fiche série (maquette V20 : catalogue-v11, heritage-v9)
+   La maquette découpait ses images dans une capture de référence (non livrée) : ici, vraies images des vidéos.
+   ====================================================================== */
+.v20-app .v20-hv9-hero-art { background-size: cover; background-position: center; }
+.v20-app .v20-hv9-hero-copy p.pm-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.v20-app .v20-hv9-hero-copy h1 { overflow-wrap: anywhere; }
+.v20-app .v20-hv9-episode-art.pm-ep-art { position: relative; display: grid; place-items: center; background-size: cover; background-position: center; }
+.v20-app .pm-ep-play { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #fff; display: grid; place-items: center; background: #0a1a2c99; color: #fff; font-size: 13px; padding-inline-start: 2px; }
+.v20-app .pm-ep-dur { position: absolute; inset-inline-end: 8px; bottom: 6px; font-size: 11px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px #000c; }
+.v20-app .v20-hv9-related-art.pm-rel-art { background-size: cover; background-position: center; }
+.v20-app .v20-hv9-locked { font-size: 15px; opacity: .8; }
+.v20-app .pm-about { padding-top: 8px; }
+.v20-app .pm-about p { color: #d5e2f2; line-height: 1.6; margin: 0 0 14px; }
+.v20-app .pm-about dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0 0 14px; }
+.v20-app .pm-about dt { color: #9aafc9; font-weight: 700; }
+.v20-app .pm-about dd { margin: 0; color: #f5f9ff; }
+.v20-app .pm-about a { color: #35b9ff; }
+.v20-app .pm-note { color: #f6cb83; font-weight: 700; margin: 8px 0 0; }
+.v20-app .pm-muted { color: #9aafc9; }
+.v20-app .pm-empty { padding: 120px 0 60px; }
+.v20-app .pm-empty a { color: #35b9ff; }
+/* Catalogue : carte sans miniature (décor du thème), deuxième groupe de la colonne, bouton « plus » désactivé. */
+.v20-app .v20-cv11-card-visual:not(:has(img)) { background-color: #0d233e; }
+.v20-app .pm-side-more { margin-top: 18px; }
+.v20-app .v20-cv11-more button:disabled { opacity: .6; cursor: progress; }
+.v20-app .v20-cv11-search input { min-width: 0; }
+.v20-app .v20-cv11-card-copy h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+/* La maquette écrivait ces libellés en capitales dans le texte ; ici, capitales par la feuille (textes traduits normaux). */
+.v20-app :is(.v20-cv11-eyebrow, .v20-cv11-side-title span, .v20-cv11-side-title small) { text-transform: uppercase; }
+/* Liens à la place des boutons de la maquette (les filtres sont des adresses) : même apparence. */
+.v20-app .v20-cv11-sidebar nav { align-items: stretch; flex-wrap: nowrap; gap: 4px; }
+.v20-app a.v20-cv11-side-link { width: auto; justify-content: flex-start; text-decoration: none; }
+.v20-app .v20-cv11-format-filters a { display: inline-block; background: #102d4d; color: #e6f4ff; border: 1px solid #37658a; border-radius: 999px; padding: 10px 15px; font-size: 12px; font-weight: 770; white-space: nowrap; }
+.v20-app .v20-cv11-format-filters a.v20-active, .v20-app .v20-cv11-format-filters a:hover { background: linear-gradient(110deg, #0c8af2, #056cda); border-color: #63bfff; box-shadow: 0 0 12px #0a8fff3d; }
+@media (max-width: 700px) { .v20-app .v20-cv11-format-filters a { padding: 9px 12px; font-size: 11px; flex: none; } }
+.v20-app .v20-cv11-toolbar-end select { display: inline-block; width: auto; }
+.v20-app a.v20-cv11-fav { display: grid; place-items: center; }
+.v20-app .v20-cv11-empty a { display: inline-block; margin-top: 8px; color: #35b9ff; font-weight: 700; }
+/* Fiche série : la carte « Apprendre » prend la hauteur de ce qu'elle contient (la maquette montrait toujours la progression),
+   onglets alignés à gauche quand il y en a peu. */
+.v20-app .v20-heritage-v9 .v20-hv9-learning-card { height: auto; min-height: 0; }
+.v20-app .v20-hv9-tabs { justify-content: flex-start; gap: 22px; }
+.v20-app .v20-hv9-ring { position: relative; }
+.v20-app .v20-hv9-learn-icon .v20-ui-glyph { width: 26px; height: 26px; }
+.v20-app .v20-hv9-meta .v20-ui-glyph { width: 18px; height: 18px; vertical-align: -3px; }
+.v20-app .v20-cv11-toolbar-end label { display: inline-flex; align-items: center; gap: 0; margin: 0; }
+/* Téléphone : la maquette serrait le titre de la carte « Apprendre » (un mot par ligne) ; le lien passe dessous. */
+@media (max-width: 700px) {
+  .v20-app .v20-hv9-learning-card header { flex-wrap: wrap; }
+  .v20-app .v20-hv9-learning-card header > div { flex: 1 1 200px; min-width: 0; }
+  .v20-app .v20-hv9-learning-card header .v20-hv9-course-link { margin-inline-start: auto; }
+  .v20-app .v20-heritage-v9 .v20-hv9-hero-copy { padding-top: 108px; }
+  .v20-app .v20-heritage-v9 .v20-hv9-hero { height: auto; min-height: 480px; padding-bottom: 24px; }
+}
+/* Fiche série en arabe : texte à droite, image à gauche (dégradé et masque retournés). */
+[dir="rtl"] .v20-app .v20-heritage-v9 .v20-hv9-hero-copy { margin-left: 0; margin-right: 4.25%; }
+[dir="rtl"] .v20-app .v20-hv9-hero-art { -webkit-mask-image: linear-gradient(270deg, transparent 0%, transparent 41%, #000 55%); mask-image: linear-gradient(270deg, transparent 0%, transparent 41%, #000 55%); }
+[dir="rtl"] .v20-app .v20-hv9-hero:after { background: linear-gradient(270deg, #041426 0%, #06182b60 26%, transparent 60%), linear-gradient(0deg, #04192c 0%, transparent 17%, transparent 80%, #0312252a 100%); }
+@media (max-width: 700px) { [dir="rtl"] .v20-app .v20-heritage-v9 .v20-hv9-hero-copy { margin: 0 18px; } }

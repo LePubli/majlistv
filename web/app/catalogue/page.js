@@ -13,10 +13,13 @@ import TalkCard from '../../components/TalkCard';
 import CatalogueFilters from '../../components/CatalogueFilters';
 import { thumbOf, posterHue, posterArt } from '../../lib/thumb';
 import { isBlueFamily } from '../../lib/skin';
+import PmCatalogue from '../../components/premium/PmCatalogue';
 
 const PAGE = 24;
 
 export default function CataloguePage() {
+  const { skin } = useApp();
+  if (skin === 'premium') return <PmCatalogue />; // thème Premium : catalogue de la maquette V20
   return <Suspense fallback={<main aria-busy="true" />}><Catalogue /></Suspense>;
 }
 

@@ -9531,3 +9531,30 @@ bash /root/verify-deploy.sh
 **Testé.** Tests du site (tous, dont `test_premium_web.mjs`) ; construction Next.js ; captures réelles comparées côte à côte avec la maquette : accueil 1440 × 900 (complet), 390 × 844 (complet), arabe ordinateur et téléphone, visiteur, menu de l'avatar, catalogue, compte ; aucun débordement horizontal, aucune erreur de page. **Non testé** : site réel, vraies miniatures YouTube haute définition.
 
 **Suite (sur « go »).** Lot 2 catalogue et fiche vidéo/série ; lot 3 Apprendre ; lot 4 Kids ; lot 5 abonnement, inscription et profil (vrais prix) ; lot 6 lecteur ; lot 7 application TV (refonte TV mise de côté le 19/11).
+
+## P1 — Thème « Premium » (thème V20), lot 2 : catalogue et séries (19/11/2026)
+
+**Ce qui change.** Trois écrans de la maquette V20 refaits à l'identique pour le thème Premium, avec les vraies données :
+- **Catalogue** (`/catalogue`, `web/components/premium/PmCatalogue.js`, classes `v20-cv11-…`) : en-tête « Explorer … » et recherche ; colonne de gauche avec « Tout le catalogue » et les thèmes principaux avec leur **nombre réel** de vidéos, puis les autres rubriques du Catalogue (Shorts, Collections, Chaînes, Audyn, En direct… : elles remplacent dans ce thème la barre d'onglets du haut), puis l'encart « Apprendre » ; formats qui ont des vidéos ; tri (plus récents, A → Z, durée) ; grille ou liste ; nombre de résultats ; cartes (image, format, titre, intervenant, thème, durée, bouton « Ma liste ») ; « Afficher plus » avec le nombre restant ; liens Apprendre et Kids. Les filtres sont dans l'adresse (`?q=`, `?cat=`, `?format=`, `?sort=`).
+- **Liste des séries** (`/series`) : même écran (« Nos séries »), nombre de séries par thème, tri par épisodes.
+- **Fiche série** (`/series/<id>`, `web/components/premium/PmSeries.js`, classes `v20-hv9-…`) : en-tête posé sur l'image ; étiquettes (thème, nombre d'épisodes), titre, intervenant, description, thème / niveau / accès ; « Regarder l'épisode 1 » ou « Reprendre l'épisode N » ; partager (feuille de partage du téléphone, sinon lien copié) ; ma progression dans la série ; onglets Épisodes / À propos / Ressources (si des ouvrages existent) ; épisodes par saison (✓ si vu, position / durée et barre si commencé, cadenas pour un visiteur si réservé aux abonnés) ; carte « Apprendre avec cette série » (progression réelle des quiz de la formule Apprentissage s'il y en a, une barre par épisode ; quiz, cartes de révision, engagement selon les fonctions actives) ; « Dans la même thématique » (autres séries du même thème).
+
+**API.** `GET /talks?sort=recent|alpha|duration` (tri) et nouvelle route `GET /talks/facets` (nombre de résultats pour la recherche et les filtres, nombre de vidéos par thème principal, sous-thèmes compris ; mêmes règles de visibilité que la liste). Aucune migration.
+
+**Différences assumées avec la maquette.** La maquette découpait ses images dans une capture de référence (non livrée) : ici, vraies miniatures. Pas de « HD », de « VF / VOST », d'année, de « Tout public », de commentaires ni de bouton « Ma liste » de série (rien de cela n'existe pour une série). Carte « Apprendre » : la maquette la montrait en double et toujours remplie ; ici une seule, avec la progression seulement si elle existe. Téléphone : titre de la carte « Apprendre » sur toute la largeur (la maquette mettait un mot par ligne), texte du bandeau un peu plus bas (il touchait le menu). La fiche vidéo (`/talks/<id>`) suivra avec le lecteur.
+
+**Fichiers.** `web/components/premium/PmCatalogue.js`, `PmSeries.js` (nouveaux), `PmHeader.js` (en-tête posé sur l'image de la fiche série), `web/components/SectionTabs.js` (`catalogueTabs`, barre masquée en Premium sur Catalogue et Séries), `web/app/catalogue/page.js`, `web/app/(module-series)/series/page.js`, `web/app/(module-series)/series/[id]/SeriesClient.js`, `web/app/skin-premium.css`, `web/lib/i18n.js` (clés `pm…` fr / en / ar), `api/src/routes/talks.js`, tests `api/tests/test_catalogue_facets.py` (ajouté à `ci-suite.txt`), `web/tests/test_premium_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-api** (tri et chiffres du Catalogue), puis **majlistv-web**. Aucune migration. Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Colonne de gauche sans chiffres et tri sans effet : l'API n'a pas été redéployée (`https://api-majlisstv.le-publicitaire.fr/talks/facets` doit répondre `{"total":…}`). Un thème absent de la colonne : il n'a aucune vidéo publiée.
+
+**Testé.** `test_catalogue_facets.py` (tri, chiffres, sous-thèmes, vidéos non prêtes ou en brouillon exclues) ; tests du site ; construction ; captures réelles comparées à la maquette : catalogue, séries, fiche série en 1440 et 390 px, français et arabe, sans débordement ni erreur (séries de démonstration créées dans la base de test seulement). **Non testé** : site réel, série à plusieurs saisons, vraie progression Apprentissage d'un abonné.
+

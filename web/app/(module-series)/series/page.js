@@ -4,8 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
 import SeriesCard from '../../../components/SeriesCard';
+import PmCatalogue from '../../../components/premium/PmCatalogue';
 
-export default function SeriesList() {
+export default function SeriesPage() {
+  const { skin } = useApp();
+  return skin === 'premium' ? <PmCatalogue series /> : <SeriesList />; // thème Premium : liste des séries de la maquette V20
+}
+
+function SeriesList() {
   const { t, call, user } = useApp();
   const [list, setList] = useState(null);
   const [mine, setMine] = useState([]);

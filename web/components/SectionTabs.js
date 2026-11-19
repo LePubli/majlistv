@@ -16,13 +16,9 @@ export const SECTION_PATHS = {
 };
 export const sectionOf = (path) => Object.keys(SECTION_PATHS).find((s) => SECTION_PATHS[s].some((p) => path === p || path.startsWith(p + '/'))) || null;
 
-export default function SectionTabs() {
-  const { t, feat, hasSeries, hasBooks, kid } = useApp();
-  const path = usePathname() || '/';
-  if (kid) return null;
-  const section = Object.keys(SECTION_PATHS).find((s) => SECTION_PATHS[s].includes(path));
-  if (!section) return null;
-  const tabs = section === 'catalogue' ? [
+/** Onglets de la rubrique « Catalogue » : [adresse, libellé, affiché, autres adresses de l'onglet]. */
+export function catalogueTabs({ t, feat, hasSeries, hasBooks }) {
+  return [
     ['/catalogue', t('stVideos'), true],
     ['/series', t('seriesNav'), hasSeries],
     ['/shorts', t('shrTitle'), feat('shorts')],
@@ -32,7 +28,18 @@ export default function SectionTabs() {
     ['/books', t('bkNav'), hasBooks],
     // Étape N1 (15/11) : « En direct » réunit la TV 24 h/24 et les événements (page /live) ; sans la TV, il mène aux événements.
     [feat('livetv') ? '/live' : '/events', t('stLive'), feat('livetv') || feat('events'), ['/live', '/events']],
-  ] : [
+  ].filter(([, , on]) => on);
+}
+
+export default function SectionTabs() {
+  const { t, feat, hasSeries, hasBooks, kid, skin } = useApp();
+  const path = usePathname() || '/';
+  if (kid) return null;
+  // Thème Premium : le Catalogue et les Séries ont leur colonne de gauche (maquette V20), qui porte aussi ces rubriques.
+  if (skin === 'premium' && (path === '/catalogue' || path === '/series')) return null;
+  const section = Object.keys(SECTION_PATHS).find((s) => SECTION_PATHS[s].includes(path));
+  if (!section) return null;
+  const tabs = section === 'catalogue' ? catalogueTabs({ t, feat, hasSeries, hasBooks }) : [
     ['/pratique', t('pqHub'), true],
     ['/priere', t('pqNav'), feat('prayer')],
     ['/coran', t('qrNav'), feat('quran')],

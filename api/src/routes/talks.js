@@ -66,7 +66,14 @@ const listSchema = z.object({
   speaker: z.string().max(120).regex(/^[a-z0-9-]+$/).optional(), // slug d'un intervenant (page /intervenants/…)
   limit: z.coerce.number().int().min(1).max(100).default(24),
   offset: z.coerce.number().int().min(0).default(0),
+  // Thème Premium, lot 2 (19/11) : tri du Catalogue (plus récents, A → Z, plus courtes d'abord).
+  sort: z.enum(['recent', 'alpha', 'duration']).default('recent'),
 });
+const SORT_SQL = {
+  recent: 'COALESCE(t.publish_at, t.created_at) DESC',
+  alpha: 'lower(t.title) ASC, t.id',
+  duration: 'COALESCE(t.duration_seconds, 2147483647) ASC, t.id',
+};
 const idSchema = z.object({ id: z.guid() });
 const talkSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -263,11 +270,31 @@ export default async function talksRoutes(app) {
          AND ($5::text IS NULL OR t.level = $5)
          AND ($7::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $7))
          AND ${adultSql('t')}
-       ORDER BY COALESCE(t.publish_at, t.created_at) DESC LIMIT $3 OFFSET $4`,
+       ORDER BY ${SORT_SQL[p.sort]} LIMIT $3 OFFSET $4`,
       [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names, p.format ?? null]
     );
     for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
+  });
+
+  // Thème Premium, lot 2 (19/11) — chiffres du Catalogue : nombre de résultats pour la recherche et les filtres choisis,
+  // et nombre de vidéos par thème principal (sous-thèmes compris) avec la même recherche et le même format.
+  app.get('/talks/facets', async (req) => {
+    const p = listSchema.parse(req.query);
+    const names = p.speaker ? await speakerNames(p.speaker) : null;
+    if (names && !names.length) return { total: 0, categories: [] };
+    const base = `t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
+         AND ($3::text[] IS NULL OR lower(trim(t.speaker)) = ANY($3::text[]))
+         AND ($1::text IS NULL OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%'
+              OR t.description ILIKE '%' || $1 || '%' OR t.transcript_text ILIKE '%' || $1 || '%')
+         AND ($2::text IS NULL OR t.level = $2)
+         AND ($4::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $4))`;
+    const vals = [p.q ?? null, p.level ?? null, names, p.format ?? null];
+    const total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${base} AND ($5::int IS NULL OR ${inCategorySql('t', 5)})`, [...vals, p.category ?? null])).rows[0].n;
+    const { rows } = await pool.query(
+      `SELECT r.id, count(t.id)::int AS n FROM categories r JOIN talks t ON ${inCategorySql('t', 'r.id')}
+        WHERE r.parent_id IS NULL AND ${base} GROUP BY r.id`, vals);
+    return { total, categories: rows };
   });
 
   app.get('/talks/:id', async (req, reply) => {

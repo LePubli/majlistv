@@ -71,5 +71,22 @@ assert.match(posterArt('x'), /^url\(\/premium\/[\w-]+\.webp\)$/);
 // 6. Textes en fr / en / ar.
 const i18n = read('lib/i18n.js');
 for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSub', 'pmLearnCur', 'pmProfile', 'pmUniverses', 'pmNewTag']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
+// 7. Lot 2 : catalogue, liste des séries, fiche série (maquette V20 : catalogue-v11, heritage-v9), vraies données.
+assert.match(read('app/catalogue/page.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
+assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
+assert.match(read('app/(module-series)/series/[id]/SeriesClient.js'), /if \(skin === 'premium'\) return <PmSeries id=/);
+const cat = read('components/premium/PmCatalogue.js');
+for (const c of ['v20-catalogue-v11', 'v20-cv11-heading', 'v20-cv11-search', 'v20-cv11-sidebar', 'v20-cv11-side-link', 'v20-cv11-format-filters', 'v20-cv11-view-switch', 'v20-cv11-cards', 'v20-cv11-card-visual', 'v20-cv11-fav', 'v20-cv11-more', 'v20-cv11-cross-learn', 'v20-cv11-cross-kids', 'v20-cv11-empty']) assert.ok(cat.includes(c), c);
+for (const api of ["'/talks?'", "'/talks/facets?'", "'/formats?used=1'", "'/series?limit=100'"]) assert.ok(cat.includes(api), `vraies données : ${api}`);
+assert.doesNotMatch(cat, /HD<|cv11-quality|Les Héritiers|Yacine/, 'ni « HD » ni contenu de démonstration');
+assert.match(cat, /catalogueTabs\(/, 'les autres rubriques du Catalogue restent accessibles');
+assert.match(read('components/SectionTabs.js'), /skin === 'premium' && \(path === '\/catalogue' \|\| path === '\/series'\)\) return null/);
+const ser = read('components/premium/PmSeries.js');
+for (const c of ['v20-heritage-v9', 'v20-hv9-hero', 'v20-hv9-pills', 'v20-hv9-hero-actions', 'v20-hv9-series-progress', 'v20-hv9-tabs', 'v20-hv9-episode', 'v20-hv9-learning-card', 'v20-hv9-ring', 'v20-hv9-related']) assert.ok(ser.includes(c), c);
+for (const api of ['`/series/${id}`', "'/me/learning'"]) assert.ok(ser.includes(api), `vraies données : ${api}`);
+assert.match(ser, /lpct != null && \(/, 'progression Apprendre seulement si elle existe');
+assert.doesNotMatch(ser, /62 %|284|VOST|2024|Tout public/, 'aucun chiffre de démonstration');
+assert.match(read('components/premium/PmHeader.js'), /\/\^\\\/series\\\/\[\^\/\]\+\$\/\.test\(path\)/, 'en-tête posé sur l’image de la fiche série');
+for (const k of ['pmSeriesTitle', 'pmCatIntro', 'pmSearchPh', 'pmResultN', 'pmSortAlpha', 'pmLearnSeries', 'pmSameTheme', 'pmEpN', 'pmQuizOf']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 void execFileSync;
 console.log('web premium OK');

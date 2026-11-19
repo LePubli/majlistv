@@ -6,10 +6,18 @@ import { useParams } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { levelLabel } from '../../../../lib/levels';
 import BooksBlock from '../../../../components/BooksBlock';
+import PmSeries from '../../../../components/premium/PmSeries';
 
 const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
 
-export default function SeriesPage({ initial = null, seriesId = null }) {
+export default function SeriesPage(props) {
+  const { skin } = useApp();
+  const params = useParams();
+  if (skin === 'premium') return <PmSeries id={props.seriesId || params.id} />; // thème Premium : fiche série de la maquette V20
+  return <SeriesClassic {...props} />;
+}
+
+function SeriesClassic({ initial = null, seriesId = null }) {
   const params = useParams();
   const id = seriesId || params.id; // adresse lisible (slug) : l'identifiant vient du serveur
   const { t, call, ready, user } = useApp();
