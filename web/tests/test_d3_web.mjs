@@ -8,9 +8,9 @@ const glob = read('app/globals.css');
 
 // Accueil : l'ordre « streaming » n'existe que pour le thème bleu ; l'accueil d'origine reste en place pour les autres thèmes.
 const home = read('app/page.js');
-assert.match(home, /if \(skin === 'bleu'\) \{/);
+assert.match(home, /if \(isBlueFamily\(skin\)\) \{/);
 assert.match(home, /<main className="st-home">/);
-const st = home.slice(home.indexOf("if (skin === 'bleu')"), home.indexOf('  return (\n    <main>'));
+const st = home.slice(home.indexOf("if (isBlueFamily(skin))"), home.indexOf('  return (\n    <main>'));
 const order = ['<HomeHero', 'row-continue', 'row-later', 'rows.slice(0, 1)', 'st-univ', '<StartCards', 'rows.slice(1, 3)', '<KidsBand', 'rows.slice(3)', 'st-learn', '<EventsBand', '<CitationCard'];
 let at = -1;
 for (const k of order) { const i = st.indexOf(k); assert.ok(i > at, `ordre de l'accueil : ${k}`); at = i; }

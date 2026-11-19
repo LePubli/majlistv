@@ -43,6 +43,6 @@ assert.match(read('components/SkinPicker.js'), /\['bleu', 'skBlue'\]/);
 const i18n = read('lib/i18n.js');
 assert.equal((i18n.match(/\n {4}skBlue: /g) || []).length, 3, 'skBlue en fr/en/ar');
 const settings = fs.readFileSync(new URL('../../api/src/settings.js', import.meta.url), 'utf8');
-assert.match(settings, /key: 'skin_default', group: 'general', type: 'select', options: \['classique', 'nuit', 'bleu'\]/);
-assert.match(fs.readFileSync(new URL('../../api/src/index.js', import.meta.url), 'utf8'), /\['nuit', 'bleu'\]\.includes\(await getSetting\('skin_default'\)\)/);
+assert.match(settings, /key: 'skin_default', group: 'general', type: 'select', options: \['classique', 'nuit', 'bleu', 'premium'\]/);
+assert.match(fs.readFileSync(new URL('../../api/src/index.js', import.meta.url), 'utf8'), /\['nuit', 'bleu', 'premium'\]\.includes\(await getSetting\('skin_default'\)\)/);
 console.log('test_d2_web OK');

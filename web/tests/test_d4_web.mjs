@@ -17,7 +17,7 @@ assert.match(api, /t\.title ILIKE '%' \|\| \$1 \|\| '%' OR t\.speaker ILIKE/, 'l
 assert.match(api, /t\.transcript_text ILIKE/, '… et sur la transcription');
 
 // Page du thème bleu : pas de deuxième bannière d'accueil, mais une mosaïque (1 grande + 4 petites au plus) puis la grille complète.
-const st = cp.slice(cp.indexOf("if (skin === 'bleu')"));
+const st = cp.slice(cp.indexOf("if (isBlueFamily(skin))"));
 assert.ok(st.indexOf('<SearchBox') < st.indexOf('<CatalogueFilters />') && st.indexOf('<CatalogueFilters />') < st.indexOf('cg-mosaic') && st.indexOf('cg-mosaic') < st.indexOf('cg-all'), 'ordre : recherche, filtres, à la une, tout');
 assert.match(st, /feat\.slice\(0, 5\)\.map\(\(x, i\) => <FeatureCard key=\{x\.id\} x=\{x\} t=\{t\} big=\{i === 0\} \/>\)/);
 assert.match(st, /data\.rows\.filter\(\(r\) => r\.format\)/, 'rangées par format seulement (les nouveautés sont dans la grille)');
@@ -26,7 +26,7 @@ assert.match(cp, /if \(bare\) return body;/);
 // Les autres thèmes gardent la page d'origine (bannière + filtres + rangées).
 assert.match(cp, /<HomeHero hero=\{hero\}[^\n]*\/>\n\s*<CatalogueFilters \/>/);
 // Carte à la une : image de la vidéo, sinon affiche de secours propre à la vidéo.
-assert.match(cp, /style=\{img \? \{ backgroundImage: `url\(\$\{img\}\)` \} : \{ '--ph-h': posterHue\(x\.id\) \}\}/);
+assert.match(cp, /style=\{img \? \{ backgroundImage: `url\(\$\{img\}\)` \} : \{ '--ph-h': posterHue\(x\.id\), '--ph-art': posterArt\(x\.id\) \}\}/);
 for (const c of ['.cg-search', '.cg-mosaic', '.cg-feat', '.cg-chips a.on']) assert.ok(css.includes(c), `style ${c}`);
 assert.match(css, /\.cg-search:focus-within/); assert.match(css, /\.cg-feat:hover, html\[data-skin="bleu"\] \.cg-feat:focus-visible/);
 const i18n = read('lib/i18n.js');

@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 import { langName } from './Transcript';
 import { levelLabel } from '../lib/levels';
-import { thumbOf, posterHue } from '../lib/thumb';
+import { thumbOf, posterHue, posterArt } from '../lib/thumb';
 
 const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul appel par vidéo
 
@@ -147,7 +147,7 @@ export default function TalkCard({ talk, t, progress, onRemove, removeLabel }) {
   return (
     <div className="talk-wrap" ref={wrap} onMouseEnter={enter} onMouseLeave={leave}>
       <Link href={talk.quizState ? `/talks/${talk.id}?quiz=1` : `/talks/${talk.id}`} className="talk">
-        <div className={['thumb', fmt ? 'has-fmt' : '', thumb ? '' : 'no-img'].filter(Boolean).join(' ')} style={thumb ? { backgroundImage: `url(${thumb})` } : { '--ph-h': posterHue(talk.id) }}>
+        <div className={['thumb', fmt ? 'has-fmt' : '', thumb ? '' : 'no-img'].filter(Boolean).join(' ')} style={thumb ? { backgroundImage: `url(${thumb})` } : { '--ph-h': posterHue(talk.id), '--ph-art': posterArt(talk.id) }}>
           {!thumb && <span className="ph-t" aria-hidden="true">{talk.title}</span>}
           {fmt && <span className="fmt-badge">{fmt}</span>}
           {talk.quizState

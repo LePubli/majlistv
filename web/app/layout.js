@@ -12,6 +12,7 @@ import '@fontsource/amiri/700.css';
 import './globals.css';
 import './skin-nuit.css'; // thème « Nuit et or » (html[data-skin="nuit"])
 import './skin-bleu.css'; // thème « Mejliss bleu » (html[data-skin="bleu"], étape D2)
+import './skin-premium.css'; // thème « Premium » V20 (html[data-premium], par-dessus le thème bleu)
 import Providers from '../components/Providers';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -36,6 +37,7 @@ import SeasonTheme from '../components/SeasonTheme'; // étape 45H : thème de s
 import AdhanPlayer from '../components/AdhanPlayer'; // adhan à l'heure de la prière (site ouvert)
 import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
 import { visitorHeaders } from '../lib/visitorIp';
+import { skinAttr } from '../lib/skin';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -69,8 +71,9 @@ export const generateMetadata = async () => {
 // Couleur de la barre d'adresse des téléphones : le fond du thème publié (Admin → Apparence).
 export const generateViewport = async () => ({ themeColor: themeBg(await siteTheme()), width: 'device-width', initialScale: 1 });
 
-// Thèmes visuels : « classique » (noir et or), « nuit » (Nuit et or), « bleu » (Mejliss bleu, étape D2).
-const SKINS = ['classique', 'nuit', 'bleu'];
+// Thèmes visuels : « classique » (noir et or), « nuit » (Nuit et or), « bleu » (Mejliss bleu, étape D2), « premium » (thème V20,
+// bâti sur « bleu » : voir lib/skin.js).
+const SKINS = ['classique', 'nuit', 'bleu', 'premium'];
 
 export default async function RootLayout({ children }) {
   const locale = getLocale(cookies().get('locale')?.value);
@@ -80,7 +83,7 @@ export default async function RootLayout({ children }) {
   const wanted = cookies().get('skin')?.value;
   const skin = skinCfg?.choice === true && SKINS.includes(wanted) ? wanted : skinDef;
   return (
-    <html lang={locale} dir={DIR[locale]} data-skin={skin}>
+    <html lang={locale} dir={DIR[locale]} data-skin={skinAttr(skin)} data-skin-name={skin} data-premium={skin === 'premium' ? '' : undefined}>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}

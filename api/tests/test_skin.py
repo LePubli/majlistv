@@ -58,6 +58,8 @@ requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default"
 ok(requests.get(B + "/config").json()["skin"] == {"def": "nuit", "choice": False}, "l'administrateur passe tout le site en Nuit et or")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": "bleu"}})
 ok(requests.get(B + "/config").json()["skin"] == {"def": "bleu", "choice": False}, "étape D2 : l'administrateur passe tout le site en « Mejliss bleu »")
+requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": "premium"}})
+ok(requests.get(B + "/config").json()["skin"] == {"def": "premium", "choice": False}, "19/11 : l'administrateur passe tout le site en « Premium » (thème V20)")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"skin_default": None, "skin_choice": None}})
 ok(requests.get(B + "/config").json()["skin"]["def"] == "classique", "retour au réglage d'origine")
 stop(); print("skin OK")

@@ -9489,3 +9489,40 @@ bash /root/verify-deploy.sh
 **Testé.** `api/tests/test_talk_source.py` (YouTube, Vimeo, vidéo copiée chez nous, absence sur la fiche publique et le catalogue, autre organisateur sans accès) ; tous les tests du site ; navigateur réel à 1440 et 390 px, en français et en arabe (fiche vidéo lue depuis YouTube, fiche vidéo importée, fiche Audyn), aucun débordement. **Non testé** : site réel.
 
 **Question liée (18/11) : lire les vidéos depuis PlanetHoster ?** Non retenu. Les conditions de PlanetHoster (§5.3) interdisent les sites de diffusion vidéo sur l'hébergement mutualisé. PlanetHoster reste pour la sauvegarde chiffrée de la nuit et l'archivage (Studio → Paramètres → Stockage et archivage). Les vidéos importées sont lues depuis Garage, sur le VPS.
+
+## P1 — Thème « Premium » (thème V20), lot 1 (19/11/2026)
+
+**Pourquoi.** Epok a fourni un thème complet (« MejlissTV V13–V20 Thème complet Premium », 78 fichiers) à ajouter aux thèmes de Mejliss. Analyse : c'est une maquette web autonome (HTML/CSS/JavaScript) avec ses propres données de démonstration ; elle ne connaît ni l'API, ni les comptes, ni Stripe, ni l'application TV. On la reconstruit donc sur le vrai site, comme un thème de plus, par lots.
+
+**Décisions d'Epok (19/11).** Nouveau thème « Premium » à côté de Classique, Nuit et or et Mejliss bleu ; titres en Montserrat (pas de Georgia, qui n'affiche pas ﷺ) ; vrai logo Mejliss en bleu (pas le triangle du ZIP) ; illustrations du thème gardées, sauf l'affiche « Les Prophètes en histoires » (elle n'est que dans les captures de référence, non importées).
+
+**Non repris du ZIP.** Prix fictifs (6,90 € / 9,90 €, trois formules) ; contenus inventés (« Les Héritiers », « Yacine et Lina », « 284 commentaires », « 4K UHD »…) ; avatars au visage inventé ; fonctions factices enregistrées dans le navigateur (contrôle parental, favoris, objectifs) — les vraies existent déjà ; captures de référence (19 Mo) et pages de comparaison.
+
+**Ce qui change (lot 1).**
+- Thème « Premium » : la page reçoit `data-skin="bleu"` (toutes les mises en page du thème bleu) et `data-premium` (règles de `web/app/skin-premium.css`). Aide : `web/lib/skin.js` (`skinAttr`, `isBlueFamily`, `applySkin`).
+- Couleurs V20 : nuit profonde #031127, bleu nuit #061B35, bleu électrique #087CFF, bleu lumière #35B9FF, blanc polaire #F5F9FF, gris bleuté #A3BBD5, filets fins bleus.
+- En-tête transparent sur l'image, onglet actif en pilule bleu électrique ; boutons principaux bleu électrique lumineux, secondaires en contour clair.
+- Une de l'accueil : badges en contour, titre plus grand, « Regarder » bleu électrique, points lumineux.
+- Vignettes : filet bleu, bouton lecture rond (toujours sur « Continuer à regarder », au survol ailleurs), barre de progression en dégradé ; vidéo sans miniature : décor illustré du thème (architecture, paysages, Coran ; jamais de personnage), choisi d'après l'identifiant (`posterArt`, `web/lib/thumb.js`).
+- « Nos univers », bandeau Kids (illustration des enfants), « À faire aujourd'hui » (illustration du Coran).
+- Images : `web/public/premium/` (28 fichiers WebP, 2,1 Mo).
+
+**Fichiers.** `web/app/skin-premium.css` (nouveau), `web/lib/skin.js` (nouveau), `web/app/layout.js`, `web/components/SkinPicker.js`, `web/app/page.js`, `web/app/catalogue/page.js`, `web/components/TalkCard.js`, `web/components/SeriesCard.js`, `web/app/talks/[id]/TalkClient.js`, `web/lib/thumb.js`, `web/lib/i18n.js` (skPremium fr / en / ar), `api/src/settings.js`, `api/src/index.js`, tests `web/tests/test_premium_web.mjs` (nouveau), `test_skin_web.mjs`, `test_d2_web.mjs`, `test_d3_web.mjs`, `test_d4_web.mjs`, `api/tests/test_skin.py`.
+
+**Activer.** Admin → Paramètres → Général → « Thème visuel par défaut » = `premium`. Retour arrière : `bleu` ou `classique`.
+
+**Déploiement.** DockPanel : **majlistv-api** (nouvelle valeur acceptée), puis **majlistv-web**. Aucune migration. Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** « premium » refusé dans Admin → Paramètres : l'API n'a pas été redéployée. Le site reste en bleu : vérifier l'attribut `data-premium` sur `<html>` (outils du navigateur) ; sinon le site n'a pas été redéployé. Images de décor absentes : `/premium/coran.webp` doit répondre.
+
+**Testé.** Tests du site (dont `test_premium_web.mjs`) et de l'API (`test_skin.py`) ; captures réelles à 1440 × 900 (accueil complet, catalogue) et 390 × 844 (accueil en français et en arabe), aucun débordement, aucune erreur de page. **Non testé** : vraies miniatures YouTube, site réel.
+
+**Suite (sur « go »).** Lot 2 catalogue et fiche vidéo/série (panneau « Apprendre avec cette série ») ; lot 3 Apprendre ; lot 4 Kids ; lot 5 abonnement, inscription et profil (vrais prix) ; lot 6 application TV (refonte TV commencée le 19/11, mise de côté sans être envoyée).
+

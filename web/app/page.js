@@ -16,6 +16,7 @@ import TodayBlock from '../components/TodayBlock';
 import { StartCards, Tour } from '../components/Onboarding';
 import EventsBand from '../components/EventsBand';
 import { mergeMyList } from '../lib/mylist';
+import { isBlueFamily } from '../lib/skin';
 
 // Première rangée de vidéos de l'accueil (nouveautés) : elle sert de « Dernières vidéos » sous la vitrine.
 const rows0 = (home) => (home?.rows || []).find((r) => r.talks)?.talks || [];
@@ -74,7 +75,7 @@ function HomeInner() {
   // Étape D3 (17/11) — thème « Mejliss bleu » : accueil de plateforme de streaming. Grande vidéo à la une (celles choisies dans
   // Admin, à défaut les 5 plus récentes), puis « Continuer à regarder », « Ma liste », les nouveautés, les univers (thèmes),
   // les autres rangées, et en bas le bloc « Mon espace Apprendre ». Mêmes données que l'accueil d'origine.
-  if (skin === 'bleu') {
+  if (isBlueFamily(skin)) {
     const auto = rows0(home).slice(0, 5);
     const hero = home?.hero?.mode === 'text' && auto.length ? { mode: 'featured', items: auto } : home?.hero;
     const univ = rows.filter((r) => r.categoryId != null && r.talks?.length);
@@ -86,7 +87,7 @@ function HomeInner() {
     return (
       <main className="st-home">
         <HomeHero hero={hero} t={t} user={user} trialDays={trialDays} />
-        {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('rowSeeAll')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
+        {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} <span className="row-sep" aria-hidden="true">·</span> <Link href="/library">{t('rowSeeAll')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
         {later.length > 0 && <Row id="row-later" title={<>{t('lbMyList')} · <Link href="/library?tab=list">{t('rowSeeAll')}</Link></>} talks={later} t={t} />}
         {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
         {rows.slice(0, 1).map(rowOf)}

@@ -11,7 +11,8 @@ import HomeHero from '../../components/HomeHero';
 import Row from '../../components/Row';
 import TalkCard from '../../components/TalkCard';
 import CatalogueFilters from '../../components/CatalogueFilters';
-import { thumbOf, posterHue } from '../../lib/thumb';
+import { thumbOf, posterHue, posterArt } from '../../lib/thumb';
+import { isBlueFamily } from '../../lib/skin';
 
 const PAGE = 24;
 
@@ -42,7 +43,7 @@ function FeatureCard({ x, t, big }) {
   const img = thumbOf(x);
   const mins = x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : '';
   return (
-    <Link href={`/talks/${x.id}`} className={big ? 'cg-feat big' : 'cg-feat'} style={img ? { backgroundImage: `url(${img})` } : { '--ph-h': posterHue(x.id) }}>
+    <Link href={`/talks/${x.id}`} className={big ? 'cg-feat big' : 'cg-feat'} style={img ? { backgroundImage: `url(${img})` } : { '--ph-h': posterHue(x.id), '--ph-art': posterArt(x.id) }}>
       <span className="cg-feat-tags"><span className={`badge-inline ${x.access}`}>{t(x.access)}</span>{x.category && <span className="cg-feat-cat">{x.category}</span>}</span>
       <span className="cg-feat-body">
         <strong>{x.title}</strong>
@@ -116,7 +117,7 @@ function Catalogue() {
   const hero = data.hero?.items?.length ? { mode: 'featured', items: data.hero.items } : { mode: 'text' };
   // Étape D4 (17/11) — thème « Mejliss bleu » : page de catalogue (et non une deuxième page d'accueil). Titre et recherche,
   // filtres, mosaïque « À la une » (une grande carte et jusqu'à quatre petites), une rangée par format, puis toutes les vidéos.
-  if (skin === 'bleu') {
+  if (isBlueFamily(skin)) {
     const feat = data.hero?.items || [];
     return (
       <main className="catalogue cg-stream">

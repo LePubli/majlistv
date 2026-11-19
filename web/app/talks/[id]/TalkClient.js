@@ -12,6 +12,7 @@ import Transcript, { langName } from '../../../components/Transcript';
 import BooksBlock from '../../../components/BooksBlock';
 import Insights from '../../../components/Insights';
 import { thumbOf, posterHue } from '../../../components/TalkCard';
+import { posterArt } from '../../../lib/thumb';
 import { pricingPath } from '../../../lib/nav';
 import SaleBox, { SaleOwned } from '../../../components/SaleBox'; // étape C-2 : contenu payant à l'unité
 import { levelLabel } from '../../../lib/levels';
@@ -663,7 +664,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               return (
                 <li key={x.id}>
                   <Link href={`/talks/${x.id}`} className="wb-card">
-                    <span className={th ? 'wb-thumb' : 'wb-thumb no-img'} style={th ? { backgroundImage: `url(${th})` } : { '--ph-h': posterHue(x.id) }}>
+                    <span className={th ? 'wb-thumb' : 'wb-thumb no-img'} style={th ? { backgroundImage: `url(${th})` } : { '--ph-h': posterHue(x.id), '--ph-art': posterArt(x.id) }}>
                       {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
                     </span>
                     <strong>{x.title}</strong>

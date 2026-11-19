@@ -3,3 +3,7 @@ export const thumbOf = (talk) => talk.posterUrl || (talk.source === 'youtube' ? 
 // Étape D3 (17/11) : vidéo sans miniature → affiche de secours propre à la vidéo (teinte tirée de son identifiant, titre écrit dessus),
 // au lieu d'un rectangle vide ou d'une même image pour tout le monde. Teintes entre 195 et 264 (bleus et violets de la charte).
 export const posterHue = (id) => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) % 360; return 195 + (h % 70); };
+// Thème « Premium » (V20, 19/11) : vidéo sans miniature → décor illustré du thème (architecture, paysages, Coran ; jamais de
+// personnage, pour ne pas laisser croire que la vidéo parle d'une personne précise), choisi à partir de l'identifiant.
+export const PREMIUM_ART = ['andalousie', 'coran', 'caravane', 'jardin', 'jerusalem', 'mosquee-nuit', 'navire', 'petra', 'bibliotheque', 'rappel-nuit'];
+export const posterArt = (id) => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) % 9973; return `url(/premium/${PREMIUM_ART[h % PREMIUM_ART.length]}.webp)`; };
