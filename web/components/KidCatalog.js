@@ -2,6 +2,7 @@
 // Mejliss Kids — catalogue de l'enfant : recherche, rubriques (pastilles), rangées de suggestions, option « seulement pour mon âge ».
 // Mots simples, gros boutons ; aucun classement ni comparaison entre enfants.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { KidCard } from './KidsHome';
 
@@ -15,7 +16,9 @@ export default function KidCatalog() {
   const [rubric, setRubric] = useState(null);     // id de rubrique choisie
   const [mine, setMine] = useState(false);        // seulement pour mon âge
   const seq = useRef(0);
+  const wanted = useSearchParams().get('r'); // rubrique demandée par l'adresse (pastilles de l'accueil du thème Premium)
   useEffect(() => { call('/kids/catalog').then((r) => setD(r.ok ? r.data : { rubrics: [], shelves: [], talks: [] })); }, [call]);
+  useEffect(() => { const r = d?.rubrics.find((x) => x.slug === wanted); if (r) setRubric(r.id); }, [d, wanted]);
   // Recherche : on attend 300 ms après la dernière lettre ; la réponse la plus récente gagne.
   useEffect(() => {
     const s = q.trim();

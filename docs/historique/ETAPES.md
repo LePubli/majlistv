@@ -9584,3 +9584,33 @@ bash /root/verify-deploy.sh
 **Debug.** Ancienne page encore affichée : le thème actif n'est pas Premium (Admin → Paramètres → Général, ou le sélecteur dans le menu de l'avatar). Cartes « parcours » absentes : aucune série suivie (il faut réussir un quiz d'une série). Carte « À faire » vide : rien à faire aujourd'hui, c'est normal.
 
 **Testé.** Tests du site (dont `test_premium_web.mjs`), construction, captures réelles comparées à la maquette en 1440 et 390 px, français et arabe, onglets Aujourd'hui / Réviser / Mes progrès, sans débordement ni erreur de page. **Non testé** : parcours avec de vraies séries suivies et des quiz réussis (la base de test n'en a pas : cartes « parcours » vues seulement par le code), abonné réel, site réel, écrans « verrouillé » et « visiteur » (seulement dégagés sous l'en-tête).
+
+## P1 — Thème « Premium » (thème V20), lot 4 : Mejliss Kids (20/11/2026)
+
+**Ce qui change.** L'espace de l'enfant (profil enfant entré avec le code parental) prend l'apparence de l'écran Kids de la maquette V20 (`web/components/premium/PmKids.js`, classes `v20-kids-…`), avec les vraies données uniquement :
+- **En-tête enfant** : logo + pastille « Kids », menu Accueil · Regarder · Apprendre (si la formule le permet) · Agir, heure de prière, prénom et avatar de l'enfant, bouton « Quitter l'espace enfant » (code parental, même fonctionnement qu'avant).
+- **Bandeau** : titre de la vraie vidéo à reprendre (ou la première non vue de son âge), durée et âges réels, bouton « Regarder ». L'illustration (deux enfants à la lanterne) n'est qu'un décor fourni avec le thème.
+- **Pastilles de rubriques** : les vraies rubriques Kids (jusqu'à 6) ; un appui ouvre « Regarder » déjà sur cette rubrique (`/kids?tab=watch&r=<rubrique>`).
+- **Rangées** : « À regarder / Continuer » (vraies vidéos de l'âge de l'enfant, vraie affiche, durée, pastille « Vue ») puis « Populaires » ou « Nouveautés » sans répéter les mêmes vidéos.
+- Le reste de l'accueil (étoiles, badges, vidéos vues, petites actions, Ramadan, histoires du soir, révisions) **garde ses fonctions** et se range sous les rangées. Le menu latéral du thème classique n'existe plus en Premium (le menu est dans l'en-tête). Les onglets Regarder / Apprendre / Agir gardent leur contenu.
+- Mobile 390 px : menu horizontal défilant, rangées défilantes. Arabe de droite à gauche (bandeau, flèches, bouton lecture retournés, durées en arabe).
+
+**API.** Aucune modification, aucune migration.
+
+**Différences assumées avec la maquette.** Elle montrait une série « Les Aventures de Yacine et Lina », de fausses catégories (Mes séries, Valeurs de l'Islam…), de fausses vidéos avec visages et de fausses affiches de séries : rien de cela n'existe, tout est remplacé par de vraies vidéos et de vraies rubriques (ou n'est pas affiché). Les vignettes sont les vraies affiches des vidéos. À valider par Epok : l'illustration du bandeau (enfants dessinés) est un décor du thème, retirable en une ligne de CSS.
+
+**Fichiers.** `web/components/premium/PmKids.js` (nouveau), `web/components/Header.js` (en-tête enfant Premium), `web/components/KidsHome.js` (branche Premium), `web/components/KidCatalog.js` (rubrique choisie par l'adresse `?r=`), `web/app/skin-premium.css`, `web/tests/test_premium_web.mjs` (section 9), `web/tests/test_nav_lots_web.mjs`.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement. Puis sur le VPS :
+
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Ancien écran Kids : le thème actif n'est pas Premium. Pas de pastilles de rubriques : aucune rubrique Kids n'est configurée (Admin → Kids). Bandeau sans titre de vidéo : aucune vidéo pour la tranche d'âge du profil. Bouton « Quitter » sans effet : vérifier le code parental.
+
+**Testé.** Tests du site (section 9 de `test_premium_web.mjs`, tous les tests web), construction, captures réelles d'un profil enfant de test (7-10 ans) en 1440 et 390 px, français et arabe, sans débordement ni erreur de page. **Non testé** : pastilles de rubriques (la base de test n'a pas de rubrique Kids : vues seulement par le code), vidéo « à reprendre », compte avec la formule Apprentissage, sortie par code parental sur ce nouvel en-tête, onglets Regarder / Apprendre / Agir en Premium (contenu inchangé, non recapturé), site réel.
+

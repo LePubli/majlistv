@@ -295,3 +295,36 @@ html[data-skin="premium"] main.page.learning:not(.pm-ln-body) { padding-top: 112
 /* Arabe : le pictogramme du livre passe à gauche (le texte commence à droite). */
 [dir="rtl"] .v20-app .v20-lv10-review-icon { right: auto; left: 28px; }
 [dir="rtl"] .v20-app .v20-lv10-review-card h2, [dir="rtl"] .v20-app .v20-lv10-review-card .v20-lv10-kicker { padding-inline-end: 0; padding-inline-start: 0; }
+
+/* ───────── Lot 4 — Mejliss Kids (côté enfant) ───────── */
+.v20-app.pm-kids { padding-bottom: 0; }
+.v20-app.pm-kids .v20-kids-page { min-height: 60vh; }
+/* Vignette réelle (affiche de la vidéo) à la place de l'illustration de la maquette. */
+.v20-app .pm-kd-art { position: relative; display: block; aspect-ratio: 2.35; border: 2px solid #9dd4ff; border-radius: 18px; overflow: hidden; background-size: cover; background-position: center; box-shadow: 0 4px 10px #010d339e; }
+.v20-app .v20-kids-v8-feature-card:hover .pm-kd-art { outline: 2px solid #23b4ff; box-shadow: 0 7px 18px #000a; }
+.v20-app .pm-kd-play { position: absolute; inset-inline-start: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; background: #087cffe6; color: #fff; display: grid; place-items: center; font-size: 13px; padding-inline-start: 2px; }
+[dir="rtl"] .v20-app .pm-kd-play { transform: scaleX(-1); padding-inline-start: 0; padding-inline-end: 2px; }
+.v20-app .pm-kd-dur, .v20-app .pm-kd-seen { position: absolute; top: 8px; inset-inline-end: 8px; background: #061325cc; color: #fff; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 9px; }
+.v20-app .pm-kd-seen { inset-inline-end: auto; inset-inline-start: 8px; background: #2cce9ccc; color: #04251c; }
+.v20-app .v20-kids-v8-feature-card { text-decoration: none; color: #fff; }
+.v20-app .v20-kids-category strong { font-size: clamp(26px, 2.6vw, 42px); line-height: 1; flex: none; }
+.v20-app .v20-kids-category { text-decoration: none; }
+.v20-app .v20-kids-v8-hero-copy h1.pm-long { font-size: clamp(30px, 3.2vw, 52px) !important; }
+.v20-app .pm-kd-leave { width: auto; padding: 0 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.v20-app .pm-kd-me { text-decoration: none; }
+/* Le reste de l'accueil (étoiles, badges, actions…) se range sous les rangées. */
+html[data-skin="premium"] main.page.pm-kd-body { max-width: 1440px; margin-inline: auto; padding: 24px clamp(17px, 3vw, 48px) 40px; }
+.v20-app.pm-kids ~ .kd-modal { z-index: 200; }
+[dir="rtl"] .v20-app .v20-kids-v8-title > a { direction: rtl; }
+@media (max-width: 850px) { html[data-skin="premium"] main.page.pm-kd-body { padding-top: 12px; } }
+/* Bandeau : le convertisseur écarte volontairement la capture complète de la maquette ; on utilise l'illustration de décor fournie. */
+.v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual { background-image: url('/premium/kids-hero-scene.webp'); }
+/* Recadrage de l'illustration de décor (le recadrage d'origine était prévu pour une autre image). */
+.v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual { background-size: cover; background-position: 62% 22%; }
+.v20-app .v20-kids-topbar { z-index: 30; }
+@media (max-width: 850px) {
+  .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual { background-size: cover; background-position: 38% 20%; }
+  .v20-app .v20-kids-head-nav { flex-wrap: nowrap; scrollbar-width: none; }
+  .v20-app .v20-kids-head-nav a { flex: none; }
+  .v20-app .pm-kd-leave { font-size: 12px; padding: 0 10px; }
+}

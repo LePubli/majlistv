@@ -12,6 +12,7 @@ import { KidActions } from './KidsActions';
 import { KidRamadan } from './KidsRamadan';
 import KidCatalog from './KidCatalog';
 import KidShorts from './KidShorts';
+import { PmKidsTop } from './premium/PmKids';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 
@@ -31,7 +32,8 @@ export function KidCard({ x, t }) {
 }
 
 export default function KidsHome() {
-  const { t, call, kid, feat } = useApp();
+  const { t, call, kid, feat, skin } = useApp();
+  const pm = skin === 'premium'; // thème Premium : écran Kids de la maquette V20 (haut de l'accueil) ; le reste garde ses fonctions
   const tab0 = useSearchParams().get('tab');
   const [d, setD] = useState(null);
   const [sum, setSum] = useState(null);
@@ -61,24 +63,27 @@ export default function KidsHome() {
       ); })}
     </ul>
   );
-  return (
-    <div className="kd-shell">
-      <aside className="kd-side">
+  const shell = (inner) => (pm
+    ? <div className="v20-app pm-page pm-kids"><div className="v20-kids-page v20-faithful-kids v20-kids-v8">{tab === 'home' && <PmKidsTop d={d} hero={hero} />}{inner}</div></div>
+    : <div className="kd-shell">{inner}</div>);
+  return shell(
+    <>
+      {!pm && <aside className="kd-side">
         <nav aria-label={t('kdMenu')}>
           {MENU.map(([k, label, ico, href]) => (
             <Link key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}><span aria-hidden="true">{ico}</span><span>{t(label)}</span></Link>
           ))}
         </nav>
         <p className="kd-side-note">{t('kdMNote')}</p>
-      </aside>
-      <main className="page kd-page kd-home">
-        <KidsBanner variant="compact" />
-        <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>
+      </aside>}
+      <main className={`page kd-page kd-home${pm ? ' pm-kd-body' : ''}`}>
+        {!pm && <KidsBanner variant="compact" />}
+        {!pm && <h1 className="kd-hello"><span aria-hidden="true">{AVATAR_EMOJI[kid.avatar] || '🦁'}</span> {t('kdHello').replace('{name}', kid.name)}</h1>}
         {left != null && <p className={left <= 5 ? 'kd-timeleft low' : 'kd-timeleft'} role="status"><span aria-hidden="true">⏳</span> {t(left <= 5 ? 'kdTimeLow' : 'kdTimeLeft').replace('{n}', left)}</p>}
 
         {tab === 'home' && (
           <>
-            {hero && (
+            {hero && !pm && (
               <section className="kd-hero" aria-label={t('kdMWatch')}>
                 <Link href={`/kids/watch/${hero.id}`} className="kd-hero-main" style={hero.posterUrl ? { backgroundImage: `url(${hero.posterUrl})` } : undefined}>
                   <span className="kd-hero-shade" />
@@ -102,15 +107,15 @@ export default function KidsHome() {
             {sum && sum.due.length > 0 && (
               <section aria-labelledby="kd-due"><h2 id="kd-due">{t('kdDue')}</h2><ul className="kd-grid">{sum.due.slice(0, 4).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
             )}
-            {d && d.resume.length > 0 && (
+            {!pm && d && d.resume.length > 0 && (
               <section aria-labelledby="kd-cont"><h2 id="kd-cont">{t('kdContinue')}</h2><ul className="kd-grid">{d.resume.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul></section>
             )}
             {feat('audyn') && <section aria-labelledby="kd-st"><h2 id="kd-st">🌙 {t('awkNav')}</h2><p><Link href="/kids/histoires" className="btn">{t('awkIntro')}</Link></p></section>}
             <KidShorts />
-            <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
+            {!pm && <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
               {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.slice(0, 8).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}
               {talks.length > 8 && <p><Link href="/kids?tab=watch" className="btn ghost">{t('kdMAll')}</Link></p>}
-            </section>
+            </section>}
           </>
         )}
 
@@ -130,6 +135,6 @@ export default function KidsHome() {
           </>
         )}
       </main>
-    </div>
+    </>
   );
 }
