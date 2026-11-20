@@ -169,6 +169,8 @@ T_ep = talk("Épisode lecture"); cur.execute("insert into series_episodes(talk_i
 ok(any(s["id"] == sid for s in rq("GET", "/series", params={"category": CORAN}).json()), "série classée en sous-catégorie : trouvée par sa catégorie principale")
 
 # ---- Nettoyage de la catégorie supprimée
-ok(rq("DELETE", f"/categories/{LECT}", headers=ADM).status_code == 200, "supprimer une sous-catégorie")
+r = rq("DELETE", f"/categories/{LECT}", headers=ADM); ok(r.status_code == 409 and r.json()["relations"]["series"] == 1, "supprimer une sous-catégorie qui contient une série : refusé, détail fourni")
+ok(rq("DELETE", f"/categories/{LECT}", headers=ADM, params={"detach": 1}).status_code == 200, "supprimer une sous-catégorie (détachement explicite)")
+cur.execute("select count(*), count(category_id) from series where id=%s", (sid,)); ok(cur.fetchone() == (1, 0), "la série est conservée, sans catégorie")
 ok(rq("GET", f"/talks/{T_lect}").json()["category"] is None, "ses conférences restent en ligne, sans catégorie")
 print("TOUT OK")
