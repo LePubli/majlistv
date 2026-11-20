@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { getSetting } from '../settings.js';
-import { adultSql } from '../taxonomy.js';
+import { adultSql, inCategorySql } from '../taxonomy.js';
 import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 import { ensureSlug, ensureAllSlugs, idFromRef } from '../slugs.js';
 import { publicSpeakers, speakerBio, speakerSlug } from '../speakers.js';
@@ -169,6 +169,11 @@ export default async function seoRoutes(app) {
     reply.header('cache-control', 'public, max-age=300');
     const books = (await pool.query(`SELECT b.id, b.updated_at AS lastmod FROM books b WHERE b.published AND ${HAS_EDITION} ORDER BY b.updated_at DESC LIMIT 2000`)).rows;
     const speakers = (await publicSpeakers()).map((x) => ({ slug: x.slug }));
-    return { ...(await siteInfo()), speakers, talks, series: series.map((id) => ({ id, slug: slugOf.get(id), lastmod: when.get(id) })), books };
+    // Pages de catégories du catalogue adultes (phase 3) : seulement celles qui contiennent des vidéos visibles.
+    const categories = (await pool.query(
+      `SELECT c.slug FROM categories c LEFT JOIN categories p ON p.id = c.parent_id
+        WHERE c.catalogue_type = 'adult' AND c.is_active AND (p.id IS NULL OR p.is_active) AND c.slug IS NOT NULL
+          AND EXISTS (SELECT 1 FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')} AND ${inCategorySql('t', 'c.id')}) ORDER BY c.display_order`)).rows;
+    return { ...(await siteInfo()), speakers, categories, talks, series: series.map((id) => ({ id, slug: slugOf.get(id), lastmod: when.get(id) })), books };
   });
 }

@@ -12,5 +12,6 @@ export default async function sitemap() {
   const books = (info.books || []).map((b) => ({ url: `${base}/books/${b.id}`, lastModified: b.lastmod || undefined, changeFrequency: 'monthly', priority: 0.6 }));
   const speakers = (info.speakers || []).map((x) => ({ url: `${base}/chaines/${x.slug}`, changeFrequency: 'weekly', priority: 0.5 }));
   const pages = (await publicPages()).map((p) => ({ url: `${base}${p.path}`, lastModified: p.updatedAt || undefined, changeFrequency: 'weekly', priority: 0.6 })); // pages créées dans Admin → Pages
-  return [...fixed, ...series, ...talks, ...books, ...speakers, ...pages];
+  const categories = (info.categories || []).map((c) => ({ url: `${base}/catalogue/${c.slug}`, changeFrequency: 'weekly', priority: 0.7 })); // nouveau catalogue, phase 3
+  return [...fixed, ...categories, ...series, ...talks, ...books, ...speakers, ...pages];
 }

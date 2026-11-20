@@ -42,6 +42,7 @@ test_studio_vtt.py
 test_taxonomy.py
 test_catalogue_taxonomy.py
 test_catalogue_admin.py
+test_catalogue_public.py
 test_texts.py
 test_themes.py
 test_users_admin.py

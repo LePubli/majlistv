@@ -14,6 +14,7 @@ import CatalogueFilters from '../../components/CatalogueFilters';
 import { thumbOf, posterHue, posterArt } from '../../lib/thumb';
 import { isBlueFamily } from '../../lib/skin';
 import PmCatalogue from '../../components/premium/PmCatalogue';
+import CategoryTiles from '../../components/CategoryTiles'; // nouveau catalogue, phase 3
 
 const PAGE = 24;
 
@@ -129,6 +130,7 @@ function Catalogue() {
           <SearchBox t={t} />
         </header>
         <CatalogueFilters />
+        <CategoryTiles />
         {feat.length > 0 && (
           <section className="cg-mosaic-wrap" aria-labelledby="cg-feat-title">
             <h2 id="cg-feat-title">{t('cgFeatured')}</h2>
@@ -152,6 +154,7 @@ function Catalogue() {
     <main className="catalogue">
       <HomeHero hero={hero} t={t} user={user} trialDays={trialDays} />
       <CatalogueFilters />
+      <CategoryTiles />
       {data.rows.length === 0 && <p className="soon">{t('cgSoon')}</p>}
       {data.rows.map((r) => (
         <Row key={r.key} id={`row-${r.key.replace(':', '-')}`} talks={r.talks} t={t}

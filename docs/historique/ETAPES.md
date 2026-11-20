@@ -9721,3 +9721,20 @@ bash /root/verify-deploy.sh
 **Exemples.** Créer « Sciences du Coran » sous Coran : Admin → Catégories → + Sous-catégorie. Masquer une catégorie le temps de la remplir : Désactiver, puis Activer. Fusionner deux catégories : Supprimer la première → « Transférer vers… » la seconde.
 
 **Testé.** Nouveau `api/tests/test_catalogue_admin.py` (dans la CI : droits, slugs, doublons, deux niveaux, héritage du catalogue, traductions, désactivation, ordre, association de vidéos, suppression protégée avec transfert et détachement, univers Kids protégé) ; `test_categories.py` adapté. **Non testé :** le transfert des séries (code écrit, pas de test dédié) ; l'écran est vérifié syntaxiquement et visuellement (voir ci-dessous si capture faite), pas sur la vraie base.
+
+## Catalogue — phase 3 sur 7 : catalogue adulte (20/11/2026)
+
+**Pourquoi.** Cahier des charges « Nouvelle architecture du catalogue » : le public doit parcourir les 14 catégories adultes et leurs sous-catégories, avec des compteurs réels, des pages dédiées et un bon référencement.
+
+**Ce qui est fait.**
+- **API publique** (`api/src/routes/catalogueCategories.js`) : `GET /catalogue/categories?lang=fr|en|ar` (catégories actives avec sous-catégories et VRAI nombre de vidéos visibles : prêtes, publiées, pas réservées aux enfants, sous-catégories comprises, une vidéo classée dans deux catégories comptée une fois par catégorie) ; `GET /catalogue/categories/:slug?lang=` (textes dans la langue avec repli sur le français, SEO, parent, frères, fil d'Ariane). Une catégorie inactive, dont le parent est inactif, ou Kids : **404**. Les vidéos se lisent avec `GET /talks?category=&limit=&offset=`.
+- **Site** : page `/catalogue/<slug>` rendue côté serveur (`app/catalogue/[slug]/page.js`) : titre et description SEO, balise canonique, `noindex` tant que la catégorie est vide, fil d'Ariane (données structurées), en-tête (icône, couleur, image d'en-tête, description), barre « Toutes les vidéos » + sous-catégories avec leurs nombres, grille, **pagination numérotée** (`?page=`, 24 par page, page hors limites = 404), message utile quand il n'y a aucune vidéo. Tuiles « Explorer par catégorie » (icône, couleur, nom dans la langue, vrai compteur) sur `/catalogue` (thèmes classique et bleu). Textes FR / EN / AR (clés `ctg…`). Les catégories non vides sont ajoutées au **sitemap**.
+- Anciennes adresses `/catalogue?cat=<id>` : inchangées (le thème Premium garde ses filtres et ses chiffres par thème).
+
+**Pas encore fait.** Tuiles et pages aux couleurs propres du thème Premium (il garde son écran de maquette) ; recherche et filtres transverses (phase 5) ; collections et Apprendre (phase 6) ; captures aux résolutions 820 et TV (phase 7).
+
+**Déploiement.** Aucune migration. DockPanel : **majlistv-api** puis **majlistv-web**, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Une page de catégorie en 404 : vérifier qu'elle est active (ainsi que son parent) et du catalogue « adultes » (Admin → Catégories). Compteur à 0 alors que des vidéos sont classées : elles sont peut-être en brouillon, pas prêtes, ou réservées aux enfants. `curl https://api-majlisstv.le-publicitaire.fr/catalogue/categories/coran?lang=ar`.
+
+**Testé.** `api/tests/test_catalogue_public.py` (CI) : compteurs, doublons de classement, langues, 404 (inactive, Kids, inconnue), brouillon et vidéo Kids non comptés, pagination, sitemap. Tests du site (.mjs) et `next build` : OK. Captures réelles 1440 et 390 px, français et arabe (RTL), sans débordement. Non testé : vraies miniatures et vraies vidéos, thème Premium, 820 px.

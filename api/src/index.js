@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import talksRoutes from './routes/talks.js';
 import categoriesAdminRoutes from './routes/categoriesAdmin.js'; // nouveau catalogue, phase 2
+import catalogueCategoriesRoutes from './routes/catalogueCategories.js'; // nouveau catalogue, phase 3
 import uploadRoutes from './routes/uploads.js';
 import mediaImportRoutes from './routes/mediaImport.js'; // étape Import : copier une vidéo externe chez nous
 import hlsRoutes from './routes/hls.js';
@@ -175,6 +176,7 @@ await app.register(moduleRoutes);
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(talksRoutes);
+await app.register(catalogueCategoriesRoutes); // nouveau catalogue, phase 3 : catégories publiques
 await app.register(categoriesAdminRoutes); // nouveau catalogue, phase 2 : administration de la taxonomie
 await app.register(formatRoutes);
 await app.register(uploadRoutes);

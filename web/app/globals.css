@@ -4088,3 +4088,28 @@ button.ms-title i { width: 7px; height: 7px; border-right: 2px solid currentColo
 .st-src { margin-top: 6px; overflow-wrap: anywhere; }
 .st-src-url, .ay-src { overflow-wrap: anywhere; word-break: break-all; color: var(--accent-light, var(--accent)); text-decoration: underline; }
 .ay-src { flex-basis: 100%; font-size: 12px; }
+
+/* Nouveau catalogue, phase 3 : tuiles « Explorer par catégorie » et page d'une catégorie (/catalogue/<slug>). Couleurs du thème ; --ctg-c = couleur de la catégorie. */
+.ctg-tiles { margin: 22px 0; }
+.ctg-tiles h2 { margin: 0 0 12px; }
+.ctg-tiles ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.ctg-tile { position: relative; overflow: hidden; display: grid; gap: 4px; align-content: start; min-height: 128px; padding: 14px; border-radius: 16px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); text-decoration: none; }
+.ctg-tile:hover, .ctg-tile:focus-visible { border-color: var(--ctg-c, var(--accent)); }
+.ctg-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .25; }
+.ctg-tile > :not(img) { position: relative; }
+.ctg-tile small { color: var(--muted); overflow-wrap: anywhere; }
+.ctg-ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 20px; background: color-mix(in srgb, var(--ctg-c, var(--accent)) 28%, transparent); flex: none; }
+.ctg-n { color: var(--muted); font-size: 13px; }
+.ctg-page { display: grid; gap: 16px; align-content: start; }
+.ctg-crumbs { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 14px; color: var(--muted); }
+.ctg-crumbs > * + *::before { content: '›'; margin-inline-end: 10px; }
+.ctg-crumbs a { color: inherit; }
+.ctg-head { display: flex; align-items: center; gap: 16px; padding: 22px; border-radius: 20px; border: 1px solid var(--line-soft); background: var(--surface) center / cover; }
+.ctg-head h1 { margin: 0 0 6px; }
+.ctg-head p { margin: 0 0 8px; max-width: 70ch; }
+.ctg-subs small { opacity: .7; margin-inline-start: 4px; }
+.ctg-empty { padding: 28px 0; }
+.ctg-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+@media (max-width: 560px) { .ctg-tiles ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ctg-head { flex-direction: column; align-items: flex-start; padding: 16px; } }
+.ctg-crumbs, .ctg-head, .ctg-pager, .ctg-empty, .ctg-tiles { margin-inline: var(--gutter); }
+.ctg-subs { padding-inline: var(--gutter); }
