@@ -67,7 +67,7 @@ ok(rq("POST", "/categories", headers=ADM, json={"name": "Orpheline", "parentId":
 ok(rq("POST", "/categories", json={"name": "x"}).status_code in (401, 403), "création réservée à l'administrateur")
 tree = rq("GET", "/categories").json()
 names = [c["fullName"] for c in tree if c["name"] in (f"Coran{tag}", "Lecture", "Apprentissage") and c["id"] in (CORAN, LECT, APPR)]
-ok(names == [f"Coran{tag}", f"Coran{tag} › Apprentissage", f"Coran{tag} › Lecture"], "liste en arbre : le parent puis ses sous-catégories, avec le nom complet")
+ok(names == [f"Coran{tag}", f"Coran{tag} › Lecture", f"Coran{tag} › Apprentissage"], "liste en arbre : le parent puis ses sous-catégories (ordre d'affichage = ordre de création), avec le nom complet")
 ok(next(c for c in tree if c["id"] == LECT)["depth"] == 1, "profondeur indiquée")
 
 # ---- Catégories d'une conférence

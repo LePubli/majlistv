@@ -196,36 +196,9 @@ export default async function talksRoutes(app) {
     return (await pool.query(`${TREE} ${where} ${TREE_ORDER}`)).rows;
   });
 
-  // Sous-catégories sur deux niveaux : le parent doit exister et être lui-même une catégorie principale.
-  async function checkParent(parentId, selfId = null) {
-    if (parentId == null) return null;
-    if (selfId != null && parentId === selfId) return 'Une catégorie ne peut pas être sa propre catégorie parente';
-    const p = (await pool.query('SELECT parent_id FROM categories WHERE id = $1', [parentId])).rows[0];
-    if (!p) return 'Catégorie parente introuvable';
-    if (p.parent_id != null) return 'Une sous-catégorie ne peut pas avoir de sous-catégorie (deux niveaux au maximum)';
-    return null;
-  }
-  const dupName = async (name, parentId, selfId = null) => (await pool.query(
-    `SELECT 1 FROM categories WHERE lower(name) = lower($1) AND parent_id IS NOT DISTINCT FROM $2::int AND ($3::int IS NULL OR id <> $3)`, [name, parentId, selfId])).rowCount > 0;
-
-  app.post('/categories', { preHandler: app.requireRole('admin') }, async (req, reply) => {
-    const { name, parentId } = z.object({ name: z.string().trim().min(1).max(60), parentId: z.number().int().positive().nullable().optional() }).parse(req.body);
-    const bad = await checkParent(parentId ?? null);
-    if (bad) return reply.code(400).send({ error: bad });
-    try {
-      if (await dupName(name, parentId ?? null)) return reply.code(409).send({ error: parentId ? 'Cette catégorie a déjà une sous-catégorie de ce nom' : 'Catégorie déjà existante' });
-      const { rows } = await pool.query('INSERT INTO categories(name, parent_id) VALUES ($1, $2) RETURNING id, name, parent_id AS "parentId"', [name, parentId ?? null]);
-      return reply.code(201).send(rows[0]);
-    } catch (err) {
-      if (err.code === '23505') return reply.code(409).send({ error: 'Catégorie déjà existante' });
-      throw err;
-    }
-  });
-
-  // Gestion des catégories (admin) : liste avec nombre de vidéos, renommer / déplacer, supprimer.
+  // Gestion des catégories (admin) : liste avec nombre de vidéos. Création, modification, ordre, suppression et association
+  // de vidéos : api/src/routes/categoriesAdmin.js (phase 2 du nouveau catalogue, 20/11).
   const admin = { preHandler: app.requireRole('admin') };
-  const catId = z.object({ id: z.coerce.number().int().positive() });
-  const catPatch = z.object({ name: z.string().trim().min(1).max(60), parentId: z.number().int().positive().nullable() }).partial().refine((x) => Object.keys(x).length > 0);
 
   // « count » : vidéos dont c'est la catégorie principale ; « total » : principale ou supplémentaire, sous-catégories comprises.
   app.get('/categories/stats', admin, async () => (await pool.query(
@@ -235,33 +208,6 @@ export default async function talksRoutes(app) {
             (SELECT count(*)::int FROM talks t WHERE ${inCategorySql('t', 'c.id')}) AS total,
             (SELECT count(*)::int FROM categories k WHERE k.parent_id = c.id) AS children
        FROM categories c JOIN category_names n ON n.id = c.id LEFT JOIN categories p ON p.id = c.parent_id ${TREE_ORDER}`)).rows);
-
-  app.patch('/categories/:id', admin, async (req, reply) => {
-    const { id } = catId.parse(req.params);
-    const b = catPatch.parse(req.body);
-    const cur = (await pool.query('SELECT name, parent_id FROM categories WHERE id = $1', [id])).rows[0];
-    if (!cur) return reply.code(404).send({ error: 'Catégorie introuvable' });
-    const name = b.name ?? cur.name;
-    const parentId = b.parentId !== undefined ? b.parentId : cur.parent_id;
-    if (b.parentId !== undefined && parentId != null) {
-      if ((await pool.query('SELECT 1 FROM categories WHERE parent_id = $1', [id])).rowCount) return reply.code(400).send({ error: 'Cette catégorie a des sous-catégories : elle ne peut pas devenir une sous-catégorie' });
-      const bad = await checkParent(parentId, id);
-      if (bad) return reply.code(400).send({ error: bad });
-    }
-    if (await dupName(name, parentId, id)) return reply.code(409).send({ error: 'Une catégorie porte déjà ce nom à cet endroit' });
-    const { rows } = await pool.query('UPDATE categories SET name = $2, parent_id = $3 WHERE id = $1 RETURNING id, name, parent_id AS "parentId"', [id, name, parentId]);
-    return rows[0]; // la recherche se met à jour seule (la signature d'indexation contient le nom et les parents)
-  });
-
-  // Les vidéos de la catégorie supprimée restent en ligne, simplement sans cette catégorie. Une catégorie qui a des sous-catégories ne se supprime pas.
-  app.delete('/categories/:id', admin, async (req, reply) => {
-    const { id } = catId.parse(req.params);
-    if ((await pool.query('SELECT 1 FROM categories WHERE parent_id = $1', [id])).rowCount) return reply.code(409).send({ error: "Supprimez ou déplacez d'abord ses sous-catégories", code: 'has_children' });
-    const n = (await pool.query('SELECT count(*)::int AS n FROM talks WHERE category_id = $1', [id])).rows[0].n;
-    const res = await pool.query('DELETE FROM categories WHERE id = $1', [id]);
-    if (!res.rowCount) return reply.code(404).send({ error: 'Catégorie introuvable' });
-    return { deleted: id, talksUncategorized: n };
-  });
 
   // Catalogue public avec recherche par mot-clé et filtre par catégorie.
   app.get('/talks', async (req) => {

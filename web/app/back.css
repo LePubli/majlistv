@@ -982,3 +982,40 @@
 .lv-btns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
 .lv-preview { grid-column: 1 / -1; }
 @media (max-width: 520px) { .lv-admin > li { grid-template-columns: 1fr; } .lv-thumb { width: 100%; } }
+
+/* Admin → Catégories (nouveau catalogue, phase 2) : arbre à gauche, formulaire à droite ; une seule colonne sur téléphone. */
+.cadm-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin: 12px 0; }
+.cadm-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cadm-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.cadm-tree { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cadm-tree > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--bg); }
+.cadm-tree > li.on { border-color: var(--accent); }
+.cadm-tree > li.off .cadm-name { opacity: .6; }
+.cadm-tree > li.cadm-sub { margin-inline-start: 26px; background: transparent; }
+.cadm-sw { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 16px; flex: none; }
+.cadm-name { flex: 1 1 160px; min-width: 0; text-align: start; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; display: grid; gap: 2px; font: inherit; }
+.cadm-name small { overflow-wrap: anywhere; }
+.cadm-act { display: flex; flex-wrap: wrap; gap: 4px; margin-inline-start: auto; }
+.cadm .btn.sm { padding: 5px 10px; font-size: 13px; min-height: 34px; }
+.cadm .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.cadm .badge.gold { color: var(--accent); border-color: var(--accent); }
+.cadm-side { display: grid; gap: 14px; min-width: 0; }
+.cadm-form { display: grid; gap: 10px; border: 1px solid var(--line-soft); border-radius: 14px; padding: 14px; background: var(--surface); }
+.cadm-form label { display: grid; gap: 4px; font-size: 14px; min-width: 0; }
+.cadm-form input:not([type=checkbox]):not([type=color]), .cadm-form textarea, .cadm-form select { width: 100%; min-width: 0; background: var(--bg); box-sizing: border-box; }
+.cadm-form label.chk { display: flex; align-items: center; gap: 8px; }
+.cadm-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.cadm-row > label { flex: 1 1 150px; }
+.cadm-lang { display: flex; gap: 6px; flex-wrap: wrap; }
+.cadm-color { display: flex; align-items: center; gap: 8px; }
+.cadm-tr { display: grid; gap: 10px; }
+.cadm-prev { display: grid; gap: 6px; }
+.cadm-tile { position: relative; overflow: hidden; display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 16px; background: var(--surface-2); min-height: 96px; }
+.cadm-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; }
+.cadm-tile > :not(img) { position: relative; }
+.cadm-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; }
+.cadm-talks ul { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
+.cadm-talks li { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 14px; border-bottom: 1px solid var(--line-soft); padding: 4px 0; }
+.cadm-talks li > span { min-width: 0; overflow-wrap: anywhere; }
+.cadm-del { display: grid; gap: 10px; padding: 14px; border: 1px solid #A94438; border-radius: 14px; background: var(--surface); }
+@media (max-width: 900px) { .cadm-grid { grid-template-columns: minmax(0, 1fr); } .cadm-act { margin-inline-start: 0; } }

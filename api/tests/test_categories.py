@@ -47,7 +47,8 @@ ok(requests.patch(f"{B}/categories/999999", headers=ADM, json={"name": "zz"}).st
 ok(requests.patch(f"{B}/categories/{cid}", headers=ORG, json={"name": "zz"}).status_code == 403, "organisateur : renommage refusé")
 
 r = requests.delete(f"{B}/categories/{cid}", headers=ORG); ok(r.status_code == 403, "organisateur : suppression refusée")
-r = requests.delete(f"{B}/categories/{cid}", headers=ADM); ok(r.status_code == 200 and r.json()["talksUncategorized"] == 1, "suppression (1 conférence détachée)")
+r = requests.delete(f"{B}/categories/{cid}", headers=ADM); ok(r.status_code == 409 and r.json()["code"] == "has_relations", "suppression refusée tant qu'une conférence y est classée")
+r = requests.delete(f"{B}/categories/{cid}?detach=1", headers=ADM); ok(r.status_code == 200 and r.json()["detached"]["talks"] == 1, "suppression avec détachement explicite (1 conférence détachée)")
 g = requests.get(f"{B}/talks/{t}"); ok(g.status_code == 200 and g.json()["category"] is None, "la conférence reste en ligne, sans catégorie")
 ok(requests.delete(f"{B}/categories/{cid}", headers=ADM).status_code == 404, "supprimer deux fois : 404")
 requests.delete(f"{B}/talks/{t}", headers=ADM)
