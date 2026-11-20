@@ -120,6 +120,12 @@ ok(A in {t["id"] for t in S("Pätiénce")}, "accents en trop : trouvé quand mê
 cur.execute("update talks set description = description || ' الصَّلاةُ' where id=%s", (C,))
 ok(C in {t["id"] for t in S("الصلاة")} and C in {t["id"] for t in S("صلاه")}, "arabe : sans voyelles courtes, tâ marbûta = hâ")
 ok({A, Bt} <= {t["id"] for t in S("histoirr")}, "faute de frappe : « histoirr » trouve « Histoire » (début du mot)")
+ok({A, Bt} <= {t["id"] for t in S(f"histoires {tag}")}, "pluriel : « histoires » trouve « Histoire » (phase 5)")
+ok(C in {t["id"] for t in S("zzzzzz deuxieme")}, "un seul mot juste suffit en dernier recours (phase 5)")
+ok(S("zzzzzz yyyyyy") == [], "aucun mot trouvé : liste vide")
+cur.execute("update talks set duration_seconds=300 where id=%s", (A,)); cur.execute("update talks set duration_seconds=3000 where id=%s", (Bt,))
+ok(A in {t["id"] for t in S(f"histoire {tag}", duration="short")} and Bt not in {t["id"] for t in S(f"histoire {tag}", duration="short")}, "recherche Kids : filtre durée courte (phase 5)")
+ok(requests.get(B + "/kids/search", headers=K, params={"q": "histoire", "progress": "done"}).status_code == 200, "filtres réservés aux adultes : ignorés côté Kids")
 res = {t["id"] for t in S(f"{tag}")}
 ok(D not in res and ADULT not in res, "jamais de brouillon ni de contenu adulte")
 ok({t["id"] for t in S(f"histoire {tag}", rubric=R2["id"])} == {A, C} and {t["id"] for t in S(f"histoire {tag}", rubric=R1["id"])} == {A, Bt}, "recherche filtrée par rubrique")

@@ -19,6 +19,7 @@ import { isOn, getSetting } from '../../settings.js';
 import { bandOkSql, inCategorySql } from '../../taxonomy.js';
 import { catalogSql, timeState } from '../../kidsControl.js';
 import { fold, foldSql } from '../../fold.js';
+import { filterShape, filterSql } from '../../talkFilters.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { parentAllowed } from './routes.js';
 
@@ -233,7 +234,11 @@ export default async function kidCatalogRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Enfant : recherche
-  const searchQuery = z.object({ q: z.string().trim().min(1).max(80), rubric: z.coerce.number().int().positive().optional() });
+  // Phase 5 : l'enfant peut aussi trier par durée et par langue d'écoute (les autres filtres sont réservés aux adultes).
+  const searchQuery = z.object({
+    q: z.string().trim().min(1).max(80), rubric: z.coerce.number().int().positive().optional(),
+    duration: filterShape.duration, audio: filterShape.audio,
+  });
   app.get('/kids/search', kidAuth, async (req, reply) => {
     if (await off(reply)) return undefined;
     const c = await ctx(req, reply); if (!c) return undefined;
@@ -243,7 +248,7 @@ export default async function kidCatalogRoutes(app) {
     const base = await params(c);
     // Mots tapés, sans accents ni majuscules ; comparés aux colonnes « repliées » de la même façon.
     const clean = [...new Set(fold(p.q).split(/\s+/).filter(Boolean))].slice(0, 5).map((w) => w.replace(/[\\%_]/g, '').slice(0, 40)).filter((w) => w.length > 0);
-    const run = async (terms) => {
+    const run = async (terms, anyWord = false) => {
       const words = terms.map((w) => `%${w}%`).filter((w) => w.length > 2);
       if (!words.length) return [];
       const vals = [...base];
@@ -252,15 +257,22 @@ export default async function kidCatalogRoutes(app) {
         return `(${foldSql('t.title')} LIKE $${n} OR ${foldSql("coalesce(t.speaker, '')")} LIKE $${n} OR ${foldSql("coalesce(t.description, '')")} LIKE $${n}
                  OR EXISTS (SELECT 1 FROM categories u WHERE u.catalogue_type = 'kids' AND u.parent_id IS NULL AND u.is_active AND ${foldSql('u.name')} LIKE $${n} AND ${inCategorySql('t', 'u.id')}))`;
       });
-      if (p.rubric) { vals.push(p.rubric); conds.push(inCategorySql('t', vals.length)); }
+      // Dernier recours (anyWord) : un seul des mots suffit, les vidéos qui en contiennent le plus passent devant.
+      const match = anyWord ? `(${conds.join(' OR ')})` : conds.join(' AND ');
+      if (p.rubric) { vals.push(p.rubric); conds.length = 0; conds.push(inCategorySql('t', vals.length)); }
+      const extra = await filterSql(p, vals, null);
       return (await pool.query(
-        `SELECT ${CARD} ${BASE} AND ${conds.join(' AND ')}
+        `SELECT ${CARD} ${BASE} AND ${match} ${p.rubric ? `AND ${conds[0]}` : ''} ${extra}
           ORDER BY (${foldSql('t.title')} LIKE $${vals.length + 1}) DESC, COALESCE(t.publish_at, t.created_at) DESC LIMIT 40`,
         [...vals, words[0]])).rows;
     };
     let rows = await run(clean);
     // Faute de frappe : rien trouvé ? On réessaie avec le début de chaque mot (4 premières lettres des mots de 5 lettres et plus).
+    // 1) pluriel / féminin : « dinosaures » → « dinosaure », « petites » → « petite » ; 2) début des mots ; 3) un seul mot suffit.
+    const singular = clean.map((w) => (w.length >= 4 ? w.replace(/(s|x|e)$/, '') : w));
+    if (!rows.length && singular.some((w, i) => w !== clean[i])) rows = await run(singular);
     if (!rows.length && clean.some((w) => w.length >= 5)) rows = await run(clean.map((w) => (w.length >= 5 ? w.slice(0, 4) : w)));
+    if (!rows.length && clean.length > 1) rows = await run(clean, true);
     return { talks: await withPosters(rows) };
   });
 }

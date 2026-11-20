@@ -9,6 +9,7 @@ import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { saleMap } from '../sales.js';
 import { INDEX, meili, meiliConf, queryWords } from '../search.js';
+import { filterShape, filterSql, hasFilters } from '../talkFilters.js';
 import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
 
 const schema = z.object({
@@ -17,6 +18,7 @@ const schema = z.object({
   level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(24),
   offset: z.coerce.number().int().min(0).max(1000).default(0),
+  ...filterShape, // phase 5 : langue, audio, sous-titres, durée, progression, ressources
 });
 
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.organizer_id, c.name AS category, t.level, (SELECT slug FROM formats WHERE id = t.format_id) AS format, 
@@ -45,6 +47,9 @@ export default async function searchRoutes(app) {
       return row.access === 'free' || subscriber || staff(row);
     };
 
+    // Avec des filtres, Meilisearch ne sait pas tout filtrer : on lui demande les 200 meilleurs résultats, puis PostgreSQL filtre
+    // et on pagine nous-mêmes (sinon les pages seraient incomplètes et le total faux).
+    const wide = hasFilters(p) || Boolean(p.level);
     let engine = 'sql';
     let ids = null;
     let total = 0;
@@ -53,7 +58,7 @@ export default async function searchRoutes(app) {
     if (c) {
       try {
         const r = await meili(c, 'POST', `/indexes/${INDEX}/search`, {
-          q: p.q, limit: p.limit, offset: p.offset,
+          q: p.q, limit: wide ? 200 : p.limit, offset: wide ? 0 : p.offset,
           filter: p.category ? ['showAdults != false', `categoryIds = ${p.category}`] : ['showAdults != false'],
           attributesToRetrieve: ['id'],
           attributesToCrop: ['transcript', 'transcriptOther', 'description'], cropLength: 24, cropMarker: '…',
@@ -70,22 +75,29 @@ export default async function searchRoutes(app) {
 
     let rows;
     if (ids) {
-      const res = await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id
-        WHERE t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}`, [ids]);
+      const vals = [ids];
+      let where = `t.id = ANY($1) AND t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}`;
+      if (p.level) { vals.push(p.level); where += ` AND t.level = $${vals.length}`; }
+      where += ' ' + (await filterSql(p, vals, viewer?.sub ?? null));
+      const res = await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE ${where}`, vals);
       const byId = new Map(res.rows.map((r) => [r.id, r]));
       rows = ids.map((id) => byId.get(id)).filter(Boolean);
-      if (p.level) { rows = rows.filter((r) => r.level === p.level); total = rows.length; }
+      if (wide) { total = rows.length; rows = rows.slice(p.offset, p.offset + p.limit); }
     } else {
+      // Repli SQL : $1 mot cherché, $2 catégorie, $3 limite, $4 décalage, puis les filtres.
+      const q = p.q.replace(/[%_\\]/g, '\\$&');
+      const vals = [q, p.category ?? null, p.limit, p.offset];
+      const extra = await filterSql(p, vals, viewer?.sub ?? null);
       const where = `t.video_status = 'ready' AND ${visibleSql('t')}
         AND (t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%' OR t.description ILIKE '%' || $1 || '%'
              OR t.transcript_text ILIKE '%' || $1 || '%')
         AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
         AND ${adultSql('t')}
-        AND (${p.level ? `t.level = '${p.level}'` : 'TRUE'})`;
-      const q = p.q.replace(/[%_\\]/g, '\\$&');
-      total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${where}`, [q, p.category ?? null])).rows[0].n;
+        AND (${p.level ? `t.level = '${p.level}'` : 'TRUE'}) ${extra}`;
+      // Le décompte réutilise les mêmes paramètres : $3 et $4 y sont cités pour que PostgreSQL les accepte.
+      total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${where} AND $3::int IS NOT NULL AND $4::int IS NOT NULL`, vals)).rows[0].n;
       rows = (await pool.query(`SELECT ${CARD} FROM talks t LEFT JOIN category_names c ON c.id = t.category_id WHERE ${where}
-        ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, [q, p.category ?? null, p.limit, p.offset])).rows;
+        ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, vals)).rows;
     }
 
     onSale = await saleMap('talk', rows.map((r) => r.id), viewer?.sub ?? null);

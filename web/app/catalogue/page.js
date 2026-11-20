@@ -11,6 +11,7 @@ import HomeHero from '../../components/HomeHero';
 import Row from '../../components/Row';
 import TalkCard from '../../components/TalkCard';
 import CatalogueFilters from '../../components/CatalogueFilters';
+import { filtersFrom } from '../../components/TalkFilters';
 import { thumbOf, posterHue, posterArt } from '../../lib/thumb';
 import { isBlueFamily } from '../../lib/skin';
 import PmCatalogue from '../../components/premium/PmCatalogue';
@@ -29,14 +30,16 @@ export default function CataloguePage() {
 // transcriptions (GET /talks?q=…). L'adresse garde la recherche (/catalogue?q=…) ; champ vidé = retour au Catalogue.
 function SearchBox({ value = '', t }) {
   const router = useRouter();
+  const sp = useSearchParams();
   const [q, setQ] = useState(value);
   useEffect(() => { setQ(value); }, [value]);
-  const go = (e) => { e.preventDefault(); const v = q.trim(); router.push(v ? `/catalogue?q=${encodeURIComponent(v)}` : '/catalogue'); };
+  const keep = () => { const k = new URLSearchParams(filtersFrom(sp)); return k; }; // les filtres restent quand on lance une recherche
+  const go = (e) => { e.preventDefault(); const v = q.trim(); const k = keep(); if (v) k.set('q', v); const s = k.toString(); router.push(s ? `/catalogue?${s}` : '/catalogue'); };
   return (
     <form className="cg-search" role="search" onSubmit={go}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       <input type="search" name="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('cgSearchPh')} aria-label={t('cgSearchPh')} maxLength={80} enterKeyHint="search" />
-      {q && <button type="button" className="cg-search-x" onClick={() => { setQ(''); if (value) router.push('/catalogue'); }} aria-label={t('cgSearchClear')}>×</button>}
+      {q && <button type="button" className="cg-search-x" onClick={() => { setQ(''); if (value) { const s = keep().toString(); router.push(s ? `/catalogue?${s}` : '/catalogue'); } }} aria-label={t('cgSearchClear')}>×</button>}
       <button type="submit" className="btn">{t('hmSearch')}</button>
     </form>
   );
@@ -99,22 +102,24 @@ function Catalogue() {
   const fmt = sp.get('format') || '';
   const cat = sp.get('cat') || '';
   const q = (sp.get('q') || '').trim().slice(0, 80);
+  const extras = filtersFrom(sp); // phase 5 : langue, audio, sous-titres, durée, niveau, progression, ressources
+  const hasExtras = Object.keys(extras).length > 0;
   const [data, setData] = useState(null); // { hero, rows }
   useEffect(() => {
-    if (!ready || fmt || cat || q) return;
+    if (!ready || fmt || cat || q || hasExtras) return;
     call('/catalogue').then((r) => setData(r.ok ? r.data : { hero: { fallback: true, items: [] }, rows: [] }));
-  }, [call, ready, fmt, cat]);
+  }, [call, ready, fmt, cat, hasExtras]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (q) {
-    const params = new URLSearchParams({ q });
+    const params = new URLSearchParams({ q, ...extras });
     return <Grid key={params.toString()} params={params} title={t('cgResults').replace('{q}', q)} format="" cat="" t={t} call={call} search={q} />;
   }
-  if (fmt || cat) {
+  if (fmt || cat || hasExtras) {
     const c = cats.find((x) => String(x.id) === cat);
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(extras);
     if (fmt) params.set('format', fmt);
     if (cat) params.set('category', cat);
-    const title = [fmt ? (formatName(fmt) || fmt) : '', cat && c ? (c.fullName || c.name) : ''].filter(Boolean).join(' · ');
+    const title = [fmt ? (formatName(fmt) || fmt) : '', cat && c ? (c.fullName || c.name) : ''].filter(Boolean).join(' · ') || t('fltTitle');
     return <Grid key={params.toString()} params={params} title={title} format={fmt} cat={cat} t={t} call={call} />;
   }
   if (!data) return <main aria-busy="true" className="catalogue" />;

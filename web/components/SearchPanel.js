@@ -8,17 +8,23 @@ import { useApp } from './Providers';
 import SearchHit from './SearchHit';
 import { LEVELS, levelLabel } from '../lib/levels';
 
+const DURATIONS = [['short', 'fltShort'], ['medium', 'fltMedium'], ['long', 'fltLong']];
+
 export default function SearchPanel({ onClose }) {
-  const { t, call } = useApp();
+  const { t, call, locale } = useApp();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
   const [level, setLevel] = useState('');
+  const [lang, setLang] = useState('');
+  const [duration, setDuration] = useState('');
+  const [langs, setLangs] = useState([]);
   const [cats, setCats] = useState([]);
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const input = useRef(null);
 
   useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+  useEffect(() => { call('/talks/filters', {}, null).then((r) => r.ok && r.data && setLangs(r.data.languages || [])); }, [call]);
   useEffect(() => { input.current?.focus(); }, []);
   // Bloque le défilement du site derrière le panneau et gère Échap.
   useEffect(() => {
@@ -37,10 +43,12 @@ export default function SearchPanel({ onClose }) {
       const p = new URLSearchParams({ q: q.trim() });
       if (cat) p.set('category', cat);
       if (level) p.set('level', level);
+      if (lang) p.set('lang', lang);
+      if (duration) p.set('duration', duration);
       call('/search?' + p, {}, null).then((r) => { if (!stale) { setRes(r.ok ? r.data : { hits: [], total: 0, series: [] }); setBusy(false); } });
     }, 250);
     return () => { stale = true; clearTimeout(timer); };
-  }, [q, cat, level, call]);
+  }, [q, cat, level, lang, duration, call]);
 
   // Un clic sur un lien de résultat ferme le panneau (la navigation se fait normalement).
   const onBodyClick = (e) => { if (e.target.closest('a')) onClose(); };
@@ -60,6 +68,16 @@ export default function SearchPanel({ onClose }) {
           <select value={level} onChange={(e) => setLevel(e.target.value)} aria-label={t('lvAll')}>
             <option value="">{t('lvAll')}</option>
             {LEVELS.map((l) => <option key={l} value={l}>{levelLabel(l, t)}</option>)}
+          </select>
+          {langs.length > 1 && (
+            <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t('fltLang')}>
+              <option value="">{t('fltLang')}</option>
+              {langs.map((l) => <option key={l} value={l}>{(() => { try { return new Intl.DisplayNames([locale || 'fr'], { type: 'language' }).of(l) || l; } catch { return l; } })()}</option>)}
+            </select>
+          )}
+          <select value={duration} onChange={(e) => setDuration(e.target.value)} aria-label={t('fltDuration')}>
+            <option value="">{t('fltDuration')}</option>
+            {DURATIONS.map(([v, k]) => <option key={v} value={v}>{t(k)}</option>)}
           </select>
         </div>
         <div className="sp-body" onClick={onBodyClick} aria-live="polite">

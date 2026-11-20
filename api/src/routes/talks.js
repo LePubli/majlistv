@@ -18,6 +18,7 @@ import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '.
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 import { featureOn } from '../features.js';
 import { classifyUrl, insertImport, newObjectKey, storageProblem, AUDIO_CHOICES, audioLangOf, talkSourceUrl } from '../mediaImport.js';
+import { filterShape, filterSql } from '../talkFilters.js';
 
 // Extrait la plateforme et l'identifiant d'une URL YouTube, Vimeo, Dailymotion ou archive.org.
 export function parseVideoUrl(raw) {
@@ -68,6 +69,7 @@ const listSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   // Thème Premium, lot 2 (19/11) : tri du Catalogue (plus récents, A → Z, plus courtes d'abord).
   sort: z.enum(['recent', 'alpha', 'duration']).default('recent'),
+  ...filterShape, // phase 5 : langue, audio, sous-titres, durée, progression, ressources
 });
 const SORT_SQL = {
   recent: 'COALESCE(t.publish_at, t.created_at) DESC',
@@ -214,6 +216,9 @@ export default async function talksRoutes(app) {
     const p = listSchema.parse(req.query);
     const names = p.speaker ? await speakerNames(p.speaker) : null;
     if (names && !names.length) return [];
+    const vals = [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names, p.format ?? null];
+    const viewer = p.progress ? await app.optionalUser(req) : null;
+    const extra = await filterSql(p, vals, viewer?.sub ?? null);
     const { rows } = await pool.query(
       `${SELECT}
        WHERE t.video_status = 'ready' AND ${visibleSql('t')}
@@ -224,9 +229,9 @@ export default async function talksRoutes(app) {
          AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
          AND ($5::text IS NULL OR t.level = $5)
          AND ($7::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $7))
-         AND ${adultSql('t')}
+         AND ${adultSql('t')} ${extra}
        ORDER BY ${SORT_SQL[p.sort]} LIMIT $3 OFFSET $4`,
-      [p.q ?? null, p.category ?? null, p.limit, p.offset, p.level ?? null, names, p.format ?? null]
+      vals
     );
     for (const r of rows) r.summary = String(r.description || '').replace(/\s+/g, ' ').trim().slice(0, 170);
     return withPosters(rows);
@@ -245,11 +250,30 @@ export default async function talksRoutes(app) {
          AND ($2::text IS NULL OR t.level = $2)
          AND ($4::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $4))`;
     const vals = [p.q ?? null, p.level ?? null, names, p.format ?? null];
-    const total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${base} AND ($5::int IS NULL OR ${inCategorySql('t', 5)})`, [...vals, p.category ?? null])).rows[0].n;
+    const viewer = p.progress ? await app.optionalUser(req) : null;
+    const vTotal = [...vals, p.category ?? null];
+    const xTotal = await filterSql(p, vTotal, viewer?.sub ?? null);
+    const total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${base} AND ($5::int IS NULL OR ${inCategorySql('t', 5)}) ${xTotal}`, vTotal)).rows[0].n;
+    const vCats = [...vals];
+    const xCats = await filterSql(p, vCats, viewer?.sub ?? null);
     const { rows } = await pool.query(
       `SELECT r.id, count(t.id)::int AS n FROM categories r JOIN talks t ON ${inCategorySql('t', 'r.id')}
-        WHERE r.parent_id IS NULL AND ${base} GROUP BY r.id`, vals);
+        WHERE r.parent_id IS NULL AND ${base} ${xCats} GROUP BY r.id`, vCats);
     return { total, categories: rows };
+  });
+
+  // Phase 5 — choix proposés par les filtres : seulement ce qui existe vraiment dans le catalogue visible.
+  app.get('/talks/filters', async () => {
+    const ok = `t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}`;
+    const langs = (await pool.query(`SELECT DISTINCT t.language AS l FROM talks t WHERE ${ok} AND t.language ~ '^[a-z]{2,3}$'`)).rows.map((r) => r.l);
+    const subs = (await pool.query(
+      `SELECT DISTINCT l FROM (
+         SELECT t.transcript_language AS l FROM talks t WHERE ${ok} AND t.transcript_language IS NOT NULL
+         UNION SELECT tt.lang FROM transcript_translations tt JOIN talks t ON t.id = tt.talk_id WHERE ${ok} AND tt.status = 'ready') x WHERE l ~ '^[a-z]{2,3}$'`)).rows.map((r) => r.l);
+    const dub = (await pool.query("SELECT to_regclass('public.dub_tracks') IS NOT NULL AS ok")).rows[0].ok
+      && (await pool.query(`SELECT 1 FROM dub_tracks d JOIN talks t ON t.id = d.talk_id WHERE ${ok} LIMIT 1`)).rowCount > 0;
+    const audio = [...new Set([...langs, ...(dub ? ['fr'] : [])])];
+    return { languages: langs.sort(), audio: audio.sort(), subtitles: subs.sort() };
   });
 
   app.get('/talks/:id', async (req, reply) => {

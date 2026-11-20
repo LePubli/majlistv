@@ -6,11 +6,15 @@
 // qui ont des contenus). Une ligne avec moins de deux choix n'est pas affichée.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
+import TalkFilters, { FILTER_KEYS, filtersFrom } from './TalkFilters';
 
 /** Adresse du Catalogue pour un format et un thème (vides = pas de filtre). */
-export const catalogueHref = (format, cat) => {
+// `keep` : filtres de la phase 5 (langue, durée…) déjà choisis — ils restent quand on change de format ou de thème.
+export const catalogueHref = (format, cat, keep = {}) => {
   const q = new URLSearchParams();
+  for (const k of FILTER_KEYS) if (keep[k]) q.set(k, keep[k]);
   if (format) q.set('format', format);
   if (cat) q.set('cat', String(cat));
   const s = q.toString();
@@ -25,6 +29,9 @@ export const rootOf = (cats, id) => {
 
 export default function CatalogueFilters({ format = '', cat = '' }) {
   const { t, call, allCats: cats, formatName } = useApp();
+  const sp = useSearchParams();
+  const keep = filtersFrom(sp);
+  const href = (f, c) => catalogueHref(f, c, keep);
   const [formats, setFormats] = useState([]);
   useEffect(() => { call('/formats?used=1', {}, null).then((r) => setFormats(r.ok && Array.isArray(r.data) ? r.data : [])); }, [call]);
   const roots = cats.filter((c) => c.parentId == null);
@@ -33,25 +40,25 @@ export default function CatalogueFilters({ format = '', cat = '' }) {
   const chip = (href, label, on, key) => (
     <Link key={key} href={href} className={on ? 'on' : undefined} aria-current={on ? 'true' : undefined}>{label}</Link>
   );
-  if (formats.length < 2 && roots.length < 2) return null;
   return (
     <div className="cg-filters">
+      <TalkFilters />
       {formats.length >= 2 && (
         <nav className="cg-chips" aria-label={t('cgByFormat')}>
-          {chip(catalogueHref('', cat), t('cgAllFormats'), !format, 'all')}
-          {formats.map((f) => chip(catalogueHref(f.slug, cat), formatName(f.slug) || f.nameFr, format === f.slug, f.slug))}
+          {chip(href('', cat), t('cgAllFormats'), !format, 'all')}
+          {formats.map((f) => chip(href(f.slug, cat), formatName(f.slug) || f.nameFr, format === f.slug, f.slug))}
         </nav>
       )}
       {roots.length >= 2 && (
         <nav className="cg-chips" aria-label={t('cgByTheme')}>
-          {chip(catalogueHref(format, ''), t('cgAllThemes'), !cat, 'all')}
-          {roots.map((c) => chip(catalogueHref(format, c.id), c.name, root === c.id, c.id))}
+          {chip(href(format, ''), t('cgAllThemes'), !cat, 'all')}
+          {roots.map((c) => chip(href(format, c.id), c.name, root === c.id, c.id))}
         </nav>
       )}
       {subs.length > 0 && (
         <nav className="cg-chips cg-subs" aria-label={t('cgBySub')}>
-          {chip(catalogueHref(format, root), t('cgAllOfTheme').replace('{n}', cats.find((c) => c.id === root)?.name || ''), String(cat) === String(root), 'all')}
-          {subs.map((c) => chip(catalogueHref(format, c.id), c.name, String(cat) === String(c.id), c.id))}
+          {chip(href(format, root), t('cgAllOfTheme').replace('{n}', cats.find((c) => c.id === root)?.name || ''), String(cat) === String(root), 'all')}
+          {subs.map((c) => chip(href(format, c.id), c.name, String(cat) === String(c.id), c.id))}
         </nav>
       )}
     </div>

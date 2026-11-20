@@ -7,9 +7,9 @@ const css = read('app/skin-bleu.css');
 
 // Recherche : un vrai formulaire, l'adresse garde la recherche, champ vide = retour au Catalogue ; l'API filtre (GET /talks?q=).
 assert.match(cp, /<form className="cg-search" role="search" onSubmit=\{go\}>/);
-assert.match(cp, /router\.push\(v \? `\/catalogue\?q=\$\{encodeURIComponent\(v\)\}` : '\/catalogue'\)/);
+assert.match(cp, /if \(v\) k\.set\('q', v\); const s = k\.toString\(\); router\.push\(s \? `\/catalogue\?\$\{s\}` : '\/catalogue'\)/, 'la recherche garde les filtres (phase 5)');
 assert.match(cp, /const q = \(sp\.get\('q'\) \|\| ''\)\.trim\(\)\.slice\(0, 80\);/);
-assert.match(cp, /const params = new URLSearchParams\(\{ q \}\);/);
+assert.match(cp, /const params = new URLSearchParams\(\{ q, ...extras \}\);/);
 assert.match(cp, /search !== null \? t\('cgNoResult'\) : t\('noTalks'\)/, 'message quand rien ne correspond');
 assert.match(cp, /aria-label=\{t\('cgSearchClear'\)\}/);
 const api = fs.readFileSync(new URL('../../api/src/routes/talks.js', import.meta.url), 'utf8');

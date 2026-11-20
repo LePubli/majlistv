@@ -4132,3 +4132,14 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .ku-serie-head::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.75)); }
 .ku-serie-head, .ku-serie-head h1, .ku-serie-head p, .ku-serie-head small { color: #fff; }
 @media (max-width: 560px) { .ku-tiles ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .ku-tile { min-height: 120px; padding: 12px 8px; } .ku-serie-head { padding: 16px; } }
+
+/* Phase 5 (20/11) — bloc « Filtres » du Catalogue (langue, audio, sous-titres, durée, niveau, progression, ressources) */
+.tf { display: grid; gap: 10px; min-width: 0; }
+.tf-toggle { justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 16px; border-radius: 999px; border: 1px solid var(--line-soft); background: transparent; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.tf-toggle:hover, .tf-toggle:focus-visible, .tf-toggle.on { border-color: var(--accent); }
+.tf-count { font-size: 12px; color: var(--accent); font-weight: 700; }
+.tf-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line-soft); border-radius: 14px; }
+.tf-field { display: grid; gap: 4px; font-size: 12px; color: var(--muted, var(--text)); min-width: 0; }
+.tf-field select { min-height: 42px; width: 100%; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line-soft); background: var(--bg, #000); color: var(--text); font: inherit; font-size: 14px; }
+.tf-reset { justify-self: start; }
+@media (max-width: 520px) { .tf-panel { grid-template-columns: 1fr 1fr; } }
