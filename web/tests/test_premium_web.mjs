@@ -45,7 +45,7 @@ for (const k of ["t('home')", "t('navCatalogue')", "t('seriesNav')", "t('navLear
 for (const k of ['"/pratique"', '"/library"', '"/account"', 'logoutNow']) assert.ok(hd.includes(k), `menu de l'avatar : ${k}`);
 assert.doesNotMatch(hd, /notification-dot/, 'pas de pastille de notification inventée');
 const home = read('components/premium/PmHome.js');
-for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'v20-continue-card', 'v20-poster-card', 'v20-big-learn-banner', 'v20-preview-kids', 'v20-preview-mobile', 'v20-preview-player', 'v20-preview-tv']) assert.ok(home.includes(c), c);
+for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'OttRail', 'OttCard', 'pm-spot', 'pm-kids-promo', 'v20-big-learn-banner']) assert.ok(home.includes(c), c);
 for (const api of ["call('/home')", "call('/me/continue')", "call('/me/learning'"]) assert.ok(home.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(home, /75%|12:34|45:20|Salahuddin|Les Héritiers|avatar-reference/, 'aucun contenu de démonstration de la maquette');
 assert.match(home, /course && \(/, 'progression du parcours seulement si elle existe');
@@ -76,7 +76,7 @@ assert.match(read('app/catalogue/page.js'), /if \(skin === 'premium'\) return <P
 assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
 assert.match(read('app/(module-series)/series/[id]/SeriesClient.js'), /if \(skin === 'premium'\) return <PmSeries id=/);
 const cat = read('components/premium/PmCatalogue.js');
-for (const c of ['v20-catalogue-v11', 'v20-cv11-heading', 'v20-cv11-search', 'v20-cv11-sidebar', 'v20-cv11-side-link', 'v20-cv11-format-filters', 'v20-cv11-view-switch', 'v20-cv11-cards', 'v20-cv11-card-visual', 'v20-cv11-fav', 'v20-cv11-more', 'v20-cv11-cross-learn', 'v20-cv11-cross-kids', 'v20-cv11-empty']) assert.ok(cat.includes(c), c);
+for (const c of ['pm-cat-hero', 'pm-cat-search', 'pm-cat-chips', 'pm-cat-formats', 'pm-cat-grid', 'OttCard', 'OttRail', 'v20-cv11-more', 'v20-cv11-cross-learn', 'v20-cv11-cross-kids', 'v20-cv11-empty']) assert.ok(cat.includes(c), c);
 for (const api of ["'/talks?'", "'/talks/facets?'", "'/formats?used=1'", "'/series?limit=100'"]) assert.ok(cat.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(cat, /HD<|cv11-quality|Les Héritiers|Yacine/, 'ni « HD » ni contenu de démonstration');
 assert.match(cat, /catalogueTabs\(/, 'les autres rubriques du Catalogue restent accessibles');

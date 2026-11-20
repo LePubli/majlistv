@@ -9812,17 +9812,24 @@ bash /root/verify-deploy.sh
 
 **Testé.** `api/tests/test_collections_dynamic.py` (CI, 33 contrôles : validations, règles intervenant / durée / tri, catégorie inconnue, brouillon, saison, aperçu, personnelle connecté / visiteur / cache, manuelle, slug unique, collections de départ en brouillon, Kids : isolement adulte, tranche d'âge, rangée dans le catalogue de l'enfant) ; `test_collections.py`, `test_kids_catalog.py`, `test_seasons.py`, `test_home_blocks.py`, `test_search_filters.py`, `test_taxonomy.py`, `test_series_discovery.py` repassent ; `web/tests/collections_dynamic.py` (Chromium, 1440 et 390 px, français et arabe : rangée sur l'accueil, règle appliquée, pas de débordement, RTL, formulaire de règles et aperçu du Studio) ; tests web `.mjs` (fiche, accueil, premium…) ; `next build`. **Non testé** : thème Premium, Safari / iPhone réels, application mobile et télé, saison réellement ouverte (testée par la cohérence accueil / page, pas en forçant Ramadan), « Reprendre mon parcours » et « Recommandations » avec de vraies données (le code est écrit, seul « Continuer » est testé de bout en bout). `test_home.py` ne passe pas ici (envoi d'image : pas de stockage Garage en local), sans lien avec cette phase.
 
-## Étape — Mise à jour design V22 : fiche vidéo (20/11/2026)
+## Étape — Mise à jour design V22 (thème Premium) (20/11/2026)
 
-**Constat honnête.** Le zip V22 (« Design Référence Fidèle + Shorts ») ne contient **aucune nouvelle maquette de fiche vidéo** : le lecteur (pv12) est identique à la V20. Ce qui change en V22 : accueil et catalogue « OTT », menu transparent sur /catalogue et /series, Shorts. J'ai donc aligné la vraie fiche sur la maquette lecteur pv12 / langage visuel V22.
+**Constat honnête.** Le zip V22 (« Design Référence Fidèle + Shorts ») ne contient **aucune nouvelle maquette de fiche vidéo** : le lecteur (pv12) est identique à la V20. Ce qui change en V22 : accueil et catalogue « OTT », menu transparent sur /catalogue et /series, Shorts. Tout cela est appliqué au thème Premium avec les **vraies données** ; seul ce thème change (les autres thèmes sont inchangés).
 
-**Ce qui change (thème Premium, ≥ 1100 px).** Fiche vidéo en deux colonnes : à gauche le lecteur dans une carte arrondie, puis titre, puces, actions et onglets à plat ; à droite le panneau « Apprendre » et la liste des épisodes (collant au défilement) ; « À suivre » en cartes image 16/9. Mode Cinéma : lecteur pleine largeur. Tablette et mobile : inchangés (une colonne). Aucun changement de JSX, d'API ni de base : CSS seul (`web/app/skin-premium.css`).
+**Fiche vidéo (≥ 1100 px).** Deux colonnes : lecteur en carte arrondie à gauche, puis titre, puces, actions, onglets à plat ; à droite le panneau « Apprendre » et les épisodes (collant). « Retour au programme » (ou « Retour à la série ») en haut ; bandeau « Une histoire à regarder, un savoir à transmettre » + « Faire le quiz » (ouvre le vrai quiz, seulement si la vidéo en a un). « À suivre » en cartes 16/9. Tablette et mobile : une colonne.
 
-**Déploiement.** Web uniquement. DockPanel → **majlistv-web** → Redeploy, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+**Menu transparent** sur /catalogue et /series (comme l'accueil, Apprendre et la fiche série).
 
-**Debug.** Ancienne mise en page : vérifier que le thème est « Premium » (Admin → Paramètres → skin_default ou choix du membre) et vider le cache du navigateur.
+**Accueil OTT.** Bandeau panoramique, puis rangées de cartes 16/9 (5 par ligne, titre sur l'image, survol qui agrandit) : Continuer à regarder (avec barre de progression), puis toutes les rangées réelles de l'API (Nouveautés, Pour vous, Séries, Pour commencer, thèmes), les collections publiées « sur l'accueil » (phase 6), une collection à la une (la première qui a au moins 3 vidéos), les vrais Shorts, Kids, Apprendre. Retirées : les 4 tuiles de démonstration (appli, lecteur, télé).
 
-**Testé.** Captures Chromium 1440 et 390 px, FR et AR (RTL), sans débordement horizontal ; test_premium_web.mjs et test_fiche.mjs OK. **Non testé** : vraie vidéo lue, fiche avec série/quiz (panneau latéral plus riche), Safari/iPhone réels.
+**Catalogue OTT.** Bandeau avec recherche, puces de thèmes, rangées par grand thème (6 au plus), grille « Tous les contenus » de 5 colonnes avec filtre de format, tri et « Afficher plus ». Même présentation pour /series. Le menu latéral de gauche est retiré.
 
-**Pas fait (à décider)** : accueil et catalogue OTT, menu transparent /catalogue et /series, Shorts V22 (pas de source de données réelle) ; libellé « Retour au programme » et bandeau « Faire le quiz » de la maquette.
+**Shorts.** /shorts devient le hub « Shorts & découvertes » (vignettes verticales, durée, chaîne) avec les shorts réellement publiés ; un clic ouvre le fil vertical existant (avec « Retour aux Shorts »). Une chaîne précise (/shorts?channel=) et les autres thèmes gardent le fil.
 
+**Déploiement.** Web uniquement (API, base et migrations inchangées). DockPanel → **majlistv-web** → Redeploy, puis `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Ancienne mise en page : le thème doit être « Premium » (Admin → Paramètres → Thème visuel par défaut) ; vider le cache. Pas de hub Shorts : fonction « Shorts » activée ? Rangée absente : elle n'apparaît que s'il y a des vidéos.
+
+**Testé.** Captures Chromium (1440 et 390 px, français et arabe RTL, sans débordement horizontal) de l'accueil, du catalogue, des séries, des Shorts (8 shorts d'essai) et de la fiche ; tous les tests du site (`test_premium_v22.mjs` nouveau, `test_premium_web.mjs` mis à jour), `next build`. **Non testé** : vraies miniatures (le test n'a pas Internet : images sombres de remplacement, donc bandeaux et affiches non jugés à l'œil), lecture réelle d'un short, collection à la une avec vraies vidéos, Safari / iPhone, 820 px.
+
+**Différences assumées avec la maquette.** Pas d'images inventées ni de faux programmes ; badge = format réel ; pas de « Prime » ni de HD ; pas de filtres de thème dans les Shorts (le module n'a pas de catégories de shorts) ; lecteur de Shorts = le fil vertical existant (pas le lecteur en carte de la maquette).

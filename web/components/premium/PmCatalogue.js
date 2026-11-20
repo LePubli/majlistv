@@ -15,6 +15,7 @@ import { useApp } from '../Providers';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import { catalogueTabs } from '../SectionTabs';
 import Glyph, { glyphOfCategory } from './Glyph';
+import { OttCard, OttRail } from './PmOtt';
 
 const PAGE = 24;
 const SORTS = ['recent', 'alpha', 'duration'];
@@ -118,124 +119,107 @@ function Inner({ series = false }) {
   const title = cur.q ? t('cgResults').replace('{q}', cur.q)
     : [cur.format ? (formatName(cur.format) || cur.format) : '', catName].filter(Boolean).join(' · ') || (series ? t('pmAllSeries') : t('pmAllContents'));
 
+  // Mode « rangées » (accueil du Catalogue sans filtre) : une rangée par grand thème qui a des vidéos (6 au plus).
+  const [rails, setRails] = useState([]);
+  const railMode = !series && !cur.q && !cur.cat && !cur.format && cur.sort === 'recent';
+  useEffect(() => {
+    if (!ready || !railMode || !facets) { setRails([]); return undefined; }
+    let dead = false;
+    const withVideos = roots.filter((c) => (counts[c.id] || 0) > 0).slice(0, 6);
+    Promise.all(withVideos.map((c) => call(`/talks?category=${c.id}&limit=10`, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] }))))
+      .then((all) => { if (!dead) setRails(all.filter((x) => x.list.length)); });
+    return () => { dead = true; };
+  }, [ready, railMode, facets, roots, counts, call]);
+
+  // Image du bandeau : celle de la première vidéo (ou série) affichée, à défaut le visuel du thème.
+  const heroImg = (shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp';
+
   return (
-    <div className="v20-app pm-page">
-      <div className="v20-catalogue-v11">
-        <div className="v20-cv11-heading">
-          <div>
-            <span className="v20-cv11-eyebrow">{t('pmExploreBrand').replace('{name}', appName)}</span>
-            <h1>{heading}</h1>
-            <p>{series ? t('pmSeriesIntro') : t('pmCatIntro')}</p>
-          </div>
-          <form className="v20-cv11-search" role="search" onSubmit={submit}>
+    <div className="v20-app pm-page pm-ott pm-ott-cat">
+      <header className="pm-cat-hero" style={{ '--hero': `url("${String(heroImg).replace(/"/g, '%22')}")` }}>
+        <div className="pm-cat-intro">
+          <span className="pm-cat-eyebrow">{t('pmExploreBrand').replace('{name}', appName)}</span>
+          <h1>{heading}</h1>
+          <p>{series ? t('pmSeriesIntro') : t('pmCatIntro')}</p>
+          <form className="pm-cat-search" role="search" onSubmit={submit}>
             <span aria-hidden="true"><Glyph name="search" /></span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('pmSearchPh')} aria-label={t('pmSearchPh')} maxLength={80} enterKeyHint="search" autoComplete="off" />
-            <kbd aria-hidden="true">⌕</kbd>
           </form>
         </div>
-        <main className="v20-cv11-layout">
-          <aside className="v20-cv11-sidebar">
-            <div className="v20-cv11-side-title"><span>{t('pmCategories')}</span><small>{t('pmExplore')}</small></div>
-            <nav aria-label={t('pmCategories')}>
-              <Link href={hrefOf(base, cur, { cat: '' })} className={`v20-cv11-side-link${cur.cat ? '' : ' v20-active'}`} aria-current={cur.cat ? undefined : 'page'}>
-                <Glyph name="grid" /><span>{series ? t('pmAllSeries') : t('cgAll')}</span>{(series ? allTotal : (facets && !cur.q && !cur.format ? facets.total : null)) != null && <small>{series ? allTotal : facets.total}</small>}
-              </Link>
-              {roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id)).map((c) => {
-                const on = String(curRoot) === String(c.id);
-                return (
-                  <Link key={c.id} href={hrefOf(base, cur, { cat: String(c.id) })} className={`v20-cv11-side-link${on ? ' v20-active' : ''}`} aria-current={on ? 'page' : undefined}>
-                    <Glyph name={glyphOfCategory(c.name)} /><span>{c.name}</span>{counts[c.id] != null && <small>{counts[c.id]}</small>}
-                  </Link>
-                );
-              })}
-            </nav>
-            {tabs.length > 0 && (
-              <>
-                <div className="v20-cv11-side-title pm-side-more"><span>{t('pmMoreToSee')}</span></div>
-                <nav aria-label={t('pmMoreToSee')}>
-                  {tabs.map(([href, label]) => <Link key={href} href={href} className="v20-cv11-side-link"><Glyph name="compass" /><span>{label}</span></Link>)}
-                </nav>
-              </>
-            )}
+      </header>
+      <nav className="pm-cat-chips" aria-label={t('pmCategories')}>
+        <Link href={hrefOf(base, cur, { cat: '' })} className={cur.cat ? undefined : 'pm-on'} aria-current={cur.cat ? undefined : 'page'}>{series ? t('pmAllSeries') : t('cgAll')}</Link>
+        {roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id)).map((c) => {
+          const on = String(curRoot) === String(c.id);
+          return <Link key={c.id} href={hrefOf(base, cur, { cat: String(c.id) })} className={on ? 'pm-on' : undefined} aria-current={on ? 'page' : undefined}>{c.name}</Link>;
+        })}
+        {tabs.map(([href, label]) => <Link key={href} href={href} className="pm-chip-more">{label}</Link>)}
+      </nav>
+      <main className="pm-ott-body">
+        {railMode && rails.map(({ c, list }) => (
+          <OttRail key={c.id} title={c.name} href={hrefOf(base, cur, { cat: String(c.id) })}>
+            {list.map((x) => <OttCard key={x.id} x={x} />)}
+          </OttRail>
+        ))}
+        <section className="pm-cat-all" aria-busy={shown === null}>
+          <div className="pm-cat-bar">
+            <div>
+              <h2>{railMode ? t('pmAllContents') : title}</h2>
+              {total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}
+            </div>
+            <div className="pm-cat-tools">
+              {!series && formats.length >= 1 && (
+                <div className="pm-cat-formats" role="group" aria-label={t('cgByFormat')}>
+                  <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'pm-on'} aria-current={cur.format ? undefined : 'true'}>{t('pmAll')}</Link>
+                  {formats.map((f) => <Link key={f.slug} href={hrefOf(base, cur, { format: f.slug })} className={cur.format === f.slug ? 'pm-on' : undefined} aria-current={cur.format === f.slug ? 'true' : undefined}>{f.name}</Link>)}
+                </div>
+              )}
+              <label className="pm-cat-sort">{t('pmSortBy')} <select value={cur.sort} onChange={(e) => go({ sort: e.target.value })} aria-label={t('pmSortBy')}>
+                <option value="recent">{t('pmSortRecent')}</option>
+                <option value="alpha">{t('pmSortAlpha')}</option>
+                <option value="duration">{series ? t('pmSortEpisodes') : t('pmSortDuration')}</option>
+              </select></label>
+            </div>
+          </div>
+          {shown && shown.length === 0 ? (
+            <div className="v20-cv11-empty">
+              <Glyph name="search" />
+              <h3>{t('pmEmptyTitle')}</h3>
+              <p>{t('pmEmptyText')}</p>
+              <Link href={base}>{t('pmShowAll')}</Link>
+            </div>
+          ) : (
+            <div className="pm-cat-grid">
+              {(shown || []).map((x) => (series
+                ? <OttCard key={x.id} x={x} kind="series" href={`/series/${x.slug || x.id}`} />
+                : <OttCard key={x.id} x={x} />))}
+            </div>
+          )}
+          {!series && items && total != null && total > items.length && (
+            <div className="v20-cv11-more">
+              <button type="button" onClick={loadMore} disabled={more}>{t('pmShowMore')} <span>{t('pmRemaining').replace('{n}', total - items.length)}</span> ↓</button>
+            </div>
+          )}
+        </section>
+        {(feat('learning') || feat('kids')) && (
+          <section className="v20-cv11-cross">
             {feat('learning') && (
-              <div className="v20-cv11-sidebar-promo">
+              <Link href="/learning" className="v20-cv11-cross-learn">
                 <span aria-hidden="true"><Glyph name="cap" /></span>
-                <b>{t('pmLearnWith').replace('{name}', appName)}</b>
-                <p>{t('pmLearnWithSub')}</p>
-                <Link href="/learning">{t('pmLearnWithCta')} →</Link>
-              </div>
+                <div><b>{t('pmCrossLearn')}</b><small>{t('pmCrossLearnSub')}</small></div>
+                <i aria-hidden="true">↗</i>
+              </Link>
             )}
-          </aside>
-          <section className="v20-cv11-main">
-            <div className="v20-cv11-toolbar">
-              <div className="v20-cv11-format-filters" role="group" aria-label={t('cgByFormat')}>
-                {!series && formats.length >= 1 && (
-                  <>
-                    <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'v20-active'} aria-current={cur.format ? undefined : 'true'}>{t('pmAll')}</Link>
-                    {formats.map((f) => <Link key={f.slug} href={hrefOf(base, cur, { format: f.slug })} className={cur.format === f.slug ? 'v20-active' : undefined} aria-current={cur.format === f.slug ? 'true' : undefined}>{formatName(f.slug) || f.nameFr}</Link>)}
-                  </>
-                )}
-              </div>
-              <div className="v20-cv11-toolbar-end">
-                <label>{t('pmSortBy')} <select value={cur.sort} onChange={(e) => go({ sort: e.target.value })} aria-label={t('pmSortBy')}>
-                  <option value="recent">{t('pmSortRecent')}</option>
-                  <option value="alpha">{t('pmSortAlpha')}</option>
-                  <option value="duration">{series ? t('pmSortEpisodes') : t('pmSortDuration')}</option>
-                </select></label>
-                <div className="v20-cv11-view-switch">
-                  <button type="button" className={view === 'grid' ? 'v20-active' : undefined} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label={t('pmViewGrid')}><Glyph name="grid" /></button>
-                  <button type="button" className={view === 'list' ? 'v20-active' : undefined} onClick={() => setView('list')} aria-pressed={view === 'list'} aria-label={t('pmViewList')}>☷</button>
-                </div>
-              </div>
-            </div>
-            <div id="cv11-results" aria-busy={shown === null}>
-              <div className="v20-cv11-results-header">
-                <div>
-                  <h2>{title}</h2>
-                  {total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}
-                </div>
-              </div>
-              {shown && shown.length === 0 ? (
-                <div className="v20-cv11-empty">
-                  <Glyph name="search" />
-                  <h3>{t('pmEmptyTitle')}</h3>
-                  <p>{t('pmEmptyText')}</p>
-                  <Link href={base}>{t('pmShowAll')}</Link>
-                </div>
-              ) : (
-                <div className={`v20-cv11-cards${view === 'list' ? ' v20-as-list' : ''}`}>
-                  {(shown || []).map((x) => (series
-                    ? <SeriesCardV20 key={x.id} s={x} t={t} />
-                    : <TalkCardV20 key={x.id} x={x} t={t} formatName={formatName} listOn={listOn} user={user} mine={listOn && inMyList(x.id)} onMine={() => toggleMyList(x.id)} />))}
-                </div>
-              )}
-              {!series && items && total != null && total > items.length && (
-                <div className="v20-cv11-more">
-                  <button type="button" onClick={loadMore} disabled={more}>{t('pmShowMore')} <span>{t('pmRemaining').replace('{n}', total - items.length)}</span> ↓</button>
-                </div>
-              )}
-            </div>
-            {(feat('learning') || feat('kids')) && (
-              <section className="v20-cv11-cross">
-                {feat('learning') && (
-                  <Link href="/learning" className="v20-cv11-cross-learn">
-                    <span aria-hidden="true"><Glyph name="cap" /></span>
-                    <div><b>{t('pmCrossLearn')}</b><small>{t('pmCrossLearnSub')}</small></div>
-                    <i aria-hidden="true">↗</i>
-                  </Link>
-                )}
-                {feat('kids') && (
-                  <Link href="/kids" className="v20-cv11-cross-kids">
-                    <span aria-hidden="true"><Glyph name="game" /></span>
-                    <div><b>{t('pmCrossKids').replace('{name}', appName.replace(/\s*TV$/i, ''))}</b><small>{t('pmCrossKidsSub')}</small></div>
-                    <i aria-hidden="true">↗</i>
-                  </Link>
-                )}
-              </section>
+            {feat('kids') && (
+              <Link href="/kids" className="v20-cv11-cross-kids">
+                <span aria-hidden="true"><Glyph name="game" /></span>
+                <div><b>{t('pmCrossKids').replace('{name}', appName.replace(/\s*TV$/i, ''))}</b><small>{t('pmCrossKidsSub')}</small></div>
+                <i aria-hidden="true">↗</i>
+              </Link>
             )}
           </section>
-        </main>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

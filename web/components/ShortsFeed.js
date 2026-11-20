@@ -138,6 +138,7 @@ export default function ShortsFeed({ firstId, channel }) {
 
   return (
     <main className="sh-page">
+      <Link href={base} className="sh-back-pm">{locale === 'ar' ? '→' : '←'} {t('pmShortsBack')}</Link>
       <div className="sh-stage">
         <div className="sh-feed" ref={feed} role="feed" aria-label={t('shrTitle')} tabIndex={-1}>
           {items.map((s, i) => {

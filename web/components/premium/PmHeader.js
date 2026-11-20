@@ -51,7 +51,7 @@ export default function PmHeader() {
     return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); };
   }, [menu]);
   if (path.startsWith('/studio') || path.startsWith('/admin')) return null; // ils ont leur propre menu
-  const overlay = path === '/' || path === '/learning' || /^\/series\/[^/]+$/.test(path); // comme la maquette : posé sur l'image (accueil, Apprendre, fiche série)
+  const overlay = path === '/' || path === '/learning' || path === '/catalogue' || path === '/series' || /^\/series\/[^/]+$/.test(path); // comme la maquette : posé sur l'image (accueil, Apprendre, catalogue, séries, fiche série)
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
   const initial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();

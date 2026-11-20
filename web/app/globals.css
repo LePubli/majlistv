@@ -4143,3 +4143,6 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .tf-field select { min-height: 42px; width: 100%; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line-soft); background: var(--bg, #000); color: var(--text); font: inherit; font-size: 14px; }
 .tf-reset { justify-self: start; }
 @media (max-width: 520px) { .tf-panel { grid-template-columns: 1fr 1fr; } }
+
+/* Éléments de la fiche vidéo et des Shorts visibles seulement avec le thème Premium (règles dans skin-premium.css) */
+.wb-back, .wb-banner, .sh-back-pm { display: none; }

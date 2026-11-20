@@ -418,6 +418,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
   return (
     <main className="page watch watch-b">
+      <Link className="wb-back" href={ctx ? `/series/${ctx.id}` : '/catalogue'}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {ctx ? t('wbBackSeries') : t('wbBack')}</Link>
       <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
 
       <section className="wb-hero" aria-label={t('wbStage')} style={thumbOf(talk) ? { '--amb': `url(${thumbOf(talk)})` } : undefined}>
@@ -560,6 +561,12 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
       <div className="wb-grid">
         <div className="wb-main">
+          {quizOn && (
+            <aside className="wb-banner" aria-label={t('wbBannerTitle')}>
+              <span className="wb-banner-text"><b>{t('wbBannerTitle')}</b><span>{t('wbBannerSub')}</span></span>
+              <button type="button" className="btn sm" onClick={openQuiz} data-act="quiz-banner">{t('wbBannerCta')} <span aria-hidden="true">{locale === 'ar' ? '↖' : '↗'}</span></button>
+            </aside>
+          )}
           {/* Panneaux des modules (étape D2 : « Langue de l'audio » du module Doublage) */}
           {hasPlayer && !talk.locked && <ModulePanels talk={talk} talkId={id} videoRef={videoRef} audioMode={audioMode} setAudioMode={pickAudio} onAudioLang={setDubLang} setAudioOverride={setDubAudio} spokenLang={audioLang} />}
           {talk.themes?.length > 0 && <p className="th-chips"><span className="meta small">{t('thOnTalk')}</span> {talk.themes.map((x) => <Link key={x.id} href={`/themes/${x.id}`} className="th-chip">{x.title}</Link>)}</p>}

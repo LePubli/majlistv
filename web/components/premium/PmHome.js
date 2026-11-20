@@ -1,6 +1,6 @@
 'use client';
-// Accueil du thème Premium : reproduction de l'accueil de la maquette V20 (même structure HTML, classes « v20-… »),
-// remplie avec les vraies données du site. Rien n'est inventé : une partie sans données réelles n'est pas affichée
+// Accueil du thème Premium : une de la maquette V20 (classes « v20-… ») puis, depuis la V22, rangées « OTT » (cartes 16:9,
+// 5 par ligne, titre sur l'image), remplies avec les vraies données du site. Rien n'est inventé : une partie sans données réelles n'est pas affichée
 // (ex. « Continuer à regarder » pour un visiteur, progression du parcours sans formule Apprentissage).
 //   1. La une (vidéos choisies dans Admin, à défaut les 5 plus récentes) avec flèches et points.
 //   2. Univers (téléphone) : les 4 premières catégories + « Plus ».
@@ -13,6 +13,8 @@ import { useReducedMotion } from '../HomeHero';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { BrandWord } from './PmBrand';
+import { OttCard, OttRail } from './PmOtt';
+import { ShortsRail } from '../ShortsRail';
 
 const HERO_FALLBACK = '/premium/andalousie-large.webp';
 const cssUrl = (u) => `url("${String(u).replace(/"/g, '%22')}")`;
@@ -116,10 +118,15 @@ export default function PmHome() {
   const [home, setHome] = useState(null);
   const [cont, setCont] = useState([]);
   const [learn, setLearn] = useState(null);
+  const [cols, setCols] = useState([]);
+  const [shorts, setShorts] = useState([]);
   useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok && Array.isArray(r.data) ? r.data : [])); else setCont([]); }, [user, call]);
   // Progression du bandeau « Apprendre » : seulement avec la formule Apprentissage (sinon l'API répond « formule requise »).
   useEffect(() => { if (user && feat('learning')) call('/me/learning', {}, null).then((r) => setLearn(r.ok ? r.data : null)); else setLearn(null); }, [user, call, feat]);
+  // Collections publiées « sur l'accueil » (phase 6) et shorts publiés (module Shorts) : rien d'affiché s'il n'y en a pas.
+  useEffect(() => { if (ready) call('/collections/home', {}, null).then((r) => setCols(r.ok && Array.isArray(r.data?.collections) ? r.data.collections : [])); }, [call, ready, user?.id]);
+  useEffect(() => { if (ready && feat('shorts')) call('/shorts?limit=10', {}, null).then((r) => setShorts(r.ok && Array.isArray(r.data) ? r.data : [])); else setShorts([]); }, [call, ready, feat]);
 
   const latest = useMemo(() => (home?.rows || []).find((r) => r.talks)?.talks || [], [home]);
   const heroItems = useMemo(() => {
@@ -132,14 +139,13 @@ export default function PmHome() {
     return s ? { title: s.title, pct: Math.round((s.passed / s.total) * 100) } : null;
   }, [learn]);
   const univ = (cats || []).slice(0, 4);
-  const resume = cont[0];
-  const playerItem = resume || latest[0];
-  const tvItem = heroItems[0] || latest[0];
   const brandFirst = (appName || 'Mejliss TV').replace(/\s*TV$/i, '');
-  const hasPreview = feat('kids') || feat('app_install') || Boolean(playerItem);
+  const rowTitle = (r) => (r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.key === 'series' ? t('rowSeries') : r.title);
+  const rowHref = (r) => (r.key === 'series' ? '/series' : r.categoryId ? `/catalogue?cat=${r.categoryId}` : r.key === 'foryou' ? undefined : '/catalogue');
+  const spot = cols.find((c) => (c.talks || []).length >= 3);
 
   return (
-    <div className="v20-app pm-home">
+    <div className="v20-app pm-home pm-ott">
       <div className="v20-signature-home v20-faithful-home">
         {home ? <Hero items={heroItems} t={t} /> : <section className="v20-hero v20-faithful-hero v20-hero-home" aria-busy="true" />}
         {univ.length > 0 && (
@@ -148,44 +154,50 @@ export default function PmHome() {
             <Link href="/catalogue" className="v20-mobile-universe"><Glyph name="grid" /><span>{t('pmMore')}</span></Link>
           </nav>
         )}
-        <main className="v20-shell v20-home-overlap">
-          {cont.length > 0 && (
-            <section className="v20-section v20-continue-section">
-              <SectionTitle title={t('continueWatching')} href="/library" t={t} />
-              <div className="v20-continue-grid">
-                {cont.slice(0, 4).map((x) => {
-                  const d = durMs(x);
-                  const left = d ? Math.max(1, Math.round((d - (x.positionMs || 0)) / 60000)) : 0;
-                  const pct = d ? Math.min(100, Math.round(((x.positionMs || 0) / d) * 100)) : 0;
-                  return (
-                    <Link key={x.id} className="v20-continue-card" href={`/talks/${x.id}`}>
-                      <div className="v20-continue-art" style={{ backgroundImage: coverOf(x) }}>
-                        <span className="v20-continue-play" aria-hidden="true">▶</span>
-                        {left > 0 && <small>{t('pmLeft').replace('{n}', left)}</small>}
-                        <div className="v20-continue-track"><i style={{ width: `${pct}%` }} /></div>
-                      </div>
-                      <div className="v20-continue-text"><b>{x.title}</b>{x.speaker && <small>{x.speaker}</small>}</div>
-                    </Link>
-                  );
-                })}
+        <main className="pm-ott-body">
+          <OttRail title={t('continueWatching')} href="/library">
+            {cont.slice(0, 10).map((x) => {
+              const d = durMs(x);
+              return <OttCard key={x.id} x={x} badge="" pct={d ? Math.round(((x.positionMs || 0) / d) * 100) : 0} />;
+            })}
+          </OttRail>
+          {(home?.rows || []).map((r) => {
+            const list = r.series || r.talks || [];
+            return (
+              <OttRail key={r.key} title={rowTitle(r)} href={rowHref(r)}>
+                {list.slice(0, 10).map((x) => <OttCard key={x.id} x={x} kind={r.series ? 'series' : undefined} />)}
+              </OttRail>
+            );
+          })}
+          {spot && (
+            <section className="pm-spot" style={{ '--cover': coverOf(spot.talks[0]) }} aria-label={spot.title}>
+              <div className="pm-spot-copy">
+                <span className="pm-spot-kicker">{t('pmSelection').replace('{name}', appName)}</span>
+                <h2>{spot.title}</h2>
+                {spot.description && <p>{spot.description}</p>}
+                {spot.mode !== 'personal' && <Link href={`/collections/${spot.id}`} className="pm-spot-cta">{t('pmExploreCollection')} <span aria-hidden="true">↗</span></Link>}
+              </div>
+              <div className="pm-spot-cards">
+                {spot.talks.slice(0, 3).map((x) => <OttCard key={x.id} x={x} badge="" />)}
               </div>
             </section>
           )}
-          {latest.length > 0 && (
-            <section className="v20-section v20-signature-new">
-              <SectionTitle title={t('rowNew')} href="/catalogue" t={t} />
-              <div className="v20-poster-grid">
-                {latest.slice(0, 6).map((x, k) => (
-                  <Link key={x.id} className="v20-poster-card" href={`/talks/${x.id}`} style={{ '--cover': coverOf(x) }}>
-                    {k === 0 && <span className="v20-poster-tag">{t('pmNewTag')}</span>}
-                    <div className="v20-poster-copy">
-                      <b className={long(x.title, 20)}>{x.title}</b>
-                      <small>{[x.speaker, x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : ''].filter(Boolean).join(' · ')}</small>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+          {cols.filter((c) => c !== spot).map((c) => (
+            <OttRail key={c.id} title={c.title} href={c.mode === 'personal' ? undefined : `/collections/${c.id}`}>
+              {(c.talks || []).slice(0, 10).map((x) => <OttCard key={x.id} x={x} />)}
+            </OttRail>
+          ))}
+          {shorts.length > 0 && (
+            <section className="pm-rail pm-shorts-rail" aria-label={t('shrTitle')}>
+              <div className="pm-rail-head"><h2>{t('shrTitle')}</h2><Link href="/shorts">{t('rowSeeAll')} <span className="pm-chev" aria-hidden="true">›</span></Link></div>
+              <ShortsRail list={shorts} />
             </section>
+          )}
+          {feat('kids') && (
+            <Link href="/kids" className="pm-kids-promo" style={{ backgroundImage: "linear-gradient(90deg,#030a16ee,#030a1600),url('/premium/kids-hero-day-v7.webp')" }}>
+              <span className="pm-kids-title">{brandFirst} <em>Kids</em></span>
+              <small>{t('kdTagline')}</small>
+            </Link>
           )}
           {feat('learning') && (
             <Link href="/learning" className="v20-big-learn-banner">
@@ -199,45 +211,6 @@ export default function PmHome() {
                 </>
               )}
             </Link>
-          )}
-          {hasPreview && (
-            <div className="v20-preview-cards">
-              {feat('kids') && (
-                <Link href="/kids" className="v20-preview-kids" style={{ backgroundImage: "linear-gradient(0deg,#06152522,#06152500),url('/premium/kids-hero-day-v7.webp')" }}>
-                  <span className="v20-preview-kids-title">{brandFirst} <em>Kids</em></span>
-                  <small>{t('kdTagline')}</small>
-                </Link>
-              )}
-              {feat('app_install') && (
-                <Link href="/application" className="v20-preview-mobile">
-                  <img src={tvItem && thumbOf(tvItem) ? thumbOf(tvItem) : '/premium/andalousie.webp'} alt="" />
-                  <div>
-                    <span className="v20-brand v20-mini-brand">▶ <BrandWord name={appName} /></span>
-                    <strong>{(resume || tvItem)?.title || t('pwaNav')}</strong>
-                    <span className="v20-mini-watch">▶ {resume ? t('pmResume') : t('watchNow')}</span>
-                    <small>{[t('home'), t('navCatalogue'), feat('learning') ? t('msLearnShort') : null].filter(Boolean).join('　')}</small>
-                  </div>
-                </Link>
-              )}
-              {playerItem && (
-                <Link href={`/talks/${playerItem.id}`} className="v20-preview-player" style={{ backgroundImage: `linear-gradient(0deg,#001326fa,#00132618),${coverOf(playerItem)}` }}>
-                  <div>
-                    <small>▣{'　'} {playerItem.title}</small>
-                    <strong aria-hidden="true">{resume ? 'Ⅱ' : '▶'}</strong>
-                    {durMs(playerItem) > 0 && <span>▶ {clock(resume ? resume.positionMs : 0)} / {clock(durMs(playerItem))}</span>}
-                  </div>
-                </Link>
-              )}
-              {feat('app_install') && tvItem && (
-                <Link href="/application" className="v20-preview-tv" style={{ backgroundImage: `linear-gradient(90deg,#021228d9,#02122800),${coverOf(tvItem)}` }}>
-                  <div>
-                    <span className="v20-brand v20-mini-brand">▶ <BrandWord name={appName} /></span>
-                    <strong className={long(tvItem.title, 24)}>{tvItem.title}</strong>
-                    <span className="v20-mini-watch">▶ {t('watchNow')}</span>
-                  </div>
-                </Link>
-              )}
-            </div>
           )}
         </main>
       </div>
