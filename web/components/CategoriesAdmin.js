@@ -166,7 +166,7 @@ export default function CategoriesAdmin() {
               <b>Supprimer « {del.cat.name} » ?</b>
               {del.error && <p className="error">{del.error}</p>}
               {del.code === 'has_children' && <p className="meta">Supprimez ou déplacez d’abord ses sous-catégories.</p>}
-              {del.code === 'kids_rubric' && <p className="meta">Utilisez « Désactiver » : l’espace Kids en dépend encore.</p>}
+              {del.code === 'kids_rubric' && <p className="meta">Utilisez « Désactiver » : cet univers est affiché dans l’espace Kids.</p>}
               {del.relations && (
                 <>
                   <p className="meta">{plural(del.relations.talks, 'vidéo principale', 'vidéos principales')} · {plural(del.relations.extraTalks, 'vidéo supplémentaire', 'vidéos supplémentaires')} · {plural(del.relations.series, 'série', 'séries')}. Rien n’est supprimé : choisissez où elles vont.</p>

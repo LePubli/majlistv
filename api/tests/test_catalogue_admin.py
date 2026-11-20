@@ -157,10 +157,9 @@ for c in requests.get(B + "/categories/admin", headers=ADM).json():
 requests.post(f"{B}/categories/{A['id']}/talks", headers=ADM, json={"remove": [t2, t3]})
 r = requests.delete(f"{B}/categories/{A['id']}", headers=ADM); ok(r.status_code == 200, "catégorie vide : suppression directe")
 
-# Univers Kids lié à l'espace Kids : jamais supprimé, ni passé aux adultes
-cur.execute("select category_id from kid_rubrics where category_id is not null limit 1"); kid = cur.fetchone()[0]
+# Univers Kids affiché aux enfants : pas de suppression directe (on le désactive d'abord)
+cur.execute("select id from categories where slug='kids-series-aventures'"); kid = cur.fetchone()[0]
 r = requests.delete(f"{B}/categories/{kid}", headers=ADM, params={"detach": 1}); ok(r.status_code == 409 and r.json()["code"] == "kids_rubric", "univers Kids utilisé : suppression refusée")
-ok(requests.patch(f"{B}/categories/{kid}", headers=ADM, json={"catalogueType": "adult"}).status_code == 409, "univers Kids utilisé : passage aux adultes refusé")
 
 for t_ in (t1, t2, t3):
     requests.delete(f"{B}/talks/{t_}", headers=ADM)

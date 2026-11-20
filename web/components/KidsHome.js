@@ -12,6 +12,7 @@ import { KidActions } from './KidsActions';
 import { KidRamadan } from './KidsRamadan';
 import KidCatalog from './KidCatalog';
 import KidShorts from './KidShorts';
+import KidUniverses from './KidUniverses';
 import { PmKidsTop } from './premium/PmKids';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
@@ -112,6 +113,7 @@ export default function KidsHome() {
             )}
             {feat('audyn') && <section aria-labelledby="kd-st"><h2 id="kd-st">🌙 {t('awkNav')}</h2><p><Link href="/kids/histoires" className="btn">{t('awkIntro')}</Link></p></section>}
             <KidShorts />
+            <KidUniverses />
             {!pm && <section aria-labelledby="kd-all"><h2 id="kd-all">{t('kdForYou')}</h2>
               {d && talks.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : <ul className="kd-grid">{talks.slice(0, 8).map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>}
               {talks.length > 8 && <p><Link href="/kids?tab=watch" className="btn ghost">{t('kdMAll')}</Link></p>}

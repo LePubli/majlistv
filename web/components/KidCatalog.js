@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { KidCard } from './KidsHome';
+import KidUniverses from './KidUniverses';
 
 const name = (r, locale) => r.names?.[locale] || r.names?.fr || r.slug;
 
@@ -73,6 +74,8 @@ export default function KidCatalog() {
           {(() => { const list = d.talks.filter((x) => x.rubricIds.includes(chosen.id) && ageOk(x)); return list.length ? grid(list) : <p className="soon">{t('kcNothing')}</p>; })()}
         </div>
       )}
+
+      {!searching && !chosen && <KidUniverses />}
 
       {!searching && !chosen && (
         d.shelves.length === 0 ? <p className="soon">{t('kdEmpty')}</p> : d.shelves.map((s) => {

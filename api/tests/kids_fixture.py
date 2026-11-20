@@ -7,8 +7,8 @@ ns = {"__name__": "kidsfixture"}; exec(compile(src, "test_offline_head", "exec")
 cur, B = ns["cur"], ns["B"]
 talk = ns["make_talk"](access="free"); ns["make_hls"](talk)
 cur.execute("update talks set kids_bands=%s, title=%s where id=%s", (["6-8", "9-12"], "Les étoiles de la nuit", talk))
-cur.execute("select id from kid_rubrics where active order by position, id limit 1"); rid = cur.fetchone()[0]
-cur.execute("insert into talk_kid_rubrics(talk_id, rubric_id) values (%s,%s) on conflict do nothing", (talk, rid))
+cur.execute("select id from categories where catalogue_type='kids' and parent_id is null and is_active order by display_order, id limit 1"); rid = cur.fetchone()[0]
+cur.execute("insert into talk_categories(talk_id, category_id) values (%s,%s) on conflict do nothing", (talk, rid))
 # 22b-9b : un quiz approuvé (5 questions, bonne réponse = index 1) et un court publié.
 cur.execute("update talks set quiz_enabled = true where id=%s", (talk,))
 for i in range(5):

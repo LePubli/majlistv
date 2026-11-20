@@ -24,7 +24,7 @@ const COUNTS = `(SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) A
   (SELECT count(*)::int FROM talk_categories tc WHERE tc.category_id = c.id) AS "extraCount",
   (SELECT count(*)::int FROM series s WHERE s.category_id = c.id) AS "seriesCount",
   (SELECT count(*)::int FROM categories k WHERE k.parent_id = c.id) AS children,
-  (SELECT count(*)::int FROM kid_rubrics r WHERE r.category_id = c.id) AS "rubricCount"`;
+  (CASE WHEN c.catalogue_type = 'kids' AND c.parent_id IS NULL AND c.is_active THEN 1 ELSE 0 END) AS "rubricCount"`;
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const urlOrPath = z.string().trim().max(500).regex(/^(https?:\/\/|\/)[^\s]*$/, 'Adresse d\'image invalide (https://… ou /chemin)');
@@ -166,9 +166,6 @@ export default async function categoriesAdminRoutes(app) {
       catalogue = (await pool.query('SELECT catalogue_type FROM categories WHERE id = $1', [parentId])).rows[0].catalogue_type;
       set.catalogueType = catalogue;
     }
-    if (b.catalogueType !== undefined && catalogue === 'adult' && (await pool.query('SELECT 1 FROM kid_rubrics WHERE category_id = $1', [id])).rowCount) {
-      return reply.code(409).send({ error: "Cet univers est utilisé par l'espace Kids : il ne peut pas passer au catalogue adultes", code: 'kids_rubric' });
-    }
     // Déplacée vers un autre parent (ou promue en catégorie principale) : elle se range à la fin de ses nouveaux frères, sauf ordre explicite.
     if (b.parentId !== undefined && parentId !== cur.parent_id && b.displayOrder === undefined) {
       set.displayOrder = (await pool.query(
@@ -215,7 +212,7 @@ export default async function categoriesAdminRoutes(app) {
     const q = z.object({ moveTo: z.coerce.number().int().positive().optional(), detach: z.enum(['1', 'true']).optional() }).parse(req.query);
     const cat = await getOne(id);
     if (!cat) return reply.code(404).send({ error: 'Catégorie introuvable' });
-    if (cat.rubricCount) return reply.code(409).send({ error: "Cet univers est utilisé par l'espace Kids : désactivez-le plutôt que de le supprimer", code: 'kids_rubric' });
+    if (cat.rubricCount) return reply.code(409).send({ error: "Cet univers est affiché dans l'espace Kids : désactivez-le d'abord, puis supprimez-le si besoin", code: 'kids_rubric' });
     if (cat.children) return reply.code(409).send({ error: "Supprimez ou déplacez d'abord ses sous-catégories", code: 'has_children', children: cat.children });
     const relations = { talks: cat.mainCount, extraTalks: cat.extraCount, series: cat.seriesCount };
     const hasRelations = cat.mainCount + cat.extraCount + cat.seriesCount > 0;
