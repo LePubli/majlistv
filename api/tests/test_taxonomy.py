@@ -87,7 +87,8 @@ r = rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [COR
 t = rq("GET", f"/talks/{T_multi}").json()
 ok(sorted(t["extraCategoryIds"]) == sorted([CORAN, APPR]), "fiche : catégories supplémentaires exposées")
 ok(T_multi in cat_ids("/talks", category=CORAN) and T_multi in cat_ids("/talks", category=HAD) and T_multi in cat_ids("/talks", category=APPR), "la conférence apparaît dans chacune de ses catégories")
-ok(rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [CORAN, APPR, LECT]}).status_code == 400, "3 catégories supplémentaires : refusé")
+ok(rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [CORAN, APPR, LECT]}).status_code == 200, "3 catégories supplémentaires : acceptées (plus de plafond de 2)")
+ok(rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": list(range(1, 22))}).status_code == 400, "plus de 20 catégories supplémentaires : refusé")
 ok(rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [HAD, CORAN]}).status_code == 200 and rq("GET", f"/talks/{T_multi}").json()["extraCategoryIds"] == [CORAN], "la catégorie principale est retirée des supplémentaires")
 ok(rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [999999]}).status_code == 400, "catégorie supplémentaire inconnue refusée")
 rq("PATCH", f"/talks/{T_multi}", headers=ORG, json={"extraCategoryIds": [CORAN]})
@@ -115,11 +116,11 @@ ok(stats[CORAN]["children"] == 1 and stats[CORAN]["total"] >= 2 and stats[LECT][
 
 # ---- Tranches d'âge multiples
 T_k = talk("Pour petits et moyens")
-r = rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["7-10", "3-6"]}); ok(r.status_code == 200, "plusieurs tranches d'âge enregistrées")
-ok(rq("GET", f"/talks/{T_k}").json()["kidsBands"] == ["3-6", "7-10"], "tranches triées de la plus jeune à la plus âgée")
-ok(rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-6", "3-6", "7-10", "11-14"]}).status_code == 200 and rq("GET", f"/talks/{T_k}").json()["kidsBands"] == ["3-6", "7-10", "11-14"], "doublons retirés")
+r = rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["6-8", "3-5"]}); ok(r.status_code == 200, "plusieurs tranches d'âge enregistrées")
+ok(rq("GET", f"/talks/{T_k}").json()["kidsBands"] == ["3-5", "6-8"], "tranches triées de la plus jeune à la plus âgée")
+ok(rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-5", "3-5", "6-8", "9-12"]}).status_code == 200 and rq("GET", f"/talks/{T_k}").json()["kidsBands"] == ["3-5", "6-8", "9-12"], "doublons retirés")
 ok(rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["1-2"]}).status_code == 400, "tranche inconnue refusée")
-ok(rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-6", "7-10"]}).status_code == 200, "retour à 3-6 et 7-10")
+ok(rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-5", "6-8"]}).status_code == 200, "retour à 3-6 et 7-10")
 # Visibilité enfant : seulement les tranches cochées
 def kidtoken(parent, band, name):
     pid = rq("POST", "/me/kids/profiles", headers=parent, json={"name": name, "band": band}).json()["id"]
@@ -129,23 +130,23 @@ rq("POST", "/auth/register", json={"email": email, "password": "Passw0rd-test", 
 cur.execute("select id from users where email=%s", (email,)); uid = cur.fetchone()[0]
 cur.execute("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values (%s,%s,'active','p','month',now()+interval '20 days',1,'learning')", ("sub_" + uuid.uuid4().hex[:12], uid))
 PH = login(email, "Passw0rd-test"); rq("PUT", "/me/kids/pin", headers=PH, json={"code": "2468"})
-K1, p1 = kidtoken(PH, "3-6", "Petit"); K2, p2 = kidtoken(PH, "7-10", "Moyen"); K3, p3 = kidtoken(PH, "11-14", "Grand")
+K1, p1 = kidtoken(PH, "3-5", "Petit"); K2, p2 = kidtoken(PH, "6-8", "Moyen"); K3, p3 = kidtoken(PH, "9-12", "Grand")
 ids = lambda K: {t["id"] for t in rq("GET", "/kids/talks", headers=K).json()["talks"]}
 ok(T_k in ids(K1) and T_k in ids(K2) and T_k not in ids(K3), "3-6 + 7-10 : vue par les petits et les moyens, pas par les grands")
 ok(rq("GET", f"/talks/{T_k}", headers=K3).status_code == 404, "les grands n'ouvrent pas la conférence en accès direct")
-rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["11-14"]})
+rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["9-12"]})
 ok(T_k not in ids(K1) and T_k not in ids(K2) and T_k in ids(K3), "11-14 seulement : réservée aux grands (les petits ne la voient plus)")
-rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-6", "7-10", "11-14"]})
+rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"kidsBands": ["3-5", "6-8", "9-12"]})
 ok(all(T_k in ids(K) for K in (K1, K2, K3)), "toutes les tranches : vue par tous")
-ok(rq("GET", f"/talks/{T_k}", headers=K1).json()["kidsBands"] == ["3-6", "7-10", "11-14"], "fiche côté enfant : tranches exposées")
-hk = rq("GET", "/home/kids").json()["talks"]; ok(any(x["id"] == T_k and x["kidsBands"] == ["3-6", "7-10", "11-14"] for x in hk), "bande de l'accueil : tranches exposées")
+ok(rq("GET", f"/talks/{T_k}", headers=K1).json()["kidsBands"] == ["3-5", "6-8", "9-12"], "fiche côté enfant : tranches exposées")
+hk = rq("GET", "/home/kids").json()["talks"]; ok(any(x["id"] == T_k and x["kidsBands"] == ["3-5", "6-8", "9-12"] for x in hk), "bande de l'accueil : tranches exposées")
 
 # ---- Public : catalogue adultes
 ok(rq("GET", f"/talks/{T_k}").json()["showAdults"] is True, "par défaut : visible dans le catalogue adultes")
 ok(T_k in cat_ids("/talks"), "conférence Kids visible aux adultes tant que le réglage est actif")
 rq("PATCH", f"/talks/{T_k}", headers=ORG, json={"showAdults": False})
 ok(T_k not in cat_ids("/talks"), "masquée du catalogue adultes")
-T_kc = talk("Kids Coran", LECT); rq("PATCH", f"/talks/{T_kc}", headers=ORG, json={"kidsBands": ["3-6"], "showAdults": False})
+T_kc = talk("Kids Coran", LECT); rq("PATCH", f"/talks/{T_kc}", headers=ORG, json={"kidsBands": ["3-5"], "showAdults": False})
 ok(T_kc not in cat_ids("/talks", category=CORAN) and T_kc not in {x["id"] for x in home_rows()[f"cat:{CORAN}"]["talks"]}, "masquée aussi des rangées de l'accueil")
 ok(T_k in ids(K1) and T_kc in ids(K1), "toujours visible dans l'espace Kids")
 ok(rq("GET", f"/talks/{T_k}").status_code == 200, "toujours accessible par son lien")
@@ -156,11 +157,11 @@ sim = {x["id"] for x in rq("GET", f"/talks/{T_lect}/similar").json()}
 ok(T_kc not in sim, "« dans la même veine » ne propose pas les conférences réservées aux enfants")
 
 # ---- Création d'une conférence avec les nouveaux champs
-r = rq("POST", "/talks", headers=ORG, json={"title": "Créée avec classement " + tag, "videoUrl": "https://www.youtube.com/watch?v=" + uuid.uuid4().hex[:11], "categoryId": LECT, "extraCategoryIds": [HAD], "kidsBands": ["7-10", "3-6"]})
+r = rq("POST", "/talks", headers=ORG, json={"title": "Créée avec classement " + tag, "videoUrl": "https://www.youtube.com/watch?v=" + uuid.uuid4().hex[:11], "categoryId": LECT, "extraCategoryIds": [HAD], "kidsBands": ["6-8", "3-5"]})
 ok(r.status_code == 201, "création avec catégories et tranches d'âge")
 tn = rq("GET", f"/talks/{r.json()['id']}").json()
-ok(tn["extraCategoryIds"] == [HAD] and tn["kidsBands"] == ["3-6", "7-10"] and tn["showAdults"] is False, "création : un contenu Kids est masqué des adultes par défaut")
-ok(rq("POST", "/talks", headers=ORG, json={"title": "Trop de catégories", "videoUrl": "https://www.youtube.com/watch?v=" + uuid.uuid4().hex[:11], "extraCategoryIds": [1, 2, 3]}).status_code == 400, "création : 3 catégories supplémentaires refusées")
+ok(tn["extraCategoryIds"] == [HAD] and tn["kidsBands"] == ["3-5", "6-8"] and tn["showAdults"] is False, "création : un contenu Kids est masqué des adultes par défaut")
+ok(rq("POST", "/talks", headers=ORG, json={"title": "Trop de catégories", "videoUrl": "https://www.youtube.com/watch?v=" + uuid.uuid4().hex[:11], "extraCategoryIds": list(range(1, 22))}).status_code == 400, "création : plus de 20 catégories supplémentaires refusées")
 
 # ---- Séries : le filtre par catégorie principale inclut les sous-catégories
 cur.execute("insert into series(owner_id,title,description,speaker,category_id,has_seasons,access,published) values (%s,%s,'d','x',%s,false,'free',true) returning id", (aid, "Série lecture " + tag, LECT)); sid = str(cur.fetchone()[0])

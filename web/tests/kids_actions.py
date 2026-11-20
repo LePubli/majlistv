@@ -20,7 +20,7 @@ def call(path, method='GET', body=None, token=None):
 adm = call('/auth/login', 'POST', {'email': 'admin@test.local', 'password': 'AdminPassw0rd-test'})['token']
 call('/me/kids/pin', 'PUT', {'code': '2468'}, adm)
 pid = (call('/me/kids', 'GET', None, adm)['profiles'] or [None])[0]
-pid = pid['id'] if pid else call('/me/kids/profiles', 'POST', {'name': 'Yacine', 'band': '7-10'}, adm)['id']
+pid = pid['id'] if pid else call('/me/kids/profiles', 'POST', {'name': 'Yacine', 'band': '6-8'}, adm)['id']
 cur.execute('delete from kid_actions where profile_id=%s', (pid,))
 def ov(pg): return pg.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
 with sync_playwright() as p:

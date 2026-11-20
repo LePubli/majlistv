@@ -51,7 +51,7 @@ cur.execute("insert into watch_progress(user_id, talk_id, position_ms, duration_
 cur.execute("insert into speaker_follows(user_id, speaker_slug, speaker_name) values (%s,'s','S')", (uid,))
 cur.execute("insert into user_lists(user_id, title, share_token) values (%s,'Ma liste',%s) returning id", (uid, f"tok-secret-{tag}")); lid = cur.fetchone()[0]
 cur.execute("insert into user_list_items(list_id, talk_id, position) values (%s,%s,0)", (lid, tid))
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Yusuf','7-10') returning id", (uid,)); kid = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Yusuf','6-8') returning id", (uid,)); kid = cur.fetchone()[0]
 cur.execute("insert into kid_progress(profile_id, talk_id, position_ms) values (%s,%s,4000)", (kid, tid))
 cur.execute("update users set kids_pin_hash = 'PINHASH-XYZ' where id = %s", (uid,))
 cur.execute("insert into device_tokens(token, user_id, platform) values (%s,%s,'android')", ("tok-" + "x" * 30 + tag, uid))

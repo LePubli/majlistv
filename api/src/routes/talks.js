@@ -82,7 +82,7 @@ const talkSchema = z.object({
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().optional(),
   formatId: z.number().int().positive().optional(), // étape B : format (vidéo, cours…) ; par défaut « vidéo »
-  extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires (2 au plus)
+  extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires (sans plafond pratique)
   kidsBands: z.array(z.enum(BANDS)).max(9).default([]), // Mejliss Kids : tranches d'âge (vide = pas pour les enfants)
   showAdults: z.boolean().optional(), // visible dans le catalogue adultes (par défaut : oui, sauf vidéo Kids)
   access: z.enum(['free', 'premium']).default('free'),
@@ -144,7 +144,7 @@ async function withPosters(rows) {
   return rows;
 }
 
-// Tranches d'âge dans l'ordre 3-6, 7-10, 11-14, sans doublon.
+// Tranches d'âge dans l'ordre 3-5, 6-8, 9-12, 13-15, sans doublon.
 const cleanBands = (l) => BANDS.filter((b) => (l || []).includes(b));
 // Catégories supplémentaires : sans doublon, sans la catégorie principale.
 const cleanExtras = (extras, principal) => [...new Set(extras || [])].filter((x) => x !== principal).slice(0, MAX_EXTRA_CATEGORIES);
@@ -183,10 +183,18 @@ export default async function talksRoutes(app) {
   const organizer = { preHandler: app.requireRole('organizer', 'admin') };
 
   // Liste des catégories dans l'ordre de l'arbre : chaque catégorie principale suivie de ses sous-catégories.
-  const TREE = `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth
+  // Nouveau catalogue (20/11) : chaque catégorie a un slug stable, un catalogue (adult | kids), un ordre d'affichage et peut être désactivée.
+  const TREE = `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth,
+                       c.slug, c.catalogue_type AS "catalogueType", c.is_active AS "isActive", c.icon, c.color
                   FROM categories c JOIN category_names n ON n.id = c.id LEFT JOIN categories p ON p.id = c.parent_id`;
-  const TREE_ORDER = 'ORDER BY lower(COALESCE(p.name, c.name)), (c.parent_id IS NOT NULL), lower(c.name)';
-  app.get('/categories', async () => (await pool.query(`${TREE} ${TREE_ORDER}`)).rows);
+  const TREE_ORDER = `ORDER BY (COALESCE(p.catalogue_type, c.catalogue_type) = 'kids'), COALESCE(p.display_order, c.display_order), lower(COALESCE(p.name, c.name)),
+                       (c.parent_id IS NOT NULL), c.display_order, lower(c.name)`;
+  // Par défaut : catalogue adultes, catégories actives (le site public). ?catalogue=kids pour les univers Kids, ?catalogue=all pour tout (Studio et administration).
+  app.get('/categories', async (req) => {
+    const { catalogue } = z.object({ catalogue: z.enum(['adult', 'kids', 'all']).default('adult') }).parse(req.query);
+    const where = catalogue === 'all' ? '' : `WHERE c.catalogue_type = '${catalogue}' AND c.is_active AND (p.id IS NULL OR p.is_active)`;
+    return (await pool.query(`${TREE} ${where} ${TREE_ORDER}`)).rows;
+  });
 
   // Sous-catégories sur deux niveaux : le parent doit exister et être lui-même une catégorie principale.
   async function checkParent(parentId, selfId = null) {
@@ -222,6 +230,7 @@ export default async function talksRoutes(app) {
   // « count » : vidéos dont c'est la catégorie principale ; « total » : principale ou supplémentaire, sous-catégories comprises.
   app.get('/categories/stats', admin, async () => (await pool.query(
     `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth,
+            c.slug, c.catalogue_type AS "catalogueType", c.is_active AS "isActive", c.icon, c.color,
             (SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) AS count,
             (SELECT count(*)::int FROM talks t WHERE ${inCategorySql('t', 'c.id')}) AS total,
             (SELECT count(*)::int FROM categories k WHERE k.parent_id = c.id) AS children

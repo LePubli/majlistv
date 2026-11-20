@@ -62,7 +62,7 @@ async function main() {
     token = adm.token;
     const ks = await api.get<{ hasPin: boolean; profiles: { id: string }[] }>('/me/kids');
     if (!ks.hasPin) await api.put('/me/kids/pin', { code: '4826' });
-    try { profileId = (await api.post<{ id: string }>('/me/kids/profiles', { name: `Essai${Date.now() % 100000}`, avatar: 'owl', band: '7-10' })).id; }
+    try { profileId = (await api.post<{ id: string }>('/me/kids/profiles', { name: `Essai${Date.now() % 100000}`, avatar: 'owl', band: '6-8' })).id; }
     catch (e) { if (!(e instanceof ApiError && e.code === 'limit')) throw e; }
     const pid = profileId ?? ks.profiles[0]?.id;
     assert.ok(pid, 'un profil enfant est nécessaire');

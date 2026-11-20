@@ -1,0 +1,1088 @@
+{
+ "categories": [
+  {
+   "slug": "coran",
+   "name": "Le Coran",
+   "catalogueType": "adult",
+   "icon": "📖",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Récitation du Coran",
+     "slug": "coran-recitation-du-coran"
+    },
+    {
+     "name": "Apprendre à lire le Coran",
+     "slug": "coran-apprendre-a-lire-le-coran"
+    },
+    {
+     "name": "Tajwid et règles de récitation",
+     "slug": "coran-tajwid-et-regles-de-recitation"
+    },
+    {
+     "name": "Mémorisation du Coran",
+     "slug": "coran-memorisation-du-coran"
+    },
+    {
+     "name": "Tafsir et explication des sourates",
+     "slug": "coran-tafsir-et-explication-des-sourates"
+    },
+    {
+     "name": "Méditation du Coran",
+     "slug": "coran-meditation-du-coran"
+    },
+    {
+     "name": "Sciences du Coran",
+     "slug": "coran-sciences-du-coran"
+    },
+    {
+     "name": "Vocabulaire coranique",
+     "slug": "coran-vocabulaire-coranique"
+    },
+    {
+     "name": "Récitateurs",
+     "slug": "coran-recitateurs"
+    },
+    {
+     "name": "Comprendre le Coran en français",
+     "slug": "coran-comprendre-le-coran-en-francais"
+    }
+   ]
+  },
+  {
+   "slug": "foi-croyance",
+   "name": "La foi et la croyance",
+   "catalogueType": "adult",
+   "icon": "🌙",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Les six piliers de la foi",
+     "slug": "foi-croyance-les-six-piliers-de-la-foi"
+    },
+    {
+     "name": "Connaître Allah",
+     "slug": "foi-croyance-connaitre-allah"
+    },
+    {
+     "name": "Les noms et attributs d'Allah",
+     "slug": "foi-croyance-les-noms-et-attributs-d-allah"
+    },
+    {
+     "name": "Les anges",
+     "slug": "foi-croyance-les-anges"
+    },
+    {
+     "name": "Les Livres révélés",
+     "slug": "foi-croyance-les-livres-reveles"
+    },
+    {
+     "name": "Les prophètes et messagers",
+     "slug": "foi-croyance-les-prophetes-et-messagers"
+    },
+    {
+     "name": "Le Jour dernier",
+     "slug": "foi-croyance-le-jour-dernier"
+    },
+    {
+     "name": "Le destin",
+     "slug": "foi-croyance-le-destin"
+    },
+    {
+     "name": "Les fondements du Tawhid",
+     "slug": "foi-croyance-les-fondements-du-tawhid"
+    },
+    {
+     "name": "Questions et doutes sur la foi",
+     "slug": "foi-croyance-questions-et-doutes-sur-la-foi"
+    }
+   ]
+  },
+  {
+   "slug": "hadith-sunna",
+   "name": "Hadith et Sunna",
+   "catalogueType": "adult",
+   "icon": "📜",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Les 40 hadiths d'An-Nawawi",
+     "slug": "hadith-sunna-les-40-hadiths-d-an-nawawi"
+    },
+    {
+     "name": "Sahih Al-Bukhari",
+     "slug": "hadith-sunna-sahih-al-bukhari"
+    },
+    {
+     "name": "Sahih Muslim",
+     "slug": "hadith-sunna-sahih-muslim"
+    },
+    {
+     "name": "Riyad As-Salihin",
+     "slug": "hadith-sunna-riyad-as-salihin"
+    },
+    {
+     "name": "Hadiths du quotidien",
+     "slug": "hadith-sunna-hadiths-du-quotidien"
+    },
+    {
+     "name": "Comprendre la Sunna",
+     "slug": "hadith-sunna-comprendre-la-sunna"
+    },
+    {
+     "name": "Sciences du hadith",
+     "slug": "hadith-sunna-sciences-du-hadith"
+    },
+    {
+     "name": "Authenticité et classification",
+     "slug": "hadith-sunna-authenticite-et-classification"
+    },
+    {
+     "name": "Comportements prophétiques",
+     "slug": "hadith-sunna-comportements-prophetiques"
+    }
+   ]
+  },
+  {
+   "slug": "vie-du-prophete",
+   "name": "La vie du Prophète ﷺ",
+   "catalogueType": "adult",
+   "icon": "🕌",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Avant la révélation",
+     "slug": "vie-du-prophete-avant-la-revelation"
+    },
+    {
+     "name": "La révélation à La Mecque",
+     "slug": "vie-du-prophete-la-revelation-a-la-mecque"
+    },
+    {
+     "name": "L'Hégire",
+     "slug": "vie-du-prophete-l-hegire"
+    },
+    {
+     "name": "La période médinoise",
+     "slug": "vie-du-prophete-la-periode-medinoise"
+    },
+    {
+     "name": "Les grands événements de la Sîra",
+     "slug": "vie-du-prophete-les-grands-evenements-de-la-sira"
+    },
+    {
+     "name": "La famille du Prophète ﷺ",
+     "slug": "vie-du-prophete-la-famille-du-prophete"
+    },
+    {
+     "name": "Son caractère et ses qualités",
+     "slug": "vie-du-prophete-son-caractere-et-ses-qualites"
+    },
+    {
+     "name": "Ses enseignements au quotidien",
+     "slug": "vie-du-prophete-ses-enseignements-au-quotidien"
+    },
+    {
+     "name": "Les dernières années",
+     "slug": "vie-du-prophete-les-dernieres-annees"
+    },
+    {
+     "name": "Les leçons de la Sîra",
+     "slug": "vie-du-prophete-les-lecons-de-la-sira"
+    }
+   ]
+  },
+  {
+   "slug": "prophetes-grandes-figures",
+   "name": "Prophètes et grandes figures",
+   "catalogueType": "adult",
+   "icon": "🌟",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Les histoires des prophètes",
+     "slug": "prophetes-grandes-figures-les-histoires-des-prophetes"
+    },
+    {
+     "name": "Les quatre califes bien guidés",
+     "slug": "prophetes-grandes-figures-les-quatre-califes-bien-guides"
+    },
+    {
+     "name": "Les compagnons du Prophète ﷺ",
+     "slug": "prophetes-grandes-figures-les-compagnons-du-prophete"
+    },
+    {
+     "name": "Les femmes remarquables de l'Islam",
+     "slug": "prophetes-grandes-figures-les-femmes-remarquables-de-l-islam"
+    },
+    {
+     "name": "Les grandes figures du savoir",
+     "slug": "prophetes-grandes-figures-les-grandes-figures-du-savoir"
+    },
+    {
+     "name": "Les savants et érudits",
+     "slug": "prophetes-grandes-figures-les-savants-et-erudits"
+    },
+    {
+     "name": "Les personnalités historiques",
+     "slug": "prophetes-grandes-figures-les-personnalites-historiques"
+    },
+    {
+     "name": "Les biographies inspirantes",
+     "slug": "prophetes-grandes-figures-les-biographies-inspirantes"
+    }
+   ]
+  },
+  {
+   "slug": "sciences-islamiques",
+   "name": "Sciences islamiques",
+   "catalogueType": "adult",
+   "icon": "🎓",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Introduction aux sciences islamiques",
+     "slug": "sciences-islamiques-introduction-aux-sciences-islamiques"
+    },
+    {
+     "name": "Fiqh et jurisprudence",
+     "slug": "sciences-islamiques-fiqh-et-jurisprudence"
+    },
+    {
+     "name": "Usul al-Fiqh",
+     "slug": "sciences-islamiques-usul-al-fiqh"
+    },
+    {
+     "name": "Aqida et théologie",
+     "slug": "sciences-islamiques-aqida-et-theologie"
+    },
+    {
+     "name": "Sciences du Coran",
+     "slug": "sciences-islamiques-sciences-du-coran"
+    },
+    {
+     "name": "Sciences du hadith",
+     "slug": "sciences-islamiques-sciences-du-hadith"
+    },
+    {
+     "name": "Langue arabe classique",
+     "slug": "sciences-islamiques-langue-arabe-classique"
+    },
+    {
+     "name": "Écoles juridiques",
+     "slug": "sciences-islamiques-ecoles-juridiques"
+    },
+    {
+     "name": "Méthodologie de recherche",
+     "slug": "sciences-islamiques-methodologie-de-recherche"
+    },
+    {
+     "name": "Ouvrages classiques",
+     "slug": "sciences-islamiques-ouvrages-classiques"
+    }
+   ]
+  },
+  {
+   "slug": "pratiques-adorations",
+   "name": "Pratiques et adorations",
+   "catalogueType": "adult",
+   "icon": "🤲",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Les cinq piliers de l'Islam",
+     "slug": "pratiques-adorations-les-cinq-piliers-de-l-islam"
+    },
+    {
+     "name": "Ablutions et purification",
+     "slug": "pratiques-adorations-ablutions-et-purification"
+    },
+    {
+     "name": "La prière",
+     "slug": "pratiques-adorations-la-priere"
+    },
+    {
+     "name": "Le jeûne",
+     "slug": "pratiques-adorations-le-jeune"
+    },
+    {
+     "name": "La Zakat et l'aumône",
+     "slug": "pratiques-adorations-la-zakat-et-l-aumone"
+    },
+    {
+     "name": "Le Hajj et la Omra",
+     "slug": "pratiques-adorations-le-hajj-et-la-omra"
+    },
+    {
+     "name": "Les invocations",
+     "slug": "pratiques-adorations-les-invocations"
+    },
+    {
+     "name": "Le Dhikr",
+     "slug": "pratiques-adorations-le-dhikr"
+    },
+    {
+     "name": "Prières surérogatoires",
+     "slug": "pratiques-adorations-prieres-surerogatoires"
+    },
+    {
+     "name": "Pratique au quotidien",
+     "slug": "pratiques-adorations-pratique-au-quotidien"
+    }
+   ]
+  },
+  {
+   "slug": "spiritualite",
+   "name": "Spiritualité et développement personnel",
+   "catalogueType": "adult",
+   "icon": "💛",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Purification du cœur",
+     "slug": "spiritualite-purification-du-cur"
+    },
+    {
+     "name": "Patience et persévérance",
+     "slug": "spiritualite-patience-et-perseverance"
+    },
+    {
+     "name": "Gratitude",
+     "slug": "spiritualite-gratitude"
+    },
+    {
+     "name": "Sincérité et intention",
+     "slug": "spiritualite-sincerite-et-intention"
+    },
+    {
+     "name": "Confiance en Allah",
+     "slug": "spiritualite-confiance-en-allah"
+    },
+    {
+     "name": "Repentir et pardon",
+     "slug": "spiritualite-repentir-et-pardon"
+    },
+    {
+     "name": "Gestion des émotions",
+     "slug": "spiritualite-gestion-des-emotions"
+    },
+    {
+     "name": "Épreuves de la vie",
+     "slug": "spiritualite-epreuves-de-la-vie"
+    },
+    {
+     "name": "Motivation et discipline",
+     "slug": "spiritualite-motivation-et-discipline"
+    },
+    {
+     "name": "Rappels spirituels",
+     "slug": "spiritualite-rappels-spirituels"
+    }
+   ]
+  },
+  {
+   "slug": "famille-societe",
+   "name": "Famille et société",
+   "catalogueType": "adult",
+   "icon": "👨‍👩‍👧",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Mariage et vie conjugale",
+     "slug": "famille-societe-mariage-et-vie-conjugale"
+    },
+    {
+     "name": "Parentalité et éducation",
+     "slug": "famille-societe-parentalite-et-education"
+    },
+    {
+     "name": "Adolescence et jeunesse",
+     "slug": "famille-societe-adolescence-et-jeunesse"
+    },
+    {
+     "name": "Relations avec les parents",
+     "slug": "famille-societe-relations-avec-les-parents"
+    },
+    {
+     "name": "Fraternité et relations sociales",
+     "slug": "famille-societe-fraternite-et-relations-sociales"
+    },
+    {
+     "name": "Travail et vie professionnelle",
+     "slug": "famille-societe-travail-et-vie-professionnelle"
+    },
+    {
+     "name": "Éthique et comportement",
+     "slug": "famille-societe-ethique-et-comportement"
+    },
+    {
+     "name": "Solidarité",
+     "slug": "famille-societe-solidarite"
+    },
+    {
+     "name": "Voisinage",
+     "slug": "famille-societe-voisinage"
+    },
+    {
+     "name": "Questions familiales contemporaines",
+     "slug": "famille-societe-questions-familiales-contemporaines"
+    }
+   ]
+  },
+  {
+   "slug": "histoire-civilisations",
+   "name": "Histoire et civilisations",
+   "catalogueType": "adult",
+   "icon": "🏛️",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Histoire de l'Islam",
+     "slug": "histoire-civilisations-histoire-de-l-islam"
+    },
+    {
+     "name": "Les premiers siècles",
+     "slug": "histoire-civilisations-les-premiers-siecles"
+    },
+    {
+     "name": "Les califats",
+     "slug": "histoire-civilisations-les-califats"
+    },
+    {
+     "name": "Al-Andalus",
+     "slug": "histoire-civilisations-al-andalus"
+    },
+    {
+     "name": "L'âge d'or des sciences",
+     "slug": "histoire-civilisations-l-age-d-or-des-sciences"
+    },
+    {
+     "name": "Les grandes dynasties",
+     "slug": "histoire-civilisations-les-grandes-dynasties"
+    },
+    {
+     "name": "Batailles et événements historiques",
+     "slug": "histoire-civilisations-batailles-et-evenements-historiques"
+    },
+    {
+     "name": "Villes historiques",
+     "slug": "histoire-civilisations-villes-historiques"
+    },
+    {
+     "name": "Architecture et patrimoine",
+     "slug": "histoire-civilisations-architecture-et-patrimoine"
+    },
+    {
+     "name": "Civilisations et échanges culturels",
+     "slug": "histoire-civilisations-civilisations-et-echanges-culturels"
+    }
+   ]
+  },
+  {
+   "slug": "sciences-decouvertes",
+   "name": "Sciences, savoirs et découvertes",
+   "catalogueType": "adult",
+   "icon": "🔭",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Astronomie",
+     "slug": "sciences-decouvertes-astronomie"
+    },
+    {
+     "name": "Mathématiques",
+     "slug": "sciences-decouvertes-mathematiques"
+    },
+    {
+     "name": "Médecine dans l'histoire",
+     "slug": "sciences-decouvertes-medecine-dans-l-histoire"
+    },
+    {
+     "name": "Physique et optique",
+     "slug": "sciences-decouvertes-physique-et-optique"
+    },
+    {
+     "name": "Géographie et exploration",
+     "slug": "sciences-decouvertes-geographie-et-exploration"
+    },
+    {
+     "name": "Inventions et découvertes",
+     "slug": "sciences-decouvertes-inventions-et-decouvertes"
+    },
+    {
+     "name": "Nature et environnement",
+     "slug": "sciences-decouvertes-nature-et-environnement"
+    },
+    {
+     "name": "Savants musulmans",
+     "slug": "sciences-decouvertes-savants-musulmans"
+    },
+    {
+     "name": "Bibliothèques et transmission du savoir",
+     "slug": "sciences-decouvertes-bibliotheques-et-transmission-du-savoir"
+    },
+    {
+     "name": "Sciences et réflexion éthique",
+     "slug": "sciences-decouvertes-sciences-et-reflexion-ethique"
+    }
+   ]
+  },
+  {
+   "slug": "islam-contemporain",
+   "name": "Islam et monde contemporain",
+   "catalogueType": "adult",
+   "icon": "🌍",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Vivre sa foi aujourd'hui",
+     "slug": "islam-contemporain-vivre-sa-foi-aujourd-hui"
+    },
+    {
+     "name": "Islam en France et en Europe",
+     "slug": "islam-contemporain-islam-en-france-et-en-europe"
+    },
+    {
+     "name": "Identité et citoyenneté",
+     "slug": "islam-contemporain-identite-et-citoyennete"
+    },
+    {
+     "name": "Éthique numérique",
+     "slug": "islam-contemporain-ethique-numerique"
+    },
+    {
+     "name": "Économie et finance éthique",
+     "slug": "islam-contemporain-economie-et-finance-ethique"
+    },
+    {
+     "name": "Environnement et responsabilité",
+     "slug": "islam-contemporain-environnement-et-responsabilite"
+    },
+    {
+     "name": "Questions de société",
+     "slug": "islam-contemporain-questions-de-societe"
+    },
+    {
+     "name": "Dialogue et coexistence",
+     "slug": "islam-contemporain-dialogue-et-coexistence"
+    },
+    {
+     "name": "Idées reçues sur l'Islam",
+     "slug": "islam-contemporain-idees-recues-sur-l-islam"
+    },
+    {
+     "name": "Questions des nouveaux musulmans",
+     "slug": "islam-contemporain-questions-des-nouveaux-musulmans"
+    }
+   ]
+  },
+  {
+   "slug": "conferences-enseignements",
+   "name": "Conférences et enseignements",
+   "catalogueType": "adult",
+   "icon": "🎤",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Conférences thématiques",
+     "slug": "conferences-enseignements-conferences-thematiques"
+    },
+    {
+     "name": "Séries de cours",
+     "slug": "conferences-enseignements-series-de-cours"
+    },
+    {
+     "name": "Questions-réponses",
+     "slug": "conferences-enseignements-questions-reponses"
+    },
+    {
+     "name": "Débats et entretiens",
+     "slug": "conferences-enseignements-debats-et-entretiens"
+    },
+    {
+     "name": "Sermons du vendredi",
+     "slug": "conferences-enseignements-sermons-du-vendredi"
+    },
+    {
+     "name": "Rappels courts",
+     "slug": "conferences-enseignements-rappels-courts"
+    },
+    {
+     "name": "Séminaires",
+     "slug": "conferences-enseignements-seminaires"
+    },
+    {
+     "name": "Rencontres avec les enseignants",
+     "slug": "conferences-enseignements-rencontres-avec-les-enseignants"
+    },
+    {
+     "name": "Cours en arabe sous-titrés",
+     "slug": "conferences-enseignements-cours-en-arabe-sous-titres"
+    },
+    {
+     "name": "Conférences traduites en français",
+     "slug": "conferences-enseignements-conferences-traduites-en-francais"
+    }
+   ]
+  },
+  {
+   "slug": "decouvrir-islam",
+   "name": "Découvrir l'Islam",
+   "catalogueType": "adult",
+   "icon": "🧭",
+   "color": null,
+   "subcategories": [
+    {
+     "name": "Qu'est-ce que l'Islam ?",
+     "slug": "decouvrir-islam-qu-est-ce-que-l-islam"
+    },
+    {
+     "name": "Les premières notions",
+     "slug": "decouvrir-islam-les-premieres-notions"
+    },
+    {
+     "name": "Les piliers de l'Islam et de la foi",
+     "slug": "decouvrir-islam-les-piliers-de-l-islam-et-de-la-foi"
+    },
+    {
+     "name": "Découvrir le Coran",
+     "slug": "decouvrir-islam-decouvrir-le-coran"
+    },
+    {
+     "name": "Découvrir le Prophète ﷺ",
+     "slug": "decouvrir-islam-decouvrir-le-prophete"
+    },
+    {
+     "name": "Premiers pas dans la prière",
+     "slug": "decouvrir-islam-premiers-pas-dans-la-priere"
+    },
+    {
+     "name": "Parcours pour nouveaux musulmans",
+     "slug": "decouvrir-islam-parcours-pour-nouveaux-musulmans"
+    },
+    {
+     "name": "Questions essentielles",
+     "slug": "decouvrir-islam-questions-essentielles"
+    },
+    {
+     "name": "Lexique islamique",
+     "slug": "decouvrir-islam-lexique-islamique"
+    },
+    {
+     "name": "Premiers parcours guidés",
+     "slug": "decouvrir-islam-premiers-parcours-guides"
+    }
+   ]
+  },
+  {
+   "slug": "kids-series-aventures",
+   "name": "Mes séries et aventures",
+   "catalogueType": "kids",
+   "icon": "🎬",
+   "color": "#FF8A3D",
+   "subcategories": [
+    {
+     "name": "Yacine et Lina",
+     "slug": "kids-series-aventures-yacine-et-lina"
+    },
+    {
+     "name": "Les aventures du quotidien",
+     "slug": "kids-series-aventures-les-aventures-du-quotidien"
+    },
+    {
+     "name": "Séries éducatives",
+     "slug": "kids-series-aventures-series-educatives"
+    },
+    {
+     "name": "Histoires en famille",
+     "slug": "kids-series-aventures-histoires-en-famille"
+    },
+    {
+     "name": "Amitié et entraide",
+     "slug": "kids-series-aventures-amitie-et-entraide"
+    },
+    {
+     "name": "Grandes aventures",
+     "slug": "kids-series-aventures-grandes-aventures"
+    }
+   ]
+  },
+  {
+   "slug": "kids-histoires-prophetes",
+   "name": "Histoires des prophètes",
+   "catalogueType": "kids",
+   "icon": "🌙",
+   "color": "#7C5CFF",
+   "subcategories": [
+    {
+     "name": "Adam",
+     "slug": "kids-histoires-prophetes-adam"
+    },
+    {
+     "name": "Nûh",
+     "slug": "kids-histoires-prophetes-nuh"
+    },
+    {
+     "name": "Ibrahim",
+     "slug": "kids-histoires-prophetes-ibrahim"
+    },
+    {
+     "name": "Moussa",
+     "slug": "kids-histoires-prophetes-moussa"
+    },
+    {
+     "name": "Youssouf",
+     "slug": "kids-histoires-prophetes-youssouf"
+    },
+    {
+     "name": "Issa",
+     "slug": "kids-histoires-prophetes-issa"
+    },
+    {
+     "name": "Muhammad ﷺ",
+     "slug": "kids-histoires-prophetes-muhammad"
+    },
+    {
+     "name": "Les leçons des prophètes",
+     "slug": "kids-histoires-prophetes-les-lecons-des-prophetes"
+    }
+   ]
+  },
+  {
+   "slug": "kids-coran",
+   "name": "Mon Coran",
+   "catalogueType": "kids",
+   "icon": "📖",
+   "color": "#19B88B",
+   "subcategories": [
+    {
+     "name": "Découvrir le Coran",
+     "slug": "kids-coran-decouvrir-le-coran"
+    },
+    {
+     "name": "Les petites sourates",
+     "slug": "kids-coran-les-petites-sourates"
+    },
+    {
+     "name": "Apprendre Al-Fatiha",
+     "slug": "kids-coran-apprendre-al-fatiha"
+    },
+    {
+     "name": "Récitation et répétition",
+     "slug": "kids-coran-recitation-et-repetition"
+    },
+    {
+     "name": "Premières lettres arabes",
+     "slug": "kids-coran-premieres-lettres-arabes"
+    },
+    {
+     "name": "Histoires du Coran",
+     "slug": "kids-coran-histoires-du-coran"
+    },
+    {
+     "name": "Mémoriser en s'amusant",
+     "slug": "kids-coran-memoriser-en-s-amusant"
+    },
+    {
+     "name": "Comprendre une sourate",
+     "slug": "kids-coran-comprendre-une-sourate"
+    }
+   ]
+  },
+  {
+   "slug": "kids-foi",
+   "name": "Je découvre ma foi",
+   "catalogueType": "kids",
+   "icon": "☀️",
+   "color": "#FFC83D",
+   "subcategories": [
+    {
+     "name": "Allah, notre Créateur",
+     "slug": "kids-foi-allah-notre-createur"
+    },
+    {
+     "name": "Les belles choses de la création",
+     "slug": "kids-foi-les-belles-choses-de-la-creation"
+    },
+    {
+     "name": "Les six piliers de la foi",
+     "slug": "kids-foi-les-six-piliers-de-la-foi"
+    },
+    {
+     "name": "Les anges",
+     "slug": "kids-foi-les-anges"
+    },
+    {
+     "name": "Les prophètes",
+     "slug": "kids-foi-les-prophetes"
+    },
+    {
+     "name": "Le Paradis",
+     "slug": "kids-foi-le-paradis"
+    },
+    {
+     "name": "La confiance en Allah",
+     "slug": "kids-foi-la-confiance-en-allah"
+    },
+    {
+     "name": "Mes premières questions",
+     "slug": "kids-foi-mes-premieres-questions"
+    }
+   ]
+  },
+  {
+   "slug": "kids-pratiques",
+   "name": "J'apprends à pratiquer",
+   "catalogueType": "kids",
+   "icon": "🕋",
+   "color": "#2D9CFF",
+   "subcategories": [
+    {
+     "name": "Mes premières ablutions",
+     "slug": "kids-pratiques-mes-premieres-ablutions"
+    },
+    {
+     "name": "J'apprends la prière",
+     "slug": "kids-pratiques-j-apprends-la-priere"
+    },
+    {
+     "name": "Les petites invocations",
+     "slug": "kids-pratiques-les-petites-invocations"
+    },
+    {
+     "name": "Découvrir le Ramadan",
+     "slug": "kids-pratiques-decouvrir-le-ramadan"
+    },
+    {
+     "name": "La générosité",
+     "slug": "kids-pratiques-la-generosite"
+    },
+    {
+     "name": "Les fêtes musulmanes",
+     "slug": "kids-pratiques-les-fetes-musulmanes"
+    },
+    {
+     "name": "Découvrir le Hajj",
+     "slug": "kids-pratiques-decouvrir-le-hajj"
+    },
+    {
+     "name": "Mes bonnes habitudes",
+     "slug": "kids-pratiques-mes-bonnes-habitudes"
+    }
+   ]
+  },
+  {
+   "slug": "kids-belles-valeurs",
+   "name": "Les belles valeurs (Adab)",
+   "catalogueType": "kids",
+   "icon": "🤝",
+   "color": "#FF5C8A",
+   "subcategories": [
+    {
+     "name": "Dire la vérité",
+     "slug": "kids-belles-valeurs-dire-la-verite"
+    },
+    {
+     "name": "Être gentil",
+     "slug": "kids-belles-valeurs-etre-gentil"
+    },
+    {
+     "name": "Respecter ses parents",
+     "slug": "kids-belles-valeurs-respecter-ses-parents"
+    },
+    {
+     "name": "Partager",
+     "slug": "kids-belles-valeurs-partager"
+    },
+    {
+     "name": "La patience",
+     "slug": "kids-belles-valeurs-la-patience"
+    },
+    {
+     "name": "Le pardon",
+     "slug": "kids-belles-valeurs-le-pardon"
+    },
+    {
+     "name": "La gratitude",
+     "slug": "kids-belles-valeurs-la-gratitude"
+    },
+    {
+     "name": "La propreté",
+     "slug": "kids-belles-valeurs-la-proprete"
+    },
+    {
+     "name": "Respecter les autres",
+     "slug": "kids-belles-valeurs-respecter-les-autres"
+    },
+    {
+     "name": "Les bonnes manières",
+     "slug": "kids-belles-valeurs-les-bonnes-manieres"
+    }
+   ]
+  },
+  {
+   "slug": "kids-sciences-decouvertes",
+   "name": "Sciences et découvertes",
+   "catalogueType": "kids",
+   "icon": "🔬",
+   "color": "#22C1D6",
+   "subcategories": [
+    {
+     "name": "Les animaux",
+     "slug": "kids-sciences-decouvertes-les-animaux"
+    },
+    {
+     "name": "La nature",
+     "slug": "kids-sciences-decouvertes-la-nature"
+    },
+    {
+     "name": "L'espace et les étoiles",
+     "slug": "kids-sciences-decouvertes-l-espace-et-les-etoiles"
+    },
+    {
+     "name": "Le corps humain",
+     "slug": "kids-sciences-decouvertes-le-corps-humain"
+    },
+    {
+     "name": "Les grandes inventions",
+     "slug": "kids-sciences-decouvertes-les-grandes-inventions"
+    },
+    {
+     "name": "Les savants musulmans",
+     "slug": "kids-sciences-decouvertes-les-savants-musulmans"
+    },
+    {
+     "name": "Les pays du monde",
+     "slug": "kids-sciences-decouvertes-les-pays-du-monde"
+    },
+    {
+     "name": "Les merveilles de la Terre",
+     "slug": "kids-sciences-decouvertes-les-merveilles-de-la-terre"
+    }
+   ]
+  },
+  {
+   "slug": "kids-apprendre-arabe",
+   "name": "J'apprends l'arabe",
+   "catalogueType": "kids",
+   "icon": "✏️",
+   "color": "#8BC34A",
+   "subcategories": [
+    {
+     "name": "Les lettres arabes",
+     "slug": "kids-apprendre-arabe-les-lettres-arabes"
+    },
+    {
+     "name": "Mes premiers mots",
+     "slug": "kids-apprendre-arabe-mes-premiers-mots"
+    },
+    {
+     "name": "Les couleurs",
+     "slug": "kids-apprendre-arabe-les-couleurs"
+    },
+    {
+     "name": "Les chiffres",
+     "slug": "kids-apprendre-arabe-les-chiffres"
+    },
+    {
+     "name": "Les animaux en arabe",
+     "slug": "kids-apprendre-arabe-les-animaux-en-arabe"
+    },
+    {
+     "name": "Les objets du quotidien",
+     "slug": "kids-apprendre-arabe-les-objets-du-quotidien"
+    },
+    {
+     "name": "Les petites phrases",
+     "slug": "kids-apprendre-arabe-les-petites-phrases"
+    },
+    {
+     "name": "Les mots du Coran",
+     "slug": "kids-apprendre-arabe-les-mots-du-coran"
+    }
+   ]
+  },
+  {
+   "slug": "kids-jeux-quiz",
+   "name": "Jeux et quiz",
+   "catalogueType": "kids",
+   "icon": "🎲",
+   "color": "#FF6B4A",
+   "subcategories": [
+    {
+     "name": "Quiz des prophètes",
+     "slug": "kids-jeux-quiz-quiz-des-prophetes"
+    },
+    {
+     "name": "Quiz du Coran",
+     "slug": "kids-jeux-quiz-quiz-du-coran"
+    },
+    {
+     "name": "Devine l'animal",
+     "slug": "kids-jeux-quiz-devine-l-animal"
+    },
+    {
+     "name": "Trouve la bonne réponse",
+     "slug": "kids-jeux-quiz-trouve-la-bonne-reponse"
+    },
+    {
+     "name": "Jeux de mémoire",
+     "slug": "kids-jeux-quiz-jeux-de-memoire"
+    },
+    {
+     "name": "Défis des belles valeurs",
+     "slug": "kids-jeux-quiz-defis-des-belles-valeurs"
+    },
+    {
+     "name": "Puzzles éducatifs",
+     "slug": "kids-jeux-quiz-puzzles-educatifs"
+    },
+    {
+     "name": "Révisions amusantes",
+     "slug": "kids-jeux-quiz-revisions-amusantes"
+    }
+   ]
+  },
+  {
+   "slug": "kids-chansons-contes",
+   "name": "Chansons, contes et créativité",
+   "catalogueType": "kids",
+   "icon": "🎵",
+   "color": "#B26BFF",
+   "subcategories": [
+    {
+     "name": "Comptines éducatives",
+     "slug": "kids-chansons-contes-comptines-educatives"
+    },
+    {
+     "name": "Anachid et chants",
+     "slug": "kids-chansons-contes-anachid-et-chants"
+    },
+    {
+     "name": "Contes illustrés",
+     "slug": "kids-chansons-contes-contes-illustres"
+    },
+    {
+     "name": "Histoires avant de dormir",
+     "slug": "kids-chansons-contes-histoires-avant-de-dormir"
+    },
+    {
+     "name": "Dessins et activités",
+     "slug": "kids-chansons-contes-dessins-et-activites"
+    },
+    {
+     "name": "Bricolages du Ramadan",
+     "slug": "kids-chansons-contes-bricolages-du-ramadan"
+    },
+    {
+     "name": "Activités à faire en famille",
+     "slug": "kids-chansons-contes-activites-a-faire-en-famille"
+    },
+    {
+     "name": "Histoires interactives",
+     "slug": "kids-chansons-contes-histoires-interactives"
+    }
+   ]
+  }
+ ]
+}

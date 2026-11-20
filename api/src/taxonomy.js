@@ -3,8 +3,8 @@
 // - Sous-catégories sur deux niveaux : chercher « Coran » trouve aussi « Coran › Lecture ».
 // - Public : talks.show_adults masque une vidéo du catalogue adultes (accueil, recherche) ; kids_bands : tranches d'âge Kids.
 
-export const BANDS = ['3-6', '7-10', '11-14'];
-export const MAX_EXTRA_CATEGORIES = 2;
+export const BANDS = ['3-5', '6-8', '9-12', '13-15'];
+export const MAX_EXTRA_CATEGORIES = 20; // plus de plafond pratique : une vidéo peut être dans autant de catégories que nécessaire (cahier des charges du 20/11)
 
 // « La vidéo est dans la catégorie $p ou dans l'une de ses sous-catégories » (principale ou supplémentaire).
 export const inCategorySql = (alias, ref) => { const p = typeof ref === 'number' ? `$${ref}` : ref; return `(
@@ -14,7 +14,7 @@ export const inCategorySql = (alias, ref) => { const p = typeof ref === 'number'
 // Catalogue adultes : exclut les vidéos réservées aux enfants.
 export const adultSql = (alias) => `${alias}.show_adults`;
 
-// Tranche d'âge d'un profil enfant ($p = '3-6' | '7-10' | '11-14').
+// Tranche d'âge d'un profil enfant ($p = '3-5' | '6-8' | '9-12' | '13-15').
 export const bandOkSql = (alias, p) => `${alias}.kids_bands @> ARRAY[$${p}::text]`;
 
 // Identifiants de toutes les catégories d'une vidéo, parents compris (index de recherche).

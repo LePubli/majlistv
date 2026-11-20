@@ -26,18 +26,18 @@ def login():
 adm = login()
 for m in call('/admin/modules', 'GET', None, adm)['modules']: call(f"/admin/modules/{m['id']}", 'PUT', {'enabled': True}, adm)
 call('/me/kids/pin', 'PUT', {'code': '2468'}, adm)
-prof = call('/me/kids/profiles', 'POST', {'name': f'Yac{tag}', 'band': '7-10', 'avatar': 'lion'}, adm)
+prof = call('/me/kids/profiles', 'POST', {'name': f'Yac{tag}', 'band': '6-8', 'avatar': 'lion'}, adm)
 pid = prof.get('id') or call('/me/kids', 'GET', None, adm)['profiles'][0]['id']
 cur.execute("update kid_profiles set catalog_mode='all', daily_limit_min=NULL where id=%s", (pid,))
 kid = call(f'/me/kids/profiles/{pid}/enter', 'POST', {}, adm)['token']
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
-UP = {'3-6': ['3-6', '7-10', '11-14'], '7-10': ['7-10', '11-14']}
+UP = {'3-5': ['3-5', '6-8', '9-12'], '6-8': ['6-8', '9-12']}
 def talk(title, band):
     cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_bands) values (%s,'une histoire de patience','Cheikh Kids','youtube',%s,%s,'published','ready','free',600,%s) returning id",
                 (f'{title} {tag}', 'v' + uuid.uuid4().hex[:9], aid, UP[band])); t = str(cur.fetchone()[0]); talks.append(t); return t
 R = call('/admin/kids/rubrics', 'POST', {'names': {'fr': f'Contes {tag}', 'en': f'Tales {tag}', 'ar': f'حكايات {tag}'}, 'emoji': '🧸'}, adm); rubrics.append(R['id'])
 R2 = call('/admin/kids/rubrics', 'POST', {'names': {'fr': f'Chansons {tag}'}, 'emoji': '🎶'}, adm); rubrics.append(R2['id'])
-A = talk('Le petit lion', '7-10'); Bt = talk('La tortue sage', '3-6'); C = talk('Chanson du matin', '7-10')
+A = talk('Le petit lion', '6-8'); Bt = talk('La tortue sage', '3-5'); C = talk('Chanson du matin', '6-8')
 call(f'/studio/talks/{A}/kid-rubrics', 'PUT', {'rubricIds': [R['id']]}, adm); call(f'/studio/talks/{Bt}/kid-rubrics', 'PUT', {'rubricIds': [R['id']]}, adm); call(f'/studio/talks/{C}/kid-rubrics', 'PUT', {'rubricIds': [R2['id']]}, adm)
 def ov(pg): return pg.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
 try:

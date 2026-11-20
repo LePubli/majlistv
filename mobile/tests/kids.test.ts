@@ -25,20 +25,20 @@ test('avatars et tranches d\'âge (mêmes que le serveur)', () => {
   assert.deepEqual([...AVATARS], ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star']);
   for (const a of AVATARS) assert.ok(AVATAR_EMOJI[a]);
   assert.equal(avatarEmoji('inconnu'), '⭐');
-  assert.deepEqual([...BANDS], ['3-6', '7-10', '11-14']);
-  assert.equal(t(bandKey('3-6')), '3-6 ans'.length ? t('kdBand36') : '');
+  assert.deepEqual([...BANDS], ['3-5', '6-8', '9-12', '13-15']);
+  assert.equal(t(bandKey('3-5')), t('kdBand35'));
   for (const b of BANDS) for (const l of ['fr', 'en', 'ar'] as const) assert.ok(DICT[l][bandKey(b)], `${l} ${b}`);
 });
 
 test('session enfant : lecture sûre, jamais de plantage', () => {
-  const s = { token: 'abc', profile: { id: 'p1', name: 'Yacine', avatar: 'fox', band: '7-10' }, issuedAt: 1000 };
+  const s = { token: 'abc', profile: { id: 'p1', name: 'Yacine', avatar: 'fox', band: '6-8' }, issuedAt: 1000 };
   assert.deepEqual(parseKidSession(serializeKidSession(s)), s);
   for (const bad of [null, '', 'pas du json', '{}', '{"token":"x"}', '{"token":"","profile":{"id":"a","name":"b"}}', '{"token":"x","profile":{"id":1,"name":"b"}}']) assert.equal(parseKidSession(bad), null, String(bad));
   assert.equal(parseKidSession('{"token":"x","profile":{"id":"a","name":"b"}}')?.profile.avatar, 'star', 'avatar par défaut');
 });
 
 test('renouvellement du jeton enfant (12 h côté serveur, renouvelé avant)', () => {
-  const s = { token: 't', profile: { id: 'p', name: 'n', avatar: 'lion', band: '3-6' }, issuedAt: 0 };
+  const s = { token: 't', profile: { id: 'p', name: 'n', avatar: 'lion', band: '3-5' }, issuedAt: 0 };
   assert.equal(needsRenew(s, KID_RENEW_AFTER_MS - 1), false);
   assert.equal(needsRenew(s, KID_RENEW_AFTER_MS), true);
   assert.ok(KID_RENEW_AFTER_MS < 12 * 3600_000);
@@ -77,14 +77,14 @@ test('rangées : titres, résolution, filtre d\'âge', () => {
   assert.equal(shelfTitle({ kind: 'rubric', rubricId: 99, ids: [] }, ctx), '');
   assert.equal(rubricName(rubrics[0], 'en'), 'Stories');
 
-  const talks = [card('a', '3-6'), card('b', '7-10'), card('c', '7-10')];
+  const talks = [card('a', '3-5'), card('b', '6-8'), card('c', '6-8')];
   const shelves: KidShelf[] = [{ kind: 'new', ids: ['a', 'b', 'zzz'] }, { kind: 'age', ids: ['zzz'] }, { kind: 'popular', ids: ['c'] }];
-  const all = resolveShelves(shelves, talks, false, '7-10');
+  const all = resolveShelves(shelves, talks, false, '6-8');
   assert.deepEqual(all.map((r) => [r.shelf.kind, r.items.map((x) => x.id)]), [['new', ['a', 'b']], ['popular', ['c']]], 'identifiants inconnus et rangées vides retirés');
-  const mine = resolveShelves(shelves, talks, true, '7-10');
+  const mine = resolveShelves(shelves, talks, true, '6-8');
   assert.deepEqual(mine.map((r) => [r.shelf.kind, r.items.map((x) => x.id)]), [['new', ['b']], ['popular', ['c']]]);
-  assert.deepEqual(ageFilter(talks, true, '3-6').map((x) => x.id), ['a']);
-  assert.equal(ageFilter(talks, false, '3-6').length, 3);
+  assert.deepEqual(ageFilter(talks, true, '3-5').map((x) => x.id), ['a']);
+  assert.equal(ageFilter(talks, false, '3-5').length, 3);
 });
 
 test('messages de sortie (code parental)', () => {
@@ -219,17 +219,17 @@ test('code parental : changement validé avant l\'envoi', () => {
 });
 
 test('profil : on n\'envoie que ce qui change', () => {
-  const cur = { name: 'Yacine', avatar: 'fox', band: '7-10' };
+  const cur = { name: 'Yacine', avatar: 'fox', band: '6-8' };
   assert.equal(profilePatch(cur, cur), null);
   assert.equal(profilePatch(cur, { ...cur, name: '   ' }), null);
   assert.equal(profilePatch(cur, { ...cur, name: 'x'.repeat(31) }), null);
   assert.equal(profilePatch(cur, { ...cur, name: ' Yacine ' }), null);
-  assert.deepEqual(profilePatch(cur, { name: 'Sami', avatar: 'owl', band: '7-10' }), { name: 'Sami', avatar: 'owl' });
-  assert.deepEqual(profilePatch(cur, { ...cur, band: '3-6' }), { band: '3-6' });
+  assert.deepEqual(profilePatch(cur, { name: 'Sami', avatar: 'owl', band: '6-8' }), { name: 'Sami', avatar: 'owl' });
+  assert.deepEqual(profilePatch(cur, { ...cur, band: '3-5' }), { band: '3-5' });
 });
 
 test('catalogue : bascule immédiate, jamais plus de 200 identifiants', () => {
-  const talks: KidCatalogTalk[] = Array.from({ length: 250 }, (_, i) => ({ id: `t${i}`, title: `T${i}`, speaker: null, kidsBands: ['7-10'], durationSeconds: 60, access: 'free', allowed: i % 2 === 0 }));
+  const talks: KidCatalogTalk[] = Array.from({ length: 250 }, (_, i) => ({ id: `t${i}`, title: `T${i}`, speaker: null, kidsBands: ['6-8'], durationSeconds: 60, access: 'free', allowed: i % 2 === 0 }));
   assert.equal(allowedCount(talks), 125); assert.equal(catalogIds(talks).length, 200);
   const off = withAllowed(talks, ['t0', 't1'], false); assert.equal(off[0].allowed, false); assert.equal(off[1].allowed, false); assert.equal(talks[0].allowed, true, 'copie : l\'original ne change pas');
   assert.equal(allowedCount(withAllowed(talks, catalogIds(talks), true)), 225, 'les 50 au-delà de 200 gardent leur état (25 autorisées)');

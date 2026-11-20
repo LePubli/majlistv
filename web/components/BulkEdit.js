@@ -17,7 +17,7 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
   const [v, setV] = useState({ access: 'free', categoryId: '', formatId: '', level: '', publication: 'published', speaker: '', kidsBands: [], bandsMode: 'replace', showAdults: true });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+  useEffect(() => { call('/categories?catalogue=all', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   const toggle = (k) => setOn((o) => ({ ...o, [k]: !o[k] }));
   const set = (k, val) => { setV((x) => ({ ...x, [k]: val })); setOn((o) => ({ ...o, [k === 'bandsMode' ? 'kidsBands' : k]: true })); };
 

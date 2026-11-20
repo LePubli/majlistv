@@ -135,10 +135,10 @@ PAR = {"authorization": "Bearer " + login(*[x for x in ()] or ("admin@test.local
 cur.execute("update users set kids_pin_hash=null, kids_pin_fails=0, kids_pin_locked_until=null where id=%s", (admin_id,))  # point de départ connu
 ok(requests.put(B + "/me/kids/pin", headers=PAR, json={"code": "1234"}).status_code in (200, 204), "code parental défini")  # le champ de l'API est « code »
 cur.execute("delete from kid_profiles where user_id=%s", (admin_id,))
-kid = requests.post(B + "/me/kids/profiles", headers=PAR, json={"name": "Enfant", "band": "7-10"}).json()["id"]
+kid = requests.post(B + "/me/kids/profiles", headers=PAR, json={"name": "Enfant", "band": "6-8"}).json()["id"]
 KT = requests.post(B + f"/me/kids/profiles/{kid}/enter", headers=PAR, json={}).json()["token"]
 K = {"authorization": "Bearer " + KT}
-TK = mk("Conf Kids", o1, bands=["7-10", "11-14"]); TA = mk("Conf adulte", o1)
+TK = mk("Conf Kids", o1, bands=["6-8", "9-12"]); TA = mk("Conf adulte", o1)
 ks = lambda body: requests.post(B + "/kids/stats", json=body, headers=K)
 ok(ks({"type": "view", "talkId": TK}).status_code == 204, "kids/stats : 204")
 ks({"type": "view", "talkId": TK}); ks({"type": "play", "talkId": TK}); ks({"type": "progress", "talkId": TK, "seconds": 45}); ks({"type": "complete", "talkId": TK})
@@ -157,7 +157,7 @@ kq = ka["kids"]["quiz"]
 exp_p = (n0 * p0 + 180) / (n0 + 2); exp_s = (n0 * s0 + 5) / (n0 + 2)
 ok(kq["attempts"] == n0 + 2 and abs(kq["avgPercent"] - exp_p) <= 1 and abs(kq["avgStars"] - exp_s) <= 0.1,
    f"quiz : 2 essais de plus ({n0} → {kq['attempts']}), moyennes recalculées ({kq['avgPercent']} %, {kq['avgStars']} étoiles ; seuls : 90 %, 2,5)")
-ok(ka["kids"]["usage"]["activeKids"] >= 1 and ka["kids"]["usage"]["minutes"] >= 10 and any(b["band"] == "7-10" for b in ka["kids"]["usage"]["bands"]), "usage Kids (enfants actifs, minutes, tranches)")
+ok(ka["kids"]["usage"]["activeKids"] >= 1 and ka["kids"]["usage"]["minutes"] >= 10 and any(b["band"] == "6-8" for b in ka["kids"]["usage"]["bands"]), "usage Kids (enfants actifs, minutes, tranches)")
 ok(ka["top"][0]["title"] == "Conf Kids" and ka["top"][0]["quizAttempts"] == 2, "top Kids avec quiz")
 ko = rep("/studio/stats", ORG1, days=7, audience="kids").json()
 ok(ko["totals"]["plays"] == 1 and "usage" not in ko["kids"] and ko["kids"]["quiz"]["attempts"] == 2, "kids organisateur : ses vidéos, sans usage global")

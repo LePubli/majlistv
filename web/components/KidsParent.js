@@ -35,7 +35,7 @@ function PinForm({ t, call, hasPin, onDone }) {
 }
 
 function ProfileForm({ t, call, p, bands, avatars, onDone, onCancel }) {
-  const [f, setF] = useState({ name: p?.name || '', avatar: p?.avatar || avatars[0], band: p?.band || '3-6' });
+  const [f, setF] = useState({ name: p?.name || '', avatar: p?.avatar || avatars[0], band: p?.band || '3-5' });
   const [err, setErr] = useState('');
   const submit = async (e) => {
     e.preventDefault(); setErr('');

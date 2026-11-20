@@ -108,8 +108,8 @@ ok(requests.get(B + "/ramadan", headers=LRN).json()["me"]["marks"] == {}, "les c
 def kidtok(parent_id, profile_id):
     h = b64(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()); pl = b64(json.dumps({"sub": str(parent_id), "role": "user", "kid": str(profile_id), "iat": int(time.time())}).encode())
     return {"authorization": "Bearer " + h + "." + pl + "." + b64(hmac.new(ENV["JWT_SECRET"].encode(), f"{h}.{pl}".encode(), hashlib.sha256).digest())}
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Enfant fictif','7-10') returning id", (uid,)); kp = cur.fetchone()[0]
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Autre fictif','7-10') returning id", (lid,)); kp2 = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Enfant fictif','6-8') returning id", (uid,)); kp = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Autre fictif','6-8') returning id", (lid,)); kp2 = cur.fetchone()[0]
 KID = kidtok(uid, kp)
 K6 = requests.post(B + "/admin/ramadan/items", headers=ADM, json=it(audience="kid", title={"fr": "Action enfant fictive", "en": "", "ar": ""}, validated=True, enabled=True)).json()["id"]
 ok(requests.get(B + "/admin/ramadan/items", headers=ADM).json()["items"][0]["audience"] in ("adult", "kid"), "admin : public de chaque action (adultes / enfants)")

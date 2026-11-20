@@ -19,7 +19,7 @@ A = login("admin@test.local")
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 ids = []
 for i in range(3):
-    cur.execute("insert into talks(title,speaker,source,video_ref,organizer_id,access,publication,video_status,kids_bands) values(%s,'Ancien','youtube','abc1234567%s',%s,'free','published','ready','{3-6}') returning id", (f"Lot {i}", i, aid))
+    cur.execute("insert into talks(title,speaker,source,video_ref,organizer_id,access,publication,video_status,kids_bands) values(%s,'Ancien','youtube','abc1234567%s',%s,'free','published','ready','{3-5}') returning id", (f"Lot {i}", i, aid))
     ids.append(cur.fetchone()[0])
 other = ids[0]
 cur.execute("select id from categories limit 1"); cat = cur.fetchone()[0]
@@ -31,12 +31,12 @@ r = post(A, ids=ids, changes={"access": "premium", "speaker": "Nouveau", "level"
 ok(r.status_code == 200 and r.json()["updated"] == 3, "modification de 3 conférences")
 cur.execute("select access, speaker, level, category_id from talks where id = any(%s::uuid[])", ([str(i) for i in ids],))
 ok(all(x == ("premium", "Nouveau", "beginner", cat) for x in cur.fetchall()), "champs appliqués à toutes")
-r = post(A, ids=ids, bandsMode="add", changes={"kidsBands": ["7-10"]})
+r = post(A, ids=ids, bandsMode="add", changes={"kidsBands": ["6-8"]})
 cur.execute("select kids_bands from talks where id = %s", (ids[0],))
-ok(sorted(cur.fetchone()[0]) == ["3-6", "7-10"], "Kids : ajout d'une tranche")
-post(A, ids=ids, bandsMode="remove", changes={"kidsBands": ["3-6"]})
+ok(sorted(cur.fetchone()[0]) == ["3-5", "6-8"], "Kids : ajout d'une tranche")
+post(A, ids=ids, bandsMode="remove", changes={"kidsBands": ["3-5"]})
 cur.execute("select kids_bands from talks where id = %s", (ids[0],))
-ok(cur.fetchone()[0] == ["7-10"], "Kids : retrait d'une tranche")
+ok(cur.fetchone()[0] == ["6-8"], "Kids : retrait d'une tranche")
 post(A, ids=ids, changes={"kidsBands": [], "showAdults": True})
 cur.execute("select kids_bands, show_adults from talks where id = %s", (ids[0],))
 ok(cur.fetchone() == ([], True), "Kids : remplacement par vide")

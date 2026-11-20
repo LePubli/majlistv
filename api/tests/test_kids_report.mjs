@@ -7,7 +7,7 @@ const mkParent = async (name, { sub = true, report = true } = {}) => {
   const { rows } = await pool.query("insert into users(email,password_hash,name,role,locale,kids_report_email) values ($1,'x',$2,'user','fr',$3) returning id", [`kr-${name}-${tag}@test.local`, 'Parent ' + name, report]);
   const id = rows[0].id;
   if (sub) await pool.query("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values ($1,$2,'active','p','month',now()+interval '20 days',1,'standard')", ['sub_kr' + name + tag, id]);
-  const k = (await pool.query("insert into kid_profiles(user_id,name,band) values ($1,$2,'3-6') returning id", [id, 'Enfant' + name])).rows[0].id;
+  const k = (await pool.query("insert into kid_profiles(user_id,name,band) values ($1,$2,'3-5') returning id", [id, 'Enfant' + name])).rows[0].id;
   return { id, k, email: `kr-${name}-${tag}@test.local` };
 };
 const active = await mkParent('a'); const idle = await mkParent('b'); const off = await mkParent('c', { report: false }); const nosub = await mkParent('d', { sub: false });
@@ -48,7 +48,7 @@ ok(learnedLine({ ...base, learned: ['a', 'b', 'c', 'd', 'e'] }, 'fr').split('«'
 ok(childBlock(withL, 'fr').split('\n').length === 2 && childBlock({ ...withL, active: false }, 'fr') === 'Yacine — pas d\'activité', 'bloc : 2 lignes ; enfant inactif : 1 ligne');
 // De vraies données : vidéo terminée + quiz réussi + quiz raté
 const org = (await pool.query("select id from users where email='admin@test.local'")).rows[0].id;
-const mkTalk = async (title) => (await pool.query("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_band) values ($1,'d','C','youtube','abc',$2,'published','ready','free',300,'3-6') returning id", [title, org])).rows[0].id;
+const mkTalk = async (title) => (await pool.query("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_band) values ($1,'d','C','youtube','abc',$2,'published','ready','free',300,'3-5') returning id", [title, org])).rows[0].id;
 const t1 = await mkTalk('Vidéo terminée ' + tag), t2 = await mkTalk('Quiz réussi ' + tag), t3 = await mkTalk('Quiz raté ' + tag);
 const L = await mkParent('e');
 await pool.query("insert into kid_usage(profile_id,day,seconds) values ($1,(now() at time zone 'Europe/Paris')::date,600)", [L.k]);

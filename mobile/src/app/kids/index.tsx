@@ -34,7 +34,7 @@ export default function KidsHub() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState<string>('lion');
-  const [band, setBand] = useState<string>('7-10');
+  const [band, setBand] = useState<string>('6-8');
   const [pin, setPin] = useState('');
   const [pin1, setPin1] = useState<string | null>(null);
   const [msg, setMsg] = useState('');

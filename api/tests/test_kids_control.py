@@ -39,7 +39,7 @@ def parent(tier):
     return H, uid, email
 
 
-def kid(H, name, band="3-6"):
+def kid(H, name, band="3-5"):
     pid = rq("POST", "/me/kids/profiles", headers=H, json={"name": name, "band": band}).json()["id"]
     return {"authorization": "Bearer " + rq("POST", f"/me/kids/profiles/{pid}/enter", headers=H).json()["token"]}, pid
 
@@ -48,10 +48,10 @@ tag = uuid.uuid4().hex[:6]
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 
 
-UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
+UP = {"3-5": ["3-5", "6-8", "9-12"], "6-8": ["6-8", "9-12"], "9-12": ["9-12"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
 
 
-def talk(title, band="3-6", nq=0):
+def talk(title, band="3-5", nq=0):
     cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_bands) "
                 "values (%s,'d','Cheikh','youtube',%s,%s,'published','ready','free',600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], aid, UP[band]))
     tid = str(cur.fetchone()[0])
@@ -144,7 +144,7 @@ ok(T2 not in ids(K) and {T1, T3, new} <= set(ids(K)), "retour au mode « tout »
 newer = talk("Epsilon")
 ok(newer in ids(K), "mode « tout » : une nouvelle conférence apparaît")
 # Âge : le catalogue parent ne propose que ce qui convient à l'âge de l'enfant
-old = talk("Pour grands", band="11-14")
+old = talk("Pour grands", band="9-12")
 ok(old not in {t["id"] for t in rq("GET", f"/me/kids/profiles/{pid}/catalog", headers=H).json()["talks"]}, "le catalogue du parent respecte la tranche d'âge")
 ok(rq("PUT", f"/me/kids/profiles/{pid}/catalog", headers=H, json={"talkIds": [old], "allowed": True}).status_code == 200 and old not in ids(K), "autoriser une conférence trop grande ne la rend pas visible")
 # Le blocage vaut aussi pour « à rejouer »
@@ -158,7 +158,7 @@ ok(rq("PUT", f"/me/kids/profiles/{pid}/catalog", headers=other, json={"talkIds":
 ok(rq("PUT", f"/me/kids/profiles/{pid}/catalog", headers=K, json={"talkIds": [T1], "allowed": True}).status_code == 403, "catalogue : refusé avec un jeton enfant")
 
 # ---- Rapport
-K2, pid2 = kid(H, "Sara", band="7-10")
+K2, pid2 = kid(H, "Sara", band="6-8")
 rq("PUT", f"/me/kids/profiles/{pid}/catalog", headers=H, json={"talkIds": [T2], "allowed": True})
 for i in range(6):
     rq("POST", "/kids/ping", headers=K); time.sleep(1)

@@ -41,7 +41,7 @@ ORG, oid = member("organizer", "orga"); ORG2, o2id = member("organizer", "orgb")
 
 # --- Rubriques (Admin)
 r = requests.get(B + "/admin/kids/rubrics", headers=ADM); L = r.json()
-ok(r.status_code == 200 and {"histoires", "prophetes", "valeurs", "coran", "sciences", "chants", "jeux", "arabe"} <= {x["slug"] for x in L}, "8 rubriques de départ présentes")
+ok(r.status_code == 200 and {"kids-series-aventures", "kids-histoires-prophetes", "kids-coran", "kids-foi", "kids-pratiques", "kids-belles-valeurs", "kids-sciences-decouvertes", "kids-apprendre-arabe", "kids-jeux-quiz", "kids-chansons-contes"} <= {x["slug"] for x in L}, "10 univers Kids présents")
 ok(requests.get(B + "/admin/kids/rubrics", headers=ORG).status_code == 403, "liste Admin refusée à un organisateur")
 ok(requests.post(B + "/admin/kids/rubrics", headers=ORG, json={"names": {"fr": "X"}}).status_code == 403, "création refusée à un organisateur")
 r = requests.post(B + "/admin/kids/rubrics", headers=ADM, json={"names": {"fr": f"Test {tag}", "en": "Test", "ar": "اختبار"}, "emoji": "🧪"}); ok(r.status_code == 201, "rubrique créée"); R1 = r.json(); rubrics.append(R1["id"])
@@ -53,7 +53,7 @@ L = {x["id"]: x for x in requests.get(B + "/admin/kids/rubrics", headers=ADM).js
 ok(L[R2["id"]]["position"] < L[R1["id"]]["position"], "R2 passe avant R1")
 
 # --- Conférences + classement (Studio)
-UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}
+UP = {"3-5": ["3-5", "6-8", "9-12"], "6-8": ["6-8", "9-12"], "9-12": ["9-12"], None: []}
 
 
 def talk(title, band, owner=None, pub="published", speaker="Cheikh Kids", access="free"):
@@ -61,7 +61,7 @@ def talk(title, band, owner=None, pub="published", speaker="Cheikh Kids", access
                 (f"{title} {tag}", speaker, "v" + uuid.uuid4().hex[:9], owner or oid, pub, access, UP[band])); tid = str(cur.fetchone()[0]); talks.append(tid); return tid
 
 
-A = talk("Histoire A", "7-10"); Bt = talk("Histoire B", "3-6"); C = talk("Chant C", "7-10"); D = talk("Brouillon D", "7-10", pub="draft"); ADULT = talk("Adulte E", None); OTHER = talk("De l'autre", "7-10", owner=o2id)
+A = talk("Histoire A", "6-8"); Bt = talk("Histoire B", "3-5"); C = talk("Chant C", "6-8"); D = talk("Brouillon D", "6-8", pub="draft"); ADULT = talk("Adulte E", None); OTHER = talk("De l'autre", "6-8", owner=o2id)
 _r = requests.put(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG, json={"rubricIds": [R1["id"], R2["id"]]}); ok(sorted(_r.json().get("rubricIds") or []) == sorted([R1["id"], R2["id"]]), "l'organisateur classe sa conférence")
 ok(sorted(requests.get(f"{B}/studio/talks/{A}/kid-rubrics", headers=ORG).json()["rubricIds"]) == sorted([R1["id"], R2["id"]]), "classement relu")
 ok(requests.put(f"{B}/studio/talks/{OTHER}/kid-rubrics", headers=ORG, json={"rubricIds": [R1["id"]]}).status_code == 404, "pas la conférence d'un autre")
@@ -77,7 +77,7 @@ ok(requests.post(B + "/studio/kids/rubrics/bulk", headers=ORG, json={"ids": [C],
 P, pid = member(None, "parent"); cur.execute("update users set role='admin' where id=%s", (pid,))  # parent autorisé sans abonnement
 P = login(f"kc-parent-{tag}@test.local")
 requests.put(B + "/me/kids/pin", headers=P, json={"code": "2468"})
-k = requests.post(B + "/me/kids/profiles", headers=P, json={"name": "Yacine", "band": "7-10"}).json()["id"]
+k = requests.post(B + "/me/kids/profiles", headers=P, json={"name": "Yacine", "band": "6-8"}).json()["id"]
 tok = requests.post(f"{B}/me/kids/profiles/{k}/enter", headers=P).json()["token"]; K = {"authorization": "Bearer " + tok}
 ok(requests.get(B + "/kids/catalog").status_code == 401, "catalogue : visiteur refusé")
 ok(requests.get(B + "/kids/catalog", headers=ORG).status_code in (401, 403), "catalogue : jeton adulte refusé")

@@ -14,7 +14,7 @@ await pool.query("DELETE FROM app_settings WHERE key IN ('kids_enabled', 'kids_p
 const tag = randomUUID().slice(0, 8);
 const mk = async (push, email) => (await pool.query("INSERT INTO users(email, password_hash, name, notify_push, kids_pending_email) VALUES ($1,'x','Parent',$2,$3) RETURNING id", [`kr-${tag}-${randomUUID().slice(0, 6)}@test.local`, push, email])).rows[0].id;
 const [a, b, c] = [await mk(true, true), await mk(false, true), await mk(true, false)];
-const kid = async (u, name) => (await pool.query("INSERT INTO kid_profiles(user_id, name, band) VALUES ($1,$2,'7-10') RETURNING id", [u, name])).rows[0].id;
+const kid = async (u, name) => (await pool.query("INSERT INTO kid_profiles(user_id, name, band) VALUES ($1,$2,'6-8') RETURNING id", [u, name])).rows[0].id;
 const [ka, kb, kc] = [await kid(a, 'Amina'), await kid(b, 'Bilal'), await kid(c, 'Sara')];
 const claim = (k, at = 'now()') => pool.query(`INSERT INTO kid_actions(profile_id, title, status, claimed_at) VALUES ($1, 'Action fictive', 'claimed', ${at})`, [k]);
 await claim(ka); await claim(ka); await claim(kb); await claim(kc);

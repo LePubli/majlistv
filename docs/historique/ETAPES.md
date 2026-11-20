@@ -9671,3 +9671,28 @@ bash /root/verify-deploy.sh
 **Debug.** Aperçu dans un navigateur (jamais livré) : version web de l'application ouverte avec `?tv=1`, puis `/tv`, `/tv/catalog`, etc. Écran trop grand ou coupé : les tailles passent par `useTv().u()`.
 
 **Testé.** `npm run check` (compilation + 296 tests, dont les nouvelles règles TV dans `tests/tv.test.ts`) ; captures réelles à 1920 × 1080 de l'accueil, du catalogue, de la fiche vidéo, du compte (code + QR) et de l'accueil Kids (non connecté) sur l'API de test. **Non testé** : télécommande et focus sur un vrai appareil Android TV, lecture vidéo réelle, Kids connecté, arabe, direct, audio, fabrication de l'APK.
+
+## Catalogue — phase 1 sur 7 : modèle de catégories, 14 + 10 catégories, nouvelles tranches d'âge (20/11/2026)
+
+**Pourquoi.** Cahier des charges « Nouvelle architecture du catalogue » (20/11) : 14 catégories adultes et 10 univers Kids avec leurs sous-catégories, un seul modèle de données, vidéos classables dans plusieurs catégories, tranches d'âge Kids 3-5 / 6-8 / 9-12 / 13-15.
+
+**Décisions d'Epok (20/11).** Un seul modèle ; plafond de 2 catégories supplémentaires supprimé ; nouvelles tranches d'âge ; « Sciences du Coran » et « Sciences du hadith » présentes sous leurs deux catégories ; **les anciennes catégories et tranches sont remplacées** (Epok reclassera lui-même les vidéos).
+
+**Ce qui est fait.**
+- **Migration principale 121** (`api/migrations/121_catalogue_taxonomy.sql`, générée par `api/scripts/gen_taxonomy_sql.py` depuis `api/content/catalogue-taxonomy.json`, qui est la source de vérité) :
+  - nouveaux champs de catégorie : `slug` (stable, unique), `catalogue_type` (adult / kids), descriptions, `display_order`, `is_active`, `is_featured`, `icon`, `image`, `hero_image`, `color`, SEO, `translations` (jsonb), dates ;
+  - 14 catégories adultes (137 sous-catégories) et 10 univers Kids (80 sous-catégories), slugs du cahier ;
+  - anciennes catégories supprimées **une seule fois** ; leurs vidéos restent en ligne, sans catégorie ; l'ancien classement est copié dans la table **`legacy_catalogue_backup`** (retour arrière possible, jamais de perte) ; thèmes favoris des membres remis à zéro (ils pointaient vers des catégories supprimées) ;
+  - tranches Kids : une vidéo des anciennes tranches reçoit les nouvelles qui les recouvrent (3-6 → 3-5 et 6-8 ; 7-10 → 6-8 et 9-12 ; 11-14 → 9-12 et 13-15) ; un profil enfant passe à 3-5, 6-8 ou 9-12 (le parent peut le modifier) ; la base refuse les anciennes valeurs.
+- **Migration Kids 002** : les 10 univers Kids remplacent les 8 anciennes rubriques (liées à leur catégorie par `kid_rubrics.category_id`) ; l'espace enfant continue de fonctionner avec ces rubriques jusqu'à la phase 4.
+- **API** : `GET /categories` renvoie par défaut les catégories adultes actives, dans l'ordre d'affichage ; `?catalogue=kids` ou `?catalogue=all` ; chaque catégorie expose `slug`, `catalogueType`, `isActive`, `icon`, `color` ; plafond de catégories supplémentaires passé à 20 (au lieu de 2).
+- **Site et application** : nouvelles tranches (sélecteurs, libellés FR / EN / AR) ; le Studio (édition d'une vidéo, lot, nouvelle vidéo) propose aussi les catégories Kids.
+
+**Pas encore fait (phases suivantes).** Administration complète de la taxonomie (phase 2), pages Catalogue adulte (3) et Kids (4), recherche et filtres (5), collections et Apprendre (6), responsive, TV et SEO (7). Les 217 sous-catégories n'ont pas encore de traductions EN / AR (le français sert de repli).
+
+**Déploiement.** DockPanel : **majlistv-api** d'abord (les migrations 121 et Kids 002 s'appliquent au démarrage), puis **majlistv-web**. L'application mobile : mise à jour à distance ou nouvel APK (déclenché par le push). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+**Avant de déployer, sauvegarder la base** (la migration supprime les anciennes catégories) : `docker exec dockpanel-app-postgres-majlisstv sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' > /root/avant-catalogue-121.dump` (adaptez le nom de la base si elle diffère de `POSTGRES_DB`).
+
+**Debug / retour arrière.** Voir ce qui était classé où : `SELECT * FROM legacy_catalogue_backup WHERE kind = 'talk_principal';`. Une vidéo « sans catégorie » après le déploiement est normale : Studio → Contenus → modification en lot.
+
+**Testé.** Nouveau test `api/tests/test_catalogue_taxonomy.py` (24 + 10 catégories, 217 sous-catégories, parents, slugs uniques, isolation adultes / Kids, 6 catégories sur une vidéo, tranches acceptées / refusées en API et en base, migration rejouée sans doublon ni perte) ; test de la migration sur une copie de l'ancien état de production (catégories, vidéos, profils d'essai) : aucune vidéo perdue ; tests existants mis à jour (tranches, plafond) ; application : typage + 296 tests. **Non testé** : migration sur la vraie base de production ; affichage dans le navigateur (aucun écran de catalogue n'est encore modifié) ; arabe / anglais des nouvelles catégories.

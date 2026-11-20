@@ -39,7 +39,7 @@ def parent(tier):
     return H, uid
 
 
-def kid(H, name, band="3-6"):
+def kid(H, name, band="3-5"):
     pid = rq("POST", "/me/kids/profiles", headers=H, json={"name": name, "band": band}).json()["id"]
     return {"authorization": "Bearer " + rq("POST", f"/me/kids/profiles/{pid}/enter", headers=H).json()["token"]}, pid
 
@@ -48,10 +48,10 @@ tag = uuid.uuid4().hex[:6]
 cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 
 
-UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
+UP = {"3-5": ["3-5", "6-8", "9-12"], "6-8": ["6-8", "9-12"], "9-12": ["9-12"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
 
 
-def talk(title, band="3-6", nq=0):
+def talk(title, band="3-5", nq=0):
     cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,kids_bands) "
                 "values (%s,'d','Cheikh','youtube',%s,%s,'published','ready','free',600,%s) returning id", (f"{title} {tag}", "v" + uuid.uuid4().hex[:9], aid, UP[band]))
     tid = str(cur.fetchone()[0])
@@ -66,7 +66,7 @@ def answers(tid, K, right):
     return rq("POST", f"/kids/talks/{tid}/quiz/submit", headers=K, json={"answers": [{"questionId": q["id"], "index": 1 if i < right else 0} for i, q in enumerate(qs)]}), len(qs)
 
 
-TQ = talk("Avec quiz", nq=8); TQ2 = talk("Avec quiz 2", nq=5); TQ3 = talk("Avec quiz 3", nq=5); TNO = talk("Sans quiz", nq=0); TADULT = talk("Adultes", band=None, nq=5); TOLD = talk("Grands", band="11-14", nq=5)
+TQ = talk("Avec quiz", nq=8); TQ2 = talk("Avec quiz 2", nq=5); TQ3 = talk("Avec quiz 3", nq=5); TNO = talk("Sans quiz", nq=0); TADULT = talk("Adultes", band=None, nq=5); TOLD = talk("Grands", band="9-12", nq=5)
 
 # ================== palier Mejliss : étoiles seulement ==================
 HS, uS = parent("standard"); KS, pS = kid(HS, "Aya")

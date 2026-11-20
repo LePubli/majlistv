@@ -41,7 +41,7 @@ ok({c["id"]: c for c in requests.get(B + "/categories/stats", headers=ADM).json(
 n2 = n + " renommée"
 r = requests.patch(f"{B}/categories/{cid}", headers=ADM, json={"name": n2}); ok(r.status_code == 200 and r.json()["name"] == n2, "renommer")
 ok(requests.get(f"{B}/talks/{t}").json()["category"] == n2, "la conférence affiche le nouveau nom")
-ok(requests.patch(f"{B}/categories/{cid}", headers=ADM, json={"name": "Histoire"}).status_code == 409, "renommer en un nom existant refusé")
+ok(requests.patch(f"{B}/categories/{cid}", headers=ADM, json={"name": "Histoire et civilisations"}).status_code == 409, "renommer en un nom existant refusé")
 ok(requests.patch(f"{B}/categories/{cid}", headers=ADM, json={"name": n2}).status_code == 200, "renommer au même nom : accepté")
 ok(requests.patch(f"{B}/categories/999999", headers=ADM, json={"name": "zz"}).status_code == 404, "renommer inconnue : 404")
 ok(requests.patch(f"{B}/categories/{cid}", headers=ORG, json={"name": "zz"}).status_code == 403, "organisateur : renommage refusé")

@@ -44,15 +44,15 @@ def mk(title, i):
 T1, P1 = mk('La patience', 1); T2, P2 = mk('La gratitude', 2); T3, P3 = mk('Le pardon', 3)
 # Conférence Kids (7-10 ans, réservée aux enfants) avec son short
 pk = f'posters/{tag}-k.png'; s3.upload_file(png, BUCKET, pk); keys.append(pk)
-cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,poster_key,kids_bands,show_adults) values (%s,'d',%s,'upload',%s,%s,'published','ready','free',600,%s,'{7-10}',false) returning id", (f'Histoire du lion {tag}', SPK, f'talks/{tag}-k', aid, pk)); TK = str(cur.fetchone()[0]); talks.append(TK)
+cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,poster_key,kids_bands,show_adults) values (%s,'d',%s,'upload',%s,%s,'published','ready','free',600,%s,'{6-8}',false) returning id", (f'Histoire du lion {tag}', SPK, f'talks/{tag}-k', aid, pk)); TK = str(cur.fetchone()[0]); talks.append(TK)
 cur.execute("insert into editor_projects(talk_id, kind, title, timeline, short) values (%s,'short','Lion','{\"clips\":[]}','{}') returning id", (TK,)); PK = str(cur.fetchone()[0])
 kk = f'editor/renders/{PK}/{tag}.mp4'; s3.upload_file(MP4, BUCKET, kk); keys.append(kk)
 cur.execute("insert into editor_renders(project_id, talk_id, kind, status, rev, timeline, plan, out_duration_s, output_key, bytes) values (%s,%s,'final','ready',1,'{}','{\"vertical\":true}',9,%s,%s)", (PK, TK, kk, os.path.getsize(MP4)))
 SK = call('/studio/shorts', 'POST', {'projectId': PK, 'status': 'published', 'title': f'Le lion courageux {tag}'}, adm)['id']; keys.append(f'shorts/{SK}.mp4')
 call('/me/kids/pin', 'PUT', {'code': '2468'}, adm)
-prof = call('/me/kids/profiles', 'POST', {'name': f'Yac{tag}', 'band': '7-10', 'avatar': 'lion'}, adm)
+prof = call('/me/kids/profiles', 'POST', {'name': f'Yac{tag}', 'band': '6-8', 'avatar': 'lion'}, adm)
 kpid = prof.get('id') or call('/me/kids', 'GET', None, adm)['profiles'][0]['id']
-cur.execute("update kid_profiles set catalog_mode='all', daily_limit_min=NULL, band='7-10' where id=%s", (kpid,))
+cur.execute("update kid_profiles set catalog_mode='all', daily_limit_min=NULL, band='6-8' where id=%s", (kpid,))
 kid = call(f'/me/kids/profiles/{kpid}/enter', 'POST', {}, adm)['token']
 S1 = call('/studio/shorts', 'POST', {'projectId': P1, 'status': 'published', 'title': f'Courte leçon sur la patience {tag}'}, adm)['id']
 S2 = call('/studio/shorts', 'POST', {'projectId': P2, 'status': 'published', 'title': f'Gratitude en 12 secondes {tag}'}, adm)['id']

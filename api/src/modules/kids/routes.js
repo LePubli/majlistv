@@ -22,7 +22,7 @@ import { sendReportNow } from '../../kidsReportMailer.js';
 import { pendingFor } from './pending.js';
 import { starsOf, starTotal, awardBadges, recordKidAttempt, KID_BADGES, KID_QUESTIONS } from '../../kidsLearning.js';
 
-export const BANDS = ['3-6', '7-10', '11-14'];
+export const BANDS = ['3-5', '6-8', '9-12', '13-15'];
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'];
 const MAX_FAILS = 5, LOCK_MINUTES = 10;
 const idSchema = z.object({ id: z.guid() });

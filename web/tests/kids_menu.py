@@ -19,9 +19,9 @@ def call(path, method='GET', body=None, token=None):
     except urllib.error.HTTPError as e: return {'error': e.code}
 adm = call('/auth/login', 'POST', {'email': 'admin@test.local', 'password': 'AdminPassw0rd-test'})['token']
 cur.execute("select id from talks where publication='published' and video_status='ready' limit 6"); ids = [r[0] for r in cur.fetchall()]
-for i in ids: cur.execute("update talks set kids_bands=%s where id=%s", (['3-6', '7-10', '11-14'], i))
+for i in ids: cur.execute("update talks set kids_bands=%s where id=%s", (['3-5', '6-8', '9-12'], i))
 call('/me/kids/pin', 'PUT', {'code': '2468'}, adm)
-prof = call('/me/kids/profiles', 'POST', {'name': 'Yacine', 'band': '7-10', 'avatar': 'lion'}, adm)
+prof = call('/me/kids/profiles', 'POST', {'name': 'Yacine', 'band': '6-8', 'avatar': 'lion'}, adm)
 pid = prof.get('id')
 if not pid:
     pid = call('/me/kids', 'GET', None, adm)['profiles'][0]['id']

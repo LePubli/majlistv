@@ -63,7 +63,7 @@ ADM = login("admin@test.local")
 ORG, oid = member("organizer", "orga"); ORG2, o2id = member("organizer", "orgb"); USR, _ = member(None, "membre"); ED, edid = member("organizer", "edit")
 SPK = f"Cheikh Sh{tag}"; SLUG = f"cheikh-sh{tag}"
 T1 = talk(oid, f"Patience {tag}", SPK); T2 = talk(oid, f"Gratitude {tag}", SPK, access="premium")
-TDRAFT = talk(oid, f"Brouillon {tag}", SPK, pub="draft"); TKIDS = talk(oid, f"Kids {tag}", SPK, bands="{7-10}", adults=False)
+TDRAFT = talk(oid, f"Brouillon {tag}", SPK, pub="draft"); TKIDS = talk(oid, f"Kids {tag}", SPK, bands="{6-8}", adults=False)
 P1 = project(T1, "Passage patience"); P2 = project(T2); P3 = project(TDRAFT); PK = project(TKIDS); PNO = project(T1, "Sans rendu", render=False)
 cur.execute("select slug from speakers where slug=%s", (SLUG,)); 
 for _ in range(10):
@@ -121,7 +121,7 @@ ok(requests.get(f"{B}/shorts/{S3}").status_code == 404 and requests.get(f"{B}/sh
 # --- Espace Kids : seulement les shorts de conférences Kids de son âge
 P, pid = member(None, "parent"); cur.execute("update users set role='admin' where id=%s", (pid,)); P = login(f"sh-parent-{tag}@test.local")
 requests.put(B + "/me/kids/pin", headers=P, json={"code": "2468"})
-k = requests.post(B + "/me/kids/profiles", headers=P, json={"name": "Yacine", "band": "7-10"}).json()["id"]
+k = requests.post(B + "/me/kids/profiles", headers=P, json={"name": "Yacine", "band": "6-8"}).json()["id"]
 cur.execute("update kid_profiles set catalog_mode='all', daily_limit_min=NULL where id=%s", (k,))
 K = {"authorization": "Bearer " + requests.post(f"{B}/me/kids/profiles/{k}/enter", headers=P).json()["token"]}
 kf = requests.get(B + "/shorts", headers=K, params={"channel": SLUG}).json()
@@ -131,9 +131,9 @@ ok(requests.get(f"{B}/shorts/{SK}", headers=K).status_code == 200, "enfant : fic
 ok(requests.get(f"{B}/shorts/{S1}", headers=K).status_code == 404, "enfant : short d'une conférence adulte refusé")
 ok(requests.post(f"{B}/shorts/{S1}/view", headers=K).status_code == 404, "enfant : vue d'un short adulte refusée")
 ok(requests.post(f"{B}/shorts/{SK}/view", headers=K).json()["counted"] is True and requests.post(f"{B}/shorts/{SK}/view", headers=K).json()["counted"] is False, "enfant : vue comptée une fois par jour")
-cur.execute("update kid_profiles set band='3-6' where id=%s", (k,))
+cur.execute("update kid_profiles set band='3-5' where id=%s", (k,))
 ok(requests.get(B + "/shorts", headers=K, params={"channel": SLUG}).json() == [], "autre tranche d'âge : rien")
-cur.execute("update kid_profiles set band='7-10', catalog_mode='selected' where id=%s", (k,))
+cur.execute("update kid_profiles set band='6-8', catalog_mode='selected' where id=%s", (k,))
 ok(requests.get(B + "/shorts", headers=K, params={"channel": SLUG}).json() == [], "catalogue limité par le parent : conférence non autorisée, rien")
 cur.execute("insert into kid_catalog(profile_id, talk_id, allowed) values (%s,%s,true)", (k, TKIDS))
 ok(len(requests.get(B + "/shorts", headers=K, params={"channel": SLUG}).json()) == 1, "…autorisée par le parent : visible")

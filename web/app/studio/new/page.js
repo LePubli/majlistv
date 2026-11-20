@@ -88,7 +88,7 @@ export default function NewTalk() {
   const wantImport = mode === 'link' && (importIt || (Boolean(link) && !parsed));
   const [frAudio, setFrAudio] = useState(true); // import : voix française de la plateforme si elle existe
 
-  useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+  useEffect(() => { call('/categories?catalogue=all', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   const patch = (o) => setF((x) => ({ ...x, ...o }));
 
   // Démarre l'envoi dès qu'un fichier est choisi, puis passe à l'étape 2.

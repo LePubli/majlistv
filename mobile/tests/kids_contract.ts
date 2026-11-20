@@ -16,15 +16,15 @@ assert.ok(DICT.fr.kdWho, 'textes Kids importés');
 
 async function main() {
   let st = await parent.get<KidsState>('/me/kids');
-  assert.equal(st.allowed, true); assert.equal(st.hasPin, false); assert.deepEqual(st.bands, ['3-6', '7-10', '11-14']);
+  assert.equal(st.allowed, true); assert.equal(st.hasPin, false); assert.deepEqual(st.bands, ['3-5', '6-8', '9-12']);
   console.log('état parent OK');
 
   assert.equal(validPin('12'), false);
   await assert.rejects(() => parent.put('/me/kids/pin', { code: '12' }), (e: ApiError) => e.status === 400);
   await parent.put('/me/kids/pin', { code: '2468' });
   st = await parent.get<KidsState>('/me/kids'); assert.equal(st.hasPin, true);
-  const p = await parent.post<KidProfile>('/me/kids/profiles', { name: 'Yacine', avatar: 'fox', band: '7-10' });
-  await assert.rejects(() => parent.post('/me/kids/profiles', { name: 'Yacine', avatar: 'lion', band: '3-6' }), (e: ApiError) => e.code === 'duplicate');
+  const p = await parent.post<KidProfile>('/me/kids/profiles', { name: 'Yacine', avatar: 'fox', band: '6-8' });
+  await assert.rejects(() => parent.post('/me/kids/profiles', { name: 'Yacine', avatar: 'lion', band: '3-5' }), (e: ApiError) => e.code === 'duplicate');
   console.log('code parental + profil OK');
 
   const entered = await parent.post<{ token: string; profile: KidProfile }>(`/me/kids/profiles/${p.id}/enter`);
@@ -42,7 +42,7 @@ async function main() {
   const titles = rows.map((r) => shelfTitle(r.shelf, { t, rubrics: cat.rubrics, locale: 'fr' }));
   assert.ok(titles.includes('Nouveautés'), `rangées : ${titles.join(' | ')}`);
   assert.ok(cat.rubrics.some((r) => r.id === fx.rubricId));
-  assert.equal(resolveShelves(cat.shelves, cat.talks, true, '3-6').length, 0, 'filtre âge : aucune vidéo dont la plus jeune tranche est 3-6');
+  assert.equal(resolveShelves(cat.shelves, cat.talks, true, '3-5').length, 0, 'filtre âge : aucune vidéo dont la plus jeune tranche est 3-6');
   console.log('catalogue OK :', titles.join(' | '));
 
   assert.equal(searchTerm('é'), null);
@@ -119,8 +119,8 @@ async function main() {
   await parent.put(`/me/kids/profiles/${p.id}/controls`, { catalogMode: 'all' });
   console.log('temps + catalogue OK');
 
-  assert.equal(profilePatch({ name: 'Yacine', avatar: 'fox', band: '7-10' }, { name: ' Yacine ', avatar: 'fox', band: '7-10' }), null);
-  const patch = profilePatch({ name: 'Yacine', avatar: 'fox', band: '7-10' }, { name: 'Yacine B', avatar: 'owl', band: '7-10' })!; assert.deepEqual(patch, { name: 'Yacine B', avatar: 'owl' });
+  assert.equal(profilePatch({ name: 'Yacine', avatar: 'fox', band: '6-8' }, { name: ' Yacine ', avatar: 'fox', band: '6-8' }), null);
+  const patch = profilePatch({ name: 'Yacine', avatar: 'fox', band: '6-8' }, { name: 'Yacine B', avatar: 'owl', band: '6-8' })!; assert.deepEqual(patch, { name: 'Yacine B', avatar: 'owl' });
   const edited = await parent.patch<KidProfile>(`/me/kids/profiles/${p.id}`, patch); assert.equal(edited.name, 'Yacine B'); assert.equal(edited.avatar, 'owl');
   assert.equal(pinChangeError('2468', '1357', '1357'), null); assert.equal(pinChangeError('2468', '1357', '1358'), 'kids.pinMismatch'); assert.equal(pinChangeError('24', '1357', '1357'), 'kdPinBad');
   let wrongPin: ApiError | null = null;

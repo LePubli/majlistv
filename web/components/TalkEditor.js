@@ -7,7 +7,7 @@ import { BANDS, bandLabel } from '../lib/kids';
 import { useApp } from './Providers';
 import ChannelPicker from './ChannelPicker';
 import KidRubricsPicker from './KidRubricsPicker';
-const MAX_EXTRA = 2;
+const MAX_EXTRA = 20; // même valeur que MAX_EXTRA_CATEGORIES de l'API
 
 // ISO -> valeur d'un <input type="datetime-local"> (heure locale de l'appareil).
 const toLocalInput = (iso) => {
@@ -52,7 +52,7 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
   const baseline = useRef(JSON.stringify(initial(x)));
   const fileInput = useRef(null);
 
-  useEffect(() => { call('/categories', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
+  useEffect(() => { call('/categories?catalogue=all', {}, null).then((r) => r.ok && setCats(r.data)); }, [call]);
   const patch = (o) => { setMsg(null); setF((v) => ({ ...v, ...o })); };
   const dirty = JSON.stringify(f) !== baseline.current;
 

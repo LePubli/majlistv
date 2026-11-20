@@ -4,8 +4,8 @@ import type { KidAction, KidActionCounts, KidCard, KidCatalogTalk, KidReportProf
 export const AVATARS = ['lion', 'owl', 'fox', 'turtle', 'rabbit', 'bear', 'camel', 'star'] as const;
 export const AVATAR_EMOJI: Record<string, string> = { lion: '🦁', owl: '🦉', fox: '🦊', turtle: '🐢', rabbit: '🐰', bear: '🐻', camel: '🐪', star: '⭐' };
 export const avatarEmoji = (a: string) => AVATAR_EMOJI[a] ?? '⭐';
-export const BANDS = ['3-6', '7-10', '11-14'] as const;
-export const bandKey = (b: string) => (b === '3-6' ? 'kdBand36' : b === '7-10' ? 'kdBand710' : 'kdBand1114') as 'kdBand36' | 'kdBand710' | 'kdBand1114';
+export const BANDS = ['3-5', '6-8', '9-12', '13-15'] as const;
+export const bandKey = (b: string) => (b === '3-5' ? 'kdBand35' : b === '6-8' ? 'kdBand68' : b === '9-12' ? 'kdBand912' : 'kdBand1315') as 'kdBand35' | 'kdBand68' | 'kdBand912' | 'kdBand1315';
 
 /** Couleurs de l'espace enfant : bleu nuit et or vif (mêmes valeurs que le site ; ne pas modifier). */
 export const KC = {
@@ -39,7 +39,7 @@ export function parseKidSession(raw: string | null): KidSessionData | null {
     if (!v || typeof v.token !== 'string' || !v.token || !v.profile || typeof v.profile.id !== 'string' || typeof v.profile.name !== 'string') return null;
     return {
       token: v.token,
-      profile: { id: v.profile.id, name: v.profile.name, avatar: String(v.profile.avatar ?? 'star'), band: String(v.profile.band ?? '3-6') },
+      profile: { id: v.profile.id, name: v.profile.name, avatar: String(v.profile.avatar ?? 'star'), band: String(v.profile.band ?? '3-5') },
       issuedAt: Number.isFinite(v.issuedAt) ? v.issuedAt : 0,
     };
   } catch { return null; }

@@ -33,7 +33,7 @@ def parent():
 
 
 def kid(H, name):
-    pid = rq("POST", "/me/kids/profiles", headers=H, json={"name": name, "band": "7-10"}).json()["id"]
+    pid = rq("POST", "/me/kids/profiles", headers=H, json={"name": name, "band": "6-8"}).json()["id"]
     return {"authorization": "Bearer " + rq("POST", f"/me/kids/profiles/{pid}/enter", headers=H).json()["token"]}, pid
 
 

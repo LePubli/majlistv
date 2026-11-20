@@ -24,7 +24,7 @@ def parent(tier):
     cur.execute("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values (%s,%s,'active','p','month',now()+interval '20 days',1,%s)", ("sub_" + uuid.uuid4().hex[:12], uid, tier))
     h = login(e)
     ok(requests.put(B + "/me/kids/pin", headers=h, json={"code": "1234"}).status_code == 200, f"parent {tier} : code parental défini")
-    p = requests.post(B + "/me/kids/profiles", headers=h, json={"name": "Yacine", "avatar": "lion", "band": "7-10"}).json()
+    p = requests.post(B + "/me/kids/profiles", headers=h, json={"name": "Yacine", "avatar": "lion", "band": "6-8"}).json()
     k = requests.post(f"{B}/me/kids/profiles/{p['id']}/enter", headers=h).json()["token"]
     return h, uid, p["id"], {"authorization": "Bearer " + k}
 

@@ -44,7 +44,7 @@ def subscribe(uid, tier):
     cur.execute("insert into subscriptions(id,user_id,status,price_id,billing_interval,current_period_end,event_created,tier) values (%s,%s,'active','p','month',now()+interval '20 days',1,%s)", ("sub_" + uuid.uuid4().hex[:12], uid, tier))
 
 
-UP = {"3-6": ["3-6", "7-10", "11-14"], "7-10": ["7-10", "11-14"], "11-14": ["11-14"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
+UP = {"3-5": ["3-5", "6-8", "9-12"], "6-8": ["6-8", "9-12"], "9-12": ["9-12"], None: []}  # ancienne règle : une conférence « 7-10 » convient aux 7-10 et aux plus grands
 
 
 def talk(title, band, access="free", status="ready", pub="published", owner=None):
@@ -57,13 +57,13 @@ tag = uuid.uuid4().hex[:6]
 ADM = login("admin@test.local", "AdminPassw0rd-test"); cur.execute("select id from users where email='admin@test.local'"); aid = cur.fetchone()[0]
 ORG, uorg = member("organizer")
 rq("PUT", "/admin/settings", headers=ADM, json={"values": {"kids_enabled": None, "kids_max_standard": None, "kids_max_learning": None}})
-T36 = talk("Petits 3-6", "3-6"); T710 = talk("Moyens 7-10", "7-10", "premium"); T1114 = talk("Grands 11-14", "11-14"); TADULT = talk("Adultes", None)
-TDRAFT = talk("Brouillon kids", "3-6", pub="draft"); TPROC = talk("En conversion", "3-6", status="processing")
+T36 = talk("Petits 3-6", "3-5"); T710 = talk("Moyens 7-10", "6-8", "premium"); T1114 = talk("Grands 11-14", "9-12"); TADULT = talk("Adultes", None)
+TDRAFT = talk("Brouillon kids", "3-5", pub="draft"); TPROC = talk("En conversion", "3-5", status="processing")
 
 # --- fiche conférence : tranche d'âge -----------------------------------------------------------
 cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access) values ('Mienne','d','x','youtube','vabcdefghij',%s,'published','ready','free') returning id", (uorg,)); mine = str(cur.fetchone()[0])
-ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": ["7-10", "11-14"]}).status_code == 200, "l'organisateur marque sa conférence « Kids 7-10 »")
-ok(rq("GET", f"/talks/{mine}").json()["kidsBands"] == ["7-10", "11-14"], "tranches d'âge exposées")
+ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": ["6-8", "9-12"]}).status_code == 200, "l'organisateur marque sa conférence « Kids 7-10 »")
+ok(rq("GET", f"/talks/{mine}").json()["kidsBands"] == ["6-8", "9-12"], "tranches d'âge exposées")
 ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": ["20-30"]}).status_code == 400, "tranche inconnue refusée")
 ok(rq("PATCH", f"/talks/{T36}", headers=ORG, json={"kidsBands": []}).status_code == 404, "pas la conférence d'un autre")
 ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": []}).status_code == 200 and rq("GET", f"/talks/{mine}").json()["kidsBands"] == [], "retrait de l'étiquette")
@@ -71,16 +71,16 @@ ok(rq("PATCH", f"/talks/{mine}", headers=ORG, json={"kidsBands": []}).status_cod
 # --- parent sans abonnement ---------------------------------------------------------------------
 P0, u0 = member()
 d = rq("GET", "/me/kids", headers=P0).json(); ok(d["allowed"] is False and d["profiles"] == [] and d["hasPin"] is False, "sans abonnement : Kids non autorisé")
-r = rq("POST", "/me/kids/profiles", headers=P0, json={"name": "Yacine", "band": "3-6"}); ok(r.status_code == 403 and r.json()["code"] == "subscription_required", "création refusée sans abonnement")
+r = rq("POST", "/me/kids/profiles", headers=P0, json={"name": "Yacine", "band": "3-5"}); ok(r.status_code == 403 and r.json()["code"] == "subscription_required", "création refusée sans abonnement")
 ok(rq("GET", "/me/kids").status_code == 401, "visiteur refusé")
 
 # --- abonnement Mejliss (1 profil) ----------------------------------------------------------------
 P1, u1 = member(); subscribe(u1, "standard")
 ok(rq("GET", "/me/kids", headers=P1).json()["max"] == 1, "Mejliss : 1 profil")
 ok(rq("POST", "/me/kids/profiles", headers=P1, json={"name": "A", "band": "2-3"}).status_code == 400, "tranche invalide refusée")
-ok(rq("POST", "/me/kids/profiles", headers=P1, json={"name": "A", "band": "3-6", "avatar": "dragon"}).status_code == 400, "avatar inconnu refusé")
-r = rq("POST", "/me/kids/profiles", headers=P1, json={"name": "Yacine", "band": "3-6", "avatar": "lion"}); ok(r.status_code == 201, "profil créé"); k1 = r.json()["id"]
-r = rq("POST", "/me/kids/profiles", headers=P1, json={"name": "Salma", "band": "7-10"}); ok(r.status_code == 409 and r.json()["code"] == "limit", "second profil refusé (abonnement Mejliss)")
+ok(rq("POST", "/me/kids/profiles", headers=P1, json={"name": "A", "band": "3-5", "avatar": "dragon"}).status_code == 400, "avatar inconnu refusé")
+r = rq("POST", "/me/kids/profiles", headers=P1, json={"name": "Yacine", "band": "3-5", "avatar": "lion"}); ok(r.status_code == 201, "profil créé"); k1 = r.json()["id"]
+r = rq("POST", "/me/kids/profiles", headers=P1, json={"name": "Salma", "band": "6-8"}); ok(r.status_code == 409 and r.json()["code"] == "limit", "second profil refusé (abonnement Mejliss)")
 r = rq("POST", f"/me/kids/profiles/{k1}/enter", headers=P1); ok(r.status_code == 409 and r.json()["code"] == "pin_required", "entrée refusée tant qu'aucun code parental n'existe")
 ok(rq("PUT", "/me/kids/pin", headers=P1, json={"code": "12ab"}).status_code == 400, "code non numérique refusé")
 ok(rq("PUT", "/me/kids/pin", headers=P1, json={"code": "123"}).status_code == 400, "code trop court refusé")
@@ -95,8 +95,8 @@ P2, u2 = member(); subscribe(u2, "learning"); rq("PUT", "/me/kids/pin", headers=
 ok(rq("GET", "/me/kids", headers=P2).json()["max"] == 5, "Apprentissage : 5 profils")
 ids = []
 for i, n in enumerate(["Aya", "Bilal", "Chaïma", "Dawud", "Elias"]):
-    r = rq("POST", "/me/kids/profiles", headers=P2, json={"name": n, "band": ["3-6", "7-10", "11-14", "7-10", "3-6"][i]}); ok(r.status_code == 201, f"profil {n}"); ids.append(r.json()["id"])
-ok(rq("POST", "/me/kids/profiles", headers=P2, json={"name": "Farah", "band": "3-6"}).status_code == 409, "6e profil refusé")
+    r = rq("POST", "/me/kids/profiles", headers=P2, json={"name": n, "band": ["3-5", "6-8", "9-12", "6-8", "3-5"][i]}); ok(r.status_code == 201, f"profil {n}"); ids.append(r.json()["id"])
+ok(rq("POST", "/me/kids/profiles", headers=P2, json={"name": "Farah", "band": "3-5"}).status_code == 409, "6e profil refusé")
 ok(rq("PATCH", f"/me/kids/profiles/{ids[0]}", headers=P2, json={"name": "bilal"}).status_code == 409, "prénom en double refusé (insensible à la casse)")
 ok(rq("PATCH", f"/me/kids/profiles/{ids[0]}", headers=P2, json={"avatar": "owl"}).json()["avatar"] == "owl", "modification du profil")
 ok(rq("PATCH", f"/me/kids/profiles/{ids[0]}", headers=P1, json={"avatar": "fox"}).status_code == 404, "le profil d'un autre parent est introuvable")
@@ -108,17 +108,17 @@ K1 = {"authorization": "Bearer " + r.json()["token"]}
 for path in ("/auth/me", "/me/kids", "/me/favorites", "/me/continue", "/me/revision"):
     x = rq("GET", path, headers=K1); ok(x.status_code == 403 and x.json().get("code") == "kid_mode", f"jeton enfant refusé sur {path}")
 ok(rq("PUT", "/me/kids/pin", headers=K1, json={"code": "0000", "current": "1357"}).status_code == 403, "l'enfant ne peut pas changer le code")
-ok(rq("POST", "/me/kids/profiles", headers=K1, json={"name": "Z", "band": "3-6"}).status_code == 403, "ni créer un profil")
+ok(rq("POST", "/me/kids/profiles", headers=K1, json={"name": "Z", "band": "3-5"}).status_code == 403, "ni créer un profil")
 ok(rq("PATCH", f"/talks/{T36}", headers=K1, json={"kidsBands": []}).status_code == 403, "ni modifier une conférence")
 KA = None
-x = rq("POST", f"/me/kids/profiles", headers=ADM, json={"name": "Admin kid", "band": "3-6"}); 
+x = rq("POST", f"/me/kids/profiles", headers=ADM, json={"name": "Admin kid", "band": "3-5"}); 
 if x.status_code == 201:
     rq("PUT", "/me/kids/pin", headers=ADM, json={"code": "1111"}) if not rq("GET", "/me/kids", headers=ADM).json()["hasPin"] else None
     KA = {"authorization": "Bearer " + rq("POST", f"/me/kids/profiles/{x.json()['id']}/enter", headers=ADM).json()["token"]}
     ok(rq("GET", "/admin/settings", headers=KA).status_code == 403, "jeton enfant d'un parent ADMIN : routes d'administration refusées")
     ok(rq("GET", "/admin/citations", headers=KA).status_code == 403, "idem citations")
     rq("DELETE", f"/me/kids/profiles/{x.json()['id']}", headers=ADM)
-me = rq("GET", "/kids/me", headers=K1).json(); ok(me["name"] == "Yacine" and me["band"] == "3-6", "profil lisible par l'enfant")
+me = rq("GET", "/kids/me", headers=K1).json(); ok(me["name"] == "Yacine" and me["band"] == "3-5", "profil lisible par l'enfant")
 ok(rq("GET", "/kids/me", headers=P1).status_code == 401, "un jeton parent n'ouvre pas /kids")
 ok(rq("GET", "/kids/me").status_code == 401, "visiteur refusé")
 

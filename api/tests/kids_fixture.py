@@ -6,7 +6,7 @@ src = open(spec.origin, encoding="utf-8").read().split("# Réglage de validité"
 ns = {"__name__": "kidsfixture"}; exec(compile(src, "test_offline_head", "exec"), ns)
 cur, B = ns["cur"], ns["B"]
 talk = ns["make_talk"](access="free"); ns["make_hls"](talk)
-cur.execute("update talks set kids_bands=%s, title=%s where id=%s", (["7-10", "11-14"], "Les étoiles de la nuit", talk))
+cur.execute("update talks set kids_bands=%s, title=%s where id=%s", (["6-8", "9-12"], "Les étoiles de la nuit", talk))
 cur.execute("select id from kid_rubrics where active order by position, id limit 1"); rid = cur.fetchone()[0]
 cur.execute("insert into talk_kid_rubrics(talk_id, rubric_id) values (%s,%s) on conflict do nothing", (talk, rid))
 # 22b-9b : un quiz approuvé (5 questions, bonne réponse = index 1) et un court publié.

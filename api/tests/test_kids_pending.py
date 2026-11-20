@@ -60,9 +60,9 @@ def parent():
 
 cur.execute("select id from users where email='admin@test.local'"); ADM = token(cur.fetchone()[0], "admin")
 P, pid = parent(); Q, qid = parent()
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Amina','7-10') returning id", (pid,)); k1 = cur.fetchone()[0]
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Yusuf','3-6') returning id", (pid,)); k2 = cur.fetchone()[0]
-cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Autre','7-10') returning id", (qid,)); k3 = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Amina','6-8') returning id", (pid,)); k1 = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Yusuf','3-5') returning id", (pid,)); k2 = cur.fetchone()[0]
+cur.execute("insert into kid_profiles(user_id, name, band) values (%s,'Autre','6-8') returning id", (qid,)); k3 = cur.fetchone()[0]
 
 ok(requests.get(B + "/me/kids/pending").status_code == 401, "connexion obligatoire")
 ok(requests.get(B + "/me/kids/pending", headers=P).json() == {"total": 0, "profiles": []}, "rien en attente : total 0")
