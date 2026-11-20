@@ -14,6 +14,7 @@
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { slugify } from '../slugs.js';
+import { patchOf } from '../zpatch.js';
 
 const FULL = `c.id, c.name, c.slug, c.parent_id AS "parentId", c.catalogue_type AS "catalogueType", c.description,
   c.short_description AS "shortDescription", c.display_order AS "displayOrder", c.is_active AS "isActive", c.is_featured AS "isFeatured",
@@ -27,10 +28,10 @@ const COUNTS = `(SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) A
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const urlOrPath = z.string().trim().max(500).regex(/^(https?:\/\/|\/)[^\s]*$/, 'Adresse d\'image invalide (https://… ou /chemin)');
-const trText = z.object({
+const trText = patchOf(z.object({
   name: z.string().trim().max(80), description: z.string().trim().max(2000), shortDescription: z.string().trim().max(300),
   seoTitle: z.string().trim().max(120), seoDescription: z.string().trim().max(300),
-}).partial().strict();
+}).strict());
 const fields = {
   name: z.string().trim().min(1).max(80),
   slug: z.string().trim().max(90).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Slug : minuscules, chiffres et tirets seulement'),
@@ -46,11 +47,11 @@ const fields = {
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Couleur : #RRGGBB').nullable(),
   seoTitle: z.string().trim().max(120),
   seoDescription: z.string().trim().max(300),
-  translations: z.object({ en: trText, ar: trText }).partial().strict(),
+  translations: patchOf(z.object({ en: trText, ar: trText }).strict()),
   displayOrder: z.number().int().min(0).max(1000000),
 };
-const createSchema = z.object(fields).partial().required({ name: true }).strict();
-const patchSchema = z.object(fields).partial().strict().refine((x) => Object.keys(x).length > 0, 'Rien à modifier');
+const createSchema = z.object(Object.fromEntries(Object.entries(fields).map(([k, f]) => [k, k === 'name' ? f : f.optional()]))).strict(); // seul le nom est obligatoire
+const patchSchema = patchOf(z.object(fields).strict()).refine((x) => Object.keys(x).length > 0, 'Rien à modifier');
 
 // Colonnes SQL de chaque champ modifiable.
 const COL = { name: 'name', slug: 'slug', parentId: 'parent_id', catalogueType: 'catalogue_type', description: 'description', shortDescription: 'short_description',
