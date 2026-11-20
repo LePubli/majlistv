@@ -391,3 +391,20 @@ html[data-skin="premium"] .wb-card:hover .wb-thumb { border-color: #35b9ff; }
 html[data-skin="premium"] .wb-card:hover strong { color: #8fd3ff; }
 html[data-skin="premium"] .watch-b .tablist .on, html[data-skin="premium"] .watch-b .tablist [aria-selected="true"] { border-color: #149cff; color: #fff; }
 html[data-skin="premium"] body.cinema-on .wb-hero { background: #000; border: 0; }
+/* V22 — fiche vidéo en deux colonnes (maquette pv12) : à gauche le lecteur (carte à bords arrondis) puis le titre, les puces,
+   les actions et les onglets à plat ; à droite le parcours « Apprendre » et la liste des épisodes. Même JSX : seul le CSS change. */
+@media (min-width: 1100px) {
+  html[data-skin="premium"] main.page.watch-b { display: grid; grid-template-columns: minmax(0, 1fr) 380px; column-gap: 32px; align-items: start; max-width: 1360px; }
+  html[data-skin="premium"] main.page.watch-b > * { grid-column: 1 / -1; min-width: 0; }
+  html[data-skin="premium"] .watch-b .wb-hero, html[data-skin="premium"] .watch-b .wb-grid { display: contents; }
+  html[data-skin="premium"] .watch-b .player-wrap { grid-column: 1; grid-row: 2; background: linear-gradient(155deg, #0f2a49, #061325); border: 1px solid #345572; border-radius: 26px; padding: 14px; box-shadow: 0 24px 60px -30px #000, 0 0 0 1px #149cff22; }
+  html[data-skin="premium"] .watch-b .wb-info { grid-column: 1; grid-row: 3; padding: 22px 4px 0; }
+  html[data-skin="premium"] .watch-b .wb-main { grid-column: 1; grid-row: 4; }
+  html[data-skin="premium"] .watch-b .wb-side { grid-column: 2; grid-row: 2 / span 3; position: sticky; top: 84px; }
+  html[data-skin="premium"] body.cinema-on .watch-b .player-wrap { grid-column: 1 / -1; padding: 0; border: 0; border-radius: 0; background: #000; box-shadow: none; }
+}
+/* « À découvrir ensuite » : cartes image arrondies, plus grandes */
+html[data-skin="premium"] .wb-next .wb-row { gap: 20px; }
+html[data-skin="premium"] .wb-thumb { aspect-ratio: 16 / 9; overflow: hidden; }
+html[data-skin="premium"] .wb-next h2 { font-size: clamp(1.3rem, 2vw, 1.7rem); }
+
