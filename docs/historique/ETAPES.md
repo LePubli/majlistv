@@ -9614,3 +9614,21 @@ bash /root/verify-deploy.sh
 
 **Testé.** Tests du site (section 9 de `test_premium_web.mjs`, tous les tests web), construction, captures réelles d'un profil enfant de test (7-10 ans) en 1440 et 390 px, français et arabe, sans débordement ni erreur de page. **Non testé** : pastilles de rubriques (la base de test n'a pas de rubrique Kids : vues seulement par le code), vidéo « à reprendre », compte avec la formule Apprentissage, sortie par code parental sur ce nouvel en-tête, onglets Regarder / Apprendre / Agir en Premium (contenu inchangé, non recapturé), site réel.
 
+## P1 — Thème « Premium » (thème V20), lot 5 : Formules, connexion / inscription, Mon compte (20/11/2026)
+
+**Constat.** La maquette V20 n'a **aucun écran** d'abonnement, d'inscription ni de connexion ; elle n'a qu'une page « Mon espace » très simple (bandeau de page, panneaux dégradés, boutons arrondis, fausses statistiques « 75 % », « 12 leçons »). Rien n'a été inventé : le style de la maquette est appliqué aux vraies pages, dont toutes les fonctions sont conservées.
+
+**Ce qui change (CSS seulement, `web/app/skin-premium.css`).**
+- **Formules** (`/pricing`) : titres Montserrat grands, cartes de formule en panneaux dégradés V20, formule mise en avant avec liseré et lueur bleus, pastille « mois offerts » bleue, boutons arrondis. Les montants, l'essai, le choix du pays, les moyens de paiement et le test A/B viennent toujours du serveur (aucun prix écrit dans le code : vérifié par un test).
+- **Connexion, inscription, mot de passe oublié** : carte en panneau dégradé, champs et bouton arrondis.
+- **Mon compte** (`/account`) : titre de page, contenu des onglets (Profil · Abonnement et achats · Notifications) dans un panneau dégradé, champs et boutons arrondis.
+- Mobile 390 px et arabe de droite à gauche vérifiés.
+
+**API / composants.** Aucune modification.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Ancien aspect : le thème actif n'est pas Premium.
+
+**Testé.** Tests du site (section 10 de `test_premium_web.mjs`), compilation, captures réelles : Formules 1440 et 390 px FR et arabe, inscription et connexion FR, Mon compte 1440 et 390 px FR. **Non testé** : onglets « Abonnement et achats » et « Notifications », Formules avec Stripe actif (la base de test n'a pas de prix Stripe : boutons « Bientôt disponible »), compte réellement abonné, inscription et Mon compte en arabe, site réel.
+

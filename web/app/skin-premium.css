@@ -328,3 +328,37 @@ html[data-skin="premium"] main.page.pm-kd-body { max-width: 1440px; margin-inlin
   .v20-app .v20-kids-head-nav a { flex: none; }
   .v20-app .pm-kd-leave { font-size: 12px; padding: 0 10px; }
 }
+
+/* ───────── Lot 5 — Formules, connexion / inscription, Mon compte ─────────
+   La maquette V20 n'a pas d'écran pour ces pages (seulement « Mon espace » : bandeau de page, panneaux dégradés, boutons arrondis).
+   On applique ce style aux vraies pages ; prix, essai, pays, moyens de paiement et fonctions viennent toujours du serveur. */
+html[data-skin="premium"] main.page.pricing,
+html[data-skin="premium"] main.page.acct { max-width: 1120px; margin-inline: auto; padding-top: 40px; }
+html[data-skin="premium"] main.page.pricing h1,
+html[data-skin="premium"] main.page.acct h1 { font-size: clamp(34px, 4vw, 52px); letter-spacing: -.04em; margin: 0 0 10px; color: #fff; }
+html[data-skin="premium"] main.page.pricing > .meta, html[data-skin="premium"] main.page.pricing > .soon { color: #afc3db; }
+html[data-skin="premium"] main.page.pricing .tier-head h2 { font-size: clamp(22px, 2.2vw, 30px); letter-spacing: -.03em; }
+/* Panneaux dégradés de la maquette */
+html[data-skin="premium"] :is(.plan, .card, .card-lite, .waiver) { background: linear-gradient(155deg, #102c4c, #081a31); border: 1px solid #345572; border-radius: 18px; box-shadow: none; }
+html[data-skin="premium"] .plan { padding: 26px; }
+html[data-skin="premium"] .plan.best { border-color: #149cff; background: linear-gradient(155deg, #123760, #081a31); box-shadow: 0 0 0 1px #149cff inset, 0 18px 50px -22px #087cffaa; }
+html[data-skin="premium"] .plan .price { font-size: clamp(30px, 3vw, 40px); letter-spacing: -.04em; color: #fff; }
+html[data-skin="premium"] .plan .plan-save { background: #087cff; color: #fff; }
+html[data-skin="premium"] .plan-list li::marker, html[data-skin="premium"] .plan-list li::before { color: #35b9ff; }
+html[data-skin="premium"] .card { max-width: 440px; padding: 34px; margin-block: 7vh; }
+html[data-skin="premium"] .card h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -.04em; }
+/* Champs et boutons arrondis comme la maquette */
+html[data-skin="premium"] :is(.card, .acct, .pricing) :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { background: #061d37; border: 1px solid #345572; border-radius: 14px; color: #fff; padding: 13px 15px; }
+html[data-skin="premium"] :is(.card, .acct, .pricing) :is(input, select, textarea):focus { border-color: #35b9ff; }
+html[data-skin="premium"] :is(.card, .acct, .pricing) .btn:not(.ghost) { background: linear-gradient(135deg, #079cff, #0867f4); border-radius: 28px; font-weight: 800; box-shadow: 0 7px 24px #006cfa44; }
+html[data-skin="premium"] :is(.card, .acct, .pricing) .btn.ghost { background: #04172d8c; border: 1px solid #a8c8e4; border-radius: 28px; }
+html[data-skin="premium"] :is(.card, .acct, .pricing) .btn:disabled { opacity: .55; box-shadow: none; }
+/* Compte : onglets latéraux en panneau */
+html[data-skin="premium"] main.page.acct .tabs-layout { gap: 28px; }
+html[data-skin="premium"] main.page.acct .tabs-body { background: linear-gradient(155deg, #102c4c, #081a31); border: 1px solid #345572; border-radius: 18px; padding: 24px clamp(18px, 3vw, 34px); min-width: 0; }
+html[data-skin="premium"] main.page.acct .card-lite { background: transparent; border: 0; padding: 0; }
+@media (max-width: 700px) {
+  html[data-skin="premium"] main.page.pricing, html[data-skin="premium"] main.page.acct { padding-top: 20px; }
+  html[data-skin="premium"] .card { margin-block: 3vh; padding: 24px 20px; }
+}
+html[data-skin="premium"] main.page.pricing .tier .plans { max-width: 760px; gap: 20px; }

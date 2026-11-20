@@ -114,5 +114,9 @@ assert.match(kh, /!pm && <aside className="kd-side">/, 'menu latéral conservé 
 assert.match(read('components/KidCatalog.js'), /useSearchParams\(\)\.get\('r'\)/, 'rubrique choisie par l’adresse');
 assert.match(css, /\.v20-app\.pm-kids \.v20-kids-v8 \.v20-kids-hero-visual \{ background-image: url\('\/premium\/kids-hero-scene\.webp'\)/, 'illustration de décor du bandeau');
 assert.match(kd, /mtrMin/, 'durées traduites (arabe)');
+// 10. Lot 5 : Formules, connexion / inscription, Mon compte (style V20 : panneaux dégradés, boutons arrondis) ; aucun prix écrit dans le code.
+assert.match(css, /main\.page\.pricing[\s\S]*main\.page\.acct/, 'pages Formules et Mon compte habillées');
+assert.match(css, /:is\(\.plan, \.card, \.card-lite, \.waiver\)/, 'panneaux dégradés V20');
+assert.doesNotMatch(read('app/pricing/page.js').replace(/\/\/.*$/gm, ''), /6[,.]99|69[,.]99|9[,.]99|99[,.]99/, 'aucun prix écrit dans le code (ils viennent de Stripe)');
 void execFileSync;
 console.log('web premium OK');
