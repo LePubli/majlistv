@@ -102,6 +102,8 @@ requests.patch(f"{B}/categories/{A['id']}", headers=ADM, json={"catalogueType": 
 ok(requests.patch(f"{B}/categories/{A['id']}", headers=ADM, json={"parentId": Bt["id"]}).status_code == 400, "catégorie avec sous-catégories : ne peut pas devenir sous-catégorie")
 r = requests.patch(f"{B}/categories/{S2['id']}", headers=ADM, json={"parentId": Bt["id"]}); ok(r.status_code == 200 and r.json()["parentId"] == Bt["id"], "déplacer une sous-catégorie vers un autre parent")
 r = requests.patch(f"{B}/categories/{S2['id']}", headers=ADM, json={"parentId": None}); ok(r.json()["parentId"] is None, "promouvoir une sous-catégorie en catégorie principale")
+mx = max(c["displayOrder"] for c in requests.get(B + "/categories/admin", headers=ADM).json() if c["parentId"] is None and c["catalogueType"] == "adult")
+ok(r.json()["displayOrder"] == mx, "promue : rangée à la fin des catégories principales (pas parmi les premières)")
 requests.patch(f"{B}/categories/{S2['id']}", headers=ADM, json={"parentId": A["id"]})
 
 # ── Ordre ──

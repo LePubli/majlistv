@@ -168,6 +168,12 @@ export default async function categoriesAdminRoutes(app) {
     if (b.catalogueType !== undefined && catalogue === 'adult' && (await pool.query('SELECT 1 FROM kid_rubrics WHERE category_id = $1', [id])).rowCount) {
       return reply.code(409).send({ error: "Cet univers est utilisé par l'espace Kids : il ne peut pas passer au catalogue adultes", code: 'kids_rubric' });
     }
+    // Déplacée vers un autre parent (ou promue en catégorie principale) : elle se range à la fin de ses nouveaux frères, sauf ordre explicite.
+    if (b.parentId !== undefined && parentId !== cur.parent_id && b.displayOrder === undefined) {
+      set.displayOrder = (await pool.query(
+        `SELECT COALESCE(max(display_order), 0) + 10 AS n FROM categories WHERE id <> $3 AND parent_id IS NOT DISTINCT FROM $1::int AND ($1::int IS NOT NULL OR catalogue_type = $2)`,
+        [parentId, catalogue, id])).rows[0].n;
+    }
     const keys = Object.keys(set);
     const sql = keys.map((k, i) => `${COL[k]} = $${i + 2}`).join(', ');
     const client = await pool.connect();

@@ -146,14 +146,14 @@ export default function CategoriesAdmin() {
                   <b>{c.name}</b>
                   <small className="meta">{c.slug} · {plural(c.mainCount + c.extraCount, 'vidéo', 'vidéos')}{c.children ? ` · ${plural(c.children, 'sous-catégorie', 'sous-catégories')}` : ''}</small>
                 </button>
-                {!c.isActive && <span className="badge">Inactive</span>}
-                {c.isFeatured && <span className="badge gold">À la une</span>}
+                {!c.isActive && <span className="cadm-badge">Inactive</span>}
+                {c.isFeatured && <span className="cadm-badge gold">À la une</span>}
                 <span className="cadm-act">
-                  <button type="button" className="btn ghost sm" disabled={idx === 0} onClick={() => move(c, -1)} aria-label={`Monter ${c.name}`}>▲</button>
-                  <button type="button" className="btn ghost sm" disabled={idx === sibCount(c) - 1} onClick={() => move(c, 1)} aria-label={`Descendre ${c.name}`}>▼</button>
-                  {!c.parentId && <button type="button" className="btn ghost sm" onClick={() => create(c)}>+ Sous-catégorie</button>}
-                  <button type="button" className="btn ghost sm" onClick={() => toggleActive(c)}>{c.isActive ? 'Désactiver' : 'Activer'}</button>
-                  <button type="button" className="btn ghost sm danger-link" onClick={() => askDelete(c)}>Supprimer</button>
+                  <button type="button" className="btn ghost cadm-sm" disabled={idx === 0} onClick={() => move(c, -1)} aria-label={`Monter ${c.name}`}>▲</button>
+                  <button type="button" className="btn ghost cadm-sm" disabled={idx === sibCount(c) - 1} onClick={() => move(c, 1)} aria-label={`Descendre ${c.name}`}>▼</button>
+                  {!c.parentId && <button type="button" className="btn ghost cadm-sm" onClick={() => create(c)}>+ Sous-catégorie</button>}
+                  <button type="button" className="btn ghost cadm-sm" onClick={() => toggleActive(c)}>{c.isActive ? 'Désactiver' : 'Activer'}</button>
+                  <button type="button" className="btn ghost cadm-sm danger-link" onClick={() => askDelete(c)}>Supprimer</button>
                 </span>
               </li>
             );
@@ -190,7 +190,7 @@ export default function CategoriesAdmin() {
               <h3>{form.id ? `Modifier « ${form.name || '…'} »` : form.parentId ? 'Nouvelle sous-catégorie' : `Nouvelle ${form.catalogueType === 'kids' ? 'univers Kids' : 'catégorie'}`}</h3>
 
               <div className="cadm-lang" role="tablist" aria-label="Langue des textes">
-                {LANGS.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={lang === k} className={`btn sm ${lang === k ? '' : 'ghost'}`} onClick={() => setLang(k)}>{label}</button>)}
+                {LANGS.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={lang === k} className={`btn cadm-sm ${lang === k ? '' : 'ghost'}`} onClick={() => setLang(k)}>{label}</button>)}
               </div>
 
               {lang === 'fr' ? (
@@ -232,7 +232,7 @@ export default function CategoriesAdmin() {
                   <div className="cadm-row">
                     <label>Icône (emoji ou mot)<input maxLength={40} value={form.icon} onChange={(e) => set('icon', e.target.value)} /></label>
                     <label>Couleur<span className="cadm-color"><input type="color" value={form.color || '#c9a24b'} onChange={(e) => set('color', e.target.value)} aria-label="Couleur" />
-                      <button type="button" className="btn ghost sm" onClick={() => set('color', '')}>Aucune</button></span></label>
+                      <button type="button" className="btn ghost cadm-sm" onClick={() => set('color', '')}>Aucune</button></span></label>
                   </div>
                   <label>Image (adresse https://… ou /chemin)<input inputMode="url" maxLength={500} value={form.image} onChange={(e) => set('image', e.target.value)} /></label>
                   <label>Image d’en-tête (hero)<input inputMode="url" maxLength={500} value={form.heroImage} onChange={(e) => set('heroImage', e.target.value)} /></label>

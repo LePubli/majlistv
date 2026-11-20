@@ -996,9 +996,9 @@
 .cadm-name { flex: 1 1 160px; min-width: 0; text-align: start; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; display: grid; gap: 2px; font: inherit; }
 .cadm-name small { overflow-wrap: anywhere; }
 .cadm-act { display: flex; flex-wrap: wrap; gap: 4px; margin-inline-start: auto; }
-.cadm .btn.sm { padding: 5px 10px; font-size: 13px; min-height: 34px; }
-.cadm .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
-.cadm .badge.gold { color: var(--accent); border-color: var(--accent); }
+.cadm .cadm-sm { padding: 5px 10px; font-size: 13px; min-height: 34px; }
+.cadm .cadm-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.cadm .cadm-badge.gold { color: var(--accent); border-color: var(--accent); }
 .cadm-side { display: grid; gap: 14px; min-width: 0; }
 .cadm-form { display: grid; gap: 10px; border: 1px solid var(--line-soft); border-radius: 14px; padding: 14px; background: var(--surface); }
 .cadm-form label { display: grid; gap: 4px; font-size: 14px; min-width: 0; }
