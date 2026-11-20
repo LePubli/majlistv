@@ -7,6 +7,8 @@ import { patchOf } from '../../zpatch.js';
 import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
+import { SEASON_IDS } from '../../hijri.js';
+import { MODES, cleanRule, resolveCollection, homeCollections } from '../../collectionRules.js';
 
 const idSchema = z.object({ id: z.guid() });
 const KINDS = ['cycle', 'speaker', 'theme'];
@@ -17,36 +19,48 @@ export { CARD, cards, visibleItems };
 export default async function collectionsRoutes(app) {
   const staff = { preHandler: app.requireRole('moderator', 'admin') };
 
+  // Collections publiées du catalogue adultes (les personnelles n'ont pas de page publique : elles vivent sur l'accueil du membre).
   app.get('/collections', async (req, reply) => {
     reply.header('cache-control', 'public, max-age=30');
     const { rows } = await pool.query(
-      `SELECT c.id, c.title, c.description, c.kind, c.pinned,
-              (SELECT count(*)::int FROM collection_items i JOIN talks t ON t.id = i.talk_id WHERE i.collection_id = c.id AND t.video_status = 'ready' AND ${visibleSql('t')}) AS talks,
-              (SELECT t.poster_key FROM collection_items i JOIN talks t ON t.id = i.talk_id WHERE i.collection_id = c.id AND t.poster_key IS NOT NULL AND ${visibleSql('t')} ORDER BY i.position LIMIT 1) AS poster_key,
-              (SELECT t.external_thumb FROM collection_items i JOIN talks t ON t.id = i.talk_id WHERE i.collection_id = c.id AND t.external_thumb IS NOT NULL AND ${visibleSql('t')} ORDER BY i.position LIMIT 1) AS external_thumb
-         FROM collections c WHERE c.published ORDER BY c.pinned DESC, c.updated_at DESC`);
-    const out = rows.filter((r) => r.talks > 0);
-    for (const r of out) { r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null); delete r.poster_key; delete r.external_thumb; }
+      `SELECT id, title, description, kind, pinned, mode, rule, season, catalogue FROM collections
+        WHERE published AND catalogue = 'adult' AND mode <> 'personal' ORDER BY pinned DESC, home_order, updated_at DESC`);
+    const out = [];
+    for (const c of rows) {
+      const r = await resolveCollection(c, null, { size: 50 });
+      if (!r.open || !r.talks.length) continue;
+      out.push({ id: c.id, title: c.title, description: c.description, kind: c.kind, pinned: c.pinned, mode: c.mode, talks: r.talks.length, posterUrl: r.talks.find((x) => x.posterUrl)?.posterUrl || null });
+    }
     return out;
+  });
+
+  // Rangées de collections de l'accueil (adultes) : varient selon le membre (continuer, parcours, pour vous) → jamais en cache partagé.
+  app.get('/collections/home', async (req, reply) => {
+    const u = await app.optionalUser(req);
+    reply.header('cache-control', u ? 'private, no-store' : 'public, max-age=30');
+    return { collections: await homeCollections('adult', u ? { sub: u.sub } : null, { size: 12 }) };
   });
 
   app.get('/collections/:id', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const c = (await pool.query('SELECT id, title, description, kind FROM collections WHERE id = $1 AND published', [id])).rows[0];
+    const c = (await pool.query(`SELECT id, title, description, kind, mode, catalogue, rule, season FROM collections WHERE id = $1 AND published AND catalogue = 'adult'`, [id])).rows[0];
     if (!c) return reply.code(404).send({ error: 'Collection introuvable' });
-    reply.header('cache-control', 'public, max-age=30');
-    return { ...c, talks: await visibleItems('collection_items', 'collection_id', id) };
+    const u = c.mode === 'personal' ? await app.optionalUser(req) : null;
+    reply.header('cache-control', c.mode === 'personal' ? 'private, no-store' : 'public, max-age=30');
+    const r = await resolveCollection(c, u ? { sub: u.sub } : null, { size: 50 });
+    if (!r.open) return reply.code(404).send({ error: 'Collection introuvable' });
+    return { id: c.id, title: c.title, description: c.description, kind: c.kind, mode: c.mode, talks: r.talks };
   });
 
   // ------------------------------------------------------------------ Équipe
   app.get('/studio/collections', staff, async () => (await pool.query(
-    `SELECT c.id, c.title, c.description, c.kind, c.published, c.pinned, c.updated_at AS "updatedAt",
+    `SELECT c.id, c.slug, c.title, c.description, c.kind, c.published, c.pinned, c.mode, c.catalogue, c.season, c.on_home AS "onHome", c.home_order AS "homeOrder", c.updated_at AS "updatedAt",
             (SELECT count(*)::int FROM collection_items i WHERE i.collection_id = c.id) AS items
        FROM collections c ORDER BY c.pinned DESC, c.updated_at DESC`)).rows);
 
   app.get('/studio/collections/:id', staff, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
-    const c = (await pool.query('SELECT id, title, description, kind, published, pinned FROM collections WHERE id = $1', [id])).rows[0];
+    const c = (await pool.query('SELECT id, slug, title, description, kind, published, pinned, mode, catalogue, rule, season, on_home AS "onHome", home_order AS "homeOrder" FROM collections WHERE id = $1', [id])).rows[0];
     if (!c) return reply.code(404).send({ error: 'Collection introuvable' });
     // Côté équipe : toutes les vidéos de la collection, même celles qui ne sont pas (encore) visibles du public.
     const { rows } = await pool.query(
@@ -61,14 +75,41 @@ export default async function collectionsRoutes(app) {
     kind: z.enum(KINDS).default('theme'),
     published: z.boolean().default(false),
     pinned: z.boolean().default(false),
+    slug: z.string().regex(/^[a-z0-9-]{2,80}$/).nullable().default(null),
+    mode: z.enum(MODES).default('manual'),
+    catalogue: z.enum(['adult', 'kids']).default('adult'),
+    rule: z.record(z.string(), z.unknown()).default({}),
+    season: z.string().regex(/^[a-z_-]{2,30}$/).nullable().default(null),
+    onHome: z.boolean().default(false),
+    homeOrder: z.number().int().min(0).max(999).default(100),
   });
+
+  // Cohérence d'une collection : règle valide, saison obligatoire pour « saisonnière », type obligatoire pour « personnelle ».
+  const check = (m) => {
+    let rule;
+    try { rule = cleanRule(m.rule); } catch (e) { return { error: 'Règle invalide : ' + (e.issues?.map((i) => `${i.path.join('.') || 'règle'} ${i.message}`).join(' ; ') || 'format') }; }
+    if (m.mode === 'personal') {
+      if (!rule.type) return { error: 'Une collection personnelle a besoin d’un type (continue, path, foryou, later)' };
+      if (m.catalogue === 'kids' && rule.type !== 'continue') return { error: 'Côté Kids, seule la reprise (continue) est disponible' };
+    } else if (rule.type) return { error: 'Le type n’existe que pour les collections personnelles' };
+    if (m.mode === 'seasonal' && !SEASON_IDS.includes(m.season)) return { error: 'Choisissez la saison (' + SEASON_IDS.join(', ') + ')' };
+    if (m.mode !== 'seasonal') m.season = null;
+    if (rule.minSeconds != null && rule.maxSeconds != null && rule.minSeconds >= rule.maxSeconds) return { error: 'La durée minimale doit être inférieure à la durée maximale' };
+    return { rule };
+  };
+  const dupSlug = (reply, e) => (e.code === '23505' ? reply.code(409).send({ error: 'Cet identifiant (slug) est déjà utilisé' }) : null);
+  const COLS = 'slug, title, description, kind, published, pinned, mode, catalogue, rule, season, on_home, home_order';
+
   app.post('/studio/collections', staff, async (req, reply) => {
     const b = body.parse(req.body ?? {});
-    const { rows } = await pool.query(
-      'INSERT INTO collections(title, description, kind, published, pinned, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [b.title, b.description, b.kind, b.published, b.pinned, req.user.sub]);
-    req.auditSummary = `Collection créée : « ${b.title} »`;
-    return reply.code(201).send({ id: rows[0].id });
+    const k = check(b); if (k.error) return reply.code(400).send({ error: k.error });
+    try {
+      const { rows } = await pool.query(
+        `INSERT INTO collections(${COLS}, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13) RETURNING id`,
+        [b.slug, b.title, b.description, b.kind, b.published, b.pinned, b.mode, b.catalogue, JSON.stringify(k.rule), b.season, b.onHome, b.homeOrder, req.user.sub]);
+      req.auditSummary = `Collection créée : « ${b.title} »`;
+      return reply.code(201).send({ id: rows[0].id });
+    } catch (e) { return dupSlug(reply, e) || Promise.reject(e); }
   });
 
   app.patch('/studio/collections/:id', staff, async (req, reply) => {
@@ -76,11 +117,25 @@ export default async function collectionsRoutes(app) {
     const b = patchOf(body).parse(req.body ?? {});
     const cur = (await pool.query('SELECT * FROM collections WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Collection introuvable' });
-    const m = { ...cur, ...b };
-    await pool.query('UPDATE collections SET title = $2, description = $3, kind = $4, published = $5, pinned = $6, updated_at = now() WHERE id = $1',
-      [id, m.title, m.description, m.kind, m.published, m.pinned]);
+    const m = { ...cur, ...b, onHome: b.onHome ?? cur.on_home, homeOrder: b.homeOrder ?? cur.home_order };
+    const k = check(m); if (k.error) return reply.code(400).send({ error: k.error });
+    try {
+      await pool.query(
+        `UPDATE collections SET slug = $2, title = $3, description = $4, kind = $5, published = $6, pinned = $7, mode = $8, catalogue = $9,
+                rule = $10::jsonb, season = $11, on_home = $12, home_order = $13, updated_at = now() WHERE id = $1`,
+        [id, m.slug, m.title, m.description, m.kind, m.published, m.pinned, m.mode, m.catalogue, JSON.stringify(k.rule), m.season, m.onHome, m.homeOrder]);
+    } catch (e) { return dupSlug(reply, e) || Promise.reject(e); }
     req.auditSummary = `Collection modifiée : « ${m.title} »${b.published !== undefined ? (b.published ? ' (publiée)' : ' (dépubliée)') : ''}`;
     return { ok: true };
+  });
+
+  // Aperçu d'une règle avant enregistrement : ce que la collection afficherait maintenant (la saison est ignorée ; « personnelle » : le compte de l'équipe sert d'exemple).
+  app.post('/studio/collections/preview', staff, async (req, reply) => {
+    const b = z.object({ mode: z.enum(MODES), catalogue: z.enum(['adult', 'kids']).default('adult'), rule: z.record(z.string(), z.unknown()).default({}), season: z.string().nullable().default(null), id: z.guid().optional() }).parse(req.body ?? {});
+    const k = check({ ...b }); if (k.error) return reply.code(400).send({ error: k.error });
+    const r = await resolveCollection({ id: b.id ?? null, mode: b.mode, catalogue: b.catalogue, rule: k.rule, season: b.season },
+      b.mode === 'personal' ? { sub: req.user.sub } : null, { size: 24, preview: true });
+    return { talks: r.talks, count: r.talks.length };
   });
 
   app.delete('/studio/collections/:id', staff, async (req, reply) => {

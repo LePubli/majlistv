@@ -10,6 +10,7 @@ import SeriesCard from '../components/SeriesCard';
 import CitationCard from '../components/CitationCard';
 import Vitrine from '../components/Vitrine';
 import { KidsBand } from '../components/KidsBanner';
+import CollectionRows from '../components/CollectionRows';
 import { HomeBlocks } from '../components/PageBlocks';
 import SeasonBands from '../components/SeasonBands';
 import TodayBlock from '../components/TodayBlock';
@@ -92,6 +93,7 @@ function HomeInner() {
         <HomeHero hero={hero} t={t} user={user} trialDays={trialDays} />
         {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} <span className="row-sep" aria-hidden="true">·</span> <Link href="/library">{t('rowSeeAll')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
         {later.length > 0 && <Row id="row-later" title={<>{t('lbMyList')} · <Link href="/library?tab=list">{t('rowSeeAll')}</Link></>} talks={later} t={t} />}
+        <CollectionRows />
         {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
         {rows.slice(0, 1).map(rowOf)}
         {univ.length > 1 && (
@@ -127,6 +129,7 @@ function HomeInner() {
           les formats sont des onglets du Catalogue. */}
       {cont.length > 0 && <Row id="row-continue" title={<>{t('continueWatching')} · <Link href="/library">{t('library')}</Link></>} talks={cont} t={t} progressOf={(x) => (x.durationMs ? x.positionMs / x.durationMs : 0)} />}
       {later.length > 0 && <Row id="row-later" title={<>{t('lbMyList')} · <Link href="/library?tab=list">{t('rowSeeAll')}</Link></>} talks={later} t={t} />}
+      <CollectionRows />
       <EventsBand />
       {home && rows.length === 0 && <p className="soon">{t('noTalks')}</p>}
       {rows.map((r, i) => (

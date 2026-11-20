@@ -22,6 +22,7 @@ import { fold, foldSql } from '../../fold.js';
 import { filterShape, filterSql } from '../../talkFilters.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { parentAllowed } from './routes.js';
+import { homeCollections } from '../../collectionRules.js';
 
 const idSchema = z.object({ id: z.guid() });
 const SHELF_MAX = 24, POPULAR_MIN = 3, TALK_MAX = 200, PAGE = 24;
@@ -167,7 +168,11 @@ export default async function kidCatalogRoutes(app) {
       const ids = rows.filter((x) => x.rubricIds.includes(r.id)).slice(0, SHELF_MAX).map((x) => x.id);
       if (ids.length) { shelves.push({ kind: 'rubric', rubricId: r.id, ids }); used.push(r.id); }
     }
-    return { rubrics: rubrics.filter((r) => used.includes(r.id)).map(rubricRow), shelves, talks: await withPosters(rows), time };
+    // Collections Kids publiées à l'accueil (cahier du 20/11, § 11) : on ne garde que ce que CET enfant peut voir ; une collection vide n'apparaît pas.
+    const seen = new Set(rows.map((x) => x.id));
+    const cols = await homeCollections('kids', { sub: c.parent.sub, profileId: c.profile.id }, { allowed: seen, size: 12 }).catch(() => []);
+    const collectionShelves = cols.map((x) => ({ kind: 'collection', collectionId: x.id, title: x.title, description: x.description, ids: x.talks.map((y) => y.id) }));
+    return { rubrics: rubrics.filter((r) => used.includes(r.id)).map(rubricRow), shelves: [...collectionShelves, ...shelves], talks: await withPosters(rows), time };
   });
 
   // ------------------------------------------------------------------ Enfant : univers (tuiles) et page d'un univers

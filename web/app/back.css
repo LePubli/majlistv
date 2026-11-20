@@ -1019,3 +1019,7 @@
 .cadm-talks li > span { min-width: 0; overflow-wrap: anywhere; }
 .cadm-del { display: grid; gap: 10px; padding: 14px; border: 1px solid #A94438; border-radius: 14px; background: var(--surface); }
 @media (max-width: 900px) { .cadm-grid { grid-template-columns: minmax(0, 1fr); } .cadm-act { margin-inline-start: 0; } }
+.co-rule { display: grid; gap: 10px; border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 12px; margin: 0; min-width: 0; }
+.co-rule legend { padding: 0 6px; font-weight: 600; }
+.co-preview { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 10px 12px; }
+.co-preview ol { margin: 6px 0 0; padding-inline-start: 20px; display: grid; gap: 4px; }

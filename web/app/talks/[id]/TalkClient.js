@@ -408,6 +408,12 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const learnOn = quizOn || practiceOn;
   const notesOn = feat('notes') && user && hasPlayer && !talk.locked;
   const revisionOn = Boolean(user && feat('revision'));
+  // Phase 6 (20/11) : la fiche relie le programme à Apprendre quand il a des ressources (quiz, mise en pratique) : leçon suivante de la
+  // série et bilan personnel s'ajoutent aux étapes existantes. Même progression qu'avant : rien de nouveau n'est suivi ici, on ouvre les écrans existants.
+  const nextLesson = learnOn && next ? next : null;
+  const bilanOn = Boolean(learnOn && user && feat('selfcheck'));
+  const stepOrder = [quizOn && 'quiz', quizOn && revisionOn && 'revision', practiceOn && 'practice', nextLesson && 'next', bilanOn && 'bilan'].filter(Boolean);
+  const stepNo = (k) => String(stepOrder.indexOf(k) + 1);
   const openNotes = () => { setTab('notes'); setTimeout(() => document.getElementById('tab-notes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 40); };
 
   return (
@@ -600,23 +606,37 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                 <h2 id="wb-learn-title">{t('wbLearn')}</h2>
                 {quizOn && (
                   <div className="wb-step" data-step="quiz">
-                    <span className={`wb-num${quizPassed ? ' done' : ''}`} aria-hidden="true">{quizPassed ? '✓' : '1'}</span>
+                    <span className={`wb-num${quizPassed ? ' done' : ''}`} aria-hidden="true">{quizPassed ? '✓' : stepNo('quiz')}</span>
                     <span className="wb-txt"><b>{t('wbStep1')}</b><span>{t('wbStep1Sub').replace('{n}', talk.quiz.count)}{qres ? ` · ${qres.percent} %` : ''}</span></span>
                     <button type="button" className={quizPassed ? 'btn ghost sm' : 'btn sm'} onClick={openQuiz} data-act="quiz">{qres ? t('qpRetry') : t('wbStart')}</button>
                   </div>
                 )}
                 {quizOn && revisionOn && (
                   <div className="wb-step" data-step="revision">
-                    <span className="wb-num" aria-hidden="true">2</span>
+                    <span className="wb-num" aria-hidden="true">{stepNo('revision')}</span>
                     <span className="wb-txt"><b>{t('wbStep2')}</b><span>{t('wbStep2Sub')}</span></span>
                     <Link className="btn ghost sm" href="/learning?tab=rev">{t('wbStep2Go')}</Link>
                   </div>
                 )}
                 {practiceOn && (
                   <div className="wb-step" data-step="practice">
-                    <span className="wb-num" aria-hidden="true">{quizOn ? (revisionOn ? '3' : '2') : '1'}</span>
+                    <span className="wb-num" aria-hidden="true">{stepNo('practice')}</span>
                     <span className="wb-txt"><b>{t('wbStep3')}</b><span>{t('wbStep3Sub')}</span></span>
                     <button type="button" className="btn ghost sm" onClick={goPractice} data-act="practice">{t('wbStep3Go')}</button>
+                  </div>
+                )}
+                {nextLesson && (
+                  <div className="wb-step" data-step="next">
+                    <span className="wb-num" aria-hidden="true">{stepNo('next')}</span>
+                    <span className="wb-txt"><b>{t('wbStepNext')}</b><span>{nextLesson.title}</span></span>
+                    <Link className="btn ghost sm" href={`/talks/${nextLesson.id}`}>{t('wbStepNextGo')}</Link>
+                  </div>
+                )}
+                {bilanOn && (
+                  <div className="wb-step" data-step="bilan">
+                    <span className="wb-num" aria-hidden="true">{stepNo('bilan')}</span>
+                    <span className="wb-txt"><b>{t('wbStepBilan')}</b><span>{t('wbStepBilanSub')}</span></span>
+                    <Link className="btn ghost sm" href="/learning?tab=progress&s=bilan">{t('wbStepBilanGo')}</Link>
                   </div>
                 )}
                 {notesOn && <button type="button" className="link wb-notes" onClick={openNotes} data-act="notes">{t('wbNotes').replace('{n}', notes.length)} →</button>}

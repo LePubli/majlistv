@@ -22,6 +22,7 @@ export const CATALOG = {
   'kids.canSee': 'Une vidéo est-elle visible par ce profil enfant ? (oui / non)',
   'series.list': 'Liste des séries publiées (filtres : limit, category, q, level, startedBy, speakerNames)',
   'series.episodeLabels': 'Place de chaque vidéo dans une série : Map(id → étiquette)',
+  'seasons.current': 'Identifiant de la saison en cours (ramadan, hajj…) ou null — les collections saisonnières n’apparaissent que pendant leur saison (module Saisons)',
   'series.nextUp': '« Épisode suivant » de chaque série commencée par un membre',
   'stripe.checkout.payment': 'Événement : paiement unique Stripe réussi (client SQL, session)',
   'stripe.invoice.paid': 'Événement : facture d’abonnement payée (client SQL, facture)',

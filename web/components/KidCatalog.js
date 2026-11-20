@@ -33,6 +33,7 @@ export default function KidCatalog() {
   const byId = useMemo(() => new Map((d?.talks || []).map((x) => [x.id, x])), [d]);
   const ageOk = (x) => !mine || x.kidsBands?.[0] === kid?.band;
   const title = (s) => {
+    if (s.kind === 'collection') return s.title;
     if (s.kind === 'resume') return t('kdContinue');
     if (s.kind === 'because') return t('kcBecause').replace('{title}', s.basedOn.title);
     if (s.kind === 'age') return t('kcAge');
@@ -82,7 +83,7 @@ export default function KidCatalog() {
           const list = s.ids.map((i) => byId.get(i)).filter(Boolean).filter(ageOk);
           if (!list.length) return null;
           return (
-            <section key={`${s.kind}-${s.rubricId || ''}`} className="kc-shelf" data-kind={s.kind} aria-label={title(s)}>
+            <section key={`${s.kind}-${s.rubricId || s.collectionId || ''}`} className="kc-shelf" data-kind={s.kind} aria-label={title(s)}>
               <h2>{title(s)}</h2>
               <ul className="kc-row">{list.map((x) => <KidCard key={x.id} x={x} t={t} />)}</ul>
             </section>

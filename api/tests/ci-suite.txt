@@ -8,6 +8,7 @@ test_channel_editors.py
 test_channels.py
 test_channels_rich.py
 test_collections.py
+test_collections_dynamic.py
 test_content_edit.py
 test_dubbing_d1b.py
 test_features.py

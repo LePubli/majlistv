@@ -30,7 +30,7 @@ const safeLink = (u) => (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u) ? u : '')
 
 // « Pour vous » (Amélioration 2.6) : conférences proches de celles que le membre a mises en favoris (poids 2) ou « à regarder plus tard » (poids 1).
 // Proximité = même intervenant (poids ×2) + catégories communes. Sont exclues : les conférences déjà dans ces deux listes et celles déjà terminées.
-async function forYouTalks(userId, vis, size) {
+export async function forYouTalks(userId, vis, size) {
   const useFav = await featureOn('favorites'); const useLater = await featureOn('watchlater');
   if (!useFav && !useLater) return [];
   const seeds = [useFav ? 'SELECT talk_id, 2 AS w FROM favorites WHERE user_id = $1' : '', useLater ? 'SELECT talk_id, 1 AS w FROM watch_later WHERE user_id = $1' : ''].filter(Boolean).join(' UNION ALL ');

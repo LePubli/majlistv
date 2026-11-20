@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from './Providers';
 import Row from './Row';
+import CollectionRows from './CollectionRows';
 import SeriesCard from './SeriesCard';
 import CitationCard from './CitationCard';
 import ChannelAvatar from './ChannelAvatar';
@@ -231,22 +232,26 @@ function CollectionsBlock({ p, lang }) {
   const [list, setList] = useState(null);
   useEffect(() => { let dead = false; call('/collections', {}, null).then((r) => { if (!dead) setList(r.ok ? r.data : []); }); return () => { dead = true; }; }, [call]);
   const shown = (list || []).slice(0, Number(p.limit) || 3);
-  if (!shown.length) return null;
   return (
-    <section aria-labelledby="hb-cols">
-      <Head id="hb-cols" title={title} href="/collections" label={t('hbColAll')} />
-      <ul className="hb-cols">
-        {shown.map((c) => (
-          <li key={c.id}>
-            <Link href={`/collections/${c.id}`} className={`hb-col k-${['cycle', 'speaker', 'theme'].includes(c.kind) ? c.kind : 'theme'}`} style={c.posterUrl ? { backgroundImage: `linear-gradient(0deg, rgba(11,9,6,.88), rgba(11,9,6,.25)), url(${c.posterUrl})` } : undefined}>
-              <span className="hb-col-kind">{t(`colKind_${c.kind}`)}</span>
-              <span className="hb-col-title">{c.title}</span>
-              <span className="hb-col-n">{t('thTalksN').replace('{n}', c.talks)}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <>
+      <CollectionRows />
+      {shown.length > 0 && (
+        <section aria-labelledby="hb-cols">
+          <Head id="hb-cols" title={title} href="/collections" label={t('hbColAll')} />
+          <ul className="hb-cols">
+            {shown.map((c) => (
+              <li key={c.id}>
+                <Link href={`/collections/${c.id}`} className={`hb-col k-${['cycle', 'speaker', 'theme'].includes(c.kind) ? c.kind : 'theme'}`} style={c.posterUrl ? { backgroundImage: `linear-gradient(0deg, rgba(11,9,6,.88), rgba(11,9,6,.25)), url(${c.posterUrl})` } : undefined}>
+                  <span className="hb-col-kind">{t(`colKind_${c.kind}`)}</span>
+                  <span className="hb-col-title">{c.title}</span>
+                  <span className="hb-col-n">{t('thTalksN').replace('{n}', c.talks)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   );
 }
 
