@@ -9632,3 +9632,23 @@ bash /root/verify-deploy.sh
 
 **Testé.** Tests du site (section 10 de `test_premium_web.mjs`), compilation, captures réelles : Formules 1440 et 390 px FR et arabe, inscription et connexion FR, Mon compte 1440 et 390 px FR. **Non testé** : onglets « Abonnement et achats » et « Notifications », Formules avec Stripe actif (la base de test n'a pas de prix Stripe : boutons « Bientôt disponible »), compte réellement abonné, inscription et Mon compte en arabe, site réel.
 
+## P1 — Thème « Premium » (thème V20), lot 6 : lecteur et page vidéo (20/11/2026)
+
+**Constat.** La maquette V20 montre un « aperçu du lecteur » (pv12) sans vraie vidéo : image fixe, faux repères de chapitres, fausses préférences, faux épisodes. La vraie page `/talks/<id>` (lecteur YouTube / Vimeo / archive.org / nos fichiers, aperçu de 2 min, achat à l'unité, quiz, notes, version française, onglets) ne doit rien perdre. Le **vrai lecteur et toutes les fonctions sont donc gardés** ; la mise en page de la maquette est appliquée par le style (CSS seulement, `web/app/skin-premium.css`).
+
+**Ce qui change.**
+- **Cadre du lecteur** : panneau dégradé bleu nuit à coins arrondis (26 px) autour du lecteur, du titre et des actions ; mode Cinéma inchangé (fond noir).
+- **Titre** en Montserrat gras, surtitre (catégorie) en bleu clair ; boutons ronds d'actions (Ma liste, Listes, Cinéma, Plus), menu « Plus » et réglages du lecteur aux couleurs V20.
+- **Carte « Apprendre avec cette vidéo »** : panneau bleu à liseré lumineux (équivalent de la carte « Une histoire à regarder, un savoir à transmettre » de la maquette) ; étapes Comprendre · Retenir · Agir en bleu.
+- **Panneau latéral des épisodes** (vidéos d'une série) et **vignettes « À suivre »** (équivalent de « À découvrir ensuite ») : cadres V20 et liseré bleu au survol.
+
+**Différences assumées avec la maquette.** Pas de faux « aperçu du lecteur », de faux chapitres, de fausses préférences ni de faux épisodes ; pas de ligne « Retour au programme / Mode TV » (le fil d'Ariane existant la remplace). Le panneau latéral de la maquette (onglets Épisodes / Chapitres / Réglages) correspond aux onglets, chapitres et réglages du lecteur existants.
+
+**API.** Aucune modification, aucune migration.
+
+**Déploiement.** DockPanel : **majlistv-web** seulement. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Ancien aspect doré : le thème actif n'est pas Premium. Lecteur noir « indisponible » en test : normal hors ligne (YouTube bloqué dans l'environnement de test).
+
+**Testé.** Tests du site (section 11), compilation, captures réelles de la page vidéo en 1440 et 390 px (FR). **Non testé** : lecture réelle d'une vidéo (le lecteur n'a pas pu charger YouTube en test), aperçu de 2 min, achat à l'unité, quiz / onglets ouverts, série avec panneau d'épisodes, arabe, site réel.
+

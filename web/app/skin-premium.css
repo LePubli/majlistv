@@ -362,3 +362,32 @@ html[data-skin="premium"] main.page.acct .card-lite { background: transparent; b
   html[data-skin="premium"] .card { margin-block: 3vh; padding: 24px 20px; }
 }
 html[data-skin="premium"] main.page.pricing .tier .plans { max-width: 760px; gap: 20px; }
+
+/* ───────── Lot 6 — Lecteur et page vidéo (/talks/<id>) ─────────
+   Mise en page V20 « lecteur » (pv12) appliquée à la vraie page : le vrai lecteur, les actions, les onglets, le quiz,
+   les notes et l'achat à l'unité gardent leurs fonctions ; seuls les cadres, couleurs et titres changent. */
+html[data-skin="premium"] main.page.watch-b { max-width: 1280px; }
+html[data-skin="premium"] .wb-hero { background: linear-gradient(155deg, #0f2a49, #061325); border: 1px solid #345572; border-radius: 26px; box-shadow: 0 24px 60px -30px #000; }
+html[data-skin="premium"] .wb-hero .player-wrap .player, html[data-skin="premium"] .wb-hero .player-wrap video { border-radius: 18px; }
+html[data-skin="premium"] .wb-info .talk-head h1 { font-family: 'Montserrat', system-ui, sans-serif; font-weight: 850; letter-spacing: -.04em; font-size: clamp(1.7rem, 3.3vw, 2.8rem); line-height: 1.05; color: #fff; }
+html[data-skin="premium"] .wb-info .eyebrow { color: #35b9ff; letter-spacing: .14em; font-weight: 800; }
+html[data-skin="premium"] .wb-ico { background: #0d2a49; border-color: #345572; }
+html[data-skin="premium"] .wb-act:hover .wb-ico, html[data-skin="premium"] .wb-act:focus-visible .wb-ico { border-color: #35b9ff; }
+html[data-skin="premium"] .wb-act.on .wb-ico, html[data-skin="premium"] .wb-act[aria-expanded="true"] .wb-ico { border-color: #35b9ff; background: #087cff33; color: #8fd3ff; }
+html[data-skin="premium"] :is(.wb-menu, .wb-pset-menu) { background: #0a2240; border-color: #345572; }
+html[data-skin="premium"] .wb-item svg { color: #35b9ff; }
+html[data-skin="premium"] .wb-item.on { color: #8fd3ff; }
+html[data-skin="premium"] .wb-pset-btn { background: rgba(3, 17, 39, .7); }
+/* Carte « Apprendre » : panneau bleu de la maquette (pv12-next) */
+html[data-skin="premium"] .wb-learn { background: linear-gradient(135deg, #0c3a6e, #0a2548); border: 1px solid #149cff; box-shadow: 0 18px 44px -26px #087cffaa; }
+html[data-skin="premium"] .wb-step { background: #0a2a4d; }
+html[data-skin="premium"] .wb-num { border-color: #35b9ff; color: #8fd3ff; }
+html[data-skin="premium"] .wb-step[data-step="quiz"] .wb-num:not(.done) { background: #087cff; color: #fff; }
+html[data-skin="premium"] .wb-notes { color: #35b9ff; }
+html[data-skin="premium"] .wb-side .side-series { background: linear-gradient(155deg, #102c4c, #081a31); border-color: #345572; border-radius: 22px; }
+html[data-skin="premium"] .wb-next h2 { font-family: 'Montserrat', system-ui, sans-serif; letter-spacing: -.03em; }
+html[data-skin="premium"] .wb-thumb { border-radius: 16px; border: 1px solid #345572; }
+html[data-skin="premium"] .wb-card:hover .wb-thumb { border-color: #35b9ff; }
+html[data-skin="premium"] .wb-card:hover strong { color: #8fd3ff; }
+html[data-skin="premium"] .watch-b .tablist .on, html[data-skin="premium"] .watch-b .tablist [aria-selected="true"] { border-color: #149cff; color: #fff; }
+html[data-skin="premium"] body.cinema-on .wb-hero { background: #000; border: 0; }
