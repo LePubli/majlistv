@@ -69,8 +69,8 @@ for (const a of PREMIUM_ART) { assert.ok(files.includes(`${a}.webp`)); assert.do
 assert.match(posterArt('x'), /^url\(\/premium\/[\w-]+\.webp\)$/);
 
 // 6. Textes en fr / en / ar.
-const i18n = read('lib/i18n.js');
-for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSub', 'pmLearnCur', 'pmProfile', 'pmUniverses', 'pmNewTag']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
+const i18nSrc = read('lib/i18n.js');
+for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSub', 'pmLearnCur', 'pmProfile', 'pmUniverses', 'pmNewTag']) assert.equal((i18nSrc.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 // 7. Lot 2 : catalogue, liste des séries, fiche série (maquette V20 : catalogue-v11, heritage-v9), vraies données.
 assert.match(read('app/catalogue/page.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
 assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
@@ -87,7 +87,7 @@ for (const api of ['`/series/${id}`', "'/me/learning'"]) assert.ok(ser.includes(
 assert.match(ser, /lpct != null && \(/, 'progression Apprendre seulement si elle existe');
 assert.doesNotMatch(ser, /62 %|284|VOST|2024|Tout public/, 'aucun chiffre de démonstration');
 assert.match(read('components/premium/PmHeader.js'), /\/\^\\\/series\\\/\[\^\/\]\+\$\/\.test\(path\)/, 'en-tête posé sur l’image de la fiche série');
-for (const k of ['pmSeriesTitle', 'pmCatIntro', 'pmSearchPh', 'pmResultN', 'pmSortAlpha', 'pmLearnSeries', 'pmSameTheme', 'pmEpN', 'pmQuizOf']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
+for (const k of ['pmSeriesTitle', 'pmCatIntro', 'pmSearchPh', 'pmResultN', 'pmSortAlpha', 'pmLearnSeries', 'pmSameTheme', 'pmEpN', 'pmQuizOf']) assert.equal((i18nSrc.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 // 8. Lot 3 : Apprendre (« Mon espace Apprendre » de la maquette V20, lv10), vraies données.
 const lrn = read('components/premium/PmLearning.js');
 for (const c of ['v20-learnv10', 'v20-lv10-hero', 'v20-lv10-progress-card', 'v20-lv10-ring', 'v20-lv10-goals-card', 'v20-lv10-path-grid', 'v20-lv10-review-card', 'v20-lv10-tools-grid', 'v20-lv10-focus', 'v20-lv10-bilan-tile', 'v20-lv10-flow-head']) assert.ok(lrn.includes(c), c);
@@ -99,7 +99,7 @@ assert.match(read('components/premium/PmHeader.js'), /path === '\/learning'/, 'e
 assert.match(lrn, /call\('\/series\?limit=100'/, 'vraies affiches de séries');
 assert.match(lrn, /lastScores\.length >= 2/, 'courbe seulement avec de vrais résultats');
 assert.doesNotMatch(lrn, /avatar-reference|Le Coran|Sîra|piliers|75 ?%|Les valeurs du quotidien|2\/3/, 'aucun parcours, chiffre ou photo de démonstration');
-for (const k of ['pmLnMySpace', 'pmLnTitleEm', 'pmLnIntro', 'pmLnGoals', 'pmLnNothing', 'pmLnPaths', 'pmLnRevWait', 'pmLnToolsTitle', 'pmLnBilan', 'pmLnBack']) assert.equal((i18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
+for (const k of ['pmLnMySpace', 'pmLnTitleEm', 'pmLnIntro', 'pmLnGoals', 'pmLnNothing', 'pmLnPaths', 'pmLnRevWait', 'pmLnToolsTitle', 'pmLnBilan', 'pmLnBack']) assert.equal((i18nSrc.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 // 9. Lot 4 : Mejliss Kids côté enfant (écran Kids de la maquette V20, kids-v8), vraies données.
 const kd = read('components/premium/PmKids.js');
 for (const c of ['v20-kids-topbar', 'v20-kids-logo', 'v20-kids-badge', 'v20-kids-head-nav', 'v20-kids-profile-pill', 'v20-kids-hero', 'v20-kids-v8-hero-copy', 'v20-kids-v8-primary', 'v20-kids-categories', 'v20-kids-v8-featured-grid', 'v20-kids-v8-feature-card']) assert.ok(kd.includes(c), c);
@@ -123,4 +123,18 @@ assert.match(css, /\.wb-hero \{ background: linear-gradient\(155deg, #0f2a49, #0
 assert.match(css, /\.wb-learn \{ background: linear-gradient\(135deg, #0c3a6e, #0a2548\)/, 'carte Apprendre bleue');
 assert.match(read('app/talks/[id]/TalkClient.js'), /<VideoPlayer|ExternalPlayer/, 'vrai lecteur conservé');
 void execFileSync;
+// 5. Back-office Premium (Admin + Studio, Lot 1) : feuille limitée au thème, chargée par les deux layouts, textes ×3 langues.
+const bo = strip(read('app/skin-premium-admin.css'));
+const boRules = bo.match(/[^{}@]+\{/g).map((x) => x.replace(/\{$/, '').trim()).filter((x) => x && !x.startsWith('media'));
+assert.ok(boRules.length > 100, 'feuille du back-office présente');
+for (const r of boRules) for (const part of top(r)) assert.match(part.trim(), /^html\[data-skin="premium"\]/, `règle du back-office limitée au thème Premium : ${part.trim()}`);
+for (const l of ['app/admin/layout.js', 'app/studio/layout.js']) assert.match(read(l), /skin-premium-admin\.css/, `${l} charge la feuille`);
+const shell = read('components/ManageShell.js');
+for (const c of ['BoTop', "skin === 'premium'", 'bo-switch']) assert.ok(shell.includes(c), `ManageShell : ${c}`);
+const bell = read('components/backoffice/BoBell.js');
+for (const p of ['/admin/watch/count', '/admin/errors?state=open', '/admin/ask/stats', '/admin/health', '/moderation/summary', '/studio/activity/count']) assert.ok(bell.includes(p), `cloche : vraie source ${p}`);
+assert.match(bell, /total > 0 && <i className="bo-dot"/, 'le point de la cloche n\'apparaît que s\'il y a des alertes');
+const boI18n = read('lib/i18n.js');
+for (const k of ['boBell', 'boNoAlerts', 'boAlWatch', 'boAlErrors', 'boAlAsk', 'boAlHealth', 'boAlMod', 'boAlReports', 'boAlTasks', 'boApps', 'boAppStudio', 'boAppAdmin', 'boAppSite', 'boAccount', 'boSearch', 'boAdminShort']) assert.equal((boI18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr, en et ar`);
+
 console.log('web premium OK');

@@ -8,8 +8,8 @@ import { useApp } from './Providers';
 import { matchScreens } from '../lib/adminSearch';
 
 const ROLE = { user: 'Membre', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
-export default function AdminPalette({ screens }) {
-  const { call } = useApp();
+export default function AdminPalette({ screens, server = true }) {
+  const { call, t } = useApp();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -29,7 +29,7 @@ export default function AdminPalette({ screens }) {
 
   // Recherche serveur (après 250 ms sans frappe, à partir de 2 lettres).
   useEffect(() => {
-    if (!open || q.trim().length < 2) { setFound({ talks: [], users: [], speakers: [] }); return undefined; }
+    if (!server || !open || q.trim().length < 2) { setFound({ talks: [], users: [], speakers: [] }); return undefined; }
     let off = false;
     const id = setTimeout(() => { call(`/admin/search?q=${encodeURIComponent(q.trim())}`).then((r) => { if (!off && r.ok) setFound(r.data); }); }, 250);
     return () => { off = true; clearTimeout(id); };
@@ -56,6 +56,7 @@ export default function AdminPalette({ screens }) {
     <>
       <button type="button" className="adp-open" onClick={() => setOpen(true)} aria-keyshortcuts="Control+K Meta+K" aria-label="Rechercher dans l’administration (Ctrl K)" title="Rechercher (Ctrl K)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+        <span className="adp-label">{t('boSearch')}</span><kbd className="adp-kbd">Ctrl K</kbd>
       </button>
       {open && (
         <div className="adp-back" onMouseDown={(e) => e.target === e.currentTarget && close()}>

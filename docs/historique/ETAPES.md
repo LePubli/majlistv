@@ -9847,3 +9847,14 @@ Retours d'Epok (15 h) : bug de la page lecteur, textes superposés sur l'accueil
 - **Pas testé** : import réel de bout en bout ; vraies images ; vidéos déjà importées inchangées.
 
 - **Ajout 20/11 (17 h 50) — vidéos déjà importées** : bouton « Récupérer l'image d'origine » (Studio → Miniature, visible quand la vidéo est hébergée et n'a pas d'image d'origine) → `POST /talks/:id/poster/original` : image YouTube (maxresdefault, repli hqdefault), Vimeo (oEmbed, 1280 px), archive.org (`services/img`) ou adresse relevée à l'import ; seuls les serveurs d'images des plateformes sont contactés ; l'image est rangée dans `hls/<id>/original.<ext>`, placée en premier et choisie. Message clair si la plateforme ne répond pas (502) ou s'il n'y a pas d'adresse d'origine (envoi direct, 409). Déploiement : majlistv-api puis majlistv-web. Debug : `docker logs dockpanel-git-majlistv-api 2>&1 | tail`. Pas testé : téléchargement réel + Garage.
+
+## Back-office Premium — Lot 1 : habillage commun Admin + Studio (20/11/2026)
+
+Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ; écrans de la maquette absents du site non intégrés ; éditeur = nos fonctions + contrôles manquants ; menus de la maquette si mieux rangés ; en-tête de la maquette avec une cloche qui sert aux alertes ; thème Premium seul (pas de version claire).
+
+- **Menu latéral** (242 px, dégradé de la maquette) : logo, bascule **Studio / Admin** en haut (Admin visible aux administrateurs seulement), groupes, entrée active en bleu avec filet clair, pied (liens, langue, compte). Bouton « Réduire le menu » conservé (grands écrans).
+- **Barre du haut** (64 px, floue) : fil d'Ariane, « Chercher une vue… Ctrl K » (palette d'Admin, reprise côté Studio ; la recherche de membres reste réservée aux administrateurs), **cloche** (vrais compteurs : Veille, erreurs ouvertes, questions IA signalées, alertes de santé ; Studio : à relire, signalements, tâches en échec ; point seulement s'il y a une alerte), icône applications (Studio / Admin / site), menu du compte (Mon compte, site, déconnexion).
+- **Contenu** : cartes, tableaux, champs, boutons, onglets, pastilles reprennent les couleurs de la maquette via des variables posées sur `.studio` ; anciennes teintes brunes remplacées.
+- **Téléphone / arabe** : tiroir ≤ 900 px, barre du haut compacte ≤ 490 px, arabe de droite à gauche vérifié.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : feuille `skin-premium-admin.css` ; si la cloche reste vide, ouvrir la console réseau (`/admin/errors?state=open`, `/moderation/summary`).
+- **Suite** : lot 2 (Vue d'ensemble, Utilisateurs, Mes contenus + fiche rapide, Tableau de bord Studio) sur « go ».

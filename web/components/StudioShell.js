@@ -13,6 +13,7 @@ import { featureForPath } from '../lib/features';
 import { hasWebModule, MODULE_STUDIO_LINKS } from '../lib/modules';
 import ManageShell, { ICONS } from './ManageShell';
 import { fmtBytes } from '../lib/format';
+import AdminPalette from './AdminPalette';
 
 // Entrées qui mènent aux écrans d'un module (identifiant du module = identifiant de sa fonction).
 const MODULE_OF_HREF = {
@@ -43,7 +44,7 @@ const STUDIO_GROUP_OF = { '/studio/references': 'settings' };
 const STUDIO_TAB_OF = { '/studio/corrections': '/studio/subtitles' };
 
 export default function StudioShell({ children }) {
-  const { t, user, ready, feat, locale, modUsable } = useApp();
+  const { t, user, ready, feat, locale, modUsable, skin } = useApp();
   const path = usePathname();
   const router = useRouter();
 
@@ -147,5 +148,7 @@ export default function StudioShell({ children }) {
       <small>{t('sdSpaceUsed').replace('{u}', fmtBytes(space.usedBytes, locale)).replace('{c}', fmtBytes(space.capacityBytes, locale))}</small>
     </Link>
   ) : null;
-  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn} extra={extra}>{children}</ManageShell>;
+  // Recherche Ctrl + K (thème Premium) : écrans du menu ; la recherche de membres n'existe que côté administrateur.
+  const screens = shown.flatMap((g) => g.items.map(([href, label]) => ({ href, label, group: g.title })));
+  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn} extra={extra} barExtra={skin === 'premium' ? <AdminPalette screens={screens} server={isAdmin} /> : undefined}>{children}</ManageShell>;
 }

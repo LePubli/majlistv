@@ -9,6 +9,7 @@ import { useApp } from './Providers';
 import { LOCALES } from '../lib/locales';
 import { useCollapsed, ChevIco } from './MemberShell';
 import BrandImg from './BrandImg';
+import BoTop from './backoffice/BoTop';
 
 export const ICONS = {
   list: 'M4 6h16M4 12h16M4 18h10',
@@ -40,7 +41,8 @@ export const Icon = ({ d }) => (
 // space : 'studio' | 'admin' ; groups : [{ key, title, items: [[href, libellé, icône, pastille?]] }] ;
 // links : liens du pied [{ href, label, icon }] ; isOn(href) : l'entrée est-elle la page courante ? ; extra : encart au-dessus du pied (facultatif)
 export default function ManageShell({ barExtra, space, groups, links, isOn, extra, children }) {
-  const { t, user, logout, locale } = useApp();
+  const { t, user, logout, locale, skin } = useApp();
+  const pm = skin === 'premium'; // thème Premium : barre du haut et bascule Studio / Admin de la maquette (components/backoffice)
   const router = useRouter();
   const [col, toggle] = useCollapsed();
   const [open, setOpen] = useState(false); // tiroir ouvert (téléphone)
@@ -58,11 +60,11 @@ export default function ManageShell({ barExtra, space, groups, links, isOn, extr
   const label = space === 'admin' ? t('adminNav') : 'STUDIO';
   return (
     <div className={`studio studio-${space}${col ? ' col' : ''}${open ? ' menu-open' : ''}`}>
-      <div className="studio-bar">
+      {!pm && <div className="studio-bar">
         <button type="button" className="studio-burger" onClick={() => setOpen(true)} aria-expanded={open} aria-controls="studio-menu" aria-label={t('menuOpen')}><Icon d={ICONS.list} /></button>
         <Link href={home} className="studio-bar-title" aria-label={`Mejliss TV ${label}`}><BrandImg kind="emblem" on="light" alt="" width="30" height="33" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></Link>
         {barExtra && <div className="studio-bar-extra">{barExtra}</div>}
-      </div>
+      </div>}
       <button type="button" className="studio-backdrop" tabIndex={-1} aria-label={t('menuClose')} onClick={() => setOpen(false)} />
       <aside className="studio-side" id="studio-menu" onClick={(e) => { if (e.target.closest('a')) setOpen(false); }}>
         <button type="button" className="ms-toggle studio-toggle" onClick={toggle} aria-expanded={!col} aria-label={col ? t('msExpand') : t('msCollapse')} title={col ? t('msExpand') : t('msCollapse')}><ChevIco /><span>{t('msCollapse')}</span></button>
@@ -70,6 +72,12 @@ export default function ManageShell({ barExtra, space, groups, links, isOn, extr
           <BrandImg kind="emblem" on="light" alt="" width="35" height="38" />
           <span><BrandImg kind="wordmark" on="light" alt="Mejliss TV" width="78" height="16" /><b>{space === 'admin' ? 'ADMIN' : 'STUDIO'}</b></span>
         </Link>
+        {pm && (
+          <div className="bo-switch" role="group" aria-label="Studio / Admin">
+            {['organizer', 'moderator', 'admin'].includes(user.role) && <Link href="/studio" className={space === 'studio' ? 'on' : ''} aria-current={space === 'studio' ? 'page' : undefined}>Studio</Link>}
+            {user.role === 'admin' && <Link href="/admin" className={space === 'admin' ? 'on' : ''} aria-current={space === 'admin' ? 'page' : undefined}>{t('boAdminShort')}</Link>}
+          </div>
+        )}
         <nav className="studio-nav" aria-label={space === 'admin' ? t('adminNav') : t('studioNav')}>
           {groups.map((g) => (
             <div key={g.key} className="studio-group">
@@ -95,7 +103,10 @@ export default function ManageShell({ barExtra, space, groups, links, isOn, extr
           </div>
         </div>
       </aside>
-      <div className="studio-main">{children}</div>
+      <div className="studio-main">
+        {pm && <BoTop space={space} crumb={(groups.flatMap((g) => g.items).find(([href]) => isOn(href)) || [])[1] || ''} search={barExtra} onMenu={() => setOpen(true)} menuOpen={open} />}
+        {children}
+      </div>
     </div>
   );
 }

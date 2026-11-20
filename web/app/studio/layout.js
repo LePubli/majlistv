@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import '../back.css'; // styles du Studio et de l'administration, chargés ici seulement (audit 11/2026)
+import '../skin-premium-admin.css'; // habillage Premium du back-office (limité à html[data-skin="premium"])
 import StudioShell from '../../components/StudioShell';
 
 // Espace privé : jamais indexé par les moteurs de recherche.
