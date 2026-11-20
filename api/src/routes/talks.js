@@ -17,6 +17,8 @@ import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
 import { viaChannel, managedSpeakers } from '../channelAccess.js';
 import { featureOn } from '../features.js';
+import { fetchPoster, posterUrls } from '../originalPoster.js';
+import { getJson } from '../linkInfo.js';
 import { classifyUrl, insertImport, newObjectKey, storageProblem, AUDIO_CHOICES, audioLangOf, talkSourceUrl } from '../mediaImport.js';
 import { filterShape, filterSql } from '../talkFilters.js';
 
@@ -595,6 +597,30 @@ export default async function talksRoutes(app) {
   });
 
   // Miniature personnalisée : image JPEG / PNG / WebP envoyée en data-URL (le navigateur la réduit avant l'envoi).
+  // Vidéo déjà copiée chez nous : va chercher l'image de présentation d'origine (YouTube, Vimeo, archive.org), la range avec les autres
+  // candidates (en premier) et la choisit. Utile pour les imports faits avant que l'image d'origine soit conservée.
+  app.post('/talks/:id/poster/original', { preHandler: app.requireRole('organizer', 'admin') }, async (req, reply) => {
+    const { id } = idSchema.parse(req.params);
+    const cur = (await pool.query('SELECT organizer_id, source, video_ref, imported_from, imported_origin, external_thumb, poster_key, poster_candidates FROM talks WHERE id = $1', [id])).rows[0];
+    if (!cur || (req.user.role !== 'admin' && cur.organizer_id !== req.user.sub && !(await viaChannel(req.user, id)))) return reply.code(404).send({ error: 'Vidéo introuvable' });
+    const src = talkSourceUrl(cur) || (cur.imported_from ? { url: cur.imported_from, origin: cur.imported_origin } : null);
+    if (!src?.url) return reply.code(409).send({ error: "Cette vidéo n'a pas d'adresse d'origine connue (envoi direct) : envoyez votre propre image." });
+    let vimeoThumb = null;
+    if (src.origin === 'vimeo') { try { vimeoThumb = (await getJson(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(src.url)}`))?.thumbnail_url || null; } catch { /* sans Vimeo : adresse relevée */ } }
+    const img = await fetchPoster(posterUrls({ url: src.url, origin: src.origin, thumb: cur.external_thumb, vimeoThumb }));
+    if (!img) return reply.code(502).send({ error: "Image d'origine introuvable chez la plateforme (vidéo privée, supprimée, ou serveur d'images injoignable). Envoyez votre propre image." });
+    const base = (cur.poster_candidates || []).find((k) => !k.startsWith('posters/'));
+    const dir = base ? base.slice(0, base.lastIndexOf('/') + 1) : `hls/${id}/`;
+    const key = `${dir}original.${img.ext}`;
+    const old = (cur.poster_candidates || []).filter((k) => /\/original\.(jpg|png|webp)$/.test(k) && k !== key);
+    await putObject(key, img.buf, img.type);
+    for (const k of old) await deleteObject(k).catch(() => {});
+    const list = [key, ...(cur.poster_candidates || []).filter((k) => !/\/original\.(jpg|png|webp)$/.test(k))];
+    await pool.query('UPDATE talks SET poster_candidates = $2, poster_key = $3 WHERE id = $1', [id, list, key]);
+    if (cur.poster_key?.startsWith(`posters/${id}/`)) await deleteObject(cur.poster_key).catch(() => {});
+    return reply.send({ ok: true, posterUrl: await presignGet(key) });
+  });
+
   app.post('/talks/:id/poster', { preHandler: app.requireRole('organizer', 'admin'), bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const { image } = z.object({ image: z.string().max(3_500_000) }).parse(req.body ?? {});

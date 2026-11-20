@@ -84,6 +84,15 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
     if (!r.ok) setThumbMsg({ ok: false, text: r.data?.error || t('errGeneric') });
     else { setThumbMsg({ ok: true, text: t('thumbDone') }); reload(); }
   };
+  // Vidéo déjà copiée chez nous : recharge l'image de présentation d'origine (YouTube, Vimeo…) chez la plateforme.
+  const [origBusy, setOrigBusy] = useState(false);
+  const fetchOriginal = async () => {
+    setThumbMsg(null); setOrigBusy(true);
+    const r = await call(`/talks/${x.id}/poster/original`, { method: 'POST' });
+    setOrigBusy(false);
+    if (!r.ok) setThumbMsg({ ok: false, text: r.data?.error || t('errGeneric') });
+    else { setThumbMsg({ ok: true, text: t('thumbDone') }); reload(); }
+  };
   const upload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -230,6 +239,9 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
             {!external && choices.length === 0 && <span className="meta small">{t('thumbSoon')}</span>}
             <div className="thumb-actions">
               <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()}>{t('thumbUpload')}</button>
+              {x.posterOriginal === -1 && x.posterChoices?.length > 0 && (
+                <button type="button" className="btn ghost" disabled={origBusy} onClick={fetchOriginal}>{origBusy ? t('thumbGetting') : t('thumbGetOriginal')}</button>
+              )}
               {external && <button type="button" className="btn ghost" onClick={() => choose(-1)}>{t('thumbPlatform').replace('{s}', sourceLabel(x.source))}</button>}
               <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={upload} />
             </div>

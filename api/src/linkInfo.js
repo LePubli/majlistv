@@ -108,7 +108,7 @@ async function getText(raw, { accept = '*/*', headers = {} } = {}) {
   }
   throw new Error('trop de redirections');
 }
-const getJson = async (url) => JSON.parse(await getText(url, { accept: 'application/json' }));
+export const getJson = async (url) => JSON.parse(await getText(url, { accept: 'application/json' }));
 
 // ---------- Point d'entrée ----------
 // Retourne { origin, title, speaker, description } (champs vides si inconnus) ou { error, code }.
