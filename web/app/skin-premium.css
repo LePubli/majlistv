@@ -397,10 +397,16 @@ html[data-skin="premium"] body.cinema-on .wb-hero { background: #000; border: 0;
   html[data-skin="premium"] main.page.watch-b { display: grid; grid-template-columns: minmax(0, 1fr) 380px; column-gap: 32px; align-items: start; max-width: 1360px; }
   html[data-skin="premium"] main.page.watch-b > * { grid-column: 1 / -1; min-width: 0; }
   html[data-skin="premium"] .watch-b .wb-hero, html[data-skin="premium"] .watch-b .wb-grid { display: contents; }
-  html[data-skin="premium"] .watch-b .player-wrap { grid-column: 1; grid-row: 2; background: linear-gradient(155deg, #0f2a49, #061325); border: 1px solid #345572; border-radius: 26px; padding: 14px; box-shadow: 0 24px 60px -30px #000, 0 0 0 1px #149cff22; }
-  html[data-skin="premium"] .watch-b .wb-info { grid-column: 1; grid-row: 3; padding: 22px 4px 0; }
-  html[data-skin="premium"] .watch-b .wb-main { grid-column: 1; grid-row: 4; }
-  html[data-skin="premium"] .watch-b .wb-side { grid-column: 2; grid-row: 2 / span 3; position: sticky; top: 84px; }
+  html[data-skin="premium"] .watch-b .player-wrap { grid-column: 1; grid-row: 3; background: linear-gradient(155deg, #0f2a49, #061325); border: 1px solid #345572; border-radius: 26px; padding: 14px; box-shadow: 0 24px 60px -30px #000, 0 0 0 1px #149cff22; }
+  html[data-skin="premium"] .watch-b .wb-info { grid-column: 1; grid-row: 4; padding: 22px 4px 0; }
+  html[data-skin="premium"] .watch-b .wb-main { grid-column: 1; grid-row: 5; }
+  html[data-skin="premium"] .watch-b .wb-side { grid-column: 2; grid-row: 3 / span 4; position: sticky; top: 92px; align-self: start; }
+  /* Chaque bloc a sa ligne : fil d'Ariane sous le retour, mention éventuelle sous les onglets, « Dans la même veine » toujours en dessous des deux colonnes
+     (avant, ces blocs tombaient au hasard dans la grille et la colonne de droite passait par-dessus). */
+  html[data-skin="premium"] main.page.watch-b > .wb-back { grid-row: 1; }
+  html[data-skin="premium"] main.page.watch-b > .crumbs { grid-row: 2; }
+  html[data-skin="premium"] main.page.watch-b > .meta { grid-column: 1; grid-row: 6; }
+  html[data-skin="premium"] .watch-b .wb-next { grid-column: 1 / -1; grid-row: 7; margin-top: 12px; }
   html[data-skin="premium"] body.cinema-on .watch-b .player-wrap { grid-column: 1 / -1; padding: 0; border: 0; border-radius: 0; background: #000; box-shadow: none; }
 }
 /* « À découvrir ensuite » : cartes image arrondies, plus grandes */
@@ -454,11 +460,19 @@ html[data-skin="premium"][dir="rtl"] .pm-card-bar i { margin-inline-start: auto;
 @media (max-width: 700px) { html[data-skin="premium"] .pm-rail-track { grid-auto-columns: 58%; } html[data-skin="premium"] .pm-card-title { font-size: 12px; } html[data-skin="premium"] .pm-card-play { opacity: 1; } html[data-skin="premium"] .pm-ott-body { padding-inline: 16px; } }
 
 /* Accueil : bandeau panoramique, menu posé sur l'image (V22) */
-html[data-skin="premium"] .pm-ott .v20-hero-home { min-height: 495px; height: 34.4vw; max-height: 585px; }
+/* Une immersive (demande d'Epok 20/11) : plus haute (≈ 80 % de l'écran), image en pleine largeur et nette, dégradé en haut (sous le menu) et en bas
+   (fondu dans le fond de la page), voile à gauche pour lire le titre. */
+html[data-skin="premium"] .pm-ott .v20-hero-home { min-height: 560px; height: min(82vh, 56vw); max-height: 900px; background-color: #05070d; }
+html[data-skin="premium"] .pm-ott .v20-hero-home:before { background-size: cover, cover, cover, cover; background-position: center, center, center, center 22%; background-repeat: no-repeat;
+  background-image: linear-gradient(180deg, #05070df2 0%, #05070d99 9%, #05070d00 26%), linear-gradient(0deg, #05070d 0%, #05070df0 7%, #05070d99 20%, #05070d00 46%), linear-gradient(90deg, #05070dee 0%, #05070d99 30%, #05070d00 62%), var(--hero); }
+[dir="rtl"] .v20-app.pm-ott .v20-hero-home:before { background-image: linear-gradient(180deg, #05070df2 0%, #05070d99 9%, #05070d00 26%), linear-gradient(0deg, #05070d 0%, #05070df0 7%, #05070d99 20%, #05070d00 46%), linear-gradient(270deg, #05070dee 0%, #05070d99 30%, #05070d00 62%), var(--hero); }
+@media (max-width: 700px) {
+  html[data-skin="premium"] .pm-ott .v20-hero-home { height: auto; min-height: 76vh; }
+  html[data-skin="premium"] .pm-ott .v20-hero-home:before, [dir="rtl"] .v20-app.pm-ott .v20-hero-home:before { background-image: linear-gradient(180deg, #05070df2 0%, #05070d80 12%, #05070d00 30%), linear-gradient(0deg, #05070d 0%, #05070df5 18%, #05070d99 45%, #05070d1c 80%), var(--hero); background-position: center, center, center 18%; background-size: cover, cover, cover; }
+}
 html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-copy h1 { font-family: 'Montserrat', system-ui, sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; line-height: 1.03; font-size: clamp(2rem, 4.2vw, 4.2rem); }
 html[data-skin="premium"] .pm-ott .v20-hero-home .v20-btn { border-radius: 6px; }
 html[data-skin="premium"] .pm-ott .v20-hero-home .v20-btn-primary { background: #e9ecef; color: #0a0c14; }
-@media (max-width: 700px) { html[data-skin="premium"] .pm-ott .v20-hero-home { height: auto; min-height: 460px; } }
 
 /* Collection à la une (la première collection publiée sur l'accueil qui a au moins 3 vidéos) */
 html[data-skin="premium"] .pm-spot { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 3%; min-height: 380px; margin: 34px -2.9vw 28px; padding: 44px 4%; overflow: hidden;
@@ -542,3 +556,16 @@ html[data-skin="premium"] .sh-page { position: relative; }
 html[data-skin="premium"] .v20-app.pm-ott, html[data-skin="premium"] .v20-app.pm-ott .v20-signature-home, html[data-skin="premium"] .v20-app.pm-ott .v20-faithful-home { background: #05070d; }
 /* Kids (accueil) : en arabe le texte reste à gauche, sur la partie dégagée de l'image (les enfants sont à droite) */
 html[data-skin="premium"][dir="rtl"] .pm-kids-promo { direction: ltr; text-align: left; justify-items: start; }
+
+
+/* En-tête : sur les pages sans image de une (fiche vidéo, compte…), l'en-tête est hors de « .v20-app » donc sans fond : le contenu passait dessous.
+   On lui donne le fond de la maquette ; l'en-tête posé sur l'image (« v20-is-overlay ») reste transparent. */
+html[data-skin="premium"] header.v20-topbar:not(.v20-is-overlay) { background: #031225f2; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid #24405a99; z-index: 100; }
+
+/* Une : titre, intervenant et infos ne se chevauchent plus (interligne plus large, marge sous le titre coupé à 3 lignes) ; flèches en bas pour ne pas passer sur le titre. */
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-copy { max-width: min(720px, 92%); }
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-copy h1 { line-height: 1.16; margin: 14px 0 12px; font-size: clamp(1.8rem, 3.4vw, 3.4rem); }
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-copy h1.pm-long { line-height: 1.16; font-size: clamp(1.6rem, 2.9vw, 2.8rem); }
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-copy h2 { margin: 0 0 12px; line-height: 1.3; }
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-meta { margin-bottom: 18px; }
+html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-arrow { top: auto; bottom: 28px; transform: none; }

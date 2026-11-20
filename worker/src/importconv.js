@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { probe, transcode, makeAudio } from './transcode.js';
+import { fetchOriginalPoster } from './originalPoster.js';
 
 const MAX_ATTEMPTS = 2;
 
@@ -134,9 +135,23 @@ export async function processImport({ job, pool, workDir, threads = 0, log = () 
       swapping = true;
       await pool.query(`UPDATE talks SET video_status = 'processing', video_progress = 95 WHERE id = $1`, [job.talk_id]);
     }
+    // Image de présentation d'origine : téléchargée chez la plateforme (nouvel import), ou reprise de la version déjà hébergée (voix française).
+    let originalName = null;
+    try {
+      const tr = (await pool.query('SELECT source, video_ref, external_thumb, poster_candidates FROM talks WHERE id = $1', [job.talk_id])).rows[0];
+      if (reimport) {
+        const k = (tr?.poster_candidates || []).find((c) => /\/original\.(jpg|png|webp)$/.test(c));
+        if (k) { await download(k, path.join(out, path.basename(k))); originalName = path.basename(k); }
+      } else if (tr) {
+        originalName = await fetchOriginalPoster({ source: tr.source, ref: tr.video_ref, thumb: tr.external_thumb }, out, { log });
+      }
+    } catch (err) { log(`[import ${job.id}] image d'origine : ${err.message}`); }
     await deletePrefix(prefix); // reste d'un essai précédent (ou fichiers de la version d'avant)
     await uploadDir(out, prefix);
-    const posters = [1, 2, 3].map((i) => `${prefix}c${i}.jpg`).filter((k) => fs.existsSync(path.join(out, k.slice(prefix.length))));
+    const posters = [...(originalName ? [originalName] : []), 'c1.jpg', 'c2.jpg', 'c3.jpg']
+      .filter((f) => fs.existsSync(path.join(out, f))).map((f) => `${prefix}${f}`);
+    // Miniature affichée d'office : l'image d'origine si on l'a, sinon l'image tirée de la vidéo.
+    const posterKey = originalName ? `${prefix}${originalName}` : `${prefix}poster.jpg`;
 
     // Bascule : la conférence devient une vidéo hébergée. Un seul bloc pour que le site ne voie jamais un état à moitié fait.
     const client = await pool.connect();
@@ -155,7 +170,7 @@ export async function processImport({ job, pool, workDir, threads = 0, log = () 
                   duration_seconds = $4, poster_key = $5, poster_candidates = $6, imported_from = $7, imported_origin = $8, external_file = NULL, rights_confirmed = true,
                   audio_track = $9, language = CASE WHEN $9 = 'fr' THEN 'fr' ELSE language END
             WHERE id = $1 AND (source <> 'upload' OR video_status = 'importing')`,
-          [job.talk_id, job.object_key, audio, Math.round(info.duration), `${prefix}poster.jpg`, posters, job.source_url, job.origin, french ? 'fr' : null]);
+          [job.talk_id, job.object_key, audio, Math.round(info.duration), posterKey, posters, job.source_url, job.origin, french ? 'fr' : null]);
       flipped = t.rowCount;
       if (flipped && french) await retranscribeInFrench(client, job.talk_id);
       if (flipped) await client.query(`UPDATE media_imports SET status = 'done', stage = NULL, progress = 100, error = NULL, finished_at = now(), updated_at = now() WHERE id = $1`, [job.id]);

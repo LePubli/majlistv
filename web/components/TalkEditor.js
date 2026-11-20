@@ -221,8 +221,8 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
                 <div className="thumb-row">
                   {choices.map((u, i) => (
                     <button key={u} type="button" className={`thumb-opt${x.posterChoice === i ? ' on' : ''}`} aria-pressed={x.posterChoice === i}
-                      aria-label={t('thumbFrame').replace('{n}', i + 1)} title={t('thumbFrame').replace('{n}', i + 1)}
-                      style={{ backgroundImage: `url(${u})` }} onClick={() => choose(i)} />
+                      aria-label={i === x.posterOriginal ? t('thumbOriginal') : t('thumbFrame').replace('{n}', i + 1)} title={i === x.posterOriginal ? t('thumbOriginal') : t('thumbFrame').replace('{n}', i + 1)}
+                      style={{ backgroundImage: `url(${u})` }} onClick={() => choose(i)}>{i === x.posterOriginal && <span className="thumb-orig">{t('thumbOriginalTag')}</span>}</button>
                   ))}
                 </div>
               </>

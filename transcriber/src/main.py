@@ -973,6 +973,10 @@ def run_media_import(job, conn, conf):
         desc = external.clean_description(report.get("description") or "")[:5000]
         if desc:
             q("UPDATE talks SET description = %s WHERE id = %s AND description = ''", (desc, job["talk_id"]))
+        # Image de présentation d'origine (YouTube, Vimeo…) : adresse gardée sur la conférence ; le worker la télécharge et la propose
+        # comme miniature (choisie d'office) en plus des images tirées de la vidéo.
+        if report.get("thumb"):
+            q("UPDATE talks SET external_thumb = COALESCE(external_thumb, %s) WHERE id = %s", (str(report["thumb"])[:1000], job["talk_id"]))
         log(f"[import {jid}] fichier dans le stockage : en attente de conversion par le worker")
     except importer.Stopped:
         drop_object()

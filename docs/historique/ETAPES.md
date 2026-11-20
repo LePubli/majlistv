@@ -9833,3 +9833,15 @@ bash /root/verify-deploy.sh
 **Testé.** Captures Chromium (1440 et 390 px, français et arabe RTL, sans débordement horizontal) de l'accueil, du catalogue, des séries, des Shorts (8 shorts d'essai) et de la fiche ; tous les tests du site (`test_premium_v22.mjs` nouveau, `test_premium_web.mjs` mis à jour), `next build`. **Non testé** : vraies miniatures (le test n'a pas Internet : images sombres de remplacement, donc bandeaux et affiches non jugés à l'œil), lecture réelle d'un short, collection à la une avec vraies vidéos, Safari / iPhone, 820 px.
 
 **Différences assumées avec la maquette.** Pas d'images inventées ni de faux programmes ; badge = format réel ; pas de « Prime » ni de HD ; pas de filtres de thème dans les Shorts (le module n'a pas de catégories de shorts) ; lecteur de Shorts = le fil vertical existant (pas le lecteur en carte de la maquette).
+
+
+## Correctifs V22 — fiche, une immersive, miniature d'origine (20/11/2026)
+
+Retours d'Epok (15 h) : bug de la page lecteur, textes superposés sur l'accueil, une trop petite et pixélisée, miniature d'origine YouTube perdue à l'import.
+
+- **Fiche vidéo (Premium)** : l'en-tête n'avait pas de fond sur les pages sans image de une (il est hors de `.v20-app`) ; les blocs « fil d'Ariane » et « mention » tombaient au hasard dans la grille et la colonne de droite passait sur « Dans la même veine ». Une ligne de grille par bloc, colonne de droite sur les lignes 3 à 6, « Dans la même veine » ligne 7 pleine largeur.
+- **Une de l'accueil** : hauteur `min(82vh, 56vw)` (max 900 px), dégradés haut / bas / côté, flèches en bas, interlignes et marges du titre (3 lignes au plus) / intervenant / infos.
+- **Netteté** : `poster.jpg` et `c1-3.jpg` passent de 640 à 1280 px (jamais agrandis). 
+- **Miniature d'origine** : le transcripteur garde l'adresse (`external_thumb`), le worker télécharge `original.<ext>` (YouTube : maxresdefault puis adresse relevée puis hqdefault ; images < 6 Ko refusées), l'ajoute en premier aux candidats et la choisit. API : `posterOriginal` dans `GET /talks/:id` ; Studio : pastille « Origine ».
+- **Déploiement** : majlistv-api, majlistv-web, majlistv-worker, majlistv-transcriber (dans cet ordre), puis les commandes VPS habituelles. **Debug** : `docker logs dockpanel-git-majlistv-worker | grep "image d'origine"`.
+- **Pas testé** : import réel de bout en bout ; vraies images ; vidéos déjà importées inchangées.

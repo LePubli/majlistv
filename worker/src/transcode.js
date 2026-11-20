@@ -102,14 +102,14 @@ export async function transcode({ input, outDir, info, threads, onProgress }) {
   const { args, count } = buildArgs({ input, outDir, info, threads });
   for (let i = 0; i < count; i++) await fs.mkdir(path.join(outDir, `v${i}`), { recursive: true });
 
-  // Miniature à ~10 % de la vidéo.
+  // Miniature à ~10 % de la vidéo (1280 px de large : la une de l'accueil occupe toute la largeur de l'écran, 640 px était flou).
   await run('ffmpeg', ['-y', '-nostdin', '-v', 'error', '-ss', String(Math.floor(info.duration * 0.1)), '-i', input,
-    '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '4', path.join(outDir, 'poster.jpg')]);
+    '-frames:v', '1', '-vf', "scale='min(1280,iw)':-2", '-q:v', '3', path.join(outDir, 'poster.jpg')]);
 
   // 3 images au choix pour la miniature (à 20 %, 50 % et 80 %) : c1.jpg, c2.jpg, c3.jpg.
   for (const [i, at] of [0.2, 0.5, 0.8].entries()) {
     await run('ffmpeg', ['-y', '-nostdin', '-v', 'error', '-ss', String(Math.floor(info.duration * at)), '-i', input,
-      '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '4', path.join(outDir, `c${i + 1}.jpg`)]).catch(() => {});
+      '-frames:v', '1', '-vf', "scale='min(1280,iw)':-2", '-q:v', '3', path.join(outDir, `c${i + 1}.jpg`)]).catch(() => {});
   }
 
   await run('nice', ['-n', '10', 'ffmpeg', ...args], {

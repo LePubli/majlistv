@@ -381,6 +381,7 @@ export default async function talksRoutes(app) {
     // Les 3 images proposées pour la miniature (vidéos envoyées) et celle qui est choisie.
     for (const r of rows) {
       r.posterChoice = r.poster_candidates.indexOf(r.poster_key);
+      r.posterOriginal = r.poster_candidates.findIndex((k) => /\/original\.(jpg|png|webp)$/.test(k)); // image de présentation d'origine (import), -1 si absente
       r.posterChoices = await Promise.all(r.poster_candidates.map((k) => presignGet(k)));
       delete r.poster_candidates;
       // Étape D5 (18/11) : adresse d'origine de la vidéo, affichée seulement dans Studio (fiche du contenu), jamais sur le site public.
