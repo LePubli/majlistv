@@ -10,6 +10,7 @@ import useMyTalks from '../../components/useMyTalks';
 import { hasWebModule } from '../../lib/modules';
 import { fmtBytes } from '../../lib/format';
 import { taskLabel } from '../../lib/activity';
+import BoKpis from '../../components/backoffice/BoKpis';
 
 const clock = (s) => { const m = Math.round((s || 0) / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
 
@@ -18,7 +19,8 @@ function Row({ label, value, extra }) {
 }
 
 export default function StudioDash() {
-  const { t, call, feat, locale, modUsable } = useApp();
+  const { t, call, feat, locale, modUsable, skin } = useApp();
+  const pm = skin === 'premium';
   const { rows, loaded } = useMyTalks();
   const [ov, setOv] = useState(null);
   useEffect(() => { call('/studio/overview?days=28').then((r) => r.ok && setOv(r.data)); }, [call]);
@@ -48,12 +50,20 @@ export default function StudioDash() {
     <main className="studio-page sd-dash">
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('sdDash')}</span></nav>
       <div className="studio-head">
-        <h1 className="studio-title">{t('sdDashTitle')}</h1>
+        <h1 className="studio-title">{pm ? t('sdPmTitle') : t('sdDashTitle')}</h1>
         <div className="sd-head-actions">
           {on('editor') && <Link href="/studio/editor" className="btn ghost sd-pill">{t('sdOpenEditor')}</Link>}
           <Link href="/studio/new" className="btn sd-pill">+ {t('newTalk')}</Link>
         </div>
       </div>
+
+      {pm && <p className="bo-sub">{t('sdPmSub')}</p>}
+      <BoKpis items={loaded ? [
+        { icon: 'film', tone: 'blue', label: t('bqKAll'), value: rows.length },
+        { icon: 'pulse', tone: 'blue', label: t('bqKRun'), value: n('run') },
+        { icon: 'doc', tone: 'blue', label: t('bqKReview'), value: n('review') },
+        { icon: 'check', tone: 'green', label: t('bqKLive'), value: n('live') },
+      ] : []} />
 
       <div className="sd-row sd-row-top">
         <section className="sd-card" aria-labelledby="sd-last">

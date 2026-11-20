@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
+import { ICONS, Icon } from '../../components/ManageShell';
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
 
 // Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
@@ -41,9 +42,42 @@ const LANG_NAMES = { fr: 'Français', en: 'Anglais', ar: 'Arabe', es: 'Espagnol'
 const money = (c, cur) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: (cur || 'eur').toUpperCase() }).format(c / 100);
 const HEALTH_ICON = { ok: '●', warn: '▲', error: '✕', off: '○' };
 
-function Kpi({ value, label, hint, href }) {
-  const body = (<><strong>{value}</strong><span>{label}</span>{hint && <small className="meta">{hint}</small>}</>);
+// Pastille d'icône de la maquette (thème Premium seulement) ; `tone` : blue | green | amber | red.
+function KpiIcon({ icon, tone }) {
+  const { skin } = useApp();
+  if (skin !== 'premium' || !icon) return null;
+  return <span className={`bo-kpi-ico ${tone || 'green'}`} aria-hidden="true"><Icon d={ICONS[icon]} /></span>;
+}
+function Kpi({ value, label, hint, href, icon, tone }) {
+  const body = (<><KpiIcon icon={icon} tone={tone} /><strong>{value}</strong><span>{label}</span>{hint && <small className="meta">{hint}</small>}</>);
   return href ? <Link className="admin-card kpi" href={href}>{body}</Link> : <div className="admin-card kpi">{body}</div>;
+}
+// Initiales dans un rond (thème Premium).
+function Avatar({ name }) {
+  const { skin } = useApp();
+  if (skin !== 'premium') return null;
+  const ini = (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('') || '?';
+  return <span className="bo-av" aria-hidden="true">{ini}</span>;
+}
+
+// « Actions rapides » de la maquette : seulement des écrans qui existent (thème Premium).
+function QuickActions() {
+  const { skin, feat } = useApp();
+  if (skin !== 'premium') return null;
+  const items = [
+    ['/studio/new', 'Ajouter une vidéo', 'film'],
+    ['/admin?tab=users', 'Gérer les utilisateurs', 'users'],
+    ...(feat('watch') ? [['/admin?tab=watch', 'Voir la Veille', 'eye']] : []),
+    ['/admin?tab=settings', 'Paramètres du site', 'gear'],
+  ];
+  return (
+    <div className="bo-panel bo-quick">
+      <h3 className="dash-h">Actions rapides</h3>
+      <div className="bo-quick-grid">
+        {items.map(([href, label, ic]) => <Link key={href} href={href}><span className="bo-kpi-ico blue"><Icon d={ICONS[ic]} /></span><b>{label}</b></Link>)}
+      </div>
+    </div>
+  );
 }
 
 function Dashboard() {
@@ -72,24 +106,24 @@ function Dashboard() {
     <section className="dash">
       <h3 className="dash-h">Abonnés</h3>
       <div className="admin-cards">
-        <Kpi value={sb.paying} label="abonnés payants" hint={sb.pastDue ? `dont ${sb.pastDue} en retard de paiement` : null} href="/admin?tab=users" />
-        <Kpi value={sb.trialing} label="en période d'essai" />
-        <Kpi value={sb.mrr ? money(sb.mrr.amount, sb.mrr.currency) : '—'} label="revenu mensuel estimé" hint={sb.mrr ? 'abonnements payants, annuels ramenés au mois (hors essais)' : 'Stripe non configuré'} />
-        <Kpi value={sb.cancelling} label="résiliations programmées" hint="actifs qui s'arrêtent à la fin de la période" />
-        <Kpi value={users.total} label="comptes" hint={`+${users.week} cette semaine · +${users.month} ce mois`} href="/admin?tab=users" />
-        <Kpi value={users.complimentary} label="accès offerts en cours" hint={users.suspended ? `${users.suspended} compte(s) suspendu(s)` : null} />
+        <Kpi icon="check" tone="green" value={sb.paying} label="abonnés payants" hint={sb.pastDue ? `dont ${sb.pastDue} en retard de paiement` : null} href="/admin?tab=users" />
+        <Kpi icon="pulse" tone="blue" value={sb.trialing} label="en période d'essai" />
+        <Kpi icon="tag" tone="green" value={sb.mrr ? money(sb.mrr.amount, sb.mrr.currency) : '—'} label="revenu mensuel estimé" hint={sb.mrr ? 'abonnements payants, annuels ramenés au mois (hors essais)' : 'Stripe non configuré'} />
+        <Kpi icon="bell" tone="amber" value={sb.cancelling} label="résiliations programmées" hint="actifs qui s'arrêtent à la fin de la période" />
+        <Kpi icon="users" tone="green" value={users.total} label="comptes" hint={`+${users.week} cette semaine · +${users.month} ce mois`} href="/admin?tab=users" />
+        <Kpi icon="heart" tone="blue" value={users.complimentary} label="accès offerts en cours" hint={users.suspended ? `${users.suspended} compte(s) suspendu(s)` : null} />
       </div>
 
       <h3 className="dash-h">Vidéos</h3>
       <div className="admin-cards">
-        <Kpi value={talks.live} label="en ligne" href="/studio?filter=live" />
-        <Kpi value={talks.processing} label="en traitement" href="/studio?filter=run" />
-        <Kpi value={talks.failed} label="en échec" href="/studio?filter=err" />
-        <Kpi value={talks.draft + talks.scheduled} label="brouillons / planifiées" hint={talks.scheduled ? `dont ${talks.scheduled} planifiée(s)` : null} href="/studio?filter=draft" />
+        <Kpi icon="film" tone="green" value={talks.live} label="en ligne" href="/studio?filter=live" />
+        <Kpi icon="layers" tone="blue" value={talks.processing} label="en traitement" href="/studio?filter=run" />
+        <Kpi icon="shield" tone="red" value={talks.failed} label="en échec" href="/studio?filter=err" />
+        <Kpi icon="doc" tone="amber" value={talks.draft + talks.scheduled} label="brouillons / planifiées" hint={talks.scheduled ? `dont ${talks.scheduled} planifiée(s)` : null} href="/studio?filter=draft" />
       </div>
 
       <div className="dash-cols">
-        <div>
+        <div className="bo-panel">
           <h3 className="dash-h">À traiter</h3>
           {todo.length === 0 ? <p className="dash-ok">✓ Rien à signaler, tout fonctionne.</p> : (
             <ul className="dash-todo">
@@ -108,7 +142,7 @@ function Dashboard() {
             </ul>
           )}
         </div>
-        <div>
+        <div className="bo-panel">
           <h3 className="dash-h">État des services</h3>
           <ul className="dash-health">
             {health.map((h) => (
@@ -123,6 +157,7 @@ function Dashboard() {
         </div>
       </div>
 
+      <QuickActions />
       <h3 className="dash-h">Dernières inscriptions</h3>
       <div className="table-wrap" tabIndex={0} role="region" aria-label="Dernières inscriptions">
         <table className="admin-table">
@@ -130,7 +165,7 @@ function Dashboard() {
           <tbody>
             {signups.map((u) => (
               <tr key={u.id}>
-                <td>{u.name}{u.disabledAt && <em className="adm-src"> (suspendu)</em>}</td>
+                <td><span className="bo-who"><Avatar name={u.name} />{u.name}{u.disabledAt && <em className="adm-src"> (suspendu)</em>}</span></td>
                 <td>{u.email}</td>
                 <td>{ROLE_LABEL[u.role] || u.role}</td>
                 <td>{u.subscription ? SUB_LABEL[u.subscription] || u.subscription : '—'}</td>
@@ -749,6 +784,14 @@ function Users({ me }) {
   const subLabel = (u) => (u.premiumUntil && new Date(u.premiumUntil) > new Date() ? `Offert → ${fmt(u.premiumUntil)}` : (SUB_LABEL[u.subscriptionStatus] || '—'));
   return (
     <section>
+      {counts && (
+        <div className="admin-cards bo-users-kpi">
+          <Kpi icon="users" tone="green" value={counts.all} label="Utilisateurs" />
+          <Kpi icon="check" tone="green" value={counts.paying} label="Abonnés actifs" />
+          <Kpi icon="pulse" tone="blue" value={counts.trialing} label="En période d'essai" />
+          <Kpi icon="shield" tone={counts.suspended ? 'amber' : 'blue'} value={counts.suspended} label="Comptes suspendus" />
+        </div>
+      )}
       <div className="adm-row adm-between">
         <div className="pills" role="group" aria-label="Filtrer par statut">
           {FILTERS.map(([k, label]) => (
@@ -789,9 +832,9 @@ function Users({ me }) {
             {data.users.map((u) => (
               <tr key={u.id} className={`${u.disabledAt ? 'adm-off ' : ''}row-click${open === u.id ? ' sel' : ''}`} tabIndex={0} onClick={() => openSheet(u.id)} onKeyDown={(e) => e.key === 'Enter' && openSheet(u.id)}>
                 <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(u.id)} onChange={() => toggleOne(u.id)} aria-label={`Cocher ${u.name}`} /></td>
-                <td>{u.name}{u.disabledAt && <span className="chip failed"> suspendu</span>}</td>
+                <td><span className="bo-who"><Avatar name={u.name} />{u.name}{u.disabledAt && <span className="chip failed"> suspendu</span>}</span></td>
                 <td>{u.email}</td>
-                <td>{ROLE_LABEL[u.role]}</td>
+                <td><span className={`bo-badge ${u.role === 'user' ? 'gray' : u.role === 'admin' ? 'violet' : 'blue'}`}>{ROLE_LABEL[u.role]}</span></td>
                 <td>{subLabel(u)}</td>
                 <td>{u.talksCount}</td>
                 <td>{fmt(u.lastWatchAt)}</td>
@@ -1131,9 +1174,11 @@ function ModuleTab({ load }) {
   return <Suspense fallback={<p className="meta" role="status">Chargement…</p>}><Screen /></Suspense>;
 }
 
+const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
+
 /* ---------------------------------------------------------------- Page */
 export default function Admin() {
-  const { user, ready } = useApp();
+  const { user, ready, skin } = useApp();
   const params = useSearchParams();
   const tab = params.get('tab') || 'dashboard';
   if (!ready || !user) return null;
@@ -1143,7 +1188,8 @@ export default function Admin() {
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
-      <h1 className="studio-title">{moduleTab ? moduleTab.title : titles[tab] || titles.dashboard}</h1>
+      <h1 className="studio-title">{moduleTab ? moduleTab.title : (skin === 'premium' && tab === 'dashboard') ? "Vue d'ensemble" : titles[tab] || titles.dashboard}</h1>
+      {skin === 'premium' && SUBTITLE[tab || 'dashboard'] && <p className="bo-sub">{SUBTITLE[tab || 'dashboard']}</p>}
       <Suspense fallback={<p className="meta" role="status">Chargement…</p>}>
         {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && <Dashboard />}
         {tab === 'users' && <Users me={user.id} />}

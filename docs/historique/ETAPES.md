@@ -9858,3 +9858,12 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - **Téléphone / arabe** : tiroir ≤ 900 px, barre du haut compacte ≤ 490 px, arabe de droite à gauche vérifié.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : feuille `skin-premium-admin.css` ; si la cloche reste vide, ouvrir la console réseau (`/admin/errors?state=open`, `/moderation/summary`).
 - **Suite** : lot 2 (Vue d'ensemble, Utilisateurs, Mes contenus + fiche rapide, Tableau de bord Studio) sur « go ».
+
+## Back-office Premium — Lot 2 : Admin et Studio (21/11/2026)
+
+- **Admin → Vue d'ensemble** : cartes de chiffres avec pastille-icône, panneaux « À traiter » et « État des services », bloc Actions rapides, avatars dans les inscriptions.
+- **Admin → Utilisateurs** : chiffres réels (utilisateurs, abonnés actifs, essais, suspendus), avatars, badges de rôle, fiche utilisateur en tiroir.
+- **Studio → Tableau de bord / Mes contenus** : chiffres réels, clic sur une ligne = fiche rapide (titre, intervenant, langues, durée, statut, visibilité, parcours de production, options rapides) ; tiroir sur petit écran.
+- Thème Premium uniquement ; données réelles seulement (rien d'affiché sans donnée).
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `skin-premium-admin.css`, composants `web/components/backoffice/`.
+- **Suite** : lot 3 (écrans restants) sur « go ».

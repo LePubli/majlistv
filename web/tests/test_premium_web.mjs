@@ -135,6 +135,6 @@ const bell = read('components/backoffice/BoBell.js');
 for (const p of ['/admin/watch/count', '/admin/errors?state=open', '/admin/ask/stats', '/admin/health', '/moderation/summary', '/studio/activity/count']) assert.ok(bell.includes(p), `cloche : vraie source ${p}`);
 assert.match(bell, /total > 0 && <i className="bo-dot"/, 'le point de la cloche n\'apparaît que s\'il y a des alertes');
 const boI18n = read('lib/i18n.js');
-for (const k of ['boBell', 'boNoAlerts', 'boAlWatch', 'boAlErrors', 'boAlAsk', 'boAlHealth', 'boAlMod', 'boAlReports', 'boAlTasks', 'boApps', 'boAppStudio', 'boAppAdmin', 'boAppSite', 'boAccount', 'boSearch', 'boAdminShort']) assert.equal((boI18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr, en et ar`);
+for (const k of ['boBell', 'boNoAlerts', 'boAlWatch', 'boAlErrors', 'boAlAsk', 'boAlHealth', 'boAlMod', 'boAlReports', 'boAlTasks', 'boApps', 'boAppStudio', 'boAppAdmin', 'boAppSite', 'boAccount', 'boSearch', 'boAdminShort', 'boOverview', 'boStats', 'boRevenue', 'bqPageTitle', 'bqPageSub', 'bqKAll', 'bqKRun', 'bqKReview', 'bqKLive', 'bqTitle', 'bqClose', 'bqTitleField', 'bqSpeaker', 'bqLangs', 'bqDuration', 'bqStatus', 'bqVis', 'bqSteps', 'bqOptions', 'sdPmTitle', 'sdPmSub', 'bqKDraft']) assert.equal((boI18n.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr, en et ar`);
 
 console.log('web premium OK');

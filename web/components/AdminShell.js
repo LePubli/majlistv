@@ -17,7 +17,8 @@ const FEATURE_OF_TAB = { watch: 'watch', ads: 'ads', experiments: 'experiments',
 const MODULE_OF_TAB = { stats: 'stats', gifts: 'gifts', revenue: 'revenue' };
 
 export default function AdminShell({ children }) {
-  const { t, user, ready, feat, call } = useApp();
+  const { t, user, ready, feat, call, skin } = useApp();
+  const pm = skin === 'premium'; // libellés de la maquette Premium : Vue d'ensemble · Statistiques · Revenus
   const [watchNew, setWatchNew] = useState(0); // pastille « Veille » : vidéos à traiter
   const path = usePathname();
   const params = useSearchParams();
@@ -41,7 +42,7 @@ export default function AdminShell({ children }) {
   // [onglet, libellé, icône]
   // Audit 11/2026 (navigation, lot A) : les mêmes écrans, rangés par métier en six groupes. Aucune adresse ne change.
   const groups = [
-    { key: 'pilot', title: t('adGrpPilot'), items: [['dashboard', t('admDashboard'), ICONS.dash], ['users', t('admUsers'), ICONS.users], ['stats', t('adStats'), ICONS.chart], ['revenue', t('adRevenue'), ICONS.tag]] },
+    { key: 'pilot', title: t('adGrpPilot'), items: [['dashboard', pm ? t('boOverview') : t('admDashboard'), ICONS.dash], ['users', t('admUsers'), ICONS.users], ['stats', pm ? t('boStats') : t('adStats'), ICONS.chart], ['revenue', pm ? t('boRevenue') : t('adRevenue'), ICONS.tag]] },
     { key: 'cat', title: t('adGrpCat'), items: [['categories', t('adCatFmt'), ICONS.tag], ['speakers', t('adSpeakers'), ICONS.users], ['watch', t('admWatch'), ICONS.eye]] },
     { key: 'practice', title: t('adGrpPractice'), items: [['quran', t('qrAdNav'), ICONS.doc], ['athkar', t('atTab'), ICONS.doc], ['ramadan', t('rzNav'), ICONS.eye], ['seasons', t('seasonAdmin'), ICONS.eye], ['friday', t('fdAdminNav'), ICONS.eye]] },
     { key: 'growth', title: t('adGrpGrowth'), items: [['ads', t('admAds'), ICONS.tag], ['experiments', 'Tests A/B', ICONS.chart], ['gifts', t('admGifts'), ICONS.heart], ['sales', t('saNav'), ICONS.tag], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['lifecycle', t('admLifecycle'), ICONS.gear]] },

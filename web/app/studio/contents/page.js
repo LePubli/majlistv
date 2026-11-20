@@ -12,6 +12,8 @@ import BulkEdit from '../../../components/BulkEdit';
 import { talkSteps, talkKind, sourceLabel } from '../../../lib/talkState';
 import { production, STAGES } from '../../../lib/production';
 import { hasWebModule } from '../../../lib/modules';
+import BoKpis from '../../../components/backoffice/BoKpis';
+import BoQuickSheet from '../../../components/backoffice/BoQuickSheet';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 const FILTERS = ['all', 'todub', 'toreview', 'live', 'draft', 'run', 'err', 'modreview'];
@@ -26,7 +28,9 @@ function Stages({ p, t }) {
 }
 
 export default function StudioTalks() {
-  const { t, call, locale, feat, modUsable } = useApp();
+  const { t, call, locale, feat, modUsable, skin } = useApp();
+  const pm = skin === 'premium';
+  const [quick, setQuick] = useState(null); // fiche rapide ouverte (thème Premium)
   const [mine, setMine] = useState(null);
   const [prod, setProd] = useState({});
   const [q, setQ] = useState('');
@@ -100,12 +104,20 @@ export default function StudioTalks() {
   };
 
   return (
-    <main className="studio-page pd-page">
+    <main className={`studio-page pd-page${pm && quick ? ' bo-has-quick' : ''}`}>
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('sdContents')}</span></nav>
       <div className="studio-head">
-        <h1 className="studio-title">{t('sdContentsTitle')}</h1>
+        <h1 className="studio-title">{pm ? t('bqPageTitle') : t('sdContentsTitle')}</h1>
         <Link href="/studio/new" className="btn sd-pill">+ {t('newTalk')}</Link>
       </div>
+
+      {pm && <p className="bo-sub">{t('bqPageSub')}</p>}
+      <BoKpis items={mine ? [
+        { icon: 'film', tone: 'blue', label: t('bqKAll'), value: rows.length },
+        { icon: 'pulse', tone: 'blue', label: t('bqKRun'), value: count('run') },
+        { icon: 'doc', tone: 'blue', label: t('bqKReview'), value: count('modreview') + (dubOn ? count('toreview') : 0) },
+        { icon: 'check', tone: 'green', label: t('bqKLive'), value: count('live') },
+      ] : []} />
 
       <StudioTabs group="contents" />
 
@@ -146,6 +158,7 @@ export default function StudioTalks() {
           onDone={(n) => { setBulk(false); setSel(new Set()); setFlash(t('bkDone').replace('{n}', n)); load(); setTimeout(() => setFlash(''), 5000); }} />
       )}
       {shown.length > 0 && (
+        <div className="bo-split">
         <div className="studio-table-wrap">
           <table className="studio-table pd-table">
             <thead>
@@ -159,7 +172,8 @@ export default function StudioTalks() {
               {shown.map((r) => {
                 const [vis, visTone] = visibility(r);
                 return (
-                  <tr key={r.id} className={sel.has(r.id) ? 'bk-sel' : undefined}>
+                  <tr key={r.id} className={[sel.has(r.id) ? 'bk-sel' : '', pm ? 'bo-row' : '', pm && quick === r.id ? 'bo-open' : ''].filter(Boolean).join(' ') || undefined}
+                    onClick={pm ? (e) => { if (!e.target.closest('a,button,input,label')) setQuick(quick === r.id ? null : r.id); } : undefined}>
                     <td className="bk-col"><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></td>
                     <td>
                       <Link href={`/studio/${r.id}`} className="studio-talk">
@@ -186,12 +200,17 @@ export default function StudioTalks() {
                     </td>
                     <td><span className={`pd-vis ${visTone}`}>{vis}</span></td>
                     <td className="pd-views">{r.p.views == null || (r.p.views === 0 && r.kind !== 'live') ? '—' : nf.format(r.p.views)}</td>
-                    <td className="end"><Link href={`/studio/${r.id}`} className="manage">{t('manage')}</Link></td>
+                    <td className="end">{pm && <button type="button" className="bo-qs-open" aria-expanded={quick === r.id} aria-label={`${t('bqTitle')} — ${r.title}`} onClick={() => setQuick(quick === r.id ? null : r.id)}>›</button>}<Link href={`/studio/${r.id}`} className="manage">{t('manage')}</Link></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+        {pm && quick && rows.find((x) => x.id === quick) && (() => {
+          const q = rows.find((x) => x.id === quick);
+          return <BoQuickSheet row={q} langs={langPair(q)} statusLabel={label(q)} visLabel={visibility(q)[0]} minutes={mins(q.durationSeconds)} onClose={() => setQuick(null)} />;
+        })()}
         </div>
       )}
       <p className="pd-legend meta small">

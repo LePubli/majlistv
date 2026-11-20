@@ -701,3 +701,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Catalogue — phase 6 sur 7** (20/11) : collections dynamiques (manuelles, automatiques, saisonnières, personnalisées ; 22 collections du cahier en brouillon) et fiche vidéo reliée à Apprendre (leçon suivante, bilan). Suite : 7 responsive / TV / SEO.
 - [x] Design V22 (thème Premium, 20/11/2026) — fiche vidéo en deux colonnes, accueil et catalogue OTT, menu transparent, hub Shorts ; correctifs du 20/11 : fiche, une immersive HD, miniature d'origine à l'import (n° 297).
 - [x] Back-office Premium, lot 1 (Admin + Studio, 20/11/2026) — menu, barre du haut (recherche Ctrl K, cloche d'alertes réelles, applications, compte), cartes, tableaux, formulaires d'après la maquette. Lots 2 (écrans clés) et 3 (le reste) à venir sur « go ».
+
+- Back-office Premium, lot 2 (Vue d'ensemble, Utilisateurs, Studio tableau de bord, Mes contenus + fiche rapide) : fait 21/11. Lot 3 sur « go ».
