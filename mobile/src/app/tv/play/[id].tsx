@@ -1,7 +1,7 @@
 // Lecteur plein écran de la télé.
 //  - Vidéo du serveur (HLS) ou fichier direct : lecteur natif (expo-video / Media3) avec ses commandes d'origine, qui se pilotent
 //    à la télécommande (OK = lecture / pause, gauche / droite = reculer / avancer).
-//  - YouTube / Vimeo / Dailymotion : lecteur intégré de la plateforme ; nos boutons (Lecture/Pause, −10 s, +10 s) sous la vidéo.
+//  - YouTube / Vimeo / Dailymotion : lecteur intégré de la plateforme ; nos commandes (Lecture/Pause, −10 s, +10 s) par-dessus la vidéo (TvPlayerBar).
 // La progression est envoyée au serveur comme sur le téléphone (reprise sur le site et les autres appareils).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
@@ -15,17 +15,17 @@ import { ProgressTracker } from '@/lib/progress';
 import { pickSource } from '@/lib/playback';
 import type { EmbedMessage } from '@/lib/embed';
 import type { Talk } from '@/lib/types';
-import { colors } from '@/lib/theme';
-import { ErrorBox, Loading, Txt } from '@/components/ui';
+import { ErrorBox, Loading } from '@/components/ui';
 import { ExternalVideo, type PlayerHandle } from '@/components/ExternalVideo';
-import { Focusable } from '@/components/tv/Focusable';
+import { TvPlayerBar } from '@/components/tv/TvPlayerBar';
+import { TvMessage } from '@/components/tv/TvMessage';
 
 export default function TvPlay() {
   const { id, at } = useLocalSearchParams<{ id: string; at?: string }>();
   const { api, user } = useSession();
   const talk = useAsync(() => api.get<Talk>(`/talks/${id}`), [id, user?.id]);
-  if (talk.loading && !talk.data) return <Loading />;
-  if (!talk.data) return <ErrorBox onRetry={talk.reload} />;
+  if (talk.loading && !talk.data) return <View style={{ flex: 1, backgroundColor: '#000' }}><Loading /></View>;
+  if (!talk.data) return <View style={{ flex: 1, backgroundColor: '#000' }}><ErrorBox onRetry={talk.reload} /></View>;
   return <Player key={talk.data.id} talk={talk.data} startSec={Math.max(0, Number(at) || 0)} />;
 }
 
@@ -65,33 +65,13 @@ function Player({ talk, startSec }: { talk: Talk; startSec: number }) {
   if (src.embed) {
     return (
       <View style={{ flex: 1, backgroundColor: '#000' }}>
-        <View style={{ flex: 1 }}>
-          <ExternalVideo ref={embed} kind={src.embed.kind} id={src.embed.id} startSeconds={startSec} limitSeconds={0} onMessage={onEmbed} />
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, padding: 14, backgroundColor: colors.nav }}>
-          <Focusable accessibilityRole="button" accessibilityLabel="-10 s" onPress={() => embed.current?.seek(Math.max(0, pos.current - 10))} style={{ paddingVertical: 10, paddingHorizontal: 22, backgroundColor: colors.panel }} radius={999}>
-            <Txt weight="bold" size={18}>⟲ 10 s</Txt>
-          </Focusable>
-          <Focusable first accessibilityRole="button" accessibilityLabel={embedPlaying ? t('tv.pause') : t('tv.play')} onPress={() => (embedPlaying ? embed.current?.pause() : embed.current?.play())}
-            style={{ paddingVertical: 10, paddingHorizontal: 30, backgroundColor: colors.gold }} radius={999}>
-            <Txt weight="extrabold" size={18} color="#111">{embedPlaying ? `❚❚ ${t('tv.pause')}` : `▶ ${t('tv.play')}`}</Txt>
-          </Focusable>
-          <Focusable accessibilityRole="button" accessibilityLabel="+10 s" onPress={() => embed.current?.seek(pos.current + 10)} style={{ paddingVertical: 10, paddingHorizontal: 22, backgroundColor: colors.panel }} radius={999}>
-            <Txt weight="bold" size={18}>10 s ⟳</Txt>
-          </Focusable>
-        </View>
+        <ExternalVideo ref={embed} kind={src.embed.kind} id={src.embed.id} startSeconds={startSec} limitSeconds={0} onMessage={onEmbed} />
+        <TvPlayerBar title={talk.title} subtitle={talk.speaker} playing={embedPlaying}
+          onToggle={() => (embedPlaying ? embed.current?.pause() : embed.current?.play())}
+          onSeekBy={(d) => embed.current?.seek(Math.max(0, pos.current + d))} />
       </View>
     );
   }
-  if (!src.uri || failed) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: colors.bg }}>
-        <Txt size={20}>{src.notReady ? t('tv.notReady') : t('tv.cannotPlay')}</Txt>
-        <Focusable first accessibilityRole="button" onPress={() => router.back()} radius={999} style={{ paddingVertical: 10, paddingHorizontal: 24, backgroundColor: colors.panel }}>
-          <Txt weight="bold" size={18}>{t('tv.back')}</Txt>
-        </Focusable>
-      </View>
-    );
-  }
+  if (!src.uri || failed) return <TvMessage text={src.notReady ? t('tv.notReady') : t('tv.cannotPlay')} />;
   return <VideoView player={player} style={{ flex: 1, backgroundColor: '#000' }} nativeControls contentFit="contain" hasTVPreferredFocus focusable />;
 }

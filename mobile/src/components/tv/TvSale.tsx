@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { useSession } from '@/lib/session';
 import { SITE_URL } from '@/lib/config';
 import { rentUnit, saleMoney, salePageUrl, type Sale } from '@/lib/sales';
-import { colors } from '@/lib/theme';
+import { tvc, useTv } from '@/lib/tvTheme';
 import { Txt } from '@/components/ui';
 import { QrCode } from './QrCode';
 
@@ -21,15 +21,16 @@ export function TvSale({ kind, id, sale, onRefresh }: { kind: 'talk' | 'audyn'; 
   const money = (c: number) => saleMoney(c, sale.currency, locale);
   const dur = (h: number) => { const r = rentUnit(h); return r.unit === 'days' ? t('sale.days', { n: r.n }) : t('sale.hours', { n: r.n }); };
   const url = salePageUrl(SITE_URL, kind, id);
+  const { u } = useTv();
   return (
-    <View style={{ flexDirection: 'row', gap: 24, alignItems: 'center', padding: 18, borderRadius: 16, backgroundColor: colors.goldTint, borderWidth: 1, borderColor: colors.goldLine }}>
-      <View style={{ padding: 8, backgroundColor: '#fff', borderRadius: 10 }}><QrCode value={url} size={150} /></View>
-      <View style={{ flex: 1, gap: 6 }}>
-        <Txt weight="extrabold" size={20} color={colors.goldLight}>{t('sale.title')}</Txt>
-        {sale.buy ? <Txt size={16}>{t('sale.buy')} : <Txt weight="extrabold" size={16} color={colors.goldLight}>{money(sale.buy.yourPrice)}</Txt></Txt> : null}
-        {sale.rent ? <Txt size={16}>{t('sale.rent', { d: dur(sale.rent.hours) })} : <Txt weight="extrabold" size={16} color={colors.goldLight}>{money(sale.rent.yourPrice)}</Txt></Txt> : null}
-        {sale.member && sale.memberDiscountPct > 0 ? <Txt size={13} color={colors.muted}>{t('sale.memberApplied', { n: sale.memberDiscountPct })}</Txt> : null}
-        <Txt size={14} color={colors.text2}>{user ? t('tv.saleScan') : t('tv.saleLogin')}</Txt>
+    <View style={{ flexDirection: 'row', gap: u(34), alignItems: 'center', padding: u(28), borderRadius: u(26), backgroundColor: 'rgba(13,30,53,0.92)', borderWidth: 1, borderColor: 'rgba(143,169,204,0.25)' }}>
+      <View style={{ padding: u(14), backgroundColor: '#fff', borderRadius: u(16) }}><QrCode value={url} size={u(200)} /></View>
+      <View style={{ flex: 1, gap: u(10) }}>
+        <Txt weight="extrabold" size={u(30)} color={tvc.text}>{t('sale.title')}</Txt>
+        {sale.buy ? <Txt size={u(24)} color={tvc.text2}>{t('sale.buy')} : <Txt weight="extrabold" size={u(24)} color={tvc.accentLight}>{money(sale.buy.yourPrice)}</Txt></Txt> : null}
+        {sale.rent ? <Txt size={u(24)} color={tvc.text2}>{t('sale.rent', { d: dur(sale.rent.hours) })} : <Txt weight="extrabold" size={u(24)} color={tvc.accentLight}>{money(sale.rent.yourPrice)}</Txt></Txt> : null}
+        {sale.member && sale.memberDiscountPct > 0 ? <Txt size={u(20)} color={tvc.muted}>{t('sale.memberApplied', { n: sale.memberDiscountPct })}</Txt> : null}
+        <Txt size={u(21)} color={tvc.muted} style={{ lineHeight: u(30) }}>{user ? t('tv.saleScan') : t('tv.saleLogin')}</Txt>
       </View>
     </View>
   );

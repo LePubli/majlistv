@@ -7,11 +7,14 @@ import { useKid } from '@/lib/kidSession';
 import { ApiError } from '@/lib/api';
 import { KC, exitMessage, validPin } from '@/lib/kids';
 import { Txt } from '@/components/ui';
-import { Focusable } from '@/components/tv/Focusable';
-import { TvPinPad } from '@/components/tv/TvPinPad';
+import { Feather } from '@expo/vector-icons';
+import { useTv } from '@/lib/tvTheme';
+import { TvButton } from '@/components/tv/TvButton';
+import { TvPinDots, TvPinPad } from '@/components/tv/TvPinPad';
 
 export default function TvKidsExit() {
-  const { t } = useSession();
+  const { t, dirStyle } = useSession();
+  const { u } = useTv();
   const { exit } = useKid();
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState('');
@@ -27,22 +30,20 @@ export default function TvKidsExit() {
       setCode('');
     } finally { setBusy(false); }
   };
-  const btn = { paddingVertical: 12, paddingHorizontal: 26, backgroundColor: KC.surface } as const;
+  const ok = validPin(code) && !locked && !busy;
   return (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 56, padding: 32, backgroundColor: KC.bg }}>
-      <View style={{ maxWidth: 380, gap: 14 }}>
-        <Txt size={48} style={{ lineHeight: 58 }}>🔒</Txt>
-        <Txt weight="extrabold" size={26} color={KC.text}>{t('kdExitTitle')}</Txt>
-        <Txt size={16} color={KC.text2}>{t('kdExitHelp')}</Txt>
-        {msg ? <Txt color={KC.danger} accessibilityLiveRegion="polite">{msg}</Txt> : null}
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-          <Focusable accessibilityRole="button" radius={999} disabled={!validPin(code) || locked || busy} onPress={() => { void submit(); }}
-            style={[btn, { backgroundColor: validPin(code) && !locked ? KC.accent : KC.surface }]}>
-            <Txt weight="extrabold" size={17} color={validPin(code) && !locked ? KC.onAccent : KC.muted}>{t('kdOk')}</Txt>
-          </Focusable>
-          <Focusable accessibilityRole="button" radius={999} onPress={() => router.back()} style={btn}>
-            <Txt weight="bold" size={17} color={KC.text}>{t('kdCancel')}</Txt>
-          </Focusable>
+    <View style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: u(200), backgroundColor: KC.bgBottom }, dirStyle]}>
+      <View style={{ width: u(720), gap: u(28) }}>
+        <View style={{ width: u(96), height: u(96), borderRadius: u(28), alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,200,61,0.16)' }}>
+          <Feather name="lock" size={u(48)} color={KC.accent} />
+        </View>
+        <Txt weight="extrabold" size={u(64)} color={KC.text} style={{ lineHeight: u(70) }}>{t('kdExitTitle')}</Txt>
+        <Txt size={u(28)} color={KC.text2} style={{ lineHeight: u(42) }}>{t('kdExitHelp')}</Txt>
+        <TvPinDots value={code} />
+        {msg ? <Txt size={u(24)} color={KC.danger} accessibilityLiveRegion="polite">{msg}</Txt> : null}
+        <View style={{ flexDirection: 'row', gap: u(18), marginTop: u(8) }}>
+          <TvButton label={t('kdOk')} icon="unlock" disabled={!ok} onPress={() => { void submit(); }} accent={KC.accent} onAccent={KC.onAccent} />
+          <TvButton label={t('kdCancel')} onPress={() => router.back()} accent={KC.accent} onAccent={KC.onAccent} />
         </View>
       </View>
       <TvPinPad value={code} onChange={setCode} disabled={busy || locked} />

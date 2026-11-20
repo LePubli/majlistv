@@ -114,3 +114,50 @@ test('TV-4 : écrans Kids de la télé', () => {
   assert.match(read('src/app/tv/kids/story/[id].tsx'), /kidApi\.get<AudynDetail>\(`\/kids\/stories\/\$\{id\}`\)/);
   for (const k of ['tv.kidsNeedSub', 'tv.kidsSetup', 'tv.kidsManage']) for (const l of ['fr', 'en', 'ar'] as const) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
 });
+
+test('TV-R : tailles de la maquette, clavier à l’écran, images de fond', async () => {
+  const { tvScale, tvKeyboardKeys, tvKeyApply, tvBackdropUrls, tvClock, tvLeftMin, TV_RAIL, TV_RAIL_OPEN } = await import('../src/lib/tvRules');
+  assert.equal(tvScale(960, 540), 0.5, 'télé 1080p ordinaire');
+  assert.equal(tvScale(1920, 1080), 1);
+  assert.equal(tvScale(960, 480), 480 / 1080, 'écran plus bas (vidéoprojecteur) : on prend la hauteur, rien n’est coupé');
+  assert.equal(tvScale(0, 0), 0.5);
+  assert.ok(TV_RAIL < TV_RAIL_OPEN);
+  const fr = tvKeyboardKeys('fr');
+  assert.equal(fr.length, 36); assert.equal(fr[0], 'a'); assert.equal(fr[35], '9');
+  assert.equal(tvKeyboardKeys('ar')[0], 'ا', 'clavier arabe');
+  assert.equal(tvKeyApply('kah', 'f'), 'kahf');
+  assert.equal(tvKeyApply('kahf', 'del'), 'kah');
+  assert.equal(tvKeyApply('kahf', 'clear'), '');
+  assert.equal(tvKeyApply('', 'space'), '', 'pas d’espace en tête');
+  assert.equal(tvKeyApply('al ', 'space'), 'al ', 'pas d’espace doublé');
+  assert.equal(tvKeyApply('x'.repeat(60), 'y').length, 60);
+  assert.deepEqual(tvBackdropUrls({ posterUrl: 'https://s/p.jpg', source: 'youtube', video_ref: 'abc' }), ['https://s/p.jpg']);
+  assert.deepEqual(tvBackdropUrls({ source: 'youtube', video_ref: 'abcDEF12345' }), ['https://i.ytimg.com/vi/abcDEF12345/maxresdefault.jpg', 'https://i.ytimg.com/vi/abcDEF12345/hqdefault.jpg']);
+  assert.deepEqual(tvBackdropUrls({ source: 'upload' }), []);
+  assert.equal(tvClock(492), '8:12'); assert.equal(tvClock(3725), '1:02:05');
+  assert.equal(tvLeftMin(60_000, 600), 9); assert.equal(tvLeftMin(0, 600), 0); assert.equal(tvLeftMin(599_500, 600), 1);
+});
+
+test('TV-R : écrans redessinés (menu repliable, accueil plein écran, fiche, lecteur, Kids)', () => {
+  const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8');
+  const shell = read('src/components/tv/TvShell.tsx');
+  assert.match(shell, /TV_RAIL_OPEN/, 'menu ouvert en grand au focus');
+  assert.match(shell, /onFocus=\{onIn\} onBlur=\{onOut\}/);
+  assert.match(shell, /emblem-bleu\.png/, 'logo bleu');
+  assert.match(read('src/app/tv/index.tsx'), /<TvShell overlay>/, 'image à la une sous le menu');
+  assert.match(read('src/app/tv/index.tsx'), /onFocusTalk=\{setBg\}/, 'le fond suit la vignette choisie');
+  const talk = read('src/app/tv/talk/[id].tsx');
+  assert.match(talk, /\/talks\/\$\{id\}\/insights/, 'chapitres');
+  assert.match(talk, /QrCode value=\{`\$\{SITE_URL\}\/pricing`\}/, 'QR code d’abonnement');
+  assert.match(talk, /t\('tv\.iSubscribed'\)/);
+  assert.match(read('src/app/tv/search.tsx'), /tvKeyApply\(v, k\)/, 'clavier à l’écran');
+  assert.match(read('src/app/tv/play/[id].tsx'), /<TvPlayerBar /);
+  assert.match(read('src/app/tv/kids/watch/[id].tsx'), /<TvPlayerBar /);
+  assert.match(read('src/components/tv/TvPlayerBar.tsx'), /TV_BAR_HIDE_MS/);
+  assert.match(read('src/components/OtaBanner.tsx'), /if \(isTV\(\)\) return <TvOtaToast \/>/, 'bulle discrète sur la télé');
+  assert.doesNotMatch(read('src/app/tv/kids/index.tsx'), /TvShell/, '« Qui regarde ? » en plein écran');
+  const keys = ['tv.leftMin', 'tv.myList', 'tv.inMyList', 'tv.lockedTitle', 'tv.resumeAt', 'tv.iSubscribed', 'tv.otherVideos', 'tv.subscribeQr', 'tv.chapterN', 'tv.back10', 'tv.fwd10',
+    'tv.kbSpace', 'tv.kbDelete', 'tv.kbClear', 'tv.kbVoice', 'tv.resultsFor', 'tv.searchTitle', 'tv.liveIntro', 'tv.audynIntro', 'tv.planLearning', 'tv.planStandard', 'tv.subscription',
+    'tv.manageOnSite', 'tv.logoutTv', 'tv.backToTv', 'tv.kidsResume', 'tv.kidsPick', 'tv.updateReady', 'tv.moreVideos', 'tv.latest', 'tv.quiz'];
+  for (const l of ['fr', 'en', 'ar'] as const) for (const k of keys) assert.ok((DICT[l] as Record<string, string>)[k], `${l}:${k}`);
+});

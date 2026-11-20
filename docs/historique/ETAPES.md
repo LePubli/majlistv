@@ -9652,3 +9652,22 @@ bash /root/verify-deploy.sh
 
 **Testé.** Tests du site (section 11), compilation, captures réelles de la page vidéo en 1440 et 390 px (FR). **Non testé** : lecture réelle d'une vidéo (le lecteur n'a pas pu charger YouTube en test), aperçu de 2 min, achat à l'unité, quiz / onglets ouverts, série avec panneau d'épisodes, arabe, site réel.
 
+
+## TV-R — Application TV refaite (lot 7 du thème Premium, 20/11/2026)
+
+**Pourquoi.** L'application TV était jugée « grossière ». Elle est redessinée aux couleurs « bleu nuit » de la maquette TV V20 (fond `#061022`, accent bleu `#1677E8`), avec le vrai logo Mejliss (dôme bleu).
+
+**Ce qui change (écrans TV de l'application Android TV / Google TV, dossier `mobile/src/app/tv/`).**
+- **Barre latérale fine** (`TvShell`) : icônes seules, qui s'élargit avec les noms quand on appuie sur gauche ; compatible arabe (droite à gauche) ; entrée « compte » en bas.
+- **Accueil** : vidéo à la une en plein écran (ou première vidéo de la première rangée), titre en Montserrat, boutons « Regarder » / « Ma liste », rangées dont le fond suit la vignette choisie.
+- **Catalogue, Recherche, Direct, Audio, Compte (code + QR), fiche vidéo, lecteur, Kids** (accueil, sortie par code, histoires, lecture) : même style ; vignettes sans image en dégradés bleus (plus de dorés).
+- Nouveaux composants : `TvBackdrop`, `TvButton`, `TvMessage`, `TvPlayerBar`, `TvBookView`, thème `lib/tvTheme.ts`, règles d'échelle `lib/tvRules.ts` (tailles données en pixels de la maquette 1920 × 1080, adaptées à l'écran).
+- Aucune donnée inventée : tout vient de l'API (titres, durées, résumés, catégories).
+
+**API / site.** Aucune modification, aucune migration. Aucun redéploiement DockPanel.
+
+**Déploiement.** Application seulement : le push sur `main` touchant `mobile/` déclenche le workflow GitHub Actions « Application Android (APK) » (voir `mobile/README.md`, « Fabriquer l'APK », et README racine « Étape 22b-5 » pour la mise à jour sans réinstaller). Les textes/écrans arrivent aussi par mise à jour à distance (OTA) sur les appareils déjà installés.
+
+**Debug.** Aperçu dans un navigateur (jamais livré) : version web de l'application ouverte avec `?tv=1`, puis `/tv`, `/tv/catalog`, etc. Écran trop grand ou coupé : les tailles passent par `useTv().u()`.
+
+**Testé.** `npm run check` (compilation + 296 tests, dont les nouvelles règles TV dans `tests/tv.test.ts`) ; captures réelles à 1920 × 1080 de l'accueil, du catalogue, de la fiche vidéo, du compte (code + QR) et de l'accueil Kids (non connecté) sur l'API de test. **Non testé** : télécommande et focus sur un vrai appareil Android TV, lecture vidéo réelle, Kids connecté, arabe, direct, audio, fabrication de l'APK.

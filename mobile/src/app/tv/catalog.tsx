@@ -1,12 +1,12 @@
-// Catalogue TV : catégories à gauche (« Toutes » + catégories principales), vidéos en grille de 4 à droite.
-// Flèche droite : de la liste des catégories vers la grille ; la suite se charge en arrivant en bas (24 vidéos à la fois).
+// Catalogue TV (refonte TV-R) : titre, catégories en pilules sur une ligne (« Toutes » + catégories principales), vidéos en grille
+// de 4 dessous. Flèche bas : des catégories vers la grille ; la suite se charge en arrivant en bas (24 vidéos à la fois).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, ScrollView, View, useWindowDimensions } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
-import { tvCardWidth, tvMenuWidth } from '@/lib/tv';
+import { minutesLabel } from '@/lib/media';
+import { tvc, useTv } from '@/lib/tvTheme';
 import type { Card, Category } from '@/lib/types';
-import { colors } from '@/lib/theme';
 import { Loading, Txt } from '@/components/ui';
 import { TvShell } from '@/components/tv/TvShell';
 import { TvCard } from '@/components/tv/TvCard';
@@ -14,12 +14,13 @@ import { Focusable } from '@/components/tv/Focusable';
 
 const PAGE = 24;
 const COLS = 4;
-const CATS_W = 200;
 
 export default function TvCatalog() {
   const { api, t } = useSession();
-  const { width } = useWindowDimensions();
-  const cardW = tvCardWidth(width - tvMenuWidth(width) - CATS_W, COLS);
+  const { u, W, rail } = useTv();
+  const pad = u(88);
+  const gap = u(32);
+  const cardW = Math.floor((W - rail - pad - u(96) - gap * (COLS - 1)) / COLS);
   const cats = useAsync(async () => (await api.get<Category[]>('/categories').catch(() => [])).filter((c) => c.parentId == null), []);
   const [cat, setCat] = useState<number | null>(null);
   const [items, setItems] = useState<Card[] | null>(null);
@@ -42,29 +43,37 @@ export default function TvCatalog() {
 
   useEffect(() => { setItems(null); setEnd(false); busy.current = false; void load(true); }, [cat]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const list = [{ id: null as number | null, name: t('tv.allCategories') }, ...(cats.data ?? []).map((c) => ({ id: c.id as number | null, name: c.name }))];
+  const header = (
+    <View style={{ gap: u(28), paddingTop: u(54) }}>
+      <Txt weight="extrabold" size={u(52)} style={{ paddingHorizontal: pad }}>{t('tv.catalog')}</Txt>
+      <FlatList horizontal data={list} keyExtractor={(c) => String(c.id)} showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: pad, gap: u(14), paddingVertical: u(8) }}
+        renderItem={({ item: c, index }) => {
+          const sel = cat === c.id;
+          return (
+            <Focusable first={index === 0} ring={false} scale={1.05} radius={999} accessibilityRole="tab" accessibilityState={{ selected: sel }} onPress={() => setCat(c.id)}>
+              {(on) => (
+                <View style={{ height: u(60), paddingHorizontal: u(28), borderRadius: 999, justifyContent: 'center', backgroundColor: on || sel ? tvc.text : tvc.glassSoft, borderWidth: u(5), borderColor: on ? tvc.halo : 'transparent' }}>
+                  <Txt weight="bold" size={u(22)} color={on || sel ? tvc.onLight : tvc.text2} numberOfLines={1}>{c.name}</Txt>
+                </View>
+              )}
+            </Focusable>
+          );
+        }} />
+    </View>
+  );
+
   return (
     <TvShell>
-      <View style={{ flex: 1, flexDirection: 'row' }}>
-        <ScrollView style={{ width: CATS_W, flexGrow: 0 }} contentContainerStyle={{ paddingVertical: 24, paddingHorizontal: 10, gap: 6 }}>
-          <Txt weight="extrabold" size={22} style={{ paddingHorizontal: 10, paddingBottom: 8 }}>{t('tv.catalog')}</Txt>
-          {[{ id: null as number | null, name: t('tv.allCategories') }, ...(cats.data ?? []).map((c) => ({ id: c.id as number | null, name: c.name }))].map((c, i) => (
-            <Focusable key={String(c.id)} first={i === 0} accessibilityRole="button" accessibilityState={{ selected: cat === c.id }} onPress={() => setCat(c.id)}
-              style={{ paddingVertical: 10, paddingHorizontal: 12, backgroundColor: cat === c.id ? colors.panel : 'transparent' }}>
-              <Txt weight="bold" size={15} color={cat === c.id ? colors.goldLight : colors.text} numberOfLines={2}>{c.name}</Txt>
-            </Focusable>
-          ))}
-        </ScrollView>
-        <View style={{ flex: 1 }}>
-          {items === null ? <Loading /> : items.length === 0 ? (
-            <Txt color={colors.muted} style={{ padding: 32 }}>{t('tv.empty')}</Txt>
-          ) : (
-            <FlatList key={`g${cat}`} data={items} numColumns={COLS} keyExtractor={(x) => x.id}
-              contentContainerStyle={{ padding: 28, gap: 16 }} columnWrapperStyle={{ gap: 16 }}
-              onEndReached={() => { void load(false); }} onEndReachedThreshold={0.6}
-              renderItem={({ item }) => <TvCard talk={item} width={cardW} />} />
-          )}
-        </View>
-      </View>
+      {header}
+      {items === null ? <Loading /> : (
+        <FlatList data={items} numColumns={COLS} keyExtractor={(x) => x.id} style={{ flex: 1 }}
+          ListEmptyComponent={<Txt size={u(26)} color={tvc.muted} style={{ paddingHorizontal: pad }}>{t('tv.empty')}</Txt>}
+          contentContainerStyle={{ paddingTop: u(26), paddingBottom: u(80), gap: u(40) }} columnWrapperStyle={{ gap, paddingHorizontal: pad }}
+          onEndReached={() => { void load(false); }} onEndReachedThreshold={0.6}
+          renderItem={({ item }) => <TvCard talk={item} width={cardW} meta={[item.speaker, minutesLabel(item.durationSeconds, t)].filter(Boolean).join(' · ')} />} />
+      )}
     </TvShell>
   );
 }

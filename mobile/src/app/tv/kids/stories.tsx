@@ -1,42 +1,37 @@
-// Histoires du soir de l'enfant sur la télé (illimitées, hors limite quotidienne).
+// Histoires du soir de l'enfant sur la télé (refonte TV-R) : illimitées, hors limite quotidienne ; grandes couvertures carrées.
 import React from 'react';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
-import { Redirect, router } from 'expo-router';
-import { Image } from 'expo-image';
+import { ScrollView, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { useAsync } from '@/lib/useAsync';
-import { fmtLong, type AudynItem } from '@/lib/audyn';
+import type { AudynItem } from '@/lib/audyn';
 import { KC } from '@/lib/kids';
-import { tvCardWidth } from '@/lib/tv';
+import { useTv } from '@/lib/tvTheme';
 import { Txt } from '@/components/ui';
-import { Focusable } from '@/components/tv/Focusable';
+import { TvSquare } from '@/components/tv/TvSquare';
 
 export default function TvKidsStories() {
-  const { t } = useSession();
+  const { t, dirStyle } = useSession();
   const { kid, kidApi, epoch } = useKid();
-  const { width } = useWindowDimensions();
-  const w = tvCardWidth(width, 5);
+  const { u } = useTv();
   const d = useAsync(() => kidApi.get<{ items: AudynItem[] }>('/kids/stories'), [kid?.profile.id, epoch]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!kid) return <Redirect href="/tv/kids" />;
   const items = d.data?.items ?? [];
   return (
-    <ScrollView style={{ backgroundColor: KC.bg }} contentContainerStyle={{ padding: 32, gap: 18 }}>
-      <Txt weight="extrabold" size={26} color={KC.text}>🌙 {t('aud.kTitle')}</Txt>
-      <Txt size={16} color={KC.text2}>{t('aud.kIntro')}</Txt>
-      {d.loading && !d.data ? <Txt color={KC.text2}>…</Txt> : null}
-      {d.error && !d.data ? <Txt color={KC.text2}>{t('common.error')}</Txt> : null}
-      {d.data && items.length === 0 ? <Txt color={KC.text2}>{t('aud.kEmpty')}</Txt> : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+    <ScrollView style={[{ backgroundColor: KC.bg }, dirStyle]} contentContainerStyle={{ paddingTop: u(54), paddingBottom: u(80), paddingHorizontal: u(96), gap: u(30) }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(18) }}>
+        <Feather name="moon" size={u(44)} color={KC.accent} />
+        <Txt weight="extrabold" size={u(56)} color={KC.text}>{t('aud.kTitle')}</Txt>
+      </View>
+      <Txt size={u(26)} color={KC.text2} style={{ lineHeight: u(38), maxWidth: u(1200) }}>{t('aud.kIntro')}</Txt>
+      {d.loading && !d.data ? <Txt size={u(26)} color={KC.text2}>…</Txt> : null}
+      {d.error && !d.data ? <Txt size={u(26)} color={KC.text2}>{t('common.error')}</Txt> : null}
+      {d.data && items.length === 0 ? <Txt size={u(26)} color={KC.text2}>{t('aud.kEmpty')}</Txt> : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: u(36) }}>
         {items.map((it, i) => (
-          <Focusable key={it.id} first={i === 0} radius={18} accessibilityRole="button" accessibilityLabel={it.title} style={{ width: w, padding: 4 }}
-            onPress={() => router.push({ pathname: '/tv/kids/story/[id]', params: { id: it.id } })}>
-            <View style={{ width: '100%', aspectRatio: 1, borderRadius: 14, overflow: 'hidden', backgroundColor: KC.surface, alignItems: 'center', justifyContent: 'center' }}>
-              {it.coverUrl ? <Image source={{ uri: it.coverUrl }} style={{ position: 'absolute', inset: 0 }} contentFit="cover" /> : <Txt size={40}>🌙</Txt>}
-            </View>
-            <Txt weight="extrabold" size={15} color={KC.text} numberOfLines={2} style={{ marginTop: 6 }}>{it.title}</Txt>
-            <Txt size={12} color={KC.muted}>{fmtLong(it.durationSeconds)}</Txt>
-          </Focusable>
+          <TvSquare key={it.id} item={it} width={u(300)} first={i === 0} href={`/tv/kids/story/${it.id}`} accent={KC.accent} panel={KC.surface} muted={KC.muted} />
         ))}
       </View>
     </ScrollView>

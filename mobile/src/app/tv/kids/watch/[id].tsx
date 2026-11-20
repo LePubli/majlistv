@@ -1,4 +1,4 @@
-// Lecteur de l'enfant sur la télé : vidéo du serveur (lecteur natif et ses commandes) ou YouTube / Vimeo / Dailymotion (nos boutons sous la vidéo).
+// Lecteur de l'enfant sur la télé : vidéo du serveur (lecteur natif et ses commandes) ou YouTube / Vimeo / Dailymotion (nos commandes par-dessus la vidéo).
 // Reprise propre à l'enfant (position envoyée toutes les 10 s, à la pause et en quittant) ; temps du jour compté par le serveur (« ping »).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -16,21 +16,13 @@ import { KC, PROGRESS_EVERY_MS, isTimeUp, progressBody } from '@/lib/kids';
 import type { Talk } from '@/lib/types';
 import { Txt } from '@/components/ui';
 import { ExternalVideo, type PlayerHandle } from '@/components/ExternalVideo';
-import { Focusable } from '@/components/tv/Focusable';
+import { TvPlayerBar } from '@/components/tv/TvPlayerBar';
+import { TvMessage } from '@/components/tv/TvMessage';
 
 const back = () => { if (router.canGoBack()) router.back(); else router.replace('/tv/kids/home'); };
 
-function Message({ text, emoji }: { text: string; emoji?: string }) {
-  const { t } = useSession();
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40, backgroundColor: KC.bg }}>
-      {emoji ? <Txt size={60} style={{ lineHeight: 72 }}>{emoji}</Txt> : null}
-      <Txt size={20} color={KC.text} style={{ textAlign: 'center' }}>{text}</Txt>
-      <Focusable first accessibilityRole="button" radius={999} onPress={back} style={{ paddingVertical: 12, paddingHorizontal: 26, backgroundColor: KC.surface }}>
-        <Txt weight="bold" size={17} color={KC.text}>{t('tv.back')}</Txt>
-      </Focusable>
-    </View>
-  );
+function Message({ text, moon }: { text: string; moon?: boolean }) {
+  return <TvMessage text={text} icon={moon ? 'moon' : 'alert-circle'} bg={KC.bg} accent={KC.accent} onAccent={KC.onAccent} onBack={back} />;
 }
 
 export default function TvKidsWatch() {
@@ -40,7 +32,7 @@ export default function TvKidsWatch() {
   const talk = useAsync(() => kidApi.get<Talk>(`/talks/${id}`), [id, epoch]);
   if (!kid) return <Redirect href="/tv/kids" />;
   const err = talk.error instanceof ApiError ? talk.error : null;
-  if (time?.timeUp || isTimeUp(err)) return <Message emoji="🌙" text={t('kdTimeUpText')} />;
+  if (time?.timeUp || isTimeUp(err)) return <Message moon text={t('kdTimeUpText')} />;
   if (talk.loading && !talk.data) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: KC.bg }}><Txt color={KC.text2}>…</Txt></View>;
   if (!talk.data || talk.data.locked) return <Message text={err && err.status !== 404 && err.status !== 403 ? t('common.error') : t('kdUnavailableTalk')} />;
   return <Player key={talk.data.id} talk={talk.data} />;
@@ -85,24 +77,12 @@ function Player({ talk }: { talk: Talk }) {
   };
 
   if (src.embed) {
-    const b = { paddingVertical: 10, paddingHorizontal: 22, backgroundColor: KC.surface } as const;
     return (
       <View style={{ flex: 1, backgroundColor: '#000' }}>
-        <View style={{ flex: 1 }}>
-          <ExternalVideo ref={embed} kind={src.embed.kind} id={src.embed.id} playerId={config?.dailymotionPlayerId} startSeconds={startSec} limitSeconds={0} onMessage={onEmbed} />
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, padding: 14, backgroundColor: KC.bgBottom }}>
-          <Focusable accessibilityRole="button" accessibilityLabel="-10 s" radius={999} onPress={() => embed.current?.seek(Math.max(0, live.current.pos - 10))} style={b}>
-            <Txt weight="bold" size={18} color={KC.text}>⟲ 10 s</Txt>
-          </Focusable>
-          <Focusable first accessibilityRole="button" accessibilityLabel={embedPlaying ? t('tv.pause') : t('tv.play')} radius={999}
-            onPress={() => (embedPlaying ? embed.current?.pause() : embed.current?.play())} style={[b, { paddingHorizontal: 30, backgroundColor: KC.accent }]}>
-            <Txt weight="extrabold" size={18} color={KC.onAccent}>{embedPlaying ? `❚❚ ${t('tv.pause')}` : `▶ ${t('tv.play')}`}</Txt>
-          </Focusable>
-          <Focusable accessibilityRole="button" accessibilityLabel="+10 s" radius={999} onPress={() => embed.current?.seek(live.current.pos + 10)} style={b}>
-            <Txt weight="bold" size={18} color={KC.text}>10 s ⟳</Txt>
-          </Focusable>
-        </View>
+        <ExternalVideo ref={embed} kind={src.embed.kind} id={src.embed.id} playerId={config?.dailymotionPlayerId} startSeconds={startSec} limitSeconds={0} onMessage={onEmbed} />
+        <TvPlayerBar title={talk.title} playing={embedPlaying} accent={KC.accent} onAccent={KC.onAccent}
+          onToggle={() => (embedPlaying ? embed.current?.pause() : embed.current?.play())}
+          onSeekBy={(d) => embed.current?.seek(Math.max(0, live.current.pos + d))} />
       </View>
     );
   }

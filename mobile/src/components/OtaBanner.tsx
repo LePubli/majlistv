@@ -9,8 +9,37 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/lib/session';
 import { colors, radius } from '@/lib/theme';
 import { Txt } from '@/components/ui';
+import { isTV } from '@/lib/tv';
+import { tvc, useTv } from '@/lib/tvTheme';
+
+/** Télé (refonte TV-R) : petite bulle en haut à droite qui s'efface seule après 8 s (la mise à jour s'applique au prochain démarrage). */
+function TvOtaToast() {
+  const { t, dirStyle } = useSession();
+  const { u } = useTv();
+  const { isUpdatePending } = Updates.useUpdates();
+  const [shown, setShown] = React.useState(true);
+  React.useEffect(() => {
+    if (!isUpdatePending) return undefined;
+    setShown(true);
+    const h = setTimeout(() => setShown(false), 8000);
+    return () => clearTimeout(h);
+  }, [isUpdatePending]);
+  if (!Updates.isEnabled || !isUpdatePending || !shown) return null;
+  return (
+    <View pointerEvents="none" accessibilityLiveRegion="polite" style={[{ position: 'absolute', top: u(54), end: u(96), zIndex: 60, flexDirection: 'row', alignItems: 'center', gap: u(12),
+      paddingVertical: u(14), paddingHorizontal: u(22), borderRadius: 999, backgroundColor: 'rgba(13,30,53,0.92)', borderWidth: 1, borderColor: 'rgba(143,169,204,0.25)' }, dirStyle]}>
+      <Feather name="refresh-cw" size={u(20)} color={tvc.accentLight} />
+      <Txt weight="bold" size={u(20)} color={tvc.text2}>{t('tv.updateReady')}</Txt>
+    </View>
+  );
+}
 
 export function OtaBanner() {
+  if (isTV()) return <TvOtaToast />;
+  return <PhoneOtaBanner />;
+}
+
+function PhoneOtaBanner() {
   const { t, dirStyle } = useSession();
   const insets = useSafeAreaInsets();
   const { isUpdatePending } = Updates.useUpdates();
