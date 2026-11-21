@@ -9968,3 +9968,9 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - Le Catalogue Premium propose les filtres de la phase 5 (langue, audio, sous-titres, durée, niveau, progression, ressources) dans un bloc « Filtres » aux couleurs du thème ; les choix sont dans l'adresse et se combinent avec thème, format, tri et recherche.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `web/components/premium/PmCatalogue.js` (clés `FILTER_KEYS`), `web/components/TalkFilters.js`, règles `.pm-cat-filters` de `web/app/skin-premium.css`.
 - **Exemple** : `/catalogue?duration=short&lang=fr` → vidéos courtes en français.
+
+
+## Thème Premium — Apprendre, écrans verrouillé et visiteur (21/11/2026)
+
+- Écran « verrouillé » (membre sans la formule Apprentissage) : texte de la bannière ramené sur la moitié sans illustration, 4 temps alignés sur une ligne. Écran « visiteur » : déjà conforme, inchangé.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : règles `.lk-banner` / `.lk-tiles` en fin de `web/app/skin-premium.css`, écran dans `web/app/(module-learning)/learning/page.js`.

@@ -727,3 +727,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, lot M recomposé comme la maquette (Studio, pages de détail : ouvrage, série, contenu Audyn, doublage d'une vidéo) : fait 21/11.
 - Éditeur de montage, lot 3b (nom, vitesse, opacité, corrections colorimétriques par extrait) : fait 21/11 (voir registre n° 315 pour ce qui n'est pas testé).
 - Thème Premium, filtres du Catalogue (phase 5) : fait 21/11. Restent : écrans Apprendre « verrouillé » / « visiteur », Kids (illustration, rubriques réelles), arabe.
+- Thème Premium, Apprendre (écrans « verrouillé » et « visiteur ») : fait 21/11. Restent : Kids (illustration du bandeau, rubriques réelles), arabe des autres écrans.
