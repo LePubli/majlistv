@@ -9985,3 +9985,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Thème Premium — essai Kids, rubriques réelles et sortie parentale (21/11/2026)
 
 - Vérification seule, sans changement de code : pastilles d'univers, rangées, sortie par code parental (mauvais code, blocage) contrôlées en 1440/390 px, français et arabe. Voir ligne 319 du registre.
+
+## Thème Premium — contrôle de l'arabe (21/11/2026)
+
+- Balayage de 44 écrans en arabe (1440 et 390 px) : aucun débordement ; correction de la pastille d'état sur Admin → Modules. Voir ligne 320 du registre.

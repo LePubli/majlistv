@@ -420,3 +420,7 @@ html[data-skin="premium"] .ac-heavy .ac-hours input { width: 70px; }
 
 /* Lot M : doublage par vidéo, espace sous la bannière du moteur */
 html[data-skin="premium"] .bm-page .db-grid { margin-top: 14px; }
+
+/* Modules : la pastille d'état (Activé…) passe au-dessus du titre au lieu de se poser dessus (la carte n'a pas d'icône), dans les deux sens de lecture. */
+html[data-skin="premium"] .bm-app .bm-ax-module > .bm-badge { position: static; display: inline-block; margin: 0 0 8px; }
+html[data-skin="premium"] .bm-app .bm-ax-module h3 { margin-top: 0; }
