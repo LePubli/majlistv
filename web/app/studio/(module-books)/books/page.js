@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
 import StudioTabs from '../../../../components/StudioTabs';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable } from '../../../../components/backoffice/Kit';
 
 export default function StudioBooks() {
-  const { t, call, locale } = useApp();
+  const { t, call, locale, skin } = useApp();
   const router = useRouter();
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(false);
@@ -24,6 +25,41 @@ export default function StudioBooks() {
     router.push(`/studio/books/${r.data.id}`);
   };
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('bkNav')} actions={<BmBtn primary onClick={() => setOpen((v) => !v)}>+ {t('bkNew')}</BmBtn>}>
+          {rows && <BmMetrics cols="three" items={[
+            { icon: 'book', label: t('bkNav'), value: rows.length },
+            { icon: 'check', tone: 'green', label: t('srPub'), value: rows.filter((r) => r.published).length },
+            { icon: 'download', label: t('bkColDl'), value: rows.reduce((a, r) => a + (r.downloads || 0), 0) },
+          ]} />}
+          <StudioTabs group="contents" />
+          {open && (
+            <BmPanel title={t('bkNew')}>
+              <form className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }} onSubmit={create}>
+                <label className="fld"><span>{t('bkName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} autoFocus /></label>
+                <label className="fld"><span>{t('bkAuthor')}</span><input maxLength={200} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></label>
+                {err && <p className="error" role="alert">{err}</p>}
+                <div><BmBtn primary disabled={busy || !f.title.trim()}>{t('bkCreate')}</BmBtn></div>
+              </form>
+            </BmPanel>
+          )}
+          <BmPanel title={t('bkNav')} extra={rows ? `${rows.length}` : ''}>
+            <BmTable empty={rows ? t('bkEmpty') : '…'} headers={[t('bkColBook'), t('colState'), t('bkColLangs'), t('bkColDl'), t('srColUpdated'), '']}
+              rows={(rows || []).map((r) => [
+                <Link key="t" href={`/studio/books/${r.id}`} className="studio-talk"><span className="studio-thumb" style={r.coverUrl ? { backgroundImage: `url(${r.coverUrl})` } : undefined} /><span className="studio-talk-text"><b dir="auto">{r.title}</b><small dir="auto">{r.author}</small></span></Link>,
+                <BmBadge key="s" tone={r.published ? 'green' : 'amber'}>{r.published ? t('srPub') : t('srDraft')}</BmBadge>,
+                r.langs.map((l) => langName(l, locale)).join(', ') || '—',
+                r.downloads,
+                date(r.updatedAt),
+                <BmBtn key="m" primary={false} href={`/studio/books/${r.id}`}>{t('manage')}</BmBtn>,
+              ])} />
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head">

@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
 import StudioTabs from '../../../../components/StudioTabs';
+import { Page as BmPage, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable } from '../../../../components/backoffice/Kit';
 
 export default function StudioRevenue() {
-  const { t, call, user, locale } = useApp();
+  const { t, call, user, locale, skin } = useApp();
   const [d, setD] = useState(null);
   useEffect(() => { if (user) call('/studio/revenue').then((r) => setD(r.ok ? r.data : { error: true })); }, [user, call]);
   if (!d) return null;
@@ -16,6 +17,32 @@ export default function StudioRevenue() {
   const hours = (s) => (s / 3600).toLocaleString(locale, { maximumFractionDigits: 1 });
   const monthLabel = (m) => new Date(`${m}-01T12:00:00Z`).toLocaleDateString(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const total = d.estimate.reduce((a, e) => a + (e.amountCents || 0), 0);
+  if (skin === 'premium') {
+    const stTone = { paid: 'green', pending: 'amber', carried: 'blue' };
+    return (
+      <main className="studio-page">
+        <BmPage title={t('rvTitle')} sub={t('rvIntro').replace('{p}', d.sharePct)}>
+          {d.channels > 0 && <BmMetrics cols="three" items={[
+            { icon: 'wallet', tone: 'green', label: `${t('rvThisMonth')} · ${monthLabel(d.month)}`, value: d.showEstimate ? money(total) : `${hours(d.estimate.reduce((a, e) => a + e.seconds, 0))} h`, note: d.showEstimate ? t('rvEstimate') : t('rvHoursOnly') },
+            { icon: 'clock', label: t('rvCarried'), value: money(d.carriedCents), note: t('rvMin').replace('{m}', money(d.minPayoutCents)) },
+          ]} />}
+          <StudioTabs group="analytics" />
+          {d.channels === 0 && <BmPanel title={t('rvTitle')}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('rvNoChannel')} <Link href="/studio/channel">{t('chNav')}</Link></p></BmPanel>}
+          {d.channels > 0 && (
+            <BmPanel title={t('rvByChannel')}>
+              <BmTable empty={t('rvNoWatch')} headers={[t('rvChannel'), t('rvHours'), ...(d.showEstimate ? [t('rvAmount')] : [])]}
+                rows={d.estimate.map((e) => [e.name, hours(e.seconds), ...(d.showEstimate ? [money(e.amountCents)] : [])])} />
+            </BmPanel>
+          )}
+          <BmPanel title={t('rvHistory')}>
+            <BmTable empty={t('rvNoHistory')} headers={[t('rvMonth'), t('rvChannel'), t('rvHours'), t('rvEarned'), t('rvTotal'), t('rvStatus')]}
+              rows={d.history.map((h) => [monthLabel(h.month), h.name, hours(h.seconds), money(h.amountCents), money(h.amountCents + h.carriedInCents), <BmBadge key="s" tone={stTone[h.status] || 'blue'}>{t('rvSt_' + h.status)}</BmBadge>])} />
+          </BmPanel>
+          <p className="meta" style={{ marginTop: 12 }}>{t('rvNote')}</p>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page rv-page">
       <h1>{t('rvTitle')}</h1>

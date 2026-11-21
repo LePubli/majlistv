@@ -7,8 +7,9 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
 import { Item } from '../../../../components/RemindersEditor';
+import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
 
-function Citations({ t, call, onChange }) {
+function Citations({ t, call, onChange, pm }) {
   const [d, setD] = useState(null);
   const [msg, setMsg] = useState(null);
   const load = useCallback(async () => { const r = await call('/admin/citations'); if (r.ok) setD(r.data); }, [call]);
@@ -26,9 +27,9 @@ function Citations({ t, call, onChange }) {
   };
   const c = d.corpus, job = d.stock.job;
   const ready = c.status === 'ready' && c.items > 0;
+  const Wrap = pm ? ({ children }) => <BmPanel title={t('citzTitle')}><div className="bm-form" style={{ padding: '0 18px 18px' }}>{children}</div></BmPanel> : ({ children }) => <section className="panel rm-panel" aria-labelledby="ct-title"><h2 className="panel-title" id="ct-title">{t('citzTitle')}</h2>{children}</section>;
   return (
-    <section className="panel rm-panel" aria-labelledby="ct-title">
-      <h2 className="panel-title" id="ct-title">{t('citzTitle')}</h2>
+    <Wrap>
       <p className="meta small">{t('citzIntro')}</p>
       <dl className="ct-stats">
         <div><dt>{t('citzCorpus')}</dt><dd>{c.status === 'running' ? c.message : ready ? `${c.items.toLocaleString()} · ${c.collections.map((x) => `${x.collection} ${x.n}`).join(', ')}` : c.status === 'failed' ? c.message : t('citzNotImported')}</dd></div>
@@ -44,12 +45,12 @@ function Citations({ t, call, onChange }) {
         <Link className="link u small" href="/admin?tab=settings">{t('citzSettings')}</Link>
       </div>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
-    </section>
+    </Wrap>
   );
 }
 
 export default function StudioReminders() {
-  const { t, call, user } = useApp();
+  const { t, call, user, skin } = useApp();
   const [f, setF] = useState({ origin: 'all', status: 'all', q: '', page: 1 });
   const [d, setD] = useState(null);
   const [man, setMan] = useState({ text: '', textAr: '', attribution: '' });
@@ -66,6 +67,48 @@ export default function StudioReminders() {
     setMan({ text: '', textAr: '', attribution: '' }); load();
   };
   const pages = d ? Math.max(1, Math.ceil(d.total / d.perPage)) : 1;
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('rmNav')} sub={t('rmLibIntro')}>
+          {d && <BmMetrics cols="three" items={[{ icon: 'bell', tone: 'blue', label: t('rmNav'), value: d.total }]} />}
+          {user?.role === 'admin' && <Citations t={t} call={call} onChange={load} pm />}
+          <BmPanel title={t('rmManual')}>
+            <form className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }} onSubmit={add}>
+              <textarea rows={3} maxLength={800} required value={man.text} onChange={(e) => setMan({ ...man, text: e.target.value })} placeholder={t('rmTextPh')} aria-label={t('rmText')} dir="auto" />
+              <textarea rows={2} maxLength={1600} value={man.textAr} onChange={(e) => setMan({ ...man, textAr: e.target.value })} placeholder={t('rmArPh')} aria-label={t('rmArLabel')} dir="rtl" lang="ar" />
+              <input required minLength={3} maxLength={300} value={man.attribution} onChange={(e) => setMan({ ...man, attribution: e.target.value })} placeholder={t('rmSourcePh')} aria-label={t('rmSource')} />
+              {msg && <p className="error" role="alert">{msg}</p>}
+              <div><BmBtn primary>{t('rmAdd')}</BmBtn> <span className="meta small">{t('rmFreeHelp')}</span></div>
+            </form>
+          </BmPanel>
+          <BmPanel title={t('rmNav')} extra={d ? `${d.total}` : ''}>
+            <div className="bm-inline-tools">
+              <select value={f.origin} onChange={(e) => setF({ ...f, origin: e.target.value, page: 1 })} aria-label={t('rmFilterOrigin')}>
+                {['all', 'corpus', 'manual', 'transcript', 'quiz'].filter((o) => o !== 'corpus' || user?.role === 'admin').map((o) => <option key={o} value={o}>{o === 'all' ? t('rmAllOrigins') : t(`rmOrigin_${o}`)}</option>)}
+              </select>
+              <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value, page: 1 })} aria-label={t('rmFilterStatus')}>
+                <option value="all">{t('rmAllStatus')}</option><option value="draft">{t('rmDraft')}</option><option value="approved">{t('rmApproved')}</option>
+              </select>
+              <label className="bm-search-field"><input type="search" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value, page: 1 })} placeholder={t('rmSearch')} aria-label={t('rmSearch')} /></label>
+            </div>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              {!d ? null : d.reminders.length === 0 ? <p className="meta">{t('rmNone')}</p> : (
+                <ul className="rm-list">{d.reminders.map((r) => <Item key={r.id + r.status + r.text + r.attribution} r={r} t={t} call={call} onChange={load} />)}</ul>
+              )}
+              {pages > 1 && (
+                <div className="rm-actions">
+                  <BmBtn primary={false} disabled={f.page <= 1} onClick={() => setF({ ...f, page: f.page - 1 })}>←</BmBtn>
+                  <span className="meta small">{f.page} / {pages}</span>
+                  <BmBtn primary={false} disabled={f.page >= pages} onClick={() => setF({ ...f, page: f.page + 1 })}>→</BmBtn>
+                </div>
+              )}
+            </div>
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head"><h1 className="studio-title">{t('rmNav')}</h1></div>

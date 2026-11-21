@@ -2,11 +2,12 @@
 // Studio → file de relecture : toutes les propositions d'action en attente de validation, toutes vidéos confondues.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
 import { useApp } from '../../../../components/Providers';
 import PracticeSuggestion from '../../../../components/PracticeSuggestion';
 
 export default function PracticeReview() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [items, setItems] = useState(null);
   const load = useCallback(() => call('/studio/practice/review').then((r) => r.ok && setItems(r.data.suggestions)), [call]);
   useEffect(() => { load(); }, [load]);
@@ -16,6 +17,27 @@ export default function PracticeReview() {
   for (const s of items || []) {
     const g = groups.find((x) => x.talkId === s.talkId);
     if (g) g.items.push(s); else groups.push({ talkId: s.talkId, title: s.talkTitle, items: [s] });
+  }
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('pzReviewTitle')} sub={t('pzReviewIntro')}>
+          {items !== null && <BmMetrics cols="three" items={[
+            { icon: 'clipboard', tone: 'amber', label: t('pzReviewTitle'), value: items.length },
+            { icon: 'video', label: t('colTalk'), value: groups.length },
+          ]} />}
+          {items === null && <p className="meta">…</p>}
+          {items && items.length === 0 && <BmPanel title={t('pzReviewTitle')}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('pzReviewEmpty')}</p></BmPanel>}
+          {groups.map((g) => (
+            <BmPanel key={g.talkId} title={g.title} extra={<Link href={`/studio/${g.talkId}/content?tab=practice`}>{t('pzOpenTab')}</Link>}>
+              <div className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>
+                {g.items.map((x) => <PracticeSuggestion key={x.id} s={x} t={t} call={call} onChange={(n) => update(x.id, n)} />)}
+              </div>
+            </BmPanel>
+          ))}
+        </BmPage>
+      </main>
+    );
   }
   return (
     <main className="studio-page studio-narrow">

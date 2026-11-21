@@ -721,4 +721,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, lot G recomposé comme la maquette (Paramètres, Santé, Erreurs, Questions IA, Audit) : fait 21/11.
 - Back-office Premium, lot H recomposé comme la maquette (Studio : Tableau de bord, Contenus, Nouvelle vidéo) : fait 21/11.
 - Back-office Premium, lot I recomposé comme la maquette (Studio : Fiche, Séries, Shorts, Collections, Sous-titres) : fait 21/11.
-- Back-office Premium, lot J recomposé comme la maquette (Studio : Activité, Corrections, Doublage, Audyn) : fait 21/11. Suite : Analytics, Revenus, Quiz, Livres, Rappels, Pratique, Références, Modération, Événements, Direct, Chaînes, Stockage, Paramètres, sur « go ».
+- Back-office Premium, lot J recomposé comme la maquette (Studio : Activité, Corrections, Doublage, Audyn) : fait 21/11.
+- Back-office Premium, lot K recomposé comme la maquette (Studio : Revenus, Quiz, Ouvrages, Rappels, Pratique, Références) : fait 21/11. Suite : Modération, Événements, Direct, Chaînes, Stockage, Paramètres, fiche d'un ouvrage, sur « go ».

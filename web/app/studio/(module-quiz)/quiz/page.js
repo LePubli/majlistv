@@ -2,11 +2,12 @@
 // Studio → file de relecture : toutes les questions de quiz en attente de validation, toutes vidéos confondues.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
 import { useApp } from '../../../../components/Providers';
 import QuizQuestion from '../../../../components/QuizQuestion';
 
 export default function ReviewQueue() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [qs, setQs] = useState(null);
   const load = useCallback(() => call('/studio/quiz/review').then((r) => r.ok && setQs(r.data.questions)), [call]);
   useEffect(() => { load(); }, [load]);
@@ -19,6 +20,27 @@ export default function ReviewQueue() {
     if (g) g.items.push(q); else groups.push({ talkId: q.talkId, title: q.talkTitle, items: [q] });
   }
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('qzReviewTitle')} sub={t('qzReviewIntro')}>
+          {qs !== null && <BmMetrics cols="three" items={[
+            { icon: 'clipboard', tone: 'amber', label: t('qzReviewTitle'), value: qs.length },
+            { icon: 'video', label: t('colTalk'), value: groups.length },
+          ]} />}
+          {qs === null && <p className="meta">…</p>}
+          {qs && qs.length === 0 && <BmPanel title={t('qzReviewTitle')}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('qzReviewEmpty')}</p></BmPanel>}
+          {groups.map((g) => (
+            <BmPanel key={g.talkId} title={g.title} extra={<Link href={`/studio/${g.talkId}/content?tab=quiz`}>{t('qzOpenQuiz')}</Link>}>
+              <div className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>
+                {g.items.map((x) => <QuizQuestion key={x.id} q={x} t={t} call={call} onChange={(n) => update(x.id, n)} />)}
+              </div>
+            </BmPanel>
+          ))}
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page studio-narrow">
       <h1 className="studio-title">{t('qzReviewTitle')}</h1>
