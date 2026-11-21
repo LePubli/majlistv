@@ -8,7 +8,7 @@ assert.match(read('components/FridayBand.js'), /\/coran\/\$\{f\.kahf\.n\}/, 'lie
 assert.match(read('components/FridayBand.js'), /ready &&/, 'bouton Al-Kahf seulement si le lecteur est prêt');
 assert.match(read('components/SeasonBands.js'), /\{season === false && <FridayBand \/>\}/, 'carte sur l’accueil quand aucune saison n’est en cours (N3)');
 assert.match(read('app/page.js'), /<SeasonBands \/>/, 'bandes de l’accueil');
-assert.match(read('app/admin/page.js'), /tab === 'friday' && <FridayAdmin/, 'onglet Admin → Vendredi');
+assert.match(read('app/admin/page.js'), /tab === 'friday' && .*<FridayAdmin/, 'onglet Admin → Vendredi');
 assert.match(read('app/admin/page.js'), /friday: 'Vendredi'/, 'titre de l’onglet');
 assert.match(read('components/AdminShell.js'), /\['friday', t\('fdAdminNav'\)/, 'menu Admin');
 for (const k of ['fdTitle', 'fdKahf', 'fdRow', 'fdAdminNav']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);

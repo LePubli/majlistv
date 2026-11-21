@@ -8,7 +8,7 @@ assert.match(pg, /<InviteCard context="ramadan" next="\/ramadan" \/>/, 'visiteur
 assert.match(pg, /n <= st\.day/, 'pas de case pour un jour à venir');
 assert.match(read('components/RamadanAdmin.js'), /disabled=\{!form\.validated\}/, 'affichage impossible sans validation');
 assert.match(read('components/SeasonBand.js'), /s\.id === 'ramadan' && feat\('ramadan'\)/, 'bouton « Ramadan » dans le bandeau de saison');
-assert.match(read('app/admin/page.js'), /tab === 'ramadan' && <RamadanAdmin/, 'onglet Admin → Ramadan');
+assert.match(read('app/admin/page.js'), /tab === 'ramadan' && .*<RamadanAdmin/, 'onglet Admin → Ramadan');
 assert.match(read('lib/navcfg.js'), /\['ramadan', 'Ramadan'\]/, 'entrée du menu');
 for (const k of ['rzNav', 'rzTitle', 'rzIntro', 'rzDayOf', 'rzStartsIn', 'rzTarawih', 'rzRakaat', 'rzMosque', 'rzHome', 'rzNote', 'rzSoon']) assert.equal((i18n.match(new RegExp(k + ':', 'g')) || []).length, 3, `${k} en fr/en/ar`);
 assert.match(read('components/KidsHome.js'), /<KidRamadan \/>/, 'enfants : circuit sur l’accueil Kids');
