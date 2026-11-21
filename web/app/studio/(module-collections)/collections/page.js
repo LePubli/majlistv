@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
 import StudioTabs from '../../../../components/StudioTabs';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, SelectList as BmSelectList, c as bmc } from '../../../../components/backoffice/Kit';
 
 const KINDS = { cycle: 'Cycle', speaker: "Série d'un intervenant", theme: 'Thème du moment' };
 // Phase 6 (cahier du 20/11, § 11) : une collection est manuelle, automatique (règles), saisonnière ou personnelle.
@@ -55,7 +56,7 @@ function RuleForm({ c, setC, cats }) {
 }
 
 
-function Editor({ id, call, onChanged, onClose }) {
+function Editor({ id, call, onChanged, onClose, pm }) {
   const [c, setC] = useState(null);
   const [talks, setTalks] = useState([]);
   const [q, setQ] = useState('');
@@ -91,6 +92,52 @@ function Editor({ id, call, onChanged, onClose }) {
   const add = (x) => { if (talks.some((y) => y.id === x.id) || talks.length >= c.max) return; setTalks([...talks, { ...x, visible: true }]); setDirty(true); };
   const remove = async () => { if (!window.confirm('Supprimer cette collection ?')) return; const r = await call(`/studio/collections/${id}`, { method: 'DELETE' }); if (r.ok) { onChanged(); onClose(); } };
   return (
+    pm ? (
+      <BmPanel title={c.title}><div className="bm-form" style={{ padding: '0 18px 18px' }}>
+      <label className="fld"><span>Titre</span><input value={c.title} maxLength={120} onChange={set('title')} /></label>
+      <label className="fld"><span>Présentation</span><textarea rows={3} maxLength={1000} value={c.description} onChange={set('description')} /></label>
+      <label className="fld"><span>Type</span><select value={c.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label className="fld"><span>Fonctionnement</span><select value={c.mode} onChange={(e) => { setC({ ...c, mode: e.target.value, rule: {}, season: null }); setPv(null); }}>{Object.entries(MODES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label className="fld"><span>Catalogue</span><select value={c.catalogue} onChange={(e) => { setC({ ...c, catalogue: e.target.value, rule: {} }); setPv(null); }}><option value="adult">Adultes</option><option value="kids">Mejliss TV Kids</option></select></label>
+      {c.mode === 'seasonal' && <label className="fld"><span>Saison</span><select value={c.season || ''} onChange={(e) => setC({ ...c, season: e.target.value || null })}><option value="">— choisir —</option>{Object.entries(SEASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>}
+      <RuleForm c={c} setC={setC} cats={cats} />
+      {c.mode !== 'manual' && <div className="panel-actions"><button type="button" className="btn ghost" onClick={preview}>Voir ce que la collection afficherait</button></div>}
+      {pv && (pv.error ? <p className="error" role="alert">{pv.error}</p> : (
+        <div className="co-preview" role="status"><b>{pv.count} vidéo(s)</b>{c.mode === 'personal' && <small className="muted"> (exemple avec votre compte)</small>}
+          <ol>{pv.talks.map((x) => <li key={x.id}>{x.title}<small className="muted"> · {x.speaker}</small></li>)}</ol></div>))}
+      <label className="rv-email"><input type="checkbox" checked={Boolean(c.onHome)} onChange={set('onHome')} /> <span>Afficher en rangée sur l'accueil</span></label>
+      {c.onHome && <label className="fld"><span>Place sur l'accueil (petit nombre = plus haut)</span><input type="number" min="0" max="999" value={c.homeOrder ?? 100} onChange={set('homeOrder')} /></label>}
+      <label className="rv-email"><input type="checkbox" checked={c.published} onChange={set('published')} /> <span>Publiée (visible sur le site, au moins une vidéo visible)</span></label>
+      <label className="rv-email"><input type="checkbox" checked={c.pinned} onChange={set('pinned')} /> <span>Épinglée en tête de la liste</span></label>
+      <div className="panel-actions"><button type="button" className="btn" onClick={saveInfo}>Enregistrer les informations</button></div>
+
+      <h3>{c.mode === 'manual' || c.mode === 'seasonal' ? 'Vidéos' : 'Vidéos choisies à la main (ignorées tant que des règles existent)'} ({talks.length}/{c.max})</h3>
+      <ol className="co-items">
+        {talks.map((x, i) => (
+          <li key={x.id}>
+            <span className="co-title">{x.title}{x.visible === false && <small className="muted"> — pas encore visible du public</small>}<small className="muted"> · {x.speaker}</small></span>
+            <span className="co-btns">
+              <button type="button" className="btn ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Monter">↑</button>
+              <button type="button" className="btn ghost" disabled={i === talks.length - 1} onClick={() => move(i, 1)} aria-label="Descendre">↓</button>
+              <button type="button" className="btn ghost" onClick={() => { setTalks(talks.filter((y) => y.id !== x.id)); setDirty(true); }} aria-label="Retirer">×</button>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <label className="fld"><span>Ajouter une vidéo (recherche par titre, intervenant ou texte)</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Au moins 2 lettres…" /></label>
+      {hits.length > 0 && (
+        <ul className="co-hits">
+          {hits.map((x) => <li key={x.id}><span>{x.title}<small className="muted"> · {x.speaker}</small></span><button type="button" className="btn ghost" disabled={talks.some((y) => y.id === x.id)} onClick={() => add(x)}>{talks.some((y) => y.id === x.id) ? 'Déjà ajoutée' : 'Ajouter'}</button></li>)}
+        </ul>
+      )}
+      <div className="panel-actions">
+        <button type="button" className="btn" disabled={!dirty} onClick={saveItems}>Enregistrer les vidéos</button>
+        <button type="button" className="btn ghost" onClick={onClose}>Fermer</button>
+        <button type="button" className="link u small" onClick={remove}>Supprimer la collection</button>
+      </div>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      </div></BmPanel>
+    ) : (
     <section className="panel co-editor">
       <h2 className="panel-title">{c.title}</h2>
       <label className="fld"><span>Titre</span><input value={c.title} maxLength={120} onChange={set('title')} /></label>
@@ -136,11 +183,12 @@ function Editor({ id, call, onChanged, onClose }) {
       </div>
       {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
     </section>
+    )
   );
 }
 
 export default function StudioCollections() {
-  const { call, user, ready } = useApp();
+  const { call, user, ready, skin } = useApp();
   const [list, setList] = useState(null);
   const [sel, setSel] = useState(null);
   const [title, setTitle] = useState('');
@@ -156,6 +204,35 @@ export default function StudioCollections() {
     if (!r.ok) { setErr(r.data?.error || 'Titre : 3 caractères au moins'); return; }
     setTitle(''); await load(); setSel(r.data.id);
   };
+  if (skin === 'premium') {
+    const mode = (c) => `${MODE_SHORT[c.mode] || 'manuelle'}${c.catalogue === 'kids' ? ' · Kids' : ''}${c.season ? ` · ${SEASONS[c.season] || c.season}` : ''}`;
+    return (
+      <main className="studio-page">
+        <BmPage title="Collections" sub="Des sélections éditoriales : cycles, séries d'un intervenant, thèmes du moment."
+          actions={<BmBtn primary={false} href="/collections">Voir la page publique</BmBtn>}>
+          <BmMetrics cols="three" items={list ? [
+            { icon: 'layers', label: 'Collections', value: list.length },
+            { icon: 'check', tone: 'green', label: 'Publiées', value: list.filter((c) => c.published).length },
+            { icon: 'home', label: 'Sur l’accueil', value: list.filter((c) => c.onHome).length },
+          ] : []} />
+          <StudioTabs group="contents" />
+          <BmCols kind="two-main">
+            <BmPanel title="Collections" extra={list ? `${list.length}` : ''}>
+              <form className={bmc('form')} style={{ padding: '0 14px 12px' }} onSubmit={create}>
+                <label className={bmc('field')}><span>Nouvelle collection</span><input value={title} maxLength={120} placeholder="Ex. Le mois de Ramadan" onChange={(e) => setTitle(e.target.value)} /></label>
+                <div className={bmc('btn-row')}><button className="btn" disabled={title.trim().length < 3}>Créer</button></div>
+              </form>
+              {err && <p className="error" role="alert" style={{ padding: '0 14px' }}>{err}</p>}
+              <BmSelectList empty="Aucune collection pour l'instant." value={sel} onSelect={(id) => setSel(sel === id ? null : id)}
+                items={(list || []).map((c) => ({ id: c.id, title: c.title, sub: mode(c), tail: <BmBadge tone={c.published ? 'green' : 'amber'}>{c.published ? 'Publiée' : 'Brouillon'}</BmBadge> }))} />
+            </BmPanel>
+            {sel ? <Editor key={sel} id={sel} call={call} onChanged={load} onClose={() => setSel(null)} pm />
+              : <BmPanel title="Collection sélectionnée"><p style={{ padding: '0 18px 18px', color: 'var(--muted)' }}>Choisissez une collection à gauche pour la modifier.</p></BmPanel>}
+          </BmCols>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page studio-narrow">
       <h1 className="studio-title">Collections</h1>

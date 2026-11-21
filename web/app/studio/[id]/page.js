@@ -12,6 +12,7 @@ import { hasWebModule } from '../../../lib/modules';
 import Timeline from '../../../components/Timeline';
 import ImportVideoPanel from '../../../components/ImportVideoPanel';
 import SaleEditor from '../../../components/SaleEditor'; // étape C-2 : vente à l'unité
+import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols } from '../../../components/backoffice/Kit';
 
 // Encart « Quiz » : état et lien vers l'onglet de gestion.
 function QuizPanel({ id, t, call }) {
@@ -60,7 +61,7 @@ export function SourceLine({ x, t }) {
 
 export default function ManageTalk() {
   const { id } = useParams();
-  const { t, call, locale, user } = useApp();
+  const { t, call, locale, user, skin } = useApp();
   const router = useRouter();
   const [x, setX] = useState(undefined);
   const [msg, setMsg] = useState(null);
@@ -118,30 +119,7 @@ export default function ManageTalk() {
     </li>
   );
 
-  return (
-    <main className="studio-page">
-      <Link href="/studio/contents" className="back">← {t('myTalks')}</Link>
-      <div className="manage-head">
-        <span className="studio-thumb big" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined} />
-        <div className="manage-title">
-          <h1 className="studio-title">{x.title}</h1>
-          <p className="meta">{[x.speaker, langName(base(x.language), locale), t(x.access), external ? sourceLabel(x.source) : ''].filter(Boolean).join(' · ')}</p>
-          <span className={`state state-${kind}`}><i aria-hidden="true" />{t('state_' + kind)}{kind === 'run' && pct != null ? ` ${pct} %` : ''}</span>
-          {kind === 'sched' && <span className="meta small"> {t('scheduledFor').replace('{d}', new Date(x.publishAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }))}</span>}
-        </div>
-        <div className="manage-actions">
-          <Link href={`/talks/${x.id}`} className="btn ghost">{t('viewPage')}</Link>
-          {user?.role === 'admin' && hasWebModule('dubbing') && <Link href={`/studio/dubbing/${x.id}`} className="btn ghost">{t('sdDub')}</Link>}
-        </div>
-      </div>
-      {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
-
-      <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} />
-
-      <QuizPanel id={x.id} t={t} call={call} />
-      <PracticePanel id={x.id} t={t} call={call} />
-
-      <h2 className="panel-title outside">{t('sectProcessing')}</h2>
+  const tracksEl = (
       <ol className="tracks">
         <Row letter="V" state={steps.video} title={t('stepVideo')}>
           <p className="meta small">
@@ -197,6 +175,67 @@ export default function ManageTalk() {
           </p>
         </Row>
       </ol>
+  );
+
+  if (skin === 'premium') {
+    const stTone = { live: 'green', run: 'blue', err: 'red', review: 'amber', sched: 'amber' }[kind] || 'blue';
+    return (
+      <main className="studio-page">
+        <BmPage title={x.title} sub={[x.speaker, langName(base(x.language), locale), t(x.access), external ? sourceLabel(x.source) : ''].filter(Boolean).join(' · ')}
+          actions={<><BmBtn primary={false} href={`/talks/${x.id}`}>{t('viewPage')}</BmBtn>{user?.role === 'admin' && hasWebModule('dubbing') && <BmBtn primary={false} href={`/studio/dubbing/${x.id}`}>{t('sdDub')}</BmBtn>}</>}>
+          <BmMetrics cols="three" items={[
+            { icon: 'activity', tone: stTone === 'green' ? 'green' : stTone === 'red' ? 'amber' : 'blue', label: t('colState'), value: `${t('state_' + kind)}${kind === 'run' && pct != null ? ` ${pct} %` : ''}`, note: kind === 'sched' ? t('scheduledFor').replace('{d}', new Date(x.publishAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })) : '' },
+            { icon: 'captions', label: t('stepSubs'), value: (x.translations || []).filter((tr) => tr.status === 'ready').length },
+            { icon: 'file', label: t('stepSummary'), value: (x.insights || []).filter((i) => i.status === 'ready').length },
+          ]} />
+          {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
+          <BmCols kind="two-main">
+            <BmPanel title={t('sectPublication')}>
+              <div className="bm-form" style={{ padding: '0 18px 18px' }}><TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} /></div>
+            </BmPanel>
+            <div style={{ display: 'grid', gap: 15, alignContent: 'start' }}>
+              <BmPanel title={t('sectProcessing')}><div className="bm-form" style={{ padding: '0 18px 18px' }}>{tracksEl}</div></BmPanel>
+              <QuizPanel id={x.id} t={t} call={call} />
+              <PracticePanel id={x.id} t={t} call={call} />
+            </div>
+          </BmCols>
+          <SaleEditor kind="talk" id={x.id} />
+          <Timeline talkId={x.id} t={t} call={call} locale={locale}
+            signature={[x.status, x.transcriptStatus, x.publication, (x.translations || []).map((tr) => tr.lang + tr.status).join(), (x.insights || []).map((i) => i.lang + i.status).join()].join('|')} />
+          <div className="danger-zone">
+            <button className="btn danger" onClick={remove}>{t('delete')}</button>
+            <span className="meta small">{t('deleteHelp')}</span>
+          </div>
+        </BmPage>
+      </main>
+    );
+  }
+
+  return (
+    <main className="studio-page">
+      <Link href="/studio/contents" className="back">← {t('myTalks')}</Link>
+      <div className="manage-head">
+        <span className="studio-thumb big" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined} />
+        <div className="manage-title">
+          <h1 className="studio-title">{x.title}</h1>
+          <p className="meta">{[x.speaker, langName(base(x.language), locale), t(x.access), external ? sourceLabel(x.source) : ''].filter(Boolean).join(' · ')}</p>
+          <span className={`state state-${kind}`}><i aria-hidden="true" />{t('state_' + kind)}{kind === 'run' && pct != null ? ` ${pct} %` : ''}</span>
+          {kind === 'sched' && <span className="meta small"> {t('scheduledFor').replace('{d}', new Date(x.publishAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }))}</span>}
+        </div>
+        <div className="manage-actions">
+          <Link href={`/talks/${x.id}`} className="btn ghost">{t('viewPage')}</Link>
+          {user?.role === 'admin' && hasWebModule('dubbing') && <Link href={`/studio/dubbing/${x.id}`} className="btn ghost">{t('sdDub')}</Link>}
+        </div>
+      </div>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'}>{msg.text}</p>}
+
+      <TalkEditor key={x.id} x={x} reload={load} t={t} call={call} isAdmin={user?.role === 'admin'} />
+
+      <QuizPanel id={x.id} t={t} call={call} />
+      <PracticePanel id={x.id} t={t} call={call} />
+
+      <h2 className="panel-title outside">{t('sectProcessing')}</h2>
+      {tracksEl}
 
       <SaleEditor kind="talk" id={x.id} />
 

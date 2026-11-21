@@ -8,11 +8,12 @@ import { useApp } from '../../../components/Providers';
 import useMyTalks from '../../../components/useMyTalks';
 import { langName } from '../../../components/Transcript';
 import SubtitleTabs from '../../../components/SubtitleTabs';
+import { Page as BmPage, Badge as BmBadge, Btn as BmBtn, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, c as bmc } from '../../../components/backoffice/Kit';
 
 const FILTERS = ['all', 'run', 'err', 'none'];
 
 export default function StudioSubtitles() {
-  const { t, locale } = useApp();
+  const { t, locale, skin } = useApp();
   const { rows, loaded } = useMyTalks();
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
@@ -29,6 +30,44 @@ export default function StudioSubtitles() {
   const shown = withKind.filter((r) => (filter === 'all' || r.sub === filter) && (!needle || `${r.title} ${r.speaker}`.toLowerCase().includes(needle)));
   const lname = (l) => langName(String(l || '').split('-')[0], locale) || l;
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('sdSubs')} sub={t('sdSubsIntro')}>
+          <BmMetrics items={loaded ? [
+            { icon: 'captions', label: t('sdSubF_all'), value: withKind.length },
+            { icon: 'clock', label: t('sdSubF_run'), value: count('run') },
+            { icon: 'alert', tone: 'amber', label: t('sdSubF_err'), value: count('err') },
+            { icon: 'file', label: t('sdSubF_none'), value: count('none') },
+          ] : []} />
+          <SubtitleTabs />
+          <BmPanel title={t('sdSubs')} extra={loaded ? `${shown.length}` : ''}>
+            <div className={bmc('inline-tools')}>
+              <label className={bmc('search-field')}><input type="search" placeholder={t('studioSearch')} value={q} onChange={(e) => setQ(e.target.value)} /></label>
+              <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t('filterBy')}>
+                {FILTERS.map((k) => <option key={k} value={k}>{t('sdSubF_' + k)}{loaded ? ` (${count(k)})` : ''}</option>)}
+              </select>
+            </div>
+            <BmTable empty={loaded ? (rows.length === 0 ? t('studioEmpty') : t('noResults')) : '…'}
+              headers={[t('colTalk'), t('sdSubSource'), t('sdSubLangs'), '']}
+              rows={shown.map((r) => [
+                <span key="a"><Link href={`/studio/${r.id}`} dir="auto"><b>{r.title}</b></Link><br /><small>{r.speaker}</small></span>,
+                r.transcriptStatus === 'ready' ? lname(r.transcriptLanguage) : (r.transcriptStatus === 'failed' ? t('step_err') : '—'),
+                <span key="l" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(r.translations || []).length === 0 && <span style={{ color: 'var(--muted)' }}>{t('sdSubNone')}</span>}
+                  {(r.translations || []).map((x) => (
+                    <BmBadge key={x.lang} tone={x.status === 'failed' ? 'red' : busy(x.status) ? 'blue' : 'green'}>
+                      {lname(x.lang)}{busy(x.status) && x.progress != null ? ` ${x.progress} %` : x.status === 'failed' ? ' !' : ' ✓'}
+                    </BmBadge>
+                  ))}
+                </span>,
+                <BmBtn key="m" primary={false} href={`/studio/${r.id}`}>{t('manage')}</BmBtn>,
+              ])} />
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head"><h1 className="studio-title">{t('sdSubs')}</h1></div>

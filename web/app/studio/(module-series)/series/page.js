@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import ChannelPicker from '../../../../components/ChannelPicker';
 import StudioTabs from '../../../../components/StudioTabs';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, c as bmc } from '../../../../components/backoffice/Kit';
 
 export default function StudioSeries() {
-  const { t, call, locale, user } = useApp();
+  const { t, call, locale, user, skin } = useApp();
   const router = useRouter();
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(false);
@@ -28,6 +29,47 @@ export default function StudioSeries() {
   const date = (d) => new Date(d).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   const pill = (on, label, onClick) => <button type="button" aria-pressed={on} className={on ? 'pill on' : 'pill'} onClick={onClick}>{label}</button>;
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('srTitle')} sub={t('srEmpty')} actions={<BmBtn onClick={() => setOpen((v) => !v)}>+ {t('srNew')}</BmBtn>}>
+          <BmMetrics cols="three" items={rows ? [
+            { icon: 'film', label: t('srColSeries'), value: rows.length },
+            { icon: 'check', tone: 'green', label: t('srPub'), value: rows.filter((r) => r.published).length },
+            { icon: 'video', label: t('srColContent'), value: rows.reduce((n, r) => n + (r.episodeCount || 0), 0) },
+          ] : []} />
+          <StudioTabs group="contents" />
+          {open && (
+            <BmPanel title={t('srCreateTitle')}>
+              <form className={bmc('form')} style={{ padding: '0 18px 18px' }} onSubmit={create}>
+                <label className={bmc('field')}><span>{t('srName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} autoFocus /></label>
+                <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
+                <label className={bmc('field')}><span>{t('speaker')}</span><input maxLength={200} value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} /></label>
+                <div className="fld" role="group" aria-label={t('srStructure')}>
+                  <span>{t('srStructure')}</span>
+                  <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
+                  <span className="meta small">{f.hasSeasons ? t('srWithHelp') : t('srNoHelp')}</span>
+                </div>
+                {err && <p className="error" role="alert">{err}</p>}
+                <div className={bmc('btn-row')}><button className="btn" disabled={busy || !f.title.trim()}>{t('srCreate')}</button></div>
+              </form>
+            </BmPanel>
+          )}
+          <BmPanel title={t('srTitle')} extra={rows ? `${rows.length}` : ''}>
+            <BmTable empty={rows ? t('srEmpty') : '…'} onRow={(i) => router.push(`/studio/series/${rows[i].id}`)}
+              headers={[t('srColSeries'), t('colState'), t('srColContent'), t('access'), t('srColUpdated')]}
+              rows={(rows || []).map((r) => [
+                <span key="a"><b dir="auto">{r.title}</b><br /><small>{[r.speaker, user?.role === 'admin' ? r.ownerName : ''].filter(Boolean).join(' · ')}</small></span>,
+                <BmBadge key="b" tone={r.published ? 'green' : 'amber'}>{r.published ? t('srPub') : t('srDraft')}</BmBadge>,
+                `${t('srEpCount').replace('{n}', r.episodeCount)}${r.hasSeasons ? ` · ${t('srSeasonCount').replace('{n}', r.seasonCount)}` : ''}`,
+                t(r.access),
+                date(r.updatedAt),
+              ])} />
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head">
