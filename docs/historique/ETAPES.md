@@ -9981,3 +9981,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - Réglage `kids_hero_mode` (Admin → Paramètres → Kids) : `illustration` (défaut) garde le décor illustré ; `featured` affiche l'image de la vidéo mise en avant (Studio → fiche de la vidéo → « Mise en avant »), si elle est visible par l'enfant et a une image.
 - **Déploiement** : DockPanel → Redeploy `majlistv-api` (nouveau réglage, pas de migration), puis `majlistv-web`, puis commandes VPS habituelles. **Debug** : `api/src/modules/kids/routes.js` (`GET /kids/talks` → `heroMode`, `featured`), `web/components/KidsHome.js`, `web/components/premium/PmKids.js`, règles `.pm-hero-video` de `web/app/skin-premium.css`.
 - **Exemple** : régler « Bandeau de l'accueil Kids » sur `featured`, cocher « Mise en avant » sur une vidéo Kids ayant une miniature, ouvrir /kids.
+
+## Thème Premium — essai Kids, rubriques réelles et sortie parentale (21/11/2026)
+
+- Vérification seule, sans changement de code : pastilles d'univers, rangées, sortie par code parental (mauvais code, blocage) contrôlées en 1440/390 px, français et arabe. Voir ligne 319 du registre.

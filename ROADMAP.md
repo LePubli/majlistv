@@ -729,3 +729,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Thème Premium, filtres du Catalogue (phase 5) : fait 21/11. Restent : écrans Apprendre « verrouillé » / « visiteur », Kids (illustration, rubriques réelles), arabe.
 - Thème Premium, Apprendre (écrans « verrouillé » et « visiteur ») : fait 21/11. Restent : Kids (illustration du bandeau, rubriques réelles), arabe des autres écrans.
 - Thème Premium, Kids : bandeau avec choix « illustration » (défaut) ou vidéo mise en avant : fait 21/11. Restent : essai Kids avec vraies rubriques et sortie par code parental, arabe des autres écrans.
+- Thème Premium, Kids : essai avec vraies rubriques et sortie par code parental : fait 21/11 (aucun changement de code). Restent : arabe des autres écrans Premium, petits restes du back-office, phase 7 du catalogue.
