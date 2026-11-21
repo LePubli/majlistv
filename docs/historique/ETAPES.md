@@ -9916,3 +9916,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Paramètres, Santé du serveur, Erreurs, Questions IA et Journal d'audit reprennent la composition de la maquette avec les données et fonctions réelles.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.
+
+## Back-office Premium — lot H recomposé (21/11/2026)
+
+- Studio : Tableau de bord, Contenus et Nouvelle vidéo reprennent la composition de la maquette avec les données et fonctions réelles.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.

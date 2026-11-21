@@ -14,6 +14,7 @@ import { production, STAGES } from '../../../lib/production';
 import { hasWebModule } from '../../../lib/modules';
 import BoKpis from '../../../components/backoffice/BoKpis';
 import BoQuickSheet from '../../../components/backoffice/BoQuickSheet';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, Drawer as BmDrawer, Meta as BmMeta, c as bmc } from '../../../components/backoffice/Kit';
 
 const mins = (s) => (s ? `${Math.max(1, Math.round(s / 60))} min` : '');
 const FILTERS = ['all', 'todub', 'toreview', 'live', 'draft', 'run', 'err', 'modreview'];
@@ -103,6 +104,83 @@ export default function StudioTalks() {
     return r.p.pct != null ? `${base} ${r.p.pct} %` : base;
   };
 
+  if (pm) {
+    const qr = quick ? rows.find((x) => x.id === quick) : null;
+    const tone = (k) => ({ ok: 'green', warn: 'amber', err: 'red', run: 'blue' }[k] || 'blue');
+    const table = (
+      <BmTable empty={mine && rows.length === 0 ? t('studioEmpty') : t('noResults')} onRow={(i) => setQuick(quick === shown[i].id ? null : shown[i].id)}
+        headers={[<input key="all" type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} />, t('pdColTalk'), t('pdColLang'), t('pdColProd'), t('pdColVis'), t('pdColViews')]}
+        rows={shown.map((r) => {
+          const [vis] = visibility(r);
+          return [
+            <span key="c" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></span>,
+            <span key="t" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <span style={{ width: 64, height: 40, borderRadius: 6, flex: '0 0 auto', background: '#0b2a45 center/cover', ...(r.posterUrl ? { backgroundImage: `url(${r.posterUrl})` } : {}) }} />
+              <span><b dir="auto">{r.title}</b><br /><small>{[mins(r.durationSeconds), r.source === 'upload' ? t('pdSentOn').replace('{d}', date(r.created_at)) : `${sourceLabel(r.source)} (${t('pdNotEditable')})`].filter(Boolean).join(' · ')}</small></span>
+            </span>,
+            langPair(r),
+            <span key="p"><Stages p={r.p} t={t} /> <BmBadge tone={tone(r.p.tone)}>{label(r)}</BmBadge></span>,
+            vis,
+            r.p.views == null || (r.p.views === 0 && r.kind !== 'live') ? '—' : nf.format(r.p.views),
+          ];
+        })} />
+    );
+    return (
+      <main className="studio-page">
+      <BmPage title={t('bqPageTitle')} sub={t('bqPageSub')} actions={<BmBtn href="/studio/new">+ {t('newTalk')}</BmBtn>}>
+        <BmMetrics items={mine ? [
+          { icon: 'video', label: t('bqKAll'), value: rows.length },
+          { icon: 'activity', label: t('bqKRun'), value: count('run') },
+          { icon: 'file', tone: 'amber', label: t('bqKReview'), value: count('modreview') + (dubOn ? count('toreview') : 0) },
+          { icon: 'check', tone: 'green', label: t('bqKLive'), value: count('live') },
+        ] : []} />
+        <StudioTabs group="contents" />
+        {flash && <p className="notice" role="status">{flash}</p>}
+        {sel.size > 0 && !bulk && (
+          <div className="bk-bar" role="region" aria-label={t('bkEdit')}>
+            <strong>{t('bkSelected').replace('{n}', sel.size)}</strong>
+            <button type="button" className="btn" onClick={() => setBulk(true)}>{t('bkEdit')}</button>
+            <button type="button" className="btn ghost" onClick={removeSelected}>{t('bkRemove')}</button>
+            <button type="button" className="btn ghost" onClick={() => setSel(new Set())}>{t('bkClear')}</button>
+          </div>
+        )}
+        {bulk && sel.size > 0 && (
+          <BulkEdit ids={[...sel]} onCancel={() => setBulk(false)}
+            onDone={(n) => { setBulk(false); setSel(new Set()); setFlash(t('bkDone').replace('{n}', n)); load(); setTimeout(() => setFlash(''), 5000); }} />
+        )}
+        <div className={bmc(`split ${qr ? 'inspector-split' : ''}`)}>
+          <BmPanel title={t('bqPageTitle')} extra={mine ? `${shown.length}` : ''}>
+            <div className={bmc('inline-tools')}>
+              <label className={bmc('search-field')}><input type="search" placeholder={t('pdSearch')} value={q} onChange={(e) => setQ(e.target.value)} /></label>
+              <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t('filterBy')}>
+                {shownFilters.map((k) => <option key={k} value={k}>{t('pdFilter_' + k)}{k !== 'all' && mine ? ` (${count(k)})` : ''}</option>)}
+              </select>
+            </div>
+            {table}
+          </BmPanel>
+          {qr && (
+            <BmDrawer title={t('bqTitle')} onClose={() => setQuick(null)}>
+              <div style={{ height: 130, borderRadius: 8, margin: '0 0 12px', background: '#0b2a45 center/cover', ...(qr.posterUrl ? { backgroundImage: `url(${qr.posterUrl})` } : {}) }} />
+              <BmMeta items={[[t('bqTitleField'), <span key="t" dir="auto">{qr.title}</span>], ...(qr.speaker ? [[t('bqSpeaker'), qr.speaker]] : []), [t('bqLangs'), langPair(qr)], ...(mins(qr.durationSeconds) ? [[t('bqDuration'), mins(qr.durationSeconds)]] : []), [t('bqStatus'), <BmBadge key="s" tone={tone(qr.p.tone)}>{label(qr)}</BmBadge>], [t('bqVis'), visibility(qr)[0]]]} />
+              <h4>{t('bqSteps')}</h4>
+              <div className={bmc('mini-steps')}>
+                {STAGES.map((k, i) => <span key={k}><i className={qr.p.stages[k] === 'ok' ? bmc('done') : ''}>{qr.p.stages[k] === 'ok' ? '✓' : i + 1}</i><small>{t(`pdSt_${k}`)}</small></span>)}
+              </div>
+              <div className={bmc('drawer-box')}>
+                <h4>{t('bqOptions')}</h4>
+                <Link className={bmc('drawer-action')} href={`/studio/${qr.id}`}>{t('manage')} →</Link>
+                {hasWebModule('stats') && feat('stats') && modUsable('stats') && <Link className={bmc('drawer-action')} href={`/studio/stats?talk=${qr.id}`}>{t('sdAnalytics')} →</Link>}
+                {dubOn && <Link className={bmc('drawer-action')} href={`/studio/dubbing/${qr.id}`}>{t('sdDub')} →</Link>}
+                {hasWebModule('editor') && feat('editor') && modUsable('editor') && qr.source === 'upload' && <Link className={bmc('drawer-action')} href={`/studio/editor?talk=${qr.id}`}>{t('sdEditInEditor')} →</Link>}
+              </div>
+            </BmDrawer>
+          )}
+        </div>
+        <p className="meta small">{t('pdLegendNote')}</p>
+      </BmPage>
+      </main>
+    );
+  }
   return (
     <main className={`studio-page pd-page${pm && quick ? ' bo-has-quick' : ''}`}>
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('sdContents')}</span></nav>

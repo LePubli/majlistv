@@ -12,6 +12,7 @@ import { uploadFile } from '../../../lib/upload';
 import { langName } from '../../../components/Transcript';
 import ImportPanel from '../../../components/ImportPanel';
 import { LEVELS, levelLabel } from '../../../lib/levels';
+import { Page as BmPage, Btn as BmBtn, Panel as BmPanel, Cols as BmCols, Hint as BmHint, I as BmI, c as bmc } from '../../../components/backoffice/Kit';
 
 // Langues de sous-titres proposées (doit correspondre à api/src/langs.js).
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
@@ -65,7 +66,7 @@ function frameOf(file) {
 }
 
 export default function NewTalk() {
-  const { t, call, locale, formats } = useApp();
+  const { t, call, locale, formats, skin } = useApp();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
@@ -153,6 +154,181 @@ export default function NewTalk() {
   const catName = cats.find((c) => String(c.id) === String(f.categoryId))?.fullName;
   const sendingLabel = t('nwSending').replace('{n}', Math.round(up.pct * 100));
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+      <BmPage title={t('newTalk')} sub={t('nwDropHint')}>
+        <ol className={bmc('wizard-steps')} aria-label={t('newTalk')}>
+          <li className={step === 1 ? bmc('on') : ''} aria-current={step === 1 ? 'step' : undefined}><i>{step > 1 ? '✓' : '1'}</i><span>{t('nwStep1')}</span></li>
+          <li className={step === 2 ? bmc('on') : ''} aria-current={step === 2 ? 'step' : undefined}><i>2</i><span>{t('nwStep2')}</span></li>
+        </ol>
+        {step === 1 && (
+          <>
+            <>
+              <BmPanel title={t('nwStep1')}>
+                <div className={bmc('dropzone') + (drag ? ' over' : '')}
+                  onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
+                  onDrop={(e) => { e.preventDefault(); setDrag(false); pick(e.dataTransfer.files); }}>
+                  <div className={bmc('upload-icon')}><BmI name="download" size={42} /></div>
+                  <h2>{t('nwDropTitle')}</h2>
+                  <p>{t('nwDropHint')}</p>
+                  <BmBtn onClick={() => fileInput.current?.click()}>{t('nwBrowse')}</BmBtn>
+                  <input ref={fileInput} type="file" accept="video/*" hidden onChange={(e) => pick(e.target.files)} />
+                </div>
+                <div className={bmc('divider-label')}>{t('nwDropOr')}</div>
+                <form className={bmc('form')} style={{ padding: '0 18px 18px' }} onSubmit={useLink}>
+                  <label className={bmc('field')}><span>{t('nwLinkTitle')}</span>
+                    <input type="url" inputMode="url" placeholder="https://" value={link} onChange={(e) => { setLink(e.target.value); setLinkErr(''); }} required /></label>
+                  <div className={bmc('btn-row')}><button className="btn">{t('nwLinkGo')}</button></div>
+                  {linkErr && <p className="error">{linkErr}</p>}
+                  <p className="muted">{t('nwLinkHint')}</p>
+                  <BmHint><b>{t('impAnyLink')}</b></BmHint>
+                </form>
+              </BmPanel>
+            </>
+            <BmPanel title={t('impNewLabel')}>
+              <div className={bmc('form')} style={{ padding: '0 18px 18px' }}><ImportPanel cats={cats} onImported={() => router.push('/studio/contents')} /></div>
+            </BmPanel>
+          </>
+        )}
+        {step === 2 && (
+          <form onSubmit={submit}>
+            <BmCols kind="two-main">
+              <BmPanel title={t('nwStep2')}>
+                <div className={bmc('form')} style={{ padding: '0 18px 18px' }}>
+            {mode === 'file' && (
+              <div className={`upbar up-${up.state}`} role="status">
+                <div className="upbar-top">
+                  <span className="upname">{file?.name}</span>
+                  <span>{up.state === 'sending' ? sendingLabel : up.state === 'done' ? t('nwSent') : t('nwSendFailed')}</span>
+                </div>
+                <progress value={up.pct} max="1" />
+                {up.state === 'failed' && <button type="button" className="link u" onClick={() => pick([file])}>{t('nwRetry')}</button>}
+              </div>
+            )}
+            {mode === 'link' && <p className="meta linkline">{link.trim()}</p>}
+            {mode === 'link' && info.state !== 'idle' && (
+              <p className={`meta${info.state === 'none' ? ' warn' : ''}`} role="status" aria-live="polite">
+                {info.state === 'loading' ? t('nwInfoLoading') : info.state === 'done' ? t('nwInfoDone', { src: info.src }) : t('nwInfoNone')}
+              </p>
+            )}
+
+            <label className="fld"><span>{t('talkTitle')}</span>
+              <input required maxLength={200} placeholder={t('nwTitlePh')} value={f.title} onChange={(e) => patch({ title: e.target.value })} /></label>
+            <ChannelPicker value={f.speaker} onChange={(v) => patch({ speaker: v })} t={t} call={call} />
+            <label className="fld"><span>{t('speaker')}</span>
+              <input placeholder={t('nwSpeakerPh')} value={f.speaker} onChange={(e) => patch({ speaker: e.target.value })} /></label>
+            <label className="fld"><span>{t('description')}</span>
+              <textarea rows={3} placeholder={t('nwDescPh')} value={f.description} onChange={(e) => patch({ description: e.target.value })} /></label>
+
+            <div className="fld" role="group" aria-label={t('nwLangQ')}>
+              <span>{t('nwLangQ')}</span>
+              <div className="pills">
+                {QUICK_LANGS.map((c) => (
+                  <button key={c} type="button" aria-pressed={base(f.language) === c} className={base(f.language) === c ? 'pill on' : 'pill'} onClick={() => patch({ language: c })}>{langName(c, locale)}</button>
+                ))}
+                <select className="pill-select" aria-label={t('nwLangOther')} value={QUICK_LANGS.includes(base(f.language)) ? '' : base(f.language)} onChange={(e) => e.target.value && patch({ language: e.target.value })}>
+                  <option value="">{t('nwLangOther')}</option>
+                  {TR_LANGS.filter((c) => !QUICK_LANGS.includes(c)).map((c) => <option key={c} value={c}>{langName(c, locale)}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('fmtLabel')}>
+              <span>{t('fmtLabel')}</span>
+              <div className="pills">
+                <button type="button" aria-pressed={!f.formatId} className={!f.formatId ? 'pill on' : 'pill'} onClick={() => patch({ formatId: '' })}>{t('fmtNone')}</button>
+                {formats.map((fm) => (
+                  <button key={fm.id} type="button" aria-pressed={String(f.formatId) === String(fm.id)} className={String(f.formatId) === String(fm.id) ? 'pill on' : 'pill'} onClick={() => patch({ formatId: String(fm.id) })}>{fm['name' + locale[0].toUpperCase() + locale.slice(1)] || fm.nameFr}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('category')}>
+              <span>{t('category')}</span>
+              <div className="pills">
+                <button type="button" aria-pressed={!f.categoryId} className={!f.categoryId ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: '' })}>{t('nwNoCat')}</button>
+                {cats.map((c) => (
+                  <button key={c.id} type="button" aria-pressed={String(f.categoryId) === String(c.id)} className={String(f.categoryId) === String(c.id) ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: String(c.id) })}>{c.fullName || c.name}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('nwAccessQ')}>
+              <span>{t('nwAccessQ')}</span>
+              <div className="pills">
+                {[['free', t('free'), t('nwFreeHelp')], ['premium', t('premium'), t('nwPremHelp')]].map(([k, label, help]) => (
+                  <button key={k} type="button" aria-pressed={f.access === k} className={f.access === k ? 'pill on' : 'pill'} onClick={() => patch({ access: k })}>{label}</button>
+                ))}
+              </div>
+              <span className="meta small">{f.access === 'free' ? t('nwFreeHelp') : t('nwPremHelp')}</span>
+            </div>
+
+            <div className="fld" role="group" aria-label={t('lvLabel')}>
+              <span>{t('lvLabel')}</span>
+              <div className="pills">
+                <button type="button" aria-pressed={!f.level} className={!f.level ? 'pill on' : 'pill'} onClick={() => patch({ level: '' })}>{t('lvNone')}</button>
+                {LEVELS.map((l) => (
+                  <button key={l} type="button" aria-pressed={f.level === l} className={f.level === l ? 'pill on' : 'pill'} onClick={() => patch({ level: l })}>{levelLabel(l, t)}</button>
+                ))}
+              </div>
+              <span className="meta small">{t('lvHelp')}</span>
+            </div>
+
+            {mode === 'link' && parsed && (
+              <div className="fld">
+                <label className="check"><input type="checkbox" checked={importIt} onChange={(e) => setImportIt(e.target.checked)} /> {t('impNewLabel')}</label>
+                {!importIt && <span className="meta small">{t('impNewHelp')}</span>}
+              </div>
+            )}
+            {wantImport && !parsed && <p className="meta small">{t('impNewForced')}</p>}
+            {wantImport && (
+              <div className="fld">
+                <label className="check"><input type="checkbox" checked={frAudio} onChange={(e) => setFrAudio(e.target.checked)} /> {t('impAudioOpt')}</label>
+                <span className="meta small">{t('impAudioOptHelp')}</span>
+              </div>
+            )}
+            {mode === 'link' && (
+              <label className="check rights"><input type="checkbox" checked={f.rightsConfirmed} onChange={(e) => patch({ rightsConfirmed: e.target.checked })} /> {wantImport ? t('impRights') : t('rightsConfirm')}</label>
+            )}
+            {canTranslate && (
+              <fieldset className="langs">
+                <legend>{t('translateTo')}</legend>
+                {TR_LANGS.filter((c) => c !== base(f.language)).map((c) => (
+                  <label key={c} className="check"><input type="checkbox" checked={f.translateTo.includes(c)} onChange={() => toggleLang(c)} /> {langName(c, locale)}</label>
+                ))}
+                <p className="meta">{t('translateHint')}</p>
+              </fieldset>
+            )}
+
+            {err && <p className="error">{err}</p>}
+            <div className="wiz-actions">
+              <button type="button" className="btn ghost" onClick={back}>← {t('nwBack')}</button>
+              <span className="wiz-right">
+                <button type="button" className="btn ghost" disabled={saving || !f.title.trim() || (mode === 'file' && up.state !== 'done')} onClick={() => submit(null, 'draft')}>{t('nwSaveDraft')}</button>
+                <button className="btn" disabled={saving || (mode === 'file' && up.state !== 'done')}>
+                  {mode === 'file' && up.state === 'sending' ? t('nwWaitUpload') : t('publish')}
+                </button>
+              </span>
+            </div>
+                </div>
+              </BmPanel>
+              <BmPanel title={t('nwPreview')}>
+                <div className="talk preview-card" style={{ margin: '0 18px 18px' }}>
+                  <div className="thumb" style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}>
+                    <span className={`badge ${f.access}`}>{t(f.access)}</span>
+                  </div>
+                  <h3>{f.title || t('nwTitlePh')}</h3>
+                  <p>{[f.speaker, catName].filter(Boolean).join(' · ') || langName(base(f.language), locale)}</p>
+                </div>
+              </BmPanel>
+            </BmCols>
+          </form>
+        )}
+      </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page studio-narrow">
       <h1 className="studio-title">{t('newTalk')}</h1>

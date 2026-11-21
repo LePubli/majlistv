@@ -11,6 +11,7 @@ import { hasWebModule } from '../../lib/modules';
 import { fmtBytes } from '../../lib/format';
 import { taskLabel } from '../../lib/activity';
 import BoKpis from '../../components/backoffice/BoKpis';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Progress as BmProgress, AxRow as BmAxRow, I as BmI, c as bmc } from '../../components/backoffice/Kit';
 
 const clock = (s) => { const m = Math.round((s || 0) / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
 
@@ -46,6 +47,79 @@ export default function StudioDash() {
   if (n('draft') + n('sched')) todo.push(['draft', t('sdTodoDraft').replace('{n}', n('draft') + n('sched')), '/studio/contents?filter=draft', true]);
   if (ov?.failedTasks) todo.push(['task', t('sdTodoTasks').replace('{n}', ov.failedTasks), '/studio/activity']);
 
+  if (pm) {
+    const prod = ov?.production || [];
+    return (
+      <main className="studio-page">
+      <BmPage title={t('sdPmTitle')} sub={t('sdPmSub')}
+        actions={<>{on('editor') && <BmBtn primary={false} href="/studio/editor">{t('sdOpenEditor')}</BmBtn>}<BmBtn href="/studio/new">+ {t('newTalk')}</BmBtn></>}>
+        <BmMetrics items={loaded ? [
+          { icon: 'video', label: t('bqKAll'), value: rows.length },
+          { icon: 'film', label: t('bqKRun'), value: n('run') },
+          { icon: 'file', tone: 'amber', label: t('bqKReview'), value: n('review') },
+          { icon: 'check', tone: 'green', label: t('bqKLive'), value: n('live') },
+        ] : []} />
+        <BmCols kind="two-main">
+          <BmPanel title={t('sdRunning')} extra={ov && ov.productionCount ? `${ov.productionCount}` : ''}>
+            <div className={bmc('task-cards')}>
+              {ov && prod.length === 0 && <p style={{ padding: 4, color: 'var(--muted)' }}>{t('sdRunningNone')}</p>}
+              {prod.slice(0, 4).map((x) => (
+                <div key={`${x.queue}:${x.ref}`} className={bmc('task-progress')}>
+                  <b dir="auto">{x.title}</b><small>{taskLabel(x, t)}</small>
+                  <div><BmProgress value={x.status === 'running' ? x.progress || 0 : 0} /><b>{x.status === 'running' ? `${x.progress || 0} %` : ''}</b></div>
+                </div>
+              ))}
+            </div>
+            <p style={{ padding: '4px 18px 14px' }}><Link className={bmc('linkish')} href="/studio/activity">{t('sdSeeActivity')}{ov?.productionCount > 3 ? ` (${ov.productionCount})` : ''} →</Link></p>
+          </BmPanel>
+          <BmPanel title={t('sdTodo')} extra={todo.length ? `${todo.length}` : ''}>
+            <div className={bmc('task-cards')}>
+              {loaded && ov && todo.length === 0 && <p style={{ padding: 4, color: 'var(--muted)' }}>{t('sdTodoNone')}</p>}
+              {todo.map(([k, label, href]) => (
+                <Link key={k} href={href} className={bmc('ax-row')} style={{ textDecoration: 'none' }}>
+                  <span className={bmc('square-icon')}><BmI name={k === 'err' || k === 'task' ? 'alert' : k === 'draft' ? 'edit' : 'file'} size={18} /></span>
+                  <span><b>{label}</b></span><span>{t('sdSee')} →</span>
+                </Link>
+              ))}
+            </div>
+          </BmPanel>
+        </BmCols>
+        <BmCols kind="equal">
+          <BmPanel title={t('bqPageTitle')} extra={<Link className={bmc('linkish')} href="/studio/contents">{t('sdContents')} →</Link>}>
+            <BmTable empty={loaded ? t('studioEmpty') : '…'} headers={[t('pdColTalk'), t('bqDuration')]}
+              rows={rows.slice(0, 5).map((r) => [<Link key="l" href={`/studio/${r.id}`} dir="auto">{r.title}</Link>, clock(r.durationSeconds)])} />
+          </BmPanel>
+          <BmPanel title={t('sdLast')} extra={ch && ch.channels > 0 ? `${t('sdFollowers')} : ${nf.format(ch.followers)}` : ''}>
+            <div style={{ padding: '0 18px 18px' }}>
+              {ov && !last && <p style={{ color: 'var(--muted)' }}>{t('sdLastNone')}</p>}
+              {last && (
+                <>
+                  <Link href={`/studio/${last.id}`} dir="auto"><b>{last.title}</b></Link>
+                  <dl className={bmc('metadata')}>
+                    {st && <div><dt>{t('sdViewsSince')}</dt><dd>{st.last ? nf.format(st.last.views) : '—'}</dd></div>}
+                    {st && <div><dt>{t('sdAvgWatch')}</dt><dd>{pct(st.last?.avgWatchPct)}</dd></div>}
+                    {dub && <div><dt>{t('sdFrListened')}</dt><dd>{pct(dub.lastFrPct)}</dd></div>}
+                    {st && <div><dt>{t('sdViews')}</dt><dd>{nf.format(st.views)}</dd></div>}
+                    {st && <div><dt>{t('sdHours')}</dt><dd>{nf.format(Math.round(st.minutes / 60))} h</dd></div>}
+                    {sto && <div><dt>{t('sgKpiGarage')}</dt><dd>{sto.space.usedBytes == null ? '—' : `${fmtBytes(sto.space.usedBytes, locale)} / ${fmtBytes(sto.space.capacityBytes, locale)}`}</dd></div>}
+                  </dl>
+                  {sto && <BmProgress value={sto.space.usedPct || 0} />}
+                </>
+              )}
+            </div>
+          </BmPanel>
+        </BmCols>
+        {on('editor') && (
+          <Link href="/studio/editor" className={bmc('shorts-cta')}>
+            <span className={bmc('shorts-cta-icon')}><BmI name="smartphone" size={34} /></span>
+            <span><strong>{t('sdOpenEditor')}</strong><small>{t('sdPmSub')}</small></span>
+            <span className={bmc('shorts-cta-arrow')}>→</span>
+          </Link>
+        )}
+      </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page sd-dash">
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('sdDash')}</span></nav>
