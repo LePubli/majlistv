@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const cp = read('app/catalogue/page.js');
+const cp = read('app/catalogue/CatalogueClient.js');
 const css = read('app/skin-bleu.css');
 
 // Recherche : un vrai formulaire, l'adresse garde la recherche, champ vide = retour au Catalogue ; l'API filtre (GET /talks?q=).

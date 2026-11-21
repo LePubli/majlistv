@@ -733,3 +733,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Thème Premium, arabe : contrôle de 44 écrans (site + back-office) fait 21/11, un défaut corrigé (pastille des Modules). Restent : petits restes cosmétiques du back-office, phase 7 du catalogue.
 - Thème Premium, back-office : fils d'Ariane Quiz / Pratique / Références / Rappels, plage horaire de l'Activité, Frames.js retiré : fait 21/11. Reste : phase 7 du catalogue.
 - Studio : sélecteur de catégories compact (vidéo et série) ; back-office Premium : polices ×1,2 : fait 21/11.
+- **Catalogue — phase 7 sur 7** (21/11) : titre / description / canonique de /catalogue, pages filtrées en noindex, rangées « collection » de l'API Kids reconnues par l'application et la télé, essais à 820 et 1920 px. **Cahier des charges du catalogue terminé.** Restent : relecture des catégories par Epok, traductions EN / AR, 32 dessins animés à classer.

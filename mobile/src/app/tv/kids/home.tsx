@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { useAsync } from '@/lib/useAsync';
-import { KC, avatarEmoji, leftMin, resolveShelves, shelfTitle } from '@/lib/kids';
+import { KC, avatarEmoji, leftMin, resolveShelves, shelfKey, shelfTitle } from '@/lib/kids';
 import { useTv } from '@/lib/tvTheme';
 import { thumbOf } from '@/lib/media';
 import { formatDuration } from '@/lib/format';
@@ -86,7 +86,7 @@ export default function TvKidsHome() {
         {cat.error && !d ? <View style={{ paddingHorizontal: pad, flexDirection: 'row' }}><TvButton first label={t('common.retry')} icon="refresh-cw" onPress={cat.reload} {...acc} /></View> : null}
         {d && rows.length === 0 ? <Txt size={u(26)} color={KC.text2} style={{ paddingHorizontal: pad }}>{t('kdEmpty')}</Txt> : null}
         {d ? rows.map(({ shelf, items }) => (
-          <View key={`${shelf.kind}-${shelf.rubricId ?? ''}`} style={{ gap: u(14) }}>
+          <View key={shelfKey(shelf)} style={{ gap: u(14) }}>
             <Txt weight="extrabold" size={u(34)} color={KC.text} style={{ paddingHorizontal: pad }}>{shelfTitle(shelf, { t, rubrics: d.rubrics, locale })}</Txt>
             <FlatList horizontal data={items} keyExtractor={(x) => x.id} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: u(28), paddingStart: pad, paddingEnd: pad, paddingVertical: u(14) }}
               renderItem={({ item }) => <TvKidCard x={item} width={w} />} />

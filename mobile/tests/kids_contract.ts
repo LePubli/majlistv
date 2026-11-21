@@ -16,7 +16,7 @@ assert.ok(DICT.fr.kdWho, 'textes Kids importés');
 
 async function main() {
   let st = await parent.get<KidsState>('/me/kids');
-  assert.equal(st.allowed, true); assert.equal(st.hasPin, false); assert.deepEqual(st.bands, ['3-5', '6-8', '9-12']);
+  assert.equal(st.allowed, true); assert.equal(st.hasPin, false); assert.deepEqual(st.bands, ['3-5', '6-8', '9-12', '13-15']);
   console.log('état parent OK');
 
   assert.equal(validPin('12'), false);

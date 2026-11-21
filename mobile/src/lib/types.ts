@@ -181,7 +181,7 @@ export type KidCard = {
   id: string; title: string; speaker: string | null; access: string; source: string; kidsBands: string[]; durationSeconds: number | null;
   completed: boolean; positionMs: number; rubricIds: number[]; stars: number | null; posterUrl: string | null;
 };
-export type KidShelf = { kind: 'resume' | 'because' | 'age' | 'new' | 'popular' | 'rubric'; ids: string[]; rubricId?: number; basedOn?: { id: string; title: string } };
+export type KidShelf = { kind: 'resume' | 'because' | 'age' | 'new' | 'popular' | 'rubric' | 'collection'; ids: string[]; rubricId?: number; basedOn?: { id: string; title: string }; collectionId?: string; title?: string }; // « collection » : rangée d'une collection Kids (catalogue, phase 6)
 export type KidCatalog = { rubrics: KidRubric[]; shelves: KidShelf[]; talks: KidCard[]; time: KidTime };
 
 // ---- Mejliss Kids (22b-9b) : quiz, étoiles, badges, petites actions, courts ----

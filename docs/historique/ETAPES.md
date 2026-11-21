@@ -9997,3 +9997,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Studio — sélecteur de catégories et taille des polices (21/11/2026)
 
 - `CategoryPicker` remplace les murs de pastilles (fiche vidéo, fiche série) ; polices du back-office Premium ×1,2. Voir ligne 322 du registre.
+
+## Catalogue — phase 7 : responsive, télé, SEO (21/11/2026)
+
+- Page serveur `/catalogue` (titre, description, canonique, `noindex` des pages filtrées) ; rangées « collection » reconnues par l'application Kids (téléphone et télé) ; captures 820 / 1920 px en trois thèmes sans débordement. **Déploiement** : DockPanel → Redeploy `majlistv-web`, puis mise à jour du contenu de l'application ; API inchangée. Voir ligne 323 du registre.

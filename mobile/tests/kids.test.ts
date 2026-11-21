@@ -7,7 +7,7 @@ import {
   LIMIT_CHOICES, allowedCount, catalogIds, dayLetter, fmtMinutes, hasActivity, limitLabel, pinChangeError, profilePatch, usageBars, withAllowed, reportDays,
   BADGE_CODES, BADGE_ICON, actionStateKey, actionsOpenCount, badgeIcon, clampStars, dueCards, neighbourShort, openActions, playableShorts, quizAnswers, reviewDate, starsMessageKey,
   AVATARS, AVATAR_EMOJI, BANDS, KC, KID_RENEW_AFTER_MS, ageFilter, avatarEmoji, bandKey, exitMessage, isKidExpired, isTimeUp, leftMin, needsRenew,
-  parseKidSession, progressBody, resolveShelves, rubricName, searchTerm, serializeKidSession, shelfTitle, validPin,
+  parseKidSession, progressBody, resolveShelves, rubricName, searchTerm, serializeKidSession, shelfKey, shelfTitle, validPin,
 } from '../src/lib/kids';
 import { APP_DICT, DICT, translate } from '../src/lib/i18n';
 import { ApiError, createApi } from '../src/lib/api';
@@ -73,6 +73,8 @@ test('rangées : titres, résolution, filtre d\'âge', () => {
   assert.equal(shelfTitle({ kind: 'popular', ids: [] }, ctx), 'Les plus regardés');
   assert.equal(shelfTitle({ kind: 'because', ids: [], basedOn: { id: 'x', title: 'Le Prophète' } }, ctx), 'Parce que tu as aimé « Le Prophète »');
   assert.equal(shelfTitle({ kind: 'rubric', rubricId: 7, ids: [] }, ctx), '📖 Histoires');
+  assert.equal(shelfTitle({ kind: 'collection', collectionId: 'c1', title: 'Ramadan en famille', ids: [] }, ctx), 'Ramadan en famille', 'rangée d\'une collection Kids (phase 6)');
+  assert.notEqual(shelfKey({ kind: 'collection', collectionId: 'c1', ids: [] }), shelfKey({ kind: 'collection', collectionId: 'c2', ids: [] }), 'deux collections = deux clés');
   assert.equal(shelfTitle({ kind: 'rubric', rubricId: 7, ids: [] }, { ...ctx, locale: 'ar' }), '📖 Histoires', 'repli sur le français');
   assert.equal(shelfTitle({ kind: 'rubric', rubricId: 99, ids: [] }, ctx), '');
   assert.equal(rubricName(rubrics[0], 'en'), 'Stories');

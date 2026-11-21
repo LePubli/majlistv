@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { useAsync } from '@/lib/useAsync';
-import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, dueCards, leftMin, resolveShelves, rubricName, searchTerm, shelfTitle } from '@/lib/kids';
+import { BADGE_CODES, KC, ageFilter, actionsOpenCount, avatarEmoji, dueCards, leftMin, resolveShelves, rubricName, searchTerm, shelfKey, shelfTitle } from '@/lib/kids';
 import type { KidCard, KidCatalog, KidSummary } from '@/lib/types';
 import { KButton, KChip, KScreen, KTxt, KidVideoCard } from '@/components/kids/KidUi';
 import { KidBadge } from '@/components/kids/KidBadge';
@@ -130,7 +130,7 @@ export default function KidsHome() {
           </View>
         ) : d ? (
           rows.length === 0 ? <KTxt style={{ paddingHorizontal: 20 }} color={KC.text2}>{t('kdEmpty')}</KTxt> : rows.map(({ shelf, items }) => (
-            <View key={`${shelf.kind}-${shelf.rubricId ?? ''}`} style={{ gap: 10 }}>
+            <View key={shelfKey(shelf)} style={{ gap: 10 }}>
               <KTxt weight="extrabold" size={20} accessibilityRole="header" style={{ paddingHorizontal: 20 }}>{shelfTitle(shelf, { t, rubrics: d.rubrics, locale })}</KTxt>
               <FlatList horizontal data={items} keyExtractor={(x) => x.id} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 20 }}
                 renderItem={({ item }) => <KidVideoCard x={item} width={cardW} onPress={() => open(item.id)} />} />

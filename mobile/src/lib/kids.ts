@@ -66,6 +66,7 @@ export function shelfTitle(s: KidShelf, ctx: { t: T; rubrics: KidRubric[]; local
   if (s.kind === 'age') return t('kcAge');
   if (s.kind === 'new') return t('kcNew');
   if (s.kind === 'popular') return t('kcPopular');
+  if (s.kind === 'collection') return s.title ?? '';
   const r = rubrics.find((x) => x.id === s.rubricId);
   return r ? `${r.emoji} ${rubricName(r, locale)}` : '';
 }
@@ -177,3 +178,6 @@ export const withAllowed = (talks: KidCatalogTalk[], ids: string[], allowed: boo
 export const catalogIds = (talks: KidCatalogTalk[], max = 200) => talks.slice(0, max).map((x) => x.id);
 /** Un enfant du rapport a-t-il quelque chose à montrer ? (sinon : « pas d'activité ») */
 export const hasActivity = (p: KidReportProfile) => p.active;
+
+/** Clé stable d'une rangée (deux rangées « collection » ne doivent pas partager la même clé). */
+export const shelfKey = (s: KidShelf) => `${s.kind}-${s.rubricId ?? s.collectionId ?? ''}`;

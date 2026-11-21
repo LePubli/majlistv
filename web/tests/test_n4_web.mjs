@@ -35,7 +35,7 @@ assert.match(cf, /\{subs\.length > 0 && \(\n\s*<nav className="cg-chips cg-subs"
 assert.match(cf, /aria-current=\{on \? 'true' : undefined\}/);
 
 // Page Catalogue : filtres sous la bannière et en haut de chaque grille ; grille format + thème
-const cp = read('app/catalogue/page.js');
+const cp = read('app/catalogue/CatalogueClient.js');
 assert.match(cp, /<HomeHero hero=\{hero\}[^\n]*\/>\n\s*<CatalogueFilters \/>/);
 assert.match(cp, /<CatalogueFilters format=\{format\} cat=\{cat\} \/>/);
 assert.match(cp, /if \(fmt\) params\.set\('format', fmt\);\n\s*if \(cat\) params\.set\('category', cat\);/);

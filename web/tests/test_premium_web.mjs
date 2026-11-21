@@ -72,7 +72,7 @@ assert.match(posterArt('x'), /^url\(\/premium\/[\w-]+\.webp\)$/);
 const i18nSrc = read('lib/i18n.js');
 for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSub', 'pmLearnCur', 'pmProfile', 'pmUniverses', 'pmNewTag']) assert.equal((i18nSrc.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 // 7. Lot 2 : catalogue, liste des séries, fiche série (maquette V20 : catalogue-v11, heritage-v9), vraies données.
-assert.match(read('app/catalogue/page.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
+assert.match(read('app/catalogue/CatalogueClient.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
 assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
 assert.match(read('app/(module-series)/series/[id]/SeriesClient.js'), /if \(skin === 'premium'\) return <PmSeries id=/);
 const cat = read('components/premium/PmCatalogue.js');
