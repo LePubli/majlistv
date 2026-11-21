@@ -9961,3 +9961,10 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - **Tests** : `cd api && node tests/test_clip_looks.mjs && node tests/test_render_plan.mjs` (le worker utilise les modules de `api/` : `ln -s ../api/node_modules ../worker/node_modules` en local) ; `node web/tests/e1_ops.mjs`.
 - **Debug** : si la durée du rendu diffère du montage, vérifier `plan.total` et `lookKey` (regroupement des extraits) dans `plan.js` ; une vitesse ne fait pas bouger la musique de fond.
 - **Exemple** : extrait de 8 s en ×2 → 4 s dans le montage, son accéléré avec `atempo`, sous-titres recalés.
+
+
+## Thème Premium — filtres du Catalogue (21/11/2026)
+
+- Le Catalogue Premium propose les filtres de la phase 5 (langue, audio, sous-titres, durée, niveau, progression, ressources) dans un bloc « Filtres » aux couleurs du thème ; les choix sont dans l'adresse et se combinent avec thème, format, tri et recherche.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `web/components/premium/PmCatalogue.js` (clés `FILTER_KEYS`), `web/components/TalkFilters.js`, règles `.pm-cat-filters` de `web/app/skin-premium.css`.
+- **Exemple** : `/catalogue?duration=short&lang=fr` → vidéos courtes en français.

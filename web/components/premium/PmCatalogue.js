@@ -16,6 +16,7 @@ import { thumbOf, posterArt } from '../../lib/thumb';
 import { catalogueTabs } from '../SectionTabs';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { OttCard, OttRail } from './PmOtt';
+import TalkFilters, { FILTER_KEYS, filtersFrom } from '../TalkFilters';
 
 const PAGE = 24;
 const SORTS = ['recent', 'alpha', 'duration'];
@@ -29,6 +30,7 @@ function hrefOf(base, cur, patch) {
   const q = new URLSearchParams();
   const v = { ...cur, ...patch };
   for (const k of ['q', 'cat', 'format', 'sort']) if (v[k] && !(k === 'sort' && v[k] === 'recent')) q.set(k, String(v[k]));
+  for (const k of FILTER_KEYS) if (v[k]) q.set(k, String(v[k])); // phase 5 : langue, audio, sous-titres, durée, niveau, progression, ressources
   const s = q.toString();
   return s ? `${base}?${s}` : base;
 }
@@ -45,7 +47,9 @@ function Inner({ series = false }) {
     cat: /^\d{1,9}$/.test(sp.get('cat') || '') ? sp.get('cat') : '',
     format: /^[a-z0-9-]{2,40}$/.test(sp.get('format') || '') ? sp.get('format') : '',
     sort: SORTS.includes(sp.get('sort')) ? sp.get('sort') : 'recent',
+    ...(series ? {} : filtersFrom(sp)), // les filtres de la phase 5 ne concernent que les vidéos
   };
+  const hasExtras = FILTER_KEYS.some((k) => cur[k]);
   const [q, setQ] = useState(cur.q);
   useEffect(() => { setQ(cur.q); }, [cur.q]);
   const [view, setView] = useState('grid');
@@ -69,6 +73,7 @@ function Inner({ series = false }) {
     if (cur.cat) p.set('category', cur.cat);
     if (cur.format) p.set('format', cur.format);
     if (cur.sort !== 'recent') p.set('sort', cur.sort);
+    for (const k of FILTER_KEYS) if (cur[k]) p.set(k, cur[k]);
     p.set('limit', PAGE); p.set('offset', offset);
     return p;
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -117,11 +122,11 @@ function Inner({ series = false }) {
   const tabs = catalogueTabs({ t, feat, hasSeries, hasBooks }).filter(([href]) => href !== '/catalogue' && href !== '/series');
   const heading = series ? t('pmSeriesTitle') : t('cgTitle');
   const title = cur.q ? t('cgResults').replace('{q}', cur.q)
-    : [cur.format ? (formatName(cur.format) || cur.format) : '', catName].filter(Boolean).join(' · ') || (series ? t('pmAllSeries') : t('pmAllContents'));
+    : [cur.format ? (formatName(cur.format) || cur.format) : '', catName].filter(Boolean).join(' · ') || (series ? t('pmAllSeries') : hasExtras ? t('fltTitle') : t('pmAllContents'));
 
   // Mode « rangées » (accueil du Catalogue sans filtre) : une rangée par grand thème qui a des vidéos (6 au plus).
   const [rails, setRails] = useState([]);
-  const railMode = !series && !cur.q && !cur.cat && !cur.format && cur.sort === 'recent';
+  const railMode = !series && !cur.q && !cur.cat && !cur.format && !hasExtras && cur.sort === 'recent';
   useEffect(() => {
     if (!ready || !railMode || !facets) { setRails([]); return undefined; }
     let dead = false;
@@ -181,6 +186,7 @@ function Inner({ series = false }) {
               </select></label>
             </div>
           </div>
+          {!series && <div className="pm-cat-filters"><TalkFilters /></div>}
           {shown && shown.length === 0 ? (
             <div className="v20-cv11-empty">
               <Glyph name="search" />

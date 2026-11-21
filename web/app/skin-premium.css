@@ -524,6 +524,18 @@ html[data-skin="premium"] .pm-cat-formats { display: flex; gap: 6px; flex-wrap: 
 html[data-skin="premium"] .pm-cat-formats a { padding: 7px 12px; }
 html[data-skin="premium"] .pm-cat-sort { white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #9fb4cc; }
 html[data-skin="premium"] .pm-cat-sort select { background: #111925; color: #fff; border: 1px solid #1d2a3a; border-radius: 4px; padding: 7px 10px; font-size: 12px; }
+/* Phase 5 — filtres (langue, audio, sous-titres, durée, niveau, progression, ressources) du Catalogue Premium */
+html[data-skin="premium"] .pm-cat-filters { margin: 0 0 16px; }
+html[data-skin="premium"] .pm-cat-filters .tf { gap: 10px; }
+html[data-skin="premium"] .pm-cat-filters .tf-toggle { min-height: 38px; padding: 7px 14px; border-radius: 4px; border: 1px solid #1d2a3a; background: #111925; color: #e6eef8; font-size: 12px; font-weight: 700; }
+html[data-skin="premium"] .pm-cat-filters .tf-toggle:hover, html[data-skin="premium"] .pm-cat-filters .tf-toggle:focus-visible { border-color: #35b9ff; }
+html[data-skin="premium"] .pm-cat-filters .tf-toggle.on { background: #126fbb; border-color: #126fbb; color: #fff; }
+html[data-skin="premium"] .pm-cat-filters .tf-count { color: #fff; }
+html[data-skin="premium"] .pm-cat-filters .tf-panel { padding: 14px; border: 1px solid #1d2a3a; border-radius: 8px; background: #0b1420; }
+html[data-skin="premium"] .pm-cat-filters .tf-field { color: #9fb4cc; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+html[data-skin="premium"] .pm-cat-filters .tf-field select { min-height: 40px; border: 1px solid #1d2a3a; border-radius: 4px; background: #111925; color: #fff; font-size: 13px; text-transform: none; letter-spacing: 0; }
+html[data-skin="premium"] .pm-cat-filters .tf-field select:focus-visible { outline: 0; border-color: #35b9ff; }
+html[data-skin="premium"] .pm-cat-filters .tf-reset { border-radius: 4px; border: 1px solid #1d2a3a; background: transparent; color: #e6eef8; }
 html[data-skin="premium"] .pm-cat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 1050px) { html[data-skin="premium"] .pm-cat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 800px) { html[data-skin="premium"] .pm-cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
