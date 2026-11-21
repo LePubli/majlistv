@@ -6,6 +6,7 @@
 // les affiche au plus tard 10 secondes plus tard. « Rétablir » revient au texte d'origine.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Table, Badge, c } from './backoffice/Kit';
 
 const LANGS = [['fr', 'Français', 'ltr'], ['en', 'English', 'ltr'], ['ar', 'العربية', 'rtl']];
 const PAGE_SIZE = 40;
@@ -37,7 +38,7 @@ const placeholders = (s) => [...new Set(String(s).match(/\{[^}]*\}/g) || [])];
 const idOf = (key, lang) => `${key}|${lang}`;
 
 export default function TextsAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [dict, setDict] = useState(null);           // textes d'origine { fr:{}, en:{}, ar:{} }
   const [saved, setSaved] = useState(null);         // textes modifiés enregistrés : Map id → valeur
   const [pending, setPending] = useState(() => new Map()); // modifications non enregistrées : id → texte, ou null = rétablir l'original
@@ -193,6 +194,83 @@ export default function TextsAdmin() {
   const shownLangs = LANGS.filter(([l]) => !lang || l === lang);
   const savedCount = [...saved.keys()].length;
 
+  if (skin === 'premium') {
+    return (
+      <Page title="Textes & traductions" sub="Modifiez n’importe quel texte du site dans les trois langues. Rien n’est publié tant que vous n’avez pas cliqué sur Enregistrer.">
+        <Metrics cols="three" items={[
+          { icon: 'text', label: 'Clés', value: keys.length },
+          { icon: 'check', tone: 'green', label: 'Modifications enregistrées', value: savedCount },
+          { icon: 'clock', tone: 'amber', label: 'Non enregistrées', value: pending.size },
+        ]} />
+        <Panel title="Matrice de traduction" extra={`${list.length} sur ${keys.length}`}>
+          <div className="bm-form" style={{ padding: '0 14px' }}>
+      <div className="tt-bar">
+        <label className="tt-search"><span className="sr-only">Chercher un texte</span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un mot, une phrase ou une clé (ex. Regarder, lgHello)…" />
+        </label>
+        <label>Page ou zone
+          <select value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="">Toutes ({keys.length})</option>
+            {groups.map(([g, n]) => <option key={g} value={g}>{g} ({n})</option>)}
+          </select>
+        </label>
+        <label>Langue
+          <select value={lang} onChange={(e) => setLang(e.target.value)}>
+            <option value="">Les trois</option>
+            {LANGS.map(([l, name]) => <option key={l} value={l}>{name}</option>)}
+          </select>
+        </label>
+        <label className="tt-check"><input type="checkbox" role="switch" checked={onlyMod} onChange={(e) => setOnlyMod(e.target.checked)} /> Seulement les textes modifiés</label>
+        <details className="ap-more">
+          <summary className="btn ghost">Plus</summary>
+          <div className="ap-more-menu">
+            <button type="button" onClick={exportJson}>Exporter mes modifications (JSON)</button>
+            <button type="button" onClick={() => importRef.current?.click()}>Importer un fichier JSON…</button>
+            <button type="button" className="danger" onClick={resetAll} disabled={busy || !savedCount}>Tout rétablir à l’origine</button>
+          </div>
+        </details>
+        <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={importJson} />
+      </div>
+
+          </div>
+          <p className="ap-status" role="status" aria-live="polite" style={{ padding: '0 14px' }}><span>{list.length} texte(s) affiché(s) sur {keys.length}</span> <span>{savedCount} modification(s) enregistrée(s)</span></p>
+          {msg && <p className="ap-msg" role="alert" style={{ padding: '0 14px' }}>{msg}</p>}
+          <Table className="tt-matrix" empty="Aucun texte ne correspond à cette recherche."
+            headers={['Clé', ...shownLangs.map(([, name]) => name), 'État']}
+            rows={shown.map((key) => [
+              <span key="k"><code className={c('ax-code')}>{key}</code><br /><small>{groupOf(key)}</small></span>,
+              ...shownLangs.map(([l, , dir]) => {
+                const id = idOf(key, l); const val = current(key, l); const err = errors.get(id);
+                return (
+                  <div key={l} className="bm-form">
+                    <textarea id={`tt-${id}`} aria-label={`${key} ${l}`} lang={l} dir={dir} rows={val.length > 90 || val.includes('\n') ? 3 : 2} value={val} maxLength={2000} aria-invalid={Boolean(err)} onChange={(e) => edit(key, l, e.target.value)} />
+                    {err && <p className="tt-err" role="alert">{err}</p>}
+                    {isModified(key, l) && <small>Original : <bdi lang={l} dir={dir}>{original(key, l)}</bdi> <button type="button" className="link u" onClick={() => restore(key, l)}>Rétablir</button></small>}
+                  </div>
+                );
+              }),
+              (() => { const m = shownLangs.some(([l]) => isModified(key, l)); const pd = shownLangs.some(([l]) => pending.has(idOf(key, l))); return <Badge key="s" tone={pd ? 'amber' : m ? 'blue' : 'gray'}>{pd ? 'Non enregistré' : m ? 'Modifié' : 'Original'}</Badge>; })(),
+            ])} />
+          {pages > 1 && (
+            <nav className="tt-pager" aria-label="Pages de textes" style={{ padding: 14 }}>
+              <button type="button" className="btn ghost" disabled={safePage === 0} onClick={() => { setPage(safePage - 1); window.scrollTo({ top: 0 }); }}>← Précédent</button>
+              <span>Page {safePage + 1} / {pages}</span>
+              <button type="button" className="btn ghost" disabled={safePage >= pages - 1} onClick={() => { setPage(safePage + 1); window.scrollTo({ top: 0 }); }}>Suivant →</button>
+            </nav>
+          )}
+        </Panel>
+        {pending.size > 0 && (
+          <div className="tt-save" role="region" aria-label="Enregistrer les modifications">
+            <span>{pending.size} modification(s) non enregistrée(s){errors.size ? ` — ${errors.size} à corriger` : ''}</span>
+            <span className="tt-save-btns">
+              <button type="button" className="btn ghost" onClick={discard} disabled={busy}>Annuler</button>
+              <button type="button" className="btn" onClick={save} disabled={busy || errors.size > 0}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+            </span>
+          </div>
+        )}
+      </Page>
+    );
+  }
   return (
     <section className="tt" lang="fr" dir="ltr">
       <p className="meta">Modifiez ici n’importe quel texte du site, dans les trois langues. Rien n’est publié tant que vous n’avez pas cliqué sur <b>Enregistrer</b>. Gardez les mots entre accolades, comme {'{n}'} : le site y met un nombre, un nom ou une date.</p>

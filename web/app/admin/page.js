@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
 import { ICONS, Icon } from '../../components/ManageShell';
-import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, SelectList as BmSelectList, Switch as BmSwitch, Hint as BmHint, Overline as BmOverline, I as BmI, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
 
 // Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
@@ -883,7 +883,7 @@ function Users({ me }) {
 // ou un texte personnalisé (« Personnaliser » part du modèle rempli). « Revenir au modèle » abandonne le texte personnalisé.
 const LEGAL_LANG_LABEL = { fr: 'Français (fait foi)', en: 'English', ar: 'العربية' };
 function LegalPages() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [list, setList] = useState([]);
   const [d, setD] = useState(null);       // réponse de GET /admin/legal/:slug
   const [edit, setEdit] = useState(null); // { title, body, titleEn, bodyEn, titleAr, bodyAr } en mode personnalisé
@@ -922,13 +922,7 @@ function LegalPages() {
   const k = { fr: ['title', 'body'], en: ['titleEn', 'bodyEn'], ar: ['titleAr', 'bodyAr'] }[lang];
   const shown = edit ? { title: edit[k[0]], body: edit[k[1]] } : d?.template?.[lang];
   const todo = shown ? (shown.body.match(/\[(à compléter|to be completed|يُستكمل) : [^\]]{2,120}\]/g) || []).length : 0;
-  return (
-    <section>
-      <p className="meta">Mentions légales, conditions de vente et d’utilisation, politique de confidentialité, en français (version qui fait foi), anglais et arabe. Par défaut, chaque page suit un modèle tenu à jour avec les fonctions du site et rempli avec <a className="link u" href="/admin?tab=settings&amp;section=legal">Paramètres → Informations légales</a>. À faire relire par un professionnel du droit avant le lancement.</p>
-      <div className="adm-row">
-        {list.map((p) => <button key={p.slug} className={d?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
-      </div>
-      {d && (
+  const detailEl = d && (
         <div className="adm-form">
           <p className={edit && d.custom ? 'adm-ok' : 'meta'}>
             {d.custom ? '✍️ Texte personnalisé (saisi à la main) : il ne suit plus les mises à jour du modèle.' : '🔄 Modèle automatique : la page se met à jour avec le site et les informations légales.'}
@@ -961,7 +955,29 @@ function LegalPages() {
           </div>
           {msg && <p className={msg.ok ? 'adm-ok' : 'error'} role="status">{msg.text}</p>}
         </div>
-      )}
+      );
+  if (skin === 'premium') {
+    return (
+      <BmPage title="Documents légaux & consentements" sub="Pages légales en français (version qui fait foi), anglais et arabe. Chaque page suit un modèle tenu à jour, personnalisable.">
+        <BmCols kind="two-main">
+          <BmPanel title="Documents" extra={`${list.length}`}>
+            <BmSelectList empty="Aucun document." value={d?.slug} onSelect={open}
+              items={list.map((p) => ({ id: p.slug, title: p.title, sub: `/legal/${p.slug}` }))} />
+          </BmPanel>
+          <BmPanel title={d ? 'Contrôle de publication' : 'Choisissez un document'}>
+            <div className="bm-form" style={{ padding: '0 14px 14px' }}>{detailEl || <p style={{ color: 'var(--muted)' }}>Sélectionnez un document à gauche pour le relire, le personnaliser ou revenir au modèle.</p>}</div>
+          </BmPanel>
+        </BmCols>
+      </BmPage>
+    );
+  }
+  return (
+    <section>
+      <p className="meta">Mentions légales, conditions de vente et d’utilisation, politique de confidentialité, en français (version qui fait foi), anglais et arabe. Par défaut, chaque page suit un modèle tenu à jour avec les fonctions du site et rempli avec <a className="link u" href="/admin?tab=settings&amp;section=legal">Paramètres → Informations légales</a>. À faire relire par un professionnel du droit avant le lancement.</p>
+      <div className="adm-row">
+        {list.map((p) => <button key={p.slug} className={d?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
+      </div>
+      {detailEl}
     </section>
   );
 }
@@ -1183,7 +1199,7 @@ function AuditLog() {
 // Un interrupteur par fonction du site. Une fonction coupée disparaît du menu et des pages, et l'API refuse ses routes ;
 // les données ne sont jamais supprimées : on peut rallumer à tout moment.
 function FeaturesAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const router = useRouter();
   const [d, setD] = useState(null);
   const [busy, setBusy] = useState('');
@@ -1198,6 +1214,48 @@ function FeaturesAdmin() {
     if (r.ok) { setD(r.data); router.refresh(); setMsg(`${f.label} : ${!f.enabled ? 'activée' : 'désactivée'}.`); } else setMsg(r.data?.error || 'Échec de l\'enregistrement');
   };
   const active = d.features.find((f) => f.id === 'maintenance')?.enabled;
+  if (skin === 'premium') {
+    const on = d.features.filter((f) => f.enabled).length;
+    return (
+      <BmPage title="Fonctions de la plateforme" sub="Chaque fonction se coupe ou se rallume ici, sans toucher au code. Les données sont conservées ; les changements sont immédiats et inscrits au journal.">
+        <BmMetrics cols="three" items={[
+          { icon: 'toggle', label: 'Fonctions disponibles', value: d.features.length },
+          { icon: 'check', tone: 'green', label: 'Activées', value: on },
+          { icon: 'clock', tone: 'amber', label: 'Désactivées', value: d.features.length - on },
+        ]} />
+        {msg && <p className="ft-msg" role="status" aria-live="polite">{msg}</p>}
+        <BmCols kind="two-main">
+          <BmPanel title="Catalogue des fonctionnalités" extra={`${d.features.length}`}>
+            {d.groups.map((g) => {
+              const list = d.features.filter((f) => f.group === g.id);
+              if (!list.length) return null;
+              return (
+                <div key={g.id} style={{ padding: '4px 14px 10px' }}>
+                  <BmOverline>{g.label.toUpperCase()}</BmOverline>
+                  <div className={bmc('ax-feature-toggles')}>
+                    {list.map((f) => (
+                      <div key={f.id} className={bmc('ax-feature-toggle')}>
+                        <span className={bmc('ax-icon')}><BmI name="layers" size={17} /></span>
+                        <div><b>{f.label}</b><small>{f.hint}</small></div>
+                        <BmSwitch on={f.enabled} disabled={busy === f.id} label={f.label} onChange={() => flip(f)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </BmPanel>
+          <BmPanel title="Dépendances & précautions">
+            <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
+              {active && <p className="ft-alert" role="alert">Mode maintenance actif : les visiteurs et les membres voient une page d’attente.</p>}
+              <BmHint>Un changement de fonction doit être vérifié sur le site, l’application mobile et la télé. Couper une fonction ne supprime aucune donnée.</BmHint>
+              <BmHint>Les modules (Admin → Modules) ont leur propre interrupteur ; certains sont liés à une fonction d’ici.</BmHint>
+            </div>
+          </BmPanel>
+        </BmCols>
+      </BmPage>
+    );
+  }
   return (
     <section className="ft-admin">
       <p className="meta">Chaque fonction se coupe ou se rallume ici, sans toucher au code. Les données sont conservées. Les changements sont appliqués tout de suite et inscrits au journal des actions.</p>
@@ -1235,7 +1293,7 @@ function ModuleTab({ load }) {
 }
 
 // Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
-const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages'];
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages', 'features', 'legal', 'modules', 'texts', 'appearance'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */

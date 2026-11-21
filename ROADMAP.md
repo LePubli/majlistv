@@ -716,4 +716,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 
 - Back-office Premium, lot D recomposé comme la maquette (Publicités, Tests A/B, Cartes cadeaux, Ventes à l'unité, Parrainage) : fait 21/11. Suite : Régions, Automatisations, Apparence, Pages, Menus, Textes, Légal… sur « go ».
 
-- Back-office Premium, lot E recomposé comme la maquette (Régions, Automatisations, Menus, Pages) : fait 21/11. Suite : Apparence, Textes, Légal, Fonctionnalités, Modules, Paramètres, Santé, Erreurs, Questions IA, Audit, Kids, puis le Studio, sur « go ».
+- Back-office Premium, lot E recomposé comme la maquette (Régions, Automatisations, Menus, Pages) : fait 21/11.
+- Back-office Premium, lot F recomposé comme la maquette (Apparence, Textes, Légal, Fonctionnalités, Modules) : fait 21/11. Suite : Paramètres, Santé, Erreurs, Questions IA, Audit, Kids, puis le Studio, sur « go ».

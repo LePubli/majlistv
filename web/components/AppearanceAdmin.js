@@ -7,6 +7,7 @@
 // « Publier » rend le brouillon visible ; chaque publication est gardée dans l'historique et peut être restaurée.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, Btn, Badge } from './backoffice/Kit';
 import { TOKENS, TOKEN_MAP, GROUPS, BUILTIN_FONTS, buildCss, checkValue, contrastIssues, resolveColor } from '../lib/themeCss';
 
 const DEVICES = [
@@ -250,7 +251,7 @@ function Preview({ css }) {
 
 /* ------------------------------------------------------------------ Page */
 export default function AppearanceAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [themes, setThemes] = useState(null);
   const [cur, setCur] = useState(null); // thème ouvert (publié + brouillon)
   const [values, setValues] = useState({}); // valeurs en cours d'édition
@@ -380,6 +381,102 @@ export default function AppearanceAdmin() {
   const hasDraft = cur.hasDraft || save === 'pending' || save === 'saving';
   const saveLabel = { idle: '', pending: 'Modifications en attente…', saving: 'Enregistrement du brouillon…', saved: 'Brouillon enregistré', error: 'Valeur à corriger' }[save];
 
+  if (skin === 'premium') {
+    return (
+      <Page title="Apparence & thème" sub="Couleurs, polices, arrondis et espacements du site. Vos changements partent dans un brouillon et s’affichent dans l’aperçu ; les visiteurs ne voient rien avant « Publier ».">
+        <Metrics cols="three" items={[
+          { icon: 'palette', label: 'Thème', value: cur.name },
+          { icon: 'check', tone: cur.isActive ? 'green' : 'amber', label: 'État', value: cur.isActive ? 'Actif sur le site' : 'Non affiché', note: cur.publishedAt ? `Publié le ${fmtDate(cur.publishedAt)}` : '' },
+          { icon: 'edit', label: 'Réglages modifiés', value: changedCount, note: saveLabel || '' },
+        ]} />
+        <div className="ap" lang="fr" dir="ltr">
+          <div className="bm-form" style={{ marginBottom: 14 }}>
+      <div className="ap-top">
+        <label className="ap-theme">Thème
+          <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>
+            {themes.map((x) => <option key={x.id} value={x.id}>{x.name}{x.isActive ? ' — actif' : ''}{x.hasDraft ? ' (brouillon)' : ''}</option>)}
+          </select>
+        </label>
+        <div className="ap-actions">
+          <button type="button" className="btn" onClick={publish} disabled={!hasDraft}>Publier</button>
+          <button type="button" className="btn ghost" onClick={discard} disabled={!cur.hasDraft}>Abandonner le brouillon</button>
+          {!cur.isActive && <button type="button" className="btn ghost" onClick={activate}>Activer sur le site</button>}
+          <button type="button" className="btn ghost" onClick={showVersions} aria-expanded={Boolean(versions)}>Historique</button>
+          <details className="ap-more">
+            <summary className="btn ghost">Plus</summary>
+            <div className="ap-more-menu">
+              <button type="button" onClick={create}>Nouveau thème (copie)</button>
+              <button type="button" onClick={rename}>Renommer</button>
+              <button type="button" onClick={exportJson}>Exporter (fichier JSON)</button>
+              <button type="button" onClick={() => importRef.current?.click()}>Importer un thème…</button>
+              {!cur.isActive && <button type="button" className="danger" onClick={remove}>Supprimer ce thème</button>}
+            </div>
+          </details>
+          <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={importJson} />
+        </div>
+      </div>
+          </div>
+      {versions && (
+            <div className="panel ap-versions">
+              <h2 className="panel-title">Historique des publications</h2>
+              {versions.length === 0 ? <p className="meta">Aucune publication pour l’instant.</p> : (
+                <ul>
+                  {versions.map((v, i) => (
+                    <li key={v.id}><span>{fmtDate(v.createdAt)}{v.by ? ` · ${v.by}` : ''} · {v.changed} réglage(s){i === 0 ? ' · version en ligne' : ''}</span>
+                      <button type="button" className="btn ghost ap-mini" onClick={() => restore(v)}>Recopier dans le brouillon</button></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {msg && <p className="ap-msg" role="alert">{msg}</p>}
+          <Cols kind="two-main">
+            <Panel title="Palette et typographie">
+              <div className="bm-form" style={{ padding: '0 14px 14px' }}>
+        <div className="ap-editor">
+          <label className="ap-search"><span className="sr-only">Chercher un réglage</span>
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un réglage (ex. bouton, fond, arrondi)…" />
+          </label>
+
+          {issues.length > 0 && (
+            <div className="ap-issues" role="note">
+              <b>Lisibilité : {issues.length} association(s) à vérifier</b>
+              <ul>{issues.map((i) => <li key={`${i.fg}-${i.bg}-${i.label}`}><button type="button" className="link u" onClick={() => goTo(i.fg)}>{i.label}</button> — contraste {String(i.ratio).replace('.', ',')}:1 (minimum conseillé {String(i.min).replace('.', ',')}:1)</li>)}</ul>
+            </div>
+          )}
+
+          {GROUPS.map((g) => {
+            const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
+            if (!list.length) return null;
+            const isOpen = Boolean(needle) || open.has(g.id);
+            const n = list.filter((t) => values[t.id] !== undefined).length;
+            return (
+              <section key={g.id} className="ap-group">
+                <h2><button type="button" aria-expanded={isOpen} onClick={() => toggle(g.id)}>
+                  <span>{g.label}</span>{n > 0 && <span className="ap-tag">{n} modifié(s)</span>}<span className="ap-chev" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+                </button></h2>
+                {isOpen && (
+                  <div className="ap-group-body">
+                    {g.hint && <p className="meta small">{g.hint}</p>}
+                    {list.map((t) => <TokenRow key={t.id} t={t} values={values} fonts={fonts} onSet={setOne} onReset={resetOne} error={errors[t.id]} flagged={flagged.has(t.id)} />)}
+                    {g.id === 'type' && <FontsPanel fonts={fonts} reload={loadFonts} />}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+              </div>
+            </Panel>
+            <Panel title="Prévisualisation en direct">
+              <div style={{ padding: '0 14px 14px' }}><Preview css={css} /></div>
+            </Panel>
+          </Cols>
+        </div>
+      </Page>
+    );
+  }
   return (
     <section className="ap" lang="fr" dir="ltr">
       <p className="meta">Réglez les couleurs, polices, arrondis et espacements du site. Vos changements partent dans un <b>brouillon</b> et s’affichent dans l’aperçu ; les visiteurs ne voient rien avant que vous cliquiez sur <b>Publier</b>. Chaque publication est gardée dans l’historique.</p>
