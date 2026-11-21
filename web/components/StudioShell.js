@@ -22,6 +22,8 @@ const MODULE_OF_HREF = {
   '/studio/dubbing': 'dubbing', // module « Doublage français » (étape S1)
   '/studio/editor': 'editor', // module « Éditeur de montage » (étape E1)
 };
+// Pages rangées sous « Paramètres » dans le menu mais qui ont leur propre nom : le fil d'Ariane du haut les nomme.
+const SUB_CRUMB = [[/^\/studio\/quiz(\/|$)/, 'Quiz'], [/^\/studio\/practice(\/|$)/, 'Mise en pratique'], [/^\/studio\/references(\/|$)/, 'Références'], [/^\/studio\/reminders(\/|$)/, 'Rappels']];
 const UUID = /^\/studio\/[0-9a-f]{8}-[0-9a-f]{4}-/i;
 // Quelle page du menu est « allumée » pour une adresse ?
 export function studioSection(path) {
@@ -150,5 +152,5 @@ export default function StudioShell({ children }) {
   ) : null;
   // Recherche Ctrl + K (thème Premium) : écrans du menu ; la recherche de membres n'existe que côté administrateur.
   const screens = shown.flatMap((g) => g.items.map(([href, label]) => ({ href, label, group: g.title })));
-  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn} extra={extra} barExtra={skin === 'premium' ? <AdminPalette screens={screens} server={isAdmin} /> : undefined}>{children}</ManageShell>;
+  return <ManageShell space="studio" groups={shown} links={links} isOn={isOn} extra={extra} crumb={(SUB_CRUMB.find(([re]) => re.test(path)) || [])[1]} barExtra={skin === 'premium' ? <AdminPalette screens={screens} server={isAdmin} /> : undefined}>{children}</ManageShell>;
 }

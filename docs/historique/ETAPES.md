@@ -9989,3 +9989,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Thème Premium — contrôle de l'arabe (21/11/2026)
 
 - Balayage de 44 écrans en arabe (1440 et 390 px) : aucun débordement ; correction de la pastille d'état sur Admin → Modules. Voir ligne 320 du registre.
+
+## Back-office Premium — petits restes cosmétiques (21/11/2026)
+
+- Fil d'Ariane du Studio nommé pour Quiz, Mise en pratique, Références, Rappels ; plage horaire de l'Activité sur une ligne ; fichier inutilisé `Frames.js` supprimé. Voir ligne 321 du registre.

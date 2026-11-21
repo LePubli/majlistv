@@ -40,7 +40,7 @@ export const Icon = ({ d }) => (
 
 // space : 'studio' | 'admin' ; groups : [{ key, title, items: [[href, libellé, icône, pastille?]] }] ;
 // links : liens du pied [{ href, label, icon }] ; isOn(href) : l'entrée est-elle la page courante ? ; extra : encart au-dessus du pied (facultatif)
-export default function ManageShell({ barExtra, space, groups, links, isOn, extra, children }) {
+export default function ManageShell({ barExtra, space, groups, links, isOn, extra, crumb: crumbOverride, children }) {
   const { t, user, logout, locale, skin } = useApp();
   const pm = skin === 'premium'; // thème Premium : barre du haut et bascule Studio / Admin de la maquette (components/backoffice)
   const router = useRouter();
@@ -104,7 +104,7 @@ export default function ManageShell({ barExtra, space, groups, links, isOn, extr
         </div>
       </aside>
       <div className="studio-main">
-        {pm && <BoTop space={space} crumb={(groups.flatMap((g) => g.items).find(([href]) => isOn(href)) || [])[1] || ''} search={barExtra} onMenu={() => setOpen(true)} menuOpen={open} />}
+        {pm && <BoTop space={space} crumb={crumbOverride || (groups.flatMap((g) => g.items).find(([href]) => isOn(href)) || [])[1] || ''} search={barExtra} onMenu={() => setOpen(true)} menuOpen={open} />}
         {children}
       </div>
     </div>

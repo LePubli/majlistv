@@ -22,8 +22,6 @@ const ErrorsAdmin = lazy(() => import('../../components/ErrorsAdmin'));
 const AskAdmin = lazy(() => import('../../components/AskAdmin'));
 const ReferralAdmin = lazy(() => import('../../components/ReferralAdmin'));
 const PricingRegionsAdmin = lazy(() => import('../../components/PricingRegionsAdmin'));
-const pmFrame = (name) => lazy(() => import('../../components/backoffice/Frames').then((m) => ({ default: m[name] }))); // cadres « maquette » (thème Premium)
-const QuranFrame = pmFrame('QuranFrame'); const AthkarFrame = pmFrame('AthkarFrame'); const RamadanFrame = pmFrame('RamadanFrame'); const SeasonsFrame = pmFrame('SeasonsFrame'); const FridayFrame = pmFrame('FridayFrame');
 const SeasonsAdmin = lazy(() => import('../../components/SeasonsAdmin'));
 const FridayAdmin = lazy(() => import('../../components/FridayAdmin'));
 const AthkarAdmin = lazy(() => import('../../components/AthkarAdmin'));

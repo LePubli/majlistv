@@ -731,3 +731,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Thème Premium, Kids : bandeau avec choix « illustration » (défaut) ou vidéo mise en avant : fait 21/11. Restent : essai Kids avec vraies rubriques et sortie par code parental, arabe des autres écrans.
 - Thème Premium, Kids : essai avec vraies rubriques et sortie par code parental : fait 21/11 (aucun changement de code). Restent : arabe des autres écrans Premium, petits restes du back-office, phase 7 du catalogue.
 - Thème Premium, arabe : contrôle de 44 écrans (site + back-office) fait 21/11, un défaut corrigé (pastille des Modules). Restent : petits restes cosmétiques du back-office, phase 7 du catalogue.
+- Thème Premium, back-office : fils d'Ariane Quiz / Pratique / Références / Rappels, plage horaire de l'Activité, Frames.js retiré : fait 21/11. Reste : phase 7 du catalogue.

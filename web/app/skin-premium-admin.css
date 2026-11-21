@@ -387,22 +387,6 @@ html[data-skin="premium"] .bm-form .studio-tools{display:flex;gap:8px;flex-wrap:
 html[data-skin="premium"] .bm-embed .bm-watch-card{display:flex;flex-direction:column}
 html[data-skin="premium"] .bm-embed .bm-watch-card img{width:100%;aspect-ratio:16/9;object-fit:cover}
 
-/* Cadre « maquette » des écrans riches (Frames.js) : titre en double masqué, tableaux et listes dans le style de la maquette. */
-html[data-skin="premium"] .bm-frame-body > section > h2:first-child{display:none}
-html[data-skin="premium"] .bm-frame-body{color:#d3e7f9;font-size:12px}
-html[data-skin="premium"] .bm-frame-body p.meta,html[data-skin="premium"] .bm-frame-body .meta{color:#8ea9bf}
-html[data-skin="premium"] .bm-frame-body a:not(.btn){color:#35b9ff}
-html[data-skin="premium"] .bm-frame-body table{width:100%;border-collapse:collapse;font-size:12px}
-html[data-skin="premium"] .bm-frame-body th{background:#082039;color:#8ea9bf;font-size:10px;font-weight:700;text-align:start;padding:10px;border-bottom:1px solid #1c3b57}
-html[data-skin="premium"] .bm-frame-body td{padding:10px;border-bottom:1px solid #153048;color:#d3e7f9;vertical-align:middle}
-html[data-skin="premium"] .bm-frame-body .table-wrap,html[data-skin="premium"] .bm-frame-body .adm-table-wrap,html[data-skin="premium"] .bm-frame-body .studio-table-wrap{overflow-x:auto}
-html[data-skin="premium"] .bm-frame-body .card,html[data-skin="premium"] .bm-frame-body .panel{background:#0b2742;border:1px solid #1c3b57;border-radius:12px;padding:14px;margin:0 0 14px;box-shadow:none}
-html[data-skin="premium"] .bm-frame-body .pill,html[data-skin="premium"] .bm-frame-body .chip{background:#0b2a45;border:1px solid #274e69;color:#d3e7f9;border-radius:999px;padding:5px 11px;font-size:11px}
-html[data-skin="premium"] .bm-frame-body .pill.on{background:#008cff;border-color:#008cff;color:#fff}
-html[data-skin="premium"] .bm-frame-body .btn{background:#008cff;color:#fff;border:0;border-radius:7px;padding:9px 14px;font-weight:700;font-size:11px;cursor:pointer}
-html[data-skin="premium"] .bm-frame-body .btn.ghost{background:#0b2a45;color:#d3e7f9;border:1px solid #274e69}
-html[data-skin="premium"] .bm-frame-body .ft-switch{background:#274e69}
-html[data-skin="premium"] .bm-frame-body .ft-switch.on{background:#008cff}
 html[data-skin="premium"] .bm-embed .bm-ax-season-card{min-height:0;height:auto}
 html[data-skin="premium"] .bm-embed .bm-ax-ramadan-hero{min-height:0}
 html[data-skin="premium"] .bm-embed .bm-ax-pill-row{flex-wrap:wrap}
@@ -424,3 +408,9 @@ html[data-skin="premium"] .bm-page .db-grid { margin-top: 14px; }
 /* Modules : la pastille d'état (Activé…) passe au-dessus du titre au lieu de se poser dessus (la carte n'a pas d'icône), dans les deux sens de lecture. */
 html[data-skin="premium"] .bm-app .bm-ax-module > .bm-badge { position: static; display: inline-block; margin: 0 0 8px; }
 html[data-skin="premium"] .bm-app .bm-ax-module h3 { margin-top: 0; }
+
+/* Activité : « de [22] h à [7] h » sur une seule ligne (les libellés se posaient au-dessus et au-dessous des cases). */
+html[data-skin="premium"] .ac-hours { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+html[data-skin="premium"] .ac-hours label { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }
+html[data-skin="premium"] .ac-hours input[type="number"] { width: 64px; }
+html[data-skin="premium"] .ac-hours label { white-space: nowrap; width: auto; flex: 0 0 auto; }
