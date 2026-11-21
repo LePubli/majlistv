@@ -216,6 +216,8 @@ export const FIELDS = [
   { key: 'book_download_daily_max', group: 'books', type: 'number', label: 'Téléchargements par membre et par jour', env: 'BOOK_DOWNLOAD_DAILY_MAX', def: '10', min: 1, max: 200 },
   { key: 'stats_enabled', group: 'stats', type: 'bool', label: "Statistiques d'audience activées", env: 'STATS_ENABLED', def: 'true',
     help: "Compteurs anonymes (visites, lectures, temps regardé) affichés dans Administration → Statistiques et dans le Studio. Aucun cookie, aucune adresse IP conservée ; les visiteurs qui envoient « Do Not Track » ne sont pas comptés. Désactiver arrête la collecte (les chiffres déjà enregistrés restent)." },
+  { key: 'kids_hero_mode', group: 'kids', type: 'select', options: ['illustration', 'featured'], label: "Bandeau de l'accueil Kids (thème Premium)", env: 'KIDS_HERO_MODE', def: 'illustration',
+    help: "illustration : le décor illustré du thème · featured : l'image de la vidéo mise en avant (Studio → fiche de la vidéo → « Mise en avant ») visible par l'enfant ; sans vidéo mise en avant, le décor illustré reste." },
   { key: 'kids_enabled', group: 'kids', type: 'bool', label: 'Espace Kids activé', env: 'KIDS_ENABLED', def: 'true',
     help: "Profils enfants sous le compte du parent, code parental, vidéos marquées « Kids » par tranche d'âge." },
   { key: 'kids_max_standard', group: 'kids', type: 'number', label: "Profils enfants : abonnement Mejliss", env: 'KIDS_MAX_STANDARD', def: '1', min: 1, max: 10 },

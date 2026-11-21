@@ -728,3 +728,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Éditeur de montage, lot 3b (nom, vitesse, opacité, corrections colorimétriques par extrait) : fait 21/11 (voir registre n° 315 pour ce qui n'est pas testé).
 - Thème Premium, filtres du Catalogue (phase 5) : fait 21/11. Restent : écrans Apprendre « verrouillé » / « visiteur », Kids (illustration, rubriques réelles), arabe.
 - Thème Premium, Apprendre (écrans « verrouillé » et « visiteur ») : fait 21/11. Restent : Kids (illustration du bandeau, rubriques réelles), arabe des autres écrans.
+- Thème Premium, Kids : bandeau avec choix « illustration » (défaut) ou vidéo mise en avant : fait 21/11. Restent : essai Kids avec vraies rubriques et sortie par code parental, arabe des autres écrans.

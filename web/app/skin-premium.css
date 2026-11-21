@@ -590,3 +590,8 @@ html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-arrow { top: auto; bo
 @media (min-width: 760px) {
   html[data-skin="premium"] .lk-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Bandeau Kids avec l'image de la vidéo mise en avant (réglage « featured ») : image plein cadre, fondue vers la gauche pour garder le texte lisible */
+.v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 38%); mask-image: linear-gradient(90deg, transparent 0, #000 38%); }
+[dir="rtl"] .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 38%); mask-image: linear-gradient(270deg, transparent 0, #000 38%); }
+@media (max-width: 850px) { .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 45%); mask-image: linear-gradient(180deg, transparent 0, #000 45%); } }

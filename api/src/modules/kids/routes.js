@@ -185,7 +185,7 @@ export default async function kidsRoutes(app) {
     const quizDefault = isOn(await getSetting('quiz_default_enabled'));
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, t.language, t.access, t.source, t.kids_bands AS "kidsBands", t.duration_seconds AS "durationSeconds",
-              t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 140) AS summary,
+              t.poster_key, t.external_thumb, t.featured, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 140) AS summary,
               COALESCE(k.completed, false) AS completed, COALESCE(k.position_ms, 0) AS "positionMs",
               (COALESCE(t.quiz_enabled, $5::boolean) AND (SELECT count(*) FROM quiz_questions q WHERE q.talk_id = t.id AND q.status = 'approved') >= $6) AS "hasQuiz",
               (SELECT max(stars) FROM kid_quiz_attempts a WHERE a.profile_id = $1 AND a.talk_id = t.id) AS stars
@@ -198,7 +198,9 @@ export default async function kidsRoutes(app) {
       delete r.poster_key; delete r.external_thumb;
     }
     const resume = rows.filter((r) => r.positionMs >= 5000 && !r.completed).slice(0, 6);
-    return { profile: shape(c.profile), talks: rows, resume, time };
+    // Bandeau Kids du thème Premium : « illustration » (défaut) ou image de la vidéo mise en avant (réglage Admin → Paramètres → Kids).
+    const heroMode = (await getSetting('kids_hero_mode')) === 'featured' ? 'featured' : 'illustration';
+    return { profile: shape(c.profile), talks: rows, resume, time, heroMode };
   });
 
   const progressBody = z.object({ positionMs: z.number().int().min(0).max(86_400_000), durationMs: z.number().int().min(0).max(86_400_000).default(0) });

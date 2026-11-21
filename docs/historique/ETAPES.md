@@ -9974,3 +9974,10 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Écran « verrouillé » (membre sans la formule Apprentissage) : texte de la bannière ramené sur la moitié sans illustration, 4 temps alignés sur une ligne. Écran « visiteur » : déjà conforme, inchangé.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : règles `.lk-banner` / `.lk-tiles` en fin de `web/app/skin-premium.css`, écran dans `web/app/(module-learning)/learning/page.js`.
+
+
+## Thème Premium — bandeau Kids : illustration ou vidéo mise en avant (21/11/2026)
+
+- Réglage `kids_hero_mode` (Admin → Paramètres → Kids) : `illustration` (défaut) garde le décor illustré ; `featured` affiche l'image de la vidéo mise en avant (Studio → fiche de la vidéo → « Mise en avant »), si elle est visible par l'enfant et a une image.
+- **Déploiement** : DockPanel → Redeploy `majlistv-api` (nouveau réglage, pas de migration), puis `majlistv-web`, puis commandes VPS habituelles. **Debug** : `api/src/modules/kids/routes.js` (`GET /kids/talks` → `heroMode`, `featured`), `web/components/KidsHome.js`, `web/components/premium/PmKids.js`, règles `.pm-hero-video` de `web/app/skin-premium.css`.
+- **Exemple** : régler « Bandeau de l'accueil Kids » sur `featured`, cocher « Mise en avant » sur une vidéo Kids ayant une miniature, ouvrir /kids.

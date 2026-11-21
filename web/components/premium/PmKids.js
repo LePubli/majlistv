@@ -99,7 +99,7 @@ function Card({ x, rubrics, locale, t }) {
 }
 
 /** Haut de l'accueil de l'enfant : bandeau, pastilles des rubriques, « À regarder maintenant », rangée suggérée. */
-export function PmKidsTop({ d, hero }) {
+export function PmKidsTop({ d, hero, art = null }) {
   const { t, call, locale } = useApp();
   const [cat, setCat] = useState(null);
   useEffect(() => { call('/kids/catalog').then((r) => setCat(r.ok ? r.data : { rubrics: [], shelves: [], talks: [] })); }, [call]);
@@ -114,7 +114,7 @@ export function PmKidsTop({ d, hero }) {
   return (
     <>
       <section className="v20-kids-hero" aria-label={t('kdMWatch')}>
-        <div className="v20-kids-hero-visual" aria-hidden="true" />
+        <div className={art ? 'v20-kids-hero-visual pm-hero-video' : 'v20-kids-hero-visual'} style={art ? { backgroundImage: `url("${art}")` } : undefined} aria-hidden="true" />
         {hero ? (
           <div className="v20-kids-v8-hero-copy">
             <span className="v20-kids-v8-eyebrow">{(resume.length ? t('kdContinue') : t('kdForYou')).toUpperCase()}</span>

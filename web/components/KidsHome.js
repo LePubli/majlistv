@@ -53,7 +53,10 @@ export default function KidsHome() {
   const tab = ['watch', 'learn', 'act'].includes(tab0) ? tab0 : 'home';
   const talks = d?.talks || [];
   const seen = talks.filter((x) => x.completed).length;
-  const hero = (d?.resume || [])[0] || talks.find((x) => !x.completed) || talks[0] || null;
+  // Thème Premium, réglage « Bandeau Kids = vidéo mise en avant » : la vidéo mise en avant (visible par l'enfant) prend le bandeau ;
+  // sans vidéo mise en avant (ou avec le réglage « illustration », par défaut), le bandeau garde le décor illustré et la vidéo à reprendre.
+  const featuredHero = d?.heroMode === 'featured' ? talks.find((x) => x.featured && x.posterUrl) || null : null;
+  const hero = featuredHero || (d?.resume || [])[0] || talks.find((x) => !x.completed) || talks[0] || null;
   const earned = sum?.badges?.length || 0;
   const MENU = [['home', 'kdMHome', '🏠', '/kids'], ['watch', 'kdMWatch', '▶️', '/kids?tab=watch'], ...(sum?.learning !== false ? [['learn', 'kdMLearn', '🧠', '/kids?tab=learn']] : []), ['act', 'kdMAct', '🌱', '/kids?tab=act']];
   const Stars3 = () => sum && <p className="kd-total"><span aria-hidden="true">⭐</span> {t('kdStarsTotal').replace('{n}', sum.stars)}</p>;
@@ -65,7 +68,7 @@ export default function KidsHome() {
     </ul>
   );
   const shell = (inner) => (pm
-    ? <div className="v20-app pm-page pm-kids"><div className="v20-kids-page v20-faithful-kids v20-kids-v8">{tab === 'home' && <PmKidsTop d={d} hero={hero} />}{inner}</div></div>
+    ? <div className="v20-app pm-page pm-kids"><div className="v20-kids-page v20-faithful-kids v20-kids-v8">{tab === 'home' && <PmKidsTop d={d} hero={hero} art={featuredHero ? featuredHero.posterUrl : null} />}{inner}</div></div>
     : <div className="kd-shell">{inner}</div>);
   return shell(
     <>
