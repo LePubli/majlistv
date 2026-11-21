@@ -22,6 +22,8 @@ const ErrorsAdmin = lazy(() => import('../../components/ErrorsAdmin'));
 const AskAdmin = lazy(() => import('../../components/AskAdmin'));
 const ReferralAdmin = lazy(() => import('../../components/ReferralAdmin'));
 const PricingRegionsAdmin = lazy(() => import('../../components/PricingRegionsAdmin'));
+const pmFrame = (name) => lazy(() => import('../../components/backoffice/Frames').then((m) => ({ default: m[name] }))); // cadres « maquette » (thème Premium)
+const QuranFrame = pmFrame('QuranFrame'); const AthkarFrame = pmFrame('AthkarFrame'); const RamadanFrame = pmFrame('RamadanFrame'); const SeasonsFrame = pmFrame('SeasonsFrame'); const FridayFrame = pmFrame('FridayFrame');
 const SeasonsAdmin = lazy(() => import('../../components/SeasonsAdmin'));
 const FridayAdmin = lazy(() => import('../../components/FridayAdmin'));
 const AthkarAdmin = lazy(() => import('../../components/AthkarAdmin'));
@@ -1233,7 +1235,7 @@ function ModuleTab({ load }) {
 }
 
 // Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
-const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue'];
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */
@@ -1273,11 +1275,11 @@ export default function Admin() {
         {tab === 'errors' && <ErrorsAdmin />}
         {tab === 'ask' && <AskAdmin />}
         {tab === 'referral' && <ReferralAdmin />}
-        {tab === 'seasons' && <SeasonsAdmin />}
-        {tab === 'friday' && <FridayAdmin />}
-        {tab === 'athkar' && <AthkarAdmin />}
-        {tab === 'ramadan' && <RamadanAdmin />}
-        {tab === 'quran' && <QuranAdmin />}
+        {tab === 'seasons' && (skin === 'premium' ? <SeasonsFrame><SeasonsAdmin /></SeasonsFrame> : <SeasonsAdmin />)}
+        {tab === 'friday' && (skin === 'premium' ? <FridayFrame><FridayAdmin /></FridayFrame> : <FridayAdmin />)}
+        {tab === 'athkar' && (skin === 'premium' ? <AthkarFrame><AthkarAdmin /></AthkarFrame> : <AthkarAdmin />)}
+        {tab === 'ramadan' && (skin === 'premium' ? <RamadanFrame><RamadanAdmin /></RamadanFrame> : <RamadanAdmin />)}
+        {tab === 'quran' && (skin === 'premium' ? <QuranFrame><QuranAdmin /></QuranFrame> : <QuranAdmin />)}
         {tab === 'regions' && <PricingRegionsAdmin />}
         {tab === 'sales' && <SalesAdmin />}
         {tab === 'lifecycle' && <LifecycleAdmin />}

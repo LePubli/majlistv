@@ -9886,3 +9886,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Recomposés comme la maquette, avec vraies données et fonctions : Admin → Statistiques (et Studio → Statistiques), Revenus (rémunération des chaînes), Catégories et formats (arborescence, sous-catégories, formulaire, onglet Formats), Intervenants (annuaire + profil), Veille (onglets À examiner / Sources suivies / Contenus intégrés / Historique).
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `web/components/backoffice/Kit.js`, `skin-premium-admin.css` (classe `bm-form`).
+
+## Back-office Premium — « maquette exacte », lot C (21/11/2026)
+
+- Coran, Adhkar, Ramadan, Saisons, Vendredi : titre + 3 chiffres réels + panneau, toutes les fonctions conservées dedans.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Frames.js`, `skin-premium-admin.css` (bloc `.bm-frame-body`).
