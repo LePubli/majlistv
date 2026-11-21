@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
 import ChannelAvatar from '../../../../components/ChannelAvatar';
 import ChannelImages from '../../../../components/ChannelImages';
 
@@ -165,7 +166,7 @@ function Channel({ c, owners, canAssign, t, call, locale, onSaved, onDeleted }) 
 }
 
 export default function StudioChannel() {
-  const { t, call, user, locale } = useApp();
+  const { t, call, user, locale, skin } = useApp();
   const [d, setD] = useState(null);
   const [owners, setOwners] = useState([]);
   const [sel, setSel] = useState('');
@@ -184,6 +185,38 @@ export default function StudioChannel() {
     if (r.ok) { setName(''); setQ(''); setSel(r.data.slug); setMsg({ ok: true, text: t('chCreated') }); load(); } else setMsg({ ok: false, text: r.data?.error || t('errGeneric') });
   };
   if (!d) return null;
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={d.canAssign ? t('chStudioAll') : t('chStudioTitle')} sub={d.canAssign ? t('chIntroStaff') : t('chIntro')}>
+          <BmMetrics cols="three" items={[{ icon: 'tv', label: d.canAssign ? t('chNavAll') : t('chNav'), value: channels.length }]} />
+          <BmPanel title={t('chSwitch')}>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              <div className="ch-bar">
+        {channels.length > 0 && (
+          <div className="ch-pick">
+            {d.canAssign && channels.length > 6 && <label className="fld ch-filter"><span>{t('chFilter')}</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} /></label>}
+            <label className="fld"><span>{t('chSwitch')}</span>
+              <select name="channel" value={cur?.slug || ''} onChange={(e) => setSel(e.target.value)}>
+                {list.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+              </select></label>
+          </div>
+        )}
+        <form onSubmit={create} className="ch-new">
+          <label className="fld"><span>{t('chNew')}</span><input name="newName" value={name} maxLength={120} placeholder={t('chNewPh')} onChange={(e) => setName(e.target.value)} /></label>
+          <button className="btn ghost" disabled={!name.trim()}>{t('chCreate')}</button>
+        </form>
+      </div>
+              <p className="meta small">{t('chNewHelp')}</p>
+              {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+            </div>
+          </BmPanel>
+          {channels.length === 0 && <p className="soon">{d.canAssign ? t('chEmptyStaff') : t('chEmpty')}</p>}
+          {cur && <BmPanel title={cur.name}><div className="bm-form" style={{ padding: '0 18px 18px' }}><Channel key={cur.slug} c={cur} owners={owners} canAssign={d.canAssign} t={t} call={call} locale={locale} onSaved={load} onDeleted={() => { setSel(''); load(); }} /></div></BmPanel>}
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page ch-studio">
       <h1>{d.canAssign ? t('chStudioAll') : t('chStudioTitle')}</h1>

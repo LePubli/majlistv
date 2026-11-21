@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { hasWebModule } from '../../lib/modules';
+import { Page as BmPage, Metrics as BmMetrics } from '../../components/backoffice/Kit';
 import { fmtBytes, ago, unitsFor } from '../../lib/format';
 
 export { fmtBytes };
@@ -72,7 +73,7 @@ function Item({ it, onAct, busyId }) {
 }
 
 export default function StoragePage() {
-  const { t, locale, user, call, feat } = useApp();
+  const { t, locale, user, call, feat, skin } = useApp();
   const [d, setD] = useState(null);
   const [err, setErr] = useState(null);
   const [form, setForm] = useState(null);
@@ -171,16 +172,25 @@ export default function StoragePage() {
 
   return (
     <main className="studio-page sg-page">
+      {skin === 'premium' ? <BmPage title={t('sgTitle')}>
+        <BmMetrics cols="three" items={[
+          { icon: 'database', tone: sp.alert ? 'red' : 'blue', label: t('sgKpiGarage'), value: sp.usedBytes == null ? null : fmtBytes(sp.usedBytes, locale), note: sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) }) },
+          { icon: 'download', label: t('sgKpiArchives'), value: fmtBytes(ar.bytes, locale), note: arSub },
+          d.pendingOriginals.available ? { icon: 'video', label: tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days }), value: fmtBytes(d.pendingOriginals.bytes, locale), note: tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count }) } : { value: null },
+        ]} />
+      </BmPage> : (<>
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}>
         <Link href="/studio">{t('dbStudio')}</Link> / <Link href="/studio/settings">{t('sdSettings')}</Link> / <span>{t('sgTitle')}</span>
       </nav>
       <div className="studio-head"><h1 className="studio-title">{t('sgTitle')}</h1></div>
+      </>)}
       <nav className="st-tabs" aria-label={t('sdSettings')}>
         <Link href="/studio/settings">{t('sgTabGeneral')}</Link>
         {hasWebModule('dubbing') && feat('dubbing') && <Link href="/studio/dubbing#defaults">{t('sgTabDubbing')}</Link>}
         <Link href="/studio/settings/storage" className="on" aria-current="page">{t('sgTitle')}</Link>
       </nav>
 
+      {skin !== 'premium' && (
       <div className="sg-kpis">
         <Kpi title={t('sgKpiGarage')} value={sp.usedBytes == null ? '—' : fmtBytes(sp.usedBytes, locale)} pct={sp.usedPct} warn={sp.alert}
           sub={sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) })} />
@@ -188,6 +198,7 @@ export default function StoragePage() {
         <Kpi title={tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days })} value={d.pendingOriginals.available ? fmtBytes(d.pendingOriginals.bytes, locale) : '—'}
           sub={tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count })} />
       </div>
+      )}
       {sp.alert && <p className="sg-alert" role="alert">{tf(t('sgSpaceAlert'), { p: sp.freePct.toLocaleString(locale), s: sp.alertPct })}</p>}
       {sp.measuredAt && <p className="meta small sg-measured">{tf(t('sgMeasured'), { d: ago(sp.measuredAt, locale), n: (sp.objects || 0).toLocaleString(locale) })} <button type="button" className="sg-link" onClick={refreshSpace}>{t('sgRefresh')}</button></p>}
 

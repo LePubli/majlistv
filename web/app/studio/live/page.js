@@ -5,10 +5,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Btn as BmBtn } from '../../../components/backoffice/Kit';
 import { liveEmbed } from '../../../components/LiveChannels';
 
 export default function StudioLive() {
-  const { t, call, user, feat } = useApp();
+  const { t, call, user, feat, skin } = useApp();
   const [list, setList] = useState(null);
   const [f, setF] = useState({ name: '', url: '' });
   const [err, setErr] = useState('');
@@ -38,6 +39,60 @@ export default function StudioLive() {
     await patch(a, { position: b.position === a.position ? b.position + d : b.position });
     await patch(b, { position: a.position });
   };
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('lvAdminTitle')} sub={t('lvAdminHelp')} actions={<BmBtn primary={false} href="/live">{t('lvSeePage')}</BmBtn>}>
+          {list && <BmMetrics cols="three" items={[
+            { icon: 'tv', label: t('lvAdminTitle'), value: list.length },
+            { icon: 'radio', tone: 'red', label: t('lvLive'), value: list.filter((c) => c.live).length },
+            { icon: 'eye', tone: 'amber', label: t('lvHide'), value: list.filter((c) => !c.enabled).length },
+          ]} />}
+          {!feat('livetv') && <p className="notice">{t('lvAdminOff')}</p>}
+          <BmPanel title={t('lvAdd')}>
+            <form className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }} onSubmit={add}>
+        <label className="fld"><span>{t('lvName')}</span><input required maxLength={80} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={t('lvNamePh')} dir="auto" /></label>
+        <label className="fld"><span>{t('lvUrl')}</span><input required type="url" inputMode="url" dir="ltr" maxLength={300} value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://www.youtube.com/@…" /></label>
+        <button className="btn" disabled={!f.name.trim() || !f.url.trim()}>{t('lvAdd')}</button>
+      </form>
+          </BmPanel>
+          {err && <p className="error" role="alert">{err}</p>}
+          <BmPanel title={t('lvAdminTitle')} extra={list ? `${list.length}` : ''}>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              {!list ? <p className="meta">…</p> : list.length === 0 ? <p className="meta">{t('lvEmpty')}</p> : (
+                <ul className="lv-admin">
+          {list.map((c, i) => (
+            <li key={c.id} className={c.enabled ? '' : 'off'}>
+              <span className="lv-thumb" style={c.video ? { backgroundImage: `url(https://i.ytimg.com/vi/${c.video.ref}/mqdefault.jpg)` } : undefined} />
+              <span className="lv-info">
+                <b dir="auto">{c.name}</b>
+                <a href={c.url} target="_blank" rel="noopener noreferrer" dir="ltr" className="meta small">{c.url}</a>
+                <span className="meta small">
+                  {!c.checkedAt ? t('lvChecking') : c.error ? <span className="lv-err">{c.error}</span> : c.live ? <span className="lv-on">● {t('lvLive')}</span> : t('lvNotLive')}
+                  {c.title ? <> · <bdi>{c.title}</bdi></> : null}
+                </span>
+              </span>
+              <span className="lv-btns">
+                <button type="button" className="btn ghost sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('lvUp')}>↑</button>
+                <button type="button" className="btn ghost sm" disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label={t('lvDown')}>↓</button>
+                {c.video && <button type="button" className="btn ghost sm" onClick={() => setPreview(preview === c.id ? null : c.id)}>{t('lvPreview')}</button>}
+                <button type="button" className="btn ghost sm" onClick={() => act(`/studio/live/${c.id}/check`, { method: 'POST' })}>{t('lvCheck')}</button>
+                <button type="button" className="btn ghost sm" onClick={() => patch(c, { enabled: !c.enabled })}>{c.enabled ? t('lvHide') : t('lvShow')}</button>
+                <button type="button" className="btn ghost sm ay-cat-del" onClick={() => { if (confirm(t('lvDelAsk').replace('{name}', c.name))) act(`/studio/live/${c.id}`, { method: 'DELETE' }); }}>{t('lvDel')}</button>
+              </span>
+              {preview === c.id && liveEmbed(c.video?.ref) && (
+                <div className="lv-player lv-preview"><iframe src={liveEmbed(c.video.ref)} title={c.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div>
+              )}
+            </li>
+          ))}
+        </ul>
+              )}
+            </div>
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="page studio-page">
       <h1>{t('lvAdminTitle')}</h1>

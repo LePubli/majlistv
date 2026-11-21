@@ -4,10 +4,11 @@
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
 import { hasWebModule, MODULE_STUDIO_LINKS } from '../../../lib/modules';
+import { Page as BmPage, Btn as BmBtn, Panel as BmPanel } from '../../../components/backoffice/Kit';
 import { ICONS, Icon } from '../../../components/ManageShell';
 
 export default function StudioSettings() {
-  const { t, user, feat } = useApp();
+  const { t, user, feat, skin } = useApp();
   if (!user) return null;
   const staff = user.role === 'moderator' || user.role === 'admin';
   const on = (id) => hasWebModule(id) && feat(id);
@@ -21,6 +22,36 @@ export default function StudioSettings() {
     ...MODULE_STUDIO_LINKS.filter((l) => l.group !== 'admin' && (!l.roles || l.roles.includes(user.role)) && feat(l.feature)).map((l) => [l.href, t(l.label), '', ICONS[l.icon] || ICONS.doc, true]),
   ].filter((x) => x[4]);
   const channels = on('channels');
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={t('sdSettingsTitle')}>
+          {channels && (
+            <BmPanel title={t('sdMyChannel')}>
+              <div style={{ padding: '0 18px 18px' }}>
+                <p className="meta">{t('sdMyChannelText')}</p>
+                <BmBtn primary href="/studio/channel">{staff ? t('chNavAll') : t('chNav')}</BmBtn>
+              </div>
+            </BmPanel>
+          )}
+          <BmPanel title={t('sdTools')}>
+            <div style={{ padding: '0 18px 18px' }}>
+              <p className="meta">{t('sdToolsText')}</p>
+              <div className="sd-tools">
+          {tools.map(([href, name, hint, d]) => (
+            <Link key={href} href={href} className="sd-tool">
+              <span className="sd-tool-ico"><Icon d={d} /></span>
+              <span><b>{name}</b>{hint && <small>{hint}</small>}</span>
+            </Link>
+          ))}
+        </div>
+              {tools.length === 0 && <p className="meta">{t('sdNoTools')}</p>}
+            </div>
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head"><h1 className="studio-title">{t('sdSettingsTitle')}</h1></div>

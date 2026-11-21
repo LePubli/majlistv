@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Tabs as BmTabs } from '../../../components/backoffice/Kit';
 
 const REASON = { copyright: "Droits d'auteur", inappropriate: 'Contenu inapproprié', misleading: 'Trompeur ou erroné', doctrinal: 'Contenu doctrinal douteux', technical: 'Problème technique', other: 'Autre' };
 const when = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
@@ -76,7 +77,7 @@ function Report({ r, call, onDone }) {
 }
 
 export default function Moderation() {
-  const { call, user, ready } = useApp();
+  const { call, user, ready, skin } = useApp();
   const [tab, setTab] = useState('pending');
   const [sum, setSum] = useState(null);
   const [items, setItems] = useState(null);
@@ -94,6 +95,37 @@ export default function Moderation() {
   if (!ready || !user) return null;
   if (!staff) return <main className="studio-page"><p>Cette page est réservée à l'équipe de modération.</p></main>;
   const tabs = [['pending', `À relire${sum ? ` (${sum.pending})` : ''}`], ['reports', `Signalements${sum ? ` (${sum.reports})` : ''}`], ['rejected', 'Refusées'], ['handled', 'Signalements traités']];
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title="Modération" sub="Toutes vos décisions sont enregistrées dans le journal des actions.">
+          {sum && <BmMetrics cols="three" items={[
+            { icon: 'shield', tone: 'amber', label: 'À relire', value: sum.pending },
+            { icon: 'flag', tone: 'red', label: 'Signalements', value: sum.reports },
+          ]} />}
+          <BmTabs names={tabs} value={tab} onChange={setTab} />
+          <BmPanel title={tabs.find((x) => x[0] === tab)[1]}>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              {items === null && <p className="meta">…</p>}
+              {items && items.length === 0 && <p className="meta">Rien à traiter ici.</p>}
+              {items && items.length > 0 && (
+                <ul className="md-list">
+                  {(tab === 'pending' || tab === 'rejected') && items.map((x) => <Review key={x.id} item={x} call={call} onDone={load} />)}
+                  {tab === 'reports' && items.map((x) => <Report key={x.id} r={x} call={call} onDone={load} />)}
+                  {tab === 'handled' && items.map((x) => (
+                    <li key={x.id} className="md-item">
+                      <Link href={`/talks/${x.talkId}`} target="_blank" className="md-title">{x.title}</Link>
+                      <span className="meta small">{REASON[x.reason] || x.reason} · {{ dismissed: 'classé sans suite', resolved: 'réglé', actioned: 'vidéo retirée' }[x.status]} par {x.handledBy || '—'} le {when(x.handledAt)}{x.note ? ` — ${x.note}` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page studio-narrow">
       <h1 className="studio-title">Modération</h1>
