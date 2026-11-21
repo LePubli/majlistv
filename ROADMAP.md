@@ -703,3 +703,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - [x] Back-office Premium, lot 1 (Admin + Studio, 20/11/2026) — menu, barre du haut (recherche Ctrl K, cloche d'alertes réelles, applications, compte), cartes, tableaux, formulaires d'après la maquette. Lots 2 (écrans clés) et 3 (le reste) à venir sur « go ».
 
 - Back-office Premium, lot 2 (Vue d'ensemble, Utilisateurs, Studio tableau de bord, Mes contenus + fiche rapide) : fait 21/11. Lot 3 sur « go ».
+
+- Back-office Premium, lot 3 (éditeur plein écran, rythme commun des écrans) : fait 21/11. Lot 3b (contrôles d'éditeur de la maquette absents) sur « go ».

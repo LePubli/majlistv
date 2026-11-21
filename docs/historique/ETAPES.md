@@ -9867,3 +9867,10 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - Thème Premium uniquement ; données réelles seulement (rien d'affiché sans donnée).
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `skin-premium-admin.css`, composants `web/components/backoffice/`.
 - **Suite** : lot 3 (écrans restants) sur « go ».
+
+## Back-office Premium — Lot 3 : éditeur et rythme commun (21/11/2026)
+
+- **Éditeur plein écran** : barre du haut, colonnes Ajouter / Réglages, boutons, champs, timeline (clip vidéo bleu, audio turquoise, titres bleu foncé), tête de lecture rouge, aux couleurs de la maquette. Fonctions inchangées ; l'habillage affiché sur l'aperçu garde sa couleur pour rester fidèle au rendu final.
+- **Tous les écrans Admin / Studio** : titre 28 px, sous-titre, espacements resserrés (Premium seulement).
+- **Pas fait** : contrôles de la maquette absents de notre éditeur (vitesse, opacité, corrections colorimétriques, transition par extrait, médiathèque) : ils touchent le rendu FFmpeg, à traiter dans un lot 3b si tu le souhaites.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles.

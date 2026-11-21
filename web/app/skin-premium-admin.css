@@ -286,3 +286,62 @@ html[data-skin="premium"] .admin :is(input, select):not([type=checkbox]):not([ty
 }
 html[data-skin="premium"] .studio label.studio-search input[type="search"] { background: none; border: 0; border-radius: 0; padding-inline: 0; min-height: 0; box-shadow: none; }
 html[data-skin="premium"] .studio-page .bo-sub { margin-top: -14px; }
+
+/* ======================================================================
+   Lot 3 — Éditeur plein écran (Studio → Éditeur → projet) aux couleurs de la maquette : bleu nuit, pistes bleu / turquoise,
+   boutons à angles doux, barre du haut sombre. Fonctions inchangées.
+   ====================================================================== */
+html[data-skin="premium"] .mt-editor { background: #041323; --accent: #008cff; --accent-hover: #35b9ff; --accent-light: #8fd3ff; --gold-soft: rgba(0, 140, 255, .16); --line: #1c3b57; --line-soft: #173951; --surface: #092039; }
+html[data-skin="premium"] .mt-top { background: #071b30; border-bottom: 1px solid #14324c; padding: 10px 18px; gap: 12px; }
+html[data-skin="premium"] .mt-titles h1 { font-size: 15px; }
+html[data-skin="premium"] .mt-top .btn, html[data-skin="premium"] .mt-tools .btn, html[data-skin="premium"] .mt-panel .btn { border-radius: 8px; min-height: 34px; padding: 6px 14px; font-size: 13px; font-weight: 700; }
+html[data-skin="premium"] .mt-top .btn.ghost, html[data-skin="premium"] .mt-tools .btn.ghost, html[data-skin="premium"] .mt-panel .btn.ghost { background: #0b2742; border: 1px solid #1f4666; color: #dcecf8; }
+html[data-skin="premium"] .mt-top .btn.ghost:hover, html[data-skin="premium"] .mt-tools .btn.ghost:hover { background: #10375a; color: #fff; }
+html[data-skin="premium"] .mt-top .btn:not(.ghost), html[data-skin="premium"] .mt-tools .btn:not(.ghost) { background: linear-gradient(110deg, #0075da, #078bf5); border: 1px solid #27b5ff; color: #fff; box-shadow: 0 3px 14px #078bf53c; }
+html[data-skin="premium"] .mt-badge, html[data-skin="premium"] .mt-top .sd-pill.mt-gold { border-radius: 8px; }
+html[data-skin="premium"] .mt-left, html[data-skin="premium"] .mt-right { background: #061a2e; }
+html[data-skin="premium"] .mt-left { border-inline-end: 1px solid #14324c; }
+html[data-skin="premium"] .mt-right { border-inline-start: 1px solid #14324c; }
+html[data-skin="premium"] .mt-cap { color: #8ea9bf; letter-spacing: 1.3px; font-weight: 800; }
+html[data-skin="premium"] .mt-right .mt-cap { color: #35b9ff; }
+html[data-skin="premium"] .mt-add { border-radius: 8px; background: #0a2640; border: 1px solid #1c3f5e; font-size: 13px; }
+html[data-skin="premium"] .mt-add:hover, html[data-skin="premium"] .mt-add.on:hover { background: #0f3355; border-color: #008cff; }
+html[data-skin="premium"] .mt-screen { border-radius: 10px; border: 1px solid #14324c; background: #000; }
+html[data-skin="premium"] .mt-round { border-radius: 8px; background: #0b2742; border-color: #1f4666; width: 42px; height: 38px; }
+html[data-skin="premium"] .mt-round.play { border-radius: 50%; width: 46px; height: 46px; background: linear-gradient(110deg, #0075da, #078bf5); border-color: #27b5ff; }
+html[data-skin="premium"] .mtw-tabs { background: #0a2640; border-radius: 8px; }
+html[data-skin="premium"] .mtw-tabs button { border-radius: 6px; }
+html[data-skin="premium"] .mtw-tabs button.on { background: #0e3a62; color: #8fd3ff; }
+html[data-skin="premium"] .mt-field input, html[data-skin="premium"] .mt-field select, html[data-skin="premium"] .mt-field textarea { background: #08233b; border: 1px solid #1c3f5e; border-radius: 8px; }
+html[data-skin="premium"] .mt-bottom { background: #061a2e; border-top: 1px solid #14324c; }
+html[data-skin="premium"] .mt-tl { background: #04101f; border-color: #14324c; border-radius: 10px; }
+html[data-skin="premium"] .mt-row { border-bottom-color: #10293f; }
+html[data-skin="premium"] .mt-row:nth-child(even) .mt-lane { background: rgba(70, 150, 220, .045); }
+html[data-skin="premium"] .mt-head { background: #061a2e; }
+html[data-skin="premium"] .mt-tick { border-left-color: #1c3b57; color: #6e8ca3; }
+html[data-skin="premium"] .mt-clip { background: linear-gradient(90deg, #0b5da8, #1488e6); border: 1px solid #35b9ff; border-radius: 6px; }
+html[data-skin="premium"] .mt-clip.sel, html[data-skin="premium"] .mt-mclip.sel, html[data-skin="premium"] .mt-tclip.sel { box-shadow: 0 0 0 2px #eef7ff; }
+html[data-skin="premium"] .mt-mclip { background: #0d4a58; border: 1px solid #37b5c4; border-radius: 6px; }
+html[data-skin="premium"] .mt-mclip .mt-clip-body { color: #d8f7fb; }
+html[data-skin="premium"] .mt-tclip { background: #1d3f86; border-color: #6ea4ff; border-radius: 6px; }
+html[data-skin="premium"] .mt-tclip .mt-clip-body { color: #e4eeff; }
+html[data-skin="premium"] .mt-tclip.banner { background: #1d3f86; border-color: #6ea4ff; }
+html[data-skin="premium"] .mt-block.orig { background: #0a2a45; border: 1px solid #1f4d73; }
+html[data-skin="premium"] .mt-block.dub { background: #0d6f86; border: 1px solid #37b5c4; }
+html[data-skin="premium"] .mt-block.dub.keep { background: #08273a; border: 1px dashed #37b5c4; }
+html[data-skin="premium"] .mt-block.sub { background: #1b3d63; }
+html[data-skin="premium"] .mt-block.sub.alt, html[data-skin="premium"] .mt-block.sub.part { background: #0f5a62; }
+html[data-skin="premium"] .mt-sw.dub { background: #0d6f86; border-color: #37b5c4; }
+html[data-skin="premium"] .mt-sw.level { background: #8fd3ff; }
+html[data-skin="premium"] .mt-sw.cut { background: repeating-linear-gradient(135deg, #041323 0 2px, #008cff 2px 4px); }
+html[data-skin="premium"] .mt-playhead { background: #ff5d7a; }
+html[data-skin="premium"] .mt-playhead::before { border-top-color: #ff5d7a; }
+html[data-skin="premium"] .mt-logo-card img { background: repeating-conic-gradient(#0a2236 0 25%, #08192a 0 50%) 0 0 / 14px 14px; }
+
+/* ---------- Lot 3 — rythme commun des écrans (titre, sous-titre, contenu plus serrés, comme la maquette) ---------- */
+html[data-skin="premium"] .studio-page { gap: 14px; padding-top: 26px; }
+html[data-skin="premium"] .studio-page > h1 { margin: 0; font-size: 28px; line-height: 1.15; letter-spacing: -.3px; }
+html[data-skin="premium"] .studio-page > h1 + p, html[data-skin="premium"] .studio-page > h1 + .meta { margin: 0 0 6px; color: #8ea9bf; font-size: 14px; }
+html[data-skin="premium"] .studio-page h2 { font-size: 17px; margin: 0; }
+html[data-skin="premium"] .studio-page > .tabs, html[data-skin="premium"] .studio-page > [role="tablist"] { margin-top: 2px; }
+html[data-skin="premium"] .studio-page .card { border-radius: 12px; }
