@@ -3,6 +3,7 @@
 // mesurer les inscriptions, puis « garder » la meilleure (ses textes deviennent ceux du site, modifiables dans Admin → Textes).
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, SelectList, Overline, Badge, Btn, Progress, Meta, c } from './backoffice/Kit';
 
 const STATUS = { draft: ['Brouillon', 'meta'], running: ['En cours', 'ok'], paused: ['En pause', 'meta'], ended: ['Terminé', 'meta'] };
 const LANG_NAME = { fr: 'Français', en: 'Anglais', ar: 'Arabe' };
@@ -131,7 +132,8 @@ function Results({ e, onKeep }) {
 }
 
 export default function ExperimentsAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
+  const [selId, setSelId] = useState(null);
   const [data, setData] = useState(null);
   const [form, setForm] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -152,6 +154,70 @@ export default function ExperimentsAdmin() {
   };
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;
+  if (skin === 'premium') {
+    const xs = data.experiments;
+    const sel = xs.find((e) => e.id === selId) || xs[0] || null;
+    const tone = { draft: 'gray', running: 'green', paused: 'amber', ended: 'blue' };
+    const visitors = xs.reduce((n, e) => n + e.variants.reduce((m, v) => m + (v.visitors || 0), 0), 0);
+    const convs = xs.reduce((n, e) => n + e.variants.reduce((m, v) => m + (v.conversions || 0), 0), 0);
+    const ready = xs.filter((e) => e.status !== 'ended' && e.variants.some((v) => v.verdict === 'better')).length;
+    const maxRate = sel ? Math.max(1, ...sel.variants.map((v) => v.rate || 0)) : 1;
+    return (
+      <Page title="Tests A/B — laboratoire" sub="Comparez l’original d’une zone du site à des variantes et mesurez les inscriptions avant de déployer."
+        actions={!form ? <Btn onClick={() => { setMsg(null); setForm(true); }}>Créer une expérience</Btn> : null}>
+        <Metrics cols="four" items={[
+          { icon: 'flask', label: 'Expériences en cours', value: xs.filter((e) => e.status === 'running').length },
+          { icon: 'users', label: 'Visiteurs inclus', value: visitors.toLocaleString('fr-FR') },
+          { icon: 'target', tone: 'green', label: 'Conversions', value: convs.toLocaleString('fr-FR') },
+          { icon: 'clock', tone: 'amber', label: 'Décisions possibles', value: ready },
+        ]} />
+        {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
+        {form ? (
+          <Panel title="Nouvelle expérience">
+            <div className="bm-form" style={{ padding: '0 14px 14px' }}>
+              <Form zones={data.zones} langs={data.langs} onCancel={() => setForm(false)} onDone={() => { setForm(false); setMsg({ ok: true, text: 'Test créé en brouillon : vérifiez-le puis démarrez-le.' }); load(); }} />
+            </div>
+          </Panel>
+        ) : (
+          <Cols kind="two-main">
+            <Panel title="Expériences" extra={`${xs.length}`}>
+              <SelectList empty="Aucun test pour l’instant." value={sel?.id} onSelect={setSelId}
+                items={xs.map((e) => ({ id: e.id, title: e.name, sub: `${e.zoneLabel} · ${e.goal === 'subscription' ? 'abonnement' : 'inscription'}`, tail: <Badge tone={tone[e.status]}>{STATUS[e.status][0]}</Badge> }))} />
+            </Panel>
+            {sel && (
+              <Panel title={`Expérience : ${sel.name}`}>
+                <div className={c('ax-ab-grid')}>
+                  {sel.variants.map((v) => (
+                    <div key={v.key} className={`${c('ax-ab-card')} ${v.key === sel.winner ? c('selected') : ''}`}>
+                      <b>Variante {v.key} · {v.name}{v.key === sel.winner ? ' 🏆' : ''}</b>
+                      <span>{v.weight} % du trafic · {v.visitors} visiteur(s)</span>
+                      <Badge tone={v.key === 'A' ? 'blue' : 'violet'}>{v.key === 'A' ? 'Témoin' : 'Test'}</Badge>
+                    </div>
+                  ))}
+                </div>
+                <div className={c('ax-check-stack')}>
+                  {sel.variants.map((v) => (
+                    <div key={v.key} className={c('ax-bar-item')}><div><b>Taux {sel.goal === 'subscription' ? 'd’abonnement' : 'd’inscription'} {v.key}</b><small>{pct(v.rate)}</small></div><Progress value={((v.rate || 0) / maxRate) * 100} /></div>
+                  ))}
+                </div>
+                <div style={{ padding: '0 14px 14px' }}>
+                  <Overline>{(VERDICT[(sel.variants.find((v) => v.verdict === 'better') || sel.variants[1] || sel.variants[0])?.verdict] || '').toUpperCase()}</Overline>
+                  <Meta items={[['Statut', STATUS[sel.status][0]], ['Démarré', sel.startedAt ? day(sel.startedAt) : '—'], ['Terminé', sel.endedAt ? day(sel.endedAt) : '—']]} />
+                  <Results e={sel} onKeep={(v) => keep(sel, v)} />
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                    {(sel.status === 'draft' || sel.status === 'paused') && <Btn onClick={() => act(`/admin/experiments/${sel.id}/start`, { method: 'POST' }, () => 'Test démarré : les visiteurs sont répartis dès maintenant.')}>{sel.status === 'draft' ? 'Démarrer' : 'Reprendre'}</Btn>}
+                    {sel.status === 'running' && <Btn primary={false} onClick={() => act(`/admin/experiments/${sel.id}/pause`, { method: 'POST' }, () => 'Test en pause : le site montre l’original.')}>Mettre en pause</Btn>}
+                    {(sel.status === 'running' || sel.status === 'paused') && <Btn primary={false} onClick={() => window.confirm('Terminer le test sans rien appliquer ? Le site garde l’original.') && act(`/admin/experiments/${sel.id}/end`, { method: 'POST', body: '{}' }, () => 'Test terminé, rien n’est appliqué.')}>Terminer sans rien appliquer</Btn>}
+                    {(sel.status === 'draft' || sel.status === 'ended') && <Btn primary={false} onClick={() => window.confirm(`Supprimer le test « ${sel.name} » et ses chiffres ?`) && act(`/admin/experiments/${sel.id}`, { method: 'DELETE' }, () => 'Test supprimé.')}>Supprimer</Btn>}
+                  </div>
+                </div>
+              </Panel>
+            )}
+          </Cols>
+        )}
+      </Page>
+    );
+  }
   return (
     <section className="xp-admin">
       <p className="meta">Compare l’original d’une zone du site à une ou deux variantes de textes, sur des visiteurs tirés au sort, et mesure laquelle donne le plus d’<b>inscriptions</b>. Un visiteur garde la même variante à chaque visite. Aucune donnée personnelle ; un visiteur qui refuse le suivi (« Do Not Track ») voit toujours l’original et n’est pas compté. Sans test en cours, le site est inchangé.</p>

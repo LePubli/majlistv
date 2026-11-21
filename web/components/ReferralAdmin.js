@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, Table, Badge, Meta, c } from './backoffice/Kit';
 
 const when = (s) => (s ? new Date(s).toLocaleDateString('fr-FR', { dateStyle: 'short' }) : '—');
 
 export default function ReferralAdmin() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -16,6 +17,38 @@ export default function ReferralAdmin() {
   if (err) return <p className="error" role="alert">{err}</p>;
   if (!d) return null;
   const x = d.totals;
+  if (skin === 'premium') {
+    return (
+      <Page title="Parrainage & ambassadeurs" sub="Qui a parrainé qui, état des récompenses et règles du programme.">
+        <Metrics cols="four" items={[
+          { icon: 'share', label: 'Parrainages', value: x.total },
+          { icon: 'gift', tone: 'green', label: 'Récompensés', value: x.rewarded },
+          { icon: 'clock', tone: 'amber', label: 'En attente', value: x.pending },
+          { icon: 'users', label: 'Parrains', value: x.referrers, note: `${x.monthsGiven} mois offerts` },
+        ]} />
+        <Cols kind="two-main">
+          <Panel title="Parrainages" extra={`${d.referrals.length}`}>
+            <Table headers={[t('refAdmReferrer'), t('refAdmReferee'), t('refAdmDate'), t('refAdmStatus')]} empty={t('refAdmNone')}
+              rows={d.referrals.map((r) => [r.referrerEmail, r.refereeEmail, when(r.createdAt),
+                r.status === 'rewarded'
+                  ? <Badge key="s" tone={r.referrerRewarded ? 'green' : 'amber'}>{`${t('refStRewarded')} · ${r.months} mois${r.referrerRewarded ? '' : ` — ${t('refAdmCapped')}`}`}</Badge>
+                  : <Badge key="s" tone="blue">{t('refStPending')}</Badge>])} />
+          </Panel>
+          <Panel title="Règles du programme">
+            <div className={c('ax-flow')} style={{ flexDirection: 'column' }}>
+              {[['1', 'Invitation', 'Lien personnel (Mon compte → Parrainage)'], ['2', 'Inscription', 'Compte de moins de 48 h, sans abonnement'], ['3', 'Premier vrai paiement', 'Pas de récompense pendant l’essai à 0 €'], ['4', 'Récompense', `${d.months} mois offerts au parrain et au filleul`]].map((y) => (
+                <div key={y[0]}><span>{y[0]}</span><b>{y[1]}</b><small>{y[2]}</small></div>
+              ))}
+            </div>
+            <div style={{ padding: '0 14px 14px' }}>
+              <Meta items={[['Mois offerts', d.months], ['Plafond par parrain et par an', d.maxPerYear || 'Aucun']]} />
+              <Link className="link u" href="/admin?tab=settings">Modifier : Paramètres → Parrainage</Link>
+            </div>
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <section>
       <h2>{t('refAdmTitle')}</h2>

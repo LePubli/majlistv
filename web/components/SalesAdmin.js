@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import { saleMoney } from './SaleBox';
+import { Page, Metrics, Panel, Table, Badge, Btn } from './backoffice/Kit';
 
 export default function SalesAdmin() {
-  const { t, call, feat, locale } = useApp();
+  const { t, call, feat, locale, skin } = useApp();
   const [status, setStatus] = useState('all');
   const [d, setD] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -23,6 +24,39 @@ export default function SalesAdmin() {
     setMsg(r.ok ? { ok: true, text: t('saRefunded') } : { ok: false, text: r.data?.error || t('errGeneric') });
     load();
   };
+  if (skin === 'premium') {
+    return (
+      <Page title="Ventes à l’unité" sub="Achats et locations de vidéos et d’audios hors abonnement : chiffres, liste et remboursements.">
+        <Metrics cols="four" items={[
+          { icon: 'wallet', tone: 'green', label: t('saRevenue'), value: money(d.totals.revenue) },
+          { icon: 'chart', label: t('saRevenue30'), value: money(d.totals.revenue30) },
+          { icon: 'check', label: t('saPaid'), value: d.totals.paid },
+          { icon: 'refresh', tone: 'amber', label: t('saRefundedN'), value: d.totals.refunded },
+        ]} />
+        <Panel title="Commandes" extra={`${d.totals.offers} ${t('saOffers').toLowerCase()}`}>
+          <div className="bm-form" style={{ padding: '0 14px' }}>
+            <label className="fld inline"><span>{t('saFilter')}</span>
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">{t('saAll')}</option><option value="paid">{t('saPaid')}</option><option value="refunded">{t('saRefundedN')}</option>
+              </select>
+            </label>
+            <p className="meta small">{t('saHelp')}</p>
+            {msg && <p className={msg.ok ? 'ok' : 'error'} role="status">{msg.text}</p>}
+          </div>
+          <Table headers={[t('saDate'), t('saBuyer'), t('saItem'), t('saKind'), t('saAmount'), t('saState'), '']} empty={t('saEmpty')}
+            rows={d.items.map((p) => [
+              date(p.paidAt),
+              <span key="b"><span dir="auto">{p.userName || '—'}</span><br /><small>{p.email}</small></span>,
+              <Link key="i" href={p.kind === 'talk' ? `/talks/${p.itemId}` : `/audyn/${p.itemId}`} dir="auto">{p.title}</Link>,
+              `${p.kind === 'talk' ? 'Vidéo' : 'Audio'} · ${p.mode === 'buy' ? t('slBuy') : t('mpRent')}`,
+              <span key="a">{money(p.amount)}{p.memberPrice ? <small> · {t('seMembers')}</small> : null}</span>,
+              p.status === 'refunded' ? <Badge key="s" tone="amber">{`${t('mpRefunded')} ${date(p.refundedAt)}`}</Badge> : <Badge key="s" tone={p.mode === 'rent' ? 'blue' : 'green'}>{p.mode === 'rent' ? `${t('saUntil')} ${date(p.expiresAt)}` : t('slOwned')}</Badge>,
+              p.status === 'paid' ? <Btn key="r" primary={false} onClick={() => refund(p)}>{t('saRefund')}</Btn> : '',
+            ])} />
+        </Panel>
+      </Page>
+    );
+  }
   return (
     <section className="sa-admin">
       <div className="admin-cards">

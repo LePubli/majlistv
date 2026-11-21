@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
+import { Page, Metrics, Panel, Cols, Table, Badge, Btn, c } from '../../components/backoffice/Kit';
 
 // Petits utilitaires repris de app/admin/page.js (le module ne dépend pas du code de la page d'administration).
 const fmtDT = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
@@ -13,7 +14,7 @@ function Kpi({ value, label, hint, href }) {
 
 /* ---------------------------------------------------------------- Cartes cadeaux (étape 21) */
 export default function GiftsAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [d, setD] = useState(null);
   const [status, setStatus] = useState('');
   const [q, setQ] = useState('');
@@ -34,6 +35,53 @@ export default function GiftsAdmin() {
     const r = await call(`/admin/gifts/${g.id}/void`, { method: 'POST' });
     setMsg(r.ok ? 'Carte annulée.' : (r.data?.error || 'Échec')); load();
   };
+  if (skin === 'premium') {
+    const tone = { pending: 'amber', paid: 'green', redeemed: 'blue', void: 'gray' };
+    return (
+      <Page title="Cadeaux & accès offerts" sub="Cartes cadeaux de 1, 3 ou 12 mois : génération de codes offerts, suivi et annulations. Prix et vente : Paramètres → Cartes cadeaux.">
+        {d && (
+          <Metrics cols="four" items={[
+            { icon: 'gift', label: 'Cartes disponibles', value: d.totals.available },
+            { icon: 'check', tone: 'green', label: 'Activées', value: d.totals.redeemed },
+            { icon: 'clock', tone: 'amber', label: 'Annulées', value: d.totals.voided },
+            { icon: 'wallet', label: 'Ventes (hors cartes offertes)', value: money(d.totals.revenue, d.currency) },
+          ]} />
+        )}
+        <Cols kind="two-main">
+          <Panel title="Cartes cadeaux" extra={d ? `${d.gifts.length}` : ''}>
+            <div className="bm-form" style={{ padding: '0 14px' }}>
+              <div className="studio-tools">
+                <label className="fld"><span>État</span><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">Tous</option>{Object.entries(STATE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                <label className="fld"><span>Recherche</span><input type="search" value={q} placeholder="Code ou e-mail" onChange={(e) => setQ(e.target.value)} /></label>
+              </div>
+              {msg && <p className="meta" role="status">{msg}</p>}
+            </div>
+            <Table headers={['Code', 'Durée', 'État', 'Origine', 'Acheteur', 'Activée par', 'Montant', '']} empty="Aucune carte."
+              rows={(d ? d.gifts : []).map((g) => [
+                <code key="c" className={c('ax-code')}>{g.code}</code>,
+                `${g.months} mois`,
+                <Badge key="s" tone={tone[g.status] || 'gray'}>{`${STATE[g.status]}${g.refundedAt ? ' (remboursée)' : ''}`}</Badge>,
+                g.source === 'admin' ? `Agence${g.note ? ` · ${g.note}` : ''}` : 'Stripe',
+                <span key="p">{g.purchaserEmail || '—'}{g.recipientEmail ? <><br /><small>→ {g.recipientEmail}</small></> : null}</span>,
+                <span key="r">{g.redeemerEmail || '—'}{g.redeemedAt ? <><br /><small>{fmtDT(g.redeemedAt)}</small></> : null}</span>,
+                g.source === 'stripe' ? money(g.amount, g.currency) : '—',
+                g.status === 'paid' ? <Btn key="v" primary={false} onClick={() => voidCard(g)}>Annuler</Btn> : '',
+              ])} />
+          </Panel>
+          <Panel title="Créer des cartes offertes">
+            <div className={c('ax-gift-card')}><h2>Offrir l’apprentissage</h2><p>Codes à partager (concours, partenaires…). Ils restent visibles dans la liste.</p></div>
+            <form className="bm-form" style={{ padding: '0 14px 14px' }} onSubmit={generate}>
+              <label className="fld"><span>Durée</span><select value={gen.months} onChange={(e) => setGen({ ...gen, months: e.target.value })}><option value="1">1 mois</option><option value="3">3 mois</option><option value="12">12 mois</option></select></label>
+              <label className="fld"><span>Quantité (50 au plus)</span><input type="number" min="1" max="50" value={gen.count} onChange={(e) => setGen({ ...gen, count: e.target.value })} /></label>
+              <label className="fld"><span>Note (concours, partenaire…)</span><input value={gen.note} maxLength={200} onChange={(e) => setGen({ ...gen, note: e.target.value })} /></label>
+              <button className="btn">Générer des cartes offertes</button>
+              {codes && <label className="fld"><span>Codes générés (à copier maintenant)</span><textarea readOnly rows={Math.min(8, codes.split('\n').length + 1)} value={codes} onFocus={(e) => e.target.select()} /></label>}
+            </form>
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <section>
       <p className="meta">Cartes cadeaux de 1, 3 ou 12 mois. Prix et ouverture à la vente : Paramètres → Cartes cadeaux. Un remboursement fait dans Stripe annule automatiquement une carte non activée.</p>

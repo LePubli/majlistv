@@ -9896,3 +9896,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Coran, Adhkar, Ramadan, Saisons, Vendredi reprennent la composition de la maquette (colonnes, cartes, fiche de validation), avec les données et fonctions réelles ; le cadre `Frames.js` n'est plus utilisé pour Coran/Adhkar/Ramadan/Saisons/Vendredi.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js` (Ax, SelectList, Pills, Switch, Quality), `skin-premium-admin.css`.
+
+## Back-office Premium — lot D recomposé (21/11/2026)
+
+- Publicités, Tests A/B, Cartes cadeaux, Ventes à l'unité, Parrainage reprennent la composition de la maquette avec les données et fonctions réelles.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.

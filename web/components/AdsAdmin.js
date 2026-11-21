@@ -5,6 +5,7 @@
 // Admin → Paramètres → « Publicité au lancement », l'interrupteur général dans Admin → Fonctions.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, Table, Btn, Badge, Meta, c } from './backoffice/Kit';
 
 const EMPTY = { advertiser: '', title: '', sentence: '', ctaLabel: 'En savoir plus', linkUrl: '', active: true, startsAt: '', endsAt: '', languages: [] };
 const LANGS = [['fr', 'Français'], ['en', 'Anglais'], ['ar', 'Arabe']];
@@ -119,7 +120,8 @@ function AdForm({ ad, limits, onDone, onCancel }) {
 }
 
 export default function AdsAdmin() {
-  const { call, locale } = useApp();
+  const { call, locale, skin } = useApp();
+  const [selId, setSelId] = useState(null);
   const [data, setData] = useState(null);
   const [form, setForm] = useState(null); // null | 'new' | annonce en modification
   const [msg, setMsg] = useState(null);
@@ -144,6 +146,65 @@ export default function AdsAdmin() {
   if (!data) return <p className="meta">Chargement…</p>;
   if (data.error) return <p className="error">{data.error}</p>;
   const ads = data.ads;
+  if (skin === 'premium') {
+    const sum = (k) => ads.reduce((n, a) => n + (a[k] || 0), 0);
+    const imp = sum('impressions'); const clk = sum('clicks');
+    const sel = ads.find((a) => a.id === selId) || ads[0] || null;
+    const tone = { live: 'green', scheduled: 'blue', paused: 'amber', ended: 'gray' };
+    return (
+      <Page title="Publicités & partenariats" sub="Publicités plein écran du lancement de l’application : campagnes, visuels, langues et chiffres."
+        actions={!form ? <Btn disabled={!data.storage} onClick={() => { setMsg(null); setForm('new'); }}>Nouvelle campagne</Btn> : null}>
+        <Metrics items={[
+          { icon: 'eye', label: 'Affichages', value: imp.toLocaleString('fr-FR') },
+          { icon: 'target', tone: 'green', label: 'Clics', value: clk.toLocaleString('fr-FR'), note: imp ? `CTR ${(Math.round((clk / imp) * 1000) / 10).toLocaleString('fr-FR')} %` : '' },
+          { icon: 'megaphone', label: 'En cours', value: ads.filter((a) => a.status === 'live').length },
+          { icon: 'clock', tone: 'amber', label: 'Programmées', value: ads.filter((a) => a.status === 'scheduled').length },
+        ]} />
+        {!data.storage && <p className="error">Le stockage vidéo n’est pas configuré : l’envoi des visuels est impossible.</p>}
+        {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
+        <Cols kind="two-main">
+          <Panel title="Campagnes" extra={`${ads.length}`}>
+            <Table headers={['Campagne', 'Langues', 'État', 'Affichages', 'Clics']} onRow={(i) => { setForm(null); setSelId(ads[i].id); }}
+              empty="Aucune publicité pour l’instant."
+              rows={ads.map((a) => [<span key="t"><b>{a.title}</b><br /><small>{a.advertiser}</small></span>, langNames(a.languages), <Badge key="s" tone={tone[a.status] || 'gray'}>{(STATUS[a.status] || [''])[0]}</Badge>, a.impressions, `${a.clicks} (${a.ctr} %)`])} />
+            <p className="meta" style={{ padding: '0 14px 14px' }}>Jamais dans l’espace Kids, jamais pendant l’heure de prière. Réglages : Admin → Paramètres → « Publicité au lancement ».</p>
+          </Panel>
+          {form ? (
+            <Panel title={form === 'new' ? 'Nouvelle publicité' : 'Modifier la publicité'}>
+              <div className="bm-form" style={{ padding: '0 14px 14px' }}>
+                <AdForm ad={form === 'new' ? null : form} limits={data.limits} onCancel={() => setForm(null)} onDone={() => { setForm(null); flash(true, 'Publicité enregistrée.'); load(); }} />
+              </div>
+            </Panel>
+          ) : sel ? (
+            <Panel title="Aperçu créatif">
+              <div className={c('ax-ad-preview')}>
+                {sel.mediaUrl && (sel.mediaKind === 'video' ? <video src={sel.mediaUrl} muted playsInline preload="metadata" /> : /* eslint-disable-next-line @next/next/no-img-element */ <img src={sel.mediaUrl} alt="" loading="lazy" />)}
+                <div><span>{sel.advertiser}</span><h2>{sel.title}</h2><Btn href={sel.linkUrl} target="_blank" rel="noopener noreferrer">{sel.ctaLabel}</Btn></div>
+              </div>
+              <div style={{ padding: '0 14px 14px' }}>
+                <Meta items={[
+                  ['Visuel', sel.mediaKind === 'video' ? 'Vidéo' : 'Photo'],
+                  ['Période', sel.startsAt || sel.endsAt ? `${sel.startsAt ? `du ${when(sel.startsAt, locale)}` : ''}${sel.endsAt ? ` jusqu’au ${when(sel.endsAt, locale)}` : ''}` : 'Sans date'],
+                  ['7 derniers jours', `${sel.impressions7} affichage(s), ${sel.clicks7} clic(s)`],
+                  ['« Passer »', sel.skips],
+                  ['Rapport annonceur', sel.reportToken ? <a key="r" href={reportUrl(sel)} target="_blank" rel="noopener noreferrer">Ouvrir le lien</a> : 'Aucun lien'],
+                ]} />
+                {sel.byLang && <p className="meta small">Par langue — {[['fr', 'FR'], ['en', 'EN'], ['ar', 'AR'], ['none', 'sans langue']].map(([k, n]) => `${n} : ${sel.byLang[k].impressions} aff. / ${sel.byLang[k].clicks} clic(s)`).join(' · ')}</p>}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Btn onClick={() => { setMsg(null); setForm(sel); }}>Modifier</Btn>
+                  <Btn primary={false} onClick={() => act(`/admin/campaigns/${sel.id}`, { method: 'PATCH', body: JSON.stringify({ active: !sel.active }) })}>{sel.active ? 'Mettre en pause' : 'Reprendre'}</Btn>
+                  <Btn primary={false} onClick={() => makeLink(sel)}>{sel.reportToken ? 'Renouveler le lien' : 'Créer le lien de suivi'}</Btn>
+                  {sel.reportToken && <Btn primary={false} onClick={() => copyLink(sel)}>Copier le lien</Btn>}
+                  {sel.reportToken && <Btn primary={false} onClick={() => act(`/admin/campaigns/${sel.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver le lien</Btn>}
+                  <Btn primary={false} onClick={() => remove(sel)}>Supprimer</Btn>
+                </div>
+              </div>
+            </Panel>
+          ) : <Panel title="Aperçu créatif"><p style={{ padding: 14, color: 'var(--muted)' }}>Créez une première campagne.</p></Panel>}
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <section className="camp-admin">
       <p className="meta">Publicités plein écran, passables, montrées au lancement de l’application (jamais dans l’espace Kids, jamais pendant l’heure de prière). S’il y en a plusieurs en cours, elles tournent : une différente à chaque lancement. Réglages (abonnés payants, nombre à la suite, durées) : Admin → Paramètres → « Publicité au lancement ».</p>
