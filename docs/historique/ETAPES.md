@@ -9993,3 +9993,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Back-office Premium — petits restes cosmétiques (21/11/2026)
 
 - Fil d'Ariane du Studio nommé pour Quiz, Mise en pratique, Références, Rappels ; plage horaire de l'Activité sur une ligne ; fichier inutilisé `Frames.js` supprimé. Voir ligne 321 du registre.
+
+## Studio — sélecteur de catégories et taille des polices (21/11/2026)
+
+- `CategoryPicker` remplace les murs de pastilles (fiche vidéo, fiche série) ; polices du back-office Premium ×1,2. Voir ligne 322 du registre.

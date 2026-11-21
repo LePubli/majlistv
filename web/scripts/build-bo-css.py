@@ -19,6 +19,15 @@ def strip_comments(s):
     return re.sub(r'/\*[\s\S]*?\*/', '', s)
 
 
+def bigger(css):
+    """Polices du back-office plus grandes (retour d'Epok, 21/11 : 9 à 11 px, illisible) : <= 16 px → x1,2 (12 px au minimum), au-delà x1,1."""
+    def f(m):
+        n = float(m.group(2))
+        v = max(12, round(n * 1.2)) if n <= 16 else round(n * 1.1)
+        return m.group(1) + str(v) + 'px'
+    return re.sub(r'(font-size\s*:\s*)(\d+(?:\.\d+)?)px', f, css)
+
+
 def split_top(s, sep=','):
     out, depth, cur, q = [], 0, '', None
     for ch in s:
@@ -145,7 +154,7 @@ def main():
     head = ('/* Back-office « Premium » — fichier fabriqué par web/scripts/build-bo-css.py à partir du thème fourni par Epok '
             '(19/11/2026). Ne pas modifier à la main : corriger le thème source ou web/app/skin-premium-admin.css. */\n')
     dest = os.path.join(os.path.dirname(__file__), '..', 'public', 'premium', 'bo-mock.css')
-    open(dest, 'w', encoding='utf-8').write(head + res + '\n')
+    open(dest, 'w', encoding='utf-8').write(head + bigger(res) + '\n')
     print(dest, len(res), 'caractères,', len(KEYFRAMES), 'animations')
 
 

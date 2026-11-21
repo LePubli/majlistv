@@ -1,5 +1,6 @@
 'use client';
 // Studio → fiche d'une vidéo : modifier les informations, la publication (publiée / brouillon / programmée) et la miniature.
+import CategoryPicker from './CategoryPicker';
 import { useEffect, useRef, useState } from 'react';
 import { sourceLabel } from '../lib/talkState';
 import { LEVELS, levelLabel } from '../lib/levels';
@@ -157,22 +158,12 @@ export default function TalkEditor({ x, reload, t, call, isAdmin }) {
         </div>
         <div className="fld" role="group" aria-label={t('category')}>
           <span>{t('category')}</span>
-          <div className="pills">
-            {pill(!f.categoryId, t('nwNoCat'), () => patch({ categoryId: '' }))}
-            {cats.map((c) => pill(String(f.categoryId) === String(c.id), c.fullName || c.name, () => patch({ categoryId: String(c.id) })))}
-          </div>
+          <CategoryPicker cats={cats} mode="single" value={f.categoryId} onChange={(v) => patch({ categoryId: v })} t={t} label={t('category')} />
           <span className="meta small">{t('txMainHelp')}</span>
         </div>
         <div className="fld" role="group" aria-label={t('txExtra')}>
           <span>{t('txExtra')}</span>
-          <div className="pills">
-            {cats.filter((c) => String(c.id) !== String(f.categoryId)).map((c) => {
-              const on = f.extraCategoryIds.includes(c.id);
-              const full = !on && f.extraCategoryIds.length >= MAX_EXTRA;
-              return <button key={c.id} type="button" className={on ? 'pill on' : 'pill'} aria-pressed={on} disabled={full}
-                onClick={() => patch({ extraCategoryIds: on ? f.extraCategoryIds.filter((id) => id !== c.id) : [...f.extraCategoryIds, c.id].sort((a, b) => a - b) })}>{on ? '✓ ' : ''}{c.fullName || c.name}</button>;
-            })}
-          </div>
+          <CategoryPicker cats={cats} mode="multi" max={MAX_EXTRA} value={f.extraCategoryIds} exclude={f.categoryId} onChange={(v) => patch({ extraCategoryIds: v })} t={t} label={t('txExtra')} />
           <span className="meta small">{t('txExtraHelp')}</span>
         </div>
         <div className="fld" role="group" aria-label={t('nwAccessQ')}>

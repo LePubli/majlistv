@@ -4148,3 +4148,24 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 
 /* Éléments de la fiche vidéo et des Shorts visibles seulement avec le thème Premium (règles dans skin-premium.css) */
 .wb-back, .wb-banner, .sh-back-pm { display: none; }
+
+/* Sélecteur de catégories (fiche vidéo du Studio) : choix replié, liste qui défile, recherche. */
+.cpk { display: flex; flex-direction: column; gap: 10px; }
+.cpk-chosen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cpk-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong, var(--line)); border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 14px; }
+.cpk-chip button { border: 0; background: transparent; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 6px; min-height: 28px; }
+.cpk-panel { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.cpk-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cpk-tools input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.cpk-tabs { display: inline-flex; gap: 6px; }
+.cpk-tabs .pill { min-height: 36px; padding: 6px 14px; }
+.cpk-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; border-top: 1px solid var(--line); }
+.cpk-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; background: transparent; color: inherit; border: 0; border-bottom: 1px solid var(--line); padding: 10px 8px; font: inherit; font-size: 14px; cursor: pointer; min-height: 40px; }
+.cpk-row:hover { background: rgba(127, 127, 127, .12); }
+.cpk-row:disabled { opacity: .45; cursor: not-allowed; }
+.cpk-row.on { font-weight: 700; }
+.cpk-child { padding-inline-start: 34px; font-weight: 400; }
+.cpk-box { flex: none; width: 18px; height: 18px; border: 1.5px solid var(--line-strong, var(--line)); border-radius: 5px; display: grid; place-items: center; font-size: 12px; }
+.cpk-row.on .cpk-box { background: var(--accent, #1677e8); border-color: var(--accent, #1677e8); color: #fff; }
+.cpk-tag { margin-inline-start: auto; opacity: .7; font-size: 11px; }
+.cpk-empty { padding: 12px 8px; }
