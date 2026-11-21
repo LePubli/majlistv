@@ -1235,7 +1235,7 @@ function ModuleTab({ load }) {
 }
 
 // Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
-const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral'];
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */

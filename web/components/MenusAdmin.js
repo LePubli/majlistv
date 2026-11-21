@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { MENUS, NAV_ICONS, NAV_ICON_LABELS, NAV_AUDIENCES } from '../lib/navcfg';
+import { Page, Metrics, Panel, Cols, SelectList, Badge, Btn, Meta } from './backoffice/Kit';
 
 const BUILTIN_LABEL = (() => {
   const m = {};
@@ -172,7 +173,7 @@ function Editor({ menu, spec, assigned, onClose, onSaved }) {
 }
 
 export default function MenusAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [data, setData] = useState(null);
   const [msg, setMsg] = useState(null);
   const [edit, setEdit] = useState(null); // id du menu ouvert
@@ -216,6 +217,73 @@ export default function MenusAdmin() {
     flash(r.ok, r.ok ? 'Menu supprimé.' : r.data?.error || 'Suppression impossible.'); load();
   };
   const opened = edit ? byId.get(edit) : null;
+  if (skin === 'premium') {
+    const nLoc = Object.values(data.locations).filter(Boolean).length;
+    const nItems = data.menus.reduce((n, m) => n + m.items.length, 0);
+    const sel = opened || data.menus[0] || null;
+    return (
+      <Page title="Menus & navigation" sub="Créez vos menus, puis choisissez où ils s’affichent. Un emplacement sans menu garde le menu d’origine du site."
+        actions={!creating ? <Btn onClick={() => { setMsg(null); setCreating(true); }}>Nouveau menu</Btn> : null}>
+        <Metrics cols="three" items={[
+          { icon: 'menu', label: 'Menus créés', value: data.menus.length },
+          { icon: 'layers', label: 'Éléments', value: nItems },
+          { icon: 'check', tone: 'green', label: 'Emplacements affectés', value: `${nLoc} / ${Object.keys(spec.locations).length}` },
+        ]} />
+        {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
+        {creating && (
+          <Panel title="Nouveau menu">
+            <form className="bm-form" style={{ padding: '0 14px 14px' }} onSubmit={create}>
+              <label>Nom<input required maxLength={80} value={name} placeholder="Ex. Menu d’été" onChange={(e) => setName(e.target.value)} /></label>
+              <label>Point de départ
+                <select value={from} onChange={(e) => setFrom(e.target.value)}>
+                  <option value="">Menu vide</option>
+                  {Object.entries(spec.locations).filter(([k]) => !k.startsWith('app_')).map(([k, l]) => <option key={k} value={`current:${k}`}>Comme le menu actuel : {l.label}</option>)}
+                  {data.menus.map((m) => <option key={m.id} value={`copy:${m.id}`}>Copie de « {m.name} »</option>)}
+                </select>
+              </label>
+              <div className="studio-tools"><button className="btn">Créer</button><button type="button" className="btn ghost" onClick={() => setCreating(false)}>Annuler</button></div>
+            </form>
+          </Panel>
+        )}
+        <Cols kind="two-main">
+          <Panel title="Mes menus" extra={`${data.menus.length}`}>
+            <SelectList empty="Aucun menu pour l’instant." value={sel?.id} onSelect={(id) => setEdit(id)}
+              items={data.menus.map((m) => ({ id: m.id, title: m.name, sub: assignedTo(m.id).length ? `Affiché : ${assignedTo(m.id).map((l) => spec.locations[l].label).join(' ; ')}` : 'Pas affecté', tail: <Badge tone="blue">{m.items.length} élément{m.items.length > 1 ? 's' : ''}</Badge> }))} />
+            {sel && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '0 14px 14px' }}>
+                <Btn primary={false} onClick={() => rename(sel)}>Renommer</Btn>
+                <Btn primary={false} onClick={() => duplicate(sel)}>Dupliquer</Btn>
+                <Btn primary={false} onClick={() => del(sel)}>Supprimer</Btn>
+              </div>
+            )}
+          </Panel>
+          <Panel title={opened ? `Structure du menu « ${opened.name} »` : 'Emplacements'}>
+            {opened ? (
+              <div className="bm-form" style={{ padding: '0 14px 14px' }}><Editor key={opened.id} menu={opened} spec={spec} assigned={assignedTo(opened.id)} onClose={() => setEdit(null)} onSaved={load} /></div>
+            ) : (
+              <div style={{ padding: '0 14px 14px' }}>
+                <p style={{ color: 'var(--muted)' }}>Sélectionnez un menu pour modifier ses éléments, ou choisissez ci-dessous quel menu s’affiche à chaque emplacement.</p>
+                {sel && <Btn onClick={() => setEdit(sel.id)}>Modifier les éléments de « {sel.name} »</Btn>}
+              </div>
+            )}
+          </Panel>
+        </Cols>
+        <Panel title="Emplacements" extra="Menu d’origine du site si rien n’est choisi">
+          <div className="bm-form" style={{ padding: '0 14px 14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14 }}>
+            {Object.entries(spec.locations).map(([k, l]) => (
+              <label key={k}><b>{l.label}</b>
+                <select value={data.locations[k] || ''} onChange={(e) => assign(k, e.target.value)}>
+                  <option value="">Menu d’origine du site</option>
+                  {data.menus.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+                <small className="meta">{l.hint}</small>
+              </label>
+            ))}
+          </div>
+        </Panel>
+      </Page>
+    );
+  }
   return (
     <section className="mn-admin">
       <p className="meta">Créez vos menus, puis choisissez où ils s’affichent. Un emplacement sans menu choisi garde le <b>menu d’origine</b> du site (rien ne change tant que vous n’affectez rien). Réservé aux administrateurs.</p>

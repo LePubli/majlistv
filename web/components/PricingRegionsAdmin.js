@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { countryName } from '../lib/countries';
+import { Page, Metrics, Panel, Cols, Table, Badge, Btn } from './backoffice/Kit';
 
 const EMPTY = { name: '', countries: '', priceMonthly: '', priceYearly: '', priceLearnMonthly: '', priceLearnYearly: '', enabled: true };
 
 export default function PricingRegionsAdmin() {
-  const { t, locale, call } = useApp();
+  const { t, locale, call, skin } = useApp();
   const [list, setList] = useState(null);
   const [form, setForm] = useState(null); // { id?, ...champs } quand on crée ou modifie
   const [msg, setMsg] = useState('');
@@ -38,6 +39,51 @@ export default function PricingRegionsAdmin() {
 
   if (err && !list) return <p className="error" role="alert">{err}</p>;
   if (!list) return null;
+  if (skin === 'premium') {
+    const countries = new Set(list.flatMap((g) => g.countries));
+    const edit = (g) => { setForm({ ...g, countries: g.countries.join(', '), priceLearnMonthly: g.priceLearnMonthly || '', priceLearnYearly: g.priceLearnYearly || '' }); setMsg(''); setErr(''); };
+    return (
+      <Page title="Régions, devises & prix" sub={t('regIntro')}
+        actions={!form ? <Btn onClick={() => { setForm({ ...EMPTY }); setMsg(''); setErr(''); }}>{t('regNew')}</Btn> : null}>
+        <Metrics cols="three" items={[
+          { icon: 'globe', label: 'Groupes de tarifs', value: list.length },
+          { icon: 'flag', label: 'Pays couverts', value: countries.size },
+          { icon: 'clock', tone: 'amber', label: 'Groupes inactifs', value: list.filter((g) => !g.enabled).length },
+        ]} />
+        {msg && <p className="meta" role="status">✓ {msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        <Cols kind="two-main">
+          <Panel title="Régions & prix" extra={`${list.length}`}>
+            <Table headers={['Groupe', 'Pays', 'Prix Stripe', 'État', '']} empty={t('regNone')}
+              rows={list.map((g) => [
+                <strong key="n">{g.name}</strong>,
+                g.countries.map((x) => `${x} ${countryName(x, locale)}`).join(' · '),
+                <span key="p" dir="ltr">{g.priceMonthly} · {g.priceYearly}{g.priceLearnMonthly ? ` · ${g.priceLearnMonthly} · ${g.priceLearnYearly}` : ''}</span>,
+                <Badge key="s" tone={g.enabled ? 'green' : 'gray'}>{g.enabled ? 'Actif' : 'Inactif'}</Badge>,
+                <span key="a" style={{ display: 'inline-flex', gap: 6 }}><Btn primary={false} onClick={() => edit(g)}>{t('regEdit')}</Btn><Btn primary={false} onClick={() => del(g)}>{t('regDelete')}</Btn></span>,
+              ])} />
+          </Panel>
+          <Panel title={form ? (form.id ? 'Modifier le groupe' : 'Nouveau groupe') : 'Règles régionales'}>
+            {form ? (
+              <form className="bm-form" style={{ padding: '0 14px 14px' }} onSubmit={save}>
+                <label>{t('regName')}<input required minLength={2} maxLength={80} value={form.name} onChange={set('name')} /></label>
+                <label>{t('regCountries')}<input required value={Array.isArray(form.countries) ? form.countries.join(', ') : form.countries} onChange={set('countries')} dir="ltr" placeholder="MA, DZ, TN" /></label>
+                <label>{t('regPM')}<input required value={form.priceMonthly} onChange={set('priceMonthly')} dir="ltr" /></label>
+                <label>{t('regPY')}<input required value={form.priceYearly} onChange={set('priceYearly')} dir="ltr" /></label>
+                <label>{t('regPLM')}<input value={form.priceLearnMonthly || ''} onChange={set('priceLearnMonthly')} dir="ltr" /></label>
+                <label>{t('regPLY')}<input value={form.priceLearnYearly || ''} onChange={set('priceLearnYearly')} dir="ltr" /></label>
+                <p className="meta small">{t('regLearnNote')}</p>
+                <label><input type="checkbox" role="switch" checked={form.enabled} onChange={set('enabled')} /> {t('regEnabled')}</label>
+                <p><button className="btn" disabled={busy}>{t('regSave')}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
+              </form>
+            ) : (
+              <p style={{ padding: '4px 18px 18px', color: 'var(--muted)' }}>Chaque groupe réunit des pays qui paient leurs propres prix Stripe. Le membre choisit son pays sur la page Abonnement ; un abonné en cours garde son prix. Sélectionnez « Modifier » sur un groupe ou créez-en un.</p>
+            )}
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <section>
       <h2>{t('regTitle')}</h2>

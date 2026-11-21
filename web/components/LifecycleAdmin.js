@@ -4,6 +4,7 @@
 // Admin → Paramètres → « E-mails de cycle de vie ». Rafraîchi toutes les minutes.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, Table, Badge, Btn, AxRow, Hint } from './backoffice/Kit';
 
 const KIND = {
   resume_talk: ['Reprise', 'Vidéo commencée (≥ 2 min), laissée de côté depuis quelques jours : « Reprenez là où vous vous êtes arrêté ».'],
@@ -12,7 +13,7 @@ const KIND = {
 };
 
 export default function LifecycleAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -44,6 +45,52 @@ export default function LifecycleAdmin() {
   if (!d) return <p className="health-muted">Chargement…</p>;
   const c = d.cfg;
   const total = Object.entries(d.kinds).filter(([, k]) => k.enabled).reduce((n, [, k]) => n + k.count, 0);
+  if (skin === 'premium') {
+    return (
+      <Page title="Automatisations & parcours" sub="E-mails de cycle de vie : reprise, démarrage et retour. Aperçu en direct, aucun envoi tant que l’interrupteur est coupé."
+        actions={c.master
+          ? <Btn primary={false} disabled={Boolean(busy)} onClick={() => toggle(false)}>{busy === 'master' ? '…' : 'Désactiver'}</Btn>
+          : <Btn disabled={Boolean(busy)} onClick={() => toggle(true)}>{busy === 'master' ? '…' : `Activer (${total} e-mail${total > 1 ? 's' : ''} pourraient partir)`}</Btn>}>
+        <Metrics cols="three" items={[
+          { icon: 'zap', tone: c.master ? 'green' : 'amber', label: 'Envois', value: c.master ? 'Activés' : 'Désactivés', note: c.master ? `Plage ${c.from === c.to ? 'toute la journée' : `${c.from} h – ${c.to} h`} (Paris)` : '' },
+          { icon: 'activity', label: 'Envoyés aujourd’hui', value: d.sentToday, note: `Plafond ${c.dailyMax} par jour` },
+          { icon: 'eye', label: 'Partiraient maintenant', value: total },
+        ]} />
+        {msg && <p className="health-ok" role="status">{msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        {!d.smtp && <p className="error">Envoi d’e-mails non configuré (Admin → Paramètres → E-mails).</p>}
+        <Cols kind="two-main">
+          <Panel title="Parcours">
+            <div className="bm-ax-flow-list">
+              {Object.entries(d.kinds).map(([k, v]) => (
+                <AxRow key={k} icon="zap" label={KIND[k][0]}
+                  detail={`${KIND[k][1]}${v.sample.length ? ` Par exemple : ${v.sample.map((x) => x.email).join(', ')}.` : ''}`}
+                  tail={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><Badge tone={v.enabled ? 'green' : 'gray'}>{v.enabled ? 'Actif' : 'Coupé'}</Badge><strong>{v.count}</strong></span>} />
+              ))}
+            </div>
+            <div style={{ padding: '0 14px 14px' }}>
+              <Hint>Les personnes qui ont refusé ces e-mails, ou qui en ont reçu un depuis {c.gapDays} jour{c.gapDays > 1 ? 's' : ''}, sont exclues.{!d.inWindow && c.master ? ` Hors plage horaire en ce moment (il est ${d.hour} h à Paris).` : ''}</Hint>
+            </div>
+          </Panel>
+          <Panel title="Contrôle des envois">
+            <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Btn primary={false} disabled={Boolean(busy) || !c.master} onClick={run}>{busy === 'run' ? 'Passage…' : 'Lancer un passage maintenant'}</Btn>
+                <Btn primary={false} href="/admin?tab=settings&section=lifecycle">Régler les délais</Btn>
+              </div>
+              <b>Recevoir un exemple</b>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {Object.keys(KIND).map((k) => <Btn key={k} primary={false} disabled={Boolean(busy)} onClick={() => test(k)}>{busy === `test-${k}` ? '…' : KIND[k][0]}</Btn>)}
+              </div>
+              <b>Envoyés ces 14 derniers jours</b>
+            </div>
+            <Table headers={['Parcours', 'Envoyés']} rows={Object.keys(KIND).map((k) => [KIND[k][0], d.sent14[k] || 0])} />
+            <p className="meta small" style={{ padding: '0 14px 14px' }}>Chaque e-mail est envoyé au plus une fois par situation, avec un lien de désinscription en un clic. Les e-mails de fin d’essai, de paiement refusé et de résiliation ne sont pas concernés.</p>
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <div className="health">
       <div className={`health-banner ${c.master ? 'ok' : 'warn'}`} role="status">

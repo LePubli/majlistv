@@ -81,9 +81,10 @@ export function Cols({ kind = 'two-main', children }) { return <div className={c
 
 export function Progress({ value }) { return <div className={c('progress')}><i style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }} /></div>; }
 
+const UP_TONES = ['up0', 'up1', 'up2', 'up3', 'up4', 'up5'];
 export function Userpic({ name, i = 0 }) {
   const ini = String(name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
-  return <span className={c(`userpic up${i % 6}`)}>{ini}</span>;
+  return <span className={c(`userpic ${UP_TONES[i % 6]}`)}>{ini}</span>;
 }
 
 // Tableau : headers = ['Titre', …], rows = [[cell, cell], …] ; onRow(i) rend la ligne cliquable.

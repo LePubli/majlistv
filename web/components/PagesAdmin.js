@@ -6,6 +6,7 @@
 // (une vraie page du site, à la largeur de l'appareil choisi), puis « Publier ».
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
+import { Page as BmPage, Metrics, Panel, Cols, SelectList, Badge, Btn, Meta } from './backoffice/Kit';
 import { BlockEditor, TextField, LANG_NAMES } from './PageFields';
 import NavEditor from './NavAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
@@ -360,7 +361,8 @@ function Editor({ pageId, onBack, pages }) {
 
 /* ------------------------------------------------------------------ Liste des pages */
 export default function PagesAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
+  const [selId, setSelId] = useState(null);
   const [pages, setPages] = useState(null);
   const [editing, setEditing] = useState(null);
   const [title, setTitle] = useState('');
@@ -391,6 +393,61 @@ export default function PagesAdmin() {
   const free = KNOWN_PATHS.filter(([p]) => !slots.some((s) => s.path === p));
   const status = (p) => (p.live ? <span className="ap-pill on">En ligne</span> : <span className="ap-pill">{p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</span>);
 
+  if (skin === 'premium') {
+    const all = [...(home ? [home] : []), ...(layoutPage ? [layoutPage] : []), ...custom, ...slots];
+    const sel = all.find((x) => x.id === selId) || all[0] || null;
+    const kindName = { home: 'Accueil des membres', layout: 'En-tête et pied de page', custom: 'Page créée', slot: 'Blocs sur une page du site' };
+    const pill = (p) => <Badge tone={p.live ? 'green' : 'amber'}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</Badge>;
+    return (
+      <BmPage title="Pages & contenus" sub="Composez des pages avec des blocs, ou ajoutez des blocs avant ou après une page existante du site."
+        actions={!home ? <Btn onClick={() => create({ kind: 'home' })}>Créer l’accueil à partir du modèle</Btn> : null}>
+        <Metrics cols="three" items={[
+          { icon: 'file', label: 'Pages et zones', value: all.length },
+          { icon: 'check', tone: 'green', label: 'En ligne', value: all.filter((x) => x.live).length },
+          { icon: 'edit', tone: 'amber', label: 'Brouillons en cours', value: all.filter((x) => x.hasDraft).length },
+        ]} />
+        {msg && <p className="ap-msg" role="alert">{msg}</p>}
+        <Cols kind="two-main">
+          <Panel title="Arborescence du site" extra={`${all.length}`}>
+            <SelectList empty="Aucune page pour l’instant." value={sel?.id} onSelect={setSelId}
+              items={all.map((x) => ({ id: x.id, title: x.title, sub: x.path || kindName[x.kind], tail: pill(x) }))} />
+          </Panel>
+          <Panel title="Page sélectionnée">
+            {sel ? (
+              <div style={{ padding: '0 14px 14px' }}>
+                <Meta items={[['Titre', sel.title], ['Type', kindName[sel.kind]], ['Adresse', sel.path || '—'], ['Statut', pill(sel)], ['Dernière modification', fmtDate(sel.updatedAt)], ['Brouillon', sel.hasDraft ? 'En cours' : 'Aucun']]} />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Btn onClick={() => setEditing(sel.id)}>Modifier avec les blocs</Btn>
+                  {sel.live && <Btn primary={false} href={sel.kind === 'home' ? '/' : sel.path} target="_blank" rel="noopener noreferrer">Voir ↗</Btn>}
+                </div>
+              </div>
+            ) : <p style={{ padding: 14, color: 'var(--muted)' }}>Créez une première page.</p>}
+          </Panel>
+        </Cols>
+        <Cols kind="equal">
+          <Panel title="Nouvelle page">
+            <form className="bm-form pe-new" style={{ padding: '0 14px 14px' }} onSubmit={(e) => { e.preventDefault(); create({ kind: 'custom', title, ...(slug ? { slug } : {}) }); }}>
+              <label>Titre de la page<input type="text" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Ramadan 2027" /></label>
+              <label>Adresse (facultatif, après /p/)<input type="text" value={slug} maxLength={60} onChange={(e) => setSlug(e.target.value.toLowerCase())} placeholder="ramadan-2027" pattern="[a-z0-9]+(-[a-z0-9]+)*" /></label>
+              <button type="submit" className="btn">Créer et modifier</button>
+            </form>
+          </Panel>
+          <Panel title="Blocs sur une page existante">
+            <form className="bm-form pe-new" style={{ padding: '0 14px 14px' }} onSubmit={(e) => { e.preventDefault(); const sp = slotPath === '*' || free.some(([p]) => p === slotPath) ? slotPath : (free[0]?.[0] ?? '*'); create({ kind: 'slot', path: sp === '*' ? slotOther.trim() : sp, title: KNOWN_PATHS.find(([p]) => p === sp)?.[1] }); }}>
+              <label>Page<select value={slotPath === '*' || free.some(([p]) => p === slotPath) ? slotPath : (free[0]?.[0] ?? '*')} onChange={(e) => setSlotPath(e.target.value)}>
+                {free.map(([p, l]) => <option key={p} value={p}>{l} ({p})</option>)}
+                <option value="*">Autre adresse…</option>
+              </select></label>
+              {(slotPath === '*' || free.length === 0) && <label>Adresse exacte<input type="text" required value={slotOther} onChange={(e) => setSlotOther(e.target.value)} placeholder="/series/ma-serie" maxLength={100} /></label>}
+              <button type="submit" className="btn">Ajouter des blocs</button>
+            </form>
+            <p className="meta small" style={{ padding: '0 14px 14px' }}>Pour créer vos propres menus : <a href="/admin?tab=menus">Admin → Menus</a>.</p>
+          </Panel>
+        </Cols>
+        {!layoutPage && <p><button type="button" className="btn" onClick={() => create({ kind: 'layout' })}>Personnaliser l’en-tête, les menus et le pied de page</button></p>}
+      </BmPage>
+    );
+  }
   return (
     <section className="pe-list-view" lang="fr" dir="ltr">
       <p className="meta">Créez de nouvelles pages et composez-les avec des blocs (bannière, titre, texte, image, cartes, vidéos, questions…), ou ajoutez des blocs avant ou après une page existante du site. Chaque bloc peut être réservé à un appareil ou à un public, et avoir ses propres couleurs.</p>
