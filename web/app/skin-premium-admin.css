@@ -358,3 +358,31 @@ html[data-skin="premium"] .bm-embed input[type="checkbox"]{width:16px!important;
 html[data-skin="premium"] .bm-embed .bm-inline-tools{display:flex;flex-wrap:wrap;gap:10px}
 html[data-skin="premium"] .bm-embed .bm-inline-tools .bm-search-field{flex:2 1 240px}
 html[data-skin="premium"] .bm-embed .bm-inline-tools select{flex:1 1 140px;width:auto}
+
+/* Formulaires existants recomposés dans les panneaux de la maquette (classe bm-form posée par nos composants) :
+   mêmes champs que .bm-field de la maquette. */
+html[data-skin="premium"] .bm-form label{display:flex;flex-direction:column;gap:7px;color:#a4c0d3;font-size:11px;font-weight:660;margin-bottom:12px}
+html[data-skin="premium"] .bm-form label.chk{flex-direction:row;align-items:center;gap:8px}
+html[data-skin="premium"] .bm-form input:not([type="checkbox"]):not([type="color"]):not([type="range"]),
+html[data-skin="premium"] .bm-form select,
+html[data-skin="premium"] .bm-form textarea{width:100%;border:1px solid #31516b;border-radius:7px;background:#082039;color:#e8f5ff;outline:0;padding:10px;min-height:33px;font-size:11px;font-family:inherit}
+html[data-skin="premium"] .bm-form input:focus,html[data-skin="premium"] .bm-form select:focus,html[data-skin="premium"] .bm-form textarea:focus{border-color:#229eea}
+html[data-skin="premium"] .bm-form h3,html[data-skin="premium"] .bm-form h4{font-size:13px;margin:14px 0 8px;color:#eef7ff}
+html[data-skin="premium"] .bm-form .cadm-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+html[data-skin="premium"] .bm-form .cadm-row>*{flex:1 1 150px}
+html[data-skin="premium"] .bm-form .btn{background:#008cff;color:#fff;border:0;border-radius:7px;padding:9px 14px;font-weight:700;font-size:11px;cursor:pointer}
+html[data-skin="premium"] .bm-form .btn.ghost{background:#0b2a45;color:#d3e7f9;border:1px solid #274e69}
+html[data-skin="premium"] .bm-form .cadm-lang{display:flex;gap:6px;margin-bottom:10px}
+html[data-skin="premium"] .bm-form .meta,html[data-skin="premium"] .bm-form small{color:#8ea9bf;font-size:11px}
+html[data-skin="premium"] .bm-form .error{color:#ff8c9c}
+html[data-skin="premium"] .bm-form .cadm-tile{border:1px solid #274e69;border-radius:10px;padding:10px;background:#0b2742;display:flex;gap:10px;align-items:center}
+html[data-skin="premium"] .bm-form .cadm-talks ul{list-style:none;margin:0 0 10px;padding:0}
+html[data-skin="premium"] .bm-form .cadm-talks li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #1c3b57;font-size:11px}
+html[data-skin="premium"] .bm-form .cadm-del{border:1px solid #4d2631;background:#2a1520;border-radius:10px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+html[data-skin="premium"] .bm-form .link{background:none;border:0;color:#35b9ff;cursor:pointer;font-size:11px}
+html[data-skin="premium"] .bm-form .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+html[data-skin="premium"] .bm-form .check{display:flex;flex-direction:row;align-items:center;gap:8px}
+html[data-skin="premium"] .bm-form fieldset{border:1px solid #274e69;border-radius:8px;margin:0 0 12px;padding:10px}
+html[data-skin="premium"] .bm-form .studio-tools{display:flex;gap:8px;flex-wrap:wrap}
+html[data-skin="premium"] .bm-embed .bm-watch-card{display:flex;flex-direction:column}
+html[data-skin="premium"] .bm-embed .bm-watch-card img{width:100%;aspect-ratio:16/9;object-fit:cover}

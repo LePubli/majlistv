@@ -9881,3 +9881,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - **Admin → Vue d'ensemble** et **Admin → Utilisateurs** recomposés comme la maquette, avec les vraies données et les vraies actions (invitation, filtres, rôle en lot, fiche complète).
 - **Non affiché faute de donnée réelle** : courbe d'audience, « Revenu mensuel » sans Stripe.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `bo-mock.css` se régénère avec `python3 web/scripts/build-bo-css.py <dossier maquette>`.
+
+## Back-office Premium — « maquette exacte », lot B (21/11/2026)
+
+- Recomposés comme la maquette, avec vraies données et fonctions : Admin → Statistiques (et Studio → Statistiques), Revenus (rémunération des chaînes), Catégories et formats (arborescence, sous-catégories, formulaire, onglet Formats), Intervenants (annuaire + profil), Veille (onglets À examiner / Sources suivies / Contenus intégrés / Historique).
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `web/components/backoffice/Kit.js`, `skin-premium-admin.css` (classe `bm-form`).

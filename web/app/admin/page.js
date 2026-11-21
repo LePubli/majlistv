@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
 import { ICONS, Icon } from '../../components/ManageShell';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
 
 // Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
@@ -1048,7 +1049,8 @@ function Formats() {
 /* ---------------------------------------------------------------- Intervenants */
 // Présentation affichée sur la page publique de chaque chaîne (/chaines/…). Le nom vient des vidéos. Depuis l'étape C, l'édition courante se fait dans Studio → Chaînes (avec attribution du propriétaire) ; cet écran reste accessible par ?tab=speakers.
 function Speakers() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
+  const [pick, setPick] = useState(null);   // thème Premium : intervenant affiché dans « Profil de l'intervenant »
   const [list, setList] = useState(null);
   const [draft, setDraft] = useState({}); // slug → texte en cours
   const [msg, setMsg] = useState(null);
@@ -1059,6 +1061,45 @@ function Speakers() {
     if (r.ok) { setMsg({ ok: true, text: `Présentation de « ${s.name} » enregistrée.` }); setDraft((d) => { const n = { ...d }; delete n[s.slug]; return n; }); load(); }
     else setMsg({ ok: false, text: r.data?.error || 'Erreur' });
   };
+  if (skin === 'premium') {
+    const all = list || [];
+    const cur = all.find((x) => x.slug === pick) || all[0] || null;
+    const val = cur ? (draft[cur.slug] ?? cur.bio ?? '') : '';
+    return (
+      <BmPage title="Intervenants" sub="Gérez les auteurs, conférenciers, voix et intervenants éditoriaux.">
+        <BmMetrics cols="three" items={[
+          { icon: 'users', label: 'Intervenants', value: list ? all.length : null },
+          { icon: 'video', label: 'Vidéos rattachées', value: list ? all.reduce((a, x) => a + x.talks, 0) : null },
+          { icon: 'check', tone: 'green', label: 'Avec présentation', value: list ? all.filter((x) => (x.bio || '').trim()).length : null },
+        ]} />
+        {msg && <p className={msg.ok ? '' : 'error'} role="status" style={{ color: msg.ok ? 'var(--green)' : undefined }}>{msg.text}</p>}
+        <BmCols kind="speakers-layout">
+          <BmPanel title="Annuaire des intervenants">
+            <BmTable headers={['Intervenant', 'Vidéos', 'Présentation', 'Page publique']} empty="Aucun intervenant : renseignez le champ « Intervenant » dans vos vidéos."
+              onRow={(i) => setPick(all[i].slug)}
+              rows={all.map((x, i) => [
+                <span key="n" className={bmc('table-user')} style={{ display: 'flex', gap: 10, alignItems: 'center' }}><BmUserpic name={x.name} i={i} /><b>{x.name}</b></span>,
+                x.talks,
+                <BmBadge key="b" tone={(x.bio || '').trim() ? 'green' : 'amber'}>{(x.bio || '').trim() ? 'Renseignée' : 'À rédiger'}</BmBadge>,
+                <a key="a" href={`/chaines/${x.slug}`} target="_blank" rel="noreferrer" className={bmc('linkish')} onClick={(e) => e.stopPropagation()}>Voir la page →</a>,
+              ])} />
+          </BmPanel>
+          <BmPanel title="Profil de l’intervenant">
+            {cur ? (
+              <div className={bmc('form')} style={{ padding: '4px 14px 14px' }}>
+                <div className={bmc('person-head')}><BmUserpic name={cur.name} i={all.indexOf(cur)} /><h3>{cur.name}</h3><small>{cur.talks} vidéo{cur.talks > 1 ? 's' : ''}</small></div>
+                <BmMeta items={[['Page publique', `/chaines/${cur.slug}`]]} />
+                <label>Présentation
+                  <textarea rows={6} maxLength={3000} value={val} placeholder="Présentation de l’intervenant…" onChange={(e) => setDraft({ ...draft, [cur.slug]: e.target.value })} />
+                </label>
+                <BmBtn disabled={val === (cur.bio || '')} onClick={() => save(cur)}>Enregistrer le profil</BmBtn>
+              </div>
+            ) : <p style={{ color: 'var(--muted)', padding: 14 }}>Aucun intervenant.</p>}
+          </BmPanel>
+        </BmCols>
+      </BmPage>
+    );
+  }
   return (
     <section className="panel">
       <p className="meta">Chaque intervenant a sa page publique (<code>/chaines/nom</code>) avec sa présentation, ses vidéos et ses séries. Les noms viennent du champ « Intervenant » des vidéos : « Cheikh Hamza » et « cheikh hamza » forment une seule page. Une présentation courte (2 à 5 phrases) aide le référencement.</p>
@@ -1191,6 +1232,8 @@ function ModuleTab({ load }) {
   return <Suspense fallback={<p className="meta" role="status">Chargement…</p>}><Screen /></Suspense>;
 }
 
+// Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */
@@ -1205,8 +1248,8 @@ export default function Admin() {
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
-      {!(skin === 'premium' && (tab === 'dashboard' || tab === 'users')) && <h1 className="studio-title">{moduleTab ? moduleTab.title : (skin === 'premium' && tab === 'dashboard') ? "Vue d'ensemble" : titles[tab] || titles.dashboard}</h1>}
-      {skin === 'premium' && tab !== 'dashboard' && tab !== 'users' && SUBTITLE[tab || 'dashboard'] && <p className="bo-sub">{SUBTITLE[tab || 'dashboard']}</p>}
+      {!(skin === 'premium' && PM_OWN_HEADING.includes(tab)) && <h1 className="studio-title">{moduleTab ? moduleTab.title : (skin === 'premium' && tab === 'dashboard') ? "Vue d'ensemble" : titles[tab] || titles.dashboard}</h1>}
+      {skin === 'premium' && !PM_OWN_HEADING.includes(tab) && SUBTITLE[tab || 'dashboard'] && <p className="bo-sub">{SUBTITLE[tab || 'dashboard']}</p>}
       <Suspense fallback={<p className="meta" role="status">Chargement…</p>}>
         {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && (skin === 'premium' ? <AdminDashboardPm /> : <Dashboard />)}
         {tab === 'users' && <Users me={user.id} />}
@@ -1217,7 +1260,9 @@ export default function Admin() {
         {tab === 'pages' && <PagesAdmin />}
         {tab === 'settings' && <Settings />}
         {tab === 'legal' && <LegalPages />}
-        {tab === 'categories' && <><Suspense fallback={<p className="meta">…</p>}><CategoriesAdmin /></Suspense><Formats /></>}
+        {tab === 'categories' && (skin === 'premium'
+          ? <Suspense fallback={<p className="meta">…</p>}><CategoriesAdmin formatsSlot={<Formats />} /></Suspense>
+          : <><Suspense fallback={<p className="meta">…</p>}><CategoriesAdmin /></Suspense><Formats /></>)}
         {tab === 'speakers' && <Speakers />}
         {tab === 'audit' && <AuditLog />}
         {tab === 'watch' && <WatchAdmin />}

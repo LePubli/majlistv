@@ -707,3 +707,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, lot 3 (éditeur plein écran, rythme commun des écrans) : fait 21/11. Lot 3b (contrôles d'éditeur de la maquette absents) sur « go ».
 
 - Back-office Premium, « maquette exacte » lot A (Vue d'ensemble et Utilisateurs recomposés à l'identique, feuille bo-mock.css + kit React) : fait 21/11. Écrans suivants par lots, sur « go ».
+
+- Back-office Premium, « maquette exacte » lot B (Statistiques, Revenus / rémunération, Catégories et formats, Intervenants, Veille) : fait 21/11. Suite par lots, sur « go ».

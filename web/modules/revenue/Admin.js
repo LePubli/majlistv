@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
+import { Page, Metrics, Panel, Cols, Btn, Badge, Table, c } from '../../components/backoffice/Kit';
 
 const money = (c, cur) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: String(cur || 'eur').toUpperCase() }).format((c || 0) / 100);
 const hours = (s) => (s / 3600).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -12,7 +13,7 @@ const monthLabel = (m) => new Date(`${m}-01T12:00:00Z`).toLocaleDateString('fr-F
 const prevMonth = () => { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
 
 export default function RevenueAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [month, setMonth] = useState(prevMonth());
   const [d, setD] = useState(null);
   const [off, setOff] = useState(false);
@@ -43,6 +44,40 @@ export default function RevenueAdmin() {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
   const s = d.settings;
+  // Thème Premium : composition de la maquette (REVENUE) — 4 chiffres, tableau, mois clôturés.
+  if (skin === 'premium') {
+    const tone = { draft: 'gray', due: 'amber', paid: 'green', carried: 'blue', rolled: 'blue' };
+    return (
+      <Page title="Rémunération des chaînes" sub="Cagnotte du mois, part de chaque chaîne, clôture et suivi des paiements."
+        actions={<>{d.closable && <Btn onClick={close}>Clôturer ce mois</Btn>}{d.closed && <Btn primary={false} onClick={exportCsv}>Exporter en CSV</Btn>}</>}>
+        <Metrics items={[
+          { icon: 'wallet', tone: 'green', label: 'Encaissé (hors taxes, net)', value: money(d.netCents, d.currency) },
+          { icon: 'chart', label: 'Cagnotte à répartir', value: money(d.poolCents, d.currency) },
+          { icon: 'clock', label: 'Visionnage compté', value: `${hours(d.totalSeconds)} h` },
+          { icon: 'check', tone: d.closed ? 'green' : 'amber', label: 'État du mois', value: d.closed ? 'Clôturé' : d.closable ? 'Clôturable' : 'En cours', note: d.closed ? `le ${new Date(d.closedAt).toLocaleDateString('fr-FR')}` : '' },
+        ]} />
+        <div className={c('inline-tools')} style={{ marginBottom: 14 }}>
+          <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Mois" />
+          <small style={{ alignSelf: 'center' }}>{s.sharePct} % des abonnements encaissés (après {s.costsPct} % de frais) ; seuil de paiement {money(s.minPayoutCents, d.currency)}. <Link href="/admin?tab=settings" className={c('linkish')}>Réglages →</Link></small>
+        </div>
+        {msg && <p role="status" style={{ color: 'var(--green)' }}>{msg}</p>}
+        {d.unassigned > 0 && <p style={{ color: 'var(--amber)' }}>{d.unassigned} chaîne(s) sans propriétaire : leur part est mise de côté (Studio → Chaînes).</p>}
+        <Panel title="Répartition par chaîne">
+          <Table headers={['Chaîne', 'Propriétaire', 'Heures', 'Gagné', 'Report', 'Total', 'Statut', '']} empty="Aucun visionnage compté ce mois-ci."
+            rows={d.lines.map((l) => [l.name, l.ownerName || l.ownerEmail || 'aucun', hours(l.seconds), money(l.amountCents, d.currency), money(l.carriedInCents, d.currency),
+              <b key="t">{money(l.amountCents + l.carriedInCents, d.currency)}</b>,
+              <Badge key="s" tone={tone[l.status] || 'blue'}>{STATUS[l.status]}</Badge>,
+              l.status === 'due' ? <Btn key="p" primary={false} onClick={() => pay(l)}>Marquer payé</Btn> : ''])} />
+        </Panel>
+        <Panel title="Mois clôturés">
+          <Table headers={['Mois', 'Cagnotte', 'Reste à payer', 'Payé', '']} empty="Aucun mois clôturé pour le moment."
+            rows={d.periods.map((p) => [monthLabel(p.month), money(p.poolCents, d.currency), money(p.dueCents, d.currency), money(p.paidCents, d.currency), <Btn key="v" primary={false} onClick={() => setMonth(p.month)}>Voir</Btn>])} />
+        </Panel>
+        <p style={{ color: 'var(--muted)', fontSize: 11 }}>Le paiement des chaînes se fait pour l’instant par virement, hors du site : exportez le CSV, payez, puis cliquez sur « Marquer payé ».</p>
+      </Page>
+    );
+  }
+
   return (
     <section className="rv-admin">
       <p className="meta">Chaque mois, {s.sharePct} % des abonnements encaissés (hors taxes, après {s.costsPct} % de frais de paiement) sont répartis entre les chaînes selon le temps de visionnage.

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import GrowthPanel from './GrowthPanel';
+import { Page, Metrics, Panel, Cols, Tabs, Btn, Table, Progress, Line, c } from '../../components/backoffice/Kit';
 
 const RANGES = [7, 30, 90, 365];
 
@@ -79,7 +80,7 @@ function HBars({ title, rows, note }) {
 }
 
 export default function StatsView({ endpoint, site }) {
-  const { call, t, locale } = useApp();
+  const { call, t, locale, skin } = useApp();
   const [days, setDays] = useState(30);
   const [audience, setAudience] = useState('web');
   const [talk, setTalk] = useState('');
@@ -147,6 +148,83 @@ export default function StatsView({ endpoint, site }) {
   const SRC = { direct: t('stSrcDirect'), search: t('stSrcSearch'), social: t('stSrcSocial'), other: t('stSrcOther') };
   const DEV = { desktop: t('stDevDesktop'), mobile: t('stDevMobile'), tablet: t('stDevTablet') };
   const LNG = { fr: 'Français', en: 'English', ar: 'العربية', other: t('stLangOther') };
+
+  // Thème Premium : composition de la maquette (ANALYTICS) — titre, onglets, 4 chiffres, 2 courbes / entonnoir, tableaux de bas de page.
+  if (skin === 'premium') {
+    const note = (cur0, prev0) => { if (cur0 == null || prev0 == null || prev0 === 0) return ''; const pct = Math.round((100 * (cur0 - prev0)) / prev0); return `${pct > 0 ? '↗ +' : pct < 0 ? '↘ ' : ''}${pct} %`; };
+    const icons = ['eye', 'users', 'clock', 'check', 'chart', 'video', 'film', 'file'];
+    const mk = (list) => list.map(([label, value, c0, p0], i) => ({ icon: icons[i % icons.length], tone: note(c0, p0).startsWith('↗') ? 'green' : 'blue', label, value, note: note(c0, p0) }));
+    const rows = (list) => (list || []).slice(0, 8);
+    const BarRows = ({ list }) => {
+      const mx = Math.max(1, ...list.map((r) => r.n));
+      return (
+        <div style={{ padding: '6px 14px 14px', display: 'grid', gap: 10 }}>
+          {list.length === 0 && <p style={{ color: 'var(--muted)' }}>Pas encore de données.</p>}
+          {rows(list).map((r) => (
+            <div key={r.label}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span>{r.label}</span><b>{n(r.n)}</b></div>
+              <Progress value={(100 * r.n) / mx} />
+            </div>
+          ))}
+        </div>
+      );
+    };
+    return (
+      <Page title={site ? 'Statistiques & audience' : 'Données analytiques — Studio'}
+        sub={site ? 'Explorez les audiences, le trafic et les engagements de la plateforme.' : 'Suivez la performance de vos contenus, vos audiences et vos chaînes.'}
+        actions={<Btn onClick={exportCsv}>Exporter (CSV)</Btn>}>
+        <Tabs names={[['web', t('stWeb')], ['kids', t('stKids')]]} value={audience} onChange={setAudience} />
+        <div className={c('inline-tools')} style={{ marginBottom: 14 }}>
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label={t('stPeriod')}>
+            {RANGES.map((r) => <option key={r} value={r}>{r === 365 ? t('stYear') : t('stLastDays').replace('{n}', r)}</option>)}
+          </select>
+          <select value={talk} onChange={(e) => setTalk(e.target.value)} aria-label={t('stTalk')}>
+            <option value="">{site ? t('stAllTalksSite') : t('stAllTalks')}</option>
+            {(d.talks || (d.top || [])).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </select>
+          <small style={{ alignSelf: 'center' }}>{new Date(d.since + 'T12:00:00').toLocaleDateString(locale)} → {new Date(d.until + 'T12:00:00').toLocaleDateString(locale)}</small>
+        </div>
+        {!hasData && <p className="st-empty" role="status" style={{ color: 'var(--muted)' }}>{t('stEmpty')}</p>}
+        <Metrics items={mk(kpis.slice(0, 4))} />
+        {kpis.length > 4 && <Metrics items={mk(kpis.slice(4, 8))} />}
+        <Cols kind="equal">
+          <Panel title={`${curLabel} — ${t('stPerDay')}`} extra={<span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>{metrics.map(([k, l]) => <button key={k} type="button" className={c('linkish')} style={{ background: 'none', border: 0, cursor: 'pointer', opacity: cur === k ? 1 : 0.6 }} onClick={() => setMetric(k)}>{l}</button>)}</span>}>
+            <Line values={data.map((x) => x.v)} labels={data.map((x) => new Date(x.day + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short' }))} />
+          </Panel>
+          <Panel title={t('stFunnel')}>
+            <BarRows list={d.funnel.map((f) => ({ label: FN[f.key], n: f.n }))} />
+          </Panel>
+        </Cols>
+        <Cols kind="analytics-bottom">
+          <Panel title={t('stTop')}>
+            <Table headers={[t('stColTalk'), t('stViews'), t('stPlays'), t('stColDone')]} empty={t('stNoTalks')}
+              rows={d.top.map((x) => [<Link key="l" href={`/talks/${x.id}`}>{x.title}</Link>, n(x.views), n(x.plays), pc(x.completionRate)])} />
+          </Panel>
+          <Panel title={kids ? t('stCategories') : t('stSources')}>
+            <BarRows list={kids ? d.categories.map((x) => ({ label: x.name, n: x.plays || x.views })) : dim('source', SRC)} />
+          </Panel>
+          <Panel title={kids ? t('stSpeakers') : t('stLangs')}>
+            <BarRows list={kids ? d.speakers.map((x) => ({ label: x.name, n: x.plays || x.views })) : dim('lang', LNG)} />
+          </Panel>
+        </Cols>
+        {!kids && (
+          <Cols kind="analytics-bottom">
+            <Panel title={t('stDevices')}><BarRows list={dim('device', DEV)} /></Panel>
+            <Panel title={t('stCategories')}><BarRows list={d.categories.map((x) => ({ label: x.name, n: x.plays || x.views }))} /></Panel>
+            <Panel title={t('stSpeakers')}><BarRows list={d.speakers.map((x) => ({ label: x.name, n: x.plays || x.views }))} /></Panel>
+          </Cols>
+        )}
+        {kids && Q && U && (
+          <Cols kind="equal">
+            <Panel title={t('stKidsQuiz')}><BarRows list={[{ label: t('stQuizPlayed'), n: Q.attempts || 0 }]} /><p style={{ padding: '0 14px 14px' }}>{t('stQuizAvg')} : {pc(Q.avgPercent)} · {t('stQuizStars')} : {Q.avgStars ?? '—'} ⭐</p></Panel>
+            <Panel title={t('stKidsUsage')}><BarRows list={[{ label: t('stActiveKids'), n: U.activeKids || 0 }, { label: t('stKidMinutes'), n: U.minutes || 0 }, { label: t('stFamilies'), n: U.families || 0 }, { label: t('stProfiles'), n: U.profiles || 0 }]} /></Panel>
+          </Cols>
+        )}
+        {wide && !kids && <div className={c('form')}><GrowthPanel days={days} /></div>}
+        <p style={{ color: 'var(--muted)', fontSize: 11 }}>{t('stPrivacy')}{kids ? ' ' + t('stKidsNote') : ''}</p>
+      </Page>
+    );
+  }
 
   return (
     <section className="st">

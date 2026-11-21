@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { langName } from './Transcript';
+import { Page, Metrics, Panel, Tabs, Btn, Badge, Table, I, c } from './backoffice/Kit';
 
 const PLATFORMS = { youtube: 'YouTube', dailymotion: 'Dailymotion', vimeo: 'Vimeo' };
 const TR_LANGS = ['ar', 'de', 'en', 'es', 'fr', 'id', 'it', 'nl', 'pt', 'ru', 'tr', 'ur'];
@@ -67,7 +68,7 @@ function AddForm({ item, cats, onDone, onCancel }) {
 }
 
 export default function WatchAdmin() {
-  const { call, locale } = useApp();
+  const { call, locale, skin } = useApp();
   const [data, setData] = useState(null);
   const [items, setItems] = useState(null);
   const [status, setStatus] = useState('new');
@@ -78,6 +79,7 @@ export default function WatchAdmin() {
   const [open, setOpen] = useState(null); // vidéo dont le formulaire « Ajouter » est ouvert
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [sourceTab, setSourceTab] = useState(false);   // thème Premium : onglet « Sources suivies »
 
   const loadSources = useCallback(() => call('/admin/watch').then((r) => r.ok && setData(r.data)), [call]);
   const loadItems = useCallback(() => call(`/admin/watch/items?status=${status}${sourceId ? `&sourceId=${sourceId}` : ''}`).then((r) => r.ok && setItems(r.data)), [call, status, sourceId]);
@@ -104,6 +106,79 @@ export default function WatchAdmin() {
   const remove = (s) => { if (window.confirm(`Ne plus suivre « ${s.label || s.url} » ? Sa liste de nouveautés sera supprimée (les vidéos déjà ajoutées restent).`)) act(`/admin/watch/${s.id}`, { method: 'DELETE' }, 'Source supprimée.'); };
 
   const sources = data?.sources || [];
+  // Thème Premium : composition de la maquette (ADMIN_WATCH) — onglets, grille de cartes « à examiner ».
+  if (skin === 'premium') {
+    const tabId = sourceTab ? 'sources' : status === 'new' ? 'review' : status === 'added' ? 'added' : 'ignored';
+    const pick = (k) => { setOpen(null); if (k === 'sources') { setSourceTab(true); return; } setSourceTab(false); setStatus(k === 'review' ? 'new' : k); };
+    const newTotal = sources.reduce((a, x) => a + (x.newCount || 0), 0);
+    return (
+      <Page title="Veille & acquisition de contenus" sub="Repérez des contenus pertinents et vérifiez les droits avant toute intégration."
+        actions={<Btn onClick={() => pick('sources')}><I name="plus" size={15} /> Ajouter une source</Btn>}>
+        <Tabs names={[['review', `À examiner${newTotal ? ` (${newTotal})` : ''}`], ['sources', 'Sources suivies'], ['added', 'Contenus intégrés'], ['ignored', 'Historique']]} value={tabId} onChange={pick} />
+        {msg && <p className={msg.ok ? '' : 'error'} role="status" style={{ color: msg.ok ? 'var(--green)' : undefined }}>{msg.text}</p>}
+        {tabId === 'sources' ? (
+          <>
+            <Panel title="Suivre une source">
+              <form className={c('form')} style={{ padding: '4px 14px 14px' }} onSubmit={add}>
+                <label>Adresse<input type="url" required value={url} placeholder="youtube.com/@chaine · dailymotion.com/compte · vimeo.com/compte" onChange={(e) => setUrl(e.target.value)} /></label>
+                <label>Nom (facultatif)<input value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} /></label>
+                <Btn type="submit" disabled={busy || !url.trim()}>Suivre</Btn>
+                <p style={{ color: 'var(--muted)' }}>Toutes les {data?.intervalHours ?? 6} h, le serveur relit chaque source ; les nouvelles vidéos arrivent dans « À examiner ».</p>
+              </form>
+            </Panel>
+            <Panel title="Sources suivies">
+              <Table headers={['Source', 'Dernier contrôle', 'État', 'Nouvelles', '']} empty="Aucune source suivie pour l'instant."
+                rows={sources.map((x) => [
+                  <span key="s"><b>{x.label || x.url}</b><br /><small>{PLATFORMS[x.platform] || x.platform} · {x.url}</small></span>,
+                  when(x.lastCheckAt, locale),
+                  !x.active ? <Badge key="e" tone="gray">En pause</Badge> : x.lastError ? <Badge key="e" tone="red">Erreur</Badge> : x.baselined ? <Badge key="e" tone="green">{`OK · ${x.lastCount} lues`}</Badge> : <Badge key="e" tone="amber">1re lecture à venir</Badge>,
+                  x.newCount > 0 ? <button key="n" type="button" className={c('linkish')} style={{ background: 'none', border: 0 }} onClick={() => { setSourceId(x.id); pick('review'); }}><b>{x.newCount}</b></button> : 0,
+                  <span key="a" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+                    <Btn primary={false} onClick={() => act(`/admin/watch/${x.id}/check`, { method: 'POST' }, 'Contrôle demandé : le serveur le fait dans la minute.')}>Vérifier</Btn>
+                    <Btn primary={false} onClick={() => act(`/admin/watch/${x.id}`, { method: 'PATCH', body: JSON.stringify({ active: !x.active }) })}>{x.active ? 'Pause' : 'Reprendre'}</Btn>
+                    <Btn primary={false} onClick={() => remove(x)}>Supprimer</Btn>
+                  </span>,
+                ])} />
+            </Panel>
+          </>
+        ) : (
+          <>
+            <div className={c('inline-tools')} style={{ marginBottom: 14 }}>
+              {sources.length > 1 && (
+                <select value={sourceId} onChange={(e) => setSourceId(e.target.value)} aria-label="Source">
+                  <option value="">Toutes les sources</option>
+                  {sources.map((x) => <option key={x.id} value={x.id}>{x.label || x.url}</option>)}
+                </select>
+              )}
+              {status === 'new' && items && items.length > 1 && <Btn primary={false} onClick={() => ignore(items.map((i) => i.id))}>Tout ignorer ({items.length})</Btn>}
+            </div>
+            {items && items.length === 0 && <p style={{ color: 'var(--muted)' }}>{status === 'new' ? 'Rien de nouveau à examiner.' : 'Aucune vidéo.'}</p>}
+            <div className={c('poster-grid watch-grid')}>
+              {(items || []).map((i) => (
+                <article key={i.id} className={c('watch-card')}>
+                  {i.thumb ? <img src={i.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : null}
+                  <div>
+                    <h3>{i.title || i.videoId}</h3>
+                    <p>{PLATFORMS[i.platform] || i.platform} · {i.sourceLabel}{i.duration ? ` · ${dur(i.duration)}` : ''}</p>
+                    <small>Trouvée le {when(i.foundAt, locale)}</small>
+                    <div className={c('btn-row')}>
+                      <Btn primary={false} href={pageUrl(i.platform, i.videoId)} target="_blank" rel="noopener noreferrer">Voir</Btn>
+                      {status !== 'added' && <Btn onClick={() => setOpen(open === i.id ? null : i.id)}>Examiner</Btn>}
+                      {status === 'new' && <Btn primary={false} onClick={() => ignore([i.id])}>Ignorer</Btn>}
+                      {status === 'ignored' && <Btn primary={false} onClick={() => act(`/admin/watch/items/${i.id}/restore`, { method: 'POST' })}>Remettre à examiner</Btn>}
+                      {status === 'added' && i.talkId && <Btn primary={false} href={`/talks/${i.talkId}`}>Ouvrir la vidéo</Btn>}
+                    </div>
+                    {open === i.id && <div className={c('form')} style={{ marginTop: 12 }}><AddForm item={i} cats={cats} onCancel={() => setOpen(null)} onDone={() => { setOpen(null); flash(true, 'Vidéo ajoutée au catalogue.'); refresh(); }} /></div>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </Page>
+    );
+  }
+
   return (
     <section className="watch-admin">
       <p className="meta">Suivez des chaînes, comptes, playlists ou albums YouTube, Dailymotion et Vimeo. Toutes les {data?.intervalHours ?? 6} h, le serveur relit chaque source ; les nouvelles vidéos s'affichent ci-dessous, visibles de vous seul. Rien n'est ajouté au catalogue sans votre action. L'intervalle se règle dans Admin → Paramètres → « Vidéos YouTube, Vimeo et Dailymotion ».</p>

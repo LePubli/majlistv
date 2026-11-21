@@ -4,6 +4,7 @@
 // icône / couleur / images, textes FR-EN-AR, SEO, aperçu du rendu, vidéos classées, suppression protégée (jamais de vidéo supprimée).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Cols, Tabs, Btn, I, Badge, c } from './backoffice/Kit';
 
 const EMPTY_TR = { name: '', shortDescription: '', description: '', seoTitle: '', seoDescription: '' };
 const blank = (catalogueType, parentId = null) => ({
@@ -17,8 +18,9 @@ const fromRow = (c) => ({
 const LANGS = [['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']];
 const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
 
-export default function CategoriesAdmin() {
-  const { call } = useApp();
+export default function CategoriesAdmin({ formatsSlot = null }) {
+  const { call, skin } = useApp();
+  const [tabPm, setTabPm] = useState('adult');   // thème Premium : Adultes / Kids / Formats
   const [rows, setRows] = useState(null);
   const [catalogue, setCatalogue] = useState('adult');
   const [form, setForm] = useState(null);       // catégorie en cours d'édition ou de création
@@ -117,51 +119,8 @@ export default function CategoriesAdmin() {
 
   const sibCount = (c) => inCat.filter((x) => (x.parentId || null) === (c.parentId || null)).length;
 
-  return (
-    <section className="panel cadm">
-      <p className="meta">Une seule structure pour le catalogue adultes (14 catégories) et Mejliss TV Kids (10 univers) : chaque catégorie a ses sous-catégories, ses textes FR / EN / AR, son SEO et son image. Une vidéo peut figurer dans plusieurs catégories. Désactiver une catégorie la masque du site sans rien supprimer.</p>
-      <div className="cadm-bar">
-        <div className="cadm-tabs" role="tablist" aria-label="Catalogue">
-          {[['adult', 'Catalogue adultes'], ['kids', 'Mejliss TV Kids']].map(([k, label]) => (
-            <button key={k} type="button" role="tab" aria-selected={catalogue === k} className={`btn ${catalogue === k ? '' : 'ghost'}`} onClick={() => { setCatalogue(k); setForm(null); setDel(null); }}>
-              {label} <small>({countOf(k)})</small>
-            </button>
-          ))}
-        </div>
-        <button type="button" className="btn" onClick={() => create(null)}>+ Nouvelle {catalogue === 'kids' ? 'univers' : 'catégorie'}</button>
-      </div>
-      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
-      {rows === null && <p className="meta">…</p>}
-
-      <div className="cadm-grid">
-        <ul className="cadm-tree" aria-label="Arbre des catégories">
-          {inCat.length === 0 && rows && <li className="meta">Aucune catégorie dans ce catalogue.</li>}
-          {inCat.map((c) => {
-            const sibs = inCat.filter((x) => (x.parentId || null) === (c.parentId || null));
-            const idx = sibs.findIndex((x) => x.id === c.id);
-            return (
-              <li key={c.id} className={`${c.parentId ? 'cadm-sub' : ''} ${form?.id === c.id ? 'on' : ''} ${c.isActive ? '' : 'off'}`}>
-                <span className="cadm-sw" style={{ background: c.color || 'var(--line-soft)' }} aria-hidden="true">{c.icon || ''}</span>
-                <button type="button" className="cadm-name" onClick={() => open(c)} title="Modifier">
-                  <b>{c.name}</b>
-                  <small className="meta">{c.slug} · {plural(c.mainCount + c.extraCount, 'vidéo', 'vidéos')}{c.children ? ` · ${plural(c.children, 'sous-catégorie', 'sous-catégories')}` : ''}</small>
-                </button>
-                {!c.isActive && <span className="cadm-badge">Inactive</span>}
-                {c.isFeatured && <span className="cadm-badge gold">À la une</span>}
-                <span className="cadm-act">
-                  <button type="button" className="btn ghost cadm-sm" disabled={idx === 0} onClick={() => move(c, -1)} aria-label={`Monter ${c.name}`}>▲</button>
-                  <button type="button" className="btn ghost cadm-sm" disabled={idx === sibCount(c) - 1} onClick={() => move(c, 1)} aria-label={`Descendre ${c.name}`}>▼</button>
-                  {!c.parentId && <button type="button" className="btn ghost cadm-sm" onClick={() => create(c)}>+ Sous-catégorie</button>}
-                  <button type="button" className="btn ghost cadm-sm" onClick={() => toggleActive(c)}>{c.isActive ? 'Désactiver' : 'Activer'}</button>
-                  <button type="button" className="btn ghost cadm-sm danger-link" onClick={() => askDelete(c)}>Supprimer</button>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="cadm-side">
-          {del && (
+  const renderDel = () => (
+          del && (
             <div className="cadm-del" role="alertdialog" aria-label="Suppression">
               <b>Supprimer « {del.cat.name} » ?</b>
               {del.error && <p className="error">{del.error}</p>}
@@ -182,10 +141,10 @@ export default function CategoriesAdmin() {
               )}
               <button type="button" className="btn ghost" onClick={() => setDel(null)}>Annuler</button>
             </div>
-          )}
-
-          {!form && !del && <p className="meta">Choisissez une catégorie dans l’arbre pour la modifier, ou créez-en une.</p>}
-          {form && (
+          )
+  );
+  const renderForm = () => (
+          form && (
             <form className="cadm-form" onSubmit={save}>
               <h3>{form.id ? `Modifier « ${form.name || '…'} »` : form.parentId ? 'Nouvelle sous-catégorie' : `Nouvelle ${form.catalogueType === 'kids' ? 'univers Kids' : 'catégorie'}`}</h3>
 
@@ -276,7 +235,120 @@ export default function CategoriesAdmin() {
                 </div>
               )}
             </form>
-          )}
+          )
+  );
+
+  // Thème Premium : composition de la maquette (ADMIN_CATEGORIES) — 3 chiffres, arborescence, sous-catégories, formulaire.
+  if (skin === 'premium') {
+    const tabs = [['adult', 'Adultes'], ['kids', 'Kids'], ...(formatsSlot ? [['formats', 'Formats']] : [])];
+    const allTops = (rows || []).filter((x) => !x.parentId);
+    const selTop = form ? (form.parentId ? (rows || []).find((x) => x.id === form.parentId) : (form.id ? form : null)) : null;
+    const subs = selTop ? inCat.filter((x) => x.parentId === selTop.id) : [];
+    const pickTab = (k) => { setTabPm(k); if (k !== 'formats') { setCatalogue(k); setForm(null); setDel(null); } };
+    const Item = ({ cat, onClick, on }) => (
+      <button type="button" className={on ? c('selected') : ''} onClick={onClick}>
+        {cat.image && /^(https?:\/\/|\/)/.test(cat.image) ? <img src={cat.image} alt="" /> : <span className={c('square-icon')} style={cat.color ? { color: cat.color } : undefined}>{cat.icon || <I name="layers" size={16} />}</span>}
+        <span><b>{cat.name}</b><small>{plural(cat.mainCount + cat.extraCount, 'contenu', 'contenus')}{cat.children ? ` · ${plural(cat.children, 'sous-catégorie', 'sous-catégories')}` : ''}{cat.isActive ? '' : ' · inactive'}</small></span>
+        <I name="chevron" size={14} />
+      </button>
+    );
+    return (
+      <Page title="Catégories & formats" sub="Structurez le catalogue adulte et le catalogue Kids."
+        actions={tabPm === 'formats' ? null : <Btn onClick={() => create(null)}><I name="plus" size={15} /> Créer {catalogue === 'kids' ? 'un univers' : 'une catégorie'}</Btn>}>
+        <Metrics cols="three" items={[
+          { icon: 'grid', label: 'Catégories', value: rows ? allTops.length : null },
+          { icon: 'layers', label: 'Sous-catégories', value: rows ? (rows.length - allTops.length) : null },
+          { icon: 'check', tone: 'green', label: 'Mises en avant', value: rows ? rows.filter((x) => x.isFeatured).length : null },
+        ]} />
+        {msg && <p className={msg.ok ? '' : 'error'} role="status" style={{ color: msg.ok ? 'var(--green)' : undefined }}>{msg.text}</p>}
+        {tabPm === 'formats' ? formatsSlot : (
+          <Cols kind="taxonomy-layout">
+            <Panel title="Arborescence du catalogue">
+              <Tabs names={tabs} value={tabPm} onChange={pickTab} />
+              <div className={c('collection-list')}>
+                {rows && tops.length === 0 && <p style={{ color: 'var(--muted)' }}>Aucune catégorie dans ce catalogue.</p>}
+                {tops.map((t) => <Item key={t.id} cat={t} on={selTop?.id === t.id} onClick={() => open(t)} />)}
+              </div>
+            </Panel>
+            <Panel title="Sous-catégories">
+              {selTop ? (
+                <>
+                  <div className={c('collection-list')}>
+                    {subs.length === 0 && <p style={{ color: 'var(--muted)' }}>Aucune sous-catégorie.</p>}
+                    {subs.map((sc) => <Item key={sc.id} cat={sc} on={form?.id === sc.id} onClick={() => open(sc)} />)}
+                  </div>
+                  <div style={{ padding: '0 10px 12px' }}><Btn primary={false} onClick={() => create(selTop)}><I name="plus" size={15} /> Ajouter une sous-catégorie</Btn></div>
+                </>
+              ) : <p style={{ color: 'var(--muted)', padding: 14 }}>Choisissez une catégorie dans l’arborescence.</p>}
+            </Panel>
+            <Panel title={form ? (form.id ? 'Modifier la catégorie' : 'Nouvelle catégorie') : 'Modifier la catégorie'}
+              extra={form?.id ? (
+                <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+                  <Btn primary={false} onClick={() => move(form, -1)} title="Monter">▲</Btn>
+                  <Btn primary={false} onClick={() => move(form, 1)} title="Descendre">▼</Btn>
+                  <Btn primary={false} onClick={() => toggleActive(form)}>{form.isActive ? 'Désactiver' : 'Activer'}</Btn>
+                  <Btn primary={false} onClick={() => askDelete(form)}>Supprimer</Btn>
+                </span>
+              ) : null}>
+              <div className={`${c('form')} cadm`} style={{ padding: '4px 14px 14px' }}>
+                {renderDel()}
+                {!form && !del && <p style={{ color: 'var(--muted)' }}>Choisissez une catégorie pour la modifier, ou créez-en une.</p>}
+                {renderForm()}
+              </div>
+            </Panel>
+          </Cols>
+        )}
+      </Page>
+    );
+  }
+
+  return (
+    <section className="panel cadm">
+      <p className="meta">Une seule structure pour le catalogue adultes (14 catégories) et Mejliss TV Kids (10 univers) : chaque catégorie a ses sous-catégories, ses textes FR / EN / AR, son SEO et son image. Une vidéo peut figurer dans plusieurs catégories. Désactiver une catégorie la masque du site sans rien supprimer.</p>
+      <div className="cadm-bar">
+        <div className="cadm-tabs" role="tablist" aria-label="Catalogue">
+          {[['adult', 'Catalogue adultes'], ['kids', 'Mejliss TV Kids']].map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={catalogue === k} className={`btn ${catalogue === k ? '' : 'ghost'}`} onClick={() => { setCatalogue(k); setForm(null); setDel(null); }}>
+              {label} <small>({countOf(k)})</small>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn" onClick={() => create(null)}>+ Nouvelle {catalogue === 'kids' ? 'univers' : 'catégorie'}</button>
+      </div>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      {rows === null && <p className="meta">…</p>}
+
+      <div className="cadm-grid">
+        <ul className="cadm-tree" aria-label="Arbre des catégories">
+          {inCat.length === 0 && rows && <li className="meta">Aucune catégorie dans ce catalogue.</li>}
+          {inCat.map((c) => {
+            const sibs = inCat.filter((x) => (x.parentId || null) === (c.parentId || null));
+            const idx = sibs.findIndex((x) => x.id === c.id);
+            return (
+              <li key={c.id} className={`${c.parentId ? 'cadm-sub' : ''} ${form?.id === c.id ? 'on' : ''} ${c.isActive ? '' : 'off'}`}>
+                <span className="cadm-sw" style={{ background: c.color || 'var(--line-soft)' }} aria-hidden="true">{c.icon || ''}</span>
+                <button type="button" className="cadm-name" onClick={() => open(c)} title="Modifier">
+                  <b>{c.name}</b>
+                  <small className="meta">{c.slug} · {plural(c.mainCount + c.extraCount, 'vidéo', 'vidéos')}{c.children ? ` · ${plural(c.children, 'sous-catégorie', 'sous-catégories')}` : ''}</small>
+                </button>
+                {!c.isActive && <span className="cadm-badge">Inactive</span>}
+                {c.isFeatured && <span className="cadm-badge gold">À la une</span>}
+                <span className="cadm-act">
+                  <button type="button" className="btn ghost cadm-sm" disabled={idx === 0} onClick={() => move(c, -1)} aria-label={`Monter ${c.name}`}>▲</button>
+                  <button type="button" className="btn ghost cadm-sm" disabled={idx === sibCount(c) - 1} onClick={() => move(c, 1)} aria-label={`Descendre ${c.name}`}>▼</button>
+                  {!c.parentId && <button type="button" className="btn ghost cadm-sm" onClick={() => create(c)}>+ Sous-catégorie</button>}
+                  <button type="button" className="btn ghost cadm-sm" onClick={() => toggleActive(c)}>{c.isActive ? 'Désactiver' : 'Activer'}</button>
+                  <button type="button" className="btn ghost cadm-sm danger-link" onClick={() => askDelete(c)}>Supprimer</button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="cadm-side">
+          {renderDel()}
+          {!form && !del && <p className="meta">Choisissez une catégorie dans l’arbre pour la modifier, ou créez-en une.</p>}
+          {renderForm()}
         </div>
       </div>
     </section>
