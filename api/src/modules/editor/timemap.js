@@ -11,13 +11,13 @@ const r3 = (x) => Math.round(x * 1000) / 1000;
 // parts : [{ in, out, start }] (start = place dans la nouvelle vidéo, intro comprise), total = durée de la nouvelle vidéo.
 export function buildMap(timeline, { introLen = 0, outroLen = 0 } = {}) {
   let t = introLen;
-  const parts = (timeline?.clips || []).map((c) => { const p = { in: Number(c.in), out: Number(c.out), start: r3(t) }; t += c.out - c.in; return p; });
+  const parts = (timeline?.clips || []).map((c) => { const sp = Number(c.speed) > 0 ? Number(c.speed) : 1; const p = { in: Number(c.in), out: Number(c.out), start: r3(t), speed: sp }; t += (c.out - c.in) / sp; return p; });
   return { parts, intro: introLen, outro: outroLen, total: r3(t + outroLen), body: r3(t), srcDuration: Number(timeline?.duration) || null };
 }
 
 // Instant de l'ancienne vidéo → { t, cut } dans la nouvelle.
 export function mapPoint(map, s) {
-  for (const p of map.parts) if (s >= p.in - 1e-6 && s < p.out - 1e-6) return { t: r3(p.start + (s - p.in)), cut: false };
+  for (const p of map.parts) if (s >= p.in - 1e-6 && s < p.out - 1e-6) return { t: r3(p.start + (s - p.in) / (p.speed || 1)), cut: false };
   // Coupé : début du passage qui suit dans la source (le plus proche après s), sinon fin du montage.
   let best = null;
   for (const p of map.parts) if (p.in >= s && (!best || p.in < best.in)) best = p;
@@ -30,15 +30,15 @@ export function mapRange(map, s, e, minPart = 0.3) {
   for (const p of map.parts) {
     const a = Math.max(s, p.in); const b = Math.min(e, p.out);
     if (b - a < minPart - 1e-6) continue;
-    if (!best || b - a > best.len) best = { s: r3(p.start + (a - p.in)), e: r3(p.start + (b - p.in)), len: b - a };
+    if (!best || b - a > best.len) best = { s: r3(p.start + (a - p.in) / (p.speed || 1)), e: r3(p.start + (b - p.in) / (p.speed || 1)), len: b - a };
   }
   return best ? { s: best.s, e: best.e } : null;
 }
 
 // Carte inverse (nouvelle vidéo → ancienne), pour revenir à l'original.
 export function inverseMap(map) {
-  const parts = map.parts.map((p) => ({ in: p.start, out: r3(p.start + (p.out - p.in)), start: p.in })).sort((a, b) => a.in - b.in);
-  return { parts, intro: 0, outro: 0, total: map.srcDuration, body: map.srcDuration ?? (parts.length ? Math.max(...parts.map((p) => p.start + (p.out - p.in))) : 0), srcDuration: map.total };
+  const parts = map.parts.map((p) => ({ in: p.start, out: r3(p.start + (p.out - p.in) / (p.speed || 1)), start: p.in, speed: 1 / (p.speed || 1) })).sort((a, b) => a.in - b.in);
+  return { parts, intro: 0, outro: 0, total: map.srcDuration, body: map.srcDuration ?? (parts.length ? Math.max(...parts.map((p) => p.start + (p.out - p.in) / (p.speed || 1))) : 0), srcDuration: map.total };
 }
 
 // Liste de positions (ms) : nouvelles positions (ms) et nombre de positions coupées.

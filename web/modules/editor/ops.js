@@ -9,11 +9,14 @@ const EPS = 1e-6;
 export const round3 = (x) => Math.round(x * 1000) / 1000;
 
 // Position de chaque extrait dans le montage.
+// Lot 3b : un extrait peut avoir une vitesse (speed, 1 par défaut) : il dure alors (out - in) / speed dans le montage.
+export const spd = (c) => (Number(c && c.speed) > 0 ? Number(c.speed) : 1);
+export const clipLen = (c) => (c.out - c.in) / spd(c);
 export function layout(clips) {
   let t = 0;
-  return clips.map((c) => { const start = t; t += c.out - c.in; return { ...c, start, end: t }; });
+  return clips.map((c) => { const start = t; t += clipLen(c); return { ...c, start, end: t }; });
 }
-export const total = (clips) => clips.reduce((s, c) => s + (c.out - c.in), 0);
+export const total = (clips) => clips.reduce((s, c) => s + clipLen(c), 0);
 
 // Quel extrait joue au temps T du montage, et à quel temps source ?
 export function locate(clips, T) {
@@ -23,7 +26,7 @@ export function locate(clips, T) {
   let i = L.findIndex((c) => tt < c.end - EPS);
   if (i < 0) i = L.length - 1;
   const c = L[i];
-  return { index: i, clip: c, src: c.in + (tt - c.start), offset: tt - c.start };
+  return { index: i, clip: c, src: c.in + (tt - c.start) * spd(c), offset: tt - c.start };
 }
 
 // Nouvel identifiant d'extrait (c1, c2, …), unique dans le montage.
@@ -40,10 +43,41 @@ export function splitAt(clips, T) {
   if (!loc) return { clips, done: false };
   const { index, clip, src } = loc;
   if (src - clip.in < MIN_CLIP - EPS || clip.out - src < MIN_CLIP - EPS) return { clips, done: false };
-  const a = { id: clip.id, in: clip.in, out: round3(src) };
-  const b = { id: newId(clips), in: round3(src), out: clip.out };
+  const { start: _s, end: _e, ...base } = clip; // garde nom, vitesse, opacité, couleur
+  const a = { ...base, id: clip.id, in: clip.in, out: round3(src) };
+  const b = { ...base, id: newId(clips), in: round3(src), out: clip.out };
   const out = [...clips.slice(0, index), a, b, ...clips.slice(index + 1)];
   return { clips: out, done: true, index: index + 1 };
+}
+
+// Lot 3b : régler le nom, la vitesse, l'opacité ou la couleur d'un extrait. Une valeur neutre efface le réglage (le montage reste « propre »).
+export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+export function patchClip(clips, id, patch) {
+  let changed = false;
+  const out = clips.map((c) => {
+    if (c.id !== id) return c;
+    const n = { ...c };
+    for (const [k, v] of Object.entries(patch)) {
+      if (k === 'name') { const nm = String(v || '').slice(0, 60); if (nm.trim()) n.name = nm; else delete n.name; }
+      else if (k === 'speed') { if (Math.abs(Number(v) - 1) < 1e-6) delete n.speed; else n.speed = Math.max(0.25, Math.min(4, Number(v))); }
+      else if (k === 'opacity') { const o = Math.max(0, Math.min(100, Math.round(Number(v)))); if (o >= 100) delete n.opacity; else n.opacity = o; }
+      else if (k === 'color') {
+        const col = { b: Math.round(v?.b || 0), c: Math.round(v?.c || 0), s: Math.round(v?.s || 0) };
+        if (!col.b && !col.c && !col.s) delete n.color; else n.color = col;
+      }
+    }
+    if (JSON.stringify(n) !== JSON.stringify(c)) changed = true;
+    return n;
+  });
+  return { clips: changed ? out : clips, done: changed };
+}
+// Filtre CSS de l'aperçu pour la couleur d'un extrait (approche de ce que fera le rendu : luminosité, contraste, saturation).
+export function lookCss(c) {
+  const col = c?.color; const f = [];
+  if (col && col.b) f.push(`brightness(${(1 + col.b / 100).toFixed(2)})`);
+  if (col && col.c) f.push(`contrast(${(1 + col.c / 100).toFixed(2)})`);
+  if (col && col.s) f.push(`saturate(${(1 + col.s / 100).toFixed(2)})`);
+  return f.length ? f.join(' ') : 'none';
 }
 
 // Supprimer un extrait (le montage garde toujours au moins un extrait).
@@ -85,7 +119,7 @@ export function mapItems(clips, items) {
     for (const it of items) {
       if (it.e <= c.in + EPS || it.s >= c.out - EPS) continue;
       const s = Math.max(it.s, c.in); const e = Math.min(it.e, c.out);
-      out.push({ ...it, ts: c.start + (s - c.in), te: c.start + (e - c.in), part: s > it.s + EPS || e < it.e - EPS, clipId: c.id });
+      out.push({ ...it, ts: c.start + (s - c.in) / spd(c), te: c.start + (e - c.in) / spd(c), part: s > it.s + EPS || e < it.e - EPS, clipId: c.id });
     }
   }
   return out;
@@ -436,7 +470,7 @@ export const covered = (clips, s) => clips.some((c) => s >= c.in - EPS && s < c.
 
 // Temps du montage où l'on entend le temps source s (première fois), ou null s'il est coupé.
 export function srcToT(clips, s) {
-  for (const c of layout(clips)) if (s >= c.in - EPS && s < c.out - EPS) return round3(c.start + (s - c.in));
+  for (const c of layout(clips)) if (s >= c.in - EPS && s < c.out - EPS) return round3(c.start + (s - c.in) / spd(c));
   return null;
 }
 
@@ -467,8 +501,8 @@ export function cutRange(clips, s, e) {
     const parts = [];
     if (c.in < s - EPS && s - c.in >= MIN_CLIP - EPS) parts.push({ in: c.in, out: round3(s) });
     if (c.out > e + EPS && c.out - e >= MIN_CLIP - EPS) parts.push({ in: round3(e), out: c.out });
-    removed += (c.out - c.in) - parts.reduce((x, p) => x + (p.out - p.in), 0);
-    parts.forEach((p, k) => out.push({ id: k === 0 ? c.id : fresh(), in: p.in, out: p.out }));
+    removed += ((c.out - c.in) - parts.reduce((x, p) => x + (p.out - p.in), 0)) / spd(c);
+    parts.forEach((p, k) => out.push({ ...c, id: k === 0 ? c.id : fresh(), in: p.in, out: p.out }));
   }
   if (!changed) return { clips, done: false };
   if (!out.length) return { clips, done: false, reason: 'all' };

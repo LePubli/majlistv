@@ -36,11 +36,25 @@ export { DENOISE, DENOISE_FILTER };
 const num = z.number().finite();
 // Nombre borné avec un message en français (« Volume : entre -40 et 12 »).
 const rng = (label, min, max) => num.min(min, `${label} : entre ${min} et ${max}`).max(max, `${label} : entre ${min} et ${max}`);
+// Réglages facultatifs d'un extrait (lot 3b) : tous absents = extrait « neutre » (comportement d'avant).
+export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+const clipColor = z.object({
+  b: rng('Luminosité', -50, 50).default(0),
+  c: rng('Contraste', -50, 50).default(0),
+  s: rng('Saturation', -100, 100).default(0),
+});
 const clip = z.object({
   id: z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, 'Identifiant d’extrait invalide'),
   in: num.min(0),
   out: num.min(0),
+  name: z.string().max(60, 'Nom de l’extrait : 60 caractères au plus').optional(),
+  speed: rng('Vitesse', 0.25, 4).optional(),
+  opacity: rng('Opacité', 0, 100).optional(),
+  color: clipColor.optional(),
 });
+// Durée d'un extrait DANS le montage (la vitesse la raccourcit ou l'allonge).
+export const clipSpeed = (c) => (Number(c?.speed) > 0 ? Number(c.speed) : 1);
+export const clipLen = (c) => (c.out - c.in) / clipSpeed(c);
 const music = z.object({
   id: z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, 'Identifiant de musique invalide'),
   asset: z.string().uuid('Musique inconnue'),
@@ -106,7 +120,15 @@ export function checkTimeline(input, sourceDuration, { assets, logos } = {}) {
   }
   const out = {
     v: 1, duration: round(dur),
-    clips: tl.clips.map((c) => ({ id: c.id, in: round(c.in), out: round(Math.min(c.out, dur)) })),
+    clips: tl.clips.map((c) => {
+      const o = { id: c.id, in: round(c.in), out: round(Math.min(c.out, dur)) };
+      const nm = (c.name || '').trim();
+      if (nm) o.name = nm;
+      if (c.speed != null && Math.abs(c.speed - 1) > 1e-6) o.speed = round(c.speed);
+      if (c.opacity != null && c.opacity < 100) o.opacity = Math.round(c.opacity);
+      if (c.color && (c.color.b || c.color.c || c.color.s)) o.color = { b: Math.round(c.color.b), c: Math.round(c.color.c), s: Math.round(c.color.s) };
+      return o;
+    }),
   };
   if (tl.audio) {
     const a = tl.audio;
@@ -146,10 +168,10 @@ export const musicAssets = (tl) => [...new Set((tl?.audio?.music || []).map((m) 
 export const initialTimeline = (duration) => ({ v: 1, duration: round(duration), clips: [{ id: 'c1', in: 0, out: round(duration) }], ui: { zoom: 1, magnet: true } });
 
 // Durée du montage (somme des extraits).
-export const editedDuration = (tl) => round((tl?.clips || []).reduce((s, c) => s + (c.out - c.in), 0));
+export const editedDuration = (tl) => round((tl?.clips || []).reduce((s, c) => s + clipLen(c), 0));
 
 // Le montage diffère-t-il de la vidéo d'origine (au moins une coupe ou un déplacement) ?
 export function isEdited(tl) {
   const c = tl?.clips || [];
-  return !(c.length === 1 && c[0].in <= 0.05 && Math.abs(c[0].out - tl.duration) <= 0.05);
+  return !(c.length === 1 && c[0].in <= 0.05 && Math.abs(c[0].out - tl.duration) <= 0.05 && clipSpeed(c[0]) === 1 && c[0].opacity == null && !c[0].color);
 }

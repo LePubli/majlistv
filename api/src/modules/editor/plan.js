@@ -84,15 +84,36 @@ export function sampleCurve(pts, t) {
 }
 
 // --- Regroupement des extraits qui se suivent dans la source (même fichier, pas de transition entre eux) -----------------------
+// Lot 3b : vitesse, opacité et couleur propres à un extrait. Deux extraits ne sont regroupés que s'ils ont le même aspect.
+const spOf = (c) => (Number(c?.speed) > 0 ? Number(c.speed) : 1);
+const lookKey = (c) => JSON.stringify([spOf(c), c.opacity ?? 100, c.color?.b || 0, c.color?.c || 0, c.color?.s || 0]);
 function partsOf(clips, dress) {
   const parts = [];
   clips.forEach((c, i) => {
     const prev = parts[parts.length - 1];
     const tr = transitionAt(dress, clips, i);
-    if (prev && !tr && Math.abs(prev.out - c.in) < 1e-3) { prev.out = c.out; prev.ids.push(c.id); return; }
-    parts.push({ in: c.in, out: c.out, ids: [c.id], tr });
+    if (prev && !tr && Math.abs(prev.out - c.in) < 1e-3 && prev.look === lookKey(c)) { prev.out = c.out; prev.ids.push(c.id); return; }
+    parts.push({ in: c.in, out: c.out, ids: [c.id], tr, look: lookKey(c), speed: spOf(c), opacity: c.opacity ?? 100, color: c.color || null });
   });
-  return parts.map((p, j) => ({ ...p, d: r3(p.out - p.in), j }));
+  // d = durée dans la source ; td = durée dans le montage (d / vitesse)
+  return parts.map((p, j) => ({ ...p, d: r3(p.out - p.in), td: r3((p.out - p.in) / p.speed), j }));
+}
+// Réglages d'image d'un extrait (couleur, opacité) : filtres FFmpeg, dans l'ordre. Mêmes formules que l'aperçu du site (approchées).
+export function lookFilters(p) {
+  const f = [];
+  const c = p.color;
+  if (c && (c.b || c.c || c.s)) f.push(`eq=brightness=${(c.b / 200).toFixed(4)}:contrast=${(1 + c.c / 100).toFixed(4)}:saturation=${(1 + c.s / 100).toFixed(4)}`);
+  if (p.opacity < 100) f.push(`drawbox=x=0:y=0:w=iw:h=ih:color=black@${(1 - p.opacity / 100).toFixed(3)}:t=fill`);
+  return f;
+}
+// Vitesse du son : atempo accepte 0,5 à 2 par filtre ; on en enchaîne deux au besoin (0,25 à 4).
+export function tempoFilters(speed) {
+  if (Math.abs(speed - 1) < 1e-6) return [];
+  const out = []; let v = speed;
+  while (v > 2 + 1e-9) { out.push('atempo=2'); v /= 2; }
+  while (v < 0.5 - 1e-9) { out.push('atempo=0.5'); v /= 0.5; }
+  out.push(`atempo=${Math.round(v * 1e6) / 1e6}`);
+  return out;
 }
 
 const fmt = (x) => String(r3(x));
@@ -136,7 +157,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   parts.forEach((p) => { p.pre = 0; p.post = 0; });
   parts.forEach((p, j) => {
     if (j < 1 || p.tr?.type !== 'dissolve') return;
-    const h = r3(Math.min(p.tr.len / 2, parts[j - 1].d / 2, p.d / 2, p.in));
+    const h = r3(Math.min(p.tr.len / 2, parts[j - 1].td / 2, p.td / 2, p.in / p.speed));
     if (h < 0.04) { p.tr = null; return; } // pas la place : coupure franche
     p.pre = h; parts[j - 1].post = h;
   });
@@ -159,26 +180,28 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   }
   const nextTr = (j) => (j + 1 < parts.length ? parts[j + 1].tr : null);
   parts.forEach((p) => {
-    const vlen = r3(p.d + p.pre + p.post); // avec les prolongements des fondus enchaînés
-    const k = addInput('source', ['-ss', fmt(p.in - p.pre), '-t', fmt(vlen)], 'v');
-    const tail = ['setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
+    const vlen = r3(p.td + p.pre + p.post);                          // durée dans le montage, avec les prolongements des fondus enchaînés
+    const vsrc = r3(p.d + (p.pre + p.post) * p.speed);               // durée lue dans la source
+    const k = addInput('source', ['-ss', fmt(p.in - p.pre * p.speed), '-t', fmt(vsrc)], 'v');
+    const sp0 = p.speed === 1 ? 'setpts=PTS-STARTPTS' : `setpts=(PTS-STARTPTS)/${p.speed}`; // vitesse de l'extrait
+    const tail = [...lookFilters(p), 'setsar=1', `fps=${FPS}`, 'format=yuv420p', `settb=1/${FPS}`];
     // Longueur exacte (fin de source trop proche : on fige la dernière image) : indispensable au calage des fondus enchaînés.
     if (p.pre || p.post) tail.push(`tpad=stop_mode=clone:stop_duration=${fmt(p.post + 0.5)}`, `trim=duration=${fmt(vlen)}`, 'setpts=PTS-STARTPTS');
     let chain;
-    if (short) chain = [`[${k}:v]setpts=PTS-STARTPTS`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), ...tail]; // extrait 9:16 : cadre vertical sur la source
-    else if (fmtOut === '16:9') chain = [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', ...tail];
-    else if (fitOut === 'crop') chain = [`[${k}:v]setpts=PTS-STARTPTS`, 'scale=@W@:@H@:force_original_aspect_ratio=increase', 'crop=@W@:@H@', ...tail]; // étape E6c : recadrée au centre
+    if (short) chain = [`[${k}:v]${sp0}`, (short.path && !isConstant(short.path) ? cropFilterPath(short.path, p.in) : cropFilter(short.path ? short.path[0].x : short.cropX)), ...tail]; // extrait 9:16 : cadre vertical sur la source
+    else if (fmtOut === '16:9') chain = [`[${k}:v]${sp0}`, 'scale=@W@:@H@:force_original_aspect_ratio=decrease', 'pad=@W@:@H@:(ow-iw)/2:(oh-ih)/2:color=black', ...tail];
+    else if (fitOut === 'crop') chain = [`[${k}:v]${sp0}`, 'scale=@W@:@H@:force_original_aspect_ratio=increase', 'crop=@W@:@H@', ...tail]; // étape E6c : recadrée au centre
     else {
       // Étape E6c : image entière, sur la même image agrandie, floutée et assombrie (pas de bandes noires).
-      V.push(`[${k}:v]setpts=PTS-STARTPTS,split=2[sb${p.j}][sf${p.j}]`);
+      V.push(`[${k}:v]${sp0},split=2[sb${p.j}][sf${p.j}]`);
       V.push(`[sb${p.j}]scale=@W@:@H@:force_original_aspect_ratio=increase,crop=@W@:@H@,boxblur=20:2,eq=brightness=-0.12[bb${p.j}]`);
       V.push(`[sf${p.j}]scale=@W@:@H@:force_original_aspect_ratio=decrease[ff${p.j}]`);
       chain = [`[bb${p.j}][ff${p.j}]overlay=(W-w)/2:(H-h)/2`, ...tail];
     }
     // Fondu au noir / au blanc : la moitié avant le raccord (fin de l'extrait précédent), la moitié après (début de celui-ci).
-    if (p.tr && p.tr.type !== 'dissolve') { const h = Math.min(p.tr.len / 2, p.d / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
+    if (p.tr && p.tr.type !== 'dissolve') { const h = Math.min(p.tr.len / 2, p.td / 2); chain.push(`fade=t=in:st=0:d=${fmt(h)}:color=${p.tr.type === 'dipwhite' ? 'white' : 'black'}`); }
     const nt = nextTr(p.j);
-    if (nt && nt.type !== 'dissolve') { const h = Math.min(nt.len / 2, p.d / 2); chain.push(`fade=t=out:st=${fmt(p.d - h)}:d=${fmt(h)}:color=${nt.type === 'dipwhite' ? 'white' : 'black'}`); }
+    if (nt && nt.type !== 'dissolve') { const h = Math.min(nt.len / 2, p.td / 2); chain.push(`fade=t=out:st=${fmt(p.td - h)}:d=${fmt(h)}:color=${nt.type === 'dipwhite' ? 'white' : 'black'}`); }
     V.push(`${chain.join(',')}[v${p.j}]`);
     segLabels.push(`v${p.j}`);
     segInfo[`v${p.j}`] = { len: vlen, xh: p.pre };
@@ -268,9 +291,10 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
       const k = addInput('source', ['-ss', fmt(p.in), '-t', fmt(p.d)], 'a');
       const c = [`[${k}:a]asetpts=PTS-STARTPTS`, AF, 'apad', `atrim=0:${fmt(p.d)}`];
       if (DENOISE_FILTER[au.orig.denoise]) c.push(DENOISE_FILTER[au.orig.denoise]);
-      const h = Math.min(half, p.d / 2);
+      if (p.speed !== 1) c.push(...tempoFilters(p.speed), 'apad', `atrim=0:${fmt(p.td)}`, 'asetpts=PTS-STARTPTS'); // vitesse : le son suit l'image
+      const h = Math.min(half, p.td / 2);
       if (h > 0.0005 && p.j > 0) c.push(`afade=t=in:st=0:d=${fmt(h)}`);
-      if (h > 0.0005 && p.j < parts.length - 1) c.push(`afade=t=out:st=${fmt(p.d - h)}:d=${fmt(h)}`);
+      if (h > 0.0005 && p.j < parts.length - 1) c.push(`afade=t=out:st=${fmt(p.td - h)}:d=${fmt(h)}`);
       return `${c.join(',')}[ao${p.j}]`;
     });
     A.push(...chains);
@@ -292,7 +316,7 @@ export function buildPlan({ timeline, vars = {}, cues = [], dub = null, music = 
   if (useDub) {
     parts.forEach((p) => {
       const k = addInput('dub', ['-ss', fmt(p.in), '-t', fmt(p.d)], 'a');
-      A.push(`[${k}:a]asetpts=PTS-STARTPTS,${AF},apad,atrim=0:${fmt(p.d)}[ad${p.j}]`);
+      A.push(`[${k}:a]asetpts=PTS-STARTPTS,${AF},apad,atrim=0:${fmt(p.d)}${p.speed !== 1 ? `,${tempoFilters(p.speed).join(',')},apad,atrim=0:${fmt(p.td)},asetpts=PTS-STARTPTS` : ''}[ad${p.j}]`);
     });
     A.push(parts.length === 1 ? '[ad0]anull[adcat]' : `${parts.map((p) => `[ad${p.j}]`).join('')}concat=n=${parts.length}:v=0:a=1[adcat]`);
     A.push(`[adcat]volume=${dbToLin(au.dub.gainDb).toFixed(5)},apad=whole_dur=${fmt(total)},atrim=0:${fmt(total)},asetpts=PTS-STARTPTS[amd]`);

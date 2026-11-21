@@ -174,7 +174,8 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
         last = { kind, index, id: c.id, to, clips: moveClip(base, index, to).clips };
       } else {
         const ds = dx / pps;
-        let val = kind === 'in' ? c.in + ds : c.out + ds;
+        const ds1 = ds * (Number(c.speed) > 0 ? Number(c.speed) : 1); // vitesse : 1 s du montage = « vitesse » s de la source
+        let val = kind === 'in' ? c.in + ds1 : c.out + ds1;
         if (magnet) val = snapSource(val, cues || [], SNAP_PX / pps);
         last = { kind, index, clips: trimClip(base, index, kind, val, duration).clips };
       }
@@ -304,7 +305,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
   ];
   const selected = (k) => (k === 'titles' ? ['titles', 'item', 'logo', 'cards'].includes(sel?.track) : k === 'video' ? ['video', 'join'].includes(sel?.track) : sel?.track === k);
 
-  const clipLabel = (c, i) => t('mtClipAria').replace('{n}', i + 1).replace('{a}', fmtTime(c.in, { tenths: true })).replace('{b}', fmtTime(c.out, { tenths: true }));
+  const clipLabel = (c, i) => (c.name ? `${c.name} — ` : '') + t('mtClipAria').replace('{n}', i + 1).replace('{a}', fmtTime(c.in, { tenths: true })).replace('{b}', fmtTime(c.out, { tenths: true }));
 
   return (
     <div className="mt-tl" dir="ltr">
@@ -330,7 +331,7 @@ export default function Timeline({ clips, duration, T, onSeek, sel, onSelect, on
                     style={{ left: x(c.start), width: Math.max(2, x(c.end - c.start)) }}>
                     <button type="button" className="mt-clip-body" onPointerDown={(e) => startClip(e, i, 'move')} aria-label={clipLabel(c, i)}
                       onClick={(e) => e.preventDefault()} onFocus={() => onSelect({ track: 'video', id: c.id })} data-clip={c.id}>
-                      {x(c.end - c.start) > 70 && <span dir="ltr">{fmtTime(c.in)} → {fmtTime(c.out)}</span>}
+                      {x(c.end - c.start) > 70 && <span dir="ltr">{c.name ? `${c.name} · ` : ''}{fmtTime(c.in)} → {fmtTime(c.out)}{c.speed ? ` · ×${c.speed}` : ''}</span>}
                     </button>
                     {!readOnly && x(c.end - c.start) > 18 && <>
                       <span className="mt-handle in" onPointerDown={(e) => startClip(e, i, 'in')} aria-hidden="true" title={t('mtTrimIn')} />

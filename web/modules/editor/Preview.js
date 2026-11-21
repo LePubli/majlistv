@@ -7,7 +7,7 @@
 // Les volumes passent par l'élément audio/vidéo (0 à 100 %) : un gain au-dessus de 0 dB n'est entendu qu'au rendu final.
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useApp } from '../../components/Providers';
-import { layout, locate, clock, musicTime } from './ops';
+import { layout, locate, clock, musicTime, spd, lookCss } from './ops';
 
 const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, setPlaying, caption, poster, sound, children, hideCaption }, ref) {
   const { t } = useApp();
@@ -39,11 +39,22 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
     for (const m of snd.music || []) follow(musicEls.current.get(m.item.id), musicTime(m.item, tt, m.assetDur), mix.music[m.item.id] || 0);
   };
   const syncRef = useRef(syncSound); syncRef.current = syncSound;
+  // Lot 3b : vitesse, couleur et opacité de l'extrait en cours (aperçu approché ; le rendu applique les mêmes réglages avec FFmpeg).
+  const applyLook = (c) => {
+    const v = video.current;
+    if (!v) return;
+    const rate = c ? spd(c) : 1;
+    if (Math.abs(v.playbackRate - rate) > 1e-6) v.playbackRate = rate;
+    if (dubEl.current && Math.abs(dubEl.current.playbackRate - rate) > 1e-6) dubEl.current.playbackRate = rate;
+    v.style.filter = c ? lookCss(c) : 'none';
+    v.style.opacity = c && c.opacity != null ? String(c.opacity / 100) : '';
+  };
   // À l'arrêt ou quand les réglages changent : volumes à jour, sons en pause.
   useEffect(() => {
     if (playing) return;
     const loc = locate(clips, T);
     syncRef.current(T, loc ? loc.src : null, false);
+    applyLook(loc ? loc.clip : null);
   }, [T, clips, playing, sound]);
 
   // Chargement du flux 360p.
@@ -75,14 +86,14 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
     if (Math.abs(T - lastSet.current) < 0.001) return;
     const loc = locate(clipsRef.current, T);
     if (!loc) return;
-    idx.current = loc.index; lastSet.current = T;
+    idx.current = loc.index; lastSet.current = T; applyLook(loc.clip);
     if (Math.abs(v.currentTime - loc.src) > 0.04) { try { v.currentTime = loc.src; } catch { /* pas encore prêt */ } }
   }, [T, state]);
   // Le montage change (coupe, déplacement) : on retrouve l'extrait en cours.
   useEffect(() => {
     const loc = locate(clips, playRef.current ? Math.max(0, lastSet.current) : Tref.current);
     if (!loc) return;
-    idx.current = loc.index;
+    idx.current = loc.index; applyLook(loc.clip);
     const v = video.current;
     if (v && !playRef.current && state === 'ready' && Math.abs(v.currentTime - loc.src) > 0.04) { try { v.currentTime = loc.src; } catch { /* rien */ } }
   }, [clips, state]);
@@ -94,7 +105,7 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
     if (!playing) { v.pause(); return undefined; }
     const loc = locate(clipsRef.current, T);
     if (!loc) return undefined;
-    idx.current = loc.index;
+    idx.current = loc.index; applyLook(loc.clip);
     if (loc.clip.end - T < 0.05 && loc.index === clipsRef.current.length - 1) { setPlaying(false); return undefined; }
     try { v.currentTime = loc.src; } catch { /* rien */ }
     v.play().catch(() => setPlaying(false));
@@ -110,10 +121,11 @@ const Preview = forwardRef(function Preview({ src, clips, T, onTime, playing, se
         if (s >= c.out - 0.04 || s < c.in - 0.5) {
           if (i + 1 >= L.length) { lastSet.current = c.end; onTime(c.end); setPlaying(false); return; }
           i += 1; idx.current = i; seeking = true;
-          v.currentTime = L[i].in;
+          v.currentTime = L[i].in; applyLook(L[i]);
           lastSet.current = L[i].start; onTime(L[i].start);
         } else {
-          const tt = c.start + Math.max(0, s - c.in);
+          const tt = c.start + Math.max(0, s - c.in) / spd(c);
+          applyLook(c);
           lastSet.current = tt; onTime(tt);
           syncRef.current(tt, s, true);
         }

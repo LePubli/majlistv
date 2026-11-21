@@ -27,7 +27,7 @@ import FrameView from './FrameView';
 import RenderPanel from './RenderPanel';
 import Templates from './Templates';
 import TextPanel from './TextPanel';
-import { layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
+import { patchClip, SPEEDS, layout, locate, total, splitAt, removeClip, moveClip, trimClip, mapItems, snap, snapTargets, fmtTime, parseTime,
   withAudio, mixAt, dubSpans, speechSpans, joins, decodePeaks, addMusic, withDress, addItem, dressEmpty, fillVars, setTransition, patchItem } from './ops';
 import { ago } from '../../lib/format';
 
@@ -315,6 +315,7 @@ export default function Editor({ id }) {
     commit(r.clips); setT(Math.min(start, total(r.clips))); setSel({ track: 'video', id: r.clips[Math.min(i, r.clips.length - 1)].id }); setNotice(null);
   };
   const doMove = (from, to) => { const r = moveClip(clips, from, to); if (r.done) { commit(r.clips); setT(layout(r.clips)[r.index].start); } };
+  const doPatchClip = (id, patch) => { const r = patchClip(clips, id, patch); if (r.done) commit(r.clips); };
   const doTrim = (i, edge, value) => { const r = trimClip(clips, i, edge, value, duration); if (r.done) commit(r.clips); };
   const addMusicAt = (m) => {
     setMusicInfo((old) => ({ ...old, [m.id]: { ...m, peaks: decodePeaks(m.wave?.peaks), stepMs: m.wave?.stepMs || 100 } }));
@@ -472,7 +473,7 @@ export default function Editor({ id }) {
               : ['titles', 'item', 'logo', 'cards', 'join', 'subs'].includes(sel.track)
                 ? <DressPanel {...{ sel, setSel, dress, setDress, canEdit, clips, totalS, T, setT, vars, channel, logos, durationFinal, onPickLogo: () => setShowLogos(true), onShowCard: setCard, onFrame: showFrame, onAddItem: addItemAt,
                   subsInfo: cues.length ? t('mtSubsHint').replace('{l}', String(data.media?.subtitles?.lang || '').toUpperCase()).replace('{n}', mapItems(clips, cues).length).replace('{c}', cues.length) : t('mtNoSubsHint') }} />
-              : <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, locale, subsLang: data.media?.subtitles?.lang }} />}
+              : <TrackPanel {...{ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, doPatchClip, setT, locale, subsLang: data.media?.subtitles?.lang }} />}
             </>}
           </aside>
         </div>
@@ -513,7 +514,7 @@ export default function Editor({ id }) {
 }
 
 // Panneau de droite : réglages de la piste ou de l'extrait sélectionné.
-function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, setT, subsLang }) {
+function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canEdit, doTrim, doDelete, doPatchClip, setT, subsLang }) {
   const [inV, setInV] = useState(''); const [outV, setOutV] = useState('');
   useEffect(() => { if (selClip) { setInV(fmtTime(selClip.in, { tenths: true })); setOutV(fmtTime(selClip.out, { tenths: true })); } }, [selClip?.id, selClip?.in, selClip?.out]); // eslint-disable-line react-hooks/exhaustive-deps
   const apply = (edge, str) => { const v = parseTime(str); if (Number.isNaN(v)) return; doTrim(selIndex, edge, v); };
@@ -532,8 +533,9 @@ function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canE
           <label htmlFor="mt-out">{t('mtClipOut')}</label>
           <input id="mt-out" dir="ltr" value={outV} disabled={!canEdit} onChange={(e) => setOutV(e.target.value)} onBlur={(e) => apply('out', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply('out', e.currentTarget.value); }} />
         </div>
-        <div className="mt-kv"><span>{t('mtClipLen')}</span><b dir="ltr">{fmtTime(selClip.out - selClip.in, { tenths: true })}</b></div>
+        <div className="mt-kv"><span>{t('mtClipLen')}</span><b dir="ltr">{fmtTime((selClip.out - selClip.in) / (selClip.speed || 1), { tenths: true })}</b></div>
         <div className="mt-kv"><span>{t('mtClipAt')}</span><b dir="ltr">{fmtTime(selClip.start, { tenths: true })}</b></div>
+        <ClipLook t={t} clip={selClip} canEdit={canEdit} onPatch={(p) => doPatchClip(selClip.id, p)} />
         <div className="mt-actions">
           <button type="button" className="btn ghost sd-pill" onClick={() => setT(selClip.start)}>{t('mtGoStart')}</button>
           <button type="button" className="btn ghost sd-pill" onClick={doDelete} disabled={!canEdit || clips.length < 2}>{t('mtDelete')}</button>
@@ -552,6 +554,42 @@ function TrackPanel({ t, sel, selClip, selIndex, clips, totalS, cutS, cues, canE
       <h3 id="mt-sel-title">{blocks[0]}</h3>
       <p className="mt-hint">{blocks[1]}</p>
       {blocks[2] && <p className="meta small">{blocks[2]}</p>}
+    </div>
+  );
+}
+
+// Lot 3b : nom, vitesse, opacité et couleur de l'extrait sélectionné (réglages facultatifs, appliqués à l'aperçu et au rendu).
+function ClipLook({ t, clip, canEdit, onPatch }) {
+  const col = clip.color || { b: 0, c: 0, s: 0 };
+  const [nm, setNm] = useState(clip.name || '');
+  useEffect(() => { setNm(clip.name || ''); }, [clip.id, clip.name]);
+  const sliders = [['b', 'mtLookB', -50, 50], ['c', 'mtLookC', -50, 50], ['s', 'mtLookS', -100, 100]];
+  const touched = Boolean(clip.name || clip.speed || clip.opacity != null || clip.color);
+  return (
+    <div className="mt-look" data-testid="clip-look">
+      <div className="mt-field">
+        <label htmlFor="mt-cname">{t('mtClipName')}</label>
+        <input id="mt-cname" value={nm} maxLength={60} disabled={!canEdit} placeholder={t('mtClipNamePh')} onChange={(e) => setNm(e.target.value)} onBlur={() => onPatch({ name: nm })} onKeyDown={(e) => { if (e.key === 'Enter') onPatch({ name: nm }); }} />
+      </div>
+      <div className="mt-field">
+        <label htmlFor="mt-cspeed">{t('mtClipSpeed')}</label>
+        <select id="mt-cspeed" value={String(clip.speed || 1)} disabled={!canEdit} onChange={(e) => onPatch({ speed: Number(e.target.value) })}>
+          {SPEEDS.map((v) => <option key={v} value={String(v)}>{v === 1 ? t('mtSpeedNormal') : `×${v}`}</option>)}
+        </select>
+      </div>
+      <div className="mt-field">
+        <label htmlFor="mt-copac">{t('mtClipOpacity')} <b dir="ltr">{clip.opacity ?? 100} %</b></label>
+        <input id="mt-copac" type="range" min="0" max="100" step="5" value={clip.opacity ?? 100} disabled={!canEdit} onChange={(e) => onPatch({ opacity: Number(e.target.value) })} />
+      </div>
+      <p className="mt-hint">{t('mtLookColor')}</p>
+      {sliders.map(([k, lab, mn, mx]) => (
+        <div className="mt-field" key={k}>
+          <label htmlFor={`mt-col-${k}`}>{t(lab)} <b dir="ltr">{col[k] > 0 ? '+' : ''}{col[k]}</b></label>
+          <input id={`mt-col-${k}`} type="range" min={mn} max={mx} step="5" value={col[k]} disabled={!canEdit} onChange={(e) => onPatch({ color: { ...col, [k]: Number(e.target.value) } })} />
+        </div>
+      ))}
+      {touched && canEdit && <button type="button" className="btn ghost sd-pill" onClick={() => { setNm(''); onPatch({ name: '', speed: 1, opacity: 100, color: { b: 0, c: 0, s: 0 } }); }}>{t('mtLookReset')}</button>}
+      <p className="meta small">{t('mtLookNote')}</p>
     </div>
   );
 }

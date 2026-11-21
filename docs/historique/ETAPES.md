@@ -9951,3 +9951,13 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Studio : fiche d'un ouvrage, détail d'une série, fiche d'un contenu Audyn et Audio et doublage d'une vidéo reprennent l'en-tête et les chiffres de la maquette ; le corps des pages est l'existant.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.
+
+
+## Éditeur de montage — lot 3b : réglages par extrait (21/11/2026)
+
+- **Description** : chaque extrait peut recevoir un nom, une vitesse (×0,25 à ×4), une opacité (0–100 %) et des corrections de couleur (luminosité, contraste, saturation). Panneau « Vidéo » de l'éditeur, quand un extrait est sélectionné. Tout est facultatif : un montage sans ces champs se comporte comme avant.
+- **Prérequis** : aucun. **Déploiement** : DockPanel → Redeploy `majlistv-api`, puis `majlistv-worker`, puis `majlistv-web` (le plan de rendu est calculé par l'API, le worker exécute FFmpeg), puis les commandes VPS habituelles.
+- **Fichiers** : `api/src/modules/editor/{timeline,plan,dress,timemap}.js`, `web/modules/editor/{ops,Editor,Timeline,Preview}.js`, `web/lib/i18n.js`, `api/tests/test_clip_looks.mjs`.
+- **Tests** : `cd api && node tests/test_clip_looks.mjs && node tests/test_render_plan.mjs` (le worker utilise les modules de `api/` : `ln -s ../api/node_modules ../worker/node_modules` en local) ; `node web/tests/e1_ops.mjs`.
+- **Debug** : si la durée du rendu diffère du montage, vérifier `plan.total` et `lookKey` (regroupement des extraits) dans `plan.js` ; une vitesse ne fait pas bouger la musique de fond.
+- **Exemple** : extrait de 8 s en ×2 → 4 s dans le montage, son accéléré avec `atempo`, sous-titres recalés.

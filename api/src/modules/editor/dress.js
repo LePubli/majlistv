@@ -123,9 +123,10 @@ export const dressIsEmpty = (d) => {
 export const fillVars = (s, vars = {}) => String(s ?? '').replace(/\{(titre|intervenant)\}/g, (_, k) => vars[k] ?? '');
 
 // --- Temps : extraits → temps du montage
+const spd = (c) => (Number(c?.speed) > 0 ? Number(c.speed) : 1); // vitesse de l'extrait (1 = normale)
 export function layout(clips) {
   let t = 0;
-  return clips.map((c) => { const start = t; t += c.out - c.in; return { ...c, start, end: t }; });
+  return clips.map((c) => { const start = t; t += (c.out - c.in) / spd(c); return { ...c, start, end: t }; });
 }
 // Place des éléments { s, e, … } (temps source) dans le montage ; un élément coupé est raccourci. Même règle que le site (ops.js).
 export function mapItems(clips, items, minPart = 0) {
@@ -135,7 +136,7 @@ export function mapItems(clips, items, minPart = 0) {
       if (it.e <= c.in + 1e-6 || it.s >= c.out - 1e-6) continue;
       const s = Math.max(it.s, c.in); const e = Math.min(it.e, c.out);
       if (e - s < minPart) continue;
-      out.push({ ...it, ts: c.start + (s - c.in), te: c.start + (e - c.in), clipId: c.id });
+      out.push({ ...it, ts: c.start + (s - c.in) / spd(c), te: c.start + (e - c.in) / spd(c), clipId: c.id });
     }
   }
   return out;
