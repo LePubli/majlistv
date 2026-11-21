@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
+import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics } from '../../../../../components/backoffice/Kit';
 import { langName } from '../../../../../components/Transcript';
 
 const LANGS = ['fr', 'ar', 'en', 'es', 'de', 'tr', 'ur', 'id', 'ru'];
@@ -35,7 +36,7 @@ const put = (url, file, onProgress) => new Promise((resolve, reject) => {
 export default function StudioBook() {
   const { id } = useParams();
   const router = useRouter();
-  const { t, call, locale } = useApp();
+  const { t, call, locale, skin } = useApp();
   const [b, setB] = useState(undefined);
   const [f, setF] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -107,6 +108,95 @@ export default function StudioBook() {
   const pill = (on, label, onClick) => <button type="button" aria-pressed={on} className={on ? 'pill on' : 'pill'} onClick={onClick}>{label}</button>;
   const langSelect = (value, onChange) => <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={t('bkLang')}>{LANGS.map((l) => <option key={l} value={l}>{langName(l, locale)}</option>)}</select>;
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={b.title} sub={b.author} actions={<>
+          <BmBtn primary={false} href="/studio/books">{t('bkNav')}</BmBtn>
+          {b.published && <BmBtn primary={false} href={`/books/${b.id}`}>{t('bkView')}</BmBtn>}
+        </>}>
+          <BmMetrics cols="three" items={[
+            { icon: 'book', tone: b.published ? 'green' : 'amber', label: t('colState'), value: b.published ? t('srPub') : t('srDraft') },
+            { icon: 'globe', label: t('bkColLangs'), value: b.files.length },
+            { icon: 'download', label: t('bkColDl'), value: b.downloads ?? 0 },
+          ]} />
+          <div className="bm-form">
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+
+      <form className="panel" onSubmit={saveInfo}>
+        <h2 className="panel-title">{t('sectInfo')}</h2>
+        <div className="fld" role="group" aria-label={t('bkPublished')}>
+          <div className="pills">{pill(b.published, t('srPub'), () => patch({ published: true }))}{pill(!b.published, t('srDraft'), () => patch({ published: false }))}</div>
+          <span className="meta small">{t('bkPublishHelp')}</span>
+        </div>
+        <label className="fld"><span>{t('bkName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+        <label className="fld"><span>{t('bkAuthor')}</span><input maxLength={200} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></label>
+        <label className="fld"><span>{t('bkDesc')}</span><textarea rows={6} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
+        <div className="panel-actions"><button className="btn" disabled={!dirty}>{dirty ? t('save') : t('nothingToSave')}</button></div>
+      </form>
+
+      <section className="panel">
+        <h2 className="panel-title">{t('bkCover')}</h2>
+        <div className="bk-coveredit">
+          <span className="bk-cover" style={b.coverUrl ? { backgroundImage: `url(${b.coverUrl})` } : undefined} aria-hidden="true">{!b.coverUrl && <span>📖</span>}</span>
+          <div><button type="button" className="btn ghost" onClick={() => coverRef.current?.click()}>{t('bkCoverUpload')}</button>
+            <input ref={coverRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={cover} />
+            {coverMsg && <p className="error" role="alert">{coverMsg}</p>}</div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">{t('bkPdf')}</h2>
+        <p className="meta small">{t('bkPdfHelp')}</p>
+        {b.files.length > 0 && (
+          <ul className="bk-files">{b.files.map((x) => (
+            <li key={x.lang}>
+              <b>{langName(x.lang, locale)}</b> <span className="meta small">{x.fileName} · {t('bkPages').replace('{n}', x.pages)} · {size(x.sizeBytes)}</span>
+              <span className={`rm-tag ${x.rightsConfirmed ? 'approved' : 'draft'}`}>{x.rightsConfirmed ? t('bkRightsOn') : t('bkRightsOff')}</span>
+              <button type="button" className="link u small" onClick={() => setRights(x.lang, !x.rightsConfirmed)}>{x.rightsConfirmed ? t('bkRightsRemove') : t('bkRightsRestore')}</button>
+              <button type="button" className="link u small" onClick={() => delPdf(x.lang)}>{t('delete')}</button>
+            </li>))}</ul>
+        )}
+        <form className="bk-upload" onSubmit={sendPdf}>
+          <div className="rm-row">{langSelect(pdf.lang, (lang) => setPdf({ ...pdf, lang }))}<input ref={fileRef} type="file" accept="application/pdf" required aria-label={t('bkPdfPick')} /></div>
+          <label className="bk-rights"><input type="checkbox" checked={pdf.rights} onChange={(e) => setPdf({ ...pdf, rights: e.target.checked })} /> {t('bkRights')}</label>
+          {pdf.err && <p className="error" role="alert">{pdf.err}</p>}
+          {pdf.progress !== null && <div className="qp-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pdf.progress}><span style={{ width: `${pdf.progress}%` }} /></div>}
+          <div><button className="btn" disabled={!pdf.rights || pdf.progress !== null}>{pdf.progress !== null ? t('bkSending') : t('bkSend')}</button></div>
+        </form>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">{t('bkLinks')}</h2>
+        <p className="meta small">{t('bkLinksHelp')}</p>
+        {b.links.length > 0 && <ul className="bk-files">{b.links.map((l) => (
+          <li key={l.id}><b>{langName(l.lang, locale)}</b> <a href={l.url} target="_blank" rel="noopener noreferrer nofollow">{l.label}</a> <span className="meta small bk-url">{l.url}</span>
+            <button type="button" className="link u small" onClick={() => delLink(l.id)}>{t('delete')}</button></li>))}</ul>}
+        <form className="bk-upload" onSubmit={addLink}>
+          <div className="rm-row">{langSelect(lk.lang, (lang) => setLk({ ...lk, lang }))}
+            <input required maxLength={80} value={lk.label} onChange={(e) => setLk({ ...lk, label: e.target.value })} placeholder={t('bkLinkLabel')} aria-label={t('bkLinkLabel')} /></div>
+          <div className="rm-row"><input required type="url" maxLength={1000} value={lk.url} onChange={(e) => setLk({ ...lk, url: e.target.value })} placeholder="https://…" aria-label={t('bkLinkUrl')} />
+            <button className="btn ghost">{t('bkLinkAdd')}</button></div>
+        </form>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">{t('bkTargets')}</h2>
+        <p className="meta small">{t('bkTargetsHelp')}</p>
+        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('bkFilter')} aria-label={t('bkFilter')} />
+        <div className="bk-targets">
+          <fieldset><legend>{t('bkTargetSeries')}</legend>{targets.series.filter(match).map((x) => <label key={x.id}><input type="checkbox" checked={sel.series.has(x.id)} onChange={() => toggle('series', x.id)} /> {x.title}</label>)}</fieldset>
+          <fieldset><legend>{t('bkTargetTalks')}</legend>{targets.talks.filter(match).slice(0, 80).map((x) => <label key={x.id}><input type="checkbox" checked={sel.talks.has(x.id)} onChange={() => toggle('talks', x.id)} /> {x.title}</label>)}</fieldset>
+        </div>
+        <div className="panel-actions"><button type="button" className="btn" onClick={saveTargets}>{t('save')}</button></div>
+      </section>
+
+      <div className="panel-actions"><button type="button" className="link u danger" onClick={del}>{t('bkDelete')}</button></div>
+          </div>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head"><div><Link href="/studio/books" className="back">← {t('bkNav')}</Link><h1 className="studio-title">{b.title}</h1></div>

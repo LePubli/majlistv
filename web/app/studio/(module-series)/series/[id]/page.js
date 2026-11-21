@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
+import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics } from '../../../../../components/backoffice/Kit';
 import ChannelPicker from '../../../../../components/ChannelPicker';
 import { LEVELS, levelLabel } from '../../../../../lib/levels';
 
@@ -37,7 +38,7 @@ const layoutOf = (eps, hasSeasons) => eps.map((e) => ({ talkId: e.id, seasonId: 
 
 export default function SeriesEditor() {
   const { id } = useParams();
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const router = useRouter();
   const [s, setS] = useState(null);          // série enregistrée
   const [f, setF] = useState(null);          // formulaire « informations »
@@ -206,6 +207,179 @@ export default function SeriesEditor() {
   const pill = (on, label, onClick) => <button type="button" aria-pressed={on} className={on ? 'pill on' : 'pill'} onClick={onClick}>{label}</button>;
   const inheritLabel = t('srInherit').replace('{a}', t(s.access));
 
+  if (skin === 'premium') {
+    return (
+      <main className="studio-page">
+        <BmPage title={s.title} sub={[s.speaker, t(s.access)].filter(Boolean).join(' · ')} actions={<>
+          <BmBtn primary={false} href="/studio/series">{t('srBack')}</BmBtn>
+          <BmBtn primary={!s.published} onClick={togglePublish}>{s.published ? t('srUnpublish') : t('srPublish')}</BmBtn>
+        </>}>
+          <BmMetrics cols="three" items={[
+            { icon: 'film', tone: s.published ? 'green' : 'amber', label: t('colState'), value: s.published ? t('srPub') : t('srDraft') },
+            { icon: 'layers', label: hasSeasons ? t('srSeasonCount').replace('{n}', seasons.length) : t('srNoSeasons'), value: hasSeasons ? seasons.length : null },
+            { icon: 'video', label: t('srEpCount').replace('{n}', eps.length), value: eps.length },
+          ]} />
+          <div className="bm-form">
+      <p className="meta small">{s.published ? t('srPublishedHelp') : t('srDraftHelp')}</p>
+
+      <form className="panel" onSubmit={saveInfo}>
+        <h2 className="panel-title">{t('srInfo')}</h2>
+        <label className="fld"><span>{t('srName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+        <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
+        <label className="fld"><span>{t('speaker')}</span><input maxLength={200} value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} /></label>
+        <label className="fld"><span>{t('srDesc')}</span><textarea rows={4} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
+        <div className="fld" role="group" aria-label={t('category')}>
+          <span>{t('category')}</span>
+          <div className="pills">{pill(!f.categoryId, t('nwNoCat'), () => setF({ ...f, categoryId: '' }))}{cats.map((c) => pill(String(f.categoryId) === String(c.id), c.fullName || c.name, () => setF({ ...f, categoryId: String(c.id) })))}</div>
+        </div>
+        <div className="fld" role="group" aria-label={t('srAccess')}>
+          <span>{t('srAccess')}</span>
+          <div className="pills">{pill(f.access === 'free', t('free'), () => setF({ ...f, access: 'free' }))}{pill(f.access === 'premium', t('premium'), () => setF({ ...f, access: 'premium' }))}</div>
+          <span className="meta small">{t('srAccessHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('lvLabel')}>
+          <span>{t('lvLabel')}</span>
+          <div className="pills">
+            {pill(!f.level, t('lvNone'), () => setF({ ...f, level: '' }))}
+            {LEVELS.map((l) => pill(f.level === l, levelLabel(l, t), () => setF({ ...f, level: l })))}
+          </div>
+          <span className="meta small">{t('lvHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('srPrereq')}>
+          <span>{t('srPrereq')}</span>
+          {others.filter((o) => o.id !== id).length === 0
+            ? <span className="meta small">{t('srPrereqNone')}</span>
+            : (
+              <div className="pills">
+                {others.filter((o) => o.id !== id).map((o) => pill(f.prerequisites.includes(o.id), o.title, () => setF({
+                  ...f,
+                  prerequisites: f.prerequisites.includes(o.id) ? f.prerequisites.filter((x) => x !== o.id) : [...f.prerequisites, o.id].slice(0, 5),
+                })))}
+              </div>
+            )}
+          <span className="meta small">{t('srPrereqHelp')}</span>
+        </div>
+        <div className="fld" role="group" aria-label={t('srStructure')}>
+          <span>{t('srStructure')}</span>
+          <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
+          <span className="meta small">{t('srStructureHelp')}</span>
+        </div>
+        {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+        <div className="panel-actions"><button className="btn" disabled={!infoDirty || saving}>{infoDirty ? t('save') : t('nothingToSave')}</button></div>
+      </form>
+
+      <section className="panel">
+        <h2 className="panel-title">{t('srImage')}</h2>
+        <div className="sr-image">
+          <span className="sr-poster" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined} />
+          <div className="thumb-opts">
+            <span className="meta small">{t('srImageHelp')}</span>
+            <div className="thumb-actions">
+              <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()}>{t('srImageChoose')}</button>
+              {s.posterUrl && <button type="button" className="btn ghost" onClick={dropImage}>{t('srImageRemove')}</button>}
+              <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pickImage} />
+            </div>
+            {imgMsg && <p className={imgMsg.ok ? 'ok-msg' : 'error'} role="status">{imgMsg.text}</p>}
+          </div>
+        </div>
+      </section>
+
+      <h2 className="panel-title outside">{t('srEpisodes')}</h2>
+      {lmsg && <p className={lmsg.ok ? 'ok-msg' : 'error'} role="status">{lmsg.text}</p>}
+      {groups.map((g, gi) => (
+        <section key={g.id || 'all'} className="sr-season" onDragOver={(e) => { if (drag) e.preventDefault(); }} onDrop={() => { if (drag) { place(drag, g.id, null); setDrag(null); setOver(null); } }}>
+          {hasSeasons && (
+            <header className="sr-season-head">
+              <b>{t('srSeason').replace('{n}', g.number)}</b>
+              <input className="sr-season-title" defaultValue={g.title} maxLength={120} placeholder={t('srSeasonTitle')} aria-label={t('srSeasonTitle')} onBlur={(e) => renameSeason(g.id, e.target.value.trim())} />
+              <span className="sr-season-tools">
+                <button type="button" className="icon-btn" onClick={() => moveSeason(gi, -1)} disabled={gi === 0} aria-label={t('srUp')} title={t('srUp')}>↑</button>
+                <button type="button" className="icon-btn" onClick={() => moveSeason(gi, 1)} disabled={gi === groups.length - 1} aria-label={t('srDown')} title={t('srDown')}>↓</button>
+                <button type="button" className="icon-btn" onClick={() => deleteSeason(g.id)} aria-label={t('srDelSeason')} title={t('srDelSeason')}>✕</button>
+              </span>
+            </header>
+          )}
+          {g.list.length === 0 && <p className="meta small sr-empty">{t('srEmptySeason')}</p>}
+          <ul className="sr-eps">
+            {g.list.map((e, i) => (
+              <li key={e.id} className={`sr-ep${over === e.id ? ' over' : ''}${drag === e.id ? ' dragging' : ''}`} draggable
+                onDragStart={() => setDrag(e.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
+                onDragOver={(ev) => { if (drag) { ev.preventDefault(); setOver(e.id); } }}
+                onDrop={(ev) => { ev.stopPropagation(); if (drag) { place(drag, g.id, e.id); setDrag(null); setOver(null); } }}>
+                <span className="sr-handle" aria-hidden="true" title={t('srDrag')}>⠿</span>
+                <span className="sr-num">{i + 1}</span>
+                <span className="studio-thumb" style={e.posterUrl ? { backgroundImage: `url(${e.posterUrl})` } : undefined}><span className="dur">{clock(e.durationSeconds)}</span></span>
+                <span className="sr-ep-text">
+                  <Link href={`/studio/${e.id}`}><b>{e.title}</b></Link>
+                  <small>{[e.speaker, e.status !== 'ready' ? t('srProcessing') : !e.visible ? t('srNotPublic') : ''].filter(Boolean).join(' · ')}</small>
+                </span>
+                <select className="sr-access" value={e.access} onChange={(ev) => setAccess(e.id, ev.target.value)} aria-label={t('access')}>
+                  <option value="inherit">{inheritLabel}</option>
+                  <option value="free">{t('free')}</option>
+                  <option value="premium">{t('premium')}</option>
+                </select>
+                {hasSeasons && seasons.length > 1 && (
+                  <select className="sr-move" value="" onChange={(ev) => ev.target.value && place(e.id, ev.target.value, null)} aria-label={t('srMoveTo')}>
+                    <option value="">{t('srMoveTo')}…</option>
+                    {seasons.filter((z) => z.id !== e.seasonId).map((z) => <option key={z.id} value={z.id}>{t('srSeason').replace('{n}', seasons.indexOf(z) + 1)}</option>)}
+                  </select>
+                )}
+                <span className="sr-tools">
+                  <button type="button" className="icon-btn" onClick={() => step(e.id, -1)} disabled={i === 0} aria-label={t('srUp')} title={t('srUp')}>↑</button>
+                  <button type="button" className="icon-btn" onClick={() => step(e.id, 1)} disabled={i === g.list.length - 1} aria-label={t('srDown')} title={t('srDown')}>↓</button>
+                  <button type="button" className="icon-btn" onClick={() => removeEp(e.id)} aria-label={t('srRemove')} title={t('srRemove')}>✕</button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {hasSeasons && <button type="button" className="btn ghost sr-addseason" onClick={addSeason}>{t('srAddSeason')}</button>}
+
+      <section className="panel">
+        <button type="button" className="sr-toggle" aria-expanded={addOpen} onClick={() => setAddOpen(!addOpen)}><h2 className="panel-title">{addOpen ? '−' : '+'} {t('srAddTalks')}</h2></button>
+        {addOpen && (
+          <>
+            <input type="search" placeholder={t('srSearchTalks')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('srSearchTalks')} />
+            {candidates.length === 0 && <p className="meta small">{t('srNoCandidates')}</p>}
+            <ul className="sr-cands">
+              {candidates.map((c) => (
+                <li key={c.id}>
+                  <label className="check"><input type="checkbox" checked={pick.includes(c.id)} onChange={() => setPick(pick.includes(c.id) ? pick.filter((x) => x !== c.id) : [...pick, c.id])} />
+                    <span><b>{c.title}</b> <small className="meta">{[c.speaker, t(c.access), clock(c.durationSeconds)].filter(Boolean).join(' · ')}</small></span></label>
+                </li>
+              ))}
+            </ul>
+            {pick.length > 0 && (
+              <div className="sr-addbar">
+                {hasSeasons && (
+                  <select value={target || firstSeason || ''} onChange={(e) => setTarget(e.target.value)} aria-label={t('srAddTo')}>
+                    {seasons.map((z, i) => <option key={z.id} value={z.id}>{t('srAddTo')} {t('srSeason').replace('{n}', i + 1)}</option>)}
+                  </select>
+                )}
+                <button type="button" className="btn" onClick={addPicked} disabled={hasSeasons && seasons.length === 0}>{t('srAddSel').replace('{n}', pick.length)}</button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {dirty && (
+        <div className="savebar" role="region" aria-label={t('srUnsaved')}>
+          <span>{t('srUnsaved')}</span>
+          <span className="sr-savebtns">
+            <button type="button" className="btn ghost" onClick={load} disabled={saving}>{t('srDiscard')}</button>
+            <button type="button" className="btn" onClick={saveLayout} disabled={saving}>{saving ? t('saving') : t('srSaveEpisodes')}</button>
+          </span>
+        </div>
+      )}
+
+      <div className="sr-danger"><button type="button" className="link u" onClick={removeSeries}>{t('srDelete')}</button></div>
+          </div>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <Link href="/studio/series" className="back">← {t('srBack')}</Link>

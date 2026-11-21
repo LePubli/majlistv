@@ -417,3 +417,6 @@ html[data-skin="premium"] .ac-heavy .ac-window { display: flex; flex-wrap: wrap;
 html[data-skin="premium"] .ac-heavy .ac-hours { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 html[data-skin="premium"] .ac-heavy .ac-hours label { display: inline-flex; align-items: center; gap: 6px; }
 html[data-skin="premium"] .ac-heavy .ac-hours input { width: 70px; }
+
+/* Lot M : doublage par vidéo, espace sous la bannière du moteur */
+html[data-skin="premium"] .bm-page .db-grid { margin-top: 14px; }

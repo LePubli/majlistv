@@ -9945,3 +9945,9 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Studio : Modération, Événements en direct, TV en direct, Paramètres, Chaînes et Stockage reprennent la composition de la maquette avec les données et fonctions réelles.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.
+
+
+## Back-office Premium — lot M recomposé (21/11/2026)
+
+- Studio : fiche d'un ouvrage, détail d'une série, fiche d'un contenu Audyn et Audio et doublage d'une vidéo reprennent l'en-tête et les chiffres de la maquette ; le corps des pages est l'existant.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.

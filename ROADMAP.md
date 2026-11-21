@@ -723,4 +723,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, lot I recomposé comme la maquette (Studio : Fiche, Séries, Shorts, Collections, Sous-titres) : fait 21/11.
 - Back-office Premium, lot J recomposé comme la maquette (Studio : Activité, Corrections, Doublage, Audyn) : fait 21/11.
 - Back-office Premium, lot K recomposé comme la maquette (Studio : Revenus, Quiz, Ouvrages, Rappels, Pratique, Références) : fait 21/11.
-- Back-office Premium, lot L recomposé comme la maquette (Studio : Modération, Événements, TV en direct, Paramètres, Chaînes, Stockage) : fait 21/11. Reste : fiche d'un ouvrage, pages secondaires (séries par saisons, doublage par vidéo, fiche Audyn), contrôles d'éditeur du lot 3b, sur « go ».
+- Back-office Premium, lot L recomposé comme la maquette (Studio : Modération, Événements, TV en direct, Paramètres, Chaînes, Stockage) : fait 21/11. 
+- Back-office Premium, lot M recomposé comme la maquette (Studio, pages de détail : ouvrage, série, contenu Audyn, doublage d'une vidéo) : fait 21/11. Reste : contrôles d'éditeur du lot 3b (vitesse, opacité, corrections colorimétriques, transition par extrait, médiathèque), sur « go ».
