@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import StudioTabs from '../../../../components/StudioTabs';
 import AudynChannelImport from '../../../../components/AudynChannelImport';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable } from '../../../../components/backoffice/Kit';
 import { AudynCategoryManager, AudynCategoryPicker } from '../../../../components/AudynCategories';
 
 export const AUDIENCE_KEY = { kids: 'ayAudKids', adults: 'ayAudAdults', both: 'ayAudBoth' };
@@ -23,7 +24,7 @@ export function itemState(i) {
 export const clock = (sec) => { const s = Math.round(sec || 0); const h = Math.floor(s / 3600); return `${h ? h + ' h ' : ''}${String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, '0')} min`; };
 
 export default function StudioAudyn() {
-  const { t, call, locale } = useApp();
+  const { t, call, locale, skin } = useApp();
   const router = useRouter();
   const [data, setData] = useState(null);
   const [rights, setRights] = useState(null);
@@ -101,6 +102,126 @@ export default function StudioAudyn() {
   };
   const showRights = async () => { const r = await call('/studio/audyn-rights'); setRights(r.ok ? r.data : []); };
   const date = (d) => new Date(d).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (skin === 'premium') {
+    const nPub = count.published || 0;
+    const totalSec = items.reduce((a, i) => a + (i.durationSeconds || 0), 0);
+    const toneOf = { ok: 'green', run: 'blue', err: 'red', muted: 'amber' };
+    return (
+      <main className="studio-page">
+        <BmPage title={t('ayNav')} sub={t('ayIntro')}
+          actions={<>
+            <BmBtn primary={false} onClick={() => setCats((v) => !v)}>{t('ayCgOpen')}</BmBtn>
+            <BmBtn primary={false} onClick={() => setChan((v) => !v)}>{t('ayChOpen')}</BmBtn>
+            <BmBtn primary onClick={() => setOpen((v) => !v)}>{t('ayNew')}</BmBtn>
+          </>}>
+          {data && <BmMetrics cols="three" items={[
+            { icon: 'headphones', tone: 'blue', label: t('ayNav'), value: items.length },
+            { icon: 'check', tone: 'green', label: t('ayPublished'), value: nPub },
+            totalSec ? { icon: 'clock', label: t('ayColAudio'), value: clock(totalSec) } : { icon: 'clock', label: t('ayColAudio'), value: null },
+          ]} />}
+          <StudioTabs />
+          {data && !data.storage && <p className="error" role="alert">{t('ayNoStorage')}</p>}
+          {failed?.waiting > 0 && <p className="error" role="alert">{t('ayBlockedWait').replace('{n}', failed.waiting)}</p>}
+          {failed?.count > 0 && (
+            <BmPanel title={t('ayRetryAll').replace('{n}', failed.count)}>
+              <div style={{ padding: '0 18px 18px' }}>
+                <p>{t('ayFailedN').replace('{n}', failed.count)}{failed.blocked > 0 ? ` ${t('ayFailedBlocked').replace('{n}', failed.blocked)}` : ''}</p>
+                <BmBtn primary onClick={retryAll}>{t('ayRetryAll').replace('{n}', failed.count)}</BmBtn>
+              </div>
+            </BmPanel>
+          )}
+          {cats && <AudynCategoryManager onChange={reload} />}
+          {chan && <AudynChannelImport onDone={reload} />}
+          {open && <BmPanel title={t('ayNew')}>
+            <form className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }} onSubmit={create}>
+          <label className="fld"><span>{t('ayNewFromLink')}</span>
+            <input type="url" inputMode="url" dir="ltr" maxLength={1000} value={link} placeholder="https://www.youtube.com/watch?v=…"
+              onChange={(e) => { setLink(e.target.value); setInfo(''); }} onBlur={readLink} />
+          </label>
+          {link.trim() && <p className="meta small">{info === 'loading' ? t('ayLinkReading') : info === 'none' ? t('ayLinkNoInfo') : t('ayNewFromLinkHelp')}</p>}
+          <label className="fld"><span>{t('ayTitleF')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+          {link.trim() && <label className="fld"><span>{t('ayAuthor')}</span><input maxLength={200} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></label>}
+          <label className="fld"><span>{t('ayAudience')}</span>
+            <select value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value })}>
+              {['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}
+            </select>
+          </label>
+          <AudynCategoryPicker id="ay-new-cat" value={f.category} onChange={(v) => setF({ ...f, category: v })} />
+          {link.trim() && (
+            <>
+              <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
+              <label className="chk"><input type="checkbox" checked={splitLink} onChange={(e) => setSplitLink(e.target.checked)} /> <span>{t('ayLinkSplit')}</span></label>
+              <label className="chk"><input type="checkbox" checked={linkRights} onChange={(e) => setLinkRights(e.target.checked)} /> <span>{t('ayLinkRights')}</span></label>
+            </>
+          )}
+          {err && <p className="error" role="alert">{err}</p>}
+          <button className="btn" disabled={busy || !f.title.trim() || (link.trim() && !linkRights)}>{t('ayCreate')}</button>
+        </form>
+          </BmPanel>}
+          <BmPanel title={t('ayNav')} extra={data ? `${shown.length}` : ''}>
+            {!data ? <p className="meta" style={{ padding: '0 18px 18px' }}>{t('ayLoading')}</p> : items.length === 0 ? <p className="meta" style={{ padding: '0 18px 18px' }}>{t('ayEmpty')}</p> : (
+              <>
+                <div className="bm-inline-tools">
+                  <label className="bm-search-field"><input type="search" placeholder={t('aySearchStudio')} value={q} onChange={(e) => setQ(e.target.value)} /></label>
+                  <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t('filterBy')}>
+                    {FILTERS.filter((k) => k === 'all' || count[k]).map((k) => <option key={k} value={k}>{t('ayF_' + k)} ({k === 'all' ? items.length : count[k]})</option>)}
+                  </select>
+                  {catNames.length > 0 && (
+                    <select value={catF} onChange={(e) => setCatF(e.target.value)} aria-label={t('ayCategory')}>
+                      <option value="">{t('ayAllCats')}</option>
+                      {catNames.map((x) => <option key={x} value={x}>{x}</option>)}
+                      <option value="__none__">{t('ayCgNone')}</option>
+                    </select>
+                  )}
+                </div>
+                {flash && <p className="notice" role="status" style={{ padding: '0 18px' }}>{flash}</p>}
+                {sel.size > 0 && (
+                  <div className="bm-inline-tools" role="region" aria-label={t('bkEdit')}>
+                    <strong>{t('ayBkSelected').replace('{n}', sel.size)}</strong>
+                    <BmBtn primary onClick={() => bulk('publish')}>{t('ayBkPublish')}</BmBtn>
+                    <BmBtn primary={false} onClick={() => bulk('draft')}>{t('ayBkDraft')}</BmBtn>
+                    <BmBtn primary={false} onClick={refreshMeta}>{t('ayBkMeta')}</BmBtn>
+                    {bulkCat === null ? (
+                      <BmBtn primary={false} onClick={() => setBulkCat('')}>{t('ayBkCategory')}</BmBtn>
+                    ) : (
+                      <span className="ay-bk-cat">
+                        <AudynCategoryPicker id="ay-bk-cat" value={bulkCat} onChange={setBulkCat} />
+                        <BmBtn primary onClick={() => bulk('category', { category: bulkCat.trim() })}>{t('ayBkApply')}</BmBtn>
+                      </span>
+                    )}
+                    <BmBtn primary={false} onClick={() => { if (confirm(t('ayBkDeleteAsk').replace('{n}', sel.size))) bulk('delete'); }}>{t('bkRemove')}</BmBtn>
+                    <BmBtn primary={false} onClick={() => { setSel(new Set()); setBulkCat(null); }}>{t('bkClear')}</BmBtn>
+                  </div>
+                )}
+                <BmTable empty={t('noResults')}
+                  headers={[<input key="all" type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} />, t('ayColItem'), t('ayAudience'), t('ayColAudio'), t('ayColState'), '']}
+                  rows={shown.map((i) => {
+                    const [, tone, label] = itemState(i);
+                    return [
+                      <input key="c" type="checkbox" checked={sel.has(i.id)} onChange={() => toggleOne(i.id)} aria-label={i.title} />,
+                      <Link key="t" href={`/studio/audyn/${i.id}`} className="studio-talk">
+                        <span className="studio-thumb ay-sthumb" style={i.coverUrl ? { backgroundImage: `url(${i.coverUrl})` } : undefined}>{!i.coverUrl && '🎧'}</span>
+                        <span className="studio-talk-text"><b dir="auto">{i.title}</b><small dir="auto">{[i.author || i.narrator, i.category].filter(Boolean).join(' · ') || '—'}</small></span>
+                      </Link>,
+                      t(AUDIENCE_KEY[i.audience]),
+                      i.chapters ? <span key="a">{i.chapters === 1 ? t('awChapter1') : t('awChapters').replace('{n}', i.chapters)}{i.durationSeconds ? <small style={{ display: 'block' }}>{clock(i.durationSeconds)}</small> : null}</span> : '—',
+                      <BmBadge key="s" tone={toneOf[tone] || 'blue'}>{t(label)}</BmBadge>,
+                      <BmBtn key="m" primary={false} href={`/studio/audyn/${i.id}`}>{t('manage')}</BmBtn>,
+                    ];
+                  })} />
+              </>
+            )}
+          </BmPanel>
+          <BmPanel title={t('ayRightsTitle')}>
+            {rights === null ? <div style={{ padding: '0 18px 18px' }}><BmBtn primary={false} onClick={showRights}>{t('ayRightsShow')}</BmBtn></div> : (
+              <BmTable empty={t('ayRightsNone')} headers={[t('ayRightsWhen'), t('ayRightsItem'), t('ayRightsFile'), t('ayRightsBy')]}
+                rows={rights.map((r) => [date(r.at), r.itemTitle, r.filename, r.by])} />
+            )}
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
   return (
     <main className="studio-page">
       <div className="studio-head">

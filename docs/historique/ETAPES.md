@@ -9927,3 +9927,9 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Studio : Fiche d'une vidéo, Séries, Shorts, Collections et Sous-titres reprennent la composition de la maquette avec les données et fonctions réelles.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.
+
+
+## Back-office Premium — lot J recomposé (21/11/2026)
+
+- Studio : Activité, Corrections, Doublage et Audyn reprennent la composition de la maquette avec les données et fonctions réelles.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `components/backoffice/Kit.js`, branches `skin === 'premium'` de chaque écran.

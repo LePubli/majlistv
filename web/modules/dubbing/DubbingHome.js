@@ -8,6 +8,7 @@ import { langName } from '../../components/Transcript';
 import ParamsForm from './ParamsForm';
 import Voices from './Voices';
 import Glossary from './Glossary';
+import { Page as BmPage, Panel as BmPanel, Tabs as BmTabs } from '../../components/backoffice/Kit';
 import { useDubbing, Gate, EngineNote, jobLabel, fmtDuration, fmtNum, tf } from './shared';
 
 const TABS = ['talks', 'defaults', 'voices', 'glossary', 'listening'];
@@ -147,7 +148,7 @@ function Listening() {
 }
 
 export default function DubbingHome() {
-  const { t, user } = useApp();
+  const { t, user, skin } = useApp();
   const { d, setD, err, load } = useDubbing('/studio/dubbing/state');
   const [tab, setTab] = useState('talks');
   // Onglet demandé dans l'adresse (#voices…), par exemple depuis la fiche d'une conférence.
@@ -157,6 +158,29 @@ export default function DubbingHome() {
     window.addEventListener('hashchange', read);
     return () => window.removeEventListener('hashchange', read);
   }, []);
+  if (skin === 'premium') {
+    return (
+      <Gate user={user} err={err}>
+        <main className="studio-page">
+          <BmPage title={t('sdDub')}>
+            <EngineNote engine={d?.engine} />
+            <BmTabs names={TABS.map((k) => [k, t(`dbTab_${k}`)])} value={tab} onChange={(k) => { setTab(k); window.history.replaceState(null, '', `#${k}`); }} />
+            {!d ? <p className="meta">{t('dbLoading')}</p> : (
+              <BmPanel title={t(`dbTab_${tab}`)}>
+                <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+                  {tab === 'talks' && <Talks />}
+                  {tab === 'defaults' && <Defaults state={d} setState={setD} />}
+                  {tab === 'voices' && <Voices state={d} reload={load} />}
+                  {tab === 'glossary' && <Glossary />}
+                  {tab === 'listening' && <Listening />}
+                </div>
+              </BmPanel>
+            )}
+          </BmPage>
+        </main>
+      </Gate>
+    );
+  }
   return (
     <Gate user={user} err={err}>
       <main className="studio-page db-page">

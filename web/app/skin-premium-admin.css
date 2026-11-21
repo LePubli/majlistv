@@ -409,3 +409,11 @@ html[data-skin="premium"] .bm-embed .bm-ax-pill-row{flex-wrap:wrap}
 html[data-skin="premium"] .bm-embed .bm-ax-pill{white-space:nowrap}
 html[data-skin="premium"] .bm-embed .bm-ax-season-card>div{position:relative;z-index:1}
 html[data-skin="premium"] .bm-embed .bm-ax-season-card:after{display:none}
+
+/* Lot J : recherche du Doublage et plage horaire de l'Activité dans les panneaux de la maquette */
+html[data-skin="premium"] .bm-form .studio-search svg { display: none; }
+html[data-skin="premium"] .bm-form .studio-search { display: block; }
+html[data-skin="premium"] .ac-heavy .ac-window { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+html[data-skin="premium"] .ac-heavy .ac-hours { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+html[data-skin="premium"] .ac-heavy .ac-hours label { display: inline-flex; align-items: center; gap: 6px; }
+html[data-skin="premium"] .ac-heavy .ac-hours input { width: 70px; }

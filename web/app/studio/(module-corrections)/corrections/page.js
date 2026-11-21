@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
 import { langName } from '../../../../components/Transcript';
 import SubtitleTabs, { subtitleTabsOn } from '../../../../components/SubtitleTabs';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Tabs as BmTabs } from '../../../../components/backoffice/Kit';
 
 const clock = (ms) => {
   const s = Math.floor(ms / 1000), h = Math.floor(s / 3600);
@@ -53,7 +54,7 @@ function Item({ c, t, call, locale, onDone }) {
 }
 
 export default function CorrectionsReview() {
-  const { t, call, locale, user, modUsable } = useApp();
+  const { t, call, locale, user, modUsable, skin } = useApp();
   // Organisateur ou administrateur : cet écran est le second onglet de « Sous-titres ». Modérateur : écran seul, comme avant.
   const tabbed = subtitleTabsOn(user?.role, modUsable('corrections'));
   const [status, setStatus] = useState('pending');
@@ -69,6 +70,32 @@ export default function CorrectionsReview() {
   for (const x of data?.items || []) {
     const g = groups.find((y) => y.talkId === x.talkId);
     if (g) g.items.push(x); else groups.push({ talkId: x.talkId, title: x.talkTitle, items: [x] });
+  }
+  if (skin === 'premium') {
+    const tabName = { pending: 'corTabPending', accepted: 'corTabAccepted', rejected: 'corTabRejected' };
+    return (
+      <main className="studio-page">
+        <BmPage title={tabbed ? t('sdSubs') : t('corTitle')} sub={t('corIntro')}>
+          {data && <BmMetrics cols="three" items={[
+            { icon: 'clock', tone: 'amber', label: t('corTabPending'), value: data.counts.pending },
+            { icon: 'check', tone: 'green', label: t('corTabAccepted'), value: data.counts.accepted },
+            { icon: 'close', label: t('corTabRejected'), value: data.counts.rejected },
+          ]} />}
+          <SubtitleTabs pending={data ? data.counts.pending : undefined} />
+          <BmTabs names={['pending', 'accepted', 'rejected'].map((k) => [k, t(tabName[k]) + (data ? ` (${data.counts[k]})` : '')])} value={status} onChange={setStatus} />
+          {err && <p className="error">{t('stLoadErr')}</p>}
+          {!data && !err && <p className="meta">…</p>}
+          {data && data.items.length === 0 && <BmPanel title={t(tabName[status])}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('corEmpty')}</p></BmPanel>}
+          {groups.map((g) => (
+            <BmPanel key={g.talkId} title={g.title} extra={<span>{g.items.length}</span>}>
+              <div className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>
+                {g.items.map((x) => <Item key={x.id} c={x} t={t} call={call} locale={locale} onDone={done} />)}
+              </div>
+            </BmPanel>
+          ))}
+        </BmPage>
+      </main>
+    );
   }
   return (
     <main className="studio-page studio-narrow">

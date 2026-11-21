@@ -9,6 +9,7 @@ import useMyTalks from '../../../components/useMyTalks';
 import TalkSteps from '../../../components/TalkSteps';
 import { taskName } from '../../../lib/activity';
 import { importLabel } from '../../../components/ImportVideoPanel';
+import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, Progress as BmProgress } from '../../../components/backoffice/Kit';
 
 const SECTIONS = [['running', 'acRunning'], ['waiting', 'acWaiting'], ['paused', 'acPaused'], ['failed', 'acFailed']];
 
@@ -50,12 +51,21 @@ function Task({ x, can, onAct, busy, pos }) {
 }
 
 // Journal des imports (étape Import) : qui a copié quelle vidéo, quand, depuis quelle adresse, avec quelle déclaration des droits.
-function ImportJournal() {
+function ImportJournal({ pm }) {
   const { t, locale, call } = useApp();
   const [list, setList] = useState(null);
   useEffect(() => { call('/studio/imports').then((r) => setList(r.ok ? r.data.imports : false)); }, [call]);
   if (list === false || list === null) return null; // fonction désactivée ou chargement
   const when = (x) => new Date(x).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (pm) {
+    return (
+      <BmPanel title={t('impJournal')} extra={<span>{list.length}</span>}>
+        <p className="meta small" style={{ padding: '0 18px' }}>{t('impJournalHelp')}</p>
+        <BmTable headers={[t('colTalk'), t('acColBy'), t('acColDate'), t('colState')]} empty={t('impJournalEmpty')}
+          rows={list.map((m) => [<span key="t"><Link href={`/studio/${m.talkId}`} dir="auto"><b>{m.title}</b></Link><small dir="auto" style={{ display: 'block' }}>{m.sourceUrl}</small>{m.error && <small className="error" dir="auto" style={{ display: 'block' }}>{m.error}</small>}<details><summary className="meta small">{t('impDeclaration')} ({when(m.rightsConfirmedAt)})</summary><small dir="auto">{m.rightsText}</small></details></span>, m.requestedByName, when(m.createdAt), <BmBadge key="s" tone={m.status === 'failed' ? 'red' : 'blue'}>{m.active ? importLabel(m, t) : t(`impSt_${m.status}`)}</BmBadge>])} />
+      </BmPanel>
+    );
+  }
   return (
     <section aria-labelledby="ac-imports" className="ac-section">
       <h2 id="ac-imports" className="sd-h2">{t('impJournal')} <span className="ac-count">{list.length}</span></h2>
@@ -82,7 +92,7 @@ function ImportJournal() {
   );
 }
 
-function HeavyControls({ s, onSave }) {
+function HeavyControls({ s, onSave, pm }) {
   const { t } = useApp();
   const [start, setStart] = useState(s.windowStart);
   const [end, setEnd] = useState(s.windowEnd);
@@ -91,11 +101,12 @@ function HeavyControls({ s, onSave }) {
   const dirty = win !== s.windowEnabled || Number(start) !== s.windowStart || Number(end) !== s.windowEnd;
   const state = s.pauseAll ? 'paused' : s.heavyAllowed ? 'on' : 'window';
   return (
-    <section className="sd-card ac-heavy" aria-labelledby="ac-heavy">
+    <section className={pm ? 'ac-heavy' : 'sd-card ac-heavy'} aria-labelledby="ac-heavy">
+      {pm ? <p><span className={`ac-chip ${state}`}>{t(`acChip_${state}`)}</span></p> : (
       <div className="sd-card-head">
         <h2 id="ac-heavy">{t('acHeavy')}</h2>
         <span className={`ac-chip ${state}`}>{t(`acChip_${state}`)}</span>
-      </div>
+      </div>)}
       {state !== 'on' && <p className="sd-note warn" role="status">{t(`acHeavy_${state}`)}</p>}
       <p className="meta">{t('acHeavyHelp')}</p>
       <div className="ac-heavy-row">
@@ -115,7 +126,7 @@ function HeavyControls({ s, onSave }) {
 }
 
 export default function StudioActivity() {
-  const { t, locale, call } = useApp();
+  const { t, locale, call, skin } = useApp();
   const { rows, loaded } = useMyTalks();
   const [d, setD] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -145,6 +156,65 @@ export default function StudioActivity() {
   const recent = rows.filter((r) => r.kind === 'live').slice(0, 8);
   const date = (x) => new Date(x).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const by = (st) => (d?.tasks || []).filter((x) => (st === 'waiting' ? ['waiting', 'blocked'].includes(x.status) : x.status === st));
+
+  if (skin === 'premium') {
+    const tone = { running: 'blue', waiting: 'amber', blocked: 'amber', paused: 'amber', failed: 'red' };
+    const counts = { running: by('running').length, waiting: by('waiting').length, paused: by('paused').length, failed: by('failed').length };
+    const btn = (label, onClick, extra = {}) => <BmBtn primary={false} disabled={busy} onClick={onClick} {...extra}>{label}</BmBtn>;
+    const taskRows = (list, st) => list.map((x, i) => {
+      const link = x.link || (x.talkId ? `/studio/${x.talkId}` : null);
+      return [
+        <b key="n">{st === 'waiting' ? `${i + 1}. ` : ''}{taskName(x, t)}{x.priority > 0 ? ` · ${t('acPrio')}` : ''}</b>,
+        link ? <Link key="l" href={link} dir="auto">{x.title}</Link> : <span key="l" dir="auto">{x.title}</span>,
+        <span key="d">{date(x.createdAt)}{x.status === 'blocked' ? ` · ${t(`taskBlocked_${x.blockedBy || 'other'}`)}` : ''}{x.status === 'failed' && x.error ? <small className="error" dir="auto" style={{ display: 'block' }}>{x.error}</small> : null}</span>,
+        x.status === 'running'
+          ? <div key="s" style={{ minWidth: 120 }}><BmProgress value={x.progress ?? 0} /><small>{x.progress != null ? `${x.progress} %` : t('acSt_running')}</small></div>
+          : <BmBadge key="s" tone={tone[x.status] || 'blue'}>{t(`acSt_${x.status}`)}</BmBadge>,
+        <span key="a" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+          {x.canceling && <small>{t('jbCanceling')}</small>}
+          {x.canCancel && x.status !== 'failed' && btn(t('jbCancel'), () => act(x, 'cancel', {}))}
+          {d.canControl && x.status !== 'failed' && (x.status === 'paused'
+            ? btn(t('acResume'), () => act(x, 'pause', { paused: false }))
+            : (x.status !== 'running' || x.canPauseRunning) && btn(t('acPause'), () => act(x, 'pause', { paused: true })))}
+          {d.canControl && x.status !== 'failed' && x.status !== 'running' && (x.priority > 0
+            ? btn(t('acPrioOff'), () => act(x, 'priority', { priority: 0 }))
+            : btn(t('acPrioOn'), () => act(x, 'priority', { priority: 10 })))}
+        </span>,
+      ];
+    });
+    return (
+      <main className="studio-page">
+        <BmPage title={t('sdActivity')} sub={t(d?.canControl ? 'acIntroAdmin' : 'acIntro')}>
+          {d && <BmMetrics cols="four" items={[
+            { icon: 'activity', tone: 'blue', label: t('acRunning'), value: counts.running },
+            { icon: 'clock', tone: 'amber', label: t('acWaiting'), value: counts.waiting },
+            { icon: 'toggle', label: t('acPaused'), value: counts.paused },
+            { icon: 'alert', tone: counts.failed ? 'red' : 'green', label: t('acFailed'), value: counts.failed },
+          ]} />}
+          {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+          {!d && <p className="meta">{t('dbLoading')}</p>}
+          {d?.canControl && <BmPanel title={t('acHeavy')}><div className="bm-form" style={{ padding: '0 18px 18px' }}><HeavyControls s={d.settings} onSave={saveSettings} pm /></div></BmPanel>}
+          {d && !d.canControl && (d.settings.pauseAll || !d.settings.heavyAllowed) && <p className="sd-note">{t(d.settings.pauseAll ? 'acHeavy_paused' : 'acHeavy_window')}</p>}
+          {d && SECTIONS.map(([st, key]) => {
+            const list = by(st);
+            if (!list.length && st !== 'running' && st !== 'waiting') return null;
+            return (
+              <BmPanel key={st} title={t(key)} extra={<span>{list.length}</span>}>
+                <BmTable headers={[t('acColTask'), t('colTalk'), t('acColSince'), t('colState'), '']} rows={taskRows(list, st)} empty={t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')} />
+                {st === 'waiting' && list.length > 1 && <p className="meta small" style={{ padding: '0 18px 14px' }}>{t('acOrderNote')}</p>}
+              </BmPanel>
+            );
+          })}
+          <ImportJournal pm />
+          <BmPanel title={t('sdActRecent')} extra={<span>{recent.length}</span>}>
+            <BmTable headers={[t('colTalk'), t('acColDate'), t('colState')]} empty={loaded && recent.length === 0 ? t('sdLastNone') : null}
+              rows={recent.map((r) => [<Link key="t" href={`/studio/${r.id}`} dir="auto"><b>{r.title}</b></Link>, date(r.created_at), <TalkSteps key="s" steps={r.steps} />])} />
+            <p className="meta small" style={{ padding: '0 18px 14px' }}>{t('stepsLegend')}</p>
+          </BmPanel>
+        </BmPage>
+      </main>
+    );
+  }
 
   return (
     <main className="studio-page ac-page">
