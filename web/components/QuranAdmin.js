@@ -3,6 +3,7 @@
 // panneau « Importer une ressource » (modèles prêts à l'emploi). Ressources (texte arabe, traductions, phonétique, tafsir), avec source, licence et crédit.
 // Aucun texte n'est fourni avec le logiciel : on importe ici ce qu'on a le droit d'utiliser (adresse ou contenu du fichier).
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Page, Metrics, Panel, Tabs, Pills, SelectList, Overline, Hint, Meta, Btn, Badge, Switch, Ax, c } from './backoffice/Kit';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import QuranReciters from './QuranReciters';
@@ -30,7 +31,7 @@ const when = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short
 const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'));
 
 export default function QuranAdmin() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [d, setD] = useState(null);
   const [form, setForm] = useState(null);
   const [imp, setImp] = useState(null); // { res, format, url, content }
@@ -39,6 +40,7 @@ export default function QuranAdmin() {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState('res'); // 'res' | 'rec'
   const [fKind, setFKind] = useState('');
+  const [selId, setSelId] = useState(null);
   const [panel, setPanel] = useState(false); // panneau « Importer une ressource »
   const load = useCallback(async () => {
     const r = await call('/admin/quran/resources');
@@ -138,26 +140,7 @@ export default function QuranAdmin() {
   const rows = d.resources.filter((x) => !fKind || x.kind === fKind);
   const working = Boolean(form || imp);
   const open = (fn) => () => { setErr(''); setMsg(''); fn(); setPanel(false); };
-  return (
-    <section className="qa">
-      <header className="aa-head">
-        <div>
-          <h2>{t('qrAdTitle')}</h2>
-          <p className="meta">{t('qrAdIntro')} <Link className="link u" href="/coran">{t('qrAdOpen')}</Link></p>
-          <p className="meta small">{t('qrAdLicence')}</p>
-        </div>
-        {!working && <div className="aa-actions"><button type="button" className="btn" onClick={() => setPanel(!panel)} aria-expanded={panel}>Importer une ressource</button></div>}
-      </header>
-
-      <div className="aa-kpis">
-        <div className="aa-kpi"><span>Texte arabe</span><b style={{ color: stats.text && stats.text.verseCount === d.totalExpected ? 'var(--ok)' : undefined }}>{stats.text ? `${stats.text.verseCount} / ${d.totalExpected}` : 'non importé'}</b><small>versets</small></div>
-        <div className="aa-kpi"><span>Ressources affichées</span><b>{stats.shown} sur {stats.total}</b><small>visibles par les membres</small></div>
-        <div className={`aa-kpi${stats.todo ? ' warn' : ''}`}><span>À faire</span><b>{stats.todo}</b><small>à importer ou sans licence</small></div>
-      </div>
-      {msg && <p className="meta" role="status">✓ {msg}</p>}
-      {err && <p className="error" role="alert">{err}</p>}
-
-      {panel && !working && (
+  const renderOptions = (visible) => visible && (
         <section className="qa-panel" aria-label="Importer une ressource">
           <div className="qa-opt">
             <h3>Coran complet (recommandé)</h3>
@@ -180,9 +163,9 @@ export default function QuranAdmin() {
             <p><button type="button" className="btn ghost" onClick={open(() => setForm({ ...EMPTY }))}>{t('qrAdNew')}</button></p>
           </div>
         </section>
-      )}
-
-      {form && (
+      
+  );
+  const renderForm = () => form && (
         <form className="reg-form" onSubmit={save}>
           <h3>{form.id ? `Modifier « ${form.name} »` : t('qrAdNew')}</h3>
           {!form.id && <label>Identifiant (ex. fr-hamidullah)<input required value={form.slug} onChange={set('slug')} dir="ltr" pattern="[a-z0-9][a-z0-9_\-]{1,59}" /></label>}
@@ -197,8 +180,8 @@ export default function QuranAdmin() {
           <label className="chk"><input type="checkbox" role="switch" checked={form.enabled} onChange={set('enabled')} /> Affichée sur le site (possible seulement une fois importée)</label>
           <p><button className="btn" disabled={busy}>{t('seasonSave')}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
-      )}
-      {imp && (
+      );
+  const renderImp = () => imp && (
         <form className="reg-form" onSubmit={runImport}>
           <h3>Importer « {imp.res.name} »</h3>
           <ol className="qa-steps" aria-label="Étapes"><li className="on">1. Source</li><li>2. Fichier</li><li>3. Import</li></ol>
@@ -211,7 +194,86 @@ export default function QuranAdmin() {
           {imp.content && <p className="meta small">Fichier lu : {Math.round(imp.content.length / 1024)} Ko.</p>}
           <p><button className="btn" disabled={busy || (!imp.url.trim() && !imp.content)}>{busy ? 'Import en cours…' : 'Importer'}</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
-      )}
+      );
+  if (skin === 'premium') {
+    const cur = d.resources.find((x) => x.id === selId) || rows[0] || null;
+    const imported = (x) => x.verseCount > 0;
+    const kindName = (k) => KINDS.find(([kk]) => kk === k)?.[1] || k;
+    return (
+      <Page title="Coran — bibliothèque éditoriale" sub="Textes, traductions, phonétique, tafsir, mot à mot et récitations : sources, licences et contrôle avant affichage."
+        actions={tab === 'res' && !working ? <Btn onClick={() => setPanel(!panel)}>Importer une ressource</Btn> : null}>
+        <Tabs names={[['res', `Textes et traductions (${d.resources.length})`], ['rec', 'Récitateurs']]} value={tab} onChange={(k) => { setTab(k); }} />
+        <Metrics cols="three" items={[
+          { icon: 'book', label: 'Texte arabe', value: stats.text ? `${stats.text.verseCount} / ${d.totalExpected}` : 'non importé', tone: stats.text && stats.text.verseCount === d.totalExpected ? 'green' : 'blue', note: 'versets' },
+          { icon: 'check', tone: 'green', label: 'Ressources affichées', value: `${stats.shown} sur ${stats.total}`, note: 'visibles par les membres' },
+          { icon: 'alert', tone: stats.todo ? 'amber' : 'blue', label: 'À faire', value: stats.todo, note: 'à importer ou sans licence' },
+        ]} />
+        {msg && <p role="status" style={{ color: 'var(--green)' }}>✓ {msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        {tab === 'rec' ? <Panel title="Récitateurs"><div className="bm-form" style={{ padding: '4px 14px 14px' }}><QuranReciters /></div></Panel> : (
+          <Ax kind="three-columns">
+            <Panel title="Ressources">
+              <Pills names={[['', 'Tout'], ...KINDS]} value={fKind} onChange={setFKind} />
+              <SelectList empty={t('qrAdNone')} value={cur?.id} onSelect={(id) => { setSelId(id); setForm(null); setImp(null); }}
+                items={rows.map((x) => ({ id: x.id, title: x.name, sub: `${kindName(x.kind)} · ${x.lang.toUpperCase()}`, tail: <Badge tone={imported(x) ? (x.enabled ? 'green' : 'blue') : 'amber'}>{imported(x) ? (x.enabled ? 'Affichée' : `${x.verseCount} versets`) : 'À importer'}</Badge> }))} />
+            </Panel>
+            <Panel title="Détail de la ressource">
+              {cur && !form && !imp ? (
+                <>
+                  <Overline>FICHE ÉDITORIALE</Overline>
+                  <h2 className={c('ax-big-title')}>{cur.name}</h2>
+                  <p className={c('ax-soft')}>{kindName(cur.kind)} · {cur.lang.toUpperCase()}</p>
+                  <Meta items={[
+                    ['Auteur / traducteur', cur.author || '—'],
+                    ['Contenu', imported(cur) ? `${cur.verseCount} versets` : 'Non importée'],
+                    ['Licence', cur.license ? <Badge key="l" tone="green">{cur.license}</Badge> : <Badge key="l" tone="amber">À renseigner avant affichage</Badge>],
+                    ['Crédit', cur.credit || '—'],
+                    ['Source', cur.sourceUrl ? <a key="s" href={cur.sourceUrl} target="_blank" rel="noreferrer">{cur.sourceUrl}</a> : '—'],
+                  ]} />
+                  <div className={c('ax-quality')}><span style={{ flex: 1 }}>Affichée sur le site{!imported(cur) && !cur.enabled ? ' (après import)' : ''}</span><Switch on={cur.enabled} disabled={!imported(cur) && !cur.enabled} onChange={() => toggle(cur)} label="Affichée" /></div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '14px 15px 0' }}>
+                    <Btn onClick={() => { setImp({ res: cur, format: ['words', 'tajweed'].includes(cur.kind) ? 'json' : 'tanzil', url: '', content: '' }); setForm(null); setErr(''); setMsg(''); setPanel(false); }}>{imported(cur) ? 'Réimporter' : 'Importer le contenu'}</Btn>
+                    <Btn primary={false} onClick={() => { setForm({ ...cur }); setImp(null); setErr(''); setMsg(''); }}>Modifier</Btn>
+                    <Btn primary={false} onClick={() => del(cur)}>Supprimer</Btn>
+                  </div>
+                </>
+              ) : !cur && !form && !imp ? <p style={{ padding: 14, color: 'var(--muted)' }}>Aucune ressource : importez-en une depuis la colonne de droite.</p> : (
+                <div className="bm-form" style={{ padding: '4px 14px 14px' }}>{renderForm()}{renderImp()}</div>
+              )}
+            </Panel>
+            <Panel title="Import & validation">
+              <div className="bm-form" style={{ padding: '4px 14px 14px' }}>
+                {renderOptions(true)}
+                <Hint>Aucun texte n’est fourni avec le logiciel : importez uniquement des contenus dont la licence le permet, renseignez la licence et le crédit exigés par la source, puis relisez avant d’afficher.</Hint>
+              </div>
+            </Panel>
+          </Ax>
+        )}
+      </Page>
+    );
+  }
+  return (
+    <section className="qa">
+      <header className="aa-head">
+        <div>
+          <h2>{t('qrAdTitle')}</h2>
+          <p className="meta">{t('qrAdIntro')} <Link className="link u" href="/coran">{t('qrAdOpen')}</Link></p>
+          <p className="meta small">{t('qrAdLicence')}</p>
+        </div>
+        {!working && <div className="aa-actions"><button type="button" className="btn" onClick={() => setPanel(!panel)} aria-expanded={panel}>Importer une ressource</button></div>}
+      </header>
+
+      <div className="aa-kpis">
+        <div className="aa-kpi"><span>Texte arabe</span><b style={{ color: stats.text && stats.text.verseCount === d.totalExpected ? 'var(--ok)' : undefined }}>{stats.text ? `${stats.text.verseCount} / ${d.totalExpected}` : 'non importé'}</b><small>versets</small></div>
+        <div className="aa-kpi"><span>Ressources affichées</span><b>{stats.shown} sur {stats.total}</b><small>visibles par les membres</small></div>
+        <div className={`aa-kpi${stats.todo ? ' warn' : ''}`}><span>À faire</span><b>{stats.todo}</b><small>à importer ou sans licence</small></div>
+      </div>
+      {msg && <p className="meta" role="status">✓ {msg}</p>}
+      {err && <p className="error" role="alert">{err}</p>}
+
+      {renderOptions(panel && !working)}
+      {renderForm()}
+      {renderImp()}
 
       {!working && (
         <>

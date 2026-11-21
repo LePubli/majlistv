@@ -5,13 +5,14 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import { BulkBar, SelectAll, useSelection } from './BulkTools';
+import { Page, Metrics, Panel, Cols, Btn, Badge, Overline, Hint, c } from './backoffice/Kit';
 
 const L = [['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']];
 const EMPTY = { audience: 'adult', day: 1, title: { fr: '', en: '', ar: '' }, text: { fr: '', en: '', ar: '' }, link: '', reference: '', position: 0, validated: false, enabled: false };
 const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((d) => d.message).join(' ; ') : t('errGeneric'));
 
 export default function RamadanAdmin() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [d, setD] = useState(null);
   const [form, setForm] = useState(null);
   const [imp, setImp] = useState(null);
@@ -65,15 +66,8 @@ export default function RamadanAdmin() {
   if (!d) return null;
   const st = d.status;
   const shown = d.items.filter((x) => (!fAud || x.audience === fAud) && (!fSt || (fSt === 'todo' ? !x.validated : fSt === 'valid' ? x.validated && !x.enabled : x.enabled)));
-  return (
-    <section>
-      <h2>Circuit de Ramadan</h2>
-      <p className="meta">Actions proposées chaque jour de Ramadan aux membres connectés (page <Link className="link u" href="/ramadan">/ramadan</Link>, gratuite). Aucun contenu n’est fourni : saisissez chaque action avec, si besoin, sa référence et un lien vers une page du site. Une action n’est montrée qu’une fois <b>validée</b> et <b>affichée</b>. Jour 0 = chaque jour. Les membres cochent aussi leurs tarawih. Les actions « Enfants » apparaissent dans l’espace Kids pendant Ramadan : l’enfant dit « je l’ai fait », le parent valide (aucune comparaison entre enfants). Import : ajoutez <code>"audience":"kid"</code>.</p>
-      <p className="meta">{st.active ? `Aujourd’hui : jour ${st.day} de Ramadan ${st.hyear}.` : st.startsOn ? `Prochain Ramadan : ${new Date(`${st.startsOn}T12:00:00Z`).toLocaleDateString('fr-FR', { dateStyle: 'long' })} (dans ${st.daysToStart} jours).` : ''} Décalage de date : <Link className="link u" href="/admin?tab=settings">Paramètres → Saisons</Link>.</p>
-      {msg && <p className="meta" role="status">✓ {msg}</p>}
-      {err && <p className="error" role="alert">{err}</p>}
-      {!form && imp === null && <p><button type="button" className="btn" onClick={() => { setForm(JSON.parse(JSON.stringify(EMPTY))); setMsg(''); setErr(''); }}>Ajouter une action</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(''); setMsg(''); setErr(''); }}>Importer une liste (JSON)</button></p>}
-      {form && (
+  const renderForm = () => (
+      form && (
         <form className="reg-form" onSubmit={save}>
           <label>Public<select value={form.audience} onChange={set('audience')}><option value="adult">Adultes (page /ramadan)</option><option value="kid">Enfants (espace Kids, validé par le parent)</option></select></label>
           <label>Jour (0 = chaque jour)<input type="number" min="0" max="30" value={form.day} onChange={set('day')} dir="ltr" /></label>
@@ -86,15 +80,91 @@ export default function RamadanAdmin() {
           <label className="chk"><input type="checkbox" role="switch" checked={form.enabled} disabled={!form.validated} onChange={set('enabled')} /> Affichée aux membres (seulement si validée)</label>
           <p><button className="btn">Enregistrer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
-      )}
-      {imp !== null && (
+      )
+  );
+  const renderImp = () => (
+      imp !== null && (
         <form className="reg-form" onSubmit={runImport}>
           <p className="meta small">Liste JSON : <code>{'[{"day":1,"titleFr":"…","textFr":"…","titleEn":"…","titleAr":"…","link":"/coran/1","reference":"…"}]'}</code> — jour 0 = chaque jour. Les actions importées arrivent non validées et non affichées.</p>
           <label>Fichier JSON<input type="file" accept=".json,application/json" onChange={readFile} /></label>
           <label>… ou contenu<textarea rows={6} value={imp} onChange={(e) => setImp(e.target.value)} dir="ltr" /></label>
           <p><button className="btn" disabled={!imp.trim()}>Importer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
         </form>
-      )}
+      )
+  );
+  if (skin === 'premium') {
+    const validCount = d.items.filter((x) => x.validated).length;
+    const dayLabel = (x) => (x.day ? `Jour ${String(x.day).padStart(2, '0')}` : 'Chaque jour');
+    return (
+      <Page title="Ramadan — programmation" sub="Construisez le circuit de Ramadan : une action par jour, relue et validée avant d’être montrée aux membres."
+        actions={!form && imp === null ? <Btn onClick={() => { setForm(JSON.parse(JSON.stringify(EMPTY))); setMsg(''); setErr(''); }}>Ajouter une action</Btn> : null}>
+        <div className={c('ax-ramadan-hero')}>
+          <div>
+            <span className={c('badge amber')}>TEMPS FORT</span>
+            <h2>{st.active ? `Ramadan ${st.hyear} — jour ${st.day}` : st.startsOn ? `Ramadan ${st.hyear || ''}` : 'Ramadan'}</h2>
+            <p>{st.active ? 'Le circuit est en cours.' : st.startsOn ? `Prochain Ramadan : ${new Date(`${st.startsOn}T12:00:00Z`).toLocaleDateString('fr-FR', { dateStyle: 'long' })} (dans ${st.daysToStart} jours).` : 'Les dates seront calculées automatiquement.'} Page publique : <Link href="/ramadan">/ramadan</Link>.</p>
+            <div className={c('btn-row')} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Btn primary={false} onClick={() => { setImp(''); setForm(null); setMsg(''); setErr(''); }}>Importer un fichier JSON</Btn>
+            </div>
+          </div>
+        </div>
+        <Metrics items={[
+          { icon: 'video', label: 'Actions', value: d.items.length },
+          { icon: 'check', tone: 'green', label: 'Validées', value: validCount },
+          { icon: 'eye', label: 'Affichées aux membres', value: d.items.filter((x) => x.enabled).length },
+          { icon: 'clock', tone: 'amber', label: 'À valider', value: d.items.length - validCount },
+        ]} />
+        {msg && <p role="status" style={{ color: 'var(--green)' }}>✓ {msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        <Cols kind="two-main">
+          <Panel title="Calendrier éditorial" extra={`${shown.length} sur ${d.items.length}`}>
+            <div className={`${c('inline-tools')} bm-form`} style={{ padding: '0 14px' }}>
+              <select aria-label="Public" value={fAud} onChange={(e) => setFAud(e.target.value)}><option value="">Tous les publics</option><option value="adult">Adultes</option><option value="kid">Enfants</option></select>
+              <select aria-label="Statut" value={fSt} onChange={(e) => setFSt(e.target.value)}><option value="">Tous les statuts</option><option value="todo">À valider</option><option value="valid">Validées, non affichées</option><option value="shown">Affichées</option></select>
+            </div>
+            <div className="bm-form" style={{ padding: '0 14px' }}>
+              <BulkBar count={sel.count} busy={busy} onRun={bulk} onClear={sel.clear}>
+                <select aria-label="Changer le public" value={chg.audience} onChange={(e) => setChg({ ...chg, audience: e.target.value })}><option value="">Public…</option><option value="adult">Adultes</option><option value="kid">Enfants</option></select>
+                <input type="number" min="0" max="30" placeholder="Jour" aria-label="Changer le jour (0 = chaque jour)" value={chg.day} onChange={(e) => setChg({ ...chg, day: e.target.value })} dir="ltr" />
+                <button type="button" className="btn ghost small" disabled={busy || (!chg.audience && chg.day === '')} onClick={() => bulk('update')}>Appliquer</button>
+              </BulkBar>
+            </div>
+            <div className={c('ax-schedule')}>
+              {shown.length === 0 && <p style={{ padding: 14, color: 'var(--muted)' }}>{d.items.length ? 'Aucune action ne correspond aux filtres.' : 'Aucune action pour le moment : ajoutez-en une ou importez un fichier.'}</p>}
+              {shown.map((x) => (
+                <div key={x.id} className={c('ax-schedule-item')}>
+                  <span><input type="checkbox" aria-label={`Sélectionner l’action ${x.id}`} checked={sel.has(x.id)} onChange={() => sel.toggle(x.id)} /> {dayLabel(x)}</span>
+                  <div><b>{x.title.fr || x.title.en || x.title.ar}</b><small>{x.audience === 'kid' ? 'Enfants' : 'Adultes'}{x.reference ? ` · ${x.reference}` : ''}</small></div>
+                  <Badge tone={x.enabled ? 'green' : x.validated ? 'blue' : 'amber'}>{x.enabled ? 'Affichée' : x.validated ? 'Validée' : 'À valider'}</Badge>
+                  <span style={{ display: 'inline-flex', gap: 6 }}>
+                    <Btn primary={false} onClick={() => { setForm(JSON.parse(JSON.stringify(x))); setImp(null); setErr(''); setMsg(''); }}>Modifier</Btn>
+                    <Btn primary={false} onClick={() => del(x)}>Supprimer</Btn>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+          <Panel title={form ? (form.id ? 'Modifier l’action' : 'Nouvelle action') : imp !== null ? 'Importer des actions' : 'Éditeur d’action'}>
+            <div className="bm-form" style={{ padding: '4px 14px 14px' }}>
+              {!form && imp === null && <Hint>Aucun contenu n’est fourni avec le logiciel : saisissez chaque action avec sa référence. Une action n’est montrée qu’une fois validée (relue par une personne qualifiée) et affichée.</Hint>}
+              {renderForm()}
+              {renderImp()}
+            </div>
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
+  return (
+    <section>
+      <h2>Circuit de Ramadan</h2>
+      <p className="meta">Actions proposées chaque jour de Ramadan aux membres connectés (page <Link className="link u" href="/ramadan">/ramadan</Link>, gratuite). Aucun contenu n’est fourni : saisissez chaque action avec, si besoin, sa référence et un lien vers une page du site. Une action n’est montrée qu’une fois <b>validée</b> et <b>affichée</b>. Jour 0 = chaque jour. Les membres cochent aussi leurs tarawih. Les actions « Enfants » apparaissent dans l’espace Kids pendant Ramadan : l’enfant dit « je l’ai fait », le parent valide (aucune comparaison entre enfants). Import : ajoutez <code>"audience":"kid"</code>.</p>
+      <p className="meta">{st.active ? `Aujourd’hui : jour ${st.day} de Ramadan ${st.hyear}.` : st.startsOn ? `Prochain Ramadan : ${new Date(`${st.startsOn}T12:00:00Z`).toLocaleDateString('fr-FR', { dateStyle: 'long' })} (dans ${st.daysToStart} jours).` : ''} Décalage de date : <Link className="link u" href="/admin?tab=settings">Paramètres → Saisons</Link>.</p>
+      {msg && <p className="meta" role="status">✓ {msg}</p>}
+      {err && <p className="error" role="alert">{err}</p>}
+      {!form && imp === null && <p><button type="button" className="btn" onClick={() => { setForm(JSON.parse(JSON.stringify(EMPTY))); setMsg(''); setErr(''); }}>Ajouter une action</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(''); setMsg(''); setErr(''); }}>Importer une liste (JSON)</button></p>}
+      {renderForm()}
+      {renderImp()}
       <div className="adm-filters">
         <label>Public<select value={fAud} onChange={(e) => setFAud(e.target.value)}><option value="">Tous</option><option value="adult">Adultes</option><option value="kid">Enfants</option></select></label>
         <label>Statut<select value={fSt} onChange={(e) => setFSt(e.target.value)}><option value="">Tous</option><option value="todo">À valider</option><option value="valid">Validées, non affichées</option><option value="shown">Affichées</option></select></label>

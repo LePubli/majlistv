@@ -147,3 +147,35 @@ export function Line({ values, labels = [], unit = '', height = 230 }) {
     </div>
   );
 }
+
+/* ---- Éléments des écrans « métier » de la maquette (préfixe ax-) ---- */
+export function Switch({ on, onChange, label, disabled }) {
+  return (
+    <button type="button" role="switch" aria-checked={!!on} aria-label={label} disabled={disabled} className={c(`switch ${on ? 'on' : ''}`)} onClick={() => onChange(!on)}><i /></button>
+  );
+}
+export function Pills({ names, value, onChange }) {
+  return <div className={c('ax-pill-row')}>{names.map(([id, label]) => <button key={id} type="button" className={c(`ax-pill ${value === id ? 'on' : ''}`)} onClick={() => onChange(id)}>{label}</button>)}</div>;
+}
+// Liste de choix numérotée : items = [{ id, title, sub, tail }].
+export function SelectList({ items, value, onSelect, empty }) {
+  if (!items.length && empty) return <p style={{ padding: 14, color: 'var(--muted)' }}>{empty}</p>;
+  return (
+    <div className={c('ax-item-stack')}>
+      {items.map((x, i) => (
+        <button key={x.id} type="button" className={c(`ax-select-item ${value === x.id ? 'selected' : ''}`)} onClick={() => onSelect(x.id)}>
+          <span className={c('ax-index')}>{String(i + 1).padStart(2, '0')}</span>
+          <span><b>{x.title}</b><small>{x.sub}</small></span>
+          {x.tail}
+          <I name="chevron" size={15} />
+        </button>
+      ))}
+    </div>
+  );
+}
+export function Quality({ icon = 'check', children, tail }) { return <div className={c('ax-quality')}><I name={icon} size={17} /><span>{children}</span>{tail}</div>; }
+export function Hint({ children }) { return <div className={c('hint-box')}>{children}</div>; }
+export function Overline({ children }) { return <span className={c('ax-overline')}>{children}</span>; }
+export function Program({ time, title, sub, tail }) { return <div className={c('ax-program')}><span>{time}</span><div><b>{title}</b><small>{sub}</small></div>{tail}</div>; }
+export function AxRow({ icon = 'file', label, detail, tail }) { return <div className={c('ax-row')}><span className={c('ax-icon')}><I name={icon} size={17} /></span><span className={c('ax-row-main')}><b>{label}</b><small>{detail}</small></span><span className={c('ax-row-tail')}>{tail}</span></div>; }
+export function Ax({ kind = 'three-columns', children }) { return <div className={c(`ax-${kind}`)}>{children}</div>; }

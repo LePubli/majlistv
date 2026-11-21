@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
+import { Page, Metrics, Panel, Btn, Badge, Overline, I, c } from './backoffice/Kit';
 
 const L = [['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']];
 const day = (s) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateString('fr-FR', { dateStyle: 'long' }) : '—');
@@ -61,7 +62,8 @@ function SeasonCard({ s, collections, onSaved }) {
 }
 
 export default function SeasonsAdmin() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
+  const [open, setOpen] = useState(null);   // thème Premium : saison dont le programme est ouvert
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   const load = useCallback(async () => {
@@ -71,6 +73,37 @@ export default function SeasonsAdmin() {
   useEffect(() => { load(); }, [load]);
   if (err) return <p className="error" role="alert">{err}</p>;
   if (!d) return null;
+  if (skin === 'premium') {
+    const cur = d.seasons.find((x) => x.id === open) || null;
+    return (
+      <Page title="Saisons & temps forts" sub="Anticipez les pages de saison et les rendez-vous éditoriaux : période, collection associée, notification.">
+        <Metrics cols="three" items={[
+          { icon: 'calendar', label: 'Saisons', value: d.seasons.length },
+          { icon: 'check', tone: 'green', label: 'Activées', value: d.seasons.filter((x) => x.enabled).length },
+          { icon: 'clock', tone: 'amber', label: 'En cours maintenant', value: d.seasons.filter((x) => x.state.active).length, note: `Aujourd’hui : ${d.today.text}` },
+        ]} />
+        <div className={c('ax-season-grid')}>
+          {d.seasons.map((x) => (
+            <article key={x.id} className={c('ax-season-card')}>
+              <div>
+                <Overline>SAISON ÉDITORIALE</Overline>
+                <h3>{x.name}</h3>
+                <p>{day(x.state.startsOn)} → {day(x.state.endsOn)} · année {x.state.hijriYear}</p>
+                <Badge tone={x.state.active ? (x.enabled ? 'green' : 'amber') : x.enabled ? 'blue' : 'gray'}>{x.state.active ? (x.enabled ? 'Visible maintenant' : 'En cours (désactivée)') : x.enabled ? 'Planifiée' : 'Désactivée'}</Badge>
+                {' '}<Btn primary={false} onClick={() => setOpen(open === x.id ? null : x.id)}>{open === x.id ? 'Fermer le programme' : 'Ouvrir le programme'}</Btn>
+              </div>
+            </article>
+          ))}
+        </div>
+        {cur && (
+          <Panel title={`Programme — ${cur.name}`}>
+            <div className="bm-form" style={{ padding: '4px 14px 14px' }}><SeasonCard key={cur.id} s={cur} collections={d.collections} onSaved={load} /></div>
+          </Panel>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: 11 }}>Calendrier Umm al-Qura, décalage {d.offset >= 0 ? '+' : ''}{d.offset} jour — réglable dans <Link href="/admin?tab=settings">Paramètres</Link>.</p>
+      </Page>
+    );
+  }
   return (
     <section>
       <h2>{t('seasonTitle')}</h2>

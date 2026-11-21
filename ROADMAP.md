@@ -711,3 +711,5 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, « maquette exacte » lot B (Statistiques, Revenus / rémunération, Catégories et formats, Intervenants, Veille) : fait 21/11. Suite par lots, sur « go ».
 
 - Back-office Premium, « maquette exacte » lot C (Coran, Adhkar, Ramadan, Saisons, Vendredi : titre, chiffres réels, panneau) : fait 21/11. Suite par lots, sur « go ».
+
+- Back-office Premium, lot C recomposé comme la maquette (Coran, Adhkar, Ramadan, Saisons, Vendredi : composition intérieure complète, remplace l'habillage en cadre) : fait 21/11. Suite par lots (Publicités, Tests A/B, Cartes cadeaux, Ventes à l'unité, Parrainage), sur « go ».

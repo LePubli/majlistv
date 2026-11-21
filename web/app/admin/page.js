@@ -1275,11 +1275,11 @@ export default function Admin() {
         {tab === 'errors' && <ErrorsAdmin />}
         {tab === 'ask' && <AskAdmin />}
         {tab === 'referral' && <ReferralAdmin />}
-        {tab === 'seasons' && (skin === 'premium' ? <SeasonsFrame><SeasonsAdmin /></SeasonsFrame> : <SeasonsAdmin />)}
-        {tab === 'friday' && (skin === 'premium' ? <FridayFrame><FridayAdmin /></FridayFrame> : <FridayAdmin />)}
-        {tab === 'athkar' && (skin === 'premium' ? <AthkarFrame><AthkarAdmin /></AthkarFrame> : <AthkarAdmin />)}
-        {tab === 'ramadan' && (skin === 'premium' ? <RamadanFrame><RamadanAdmin /></RamadanFrame> : <RamadanAdmin />)}
-        {tab === 'quran' && (skin === 'premium' ? <QuranFrame><QuranAdmin /></QuranFrame> : <QuranAdmin />)}
+        {tab === 'seasons' && <SeasonsAdmin />}
+        {tab === 'friday' && <FridayAdmin />}
+        {tab === 'athkar' && <AthkarAdmin />}
+        {tab === 'ramadan' && <RamadanAdmin />}
+        {tab === 'quran' && <QuranAdmin />}
         {tab === 'regions' && <PricingRegionsAdmin />}
         {tab === 'sales' && <SalesAdmin />}
         {tab === 'lifecycle' && <LifecycleAdmin />}

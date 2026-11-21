@@ -4,6 +4,7 @@
 // Écran : bilan, thèmes avec progression, filtres, une carte par dhikr avec deux interrupteurs (Relu / Affiché), fiche d'édition,
 // mode relecture (un dhikr à la fois, avec la note de l'assistant), actions en lot, import JSON, restauration des dhikr fournis.
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Page, Metrics, Panel, Pills, SelectList, Hint, Overline, Quality, Btn, Badge, Switch, Progress, Ax, c } from './backoffice/Kit';
 import { useApp } from './Providers';
 import { BulkBar, SelectAll, useSelection } from './BulkTools';
 
@@ -21,7 +22,7 @@ const errOf = (r, t) => r.data?.error || (r.data?.details ? r.data.details.map((
 const cut = (s, n) => (s && s.length > n ? `${s.slice(0, n)}…` : s || '');
 
 export default function AthkarAdmin() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [d, setD] = useState(null);
   const [form, setForm] = useState(null);
   const [imp, setImp] = useState(null);
@@ -31,6 +32,7 @@ export default function AthkarAdmin() {
   const [limit, setLimit] = useState(PAGE);
   const [busy, setBusy] = useState(false);
   const [chg, setChg] = useState({ category: '', theme: '', target: '' });
+  const [selId, setSelId] = useState(null);
   const [rv, setRv] = useState(null); // mode relecture : { ids: [...], i: 0 }
   const load = useCallback(async () => {
     const r = await call('/admin/athkar');
@@ -120,7 +122,8 @@ export default function AthkarAdmin() {
   );
 
   if (rv && cur && !editing) {
-    return (
+    const wrapPm = (el) => (skin === 'premium' ? <Page title="Adhkar & invocations" sub="Relecture des invocations, une par une."><Panel title="Relecture"><div className="bm-form" style={{ padding: '4px 14px 14px' }}>{el}</div></Panel></Page> : el);
+    return wrapPm(
       <section className="aa">
         <div className="aa-rvhead">
           <button type="button" className="btn ghost" onClick={() => { setRv(null); load(); }}>← Liste des adhkar</button>
@@ -159,6 +162,111 @@ export default function AthkarAdmin() {
     );
   }
 
+  const renderForm = () => editing && (
+        <form className="reg-form aa-form" onSubmit={save}>
+          <h3>{form.id ? `Modifier le dhikr n° ${form.id}` : 'Nouveau dhikr'}</h3>
+          {form.reviewNote && <div className="aa-note"><b>Note de l’assistant</b><p>{form.reviewNote}</p></div>}
+          <div className="aa-grid">
+            <label>Thème<select value={form.theme} onChange={set('theme')}><option value="">Automatique (selon le moment et le lot)</option>{THEMES.map((k) => <option key={k} value={k}>{THEME_NAMES[k]}</option>)}</select></label>
+            <label>Moment<select value={form.category} onChange={set('category')}>{CATS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
+            <label>Nombre de répétitions<input type="number" min="1" max="1000" value={form.target} onChange={set('target')} dir="ltr" /></label>
+            <label>Ordre<input type="number" min="0" max="10000" value={form.position} onChange={set('position')} dir="ltr" /></label>
+          </div>
+          <label>Texte arabe<textarea required rows={3} value={form.textAr} onChange={set('textAr')} dir="rtl" lang="ar" /></label>
+          <label>Phonétique (facultatif)<textarea rows={2} value={form.translit} onChange={set('translit')} dir="ltr" /></label>
+          <label>Traduction française<textarea rows={2} value={form.trFr} onChange={set('trFr')} /></label>
+          <label>Traduction anglaise (facultatif)<textarea rows={2} value={form.trEn} onChange={set('trEn')} dir="ltr" /></label>
+          <label>Référence (obligatoire)<input required minLength={3} maxLength={500} value={form.reference} onChange={set('reference')} /></label>
+          <label>Note de relecture (jamais montrée aux membres)<textarea rows={2} maxLength={1000} value={form.reviewNote} onChange={set('reviewNote')} /></label>
+          <label className="chk"><input type="checkbox" checked={form.validated} onChange={set('validated')} /> Relu : texte et référence validés par une personne qualifiée</label>
+          <label className="chk"><input type="checkbox" checked={form.enabled} disabled={!form.validated} onChange={set('enabled')} /> Affiché aux membres (seulement si relu)</label>
+          <p><button className="btn">Enregistrer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
+        </form>
+      );
+  const renderImp = () => importing && (
+        <form className="reg-form aa-form" onSubmit={runImport}>
+          <p className="meta small">Liste JSON : <code>{'[{"category":"morning","theme":"matin_soir","textAr":"…","translit":"…","trFr":"…","trEn":"…","reference":"…","target":3}]'}</code>. Moments : morning, evening, after_prayer, sleep, general. Thèmes : {THEMES.join(', ')} (facultatif : déduit sinon). Les dhikr importés arrivent non relus et non affichés.</p>
+          <label>Fichier JSON<input type="file" accept=".json,application/json" onChange={readFile} /></label>
+          <label>… ou contenu<textarea rows={6} value={imp} onChange={(e) => setImp(e.target.value)} dir="ltr" /></label>
+          <p><button className="btn" disabled={!imp.trim()}>Importer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
+        </form>
+      );
+  if (skin === 'premium') {
+    const items = shown.slice(0, limit);
+    const sel1 = d.items.find((x) => x.id === selId) || shown[0] || null;
+    const cutP = (t0, n) => (t0 && t0.length > n ? `${t0.slice(0, n)}…` : t0 || '');
+    return (
+      <Page title="Adhkar & invocations" sub="Gérez les textes, sources, traductions et cycles de relecture."
+        actions={!editing && !importing ? <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+          <Btn onClick={() => { setForm({ ...EMPTY }); setMsg(''); setErr(''); }}>Ajouter une invocation</Btn>
+          <Btn primary={false} onClick={() => { setImp(''); setMsg(''); setErr(''); }}>Importer (JSON)</Btn>
+          <Btn primary={false} disabled={busy} onClick={restore}>Restaurer les fournis</Btn>
+        </span> : null}>
+        <Metrics cols="three" items={[
+          { icon: 'book', label: 'Invocations', value: stats.total },
+          { icon: 'shield', tone: 'green', label: 'Relues (sources validées)', value: `${stats.valid} / ${stats.total}`, note: stats.total ? `${Math.round((100 * stats.valid) / stats.total)} %` : '' },
+          { icon: 'clock', tone: stats.todo ? 'amber' : 'blue', label: 'Relectures en attente', value: stats.todo, note: stats.todo ? 'À traiter' : '' },
+        ]} />
+        {msg && <p role="status" style={{ color: 'var(--green)' }}>✓ {msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        {(editing || importing) ? (
+          <Panel title={editing ? (form.id ? `Modifier l’invocation n° ${form.id}` : 'Nouvelle invocation') : 'Importer des invocations'}>
+            <div className="bm-form" style={{ padding: '4px 14px 14px' }}>{renderForm()}{renderImp()}</div>
+          </Panel>
+        ) : (
+          <Ax kind="three-columns">
+            <Panel title="Collections">
+              <SelectList value={fTheme} onSelect={(id) => setFTheme(id)}
+                items={[{ id: '', title: 'Toutes les collections', sub: `${stats.valid} / ${stats.total} relues` }, ...THEMES.map((k) => ({ id: k, title: THEME_NAMES[k], sub: `${stats.per[k].valid} / ${stats.per[k].total} relues`, tail: <Badge tone={stats.per[k].total && stats.per[k].valid === stats.per[k].total ? 'green' : 'amber'}>{stats.per[k].total && stats.per[k].valid === stats.per[k].total ? 'Validé' : 'À relire'}</Badge> }))]} />
+            </Panel>
+            <Panel title="Invocations" extra={`${shown.length} sur ${d.items.length}`}>
+              <Pills names={STATUS} value={fSt} onChange={setFSt} />
+              <div className="bm-form" style={{ padding: '0 14px' }}>
+                <div className={c('inline-tools')}>
+                  <input type="search" placeholder="Rechercher (arabe, français, source)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher" />
+                  <select aria-label="Moment" value={fCat} onChange={(e) => setFCat(e.target.value)}><option value="">Tous les moments</option>{CATS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>
+                </div>
+                <BulkBar count={sel.count} busy={busy} onRun={bulk} onClear={sel.clear}>
+                  <select aria-label="Changer le thème" value={chg.theme} onChange={(e) => setChg({ ...chg, theme: e.target.value })}><option value="">Thème…</option>{THEMES.map((k) => <option key={k} value={k}>{THEME_NAMES[k]}</option>)}</select>
+                  <select aria-label="Changer le moment" value={chg.category} onChange={(e) => setChg({ ...chg, category: e.target.value })}><option value="">Moment…</option>{CATS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>
+                  <input type="number" min="1" max="1000" placeholder="Répét." aria-label="Répétitions" value={chg.target} onChange={(e) => setChg({ ...chg, target: e.target.value })} dir="ltr" />
+                  <button type="button" className="btn ghost small" disabled={busy || (!chg.category && !chg.theme && !chg.target)} onClick={() => bulk('update')}>Appliquer</button>
+                </BulkBar>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', padding: '6px 0' }}>
+                  <SelectAll visible={shown.map((x) => x.id)} selection={sel} /> <small>Tout sélectionner</small>
+                  {shown.some((x) => !x.validated) && <Btn primary={false} onClick={startReview}>Relire un par un ({shown.filter((x) => !x.validated).length})</Btn>}
+                </div>
+              </div>
+              <SelectList empty={d.items.length ? 'Aucune invocation ne correspond aux filtres.' : 'Aucune invocation. « Restaurer les fournis » les recharge.'} value={sel1?.id} onSelect={setSelId}
+                items={items.map((x) => ({ id: x.id, title: cutP(x.trFr, 70) || cutP(x.textAr, 50), sub: `n° ${x.id} · ${THEME_NAMES[x.theme] || x.theme} · ${x.target} fois`, tail: <Badge tone={x.enabled ? 'green' : x.validated ? 'blue' : 'amber'}>{x.enabled ? 'Affichée' : x.validated ? 'Relue' : 'À relire'}</Badge> }))} />
+              {shown.length > limit && <div style={{ padding: '0 14px 14px' }}><Btn primary={false} onClick={() => setLimit(limit + PAGE)}>Afficher {Math.min(PAGE, shown.length - limit)} de plus ({shown.length - limit} restants)</Btn></div>}
+            </Panel>
+            <Panel title="Fiche de validation">
+              {sel1 ? (
+                <>
+                  <Overline>INVOCATION N° {sel1.id}</Overline>
+                  <p lang="ar" dir="rtl" style={{ fontSize: 20, lineHeight: 1.9, margin: '10px 15px' }}>{sel1.textAr}</p>
+                  {sel1.translit && <p dir="ltr" style={{ margin: '0 15px 10px', color: 'var(--muted)', fontStyle: 'italic' }}>{sel1.translit}</p>}
+                  <p style={{ margin: '0 15px 10px' }}>{sel1.trFr || '—'}</p>
+                  <p style={{ margin: '0 15px 14px', color: 'var(--muted)', fontSize: 11 }}>Référence : {sel1.reference}</p>
+                  {sel1.reviewNote && <div style={{ padding: '0 14px 12px' }}><Hint><b>Note de l’assistant</b><p>{sel1.reviewNote}</p></Hint></div>}
+                  <Quality icon={sel1.validated ? 'check' : 'clock'} tail={<Switch on={sel1.validated} disabled={busy} onChange={() => act([sel1.id], sel1.validated ? 'unvalidate' : 'validate', {}, true)} label="Relue" />}>Source relue par une personne qualifiée</Quality>
+                  <Quality icon={sel1.enabled ? 'check' : 'clock'} tail={<Switch on={sel1.enabled} disabled={busy || !sel1.validated} onChange={() => act([sel1.id], sel1.enabled ? 'hide' : 'show', {}, true)} label="Affichée" />}>Affichée aux membres</Quality>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 14 }}>
+                    <Btn onClick={() => { setForm({ ...sel1 }); setErr(''); setMsg(''); }}>Modifier</Btn>
+                    <Btn primary={false} onClick={() => del(sel1)}>Supprimer</Btn>
+                  </div>
+                </>
+              ) : <p style={{ padding: 14, color: 'var(--muted)' }}>Choisissez une invocation.</p>}
+              <div style={{ padding: '0 14px 14px' }}><Hint>Aucun texte religieux n’est inventé : chaque invocation doit avoir une source documentée et être relue avant d’être affichée.{stats.todo > 0 && !rv ? ' ' : ''}</Hint>
+                {stats.todo > 0 && <div style={{ marginTop: 10 }}><Btn onClick={startReviewFromAll}>Commencer la relecture ({stats.todo})</Btn></div>}
+              </div>
+            </Panel>
+          </Ax>
+        )}
+      </Page>
+    );
+  }
   return (
     <section className="aa">
       <header className="aa-head">
@@ -185,35 +293,8 @@ export default function AthkarAdmin() {
       {msg && <p className="meta" role="status">✓ {msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
 
-      {editing && (
-        <form className="reg-form aa-form" onSubmit={save}>
-          <h3>{form.id ? `Modifier le dhikr n° ${form.id}` : 'Nouveau dhikr'}</h3>
-          {form.reviewNote && <div className="aa-note"><b>Note de l’assistant</b><p>{form.reviewNote}</p></div>}
-          <div className="aa-grid">
-            <label>Thème<select value={form.theme} onChange={set('theme')}><option value="">Automatique (selon le moment et le lot)</option>{THEMES.map((k) => <option key={k} value={k}>{THEME_NAMES[k]}</option>)}</select></label>
-            <label>Moment<select value={form.category} onChange={set('category')}>{CATS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
-            <label>Nombre de répétitions<input type="number" min="1" max="1000" value={form.target} onChange={set('target')} dir="ltr" /></label>
-            <label>Ordre<input type="number" min="0" max="10000" value={form.position} onChange={set('position')} dir="ltr" /></label>
-          </div>
-          <label>Texte arabe<textarea required rows={3} value={form.textAr} onChange={set('textAr')} dir="rtl" lang="ar" /></label>
-          <label>Phonétique (facultatif)<textarea rows={2} value={form.translit} onChange={set('translit')} dir="ltr" /></label>
-          <label>Traduction française<textarea rows={2} value={form.trFr} onChange={set('trFr')} /></label>
-          <label>Traduction anglaise (facultatif)<textarea rows={2} value={form.trEn} onChange={set('trEn')} dir="ltr" /></label>
-          <label>Référence (obligatoire)<input required minLength={3} maxLength={500} value={form.reference} onChange={set('reference')} /></label>
-          <label>Note de relecture (jamais montrée aux membres)<textarea rows={2} maxLength={1000} value={form.reviewNote} onChange={set('reviewNote')} /></label>
-          <label className="chk"><input type="checkbox" checked={form.validated} onChange={set('validated')} /> Relu : texte et référence validés par une personne qualifiée</label>
-          <label className="chk"><input type="checkbox" checked={form.enabled} disabled={!form.validated} onChange={set('enabled')} /> Affiché aux membres (seulement si relu)</label>
-          <p><button className="btn">Enregistrer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setForm(null); setErr(''); }}>{t('regCancel')}</button></p>
-        </form>
-      )}
-      {importing && (
-        <form className="reg-form aa-form" onSubmit={runImport}>
-          <p className="meta small">Liste JSON : <code>{'[{"category":"morning","theme":"matin_soir","textAr":"…","translit":"…","trFr":"…","trEn":"…","reference":"…","target":3}]'}</code>. Moments : morning, evening, after_prayer, sleep, general. Thèmes : {THEMES.join(', ')} (facultatif : déduit sinon). Les dhikr importés arrivent non relus et non affichés.</p>
-          <label>Fichier JSON<input type="file" accept=".json,application/json" onChange={readFile} /></label>
-          <label>… ou contenu<textarea rows={6} value={imp} onChange={(e) => setImp(e.target.value)} dir="ltr" /></label>
-          <p><button className="btn" disabled={!imp.trim()}>Importer</button>{' '}<button type="button" className="btn ghost" onClick={() => { setImp(null); setErr(''); }}>{t('regCancel')}</button></p>
-        </form>
-      )}
+      {renderForm()}
+      {renderImp()}
 
       {!editing && !importing && (
         <div className="aa-layout">
