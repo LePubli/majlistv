@@ -37,7 +37,7 @@ import SeasonTheme from '../components/SeasonTheme'; // étape 45H : thème de s
 import AdhanPlayer from '../components/AdhanPlayer'; // adhan à l'heure de la prière (site ouvert)
 import PrayerGate from '../components/PrayerGate'; // étape 23a : pause de la lecture à l'heure de la prière
 import { visitorHeaders } from '../lib/visitorIp';
-import { V20_CSS } from '../lib/skin';
+import { V20_CSS, BO_CSS } from '../lib/skin';
 
 export const dynamic = 'force-dynamic';
 // Nom du site et durée de l'essai : réglés dans Admin → Paramètres (GET /config), à défaut variable APP_NAME.
@@ -85,7 +85,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang={locale} dir={DIR[locale]} data-skin={skin}>
       {/* Thème « Premium » (V20) : sa feuille n'est chargée que pour ce thème (≈ 230 Ko, inutile aux autres). */}
-      <head>{skin === 'premium' && <link id="v20-css" rel="stylesheet" href={V20_CSS} />}</head>
+      <head>{skin === 'premium' && <link id="v20-css" rel="stylesheet" href={V20_CSS} />}{skin === 'premium' && <link id="bo-css" rel="stylesheet" href={BO_CSS} />}</head>
       <body>
         {/* Thème publié (Admin → Apparence) : placé après la feuille de style du site, il la remplace. L'aperçu de
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}

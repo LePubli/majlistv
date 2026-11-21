@@ -31,6 +31,8 @@ const AppearanceAdmin = lazy(() => import('../../components/AppearanceAdmin'));
 const ModulesAdmin = lazy(() => import('../../components/ModulesAdmin'));
 const TextsAdmin = lazy(() => import('../../components/TextsAdmin'));
 const PagesAdmin = lazy(() => import('../../components/PagesAdmin'));
+const UsersViewPm = lazy(() => import('../../components/backoffice/UsersView')); // thème Premium : Utilisateurs de la maquette
+const AdminDashboardPm = lazy(() => import('../../components/backoffice/AdminDashboard')); // thème Premium : Vue d'ensemble de la maquette
 const CategoriesAdmin = lazy(() => import('../../components/CategoriesAdmin')); // nouveau catalogue, phase 2
 
 const ROLE_LABEL = { user: 'Utilisateur', organizer: 'Organisateur', moderator: 'Modérateur', admin: 'Administrateur' };
@@ -740,7 +742,8 @@ function UserSheet({ id, me, onClose, onChanged }) {
 }
 
 function Users({ me }) {
-  const { call } = useApp();
+  const { call, skin } = useApp();
+  const [peek, setPeek] = useState(null);   // thème Premium : membre affiché dans le panneau « Détail du membre »
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState('');
@@ -782,6 +785,20 @@ function Users({ me }) {
   };
   const pages = Math.max(1, Math.ceil(data.total / LIMIT));
   const subLabel = (u) => (u.premiumUntil && new Date(u.premiumUntil) > new Date() ? `Offert → ${fmt(u.premiumUntil)}` : (SUB_LABEL[u.subscriptionStatus] || '—'));
+  if (skin === 'premium') {
+    return (
+      <section>
+        <Suspense fallback={<p className="meta" role="status">Chargement…</p>}>
+          <UsersViewPm counts={counts} data={data} filters={FILTERS} q={q} setQ={setQ} role={role} setRole={setRole} status={status} setStatus={setStatus}
+            sort={sort} setSort={setSort} page={page} setPage={setPage} pages={pages} sel={sel} toggleOne={toggleOne} toggleAll={toggleAll} allShown={allShown}
+            bulkRole={bulkRole} setBulkRole={setBulkRole} applyRole={applyRole} clearSel={() => setSel(new Set())} bulkMsg={bulkMsg}
+            onCreate={() => setCreating(true)} onOpen={openSheet} subLabel={subLabel} peek={peek} setPeek={setPeek} />
+        </Suspense>
+        {creating && <NewUser onClose={() => setCreating(false)} onDone={(user) => { setCreating(false); load(); openSheet(user.id); }} />}
+        {open && <UserSheet id={open} me={me} onClose={() => openSheet(null)} onChanged={load} />}
+      </section>
+    );
+  }
   return (
     <section>
       {counts && (
@@ -1188,10 +1205,10 @@ export default function Admin() {
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
-      <h1 className="studio-title">{moduleTab ? moduleTab.title : (skin === 'premium' && tab === 'dashboard') ? "Vue d'ensemble" : titles[tab] || titles.dashboard}</h1>
-      {skin === 'premium' && SUBTITLE[tab || 'dashboard'] && <p className="bo-sub">{SUBTITLE[tab || 'dashboard']}</p>}
+      {!(skin === 'premium' && (tab === 'dashboard' || tab === 'users')) && <h1 className="studio-title">{moduleTab ? moduleTab.title : (skin === 'premium' && tab === 'dashboard') ? "Vue d'ensemble" : titles[tab] || titles.dashboard}</h1>}
+      {skin === 'premium' && tab !== 'dashboard' && tab !== 'users' && SUBTITLE[tab || 'dashboard'] && <p className="bo-sub">{SUBTITLE[tab || 'dashboard']}</p>}
       <Suspense fallback={<p className="meta" role="status">Chargement…</p>}>
-        {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && <Dashboard />}
+        {(tab === 'dashboard' || (!titles[tab] && !moduleTab)) && (skin === 'premium' ? <AdminDashboardPm /> : <Dashboard />)}
         {tab === 'users' && <Users me={user.id} />}
         {tab === 'features' && <FeaturesAdmin />}
         {tab === 'modules' && <ModulesAdmin />}

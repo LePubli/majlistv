@@ -345,3 +345,16 @@ html[data-skin="premium"] .studio-page > h1 + p, html[data-skin="premium"] .stud
 html[data-skin="premium"] .studio-page h2 { font-size: 17px; margin: 0; }
 html[data-skin="premium"] .studio-page > .tabs, html[data-skin="premium"] .studio-page > [role="tablist"] { margin-top: 2px; }
 html[data-skin="premium"] .studio-page .card { border-radius: 12px; }
+
+/* Back-office « maquette exacte » : les écrans recomposés (web/components/backoffice) vivent dans .bm-app (feuille bo-mock.css).
+   Embarqués dans la coque du site : pas de fond propre, pas de hauteur forcée. */
+html[data-skin="premium"] .bm-app.bm-embed{background:transparent;min-height:0;overflow:visible;font-size:13px}
+html[data-skin="premium"] .studio-page > .bm-app.bm-embed{margin:0}
+html[data-skin="premium"] .bm-embed .bm-data-table td:first-child{white-space:normal;min-width:150px}
+html[data-skin="premium"] .bm-embed .bm-data-table td .bm-badge{white-space:nowrap}
+html[data-skin="premium"] .bm-embed > .bm-panel{margin-bottom:14px}
+html[data-skin="premium"] .bm-embed .bm-metrics{margin-bottom:14px}
+html[data-skin="premium"] .bm-embed input[type="checkbox"]{width:16px!important;height:16px!important;min-width:16px;padding:0!important;border-radius:4px;accent-color:#008cff}
+html[data-skin="premium"] .bm-embed .bm-inline-tools{display:flex;flex-wrap:wrap;gap:10px}
+html[data-skin="premium"] .bm-embed .bm-inline-tools .bm-search-field{flex:2 1 240px}
+html[data-skin="premium"] .bm-embed .bm-inline-tools select{flex:1 1 140px;width:auto}

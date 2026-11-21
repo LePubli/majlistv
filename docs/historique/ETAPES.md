@@ -9874,3 +9874,10 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 - **Tous les écrans Admin / Studio** : titre 28 px, sous-titre, espacements resserrés (Premium seulement).
 - **Pas fait** : contrôles de la maquette absents de notre éditeur (vitesse, opacité, corrections colorimétriques, transition par extrait, médiathèque) : ils touchent le rendu FFmpeg, à traiter dans un lot 3b si tu le souhaites.
 - **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles.
+
+## Back-office Premium — « maquette exacte », lot A (21/11/2026)
+
+- **Méthode** : feuille `web/public/premium/bo-mock.css` (maquette Admin + Studio, classes `bm-…`) et composants `web/components/backoffice/Kit.js`, `AdminDashboard.js`, `UsersView.js` ; chargés seulement avec le thème Premium.
+- **Admin → Vue d'ensemble** et **Admin → Utilisateurs** recomposés comme la maquette, avec les vraies données et les vraies actions (invitation, filtres, rôle en lot, fiche complète).
+- **Non affiché faute de donnée réelle** : courbe d'audience, « Revenu mensuel » sans Stripe.
+- **Déploiement** : web seulement (majlistv-web), puis commandes VPS habituelles. **Debug** : `bo-mock.css` se régénère avec `python3 web/scripts/build-bo-css.py <dossier maquette>`.
