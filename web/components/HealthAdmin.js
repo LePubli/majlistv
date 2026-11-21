@@ -4,6 +4,7 @@
 // Admin → Paramètres → « Santé du serveur ». Rafraîchi toutes les minutes.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Btn, Badge, Metrics, Panel, Cols, Progress, Hint, Ax, I as BmI } from './backoffice/Kit';
 
 const LEVEL = { ok: ['Tout va bien', 'ok'], warn: ['À surveiller', 'warn'], crit: ['Critique', 'crit'] };
 const GB = 1024 ** 3;
@@ -43,14 +44,14 @@ function Spark({ series }) {
 const KIND_LABEL = { backup: 'Sauvegarde', restore_test: 'Test de restauration' };
 
 /** Étape 37 — Sauvegardes : ce que le VPS a rapporté (sauvegarde nocturne, test de restauration hebdomadaire). */
-function BackupCard({ b, ago }) {
+function BackupCard({ b, ago, bare }) {
   if (!b) return null;
   const [lvlText, lvl] = b.level === 'off' ? ['Suivi non activé', 'warn'] : LEVEL[b.level];
   const bk = b.last?.backup, rt = b.last?.restore_test;
   const det = bk?.details || {}, rdet = rt?.details || {};
   return (
-    <section className="card health-block" aria-labelledby="health-backup-title">
-      <h3 id="health-backup-title">Sauvegardes <span className={`health-pill ${lvl}`}>{lvlText}</span></h3>
+    <section className={bare ? undefined : 'card health-block'} aria-labelledby="health-backup-title">
+      {!bare && <h3 id="health-backup-title">Sauvegardes <span className={`health-pill ${lvl}`}>{lvlText}</span></h3>}
       {b.level === 'off' ? (
         <p className="health-muted">Le VPS fait déjà une sauvegarde chiffrée chaque nuit, mais le site ne la surveille pas encore. Pour l’activer : générer un jeton sur le VPS et le saisir dans Paramètres → Santé du serveur (« Sauvegardes : jeton des rapports du VPS »), pas à pas dans ops/backup/README.md.</p>
       ) : (
@@ -73,7 +74,7 @@ function BackupCard({ b, ago }) {
 }
 
 export default function HealthAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -97,6 +98,75 @@ export default function HealthAdmin() {
   const ago = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
   const stateOf = (k) => d.alerts.states.find((s) => s.kind === k);
 
+  if (skin === 'premium') {
+    const tone = { ok: 'green', warn: 'amber', crit: 'red' }[d.level] || 'green';
+    const cards = [
+      d.disk && { id: 'disk', t: 'Disque', pct: d.disk.pct, lvl: d.disk.level, l: [`${size(d.disk.free)} libres sur ${size(d.disk.total)}`, `Alerte à ${d.thresholds.diskWarn} %, critique à ${d.thresholds.diskCrit} %`] },
+      { id: 'mem', t: 'Mémoire', pct: d.mem.pct, lvl: d.mem.level, l: [`${size(d.mem.avail)} disponibles sur ${size(d.mem.total)}`, `Critique à ${d.thresholds.memCrit} %`] },
+      { id: 'cpu', t: 'Processeur', pct: d.cpu.loadPct, lvl: d.cpu.level, l: [`Moyenne 1 / 5 / 15 min : ${d.cpu.load.join(' · ')}`, `${d.cpu.cpus} cœurs (100 % = tous occupés)`] },
+    ].filter(Boolean);
+    const bk = d.backup;
+    return (
+      <Page title="Santé du serveur" sub="Disque, mémoire, processeur, base de données, alertes e-mail et sauvegardes — mesurés sur le serveur, rafraîchis chaque minute."
+        actions={<><Btn primary={false} disabled={Boolean(busy)} onClick={() => act('test', '/admin/health/test-alert', (r) => `E-mail d’essai envoyé à ${r.sent} destinataire${r.sent > 1 ? 's' : ''}.`)}>{busy === 'test' ? 'Envoi…' : 'Tester l’alerte e-mail'}</Btn><Btn disabled={Boolean(busy)} onClick={() => act('check', '/admin/health/check', () => 'Mesure effectuée.')}>{busy === 'check' ? 'Mesure…' : 'Mesurer maintenant'}</Btn></>}>
+        <div className={`bm-notice ${lvl === 'ok' ? 'bm-green' : ''}`} role="status"><BmI name={lvl === 'ok' ? 'check' : 'alert'} size={20} /> <span><strong>{lvlText}.</strong> {lvl === 'ok' ? 'Disque, mémoire et sauvegardes sont en ordre.' : lvl === 'warn' ? 'Un seuil d’attention est dépassé : pensez à libérer de la place.' : 'Un seuil critique est dépassé : à traiter rapidement.'}</span></div>
+        {(msg || err) && <p className={err ? 'error' : 'health-ok'} role={err ? 'alert' : 'status'}>{err || msg}</p>}
+        <Metrics items={[
+          { icon: 'database', tone: tone, label: 'Base de données', value: size(d.database.size), note: `${d.database.tables.length} tables suivies` },
+          d.disk && { icon: 'database', label: 'Disque utilisé', value: `${d.disk.pct} %`, note: `${size(d.disk.free)} libres` },
+          { icon: 'activity', label: 'Mémoire utilisée', value: `${d.mem.pct} %`, note: `${size(d.mem.avail)} disponibles` },
+          { icon: 'clock', label: 'Serveur allumé depuis', value: uptime(d.uptimeSec) },
+        ].filter(Boolean)} />
+        <Ax kind="three-columns">
+          {cards.map((g) => (
+            <Panel key={g.id} title={g.t} extra={<Badge tone={{ ok: 'green', warn: 'amber', crit: 'red' }[g.lvl]}>{LEVEL[g.lvl][0]}</Badge>}>
+              <div style={{ padding: '4px 18px 18px' }}>
+                <strong style={{ fontSize: 30 }}>{g.pct} %</strong>
+                <Progress value={g.pct} />
+                <ul className="health-lines">{g.l.map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+            </Panel>
+          ))}
+        </Ax>
+        <Cols kind="two-main">
+          <Panel title="Évolution sur 7 jours">
+            <div style={{ padding: '0 18px 18px' }}><Spark series={d.series} />{trendText && <p>{trendText}</p>}</div>
+          </Panel>
+          <Panel title="Base de données" extra={size(d.database.size)}>
+            <ul className="health-tables" style={{ padding: '0 18px 18px' }}>
+              {d.database.tables.map((t) => <li key={t.name}><span>{t.name}</span><strong>{size(t.size)}</strong></li>)}
+            </ul>
+          </Panel>
+        </Cols>
+        <Cols kind="equal">
+          <Panel title="Alertes e-mail" extra={<Badge tone={d.alerts.enabled ? 'green' : 'amber'}>{d.alerts.enabled ? 'Activées' : 'Désactivées'}</Badge>}>
+            <div style={{ padding: '0 18px 18px' }}>
+              <p>{d.alerts.mailConfigured ? 'Envoi d’e-mails configuré' : <strong className="health-warn-text">Envoi d’e-mails non configuré : aucune alerte ne partira (Paramètres → E-mails)</strong>} · {d.alerts.recipients} destinataire{d.alerts.recipients > 1 ? 's' : ''}</p>
+              <ul className="health-lines">
+                {['disk', 'mem'].map((k) => { const st = stateOf(k); return <li key={k}>{k === 'disk' ? 'Disque' : 'Mémoire'} : {st ? LEVEL[st.level][0] : '—'}{st?.last_sent_at ? ` · dernier e-mail le ${ago(st.last_sent_at)}` : ''}</li>; })}
+              </ul>
+              <Hint>Un e-mail part quand un seuil est franchi, puis un rappel toutes les 24 h (critique) ou 72 h (attention), et un message quand tout redevient normal.</Hint>
+              <p style={{ marginTop: 12 }}><Btn primary={false} href="/admin?tab=settings&section=health">Régler les seuils</Btn></p>
+            </div>
+          </Panel>
+          <Panel title="Sauvegardes" extra={bk ? <Badge tone={bk.level === 'ok' ? 'green' : bk.level === 'off' ? 'blue' : 'amber'}>{bk.level === 'off' ? 'Suivi non activé' : LEVEL[bk.level][0]}</Badge> : null}>
+            <div className="health" style={{ padding: '0 18px 18px' }}><BackupCard b={bk} ago={ago} bare /></div>
+          </Panel>
+        </Cols>
+        <Panel title="Libérer de la place">
+          <div style={{ padding: '0 18px 18px' }}>
+            <p className="health-muted">Les images Docker et le cache de construction ne sont pas visibles depuis le site (volontairement). Sur le VPS, en SSH :</p>
+            <pre className="health-code">{`df -h /
+docker system df
+docker image prune -a -f
+docker builder prune -f --filter "until=48h"
+df -h /`}</pre>
+            <Hint>Ne jamais lancer « docker volume prune » : il supprimerait des volumes (base de données, stockage vidéo). Un nettoyage automatique tourne déjà chaque dimanche à 4 h.</Hint>
+          </div>
+        </Panel>
+      </Page>
+    );
+  }
   return (
     <div className="health">
       <div className={`health-banner ${lvl}`} role="status">

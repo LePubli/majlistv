@@ -1,14 +1,14 @@
 'use client';
 // Back-office : tableau de bord, gestion des utilisateurs, paramètres (clés d'API, Stripe, moteurs IA…).
 // Tout passe par l'API (/admin/*) ; les clés secrètes ne sont jamais renvoyées par le serveur (seulement ••••xxxx).
-import { SectionHeader, SettingsHub } from '../../components/SettingsHub';
+import { SectionHeader, SettingsHub, themesFor, themeOf, sectionLabel, searchFields, SECTION_META } from '../../components/SettingsHub';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
 import { ICONS, Icon } from '../../components/ManageShell';
-import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, SelectList as BmSelectList, Switch as BmSwitch, Hint as BmHint, Overline as BmOverline, I as BmI, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, SelectList as BmSelectList, Switch as BmSwitch, Hint as BmHint, Overline as BmOverline, Tabs as BmTabs, I as BmI, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
 import { MODULE_ADMIN_TABS } from '../../lib/modules'; // étape M3b : écrans d'administration fournis par les modules
 
 // Audit 11/2026 (P2) : chaque écran d'administration est chargé à la demande, à l'ouverture de son onglet
@@ -373,7 +373,7 @@ function HeroImage() {
 }
 
 function Settings() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const router = useRouter();
   const sp = useSearchParams();
   const [data, setData] = useState(null);
@@ -431,6 +431,65 @@ function Settings() {
   const changedIn = (id) => data.fields.some((f) => f.group === id && f.key in draft);
   const dirtyCount = Object.keys(draft).length;
   const encryptionWarning = !data.encryption && <p className="error">SETTINGS_KEY n'est pas définie sur l'API : les clés ne peuvent pas être enregistrées. Ajoute cette variable (voir README) puis redéploie l'API.</p>;
+
+  // Thème Premium : composition de la maquette (onglets par thème, liste des sections, détail et réglages de la section choisie).
+  if (skin === 'premium') {
+    const themes = themesFor(data.groups);
+    const cur = section || themes[0]?.items[0]?.id;
+    const curTheme = themes.find((t) => t.items.some((g) => g.id === cur)) || themes[0];
+    const fieldsPm = data.fields.filter((f) => f.group === cur && !f.hidden && !(cur === 'translation' && Object.values(LANG_KEYS).includes(f.key)));
+    const [stPm, stLabelPm] = sectionStatus(cur, val, set);
+    const tonePm = { ok: 'green', warn: 'amber', error: 'red', off: 'blue' };
+    const found = searchFields(data.fields, data.groups, query);
+    const issues = data.groups.filter((g) => ['warn', 'error'].includes(sectionStatus(g.id, val, set)[0])).length;
+    const curGroup = data.groups.find((g) => g.id === cur);
+    return (
+      <BmPage title="Paramètres généraux" sub="Configuration du site, des services, des e-mails et de la sécurité. Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier."
+        actions={<BmBtn disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</BmBtn>}>
+        {encryptionWarning}
+        <BmTabs names={themes.map((t) => [t.id, t.label])} value={curTheme?.id} onChange={(id) => goto(themes.find((t) => t.id === id)?.items[0]?.id)} />
+        <BmMetrics cols="three" items={[
+          { icon: 'settings', label: 'Sections de réglages', value: data.groups.length },
+          { icon: 'alert', tone: issues ? 'amber' : 'green', label: 'À vérifier', value: issues },
+          { icon: 'edit', tone: dirty ? 'amber' : 'green', label: 'Modifications non enregistrées', value: dirtyCount },
+        ]} />
+        <BmCols kind="two-main">
+          <BmPanel title={curTheme?.label || 'Sections'} extra={`${curTheme?.items.length || 0}`}>
+            <div className="bm-inline-tools"><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un réglage…" aria-label="Rechercher un réglage" /></div>
+            {found.length > 0 && <div className="bm-config-list">{found.map((r) => <button key={r.key} type="button" onClick={() => { setQuery(''); goto(r.group); }}><span><b>{r.label}</b><small>{r.groupLabel}</small></span></button>)}</div>}
+            <BmSelectList value={cur} onSelect={(id) => goto(id)}
+              items={(curTheme?.items || []).map((g) => { const [st, lab] = sectionStatus(g.id, val, set); return { id: g.id, title: sectionLabel(g), sub: lab || (SECTION_META[g.id]?.[1] || ''), tail: <BmBadge tone={tonePm[st] || 'blue'}>{st === 'ok' ? 'OK' : st === 'warn' ? 'À vérifier' : st === 'error' ? 'Erreur' : 'Inactif'}</BmBadge> }; })} />
+          </BmPanel>
+          <BmPanel title={curGroup ? sectionLabel(curGroup) : 'Réglages'} extra={dirty ? `${dirtyCount} modification${dirtyCount > 1 ? 's' : ''}` : ''}>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              <p className="meta set-help">{SECTION_HELP[cur]}</p>
+              {stLabelPm && stPm !== 'ok' && <p className={`set-state hs-${stPm}`} role="status"><span aria-hidden="true">{HEALTH_ICON[stPm]}</span> {stLabelPm}</p>}
+              {cur === 'home' && <HeroImage />}
+              {cur === 'translation' && <EngineTable data={data} val={val} set={set} setVal={setVal} />}
+              <div className="set-fields">
+                {fieldsPm.map((f) => (
+                  <div key={f.key} className={f.type === 'langs' ? 'set-wide' : undefined}>
+                    <Field f={f} langs={data.langs} dirty={dirty}
+                      value={f.type === 'secret' ? secretVal(f.key) : draft[f.key]}
+                      onChange={(v) => setVal(f.key, v)}
+                      onClear={() => setVal(f.key, null)}
+                      onTest={test} testing={Boolean(f.test && tests[f.test]?.loading)} />
+                    {f.test && tests[f.test] && !tests[f.test].loading && <p className={tests[f.test].ok ? 'adm-ok' : 'error'}>{tests[f.test].message}</p>}
+                  </div>
+                ))}
+                {!fieldsPm.length && <p className="meta">Cette section n'a pas de réglage à saisir ici.</p>}
+              </div>
+              <div className="adm-savebar">
+                <BmBtn disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</BmBtn>
+                {dirty && <BmBtn primary={false} onClick={() => { setDraft({}); setMsg(null); }}>Annuler les modifications</BmBtn>}
+                {msg && <span className={msg.ok ? 'adm-ok' : 'error'}>{msg.text}</span>}
+              </div>
+            </div>
+          </BmPanel>
+        </BmCols>
+      </BmPage>
+    );
+  }
 
   // Accueil : cartes par thèmes, avec l'état de chaque section et une recherche.
   if (!section) {
@@ -1156,6 +1215,43 @@ function AuditLog() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = 'journal-actions.csv';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
+  const { skin } = useApp();
+  if (skin === 'premium') {
+    const FIELDS = (
+      <div className="bm-inline-tools">
+        <label className="fld"><span>Période</span><select value={days} onChange={(e) => { setPage(0); setDays(Number(e.target.value)); }}>{[[1, '24 heures'], [7, '7 jours'], [30, '30 jours'], [90, '90 jours'], [365, '1 an'], [730, '2 ans']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <label className="fld"><span>Équipe</span><select value={role} onChange={(e) => { setPage(0); setRole(e.target.value); }}><option value="">Tous</option><option value="admin">Administrateurs</option><option value="moderator">Modérateurs</option></select></label>
+        <label className="fld"><span>Recherche</span><input type="search" value={q} placeholder="Nom, action, identifiant…" onChange={(e) => { setPage(0); setQ(e.target.value); }} /></label>
+      </div>
+    );
+    return (
+      <BmPage title="Journal d’audit" sub="Qui a fait quoi : chaque modification faite par un administrateur ou un modérateur. Seuls les noms des champs modifiés sont conservés, jamais leurs valeurs."
+        actions={<BmBtn primary={false} onClick={exportCsv}>Exporter (CSV)</BmBtn>}>
+        <BmMetrics cols="three" items={d ? [
+          { icon: 'clipboard', label: 'Actions sur la période', value: d.total },
+          { icon: 'clock', label: 'Affichées', value: d.items.length, note: `page ${page + 1}` },
+        ] : []} />
+        <BmPanel title="Actions" extra={d ? `${d.total}` : ''}>
+          {FIELDS}
+          <BmTable empty="Aucune action sur cette période." headers={['Date', 'Qui', 'Action', 'Cible', 'Détail']}
+            rows={(d?.items || []).map((r) => [
+              fmtDT(r.at),
+              <span key="w">{r.actorName}<br /><small>{ROLE_LABEL[r.actorRole] || r.actorRole}</small></span>,
+              <code key="c">{r.method} {r.route}</code>,
+              r.target,
+              r.summary || (r.fields.length ? `Champs : ${r.fields.join(', ')}` : ''),
+            ])} />
+          {d && (
+            <div className="bm-inline-tools" style={{ justifyContent: 'space-between' }}>
+              <BmBtn primary={false} disabled={page === 0} onClick={() => setPage(page - 1)}>← Précédent</BmBtn>
+              <span>{d.total} action(s) · page {page + 1}</span>
+              <BmBtn primary={false} disabled={(page + 1) * LIMIT >= d.total} onClick={() => setPage(page + 1)}>Suivant →</BmBtn>
+            </div>
+          )}
+        </BmPanel>
+      </BmPage>
+    );
+  }
   return (
     <section>
       <p className="meta">Qui a fait quoi : chaque modification faite par un administrateur ou un modérateur. Seuls les noms des champs modifiés sont conservés, jamais leurs valeurs (mots de passe, clés…).</p>
@@ -1293,7 +1389,7 @@ function ModuleTab({ load }) {
 }
 
 // Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
-const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages', 'features', 'legal', 'modules', 'texts', 'appearance'];
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages', 'features', 'legal', 'modules', 'texts', 'appearance', 'health', 'errors', 'ask', 'audit', 'settings'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */

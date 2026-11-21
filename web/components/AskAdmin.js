@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { clock } from '../lib/clock';
 import { useApp } from './Providers';
+import { Page, Btn, Badge, Tabs, Metrics, Panel, Cols, Table, Hint } from './backoffice/Kit';
 
 const FILTERS = [['reported', 'À traiter (signalées)'], ['refused', 'Refus'], ['answered', 'Réponses'], ['all', 'Tout']];
 const STATUS = { answered: 'Répondu', not_in_talk: 'Pas dans la vidéo', off_topic: 'Hors sujet', religious_ruling: 'Question religieuse (refus)' };
@@ -22,7 +23,7 @@ function Stat({ label, v }) {
 }
 
 export default function AskAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [filter, setFilter] = useState('reported');
   const [list, setList] = useState(null);
   const [stats, setStats] = useState(null);
@@ -46,6 +47,49 @@ export default function AskAdmin() {
   if (err) return <section className="billing"><h2>Questions IA</h2><p className="meta" role="status">{err}</p></section>;
   if (!list || !stats) return <p className="meta" role="status">Chargement…</p>;
   const eng = stats.engine;
+  if (skin === 'premium') {
+    const tone = { answered: 'green', not_in_talk: 'amber', off_topic: 'amber', religious_ruling: 'red' };
+    return (
+      <Page title="Questions IA" sub={`Moteur actuel : ${eng.ready ? `${eng.provider === 'deepseek' ? 'DeepSeek' : 'Claude'} (${eng.model})` : 'aucun (clé manquante)'} · plafond ${stats.limits.dailyMax} question(s) par membre et par jour, ${num(stats.limits.globalDailyMax)} pour tout le site.`}
+        actions={<Btn primary={false} href="/admin?tab=settings">Réglages</Btn>}>
+        <Metrics cols="three" items={[
+          { icon: 'zap', label: "Aujourd'hui", value: num(stats.today.questions), note: `${num(stats.today.answered)} réponses · ${num(stats.today.refused)} refus` },
+          { icon: 'calendar', label: '7 derniers jours', value: num(stats.week.questions), note: `${num(stats.week.members)} membre(s)` },
+          { icon: 'chart', label: '30 derniers jours', value: num(stats.month.questions), note: `${num(stats.month.tokensIn)} + ${num(stats.month.tokensOut)} jetons` },
+        ]} />
+        <Tabs names={FILTERS.map(([k, l]) => [k, k === 'reported' && list.reportedOpen ? `${l} (${list.reportedOpen})` : l])} value={filter} onChange={setFilter} />
+        <Cols kind="two-main">
+          <Panel title="Échanges" extra={`${list.items.length}`}>
+            <Table empty={filter === 'reported' ? 'Aucune réponse signalée à traiter.' : 'Rien à afficher.'}
+              headers={['Date', 'Membre', 'Vidéo', 'État', 'Question et réponse', '']}
+              rows={list.items.map((x) => [
+                when(x.createdAt),
+                <span key="u">{x.userName}<br /><small>{x.userEmail}</small></span>,
+                <Link key="t" className="link u" href={`/talks/${x.talkId}`}>{x.talkTitle}</Link>,
+                <Badge key="s" tone={tone[x.status] || 'blue'}>{STATUS[x.status] || x.status}</Badge>,
+                <div key="q" style={{ minWidth: 240 }}>
+                  <p><b>Question :</b> {x.question}</p>
+                  <p><b>Réponse :</b> {x.answer}</p>
+                  {x.sources.map((sr, i) => <blockquote key={i}>« {sr.text} » <small>({clock(sr.startMs)})</small></blockquote>)}
+                  {x.reportedAt && <small>⚑ Signalée le {when(x.reportedAt)}{x.reportReason ? ` : « ${x.reportReason} »` : ''}{x.reviewedAt ? ` · traitée le ${when(x.reviewedAt)}` : ''}</small>}
+                </div>,
+                <span key="a" style={{ display: 'grid', gap: 6 }}>
+                  {x.reportedAt && !x.reviewedAt && <Btn disabled={busy === x.id} onClick={() => act(x.id, 'ok')}>Traitée</Btn>}
+                  <Btn primary={false} disabled={busy === x.id} onClick={() => act(x.id, 'delete')}>Supprimer</Btn>
+                </span>,
+              ])} />
+          </Panel>
+          <Panel title="Volumes et modèles">
+            <div style={{ padding: '0 18px 18px' }}>
+              {stats.byModel.length > 0 ? <ul className="health-lines">{stats.byModel.map((m) => <li key={m.model}>{m.model} — {num(m.questions)} q., {num(m.tokensIn)} + {num(m.tokensOut)} jetons (30 j)</li>)}</ul> : <p className="health-muted">Aucune question sur 30 jours.</p>}
+              {stats.topTalks.length > 0 && <><b>Vidéos les plus questionnées (30 j)</b><ul className="health-lines">{stats.topTalks.map((t) => <li key={t.id}><Link className="link u" href={`/talks/${t.id}`}>{t.title}</Link> ({t.n})</li>)}</ul></>}
+              <Hint>Le prix dépend du modèle et de votre contrat : multipliez les jetons par le tarif de votre fournisseur.</Hint>
+            </div>
+          </Panel>
+        </Cols>
+      </Page>
+    );
+  }
   return (
     <section className="billing">
       <h2>Questions IA</h2>

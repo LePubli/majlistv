@@ -3,13 +3,14 @@
 // Aucune donnée personnelle n'est enregistrée. Une alerte e-mail part à la première apparition d'une erreur et quand une erreur « résolue » revient.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
+import { Page, Btn, Badge, Tabs, Metrics, Panel, Cols, SelectList, Meta, Hint, I as BmI } from './backoffice/Kit';
 
 const STATES = [['open', 'Ouvertes'], ['resolved', 'Résolues'], ['ignored', 'Ignorées'], ['all', 'Toutes']];
 const SOURCES = [['all', 'Serveur et site'], ['api', 'Serveur'], ['web', 'Site (navigateur)']];
 const ago = (s) => (s ? new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 export default function ErrorsAdmin() {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [state, setState] = useState('open');
   const [source, setSource] = useState('all');
   const [d, setD] = useState(null);
@@ -44,6 +45,52 @@ export default function ErrorsAdmin() {
 
   if (err && !d) return <p className="error" role="alert">{err}</p>;
   if (!d) return <p className="health-muted">Chargement…</p>;
+  if (skin === 'premium') {
+    const sel = d.items.find((g) => g.fingerprint === open) || d.items[0] || null;
+    if (sel && sel.fingerprint !== open && !detail) setTimeout(() => toggle(sel.fingerprint), 0);
+    const tone = (st) => (st === 'open' ? 'red' : st === 'resolved' ? 'green' : 'blue');
+    const label = { open: 'Ouverte', resolved: 'Résolue', ignored: 'Ignorée' };
+    return (
+      <Page title="Erreurs techniques" sub="Erreurs du serveur et du navigateur, regroupées avec leur trace. Aucune donnée personnelle n’est enregistrée."
+        actions={<Btn primary={false} disabled={busy === 'test'} onClick={test}>{busy === 'test' ? 'Envoi…' : 'Déclencher une erreur d’essai'}</Btn>}>
+        <Tabs names={STATES} value={state} onChange={(k) => { setOpen(null); setDetail(null); setState(k); }} />
+        <Metrics cols="three" items={[
+          { icon: 'alert', tone: d.counts.open > 0 ? 'amber' : 'green', label: 'Ouvertes', value: d.counts.open ?? 0 },
+          { icon: 'check', tone: 'green', label: 'Résolues', value: d.counts.resolved ?? 0 },
+          { icon: 'clock', label: 'Occurrences sur 24 h', value: d.last24h },
+        ]} />
+        {msg && <p className="health-ok" role="status">{msg}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
+        <Cols kind="two-main">
+          <Panel title="Erreurs" extra={`${d.items.length}`}>
+            <div style={{ padding: '0 14px 10px' }}>
+              <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Origine">{SOURCES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+            </div>
+            <SelectList empty="Rien à afficher dans cette liste." value={sel?.fingerprint} onSelect={(fp) => { setOpen(fp); setDetail(null); call(`/admin/errors/${fp}`).then((r) => r.ok && setDetail(r.data)); }}
+              items={d.items.map((g) => ({ id: g.fingerprint, title: g.message.slice(0, 90), sub: `${g.source === 'api' ? 'Serveur' : 'Navigateur'}${g.route ? ` · ${g.route}` : ''} · ${g.count} fois`, tail: <Badge tone={tone(g.state)}>{label[g.state] || g.state}</Badge> }))} />
+          </Panel>
+          <Panel title="Détail de l’erreur">
+            {sel ? (
+              <div style={{ padding: '0 18px 18px' }}>
+                <h3 style={{ overflowWrap: 'anywhere' }}>{sel.message}</h3>
+                <Meta items={[['Origine', sel.source === 'api' ? 'Serveur' : 'Site (navigateur)'], ['Page', sel.route || '—'], ['Code', sel.httpStatus || '—'], ['Occurrences', sel.count], ['Première', ago(sel.firstAt)], ['Dernière', ago(sel.lastAt)]]} />
+                {detail && detail.stack && <pre className="health-code" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{detail.stack}</pre>}
+                {detail && <ul className="health-lines">{detail.events.map((e, i) => <li key={i}>{ago(e.at)}{e.path ? ` · ${e.path}` : ''}{e.userAgent ? ` · ${e.userAgent}` : ''}</li>)}</ul>}
+                {!detail && <p className="health-muted">Chargement du détail…</p>}
+                <Hint><b>Pour la faire corriger</b><p>Copiez le message et la trace puis demandez « corrige cette erreur ».</p></Hint>
+                <div className="bm-btn-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                  {sel.state !== 'resolved' && <Btn disabled={busy === sel.fingerprint} onClick={() => setErrState(sel.fingerprint, 'resolved')}>Marquer résolue</Btn>}
+                  {sel.state !== 'ignored' && <Btn primary={false} disabled={busy === sel.fingerprint} onClick={() => setErrState(sel.fingerprint, 'ignored')}>Ignorer</Btn>}
+                  {sel.state !== 'open' && <Btn primary={false} disabled={busy === sel.fingerprint} onClick={() => setErrState(sel.fingerprint, 'open')}>Rouvrir</Btn>}
+                </div>
+              </div>
+            ) : <p style={{ padding: 18, color: 'var(--muted)' }}>Aucune erreur dans cette liste.</p>}
+          </Panel>
+        </Cols>
+        <Panel title="À propos"><div style={{ padding: '0 18px 18px' }}><p className="health-muted">Le serveur enregistre ses erreurs internes (500) et le site envoie les erreurs JavaScript de ses pages, regroupées par message et par page. Ni compte ni adresse IP ; e-mails, jetons et paramètres d’adresse sont masqués. Occurrences gardées 30 jours, erreurs résolues ou ignorées 90 jours. Alertes : Paramètres → Santé du serveur.</p></div></Panel>
+      </Page>
+    );
+  }
   return (
     <div className="health">
       <div className={`health-banner ${d.counts.open > 0 ? 'warn' : 'ok'}`} role="status">
