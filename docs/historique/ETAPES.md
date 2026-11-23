@@ -10106,3 +10106,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé.** Voir ligne 338 du registre.
 
+
+## Apparence — onglets et pages d'essai (23/11/2026)
+
+**Description.** Admin → Apparence : réglages rangés en onglets Tout / Couleurs / Typographies / Composants / Mise en page ; les onglets Typographies et Composants affichent l'aperçu sur une page d'essai dédiée (`/apercu-theme`) qui reflète le brouillon en direct.
+
+**Prérequis.** Aucun (pas de migration, pas de changement d'API).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web` seul. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Page d'essai vide : ouvrir `/apercu-theme?s=compo` directement ; elle doit afficher boutons, badges, cartes, champs. L'aperçu n'est pas indexé (noindex).
+
+**Exemples.** Admin → Apparence → onglet « Composants » : changer « Arrondi des grands blocs » et voir les cartes de l'aperçu s'arrondir.
+
+**Testé / non testé.** Voir ligne 339 du registre.

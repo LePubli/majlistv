@@ -4176,3 +4176,8 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .cpk-row.on .cpk-box { background: var(--accent, #1677e8); border-color: var(--accent, #1677e8); color: #fff; }
 .cpk-tag { margin-inline-start: auto; opacity: .7; font-size: 11px; }
 .cpk-empty { padding: 12px 8px; }
+
+/* Admin → Apparence : onglets Couleurs / Typographies / Composants / Mise en page */
+.ap-views { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ap-views button { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; min-height: 40px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.ap-views button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }

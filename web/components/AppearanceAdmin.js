@@ -18,7 +18,15 @@ const DEVICES = [
 ];
 const PAGES = [
   ['/', 'Accueil'], ['/library', 'Ma bibliothèque'], ['/learning', 'Apprentissage'], ['/account', 'Mon compte'],
-  ['/chaines', 'Chaînes'], ['/collections', 'Collections'], ['/pricing', 'Tarifs'], ['/kids', 'Espace Kids'], ['/admin?tab=features', 'Administration'],
+  ['/chaines', 'Chaînes'], ['/apercu-theme?s=typo', 'Essai : textes et polices'], ['/apercu-theme?s=compo', 'Essai : boutons, onglets, champs, cartes'], ['/collections', 'Collections'], ['/pricing', 'Tarifs'], ['/kids', 'Espace Kids'], ['/admin?tab=features', 'Administration'],
+];
+// Onglets de l'écran : quels groupes de réglages montrer, et quelle page d'essai afficher dans l'aperçu.
+const VIEWS = [
+  { id: 'all', label: 'Tout', groups: null, start: null },
+  { id: 'colors', label: 'Couleurs', groups: ['base', 'quote', 'kids'], start: '/' },
+  { id: 'type', label: 'Typographies', groups: ['type'], start: '/apercu-theme?s=typo' },
+  { id: 'compo', label: 'Composants', groups: ['shape', 'buttons', 'cards', 'badges', 'forms', 'tabs'], start: '/apercu-theme?s=compo' },
+  { id: 'layout', label: 'Mise en page', groups: ['space', 'header', 'sidebar', 'bottom', 'studio', 'footer'], start: '/' },
 ];
 const ROOT_COLORS = TOKENS.filter((t) => t.scope === 'root' && t.type === 'color' && t.group === 'base');
 const ROOT_LENGTHS = TOKENS.filter((t) => t.scope === 'root' && t.type === 'length' && t.group === 'shape');
@@ -168,7 +176,7 @@ function FontsPanel({ fonts, reload }) {
 }
 
 /* ------------------------------------------------------------------ Aperçu */
-function Preview({ css }) {
+function Preview({ css, start }) {
   const frame = useRef(null);
   const box = useRef(null);
   const [device, setDevice] = useState(1440);
@@ -179,6 +187,7 @@ function Preview({ css }) {
   const [viewH, setViewH] = useState(900);
   const [nonce, setNonce] = useState(0); // force le rechargement du cadre (changement de langue)
   const original = useRef(null);
+  useEffect(() => { if (start) { setPath(start); setCustom(''); } }, [start]); // l'onglet choisi propose sa page d'essai
 
   // Remplace la feuille de style du thème dans la page affichée (même origine : accès direct au document du cadre).
   const inject = useCallback(() => {
@@ -262,6 +271,7 @@ export default function AppearanceAdmin() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(() => new Set(['base']));
   const [versions, setVersions] = useState(null);
+  const [view, setView] = useState('all'); // onglet : all | colors | type | compo | layout
   const timer = useRef(null);
   const importRef = useRef(null);
 
@@ -377,6 +387,14 @@ export default function AppearanceAdmin() {
 
   if (!themes || !cur) return <p className="meta">Chargement…</p>;
   const needle = q.trim().toLowerCase();
+  const viewDef = VIEWS.find((v) => v.id === view) || VIEWS[0];
+  const viewGroups = viewDef.groups;
+  const countIn = (v) => (v.groups ? TOKENS.filter((t) => v.groups.includes(t.group) && values[t.id] !== undefined).length : Object.keys(values).length);
+  const tabsEl = (
+    <div className="ap-views" role="tablist" aria-label="Type de réglages">
+      {VIEWS.map((v) => <button key={v.id} type="button" role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => { setView(v.id); setOpen((o) => new Set([...o, ...(v.groups || [])])); }}>{v.label}{countIn(v) > 0 && <span className="ap-tag">{countIn(v)}</span>}</button>)}
+    </div>
+  );
   const changedCount = Object.keys(values).length;
   const hasDraft = cur.hasDraft || save === 'pending' || save === 'saving';
   const saveLabel = { idle: '', pending: 'Modifications en attente…', saving: 'Enregistrement du brouillon…', saved: 'Brouillon enregistré', error: 'Valeur à corriger' }[save];
@@ -435,6 +453,7 @@ export default function AppearanceAdmin() {
             <Panel title="Palette et typographie">
               <div className="bm-form" style={{ padding: '0 14px 14px' }}>
         <div className="ap-editor">
+          {tabsEl}
           <label className="ap-search"><span className="sr-only">Chercher un réglage</span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un réglage (ex. bouton, fond, arrondi)…" />
           </label>
@@ -447,6 +466,7 @@ export default function AppearanceAdmin() {
           )}
 
           {GROUPS.map((g) => {
+            if (!needle && viewGroups && !viewGroups.includes(g.id)) return null;
             const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
             if (!list.length) return null;
             const isOpen = Boolean(needle) || open.has(g.id);
@@ -470,7 +490,7 @@ export default function AppearanceAdmin() {
               </div>
             </Panel>
             <Panel title="Prévisualisation en direct">
-              <div style={{ padding: '0 14px 14px' }}><Preview css={css} /></div>
+              <div style={{ padding: '0 14px 14px' }}><Preview css={css} start={viewDef.start} /></div>
             </Panel>
           </Cols>
         </div>
@@ -529,6 +549,7 @@ export default function AppearanceAdmin() {
 
       <div className="ap-layout">
         <div className="ap-editor">
+          {tabsEl}
           <label className="ap-search"><span className="sr-only">Chercher un réglage</span>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un réglage (ex. bouton, fond, arrondi)…" />
           </label>
@@ -541,6 +562,7 @@ export default function AppearanceAdmin() {
           )}
 
           {GROUPS.map((g) => {
+            if (!needle && viewGroups && !viewGroups.includes(g.id)) return null;
             const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
             if (!list.length) return null;
             const isOpen = Boolean(needle) || open.has(g.id);
@@ -561,7 +583,7 @@ export default function AppearanceAdmin() {
             );
           })}
         </div>
-        <Preview css={css} />
+        <Preview css={css} start={viewDef.start} />
       </div>
     </section>
   );
