@@ -25,10 +25,18 @@ export default function PmSeries({ id }) {
   const [learn, setLearn] = useState(null);
   const [related, setRelated] = useState([]);
   const [tab, setTab] = useState('episodes');
+  const [season, setSeason] = useState(0); // saison affichée (série à plusieurs saisons)
   const [shared, setShared] = useState(false);
   useEffect(() => {
     if (!ready) return;
-    call(`/series/${id}`).then((r) => setS(r.ok ? r.data : null));
+    call(`/series/${id}`).then((r) => {
+      setS(r.ok ? r.data : null);
+      // Ouvre la saison de l'épisode à reprendre (sinon la première).
+      if (r.ok && r.data.seasons) {
+        const at = r.data.seasons.findIndex((z) => z.episodes.some((e) => e.id === r.data.resume?.talkId));
+        setSeason(at >= 0 ? at : 0);
+      }
+    });
   }, [id, call, ready, user]);
   useEffect(() => { if (user && feat('learning')) call('/me/learning', {}, null).then((r) => setLearn(r.ok ? r.data : null)); }, [user, call, feat]);
   const root = useMemo(() => {
@@ -45,6 +53,8 @@ export default function PmSeries({ id }) {
     if (s.seasons?.length) return s.seasons.map((z) => ({ key: z.id, title: z.title ? `${t('seasonN').replace('{n}', z.number)} – ${z.title}` : t('seasonN').replace('{n}', z.number), episodes: z.episodes }));
     return [{ key: 'all', title: '', episodes: s.episodes || [] }];
   }, [s, t]);
+  const multi = !!s?.seasons && s.seasons.length > 1; // plusieurs saisons : une saison à la fois, avec ses onglets
+  const shown = multi ? groups.slice(Math.min(season, groups.length - 1), Math.min(season, groups.length - 1) + 1) : groups;
   const flat = groups.flatMap((g) => g.episodes);
 
   if (s === undefined) return <div className="v20-app pm-page" aria-busy="true"><div className="v20-heritage-v9"><section className="v20-hv9-hero" /></div></div>;
@@ -83,6 +93,7 @@ export default function PmSeries({ id }) {
           <div className="v20-hv9-hero-copy">
             <div className="v20-hv9-pills">
               <span>{(s.category || t('seriesTag')).toUpperCase()}</span>
+              {multi && <span>◧ {t('seasonCount').replace('{n}', s.seasons.length).toUpperCase()}</span>}
               <span>✦ {t('episodeCount').replace('{n}', s.episodeCount).toUpperCase()}</span>
             </div>
             <h1>{s.title}</h1>
@@ -119,9 +130,25 @@ export default function PmSeries({ id }) {
                 <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'v20-active' : undefined} onClick={() => setTab(k)}><span aria-hidden="true">{ico}</span>{name}</button>
               ))}
             </nav>
-            {tab === 'episodes' && groups.map((g) => (
+            {tab === 'episodes' && multi && (
+              <div className="pm-seasons" role="tablist" aria-label={t('seasonPick')}>
+                {groups.map((g, i) => {
+                  const z = s.seasons[i];
+                  const seen = z.episodes.filter((e) => e.completed).length;
+                  const full = z.episodes.length > 0 && seen === z.episodes.length;
+                  return (
+                    <button key={g.key} type="button" role="tab" aria-selected={i === season} className={i === season ? 'pm-season on' : 'pm-season'} onClick={() => setSeason(i)}>
+                      <b>{full && user ? '✓ ' : ''}{t('seasonN').replace('{n}', z.number)}</b>
+                      <small>{t('episodeCount').replace('{n}', z.episodes.length)}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {tab === 'episodes' && shown.map((g) => (
               <section key={g.key} className="v20-hv9-episodes">
                 {g.title && <h3>{g.title}</h3>}
+                {multi && user && g.episodes.length > 0 && <p className="pm-muted pm-season-prog">{t('pmSeasonDone').replace('{n}', g.episodes.filter((e) => e.completed).length).replace('{total}', g.episodes.length)}</p>}
                 {g.episodes.length === 0 && <p className="pm-muted">{t('seasonEmpty')}</p>}
                 <div className="v20-hv9-episode-list">
                   {g.episodes.map((e) => {
@@ -149,6 +176,9 @@ export default function PmSeries({ id }) {
                     );
                   })}
                 </div>
+                {multi && season < groups.length - 1 && g.episodes.length > 0 && (
+                  <button type="button" className="pm-season-next" onClick={() => { setSeason(season + 1); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }}>{t('pmSeasonNext')} ❯</button>
+                )}
               </section>
             ))}
             {tab === 'about' && (

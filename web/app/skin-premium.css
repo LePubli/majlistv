@@ -205,6 +205,17 @@ html[data-skin="premium"] .page-shell:has(> .pm-home), html[data-skin="premium"]
 .v20-app .pm-about a { color: #35b9ff; }
 .v20-app .pm-note { color: #f6cb83; font-weight: 700; margin: 8px 0 0; }
 .v20-app .pm-muted { color: #9aafc9; }
+/* Série à plusieurs saisons : onglets de saison, avancement, bouton « Saison suivante » */
+.v20-app .pm-seasons { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 14px; max-width: 100%; }
+.v20-app .pm-season { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; padding: 10px 16px; border-radius: 14px; border: 1px solid rgba(120, 170, 230, .28); background: rgba(13, 30, 53, .7); color: #d5e2f2; cursor: pointer; font: inherit; text-align: start; }
+.v20-app .pm-season b { color: #f5f9ff; font-size: 15px; }
+.v20-app .pm-season small { color: #9aafc9; font-size: 12px; }
+.v20-app .pm-season.on { background: linear-gradient(135deg, #1677e8, #0b4fb0); border-color: #35b9ff; }
+.v20-app .pm-season.on small { color: #e6f1ff; }
+.v20-app .pm-season:focus-visible, .v20-app .pm-season-next:focus-visible { outline: 2px solid #35b9ff; outline-offset: 2px; }
+.v20-app .pm-season-prog { margin: -4px 0 12px; font-size: 13px; }
+.v20-app .pm-season-next { margin-top: 16px; padding: 12px 20px; border-radius: 999px; border: 1px solid #35b9ff; background: transparent; color: #f5f9ff; font: inherit; font-weight: 700; cursor: pointer; }
+.v20-app .pm-season-next:hover { background: rgba(53, 185, 255, .15); }
 .v20-app .pm-empty { padding: 120px 0 60px; }
 .v20-app .pm-empty a { color: #35b9ff; }
 /* Catalogue : carte sans miniature (décor du thème), deuxième groupe de la colonne, bouton « plus » désactivé. */

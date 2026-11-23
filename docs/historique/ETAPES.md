@@ -10063,3 +10063,18 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** `POST /studio/shorts/review-batch` avec `{"ids":["…"],"decision":"reject","note":"Hors sujet"}`.
 
 **Testé / non testé.** Voir ligne 335 du registre.
+
+## Séries à plusieurs saisons — site public, thème Premium (23/11/2026)
+
+**Description.** La fiche série Premium affichait toutes les saisons les unes sous les autres. Elle propose maintenant des onglets « Saison 1, 2… » (nombre d'épisodes, ✓ si la saison est terminée), une saison à la fois, la saison de l'épisode à reprendre ouverte d'office, l'avancement « N / M vus » par saison, un bouton « Saison suivante » et l'étiquette « N saisons » dans le bandeau. Une série sans saison, ou à une seule, reste comme avant.
+
+**Prérequis.** Thème Premium actif ; série avec plusieurs saisons (Studio → Séries). Aucune migration, aucun changement d'API.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web` seulement. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Pas d'onglets : la série n'a qu'une saison (ou `has_seasons` désactivé dans Studio). Mauvaise saison ouverte : vérifier `resume.talkId` dans `GET /series/<id>`.
+
+**Exemples.** `/series/<id>` d'une série à 2 saisons : onglets Saison 1 / Saison 2, puis « Saison suivante ».
+
+**Testé / non testé.** Voir ligne 336 du registre.
+
