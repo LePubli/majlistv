@@ -15,7 +15,7 @@ import { useApp } from '../Providers';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import { catalogueTabs } from '../SectionTabs';
 import Glyph, { glyphOfCategory } from './Glyph';
-import { OttCard, OttRail } from './PmOtt';
+import { OttCard, OttRail, useTalkProgress } from './PmOtt';
 import TalkFilters, { FILTER_KEYS, filtersFrom } from '../TalkFilters';
 
 const PAGE = 24;
@@ -66,6 +66,7 @@ function Inner({ series = false }) {
   const [items, setItems] = useState(null);
   const [facets, setFacets] = useState(null);
   const [allSeries, setAllSeries] = useState(null);
+  const [mySeries, setMySeries] = useState({}); // { idSérie: épisodes terminés } du membre (GET /me/series), vide pour un visiteur
   const key = JSON.stringify(cur);
   const params = useCallback((offset) => {
     const p = new URLSearchParams();
@@ -87,6 +88,13 @@ function Inner({ series = false }) {
     return () => { dead = true; };
   }, [ready, series, call, params]);
   useEffect(() => { if (series && ready) call('/series?limit=100', {}, null).then((r) => setAllSeries(r.ok && Array.isArray(r.data) ? r.data : [])); }, [series, ready, call]);
+
+  useEffect(() => {
+    if (!series || !user) { setMySeries({}); return undefined; }
+    let dead = false;
+    call('/me/series').then((r) => { if (!dead && r.ok && Array.isArray(r.data)) setMySeries(Object.fromEntries(r.data.map((s) => [s.id, s.watched || 0]))); });
+    return () => { dead = true; };
+  }, [series, user, call]);
 
   // Mode séries : filtres et tri faits ici (la liste complète tient en une page).
   const seriesShown = useMemo(() => {
@@ -135,6 +143,14 @@ function Inner({ series = false }) {
       .then((all) => { if (!dead) setRails(all.filter((x) => x.list.length)); });
     return () => { dead = true; };
   }, [ready, railMode, facets, roots, counts, call]);
+  // Avancement réel du membre sur les cartes vidéo affichées (grille et rangées) ; rien pour un visiteur.
+  const prog = useTalkProgress(series ? [] : [...(shown || []).map((x) => x.id), ...(railMode ? rails.flatMap((r) => r.list.map((x) => x.id)) : [])]);
+  const talkCard = (x) => <OttCard key={x.id} x={x} pct={prog[x.id]?.pct} done={prog[x.id]?.done} />;
+  const seriesCard = (x) => {
+    const w = mySeries[x.id] || 0;
+    const full = x.episodeCount > 0 && w >= x.episodeCount;
+    return <OttCard key={x.id} x={x} kind="series" href={`/series/${x.slug || x.id}`} pct={x.episodeCount ? Math.round((Math.min(w, x.episodeCount) / x.episodeCount) * 100) : 0} done={full} />;
+  };
 
   // Image du bandeau : celle de la première vidéo (ou série) affichée, à défaut le visuel du thème.
   const heroImg = (shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp';
@@ -163,7 +179,7 @@ function Inner({ series = false }) {
       <main className="pm-ott-body">
         {railMode && rails.map(({ c, list }) => (
           <OttRail key={c.id} title={c.name} href={hrefOf(base, cur, { cat: String(c.id) })}>
-            {list.map((x) => <OttCard key={x.id} x={x} />)}
+            {list.map(talkCard)}
           </OttRail>
         ))}
         <section className="pm-cat-all" aria-busy={shown === null}>
@@ -196,9 +212,7 @@ function Inner({ series = false }) {
             </div>
           ) : (
             <div className="pm-cat-grid">
-              {(shown || []).map((x) => (series
-                ? <OttCard key={x.id} x={x} kind="series" href={`/series/${x.slug || x.id}`} />
-                : <OttCard key={x.id} x={x} />))}
+              {(shown || []).map((x) => (series ? seriesCard(x) : talkCard(x)))}
             </div>
           )}
           {!series && items && total != null && total > items.length && (

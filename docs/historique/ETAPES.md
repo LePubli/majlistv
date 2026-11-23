@@ -10207,3 +10207,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé / limites.** Voir ligne 345 du registre (surtout : aucun vrai Whisper lancé en local ; seuil à ajuster).
 
+## Apprendre — progression sur les cartes (23/11/2026)
+
+**Description.** Les cartes du thème Premium montrent l'avancement réel du membre : barre de lecture sur chaque vidéo du Catalogue, part d'épisodes terminés sur chaque série, pastille « Terminé » quand c'est fini. Correctif : le bandeau « Apprendre » de l'accueil et la carte « Apprendre avec cette série » n'affichaient jamais la progression (appel sans jeton).
+
+**Prérequis.** Thème Premium, membre connecté. Pour les chiffres de quiz de ces deux cartes : formule Apprentissage. Aucune migration.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Pas de barre : l'avancement n'est enregistré qu'au-delà de 5 s de lecture ; vérifier `GET /api/me/progress?ids=<id>` connecté (200 et une ligne, sinon 401 = jeton). Une carte reste sans pastille : la vidéo n'est « terminée » qu'à 95 % de lecture (ou 30 s avant la fin).
+
+**Exemples.** Regarder une vidéo à moitié, ouvrir le Catalogue : barre à 50 %. Terminer toutes les vidéos d'une série : sa carte affiche « Terminé » sur la page Séries.
+
+**Testé / non testé / limites.** Voir ligne 346 du registre.
+

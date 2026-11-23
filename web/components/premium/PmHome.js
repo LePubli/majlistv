@@ -123,7 +123,7 @@ export default function PmHome() {
   useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok && Array.isArray(r.data) ? r.data : [])); else setCont([]); }, [user, call]);
   // Progression du bandeau « Apprendre » : seulement avec la formule Apprentissage (sinon l'API répond « formule requise »).
-  useEffect(() => { if (user && feat('learning')) call('/me/learning', {}, null).then((r) => setLearn(r.ok ? r.data : null)); else setLearn(null); }, [user, call, feat]);
+  useEffect(() => { if (user && feat('learning')) call('/me/learning').then((r) => setLearn(r.ok ? r.data : null)); else setLearn(null); }, [user, call, feat]);
   // Collections publiées « sur l'accueil » (phase 6) et shorts publiés (module Shorts) : rien d'affiché s'il n'y en a pas.
   useEffect(() => { if (ready) call('/collections/home', {}, null).then((r) => setCols(r.ok && Array.isArray(r.data?.collections) ? r.data.collections : [])); }, [call, ready, user?.id]);
   useEffect(() => { if (ready && feat('shorts')) call('/shorts?limit=10', {}, null).then((r) => setShorts(r.ok && Array.isArray(r.data) ? r.data : [])); else setShorts([]); }, [call, ready, feat]);

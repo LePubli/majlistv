@@ -38,7 +38,7 @@ export default function PmSeries({ id }) {
       }
     });
   }, [id, call, ready, user]);
-  useEffect(() => { if (user && feat('learning')) call('/me/learning', {}, null).then((r) => setLearn(r.ok ? r.data : null)); }, [user, call, feat]);
+  useEffect(() => { if (user && feat('learning')) call('/me/learning').then((r) => setLearn(r.ok ? r.data : null)); }, [user, call, feat]);
   const root = useMemo(() => {
     const c = (allCats || []).find((x) => String(x.id) === String(s?.categoryId));
     return c ? (c.parentId ?? c.id) : null;

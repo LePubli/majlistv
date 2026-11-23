@@ -463,6 +463,7 @@ html[data-skin="premium"] .pm-card:hover .pm-card-title, html[data-skin="premium
 html[data-skin="premium"] .pm-card:hover .pm-card-sub, html[data-skin="premium"] .pm-card:focus-visible .pm-card-sub { opacity: 1; }
 html[data-skin="premium"] .pm-card-play { position: absolute; inset-inline-end: 8px; top: 8px; z-index: 1; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; background: #0009; border: 1px solid #fff9; opacity: 0; transition: opacity .18s; }
 html[data-skin="premium"] .pm-card:hover .pm-card-play, html[data-skin="premium"] .pm-card:focus-visible .pm-card-play { opacity: 1; }
+html[data-skin="premium"] .pm-card-done { position: absolute; top: 6px; inset-inline-end: 6px; z-index: 2; padding: 2px 6px; border-radius: 2px; background: #1677e8; font-size: 8px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; }
 html[data-skin="premium"] .pm-card-bar { position: absolute; inset-inline: 0; bottom: 0; height: 3px; background: #fff3; z-index: 2; }
 html[data-skin="premium"] .pm-card-bar i { display: block; height: 100%; background: #1677e8; }
 html[data-skin="premium"][dir="rtl"] .pm-card-bar i { margin-inline-start: auto; }

@@ -62,6 +62,19 @@ export default async function libraryRoutes(app) {
     return reply.code(204).send();
   });
 
+  // Avancement de vidéos données, pour les cartes du thème Premium : GET /me/progress?ids=<uuid>,<uuid>… (100 au plus).
+  // Ne renvoie que les vidéos du membre vraiment commencées (au-delà de la reprise minimale) ou terminées : { talkId, pct 0–100, done }.
+  app.get('/me/progress', auth, async (req, reply) => {
+    const { ids } = z.object({ ids: z.string().max(4000) }).parse(req.query);
+    const list = [...new Set(ids.split(',').map((x) => x.trim()).filter(Boolean))].slice(0, 100);
+    if (!list.every((x) => z.guid().safeParse(x).success)) return reply.code(400).send({ error: 'Liste de vidéos invalide' });
+    if (!list.length) return [];
+    const { rows } = await pool.query(
+      `SELECT talk_id AS "talkId", position_ms, duration_ms, completed FROM watch_progress
+        WHERE user_id = $1 AND talk_id = ANY($2::uuid[]) AND (completed OR position_ms >= $3)`, [req.user.sub, list, MIN_RESUME_MS]);
+    return rows.map((r) => ({ talkId: r.talkId, done: r.completed, pct: r.completed ? 100 : r.duration_ms > 0 ? Math.min(99, Math.floor((r.position_ms / r.duration_ms) * 100)) : 0 }));
+  });
+
   app.delete('/me/progress/:id', auth, async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     await pool.query('DELETE FROM watch_progress WHERE user_id = $1 AND talk_id = $2', [req.user.sub, id]);
