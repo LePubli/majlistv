@@ -56,7 +56,7 @@ function Item({ c, t, call, locale, onDone }) {
 export default function CorrectionsReview() {
   const { t, call, locale, user, modUsable, skin } = useApp();
   // Organisateur ou administrateur : cet écran est le second onglet de « Sous-titres ». Modérateur : écran seul, comme avant.
-  const tabbed = subtitleTabsOn(user?.role, modUsable('corrections'));
+  const tabbed = subtitleTabsOn(user?.role);
   const [status, setStatus] = useState('pending');
   const [data, setData] = useState(null);
   const [err, setErr] = useState(false);

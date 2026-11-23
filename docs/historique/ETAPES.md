@@ -10163,3 +10163,19 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé.** Voir ligne 342 du registre.
 
+## Qualité des sous-titres — Studio → Sous-titres → Qualité (23/11/2026)
+
+**Description.** Troisième onglet de la rubrique Sous-titres : une note sur 100 par langue et par contenu, calculée sur les sous-titres déjà enregistrés. Lecture seule ; la correction se fait dans la fiche du contenu.
+
+**Règles mesurées.** Plus de 21 caractères par seconde, plus de 84 caractères par sous-titre, plus de 8 s à l'écran, chevauchement, sous-titre vide, traduction incomplète ou identique à l'original. Seuils dans `api/src/subtitleQuality.js` (`NORMS`). Note = 100 × (1 − (sous-titres avec défaut + manquants) / total) ; ≥ 90 bon, 70-89 à vérifier, < 70 à corriger ; note du contenu = la plus basse de ses langues.
+
+**Prérequis.** Aucune migration, aucun nouveau réglage. Réservé à l'organisateur et à l'administrateur.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Liste vide : aucun contenu n'a de sous-titres (`select count(*) from transcript_segments`). Note basse partout : vérifier les seuils de `NORMS`. Traduction « non traduite » à tort : phrases identiques par nature (noms propres) ; seules les phrases de 16 caractères ou plus sont comparées. Route : `GET /studio/subtitles/quality` (jeton organisateur ou administrateur).
+
+**Exemples.** Une vidéo de 1 h avec 20 % de sous-titres trop rapides à lire obtient 80 (« à vérifier ») ; une traduction arabe à moitié faite obtient au plus 50.
+
+**Testé / non testé / limites.** Voir ligne 343 du registre. Ne juge pas la justesse du texte (aucun score de confiance Whisper n'est enregistré).
+
