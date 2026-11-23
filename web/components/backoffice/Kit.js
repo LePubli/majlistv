@@ -32,6 +32,12 @@ export function Page({ title, sub, actions, children }) {
   );
 }
 
+// Image de couverture avec titre (« art-hero » de la maquette) ; sans image, le fond uni de la maquette.
+export function HeroArt({ src, title }) {
+  const bg = src ? `linear-gradient(0deg,#02101de6,transparent 72%),url('${String(src).replace(/'/g, '%27')}')` : 'linear-gradient(0deg,#02101de6,transparent 72%)';
+  return <div className={c('art-hero')} style={{ backgroundImage: bg }}><span>{title}</span></div>;
+}
+
 export function Btn({ children, primary = true, onClick, href, disabled, type = 'button', title, ...rest }) {
   const cls = c(`button ${primary ? 'primary' : 'secondary'}`);
   if (href) return <a className={cls} href={href} title={title} {...rest}>{children}</a>;

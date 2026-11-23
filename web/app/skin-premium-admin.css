@@ -429,3 +429,51 @@ html[data-skin="premium"] .bm-app {
 }
 html[data-skin="premium"] .bm-app :is(h1, h2, h3, h4, .btn, .eyebrow, .logo-text) { font-family: var(--font-title); }
 html[data-skin="premium"] .bm-app :is(button, input, textarea, select) { font-family: inherit; }
+
+/* Chaînes (Studio) : identité, liens et gestion dans la grille de la maquette ; le formulaire n'ajoute pas de boîte. */
+html[data-skin="premium"] .bm-embed .ch-contents{display:contents}
+html[data-skin="premium"] .bm-embed .ch-p-links{grid-column:1/-1;order:5}
+html[data-skin="premium"] .bm-embed .ch-p-list .bm-sx-live-sources>button{text-align:start}
+html[data-skin="premium"] .bm-embed .ch-p-list .bm-sx-live-sources>button b{display:block}
+html[data-skin="premium"] .bm-embed .ch-p-identity .bm-sx-preview-art{margin:14px 18px;height:174px}
+html[data-skin="premium"] .bm-embed .ch-p-rights .ch-team{list-style:none;margin:0 0 12px;padding:0}
+html[data-skin="premium"] .bm-embed .ch-p-rights .ch-team li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 0;border-bottom:1px solid #1c3b57}
+html[data-skin="premium"] .bm-embed .ch-p-rights .ch-owner{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+
+/* Stockage (Studio) : règles, fournisseurs et archives dans les panneaux de la maquette. */
+html[data-skin="premium"] .sg-bm .sg-rule{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1c3b57}
+html[data-skin="premium"] .sg-bm .sg-rule small{display:block}
+html[data-skin="premium"] .sg-bm .sg-num{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+html[data-skin="premium"] .sg-bm .sg-num input{width:88px;text-align:end}
+html[data-skin="premium"] .sg-bm .sg-providers{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+html[data-skin="premium"] .sg-bm .sg-prov{display:flex;flex-direction:column;gap:4px;text-align:start;padding:12px;border:1px solid #264e68;background:#0c2c48;color:#d8ebf9;border-radius:8px;cursor:pointer}
+html[data-skin="premium"] .sg-bm .sg-prov.on{border-color:#0e9aed;background:#0b3d62}
+html[data-skin="premium"] .sg-bm .sg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+html[data-skin="premium"] .sg-bm .sg-grid .sg-wide{grid-column:1/-1}
+html[data-skin="premium"] .sg-bm .sg-test{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+html[data-skin="premium"] .sg-bm .sg-items{list-style:none;margin:0 0 10px;padding:0}
+html[data-skin="premium"] .sg-bm .sg-item{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #1c3b57}
+html[data-skin="premium"] .sg-bm .sg-link{background:none;border:0;color:#35b9ff;cursor:pointer;font-size:13px;padding:0}
+html[data-skin="premium"] .sg-bm .sg-chip{font-size:12px}
+html[data-skin="premium"] .sg-bm .db-actions{display:flex;gap:10px;margin-top:6px}
+
+/* Colonnes empilées des fiches (Audyn, ouvrage) : plusieurs panneaux dans une colonne de la maquette. */
+html[data-skin="premium"] .bm-embed .ay-stack{display:grid;gap:14px;align-content:start;min-width:0}
+html[data-skin="premium"] .bm-embed .ay-form .btn.sm{padding:6px 10px;font-size:12px}
+html[data-skin="premium"] .bm-embed .ay-form .ay-chapter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #1c3b57}
+html[data-skin="premium"] .bm-embed .ay-form ol.ay-chapters{list-style:none;margin:0 0 12px;padding:0}
+
+/* Chaînes : pastille d'avatar ronde dans la liste (la maquette y met une photo rectangulaire). */
+html[data-skin="premium"] .bm-embed .ch-p-list .bm-sx-live-sources .ch-avatar{width:44px;height:44px;min-width:44px;border-radius:50%;object-fit:cover;flex:none;display:inline-flex;align-items:center;justify-content:center}
+/* Stockage : lignes de règles sans boîte, unités discrètes. */
+html[data-skin="premium"] .sg-bm .sg-rule{background:none;border-radius:0;border-width:0 0 1px}
+html[data-skin="premium"] .sg-bm .sg-num{color:#8ea9bf;font-size:13px;font-weight:600}
+
+/* Séries (Studio) : la liste d'épisodes tient dans la colonne de gauche de la maquette (la ligne passe à la ligne). */
+html[data-skin="premium"] .bm-embed .sr-ep{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+html[data-skin="premium"] .bm-embed .sr-ep .sr-ep-text{flex:1 1 200px;min-width:160px;writing-mode:horizontal-tb}
+html[data-skin="premium"] .bm-embed .sr-ep .sr-ep-text b{display:block;overflow-wrap:anywhere}
+html[data-skin="premium"] .bm-embed .sr-ep .studio-thumb{flex:0 0 96px;width:96px;height:56px}
+html[data-skin="premium"] .bm-embed .sr-ep select{flex:0 1 150px;min-width:0;width:auto}
+
+html[data-skin="premium"] .bm-embed .bm-cols.bm-dubbing-layout,html[data-skin="premium"] .bm-embed .bm-cols.bm-detail-layout,html[data-skin="premium"] .bm-embed .bm-cols.bm-audio-layout{align-items:start}

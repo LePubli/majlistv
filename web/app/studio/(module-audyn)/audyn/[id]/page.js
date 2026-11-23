@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
-import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics } from '../../../../../components/backoffice/Kit';
+import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, HeroArt as BmHeroArt } from '../../../../../components/backoffice/Kit';
 import StudioTabs from '../../../../../components/StudioTabs';
 import { AudynCategoryPicker } from '../../../../../components/AudynCategories';
 import SaleEditor from '../../../../../components/SaleEditor'; // étape C-2 : vente à l'unité
@@ -173,99 +173,109 @@ export default function StudioAudynItem() {
           ]} />
           <StudioTabs />
           <div className="bm-form">
-      {err && <p className="error" role="alert">{err}</p>}
-      {msg && <p className="meta" role="status">{msg}</p>}
-
-      <section className="panel ay-form">
-        <h2 className="ay-h2">{t('ayInfos')}</h2>
-        {field('title', t('ayTitleF'), { maxLength: 200 })}
-        {field('narrator', t('ayNarrator'), { maxLength: 200 })}
-        {field('author', t('ayAuthor'), { maxLength: 200 })}
-        <label className="fld"><span>{t('ayDesc')}</span><textarea rows={4} maxLength={4000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
-        <label className="fld"><span>{t('ayAudience')}</span>
-          <select value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value })}>{['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}</select>
-        </label>
-        <AudynCategoryPicker id="ay-item-cat" value={f.category} onChange={(v) => setF({ ...f, category: v })} />
-        <label className="fld"><span>{t('ayLang')}</span><select value={f.language} onChange={(e) => setF({ ...f, language: e.target.value })}>{LANGS.map((l) => <option key={l} value={l}>{l}</option>)}</select></label>
-        <label className="fld"><span>{t('ayAccess')}</span>
-          <select value={f.access} onChange={(e) => setF({ ...f, access: e.target.value })}>
-            <option value="learning">{t('ayAccLearning')}</option><option value="free">{t('ayAccFree')}</option>
-          </select>
-        </label>
-        <button className="btn" onClick={() => patch(f)}>{t('save')}</button>
-      </section>
-
-      <section className="panel ay-form">
-        <h2 className="ay-h2">{t('ayCover')}</h2>
-        {it.coverUrl ? <img className="ay-cover" src={it.coverUrl} alt="" /> : <p className="meta">{t('ayNoCover')}</p>}
-        <input ref={coverRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={setCover} aria-label={t('ayCover')} />
-        {it.canCoverFromLink && (
-          <div className="ay-sub">
-            <button type="button" className="btn ghost sm" onClick={coverFromLink}>{t('ayCoverFromLink')}</button>
-            <p className="meta">{t('ayCoverFromLinkHelp')}</p>
+            {err && <p className="error" role="alert">{err}</p>}
+            {msg && <p className="meta" role="status">{msg}</p>}
           </div>
-        )}
-      </section>
+          <BmCols kind="audio-layout">
+            <div className="ay-stack">
+              <BmPanel title={t('ayInfos')}>
+                <div className="bm-form ay-form" style={{ padding: '0 18px 18px' }}>
+                {field('title', t('ayTitleF'), { maxLength: 200 })}
+                {field('narrator', t('ayNarrator'), { maxLength: 200 })}
+                {field('author', t('ayAuthor'), { maxLength: 200 })}
+                <label className="fld"><span>{t('ayDesc')}</span><textarea rows={4} maxLength={4000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
+                <label className="fld"><span>{t('ayAudience')}</span>
+                  <select value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value })}>{['adults', 'kids', 'both'].map((a) => <option key={a} value={a}>{t(AUDIENCE_KEY[a])}</option>)}</select>
+                </label>
+                <AudynCategoryPicker id="ay-item-cat" value={f.category} onChange={(v) => setF({ ...f, category: v })} />
+                <label className="fld"><span>{t('ayLang')}</span><select value={f.language} onChange={(e) => setF({ ...f, language: e.target.value })}>{LANGS.map((l) => <option key={l} value={l}>{l}</option>)}</select></label>
+                <label className="fld"><span>{t('ayAccess')}</span>
+                  <select value={f.access} onChange={(e) => setF({ ...f, access: e.target.value })}>
+                    <option value="learning">{t('ayAccLearning')}</option><option value="free">{t('ayAccFree')}</option>
+                  </select>
+                </label>
+                <button className="btn" onClick={() => patch(f)}>{t('save')}</button>
+      
+                </div>
+              </BmPanel>
+              <BmPanel title={`${t('ayChapters')} (${it.chapters.length}${it.durationSeconds ? ` · ${clock(it.durationSeconds)}` : ''})`}>
+                <div className="bm-form ay-form" style={{ padding: '0 18px 18px' }}>
+                <ol className="ay-chapters">
+                  {it.chapters.map((c, i) => (
+                    <li key={c.id} className="ay-chapter">
+                      <input defaultValue={c.title} maxLength={200} aria-label={t('ayChapterTitle')} onBlur={(e) => rename(c, e.target.value)} />
+                      <span className="meta">{c.durationSeconds ? clock(c.durationSeconds) : '—'} · {(c.size / 1048576).toFixed(1)} Mo</span>
+                      {/* Étape D5 (18/11) : adresse d'où vient ce chapitre (import par lien), Studio seulement. */}
+                      {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="meta u ay-src" dir="ltr" title={c.sourceUrl} data-testid="chapter-source">{t('srcLabel')} {c.sourceUrl}</a>}
+                      <button className="btn ghost sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('ayUp')}>↑</button>
+                      <button className="btn ghost sm" disabled={i === it.chapters.length - 1} onClick={() => move(i, 1)} aria-label={t('ayDown')}>↓</button>
+                      {c.sourceUrl && <button className="btn ghost sm" onClick={() => resplit(c)} title={t('ayResplitTitle')}>{t('ayResplit')}</button>}
+                      <button className="btn ghost sm" onClick={() => del(c)}>{t('ayDelete')}</button>
+                    </li>
+                  ))}
+                </ol>
+                <label className="chk"><input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} /> <span>{t('ayRightsOk')}</span></label>
+                <input ref={fileRef} type="file" multiple accept="audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a" disabled={!rights || busy} onChange={addFiles} aria-label={t('ayAddFiles')} />
+                <p className="meta">{t('ayFormats')}</p>
+                {queue.map((q, i) => <p key={i} className={q.error ? 'error' : 'meta'}>{q.name} — {q.error || (q.done ? t('ayDone') : `${q.pct} %`)}</p>)}
 
-      <section className="panel ay-form">
-        <h2 className="ay-h2">{t('ayChapters')} ({it.chapters.length}{it.durationSeconds ? ` · ${clock(it.durationSeconds)}` : ''})</h2>
-        <ol className="ay-chapters">
-          {it.chapters.map((c, i) => (
-            <li key={c.id} className="ay-chapter">
-              <input defaultValue={c.title} maxLength={200} aria-label={t('ayChapterTitle')} onBlur={(e) => rename(c, e.target.value)} />
-              <span className="meta">{c.durationSeconds ? clock(c.durationSeconds) : '—'} · {(c.size / 1048576).toFixed(1)} Mo</span>
-              {/* Étape D5 (18/11) : adresse d'où vient ce chapitre (import par lien), Studio seulement. */}
-              {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="meta u ay-src" dir="ltr" title={c.sourceUrl} data-testid="chapter-source">{t('srcLabel')} {c.sourceUrl}</a>}
-              <button className="btn ghost sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('ayUp')}>↑</button>
-              <button className="btn ghost sm" disabled={i === it.chapters.length - 1} onClick={() => move(i, 1)} aria-label={t('ayDown')}>↓</button>
-              {c.sourceUrl && <button className="btn ghost sm" onClick={() => resplit(c)} title={t('ayResplitTitle')}>{t('ayResplit')}</button>}
-              <button className="btn ghost sm" onClick={() => del(c)}>{t('ayDelete')}</button>
-            </li>
-          ))}
-        </ol>
-        <label className="chk"><input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} /> <span>{t('ayRightsOk')}</span></label>
-        <input ref={fileRef} type="file" multiple accept="audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a" disabled={!rights || busy} onChange={addFiles} aria-label={t('ayAddFiles')} />
-        <p className="meta">{t('ayFormats')}</p>
-        {queue.map((q, i) => <p key={i} className={q.error ? 'error' : 'meta'}>{q.name} — {q.error || (q.done ? t('ayDone') : `${q.pct} %`)}</p>)}
-
-        <form className="ay-sub ay-link" onSubmit={addLink} data-testid="audyn-link">
-          <h3 className="ay-h3">{t('ayLinkTitle')}</h3>
-          <p className="meta">{t('ayLinkHelp')}</p>
-          <div className="ay-link-row">
-            <input type="url" inputMode="url" dir="ltr" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" aria-label={t('ayLinkTitle')} maxLength={1000} />
-            <button className="btn" disabled={!link.trim() || !rights}>{t('ayLinkAdd')}</button>
-          </div>
-          <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
-          <label className="chk"><input type="checkbox" checked={splitLink} onChange={(e) => setSplitLink(e.target.checked)} /> <span>{t('ayLinkSplit')}</span></label>
-          {!rights && <p className="meta">{t('ayLinkNeedRights')}</p>}
-        </form>
-        {jobs.length > 0 && (
-          <ul className="ay-jobs" aria-live="polite">
-            {jobs.map((j) => (
-              <li key={j.id} className={j.status === 'failed' ? 'bad' : ''}>
-                <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.kind === 'meta' ? t('ayMetaJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
-                <span className="meta">{jobLabel(j)}</span>
-                {j.active && <button type="button" className="btn ghost sm" onClick={() => cancelJob(j)}>{t('ayLinkCancel')}</button>}
-                {j.status === 'failed' && <button type="button" className="btn ghost sm" onClick={() => retryJob(j)}>{t('ayRetry')}</button>}
-                {j.error && <span className="error small">{j.error}</span>}
-                {j.note && <span className="meta small">{j.note}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <SaleEditor kind="audyn" id={it.id} />
-
-      <section className="panel ay-form">
-        <h2 className="ay-h2">{t('ayPublish')}</h2>
-        <p className="meta">{it.status === 'published' ? t('ayIsPublished') : t('ayIsDraft')}</p>
-        {it.status === 'published'
-          ? <button className="btn ghost" onClick={() => patch({ status: 'draft' }, t('ayUnpublished'))}>{t('ayUnpublish')}</button>
-          : <button className="btn" disabled={!it.chapters.length} onClick={() => patch({ status: 'published' }, t('ayPublishedMsg'))}>{t('ayPublishBtn')}</button>}
-        <button className="btn ghost" onClick={delAll}>{t('ayDeleteItem')}</button>
-      </section>
-          </div>
+                <form className="ay-sub ay-link" onSubmit={addLink} data-testid="audyn-link">
+                  <h3 className="ay-h3">{t('ayLinkTitle')}</h3>
+                  <p className="meta">{t('ayLinkHelp')}</p>
+                  <div className="ay-link-row">
+                    <input type="url" inputMode="url" dir="ltr" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" aria-label={t('ayLinkTitle')} maxLength={1000} />
+                    <button className="btn" disabled={!link.trim() || !rights}>{t('ayLinkAdd')}</button>
+                  </div>
+                  <label className="chk"><input type="checkbox" checked={frLink} onChange={(e) => setFrLink(e.target.checked)} /> <span>{t('ayLinkFr')}</span></label>
+                  <label className="chk"><input type="checkbox" checked={splitLink} onChange={(e) => setSplitLink(e.target.checked)} /> <span>{t('ayLinkSplit')}</span></label>
+                  {!rights && <p className="meta">{t('ayLinkNeedRights')}</p>}
+                </form>
+                {jobs.length > 0 && (
+                  <ul className="ay-jobs" aria-live="polite">
+                    {jobs.map((j) => (
+                      <li key={j.id} className={j.status === 'failed' ? 'bad' : ''}>
+                        <span className="ay-job-t" dir="auto">{j.kind === 'cover' ? t('ayLinkCoverJob') : j.kind === 'meta' ? t('ayMetaJob') : j.replaceChapter ? `${t('ayResplitJob')} : ${j.title}` : (j.title || j.url)}</span>
+                        <span className="meta">{jobLabel(j)}</span>
+                        {j.active && <button type="button" className="btn ghost sm" onClick={() => cancelJob(j)}>{t('ayLinkCancel')}</button>}
+                        {j.status === 'failed' && <button type="button" className="btn ghost sm" onClick={() => retryJob(j)}>{t('ayRetry')}</button>}
+                        {j.error && <span className="error small">{j.error}</span>}
+                        {j.note && <span className="meta small">{j.note}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+      
+                </div>
+              </BmPanel>
+            </div>
+            <div className="ay-stack">
+              <BmPanel title={t('ayCover')}>
+                <BmHeroArt src={it.coverUrl} title={it.title} />
+                <div className="bm-form ay-form" style={{ padding: '0 18px 18px' }}>
+                {!it.coverUrl && <p className="meta">{t('ayNoCover')}</p>}
+                <input ref={coverRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={setCover} aria-label={t('ayCover')} />
+                {it.canCoverFromLink && (
+                  <div className="ay-sub">
+                    <button type="button" className="btn ghost sm" onClick={coverFromLink}>{t('ayCoverFromLink')}</button>
+                    <p className="meta">{t('ayCoverFromLinkHelp')}</p>
+                  </div>
+                )}
+      
+                </div>
+              </BmPanel>
+              <div className="bm-form"><SaleEditor kind="audyn" id={it.id} /></div>
+              <BmPanel title={t('ayPublish')}>
+                <div className="bm-form ay-form" style={{ padding: '0 18px 18px' }}>
+                <p className="meta">{it.status === 'published' ? t('ayIsPublished') : t('ayIsDraft')}</p>
+                {it.status === 'published'
+                  ? <button className="btn ghost" onClick={() => patch({ status: 'draft' }, t('ayUnpublished'))}>{t('ayUnpublish')}</button>
+                  : <button className="btn" disabled={!it.chapters.length} onClick={() => patch({ status: 'published' }, t('ayPublishedMsg'))}>{t('ayPublishBtn')}</button>}
+                <button className="btn ghost" onClick={delAll}>{t('ayDeleteItem')}</button>
+      
+                </div>
+              </BmPanel>
+            </div>
+          </BmCols>
         </BmPage>
       </main>
     );

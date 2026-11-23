@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../../components/Providers';
-import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Meta as BmMeta, Badge as BmBadge, c as bmc } from '../../../../components/backoffice/Kit';
 import ChannelAvatar from '../../../../components/ChannelAvatar';
 import ChannelImages from '../../../../components/ChannelImages';
 
@@ -49,7 +49,7 @@ function Team({ c, t, call }) {
   );
 }
 
-function Channel({ c, owners, canAssign, t, call, locale, onSaved, onDeleted }) {
+function Channel({ c, owners, canAssign, t, call, locale, onSaved, onDeleted, premium }) {
   // Valeurs enregistrées : ne change que si les champs modifiables changent (pas quand une image est rechargée).
   const key = JSON.stringify([c.name, c.bio, c.tagline, c.website, c.contactEmail, c.country, c.mainLanguage, c.featuredTalkId, c.socials]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,13 +81,90 @@ function Channel({ c, owners, canAssign, t, call, locale, onSaved, onDeleted }) 
     setBusy(true); setMsg(null);
     const r = await call(`/studio/channels/${c.slug}/owner`, { method: 'PUT', body: JSON.stringify({ ownerId: owner || null }) });
     setBusy(false);
-    if (r.ok) { setMsg({ ok: true, text: t('chAssigned') }); onSaved(); } else setMsg({ ok: false, text: r.data?.error || t('errGeneric') });
+    if (r.ok) { setMsg({ ok: true, text: t('chAssigned'), where: 'rights' }); onSaved(); } else setMsg({ ok: false, text: r.data?.error || t('errGeneric'), where: 'rights' });
   };
   const del = async () => {
     if (!window.confirm(t('chDeleteAsk'))) return;
     const r = await call(`/studio/channels/${c.slug}`, { method: 'DELETE' });
-    if (r.ok) onDeleted(); else setMsg({ ok: false, text: r.data?.error || t('errGeneric') });
+    if (r.ok) onDeleted(); else setMsg({ ok: false, text: r.data?.error || t('errGeneric'), where: 'rights' });
   };
+  if (premium) {
+    // Maquette « Chaînes & équipes éditoriales » : identité (aperçu + champs), liens et informations, puis gestion et droits.
+    const role = t(c.myRole === 'editor' ? 'chRoleEditor' : 'chRoleOwner');
+    const showMsg = (where) => msg && (msg.where || 'save') === where && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>;
+    return (
+      <>
+        <form onSubmit={save} className="ch-form ch-contents" data-slug={c.slug}>
+          <BmPanel title={t('chSecIdentity')} className="ch-p-identity">
+            <div className={bmc('sx-preview-art')}>
+              {c.bannerUrl ? <img src={c.bannerUrl} alt="" /> : null}
+              <div><BmBadge tone="blue">{f.name || c.name}</BmBadge></div>
+            </div>
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              <label className="fld"><span>{t('chName')}</span><input name="name" value={f.name} maxLength={120} required onChange={(e) => set('name', e.target.value)} /></label>
+              <label className="fld"><span>{t('chTagline')}</span><input name="tagline" value={f.tagline} maxLength={100} placeholder={t('chTaglinePh')} onChange={(e) => set('tagline', e.target.value)} /></label>
+              <label className="fld"><span>{t('chBio')}</span><textarea name="bio" rows={5} maxLength={3000} value={f.bio} placeholder={t('chBioPh')} onChange={(e) => set('bio', e.target.value)} /></label>
+              <h3>{t('chSecImages')}</h3>
+              <ChannelImages c={c} t={t} call={call} onSaved={onSaved} />
+              <div className="panel-actions" style={{ marginTop: 14 }}><button className="btn" disabled={!dirty || busy}>{t('chSave')}</button></div>
+              {showMsg('save')}
+            </div>
+          </BmPanel>
+          <BmPanel title={`${t('chSecLinks')} · ${t('chSecInfo')}`} className="ch-p-links">
+            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+              <div className="form-grid">
+                <label className="fld"><span>{t('chWebsite')}</span><input name="website" type="url" inputMode="url" maxLength={200} placeholder="https://" value={f.website} onChange={(e) => set('website', e.target.value)} /></label>
+                <label className="fld"><span>{t('chContact')}</span><input name="contactEmail" type="email" maxLength={160} value={f.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} /></label>
+                <label className="fld"><span>{t('chCountry')}</span><input name="country" maxLength={80} value={f.country} onChange={(e) => set('country', e.target.value)} /></label>
+                <label className="fld"><span>{t('chLang')}</span>
+                  <select name="mainLanguage" value={f.mainLanguage} onChange={(e) => set('mainLanguage', e.target.value)}>
+                    <option value="">{t('chLangNone')}</option>
+                    {LANGS.map((l) => <option key={l} value={l}>{langName(l)}</option>)}
+                  </select></label>
+                {SOCIALS.map(([k, label]) => (
+                  <label className="fld" key={k}><span>{label}</span>
+                    <input name={`social-${k}`} type="url" inputMode="url" maxLength={200} placeholder="https://" value={f.socials[k]} onChange={(e) => setF((o) => ({ ...o, socials: { ...o.socials, [k]: e.target.value } }))} /></label>
+                ))}
+              </div>
+              <label className="fld"><span>{t('chFeatured')}</span>
+                <select name="featuredTalkId" value={f.featuredTalkId} onChange={(e) => set('featuredTalkId', e.target.value)}>
+                  <option value="">{t('chFeaturedNone')}</option>
+                  {talks.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+                </select>
+                <small className="meta">{t('chFeaturedHelp')}</small></label>
+              <div className="panel-actions"><button className="btn" disabled={!dirty || busy}>{t('chSave')}</button></div>
+            </div>
+          </BmPanel>
+        </form>
+        <BmPanel title={t('chManageTitle')} className="ch-p-rights">
+          <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+            <BmMeta items={[
+              [t('chMetaFollowers'), c.followers.toLocaleString(locale)],
+              [t('chMetaTalks'), c.talks.toLocaleString(locale)],
+              [t('chMetaRole'), role],
+              [t('chMetaKey'), <span key="k" dir="ltr">{c.keyName}</span>],
+            ]} />
+            {c.talks === 0 && <p className="meta">{t('chPubEmptyNote')}</p>}
+            {c.talks > 0 && <p><Link className="link" href={`/chaines/${c.slug}`} target="_blank">{t('chView')}</Link></p>}
+            {isOwnerish && <Team c={c} t={t} call={call} />}
+            {canAssign && (
+              <div className="ch-owner">
+                <label className="fld"><span>{t('chOwner')}</span>
+                  <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+                    <option value="">{t('chNoOwner')}</option>
+                    {owners.map((o) => <option key={o.id} value={o.id}>{o.name || o.email} ({t('role_' + o.role)})</option>)}
+                  </select>
+                </label>
+                <button type="button" className="btn ghost" disabled={busy || owner === (c.ownerId || '')} onClick={assign}>{t('chAssign')}</button>
+              </div>
+            )}
+            {isOwnerish && c.talks === 0 && <div className="panel-actions"><button type="button" className="btn ghost danger" onClick={del}>{t('chDelete')}</button></div>}
+            {showMsg('rights')}
+          </div>
+        </BmPanel>
+      </>
+    );
+  }
   return (
     <article className="ch-card" data-slug={c.slug}>
       <div className="ch-card-head">
@@ -186,33 +263,40 @@ export default function StudioChannel() {
   };
   if (!d) return null;
   if (skin === 'premium') {
+    const followers = cur ? cur.followers : null;
     return (
       <main className="studio-page">
         <BmPage title={d.canAssign ? t('chStudioAll') : t('chStudioTitle')} sub={d.canAssign ? t('chIntroStaff') : t('chIntro')}>
-          <BmMetrics cols="three" items={[{ icon: 'tv', label: d.canAssign ? t('chNavAll') : t('chNav'), value: channels.length }]} />
-          <BmPanel title={t('chSwitch')}>
-            <div className="bm-form" style={{ padding: '0 18px 18px' }}>
-              <div className="ch-bar">
-        {channels.length > 0 && (
-          <div className="ch-pick">
-            {d.canAssign && channels.length > 6 && <label className="fld ch-filter"><span>{t('chFilter')}</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} /></label>}
-            <label className="fld"><span>{t('chSwitch')}</span>
-              <select name="channel" value={cur?.slug || ''} onChange={(e) => setSel(e.target.value)}>
-                {list.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-              </select></label>
-          </div>
-        )}
-        <form onSubmit={create} className="ch-new">
-          <label className="fld"><span>{t('chNew')}</span><input name="newName" value={name} maxLength={120} placeholder={t('chNewPh')} onChange={(e) => setName(e.target.value)} /></label>
-          <button className="btn ghost" disabled={!name.trim()}>{t('chCreate')}</button>
-        </form>
-      </div>
-              <p className="meta small">{t('chNewHelp')}</p>
-              {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
-            </div>
-          </BmPanel>
+          <BmMetrics cols="three" items={[
+            { icon: 'tv', label: d.canAssign ? t('chNavAll') : t('chNav'), value: channels.length },
+            cur ? { icon: 'video', label: t('chMetaTalks'), value: cur.talks.toLocaleString(locale), note: cur.name } : { value: null },
+            cur ? { icon: 'users', tone: 'green', label: t('chMetaFollowers'), value: followers.toLocaleString(locale), note: cur.name } : { value: null },
+          ]} />
           {channels.length === 0 && <p className="soon">{d.canAssign ? t('chEmptyStaff') : t('chEmpty')}</p>}
-          {cur && <BmPanel title={cur.name}><div className="bm-form" style={{ padding: '0 18px 18px' }}><Channel key={cur.slug} c={cur} owners={owners} canAssign={d.canAssign} t={t} call={call} locale={locale} onSaved={load} onDeleted={() => { setSel(''); load(); }} /></div></BmPanel>}
+          <div className={bmc('sx-channel-layout')}>
+            <BmPanel title={t('chListTitle')} className="ch-p-list">
+              {channels.length > 0 && (
+                <div className={bmc('sx-live-sources')}>
+                  {list.map((ch) => (
+                    <button key={ch.slug} type="button" className={cur?.slug === ch.slug ? bmc('selected') : ''} onClick={() => setSel(ch.slug)}>
+                      <ChannelAvatar name={ch.name} url={ch.avatarUrl} />
+                      <span><b>{ch.name}</b><small>{t(ch.followers > 1 ? 'chFolN' : 'chFol1').replace('{n}', ch.followers)}</small></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="bm-form" style={{ padding: '0 18px 18px' }}>
+                {d.canAssign && channels.length > 6 && <label className="fld ch-filter"><span>{t('chFilter')}</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} /></label>}
+                <form onSubmit={create} className="ch-new">
+                  <label className="fld"><span>{t('chNew')}</span><input name="newName" value={name} maxLength={120} placeholder={t('chNewPh')} onChange={(e) => setName(e.target.value)} /></label>
+                  <button className="btn ghost" disabled={!name.trim()}>{t('chCreate')}</button>
+                </form>
+                <p className="meta small">{t('chNewHelp')}</p>
+                {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+              </div>
+            </BmPanel>
+            {cur && <Channel key={cur.slug} premium c={cur} owners={owners} canAssign={d.canAssign} t={t} call={call} locale={locale} onSaved={load} onDeleted={() => { setSel(''); load(); }} />}
+          </div>
         </BmPage>
       </main>
     );

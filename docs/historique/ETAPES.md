@@ -10021,3 +10021,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Catalogue — finitions (23/11/2026)
 
 - ItemList sur les pages de catégorie ; zone chiffres de l'accueil Kids alignée sur les rangées. **Déploiement** : `majlistv-web` seulement.
+
+## Back-office Premium — groupe B (23/11/2026)
+
+- Six écrans recomposés comme la maquette (Stockage, Chaînes, Doublage d'une vidéo, fiche Audyn, fiche d'un ouvrage, détail d'une série), mêmes données et mêmes fonctions. **Déploiement** : `majlistv-web` seulement.

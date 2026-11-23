@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import { hasWebModule } from '../../lib/modules';
-import { Page as BmPage, Metrics as BmMetrics } from '../../components/backoffice/Kit';
+import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Progress as BmProgress, Meta as BmMeta } from '../../components/backoffice/Kit';
 import { fmtBytes, ago, unitsFor } from '../../lib/format';
 
 export { fmtBytes };
@@ -170,27 +170,176 @@ export default function StoragePage() {
   const arSub = ar.count ? tf(t(ar.count === 1 ? 'sgArchFiles1' : 'sgArchFiles'), { n: ar.count, a: ar.audio, v: ar.video }) : t('sgArchNone');
   const live = d.items;
 
+  const whereBody = (
+    <>
+    <div className="sg-providers" role="radiogroup" aria-label={t('sgWhere')}>
+      {d.providers.map((x) => (
+        <button key={x.id} type="button" role="radio" aria-checked={p === x.id} className={`sg-prov${p === x.id ? ' on' : ''}`} onClick={() => set('provider', x.id)}>
+          <strong>{t(`sgProv_${x.id}`)}</strong><small>{t(`sgProvSub_${x.id}`)}</small>
+        </button>
+      ))}
+    </div>
+
+    {p === 'planethoster' && (
+      <div className="sg-grid">
+        <Field label={t('sgHost')}><input value={form.sftp_host} onChange={(e) => set('sftp_host', e.target.value)} placeholder="node228-eu.n0c.com" autoComplete="off" /></Field>
+        <Field label={t('sgPort')}><input inputMode="numeric" value={form.sftp_port} onChange={(e) => set('sftp_port', e.target.value)} /></Field>
+        <Field label={t('sgUser')}><input value={form.sftp_user} onChange={(e) => set('sftp_user', e.target.value)} autoComplete="off" /></Field>
+        <SecretField label={t(useKey ? 'sgKey' : 'sgPassOrKey')} isSet={d.secret.sftp_secret.isSet} multiline={useKey}
+          setHint={d.secret.sftp_secret.kind === 'key' ? t('sgKeySet') : t('sgSecretSet')} value={sec.sftp_secret} onChange={(v) => setS('sftp_secret', v)}
+          placeholder={useKey ? '-----BEGIN OPENSSH PRIVATE KEY-----' : ''} />
+        <p className="sg-wide sg-switch"><button type="button" className="sg-link" onClick={() => setUseKey(!useKey)}>{t(useKey ? 'sgUsePass' : 'sgUseKey')}</button></p>
+      </div>
+    )}
+    {p === 's3' && (
+      <div className="sg-grid">
+        <Field label={t('sgS3Endpoint')} wide><input value={form.s3_endpoint} onChange={(e) => set('s3_endpoint', e.target.value)} placeholder="https://s3.fr-par.scw.cloud" autoComplete="off" /></Field>
+        <Field label={t('sgS3Region')}><input value={form.s3_region} onChange={(e) => set('s3_region', e.target.value)} /></Field>
+        <Field label={t('sgS3Bucket')}><input value={form.s3_bucket} onChange={(e) => set('s3_bucket', e.target.value)} autoComplete="off" /></Field>
+        <Field label={t('sgS3Access')}><input value={form.s3_access_key} onChange={(e) => set('s3_access_key', e.target.value)} autoComplete="off" /></Field>
+        <SecretField label={t('sgS3Secret')} isSet={d.secret.s3_secret_key.isSet} value={sec.s3_secret_key} onChange={(v) => setS('s3_secret_key', v)} />
+      </div>
+    )}
+    {p === 'webdav' && (
+      <div className="sg-grid">
+        <Field label={t('sgDavUrl')} wide><input value={form.webdav_url} onChange={(e) => set('webdav_url', e.target.value)} placeholder="https://cloud.exemple.fr/remote.php/dav/files/…" autoComplete="off" /></Field>
+        <Field label={t('sgUser')}><input value={form.webdav_user} onChange={(e) => set('webdav_user', e.target.value)} autoComplete="off" /></Field>
+        <SecretField label={t('sgPass')} isSet={d.secret.webdav_pass.isSet} value={sec.webdav_pass} onChange={(v) => setS('webdav_pass', v)} />
+      </div>
+    )}
+    {p === 'none' && <p className="meta">{t('sgNoneText')}</p>}
+    {p !== 'none' && (
+      <details className="db-adv">
+        <summary>{t('sgAdvanced')}</summary>
+        <div className="sg-grid">
+          <Field label={t('sgFolder')}><input value={form.folder} onChange={(e) => set('folder', e.target.value)} /></Field>
+          <SecretField label={t('sgEncrypt')} isSet={d.secret.encrypt_pass.isSet} value={sec.encrypt_pass} onChange={(v) => setS('encrypt_pass', v)} />
+          <p className="meta small sg-wide">{t('sgEncryptHelp')}</p>
+          {d.secret.encrypt_pass.isSet && <p className="sg-wide"><button type="button" className="sg-link" onClick={async () => { if (!window.confirm(t('sgEncryptRemoveConfirm'))) return; const r = await call('/studio/storage/settings', { method: 'PUT', body: JSON.stringify({ encrypt_pass: null }) }); if (r.ok) apply(r.data, true); }}>{t('sgEncryptRemove')}</button></p>}
+        </div>
+      </details>
+    )}
+    {!d.encryptionReady && <p className="error small">{t('sgNoEncryption')}</p>}
+    <div className="sg-test">
+      <button type="button" className="btn ghost sg-pill" disabled={testing || p === 'none'} onClick={test}>{testing ? t('sgTesting') : t('sgTest')}</button>
+      <button type="button" className="btn ghost sg-pill" disabled={testing || p === 'none'} onClick={testFile}>{t('sgTestFile')}</button>
+      <small className="meta">{t('sgCipherNote')}</small>
+    </div>
+    {lt && !lt.ok && <p className="error small" role="status">{lt.message}</p>}
+    {lt?.ok && lt.about?.freeBytes != null && <p className="meta small">{tf(t('sgAbout'), { f: fmtBytes(lt.about.freeBytes, locale) })}</p>}
+    </>
+  );
+  const rulesBody = (
+    <>
+      <div className="sg-rule">
+        <span>{t('sgRuleWork')}</span>
+        <span className="sg-num"><input type="number" min={0} max={3650} value={form.work_audio_days} onChange={(e) => set('work_audio_days', e.target.value)} aria-label={t('sgRuleWork')} /> {t('sgDays')}</span>
+      </div>
+      <div className="sg-rule">
+        <span>{t('sgRuleKeep')}<small className="meta">{t('sgRuleKeepNote')}</small></span>
+        <span className="sg-num"><input type="number" min={1} max={365} value={form.keep_original_days} onChange={(e) => set('keep_original_days', e.target.value)} aria-label={t('sgRuleKeep')} /> {t('sgDays')}</span>
+      </div>
+      <div className="sg-rule">
+        <span>{t('sgRuleAlert')}</span>
+        <span className="sg-num"><input type="number" min={0} max={90} value={form.alert_free_pct} onChange={(e) => set('alert_free_pct', e.target.value)} aria-label={t('sgRuleAlert')} /> %</span>
+      </div>
+      <div className="sg-rule">
+        <span>{t('sgRuleCapacity')}<small className="meta">{t('sgRuleCapacityNote')}</small></span>
+        <span className="sg-num"><input type="number" min={1} max={100000} value={form.garage_capacity_gb} onChange={(e) => set('garage_capacity_gb', e.target.value)} aria-label={t('sgRuleCapacity')} /> {unitsFor(locale)[3]}</span>
+      </div>
+      <div className="sg-rule"><span>{t('sgRuleBackup')}</span><strong className="sg-same">{t('sgUnchanged')}</strong></div>
+      <p className="meta small">
+        {d.autoLast ? tf(t('sgRulesLast'), { d: ago(d.autoLast.at, locale), n: d.autoLast.queued }) : t('sgRulesNever')}{' '}
+        {p !== 'none' && <button type="button" className="sg-link" onClick={runRules}>{t('sgRulesNow')}</button>}
+      </p>
+    </>
+  );
+  const archBody = (
+    <>
+      {live.length ? <ul className="sg-items">{live.map((it) => <Item key={it.id} it={it} onAct={act} busyId={busyId} />)}</ul> : <p className="meta">{t('sgArchEmpty')}</p>}
+      {d.history.length > 0 && (
+        <>
+          <button type="button" className="sg-link" aria-expanded={showHist} onClick={() => setShowHist(!showHist)}>{tf(t(showHist ? 'sgHistHide' : 'sgHistShow'), { n: d.history.length })}</button>
+          {showHist && <ul className="sg-items">{d.history.map((it) => <Item key={it.id} it={it} onAct={act} busyId={busyId} />)}</ul>}
+        </>
+      )}
+    </>
+  );
+  const chip = lt && <span className={`sg-chip ${lt.ok ? 'ok' : 'ko'}`}>{tf(t(lt.ok ? 'sgChipOk' : 'sgChipKo'), { d: ago(lt.at, locale) })}</span>;
+  const resetAll = () => { apply(d, false); setSec({ sftp_secret: '', s3_secret_key: '', webdav_pass: '', encrypt_pass: '' }); setMsg(null); };
+  const actions = (
+    <>
+      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
+      <div className="db-actions">
+        <button type="button" className="btn sg-save" disabled={!dirty || saving} onClick={save}>{saving ? t('sgSaving') : t('dbSave')}</button>
+        {dirty && <button type="button" className="btn ghost" onClick={resetAll}>{t('dbCancel')}</button>}
+      </div>
+    </>
+  );
+  const tabs = (
+    <nav className="st-tabs" aria-label={t('sdSettings')}>
+      <Link href="/studio/settings">{t('sgTabGeneral')}</Link>
+      {hasWebModule('dubbing') && feat('dubbing') && <Link href="/studio/dubbing#defaults">{t('sgTabDubbing')}</Link>}
+      <Link href="/studio/settings/storage" className="on" aria-current="page">{t('sgTitle')}</Link>
+    </nav>
+  );
+  const alertP = sp.alert && <p className="sg-alert" role="alert">{tf(t('sgSpaceAlert'), { p: sp.freePct.toLocaleString(locale), s: sp.alertPct })}</p>;
+  const measured = sp.measuredAt && <p className="meta small sg-measured">{tf(t('sgMeasured'), { d: ago(sp.measuredAt, locale), n: (sp.objects || 0).toLocaleString(locale) })} <button type="button" className="sg-link" onClick={refreshSpace}>{t('sgRefresh')}</button></p>;
+
+  // Maquette « Stockage & archivage » : 3 chiffres, capacité + règles de conservation côte à côte, puis l'archivage et les fichiers archivés.
+  if (skin === 'premium') {
+    const metrics = [
+      { icon: 'database', tone: sp.alert ? 'red' : 'blue', label: t('sgKpiGarage'), value: sp.usedBytes == null ? null : fmtBytes(sp.usedBytes, locale), note: sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) }) },
+      { icon: 'download', label: t('sgKpiArchives'), value: fmtBytes(ar.bytes, locale), note: arSub },
+      d.pendingOriginals.available ? { icon: 'video', label: tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days }), value: fmtBytes(d.pendingOriginals.bytes, locale), note: tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count }) } : { value: null },
+    ];
+    return (
+      <main className="studio-page sg-page">
+        <BmPage title={t('sgTitle')}>
+          <BmMetrics cols="three" items={metrics} />
+          {tabs}
+          {alertP}
+          <BmCols kind="equal">
+            <BmPanel title={t('sgKpiGarage')}>
+              <div className="bm-form sg-bm" style={{ padding: '0 18px 18px' }}>
+                {sp.usedBytes == null
+                  ? <p className="meta">{sp.error || t('sgGarageOff')}</p>
+                  : <>
+                    <h3>{fmtBytes(sp.usedBytes, locale)} / {fmtBytes(sp.capacityBytes, locale)}</h3>
+                    <BmProgress value={sp.usedPct} />
+                    <p>{tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) })}</p>
+                  </>}
+                <BmMeta items={[
+                  [t('sgKpiArchives'), fmtBytes(ar.bytes, locale)],
+                  [arSub, ar.count.toLocaleString(locale)],
+                  ...(d.pendingOriginals.available ? [[tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days }), fmtBytes(d.pendingOriginals.bytes, locale)]] : []),
+                ]} />
+                {measured}
+              </div>
+            </BmPanel>
+            <BmPanel title={t('sgRules')}>
+              <div className="bm-form sg-bm" style={{ padding: '0 18px 18px' }}>{rulesBody}</div>
+            </BmPanel>
+          </BmCols>
+          <BmPanel title={t('sgWhere')} extra={chip}>
+            <div className="bm-form sg-bm" style={{ padding: '0 18px 18px' }}>{whereBody}</div>
+          </BmPanel>
+          <BmPanel title={t('sgInArchives')}>
+            <div className="bm-form sg-bm" style={{ padding: '0 18px 18px' }}>{archBody}</div>
+          </BmPanel>
+          <div className="bm-form sg-bm">{actions}</div>
+        </BmPage>
+      </main>
+    );
+  }
+
   return (
     <main className="studio-page sg-page">
-      {skin === 'premium' ? <BmPage title={t('sgTitle')}>
-        <BmMetrics cols="three" items={[
-          { icon: 'database', tone: sp.alert ? 'red' : 'blue', label: t('sgKpiGarage'), value: sp.usedBytes == null ? null : fmtBytes(sp.usedBytes, locale), note: sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) }) },
-          { icon: 'download', label: t('sgKpiArchives'), value: fmtBytes(ar.bytes, locale), note: arSub },
-          d.pendingOriginals.available ? { icon: 'video', label: tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days }), value: fmtBytes(d.pendingOriginals.bytes, locale), note: tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count }) } : { value: null },
-        ]} />
-      </BmPage> : (<>
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}>
         <Link href="/studio">{t('dbStudio')}</Link> / <Link href="/studio/settings">{t('sdSettings')}</Link> / <span>{t('sgTitle')}</span>
       </nav>
       <div className="studio-head"><h1 className="studio-title">{t('sgTitle')}</h1></div>
-      </>)}
-      <nav className="st-tabs" aria-label={t('sdSettings')}>
-        <Link href="/studio/settings">{t('sgTabGeneral')}</Link>
-        {hasWebModule('dubbing') && feat('dubbing') && <Link href="/studio/dubbing#defaults">{t('sgTabDubbing')}</Link>}
-        <Link href="/studio/settings/storage" className="on" aria-current="page">{t('sgTitle')}</Link>
-      </nav>
-
-      {skin !== 'premium' && (
+      {tabs}
       <div className="sg-kpis">
         <Kpi title={t('sgKpiGarage')} value={sp.usedBytes == null ? '—' : fmtBytes(sp.usedBytes, locale)} pct={sp.usedPct} warn={sp.alert}
           sub={sp.usedBytes == null ? (sp.error || t('sgGarageOff')) : tf(t('sgKpiGarageSub'), { c: fmtBytes(sp.capacityBytes, locale), p: sp.usedPct.toLocaleString(locale) })} />
@@ -198,115 +347,30 @@ export default function StoragePage() {
         <Kpi title={tf(t('sgKpiOriginals'), { n: d.pendingOriginals.days })} value={d.pendingOriginals.available ? fmtBytes(d.pendingOriginals.bytes, locale) : '—'}
           sub={tf(t('sgKpiOriginalsSub'), { n: d.pendingOriginals.count })} />
       </div>
-      )}
-      {sp.alert && <p className="sg-alert" role="alert">{tf(t('sgSpaceAlert'), { p: sp.freePct.toLocaleString(locale), s: sp.alertPct })}</p>}
-      {sp.measuredAt && <p className="meta small sg-measured">{tf(t('sgMeasured'), { d: ago(sp.measuredAt, locale), n: (sp.objects || 0).toLocaleString(locale) })} <button type="button" className="sg-link" onClick={refreshSpace}>{t('sgRefresh')}</button></p>}
+      {alertP}
+      {measured}
 
       <section className="sd-card sg-where" aria-labelledby="sg-where">
         <div className="sd-card-head">
           <h2 id="sg-where">{t('sgWhere')}</h2>
-          {lt && <span className={`sg-chip ${lt.ok ? 'ok' : 'ko'}`}>{tf(t(lt.ok ? 'sgChipOk' : 'sgChipKo'), { d: ago(lt.at, locale) })}</span>}
+          {chip}
         </div>
-        <div className="sg-providers" role="radiogroup" aria-label={t('sgWhere')}>
-          {d.providers.map((x) => (
-            <button key={x.id} type="button" role="radio" aria-checked={p === x.id} className={`sg-prov${p === x.id ? ' on' : ''}`} onClick={() => set('provider', x.id)}>
-              <strong>{t(`sgProv_${x.id}`)}</strong><small>{t(`sgProvSub_${x.id}`)}</small>
-            </button>
-          ))}
-        </div>
-
-        {p === 'planethoster' && (
-          <div className="sg-grid">
-            <Field label={t('sgHost')}><input value={form.sftp_host} onChange={(e) => set('sftp_host', e.target.value)} placeholder="node228-eu.n0c.com" autoComplete="off" /></Field>
-            <Field label={t('sgPort')}><input inputMode="numeric" value={form.sftp_port} onChange={(e) => set('sftp_port', e.target.value)} /></Field>
-            <Field label={t('sgUser')}><input value={form.sftp_user} onChange={(e) => set('sftp_user', e.target.value)} autoComplete="off" /></Field>
-            <SecretField label={t(useKey ? 'sgKey' : 'sgPassOrKey')} isSet={d.secret.sftp_secret.isSet} multiline={useKey}
-              setHint={d.secret.sftp_secret.kind === 'key' ? t('sgKeySet') : t('sgSecretSet')} value={sec.sftp_secret} onChange={(v) => setS('sftp_secret', v)}
-              placeholder={useKey ? '-----BEGIN OPENSSH PRIVATE KEY-----' : ''} />
-            <p className="sg-wide sg-switch"><button type="button" className="sg-link" onClick={() => setUseKey(!useKey)}>{t(useKey ? 'sgUsePass' : 'sgUseKey')}</button></p>
-          </div>
-        )}
-        {p === 's3' && (
-          <div className="sg-grid">
-            <Field label={t('sgS3Endpoint')} wide><input value={form.s3_endpoint} onChange={(e) => set('s3_endpoint', e.target.value)} placeholder="https://s3.fr-par.scw.cloud" autoComplete="off" /></Field>
-            <Field label={t('sgS3Region')}><input value={form.s3_region} onChange={(e) => set('s3_region', e.target.value)} /></Field>
-            <Field label={t('sgS3Bucket')}><input value={form.s3_bucket} onChange={(e) => set('s3_bucket', e.target.value)} autoComplete="off" /></Field>
-            <Field label={t('sgS3Access')}><input value={form.s3_access_key} onChange={(e) => set('s3_access_key', e.target.value)} autoComplete="off" /></Field>
-            <SecretField label={t('sgS3Secret')} isSet={d.secret.s3_secret_key.isSet} value={sec.s3_secret_key} onChange={(v) => setS('s3_secret_key', v)} />
-          </div>
-        )}
-        {p === 'webdav' && (
-          <div className="sg-grid">
-            <Field label={t('sgDavUrl')} wide><input value={form.webdav_url} onChange={(e) => set('webdav_url', e.target.value)} placeholder="https://cloud.exemple.fr/remote.php/dav/files/…" autoComplete="off" /></Field>
-            <Field label={t('sgUser')}><input value={form.webdav_user} onChange={(e) => set('webdav_user', e.target.value)} autoComplete="off" /></Field>
-            <SecretField label={t('sgPass')} isSet={d.secret.webdav_pass.isSet} value={sec.webdav_pass} onChange={(v) => setS('webdav_pass', v)} />
-          </div>
-        )}
-        {p === 'none' && <p className="meta">{t('sgNoneText')}</p>}
-        {p !== 'none' && (
-          <details className="db-adv">
-            <summary>{t('sgAdvanced')}</summary>
-            <div className="sg-grid">
-              <Field label={t('sgFolder')}><input value={form.folder} onChange={(e) => set('folder', e.target.value)} /></Field>
-              <SecretField label={t('sgEncrypt')} isSet={d.secret.encrypt_pass.isSet} value={sec.encrypt_pass} onChange={(v) => setS('encrypt_pass', v)} />
-              <p className="meta small sg-wide">{t('sgEncryptHelp')}</p>
-              {d.secret.encrypt_pass.isSet && <p className="sg-wide"><button type="button" className="sg-link" onClick={async () => { if (!window.confirm(t('sgEncryptRemoveConfirm'))) return; const r = await call('/studio/storage/settings', { method: 'PUT', body: JSON.stringify({ encrypt_pass: null }) }); if (r.ok) apply(r.data, true); }}>{t('sgEncryptRemove')}</button></p>}
-            </div>
-          </details>
-        )}
-        {!d.encryptionReady && <p className="error small">{t('sgNoEncryption')}</p>}
-        <div className="sg-test">
-          <button type="button" className="btn ghost sg-pill" disabled={testing || p === 'none'} onClick={test}>{testing ? t('sgTesting') : t('sgTest')}</button>
-          <button type="button" className="btn ghost sg-pill" disabled={testing || p === 'none'} onClick={testFile}>{t('sgTestFile')}</button>
-          <small className="meta">{t('sgCipherNote')}</small>
-        </div>
-        {lt && !lt.ok && <p className="error small" role="status">{lt.message}</p>}
-        {lt?.ok && lt.about?.freeBytes != null && <p className="meta small">{tf(t('sgAbout'), { f: fmtBytes(lt.about.freeBytes, locale) })}</p>}
+        {whereBody}
       </section>
 
       <div className="sg-two">
         <section className="sd-card" aria-labelledby="sg-rules">
           <h2 id="sg-rules">{t('sgRules')}</h2>
-          <div className="sg-rule">
-            <span>{t('sgRuleWork')}</span>
-            <span className="sg-num"><input type="number" min={0} max={3650} value={form.work_audio_days} onChange={(e) => set('work_audio_days', e.target.value)} aria-label={t('sgRuleWork')} /> {t('sgDays')}</span>
-          </div>
-          <div className="sg-rule">
-            <span>{t('sgRuleKeep')}<small className="meta">{t('sgRuleKeepNote')}</small></span>
-            <span className="sg-num"><input type="number" min={1} max={365} value={form.keep_original_days} onChange={(e) => set('keep_original_days', e.target.value)} aria-label={t('sgRuleKeep')} /> {t('sgDays')}</span>
-          </div>
-          <div className="sg-rule">
-            <span>{t('sgRuleAlert')}</span>
-            <span className="sg-num"><input type="number" min={0} max={90} value={form.alert_free_pct} onChange={(e) => set('alert_free_pct', e.target.value)} aria-label={t('sgRuleAlert')} /> %</span>
-          </div>
-          <div className="sg-rule">
-            <span>{t('sgRuleCapacity')}<small className="meta">{t('sgRuleCapacityNote')}</small></span>
-            <span className="sg-num"><input type="number" min={1} max={100000} value={form.garage_capacity_gb} onChange={(e) => set('garage_capacity_gb', e.target.value)} aria-label={t('sgRuleCapacity')} /> {unitsFor(locale)[3]}</span>
-          </div>
-          <div className="sg-rule"><span>{t('sgRuleBackup')}</span><strong className="sg-same">{t('sgUnchanged')}</strong></div>
-          <p className="meta small">
-            {d.autoLast ? tf(t('sgRulesLast'), { d: ago(d.autoLast.at, locale), n: d.autoLast.queued }) : t('sgRulesNever')}{' '}
-            {p !== 'none' && <button type="button" className="sg-link" onClick={runRules}>{t('sgRulesNow')}</button>}
-          </p>
+          {rulesBody}
         </section>
 
         <section className="sd-card" aria-labelledby="sg-arch">
           <h2 id="sg-arch">{t('sgInArchives')}</h2>
-          {live.length ? <ul className="sg-items">{live.map((it) => <Item key={it.id} it={it} onAct={act} busyId={busyId} />)}</ul> : <p className="meta">{t('sgArchEmpty')}</p>}
-          {d.history.length > 0 && (
-            <>
-              <button type="button" className="sg-link" aria-expanded={showHist} onClick={() => setShowHist(!showHist)}>{tf(t(showHist ? 'sgHistHide' : 'sgHistShow'), { n: d.history.length })}</button>
-              {showHist && <ul className="sg-items">{d.history.map((it) => <Item key={it.id} it={it} onAct={act} busyId={busyId} />)}</ul>}
-            </>
-          )}
+          {archBody}
         </section>
       </div>
 
-      {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
-      <div className="db-actions">
-        <button type="button" className="btn sg-save" disabled={!dirty || saving} onClick={save}>{saving ? t('sgSaving') : t('dbSave')}</button>
-        {dirty && <button type="button" className="btn ghost" onClick={() => { apply(d, false); setSec({ sftp_secret: '', s3_secret_key: '', webdav_pass: '', encrypt_pass: '' }); setMsg(null); }}>{t('dbCancel')}</button>}
-      </div>
+      {actions}
     </main>
   );
 }
