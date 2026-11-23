@@ -46,6 +46,7 @@ export default function TextsAdmin() {
   const [group, setGroup] = useState('');
   const [lang, setLang] = useState('');
   const [onlyMod, setOnlyMod] = useState(false);
+  const [check, setCheck] = useState('');          // '' | 'missing' | 'same' | 'ph' : textes à vérifier
   const [page, setPage] = useState(0);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -86,21 +87,42 @@ export default function TextsAdmin() {
     return s;
   }, [saved, pending]);
 
+  // Textes à vérifier (anglais et arabe comparés au français actuel) : absent ou vide, identique au français, variables {…} différentes.
+  const issues = useMemo(() => {
+    const m = new Map();
+    if (!dict) return m;
+    for (const k of keys) {
+      const fr = current(k, 'fr'); const frPh = placeholders(fr).sort().join();
+      const kinds = new Set();
+      for (const [l] of LANGS) {
+        if (l === 'fr' || (lang && l !== lang)) continue;
+        const v = current(k, l);
+        if (!String(v).trim()) { kinds.add('missing'); continue; }
+        if (v === fr && /[a-zà-ÿ]{3}/i.test(fr)) kinds.add('same');
+        if (placeholders(v).sort().join() !== frPh) kinds.add('ph');
+      }
+      if (kinds.size) m.set(k, kinds);
+    }
+    return m;
+  }, [dict, keys, current, lang]);
+  const issueCount = useMemo(() => { const n = { missing: 0, same: 0, ph: 0 }; for (const ks of issues.values()) for (const x of ks) n[x]++; return n; }, [issues]);
+
   const needle = norm(q.trim());
   const list = useMemo(() => {
     if (!dict) return [];
     return keys.filter((k) => {
       if (group && groupOf(k) !== group) return false;
       if (onlyMod && !modifiedKeys.has(k)) return false;
+      if (check && !issues.get(k)?.has(check)) return false;
       if (!needle) return true;
       if (norm(k).includes(needle)) return true;
       return LANGS.some(([l]) => norm(current(k, l)).includes(needle) || norm(original(k, l)).includes(needle));
     });
-  }, [dict, keys, group, onlyMod, needle, modifiedKeys, current, original]);
+  }, [dict, keys, group, onlyMod, check, issues, needle, modifiedKeys, current, original]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
   const safePage = Math.min(page, pages - 1);
   const shown = list.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-  useEffect(() => { setPage(0); }, [q, group, onlyMod, lang]);
+  useEffect(() => { setPage(0); }, [q, group, onlyMod, lang, check]);
 
   // Erreur d'un texte en cours de modification (vide, ou variable {n} supprimée).
   const problem = useCallback((key, l, text) => {
@@ -197,10 +219,11 @@ export default function TextsAdmin() {
   if (skin === 'premium') {
     return (
       <Page title="Textes & traductions" sub="Modifiez n’importe quel texte du site dans les trois langues. Rien n’est publié tant que vous n’avez pas cliqué sur Enregistrer.">
-        <Metrics cols="three" items={[
+        <Metrics cols="four" items={[
           { icon: 'text', label: 'Clés', value: keys.length },
           { icon: 'check', tone: 'green', label: 'Modifications enregistrées', value: savedCount },
           { icon: 'clock', tone: 'amber', label: 'Non enregistrées', value: pending.size },
+          { icon: 'alert', tone: issueCount.missing + issueCount.ph ? 'red' : 'green', label: 'À vérifier (EN / AR)', value: issues.size, note: `${issueCount.missing} absent(s) · ${issueCount.same} identique(s) au français · ${issueCount.ph} variable(s)` },
         ]} />
         <Panel title="Matrice de traduction" extra={`${list.length} sur ${keys.length}`}>
           <div className="bm-form" style={{ padding: '0 14px' }}>
@@ -218,6 +241,14 @@ export default function TextsAdmin() {
           <select value={lang} onChange={(e) => setLang(e.target.value)}>
             <option value="">Les trois</option>
             {LANGS.map(([l, name]) => <option key={l} value={l}>{name}</option>)}
+          </select>
+        </label>
+        <label>À vérifier
+          <select value={check} onChange={(e) => setCheck(e.target.value)}>
+            <option value="">Tout</option>
+            <option value="missing">Texte absent ou vide ({issueCount.missing})</option>
+            <option value="same">Identique au français ({issueCount.same})</option>
+            <option value="ph">Variables {'{…}'} différentes ({issueCount.ph})</option>
           </select>
         </label>
         <label className="tt-check"><input type="checkbox" role="switch" checked={onlyMod} onChange={(e) => setOnlyMod(e.target.checked)} /> Seulement les textes modifiés</label>
@@ -238,7 +269,7 @@ export default function TextsAdmin() {
           <Table className="tt-matrix" empty="Aucun texte ne correspond à cette recherche."
             headers={['Clé', ...shownLangs.map(([, name]) => name), 'État']}
             rows={shown.map((key) => [
-              <span key="k"><code className={c('ax-code')}>{key}</code><br /><small>{groupOf(key)}</small></span>,
+              <span key="k"><code className={c('ax-code')}>{key}</code><br /><small>{groupOf(key)}</small>{issues.has(key) && <><br />{[...issues.get(key)].map((x) => <Badge key={x} tone={x === 'same' ? 'amber' : 'red'}>{x === 'missing' ? 'Absent' : x === 'same' ? 'Identique au FR' : 'Variables'}</Badge>)}</>}</span>,
               ...shownLangs.map(([l, , dir]) => {
                 const id = idOf(key, l); const val = current(key, l); const err = errors.get(id);
                 return (
@@ -289,6 +320,14 @@ export default function TextsAdmin() {
           <select value={lang} onChange={(e) => setLang(e.target.value)}>
             <option value="">Les trois</option>
             {LANGS.map(([l, name]) => <option key={l} value={l}>{name}</option>)}
+          </select>
+        </label>
+        <label>À vérifier
+          <select value={check} onChange={(e) => setCheck(e.target.value)}>
+            <option value="">Tout</option>
+            <option value="missing">Texte absent ou vide ({issueCount.missing})</option>
+            <option value="same">Identique au français ({issueCount.same})</option>
+            <option value="ph">Variables {'{…}'} différentes ({issueCount.ph})</option>
           </select>
         </label>
         <label className="tt-check"><input type="checkbox" role="switch" checked={onlyMod} onChange={(e) => setOnlyMod(e.target.checked)} /> Seulement les textes modifiés</label>

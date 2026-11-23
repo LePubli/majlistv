@@ -10041,3 +10041,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Admin → Fonctions : onglets Catalogue / Dépendances / Historique. Dépendances relevées dans le code (9 liens, « exige » ou « utilise »), état Bloquée/Partielle/OK, confirmation avant de couper une fonction dont d'autres dépendent. Historique tiré du journal d'audit.
 - Aucune migration. Déployer `majlistv-api` puis `majlistv-web`.
+
+## Back-office Premium — groupe A, point 5 : Textes à vérifier (23/11/2026)
+
+- Admin → Textes : filtre et chiffre « À vérifier » (absent / identique au français / variables différentes) pour l'anglais et l'arabe, calculés sur les textes réels. 4 646 clés : 0 absente, 150 identiques, 1 variable (pluriel). Aucune migration ni API. Déployer `majlistv-web` seulement.
