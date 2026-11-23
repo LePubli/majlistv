@@ -10179,3 +10179,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé / limites.** Voir ligne 343 du registre. Ne juge pas la justesse du texte (aucun score de confiance Whisper n'est enregistré).
 
+## Shorts — lecteur en carte et thèmes (23/11/2026)
+
+**Description.** Hub Shorts du thème Premium : un clic ouvre le short dans une carte verticale (sans quitter la page) ; pastilles de thèmes qui filtrent la grille.
+
+**Prérequis.** Module « Shorts publics » actif, thème Premium. Aucune migration. Les thèmes viennent du classement des vidéos (Admin → Catégories) : une vidéo sans catégorie n'a pas de thème.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Pas de pastilles : aucun short publié n'a de vidéo classée dans une catégorie principale (`curl -s https://api-majlisstv.le-publicitaire.fr/shorts/themes`). Carte « n'est plus disponible » : fichier `shorts/<id>.mp4` absent du stockage ou lien expiré (Studio → Shorts → rafraîchir).
+
+**Exemples.** Hub → pastille « Le Coran » → clic sur une vignette → flèche droite pour le suivant → Échap.
+
+**Testé / non testé / limites.** Voir ligne 344 du registre.
+

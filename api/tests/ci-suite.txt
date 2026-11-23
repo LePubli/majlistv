@@ -42,6 +42,7 @@ test_stats.py
 test_finance.py
 test_kids_admin.py
 test_subtitle_quality.py
+test_shorts_themes.py
 test_shorts_review.py
 test_studio_vtt.py
 test_taxonomy.py

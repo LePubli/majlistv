@@ -1,5 +1,6 @@
 // Shorts publics.
-//   GET  /shorts?channel=<slug>&limit=&offset=   public : fil des shorts publiés (les plus récents d'abord) ; jeton enfant : seulement ceux de son âge
+//   GET  /shorts?channel=<slug>&theme=<slug>&limit=&offset=   public : fil des shorts publiés (les plus récents d'abord) ; jeton enfant : seulement ceux de son âge
+//   GET  /shorts/themes                           public : thèmes (catégories principales) des shorts publiés, avec leur nombre
 //   GET  /shorts/:id                              public : un short publié
 //   POST /shorts/:id/view                         public : compte une vue (une par personne, par short et par jour)
 //   GET  /studio/shorts                           Studio : mes shorts (brouillons et publiés) et les extraits prêts à publier
@@ -34,6 +35,7 @@ const listSchema = z.object({
   channel: z.string().max(120).regex(/^[a-z0-9-]+$/).optional(),
   limit: z.coerce.number().int().min(1).max(30).default(12),
   offset: z.coerce.number().int().min(0).max(5000).default(0),
+  theme: z.string().max(160).regex(/^[a-z0-9-]+$/).optional(),
 });
 const TITLE_MAX = 90;
 const OWN = z.enum(['draft', 'published']);
@@ -42,13 +44,40 @@ const OWN = z.enum(['draft', 'published']);
 const BASE_WHERE = `s.status = 'published' AND t.video_status = 'ready' AND ${visibleSql('t')}`;
 const ADULT_WHERE = `${BASE_WHERE} AND ${adultSql('t')}`;
 const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)`;
+// Thèmes d'un short = les catégories PRINCIPALES de sa vidéo : la catégorie de la vidéo et ses catégories en plus, ramenées à leur catégorie
+// parente quand ce sont des sous-catégories (aucune donnée propre aux shorts : c'est le classement de la vidéo qui fait foi).
+const THEME_IDS = `SELECT DISTINCT COALESCE(c_.parent_id, c_.id) AS id FROM categories c_
+   WHERE c_.is_active AND c_.id IN (SELECT t.category_id UNION SELECT tc_.category_id FROM talk_categories tc_ WHERE tc_.talk_id = t.id)`;
 const PUBLIC_SELECT = `
   SELECT s.id, s.title, s.duration_s, s.views, s.published_at, s.video_key, s.poster_key AS short_poster,
          t.id AS talk_id, t.title AS talk_title, t.speaker, t.access, t.poster_key, t.external_thumb
     FROM public_shorts s JOIN talks t ON t.id = s.talk_id`;
 
+// Noms traduits d'une catégorie ({ en: '…', ar: '…' }) : le champ `translations` garde { en: { name }, ar: { name } } ; on n'en sort que les noms non vides.
+function nameTr(tr) {
+  const out = {};
+  for (const [lang, v] of Object.entries(tr && typeof tr === 'object' ? tr : {})) {
+    const n = typeof v === 'string' ? v : v && typeof v.name === 'string' ? v.name : '';
+    if (n.trim()) out[lang] = n.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 // Forme publique d'un short (liens temporaires, chaîne, miniature de la vidéo en affiche).
 async function publicView(rows, { kid = false } = {}) {
+  const themeOf = new Map();
+  if (rows.length) {
+    const th = await pool.query(
+      `SELECT s.id AS short_id, top.slug, top.name, top.translations AS tr, top.display_order
+         FROM public_shorts s JOIN talks t ON t.id = s.talk_id
+         JOIN LATERAL (${THEME_IDS}) ids ON true JOIN categories top ON top.id = ids.id AND top.slug IS NOT NULL
+        WHERE s.id = ANY($1::uuid[]) ORDER BY top.display_order, top.name`, [rows.map((r) => r.id)]);
+    for (const r of th.rows) {
+      const list = themeOf.get(r.short_id) || [];
+      list.push({ slug: r.slug, name: r.name, nameTr: nameTr(r.tr) });
+      themeOf.set(r.short_id, list);
+    }
+  }
   const slugs = [...new Set(rows.map((r) => speakerSlug(r.speaker)).filter(Boolean))];
   const named = new Map((await pool.query('SELECT slug, name FROM speakers WHERE slug = ANY($1)', [slugs])).rows.map((r) => [r.slug, r.name]));
   const imgs = await channelImages(slugs);
@@ -61,6 +90,7 @@ async function publicView(rows, { kid = false } = {}) {
       posterUrl: r.short_poster ? await presignGet(r.short_poster).catch(() => null)
         : r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.external_thumb || null),
       talk: { id: r.talk_id, title: r.talk_title, premium: r.access === 'premium' },
+      themes: themeOf.get(r.id) || [],
       channel: slug && !kid ? { slug, name: named.get(slug) || String(r.speaker).trim(), avatarUrl: imgs.get(slug)?.avatarUrl || null } : null,
     });
   }
@@ -94,8 +124,22 @@ export default async function shortsRoutes(app) {
     const n = sc.args.length;
     const { rows } = await pool.query(
       `${PUBLIC_SELECT} WHERE ${sc.where} AND ($${n + 1}::text[] IS NULL OR lower(trim(t.speaker)) = ANY($${n + 1}::text[]))
-        ORDER BY s.published_at DESC, s.id LIMIT $${n + 2} OFFSET $${n + 3}`, [...sc.args, names, p.limit, p.offset]);
+          AND ($${n + 4}::text IS NULL OR EXISTS (SELECT 1 FROM (${THEME_IDS}) th_ JOIN categories top_ ON top_.id = th_.id WHERE top_.slug = $${n + 4}))
+        ORDER BY s.published_at DESC, s.id LIMIT $${n + 2} OFFSET $${n + 3}`, [...sc.args, names, p.limit, p.offset, p.theme || null]);
     return publicView(rows, { kid: Boolean(sc.kid) });
+  });
+
+  // Thèmes proposés dans le hub : catégories principales qui ont au moins un short visible par cette personne, dans l'ordre du catalogue.
+  app.get('/shorts/themes', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    const sc = await scope(req);
+    if (!sc) return [];
+    const { rows } = await pool.query(
+      `SELECT top.slug, top.name, top.translations AS tr, count(DISTINCT s.id)::int AS count, min(top.display_order) AS ord
+         FROM public_shorts s JOIN talks t ON t.id = s.talk_id
+         JOIN LATERAL (${THEME_IDS}) ids ON true JOIN categories top ON top.id = ids.id AND top.slug IS NOT NULL
+        WHERE ${sc.where} GROUP BY top.slug, top.name, top.translations ORDER BY min(top.display_order), top.name`, sc.args);
+    return rows.map((r) => ({ slug: r.slug, name: r.name, nameTr: nameTr(r.tr), count: r.count }));
   });
 
   app.get('/shorts/:id', async (req, reply) => {

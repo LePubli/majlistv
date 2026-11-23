@@ -1,0 +1,23 @@
+// Shorts (thème Premium) : pastilles de thèmes + lecteur en carte (23/11). node web/tests/test_shorts_card.mjs
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const web = fileURLToPath(new URL('..', import.meta.url));
+const read = (p) => fs.readFileSync(join(web, p), 'utf8');
+const i18n = read('lib/i18n.js');
+for (const k of ['pmShThemes', 'pmShAll', 'pmShClose', 'pmShOpenFeed', 'pmShPos']) assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
+const hub = read('components/premium/PmShorts.js');
+assert.match(hub, /call\('\/shorts\/themes'/, 'thèmes demandés à l\'API');
+assert.match(hub, /theme=\$\{encodeURIComponent\(theme\)\}/, 'le thème filtre la liste');
+assert.match(hub, /aria-pressed=\{theme === null\}/, 'pastille « Tous » annoncée');
+assert.match(hub, /e\.button === 0 && !e\.metaKey && !e\.ctrlKey/, 'clic simple = carte ; clic du milieu / Ctrl = fil');
+assert.match(hub, /opener\.current\?\.focus\(\)/, 'le focus revient sur la vignette à la fermeture');
+const card = read('components/premium/PmShortCard.js');
+assert.match(card, /role="dialog" aria-modal="true"/, 'fenêtre annoncée aux lecteurs d\'écran');
+assert.match(card, /e\.key === 'Escape'/, 'Échap ferme');
+assert.match(card, /call\(`\/shorts\/\$\{s\.id\}\/view`/, 'vue comptée comme dans le fil');
+assert.match(card, /mejliss-shorts-muted/, 'même réglage du son que le fil');
+assert.match(card, /onEnded=\{\(\) => \(index \+ 1 < items\.length \? go\(index \+ 1\)/, 'fin d\'un short : suivant');
+assert.match(read('app/skin-premium.css'), /\.pm-shc-stage \{[^}]*aspect-ratio: 9 \/ 16/, 'carte verticale 9:16');
+console.log('OK — Shorts : thèmes et lecteur en carte');
