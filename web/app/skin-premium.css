@@ -313,7 +313,7 @@ html[data-skin="premium"] main.page.learning:not(.pm-ln-body) { padding-top: 112
 .v20-app .pm-kd-leave { width: auto; padding: 0 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .v20-app .pm-kd-me { text-decoration: none; }
 /* Le reste de l'accueil (étoiles, badges, actions…) se range sous les rangées. */
-html[data-skin="premium"] main.page.pm-kd-body { max-width: 1440px; margin-inline: auto; padding: 24px clamp(17px, 3vw, 48px) 40px; }
+html[data-skin="premium"] main.page.pm-kd-body { max-width: none; margin-inline: 0; padding: 24px clamp(17px, 4.6vw, 88px) 40px; /* même largeur que les rangées de vidéos (23/11) */ }
 .v20-app.pm-kids ~ .kd-modal { z-index: 200; }
 [dir="rtl"] .v20-app .v20-kids-v8-title > a { direction: rtl; }
 @media (max-width: 850px) { html[data-skin="premium"] main.page.pm-kd-body { padding-top: 12px; } }

@@ -40,9 +40,15 @@ export default async function Page({ params, searchParams }) {
     itemListElement: [{ name: 'Catalogue', item: `${site.baseUrl}/catalogue` }, ...cat.breadcrumbs.map((b) => ({ name: b.name, item: `${site.baseUrl}/catalogue/${b.slug}` }))]
       .map((x, i) => ({ '@type': 'ListItem', position: i + 1, name: x.name, item: x.item })),
   };
+  // Liste des vidéos de la page (données structurées « ItemList ») : les vraies vidéos affichées, dans leur ordre, avec leur adresse.
+  const list = talks.length ? {
+    '@context': 'https://schema.org', '@type': 'ItemList', name: cat.name, numberOfItems: cat.count,
+    itemListElement: talks.map((t, i) => ({ '@type': 'ListItem', position: (page - 1) * PAGE + i + 1, name: t.title, url: `${site.baseUrl}/talks/${t.id}` })),
+  } : null;
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
+      {list && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(list)} />}
       <CategoryView cat={cat} talks={talks} page={page} pages={pages} />
     </>
   );

@@ -10017,3 +10017,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Back-office — sens de lecture en arabe (23/11/2026)
 
 - Admin et Studio gardent le sens gauche-droite quand le site est en arabe. **Déploiement** : `majlistv-web` seulement.
+
+## Catalogue — finitions (23/11/2026)
+
+- ItemList sur les pages de catégorie ; zone chiffres de l'accueil Kids alignée sur les rangées. **Déploiement** : `majlistv-web` seulement.

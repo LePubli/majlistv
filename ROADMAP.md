@@ -738,3 +738,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium : police Poppins : fait 23/11.
 - Catalogue : noms de catégories traduits (EN / AR) sur le site et l'application : fait 23/11.
 - Back-office : reste de gauche à droite quand le site est en arabe (textes français) : fait 23/11.
+- Catalogue : ItemList des pages de catégorie, accueil Kids Premium à 1920 px : fait 23/11 (hreflang abandonné).
