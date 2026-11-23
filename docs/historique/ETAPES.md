@@ -10149,3 +10149,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé.** Voir ligne 341 du registre.
 
+## Kids & familles — écran d'administration (23/11/2026)
+
+**Description.** Admin → Kids & familles (groupe Pilotage) : vue d'ensemble agrégée de l'espace enfant. Aucune identité d'enfant ou de parent.
+
+**Prérequis.** Fonction « Mejliss Kids » activée. Aucune migration.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Écran vide : aucun profil enfant (`select count(*) from kid_profiles`). « Sans univers » élevé : vidéos pour enfants non classées dans un univers Kids (Studio → Contenus, lot). Temps à zéro : `select * from kid_usage order by day desc limit 5`.
+
+**Exemples.** Voir d'un coup d'œil combien d'enfants ont été actifs cette semaine, combien de parents ont mis un code parental, et quelles vidéos Kids sont à classer.
+
+**Testé / non testé.** Voir ligne 342 du registre.
+

@@ -752,3 +752,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Apparence : onglets Couleurs / Typographies / Composants / Mise en page et pages d'essai (/apercu-theme) : fait 23/11.
 - Publicité : onglets Créations / Ciblage / Rapports (courbe 30 jours, ciblage par langue en un clic) : fait 23/11.
 - Publicité : ciblage par pays (fuseau du téléphone) et appareil, durée de visionnage, conversions inscription/achat, thème classique à onglets : fait 23/11.
+- Kids & familles : nouvel écran Admin d'ensemble de l'espace enfant (familles, tranches d'âge, usage, contrôle parental, catalogue), chiffres agrégés sans identité : fait 23/11.

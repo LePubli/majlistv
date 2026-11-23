@@ -40,6 +40,7 @@ test_slugs.py
 test_speakers.py
 test_stats.py
 test_finance.py
+test_kids_admin.py
 test_shorts_review.py
 test_studio_vtt.py
 test_taxonomy.py

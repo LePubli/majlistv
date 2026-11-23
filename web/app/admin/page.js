@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
+import KidsAdmin from '../../components/KidsAdmin'; // Kids & familles : vue d'ensemble agrégée de l'espace enfant
 import FinanceAdmin from '../../components/FinanceAdmin'; // revenus et abonnements : vue d'ensemble de l'argent encaissé
 import { ICONS, Icon } from '../../components/ManageShell';
 import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Table as BmTable, Userpic as BmUserpic, Badge as BmBadge, Btn as BmBtn, Meta as BmMeta, SelectList as BmSelectList, Switch as BmSwitch, Hint as BmHint, Overline as BmOverline, Tabs as BmTabs, I as BmI, c as bmc } from '../../components/backoffice/Kit'; // thème Premium (maquette exacte)
@@ -1492,7 +1493,7 @@ function ModuleTab({ load }) {
 }
 
 // Écrans recomposés d'après la maquette (thème Premium) : ils dessinent eux-mêmes leur titre.
-const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'finance', 'revenue', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages', 'features', 'legal', 'modules', 'texts', 'appearance', 'health', 'errors', 'ask', 'audit', 'settings'];
+const PM_OWN_HEADING = ['dashboard', 'users', 'categories', 'speakers', 'watch', 'stats', 'finance', 'revenue', 'kids', 'quran', 'athkar', 'ramadan', 'seasons', 'friday', 'ads', 'experiments', 'gifts', 'sales', 'referral', 'regions', 'lifecycle', 'menus', 'pages', 'features', 'legal', 'modules', 'texts', 'appearance', 'health', 'errors', 'ask', 'audit', 'settings'];
 const SUBTITLE = { dashboard: 'Pilotez la plateforme en temps réel', users: 'Membres, familles, organisateurs et abonnements' };
 
 /* ---------------------------------------------------------------- Page */
@@ -1503,7 +1504,7 @@ export default function Admin() {
   if (!ready || !user) return null;
   if (user.role !== 'admin') return <main className="studio-page"><p>Cette page est réservée aux administrateurs.</p></main>;
   // Les sections se choisissent dans le menu latéral (Administration).
-  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', menus: 'Menus', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', sales: 'Ventes à l\'unité', finance: 'Revenus & abonnements', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
+  const titles = { dashboard: 'Tableau de bord', users: 'Utilisateurs', settings: 'Paramètres', features: 'Fonctions', modules: 'Modules', appearance: 'Apparence', texts: 'Textes', pages: 'Pages', legal: 'Pages légales', categories: 'Catégories et formats', speakers: 'Intervenants', audit: "Journal des actions", watch: 'Veille', ads: 'Publicités', experiments: 'Tests A/B', menus: 'Menus', health: 'Santé du serveur', errors: 'Erreurs', referral: 'Parrainages', regions: 'Tarifs par pays', sales: 'Ventes à l\'unité', finance: 'Revenus & abonnements', kids: 'Kids & familles', seasons: 'Saisons', friday: 'Vendredi', athkar: 'Adhkar', ramadan: 'Circuit de Ramadan', quran: 'Coran', ask: 'Questions IA', lifecycle: 'E-mails de cycle de vie' };
   const moduleTab = MODULE_ADMIN_TABS.find((m) => m.tab === tab) || null; // écran fourni par un module (cartes cadeaux, rémunération, statistiques…)
   return (
     <main className="admin studio-page">
@@ -1540,6 +1541,7 @@ export default function Admin() {
         {tab === 'regions' && <PricingRegionsAdmin />}
         {tab === 'sales' && <SalesAdmin />}
         {tab === 'finance' && <FinanceAdmin />}
+        {tab === 'kids' && <KidsAdmin />}
         {tab === 'lifecycle' && <LifecycleAdmin />}
       </Suspense>
       {moduleTab && <ModuleTab key={moduleTab.tab} load={moduleTab.load} />}
