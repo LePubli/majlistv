@@ -10045,3 +10045,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Back-office Premium — groupe A, point 5 : Textes à vérifier (23/11/2026)
 
 - Admin → Textes : filtre et chiffre « À vérifier » (absent / identique au français / variables différentes) pour l'anglais et l'arabe, calculés sur les textes réels. 4 646 clés : 0 absente, 150 identiques, 1 variable (pluriel). Aucune migration ni API. Déployer `majlistv-web` seulement.
+
+## Back-office Premium — groupe A, point 1 : Validation des Shorts (23/11/2026)
+
+- Réglage `shorts_review` (désactivé d'origine) : un organisateur envoie ses shorts « en attente de validation » ; un modérateur ou l'administrateur valide ou refuse (motif obligatoire, visible de l'auteur) dans Studio → Shorts. Migration shorts 003. Journal des actions pour les relectures. Déployer `majlistv-api` (migration) puis `majlistv-web`.

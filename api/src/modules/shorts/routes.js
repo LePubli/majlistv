@@ -6,7 +6,9 @@
 //   POST /studio/shorts                           Studio : publier un extrait de l'éditeur (copie du dernier rendu vertical prêt)
 //   PUT  /studio/shorts/:id                       Studio : titre, brouillon / publié
 //   POST /studio/shorts/:id/refresh               Studio : remplacer la vidéo par le dernier rendu de l'extrait
+//   POST /studio/shorts/:id/review                Modérateur / administrateur : { decision: approve | reject, note } sur un short « pending »
 //   DELETE /studio/shorts/:id                     Studio : supprimer (fichier compris)
+// Validation (réglage shorts_review, désactivé d'origine) : un organisateur ou éditeur de chaîne qui publie envoie le short « pending » ; le personnel publie directement.
 // Droits Studio : le créateur de la vidéo, le propriétaire et les éditeurs de sa chaîne (src/channelAccess.js), modérateurs, administrateurs.
 // Espace Kids : un enfant ne voit que les shorts de vidéos de sa tranche d'âge et du catalogue autorisé par son parent
 // (mêmes règles que le catalogue Kids, gratuites seulement sans abonnement), tant que son temps du jour n'est pas écoulé.
@@ -127,8 +129,13 @@ export default async function shortsRoutes(app) {
     return row;
   }
 
+  // Validation avant publication : réglage `shorts_review` ; ne concerne que les organisateurs et éditeurs de chaîne (le personnel publie directement).
+  const reviewOn = async () => isOn(await getSetting('shorts_review'));
+  const reviewer = { preHandler: app.requireRole('moderator', 'admin') };
+
   const studioView = async (r) => ({
-    id: r.id, title: r.title, status: r.status, views: r.views, duration: r.duration_s != null ? Number(r.duration_s) : null, bytes: r.bytes != null ? Number(r.bytes) : null,
+    id: r.id, title: r.title, status: r.status, views: r.views,
+    submittedAt: r.submitted_at || null, reviewNote: r.review_note || null, author: r.author_name || null, duration: r.duration_s != null ? Number(r.duration_s) : null, bytes: r.bytes != null ? Number(r.bytes) : null,
     publishedAt: r.published_at, createdAt: r.created_at, updatedAt: r.updated_at, projectId: r.project_id,
     talk: { id: r.talk_id, title: r.talk_title, visible: r.visible }, channel: speakerSlug(r.speaker),
     videoUrl: await presignGet(r.video_key).catch(() => null),
@@ -142,8 +149,9 @@ export default async function shortsRoutes(app) {
     const scope = '($1::boolean OR t.organizer_id = $2 OR lower(trim(t.speaker)) = ANY($3::text[]))';
     const args = [staff, req.user.sub, mine || []];
     const shorts = (await pool.query(
-      `SELECT s.*, t.title AS talk_title, t.speaker, ${visibleSql('t')} AS visible
-         FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE ${scope} ORDER BY s.created_at DESC LIMIT 200`, args)).rows;
+      `SELECT s.*, t.title AS talk_title, t.speaker, ${visibleSql('t')} AS visible, u.name AS author_name
+         FROM public_shorts s JOIN talks t ON t.id = s.talk_id LEFT JOIN users u ON u.id = s.created_by
+        WHERE ${scope} ORDER BY (s.status = 'pending') DESC, s.created_at DESC LIMIT 200`, args)).rows;
     let candidates = [];
     try {
       candidates = (await pool.query(
@@ -154,6 +162,7 @@ export default async function shortsRoutes(app) {
           WHERE p.kind = 'short' AND ${scope} ORDER BY p.updated_at DESC LIMIT 100`, args)).rows;
     } catch { /* module « Éditeur de montage » absent : pas d'extraits à proposer */ }
     return {
+      review: await reviewOn(), canReview: staff,
       shorts: await Promise.all(shorts.map(studioView)),
       candidates: candidates.map((c) => ({ projectId: c.project_id, title: c.title || '', talkId: c.talk_id, talkTitle: c.talk_title, duration: c.out_duration_s != null ? Number(c.out_duration_s) : null,
         bytes: c.bytes != null ? Number(c.bytes) : null, shortId: c.short_id || null })),
@@ -176,29 +185,53 @@ export default async function shortsRoutes(app) {
     const src = await sourceOf(req, b.projectId);
     if (!src) return reply.code(404).send({ error: 'Extrait introuvable, ou sans rendu prêt : lancez d’abord le rendu de l’extrait dans l’éditeur.', code: 'no_render' });
     if ((await pool.query('SELECT 1 FROM public_shorts WHERE project_id = $1', [b.projectId])).rowCount) return reply.code(409).send({ error: 'Cet extrait est déjà publié ou en brouillon : modifiez-le dans la liste.', code: 'already' });
+    // Validation activée : un organisateur qui demande « publié » envoie le short en attente de validation.
+    const status = b.status === 'published' && !isStaff(req.user) && (await reviewOn()) ? 'pending' : b.status;
     const id = (await pool.query('SELECT gen_random_uuid() AS id')).rows[0].id;
     const key = `shorts/${id}.mp4`;
     try { await copyObject(src.output_key, key, 'video/mp4'); } catch (err) { return reply.code(502).send({ error: `Copie de la vidéo impossible : ${err.message}`, code: 'copy' }); }
     await pool.query(
-      `INSERT INTO public_shorts(id, talk_id, project_id, title, video_key, duration_s, bytes, status, published_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 = 'published' THEN now() END, $9)`,
-      [id, src.talk_id, src.id, b.title || src.title || src.talk_title, key, src.out_duration_s, src.bytes, b.status, req.user.sub]);
+      `INSERT INTO public_shorts(id, talk_id, project_id, title, video_key, duration_s, bytes, status, published_at, submitted_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 = 'published' THEN now() END, CASE WHEN $8 = 'pending' THEN now() END, $9)`,
+      [id, src.talk_id, src.id, b.title || src.title || src.talk_title, key, src.out_duration_s, src.bytes, status, req.user.sub]);
     const poster = await makePoster(id, key, src.out_duration_s, app.log);
     if (poster) await pool.query('UPDATE public_shorts SET poster_key = $2 WHERE id = $1', [id, poster]);
-    req.auditSummary = `Shorts : ${b.status === 'published' ? 'publié' : 'brouillon créé'} (« ${src.talk_title} »)`;
-    return reply.code(201).send({ id, status: b.status });
+    req.auditSummary = `Shorts : ${status === 'published' ? 'publié' : status === 'pending' ? 'envoyé pour validation' : 'brouillon créé'} (« ${src.talk_title} »)`;
+    return reply.code(201).send({ id, status });
   });
 
   app.put('/studio/shorts/:id', manager, async (req, reply) => {
     const row = await loadOwn(req, reply); if (!row) return reply;
     const b = z.object({ title: z.string().trim().min(1).max(TITLE_MAX).optional(), status: OWN.optional() }).parse(req.body ?? {});
+    // Validation activée : pour un non-relecteur, publier (ou retoucher le titre d'un short publié) = nouvelle demande de validation.
+    let status = b.status ?? row.status;
+    const titleChanged = b.title !== undefined && b.title !== row.title;
+    if (!isStaff(req.user) && status === 'published' && (row.status !== 'published' || titleChanged) && (await reviewOn())) status = 'pending';
+    const submit = status === 'pending' && (row.status !== 'pending');
     await pool.query(
-      `UPDATE public_shorts SET title = COALESCE($2, title), status = COALESCE($3, status),
-              published_at = CASE WHEN COALESCE($3, status) = 'published' THEN COALESCE(published_at, now()) ELSE NULL END, updated_at = now() WHERE id = $1`,
-      [row.id, b.title ?? null, b.status ?? null]);
-    if (b.status && b.status !== row.status) req.auditSummary = `Shorts : ${b.status === 'published' ? 'publié' : 'repassé en brouillon'} (« ${row.talk_title} »)`;
+      `UPDATE public_shorts SET title = COALESCE($2, title), status = $3,
+              published_at = CASE WHEN $3 = 'published' THEN COALESCE(published_at, now()) ELSE NULL END,
+              submitted_at = CASE WHEN $4 THEN now() ELSE submitted_at END,
+              review_note = CASE WHEN $4 THEN NULL ELSE review_note END, updated_at = now() WHERE id = $1`,
+      [row.id, b.title ?? null, status, submit]);
+    if (status !== row.status) req.auditSummary = `Shorts : ${status === 'published' ? 'publié' : status === 'pending' ? 'envoyé pour validation' : row.status === 'pending' ? 'demande de validation retirée' : 'repassé en brouillon'} (« ${row.talk_title} »)`;
     const r = (await pool.query(`SELECT s.*, t.title AS talk_title, t.speaker, ${visibleSql('t')} AS visible FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = $1`, [row.id])).rows[0];
     return studioView(r);
+  });
+
+  // Relecture (modérateur ou administrateur) : valider = publier ; refuser = retour en brouillon avec un motif que l'auteur voit.
+  app.post('/studio/shorts/:id/review', reviewer, async (req, reply) => {
+    const row = await loadOwn(req, reply); if (!row) return reply;
+    const b = z.object({ decision: z.enum(['approve', 'reject']), note: z.string().trim().max(300).optional() }).parse(req.body ?? {});
+    if (row.status !== 'pending') return reply.code(409).send({ error: 'Ce short n’est pas en attente de validation.', code: 'not_pending' });
+    if (b.decision === 'reject' && !b.note) return reply.code(400).send({ error: 'Indiquez le motif du refus : l’auteur le verra.', code: 'note_required' });
+    const approve = b.decision === 'approve';
+    await pool.query(
+      `UPDATE public_shorts SET status = $2, published_at = CASE WHEN $2 = 'published' THEN now() ELSE NULL END,
+              review_note = $3, reviewed_by = $4, reviewed_at = now(), updated_at = now() WHERE id = $1`,
+      [row.id, approve ? 'published' : 'draft', approve ? null : b.note, req.user.sub]);
+    req.auditSummary = `Shorts : ${approve ? 'validé et publié' : `refusé (${b.note})`} (« ${row.talk_title} »)`;
+    return { status: approve ? 'published' : 'draft' };
   });
 
   // Remplacer la vidéo par le dernier rendu de l'extrait (après l'avoir retouché dans l'éditeur).
@@ -208,8 +241,14 @@ export default async function shortsRoutes(app) {
     if (!src) return reply.code(409).send({ error: 'L’extrait de l’éditeur n’existe plus ou n’a pas de rendu prêt.', code: 'no_render' });
     try { await copyObject(src.output_key, row.video_key, 'video/mp4'); } catch (err) { return reply.code(502).send({ error: `Copie de la vidéo impossible : ${err.message}`, code: 'copy' }); }
     const poster = await makePoster(row.id, row.video_key, src.out_duration_s, app.log);
-    await pool.query('UPDATE public_shorts SET duration_s = $2, bytes = $3, poster_key = COALESCE($4, poster_key), updated_at = now() WHERE id = $1', [row.id, src.out_duration_s, src.bytes, poster]);
-    return { refreshed: true, duration: src.out_duration_s != null ? Number(src.out_duration_s) : null };
+    // Le fichier est remplacé sur place : avec la validation activée, un short publié par un non-relecteur repasse en attente (sinon la nouvelle vidéo serait en ligne sans relecture).
+    const back = row.status === 'published' && !isStaff(req.user) && (await reviewOn());
+    await pool.query(
+      `UPDATE public_shorts SET duration_s = $2, bytes = $3, poster_key = COALESCE($4, poster_key), updated_at = now(),
+              status = CASE WHEN $5 THEN 'pending' ELSE status END, published_at = CASE WHEN $5 THEN NULL ELSE published_at END,
+              submitted_at = CASE WHEN $5 THEN now() ELSE submitted_at END, review_note = CASE WHEN $5 THEN NULL ELSE review_note END WHERE id = $1`,
+      [row.id, src.out_duration_s, src.bytes, poster, back]);
+    return { refreshed: true, status: back ? 'pending' : row.status, duration: src.out_duration_s != null ? Number(src.out_duration_s) : null };
   });
 
   app.delete('/studio/shorts/:id', manager, async (req, reply) => {

@@ -14,6 +14,7 @@ export default function StudioShorts() {
   const [busy, setBusy] = useState('');
   const [titles, setTitles] = useState({});
   const [focus, setFocus] = useState(null);
+  const [notes, setNotes] = useState({});
 
   const load = useCallback(async () => {
     const r = await call('/studio/shorts');
@@ -25,11 +26,18 @@ export default function StudioShorts() {
     setBusy(key); setMsg(null);
     const r = await call(path, opts);
     setBusy('');
-    if (r.ok) { if (ok) setMsg({ text: ok }); await load(); } else setMsg({ err: true, text: r.data?.error || t('dbError') });
+    if (r.ok) { const text = typeof ok === 'function' ? ok(r) : ok; if (text) setMsg({ text }); await load(); } else setMsg({ err: true, text: r.data?.error || t('dbError') });
     return r;
   };
-  const publish = (c, status) => act(`c${c.projectId}`, '/studio/shorts', { method: 'POST', body: JSON.stringify({ projectId: c.projectId, status }) }, status === 'published' ? t('shrPublished') : t('shrDraftSaved'));
-  const setStatus = (s, status) => act(`s${s.id}`, `/studio/shorts/${s.id}`, { method: 'PUT', body: JSON.stringify({ status }) }, status === 'published' ? t('shrPublished') : t('shrBackDraft'));
+  const publish = (c, status) => act(`c${c.projectId}`, '/studio/shorts', { method: 'POST', body: JSON.stringify({ projectId: c.projectId, status }) }, (r) => (r.data?.status === 'pending' ? t('shrAsked') : status === 'published' ? t('shrPublished') : t('shrDraftSaved')));
+  const setStatus = (s, status) => act(`s${s.id}`, `/studio/shorts/${s.id}`, { method: 'PUT', body: JSON.stringify({ status }) }, (r) => (r.data?.status === 'pending' ? t('shrAsked') : status === 'published' ? t('shrPublished') : t('shrBackDraft')));
+  // Relecture (modérateur / administrateur) : valider = publier ; refuser demande un motif, visible par l'auteur.
+  const review = async (s, decision) => {
+    const note = (notes[s.id] || '').trim();
+    if (decision === 'reject' && !note) { setMsg({ err: true, text: t('shrNeedNote') }); return; }
+    const r = await act(`s${s.id}`, `/studio/shorts/${s.id}/review`, { method: 'POST', body: JSON.stringify({ decision, note }) }, decision === 'approve' ? t('shrApproved') : t('shrRejected'));
+    if (r.ok) setNotes((x) => ({ ...x, [s.id]: '' }));
+  };
   const rename = async (s) => {
     const title = (titles[s.id] ?? s.title).trim();
     if (!title || title === s.title) return;
@@ -39,6 +47,10 @@ export default function StudioShorts() {
   const remove = (s) => { if (window.confirm(t('shrConfirmDelete'))) act(`s${s.id}`, `/studio/shorts/${s.id}`, { method: 'DELETE' }, t('shrDeleted')); };
   const copyLink = async (s) => { try { await navigator.clipboard.writeText(`${window.location.origin}/shorts/${s.id}`); setMsg({ text: t('shrLinkCopied') }); } catch { setMsg({ err: true, text: `${window.location.origin}/shorts/${s.id}` }); } };
 
+  const askLabel = d?.review && !d?.canReview ? t('shrAskReview') : t('shrPublish');
+  const pending = (d?.shorts || []).filter((x) => x.status === 'pending');
+  const stateOf = (s) => (s.status === 'published' ? (s.talk.visible ? t('shrStatePublished') : t('shrStateHidden')) : s.status === 'pending' ? t('shrStatePending') : t('shrStateDraft'));
+  const toneOf = (s) => (s.status === 'published' ? (s.talk.visible ? 'green' : 'amber') : s.status === 'pending' ? 'amber' : 'blue');
   const todo = (d?.candidates || []).filter((c) => !c.shortId);
   const date = (iso) => (iso ? new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
@@ -48,8 +60,9 @@ export default function StudioShorts() {
     return (
       <main className="studio-page sh-studio">
         <BmPage title={t('shrSdNav')} sub={t('shrStudioIntro')} actions={<BmBtn primary={false} href="/studio/editor">{t('shrOpenEditor')}</BmBtn>}>
-          <BmMetrics cols="three" items={d ? [
+          <BmMetrics cols={d?.review ? 'four' : 'three'} items={d ? [
             { icon: 'smartphone', label: t('shrMine'), value: shorts.length },
+            ...(d.review ? [{ icon: 'clock', tone: pending.length ? 'amber' : 'green', label: t('shrToReview'), value: pending.length }] : []),
             { icon: 'check', tone: 'green', label: t('shrStatePublished'), value: shorts.filter((x) => x.status === 'published').length },
             { icon: 'eye', label: 'Vues', value: shorts.reduce((n, x) => n + (x.views || 0), 0).toLocaleString(locale) },
           ] : []} />
@@ -57,13 +70,29 @@ export default function StudioShorts() {
           {!d && !msg && <p className="meta">{t('shrLoading')}</p>}
           {d && (
             <>
+              {d.review && !d.canReview && <BmHint>{t('shrReviewOnHint')}</BmHint>}
+              {d.canReview && (d.review || pending.length > 0) && (
+                <BmPanel title={t('shrToReview')} extra={`${pending.length}`}>
+                  <BmTable empty={t('shrNoneToReview')} headers={['', t('shrTitleField'), 'Vidéo', t('shrRejectNote'), '']}
+                    rows={pending.map((s) => [
+                      s.videoUrl ? <video key="v" className="sh-thumb" src={s.videoUrl} poster={s.posterUrl || undefined} preload="metadata" muted playsInline controls aria-label={s.title} style={{ width: 72, borderRadius: 6 }} /> : '',
+                      <span key="i"><b dir="auto">{s.title}</b>{s.author && <><br /><small>{t('shrAuthorBy').replace('{name}', s.author)}</small></>}</span>,
+                      <span key="t">{s.talk.title}<br /><small>{s.duration != null && mmss(s.duration)}{s.submittedAt && ` · ${date(s.submittedAt)}`}</small></span>,
+                      <input key="n" value={notes[s.id] || ''} maxLength={300} placeholder={t('shrRejectNote')} aria-label={t('shrRejectNote')} onChange={(e) => setNotes((x) => ({ ...x, [s.id]: e.target.value }))} />,
+                      <span key="a" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <BmBtn disabled={busy === `s${s.id}`} onClick={() => review(s, 'approve')}>{t('shrApprove')}</BmBtn>
+                        <BmBtn primary={false} disabled={busy === `s${s.id}`} onClick={() => review(s, 'reject')}>{t('shrReject')}</BmBtn>
+                      </span>,
+                    ])} />
+                </BmPanel>
+              )}
               <BmPanel title={t('shrToPublish')} extra={`${todo.length}`}>
                 <BmTable empty={<>{t('shrNoCandidate')} <Link href="/studio/editor" className="link u">{t('shrOpenEditor')}</Link></>}
                   headers={['Extrait', 'Vidéo', 'Durée', '']}
                   rows={todo.map((c) => [
                     <b key="a" dir="auto">{c.title || c.talkTitle}</b>, c.talkTitle, c.duration != null ? mmss(c.duration) : '—',
                     <span key="b" style={{ display: 'flex', gap: 8 }}>
-                      <BmBtn disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'published')}>{t('shrPublish')}</BmBtn>
+                      <BmBtn disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'published')}>{askLabel}</BmBtn>
                       <BmBtn primary={false} disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'draft')}>{t('shrKeepDraft')}</BmBtn>
                     </span>,
                   ])} />
@@ -73,12 +102,12 @@ export default function StudioShorts() {
                   rows={shorts.map((s) => [
                     s.videoUrl ? <video key="v" className="sh-thumb" src={s.videoUrl} poster={s.posterUrl || undefined} preload="metadata" muted playsInline controls aria-label={s.title} style={{ width: 72, borderRadius: 6 }} /> : '',
                     <input key="i" value={titles[s.id] ?? s.title} maxLength={90} onChange={(e) => setTitles((x) => ({ ...x, [s.id]: e.target.value }))} onBlur={() => rename(s)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />,
-                    <span key="t">{s.talk.title}<br /><small>{s.duration != null && mmss(s.duration)} · {t('shrViews').replace('{n}', s.views.toLocaleString(locale))}{s.publishedAt && ` · ${date(s.publishedAt)}`}</small></span>,
-                    <BmBadge key="s" tone={s.status === 'published' ? (s.talk.visible ? 'green' : 'amber') : 'blue'}>{s.status === 'published' ? (s.talk.visible ? t('shrStatePublished') : t('shrStateHidden')) : t('shrStateDraft')}</BmBadge>,
+                    <span key="t">{s.talk.title}<br /><small>{s.duration != null && mmss(s.duration)} · {t('shrViews').replace('{n}', s.views.toLocaleString(locale))}{s.publishedAt && ` · ${date(s.publishedAt)}`}</small>{s.status === 'draft' && s.reviewNote && <><br /><small role="note">{t('shrRefused').replace('{note}', s.reviewNote)}</small></>}</span>,
+                    <BmBadge key="s" tone={toneOf(s)}>{stateOf(s)}</BmBadge>,
                     <span key="a" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {s.status === 'draft'
-                        ? <BmBtn disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'published')}>{t('shrPublish')}</BmBtn>
-                        : <BmBtn primary={false} disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'draft')}>{t('shrUnpublish')}</BmBtn>}
+                        ? <BmBtn disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'published')}>{askLabel}</BmBtn>
+                        : <BmBtn primary={false} disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'draft')}>{s.status === 'pending' ? t('shrWithdraw') : t('shrUnpublish')}</BmBtn>}
                       {s.status === 'published' && <BmBtn primary={false} onClick={() => copyLink(s)}>{t('shrCopyLink')}</BmBtn>}
                       {s.projectId && <BmBtn primary={false} disabled={busy === `s${s.id}`} onClick={() => refresh(s)}>{t('shrRefresh')}</BmBtn>}
                       <BmBtn primary={false} disabled={busy === `s${s.id}`} onClick={() => remove(s)}>{t('shrDelete')}</BmBtn>
@@ -111,7 +140,7 @@ export default function StudioShorts() {
                   <li key={c.projectId} className={`sh-li${focus === c.projectId ? ' focus' : ''}`}>
                     <div className="sh-li-text"><b>{c.title || c.talkTitle}</b><span className="meta">{c.talkTitle}{c.duration != null && ` · ${mmss(c.duration)}`}</span></div>
                     <div className="sh-li-act">
-                      <button type="button" className="btn" disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'published')} data-act="short-publish">{t('shrPublish')}</button>
+                      <button type="button" className="btn" disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'published')} data-act="short-publish">{askLabel}</button>
                       <button type="button" className="btn ghost" disabled={busy === `c${c.projectId}`} onClick={() => publish(c, 'draft')} data-act="short-draft">{t('shrKeepDraft')}</button>
                     </div>
                   </li>
@@ -133,12 +162,21 @@ export default function StudioShorts() {
                         <input value={titles[s.id] ?? s.title} maxLength={90} onChange={(e) => setTitles((x) => ({ ...x, [s.id]: e.target.value }))} onBlur={() => rename(s)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
                       </label>
                       <span className="meta">{s.talk.title}{s.duration != null && ` · ${mmss(s.duration)}`} · {t('shrViews').replace('{n}', s.views.toLocaleString(locale))}{s.publishedAt && ` · ${date(s.publishedAt)}`}</span>
-                      <span className={`sh-state ${s.status}`}>{s.status === 'published' ? (s.talk.visible ? t('shrStatePublished') : t('shrStateHidden')) : t('shrStateDraft')}</span>
+                      <span className={`sh-state ${s.status}`}>{stateOf(s)}</span>
+                      {s.status === 'draft' && s.reviewNote && <span className="meta small">{t('shrRefused').replace('{note}', s.reviewNote)}</span>}
+                      {d.canReview && s.status === 'pending' && (
+                        <span className="sh-review">
+                          {s.author && <span className="meta small">{t('shrAuthorBy').replace('{name}', s.author)}</span>}
+                          <input value={notes[s.id] || ''} maxLength={300} placeholder={t('shrRejectNote')} aria-label={t('shrRejectNote')} onChange={(e) => setNotes((x) => ({ ...x, [s.id]: e.target.value }))} />
+                          <button type="button" className="btn" disabled={busy === `s${s.id}`} onClick={() => review(s, 'approve')}>{t('shrApprove')}</button>
+                          <button type="button" className="btn ghost" disabled={busy === `s${s.id}`} onClick={() => review(s, 'reject')}>{t('shrReject')}</button>
+                        </span>
+                      )}
                     </div>
                     <div className="sh-li-act">
                       {s.status === 'draft'
-                        ? <button type="button" className="btn" disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'published')} data-act="short-publish">{t('shrPublish')}</button>
-                        : <button type="button" className="btn ghost" disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'draft')} data-act="short-unpublish">{t('shrUnpublish')}</button>}
+                        ? <button type="button" className="btn" disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'published')} data-act="short-publish">{askLabel}</button>
+                        : <button type="button" className="btn ghost" disabled={busy === `s${s.id}`} onClick={() => setStatus(s, 'draft')} data-act="short-unpublish">{s.status === 'pending' ? t('shrWithdraw') : t('shrUnpublish')}</button>}
                       {s.status === 'published' && <button type="button" className="btn ghost" onClick={() => copyLink(s)}>{t('shrCopyLink')}</button>}
                       {s.projectId && <button type="button" className="btn ghost" disabled={busy === `s${s.id}`} onClick={() => refresh(s)} title={t('shrRefreshHint')}>{t('shrRefresh')}</button>}
                       <button type="button" className="btn ghost danger" disabled={busy === `s${s.id}`} onClick={() => remove(s)} data-act="short-delete">{t('shrDelete')}</button>
