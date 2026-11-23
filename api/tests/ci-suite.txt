@@ -89,3 +89,4 @@ test_sales.py
 test_legal_i18n.py
 test_catalogue_facets.py
 test_search_filters.py
+test_catalogue_translations.py

@@ -1,0 +1,966 @@
+{
+ "coran": {
+  "en": "The Quran",
+  "ar": "القرآن الكريم"
+ },
+ "foi-croyance": {
+  "en": "Faith and Belief",
+  "ar": "الإيمان والعقيدة"
+ },
+ "hadith-sunna": {
+  "en": "Hadith and Sunnah",
+  "ar": "الحديث والسنة"
+ },
+ "vie-du-prophete": {
+  "en": "The Life of the Prophet ﷺ",
+  "ar": "سيرة النبي ﷺ"
+ },
+ "prophetes-grandes-figures": {
+  "en": "Prophets and Great Figures",
+  "ar": "الأنبياء والشخصيات العظيمة"
+ },
+ "sciences-islamiques": {
+  "en": "Islamic Sciences",
+  "ar": "العلوم الإسلامية"
+ },
+ "pratiques-adorations": {
+  "en": "Practices and Worship",
+  "ar": "الشعائر والعبادات"
+ },
+ "spiritualite": {
+  "en": "Spirituality and Personal Development",
+  "ar": "الروحانيات والتطوير الذاتي"
+ },
+ "famille-societe": {
+  "en": "Family and Society",
+  "ar": "الأسرة والمجتمع"
+ },
+ "histoire-civilisations": {
+  "en": "History and Civilizations",
+  "ar": "التاريخ والحضارات"
+ },
+ "sciences-decouvertes": {
+  "en": "Sciences, Knowledge and Discoveries",
+  "ar": "العلوم والمعارف والاكتشافات"
+ },
+ "islam-contemporain": {
+  "en": "Islam and the Contemporary World",
+  "ar": "الإسلام والعالم المعاصر"
+ },
+ "conferences-enseignements": {
+  "en": "Lectures and Teachings",
+  "ar": "المحاضرات والدروس"
+ },
+ "decouvrir-islam": {
+  "en": "Discover Islam",
+  "ar": "اكتشف الإسلام"
+ },
+ "kids-series-aventures": {
+  "en": "My Series and Adventures",
+  "ar": "مسلسلاتي ومغامراتي"
+ },
+ "kids-histoires-prophetes": {
+  "en": "Stories of the Prophets",
+  "ar": "قصص الأنبياء"
+ },
+ "kids-coran": {
+  "en": "My Quran",
+  "ar": "قرآني"
+ },
+ "kids-foi": {
+  "en": "I Discover My Faith",
+  "ar": "أكتشف إيماني"
+ },
+ "kids-pratiques": {
+  "en": "I Learn to Practice",
+  "ar": "أتعلم العبادات"
+ },
+ "kids-belles-valeurs": {
+  "en": "Beautiful Values (Adab)",
+  "ar": "القيم الجميلة (الآداب)"
+ },
+ "kids-sciences-decouvertes": {
+  "en": "Science and Discoveries",
+  "ar": "العلوم والاكتشافات"
+ },
+ "kids-apprendre-arabe": {
+  "en": "I Learn Arabic",
+  "ar": "أتعلم العربية"
+ },
+ "kids-jeux-quiz": {
+  "en": "Games and Quizzes",
+  "ar": "ألعاب وأسئلة"
+ },
+ "kids-chansons-contes": {
+  "en": "Songs, Tales and Creativity",
+  "ar": "أناشيد وحكايات وإبداع"
+ },
+ "coran-recitation-du-coran": {
+  "en": "Quran Recitation",
+  "ar": "تلاوة القرآن"
+ },
+ "coran-apprendre-a-lire-le-coran": {
+  "en": "Learning to Read the Quran",
+  "ar": "تعلم قراءة القرآن"
+ },
+ "coran-tajwid-et-regles-de-recitation": {
+  "en": "Tajwid and Recitation Rules",
+  "ar": "التجويد وأحكام التلاوة"
+ },
+ "coran-memorisation-du-coran": {
+  "en": "Quran Memorization",
+  "ar": "حفظ القرآن"
+ },
+ "coran-tafsir-et-explication-des-sourates": {
+  "en": "Tafsir and Explanation of Surahs",
+  "ar": "التفسير وشرح السور"
+ },
+ "coran-meditation-du-coran": {
+  "en": "Quran Reflection",
+  "ar": "تدبر القرآن"
+ },
+ "coran-sciences-du-coran": {
+  "en": "Quranic Sciences",
+  "ar": "علوم القرآن"
+ },
+ "coran-vocabulaire-coranique": {
+  "en": "Quranic Vocabulary",
+  "ar": "مفردات القرآن"
+ },
+ "coran-recitateurs": {
+  "en": "Reciters",
+  "ar": "القراء"
+ },
+ "coran-comprendre-le-coran-en-francais": {
+  "en": "Understanding the Quran in French",
+  "ar": "فهم القرآن بالفرنسية"
+ },
+ "foi-croyance-les-six-piliers-de-la-foi": {
+  "en": "The Six Pillars of Faith",
+  "ar": "أركان الإيمان الستة"
+ },
+ "foi-croyance-connaitre-allah": {
+  "en": "Knowing Allah",
+  "ar": "معرفة الله"
+ },
+ "foi-croyance-les-noms-et-attributs-d-allah": {
+  "en": "The Names and Attributes of Allah",
+  "ar": "أسماء الله وصفاته"
+ },
+ "foi-croyance-les-anges": {
+  "en": "The Angels",
+  "ar": "الملائكة"
+ },
+ "foi-croyance-les-livres-reveles": {
+  "en": "The Revealed Books",
+  "ar": "الكتب المنزلة"
+ },
+ "foi-croyance-les-prophetes-et-messagers": {
+  "en": "Prophets and Messengers",
+  "ar": "الأنبياء والرسل"
+ },
+ "foi-croyance-le-jour-dernier": {
+  "en": "The Last Day",
+  "ar": "اليوم الآخر"
+ },
+ "foi-croyance-le-destin": {
+  "en": "Destiny (Qadar)",
+  "ar": "القدر"
+ },
+ "foi-croyance-les-fondements-du-tawhid": {
+  "en": "The Foundations of Tawhid",
+  "ar": "أسس التوحيد"
+ },
+ "foi-croyance-questions-et-doutes-sur-la-foi": {
+  "en": "Questions and Doubts about Faith",
+  "ar": "أسئلة وشبهات حول الإيمان"
+ },
+ "hadith-sunna-les-40-hadiths-d-an-nawawi": {
+  "en": "An-Nawawi's 40 Hadiths",
+  "ar": "الأربعون النووية"
+ },
+ "hadith-sunna-sahih-al-bukhari": {
+  "en": "Sahih Al-Bukhari",
+  "ar": "صحيح البخاري"
+ },
+ "hadith-sunna-sahih-muslim": {
+  "en": "Sahih Muslim",
+  "ar": "صحيح مسلم"
+ },
+ "hadith-sunna-riyad-as-salihin": {
+  "en": "Riyad As-Salihin",
+  "ar": "رياض الصالحين"
+ },
+ "hadith-sunna-hadiths-du-quotidien": {
+  "en": "Everyday Hadiths",
+  "ar": "أحاديث الحياة اليومية"
+ },
+ "hadith-sunna-comprendre-la-sunna": {
+  "en": "Understanding the Sunnah",
+  "ar": "فهم السنة"
+ },
+ "hadith-sunna-sciences-du-hadith": {
+  "en": "Hadith Sciences",
+  "ar": "علوم الحديث"
+ },
+ "hadith-sunna-authenticite-et-classification": {
+  "en": "Authenticity and Classification",
+  "ar": "الصحة والتصنيف"
+ },
+ "hadith-sunna-comportements-prophetiques": {
+  "en": "Prophetic Conduct",
+  "ar": "الهدي النبوي"
+ },
+ "vie-du-prophete-avant-la-revelation": {
+  "en": "Before the Revelation",
+  "ar": "قبل الوحي"
+ },
+ "vie-du-prophete-la-revelation-a-la-mecque": {
+  "en": "The Revelation in Mecca",
+  "ar": "الوحي في مكة"
+ },
+ "vie-du-prophete-l-hegire": {
+  "en": "The Hijra",
+  "ar": "الهجرة"
+ },
+ "vie-du-prophete-la-periode-medinoise": {
+  "en": "The Medinan Period",
+  "ar": "الفترة المدنية"
+ },
+ "vie-du-prophete-les-grands-evenements-de-la-sira": {
+  "en": "Major Events of the Sira",
+  "ar": "أحداث السيرة الكبرى"
+ },
+ "vie-du-prophete-la-famille-du-prophete": {
+  "en": "The Prophet's ﷺ Family",
+  "ar": "أسرة النبي ﷺ"
+ },
+ "vie-du-prophete-son-caractere-et-ses-qualites": {
+  "en": "His Character and Qualities",
+  "ar": "أخلاقه وصفاته"
+ },
+ "vie-du-prophete-ses-enseignements-au-quotidien": {
+  "en": "His Everyday Teachings",
+  "ar": "تعاليمه في الحياة اليومية"
+ },
+ "vie-du-prophete-les-dernieres-annees": {
+  "en": "The Final Years",
+  "ar": "السنوات الأخيرة"
+ },
+ "vie-du-prophete-les-lecons-de-la-sira": {
+  "en": "Lessons from the Sira",
+  "ar": "دروس من السيرة"
+ },
+ "prophetes-grandes-figures-les-histoires-des-prophetes": {
+  "en": "Stories of the Prophets",
+  "ar": "قصص الأنبياء"
+ },
+ "prophetes-grandes-figures-les-quatre-califes-bien-guides": {
+  "en": "The Four Rightly Guided Caliphs",
+  "ar": "الخلفاء الراشدون الأربعة"
+ },
+ "prophetes-grandes-figures-les-compagnons-du-prophete": {
+  "en": "The Prophet's ﷺ Companions",
+  "ar": "صحابة النبي ﷺ"
+ },
+ "prophetes-grandes-figures-les-femmes-remarquables-de-l-islam": {
+  "en": "Remarkable Women of Islam",
+  "ar": "نساء عظيمات في الإسلام"
+ },
+ "prophetes-grandes-figures-les-grandes-figures-du-savoir": {
+  "en": "Great Figures of Knowledge",
+  "ar": "أعلام العلم"
+ },
+ "prophetes-grandes-figures-les-savants-et-erudits": {
+  "en": "Scholars and Erudites",
+  "ar": "العلماء والأئمة"
+ },
+ "prophetes-grandes-figures-les-personnalites-historiques": {
+  "en": "Historical Figures",
+  "ar": "شخصيات تاريخية"
+ },
+ "prophetes-grandes-figures-les-biographies-inspirantes": {
+  "en": "Inspiring Biographies",
+  "ar": "سير ملهمة"
+ },
+ "sciences-islamiques-introduction-aux-sciences-islamiques": {
+  "en": "Introduction to Islamic Sciences",
+  "ar": "مدخل إلى العلوم الإسلامية"
+ },
+ "sciences-islamiques-fiqh-et-jurisprudence": {
+  "en": "Fiqh and Jurisprudence",
+  "ar": "الفقه والتشريع"
+ },
+ "sciences-islamiques-usul-al-fiqh": {
+  "en": "Usul al-Fiqh",
+  "ar": "أصول الفقه"
+ },
+ "sciences-islamiques-aqida-et-theologie": {
+  "en": "Aqida and Theology",
+  "ar": "العقيدة وعلم الكلام"
+ },
+ "sciences-islamiques-sciences-du-coran": {
+  "en": "Quranic Sciences",
+  "ar": "علوم القرآن"
+ },
+ "sciences-islamiques-sciences-du-hadith": {
+  "en": "Hadith Sciences",
+  "ar": "علوم الحديث"
+ },
+ "sciences-islamiques-langue-arabe-classique": {
+  "en": "Classical Arabic Language",
+  "ar": "اللغة العربية الفصحى"
+ },
+ "sciences-islamiques-ecoles-juridiques": {
+  "en": "Schools of Jurisprudence",
+  "ar": "المذاهب الفقهية"
+ },
+ "sciences-islamiques-methodologie-de-recherche": {
+  "en": "Research Methodology",
+  "ar": "منهجية البحث"
+ },
+ "sciences-islamiques-ouvrages-classiques": {
+  "en": "Classical Works",
+  "ar": "المؤلفات الكلاسيكية"
+ },
+ "pratiques-adorations-les-cinq-piliers-de-l-islam": {
+  "en": "The Five Pillars of Islam",
+  "ar": "أركان الإسلام الخمسة"
+ },
+ "pratiques-adorations-ablutions-et-purification": {
+  "en": "Ablutions and Purification",
+  "ar": "الوضوء والطهارة"
+ },
+ "pratiques-adorations-la-priere": {
+  "en": "Prayer",
+  "ar": "الصلاة"
+ },
+ "pratiques-adorations-le-jeune": {
+  "en": "Fasting",
+  "ar": "الصيام"
+ },
+ "pratiques-adorations-la-zakat-et-l-aumone": {
+  "en": "Zakat and Charity",
+  "ar": "الزكاة والصدقة"
+ },
+ "pratiques-adorations-le-hajj-et-la-omra": {
+  "en": "Hajj and Umrah",
+  "ar": "الحج والعمرة"
+ },
+ "pratiques-adorations-les-invocations": {
+  "en": "Supplications",
+  "ar": "الأدعية"
+ },
+ "pratiques-adorations-le-dhikr": {
+  "en": "Dhikr",
+  "ar": "الذكر"
+ },
+ "pratiques-adorations-prieres-surerogatoires": {
+  "en": "Voluntary Prayers",
+  "ar": "صلوات النافلة"
+ },
+ "pratiques-adorations-pratique-au-quotidien": {
+  "en": "Daily Practice",
+  "ar": "الممارسة اليومية"
+ },
+ "spiritualite-purification-du-cur": {
+  "en": "Purification of the Heart",
+  "ar": "تزكية القلب"
+ },
+ "spiritualite-patience-et-perseverance": {
+  "en": "Patience and Perseverance",
+  "ar": "الصبر والمثابرة"
+ },
+ "spiritualite-gratitude": {
+  "en": "Gratitude",
+  "ar": "الشكر"
+ },
+ "spiritualite-sincerite-et-intention": {
+  "en": "Sincerity and Intention",
+  "ar": "الإخلاص والنية"
+ },
+ "spiritualite-confiance-en-allah": {
+  "en": "Trust in Allah",
+  "ar": "التوكل على الله"
+ },
+ "spiritualite-repentir-et-pardon": {
+  "en": "Repentance and Forgiveness",
+  "ar": "التوبة والمغفرة"
+ },
+ "spiritualite-gestion-des-emotions": {
+  "en": "Managing Emotions",
+  "ar": "إدارة المشاعر"
+ },
+ "spiritualite-epreuves-de-la-vie": {
+  "en": "Life's Trials",
+  "ar": "ابتلاءات الحياة"
+ },
+ "spiritualite-motivation-et-discipline": {
+  "en": "Motivation and Discipline",
+  "ar": "الحافز والانضباط"
+ },
+ "spiritualite-rappels-spirituels": {
+  "en": "Spiritual Reminders",
+  "ar": "تذكيرات روحية"
+ },
+ "famille-societe-mariage-et-vie-conjugale": {
+  "en": "Marriage and Married Life",
+  "ar": "الزواج والحياة الزوجية"
+ },
+ "famille-societe-parentalite-et-education": {
+  "en": "Parenting and Education",
+  "ar": "التربية والتعليم"
+ },
+ "famille-societe-adolescence-et-jeunesse": {
+  "en": "Adolescence and Youth",
+  "ar": "المراهقة والشباب"
+ },
+ "famille-societe-relations-avec-les-parents": {
+  "en": "Relationships with Parents",
+  "ar": "العلاقة مع الوالدين"
+ },
+ "famille-societe-fraternite-et-relations-sociales": {
+  "en": "Brotherhood and Social Relations",
+  "ar": "الأخوة والعلاقات الاجتماعية"
+ },
+ "famille-societe-travail-et-vie-professionnelle": {
+  "en": "Work and Professional Life",
+  "ar": "العمل والحياة المهنية"
+ },
+ "famille-societe-ethique-et-comportement": {
+  "en": "Ethics and Conduct",
+  "ar": "الأخلاق والسلوك"
+ },
+ "famille-societe-solidarite": {
+  "en": "Solidarity",
+  "ar": "التضامن"
+ },
+ "famille-societe-voisinage": {
+  "en": "Neighbors",
+  "ar": "الجوار"
+ },
+ "famille-societe-questions-familiales-contemporaines": {
+  "en": "Contemporary Family Issues",
+  "ar": "قضايا الأسرة المعاصرة"
+ },
+ "histoire-civilisations-histoire-de-l-islam": {
+  "en": "History of Islam",
+  "ar": "تاريخ الإسلام"
+ },
+ "histoire-civilisations-les-premiers-siecles": {
+  "en": "The Early Centuries",
+  "ar": "القرون الأولى"
+ },
+ "histoire-civilisations-les-califats": {
+  "en": "The Caliphates",
+  "ar": "الخلافات"
+ },
+ "histoire-civilisations-al-andalus": {
+  "en": "Al-Andalus",
+  "ar": "الأندلس"
+ },
+ "histoire-civilisations-l-age-d-or-des-sciences": {
+  "en": "The Golden Age of Science",
+  "ar": "العصر الذهبي للعلوم"
+ },
+ "histoire-civilisations-les-grandes-dynasties": {
+  "en": "The Great Dynasties",
+  "ar": "الدول والسلالات الكبرى"
+ },
+ "histoire-civilisations-batailles-et-evenements-historiques": {
+  "en": "Battles and Historical Events",
+  "ar": "المعارك والأحداث التاريخية"
+ },
+ "histoire-civilisations-villes-historiques": {
+  "en": "Historic Cities",
+  "ar": "المدن التاريخية"
+ },
+ "histoire-civilisations-architecture-et-patrimoine": {
+  "en": "Architecture and Heritage",
+  "ar": "العمارة والتراث"
+ },
+ "histoire-civilisations-civilisations-et-echanges-culturels": {
+  "en": "Civilizations and Cultural Exchange",
+  "ar": "الحضارات والتبادل الثقافي"
+ },
+ "sciences-decouvertes-astronomie": {
+  "en": "Astronomy",
+  "ar": "علم الفلك"
+ },
+ "sciences-decouvertes-mathematiques": {
+  "en": "Mathematics",
+  "ar": "الرياضيات"
+ },
+ "sciences-decouvertes-medecine-dans-l-histoire": {
+  "en": "Medicine in History",
+  "ar": "الطب عبر التاريخ"
+ },
+ "sciences-decouvertes-physique-et-optique": {
+  "en": "Physics and Optics",
+  "ar": "الفيزياء والبصريات"
+ },
+ "sciences-decouvertes-geographie-et-exploration": {
+  "en": "Geography and Exploration",
+  "ar": "الجغرافيا والاستكشاف"
+ },
+ "sciences-decouvertes-inventions-et-decouvertes": {
+  "en": "Inventions and Discoveries",
+  "ar": "الاختراعات والاكتشافات"
+ },
+ "sciences-decouvertes-nature-et-environnement": {
+  "en": "Nature and Environment",
+  "ar": "الطبيعة والبيئة"
+ },
+ "sciences-decouvertes-savants-musulmans": {
+  "en": "Muslim Scholars",
+  "ar": "علماء مسلمون"
+ },
+ "sciences-decouvertes-bibliotheques-et-transmission-du-savoir": {
+  "en": "Libraries and the Transmission of Knowledge",
+  "ar": "المكتبات ونقل المعرفة"
+ },
+ "sciences-decouvertes-sciences-et-reflexion-ethique": {
+  "en": "Science and Ethical Reflection",
+  "ar": "العلم والتأمل الأخلاقي"
+ },
+ "islam-contemporain-vivre-sa-foi-aujourd-hui": {
+  "en": "Living Your Faith Today",
+  "ar": "عيش الإيمان اليوم"
+ },
+ "islam-contemporain-islam-en-france-et-en-europe": {
+  "en": "Islam in France and Europe",
+  "ar": "الإسلام في فرنسا وأوروبا"
+ },
+ "islam-contemporain-identite-et-citoyennete": {
+  "en": "Identity and Citizenship",
+  "ar": "الهوية والمواطنة"
+ },
+ "islam-contemporain-ethique-numerique": {
+  "en": "Digital Ethics",
+  "ar": "الأخلاقيات الرقمية"
+ },
+ "islam-contemporain-economie-et-finance-ethique": {
+  "en": "Economy and Ethical Finance",
+  "ar": "الاقتصاد والتمويل الأخلاقي"
+ },
+ "islam-contemporain-environnement-et-responsabilite": {
+  "en": "Environment and Responsibility",
+  "ar": "البيئة والمسؤولية"
+ },
+ "islam-contemporain-questions-de-societe": {
+  "en": "Social Issues",
+  "ar": "قضايا المجتمع"
+ },
+ "islam-contemporain-dialogue-et-coexistence": {
+  "en": "Dialogue and Coexistence",
+  "ar": "الحوار والتعايش"
+ },
+ "islam-contemporain-idees-recues-sur-l-islam": {
+  "en": "Misconceptions about Islam",
+  "ar": "مفاهيم خاطئة عن الإسلام"
+ },
+ "islam-contemporain-questions-des-nouveaux-musulmans": {
+  "en": "Questions from New Muslims",
+  "ar": "أسئلة المسلمين الجدد"
+ },
+ "conferences-enseignements-conferences-thematiques": {
+  "en": "Thematic Lectures",
+  "ar": "محاضرات موضوعية"
+ },
+ "conferences-enseignements-series-de-cours": {
+  "en": "Course Series",
+  "ar": "سلاسل الدروس"
+ },
+ "conferences-enseignements-questions-reponses": {
+  "en": "Questions and Answers",
+  "ar": "أسئلة وأجوبة"
+ },
+ "conferences-enseignements-debats-et-entretiens": {
+  "en": "Debates and Interviews",
+  "ar": "مناظرات ولقاءات"
+ },
+ "conferences-enseignements-sermons-du-vendredi": {
+  "en": "Friday Sermons",
+  "ar": "خطب الجمعة"
+ },
+ "conferences-enseignements-rappels-courts": {
+  "en": "Short Reminders",
+  "ar": "تذكيرات قصيرة"
+ },
+ "conferences-enseignements-seminaires": {
+  "en": "Seminars",
+  "ar": "ندوات"
+ },
+ "conferences-enseignements-rencontres-avec-les-enseignants": {
+  "en": "Meetings with Teachers",
+  "ar": "لقاءات مع المدرسين"
+ },
+ "conferences-enseignements-cours-en-arabe-sous-titres": {
+  "en": "Arabic Lessons with Subtitles",
+  "ar": "دروس بالعربية مترجمة"
+ },
+ "conferences-enseignements-conferences-traduites-en-francais": {
+  "en": "Lectures Translated into French",
+  "ar": "محاضرات مترجمة إلى الفرنسية"
+ },
+ "decouvrir-islam-qu-est-ce-que-l-islam": {
+  "en": "What Is Islam?",
+  "ar": "ما هو الإسلام؟"
+ },
+ "decouvrir-islam-les-premieres-notions": {
+  "en": "First Notions",
+  "ar": "المفاهيم الأولى"
+ },
+ "decouvrir-islam-les-piliers-de-l-islam-et-de-la-foi": {
+  "en": "The Pillars of Islam and Faith",
+  "ar": "أركان الإسلام والإيمان"
+ },
+ "decouvrir-islam-decouvrir-le-coran": {
+  "en": "Discover the Quran",
+  "ar": "اكتشف القرآن"
+ },
+ "decouvrir-islam-decouvrir-le-prophete": {
+  "en": "Discover the Prophet ﷺ",
+  "ar": "اكتشف النبي ﷺ"
+ },
+ "decouvrir-islam-premiers-pas-dans-la-priere": {
+  "en": "First Steps in Prayer",
+  "ar": "الخطوات الأولى في الصلاة"
+ },
+ "decouvrir-islam-parcours-pour-nouveaux-musulmans": {
+  "en": "Path for New Muslims",
+  "ar": "مسار للمسلمين الجدد"
+ },
+ "decouvrir-islam-questions-essentielles": {
+  "en": "Essential Questions",
+  "ar": "أسئلة أساسية"
+ },
+ "decouvrir-islam-lexique-islamique": {
+  "en": "Islamic Glossary",
+  "ar": "معجم المصطلحات الإسلامية"
+ },
+ "decouvrir-islam-premiers-parcours-guides": {
+  "en": "First Guided Paths",
+  "ar": "مسارات موجهة أولى"
+ },
+ "kids-series-aventures-yacine-et-lina": {
+  "en": "Yacine and Lina",
+  "ar": "ياسين ولينا"
+ },
+ "kids-series-aventures-les-aventures-du-quotidien": {
+  "en": "Everyday Adventures",
+  "ar": "مغامرات الحياة اليومية"
+ },
+ "kids-series-aventures-series-educatives": {
+  "en": "Educational Series",
+  "ar": "مسلسلات تعليمية"
+ },
+ "kids-series-aventures-histoires-en-famille": {
+  "en": "Family Stories",
+  "ar": "حكايات عائلية"
+ },
+ "kids-series-aventures-amitie-et-entraide": {
+  "en": "Friendship and Helping Others",
+  "ar": "الصداقة والتعاون"
+ },
+ "kids-series-aventures-grandes-aventures": {
+  "en": "Great Adventures",
+  "ar": "مغامرات كبرى"
+ },
+ "kids-histoires-prophetes-adam": {
+  "en": "Adam",
+  "ar": "آدم"
+ },
+ "kids-histoires-prophetes-nuh": {
+  "en": "Nuh",
+  "ar": "نوح"
+ },
+ "kids-histoires-prophetes-ibrahim": {
+  "en": "Ibrahim",
+  "ar": "إبراهيم"
+ },
+ "kids-histoires-prophetes-moussa": {
+  "en": "Musa",
+  "ar": "موسى"
+ },
+ "kids-histoires-prophetes-youssouf": {
+  "en": "Yusuf",
+  "ar": "يوسف"
+ },
+ "kids-histoires-prophetes-issa": {
+  "en": "Isa",
+  "ar": "عيسى"
+ },
+ "kids-histoires-prophetes-muhammad": {
+  "en": "Muhammad ﷺ",
+  "ar": "محمد ﷺ"
+ },
+ "kids-histoires-prophetes-les-lecons-des-prophetes": {
+  "en": "Lessons from the Prophets",
+  "ar": "دروس من الأنبياء"
+ },
+ "kids-coran-decouvrir-le-coran": {
+  "en": "Discover the Quran",
+  "ar": "اكتشف القرآن"
+ },
+ "kids-coran-les-petites-sourates": {
+  "en": "The Short Surahs",
+  "ar": "السور القصيرة"
+ },
+ "kids-coran-apprendre-al-fatiha": {
+  "en": "Learn Al-Fatiha",
+  "ar": "أتعلم الفاتحة"
+ },
+ "kids-coran-recitation-et-repetition": {
+  "en": "Recitation and Repetition",
+  "ar": "التلاوة والتكرار"
+ },
+ "kids-coran-premieres-lettres-arabes": {
+  "en": "First Arabic Letters",
+  "ar": "الحروف العربية الأولى"
+ },
+ "kids-coran-histoires-du-coran": {
+  "en": "Stories from the Quran",
+  "ar": "قصص من القرآن"
+ },
+ "kids-coran-memoriser-en-s-amusant": {
+  "en": "Memorize with Fun",
+  "ar": "أحفظ باللعب"
+ },
+ "kids-coran-comprendre-une-sourate": {
+  "en": "Understanding a Surah",
+  "ar": "أفهم سورة"
+ },
+ "kids-foi-allah-notre-createur": {
+  "en": "Allah, Our Creator",
+  "ar": "الله خالقنا"
+ },
+ "kids-foi-les-belles-choses-de-la-creation": {
+  "en": "The Beautiful Things of Creation",
+  "ar": "جمال الخلق"
+ },
+ "kids-foi-les-six-piliers-de-la-foi": {
+  "en": "The Six Pillars of Faith",
+  "ar": "أركان الإيمان الستة"
+ },
+ "kids-foi-les-anges": {
+  "en": "The Angels",
+  "ar": "الملائكة"
+ },
+ "kids-foi-les-prophetes": {
+  "en": "The Prophets",
+  "ar": "الأنبياء"
+ },
+ "kids-foi-le-paradis": {
+  "en": "Paradise",
+  "ar": "الجنة"
+ },
+ "kids-foi-la-confiance-en-allah": {
+  "en": "Trust in Allah",
+  "ar": "التوكل على الله"
+ },
+ "kids-foi-mes-premieres-questions": {
+  "en": "My First Questions",
+  "ar": "أسئلتي الأولى"
+ },
+ "kids-pratiques-mes-premieres-ablutions": {
+  "en": "My First Ablutions",
+  "ar": "وضوئي الأول"
+ },
+ "kids-pratiques-j-apprends-la-priere": {
+  "en": "I Learn Prayer",
+  "ar": "أتعلم الصلاة"
+ },
+ "kids-pratiques-les-petites-invocations": {
+  "en": "Little Supplications",
+  "ar": "أدعية صغيرة"
+ },
+ "kids-pratiques-decouvrir-le-ramadan": {
+  "en": "Discover Ramadan",
+  "ar": "اكتشف رمضان"
+ },
+ "kids-pratiques-la-generosite": {
+  "en": "Generosity",
+  "ar": "الكرم"
+ },
+ "kids-pratiques-les-fetes-musulmanes": {
+  "en": "Muslim Celebrations",
+  "ar": "الأعياد الإسلامية"
+ },
+ "kids-pratiques-decouvrir-le-hajj": {
+  "en": "Discover Hajj",
+  "ar": "اكتشف الحج"
+ },
+ "kids-pratiques-mes-bonnes-habitudes": {
+  "en": "My Good Habits",
+  "ar": "عاداتي الحسنة"
+ },
+ "kids-belles-valeurs-dire-la-verite": {
+  "en": "Telling the Truth",
+  "ar": "قول الصدق"
+ },
+ "kids-belles-valeurs-etre-gentil": {
+  "en": "Being Kind",
+  "ar": "اللطف"
+ },
+ "kids-belles-valeurs-respecter-ses-parents": {
+  "en": "Respecting Your Parents",
+  "ar": "احترام الوالدين"
+ },
+ "kids-belles-valeurs-partager": {
+  "en": "Sharing",
+  "ar": "المشاركة"
+ },
+ "kids-belles-valeurs-la-patience": {
+  "en": "Patience",
+  "ar": "الصبر"
+ },
+ "kids-belles-valeurs-le-pardon": {
+  "en": "Forgiveness",
+  "ar": "العفو"
+ },
+ "kids-belles-valeurs-la-gratitude": {
+  "en": "Gratitude",
+  "ar": "الشكر"
+ },
+ "kids-belles-valeurs-la-proprete": {
+  "en": "Cleanliness",
+  "ar": "النظافة"
+ },
+ "kids-belles-valeurs-respecter-les-autres": {
+  "en": "Respecting Others",
+  "ar": "احترام الآخرين"
+ },
+ "kids-belles-valeurs-les-bonnes-manieres": {
+  "en": "Good Manners",
+  "ar": "حسن الأخلاق"
+ },
+ "kids-sciences-decouvertes-les-animaux": {
+  "en": "Animals",
+  "ar": "الحيوانات"
+ },
+ "kids-sciences-decouvertes-la-nature": {
+  "en": "Nature",
+  "ar": "الطبيعة"
+ },
+ "kids-sciences-decouvertes-l-espace-et-les-etoiles": {
+  "en": "Space and Stars",
+  "ar": "الفضاء والنجوم"
+ },
+ "kids-sciences-decouvertes-le-corps-humain": {
+  "en": "The Human Body",
+  "ar": "جسم الإنسان"
+ },
+ "kids-sciences-decouvertes-les-grandes-inventions": {
+  "en": "Great Inventions",
+  "ar": "اختراعات عظيمة"
+ },
+ "kids-sciences-decouvertes-les-savants-musulmans": {
+  "en": "Muslim Scholars",
+  "ar": "علماء مسلمون"
+ },
+ "kids-sciences-decouvertes-les-pays-du-monde": {
+  "en": "Countries of the World",
+  "ar": "بلدان العالم"
+ },
+ "kids-sciences-decouvertes-les-merveilles-de-la-terre": {
+  "en": "Wonders of the Earth",
+  "ar": "عجائب الأرض"
+ },
+ "kids-apprendre-arabe-les-lettres-arabes": {
+  "en": "Arabic Letters",
+  "ar": "الحروف العربية"
+ },
+ "kids-apprendre-arabe-mes-premiers-mots": {
+  "en": "My First Words",
+  "ar": "كلماتي الأولى"
+ },
+ "kids-apprendre-arabe-les-couleurs": {
+  "en": "Colors",
+  "ar": "الألوان"
+ },
+ "kids-apprendre-arabe-les-chiffres": {
+  "en": "Numbers",
+  "ar": "الأرقام"
+ },
+ "kids-apprendre-arabe-les-animaux-en-arabe": {
+  "en": "Animals in Arabic",
+  "ar": "الحيوانات بالعربية"
+ },
+ "kids-apprendre-arabe-les-objets-du-quotidien": {
+  "en": "Everyday Objects",
+  "ar": "أشياء من حياتنا اليومية"
+ },
+ "kids-apprendre-arabe-les-petites-phrases": {
+  "en": "Little Sentences",
+  "ar": "جمل صغيرة"
+ },
+ "kids-apprendre-arabe-les-mots-du-coran": {
+  "en": "Words of the Quran",
+  "ar": "كلمات من القرآن"
+ },
+ "kids-jeux-quiz-quiz-des-prophetes": {
+  "en": "Prophets Quiz",
+  "ar": "مسابقة الأنبياء"
+ },
+ "kids-jeux-quiz-quiz-du-coran": {
+  "en": "Quran Quiz",
+  "ar": "مسابقة القرآن"
+ },
+ "kids-jeux-quiz-devine-l-animal": {
+  "en": "Guess the Animal",
+  "ar": "خمّن الحيوان"
+ },
+ "kids-jeux-quiz-trouve-la-bonne-reponse": {
+  "en": "Find the Right Answer",
+  "ar": "اعثر على الإجابة الصحيحة"
+ },
+ "kids-jeux-quiz-jeux-de-memoire": {
+  "en": "Memory Games",
+  "ar": "ألعاب الذاكرة"
+ },
+ "kids-jeux-quiz-defis-des-belles-valeurs": {
+  "en": "Beautiful Values Challenges",
+  "ar": "تحديات القيم الجميلة"
+ },
+ "kids-jeux-quiz-puzzles-educatifs": {
+  "en": "Educational Puzzles",
+  "ar": "ألغاز تعليمية"
+ },
+ "kids-jeux-quiz-revisions-amusantes": {
+  "en": "Fun Revision",
+  "ar": "مراجعة ممتعة"
+ },
+ "kids-chansons-contes-comptines-educatives": {
+  "en": "Educational Nursery Rhymes",
+  "ar": "أغاني الأطفال التعليمية"
+ },
+ "kids-chansons-contes-anachid-et-chants": {
+  "en": "Anasheed and Songs",
+  "ar": "أناشيد وأغانٍ"
+ },
+ "kids-chansons-contes-contes-illustres": {
+  "en": "Illustrated Tales",
+  "ar": "حكايات مصورة"
+ },
+ "kids-chansons-contes-histoires-avant-de-dormir": {
+  "en": "Bedtime Stories",
+  "ar": "قصص قبل النوم"
+ },
+ "kids-chansons-contes-dessins-et-activites": {
+  "en": "Drawings and Activities",
+  "ar": "رسم وأنشطة"
+ },
+ "kids-chansons-contes-bricolages-du-ramadan": {
+  "en": "Ramadan Crafts",
+  "ar": "أشغال يدوية لرمضان"
+ },
+ "kids-chansons-contes-activites-a-faire-en-famille": {
+  "en": "Family Activities",
+  "ar": "أنشطة عائلية"
+ },
+ "kids-chansons-contes-histoires-interactives": {
+  "en": "Interactive Stories",
+  "ar": "قصص تفاعلية"
+ }
+}
