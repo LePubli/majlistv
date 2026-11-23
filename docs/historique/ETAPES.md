@@ -10013,3 +10013,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Catalogue — noms de catégories traduits (23/11/2026)
 
 - Migration 124 (colonne `tr` de la vue `category_names`), `categoryTr` dans les cartes, traduction appliquée par le client d'API du site et de l'application. **Déploiement** : `majlistv-api` puis `majlistv-web` ; application : mise à jour du contenu.
+
+## Back-office — sens de lecture en arabe (23/11/2026)
+
+- Admin et Studio gardent le sens gauche-droite quand le site est en arabe. **Déploiement** : `majlistv-web` seulement.

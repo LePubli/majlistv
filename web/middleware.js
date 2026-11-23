@@ -85,6 +85,7 @@ export async function middleware(req) {
   // L'en-tête est aussi transmis à Next.js (requête) pour qu'il pose le nonce sur ses scripts.
   const headers = new Headers(req.headers);
   headers.set('x-nonce', nonce);
+  headers.set('x-pathname', req.nextUrl.pathname); // lu par app/layout.js : le back-office reste de gauche à droite (textes en français)
   headers.set(header, csp);
   const res = NextResponse.next({ request: { headers } });
   res.headers.set(header, csp);

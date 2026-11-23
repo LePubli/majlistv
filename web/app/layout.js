@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 // Polices auto-hébergées (fichiers servis par le site, aucun appel à Google Fonts : conforme RGPD).
 import '@fontsource-variable/montserrat';
 import '@fontsource-variable/fredoka';
@@ -24,6 +24,7 @@ import Footer from '../components/Footer';
 import RouteGate from '../components/RouteGate';
 import MemberShell from '../components/MemberShell';
 import SectionTabs from '../components/SectionTabs';
+import DirGuard from '../components/DirGuard';
 import StatsBeacon from '../components/StatsBeacon';
 import ErrorReporter from '../components/ErrorReporter'; // étape 39 : suivi des erreurs du navigateur
 import ResponsiveTables from '../components/ResponsiveTables';
@@ -87,8 +88,12 @@ export default async function RootLayout({ children }) {
   const skinDef = SKINS.includes(skinCfg?.def) ? skinCfg.def : 'classique';
   const wanted = cookies().get('skin')?.value;
   const skin = skinCfg?.choice === true && SKINS.includes(wanted) ? wanted : skinDef;
+  // Back-office (Admin, Studio) : ses textes sont en français ; même quand le site est en arabe il reste de gauche à droite (sinon « +121 cette
+  // semaine », les tableaux et les formulaires s'affichent à l'envers). Les pages du site public gardent le sens de l'arabe.
+  const backoffice = /^\/(admin|studio)(\/|$)/.test(headers().get('x-pathname') || '');
+  const dir = backoffice ? 'ltr' : DIR[locale];
   return (
-    <html lang={locale} dir={DIR[locale]} data-skin={skin}>
+    <html lang={locale} dir={dir} data-skin={skin}>
       {/* Thème « Premium » (V20) : sa feuille n'est chargée que pour ce thème (≈ 230 Ko, inutile aux autres). */}
       <head>{skin === 'premium' && <link id="v20-css" rel="stylesheet" href={V20_CSS} />}{skin === 'premium' && <link id="bo-css" rel="stylesheet" href={BO_CSS} />}</head>
       <body>
@@ -96,6 +101,7 @@ export default async function RootLayout({ children }) {
             l'administration réécrit cette balise (id="theme-vars") pour montrer un brouillon sans le publier. */}
         <style id="theme-vars" dangerouslySetInnerHTML={{ __html: theme?.css || '' }} />
         <Providers skin={skin} skinChoice={skinCfg?.choice === true} locale={locale} dict={dict} appName={appName} trialDays={trialDays} prayerCfg={prayer} cards={cards} hasSeries={Boolean(hasSeries) && hasWebModule('series')} hasBooks={Boolean(hasBooks) && hasWebModule('books')} statsOn={stats !== false && hasWebModule('stats')} features={webFeatures(features || {})} modules={modules || {}} layout={layout}>
+          <DirGuard locale={locale} />
           <StatsBeacon />
           <ErrorReporter />
           <PwaRegister />
