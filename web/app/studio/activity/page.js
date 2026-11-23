@@ -11,15 +11,18 @@ import { taskName } from '../../../lib/activity';
 import { importLabel } from '../../../components/ImportVideoPanel';
 import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, Progress as BmProgress } from '../../../components/backoffice/Kit';
 
+const RETRYABLE = ['video', 'transcript', 'translation']; // files dont on sait relancer une tâche en échec, en lot ou une par une (API : POST /studio/activity/retry)
+const taskKey = (x) => `${x.queue}:${x.ref}`;
 const SECTIONS = [['running', 'acRunning'], ['waiting', 'acWaiting'], ['paused', 'acPaused'], ['failed', 'acFailed']];
 
-function Task({ x, can, onAct, busy, pos }) {
+function Task({ x, can, onAct, busy, pos, sel, onSel, onRetry }) {
   const { t, locale } = useApp();
   const when = new Date(x.createdAt).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const link = x.link || (x.talkId ? `/studio/${x.talkId}` : null);
   const st = x.status;
   return (
     <li className={`ac-task ${st}`}>
+      {st === 'failed' && RETRYABLE.includes(x.queue) && <input type="checkbox" className="ac-sel" checked={Boolean(sel)} onChange={() => onSel(x)} aria-label={`${t('acSelect')} : ${x.title}`} />}
       <div className="ac-main">
         <span className="ac-kind">{pos != null && <span className="ac-pos">{pos}</span>}{taskName(x, t)}{x.priority > 0 && <span className="ac-prio">{t('acPrio')}</span>}{x.light && <span className="ac-light">{t('acLight')}</span>}</span>
         {link ? <Link href={link} className="ac-title" dir="auto">{x.title}</Link> : <span className="ac-title" dir="auto">{x.title}</span>}
@@ -34,6 +37,7 @@ function Task({ x, can, onAct, busy, pos }) {
       <div className="ac-side">
         <span className={`ac-state ${st}`}>{st === 'running' && x.progress != null ? `${x.progress} %` : t(`acSt_${st}`)}</span>
         {x.canceling && <small className="meta">{t('jbCanceling')}</small>}
+        {st === 'failed' && RETRYABLE.includes(x.queue) && <button type="button" className="btn ghost ac-btn" disabled={busy} onClick={() => onRetry([x])} data-act="task-retry">{t('acRetry')}</button>}
         {x.canCancel && st !== 'failed' && <button type="button" className="btn ghost ac-btn" disabled={busy} onClick={() => onAct(x, 'cancel', {})} data-act="task-cancel">{t('jbCancel')}</button>}
         {can && st !== 'failed' && (
           <div className="ac-actions">
@@ -147,6 +151,34 @@ export default function StudioActivity() {
     setMsg(r.ok ? { ok: true, text: t(what === 'cancel' ? 'jbCanceledMsg' : what === 'pause' ? (body.paused ? 'acPausedMsg' : 'acResumedMsg') : (body.priority ? 'acPrioMsg' : 'acPrioOffMsg')) } : { ok: false, text: r.data?.error || t('dbError') });
     load();
   };
+  // Relance en lot des tâches en échec (cases à cocher). Les tâches ignorées sont expliquées : accord de l'auteur manquant, copie à refaire…
+  const [sel, setSel] = useState(() => new Set());
+  const failedList = (d?.tasks || []).filter((x) => x.status === 'failed');
+  const retryable = failedList.filter((x) => RETRYABLE.includes(x.queue));
+  const chosen = retryable.filter((x) => sel.has(taskKey(x)));
+  const toggle = (x) => setSel((p) => { const n = new Set(p); if (n.has(taskKey(x))) n.delete(taskKey(x)); else n.add(taskKey(x)); return n; });
+  const toggleAll = () => setSel(chosen.length === retryable.length ? new Set() : new Set(retryable.map(taskKey)));
+  const retry = async (list) => {
+    if (!list.length) return;
+    setBusy(true);
+    const r = await call('/studio/activity/retry', { method: 'POST', body: JSON.stringify({ items: list.slice(0, 500).map((x) => ({ queue: x.queue, ref: x.ref })) }) });
+    setBusy(false);
+    if (!r.ok) { setMsg({ ok: false, text: r.data?.error || t('dbError') }); return; }
+    const why = {};
+    for (const k of r.data.skipped) why[k.reason] = (why[k.reason] || 0) + 1;
+    const extra = Object.entries(why).map(([k, n]) => `${n} × ${t(`acSkip_${k}`)}`).join(' ; ');
+    setMsg({ ok: r.data.retried > 0 || !extra, text: t('acRetryDone').replace('{n}', r.data.retried) + (extra ? ` — ${t('acRetrySkipped')} : ${extra}` : '') });
+    setSel(new Set());
+    load();
+  };
+  const retryBar = (
+    <div className="ac-retry-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '0 18px 10px' }}>
+      <button type="button" className="btn ghost ac-btn" disabled={busy || !retryable.length} onClick={toggleAll} data-act="retry-all">{chosen.length === retryable.length && retryable.length ? t('acSelNone') : `${t('acSelAll')} (${retryable.length})`}</button>
+      <button type="button" className="btn ac-btn" disabled={busy || !chosen.length} onClick={() => retry(chosen)} data-act="retry-sel">{t('acRetrySel').replace('{n}', chosen.length)}</button>
+      <small className="meta" style={{ flexBasis: '100%' }}>{t('acRetryNote')}</small>
+    </div>
+  );
+
   const saveSettings = async (body) => {
     const r = await call('/studio/activity/settings', { method: 'PUT', body: JSON.stringify(body) });
     if (r.ok) setD({ ...d, settings: r.data.settings });
@@ -164,14 +196,16 @@ export default function StudioActivity() {
     const taskRows = (list, st) => list.map((x, i) => {
       const link = x.link || (x.talkId ? `/studio/${x.talkId}` : null);
       return [
+        ...(st === 'failed' ? [RETRYABLE.includes(x.queue) ? <input key="c" type="checkbox" checked={sel.has(taskKey(x))} onChange={() => toggle(x)} aria-label={`${t('acSelect')} : ${x.title}`} /> : <span key="c" />] : []),
         <b key="n">{st === 'waiting' ? `${i + 1}. ` : ''}{taskName(x, t)}{x.priority > 0 ? ` · ${t('acPrio')}` : ''}</b>,
         link ? <Link key="l" href={link} dir="auto">{x.title}</Link> : <span key="l" dir="auto">{x.title}</span>,
-        <span key="d">{date(x.createdAt)}{x.status === 'blocked' ? ` · ${t(`taskBlocked_${x.blockedBy || 'other'}`)}` : ''}{x.status === 'failed' && x.error ? <small className="error" dir="auto" style={{ display: 'block' }}>{x.error}</small> : null}</span>,
+        <span key="d">{date(x.createdAt)}{x.status === 'blocked' ? ` · ${t(`taskBlocked_${x.blockedBy || 'other'}`)}` : ''}{x.status === 'failed' && x.error ? <small className="error" dir="auto" style={{ display: 'block', whiteSpace: 'normal', minWidth: 240, maxWidth: 480 }}>{x.error}</small> : null}</span>,
         x.status === 'running'
           ? <div key="s" style={{ minWidth: 120 }}><BmProgress value={x.progress ?? 0} /><small>{x.progress != null ? `${x.progress} %` : t('acSt_running')}</small></div>
           : <BmBadge key="s" tone={tone[x.status] || 'blue'}>{t(`acSt_${x.status}`)}</BmBadge>,
         <span key="a" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
           {x.canceling && <small>{t('jbCanceling')}</small>}
+          {x.status === 'failed' && RETRYABLE.includes(x.queue) && btn(t('acRetry'), () => retry([x]))}
           {x.canCancel && x.status !== 'failed' && btn(t('jbCancel'), () => act(x, 'cancel', {}))}
           {d.canControl && x.status !== 'failed' && (x.status === 'paused'
             ? btn(t('acResume'), () => act(x, 'pause', { paused: false }))
@@ -200,7 +234,8 @@ export default function StudioActivity() {
             if (!list.length && st !== 'running' && st !== 'waiting') return null;
             return (
               <BmPanel key={st} title={t(key)} extra={<span>{list.length}</span>}>
-                <BmTable headers={[t('acColTask'), t('colTalk'), t('acColSince'), t('colState'), '']} rows={taskRows(list, st)} empty={t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')} />
+                {st === 'failed' && retryable.length > 0 && retryBar}
+                <BmTable headers={[...(st === 'failed' ? [''] : []), t('acColTask'), t('colTalk'), t('acColSince'), t('colState'), '']} rows={taskRows(list, st)} empty={t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')} />
                 {st === 'waiting' && list.length > 1 && <p className="meta small" style={{ padding: '0 18px 14px' }}>{t('acOrderNote')}</p>}
               </BmPanel>
             );
@@ -233,7 +268,8 @@ export default function StudioActivity() {
             <h2 id={`ac-${st}`} className="sd-h2">{t(key)} <span className="ac-count">{list.length}</span></h2>
             {list.length === 0 && <p className="meta">{t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')}</p>}
             {st === 'waiting' && list.length > 1 && <p className="meta small">{t('acOrderNote')}</p>}
-            <ul className="ac-list">{list.map((x, i) => <Task key={`${x.queue}:${x.ref}`} x={x} can={d.canControl} onAct={act} busy={busy} pos={st === 'waiting' ? i + 1 : null} />)}</ul>
+            {st === 'failed' && retryable.length > 0 && retryBar}
+            <ul className="ac-list">{list.map((x, i) => <Task key={`${x.queue}:${x.ref}`} x={x} can={d.canControl} onAct={act} busy={busy} pos={st === 'waiting' ? i + 1 : null} sel={sel.has(taskKey(x))} onSel={toggle} onRetry={retry} />)}</ul>
           </section>
         );
       })}

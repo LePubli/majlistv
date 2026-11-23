@@ -152,6 +152,42 @@ export default async function activityRoutes(app) {
     return { canceled: true, running: task.status === 'running' };
   });
 
+  // Relance en lot des tâches EN ÉCHEC (registre n°347) : { items: [{ queue, ref }] } (500 au plus). Chaque tâche est relancée comme
+  // depuis la fiche de la vidéo (mêmes règles) : conversion, transcription, traduction. Sont ignorées, avec la raison : l'accord de
+  // l'auteur manquant (vidéo YouTube / Vimeo), une copie d'import à refaire depuis la fiche, une tâche d'un module sans relance
+  // en lot, une tâche qui n'est plus en échec. Un organisateur ne relance que les tâches de ses vidéos ; l'administrateur toutes.
+  app.post('/studio/activity/retry', viewer, async (req) => {
+    const { items } = z.object({ items: z.array(z.object({ queue: z.enum(QUEUES), ref: z.string().min(1).max(120) }).strict()).min(1).max(500) }).strict().parse(req.body ?? {});
+    const failed = new Map((await listTasks(scope(req))).filter((t) => t.status === 'failed').map((t) => [`${t.queue}:${t.ref}`, t]));
+    let retried = 0;
+    const skipped = [];
+    const skip = (task, reason) => skipped.push({ queue: task.queue, ref: task.ref, title: task.title, reason });
+    for (const it of items) {
+      const task = failed.get(`${it.queue}:${it.ref}`);
+      if (!task) { skipped.push({ queue: it.queue, ref: it.ref, title: null, reason: 'state' }); continue; }
+      let n = 0;
+      if (it.queue === 'video') {
+        // Si c'est la copie de la vidéo (import) qui a échoué, il n'y a pas de fichier à convertir : à refaire depuis la fiche.
+        const imp = (await pool.query('SELECT new_talk, status FROM media_imports WHERE talk_id = $1 ORDER BY created_at DESC LIMIT 1', [task.talkId])).rows[0];
+        if (imp?.new_talk && imp.status !== 'done') { skip(task, 'import'); continue; }
+        n = (await pool.query("UPDATE talks SET video_status = 'pending', video_progress = 0, video_error = NULL, transcode_attempts = 0 WHERE id = $1 AND source = 'upload' AND video_status = 'failed'", [task.talkId])).rowCount;
+      } else if (it.queue === 'transcript') {
+        // Même règle que POST /talks/:id/transcribe : l'accord de l'auteur n'est jamais confirmé à sa place.
+        n = (await pool.query(
+          `UPDATE talks SET transcript_status = 'pending', transcript_error = NULL, transcript_attempts = 0, transcript_progress = 0
+            WHERE id = $1 AND transcript_status = 'failed' AND (source = 'upload' OR rights_confirmed)`, [task.talkId])).rowCount;
+        if (!n) { skip(task, 'rights'); continue; }
+      } else if (it.queue === 'translation') {
+        n = (await pool.query(
+          `UPDATE transcript_translations SET status = 'pending', progress = 0, error = NULL, attempts = 0, updated_at = now()
+            WHERE talk_id = $1 AND lang = $2 AND status = 'failed'`, [task.talkId, task.lang])).rowCount;
+      } else { skip(task, it.queue === 'import' ? 'import' : 'other'); continue; }
+      if (n) retried++; else skip(task, 'state');
+    }
+    req.auditSummary = `Activité : relance en lot — ${retried} relancée(s), ${skipped.length} ignorée(s) sur ${items.length}`;
+    return { retried, skipped };
+  });
+
   // Priorité : « passer en premier » (10) ou normale (0).
   app.post('/studio/activity/:queue/:ref/priority', admin, async (req, reply) => {
     const { queue, ref } = qp.parse(req.params);

@@ -10221,3 +10221,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé / limites.** Voir ligne 346 du registre.
 
+## Studio → Activité — relance en lot des échecs (23/11/2026)
+
+**Description.** Dans le tableau « En échec », cochez les tâches (ou « Tout sélectionner ») puis « Relancer la sélection » ; chaque ligne a aussi son bouton « Relancer ». Conversions, transcriptions et traductions sont remises en attente, comme depuis la fiche de la vidéo.
+
+**Prérequis.** Rôle organisateur (ses vidéos) ou administrateur (tout). Aucune migration.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** « ignorées : accord de l'auteur manquant » : ouvrir la fiche de la vidéo et confirmer l'accord, puis relancer. Les tâches relancées échouent de nouveau avec le même message : la cause n'a pas changé (YouTube : cookies ou proxy dans Admin → Paramètres). `select transcript_status, count(*) from talks group by 1;` pour suivre.
+
+**Exemples.** Studio → Activité → « En échec » → Tout sélectionner → Relancer la sélection : « 78 tâche(s) relancée(s) — ignorées : 5 × accord de l'auteur manquant… ».
+
+**Testé / non testé / limites.** Voir ligne 347 du registre.
+

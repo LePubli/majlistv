@@ -757,3 +757,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Shorts (thème Premium) : lecteur en carte dans le hub et pastilles de thèmes (catégories principales de la vidéo du short) : fait 23/11.
 - Qualité des sous-titres : score de confiance de Whisper par phrase (migration 128, transcripteur, défaut « reconnaissance incertaine ») : fait 23/11.
 - Thème Premium : progression réelle sur les cartes du Catalogue et des Séries ; correctif du jeton sur /me/learning (accueil, page série) : fait 23/11. Fin de l'ordre convenu pour les points back-office / Premium (hors points mis de côté).
+- Studio → Activité : relance en lot des tâches en échec (cases à cocher, « Relancer la sélection ») : fait 23/11.

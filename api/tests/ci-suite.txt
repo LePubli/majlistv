@@ -43,6 +43,7 @@ test_finance.py
 test_kids_admin.py
 test_subtitle_quality.py
 test_me_progress.py
+test_activity_retry.py
 test_shorts_themes.py
 test_shorts_review.py
 test_studio_vtt.py
