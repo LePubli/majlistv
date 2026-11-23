@@ -1,7 +1,8 @@
 'use client';
 // Studio → Sous-titres → Qualité : pour chacun de mes contenus, la note de lisibilité et de complétude de chaque langue de sous-titres
-// (API : GET /studio/subtitles/quality). Mesures FORMELLES seulement (vitesse de lecture, longueur, durée, chevauchement, traduction
-// incomplète ou non traduite) : aucune confiance de reconnaissance vocale n'est enregistrée, l'écran ne juge donc pas si le texte est juste.
+// (API : GET /studio/subtitles/quality). Mesures FORMELLES (vitesse de lecture, longueur, durée, chevauchement, traduction incomplète
+// ou non traduite) + CONFIANCE de Whisper : les phrases qu'il a transcrites avec hésitation sont signalées « incertaines » (indice, pas un
+// verdict : elle n'existe que pour les contenus transcrits par Whisper depuis la migration 128).
 // Troisième onglet de la rubrique (components/SubtitleTabs.js). Lecture seule : on corrige dans la fiche du contenu (« Gérer »).
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -29,8 +30,9 @@ export default function SubtitleQuality() {
   }, [call]);
 
   const lname = (l) => langName(String(l || '').split('-')[0], locale) || l;
-  const norms = data?.norms || { maxCps: 21, maxChars: 84, maxSeconds: 8 };
-  const label = (k) => t('sqIssue_' + k).replace('{cps}', norms.maxCps).replace('{chars}', norms.maxChars).replace('{s}', norms.maxSeconds);
+  const norms = data?.norms || { maxCps: 21, maxChars: 84, maxSeconds: 8, doubtBelow: 0.55 };
+  const label = (k) => t('sqIssue_' + k).replace('{cps}', norms.maxCps).replace('{chars}', norms.maxChars).replace('{s}', norms.maxSeconds).replace('{pct}', Math.round((norms.doubtBelow ?? 0.55) * 100));
+  const normsText = () => t('sqNorms').replace('{cps}', norms.maxCps).replace('{chars}', norms.maxChars).replace('{s}', norms.maxSeconds).replace('{pct}', Math.round((norms.doubtBelow ?? 0.55) * 100));
   const needle = q.trim().toLowerCase();
   const talks = data?.talks || [];
   const shown = talks.filter((r) => (filter === 'all' || r.level === filter) && (!needle || `${r.title} ${r.speaker}`.toLowerCase().includes(needle)));
@@ -56,7 +58,9 @@ export default function SubtitleQuality() {
     const sum = {};
     for (const l of r.langs) for (const [k, v] of Object.entries(l.counts)) if (v) sum[k] = (sum[k] || 0) + v;
     const keys = Object.keys(sum);
-    return keys.length ? keys.map((k) => `${label(k)} : ${sum[k]}`).join(' · ') : '—';
+    const src = r.langs.find((l) => l.isSource && l.confidence != null);
+    const conf = src ? ` · ${t('sqConfAvg').replace('{n}', src.confidence)}` : '';
+    return (keys.length ? keys.map((k) => `${label(k)} : ${sum[k]}`).join(' · ') : '—') + conf;
   };
 
   const detail = open && (
@@ -69,7 +73,7 @@ export default function SubtitleQuality() {
         <BmTable headers={[t('sqColTime'), `${t('sqColText')} · ${t('sqColIssues')}`]}
           rows={open.items.map((it) => [
             clock(it.startMs),
-            <span key="t" dir="auto">{it.text || '—'}<br /><small>{it.chars} {t('sqChars')} · {it.seconds} s{it.cps != null ? ` · ${it.cps} ${t('sqCps')}` : ''}</small>
+            <span key="t" dir="auto">{it.text || '—'}<br /><small>{it.chars} {t('sqChars')} · {it.seconds} s{it.cps != null ? ` · ${it.cps} ${t('sqCps')}` : ''}{it.confidence != null ? ` · ${t('sqConf')} ${it.confidence} %` : ''}</small>
               <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>{it.issues.map((k) => <BmBadge key={k} tone="amber">{label(k)}</BmBadge>)}</span></span>,
           ])} />
       )}
@@ -97,7 +101,7 @@ export default function SubtitleQuality() {
           {body() || (
             <>
               <BmPanel title={t('sqTitle')} extra={`${shown.length}`}>
-                <p className="meta">{t('sqNorms').replace('{cps}', norms.maxCps).replace('{chars}', norms.maxChars).replace('{s}', norms.maxSeconds)}</p>
+                <p className="meta">{normsText()}</p>
                 <div className={bmc('inline-tools')}>
                   <label className={bmc('search-field')}><input type="search" placeholder={t('studioSearch')} value={q} onChange={(e) => setQ(e.target.value)} /></label>
                   <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t('filterBy')}>
@@ -110,7 +114,7 @@ export default function SubtitleQuality() {
                     <span key="a"><Link href={`/studio/${r.id}`} dir="auto"><b>{r.title}</b></Link><br /><small>{r.speaker}</small></span>,
                     <BmBadge key="s" tone={TONE[r.level]}>{r.score ?? '—'} / 100</BmBadge>,
                     langBadges(r),
-                    <small key="p">{problems(r)}{r.pendingCorrections ? ` · ${t('sqPending').replace('{n}', r.pendingCorrections)}` : ''}</small>,
+                    <small key="p" style={{ display: 'block', whiteSpace: 'normal', minWidth: 220 }}>{problems(r)}{r.pendingCorrections ? ` · ${t('sqPending').replace('{n}', r.pendingCorrections)}` : ''}</small>,
                     <BmBtn key="m" primary={false} href={`/studio/${r.id}`}>{t('manage')}</BmBtn>,
                   ])} />
                 {tot.withoutText > 0 && <p className="meta" style={{ marginTop: 10 }}>{t('sqWithout').replace('{n}', tot.withoutText)}</p>}
@@ -129,7 +133,7 @@ export default function SubtitleQuality() {
       <p className="meta">{t('sqIntro')}</p>
       {body() || (
         <>
-          <p className="meta">{t('sqNorms').replace('{cps}', norms.maxCps).replace('{chars}', norms.maxChars).replace('{s}', norms.maxSeconds)}</p>
+          <p className="meta">{normsText()}</p>
           <div className="admin-cards">
             {[['analysed', tot.analysed], ['good', tot.good], ['check', tot.check], ['fix', tot.fix]].map(([k, v]) => (
               <div key={k} className="admin-card"><div className="admin-num">{v}</div><div className="meta">{t(k === 'analysed' ? 'sqM_analysed' : 'sqF_' + k)}</div></div>
@@ -167,7 +171,7 @@ export default function SubtitleQuality() {
                 <table className="st-table">
                   <thead><tr><th>{t('sqColTime')}</th><th>{t('sqColText')}</th><th>{t('sqColIssues')}</th></tr></thead>
                   <tbody>{open.items.map((it) => (
-                    <tr key={it.idx}><td>{clock(it.startMs)}</td><td dir="auto">{it.text || '—'}<br /><small>{it.chars} {t('sqChars')} · {it.seconds} s{it.cps != null ? ` · ${it.cps} ${t('sqCps')}` : ''}</small></td><td><small>{it.issues.map((k) => label(k)).join(' · ')}</small></td></tr>
+                    <tr key={it.idx}><td>{clock(it.startMs)}</td><td dir="auto">{it.text || '—'}<br /><small>{it.chars} {t('sqChars')} · {it.seconds} s{it.cps != null ? ` · ${it.cps} ${t('sqCps')}` : ''}{it.confidence != null ? ` · ${t('sqConf')} ${it.confidence} %` : ''}</small></td><td><small>{it.issues.map((k) => label(k)).join(' · ')}</small></td></tr>
                   ))}</tbody>
                 </table>
               )}

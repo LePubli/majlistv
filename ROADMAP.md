@@ -755,3 +755,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Kids & familles : nouvel écran Admin d'ensemble de l'espace enfant (familles, tranches d'âge, usage, contrôle parental, catalogue), chiffres agrégés sans identité : fait 23/11.
 - Qualité des sous-titres : nouvel onglet Studio → Sous-titres → Qualité (note par langue, défauts de lisibilité, traductions incomplètes, détail des sous-titres à corriger) : fait 23/11.
 - Shorts (thème Premium) : lecteur en carte dans le hub et pastilles de thèmes (catégories principales de la vidéo du short) : fait 23/11.
+- Qualité des sous-titres : score de confiance de Whisper par phrase (migration 128, transcripteur, défaut « reconnaissance incertaine ») : fait 23/11.

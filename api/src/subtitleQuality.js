@@ -1,9 +1,12 @@
 // Studio → Sous-titres → « Qualité » : mesures FORMELLES de lisibilité des sous-titres déjà enregistrés (transcript_segments).
-// Aucune confiance de reconnaissance vocale n'est stockée : on ne juge donc PAS si le texte est juste, seulement s'il respecte
-// les normes usuelles du sous-titrage et s'il est complet. Les seuils sont ceux de la pratique courante (21 caractères par seconde,
-// 2 lignes de 42 caractères, 8 secondes au plus par sous-titre).
-export const NORMS = { maxCps: 21, maxChars: 84, maxSeconds: 8, overlapMs: 50, sameMinChars: 16 };
-export const FLAGS = ['empty', 'fast', 'long', 'slow', 'overlap', 'same'];
+// Deux familles de mesures : (1) FORMELLES — normes usuelles du sous-titrage et complétude (21 caractères par seconde, 2 lignes de
+// 42 caractères, 8 secondes au plus par sous-titre) ; (2) CONFIANCE de la reconnaissance vocale — Whisper note chaque phrase qu'il
+// transcrit (transcript_segments.confidence, 0 à 1) et les phrases sous le seuil « doubtBelow » sont signalées « incertaines ».
+// La confiance n'existe que pour la langue d'origine transcrite par Whisper (pas pour les sous-titres venus d'une plateforme, ni
+// les traductions, ni les transcriptions d'avant la migration 128) et s'efface quand un humain corrige la phrase. Ce n'est qu'un
+// indice : elle ne dit pas que le texte est faux, seulement que la machine hésitait.
+export const NORMS = { maxCps: 21, maxChars: 84, maxSeconds: 8, overlapMs: 50, sameMinChars: 16, doubtBelow: 0.55 };
+export const FLAGS = ['empty', 'fast', 'long', 'slow', 'overlap', 'same', 'doubt'];
 
 /** Fragment SQL : une ligne par phrase avec ses drapeaux (booléens). Paramètres : $1 = talk ids (uuid[]), $2 = lang ou NULL. */
 export const FLAGGED_SQL = `
@@ -11,7 +14,7 @@ export const FLAGGED_SQL = `
     SELECT t.id AS talk_id, COALESCE(t.transcript_language, t.language) AS src_lang FROM talks t WHERE t.id = ANY($1::uuid[])
   ), seg AS (
     SELECT s.talk_id, s.lang, s.idx, s.start_ms, s.end_ms, btrim(s.text) AS txt, char_length(btrim(s.text)) AS len,
-           s.end_ms - s.start_ms AS dur, lag(s.end_ms) OVER (PARTITION BY s.talk_id, s.lang ORDER BY s.idx) AS prev_end
+           s.end_ms - s.start_ms AS dur, s.confidence, lag(s.end_ms) OVER (PARTITION BY s.talk_id, s.lang ORDER BY s.idx) AS prev_end
       FROM transcript_segments s WHERE s.talk_id = ANY($1::uuid[]) AND ($2::text IS NULL OR s.lang = $2)
   ), f AS (
     SELECT seg.*, src.src_lang, (seg.lang = src.src_lang) AS is_src,
@@ -20,6 +23,7 @@ export const FLAGGED_SQL = `
            (seg.len > ${NORMS.maxChars}) AS f_long,
            (seg.dur > ${NORMS.maxSeconds * 1000}) AS f_slow,
            (seg.prev_end IS NOT NULL AND seg.start_ms < seg.prev_end - ${NORMS.overlapMs}) AS f_overlap,
+           (seg.lang = src.src_lang AND seg.confidence IS NOT NULL AND seg.confidence < ${NORMS.doubtBelow}) AS f_doubt,
            (seg.lang <> src.src_lang AND seg.len >= ${NORMS.sameMinChars}
               AND EXISTS (SELECT 1 FROM transcript_segments o WHERE o.talk_id = seg.talk_id AND o.lang = src.src_lang AND o.idx = seg.idx AND btrim(o.text) = seg.txt)) AS f_same
       FROM seg JOIN src ON src.talk_id = seg.talk_id
@@ -51,7 +55,9 @@ export function buildTalks(talks, aggRows, correctionRows = []) {
       return {
         lang: r.lang, isSource: r.is_src, segments: r.segments, expected: r.is_src ? r.segments : expected, flagged: r.flagged, score, level: levelOf(score),
         avgCps: r.chars && r.ms ? Math.round((r.chars * 1000 / r.ms) * 10) / 10 : null,
-        counts: { empty: r.f_empty, fast: r.f_fast, long: r.f_long, slow: r.f_slow, overlap: r.f_overlap, same: r.f_same, missing },
+        // Confiance moyenne de Whisper (0 à 100) sur les phrases qui en ont une ; null si aucune (voir l'en-tête).
+        confidence: r.conf_n ? Math.round(r.conf_avg * 100) : null, confidenceN: r.conf_n || 0,
+        counts: { empty: r.f_empty, fast: r.f_fast, long: r.f_long, slow: r.f_slow, overlap: r.f_overlap, same: r.f_same, doubt: r.f_doubt || 0, missing },
       };
     }).sort((a, b) => (b.isSource - a.isSource) || a.lang.localeCompare(b.lang));
     const worst = langs.reduce((m, l) => (l.score != null && (m == null || l.score < m) ? l.score : m), null);

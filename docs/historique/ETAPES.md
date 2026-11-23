@@ -10193,3 +10193,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé / limites.** Voir ligne 344 du registre.
 
+## Qualité des sous-titres — confiance de Whisper (23/11/2026)
+
+**Description.** Whisper donne une confiance à chaque phrase qu'il transcrit ; on l'enregistre (0 à 1) et l'écran Studio → Sous-titres → Qualité signale les phrases « incertaines » (confiance sous 55 %), avec la confiance moyenne par contenu et celle de chaque phrase dans le détail.
+
+**Prérequis.** Aucun réglage. Migration 128 appliquée au démarrage de l'API. Les contenus **déjà transcrits n'ont pas de confiance** : l'écran ne les juge pas (pas d'alerte, jamais « 0 »). Elle apparaît pour les vidéos transcrites après le déploiement du transcripteur.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy dans l'ordre : `majlistv-api` (migration 128), `majlistv-transcriber`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Colonne absente : l'API n'a pas redémarré (journal : `128_transcript_confidence`). Aucune confiance sur une nouvelle vidéo : vérifier que le transcripteur a été redéployé et que la méthode est « whisper » (`select idx, confidence from transcript_segments where talk_id = '<id>' order by idx;`). Trop (ou pas assez) de phrases signalées : ajuster `NORMS.doubtBelow` dans `api/src/subtitleQuality.js` (0,55 aujourd'hui) à partir de vraies transcriptions.
+
+**Exemples.** Mettre en ligne une vidéo, attendre la transcription, ouvrir Studio → Sous-titres → Qualité : « Reconnaissance incertaine : 3 · Confiance moyenne de la reconnaissance : 82 % » ; cliquer la langue pour voir les 3 phrases et leur confiance ; corriger une phrase dans la fiche : sa confiance disparaît.
+
+**Testé / non testé / limites.** Voir ligne 345 du registre (surtout : aucun vrai Whisper lancé en local ; seuil à ajuster).
+

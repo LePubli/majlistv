@@ -7,6 +7,7 @@ Prend les conférences dont la transcription est en attente (transcript_status =
 Enregistre les segments horodatés dans transcript_segments. Traite aussi les imports de playlists et de chaînes.
 """
 import json
+import math
 import os
 import shutil
 import signal
@@ -304,6 +305,15 @@ class Stop(Exception):
     pass
 
 
+def confidence_of(seg):
+    """Confiance de Whisper dans une phrase : exp(avg_logprob), entre 0 et 1 ; None si le moteur ne la donne pas.
+    Étape « confiance » : enregistrée dans transcript_segments.confidence, utilisée par l'écran Studio → Sous-titres → Qualité."""
+    lp = getattr(seg, "avg_logprob", None)
+    if not isinstance(lp, (int, float)):
+        return None
+    return round(max(0.0, min(1.0, math.exp(lp))), 3)
+
+
 def transcribe_wav(talk_id, wav, declared, force=False):
     """Transcrit un fichier audio (WAV 16 kHz) avec Whisper. Renvoie (segments, langue) ; segments vides = pas de parole.
     force : la langue est imposée même en détection automatique (piste française récupérée à l'import : on sait que c'est du français)."""
@@ -322,7 +332,7 @@ def transcribe_wav(talk_id, wav, declared, force=False):
         text = seg.text.strip()
         if text:
             words = [(int(w.start * 1000), int(w.end * 1000), w.word.strip()) for w in (getattr(seg, "words", None) or []) if w.word.strip()]
-            rows.append((int(seg.start * 1000), int(seg.end * 1000), text, words))
+            rows.append((int(seg.start * 1000), int(seg.end * 1000), text, words, confidence_of(seg)))
         pct = min(99, int(seg.end / duration * 100)) if duration else 0
         if pct > last and time.time() - last_write > 4:
             last, last_write = pct, time.time()
@@ -337,7 +347,7 @@ def store(talk_id, cues, lang, method):
     """Enregistre les segments [(début_ms, fin_ms, texte[, mots])] et passe la transcription à « prête ».
     Étape E5a : les mots horodatés [(début_ms, fin_ms, mot)] de Whisper vont dans transcript_words (montage par le texte)."""
     global last_ok
-    rows = [(talk_id, lang, i, c[0], c[1], c[2]) for i, c in enumerate(cues)]
+    rows = [(talk_id, lang, i, c[0], c[1], c[2], c[4] if len(c) > 4 else None) for i, c in enumerate(cues)]
     words = [(talk_id, lang, i, k, w[0], w[1], w[2]) for i, c in enumerate(cues) if len(c) > 3 for k, w in enumerate(c[3])]
     full_text = " ".join(r[5] for r in rows)
     try:
@@ -345,7 +355,7 @@ def store(talk_id, cues, lang, method):
             cur.execute("DELETE FROM transcript_segments WHERE talk_id = %s AND lang = %s", (talk_id, lang))
             psycopg2.extras.execute_values(
                 cur,
-                "INSERT INTO transcript_segments (talk_id, lang, idx, start_ms, end_ms, text) VALUES %s",
+                "INSERT INTO transcript_segments (talk_id, lang, idx, start_ms, end_ms, text, confidence) VALUES %s",
                 rows, page_size=500,
             )
         store_words(talk_id, lang, words)

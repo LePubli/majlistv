@@ -61,12 +61,42 @@ ok(t["score"] == min(fr["score"], en["score"]) and t["level"] == "fix", "note du
 ok(d["totals"]["fix"] >= 1 and d["totals"]["analysed"] == len(d["talks"]), "totaux")
 
 dt = requests.get(B + f"/studio/subtitles/quality/{tid}?lang=fr", headers=A).json()
-ok(len(dt["items"]) == 4 and dt["items"][0]["idx"] == 1 and "fast" in dt["items"][0]["issues"], "détail : la plus rapide d'abord")
+ok(len(dt["items"]) == 4 and dt["items"][0]["idx"] == 2 and {"fast", "long"} <= set(dt["items"][0]["issues"]) and dt["items"][-1]["idx"] in (3, 4), "détail : la phrase aux deux défauts d'abord")
 ok(requests.get(B + f"/studio/subtitles/quality/{other}?lang=fr", headers=A).status_code == 404, "détail d'un contenu d'autrui : 404")
 ok(requests.get(B + f"/studio/subtitles/quality/{tid}?lang=zz9z99", headers=A).status_code == 400, "langue invalide : 400")
 ok(requests.get(B + f"/studio/subtitles/quality/{tid}?lang=fr", headers=M).status_code == 403, "détail : membre refusé")
 
-cur.execute("delete from talks where id in (%s,%s)", (tid, other))
+# --- Confiance de la reconnaissance vocale (migration 128) -------------------------------------------------------------------
+cur.execute("insert into talks(title,speaker,language,organizer_id,transcript_language,transcript_status,source,video_ref) values(%s,'Qualité Test','fr',%s,'fr','ready','upload','x') returning id", (f"Confiance {tag}", admin)); cid = cur.fetchone()[0]
+for i, c in enumerate([0.9, 0.4, None, 0.54, 0.55]):
+    cur.execute("insert into transcript_segments(talk_id,lang,idx,start_ms,end_ms,text,confidence) values(%s,'fr',%s,%s,%s,%s,%s)", (cid, i, i * 3000, i * 3000 + 2500, f"Phrase {i} correcte et lisible.", c))
+d = requests.get(B + "/studio/subtitles/quality", headers=A).json()
+ct = next(x for x in d["talks"] if x["id"] == cid); cf = ct["langs"][0]
+ok(d["norms"]["doubtBelow"] == 0.55, "seuil de doute exposé (0,55)")
+ok(cf["counts"]["doubt"] == 2 and cf["flagged"] == 2, f"2 phrases incertaines (0,40 et 0,54 ; 0,55 et l'inconnue non) : {cf['counts']['doubt']}")
+ok(cf["confidence"] == 60 and cf["confidenceN"] == 4, f"confiance moyenne 60 sur 4 phrases (obtenu {cf['confidence']}, {cf['confidenceN']})")
+ok(cf["score"] == 60, f"les phrases incertaines comptent dans la note (obtenu {cf['score']})")
+fr_old = next(l for l in t["langs"] if l["lang"] == "fr")
+ok(fr_old["confidence"] is None and fr_old["counts"]["doubt"] == 0, "contenu sans confiance enregistrée : null, aucun doute")
+dc = requests.get(B + f"/studio/subtitles/quality/{cid}?lang=fr", headers=A).json()
+ok([(i["idx"], i["confidence"]) for i in dc["items"]] == [(1, 40), (3, 54)] and all(i["issues"] == ["doubt"] for i in dc["items"]), f"détail : les deux phrases avec leur confiance ({[(i['idx'], i['confidence']) for i in dc['items']]})")
+# Corriger le texte efface la confiance (déclencheur) ; la modifier avec le texte la conserve.
+cur.execute("update transcript_segments set text = 'Phrase corrigée par un humain.' where talk_id=%s and idx=1", (cid,))
+cur.execute("select confidence from transcript_segments where talk_id=%s and idx=1", (cid,)); ok(cur.fetchone()[0] is None, "texte corrigé : confiance effacée")
+cur.execute("update transcript_segments set text = 'Nouveau texte.', confidence = 0.3 where talk_id=%s and idx=3", (cid,))
+cur.execute("select confidence from transcript_segments where talk_id=%s and idx=3", (cid,)); ok(abs(cur.fetchone()[0] - 0.3) < 1e-6, "texte et confiance réécrits ensemble (Whisper) : confiance gardée")
+cur.execute("update transcript_segments set start_ms = start_ms + 1 where talk_id=%s and idx=0", (cid,))
+cur.execute("select confidence from transcript_segments where talk_id=%s and idx=0", (cid,)); ok(abs(cur.fetchone()[0] - 0.9) < 1e-6, "autre champ modifié : confiance gardée")
+d = requests.get(B + "/studio/subtitles/quality", headers=A).json()
+ok(next(x for x in d["talks"] if x["id"] == cid)["langs"][0]["counts"]["doubt"] == 1, "après correction : 1 seule phrase incertaine")
+import psycopg2
+try:
+    cur.execute("update transcript_segments set confidence = 1.5 where talk_id=%s and idx=0", (cid,)); bad = False
+except psycopg2.errors.CheckViolation:
+    bad = True
+ok(bad, "confiance hors de 0..1 refusée par la base")
+
+cur.execute("delete from talks where id in (%s,%s,%s)", (tid, other, cid))
 cur.execute("delete from users where id=%s", (member,))
 d2 = requests.get(B + "/studio/subtitles/quality", headers=A).json()
 ok(all(x["id"] != tid for x in d2["talks"]), "suppression : disparu")

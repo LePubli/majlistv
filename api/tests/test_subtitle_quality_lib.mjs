@@ -12,7 +12,7 @@ assert.deepEqual([90, 89, 70, 69, null].map(levelOf), ['good', 'check', 'check',
 assert.equal(NORMS.maxCps, 21); assert.equal(NORMS.maxChars, 84);
 
 const talks = [{ id: 'a', title: 'B talk', speaker: 's' }, { id: 'b', title: 'A talk', speaker: 's' }, { id: 'c', title: 'Sans texte', speaker: 's' }];
-const z = { chars: 1000, ms: 100000, f_empty: 0, f_fast: 0, f_long: 0, f_slow: 0, f_overlap: 0, f_same: 0 };
+const z = { chars: 1000, ms: 100000, f_empty: 0, f_fast: 0, f_long: 0, f_slow: 0, f_overlap: 0, f_same: 0, f_doubt: 0, conf_n: 0, conf_avg: null };
 const agg = [
   { ...z, talk_id: 'a', lang: 'fr', is_src: true, segments: 10, flagged: 0 },
   { ...z, talk_id: 'a', lang: 'en', is_src: false, segments: 5, flagged: 0 },
@@ -27,4 +27,10 @@ assert.equal(out[0].langs[1].counts.missing, 5);
 assert.equal(out[1].score, 90); assert.equal(out[1].pendingCorrections, 3);
 assert.equal(out[1].langs[0].avgCps, 10);
 assert.deepEqual(issuesOf({ f_fast: true, f_same: true, f_empty: false }), ['fast', 'same']);
+assert.deepEqual(issuesOf({ f_doubt: true }), ['doubt']);
+assert.equal(NORMS.doubtBelow, 0.55);
+// Confiance : moyenne en pourcentage, null sans donnée ; les phrases incertaines comptent comme défauts.
+const conf = buildTalks([{ id: 'd', title: 'D', speaker: 's' }], [{ ...z, talk_id: 'd', lang: 'fr', is_src: true, segments: 10, flagged: 2, f_doubt: 2, conf_n: 10, conf_avg: 0.874 }], []);
+assert.equal(conf[0].langs[0].confidence, 87); assert.equal(conf[0].langs[0].counts.doubt, 2); assert.equal(conf[0].score, 80);
+assert.equal(out[1].langs[0].confidence, null, 'sans confiance enregistrée : null, pas 0');
 console.log('OK — test_subtitle_quality_lib');
