@@ -750,3 +750,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Légal : historique des versions des pages légales et matrice de consentement : fait 23/11.
 - Pages : référencement (image de partage, noindex, aperçu Google, contrôles) et historique avec résumé des changements : fait 23/11.
 - Apparence : onglets Couleurs / Typographies / Composants / Mise en page et pages d'essai (/apercu-theme) : fait 23/11.
+- Publicité : onglets Créations / Ciblage / Rapports (courbe 30 jours, ciblage par langue en un clic) : fait 23/11.

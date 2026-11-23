@@ -10120,3 +10120,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** Admin → Apparence → onglet « Composants » : changer « Arrondi des grands blocs » et voir les cartes de l'aperçu s'arrondir.
 
 **Testé / non testé.** Voir ligne 339 du registre.
+
+## Publicité — Créations, Ciblage, Rapports (23/11/2026)
+
+**Description.** Admin → Publicités (thème Premium) : trois onglets. Créations (campagnes, aperçu, formulaire), Ciblage (langues en interrupteurs, période, règles fixes), Rapports (courbe 30 jours, répartition par langue, résultats par campagne, liens de suivi annonceur).
+
+**Prérequis.** Aucun. Pour créer ou modifier un visuel : stockage S3 configuré.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (aucune migration), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Courbe vide : aucun affichage depuis 30 jours (`select * from ad_stats order by day desc limit 5`). Interrupteur sans effet : message rouge au-dessus des onglets.
+
+**Exemples.** Ciblage → désactiver « Anglais » sur une campagne : elle n'est plus proposée aux applications en anglais.
+
+**Testé / non testé.** Voir ligne 340 du registre.

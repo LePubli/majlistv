@@ -54,4 +54,6 @@ ok(requests.patch(f"{B}/admin/campaigns/{ad}", headers=A, json={"languages": []}
 
 cur.execute("delete from ads where id=%s", (ad,))
 cur.execute("select count(*) from ad_stats_lang where ad_id=%s", (ad,)); ok(cur.fetchone()[0] == 0, "suppression : chiffres par langue supprimés")
+d = requests.get(B + "/admin/campaigns", headers=A).json()["daily"]
+ok(len(d) == 30 and d[-1]["day"] > d[0]["day"] and all(isinstance(x["impressions"], int) and isinstance(x["clicks"], int) for x in d), "courbe : 30 jours complets")
 print("test_ads_lang : TOUT OK")

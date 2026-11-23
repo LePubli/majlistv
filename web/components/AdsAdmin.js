@@ -5,7 +5,7 @@
 // Admin → Paramètres → « Publicité au lancement », l'interrupteur général dans Admin → Fonctions.
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
-import { Page, Metrics, Panel, Cols, Table, Btn, Badge, Meta, c } from './backoffice/Kit';
+import { Page, Metrics, Panel, Cols, Table, Tabs, Line, Switch, Btn, Badge, Meta, c } from './backoffice/Kit';
 
 const EMPTY = { advertiser: '', title: '', sentence: '', ctaLabel: 'En savoir plus', linkUrl: '', active: true, startsAt: '', endsAt: '', languages: [] };
 const LANGS = [['fr', 'Français'], ['en', 'Anglais'], ['ar', 'Arabe']];
@@ -125,6 +125,7 @@ export default function AdsAdmin() {
   const [data, setData] = useState(null);
   const [form, setForm] = useState(null); // null | 'new' | annonce en modification
   const [msg, setMsg] = useState(null);
+  const [tab, setTab] = useState('crea'); // Premium : crea | target | report
   const load = useCallback(() => call('/admin/campaigns').then((r) => setData(r.ok ? r.data : { error: r.data?.error || 'Chargement impossible.' })), [call]);
   useEffect(() => { load(); }, [load]);
   const flash = (ok, text) => setMsg({ ok, text });
@@ -162,6 +163,55 @@ export default function AdsAdmin() {
         ]} />
         {!data.storage && <p className="error">Le stockage vidéo n’est pas configuré : l’envoi des visuels est impossible.</p>}
         {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
+        <Tabs value={tab} onChange={(t) => { setTab(t); setForm(null); }} names={[['crea', 'Créations'], ['target', 'Ciblage'], ['report', 'Rapports']]} />
+        {tab === 'target' && (
+          <Panel title="Ciblage des campagnes" extra={`${ads.length}`}>
+            <Table headers={['Campagne', 'Français', 'Anglais', 'Arabe', 'Période', 'État']} empty="Aucune publicité pour l’instant."
+              rows={ads.map((a) => {
+                const all = !a.languages || !a.languages.length;
+                const toggle = (k) => {
+                  const cur = all ? LANGS.map((l) => l[0]) : a.languages;
+                  const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
+                  if (!next.length) { flash(false, 'Gardez au moins une langue : pour tout montrer, cochez-les toutes.'); return; }
+                  act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ languages: next.length === LANGS.length ? [] : next }) });
+                };
+                return [<span key="t"><b>{a.title}</b><br /><small>{a.advertiser} — {langNames(a.languages)}</small></span>,
+                  ...LANGS.map(([k, n]) => <Switch key={k} on={all || a.languages.includes(k)} label={`${a.title} : ${n}`} onChange={() => toggle(k)} />),
+                  a.startsAt || a.endsAt ? `${a.startsAt ? `du ${when(a.startsAt, locale)}` : ''}${a.endsAt ? ` jusqu’au ${when(a.endsAt, locale)}` : ''}` : 'Sans date',
+                  <Badge key="s" tone={tone[a.status] || 'gray'}>{(STATUS[a.status] || [''])[0]}</Badge>];
+              })} />
+            <p className="meta" style={{ padding: '0 14px 14px' }}>Le ciblage porte sur la langue de l’application (toutes les langues cochées ou aucune = montrée à tous ; une application ancienne qui n’envoie pas sa langue voit tout) et sur la période (modifiable depuis « Créations »). Règles fixes : jamais dans l’espace Kids, jamais pendant l’heure de prière, montrée ou non aux abonnés payants selon le réglage « Publicité au lancement » (Admin → Paramètres). Le site n’a pas d’autre critère (pays, âge, appareil) : il n’est pas mesuré.</p>
+          </Panel>
+        )}
+        {tab === 'report' && (() => {
+          const L = (k) => ads.reduce((n, a) => n + (a.byLang?.[k]?.impressions || 0), 0);
+          const langs = [['fr', 'Français'], ['en', 'Anglais'], ['ar', 'Arabe'], ['none', 'Sans langue (anciennes versions)']];
+          const tot = langs.reduce((n, [k]) => n + L(k), 0);
+          const daily = data.daily || [];
+          return (
+            <>
+              <Cols kind="two-main">
+                <Panel title="Affichages des 30 derniers jours" extra={`${daily.reduce((n, d) => n + d.impressions, 0).toLocaleString('fr-FR')} affichages · ${daily.reduce((n, d) => n + d.clicks, 0).toLocaleString('fr-FR')} clics`}>
+                  {daily.some((d) => d.impressions) ? <Line values={daily.map((d) => d.impressions)} labels={daily.map((d) => d.day.slice(5).split('-').reverse().join('/'))} /> : <p style={{ padding: 14, color: 'var(--muted)' }}>Aucun affichage sur les 30 derniers jours.</p>}
+                </Panel>
+                <Panel title="Par langue de l’application">
+                  <div style={{ padding: '0 14px 14px' }}>
+                    {tot ? <Meta items={langs.map(([k, n]) => [n, `${L(k).toLocaleString('fr-FR')} affichage(s) — ${Math.round((L(k) / tot) * 100)} %`])} /> : <p style={{ color: 'var(--muted)' }}>Pas encore de chiffres par langue.</p>}
+                  </div>
+                </Panel>
+              </Cols>
+              <Panel title="Résultats par campagne" extra={`${ads.length}`}>
+                <Table headers={['Campagne', 'Affichages', 'Clics', 'CTR', '« Passer »', '7 jours', 'Rapport annonceur']} empty="Aucune publicité pour l’instant."
+                  rows={ads.map((a) => [<span key="t"><b>{a.title}</b><br /><small>{a.advertiser}</small></span>, a.impressions, a.clicks, `${a.ctr} %`, a.skips, `${a.impressions7} aff. / ${a.clicks7} clic(s)`,
+                    <span key="r" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {a.reportToken ? <><a href={reportUrl(a)} target="_blank" rel="noopener noreferrer">Ouvrir</a><Btn primary={false} onClick={() => copyLink(a)}>Copier</Btn><Btn primary={false} onClick={() => makeLink(a)}>Renouveler</Btn><Btn primary={false} onClick={() => act(`/admin/campaigns/${a.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver</Btn></> : <Btn primary={false} onClick={() => makeLink(a)}>Créer le lien</Btn>}
+                    </span>])} />
+                <p className="meta" style={{ padding: '0 14px 14px' }}>Le lien de suivi est secret et sans compte : il donne à l’annonceur sa page de résultats et un PDF. Les chiffres comptent les affichages, clics et « Passer » enregistrés par l’application ; ni durée de visionnage ni conversion ne sont mesurées.</p>
+              </Panel>
+            </>
+          );
+        })()}
+        {tab === 'crea' && (
         <Cols kind="two-main">
           <Panel title="Campagnes" extra={`${ads.length}`}>
             <Table headers={['Campagne', 'Langues', 'État', 'Affichages', 'Clics']} onRow={(i) => { setForm(null); setSelId(ads[i].id); }}
@@ -202,6 +252,7 @@ export default function AdsAdmin() {
             </Panel>
           ) : <Panel title="Aperçu créatif"><p style={{ padding: 14, color: 'var(--muted)' }}>Créez une première campagne.</p></Panel>}
         </Cols>
+        )}
       </Page>
     );
   }

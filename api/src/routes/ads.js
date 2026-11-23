@@ -98,6 +98,11 @@ export default async function adsRoutes(app) {
               coalesce(sum(s.clicks) FILTER (WHERE s.day >= current_date - 6), 0)::int AS clicks7
          FROM ads a LEFT JOIN ad_stats s ON s.ad_id = a.id GROUP BY a.id ORDER BY a.created_at, a.id`);
     const langRows = (await pool.query('SELECT ad_id, lang, sum(impressions)::int AS impressions, sum(clicks)::int AS clicks, sum(skips)::int AS skips FROM ad_stats_lang GROUP BY ad_id, lang')).rows;
+    // Courbe des 30 derniers jours (toutes campagnes), jours sans affichage complétés par des zéros (jours de la base).
+    const daily = (await pool.query(
+      `SELECT to_char(g.d, 'YYYY-MM-DD') AS day, coalesce(sum(s.impressions), 0)::int AS impressions, coalesce(sum(s.clicks), 0)::int AS clicks
+         FROM generate_series(current_date - 29, current_date, interval '1 day') AS g(d) LEFT JOIN ad_stats s ON s.day = g.d::date
+        GROUP BY g.d ORDER BY g.d`)).rows;
     const now = new Date();
     const ads = [];
     for (const a of rows) {
@@ -109,7 +114,7 @@ export default async function adsRoutes(app) {
         reportToken: a.report_token, languages: a.languages, byLang: langBreakdown({ impressions: a.impressions, clicks: a.clicks, skips: a.skips }, langRows.filter((x) => x.ad_id === a.id)),
       });
     }
-    return { ads, storage: Boolean(storage), limits: { imageMb: mediaInfo('image/png').maxMb, videoMb: mediaInfo('video/mp4').maxMb } };
+    return { ads, daily, storage: Boolean(storage), limits: { imageMb: mediaInfo('image/png').maxMb, videoMb: mediaInfo('video/mp4').maxMb } };
   });
 
   app.post('/admin/campaigns/upload-url', adminOnly, async (req, reply) => {
