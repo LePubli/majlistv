@@ -748,3 +748,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Validation des Shorts : notification à l'auteur (push + e-mail) et relecture en lot : fait 23/11.
 - Séries à plusieurs saisons (fiche série Premium : onglets de saison, avancement, saison suivante) : fait 23/11.
 - Légal : historique des versions des pages légales et matrice de consentement : fait 23/11.
+- Pages : référencement (image de partage, noindex, aperçu Google, contrôles) et historique avec résumé des changements : fait 23/11.

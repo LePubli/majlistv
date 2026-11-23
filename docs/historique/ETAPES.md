@@ -10092,3 +10092,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé.** Voir ligne 337 du registre.
 
+## Pages — référencement et historique (23/11/2026)
+
+**Description.** Admin → Pages (page personnalisée) : panneau « Référencement » avec titre et description par langue, image de partage, case « Ne pas référencer cette page » (balise `noindex` et retrait du plan du site), aperçu façon Google et liste de contrôle. L'historique des publications résume ce qui change à chaque version (blocs ajoutés, retirés, modifiés, titre, description, image, référencement).
+
+**Prérequis.** Une page personnalisée (Admin → Pages → Créer). Pour l'image de partage : une image déjà envoyée dans la médiathèque des pages.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (aucune migration), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Une page « ne pas référencer » doit montrer `<meta name="robots" content="noindex, follow"/>` dans son code source et ne pas figurer dans `/sitemap.xml` (cache de 5 min). Image de partage absente : vérifier `og:image` dans le code source de la page.
+
+**Exemples.** Cocher « Ne pas référencer », publier, puis `curl -s https://majlisstv.le-publicitaire.fr/p/<nom> | grep robots`.
+
+**Testé / non testé.** Voir ligne 338 du registre.
+

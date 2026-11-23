@@ -90,6 +90,28 @@ const row = (r) => ({
 });
 const full = (r) => ({ ...row(r), published: norm(r.kind, r.published), draft: r.draft === null ? null : norm(r.kind, r.draft), content: norm(r.kind, r.draft ?? r.published) });
 
+/** Résumé lisible de ce qui change entre deux contenus de page : blocs ajoutés / retirés / modifiés, titre, description, image de partage, référencement. */
+export function describeChanges(before, after) {
+  const flat = (c) => new Map(Object.values(c?.zones || {}).flat().map((b) => [b.id, JSON.stringify([b.type, b.props, b.show, b.style])]));
+  const a = flat(before), b = flat(after);
+  let added = 0, removed = 0, edited = 0;
+  for (const [id, sig] of b) { if (!a.has(id)) added++; else if (a.get(id) !== sig) edited++; }
+  for (const id of a.keys()) if (!b.has(id)) removed++;
+  const out = [];
+  const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+  if (added) out.push(`${plural(added, 'bloc')} ajouté${added > 1 ? 's' : ''}`);
+  if (removed) out.push(`${plural(removed, 'bloc')} retiré${removed > 1 ? 's' : ''}`);
+  if (edited) out.push(`${plural(edited, 'bloc')} modifié${edited > 1 ? 's' : ''}`);
+  const m1 = before?.meta || {}, m2 = after?.meta || {};
+  if (JSON.stringify(m1.title ?? null) !== JSON.stringify(m2.title ?? null)) out.push('titre modifié');
+  if (JSON.stringify(m1.description ?? null) !== JSON.stringify(m2.description ?? null)) out.push('description modifiée');
+  if ((m1.image || null) !== (m2.image || null)) out.push('image de partage modifiée');
+  if (Boolean(m1.noindex) !== Boolean(m2.noindex)) out.push(m2.noindex ? 'retirée de Google et du plan du site' : 'remise dans Google et le plan du site');
+  const order = (c) => Object.values(c?.zones || {}).flat().map((x) => x.id).filter((id) => a.has(id) && b.has(id)).join();
+  if (!added && !removed && !edited && order(before) !== order(after)) out.push('blocs réordonnés');
+  return out;
+}
+
 export default async function pagesRoutes(app) {
   const admin = { preHandler: app.requireRole('admin') };
 
@@ -117,7 +139,7 @@ export default async function pagesRoutes(app) {
   // Pages personnalisées en ligne (pour le plan du site /sitemap.xml).
   app.get('/pages/public-list', async (req, reply) => {
     reply.header('cache-control', 'public, max-age=60');
-    return (await pool.query("SELECT path, updated_at FROM site_pages WHERE kind = 'custom' AND live ORDER BY path")).rows.map((r) => ({ path: r.path, updatedAt: r.updated_at }));
+    return (await pool.query("SELECT path, updated_at FROM site_pages WHERE kind = 'custom' AND live AND COALESCE(published->'meta'->>'noindex', 'false') <> 'true' ORDER BY path")).rows.map((r) => ({ path: r.path, updatedAt: r.updated_at }));
   });
 
   app.get('/pages/media/:id', async (req, reply) => {
@@ -258,10 +280,13 @@ export default async function pagesRoutes(app) {
 
   app.get('/admin/pages/:id/versions', admin, async (req) => {
     const { id } = idParam.parse(req.params);
-    return (await pool.query(
+    const rows = (await pool.query(
       `SELECT v.id, v.created_at, u.name AS by, v.content FROM site_page_versions v LEFT JOIN users u ON u.id = v.created_by
-        WHERE v.page_id = $1 ORDER BY v.id DESC`, [id])).rows.map((v) => ({
+        WHERE v.page_id = $1 ORDER BY v.id DESC`, [id])).rows;
+    // Chaque version est comparée à la précédente (la plus ancienne n'a rien à comparer).
+    return rows.map((v, i) => ({
       id: v.id, createdAt: v.created_at, by: v.by, blocks: Object.values(v.content?.zones || {}).reduce((a, l) => a + l.length, 0),
+      changes: i + 1 < rows.length ? describeChanges(rows[i + 1].content, v.content) : null,
     }));
   });
 

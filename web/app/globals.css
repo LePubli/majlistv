@@ -2038,6 +2038,13 @@ h3.pb-h { font-size: clamp(1.15rem, 2vw, 1.4rem); }
 .pe-dots { display: inline-flex; gap: 3px; } .pe-dots i { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-transform: uppercase; }
 .pe-dots i.on { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); color: var(--accent-light); }
 .pe-meta { border: 1px solid var(--line-soft); border-radius: 12px; background: var(--surface); padding: 10px 14px; display: grid; gap: 10px; } .pe-meta summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.pe-check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; } .pe-check input { margin-top: 3px; }
+.seo-box { display: grid; gap: 12px; min-width: 0; }
+.seo-preview { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: #fff; color: #202124; border: 1px solid var(--line-soft); min-width: 0; overflow: hidden; }
+.seo-preview small { color: #4d5156; font-size: 12px; overflow-wrap: anywhere; } .seo-preview b { color: #1a0dab; font-size: 18px; font-weight: 400; overflow-wrap: anywhere; } .seo-preview span { color: #4d5156; font-size: 14px; overflow-wrap: anywhere; }
+.seo-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; } .seo-checks li { display: flex; gap: 8px; align-items: flex-start; }
+.seo-checks li span { flex: 0 0 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+.seo-checks .good span { background: rgba(32, 168, 110, .2); color: #3ddc97; } .seo-checks .warn span { background: rgba(240, 170, 40, .2); color: #f0aa28; }
 .pe-zone { display: grid; gap: 10px; } .pe-zone h3 { margin: 0; font-size: 1.05rem; }
 .pe-blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .pe-block { border: 1px solid var(--line-soft); border-radius: 12px; background: var(--surface); overflow: hidden; }

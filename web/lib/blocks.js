@@ -245,6 +245,9 @@ export function cleanContent(content, kind, strict = true) {
   for (const [k, spec] of [['title', T('title', 'Titre', { max: 120 })], ['description', T('description', 'Description', { max: 300 })]]) {
     try { const c = cleanField(spec, meta[k]); if (c !== undefined) out.meta[k] = c; } catch (e) { err(`meta.${k}`, e.message); }
   }
+  // Référencement : image de partage (image envoyée dans les pages) et « ne pas référencer » (hors plan du site, balise noindex).
+  try { const c = cleanField({ k: 'image', label: 'Image', kind: 'media' }, meta.image); if (c !== undefined) out.meta.image = c; } catch (e) { err('meta.image', e.message); }
+  if (meta.noindex === true) out.meta.noindex = true;
   const zones = content.zones && typeof content.zones === 'object' ? content.zones : {};
   for (const z of Object.keys(zones)) if (!ZONES[kind].includes(z)) err(`zones.${z}`, 'Zone inconnue');
   const seen = new Set();

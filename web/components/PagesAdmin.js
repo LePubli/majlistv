@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import { Page as BmPage, Metrics, Panel, Cols, SelectList, Badge, Btn, Meta } from './backoffice/Kit';
-import { BlockEditor, TextField, LANG_NAMES } from './PageFields';
+import { BlockEditor, TextField, MediaField, LANG_NAMES } from './PageFields';
 import NavEditor from './NavAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
 
@@ -23,6 +23,40 @@ const readAsDataUrl = (file) => new Promise((ok, ko) => { const r = new FileRead
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 /* ------------------------------------------------------------------ Bibliothèque d'images */
+// Panneau « Référencement » : aperçu façon Google, longueur du titre et de la description, liste de contrôle (données réelles de la page).
+const SEO_TITLE = [30, 60];
+const SEO_DESC = [70, 160];
+function SeoCheck({ page, content, lang }) {
+  const title = content.meta?.title?.[lang] || '';
+  const desc = content.meta?.description?.[lang] || '';
+  const blocks = Object.values(content.zones || {}).flat();
+  const hasHeading = blocks.some((b) => b.type === 'heading' || b.type === 'hero');
+  const images = blocks.filter((b) => b.type === 'image');
+  const noAlt = images.filter((b) => !(b.props?.alt && (b.props.alt[lang] || b.props.alt.fr))).length;
+  const origin = typeof window !== 'undefined' ? window.location.host : '';
+  const within = (n, [lo, hi]) => n >= lo && n <= hi;
+  const checks = [
+    [Boolean(title) && within(title.length, SEO_TITLE), `Titre ${title ? `de ${title.length} caractères` : 'non renseigné (le titre de la page est utilisé)'} — idéal : ${SEO_TITLE[0]} à ${SEO_TITLE[1]}`],
+    [Boolean(desc) && within(desc.length, SEO_DESC), `Description ${desc ? `de ${desc.length} caractères` : 'non renseignée'} — idéal : ${SEO_DESC[0]} à ${SEO_DESC[1]}`],
+    [Boolean(content.meta?.image), content.meta?.image ? 'Image de partage choisie' : 'Aucune image de partage : les réseaux sociaux en choisiront une au hasard'],
+    [hasHeading, hasHeading ? 'La page contient un titre (bloc « Titre » ou « Bandeau »)' : 'Aucun bloc « Titre » : ajoutez-en un, Google s’en sert pour comprendre la page'],
+    [noAlt === 0, images.length === 0 ? 'Aucune image dans la page' : noAlt === 0 ? 'Toutes les images ont une description' : `${noAlt} image(s) sans description (utile aux malvoyants et à Google)`],
+    [!content.meta?.noindex, content.meta?.noindex ? 'La page est volontairement absente de Google et du plan du site' : 'La page peut être référencée (plan du site, Google)'],
+    [Boolean(page.live), page.live ? 'La page est en ligne' : 'La page n’est pas en ligne : Google ne la voit pas encore'],
+  ];
+  return (
+    <div className="seo-box">
+      <div className="seo-preview" aria-label="Aperçu sur Google">
+        <small>{origin}{page.path}</small>
+        <b>{title || page.title}</b>
+        <span>{desc || 'Aucune description : Google choisira un extrait de la page.'}</span>
+      </div>
+      <ul className="seo-checks">{checks.map(([good, text], i) => <li key={i} className={good ? 'good' : 'warn'}><span aria-hidden="true">{good ? '✓' : '!'}</span> {text}</li>)}</ul>
+      <p className="meta small">Les longueurs se calculent pour la langue en cours d’édition ({LANG_NAMES[lang]}). Rien n’est obligatoire : ce sont des repères.</p>
+    </div>
+  );
+}
+
 export function MediaPicker({ call, onPick, onClose }) {
   const [list, setList] = useState(null);
   const [msg, setMsg] = useState('');
@@ -274,7 +308,7 @@ function Editor({ pageId, onBack, pages }) {
           <h3 className="panel-title">Historique des publications</h3>
           {versions.length === 0 ? <p className="meta">Aucune publication pour l’instant.</p> : (
             <ul>{versions.map((v, i) => (
-              <li key={v.id}><span>{fmtDate(v.createdAt)}{v.by ? ` · ${v.by}` : ''} · {v.blocks} bloc(s){i === 0 ? ' · version en ligne' : ''}</span>
+              <li key={v.id}><span>{fmtDate(v.createdAt)}{v.by ? ` · ${v.by}` : ''} · {v.blocks} bloc(s){i === 0 ? ' · version en ligne' : ''}<br /><small className="meta">{v.changes === null ? 'Première publication' : v.changes.length ? v.changes.join(' · ') : 'Aucun changement visible'}</small></span>
                 <button type="button" className="btn ghost ap-mini" onClick={() => restore(v)}>Recopier dans le brouillon</button></li>
             ))}</ul>
           )}
@@ -293,10 +327,13 @@ function Editor({ pageId, onBack, pages }) {
           {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site pour les membres connectés (et pour tous si la vitrine visiteurs est coupée). Tant qu’elle n’est pas publiée, ou si vous la supprimez ou la mettez hors ligne, l’accueil d’origine reste en place. Les blocs « données du site » (À la une, Chaînes à suivre, Collections…) se mettent à jour tout seuls.</p>}
           {page.kind === 'layout' && <NavEditor nav={content.nav} onChange={setNav} lang={lang} errors={errors} viewAs={viewAs} onViewAs={setViewAs} />}
           {page.kind === 'custom' && (
-            <details className="pe-meta">
-              <summary>Titre et description de la page (affichés sur Google et dans l’onglet du navigateur)</summary>
+            <details className="pe-meta" open>
+              <summary>Référencement : titre, description et image affichés sur Google et quand la page est partagée</summary>
               <TextField f={{ k: 'title', label: 'Titre de la page', kind: 't', max: 120 }} value={content.meta?.title} lang={lang} onChange={(v) => setMeta('title', v)} error={errors['meta.title']} />
               <TextField f={{ k: 'description', label: 'Description (une ou deux phrases)', kind: 't', max: 300 }} value={content.meta?.description} lang={lang} onChange={(v) => setMeta('description', v)} error={errors['meta.description']} />
+              <MediaField f={{ label: 'Image de partage (réseaux sociaux, messageries)' }} value={content.meta?.image} onPick={() => setMediaCb(() => (id) => setMeta('image', id))} onClear={() => setMeta('image', undefined)} error={errors['meta.image']} />
+              <label className="pe-check"><input type="checkbox" checked={Boolean(content.meta?.noindex)} onChange={(e) => setMeta('noindex', e.target.checked ? true : undefined)} /> Ne pas référencer cette page (absente de Google et du plan du site)</label>
+              <SeoCheck page={page} content={content} lang={lang} />
             </details>
           )}
 

@@ -17,7 +17,12 @@ export async function generateMetadata({ params }) {
   const site = await seoSite();
   const title = tx(page.meta?.title, lang) || page.title;
   const description = tx(page.meta?.description, lang) || undefined;
-  return { title, description, alternates: { canonical: `${site.baseUrl}${page.path}` }, openGraph: { title, description, url: `${site.baseUrl}${page.path}`, siteName: site.appName } };
+  const image = page.meta?.image ? `${site.baseUrl}/api/pages/media/${page.meta.image}` : undefined; // image de partage choisie dans Admin → Pages
+  return {
+    title, description, alternates: { canonical: `${site.baseUrl}${page.path}` },
+    ...(page.meta?.noindex ? { robots: { index: false, follow: true } } : {}),
+    openGraph: { title, description, url: `${site.baseUrl}${page.path}`, siteName: site.appName, ...(image ? { images: [{ url: image }] } : {}) },
+  };
 }
 
 export default async function Page({ params }) {
