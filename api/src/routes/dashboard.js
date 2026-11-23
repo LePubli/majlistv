@@ -13,7 +13,7 @@ const STUCK = { video: '3 hours', transcript: '3 hours', translation: '2 hours',
 
 // Montants des formules chez Stripe (cache 10 min) : sert uniquement à estimer le revenu mensuel.
 let plans = { at: 0, sig: '', data: null };
-async function planAmounts() {
+export async function planAmounts() {
   const ctx = await stripeContext();
   if (!ctx) return null;
   const sig = `${ctx.prices.month}|${ctx.prices.year}`;

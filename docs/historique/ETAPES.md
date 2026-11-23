@@ -10030,3 +10030,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Écran Statistiques (Administration et Studio) recomposé comme la maquette : 6 onglets, courbe de rétention par quartile, anneau par langue, onglet Shorts (vues réelles), Rapports (export CSV, engagements après vidéo, croissance). **Déploiement** : `majlistv-api` d'abord (nouveau bloc `shorts` dans le rapport, aucune migration), puis `majlistv-web`. Rien d'autre à relancer.
 - Limites assumées : pas de courbe seconde par seconde ni de taux de fin pour les Shorts (non mesurés) ; Kids sans onglets Audience / Langues / Shorts. Détail dans le registre, ligne 330.
+
+## Back-office Premium — groupe A, point 2 : Revenus & abonnements (23/11/2026)
+
+- Nouvel écran Admin → Revenus & abonnements (4 chiffres, courbe 12 mois, répartition, opérations récentes, abonnés) fondé sur les vraies tables : abonnements, factures, ventes à l'unité, cartes cadeaux. **Déploiement** : `majlistv-api` d'abord (nouvelle route `/admin/finance`, aucune migration), puis `majlistv-web`.
+- À savoir : l'historique des factures d'abonnement n'existe que si la fonction « Rémunération des chaînes » est activée ; sinon l'écran l'indique. Détail et limites : registre, ligne 331.

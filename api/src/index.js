@@ -48,6 +48,7 @@ import adsRoutes from './routes/ads.js'; // étape 24c : publicité plein écran
 import cardsRoutes from './routes/cards.js';
 import homeRoutes from './routes/home.js';
 import dashboardRoutes from './routes/dashboard.js';
+import financeRoutes from './routes/finance.js';
 import studioContentRoutes from './routes/studio_content.js';
 import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
@@ -218,6 +219,7 @@ await app.register(activityRoutes);
 await app.register(overviewRoutes);
 await app.register(speakersRoutes);
 await app.register(dashboardRoutes);
+await app.register(financeRoutes);
 await app.register(homeRoutes);
 await app.register(cardsRoutes);
 await registerModules(app); // routes de chaque module (cartes cadeaux : api/src/modules/gifts)
