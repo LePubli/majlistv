@@ -79,3 +79,19 @@ console.log('OK  ads lib');
   const pdf = await reportPdf({ ...rep, title: 'Offre d’été — العربية 20 %' });
   t(pdf.subarray(0, 5).toString() === '%PDF-' && pdf.length > 1500, 'PDF généré (accents gérés, caractères non gérés remplacés)');
 }
+
+// Ciblage pays / appareil, durée, liens suivis (lot Publicité : mesures)
+import { tzToCountry, normDevice, matchesCountry, matchesDevice, avgSeconds, completionRate, trackedLink, AD_COUNTRIES, TZ_COUNTRY } from '../src/ads.js';
+assert.equal(tzToCountry('Europe/Paris'), 'FR'); assert.equal(tzToCountry('Africa/Casablanca'), 'MA');
+assert.equal(tzToCountry('Mars/Olympus'), ''); assert.equal(tzToCountry(undefined), '');
+assert.ok(AD_COUNTRIES.every(([c]) => Object.values(TZ_COUNTRY).includes(c)), 'chaque pays proposé est reconnaissable par au moins un fuseau');
+assert.equal(normDevice('Android'), 'android'); assert.equal(normDevice('iOS'), 'ios'); assert.equal(normDevice('windows'), ''); assert.equal(normDevice(null), '');
+assert.equal(matchesCountry([], ''), true); assert.equal(matchesCountry(undefined, 'FR'), true);
+assert.equal(matchesCountry(['FR', 'BE'], 'FR'), true); assert.equal(matchesCountry(['FR'], 'MA'), false); assert.equal(matchesCountry(['FR'], ''), false);
+assert.equal(matchesDevice([], ''), true); assert.equal(matchesDevice(['tv'], 'tv'), true); assert.equal(matchesDevice(['tv'], 'ios'), false); assert.equal(matchesDevice(['tv'], ''), false);
+assert.equal(avgSeconds(0, 0), 0); assert.equal(avgSeconds(15000, 3), 5); assert.equal(avgSeconds(10000, 3), 3.3);
+assert.equal(completionRate(0, 0), 0); assert.equal(completionRate(1, 3), 33.3);
+assert.equal(trackedLink('https://site.fr/offre?x=1', 'ID1', 'https://site.fr'), 'https://site.fr/offre?x=1&ad=ID1');
+assert.equal(trackedLink('https://autre.com/p', 'ID1', 'https://site.fr'), 'https://autre.com/p'); // lien externe : jamais modifié
+assert.equal(trackedLink('pas un lien', 'ID1', 'https://site.fr'), 'pas un lien');
+console.log('test_ads_lib (ciblage, mesures) : OK');

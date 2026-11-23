@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 // Publicité au lancement (étape 24c) : lecture sûre de la réponse, lien, règles d'affichage, compte à rebours.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adAllowed, adRatio, parseAds, safeLink, skipRemaining, tooLate } from '../src/lib/ads';
+import { adAllowed, adDevice, watchedSeconds, adRatio, parseAds, safeLink, skipRemaining, tooLate } from '../src/lib/ads';
 
 const good = { id: 'a1', advertiser: 'Miel & Co', title: 'Le miel', sentence: '-10 %', cta: 'Voir', linkUrl: 'https://miel.fr/x', mediaKind: 'image', mediaUrl: 'https://s3/x.jpg' };
 
@@ -56,6 +56,12 @@ test('tooLate, skipRemaining, adRatio', () => {
 test('5.3 : la langue de l\'application accompagne la demande et les compteurs', () => {
   const g = readFileSync(new URL('../src/components/AdGate.tsx', import.meta.url), 'utf8');
   assert.match(g, /const \{ api, feat, ready, locale \} = useSession\(\)/);
-  assert.match(g, /'\/ads\/next', after \? \{ after, lang: locale \} : \{ lang: locale \}/);
-  for (const k of ['impression', 'click', 'skip']) assert.match(g, new RegExp('/ads/\\$\\{ad\\.id\\}/' + k + '`, \\{ lang: locale \\}'));
+  assert.match(g, /'\/ads\/next', after \? \{ after, lang: locale, \.\.\.adContext\(\) \} : \{ lang: locale, \.\.\.adContext\(\) \}/);
+  for (const k of ['impression', 'click', 'skip']) assert.match(g, new RegExp('/ads/\\$\\{ad\\.id\\}/' + k + '`, \\{ lang: locale, \\.\\.\\.adContext\\(\\) \\}'));
+  assert.match(g, /\/ads\/\$\{ad\.id\}\/watch`, \{ seconds: watchedSeconds/);
+});
+
+test('appareil et durée regardée envoyés au serveur', () => {
+  assert.equal(adDevice('ios', false), 'ios'); assert.equal(adDevice('android', false), 'android'); assert.equal(adDevice('android', true), 'tv'); assert.equal(adDevice('web', false), '');
+  assert.equal(watchedSeconds(0, 5000), 0); assert.equal(watchedSeconds(1000, 4500), 3.5); assert.equal(watchedSeconds(1000, 999), 0); assert.equal(watchedSeconds(1, 9e9), 300);
 });

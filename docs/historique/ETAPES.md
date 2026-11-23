@@ -10134,3 +10134,18 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** Ciblage → désactiver « Anglais » sur une campagne : elle n'est plus proposée aux applications en anglais.
 
 **Testé / non testé.** Voir ligne 340 du registre.
+
+## Publicité — ciblage pays/appareil, durée, conversions (23/11/2026)
+
+**Description.** Les campagnes peuvent viser des pays (déduits du fuseau horaire du téléphone, approximatif) et des appareils (Android, iPhone/iPad, TV, site) ; l'application mesure la durée réellement regardée ; le site compte les inscriptions et achats venus d'une publicité dont le lien mène vers notre site. Le thème classique a les mêmes onglets Créations / Ciblage / Rapports que le Premium. Pas de ciblage par âge (décision d'Epok).
+
+**Prérequis.** Migration 127 (appliquée au démarrage de l'API). Stockage S3 pour les visuels. Pour les conversions : lien de la campagne vers le site (`web_url`).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 127), puis `majlistv-web`. Application : mise à jour de contenu (OTA), sans nouvelle version native. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Campagne ciblée jamais montrée : un pays ou un appareil est coché et le téléphone n'envoie pas de fuseau/appareil connu (ancienne version de l'application) → décocher pour « tous ». Pas de durée : application non mise à jour. Pas d'inscription comptée : lien externe, navigateur en « ne pas suivre », compte créé plus de 48 h après le clic (`select * from ad_attributions order by created_at desc limit 5`). Répartitions : `select * from ad_stats_dim order by day desc limit 20`.
+
+**Exemples.** Ciblage → campagne « Rentrée » → cocher « TV » : seule l'application TV la voit. Cocher « France » et « Belgique » : réservée aux téléphones réglés sur Paris ou Bruxelles. Rapports → durée moyenne, part allée au bout, inscriptions, achats.
+
+**Testé / non testé.** Voir ligne 341 du registre.
+

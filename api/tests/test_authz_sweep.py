@@ -62,7 +62,7 @@ off = lambda p: False
 PUBLIC_WRITES = {
     ("POST", "/auth/register"), ("POST", "/auth/login"), ("POST", "/auth/forgot"), ("POST", "/auth/reset"), ("POST", "/auth/2fa/verify"),
     ("POST", "/errors/client"), ("POST", "/stats/hit"), ("POST", "/xp/click"), ("POST", "/xp/expose"),
-    ("POST", "/ads/:id/click"), ("POST", "/ads/:id/impression"), ("POST", "/ads/:id/skip"), ("POST", "/shorts/:id/view"),
+    ("POST", "/ads/:id/click"), ("POST", "/ads/:id/impression"), ("POST", "/ads/:id/skip"), ("POST", "/ads/:id/watch"), ("POST", "/shorts/:id/view"),
     ("POST", "/talks/:id/quiz/submit"), ("POST", "/talks/:id/report"), ("POST", "/talks/:id/quiz/questions/:qid/report"),
     ("POST", "/backup/report"),
     # Application TV : la télé, pas encore connectée, demande un code puis attend sa validation (secret de 32 octets, 13/11).

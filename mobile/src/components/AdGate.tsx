@@ -3,7 +3,7 @@
 // Elle passe après l'animation du logo (lib/launch.ts). Jamais : espace enfant, fonction coupée côté serveur, pendant l'heure de prière, abonné payant (réglage serveur), réponse trop lente.
 // Plusieurs publicités : le serveur choisit la suivante dans la rotation (on lui donne la dernière montrée) ; réglage « à la suite ».
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,12 +15,18 @@ import { useSession } from '@/lib/session';
 import { useKid } from '@/lib/kidSession';
 import { usePrayer } from '@/lib/prayerStore';
 import { statusAt } from '@/lib/prayer/prayerLogic';
-import { Ad, AdsReply, adAllowed, adRatio, parseAds, skipRemaining, tooLate } from '@/lib/ads';
+import { Ad, AdsReply, adAllowed, adDevice, adRatio, parseAds, skipRemaining, tooLate, watchedSeconds } from '@/lib/ads';
 import { introEndedAt, onIntroEnd } from '@/lib/launch';
 import { colors, veil } from '@/lib/theme';
 import { Txt } from '@/components/ui';
 
 const K_LAST = 'mejliss.adLast';
+/** Contexte de ciblage : fuseau horaire du téléphone (pays approximatif) et appareil. Aucune position ni adresse IP. */
+const adContext = () => {
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* fuseau illisible : pays inconnu */ }
+  return { tz, platform: adDevice(Platform.OS, Boolean((Platform as { isTV?: boolean }).isTV)) };
+};
 const LAUNCH = Date.now();
 let handled = false; // une seule décision par lancement (l'application reste ouverte : pas de nouvelle publicité en revenant)
 
@@ -140,7 +146,7 @@ export function AdGate() {
       try {
         let after: string | null = null;
         try { after = await SecureStore.getItemAsync(K_LAST); } catch { /* coffre indisponible : on commence au début */ }
-        const r = parseAds(await api.get<unknown>('/ads/next', after ? { after, lang: locale } : { lang: locale }));
+        const r = parseAds(await api.get<unknown>('/ads/next', after ? { after, lang: locale, ...adContext() } : { lang: locale, ...adContext() }));
         // La publicité vient après l'animation du logo ; si elle n'est pas prête 3 s après la fin de l'animation, on y renonce.
         if (r.ads.length) onIntroEnd(() => { if (!tooLate(Date.now() - introEndedAt(), 3000)) setReply(r); });
       } catch { /* hors ligne ou erreur : pas de publicité, l'application démarre normalement */ }
@@ -149,17 +155,21 @@ export function AdGate() {
   }, [ready, kidReady, kid, prayer.on, prayer.ready, prayer.prefs, prayer.items, feat, api]);
 
   const ad = reply?.ads[index] ?? null;
+  const shownAt = useRef(0);
   // Affichage compté une fois par publicité ; on retient la dernière montrée pour la rotation.
   useEffect(() => {
     if (!ad) return;
-    void api.post(`/ads/${ad.id}/impression`, { lang: locale }).catch(() => { /* compteur non essentiel */ });
+    shownAt.current = Date.now();
+    void api.post(`/ads/${ad.id}/impression`, { lang: locale, ...adContext() }).catch(() => { /* compteur non essentiel */ });
     void SecureStore.setItemAsync(K_LAST, ad.id).catch(() => { /* idem */ });
   }, [ad?.id, api]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onFinish = useCallback((how: 'end' | 'skip' | 'click') => {
     if (!ad || !reply) return;
-    if (how === 'click') void api.post(`/ads/${ad.id}/click`, { lang: locale }).catch(() => {});
-    if (how === 'skip') void api.post(`/ads/${ad.id}/skip`, { lang: locale }).catch(() => {});
+    if (how === 'click') void api.post(`/ads/${ad.id}/click`, { lang: locale, ...adContext() }).catch(() => {});
+    if (how === 'skip') void api.post(`/ads/${ad.id}/skip`, { lang: locale, ...adContext() }).catch(() => {});
+    // Durée réellement regardée ; « completed » = allée jusqu'au bout sans passer ni cliquer.
+    void api.post(`/ads/${ad.id}/watch`, { seconds: watchedSeconds(shownAt.current, Date.now()), completed: how === 'end' }).catch(() => { /* mesure non essentielle */ });
     if (how === 'click' || index + 1 >= reply.ads.length) setReply(null); else setIndex(index + 1);
   }, [ad, reply, index, api, locale]);
 

@@ -68,3 +68,49 @@ export function langBreakdown(total, rows) {
   for (const k of ['impressions', 'clicks', 'skips']) out.none[k] = Math.max(0, total[k] - AD_LANGS.reduce((s, l) => s + out[l][k], 0));
   return out;
 }
+
+// ---- Ciblage par pays (fuseau horaire du téléphone) et par appareil ----
+// Le pays est APPROXIMATIF : il est déduit du fuseau horaire réglé sur le téléphone (aucune adresse IP n'est analysée ni conservée).
+export const TZ_COUNTRY = {
+  'Europe/Paris': 'FR', 'Europe/Brussels': 'BE', 'Europe/Luxembourg': 'LU', 'Europe/Zurich': 'CH', 'Europe/Madrid': 'ES', 'Atlantic/Canary': 'ES',
+  'Europe/Lisbon': 'PT', 'Europe/Rome': 'IT', 'Europe/Berlin': 'DE', 'Europe/Amsterdam': 'NL', 'Europe/London': 'GB', 'Europe/Dublin': 'IE',
+  'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Vienna': 'AT', 'Europe/Warsaw': 'PL', 'Europe/Istanbul': 'TR',
+  'Europe/Athens': 'GR', 'Europe/Moscow': 'RU',
+  'Africa/Casablanca': 'MA', 'Africa/Algiers': 'DZ', 'Africa/Tunis': 'TN', 'Africa/Cairo': 'EG', 'Africa/Tripoli': 'LY', 'Africa/Dakar': 'SN',
+  'Africa/Abidjan': 'CI', 'Africa/Lagos': 'NG', 'Africa/Nouakchott': 'MR', 'Africa/Bamako': 'ML', 'Africa/Douala': 'CM', 'Africa/Johannesburg': 'ZA',
+  'Asia/Riyadh': 'SA', 'Asia/Dubai': 'AE', 'Asia/Qatar': 'QA', 'Asia/Kuwait': 'KW', 'Asia/Bahrain': 'BH', 'Asia/Muscat': 'OM', 'Asia/Baghdad': 'IQ',
+  'Asia/Amman': 'JO', 'Asia/Beirut': 'LB', 'Asia/Damascus': 'SY', 'Asia/Jerusalem': 'IL', 'Asia/Karachi': 'PK', 'Asia/Jakarta': 'ID',
+  'Asia/Kuala_Lumpur': 'MY', 'Asia/Singapore': 'SG', 'Asia/Dhaka': 'BD', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Tehran': 'IR',
+  'America/Toronto': 'CA', 'America/Montreal': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Halifax': 'CA',
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US', 'America/Phoenix': 'US',
+  'America/Sao_Paulo': 'BR', 'America/Martinique': 'MQ', 'America/Guadeloupe': 'GP', 'America/Cayenne': 'GF', 'Indian/Reunion': 'RE', 'Indian/Mayotte': 'YT',
+  'Australia/Sydney': 'AU', 'Pacific/Auckland': 'NZ',
+};
+/** Pays proposés dans l'administration (code, libellé) — ceux qu'on sait reconnaître. */
+export const AD_COUNTRIES = [
+  ['FR', 'France'], ['BE', 'Belgique'], ['CH', 'Suisse'], ['LU', 'Luxembourg'], ['CA', 'Canada'], ['MA', 'Maroc'], ['DZ', 'Algérie'], ['TN', 'Tunisie'],
+  ['SN', 'Sénégal'], ['CI', "Côte d'Ivoire"], ['SA', 'Arabie saoudite'], ['AE', 'Émirats arabes unis'], ['QA', 'Qatar'], ['KW', 'Koweït'], ['EG', 'Égypte'],
+  ['GB', 'Royaume-Uni'], ['DE', 'Allemagne'], ['ES', 'Espagne'], ['IT', 'Italie'], ['NL', 'Pays-Bas'], ['TR', 'Turquie'], ['US', 'États-Unis'],
+  ['MQ', 'Martinique'], ['GP', 'Guadeloupe'], ['RE', 'La Réunion'],
+];
+export const AD_COUNTRY_CODES = AD_COUNTRIES.map((c) => c[0]);
+/** « Europe/Paris » → 'FR' ; fuseau inconnu ou absent → '' (pays inconnu). */
+export const tzToCountry = (tz) => TZ_COUNTRY[String(tz ?? '').trim()] || '';
+export const AD_DEVICES = ['android', 'ios', 'tv', 'web'];
+/** 'Android', 'iOS', 'tv', 'web' → valeur connue ; sinon '' (appareil inconnu). */
+export const normDevice = (v) => { const d = String(v ?? '').trim().toLowerCase(); return AD_DEVICES.includes(d) ? d : ''; };
+/** Publicité sans pays choisi : montrée partout. Avec pays : montrée seulement si le pays est connu ET choisi (inconnu → pas de publicité ciblée). */
+export const matchesCountry = (countries, country) => !countries || countries.length === 0 || (Boolean(country) && countries.includes(country));
+export const matchesDevice = (devices, device) => !devices || devices.length === 0 || (Boolean(device) && devices.includes(device));
+/** Durée moyenne en secondes (une décimale) et taux d'aller-au-bout en %. */
+export const avgSeconds = (watchMs, n) => (n > 0 ? Math.round(watchMs / n / 100) / 10 : 0);
+export const completionRate = (completed, n) => (n > 0 ? Math.round((completed / n) * 1000) / 10 : 0);
+/** Ajoute ?ad=<id> aux liens qui mènent vers notre propre site (mesure des inscriptions) ; les autres liens ne sont jamais modifiés. */
+export function trackedLink(link, adId, webUrl) {
+  try {
+    const u = new URL(link); const w = new URL(webUrl);
+    if (u.host !== w.host) return link;
+    u.searchParams.set('ad', adId);
+    return u.toString();
+  } catch { return link; }
+}

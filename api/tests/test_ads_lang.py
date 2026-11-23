@@ -56,4 +56,38 @@ cur.execute("delete from ads where id=%s", (ad,))
 cur.execute("select count(*) from ad_stats_lang where ad_id=%s", (ad,)); ok(cur.fetchone()[0] == 0, "suppression : chiffres par langue supprimés")
 d = requests.get(B + "/admin/campaigns", headers=A).json()["daily"]
 ok(len(d) == 30 and d[-1]["day"] > d[0]["day"] and all(isinstance(x["impressions"], int) and isinstance(x["clicks"], int) for x in d), "courbe : 30 jours complets")
+
+# ---- Lot mesures : pays, appareil, durée, conversions (sans S3 : /ads/next non testé ici) ----
+cur.execute("insert into ads(advertiser,title,link_url,media_kind,media_key,media_type) values(%s,'T2','https://exemple.fr','image','campaigns/y.png','image/png') returning id", (f"Annonceur2 {tag}",))
+ad2 = cur.fetchone()[0]
+camp2 = lambda: next(a for a in requests.get(B + "/admin/campaigns", headers=A).json()["ads"] if a["id"] == str(ad2))
+ok(camp2()["countries"] == [] and camp2()["devices"] == [], "nouvelle publicité : tous pays, tous appareils")
+requests.post(f"{B}/ads/{ad2}/impression", json={"lang": "fr", "tz": "Europe/Paris", "platform": "android"})
+requests.post(f"{B}/ads/{ad2}/impression", json={"lang": "fr", "tz": "Europe/Paris", "platform": "ios"})
+requests.post(f"{B}/ads/{ad2}/impression", json={"tz": "Mars/X"})
+requests.post(f"{B}/ads/{ad2}/click", json={"tz": "Europe/Paris", "platform": "android"})
+c = camp2(); co = {x["value"]: x for x in c["byCountry"]}; de = {x["value"]: x for x in c["byDevice"]}
+ok(co["FR"]["impressions"] == 2 and co["FR"]["clicks"] == 1 and co[""]["impressions"] == 1, "répartition par pays (fuseau inconnu = vide)")
+ok(de["android"]["impressions"] == 1 and de["android"]["clicks"] == 1 and de["ios"]["impressions"] == 1, "répartition par appareil")
+ok(requests.post(f"{B}/ads/{ad2}/watch", json={"seconds": 4, "completed": False}).status_code == 200, "durée enregistrée")
+requests.post(f"{B}/ads/{ad2}/watch", json={"seconds": 6, "completed": True})
+c = camp2(); ok(c["avgWatchSeconds"] == 5 and c["completionRate"] == 50 and c["watched"] == 2, "durée moyenne 5 s, 50 % allés au bout")
+ok(requests.post(f"{B}/ads/{ad2}/watch", json={"seconds": 9999}).status_code == 400, "durée absurde refusée")
+ok(requests.post(f"{B}/ads/00000000-0000-0000-0000-000000000000/watch", json={"seconds": 3}).status_code == 404, "durée : publicité inconnue 404")
+ok(requests.patch(f"{B}/admin/campaigns/{ad2}", headers=A, json={"countries": ["FR", "FR", "MA"], "devices": ["tv"]}).status_code == 200 and camp2()["countries"] == ["FR", "MA"] and camp2()["devices"] == ["tv"], "pays et appareils enregistrés")
+ok(requests.patch(f"{B}/admin/campaigns/{ad2}", headers=A, json={"countries": ["ZZ"]}).status_code == 400, "pays inconnu refusé")
+ok(requests.patch(f"{B}/admin/campaigns/{ad2}", headers=A, json={"devices": ["frigo"]}).status_code == 400, "appareil inconnu refusé")
+# Conversions : compte tout juste créé
+r = requests.post(B + "/auth/register", json={"email": f"ad{tag}@test.local", "password": "Passw0rd-test-1", "locale": "fr"})
+U = {"authorization": "Bearer " + r.json()["token"]}
+ok(requests.post(B + "/me/ad-attribution", json={"ad": str(ad2)}).status_code == 401, "rattachement sans compte : refusé")
+ok(requests.post(B + "/me/ad-attribution", headers=U, json={"ad": "00000000-0000-0000-0000-000000000000"}).status_code == 404, "rattachement : publicité inconnue 404")
+ok(requests.post(B + "/me/ad-attribution", headers=U, json={"ad": str(ad2)}).status_code == 200, "rattachement d'un compte récent")
+requests.post(B + "/me/ad-attribution", headers=U, json={"ad": str(ad2)})
+ok(camp2()["signups"] == 1 and camp2()["subscriptions"] == 0, "une seule inscription comptée (pas de doublon)")
+cur.execute("update users set created_at = now() - interval '5 days' where email=%s", (f"ad{tag}@test.local",))
+ok(requests.post(B + "/me/ad-attribution", headers=U, json={"ad": str(ad2)}).status_code == 409, "ancien compte : refusé")
+cur.execute("delete from users where email=%s", (f"ad{tag}@test.local",))
+cur.execute("delete from ads where id=%s", (ad2,))
+cur.execute("select (select count(*) from ad_stats_dim where ad_id=%s)+(select count(*) from ad_conversions where ad_id=%s)", (ad2, ad2)); ok(cur.fetchone()[0] == 0, "suppression : mesures supprimées")
 print("test_ads_lang : TOUT OK")

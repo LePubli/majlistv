@@ -39,3 +39,14 @@ export const skipRemaining = (elapsedSec: number, skipSeconds: number): number =
 
 /** Part (0 à 1) de la barre de progression de la publicité. */
 export const adRatio = (elapsedSec: number, totalSec: number): number => (totalSec > 0 && Number.isFinite(elapsedSec) ? Math.min(1, Math.max(0, elapsedSec / totalSec)) : 0);
+
+/** Appareil annoncé au serveur pour le ciblage : « tv » (Android TV / Apple TV), « ios » ou « android » ; autre → 'android' n'est jamais deviné. */
+export function adDevice(os: string, isTV: boolean): 'tv' | 'ios' | 'android' | '' {
+  if (isTV) return 'tv';
+  return os === 'ios' ? 'ios' : os === 'android' ? 'android' : '';
+}
+/** Durée regardée en secondes (0–300, arrondie à 0,1 s) à partir de l'instant d'affichage ; instant inconnu → 0. */
+export function watchedSeconds(shownAt: number, now: number): number {
+  if (!shownAt || now < shownAt) return 0;
+  return Math.min(300, Math.round(((now - shownAt) / 1000) * 10) / 10);
+}

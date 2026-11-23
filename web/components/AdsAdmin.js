@@ -10,6 +10,16 @@ import { Page, Metrics, Panel, Cols, Table, Tabs, Line, Switch, Btn, Badge, Meta
 const EMPTY = { advertiser: '', title: '', sentence: '', ctaLabel: 'En savoir plus', linkUrl: '', active: true, startsAt: '', endsAt: '', languages: [] };
 const LANGS = [['fr', 'Français'], ['en', 'Anglais'], ['ar', 'Arabe']];
 const langNames = (l) => (l && l.length ? l.map((x) => (LANGS.find((y) => y[0] === x) || [x, x])[1]).join(', ') : 'toutes les langues');
+const DEVICES = [['android', 'Android'], ['ios', 'iPhone / iPad'], ['tv', 'TV'], ['web', 'Site']];
+const deviceName = (v) => (v ? (DEVICES.find((d) => d[0] === v) || [v, v])[1] : 'Inconnu');
+const num = (n) => Number(n || 0).toLocaleString('fr-FR');
+/** Additionne les répartitions (byCountry / byDevice) de toutes les campagnes ; trié du plus affiché au moins affiché. */
+const mergeDim = (ads, key) => {
+  const m = new Map();
+  for (const a of ads) for (const r of a[key] || []) { const o = m.get(r.value) || { value: r.value, impressions: 0, clicks: 0, skips: 0 }; o.impressions += r.impressions; o.clicks += r.clicks; o.skips += r.skips; m.set(r.value, o); }
+  return [...m.values()].sort((x, y) => y.impressions - x.impressions);
+};
+const secs = (a) => (a.watched ? `${String(a.avgWatchSeconds).replace('.', ',')} s` : '—');
 const STATUS = { live: ['En cours', 'ok'], scheduled: ['Programmée', 'meta'], ended: ['Terminée', 'meta'], paused: ['En pause', 'meta'] };
 // Valeur d'un champ « date et heure » (heure locale) ⇄ instant ISO.
 const toLocal = (iso) => { if (!iso) return ''; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -119,6 +129,37 @@ function AdForm({ ad, limits, onDone, onCancel }) {
   );
 }
 
+
+// Pays (fuseau horaire du téléphone, approximatif) et appareils d'une campagne. Aucune case cochée = tous.
+function TargetEditor({ ad, countries, onSave }) {
+  const toggle = (key, v) => { const cur = ad[key] || []; onSave(ad, { [key]: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] }); };
+  const box = (key, v, label) => (
+    <label key={v} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', minWidth: 150 }}>
+      <input type="checkbox" checked={(ad[key] || []).includes(v)} onChange={() => toggle(key, v)} /> {label}
+    </label>
+  );
+  return (
+    <div>
+      <p><b>Appareils</b> <small className="meta">— aucun coché = tous les appareils</small></p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>{DEVICES.map(([k, n]) => box('devices', k, n))}</div>
+      <p style={{ marginTop: 14 }}><b>Pays</b> <small className="meta">— aucun coché = tous les pays</small></p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>{countries.map(([k, n]) => box('countries', k, n))}</div>
+      <p className="meta small" style={{ marginTop: 12 }}>Le pays est approximatif : il vient du fuseau horaire réglé sur le téléphone (aucune adresse IP ni position n’est utilisée). Une campagne qui vise des pays n’est jamais montrée à un téléphone dont le fuseau est inconnu ; il n’y a pas de ciblage par âge (l’application ne connaît pas l’âge du public).</p>
+    </div>
+  );
+}
+
+// Chiffres de durée et de conversions, répartitions par appareil et par pays (communs aux deux thèmes).
+function Breakdown({ title, rows, name }) {
+  const tot = rows.reduce((n, r) => n + r.impressions, 0);
+  return (
+    <div>
+      {title ? <p><b>{title}</b></p> : null}
+      {tot ? <ul className="meta" style={{ paddingInlineStart: 18 }}>{rows.map((r) => <li key={r.value || 'x'}>{name(r.value)} : {num(r.impressions)} affichage(s) ({Math.round((r.impressions / tot) * 100)} %), {num(r.clicks)} clic(s)</li>)}</ul> : <p className="meta">Pas encore de chiffres.</p>}
+    </div>
+  );
+}
+
 export default function AdsAdmin() {
   const { call, locale, skin } = useApp();
   const [selId, setSelId] = useState(null);
@@ -129,6 +170,8 @@ export default function AdsAdmin() {
   const load = useCallback(() => call('/admin/campaigns').then((r) => setData(r.ok ? r.data : { error: r.data?.error || 'Chargement impossible.' })), [call]);
   useEffect(() => { load(); }, [load]);
   const flash = (ok, text) => setMsg({ ok, text });
+  const [tgtId, setTgtId] = useState(null);
+  const saveTarget = (a, patch) => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
   const act = async (path, opts, okText) => {
     const r = await call(path, opts);
     if (r.ok) { if (okText) flash(true, okText); load(); } else flash(false, r.data?.error || 'Action impossible.');
@@ -180,7 +223,23 @@ export default function AdsAdmin() {
                   a.startsAt || a.endsAt ? `${a.startsAt ? `du ${when(a.startsAt, locale)}` : ''}${a.endsAt ? ` jusqu’au ${when(a.endsAt, locale)}` : ''}` : 'Sans date',
                   <Badge key="s" tone={tone[a.status] || 'gray'}>{(STATUS[a.status] || [''])[0]}</Badge>];
               })} />
-            <p className="meta" style={{ padding: '0 14px 14px' }}>Le ciblage porte sur la langue de l’application (toutes les langues cochées ou aucune = montrée à tous ; une application ancienne qui n’envoie pas sa langue voit tout) et sur la période (modifiable depuis « Créations »). Règles fixes : jamais dans l’espace Kids, jamais pendant l’heure de prière, montrée ou non aux abonnés payants selon le réglage « Publicité au lancement » (Admin → Paramètres). Le site n’a pas d’autre critère (pays, âge, appareil) : il n’est pas mesuré.</p>
+            <p className="meta" style={{ padding: '0 14px 14px' }}>Le ciblage porte sur la langue de l’application (toutes les langues cochées ou aucune = montrée à tous ; une application ancienne qui n’envoie pas sa langue voit tout) et sur la période (modifiable depuis « Créations »). Règles fixes : jamais dans l’espace Kids, jamais pendant l’heure de prière, montrée ou non aux abonnés payants selon le réglage « Publicité au lancement » (Admin → Paramètres). Pays et appareils se règlent dans le panneau ci-dessous.</p>
+          </Panel>
+        )}
+        {tab === 'target' && (
+          <Panel title="Pays et appareils">
+            <div style={{ padding: '0 14px 14px' }}>
+              {ads.length ? (
+                <>
+                  <label>Campagne{' '}
+                    <select value={(ads.find((a) => a.id === tgtId) || ads[0]).id} onChange={(e) => setTgtId(e.target.value)}>
+                      {ads.map((a) => <option key={a.id} value={a.id}>{a.title} — {a.advertiser}</option>)}
+                    </select>
+                  </label>
+                  <TargetEditor ad={ads.find((a) => a.id === tgtId) || ads[0]} countries={data.countries || []} onSave={saveTarget} />
+                </>
+              ) : <p style={{ color: 'var(--muted)' }}>Aucune publicité pour l’instant.</p>}
+            </div>
           </Panel>
         )}
         {tab === 'report' && (() => {
@@ -206,8 +265,17 @@ export default function AdsAdmin() {
                     <span key="r" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {a.reportToken ? <><a href={reportUrl(a)} target="_blank" rel="noopener noreferrer">Ouvrir</a><Btn primary={false} onClick={() => copyLink(a)}>Copier</Btn><Btn primary={false} onClick={() => makeLink(a)}>Renouveler</Btn><Btn primary={false} onClick={() => act(`/admin/campaigns/${a.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver</Btn></> : <Btn primary={false} onClick={() => makeLink(a)}>Créer le lien</Btn>}
                     </span>])} />
-                <p className="meta" style={{ padding: '0 14px 14px' }}>Le lien de suivi est secret et sans compte : il donne à l’annonceur sa page de résultats et un PDF. Les chiffres comptent les affichages, clics et « Passer » enregistrés par l’application ; ni durée de visionnage ni conversion ne sont mesurées.</p>
+                <p className="meta" style={{ padding: '0 14px 14px' }}>Le lien de suivi est secret et sans compte : il donne à l’annonceur sa page de résultats et un PDF. Les chiffres comptent les affichages, clics et « Passer » enregistrés par l’application ; « Durée » = temps réellement passé devant la publicité (moyenne) ; « Au bout » = part des affichages allés jusqu’à la fin sans « Passer » ni clic.</p>
               </Panel>
+              <Panel title="Durée de visionnage et conversions" extra={`${ads.length}`}>
+                <Table headers={['Campagne', 'Durée moyenne', 'Au bout', 'Inscriptions', 'Achats']} empty="Aucune publicité pour l’instant."
+                  rows={ads.map((a) => [<span key="t"><b>{a.title}</b><br /><small>{a.advertiser}</small></span>, secs(a), a.watched ? `${String(a.completionRate).replace('.', ',')} %` : '—', a.signups, a.subscriptions])} />
+                <p className="meta" style={{ padding: '0 14px 14px' }}>Les inscriptions et achats ne sont comptés que pour les publicités dont le lien mène vers notre site : le site y ajoute l’identifiant de la publicité, retenu 7 jours dans le navigateur (jamais si le visiteur refuse le suivi), puis rattaché au compte créé dans les 48 h. « Achats » = première facture payée de ce compte. Un lien vers un autre site n’est pas modifié : aucune conversion mesurable.</p>
+              </Panel>
+              <Cols kind="two-main">
+                <Panel title="Par appareil"><div style={{ padding: '0 14px 14px' }}><Breakdown title="" rows={mergeDim(ads, 'byDevice')} name={deviceName} /></div></Panel>
+                <Panel title="Par pays (fuseau horaire)"><div style={{ padding: '0 14px 14px' }}><Breakdown title="" rows={mergeDim(ads, 'byCountry')} name={(v) => (v ? ((data.countries || []).find((x) => x[0] === v) || [v, v])[1] : 'Inconnu')} /></div></Panel>
+              </Cols>
             </>
           );
         })()}
@@ -237,6 +305,9 @@ export default function AdsAdmin() {
                   ['Période', sel.startsAt || sel.endsAt ? `${sel.startsAt ? `du ${when(sel.startsAt, locale)}` : ''}${sel.endsAt ? ` jusqu’au ${when(sel.endsAt, locale)}` : ''}` : 'Sans date'],
                   ['7 derniers jours', `${sel.impressions7} affichage(s), ${sel.clicks7} clic(s)`],
                   ['« Passer »', sel.skips],
+                  ['Durée moyenne vue', secs(sel)],
+                  ['Pays / appareils visés', `${sel.countries?.length ? sel.countries.join(', ') : 'tous pays'} · ${sel.devices?.length ? sel.devices.map(deviceName).join(', ') : 'tous appareils'}`],
+                  ['Inscriptions / achats', `${sel.signups} / ${sel.subscriptions}`],
                   ['Rapport annonceur', sel.reportToken ? <a key="r" href={reportUrl(sel)} target="_blank" rel="noopener noreferrer">Ouvrir le lien</a> : 'Aucun lien'],
                 ]} />
                 {sel.byLang && <p className="meta small">Par langue — {[['fr', 'FR'], ['en', 'EN'], ['ar', 'AR'], ['none', 'sans langue']].map(([k, n]) => `${n} : ${sel.byLang[k].impressions} aff. / ${sel.byLang[k].clicks} clic(s)`).join(' · ')}</p>}
@@ -256,45 +327,120 @@ export default function AdsAdmin() {
       </Page>
     );
   }
+  const countriesList = data.countries || [];
+  const cname = (v) => (v ? (countriesList.find((x) => x[0] === v) || [v, v])[1] : 'Inconnu');
   return (
     <section className="camp-admin">
       <p className="meta">Publicités plein écran, passables, montrées au lancement de l’application (jamais dans l’espace Kids, jamais pendant l’heure de prière). S’il y en a plusieurs en cours, elles tournent : une différente à chaque lancement. Réglages (abonnés payants, nombre à la suite, durées) : Admin → Paramètres → « Publicité au lancement ».</p>
       {!data.storage && <p className="error">Le stockage vidéo n’est pas configuré : l’envoi des visuels est impossible.</p>}
-      {form ? (
-        <AdForm ad={form === 'new' ? null : form} limits={data.limits} onCancel={() => setForm(null)} onDone={() => { setForm(null); flash(true, 'Publicité enregistrée.'); load(); }} />
-      ) : (
-        <button type="button" className="btn" onClick={() => { setMsg(null); setForm('new'); }} disabled={!data.storage}>Nouvelle publicité</button>
-      )}
+      <div className="cadm-tabs" role="tablist" aria-label="Publicités">
+        {[['crea', 'Créations'], ['target', 'Ciblage'], ['report', 'Rapports']].map(([k, label]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} className={`btn ${tab === k ? '' : 'ghost'}`} onClick={() => { setTab(k); setForm(null); }}>{label}</button>
+        ))}
+      </div>
       {msg && <p className={msg.ok ? 'meta ok' : 'error'} role="status">{msg.text}</p>}
-      {ads.length === 0 && !form && <p className="meta">Aucune publicité pour l’instant.</p>}
-      <ul className="camp-list">
-        {ads.map((a) => {
-          const [label, cls] = STATUS[a.status] || ['', 'meta'];
-          return (
-            <li key={a.id} className="card camp-item">
-              <Preview ad={a} />
-              <div className="camp-info">
-                <b>{a.title}</b>
-                <small className="meta">{a.advertiser}{a.sentence ? ` · ${a.sentence}` : ''}</small>
-                <small className={cls}>{label}{a.startsAt ? ` · du ${when(a.startsAt, locale)}` : ''}{a.endsAt ? ` · jusqu’au ${when(a.endsAt, locale)}` : ''}</small>
-                <small className="meta"><a href={a.linkUrl} target="_blank" rel="noopener noreferrer">{a.ctaLabel}</a> · {a.mediaKind === 'video' ? 'vidéo' : 'photo'}</small>
-                <small className="meta">{a.impressions} affichage(s) · {a.clicks} clic(s) ({a.ctr} %) · {a.skips} « passer » — 7 derniers jours : {a.impressions7} affichage(s), {a.clicks7} clic(s)</small>
-                <small className="meta">Langues visées : {langNames(a.languages)}</small>
-                {a.byLang ? <small className="meta">Par langue — {[['fr', 'FR'], ['en', 'EN'], ['ar', 'AR'], ['none', 'sans langue']].map(([k, n]) => `${n} : ${a.byLang[k].impressions} aff. / ${a.byLang[k].clicks} clic(s)`).join(' · ')}</small> : null}
-                <small className="meta adr-link">Rapport annonceur : {a.reportToken ? <a href={reportUrl(a)} target="_blank" rel="noopener noreferrer">{reportUrl(a)}</a> : 'aucun lien (désactivé)'}</small>
-                <div className="studio-tools">
-                  <button type="button" className="btn ghost" onClick={() => makeLink(a)}>{a.reportToken ? 'Renouveler le lien de suivi' : 'Créer le lien de suivi'}</button>
-                  {a.reportToken && <button type="button" className="btn ghost" onClick={() => copyLink(a)}>Copier le lien</button>}
-                  {a.reportToken && <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver le lien</button>}
-                  <button type="button" className="btn ghost" onClick={() => { setMsg(null); setForm(a); window.scrollTo?.({ top: 0 }); }}>Modifier</button>
-                  <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>
-                  <button type="button" className="btn ghost" onClick={() => remove(a)}>Supprimer</button>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {tab === 'target' && (
+        <div className="card" style={{ marginTop: 14, padding: 14 }}>
+          <h3>Ciblage des campagnes</h3>
+          <p className="meta">Langue, pays et appareil. Aucune case cochée = tous. Règles fixes : jamais dans l’espace Kids, jamais pendant l’heure de prière.</p>
+          {ads.length === 0 && <p className="meta">Aucune publicité pour l’instant.</p>}
+          {ads.length > 0 && (
+            <>
+              <label>Campagne{' '}
+                <select value={(ads.find((a) => a.id === tgtId) || ads[0]).id} onChange={(e) => setTgtId(e.target.value)}>
+                  {ads.map((a) => <option key={a.id} value={a.id}>{a.title} — {a.advertiser}</option>)}
+                </select>
+              </label>
+              {(() => {
+                const a = ads.find((x) => x.id === tgtId) || ads[0];
+                const cur = a.languages || [];
+                return (
+                  <div style={{ marginTop: 12 }}>
+                    <p><b>Langues</b> <small className="meta">— aucune cochée = toutes</small></p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                      {LANGS.map(([k, n]) => (
+                        <label key={k} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', minWidth: 150 }}>
+                          <input type="checkbox" checked={cur.includes(k)} onChange={() => saveTarget(a, { languages: cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k] })} /> {n}
+                        </label>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 14 }}><TargetEditor ad={a} countries={countriesList} onSave={saveTarget} /></div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      )}
+      {tab === 'report' && (
+        <div style={{ marginTop: 14 }}>
+          <div className="card" style={{ padding: 14 }}>
+            <h3>Affichages des 30 derniers jours</h3>
+            <p className="meta">{num((data.daily || []).reduce((n, d) => n + d.impressions, 0))} affichage(s) · {num((data.daily || []).reduce((n, d) => n + d.clicks, 0))} clic(s)</p>
+            <ul className="meta" style={{ paddingInlineStart: 18 }}>
+              {(data.daily || []).filter((d) => d.impressions || d.clicks).slice(-10).reverse().map((d) => <li key={d.day}>{d.day.split('-').reverse().join('/')} : {d.impressions} affichage(s), {d.clicks} clic(s)</li>)}
+              {!(data.daily || []).some((d) => d.impressions) && <li>Aucun affichage sur les 30 derniers jours.</li>}
+            </ul>
+          </div>
+          <div className="card" style={{ padding: 14, marginTop: 12 }}>
+            <h3>Par campagne</h3>
+            {ads.length === 0 && <p className="meta">Aucune publicité pour l’instant.</p>}
+            <ul className="camp-list">
+              {ads.map((a) => (
+                <li key={a.id} style={{ marginBottom: 12 }}>
+                  <b>{a.title}</b> <small className="meta">{a.advertiser}</small><br />
+                  <small className="meta">{num(a.impressions)} affichage(s) · {num(a.clicks)} clic(s) ({a.ctr} %) · {num(a.skips)} « passer » — 7 jours : {a.impressions7} / {a.clicks7}</small><br />
+                  <small className="meta">Durée moyenne vue : {secs(a)}{a.watched ? ` · allées au bout : ${String(a.completionRate).replace('.', ',')} %` : ''} · inscriptions : {a.signups} · achats : {a.subscriptions}</small><br />
+                  <small className="meta">Rapport annonceur : {a.reportToken ? <a href={reportUrl(a)} target="_blank" rel="noopener noreferrer">{reportUrl(a)}</a> : 'aucun lien (désactivé)'}</small>
+                  <div className="studio-tools">
+                    <button type="button" className="btn ghost" onClick={() => makeLink(a)}>{a.reportToken ? 'Renouveler le lien de suivi' : 'Créer le lien de suivi'}</button>
+                    {a.reportToken && <button type="button" className="btn ghost" onClick={() => copyLink(a)}>Copier le lien</button>}
+                    {a.reportToken && <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}/report-link`, { method: 'DELETE' }, 'Lien de suivi désactivé.')}>Désactiver le lien</button>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="meta small">Les inscriptions et achats ne sont comptés que pour les liens qui mènent vers notre site (identifiant ajouté au lien, retenu 7 jours, jamais si le visiteur refuse le suivi).</p>
+          </div>
+          <div className="card" style={{ padding: 14, marginTop: 12 }}>
+            <Breakdown title="Par appareil" rows={mergeDim(ads, 'byDevice')} name={deviceName} />
+            <Breakdown title="Par pays (fuseau horaire du téléphone)" rows={mergeDim(ads, 'byCountry')} name={cname} />
+          </div>
+        </div>
+      )}
+      {tab === 'crea' && (
+        <>
+          {form ? (
+            <AdForm ad={form === 'new' ? null : form} limits={data.limits} onCancel={() => setForm(null)} onDone={() => { setForm(null); flash(true, 'Publicité enregistrée.'); load(); }} />
+          ) : (
+            <button type="button" className="btn" style={{ marginTop: 14 }} onClick={() => { setMsg(null); setForm('new'); }} disabled={!data.storage}>Nouvelle publicité</button>
+          )}
+          {ads.length === 0 && !form && <p className="meta">Aucune publicité pour l’instant.</p>}
+          <ul className="camp-list">
+            {ads.map((a) => {
+              const [label, cls] = STATUS[a.status] || ['', 'meta'];
+              return (
+                <li key={a.id} className="card camp-item">
+                  <Preview ad={a} />
+                  <div className="camp-info">
+                    <b>{a.title}</b>
+                    <small className="meta">{a.advertiser}{a.sentence ? ` · ${a.sentence}` : ''}</small>
+                    <small className={cls}>{label}{a.startsAt ? ` · du ${when(a.startsAt, locale)}` : ''}{a.endsAt ? ` · jusqu’au ${when(a.endsAt, locale)}` : ''}</small>
+                    <small className="meta"><a href={a.linkUrl} target="_blank" rel="noopener noreferrer">{a.ctaLabel}</a> · {a.mediaKind === 'video' ? 'vidéo' : 'photo'}</small>
+                    <small className="meta">{a.impressions} affichage(s) · {a.clicks} clic(s) ({a.ctr} %) · {a.skips} « passer »</small>
+                    <small className="meta">Visée : {langNames(a.languages)} · {a.countries?.length ? a.countries.map(cname).join(', ') : 'tous pays'} · {a.devices?.length ? a.devices.map(deviceName).join(', ') : 'tous appareils'}</small>
+                    <div className="studio-tools">
+                      <button type="button" className="btn ghost" onClick={() => { setMsg(null); setForm(a); window.scrollTo?.({ top: 0 }); }}>Modifier</button>
+                      <button type="button" className="btn ghost" onClick={() => act(`/admin/campaigns/${a.id}`, { method: 'PATCH', body: JSON.stringify({ active: !a.active }) })}>{a.active ? 'Mettre en pause' : 'Reprendre'}</button>
+                      <button type="button" className="btn ghost" onClick={() => remove(a)}>Supprimer</button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </section>
   );
 }

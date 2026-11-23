@@ -5,6 +5,7 @@ import { AudynPlayerProvider } from './AudynPlayer';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrayerState } from '../lib/usePrayer';
+import { captureAdRef } from '../lib/adref';
 
 import { localizeCatNames } from '../lib/catNames';
 
@@ -64,6 +65,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
       .finally(() => setReady(true));
   }, []);
 
+  useEffect(() => { captureAdRef(window.location.search); }, [path]); // publicité : retient ?ad=<id> pour mesurer les inscriptions
   useEffect(() => { fetch('/api/formats').then((r) => (r.ok ? r.json() : [])).then((f) => Array.isArray(f) && setFormats(f)).catch(() => {}); }, []);
   useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setAllCats(localizeCatNames(c, locale, '/categories'))).catch(() => {}); }, []);
   // Nom d'un format (slug) dans la langue courante ; vide si inconnu.

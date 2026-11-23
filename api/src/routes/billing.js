@@ -401,6 +401,11 @@ export default async function billingRoutes(app) {
               const xm = xpMeta(obj.subscription_details?.metadata || obj.lines?.data?.[0]?.metadata);
               if (xm) await client.query('UPDATE experiment_exposures SET paid_at = COALESCE(paid_at, now()), revenue_cents = revenue_cents + $3 WHERE experiment_id = $1 AND visitor_hash = $2', [xm.exp, xm.vh, obj.amount_paid]);
             }
+            if (event.type === 'invoice.paid' && obj.amount_paid > 0) { // publicité : première facture payée d'un compte venu d'une publicité = conversion « achat »
+              const u = await userFor(client, obj);
+              const at = u && (await client.query('UPDATE ad_attributions SET subscribed_at = now() WHERE user_id = $1 AND subscribed_at IS NULL RETURNING ad_id', [u.id])).rows[0];
+              if (at) await client.query("INSERT INTO ad_conversions(ad_id, day, kind, n) VALUES ($1, current_date, 'subscription', 1) ON CONFLICT (ad_id, day, kind) DO UPDATE SET n = ad_conversions.n + 1", [at.ad_id]);
+            }
             if (event.type === 'invoice.paid') await ext.emit('stripe.invoice.paid', client, obj); // module revenue : base de la rémunération des chaînes
           } else if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && obj.mode === 'payment') {
             await ext.emit('stripe.checkout.payment', client, obj); // paiement unique : carte cadeau (module gifts)
