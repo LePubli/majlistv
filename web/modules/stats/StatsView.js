@@ -5,9 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../components/Providers';
 import GrowthPanel from './GrowthPanel';
-import { Page, Metrics, Panel, Cols, Tabs, Btn, Table, Progress, Line, c } from '../../components/backoffice/Kit';
+import { Page, Metrics, Panel, Cols, Tabs, Pills, Donut, Btn, Table, Progress, Line, c } from '../../components/backoffice/Kit';
 
 const RANGES = [7, 30, 90, 365];
+const pct0 = (a, b) => (b > 0 ? Math.min(100, Math.round((100 * a) / b)) : 0);
 
 // Variation par rapport à la période précédente.
 function Delta({ cur, prev, t }) {
@@ -87,6 +88,7 @@ export default function StatsView({ endpoint, site }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState(false);
   const [metric, setMetric] = useState(null);
+  const [section, setSection] = useState('overview');
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const n = (v) => (v == null ? '—' : nf.format(v));
   const pc = (v) => (v == null ? '—' : `${v} %`);
@@ -149,18 +151,17 @@ export default function StatsView({ endpoint, site }) {
   const DEV = { desktop: t('stDevDesktop'), mobile: t('stDevMobile'), tablet: t('stDevTablet') };
   const LNG = { fr: 'Français', en: 'English', ar: 'العربية', other: t('stLangOther') };
 
-  // Thème Premium : composition de la maquette (ANALYTICS) — titre, onglets, 4 chiffres, 2 courbes / entonnoir, tableaux de bas de page.
+  // Thème Premium : composition de la maquette (ANALYTICS) — titre, onglets, 4 chiffres, courbes, tableaux de bas de page.
   if (skin === 'premium') {
     const note = (cur0, prev0) => { if (cur0 == null || prev0 == null || prev0 === 0) return ''; const pct = Math.round((100 * (cur0 - prev0)) / prev0); return `${pct > 0 ? '↗ +' : pct < 0 ? '↘ ' : ''}${pct} %`; };
     const icons = ['eye', 'users', 'clock', 'check', 'chart', 'video', 'film', 'file'];
     const mk = (list) => list.map(([label, value, c0, p0], i) => ({ icon: icons[i % icons.length], tone: note(c0, p0).startsWith('↗') ? 'green' : 'blue', label, value, note: note(c0, p0) }));
-    const rows = (list) => (list || []).slice(0, 8);
     const BarRows = ({ list }) => {
       const mx = Math.max(1, ...list.map((r) => r.n));
       return (
         <div style={{ padding: '6px 14px 14px', display: 'grid', gap: 10 }}>
-          {list.length === 0 && <p style={{ color: 'var(--muted)' }}>Pas encore de données.</p>}
-          {rows(list).map((r) => (
+          {list.length === 0 && <p style={{ color: 'var(--muted)' }}>{t('stNoYet')}</p>}
+          {list.slice(0, 8).map((r) => (
             <div key={r.label}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span>{r.label}</span><b>{n(r.n)}</b></div>
               <Progress value={(100 * r.n) / mx} />
@@ -169,11 +170,23 @@ export default function StatsView({ endpoint, site }) {
         </div>
       );
     };
+    const catList = d.categories.map((x) => ({ label: x.name, n: x.plays || x.views }));
+    const spkList = d.speakers.map((x) => ({ label: x.name, n: x.plays || x.views }));
+    const sh = d.shorts; // null : module Shorts non installé ; absent pour Kids
+    // Onglets réellement utiles selon le public (Kids n'a ni provenance, ni langue, ni Shorts).
+    const tabNames = [['overview', t('stTabOverview')], ['content', t('stTabContent')], ...(kids ? [] : [['shorts', t('stTabShorts')], ['audience', t('stTabAudience')], ['langs', t('stTabLangs')]]), ['reports', t('stTabReports')]];
+    const tab = tabNames.some(([k]) => k === section) ? section : 'overview';
+    // Rétention par quartile : part des lectures qui atteignent chaque palier (vraies données, pas de courbe seconde par seconde).
+    const ret = T.plays > 0 ? [100, pct0(T.q25, T.plays), pct0(T.q50, T.plays), pct0(T.q75, T.plays), pct0(T.completes, T.plays)] : [];
+    const langs = dim('lang', LNG);
+    const langSum = langs.reduce((a, r) => a + r.n, 0);
+    const first = langs[0];
+    const days0 = (list) => list.map((x) => new Date(x.day + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short' }));
     return (
-      <Page title={site ? 'Statistiques & audience' : 'Données analytiques — Studio'}
-        sub={site ? 'Explorez les audiences, le trafic et les engagements de la plateforme.' : 'Suivez la performance de vos contenus, vos audiences et vos chaînes.'}
-        actions={<Btn onClick={exportCsv}>Exporter (CSV)</Btn>}>
-        <Tabs names={[['web', t('stWeb')], ['kids', t('stKids')]]} value={audience} onChange={setAudience} />
+      <Page title={site ? t('stPageTitleSite') : t('stPageTitleStudio')} sub={site ? t('stPageSubSite') : t('stPageSubStudio')}
+        actions={<Btn onClick={exportCsv}>{t('stExportCsv')}</Btn>}>
+        <Pills names={[['web', t('stWeb')], ['kids', t('stKids')]]} value={audience} onChange={setAudience} />
+        <Tabs names={tabNames} value={tab} onChange={setSection} />
         <div className={c('inline-tools')} style={{ marginBottom: 14 }}>
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label={t('stPeriod')}>
             {RANGES.map((r) => <option key={r} value={r}>{r === 365 ? t('stYear') : t('stLastDays').replace('{n}', r)}</option>)}
@@ -185,42 +198,109 @@ export default function StatsView({ endpoint, site }) {
           <small style={{ alignSelf: 'center' }}>{new Date(d.since + 'T12:00:00').toLocaleDateString(locale)} → {new Date(d.until + 'T12:00:00').toLocaleDateString(locale)}</small>
         </div>
         {!hasData && <p className="st-empty" role="status" style={{ color: 'var(--muted)' }}>{t('stEmpty')}</p>}
-        <Metrics items={mk(kpis.slice(0, 4))} />
-        {kpis.length > 4 && <Metrics items={mk(kpis.slice(4, 8))} />}
-        <Cols kind="equal">
-          <Panel title={`${curLabel} — ${t('stPerDay')}`} extra={<span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>{metrics.map(([k, l]) => <button key={k} type="button" className={c('linkish')} style={{ background: 'none', border: 0, cursor: 'pointer', opacity: cur === k ? 1 : 0.6 }} onClick={() => setMetric(k)}>{l}</button>)}</span>}>
-            <Line values={data.map((x) => x.v)} labels={data.map((x) => new Date(x.day + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short' }))} />
-          </Panel>
-          <Panel title={t('stFunnel')}>
-            <BarRows list={d.funnel.map((f) => ({ label: FN[f.key], n: f.n }))} />
-          </Panel>
-        </Cols>
-        <Cols kind="analytics-bottom">
-          <Panel title={t('stTop')}>
-            <Table headers={[t('stColTalk'), t('stViews'), t('stPlays'), t('stColDone')]} empty={t('stNoTalks')}
-              rows={d.top.map((x) => [<Link key="l" href={`/talks/${x.id}`}>{x.title}</Link>, n(x.views), n(x.plays), pc(x.completionRate)])} />
-          </Panel>
-          <Panel title={kids ? t('stCategories') : t('stSources')}>
-            <BarRows list={kids ? d.categories.map((x) => ({ label: x.name, n: x.plays || x.views })) : dim('source', SRC)} />
-          </Panel>
-          <Panel title={kids ? t('stSpeakers') : t('stLangs')}>
-            <BarRows list={kids ? d.speakers.map((x) => ({ label: x.name, n: x.plays || x.views })) : dim('lang', LNG)} />
-          </Panel>
-        </Cols>
-        {!kids && (
-          <Cols kind="analytics-bottom">
-            <Panel title={t('stDevices')}><BarRows list={dim('device', DEV)} /></Panel>
-            <Panel title={t('stCategories')}><BarRows list={d.categories.map((x) => ({ label: x.name, n: x.plays || x.views }))} /></Panel>
-            <Panel title={t('stSpeakers')}><BarRows list={d.speakers.map((x) => ({ label: x.name, n: x.plays || x.views }))} /></Panel>
-          </Cols>
-        )}
-        {kids && Q && U && (
+
+        {tab === 'overview' && (<>
+          <Metrics items={mk(kpis.slice(0, 4))} />
+          {kpis.length > 4 && <Metrics items={mk(kpis.slice(4, 8))} cols={kpis.length === 7 ? 'three' : 'four'} />}
           <Cols kind="equal">
+            <Panel title={`${curLabel} — ${t('stPerDay')}`}>
+              <div style={{ padding: '8px 14px 0' }}><Pills names={metrics} value={cur} onChange={setMetric} /></div>
+              <Line values={data.map((x) => x.v)} labels={days0(data)} />
+            </Panel>
+            <Panel title={t('stRetention')}>
+              {ret.length ? <Line values={ret} unit=" %" labels={['0', '25 %', '50 %', '75 %', '100 %']} /> : <p style={{ padding: 14, color: 'var(--muted)' }}>{t('stNoYet')}</p>}
+              <p style={{ padding: '0 14px 14px', color: 'var(--muted)', fontSize: 11 }}>{t('stRetentionNote')}</p>
+            </Panel>
+          </Cols>
+          <Cols kind="analytics-bottom">
+            <Panel title={t('stTop')}>
+              <Table headers={[t('stColTalk'), t('stViews'), t('stColDone')]} empty={t('stNoTalks')}
+                rows={d.top.slice(0, 5).map((x) => [<Link key="l" href={`/talks/${x.id}`}>{x.title}</Link>, n(x.views), pc(x.completionRate)])} />
+            </Panel>
+            <Panel title={t('stFunnel')}>
+              <BarRows list={d.funnel.map((f) => ({ label: FN[f.key], n: f.n }))} />
+            </Panel>
+            {!kids && (
+              <Panel title={t('stLangShare')}>
+                {first && langSum > 0
+                  ? <div className={c('donut-wrap')}><Donut value={(100 * first.n) / langSum} label={`${Math.round((100 * first.n) / langSum)} %`} sub={first.label} /><div>{langs.slice(0, 4).map((r) => <p key={r.label}>● <bdi>{r.label}</bdi> — {Math.round((100 * r.n) / langSum)} %</p>)}</div></div>
+                  : <p style={{ padding: 14, color: 'var(--muted)' }}>{t('stNoYet')}</p>}
+              </Panel>
+            )}
+            {kids && Q && U && (
+              <Panel title={t('stKidsUsage')}><BarRows list={[{ label: t('stActiveKids'), n: U.activeKids || 0 }, { label: t('stKidMinutes'), n: U.minutes || 0 }, { label: t('stFamilies'), n: U.families || 0 }, { label: t('stProfiles'), n: U.profiles || 0 }]} /></Panel>
+            )}
+          </Cols>
+        </>)}
+
+        {tab === 'content' && (<>
+          <Panel title={t('stTop')}>
+            <Table headers={[t('stColTalk'), t('stViews'), t('stPlays'), t('stMinutes'), t('stColWatch'), t('stColDone'), ...(kids ? [t('stQuizPlayed'), t('stQuizStars')] : [])]} empty={t('stNoTalks')}
+              rows={d.top.map((x) => [<Link key="l" href={`/talks/${x.id}`}>{x.title}</Link>, n(x.views), n(x.plays), n(x.minutes), pc(x.avgWatchPct), pc(x.completionRate), ...(kids ? [n(x.quizAttempts), x.quizStars ?? '—'] : [])])} />
+          </Panel>
+          <Cols kind="equal">
+            <Panel title={t('stCategories')}><BarRows list={catList} /></Panel>
+            <Panel title={t('stSpeakers')}><BarRows list={spkList} /></Panel>
+          </Cols>
+          {kids && Q && (
             <Panel title={t('stKidsQuiz')}><BarRows list={[{ label: t('stQuizPlayed'), n: Q.attempts || 0 }]} /><p style={{ padding: '0 14px 14px' }}>{t('stQuizAvg')} : {pc(Q.avgPercent)} · {t('stQuizStars')} : {Q.avgStars ?? '—'} ⭐</p></Panel>
-            <Panel title={t('stKidsUsage')}><BarRows list={[{ label: t('stActiveKids'), n: U.activeKids || 0 }, { label: t('stKidMinutes'), n: U.minutes || 0 }, { label: t('stFamilies'), n: U.families || 0 }, { label: t('stProfiles'), n: U.profiles || 0 }]} /></Panel>
+          )}
+        </>)}
+
+        {tab === 'shorts' && (sh == null ? <Panel title={t('stTabShorts')}><p style={{ padding: 14, color: 'var(--muted)' }}>{t('stShortsOff')}</p></Panel> : (<>
+          <Metrics items={mk([[t('stShortsViews'), n(sh.views), sh.views, sh.prevViews], [t('stShortsPublished'), n(sh.published), null, null], [t('stShortsDrafts'), n(sh.drafts), null, null]])} cols="three" />
+          <Cols kind="two-main">
+            <Panel title={t('stShortsPerDay')}><Line values={sh.series.map((x) => x.views)} labels={days0(sh.series)} /></Panel>
+            <Panel title={t('stShortsTop')}>
+              <Table headers={[t('stColShort'), t('stColTalk'), t('stShortsViews')]} empty={t('stNoTalks')} rows={sh.top.map((x) => [x.title || '—', x.talk, n(x.views)])} />
+            </Panel>
+          </Cols>
+          <p style={{ color: 'var(--muted)', fontSize: 11 }}>{t('stShortsNote')}</p>
+        </>))}
+
+        {tab === 'audience' && (<>
+          <Metrics items={mk(kpis.slice(0, 4))} />
+          <Cols kind="analytics-bottom">
+            <Panel title={t('stSources')}><BarRows list={dim('source', SRC)} /></Panel>
+            <Panel title={t('stDevices')}><BarRows list={dim('device', DEV)} /></Panel>
+            {wide ? <Panel title={t('stCountries')}><BarRows list={dim('country')} /></Panel> : <Panel title={t('stLangs')}><BarRows list={langs} /></Panel>}
+          </Cols>
+          {wide && <Panel title={t('stReferrers')}><BarRows list={dim('referrer')} /></Panel>}
+        </>)}
+
+        {tab === 'langs' && (
+          <Cols kind="equal">
+            <Panel title={t('stLangShare')}>
+              {first && langSum > 0
+                ? <div className={c('donut-wrap')}><Donut value={(100 * first.n) / langSum} label={`${Math.round((100 * first.n) / langSum)} %`} sub={first.label} /><div>{langs.map((r) => <p key={r.label}>● <bdi>{r.label}</bdi> — {Math.round((100 * r.n) / langSum)} %</p>)}</div></div>
+                : <p style={{ padding: 14, color: 'var(--muted)' }}>{t('stNoYet')}</p>}
+            </Panel>
+            <Panel title={t('stLangs')}><BarRows list={langs} /></Panel>
           </Cols>
         )}
-        {wide && !kids && <div className={c('form')}><GrowthPanel days={days} /></div>}
+
+        {tab === 'reports' && (<>
+          <Panel title={t('stTabReports')}>
+            <div style={{ padding: 14, display: 'grid', gap: 12 }}>
+              <p style={{ color: 'var(--muted)' }}>{t('stReportsIntro')}</p>
+              <div><Btn onClick={exportCsv}>{t('stExportCsv')}</Btn></div>
+            </div>
+          </Panel>
+          {!kids && d.practice && (
+            <Panel title={t('stPracticeTitle')}>
+              <div style={{ padding: 14, display: 'grid', gap: 8 }}>
+                <p style={{ color: 'var(--muted)' }}>{t('stPracticeIntro').replace('{n}', d.practice.min)}</p>
+                {d.practice.committed == null && d.practice.talks.length === 0 ? <p>{t('stPracticeNone').replace('{n}', d.practice.min)}</p> : (
+                  <ul style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
+                    {d.practice.committed != null && <li><b>{t('stPracticeTotal').replace('{n}', n(d.practice.committed))}</b>{d.practice.done != null && <> · {t('stPracticeDone').replace('{n}', n(d.practice.done))}</>}</li>}
+                    {d.practice.talks.map((x) => <li key={x.talkId}>{x.title} — {x.committed != null ? t('stPracticeTotal').replace('{n}', n(x.committed)) : ''}{x.done != null ? ` · ${t('stPracticeDone').replace('{n}', n(x.done))}` : ''}</li>)}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+          )}
+          {wide && !kids && <div className={c('form')}><GrowthPanel days={days} /></div>}
+        </>)}
         <p style={{ color: 'var(--muted)', fontSize: 11 }}>{t('stPrivacy')}{kids ? ' ' + t('stKidsNote') : ''}</p>
       </Page>
     );

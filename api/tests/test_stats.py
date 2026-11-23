@@ -171,6 +171,21 @@ cur.execute("select count(*) from stat_dim_daily where audience='kids'"); ok(cur
 cur.execute("select h from stat_seen limit 5"); hs = [x[0] for x in cur.fetchall()]
 ok(hs and all(len(h) == 22 and "." not in h and "127" not in h for h in hs), "empreintes du jour : 22 caractères opaques, pas d'adresse IP")
 
+# --- Shorts publics : seules les vues sont mesurées ; chaque organisateur ne voit que les siens
+cur.execute("insert into public_shorts(talk_id,title,video_key,status,published_at) values (%s,'Short A','shorts/a.mp4','published',now()) returning id", (T1,)); SA = cur.fetchone()[0]
+cur.execute("insert into public_shorts(talk_id,title,video_key,status) values (%s,'Short B','shorts/b.mp4','draft') returning id", (T1,)); SB = cur.fetchone()[0]
+cur.execute("insert into public_shorts(talk_id,title,video_key,status,published_at) values (%s,'Short C','shorts/c.mp4','published',now()) returning id", (T3,)); SC = cur.fetchone()[0]
+for who in ("v1", "v2", "v3"): cur.execute("insert into public_short_views(short_id,viewer) values (%s,%s)", (SA, who))
+cur.execute("insert into public_short_views(short_id,viewer) values (%s,'v1')", (SC,))
+sh = rep("/admin/stats", ADM, days=7).json()["shorts"]
+ok(sh["views"] == 4 and sh["published"] >= 2 and sh["top"][0]["title"] == "Short A" and sh["top"][0]["views"] == 3, f"Shorts admin : 4 vues, Short A en tête (obtenu {sh['views']})")
+ok(len(sh["series"]) == 7, "Shorts : une valeur par jour")
+s1 = rep("/studio/stats", ORG1, days=7).json()["shorts"]
+ok(s1["views"] == 3 and s1["published"] == 1 and s1["drafts"] == 1 and all(x["talk"] == "Conf A" for x in s1["top"]), f"Shorts organisateur 1 : ses 3 vues seulement (obtenu {s1})")
+s2 = rep("/studio/stats", ORG2, days=7).json()["shorts"]
+ok(s2["views"] == 1 and s2["drafts"] == 0, "Shorts organisateur 2 : sa vue seulement")
+ok(rep("/admin/stats", ADM, days=7, audience="kids").json().get("shorts") is None, "Kids : pas de bloc Shorts")
+
 # --- interrupteur
 requests.put(B + "/admin/settings", headers={"authorization": "Bearer " + ADM}, json={"values": {"stats_enabled": "false"}})
 n = rep("/admin/stats", ADM, days=7).json()["site"]["totals"]["pageviews"]

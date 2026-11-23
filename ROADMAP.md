@@ -740,3 +740,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office : reste de gauche à droite quand le site est en arabe (textes français) : fait 23/11.
 - Catalogue : ItemList des pages de catégorie, accueil Kids Premium à 1920 px : fait 23/11 (hreflang abandonné).
 - Back-office Premium, groupe B : Stockage, Chaînes, Doublage par vidéo, fiche Audyn, fiche ouvrage, détail série recomposés : fait 23/11.
+- Back-office Premium, groupe A, point 1 : Statistiques (6 onglets, rétention par quartile, Shorts, langues, rapports) : fait 23/11.

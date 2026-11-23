@@ -10025,3 +10025,8 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Back-office Premium — groupe B (23/11/2026)
 
 - Six écrans recomposés comme la maquette (Stockage, Chaînes, Doublage d'une vidéo, fiche Audyn, fiche d'un ouvrage, détail d'une série), mêmes données et mêmes fonctions. **Déploiement** : `majlistv-web` seulement.
+
+## Back-office Premium — groupe A, point 1 : Statistiques (23/11/2026)
+
+- Écran Statistiques (Administration et Studio) recomposé comme la maquette : 6 onglets, courbe de rétention par quartile, anneau par langue, onglet Shorts (vues réelles), Rapports (export CSV, engagements après vidéo, croissance). **Déploiement** : `majlistv-api` d'abord (nouveau bloc `shorts` dans le rapport, aucune migration), puis `majlistv-web`. Rien d'autre à relancer.
+- Limites assumées : pas de courbe seconde par seconde ni de taux de fin pour les Shorts (non mesurés) ; Kids sans onglets Audience / Langues / Shorts. Détail dans le registre, ligne 330.

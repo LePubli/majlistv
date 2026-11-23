@@ -128,6 +128,7 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
       }
     }
     out.dims = dims;
+    out.shorts = await shortsPart({ since, until, prevSince, prevUntil, organizerId, talkId });
   } else {
     // Kids : quiz (par vidéo) et, pour l'administrateur, usage de l'espace enfant. Aucun profil n'est identifiable.
     const QF = `(a.created_at AT TIME ZONE '${TZ}')::date BETWEEN $1::date AND $2::date AND ($3::uuid IS NULL OR t.organizer_id = $3) AND ($4::uuid IS NULL OR a.talk_id = $4)`;
@@ -158,6 +159,32 @@ export async function buildReport({ audience, days, organizerId = null, talkId =
     out.talks = (await pool.query(`SELECT id, title FROM talks WHERE organizer_id = $1 ORDER BY created_at DESC LIMIT 300`, [organizerId])).rows;
   }
   return out;
+}
+
+// Shorts publics (module facultatif) : seules les vues sont mesurées (une par personne, par short et par jour).
+// Aucune durée de visionnage, aucun taux de fin : on ne les invente pas. null si le module n'est pas installé.
+async function shortsPart({ since, until, prevSince, prevUntil, organizerId, talkId }) {
+  const has = (await pool.query("SELECT to_regclass('public.public_shorts') AS t")).rows[0].t;
+  if (!has) return null;
+  const sc = [organizerId || null, talkId || null];
+  const where = 't.id = s.talk_id AND ($1::uuid IS NULL OR t.organizer_id = $1) AND ($2::uuid IS NULL OR s.talk_id = $2)';
+  const count = async (a, b) => num((await pool.query(
+    `SELECT count(*)::int AS n FROM public_short_views v JOIN public_shorts s ON s.id = v.short_id JOIN talks t ON ${where}
+      WHERE v.day BETWEEN $3::date AND $4::date`, [...sc, a, b])).rows[0].n);
+  const state = (await pool.query(
+    `SELECT count(*) FILTER (WHERE s.status = 'published')::int AS published, count(*) FILTER (WHERE s.status = 'draft')::int AS drafts
+       FROM public_shorts s JOIN talks t ON ${where}`, sc)).rows[0];
+  const series = (await pool.query(
+    `SELECT g.day::date::text AS day, count(x.viewer)::int AS views
+       FROM generate_series($3::date, $4::date, '1 day') AS g(day)
+       LEFT JOIN (SELECT v.day, v.viewer FROM public_short_views v JOIN public_shorts s ON s.id = v.short_id JOIN talks t ON ${where}) x ON x.day = g.day
+      GROUP BY g.day ORDER BY g.day`, [...sc, since, until])).rows;
+  const top = (await pool.query(
+    `SELECT s.id, s.title, t.title AS talk, count(v.viewer)::int AS views
+       FROM public_shorts s JOIN talks t ON ${where}
+       JOIN public_short_views v ON v.short_id = s.id AND v.day BETWEEN $3::date AND $4::date
+      GROUP BY s.id, s.title, t.title ORDER BY count(v.viewer) DESC LIMIT 10`, [...sc, since, until])).rows;
+  return { published: state.published, drafts: state.drafts, views: await count(since, until), prevViews: await count(prevSince, prevUntil), series, top };
 }
 
 const csvCell = (v) => { const s = v == null ? '' : String(v); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };

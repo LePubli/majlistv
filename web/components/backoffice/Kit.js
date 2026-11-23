@@ -114,6 +114,11 @@ export function Table({ headers, rows, className = '', onRow, empty }) {
 
 export function Field({ label, children }) { return <label className={c('field')}><span>{label}</span>{children}</label>; }
 
+// Anneau de la maquette : value = 0–100 (part colorée), label = texte central.
+export function Donut({ value, label, sub }) {
+  return <div className={c('donut')} style={{ '--value': Math.max(0, Math.min(100, value || 0)) }}><div><strong>{label}</strong>{sub && <small>{sub}</small>}</div></div>;
+}
+
 export function Meta({ items }) {
   return <dl className={c('metadata')}>{items.map(([k, v], i) => <div key={i}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>;
 }
