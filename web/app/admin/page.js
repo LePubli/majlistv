@@ -1299,9 +1299,17 @@ function FeaturesAdmin() {
   const [d, setD] = useState(null);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [sub, setSub] = useState('catalog');
+  const [hist, setHist] = useState(null);
   useEffect(() => { call('/admin/features').then((r) => r.ok && setD(r.data)); }, [call]);
+  useEffect(() => { if (sub === 'history') call('/admin/features/history').then((r) => r.ok && setHist(r.data.items)); }, [sub, call, d]);
   if (!d) return <p className="meta">Chargement…</p>;
+  const byId = Object.fromEntries(d.features.map((x) => [x.id, x]));
+  // Fonctions allumées qui comptent sur la fonction f (pour prévenir avant de la couper).
+  const dependents = (f) => d.features.filter((x) => x.enabled && x.needs.some((n) => n.id === f.id));
   const flip = async (f) => {
+    const deps = f.enabled ? dependents(f) : [];
+    if (deps.length && !window.confirm(`Couper « ${f.label} » touche : ${deps.map((x) => x.label).join(', ')}. Continuer ?`)) return;
     if (f.id === 'maintenance' && !f.enabled && !window.confirm('Activer la maintenance ? Les visiteurs et les membres verront une page d\'attente. Vous gardez l\'accès en étant connecté comme administrateur.')) return;
     setBusy(f.id); setMsg('');
     const r = await call('/admin/features', { method: 'PUT', body: JSON.stringify({ values: { [f.id]: !f.enabled } }) });
@@ -1319,7 +1327,30 @@ function FeaturesAdmin() {
           { icon: 'clock', tone: 'amber', label: 'Désactivées', value: d.features.length - on },
         ]} />
         {msg && <p className="ft-msg" role="status" aria-live="polite">{msg}</p>}
-        <BmCols kind="two-main">
+        <BmTabs names={[['catalog', 'Catalogue'], ['deps', 'Dépendances'], ['history', 'Historique']]} value={sub} onChange={setSub} />
+        {sub === 'deps' && (
+          <BmPanel title="Dépendances entre fonctions" extra={`${d.features.filter((x) => x.needs.length).length}`}>
+            <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
+              <BmHint>« Exige » : sans l’autre fonction, celle-ci ne fait plus rien. « Utilise » : elle marche encore, mais sans cette partie. Liste relevée dans le code, fonction par fonction.</BmHint>
+              <BmTable headers={['Fonction', 'Dépend de', 'Lien', 'Effet si l’autre est coupée', 'État']} empty="Aucune dépendance."
+                rows={d.features.flatMap((f) => f.needs.map((n) => {
+                  const o = byId[n.id];
+                  const off = f.enabled && o && !o.enabled;
+                  return [<b key="a">{f.label}</b>, o ? o.label : n.id, <BmBadge key="k" tone={n.kind === 'requires' ? 'amber' : 'blue'}>{n.kind === 'requires' ? 'Exige' : 'Utilise'}</BmBadge>, n.why.replace(/ \([^)]*\.js\)\.?$/, '.'),
+                    <BmBadge key="s" tone={off ? (n.kind === 'requires' ? 'red' : 'amber') : 'green'}>{off ? (n.kind === 'requires' ? 'Bloquée' : 'Partielle') : 'OK'}</BmBadge>];
+                }))} />
+            </div>
+          </BmPanel>
+        )}
+        {sub === 'history' && (
+          <BmPanel title="Historique des changements" extra={hist ? `${hist.length}` : ''}>
+            <div style={{ padding: '0 14px 14px' }}>
+              <BmTable headers={['Quand · qui', 'Changement']} empty={hist ? 'Aucun changement enregistré.' : 'Chargement…'}
+                rows={(hist || []).map((h) => [<span key="w">{new Date(h.at).toLocaleString('fr-FR')}<br /><small>{(h.actorName || '').replace(/\s*<[^>]*>$/, '')}</small></span>, <span key="c" style={{ whiteSpace: 'normal' }}>{h.summary.replace(/^Fonctions : /, '')}</span>])} />
+            </div>
+          </BmPanel>
+        )}
+        {sub === 'catalog' && <BmCols kind="two-main">
           <BmPanel title="Catalogue des fonctionnalités" extra={`${d.features.length}`}>
             {d.groups.map((g) => {
               const list = d.features.filter((f) => f.group === g.id);
@@ -1347,7 +1378,7 @@ function FeaturesAdmin() {
               <BmHint>Les modules (Admin → Modules) ont leur propre interrupteur ; certains sont liés à une fonction d’ici.</BmHint>
             </div>
           </BmPanel>
-        </BmCols>
+        </BmCols>}
       </BmPage>
     );
   }

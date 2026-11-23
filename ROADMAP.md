@@ -742,3 +742,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, groupe B : Stockage, Chaînes, Doublage par vidéo, fiche Audyn, fiche ouvrage, détail série recomposés : fait 23/11.
 - Back-office Premium, groupe A, point 1 : Statistiques (6 onglets, rétention par quartile, Shorts, langues, rapports) : fait 23/11.
 - Back-office Premium, groupe A, point 2 : Revenus & abonnements (encaissements réels, abonnés, ventes, cartes) : fait 23/11.
+- Back-office Premium, groupe A, point 7 : Fonctionnalités — onglets Dépendances et Historique : fait 23/11.

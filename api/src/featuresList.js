@@ -135,3 +135,22 @@ for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includ
 
 export const BY_ID = Object.fromEntries(FEATURES.map((f) => [f.id, f]));
 export const settingKey = (f) => f.setting || `feat_${f.id}`;
+
+
+// Dépendances entre fonctions, relevées dans le code (jamais déduites) :
+//  - « requires » : sans l'autre fonction, celle-ci ne fait plus rien ;
+//  - « uses »     : elle continue de marcher, mais sans cette partie.
+// Chaque ligne cite le fichier où la vérification a lieu.
+export const FEATURE_NEEDS = {
+  quranplan: [{ id: 'quran', kind: 'requires', why: 'Le rappel quotidien et le plan s\'arrêtent sans le lecteur (modules/quranplan/lib.js).' }],
+  friday: [{ id: 'quran', kind: 'uses', why: 'La sourate Al-Kahf n\'est proposée que si le Coran est activé (modules/friday/lib.js).' }],
+  learning: [
+    { id: 'quran', kind: 'uses', why: 'Le repère « Lecture du Coran » du parcours disparaît (learningPlan.js).' },
+    { id: 'quranplan', kind: 'uses', why: 'Le repère « Lecture du Coran » du parcours disparaît (learningPlan.js).' },
+    { id: 'athkar', kind: 'uses', why: 'Le repère « Adhkar » du parcours disparaît (learningPlan.js).' },
+    { id: 'practice', kind: 'uses', why: 'Les engagements à échéance disparaissent du parcours (learningPlan.js).' },
+    { id: 'selfcheck', kind: 'uses', why: 'Le repère « Bilan personnel » du parcours disparaît (learningPlan.js).' },
+  ],
+  events: [{ id: 'webpush', kind: 'uses', why: 'Les rappels ne passent plus par le navigateur ; e-mail et application restent possibles (modules/events/reminders.js).' }],
+  kids: [{ id: 'ramadan', kind: 'uses', why: 'Les actions Ramadan n\'apparaissent plus dans les validations en attente (modules/kids/pending.js).' }],
+};

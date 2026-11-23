@@ -1,7 +1,8 @@
 // Fonctions activables / désactivables (étape A) : lecture de l'état, garde de routes et routes d'administration.
 // Le registre (liste des fonctions et de leurs routes) est dans featuresList.js.
 import { z } from 'zod';
-import { FEATURES, FEATURE_GROUPS, BY_ID, settingKey } from './featuresList.js';
+import { FEATURES, FEATURE_GROUPS, FEATURE_NEEDS, BY_ID, settingKey } from './featuresList.js';
+import { pool } from './db.js';
 import { getSetting, saveSettings, isOn } from './settings.js';
 import { currentUser } from './userstate.js';
 
@@ -62,7 +63,7 @@ async function describe() {
   const state = await allFeatures();
   return {
     groups: FEATURE_GROUPS,
-    features: FEATURES.filter(featureAvailable).map((f) => ({ id: f.id, group: f.group, label: f.label, hint: f.hint, enabled: state[f.id], default: (f.def || 'true') === 'true', alert: f.id === 'maintenance' })),
+    features: FEATURES.filter(featureAvailable).map((f) => ({ id: f.id, group: f.group, label: f.label, hint: f.hint, enabled: state[f.id], default: (f.def || 'true') === 'true', alert: f.id === 'maintenance', needs: FEATURE_NEEDS[f.id] || [] })),
   };
 }
 
@@ -73,6 +74,15 @@ export default async function featureRoutes(app) {
   app.get('/features', async () => allFeatures());
 
   app.get('/admin/features', adminOnly, async () => describe());
+
+  // Historique : les changements de fonctions déjà inscrits au journal des actions (qui, quand, quoi).
+  app.get('/admin/features/history', adminOnly, async (req) => {
+    const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
+    const { rows } = await pool.query(
+      `SELECT id, at, actor_name AS "actorName", summary FROM audit_log
+        WHERE method = 'PUT' AND route = '/admin/features' AND status < 400 ORDER BY at DESC LIMIT $1`, [limit]);
+    return { items: rows };
+  });
 
   // Corps : { values: { quiz: false, series: true } }. Chaque changement est inscrit au journal des actions.
   app.put('/admin/features', adminOnly, async (req, reply) => {

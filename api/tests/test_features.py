@@ -105,5 +105,15 @@ cur.execute("select summary from audit_log where route like '%/admin/features%' 
 row = cur.fetchone()
 ok(row is not None and "Fonctions" in row[0], "changement inscrit au journal des actions")
 
+# --- Dépendances et historique
+d = requests.get(B + "/admin/features", headers=ADMIN).json()
+ids = {x["id"] for x in d["features"]}
+by = {x["id"]: x for x in d["features"]}
+ok(all(n["id"] in ids and n["kind"] in ("requires", "uses") for x in d["features"] for n in x["needs"]), "dépendances : toutes pointent vers une fonction existante")
+ok(any(n["id"] == "quran" and n["kind"] == "requires" for n in by["quranplan"]["needs"]), "dépendances : le plan Coran exige le lecteur")
+h = requests.get(B + "/admin/features/history", headers=ADMIN)
+ok(h.status_code == 200 and len(h.json()["items"]) >= 1 and "Fonctions" in h.json()["items"][0]["summary"], "historique : liste les changements récents")
+ok(requests.get(B + "/admin/features/history", headers=USER).status_code in (401, 403), "historique : réservé à l'administrateur")
+
 restore()
 print("TOUT EST BON", flush=True)
