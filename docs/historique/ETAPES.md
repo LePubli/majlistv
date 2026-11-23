@@ -10035,3 +10035,4 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 - Nouvel écran Admin → Revenus & abonnements (4 chiffres, courbe 12 mois, répartition, opérations récentes, abonnés) fondé sur les vraies tables : abonnements, factures, ventes à l'unité, cartes cadeaux. **Déploiement** : `majlistv-api` d'abord (nouvelle route `/admin/finance`, aucune migration), puis `majlistv-web`.
 - À savoir : l'historique des factures d'abonnement n'existe que si la fonction « Rémunération des chaînes » est activée ; sinon l'écran l'indique. Détail et limites : registre, ligne 331.
+- Complément : panneau « Cartes cadeaux » et partenariats saisis à la main (migration 125) ; déployer `majlistv-api` (migration) puis `majlistv-web`.

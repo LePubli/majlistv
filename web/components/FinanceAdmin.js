@@ -1,7 +1,7 @@
 'use client';
 // Administration → « Revenus & abonnements » : ce qui est réellement encaissé (abonnements, ventes à l'unité, cartes cadeaux).
-// Données : GET /admin/finance. Rien n'est inventé : pas de « partenariats », pas de revenu récurrent annuel, pas de prévision.
-import { useEffect, useState } from 'react';
+// Données : GET /admin/finance. Rien n'est inventé : pas de revenu récurrent annuel ni de prévision ; les partenariats sont SAISIS À LA MAIN.
+import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { saleMoney } from './SaleBox';
 import { Page, Metrics, Panel, Cols, Table, Badge, Meta, Donut, Line, c } from './backoffice/Kit';
@@ -12,10 +12,82 @@ const delta = (cur, prev) => {
   return p === 0 ? '0 %' : `${p > 0 ? '↗ +' : '↘ '}${p} %`;
 };
 
+// Partenariats et sponsoring : saisie manuelle (le site n'encaisse rien pour eux). Seuls les montants « encaissés » comptent dans les totaux.
+function Partnerships({ d, money, dateFmt, reload }) {
+  const { t, call } = useApp();
+  const empty = { partner: '', label: '', amount: '', on: '', adId: '', status: 'received' };
+  const [f, setF] = useState(empty);
+  const [err, setErr] = useState(false);
+  const [sure, setSure] = useState('');
+  const P = d.partnerships;
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const save = async (e) => {
+    e.preventDefault();
+    setErr(false);
+    const amount = Number(String(f.amount).replace(',', '.'));
+    const body = { partner: f.partner, label: f.label, amount, status: f.status };
+    if (f.on) body.on = f.on;
+    if (f.adId) body.adId = f.adId;
+    const r = await call('/admin/finance/partnerships', { method: 'POST', body: JSON.stringify(body) });
+    if (!r.ok) return setErr(true);
+    setF(empty);
+    reload();
+  };
+  const mark = async (id) => { await call(`/admin/finance/partnerships/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'received' }) }); reload(); };
+  const del = async (id) => {
+    if (sure !== id) return setSure(id);
+    setSure('');
+    await call(`/admin/finance/partnerships/${id}`, { method: 'DELETE' });
+    reload();
+  };
+  return (
+    <div style={{ padding: 14, display: 'grid', gap: 12 }}>
+      {P.items.length === 0 ? <p className="meta">{t('fnPartNone')}</p> : (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {P.items.map((x) => (
+            <div key={x.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ minWidth: 0 }}>
+                <b dir="auto">{x.partner}</b>{x.label ? <span dir="auto"> — {x.label}</span> : null}
+                <div className="meta small">{dateFmt.format(new Date(x.on))}{x.adTitle ? ` · ${x.adTitle}` : ''}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <b>{money(x.amount)}</b>
+                <Badge tone={x.status === 'pending' ? 'amber' : 'green'}>{x.status === 'pending' ? t('fnPartPending') : t('fnPartReceived')}</Badge>
+                {x.status === 'pending' && <button type="button" className={c('button secondary')} style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => mark(x.id)}>{t('fnPartMarkReceived')}</button>}
+                <button type="button" className={c('button secondary')} style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => del(x.id)}>{sure === x.id ? t('fnPartSure') : t('fnPartDelete')}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {P.pendingCents > 0 && <p className="meta"><b>{t('fnPartPendingTotal')} :</b> {money(P.pendingCents)}</p>}
+      <form onSubmit={save} className={c('form')} style={{ display: 'grid', gap: 8 }}>
+        <b>{t('fnPartAdd')}</b>
+        <input required maxLength={120} placeholder={t('fnPartPartner')} aria-label={t('fnPartPartner')} value={f.partner} onChange={set('partner')} />
+        <input maxLength={200} placeholder={t('fnPartLabel')} aria-label={t('fnPartLabel')} value={f.label} onChange={set('label')} />
+        <input required inputMode="decimal" placeholder={`${t('fnPartAmount')} (${d.currency === 'eur' ? '€' : d.currency.toUpperCase()})`} aria-label={t('fnPartAmount')} value={f.amount} onChange={set('amount')} />
+        <label>{t('fnPartDate')}<input type="date" value={f.on} onChange={set('on')} /></label>
+        <select aria-label={t('fnPartAd')} value={f.adId} onChange={set('adId')}>
+          <option value="">{t('fnPartAd')} : {t('fnPartNoAd')}</option>
+          {P.ads.map((a) => <option key={a.id} value={a.id}>{a.advertiser} — {a.title}</option>)}
+        </select>
+        <select aria-label={t('fnTx')} value={f.status} onChange={set('status')}>
+          <option value="received">{t('fnPartReceived')}</option>
+          <option value="pending">{t('fnPartPending')}</option>
+        </select>
+        {err && <p className="error">{t('fnPartErr')}</p>}
+        <button type="submit" className={c('button')}>{t('fnPartSave')}</button>
+      </form>
+      <p className="meta small">{t('fnPartNote')}</p>
+    </div>
+  );
+}
+
 export default function FinanceAdmin() {
   const { t, call, locale, skin } = useApp();
   const [d, setD] = useState(null);
-  useEffect(() => { call('/admin/finance').then((r) => setD(r.ok ? r.data : false)); }, [call]);
+  const reload = useCallback(() => call('/admin/finance').then((r) => setD(r.ok ? r.data : false)), [call]);
+  useEffect(() => { reload(); }, [reload]);
   if (d === false) return <p className="error">{t('errGeneric')}</p>;
   if (!d) return <p className="meta">…</p>;
 
@@ -24,12 +96,14 @@ export default function FinanceAdmin() {
   const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit' });
   const T = d.totals;
   const S = d.subscribers;
-  const KIND = { subscription: t('fnSrcSubs'), sale: t('fnSrcSales'), gift: t('fnSrcGifts') };
+  const KIND = { subscription: t('fnSrcSubs'), sale: t('fnSrcSales'), gift: t('fnSrcGifts'), partnership: t('fnSrcPartners') };
   const stateBadge = (s) => (s === 'refunded' ? <Badge tone="amber">{t('fnRefunded')}</Badge> : s === 'partial' ? <Badge tone="amber">{t('fnPartial')}</Badge> : <Badge tone="green">{t('fnPaid')}</Badge>);
   const labels = d.series.map((r) => monthFmt.format(new Date(r.month + '-01T12:00:00')));
-  const totals = d.series.map((r) => (r.subscriptions + r.sales + r.gifts) / 100);
+  const totals = d.series.map((r) => (r.subscriptions + r.sales + r.gifts + r.partnerships) / 100);
   const share = T.all > 0 ? Math.round((100 * T.subscriptions) / T.all) : 0;
-  const sources = [[t('fnSrcSubs'), T.subscriptions], [t('fnSrcSales'), T.sales], [t('fnSrcGifts'), T.gifts]];
+  const sources = [[t('fnSrcSubs'), T.subscriptions], [t('fnSrcSales'), T.sales], [t('fnSrcGifts'), T.gifts], [t('fnSrcPartners'), T.partnerships]];
+  const G = d.giftCards;
+  const giftRows = [[t('fnGiftSold'), `${G.sold} · ${money(G.sold_cents)}`], [t('fnGiftRedeemed'), G.redeemed], [t('fnGiftPending'), `${G.unredeemed} · ${money(G.unredeemed_cents)}`], [t('fnGiftOffered'), G.offered], [t('fnGiftRefunded'), G.refunded]];
   const noHistory = d.invoicesRecorded.count === 0;
   const notes = [
     noHistory ? t('fnNoHistory') : t('fnSince').replace('{d}', dateFmt.format(new Date(d.invoicesRecorded.since))),
@@ -60,6 +134,11 @@ export default function FinanceAdmin() {
           <div className="st-tablewrap"><table className="st-table"><thead><tr>{heads.map((h) => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>{txRows.map((r, i) => <tr key={i}>{r.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody></table></div>
         )}
+        <h2>{t('fnGiftsPanel')}</h2>
+        <ul>{giftRows.map(([l, v]) => <li key={l}>{l} : {v}</li>)}</ul>
+        <p className="meta small">{t('fnGiftNote')}</p>
+        <h2>{t('fnPartPanel')}</h2>
+        <Partnerships d={d} money={money} dateFmt={dateFmt} reload={reload} />
         {notes.map((n) => <p key={n} className="meta small">{n}</p>)}
       </section>
     );
@@ -89,6 +168,13 @@ export default function FinanceAdmin() {
         <Panel title={t('fnSubsPanel')}>
           <Meta items={[[t('fnMonthly'), S.monthly], [t('fnYearly'), S.yearly], [t('fnTrialing'), S.trialing], [t('fnCancelling'), S.cancelling]]} />
           <div style={{ padding: '0 14px 14px', display: 'grid', gap: 6 }}>{notes.map((n) => <p key={n} style={{ color: 'var(--muted)', fontSize: 12 }}>{n}</p>)}</div>
+        </Panel>
+      </Cols>
+      <Cols kind="two-main">
+        <Panel title={t('fnPartPanel')}><Partnerships d={d} money={money} dateFmt={dateFmt} reload={reload} /></Panel>
+        <Panel title={t('fnGiftsPanel')}>
+          <Meta items={giftRows} />
+          <div style={{ padding: '0 14px 14px' }}><p style={{ color: 'var(--muted)', fontSize: 12 }}>{t('fnGiftNote')}</p></div>
         </Panel>
       </Cols>
     </Page>
