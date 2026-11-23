@@ -1,5 +1,6 @@
 // Client de l'API Mejliss TV : JSON, jeton d'authentification, délai maximal, erreurs lisibles.
 // Aucune dépendance native : testable avec Node (voir tests/api.test.ts).
+import { localizeCatNames } from './catNames';
 
 export class ApiError extends Error {
   status: number;
@@ -20,6 +21,8 @@ export type ApiOptions = {
   getToken: () => string | null;
   /** Appelé quand le serveur répond 401 alors qu'un jeton avait été envoyé (session expirée). */
   onUnauthorized?: () => void;
+  /** Langue de l'application : les noms de catégories sont renvoyés dans cette langue quand l'API en a une traduction. */
+  getLocale?: () => string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
@@ -75,7 +78,7 @@ export function createApi(opts: ApiOptions) {
       if (res.status === 401 && token) opts.onUnauthorized?.();
       throw new ApiError(data?.error || `HTTP ${res.status}`, res.status, data?.code, data && typeof data === 'object' ? data : undefined);
     }
-    return data as T;
+    return localizeCatNames(data, opts.getLocale?.(), path) as T;
   }
 
   return {

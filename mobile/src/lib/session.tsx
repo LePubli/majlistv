@@ -80,6 +80,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [skin, setSkin] = useState<Skin>(currentSkin());
   const [skinPick, setSkinPickState] = useState<Skin | null>(null);
   const tokenRef = useRef<string | null>(null);
+  const localeRef = useRef<Locale>('fr');
+  localeRef.current = locale;
 
   // Session effacée (jeton expiré : le serveur n'accepte déjà plus rien, inutile de lui parler).
   const clear = useCallback(async () => {
@@ -89,7 +91,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const api = useMemo(
-    () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, onUnauthorized: () => { void clear(); } }),
+    () => createApi({ baseUrl: API_URL, getToken: () => tokenRef.current, getLocale: () => localeRef.current, onUnauthorized: () => { void clear(); } }),
     [clear],
   );
 

@@ -6,6 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrayerState } from '../lib/usePrayer';
 
+import { localizeCatNames } from '../lib/catNames';
+
 const Ctx = createContext(null);
 // Un jeton « espace enfant » (Mejliss Kids) porte l'identifiant du profil ; le serveur le refuse hors de l'espace enfant.
 const kidIdOf = (tk) => { try { return JSON.parse(atob(tk.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).kid || null; } catch { return null; } };
@@ -40,9 +42,9 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
       ...opts,
       headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(tk ? { Authorization: 'Bearer ' + tk } : {}) },
     });
-    const data = await res.json().catch(() => ({}));
+    const data = localizeCatNames(await res.json().catch(() => ({})), locale, path);
     return { ok: res.ok, status: res.status, data };
-  }, [token]);
+  }, [token, locale]);
 
   // Au chargement : restaure la session si un token valide est stocké.
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   }, []);
 
   useEffect(() => { fetch('/api/formats').then((r) => (r.ok ? r.json() : [])).then((f) => Array.isArray(f) && setFormats(f)).catch(() => {}); }, []);
-  useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setAllCats(c)).catch(() => {}); }, []);
+  useEffect(() => { fetch('/api/categories').then((r) => (r.ok ? r.json() : [])).then((c) => Array.isArray(c) && setAllCats(localizeCatNames(c, locale, '/categories'))).catch(() => {}); }, []);
   // Nom d'un format (slug) dans la langue courante ; vide si inconnu.
   const formatName = (slug) => { const f = formats.find((x) => x.slug === slug); return f ? (f['name' + locale[0].toUpperCase() + locale.slice(1)] || f.nameFr) : ''; };
   // Favoris de l'utilisateur connecté (cœur sur les vignettes).

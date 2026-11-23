@@ -127,7 +127,7 @@ const patchSchema = z.object({
 const POSTER_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.source,
-  t.video_ref, t.category_id, c.name AS category, t.format_id AS "formatId", (SELECT slug FROM formats WHERE id = t.format_id) AS format, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
+  t.video_ref, t.category_id, c.name AS category, c.tr AS "categoryTr", t.format_id AS "formatId", (SELECT slug FROM formats WHERE id = t.format_id) AS format, t.created_at, t.level, t.kids_bands AS "kidsBands", t.show_adults AS "showAdults",
   COALESCE((SELECT array_agg(tc.category_id ORDER BY tc.category_id) FROM talk_categories tc WHERE tc.talk_id = t.id), '{}') AS "extraCategoryIds",
   t.audio_status, t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
@@ -189,7 +189,8 @@ export default async function talksRoutes(app) {
   // Liste des catégories dans l'ordre de l'arbre : chaque catégorie principale suivie de ses sous-catégories.
   // Nouveau catalogue (20/11) : chaque catégorie a un slug stable, un catalogue (adult | kids), un ordre d'affichage et peut être désactivée.
   const TREE = `SELECT c.id, c.name, c.parent_id AS "parentId", n.name AS "fullName", (c.parent_id IS NOT NULL)::int AS depth,
-                       c.slug, c.catalogue_type AS "catalogueType", c.is_active AS "isActive", c.icon, c.color
+                       c.slug, c.catalogue_type AS "catalogueType", c.is_active AS "isActive", c.icon, c.color,
+                       n.tr AS "fullNameTr", jsonb_strip_nulls(jsonb_build_object('en', NULLIF(c.translations->'en'->>'name', ''), 'ar', NULLIF(c.translations->'ar'->>'name', ''))) AS "nameTr"
                   FROM categories c JOIN category_names n ON n.id = c.id LEFT JOIN categories p ON p.id = c.parent_id`;
   const TREE_ORDER = `ORDER BY (COALESCE(p.catalogue_type, c.catalogue_type) = 'kids'), COALESCE(p.display_order, c.display_order), lower(COALESCE(p.name, c.name)),
                        (c.parent_id IS NOT NULL), c.display_order, lower(c.name)`;

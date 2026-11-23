@@ -736,3 +736,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Catalogue — phase 7 sur 7** (21/11) : titre / description / canonique de /catalogue, pages filtrées en noindex, rangées « collection » de l'API Kids reconnues par l'application et la télé, essais à 820 et 1920 px. **Cahier des charges du catalogue terminé.** Restent : relecture des catégories par Epok, traductions EN / AR, 32 dessins animés à classer.
 - Catalogue : noms EN / AR des 241 catégories (migration 123, propositions IA à valider) : fait 21/11. Reste : afficher ces noms traduits sur le site et l'application adultes.
 - Back-office Premium : police Poppins : fait 23/11.
+- Catalogue : noms de catégories traduits (EN / AR) sur le site et l'application : fait 23/11.

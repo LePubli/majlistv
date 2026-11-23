@@ -10,7 +10,7 @@ import { visibleSql } from '../visibility.js';
 import { getNumber } from '../settings.js';
 import { adultSql } from '../taxonomy.js';
 
-const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.category_id AS "categoryId", c.name AS category, t.level,
+const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, t.category_id AS "categoryId", c.name AS category, c.tr AS "categoryTr", t.level,
   f.slug AS format, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description`;
 const FROM = 'FROM talks t LEFT JOIN category_names c ON c.id = t.category_id LEFT JOIN formats f ON f.id = t.format_id';
 const clip = (s, n) => { const x = String(s || '').replace(/\s+/g, ' ').trim(); return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x; };

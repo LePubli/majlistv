@@ -65,7 +65,7 @@ export async function listSeries({ limit = 40, category = null, q = null, level 
     order = 'max(p.updated_at) DESC';
   }
   const { rows } = await pool.query(
-    `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, s.poster_key, s.level,
+    `SELECT s.id, s.title, s.speaker, s.description, s.has_seasons AS "hasSeasons", s.category_id AS "categoryId", c.name AS category, c.tr AS "categoryTr", s.poster_key, s.level,
             count(t.id)::int AS "episodeCount",
             (SELECT count(*)::int FROM seasons z WHERE z.series_id = s.id) AS "seasonCount",
             bool_and(t.access = 'free') AS "allFree", bool_and(t.access = 'premium') AS "allPremium",
@@ -222,7 +222,7 @@ export default async function seriesRoutes(app) {
 
   app.get('/series/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const s = (await pool.query('SELECT s.*, c.name AS category FROM series s LEFT JOIN category_names c ON c.id = s.category_id WHERE s.id = $1', [id])).rows[0];
+    const s = (await pool.query('SELECT s.*, c.name AS category, c.tr AS "categoryTr" FROM series s LEFT JOIN category_names c ON c.id = s.category_id WHERE s.id = $1', [id])).rows[0];
     if (!s) return reply.code(404).send({ error: 'Série introuvable' });
     const viewer = await app.optionalUser(req);
     const manage = viewer && (viewer.role === 'admin' || viewer.sub === s.owner_id);

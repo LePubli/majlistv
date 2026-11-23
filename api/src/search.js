@@ -74,7 +74,7 @@ const SIG = `md5(concat_ws('|', t.title, t.speaker, t.description, t.language, t
 async function buildDocs(ids) {
   const { rows } = await pool.query(
     `SELECT t.id, t.title, t.speaker, t.description, t.language, t.access, t.source, t.category_id AS "categoryId", ${categoryIdsSql('t')} AS "categoryIds", t.show_adults AS "showAdults",
-            c.name AS category, extract(epoch FROM t.created_at)::bigint AS "createdAt",
+            c.name AS category, c.tr AS "categoryTr", extract(epoch FROM t.created_at)::bigint AS "createdAt",
             left(coalesce(t.transcript_text, ''), $2) AS transcript,
             left(coalesce((SELECT string_agg(s.text, ' ' ORDER BY s.lang, s.idx) FROM transcript_segments s
                             WHERE s.talk_id = t.id AND s.lang <> coalesce(t.transcript_language, '')), ''), $2) AS "transcriptOther"
