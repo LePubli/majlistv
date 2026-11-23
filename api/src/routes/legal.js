@@ -6,6 +6,10 @@
 //   GET  /admin/legal/:slug               admin : texte enregistré, modèle rempli, informations manquantes
 //   PUT  /admin/legal/:slug               admin : texte personnalisé (fr obligatoire, en / ar facultatifs)
 //   DELETE /admin/legal/:slug/custom      admin : revenir au modèle automatique
+//   GET  /admin/legal/:slug/versions      admin : historique des textes personnalisés (sans le texte)
+//   GET  /admin/legal/:slug/versions/:n   admin : un ancien texte en entier
+//   POST /admin/legal/:slug/versions/:n/restore  admin : remet un ancien texte (devient une nouvelle version)
+//   GET  /admin/legal-consents            admin : matrice de consentement (par type et version du texte accepté, sans identité)
 //   GET  /admin/users/:id/consents        admin : preuves de consentement d'un membre
 import { z } from 'zod';
 import { pool } from '../db.js';
@@ -42,6 +46,16 @@ async function render(row, slug, lang, vars) {
   const t = tpl[lang] || tpl.fr;
   const { text, missing } = fillTemplate(t.body, vars || await legalVars(), lang);
   return { slug, lang, title: t.title, body: text, custom: false, updatedAt: LEGAL_TEMPLATES_DATE, missing };
+}
+
+/** Garde le texte enregistré comme nouvelle version (numéro suivant de la page). */
+async function snapshot(slug, b, userId, restoredFrom) {
+  const { rows } = await pool.query(
+    `INSERT INTO legal_page_versions(slug, version, title, body, title_en, body_en, title_ar, body_ar, saved_by, restored_from)
+     VALUES ($1, COALESCE((SELECT max(version) FROM legal_page_versions WHERE slug = $1), 0) + 1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING version`,
+    [slug, b.title, b.body, b.titleEn || '', b.bodyEn || '', b.titleAr || '', b.bodyAr || '', userId, restoredFrom]);
+  return rows[0].version;
 }
 
 export default async function legalRoutes(app) {
@@ -97,7 +111,8 @@ export default async function legalRoutes(app) {
          title_ar = EXCLUDED.title_ar, body_ar = EXCLUDED.body_ar, custom = true, updated_by = EXCLUDED.updated_by, updated_at = now()
        RETURNING slug, title, body, updated_at AS "updatedAt"`,
       [slug, b.title, b.body, b.titleEn, b.bodyEn, b.titleAr, b.bodyAr, req.user.sub]);
-    return { ...rows[0], custom: true };
+    const version = await snapshot(slug, b, req.user.sub, null);
+    return { ...rows[0], custom: true, version };
   });
 
   app.delete('/admin/legal/:slug/custom', adminOnly, async (req, reply) => {
@@ -105,6 +120,52 @@ export default async function legalRoutes(app) {
     if (!LEGAL_TEMPLATES[slug]) return reply.code(400).send({ error: "Cette page n'a pas de modèle automatique." });
     await pool.query('UPDATE legal_pages SET custom = false, updated_by = $2, updated_at = now() WHERE slug = $1', [slug, req.user.sub]);
     return { ok: true, custom: false };
+  });
+
+  app.get('/admin/legal/:slug/versions', adminOnly, async (req) => {
+    const { slug } = slugSchema.parse(req.params);
+    const { rows } = await pool.query(
+      `SELECT v.version, v.title, v.restored_from AS "restoredFrom", v.created_at AS "createdAt", u.name AS "author",
+              length(v.body) AS chars, (v.body_en <> '') AS en, (v.body_ar <> '') AS ar
+         FROM legal_page_versions v LEFT JOIN users u ON u.id = v.saved_by
+        WHERE v.slug = $1 ORDER BY v.version DESC LIMIT 100`, [slug]);
+    return rows;
+  });
+
+  const versionParams = z.object({ slug: slugSchema.shape.slug, n: z.coerce.number().int().min(1) });
+
+  app.get('/admin/legal/:slug/versions/:n', adminOnly, async (req, reply) => {
+    const { slug, n } = versionParams.parse(req.params);
+    const row = (await pool.query(
+      `SELECT version, title, body, title_en AS "titleEn", body_en AS "bodyEn", title_ar AS "titleAr", body_ar AS "bodyAr", created_at AS "createdAt"
+         FROM legal_page_versions WHERE slug = $1 AND version = $2`, [slug, n])).rows[0];
+    return row || reply.code(404).send({ error: 'Version introuvable' });
+  });
+
+  app.post('/admin/legal/:slug/versions/:n/restore', adminOnly, async (req, reply) => {
+    const { slug, n } = versionParams.parse(req.params);
+    const v = (await pool.query(
+      `SELECT title, body, title_en AS "titleEn", body_en AS "bodyEn", title_ar AS "titleAr", body_ar AS "bodyAr"
+         FROM legal_page_versions WHERE slug = $1 AND version = $2`, [slug, n])).rows[0];
+    if (!v) return reply.code(404).send({ error: 'Version introuvable' });
+    await pool.query(
+      `INSERT INTO legal_pages(slug, title, body, title_en, body_en, title_ar, body_ar, custom, updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,true,$8)
+       ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body, title_en = EXCLUDED.title_en, body_en = EXCLUDED.body_en,
+         title_ar = EXCLUDED.title_ar, body_ar = EXCLUDED.body_ar, custom = true, updated_by = EXCLUDED.updated_by, updated_at = now()`,
+      [slug, v.title, v.body, v.titleEn, v.bodyEn, v.titleAr, v.bodyAr, req.user.sub]);
+    const version = await snapshot(slug, v, req.user.sub, n);
+    req.auditSummary = `Page légale « ${slug} » : version ${n} remise en place (devient la version ${version})`;
+    return { ok: true, version, restoredFrom: n };
+  });
+
+  // Matrice de consentement : combien d'acceptations par type et par version du texte (aucune identité, aucune adresse IP).
+  app.get('/admin/legal-consents', adminOnly, async () => {
+    const { rows } = await pool.query(
+      `SELECT kind, version, count(*)::int AS total, count(DISTINCT COALESCE(user_id::text, email))::int AS members,
+              min(created_at) AS "first", max(created_at) AS "last"
+         FROM consents GROUP BY kind, version ORDER BY kind, max(created_at) DESC`);
+    const total = (await pool.query('SELECT count(*)::int AS n FROM consents')).rows[0].n;
+    return { total, rows };
   });
 
   // Preuves de consentement d'un utilisateur (en cas de litige).

@@ -10078,3 +10078,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé.** Voir ligne 336 du registre.
 
+## Légal — historique des versions et matrice de consentement (23/11/2026)
+
+**Description.** Admin → Pages légales : chaque texte personnalisé enregistré garde une version numérotée (auteur, date, langues) ; on peut lire une ancienne version et la remettre en place (nouvelle version, page publique à jour, action au journal). Une matrice de consentement compte les acceptations par type (renonciation, achats à l'unité, cartes cadeaux) et par version du texte, sans identité ni adresse IP.
+
+**Prérequis.** Rien de particulier. Les textes personnalisés déjà enregistrés deviennent la version 1.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 126 au démarrage), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Historique vide : la page suit le modèle automatique (aucun texte personnalisé). Matrice vide : aucun paiement avec consentement n'a encore été enregistré (table `consents`).
+
+**Exemples.** `GET /admin/legal/cgv/versions`, `POST /admin/legal/cgv/versions/1/restore`, `GET /admin/legal-consents`.
+
+**Testé / non testé.** Voir ligne 337 du registre.
+

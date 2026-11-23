@@ -948,9 +948,14 @@ function LegalPages() {
   const [lang, setLang] = useState('fr');
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [vers, setVers] = useState([]);       // historique des textes personnalisés de la page ouverte
+  const [viewV, setViewV] = useState(null);   // ancienne version relue en entier
+  const [consents, setConsents] = useState(null); // matrice de consentement
   useEffect(() => { call('/legal?lang=fr', {}, null).then((r) => r.ok && setList(r.data)); }, [call]);
+  useEffect(() => { call('/admin/legal-consents').then((r) => r.ok && setConsents(r.data)); }, [call]);
   const open = async (slug) => {
-    setMsg(null); setLang('fr');
+    setMsg(null); setLang('fr'); setViewV(null);
+    call(`/admin/legal/${slug}/versions`).then((v) => setVers(v.ok ? v.data : []));
     const r = await call('/admin/legal/' + slug);
     if (!r.ok) return;
     setD(r.data);
@@ -975,6 +980,15 @@ function LegalPages() {
     const r = await call(`/admin/legal/${d.slug}/custom`, { method: 'DELETE' });
     setBusy(false);
     if (r.ok) { setMsg({ ok: true, text: 'La page suit de nouveau le modèle automatique.' }); open(d.slug); }
+    else setMsg({ ok: false, text: r.data.error || 'Erreur' });
+  };
+  const readVersion = async (n) => { const r = await call(`/admin/legal/${d.slug}/versions/${n}`); if (r.ok) setViewV(r.data); };
+  const restoreVersion = async (n) => {
+    if (!window.confirm(`Remettre la version ${n} ? Elle devient la version affichée sur le site (une nouvelle version est ajoutée à l’historique).`)) return;
+    setBusy(true);
+    const r = await call(`/admin/legal/${d.slug}/versions/${n}/restore`, { method: 'POST' });
+    setBusy(false);
+    if (r.ok) { setMsg({ ok: true, text: `Version ${n} remise en place (version ${r.data.version}). La page publique est à jour.` }); open(d.slug); }
     else setMsg({ ok: false, text: r.data.error || 'Erreur' });
   };
   const k = { fr: ['title', 'body'], en: ['titleEn', 'bodyEn'], ar: ['titleAr', 'bodyAr'] }[lang];
@@ -1014,9 +1028,59 @@ function LegalPages() {
           {msg && <p className={msg.ok ? 'adm-ok' : 'error'} role="status">{msg.text}</p>}
         </div>
       );
+  const KIND_LABEL = { terms: 'Conditions générales', withdrawal_waiver: 'Renonciation au droit de rétractation', sale_terms: 'Conditions d’achat à l’unité', gift_terms: 'Conditions des cartes cadeaux' };
+  const versionsEl = d && (
+    <div style={{ padding: '0 14px 14px' }}>
+      {vers.length === 0
+        ? <p className="meta">{d.custom ? 'Aucune version enregistrée.' : 'Cette page suit le modèle automatique : elle n’a pas d’historique. Chaque texte personnalisé enregistré créera une version.'}</p>
+        : (
+          <ul className="legal-versions" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+            {vers.map((v, i) => (
+              <li key={v.version} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ minWidth: 0, flex: '1 1 220px' }}>
+                  <b>Version {v.version}</b>{i === 0 && d.custom ? ' · en ligne' : ''}{v.restoredFrom ? ` · remise de la version ${v.restoredFrom}` : ''}<br />
+                  <small className="meta">{fmtDT(v.createdAt)}{v.author ? ` · ${v.author}` : ''} · FR{v.en ? ' · EN' : ''}{v.ar ? ' · AR' : ''}</small>
+                </span>
+                <span className="adm-row">
+                  <button type="button" className="btn ghost small" onClick={() => readVersion(v.version)}>Lire</button>
+                  {!(i === 0 && d.custom) && <button type="button" className="btn ghost small" disabled={busy} onClick={() => restoreVersion(v.version)}>Remettre cette version</button>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      {viewV && (
+        <div className="legal-preview" style={{ marginTop: 12 }}>
+          <p className="meta"><b>Version {viewV.version}</b> · {fmtDT(viewV.createdAt)} (français) <button type="button" className="btn ghost small" onClick={() => setViewV(null)}>Fermer</button></p>
+          <h3>{viewV.title}</h3>
+          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 14, maxHeight: 320, overflow: 'auto' }}>{viewV.body}</pre>
+        </div>
+      )}
+    </div>
+  );
+  const consentsEl = consents && (
+    consents.rows.length === 0
+      ? <p className="meta" style={{ padding: '0 14px 14px' }}>Aucun consentement enregistré pour l’instant.</p>
+      : (
+        <div style={{ overflowX: 'auto', padding: '0 14px 14px' }}>
+          <table className="bm-data-table" style={{ width: '100%' }}>
+            <thead><tr><th>Type</th><th>Version</th><th>Acceptations (personnes)</th><th>Dernière</th></tr></thead>
+            <tbody>{consents.rows.map((r) => (
+              <tr key={r.kind + r.version}><td>{KIND_LABEL[r.kind] || r.kind}</td><td>{r.version}</td><td>{r.total} ({r.members})</td><td>{fmtDT(r.last)}</td></tr>
+            ))}</tbody>
+          </table>
+          <p className="meta small">Chiffres tirés des preuves enregistrées au paiement (renonciation, achats à l’unité, cartes cadeaux). Aucune identité ni adresse IP n’est affichée ici ; le détail d’un membre est dans Utilisateurs → fiche du membre. Les conditions générales ne sont pas encore demandées à l’inscription : elles n’apparaissent donc pas tant que ce n’est pas le cas.</p>
+        </div>
+      )
+  );
   if (skin === 'premium') {
     return (
       <BmPage title="Documents légaux & consentements" sub="Pages légales en français (version qui fait foi), anglais et arabe. Chaque page suit un modèle tenu à jour, personnalisable.">
+        <BmMetrics cols="three" items={[
+          { icon: 'file', label: 'Documents', value: list.length },
+          { icon: 'check', label: 'Consentements enregistrés', value: consents ? consents.total : '—' },
+          { icon: 'clock', label: d ? `Versions de « ${d.slug} »` : 'Versions', value: d ? vers.length : '—' },
+        ]} />
         <BmCols kind="two-main">
           <BmPanel title="Documents" extra={`${list.length}`}>
             <BmSelectList empty="Aucun document." value={d?.slug} onSelect={open}
@@ -1025,6 +1089,12 @@ function LegalPages() {
           <BmPanel title={d ? 'Contrôle de publication' : 'Choisissez un document'}>
             <div className="bm-form" style={{ padding: '0 14px 14px' }}>{detailEl || <p style={{ color: 'var(--muted)' }}>Sélectionnez un document à gauche pour le relire, le personnaliser ou revenir au modèle.</p>}</div>
           </BmPanel>
+        </BmCols>
+        <BmCols kind="two-main">
+          <BmPanel title="Historique des versions" extra={d ? `${vers.length}` : ''}>
+            {d ? versionsEl : <p style={{ padding: '0 14px 14px', color: 'var(--muted)' }}>Choisissez un document pour voir son historique.</p>}
+          </BmPanel>
+          <BmPanel title="Matrice de consentement" extra={consents ? `${consents.total}` : ''}>{consentsEl}</BmPanel>
         </BmCols>
       </BmPage>
     );
@@ -1036,6 +1106,9 @@ function LegalPages() {
         {list.map((p) => <button key={p.slug} className={d?.slug === p.slug ? 'btn' : 'btn ghost'} onClick={() => open(p.slug)}>{p.title}</button>)}
       </div>
       {detailEl}
+      {d && <><h3>Historique des versions</h3>{versionsEl}</>}
+      <h3>Matrice de consentement</h3>
+      {consentsEl}
     </section>
   );
 }
