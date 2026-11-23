@@ -8,12 +8,16 @@ B = "http://127.0.0.1:3055"
 db = psycopg2.connect(host="127.0.0.1", port=5544, dbname="majlis", user="majlis", password="pw"); db.autocommit = True; cur = db.cursor()
 tag = uuid.uuid4().hex[:6]; users, talks, shorts = [], [], []
 cur.execute("select value from app_settings where key='shorts_review'"); was = cur.fetchone()
+cur.execute("select key, value, is_secret from app_settings where key in ('smtp_host','mail_from')"); smtp_was = {r[0]: r for r in cur.fetchall()}
 
 
 def cleanup():
     for s in shorts: cur.execute("delete from public_shorts where id=%s", (s,))
     for t in talks: cur.execute("delete from talks where id=%s", (t,))
-    for u in users: cur.execute("delete from users where id=%s", (u,))
+    for u in users:
+        cur.execute("delete from email_outbox where user_id=%s", (u,)); cur.execute("delete from users where id=%s", (u,))
+    for k in ('smtp_host', 'mail_from'):
+        if k not in smtp_was: cur.execute("delete from app_settings where key=%s", (k,))
     if was: cur.execute("update app_settings set value=%s where key='shorts_review'", (was[0],))
     else: cur.execute("delete from app_settings where key='shorts_review'")
 
@@ -124,6 +128,42 @@ cur.execute("select count(*) from audit_log where route='/studio/shorts/:id/revi
 review(False)
 s5 = short(T, oid)
 ok(requests.put(f"{B}/studio/shorts/{s5}", json={"status": "published"}, headers=ORG).json()["status"] == "published", "validation coupée de nouveau : publication directe")
+
+# --- Notification de l'auteur (e-mail mis en file ; le push est couvert par test_shorts_review_texts.mjs, sans Firebase ici)
+requests.put(B + "/admin/settings", json={"values": {"smtp_host": "127.0.0.1", "mail_from": "test@example.org", "smtp_port": "1"}}, headers=ADM)
+review(True)
+n1 = short(T, oid); n2 = short(T, oid); n3 = short(T, oid, title="Sera refusé")
+for x in (n1, n2, n3): requests.put(f"{B}/studio/shorts/{x}", json={"status": "published"}, headers=ORG)
+ok(all(state(x)[0] == "pending" for x in (n1, n2, n3)), "trois shorts en attente")
+def outbox(kind):
+    cur.execute("select count(*) from email_outbox where user_id=%s and kind=%s", (oid, kind)); return cur.fetchone()[0]
+requests.post(f"{B}/studio/shorts/{n1}/review", json={"decision": "approve"}, headers=MOD)
+ok(outbox("shorts_approved") == 1, "validation : e-mail à l'auteur mis en file")
+requests.post(f"{B}/studio/shorts/{n3}/review", json={"decision": "reject", "note": "Image floue"}, headers=MOD)
+cur.execute("select vars->>'note' from email_outbox where user_id=%s and kind='shorts_rejected'", (oid,)); row = cur.fetchone()
+ok(row is not None and row[0] == "Image floue", "refus : e-mail à l'auteur avec le motif")
+ok(requests.get(B + "/studio/shorts", headers=MOD).status_code == 200, "liste toujours lisible")
+
+# --- Relecture en lot
+b1 = short(T, oid); b2 = short(T, oid); b3 = short(T, oid); bdraft = short(T, oid, "draft")
+for x in (b1, b2, b3): requests.put(f"{B}/studio/shorts/{x}", json={"status": "published"}, headers=ORG)
+ok(requests.post(B + "/studio/shorts/review-batch", json={"ids": [b1], "decision": "approve"}, headers=ORG).status_code == 403, "lot : un organisateur ne peut pas")
+ok(requests.post(B + "/studio/shorts/review-batch", json={"ids": [], "decision": "approve"}, headers=MOD).status_code == 400, "lot : liste vide refusée")
+ok(requests.post(B + "/studio/shorts/review-batch", json={"ids": [b1, b2], "decision": "reject"}, headers=MOD).status_code == 400, "lot : refus sans motif refusé")
+r = requests.post(B + "/studio/shorts/review-batch", json={"ids": [b1, b2, bdraft, str(uuid.uuid4())], "decision": "approve"}, headers=MOD).json()
+ok(r["done"] == 2 and len(r["skipped"]) == 2, "lot : 2 validés, le brouillon et l'inconnu ignorés et listés")
+ok(state(b1)[0] == "published" and state(b2)[0] == "published" and state(b3)[0] == "pending", "lot : seuls les shorts choisis ont changé")
+before = outbox("shorts_approved")
+r = requests.post(B + "/studio/shorts/review-batch", json={"ids": [b3], "decision": "reject", "note": "Hors sujet"}, headers=MOD).json()
+ok(r["done"] == 1 and state(b3)[:2] == ("draft", "Hors sujet"), "lot : refus avec motif commun, brouillon")
+ok(outbox("shorts_approved") == before, "lot : le refus ne crée pas d'e-mail de validation")
+time.sleep(1)
+cur.execute("select count(*) from audit_log where route='/studio/shorts/review-batch'"); ok(cur.fetchone()[0] >= 2, "lots inscrits au journal des actions")
+# un relecteur qui valide son propre short ne se notifie pas lui-même
+ms = short(T, mid); requests.put(f"{B}/studio/shorts/{ms}", json={"status": "pending"}, headers=MOD)
+cur.execute("update public_shorts set status='pending' where id=%s", (ms,))
+requests.post(f"{B}/studio/shorts/{ms}/review", json={"decision": "approve"}, headers=MOD)
+cur.execute("select count(*) from email_outbox where user_id=%s and kind like 'shorts_%%'", (mid,)); ok(cur.fetchone()[0] == 0, "le relecteur n'est pas notifié de sa propre décision")
 
 cleanup()
 print("TOUT EST BON", flush=True)

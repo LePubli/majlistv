@@ -7,6 +7,7 @@
 //   PUT  /studio/shorts/:id                       Studio : titre, brouillon / publié
 //   POST /studio/shorts/:id/refresh               Studio : remplacer la vidéo par le dernier rendu de l'extrait
 //   POST /studio/shorts/:id/review                Modérateur / administrateur : { decision: approve | reject, note } sur un short « pending »
+//   POST /studio/shorts/review-batch              Modérateur / administrateur : même décision pour 1 à 50 shorts « pending » ({ ids, decision, note })
 //   DELETE /studio/shorts/:id                     Studio : supprimer (fichier compris)
 // Validation (réglage shorts_review, désactivé d'origine) : un organisateur ou éditeur de chaîne qui publie envoie le short « pending » ; le personnel publie directement.
 // Droits Studio : le créateur de la vidéo, le propriétaire et les éditeurs de sa chaîne (src/channelAccess.js), modérateurs, administrateurs.
@@ -17,6 +18,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { pool } from '../../db.js';
 import { presignGet, copyObject, deleteObject } from '../../storage.js';
+import { pushToUser } from '../../push.js';
+import { enqueueForUser, smtpConf } from '../../mailer.js';
 import { visibleSql } from '../../visibility.js';
 import { adultSql, bandOkSql } from '../../taxonomy.js';
 import { catalogSql, timeState } from '../../kidsControl.js';
@@ -220,18 +223,56 @@ export default async function shortsRoutes(app) {
   });
 
   // Relecture (modérateur ou administrateur) : valider = publier ; refuser = retour en brouillon avec un motif que l'auteur voit.
-  app.post('/studio/shorts/:id/review', reviewer, async (req, reply) => {
-    const row = await loadOwn(req, reply); if (!row) return reply;
-    const b = z.object({ decision: z.enum(['approve', 'reject']), note: z.string().trim().max(300).optional() }).parse(req.body ?? {});
-    if (row.status !== 'pending') return reply.code(409).send({ error: 'Ce short n’est pas en attente de validation.', code: 'not_pending' });
-    if (b.decision === 'reject' && !b.note) return reply.code(400).send({ error: 'Indiquez le motif du refus : l’auteur le verra.', code: 'note_required' });
-    const approve = b.decision === 'approve';
+  // L'auteur est prévenu par notification (téléphone / navigateur, s'il les a activées) et par e-mail (si l'envoi est configuré).
+  async function notifyAuthor(row, approve, note, reviewerId) {
+    if (!row.created_by || row.created_by === reviewerId) return;
+    try {
+      const kind = approve ? 'shorts_approved' : 'shorts_rejected';
+      const title = row.title || row.talk_title;
+      await pushToUser(row.created_by, kind, { title, note: note || '' }, '/studio/shorts', app.log);
+      if (await smtpConf()) await enqueueForUser(pool, row.created_by, kind, { title, note: note || '', path: '/studio/shorts' }, `short-review:${row.id}:${Date.now()}`);
+    } catch (err) { app.log.warn(`Shorts : notification de l'auteur impossible (${err.message})`); }
+  }
+  async function applyReview(row, approve, note, reviewerId) {
     await pool.query(
       `UPDATE public_shorts SET status = $2, published_at = CASE WHEN $2 = 'published' THEN now() ELSE NULL END,
-              review_note = $3, reviewed_by = $4, reviewed_at = now(), updated_at = now() WHERE id = $1`,
-      [row.id, approve ? 'published' : 'draft', approve ? null : b.note, req.user.sub]);
+              review_note = $3, reviewed_by = $4, reviewed_at = now(), updated_at = now() WHERE id = $1 AND status = 'pending'`,
+      [row.id, approve ? 'published' : 'draft', approve ? null : note, reviewerId]);
+    await notifyAuthor(row, approve, note, reviewerId);
+  }
+  const decisionSchema = z.object({ decision: z.enum(['approve', 'reject']), note: z.string().trim().max(300).optional() });
+  const NOTE_REQUIRED = { error: 'Indiquez le motif du refus : l’auteur le verra.', code: 'note_required' };
+
+  app.post('/studio/shorts/:id/review', reviewer, async (req, reply) => {
+    const row = await loadOwn(req, reply); if (!row) return reply;
+    const b = decisionSchema.parse(req.body ?? {});
+    if (row.status !== 'pending') return reply.code(409).send({ error: 'Ce short n’est pas en attente de validation.', code: 'not_pending' });
+    if (b.decision === 'reject' && !b.note) return reply.code(400).send(NOTE_REQUIRED);
+    const approve = b.decision === 'approve';
+    await applyReview(row, approve, b.note, req.user.sub);
     req.auditSummary = `Shorts : ${approve ? 'validé et publié' : `refusé (${b.note})`} (« ${row.talk_title} »)`;
     return { status: approve ? 'published' : 'draft' };
+  });
+
+  // Relecture en lot : la même décision (et le même motif) pour jusqu'à 50 shorts ; ceux qui ne sont plus en attente sont ignorés et listés.
+  app.post('/studio/shorts/review-batch', reviewer, async (req, reply) => {
+    const b = decisionSchema.extend({ ids: z.array(z.guid()).min(1).max(50) }).parse(req.body ?? {});
+    if (b.decision === 'reject' && !b.note) return reply.code(400).send(NOTE_REQUIRED);
+    const approve = b.decision === 'approve';
+    const ids = [...new Set(b.ids)];
+    const rows = (await pool.query(
+      `SELECT s.*, t.title AS talk_title FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = ANY($1::uuid[])`, [ids])).rows;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    let done = 0; const skipped = [];
+    for (const id of ids) {
+      const row = byId.get(id);
+      if (!row) { skipped.push({ id, reason: 'introuvable' }); continue; }
+      if (row.status !== 'pending') { skipped.push({ id, reason: 'pas en attente' }); continue; }
+      await applyReview(row, approve, b.note, req.user.sub);
+      done++;
+    }
+    req.auditSummary = `Shorts : ${done} ${approve ? 'validé(s) et publié(s)' : `refusé(s) (${b.note})`} en lot`;
+    return { done, skipped, status: approve ? 'published' : 'draft' };
   });
 
   // Remplacer la vidéo par le dernier rendu de l'extrait (après l'avoir retouché dans l'éditeur).

@@ -745,3 +745,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Back-office Premium, groupe A, point 7 : Fonctionnalités — onglets Dépendances et Historique : fait 23/11.
 - Back-office Premium, groupe A, point 5 : Textes — filtre « À vérifier » (absents, identiques au français, variables) : fait 23/11.
 - Back-office Premium, groupe A, point 1 : Validation des Shorts (réglage, file « À valider », motif de refus) : fait 23/11.
+- Validation des Shorts : notification à l'auteur (push + e-mail) et relecture en lot : fait 23/11.

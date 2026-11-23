@@ -15,6 +15,8 @@ export default function StudioShorts() {
   const [titles, setTitles] = useState({});
   const [focus, setFocus] = useState(null);
   const [notes, setNotes] = useState({});
+  const [sel, setSel] = useState([]);          // relecture en lot : shorts cochés
+  const [batchNote, setBatchNote] = useState('');
 
   const load = useCallback(async () => {
     const r = await call('/studio/shorts');
@@ -47,6 +49,16 @@ export default function StudioShorts() {
   const remove = (s) => { if (window.confirm(t('shrConfirmDelete'))) act(`s${s.id}`, `/studio/shorts/${s.id}`, { method: 'DELETE' }, t('shrDeleted')); };
   const copyLink = async (s) => { try { await navigator.clipboard.writeText(`${window.location.origin}/shorts/${s.id}`); setMsg({ text: t('shrLinkCopied') }); } catch { setMsg({ err: true, text: `${window.location.origin}/shorts/${s.id}` }); } };
 
+  const toggle = (id) => setSel((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
+  const reviewBatch = async (decision) => {
+    const note = batchNote.trim();
+    const ids = sel.filter((id) => (d?.shorts || []).some((x) => x.id === id && x.status === 'pending'));
+    if (!ids.length) return;
+    if (decision === 'reject' && !note) { setMsg({ err: true, text: t('shrNeedNote') }); return; }
+    const r = await act('batch', '/studio/shorts/review-batch', { method: 'POST', body: JSON.stringify({ ids, decision, note }) },
+      (x) => (decision === 'approve' ? t('shrBatchApproved') : t('shrBatchRejected')).replace('{n}', x.data?.done ?? ids.length));
+    if (r.ok) { setSel([]); setBatchNote(''); }
+  };
   const askLabel = d?.review && !d?.canReview ? t('shrAskReview') : t('shrPublish');
   const pending = (d?.shorts || []).filter((x) => x.status === 'pending');
   const stateOf = (s) => (s.status === 'published' ? (s.talk.visible ? t('shrStatePublished') : t('shrStateHidden')) : s.status === 'pending' ? t('shrStatePending') : t('shrStateDraft'));
@@ -73,8 +85,21 @@ export default function StudioShorts() {
               {d.review && !d.canReview && <BmHint>{t('shrReviewOnHint')}</BmHint>}
               {d.canReview && (d.review || pending.length > 0) && (
                 <BmPanel title={t('shrToReview')} extra={`${pending.length}`}>
-                  <BmTable empty={t('shrNoneToReview')} headers={['', t('shrTitleField'), 'Vidéo', t('shrRejectNote'), '']}
+                  {pending.length > 1 && (
+                    <div className="sh-batch" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '0 14px 10px' }}>
+                      <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input type="checkbox" checked={sel.length === pending.length} onChange={(e) => setSel(e.target.checked ? pending.map((x) => x.id) : [])} />
+                        {t('shrSelectAll')}
+                      </label>
+                      <span className="meta">{t('shrSelected').replace('{n}', sel.length)}</span>
+                      <input value={batchNote} maxLength={300} placeholder={t('shrRejectNote')} aria-label={t('shrRejectNote')} onChange={(e) => setBatchNote(e.target.value)} style={{ flex: '1 1 220px', minWidth: 0 }} />
+                      <BmBtn disabled={!sel.length || busy === 'batch'} onClick={() => reviewBatch('approve')}>{t('shrApproveSel')}</BmBtn>
+                      <BmBtn primary={false} disabled={!sel.length || busy === 'batch'} onClick={() => reviewBatch('reject')}>{t('shrRejectSel')}</BmBtn>
+                    </div>
+                  )}
+                  <BmTable empty={t('shrNoneToReview')} headers={[pending.length > 1 ? '✓' : '', '', t('shrTitleField'), 'Vidéo', t('shrRejectNote'), '']}
                     rows={pending.map((s) => [
+                      pending.length > 1 ? <input key="c" type="checkbox" checked={sel.includes(s.id)} onChange={() => toggle(s.id)} aria-label={s.title} /> : <span key="c" />,
                       s.videoUrl ? <video key="v" className="sh-thumb" src={s.videoUrl} poster={s.posterUrl || undefined} preload="metadata" muted playsInline controls aria-label={s.title} style={{ width: 72, borderRadius: 6 }} /> : '',
                       <span key="i"><b dir="auto">{s.title}</b>{s.author && <><br /><small>{t('shrAuthorBy').replace('{name}', s.author)}</small></>}</span>,
                       <span key="t">{s.talk.title}<br /><small>{s.duration != null && mmss(s.duration)}{s.submittedAt && ` · ${date(s.submittedAt)}`}</small></span>,

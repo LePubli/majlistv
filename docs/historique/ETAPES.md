@@ -10049,3 +10049,17 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Back-office Premium — groupe A, point 1 : Validation des Shorts (23/11/2026)
 
 - Réglage `shorts_review` (désactivé d'origine) : un organisateur envoie ses shorts « en attente de validation » ; un modérateur ou l'administrateur valide ou refuse (motif obligatoire, visible de l'auteur) dans Studio → Shorts. Migration shorts 003. Journal des actions pour les relectures. Déployer `majlistv-api` (migration) puis `majlistv-web`.
+
+## Validation des Shorts — notification à l'auteur et relecture en lot (23/11/2026)
+
+**Description.** Suite de la validation des Shorts, à la demande d'Epok. (1) Quand un modérateur ou l'administrateur valide ou refuse un short, l'auteur reçoit une notification push et un e-mail (le motif figure dans le refus). (2) Studio → Shorts → « À valider » : on coche plusieurs shorts puis « Valider la sélection » ou « Refuser la sélection » (motif commun obligatoire, 50 maximum).
+
+**Prérequis.** Étape « Validation des Shorts » déployée, réglage Admin → Paramètres → Général « Valider les shorts avant leur publication » activé. Pour l'e-mail : SMTP configuré ; pour le push : l'auteur a activé les notifications.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (aucune migration), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** Pas d'e-mail : vérifier SMTP (Admin → Paramètres) et la table `email_outbox` (kind `shorts_approved` / `shorts_rejected`). Pas de push : l'auteur a-t-il activé ses notifications ? Lot : la réponse indique `done` et la liste `skipped` (short déjà traité ou introuvable).
+
+**Exemples.** `POST /studio/shorts/review-batch` avec `{"ids":["…"],"decision":"reject","note":"Hors sujet"}`.
+
+**Testé / non testé.** Voir ligne 335 du registre.

@@ -133,6 +133,16 @@ const TEXTS = {
     en: (v) => ({ title: 'Cancelled: ' + cut(v.title, 50), body: `The event planned ${evWhen(v.at, 'en')} has been cancelled.` }),
     ar: (v) => ({ title: 'أُلغيت: ' + cut(v.title, 50), body: `أُلغيت الفعالية المقررة ${evWhen(v.at, 'ar')}.` }),
   },
+  shorts_approved: { // l'auteur d'un short est prévenu de la décision du relecteur
+    fr: (v) => ({ title: 'Short publié', body: cut(v.title, 100) + ' est en ligne.' }),
+    en: (v) => ({ title: 'Short published', body: cut(v.title, 100) + ' is now live.' }),
+    ar: (v) => ({ title: 'تم نشر المقطع', body: cut(v.title, 100) + ' منشور الآن.' }),
+  },
+  shorts_rejected: {
+    fr: (v) => ({ title: 'Short refusé', body: cut(v.title, 60) + (v.note ? ' — ' + cut(v.note, 80) : '') }),
+    en: (v) => ({ title: 'Short rejected', body: cut(v.title, 60) + (v.note ? ' — ' + cut(v.note, 80) : '') }),
+    ar: (v) => ({ title: 'تم رفض المقطع', body: cut(v.title, 60) + (v.note ? ' — ' + cut(v.note, 80) : '') }),
+  },
   plan_daily: { // planning (étape 3) : récapitulatif du matin, nombre seulement
     fr: (v) => ({ title: 'Votre planning du jour', body: v.count > 1 ? `${v.count} choses à faire aujourd’hui.` : '1 chose à faire aujourd’hui.' }),
     en: (v) => ({ title: 'Your plan for today', body: v.count > 1 ? `${v.count} things to do today.` : '1 thing to do today.' }),

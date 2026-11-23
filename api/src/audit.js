@@ -18,7 +18,7 @@ const SILENT = [['PUT', /^\/studio\/editor\/projects\/:id$/], ['POST', /^\/studi
 export function shouldLog(role, method, route) {
   if (!MUTATING.has(method) || !route) return false;
   if (role !== 'admin' && role !== 'moderator') return false;
-  if (route.startsWith('/admin/') || route.startsWith('/moderation/') || route.startsWith('/studio/collections') || route.startsWith('/studio/channels') || route === '/studio/shorts/:id/review') return true; // le modérateur gère aussi les collections et les chaînes, et relit les shorts
+  if (route.startsWith('/admin/') || route.startsWith('/moderation/') || route.startsWith('/studio/collections') || route.startsWith('/studio/channels') || route === '/studio/shorts/:id/review' || route === '/studio/shorts/review-batch') return true; // le modérateur gère aussi les collections et les chaînes, et relit les shorts
   if (role !== 'admin') return false;
   if (VIEWER.some((re) => re.test(route))) return false;
   if (SILENT.some(([m, re]) => m === method && re.test(route))) return false;
