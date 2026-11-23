@@ -4,6 +4,11 @@ import '@fontsource-variable/montserrat';
 import '@fontsource-variable/fredoka';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/inter'; // thème « Mejliss bleu » (étape D2)
+import '@fontsource/poppins/400.css'; // back-office Premium (demande d'Epok 23/11)
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/poppins/800.css';
 import '@fontsource-variable/noto-kufi-arabic';
 import '@fontsource-variable/noto-sans-arabic';
 import '@fontsource/marcellus';

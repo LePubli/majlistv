@@ -419,3 +419,13 @@ html[data-skin="premium"] .ac-hours label { white-space: nowrap; width: auto; fl
 html[data-skin="premium"] .bm-app [class*="-grid"] > * { min-width: 0; }
 @media (max-width: 600px) { html[data-skin="premium"] .bm-app .bm-ax-modules-grid { grid-template-columns: minmax(0, 1fr); } }
 html[data-skin="premium"] .bm-app .bm-ax-module-footer { flex-wrap: wrap; }
+
+/* Police du back-office : Poppins (demande d'Epok 23/11). Les variables sont redéfinies dans la zone du back-office, si bien que
+   tous les titres, boutons et textes qui lisent --font-title / --font-body (y compris les écrans existants) suivent. L'arabe garde ses polices. */
+html[data-skin="premium"] .bm-app {
+  --font-title: Poppins, 'Noto Kufi Arabic Variable', 'Noto Sans Arabic Variable', 'Segoe UI', Arial, sans-serif;
+  --font-body: Poppins, 'Noto Sans Arabic Variable', 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-body);
+}
+html[data-skin="premium"] .bm-app :is(h1, h2, h3, h4, .btn, .eyebrow, .logo-text) { font-family: var(--font-title); }
+html[data-skin="premium"] .bm-app :is(button, input, textarea, select) { font-family: inherit; }

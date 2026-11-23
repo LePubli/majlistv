@@ -85,7 +85,7 @@ def scope_selector(sel):
 
 
 KEYFRAMES = set()
-TITLE = "'Montserrat Variable','Noto Kufi Arabic Variable',Montserrat,system-ui,sans-serif"
+TITLE = "Poppins,'Noto Kufi Arabic Variable','Noto Sans Arabic Variable','Segoe UI',Arial,sans-serif"  # back-office : Poppins (demande d'Epok 23/11)
 
 
 def transform_decls(body):
@@ -95,6 +95,7 @@ def transform_decls(body):
         return m.group(0) if os.path.exists(os.path.join(OUT_DIR, m.group(2))) else 'none'
     body = re.sub(r"url\((['\"]?)/premium/([\w.-]+)\1\)", keep, body)
     body = re.sub(r"font-family:\s*Georgia[^;}]*", "font-family:" + TITLE, body)
+    body = re.sub(r"font-family:\s*(?:Inter|'Montserrat Variable')[^;}]*", "font-family:" + TITLE, body)
     body = re.sub(r"Georgia(\s*,\s*'Times New Roman')?(\s*,\s*serif)?", TITLE, body)
     def anim(m):
         val = m.group(2)

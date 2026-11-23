@@ -10005,3 +10005,7 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 ## Catalogue — traductions EN / AR des catégories (21/11/2026)
 
 - Migration 123 : noms anglais et arabes des 241 catégories, sans écraser les saisies de l'administrateur ; test `test_catalogue_translations.py`. **Déploiement** : redéployer `majlistv-api`. À valider : relecture des traductions (vocabulaire religieux).
+
+## Back-office Premium — police Poppins (23/11/2026)
+
+- Poppins (auto-hébergée) sur Admin et Studio, thème Premium. **Déploiement** : `majlistv-web` seulement.
