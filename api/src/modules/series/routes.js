@@ -77,7 +77,7 @@ export async function listSeries({ limit = 40, category = null, q = null, level 
        ${join}
        LEFT JOIN category_names c ON c.id = s.category_id
       WHERE ${where.join(' AND ')}
-      GROUP BY s.id, c.name ${having} ORDER BY ${order} LIMIT $1`, vals);
+      GROUP BY s.id, c.name, c.tr ${having} ORDER BY ${order} LIMIT $1`, vals);
   const out = [];
   for (const r of rows) {
     const poster = r.poster_key || r.first_poster;
