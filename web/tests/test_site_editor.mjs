@@ -2,7 +2,7 @@
 // annuler / rétablir.   node web/tests/test_site_editor.mjs
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../lib/editorOps.js';
+import { getList, isColZone, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../lib/editorOps.js';
 
 const B = (id) => ({ id, type: 'text', props: {}, show: { devices: ['mobile', 'tablet', 'desktop'], audience: 'all' }, style: {} });
 const page = () => ({ meta: {}, zones: { before: [B('a'), B('b'), B('c')], after: [B('x')] } });
@@ -69,5 +69,42 @@ assert.equal(k.past.length, 1, 'frappes rapprochées = une étape'); assert.equa
 k = pushHistory(k, t, 'champ', 5000); assert.equal(k.past.length, 2, 'pause = nouvelle étape');
 assert.equal(newHistory(3).limit, 3);
 let l = newHistory(3); for (let i = 0; i < 6; i++) l = pushHistory(l, 's' + i, null, i * 5000); assert.equal(l.past.length, 3, 'taille limitée');
+
+// ---- Étape 3 : colonnes (zone « idBloc:n »)
+{
+  const C = { id: 'col1', type: 'columns', props: { count: '2' }, cols: [[B('x1')], [B('x2'), B('x3')]], show: {}, style: {} };
+  const c0 = { meta: {}, zones: { main: [B('a'), C, B('b')] } };
+  assert.ok(isColZone('col1:1') && !isColZone('main'));
+  assert.deepEqual(getList(c0, 'col1:1').map((b) => b.id), ['x2', 'x3']);
+  assert.deepEqual(findBlock(c0, 'x3'), { zone: 'col1:1', index: 1, block: c0.zones.main[1].cols[1][1] });
+  // insertion dans une colonne
+  const c1 = insertBlock(c0, 'col1:0', 1, B('n1'));
+  assert.deepEqual(getList(c1, 'col1:0').map((b) => b.id), ['x1', 'n1']);
+  assert.deepEqual(c0.zones.main[1].cols[0].map((b) => b.id), ['x1'], 'pas de modification en place');
+  // colonnes dans colonnes refusées
+  assert.equal(insertBlock(c0, 'col1:0', 0, { ...C, id: 'col2' }), null);
+  assert.equal(moveBlock(c0, 'col1', 'col1:0', 0), null, 'un bloc Colonnes ne va pas dans ses colonnes');
+  // déplacement page → colonne → page
+  const c2 = moveBlock(c0, 'a', 'col1:1', 1);
+  assert.deepEqual(getList(c2, 'col1:1').map((b) => b.id), ['x2', 'a', 'x3']);
+  assert.deepEqual(c2.zones.main.map((b) => b.id), ['col1', 'b']);
+  const c3 = moveBlock(c2, 'x1', 'main', 0);
+  assert.deepEqual(c3.zones.main.map((b) => b.id), ['x1', 'col1', 'b']);
+  assert.deepEqual(getList(c3, 'col1:0'), []);
+  // monter / supprimer / dupliquer dans une colonne
+  assert.deepEqual(getList(nudgeBlock(c0, 'x3', -1), 'col1:1').map((b) => b.id), ['x3', 'x2']);
+  assert.deepEqual(getList(removeBlock(c0, 'x2'), 'col1:1').map((b) => b.id), ['x3']);
+  const d = duplicateBlock(c0, 'col1', 'col9', 60);
+  assert.equal(d.content.zones.main[2].id, 'col9');
+  const ids = d.content.zones.main[2].cols.flat().map((b) => b.id);
+  assert.ok(ids.every((i) => !['x1', 'x2', 'x3'].includes(i)) && new Set(ids).size === 3, 'copie : nouveaux identifiants');
+  // cible de dépôt : la colonne sous le pointeur l'emporte sur la zone de la page
+  const zones = [{ zone: 'main', x: 0, w: 1000, y: 0, h: 800 }, { zone: 'col1:0', x: 0, w: 500, y: 100, h: 300 }, { zone: 'col1:1', x: 500, w: 500, y: 100, h: 300 }];
+  const rects = [{ id: 'x1', zone: 'col1:0', y: 100, h: 100 }, { id: 'x2', zone: 'col1:1', y: 100, h: 80 }, { id: 'x3', zone: 'col1:1', y: 180, h: 80 }];
+  assert.deepEqual(dropTarget(rects, zones, 150, 700).zone, 'col1:1');
+  assert.equal(dropTarget(rects, zones, 150, 700).index, 1);
+  assert.equal(dropTarget(rects, zones, 700, 700).zone, 'main');
+  assert.equal(dropTarget(rects, zones, 150, 700, false).zone, 'main', 'colonnes non proposées pour un bloc Colonnes');
+}
 
 console.log('OK éditeur : opérations sur les blocs, cible de dépôt, historique');

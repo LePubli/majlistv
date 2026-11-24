@@ -26,6 +26,8 @@ export const COLOR_REF_LABELS = {
   text: 'Texte', muted: 'Texte atténué', line: 'Bordure', onAccent: 'Texte sur l’or',
 };
 export const MAX_BLOCKS_PER_ZONE = 60;
+export const MAX_BLOCKS_PER_COLUMN = 20; // blocs dans une colonne (les colonnes ne s'imbriquent pas)
+export const MAX_COLS = 4;
 export const MAX_CONTENT_BYTES = 250_000;
 
 // ---- Champs : t = texte court par langue, tl = texte long par langue, url, media (image envoyée), sel, num, video, list
@@ -132,10 +134,20 @@ export const BLOCK_TYPES = {
   kids: {
     label: 'Bande Espace Kids', hint: 'Les dernières vidéos Kids. Invisible si l’Espace Kids est coupé (Admin → Paramètres).', fields: [], sample: {},
   },
+  columns: {
+    label: 'Colonnes', hint: 'Une rangée de 2 à 4 colonnes : glissez d’autres blocs dans chaque colonne. Sur téléphone, les colonnes s’empilent.',
+    container: true,
+    fields: [S('count', 'Nombre de colonnes', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], '2'),
+      S('ratio', 'Proportions (2 colonnes)', [['', 'Égales'], ['1-2', 'Étroite puis large'], ['2-1', 'Large puis étroite']], ''),
+      S('gap', 'Espace entre colonnes', [['s', 'Petit'], ['m', 'Moyen'], ['l', 'Grand']], 'm'),
+      S('valign', 'Alignement vertical', [['start', 'En haut'], ['center', 'Au milieu'], ['end', 'En bas']], 'start'),
+      S('stack', 'Empiler sur', [['m', 'Téléphone'], ['t', 'Téléphone et tablette']], 'm')],
+    sample: { count: '2' },
+  },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'columns', 'spacer', 'divider'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 
@@ -251,51 +263,70 @@ export function cleanContent(content, kind, strict = true) {
   const zones = content.zones && typeof content.zones === 'object' ? content.zones : {};
   for (const z of Object.keys(zones)) if (!ZONES[kind].includes(z)) err(`zones.${z}`, 'Zone inconnue');
   const seen = new Set();
+  const cleanBlock = (b, at, depth) => {
+    if (!b || typeof b !== 'object' || Array.isArray(b)) { err(at, 'Bloc invalide'); return null; }
+    const def = BLOCK_TYPES[b.type];
+    if (def?.container && depth > 0) { err(`${at}.type`, 'Les colonnes ne peuvent pas contenir d’autres colonnes'); return null; }
+    if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return null; }
+    if (typeof b.id !== 'string' || !/^[A-Za-z0-9_-]{4,24}$/.test(b.id)) err(`${at}.id`, 'Identifiant de bloc invalide');
+    else if (seen.has(b.id)) err(`${at}.id`, 'Identifiant de bloc en double');
+    else seen.add(b.id);
+    const props = {};
+    const src = b.props && typeof b.props === 'object' && !Array.isArray(b.props) ? b.props : {};
+    for (const f of def.fields) {
+      try { const c = cleanField(f, src[f.k]); if (c !== undefined) props[f.k] = c; } catch (e) { err(`${at}.props.${f.k}`, e.message); }
+    }
+    // Champs obligatoires : exigés à la publication seulement (un brouillon peut être incomplet).
+    if (strict) {
+      if (b.type === 'talks' && (props.source || 'latest') === 'category' && !(props.category > 0)) err(`${at}.props.category`, 'Indiquez le numéro de la catégorie');
+      if (b.type === 'image' && !props.image) err(`${at}.props.image`, 'Choisissez une image');
+      if (b.type === 'video' && !props.url) err(`${at}.props.url`, 'Indiquez l’adresse de la vidéo');
+    }
+    // Affichage : appareils et public
+    const s = b.show && typeof b.show === 'object' ? b.show : {};
+    let devices = Array.isArray(s.devices) ? s.devices : DEVICES;
+    if (!devices.every((d) => DEVICES.includes(d)) || !devices.length) { err(`${at}.show.devices`, 'Choisissez au moins un appareil'); devices = DEVICES; }
+    const audience = s.audience ?? 'all';
+    if (!AUDIENCES.some(([a]) => a === audience)) err(`${at}.show.audience`, 'Public inconnu');
+    // Style
+    const st = b.style && typeof b.style === 'object' && !Array.isArray(b.style) ? b.style : {};
+    const style = {};
+    for (const k of Object.keys(st)) {
+      const v = st[k];
+      if (v === '' || v == null) continue;
+      if (k === 'textColor' || k === 'bgColor') { if (!validColor(v)) err(`${at}.style.${k}`, 'Couleur non valide (code #RRGGBB ou couleur du thème)'); else style[k] = v; }
+      else if (k === 'align') { if (!['start', 'center', 'end'].includes(v)) err(`${at}.style.${k}`, 'Alignement inconnu'); else style[k] = v; }
+      else if (k === 'maxWidth') { if (!['full', 'wide', 'narrow'].includes(v)) err(`${at}.style.${k}`, 'Largeur inconnue'); else style[k] = v; }
+      else if (k === 'padTop' || k === 'padBottom') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 240) err(`${at}.style.${k}`, 'Entier entre 0 et 240'); else style[k] = n; }
+      else if (k === 'radius') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 60) err(`${at}.style.${k}`, 'Entier entre 0 et 60'); else style[k] = n; }
+      else if (k === 'bgImage') { if (!validMedia(v)) err(`${at}.style.${k}`, 'Image non valide'); else style[k] = v; }
+      else if (k === 'shadow') { if (!['soft', 'strong'].includes(v)) err(`${at}.style.${k}`, 'Ombre inconnue'); else style[k] = v; }
+      else if (k === 'border') { if (v !== true) err(`${at}.style.${k}`, 'Bordure non valide'); else style[k] = true; }
+      else if (k === 'minHeight') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 1200) err(`${at}.style.${k}`, 'Entier entre 0 et 1200'); else style[k] = n; }
+      else err(`${at}.style.${k}`, 'Réglage de style inconnu');
+    }
+    const res = { id: b.id, type: b.type, props, show: { devices: DEVICES.filter((d) => devices.includes(d)), audience: AUDIENCES.some(([a]) => a === audience) ? audience : 'all' }, style };
+    if (def.container) {
+      const n = Math.max(1, Math.min(MAX_COLS, Number(props.count) || 2));
+      const rawCols = Array.isArray(b.cols) ? b.cols : [];
+      if (rawCols.length > MAX_COLS) err(`${at}.cols`, `${MAX_COLS} colonnes au maximum`);
+      res.cols = [];
+      for (let c = 0; c < n; c++) {
+        const colList = Array.isArray(rawCols[c]) ? rawCols[c] : [];
+        if (colList.length > MAX_BLOCKS_PER_COLUMN) { err(`${at}.cols.${c}`, `${MAX_BLOCKS_PER_COLUMN} blocs au maximum par colonne`); res.cols.push([]); continue; }
+        res.cols.push(colList.map((cb, ci) => cleanBlock(cb, `${at}.cols.${c}.${ci}`, depth + 1)).filter(Boolean));
+      }
+      // Colonnes en trop (nombre réduit) : leurs blocs sont ajoutés à la dernière colonne gardée, rien ne se perd.
+      for (let c = n; c < rawCols.length; c++) if (Array.isArray(rawCols[c])) for (const cb of rawCols[c]) { const k = cleanBlock(cb, `${at}.cols.${c}`, depth + 1); if (k && res.cols[n - 1].length < MAX_BLOCKS_PER_COLUMN) res.cols[n - 1].push(k); }
+    }
+    return res;
+  };
   for (const z of ZONES[kind]) {
     const list = zones[z] ?? [];
     out.zones[z] = [];
     if (!Array.isArray(list)) { err(`zones.${z}`, 'Liste de blocs invalide'); continue; }
     if (list.length > MAX_BLOCKS_PER_ZONE) { err(`zones.${z}`, `${MAX_BLOCKS_PER_ZONE} blocs au maximum par zone`); continue; }
-    list.forEach((b, i) => {
-      const at = `zones.${z}.${i}`;
-      if (!b || typeof b !== 'object' || Array.isArray(b)) { err(at, 'Bloc invalide'); return; }
-      const def = BLOCK_TYPES[b.type];
-      if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return; }
-      if (typeof b.id !== 'string' || !/^[A-Za-z0-9_-]{4,24}$/.test(b.id)) err(`${at}.id`, 'Identifiant de bloc invalide');
-      else if (seen.has(b.id)) err(`${at}.id`, 'Identifiant de bloc en double');
-      else seen.add(b.id);
-      const props = {};
-      const src = b.props && typeof b.props === 'object' && !Array.isArray(b.props) ? b.props : {};
-      for (const f of def.fields) {
-        try { const c = cleanField(f, src[f.k]); if (c !== undefined) props[f.k] = c; } catch (e) { err(`${at}.props.${f.k}`, e.message); }
-      }
-      // Champs obligatoires : exigés à la publication seulement (un brouillon peut être incomplet).
-      if (strict) {
-        if (b.type === 'talks' && (props.source || 'latest') === 'category' && !(props.category > 0)) err(`${at}.props.category`, 'Indiquez le numéro de la catégorie');
-        if (b.type === 'image' && !props.image) err(`${at}.props.image`, 'Choisissez une image');
-        if (b.type === 'video' && !props.url) err(`${at}.props.url`, 'Indiquez l’adresse de la vidéo');
-      }
-      // Affichage : appareils et public
-      const s = b.show && typeof b.show === 'object' ? b.show : {};
-      let devices = Array.isArray(s.devices) ? s.devices : DEVICES;
-      if (!devices.every((d) => DEVICES.includes(d)) || !devices.length) { err(`${at}.show.devices`, 'Choisissez au moins un appareil'); devices = DEVICES; }
-      const audience = s.audience ?? 'all';
-      if (!AUDIENCES.some(([a]) => a === audience)) err(`${at}.show.audience`, 'Public inconnu');
-      // Style
-      const st = b.style && typeof b.style === 'object' && !Array.isArray(b.style) ? b.style : {};
-      const style = {};
-      for (const k of Object.keys(st)) {
-        const v = st[k];
-        if (v === '' || v == null) continue;
-        if (k === 'textColor' || k === 'bgColor') { if (!validColor(v)) err(`${at}.style.${k}`, 'Couleur non valide (code #RRGGBB ou couleur du thème)'); else style[k] = v; }
-        else if (k === 'align') { if (!['start', 'center', 'end'].includes(v)) err(`${at}.style.${k}`, 'Alignement inconnu'); else style[k] = v; }
-        else if (k === 'maxWidth') { if (!['full', 'wide', 'narrow'].includes(v)) err(`${at}.style.${k}`, 'Largeur inconnue'); else style[k] = v; }
-        else if (k === 'padTop' || k === 'padBottom') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 240) err(`${at}.style.${k}`, 'Entier entre 0 et 240'); else style[k] = n; }
-        else if (k === 'radius') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 60) err(`${at}.style.${k}`, 'Entier entre 0 et 60'); else style[k] = n; }
-        else err(`${at}.style.${k}`, 'Réglage de style inconnu');
-      }
-      out.zones[z].push({ id: b.id, type: b.type, props, show: { devices: DEVICES.filter((d) => devices.includes(d)), audience: AUDIENCES.some(([a]) => a === audience) ? audience : 'all' }, style });
-    });
+    list.forEach((b, i) => { const r = cleanBlock(b, `zones.${z}.${i}`, 0); if (r) out.zones[z].push(r); });
   }
   return { value: out, errors };
 }

@@ -65,9 +65,13 @@ let slotCache = null;
 let slotCacheAt = 0;
 export const resetPagesCache = () => { slotCache = null; };
 
-const hasTargeted = (zones) => Object.values(zones || {}).some((list) => (list || []).some((b) => (b.show?.audience || 'all') !== 'all'));
-const onlyPublic = (zones) => Object.fromEntries(Object.entries(zones || {}).map(([z, list]) => [z, (list || []).filter((b) => (b.show?.audience || 'all') === 'all')]));
-const forUser = (zones, user) => Object.fromEntries(Object.entries(zones || {}).map(([z, list]) => [z, (list || []).filter((b) => audienceMatches(b.show?.audience || 'all', user))]));
+// Blocs réservés à un public : on regarde aussi dans les colonnes des blocs « Colonnes ».
+const audOf = (b) => b.show?.audience || 'all';
+const hasTargetedList = (list) => (list || []).some((b) => audOf(b) !== 'all' || (b.cols || []).some(hasTargetedList));
+const filterList = (list, keep) => (list || []).filter(keep).map((b) => (b.cols ? { ...b, cols: b.cols.map((c) => filterList(c, keep)) } : b));
+const hasTargeted = (zones) => Object.values(zones || {}).some(hasTargetedList);
+const onlyPublic = (zones) => Object.fromEntries(Object.entries(zones || {}).map(([z, list]) => [z, filterList(list, (b) => audOf(b) === 'all')]));
+const forUser = (zones, user) => Object.fromEntries(Object.entries(zones || {}).map(([z, list]) => [z, filterList(list, (b) => audienceMatches(audOf(b), user))]));
 
 // Blocs « avant / après » des pages existantes, pour tout le monde (les blocs réservés à un public sont chargés ensuite par le navigateur).
 export async function pageSlots() {
@@ -92,7 +96,8 @@ const full = (r) => ({ ...row(r), published: norm(r.kind, r.published), draft: r
 
 /** Résumé lisible de ce qui change entre deux contenus de page : blocs ajoutés / retirés / modifiés, titre, description, image de partage, référencement. */
 export function describeChanges(before, after) {
-  const flat = (c) => new Map(Object.values(c?.zones || {}).flat().map((b) => [b.id, JSON.stringify([b.type, b.props, b.show, b.style])]));
+  const all = (list) => (list || []).flatMap((b) => [b, ...(b.cols || []).flatMap(all)]);
+  const flat = (c) => new Map(all(Object.values(c?.zones || {}).flat()).map((b) => [b.id, JSON.stringify([b.type, b.props, b.show, b.style, b.cols ? b.cols.map((x) => x.map((y) => y.id)) : 0])]));
   const a = flat(before), b = flat(after);
   let added = 0, removed = 0, edited = 0;
   for (const [id, sig] of b) { if (!a.has(id)) added++; else if (a.get(id) !== sig) edited++; }
@@ -107,7 +112,7 @@ export function describeChanges(before, after) {
   if (JSON.stringify(m1.description ?? null) !== JSON.stringify(m2.description ?? null)) out.push('description modifiée');
   if ((m1.image || null) !== (m2.image || null)) out.push('image de partage modifiée');
   if (Boolean(m1.noindex) !== Boolean(m2.noindex)) out.push(m2.noindex ? 'retirée de Google et du plan du site' : 'remise dans Google et le plan du site');
-  const order = (c) => Object.values(c?.zones || {}).flat().map((x) => x.id).filter((id) => a.has(id) && b.has(id)).join();
+  const order = (c) => all(Object.values(c?.zones || {}).flat()).map((x) => x.id).filter((id) => a.has(id) && b.has(id)).join();
   if (!added && !removed && !edited && order(before) !== order(after)) out.push('blocs réordonnés');
   return out;
 }

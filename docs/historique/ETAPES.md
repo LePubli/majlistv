@@ -10266,3 +10266,18 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** Admin → Site → Éditeur du site → onglet Pages → « Nouvelle page » → onglet Blocs : glisser « Bannière » puis « Texte » sur la page → clic sur la bannière : modifier le titre à droite → bouton Téléphone pour voir le rendu mobile → Ctrl+Z pour annuler → Publier. Onglet Style : changer la couleur principale, le résultat se voit aussitôt dans la page ; la publication du thème se fait dans cet onglet.
 
 **Testé / non testé / limites.** Voir ligne 351 du registre.
+
+
+## Éditeur visuel, étape 3 — colonnes, modèles de sections et style de section (24/11/2026)
+
+**Description.** Dans l'éditeur plein écran : nouveau bloc « Colonnes » (1 à 4 colonnes) où l'on dépose d'autres blocs, onglet « Modèles » (7 sections prêtes à poser), et style de section étendu (image de fond, ombre, bordure, hauteur minimale) dans l'onglet Style de chaque bloc.
+
+**Prérequis.** Aucune migration. Compte administrateur.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` PUIS `majlistv-web` (la validation des colonnes est dans l'API : sans elle, une page avec colonnes serait refusée à l'enregistrement). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** « Les colonnes ne se mettent pas dans une colonne » : voulu (un seul niveau). Page refusée à l'enregistrement : lire le bandeau (bloc fautif en rouge dans le Plan). Les copies `web/lib/blocks.js` et `api/src/blocks.js` doivent rester identiques (`diff web/lib/blocks.js api/src/blocks.js`). Tests : `python3 api/tests/test_page_columns.py`, `node web/tests/test_site_editor.mjs`.
+
+**Exemples.** Éditeur → Modèles → « Deux colonnes : texte et image » → cliquer le bloc Image, choisir une image → glisser « Citation » (onglet Blocs) dans la colonne de gauche → Style du bloc Colonnes : fond, ombre, bordure → bouton Téléphone : les colonnes s'empilent → Publier.
+
+**Testé / non testé / limites.** Voir ligne 352 du registre.

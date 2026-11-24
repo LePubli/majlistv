@@ -191,7 +191,7 @@ function ColorStyle({ label, value, onChange }) {
   );
 }
 
-export function StyleFields({ style, onChange }) {
+export function StyleFields({ style, onChange, onPickMedia }) {
   const st = style || {};
   const set = (k, v) => { const n = { ...st }; if (v === undefined || v === '') delete n[k]; else n[k] = v; onChange(n); };
   const num = (k, label, max) => (
@@ -207,6 +207,12 @@ export function StyleFields({ style, onChange }) {
       <label className="pe-f"><span className="pe-lab">Largeur du contenu</span>
         <select value={st.maxWidth || ''} onChange={(e) => set('maxWidth', e.target.value)}>{STYLE_WIDTH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
       <div className="pe-row">{num('padTop', 'Espace au-dessus (px)', 240)}{num('padBottom', 'Espace en dessous (px)', 240)}{num('radius', 'Arrondi (px)', 60)}</div>
+      <div className="pe-row">{num('minHeight', 'Hauteur minimale (px)', 1200)}
+        <label className="pe-f"><span className="pe-lab">Ombre</span>
+          <select value={st.shadow || ''} onChange={(e) => set('shadow', e.target.value)}><option value="">Aucune</option><option value="soft">Légère</option><option value="strong">Marquée</option></select></label>
+        <label className="pe-f"><span className="pe-lab">Bordure</span>
+          <select value={st.border ? '1' : ''} onChange={(e) => set('border', e.target.value ? true : undefined)}><option value="">Aucune</option><option value="1">Fine</option></select></label></div>
+      {onPickMedia && <MediaField f={{ label: 'Image de fond de la section' }} value={st.bgImage} onPick={() => onPickMedia((id) => set('bgImage', id))} onClear={() => set('bgImage', undefined)} />}
       <p className="meta small">Les couleurs « du thème » suivent Admin → Apparence. Laissez « Selon le thème » ou vide pour garder le réglage d’origine.</p>
       {Object.keys(st).length > 0 && <button type="button" className="btn ghost pe-mini" onClick={() => onChange({})}>Réinitialiser le style de ce bloc</button>}
     </div>
@@ -233,7 +239,7 @@ export function BlockEditor({ block, lang, onChange, onPickMedia, errors }) {
         </div>
       )}
       {tab === 'show' && <ShowFields show={block.show} onChange={(show) => onChange({ ...block, show })} />}
-      {tab === 'style' && <StyleFields style={block.style} onChange={(style) => onChange({ ...block, style })} />}
+      {tab === 'style' && <StyleFields style={block.style} onChange={(style) => onChange({ ...block, style })} onPickMedia={onPickMedia} />}
     </div>
   );
 }

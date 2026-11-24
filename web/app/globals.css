@@ -4181,3 +4181,16 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .ap-views { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .ap-views button { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; min-height: 40px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .ap-views button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+
+/* Étape 3 : colonnes, ombre et bordure de section */
+.pb-cols { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: 20px; }
+.pb-cols.n-1 { --n: 1; } .pb-cols.n-2 { --n: 2; } .pb-cols.n-3 { --n: 3; } .pb-cols.n-4 { --n: 4; }
+.pb-cols.g-s { gap: 10px; } .pb-cols.g-l { gap: 40px; }
+.pb-cols.n-2.r-1-2 { grid-template-columns: 1fr 2fr; } .pb-cols.n-2.r-2-1 { grid-template-columns: 2fr 1fr; }
+.pb-cols.v-center { align-items: center; } .pb-cols.v-end { align-items: end; } .pb-cols.v-start { align-items: start; }
+.pb-col { min-width: 0; }
+.pb-col > .pb { padding-inline: 0; }
+@media (max-width: 700px) { .pb-cols { grid-template-columns: 1fr !important; } }
+@media (max-width: 1024px) { .pb-cols.st-t { grid-template-columns: 1fr !important; } }
+.pb.pbsh-soft { box-shadow: 0 6px 20px rgba(0, 0, 0, .25); } .pb.pbsh-strong { box-shadow: 0 14px 44px rgba(0, 0, 0, .5); }
+.pb.has-border { border: 1px solid var(--line-strong, var(--card-border, rgba(255, 255, 255, .18))); }

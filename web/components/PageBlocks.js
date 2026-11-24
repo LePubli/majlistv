@@ -87,7 +87,7 @@ function TalksBlock({ p, lang }) {
   );
 }
 
-function Block({ b, lang }) {
+function Block({ b, lang, ctx = {} }) {
   const p = b.props || {};
   const T = (k) => tx(p[k], lang);
   switch (b.type) {
@@ -100,6 +100,20 @@ function Block({ b, lang }) {
           {T('title') && <h1>{T('title')}</h1>}
           {T('text') && <div className="pb-rich"><Rich text={T('text')} /></div>}
           <div className="pb-actions"><Btn url={p.btn1Url} label={T('btn1Label')} /><Btn url={p.btn2Url} label={T('btn2Label')} kind="ghost" /></div>
+        </div>
+      );
+    }
+    case 'columns': {
+      const n = Math.max(1, Math.min(4, Number(p.count) || 2));
+      const cols = b.cols || [];
+      return (
+        <div className={`pb-cols n-${n} r-${p.ratio || 'eq'} g-${p.gap || 'm'} v-${p.valign || 'start'} st-${p.stack || 'm'}`}>
+          {Array.from({ length: n }, (_, i) => (
+            <div key={i} className="pb-col" {...(ctx.editor ? { 'data-zone': `${b.id}:${i}` } : {})}>
+              <BlocksView blocks={cols[i] || []} locale={lang} preview={ctx.preview} onPick={ctx.onPick} pickedId={ctx.pickedId} nested />
+              {ctx.editor && !(cols[i] || []).length && <div className="pb-empty">Colonne {i + 1} : déposez un bloc ici</div>}
+            </div>
+          ))}
         </div>
       );
     }
@@ -168,10 +182,14 @@ function sectionProps(b, preview) {
   if (Number.isInteger(st.padTop)) style.paddingTop = st.padTop;
   if (Number.isInteger(st.padBottom)) style.paddingBottom = st.padBottom;
   if (Number.isInteger(st.radius)) style.borderRadius = st.radius;
+  if (st.minHeight) style.minHeight = st.minHeight;
+  if (validMedia(st.bgImage)) { style.backgroundImage = `url(/api/pages/media/${st.bgImage})`; style.backgroundSize = 'cover'; style.backgroundPosition = 'center'; }
   if (st.align) style.textAlign = st.align === 'start' ? 'start' : st.align === 'end' ? 'end' : 'center';
   const d = (b.show?.devices || ['m', 't', 'd']);
   const cls = ['pb', `pbt-${b.type}`]; // pbt- : type du bloc (ne pas confondre avec les classes de son contenu)
-  if (st.bgColor) cls.push('has-bg');
+  if (st.bgColor || validMedia(st.bgImage)) cls.push('has-bg');
+  if (st.shadow) cls.push(`pbsh-${st.shadow}`);
+  if (st.border) cls.push('has-border');
   if (st.align) cls.push(`al-${st.align}`);
   if (st.maxWidth) cls.push(`mw-${st.maxWidth}`);
   if (!d.includes('m')) cls.push('pb-hide-m');
@@ -181,7 +199,7 @@ function sectionProps(b, preview) {
 }
 
 // Liste de blocs. preview = vrai : tous les publics sont montrés, avec une étiquette sur les blocs limités.
-export function BlocksView({ blocks, locale, preview = false, onPick, pickedId }) {
+export function BlocksView({ blocks, locale, preview = false, onPick, pickedId, editor = false, nested = false }) {
   const lang = locale || 'fr';
   const { blockEdits } = useApp(); // mode édition sur la page (étape I5) : le bloc en cours de modification s'affiche tout de suite
   return (
@@ -197,7 +215,7 @@ export function BlocksView({ blocks, locale, preview = false, onPick, pickedId }
           <section key={b.id} {...props} {...(preview ? { 'data-block-id': b.id } : {})} {...(preview && onPick ? { onClick: (e) => { e.stopPropagation(); onPick(b.id); }, 'aria-current': pickedId === b.id ? 'true' : undefined } : {})}
             className={`${props.className}${preview && pickedId === b.id ? ' is-picked' : ''}`}>
             {flags.length > 0 && <span className="pb-flag">{flags.join(' · ')}</span>}
-            <div className="pb-in"><Block b={b} lang={lang} /></div>
+            <div className="pb-in"><Block b={b} lang={lang} ctx={{ preview, onPick, pickedId, editor }} /></div>
           </section>
         );
       })}

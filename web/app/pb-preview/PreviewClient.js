@@ -68,7 +68,7 @@ export default function PreviewClient() {
       });
       const zones = [...el.querySelectorAll('[data-zone]')].map((n) => {
         const r = n.getBoundingClientRect();
-        return { zone: n.getAttribute('data-zone'), y: r.top + sy, h: r.height };
+        return { zone: n.getAttribute('data-zone'), x: r.left, w: r.width, y: r.top + sy, h: r.height };
       });
       window.parent?.postMessage({ type: 'pb-rects', rects, zones, scrollY: sy, docH: document.documentElement.scrollHeight, viewH: window.innerHeight }, origin);
     });
@@ -102,7 +102,7 @@ export default function PreviewClient() {
         return (
           <div key={z} className={`pb-zone pb-${z}`} {...(editor ? { 'data-zone': z } : {})}>
             {order.length > 1 && <p className="pb-zone-label">{ZONE_TITLES[z]}</p>}
-            <BlocksView blocks={list} locale={locale} preview onPick={pick} pickedId={msg.pickedId} />
+            <BlocksView blocks={list} locale={locale} preview onPick={pick} pickedId={msg.pickedId} editor={editor} />
             {editor && list.length === 0 && <div className="pb-empty">Déposez un bloc ici</div>}
             {order.length > 1 && z === 'before' && <p className="pb-zone-label">▼ Contenu habituel de la page ▼</p>}
           </div>

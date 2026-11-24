@@ -16,7 +16,8 @@ import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
-import { clone, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
+import { TEMPLATES } from '../../lib/blockTemplates';
+import { clone, isColZone, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
 const DEVICES = [{ id: 390, label: 'Téléphone', glyph: '▯' }, { id: 768, label: 'Tablette', glyph: '▭' }, { id: 1024, label: 'Petit écran', glyph: '▬' }, { id: 1440, label: 'Ordinateur', glyph: '▬▬' }];
 const KNOWN_PATHS = [
@@ -25,7 +26,7 @@ const KNOWN_PATHS = [
   ['/lists', 'Mes listes'], ['/themes', 'Thèmes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'],
   ['/legal/mentions-legales', 'Mentions légales'], ['/legal/cgv', 'Conditions générales de vente'], ['/legal/confidentialite', 'Confidentialité'],
 ];
-const GLYPH = { hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', spacer: '↕', divider: '―' };
+const GLYPH = { hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', columns: '▥', spacer: '↕', divider: '―' };
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const typing = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 
@@ -124,12 +125,56 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
 /* ------------------------------------------------------------------ Panneau « Plan » : blocs par zone, à réordonner */
 function Layers({ content, zones, selected, onSelect, lang, drag, onDragStart, onDragEnd, onDrop, onNudge, onDup, onDel, errorsByBlock }) {
   const [over, setOver] = useState(null); // { zone, index }
-  const hover = (e, zone, index, i0) => {
+  const hover = (e, zone, i0) => {
     if (!drag.current) return;
-    e.preventDefault();
+    if (isColZone(zone) && (drag.current.kind === 'new' ? drag.current.type === 'columns' : findBlock(content, drag.current.id)?.block.type === 'columns')) return;
+    e.preventDefault(); e.stopPropagation();
     const r = e.currentTarget.getBoundingClientRect();
-    const after = e.clientY > r.top + r.height / 2;
-    setOver({ zone, index: after ? i0 + 1 : i0 });
+    setOver({ zone, index: e.clientY > r.top + r.height / 2 ? i0 + 1 : i0 });
+  };
+  const renderList = (zone) => {
+    const list = getList(content, zone);
+    return (
+      <ol>
+        {list.map((b, i) => {
+          const def = BLOCK_TYPES[b.type];
+          const bad = errorsByBlock[b.id];
+          return (
+            <li key={b.id} className={`ed-layer${selected === b.id ? ' on' : ''}${bad ? ' bad' : ''}${over?.zone === zone && over.index === i ? ' drop-before' : ''}${over?.zone === zone && over.index === i + 1 && i === list.length - 1 ? ' drop-after' : ''}`}
+              draggable onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', `move:${b.id}`); e.dataTransfer.effectAllowed = 'move'; onDragStart({ kind: 'move', id: b.id }); }}
+              onDragEnd={() => { setOver(null); onDragEnd(); }} onDragOver={(e) => hover(e, zone, i)}>
+              <div className="ed-layer-row">
+                <button type="button" className="ed-layer-main" onClick={() => onSelect(b.id)} aria-pressed={selected === b.id}
+                  onKeyDown={(e) => { if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); onNudge(b.id, -1); } if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); onNudge(b.id, 1); } }}>
+                  <span className="ed-pal-glyph" aria-hidden="true">{GLYPH[b.type] || '▫'}</span>
+                  <span className="ed-layer-txt"><strong>{def.label}</strong><small>{def.container ? `${(b.cols || []).length} colonne(s)` : blockSummary(b, lang)}</small></span>
+                  {(b.show?.devices || []).length < 3 && <span className="ap-tag">{(b.show.devices || []).map((d) => DEVICE_LABELS[d]).join(', ')}</span>}
+                  {(b.show?.audience || 'all') !== 'all' && <span className="ap-tag">{AUDIENCES.find(([a]) => a === b.show.audience)?.[1]}</span>}
+                </button>
+                <span className="ed-layer-btns">
+                  <button type="button" aria-label={`${def.label} ${i + 1} : monter`} disabled={i === 0} onClick={() => onNudge(b.id, -1)}>↑</button>
+                  <button type="button" aria-label={`${def.label} ${i + 1} : descendre`} disabled={i === list.length - 1} onClick={() => onNudge(b.id, 1)}>↓</button>
+                  <button type="button" aria-label={`${def.label} ${i + 1} : dupliquer`} onClick={() => onDup(b.id)}>⧉</button>
+                  <button type="button" aria-label={`${def.label} ${i + 1} : supprimer`} onClick={() => onDel(b.id)}>✕</button>
+                </span>
+              </div>
+              {def.container && (b.cols || []).map((_, n) => {
+                const cz = `${b.id}:${n}`;
+                const cl = getList(content, cz);
+                return (
+                  <div key={n} className="ed-layer-col" role="group" aria-label={`Colonne ${n + 1}`}
+                    onDragOver={(e) => { if (!cl.length) hover(e, cz, 0); }}>
+                    <h4>Colonne {n + 1}</h4>
+                    {cl.length === 0 && <p className={`ed-layer-empty${over?.zone === cz ? ' drop' : ''}`}>Vide — glissez un bloc ici.</p>}
+                    {renderList(cz)}
+                  </div>
+                );
+              })}
+            </li>
+          );
+        })}
+      </ol>
+    );
   };
   return (
     <div className="ed-layers">
@@ -138,38 +183,28 @@ function Layers({ content, zones, selected, onSelect, lang, drag, onDragStart, o
         return (
           <section key={zone} aria-label={ZONE_LABELS[zone]}
             onDragOver={(e) => { if (drag.current && !list.length) { e.preventDefault(); setOver({ zone, index: 0 }); } }}
-            onDrop={(e) => { e.preventDefault(); if (over) onDrop(over.zone, over.index); setOver(null); }}
+            onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (over) onDrop(over.zone, over.index); setOver(null); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(null); }}>
             <h3>{ZONE_LABELS[zone]} <span className="meta small">({list.length})</span></h3>
             {list.length === 0 && <p className={`ed-layer-empty${over?.zone === zone ? ' drop' : ''}`}>Aucun bloc — glissez-en un ici.</p>}
-            <ol>
-              {list.map((b, i) => {
-                const def = BLOCK_TYPES[b.type];
-                const bad = errorsByBlock[b.id];
-                return (
-                  <li key={b.id} className={`ed-layer${selected === b.id ? ' on' : ''}${bad ? ' bad' : ''}${over?.zone === zone && over.index === i ? ' drop-before' : ''}${over?.zone === zone && over.index === i + 1 && i === list.length - 1 ? ' drop-after' : ''}`}
-                    draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', `move:${b.id}`); e.dataTransfer.effectAllowed = 'move'; onDragStart({ kind: 'move', id: b.id }); }}
-                    onDragEnd={() => { setOver(null); onDragEnd(); }} onDragOver={(e) => hover(e, zone, i, i)}>
-                    <button type="button" className="ed-layer-main" onClick={() => onSelect(b.id)} aria-pressed={selected === b.id}
-                      onKeyDown={(e) => { if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); onNudge(b.id, -1); } if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); onNudge(b.id, 1); } }}>
-                      <span className="ed-pal-glyph" aria-hidden="true">{GLYPH[b.type] || '▫'}</span>
-                      <span className="ed-layer-txt"><strong>{def.label}</strong><small>{blockSummary(b, lang)}</small></span>
-                      {(b.show?.devices || []).length < 3 && <span className="ap-tag">{(b.show.devices || []).map((d) => DEVICE_LABELS[d]).join(', ')}</span>}
-                      {(b.show?.audience || 'all') !== 'all' && <span className="ap-tag">{AUDIENCES.find(([a]) => a === b.show.audience)?.[1]}</span>}
-                    </button>
-                    <span className="ed-layer-btns">
-                      <button type="button" aria-label={`${def.label} ${i + 1} : monter`} disabled={i === 0} onClick={() => onNudge(b.id, -1)}>↑</button>
-                      <button type="button" aria-label={`${def.label} ${i + 1} : descendre`} disabled={i === list.length - 1} onClick={() => onNudge(b.id, 1)}>↓</button>
-                      <button type="button" aria-label={`${def.label} ${i + 1} : dupliquer`} onClick={() => onDup(b.id)}>⧉</button>
-                      <button type="button" aria-label={`${def.label} ${i + 1} : supprimer`} onClick={() => onDel(b.id)}>✕</button>
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+            {renderList(zone)}
           </section>
         );
       })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Panneau « Modèles » */
+function Templates({ onUse, disabled }) {
+  return (
+    <div className="ed-tpl">
+      <p className="meta small">Des sections toutes prêtes : cliquez pour les ajouter après le bloc choisi, puis modifiez les textes, les images et les couleurs.</p>
+      <ul>
+        {TEMPLATES.map((t) => (
+          <li key={t.id}><button type="button" className="ed-tpl-item" disabled={disabled} onClick={() => onUse(t)}><strong>{t.label}</strong><small>{t.hint}</small></button></li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -298,7 +333,9 @@ function Canvas({ doc, zones, lang, device, selected, onSelect, drag, onDropAt, 
     const r = overlayRef.current.getBoundingClientRect();
     const yScreen = e.clientY - r.top;
     const yDoc = yScreen / scale + metrics.scrollY;
-    const t = dropTarget(metrics.rects.filter((x) => !(drag.current.kind === 'move' && x.id === drag.current.id)), metrics.zones.filter((z) => z.zone), yDoc);
+    const xDoc = (e.clientX - r.left) / scale;
+    const dragsColumns = drag.current.kind === 'new' ? drag.current.type === 'columns' : findBlock(doc.content, drag.current.id)?.block.type === 'columns';
+    const t = dropTarget(metrics.rects.filter((x) => !(drag.current.kind === 'move' && x.id === drag.current.id)), metrics.zones.filter((z) => z.zone && !(drag.current.kind === 'move' && z.zone.startsWith(`${drag.current.id}:`))), yDoc, xDoc, !dragsColumns);
     setDropAt(t);
     // Défilement automatique près des bords.
     const edge = 70;
@@ -331,7 +368,7 @@ function Canvas({ doc, zones, lang, device, selected, onSelect, drag, onDropAt, 
               </div>
             </>
           )}
-          {dropAt && dragging && <div className="ed-dropline" style={{ top: lineTop }}><span>{zones.length > 1 ? ZONE_LABELS[dropAt.zone] : 'Déposer ici'}</span></div>}
+          {dropAt && dragging && <div className="ed-dropline" style={{ top: lineTop, ...(dropAt.w != null && isColZone(dropAt.zone) ? { insetInlineStart: dropAt.x * scale, insetInlineEnd: 'auto', width: dropAt.w * scale } : {}) }}><span>{isColZone(dropAt.zone) ? `Colonne ${Number(dropAt.zone.split(':')[1]) + 1}` : zones.length > 1 ? ZONE_LABELS[dropAt.zone] : 'Déposer ici'}</span></div>}
         </div>
       </div>
       {!ready && <p className="ed-loading" role="status">Chargement de l’aperçu…</p>}
@@ -391,12 +428,29 @@ export default function SiteEditor() {
   const addBlock = useCallback((type, zone, index) => {
     if (!content) return;
     const b = newBlock(type);
-    const z = zone || (selected && findBlock(content, selected)?.zone) || zones[0];
-    const at = index ?? (selected && findBlock(content, selected) ? findBlock(content, selected).index + 1 : (content.zones[z] || []).length);
+    const sel = selected ? findBlock(content, selected) : null;
+    let z = zone || sel?.zone || zones[0];
+    let at = index ?? (sel ? sel.index + 1 : getList(content, z).length);
+    if (type === 'columns' && isColZone(z)) { // les colonnes ne s'imbriquent pas : on les pose juste après le bloc Colonnes qui contient la cible
+      const parent = findBlock(content, z.split(':')[0]);
+      if (!parent) return;
+      z = parent.zone; at = parent.index + 1;
+    }
     const next = insertBlock(content, z, at, b, MAX_BLOCKS_PER_ZONE);
-    if (!next) { say(`Cette zone contient déjà ${MAX_BLOCKS_PER_ZONE} blocs.`); return; }
+    if (!next) { say(`Cette zone est pleine (${isColZone(z) ? 20 : MAX_BLOCKS_PER_ZONE} blocs au maximum).`); return; }
     commit(next); setSelected(b.id); setRightOpen(true);
   }, [content, selected, zones, commit, say]);
+  const addTemplate = useCallback((t) => {
+    if (!content) return;
+    const sel = selected ? findBlock(content, selected) : null;
+    // Un modèle se pose toujours au niveau de la page (jamais dans une colonne) : après le bloc choisi, ou le bloc Colonnes qui le contient.
+    let z = sel?.zone || zones[0]; let at = sel ? sel.index + 1 : (content.zones[z] || []).length;
+    if (isColZone(z)) { const parent = findBlock(content, z.split(':')[0]); z = parent.zone; at = parent.index + 1; }
+    const blocks = t.make();
+    let next = content;
+    for (let k = 0; k < blocks.length; k++) { next = insertBlock(next, z, at + k, blocks[k], MAX_BLOCKS_PER_ZONE); if (!next) { say('Cette zone est trop pleine pour ce modèle.'); return; } }
+    commit(next); setSelected(blocks[0].id); setRightOpen(true); say(`Modèle « ${t.label} » ajouté.`, { label: 'Annuler', run: undo });
+  }, [content, selected, zones, commit, undo, say]);
   const nudge = useCallback((id, d) => commit(nudgeBlock(content, id, d)), [content, commit]);
   const dup = useCallback((id) => {
     const r = duplicateBlock(content, id, newId(), MAX_BLOCKS_PER_ZONE);
@@ -409,12 +463,12 @@ export default function SiteEditor() {
     if (!d || !content) return;
     if (d.kind === 'new') { addBlock(d.type, zone, index); return; }
     const next = moveBlock(content, d.id, zone, index, MAX_BLOCKS_PER_ZONE);
-    if (!next) { say(`Cette zone contient déjà ${MAX_BLOCKS_PER_ZONE} blocs.`); return; }
+    if (!next) { say(isColZone(zone) ? 'Les colonnes ne se mettent pas dans une colonne, et une colonne accepte 20 blocs au plus.' : `Cette zone contient déjà ${MAX_BLOCKS_PER_ZONE} blocs.`); return; }
     commit(next);
   }, [content, addBlock, commit, say]);
   const startDrag = useCallback((d) => { setTimeout(() => { drag.current = d; force((n) => n + 1); }, 0); drag.current = d; }, []);
   const endDrag = useCallback(() => { drag.current = null; force((n) => n + 1); }, []);
-  const setBlock = (b) => { const f = findBlock(content, b.id); if (!f) return; commit({ ...content, zones: { ...content.zones, [f.zone]: content.zones[f.zone].map((x) => (x.id === b.id ? b : x)) } }, `block:${b.id}`); };
+  const setBlock = (b) => { const f = findBlock(content, b.id); if (!f) return; commit(setList(content, f.zone, getList(content, f.zone).map((x) => (x.id === b.id ? b : x))), `block:${b.id}`); };
   const setMeta = (k, v) => { const meta = { ...(content.meta || {}) }; if (v === undefined) delete meta[k]; else meta[k] = v; commit({ ...content, meta }, `meta:${k}`); };
   const setNav = (nav) => { const c = { ...content }; if (nav === undefined) delete c.nav; else c.nav = nav; commit(c, 'nav'); };
 
@@ -475,9 +529,17 @@ export default function SiteEditor() {
   const errorsByBlock = useMemo(() => {
     const out = {}; const rest = [];
     for (const [path, m] of Object.entries(errors || {})) {
-      const x = path.match(/^zones\.(\w+)\.(\d+)\.(props|show|style)\.(\w+)/) || path.match(/^zones\.(\w+)\.(\d+)\.(type|id)()/);
-      const b = x && content?.zones?.[x[1]]?.[Number(x[2])];
-      if (b) { (out[b.id] ||= {})[x[4] || x[3]] = m; } else rest.push(`${path ? `${path} : ` : ''}${m}`);
+      // zones.main.0[.cols.1.2].props.image : on suit le chemin jusqu'au bloc (colonnes comprises)
+      const parts = path.split('.');
+      let node = null; let k = 0;
+      if (parts[0] === 'zones' && content?.zones?.[parts[1]]) {
+        node = content.zones[parts[1]][Number(parts[2])]; k = 3;
+        while (node && parts[k] === 'cols') { node = node.cols?.[Number(parts[k + 1])]?.[Number(parts[k + 2])]; k += 3; }
+      }
+      const group = parts[k]; const field = parts[k + 1];
+      if (node && ['props', 'show', 'style'].includes(group) && field) (out[node.id] ||= {})[field] = m;
+      else if (node && ['type', 'id'].includes(group)) (out[node.id] ||= {})[group] = m;
+      else rest.push(`${path ? `${path} : ` : ''}${m}`);
     }
     return { out, rest };
   }, [errors, content]);
@@ -517,9 +579,10 @@ export default function SiteEditor() {
         <button type="button" className="btn ed-publish" onClick={publish} disabled={!page || (!page.hasDraft && save !== 'pending')}>Publier</button>
       </header>
 
-      {(msg || errorsByBlock.rest.length > 0) && (
+      {(msg || errorsByBlock.rest.length > 0 || Object.keys(errorsByBlock.out).length > 0) && (
         <div className="ed-banner" role="alert">
           {msg && <span>{msg}</span>}
+          {Object.keys(errorsByBlock.out).length > 0 && <span>{Object.keys(errorsByBlock.out).length} bloc(s) à corriger (en rouge dans le Plan) : {Object.values(errorsByBlock.out).map((o) => Object.values(o)[0]).slice(0, 3).join(' · ')}</span>}
           {errorsByBlock.rest.map((m, i) => <span key={i}>{m}</span>)}
           <button type="button" aria-label="Fermer" onClick={() => { setMsg(''); doc.setErrors({}); }}>✕</button>
         </div>
@@ -529,12 +592,13 @@ export default function SiteEditor() {
         {leftOpen && (
           <aside className="ed-left" aria-label="Blocs, plan, pages et style">
             <div className="ed-tabs" role="tablist">
-              {[['blocks', 'Blocs'], ['layers', 'Plan'], ['pages', 'Pages'], ['style', 'Style']].map(([id, l]) => (
+              {[['blocks', 'Blocs'], ['tpl', 'Modèles'], ['layers', 'Plan'], ['pages', 'Pages'], ['style', 'Style']].map(([id, l]) => (
                 <button key={id} type="button" role="tab" aria-selected={leftTab === id} className={leftTab === id ? 'on' : ''} onClick={() => setLeftTab(id)}>{l}</button>
               ))}
             </div>
             <div className="ed-panel">
               {leftTab === 'blocks' && <Palette disabled={!content} onAdd={(t) => addBlock(t)} onDragStart={startDrag} onDragEnd={endDrag} />}
+              {leftTab === 'tpl' && <Templates disabled={!content} onUse={addTemplate} />}
               {leftTab === 'layers' && content && <Layers content={content} zones={zones} selected={selected} onSelect={(id) => { setSelected(id); setRightOpen(true); }} lang={lang} drag={drag} onDragStart={startDrag} onDragEnd={endDrag} onDrop={dropAt} onNudge={nudge} onDup={dup} onDel={del} errorsByBlock={errorsByBlock.out} />}
               {leftTab === 'layers' && !content && <p className="meta">Choisissez une page.</p>}
               {leftTab === 'pages' && pages && <PagesList pages={pages} pageId={pageId} onOpen={openPage} reload={loadPages} call={call} />}
