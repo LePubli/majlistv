@@ -10251,3 +10251,18 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** Apparence → « Thème Premium : couleurs » → Couleur principale : choisir un vert → le bleu des boutons, liens actifs et dégradés devient vert partout ; Publier. « Police des titres » : Playfair Display Variable.
 
 **Testé / non testé / limites.** Voir ligne 350 du registre.
+
+
+## Éditeur visuel, étape 2 — écran d'édition plein écran `/editeur` (24/11/2026)
+
+**Description.** Un seul écran pour composer les pages du site sans toucher au code : barre du haut (page, annuler/rétablir, taille d'écran, langue, panneaux, Historique, Publier), panneau gauche (Blocs à glisser, Plan réordonnable, Pages, Style = thème en direct), centre (la vraie page, mise à l'échelle de l'appareil choisi, sélection et dépôt directement dessus), panneau droit (réglages du bloc ou de la page). Les panneaux se masquent pour donner toute la place à la page ; sur écran étroit ils passent par-dessus.
+
+**Prérequis.** Aucune migration, aucun changement d'API. Compte administrateur.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web` (l'API ne change pas). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec attendu).
+
+**Debug.** L'aperçu reste « Chargement de l'aperçu… » : vérifier que `/pb-preview` s'ouvre seul (CSP, même origine). Le glisser-déposer ne réagit pas : normal au doigt (utiliser le clic dans « Blocs » puis le Plan) ; sur « En-tête et pied de page » déposer via le Plan. « Non enregistré » : lire le bandeau (erreur de validation de l'API) ; le contenu reste dans l'éditeur. Console du navigateur : filtrer `pb-`. Tests : `node web/tests/test_site_editor.mjs`, `node web/tests/test_css_back.mjs`.
+
+**Exemples.** Admin → Site → Éditeur du site → onglet Pages → « Nouvelle page » → onglet Blocs : glisser « Bannière » puis « Texte » sur la page → clic sur la bannière : modifier le titre à droite → bouton Téléphone pour voir le rendu mobile → Ctrl+Z pour annuler → Publier. Onglet Style : changer la couleur principale, le résultat se voit aussitôt dans la page ; la publication du thème se fait dans cet onglet.
+
+**Testé / non testé / limites.** Voir ligne 351 du registre.

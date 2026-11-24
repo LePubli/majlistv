@@ -46,7 +46,7 @@ export default function AdminShell({ children }) {
     { key: 'cat', title: t('adGrpCat'), items: [['categories', t('adCatFmt'), ICONS.tag], ['speakers', t('adSpeakers'), ICONS.users], ['watch', t('admWatch'), ICONS.eye]] },
     { key: 'practice', title: t('adGrpPractice'), items: [['quran', t('qrAdNav'), ICONS.doc], ['athkar', t('atTab'), ICONS.doc], ['ramadan', t('rzNav'), ICONS.eye], ['seasons', t('seasonAdmin'), ICONS.eye], ['friday', t('fdAdminNav'), ICONS.eye]] },
     { key: 'growth', title: t('adGrpGrowth'), items: [['ads', t('admAds'), ICONS.tag], ['experiments', 'Tests A/B', ICONS.chart], ['gifts', t('admGifts'), ICONS.heart], ['sales', t('saNav'), ICONS.tag], ['referral', t('refAdmin'), ICONS.users], ['regions', t('regAdmin'), ICONS.tag], ['lifecycle', t('admLifecycle'), ICONS.gear]] },
-    { key: 'site', title: t('adGrpSite'), items: [['appearance', t('admAppearance'), ICONS.brush], ['pages', t('admPages'), ICONS.doc], ['menus', 'Menus', ICONS.layers], ['texts', t('admTexts'), ICONS.doc], ['legal', t('admLegal'), ICONS.doc], ['features', t('admFeatures'), ICONS.gear], ['modules', t('admModules'), ICONS.layers], ['settings', t('admSettings'), ICONS.gear]] },
+    { key: 'site', title: t('adGrpSite'), items: [['/editeur', 'Éditeur du site', ICONS.brush], ['appearance', t('admAppearance'), ICONS.brush], ['pages', t('admPages'), ICONS.doc], ['menus', 'Menus', ICONS.layers], ['texts', t('admTexts'), ICONS.doc], ['legal', t('admLegal'), ICONS.doc], ['features', t('admFeatures'), ICONS.gear], ['modules', t('admModules'), ICONS.layers], ['settings', t('admSettings'), ICONS.gear]] },
     { key: 'tech', title: t('adGrpTech'), items: [['health', t('admHealth'), ICONS.gear], ['errors', t('admErrors'), ICONS.shield], ['ask', t('admAsk'), ICONS.shield], ['audit', t('admAudit'), ICONS.shield]] },
   ];
   const visible = (id) => {
@@ -57,7 +57,7 @@ export default function AdminShell({ children }) {
   };
   const shown = groups.map((g) => ({
     ...g,
-    items: g.items.filter(([id]) => visible(id)).map(([id, label, icon]) => [id === 'dashboard' ? '/admin' : `/admin?tab=${id}`, id === 'watch' && watchNew > 0 ? `${label} (${watchNew})` : label, icon]),
+    items: g.items.filter(([id]) => visible(id)).map(([id, label, icon]) => [id.startsWith('/') ? id : id === 'dashboard' ? '/admin' : `/admin?tab=${id}`, id === 'watch' && watchNew > 0 ? `${label} (${watchNew})` : label, icon]),
   })).filter((g) => g.items.length);
   const isOn = (href) => path === '/admin' && tab === (new URL(href, 'http://x').searchParams.get('tab') || 'dashboard');
   const links = [

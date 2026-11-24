@@ -194,7 +194,7 @@ export function BlocksView({ blocks, locale, preview = false, onPick, pickedId }
           ...((b.show?.audience || 'all') !== 'all' ? [AUDIENCES.find(([a]) => a === b.show.audience)?.[1]] : []),
         ] : [];
         return (
-          <section key={b.id} {...props} {...(preview && onPick ? { onClick: () => onPick(b.id), 'aria-current': pickedId === b.id ? 'true' : undefined } : {})}
+          <section key={b.id} {...props} {...(preview ? { 'data-block-id': b.id } : {})} {...(preview && onPick ? { onClick: (e) => { e.stopPropagation(); onPick(b.id); }, 'aria-current': pickedId === b.id ? 'true' : undefined } : {})}
             className={`${props.className}${preview && pickedId === b.id ? ' is-picked' : ''}`}>
             {flags.length > 0 && <span className="pb-flag">{flags.join(' · ')}</span>}
             <div className="pb-in"><Block b={b} lang={lang} /></div>

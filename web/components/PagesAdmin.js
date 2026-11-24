@@ -26,7 +26,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 // Panneau « Référencement » : aperçu façon Google, longueur du titre et de la description, liste de contrôle (données réelles de la page).
 const SEO_TITLE = [30, 60];
 const SEO_DESC = [70, 160];
-function SeoCheck({ page, content, lang }) {
+export function SeoCheck({ page, content, lang }) {
   const title = content.meta?.title?.[lang] || '';
   const desc = content.meta?.description?.[lang] || '';
   const blocks = Object.values(content.zones || {}).flat();
@@ -489,6 +489,7 @@ export default function PagesAdmin() {
     <section className="pe-list-view" lang="fr" dir="ltr">
       <p className="meta">Créez de nouvelles pages et composez-les avec des blocs (bannière, titre, texte, image, cartes, vidéos, questions…), ou ajoutez des blocs avant ou après une page existante du site. Chaque bloc peut être réservé à un appareil ou à un public, et avoir ses propres couleurs.</p>
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
+      <p><a className="btn" href="/editeur">Ouvrir l’éditeur visuel (plein écran, glisser-déposer)</a></p>
 
       <div className="panel">
         <h2 className="panel-title">Accueil des membres</h2>

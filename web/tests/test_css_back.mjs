@@ -30,7 +30,7 @@ const imports = (f, s) => {
   if (/require\.context\(\s*'\.\.\/modules'/.test(s)) for (const k of src.keys()) if (isModuleCard(k)) out.push(k);
   return out;
 };
-const isBack = (f) => /[\\/]app[\\/](admin|studio)[\\/]/.test(f);
+const isBack = (f) => /[\\/]app[\\/](admin|studio|editeur)[\\/]/.test(f);
 const entries = [...src.keys()].filter((f) => (/[\\/]app[\\/]/.test(f) && /[\\/](page|layout|not-found|error|global-error|loading|template|route)\.js$/.test(f)) || /[\\/]middleware\.js$/.test(f));
 const front = new Set(); const todo = entries.filter((f) => !isBack(f));
 while (todo.length) { const f = todo.pop(); if (front.has(f)) continue; front.add(f); for (const g of imports(f, src.get(f))) todo.push(g); }

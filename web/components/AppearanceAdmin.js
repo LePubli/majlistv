@@ -312,6 +312,105 @@ function SiteSkin() {
   );
 }
 
+/* ------------------------------------------------------------------ Panneau « Style » de l'éditeur visuel */
+// Les mêmes réglages que cette page, dans le panneau de gauche de l'éditeur : chaque modification part dans le brouillon du thème actif
+// et s'affiche aussitôt dans la page en cours d'édition (onCss reçoit la feuille de style à injecter dans l'aperçu).
+export function ThemePanel({ onCss }) {
+  const { call, skin } = useApp();
+  const [cur, setCur] = useState(null);
+  const [values, setValues] = useState({});
+  const [fonts, setFonts] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [save, setSave] = useState('idle');
+  const [msg, setMsg] = useState('');
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(() => new Set(skin === 'premium' ? ['premium', 'premiumType'] : ['base']));
+  const timer = useRef(null);
+  const loadFonts = useCallback(() => call('/admin/theme/fonts').then((r) => r.ok && setFonts(r.data)), [call]);
+  useEffect(() => {
+    loadFonts();
+    call('/admin/themes').then(async (r) => {
+      if (!r.ok) return;
+      const a = r.data.find((x) => x.isActive) || r.data[0];
+      if (!a) return;
+      const t = await call(`/admin/themes/${a.id}`);
+      if (t.ok) { setCur(t.data); setValues(t.data.draft ?? t.data.published); }
+    });
+  }, [call, loadFonts]);
+  const names = fonts.map((f) => f.family);
+  const valid = useMemo(() => Object.fromEntries(Object.entries(values).filter(([k, v]) => !checkValue(k, v, names))), [values, fonts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const css = useMemo(() => buildCss(valid, fonts), [valid, fonts]);
+  const issues = useMemo(() => contrastIssues(valid), [valid]);
+  const flagged = new Set(issues.flatMap((i) => [i.fg, i.bg]));
+  useEffect(() => { onCss?.(css); }, [css]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const persist = useCallback(async (id, vals) => {
+    setSave('saving');
+    const r = await call(`/admin/themes/${id}/draft`, { method: 'PUT', body: JSON.stringify({ values: vals }) });
+    if (r.ok) { setCur(r.data); setErrors({}); setSave('saved'); } else { setErrors(r.data?.errors || {}); setSave('error'); }
+  }, [call]);
+  const schedule = (vals) => {
+    setSave('pending'); clearTimeout(timer.current);
+    const bad = Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, checkValue(k, v, names)]).filter(([, e]) => e));
+    setErrors(bad);
+    if (Object.keys(bad).length) { setSave('error'); return; }
+    timer.current = setTimeout(() => persist(cur.id, vals), 800);
+  };
+  const setOne = (id, v) => { const next = { ...values, [id]: v }; if (v === TOKEN_MAP[id].def) delete next[id]; setValues(next); schedule(next); };
+  const resetOne = (id) => { const next = { ...values }; delete next[id]; setValues(next); schedule(next); };
+  const publish = async () => {
+    clearTimeout(timer.current);
+    if (Object.keys(errors).length) { setMsg('Corrigez d’abord les valeurs signalées en rouge.'); return; }
+    if (issues.length && !window.confirm(`${issues.length} association(s) de couleurs sont peu lisibles. Publier quand même ?`)) return;
+    await persist(cur.id, values);
+    const r = await call(`/admin/themes/${cur.id}/publish`, { method: 'POST' });
+    if (r.ok) { setCur(r.data); setValues(r.data.published); setMsg(cur.isActive ? 'Thème publié : le site l’affiche sous 10 secondes.' : 'Publié (ce thème n’est pas actif sur le site).'); setSave('idle'); } else setMsg(r.data?.error || 'Publication impossible.');
+  };
+  const discard = async () => {
+    if (!window.confirm('Abandonner le brouillon du thème et revenir à la version publiée ?')) return;
+    clearTimeout(timer.current);
+    const r = await call(`/admin/themes/${cur.id}/draft`, { method: 'DELETE' });
+    if (r.ok) { setCur(r.data); setValues(r.data.published); setErrors({}); setSave('idle'); setMsg('Brouillon du thème abandonné.'); }
+  };
+  if (!cur) return <p className="meta" role="status">Chargement du thème…</p>;
+  const needle = q.trim().toLowerCase();
+  const hasDraft = cur.hasDraft || save === 'pending' || save === 'saving';
+  return (
+    <div className="ed-theme" lang="fr" dir="ltr">
+      <p className="meta small"><b>{cur.name}</b>{cur.isActive ? ' · actif sur le site' : ' · non affiché'} — vos changements s’affichent dans la page ; les visiteurs ne voient rien avant « Publier le thème ».</p>
+      <div className="ed-theme-actions">
+        <button type="button" className="btn" onClick={publish} disabled={!hasDraft}>Publier le thème</button>
+        <button type="button" className="btn ghost" onClick={discard} disabled={!cur.hasDraft}>Abandonner</button>
+        <span className="meta small" role="status">{{ pending: 'En attente…', saving: 'Enregistrement…', saved: 'Brouillon enregistré', error: 'Valeur à corriger', idle: '' }[save]}</span>
+      </div>
+      {msg && <p className="ap-msg" role="status">{msg}</p>}
+      <input type="search" className="ed-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher un réglage (fond, bouton, police…)" aria-label="Chercher un réglage" />
+      {issues.length > 0 && <p className="ap-issues"><b>Lisibilité : {issues.length} association(s) à vérifier</b> — {issues.map((i) => i.label).join(' ; ')}</p>}
+      <SkinNote skin={skin} />
+      {GROUPS.filter((g) => skin === 'premium' || !g.skin).map((g) => {
+        const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
+        if (!list.length) return null;
+        const isOpen = Boolean(needle) || open.has(g.id);
+        const n = list.filter((t) => values[t.id] !== undefined).length;
+        return (
+          <section key={g.id} className="ap-group">
+            <h3><button type="button" aria-expanded={isOpen} onClick={() => setOpen((o) => { const x = new Set(o); if (x.has(g.id)) x.delete(g.id); else x.add(g.id); return x; })}>
+              <span>{g.label}</span>{n > 0 && <span className="ap-tag">{n}</span>}<span className="ap-chev" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+            </button></h3>
+            {isOpen && (
+              <div className="ap-group-body">
+                {g.hint && <p className="meta small">{g.hint}</p>}
+                {list.map((t) => <TokenRow key={t.id} t={t} values={values} fonts={fonts} onSet={setOne} onReset={resetOne} error={errors[t.id]} flagged={flagged.has(t.id)} />)}
+                {(g.id === 'type' || g.id === 'premiumType') && <FontsPanel fonts={fonts} reload={loadFonts} />}
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ Page */
 export default function AppearanceAdmin() {
   const { call, skin } = useApp();
@@ -461,6 +560,7 @@ export default function AppearanceAdmin() {
           { icon: 'check', tone: cur.isActive ? 'green' : 'amber', label: 'État', value: cur.isActive ? 'Actif sur le site' : 'Non affiché', note: cur.publishedAt ? `Publié le ${fmtDate(cur.publishedAt)}` : '' },
           { icon: 'edit', label: 'Réglages modifiés', value: changedCount, note: saveLabel || '' },
         ]} />
+        <p><a className="btn" href="/editeur">Ouvrir l’éditeur visuel (plein écran : pages, blocs et style)</a></p>
         <div className="ap" lang="fr" dir="ltr">
           <div className="bm-form" style={{ marginBottom: 14 }}>
       <SiteSkin />
