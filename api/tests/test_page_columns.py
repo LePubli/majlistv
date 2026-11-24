@@ -28,10 +28,14 @@ c = r.json()["content"]["zones"]["main"][0]
 ok(r.status_code == 200 and len(c["cols"]) == 2 and [len(x) for x in c["cols"]] == [1, 2], "colonnes acceptées, 2 colonnes (1 + 2 blocs)")
 ok(c["props"].get("ratio") == "1-2", "proportions conservées")
 
-# Pas de colonnes dans une colonne
-bad = blk("columns", {"count": "2"}, "cccc0009", cols=[[blk("columns", {"count": "2"}, "cccc0008", cols=[[], []])], []])
-r = put(content([bad]))
-ok(r.status_code == 400 and any("colonnes" in str(v).lower() for v in (r.json().get("errors") or {}).values()), "colonnes dans une colonne refusées")
+# Colonnes dans une colonne : deux niveaux acceptés (étape 6), trois refusés
+inner = blk("columns", {"count": "2"}, "cccc0008", cols=[[blk("text", {}, "cccc0020")], []])
+two = blk("columns", {"count": "2"}, "cccc0009", cols=[[inner], []])
+r = put(content([two]))
+ok(r.status_code == 200 and r.json()["content"]["zones"]["main"][0]["cols"][0][0]["cols"][0][0]["id"] == "cccc0020", "colonnes dans une colonne : 2 niveaux acceptés")
+deep = blk("columns", {"count": "2"}, "cccc0030", cols=[[blk("columns", {"count": "2"}, "cccc0031", cols=[[blk("columns", {"count": "2"}, "cccc0032", cols=[[], []])], []])], []])
+r = put(content([deep]))
+ok(r.status_code == 400 and any("deux niveaux" in str(v).lower() for v in (r.json().get("errors") or {}).values()), "trois niveaux de colonnes refusés")
 
 # Nombre de colonnes réduit : les blocs de la colonne supprimée passent à la dernière colonne gardée
 shrink = blk("columns", {"count": "1"}, "cccc0010", cols=[[t1], [blk("text", {}, "cccc0011")]])

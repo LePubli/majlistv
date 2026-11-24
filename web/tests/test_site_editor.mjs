@@ -2,7 +2,7 @@
 // annuler / rétablir.   node web/tests/test_site_editor.mjs
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { getList, isColZone, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../lib/editorOps.js';
+import { getList, zoneDepth, blockHeight, canPlace, isColZone, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../lib/editorOps.js';
 
 const B = (id) => ({ id, type: 'text', props: {}, show: { devices: ['mobile', 'tablet', 'desktop'], audience: 'all' }, style: {} });
 const page = () => ({ meta: {}, zones: { before: [B('a'), B('b'), B('c')], after: [B('x')] } });
@@ -81,9 +81,19 @@ let l = newHistory(3); for (let i = 0; i < 6; i++) l = pushHistory(l, 's' + i, n
   const c1 = insertBlock(c0, 'col1:0', 1, B('n1'));
   assert.deepEqual(getList(c1, 'col1:0').map((b) => b.id), ['x1', 'n1']);
   assert.deepEqual(c0.zones.main[1].cols[0].map((b) => b.id), ['x1'], 'pas de modification en place');
-  // colonnes dans colonnes refusées
-  assert.equal(insertBlock(c0, 'col1:0', 0, { ...C, id: 'col2' }), null);
+  // colonnes dans colonnes : deux niveaux au plus (étape 6)
+  const nest = insertBlock(c0, 'col1:0', 0, { ...C, id: 'col2', cols: [[], []] });
+  assert.ok(nest, 'un second niveau de colonnes est accepté');
+  assert.equal(zoneDepth(nest, 'col2:0'), 2, 'profondeur de la colonne imbriquée');
+  assert.equal(insertBlock(nest, 'col2:0', 0, { ...C, id: 'col3', cols: [[], []] }), null, 'pas de troisième niveau');
   assert.equal(moveBlock(c0, 'col1', 'col1:0', 0), null, 'un bloc Colonnes ne va pas dans ses colonnes');
+  assert.equal(moveBlock(nest, 'col1', 'col2:0', 0), null, 'ni dans les colonnes de ses colonnes');
+  assert.equal(blockHeight(nest.zones.main[1]), 2, 'hauteur d\'un bloc Colonnes qui en contient un autre');
+  assert.equal(canPlace(nest, nest.zones.main[1], 'col1:0'), false, 'un bloc de hauteur 2 ne se met pas dans une colonne');
+  const dupN = duplicateBlock(nest, 'col1', 'copy', 20, (() => { let i = 0; return () => `n${i++}`; })());
+  const idsN = JSON.stringify(dupN.content).match(/"id":"[^"]+"/g);
+  assert.equal(new Set(idsN).size, idsN.length, 'copie profonde : identifiants tous uniques');
+  assert.deepEqual(getList(nest, 'col2:1'), []);
   // déplacement page → colonne → page
   const c2 = moveBlock(c0, 'a', 'col1:1', 1);
   assert.deepEqual(getList(c2, 'col1:1').map((b) => b.id), ['x2', 'a', 'x3']);

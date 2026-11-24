@@ -3,53 +3,89 @@
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// Zones : « main », « before »… (blocs de la page) ou « <idBloc>:<n> » = colonne n d'un bloc Colonnes (un seul niveau).
+// Zones : « main », « before »… (blocs de la page) ou « <idBloc>:<n> » = colonne n d'un bloc Colonnes. Depuis l'étape 6 les colonnes
+// peuvent contenir un second niveau de colonnes (jamais plus : MAX_COLUMN_DEPTH). Les identifiants de bloc sont uniques : une colonne
+// se retrouve par l'identifiant de son bloc, à n'importe quelle profondeur.
+export const MAX_COLUMN_DEPTH = 2;
 export const isColZone = (zone) => typeof zone === 'string' && zone.includes(':');
 const colParts = (zone) => { const [id, n] = zone.split(':'); return [id, Number(n)]; };
 const isContainer = (b) => b && b.type === 'columns';
 
+// Parcourt tous les blocs (colonnes comprises) : fn(bloc, zone, index, profondeur) ; profondeur 0 = bloc de la page. Arrêt si fn renvoie une valeur.
+function walk(content, fn) {
+  const inList = (list, zone, depth) => {
+    for (let i = 0; i < list.length; i++) {
+      const r = fn(list[i], zone, i, depth);
+      if (r !== undefined) return r;
+      for (let n = 0; n < (list[i].cols || []).length; n++) {
+        const r2 = inList(list[i].cols[n], `${list[i].id}:${n}`, depth + 1);
+        if (r2 !== undefined) return r2;
+      }
+    }
+    return undefined;
+  };
+  for (const [zone, list] of Object.entries(content?.zones || {})) { const r = inList(list, zone, 0); if (r !== undefined) return r; }
+  return undefined;
+}
+// Profondeur d'une zone : 0 pour une zone de la page, 1 pour la colonne d'un bloc de la page, 2 pour une colonne de colonne.
+export function zoneDepth(content, zone) {
+  if (!isColZone(zone)) return 0;
+  const id = colParts(zone)[0];
+  const d = walk(content, (b, z, i, depth) => (b.id === id ? depth : undefined));
+  return d === undefined ? 0 : d + 1;
+}
+// « Hauteur » d'un bloc : 0 s'il n'est pas un bloc Colonnes, 1 + la plus haute de ses colonnes sinon.
+export function blockHeight(b) {
+  if (!isContainer(b)) return 0;
+  let h = 0;
+  for (const col of b.cols || []) for (const c of col) h = Math.max(h, blockHeight(c));
+  return 1 + h;
+}
+// Le bloc `block` peut-il être posé dans `zone` ? (profondeur maximale, pas dans sa propre colonne)
+export function canPlace(content, block, zone) {
+  if (!isColZone(zone) || !block) return true;
+  if (zoneDepth(content, zone) + blockHeight(block) > MAX_COLUMN_DEPTH) return false;
+  const owner = colParts(zone)[0];
+  if (block.id && block.id === owner) return false;
+  if (block.id && isContainer(block)) { // pas dans une colonne qui lui appartient (directement ou plus bas)
+    const own = walk({ zones: { x: [block] } }, (b) => (b.id === owner ? true : undefined));
+    if (own) return false;
+  }
+  return true;
+}
+
 export function getList(content, zone) {
   if (!isColZone(zone)) return content?.zones?.[zone] || [];
   const [id, n] = colParts(zone);
-  for (const list of Object.values(content?.zones || {})) { const c = list.find((b) => b.id === id); if (c) return (c.cols || [])[n] || []; }
-  return [];
+  return walk(content, (b) => (b.id === id ? (b.cols || [])[n] || [] : undefined)) || [];
 }
 export function setList(content, zone, list) {
   if (!isColZone(zone)) return { ...content, zones: { ...content.zones, [zone]: list } };
   const [id, n] = colParts(zone);
-  const zones = {};
-  for (const [z, l] of Object.entries(content.zones || {})) {
-    zones[z] = l.map((b) => {
-      if (b.id !== id) return b;
+  const mapList = (l) => l.map((b) => {
+    if (b.id === id) {
       const cols = [...(b.cols || [])];
       while (cols.length <= n) cols.push([]);
       cols[n] = list;
       return { ...b, cols };
-    });
-  }
+    }
+    return b.cols ? { ...b, cols: b.cols.map(mapList) } : b;
+  });
+  const zones = {};
+  for (const [z, l] of Object.entries(content.zones || {})) zones[z] = mapList(l);
   return { ...content, zones };
 }
 
 // Où se trouve un bloc : { zone, index, block } ou null.
 export function findBlock(content, id) {
-  for (const [zone, list] of Object.entries(content?.zones || {})) {
-    const index = list.findIndex((b) => b.id === id);
-    if (index >= 0) return { zone, index, block: list[index] };
-    for (const c of list) {
-      for (let n = 0; n < (c.cols || []).length; n++) {
-        const k = c.cols[n].findIndex((b) => b.id === id);
-        if (k >= 0) return { zone: `${c.id}:${n}`, index: k, block: c.cols[n][k] };
-      }
-    }
-  }
-  return null;
+  return walk(content, (b, zone, index) => (b.id === id ? { zone, index, block: b } : undefined)) || null;
 }
 
 const withZone = setList;
 
-// Insère un bloc à la position `index` d'une zone. Renvoie null si la zone est pleine ou si on met des colonnes dans des colonnes.
+// Insère un bloc à la position `index` d'une zone. Renvoie null si la zone est pleine ou si les colonnes seraient trop imbriquées.
 export function insertBlock(content, zone, index, block, max = Infinity) {
-  if (isColZone(zone) && isContainer(block)) return null;
+  if (!canPlace(content, block, zone)) return null;
   const list = getList(content, zone);
   if (list.length >= (isColZone(zone) ? Math.min(max, 20) : max)) return null;
   const at = Math.max(0, Math.min(list.length, index));
@@ -64,11 +100,11 @@ export function removeBlock(content, id) {
 
 // Déplace un bloc. `toIndex` = position d'insertion dans la zone d'arrivée AVANT le retrait (c'est ce que donne un
 // glisser-déposer : « avant le bloc n° i »). Même zone : l'index est corrigé du retrait. Renvoie null si la zone d'arrivée est pleine
-// ou si l'on dépose des colonnes dans une colonne (ou un bloc dans sa propre colonne).
+// ou si les colonnes seraient trop imbriquées (ou un bloc dans sa propre colonne).
 export function moveBlock(content, id, toZone, toIndex, max = Infinity) {
   const f = findBlock(content, id);
   if (!f) return content;
-  if (isColZone(toZone) && (isContainer(f.block) || colParts(toZone)[0] === id)) return null;
+  if (!canPlace(content, f.block, toZone)) return null;
   if (f.zone !== toZone && getList(content, toZone).length >= (isColZone(toZone) ? Math.min(max, 20) : max)) return null;
   let at = toIndex;
   if (f.zone === toZone && f.index < toIndex) at -= 1;
@@ -97,7 +133,8 @@ export function duplicateBlock(content, id, newId, max = Infinity, makeId = () =
   if (!f || getList(content, f.zone).length >= max) return null;
   const copy = clone(f.block);
   copy.id = newId;
-  if (copy.cols) copy.cols = copy.cols.map((col) => col.map((b) => ({ ...b, id: makeId() })));
+  const reid = (b) => ({ ...b, id: makeId(), ...(b.cols ? { cols: b.cols.map((col) => col.map(reid)) } : {}) });
+  if (copy.cols) copy.cols = copy.cols.map((col) => col.map(reid));
   return { content: insertBlock(content, f.zone, f.index + 1, copy, max), id: newId };
 }
 
@@ -105,7 +142,8 @@ export function duplicateBlock(content, id, newId, max = Infinity, makeId = () =
 // zones : [{ zone, x?, w?, y, h }] (conteneurs de zones, colonnes comprises, y compris vides). x : abscisse du pointeur (pour les colonnes).
 // `allowNested` faux : les colonnes ne sont pas proposées (on déplace un bloc Colonnes). Renvoie { zone, index, lineY, x?, w? } ou null.
 export function dropTarget(rects, zones, y, x = null, allowNested = true) {
-  const usable = zones.filter((z) => allowNested || !isColZone(z.zone));
+  // allowNested : vrai (toutes les colonnes), faux (aucune) ou une fonction zone → booléen (profondeur maximale des colonnes, étape 6).
+  const usable = zones.filter((z) => !isColZone(z.zone) || (typeof allowNested === 'function' ? allowNested(z.zone) : allowNested));
   if (!usable.length) return null;
   const inside = (c) => y >= c.y && y <= c.y + c.h && (x == null || c.w == null || (x >= c.x && x <= c.x + c.w));
   // Zone la plus petite qui contient le pointeur (une colonne l'emporte sur la zone de la page qui la contient) ; sinon la zone de page la plus proche.

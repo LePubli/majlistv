@@ -110,7 +110,7 @@ function Block({ b, lang, ctx = {} }) {
         <div className={`pb-cols n-${n} r-${p.ratio || 'eq'} g-${p.gap || 'm'} v-${p.valign || 'start'} st-${p.stack || 'm'}`}>
           {Array.from({ length: n }, (_, i) => (
             <div key={i} className="pb-col" {...(ctx.editor ? { 'data-zone': `${b.id}:${i}` } : {})}>
-              <BlocksView blocks={cols[i] || []} locale={lang} preview={ctx.preview} onPick={ctx.onPick} pickedId={ctx.pickedId} nested />
+              <BlocksView blocks={cols[i] || []} locale={lang} preview={ctx.preview} onPick={ctx.onPick} pickedId={ctx.pickedId} editor={ctx.editor} nested />
               {ctx.editor && !(cols[i] || []).length && <div className="pb-empty">Colonne {i + 1} : déposez un bloc ici</div>}
             </div>
           ))}
@@ -204,6 +204,12 @@ function sectionProps(b, preview) {
   }
   if (Number.isInteger(st.minHeightM) && st.minHeightM > 0) { style['--mh-m'] = `${st.minHeightM}px`; cls.push('mh-m'); }
   if (st.alignM) cls.push(`al-m-${st.alignM}`);
+  // Étape 6a : éléments du bloc (variables CSS + classes ; les règles sont dans globals.css)
+  for (const [k, v, c, unit] of [['elTitleColor', '--el-tc', 'el-tc', 'c'], ['elTitleSize', '--el-ts', 'el-ts', 'px'], ['elTitleWeight', '--el-tw', 'el-tw', ''], ['elTextColor', '--el-xc', 'el-xc', 'c'], ['elTextSize', '--el-xs', 'el-xs', 'px'], ['elBtnBg', '--el-bb', 'el-bb', 'c'], ['elBtnColor', '--el-bc', 'el-bc', 'c'], ['elBtnRadius', '--el-br', 'el-br', 'px'], ['elImgRadius', '--el-ir', 'el-ir', 'px']]) {
+    if (st[k] === undefined || st[k] === '') continue;
+    style[v] = unit === 'c' ? colorCss(st[k]) : `${st[k]}${unit}`;
+    cls.push(c);
+  }
   if (!d.includes('m')) cls.push('pb-hide-m');
   if (!d.includes('t')) cls.push('pb-hide-t');
   if (!d.includes('d')) cls.push('pb-hide-d');

@@ -231,6 +231,20 @@ export function StyleFields({ style, onChange, onPickMedia }) {
         <p className="meta small">Jouée quand le bloc entre dans l’écran. Désactivée pour les personnes qui ont demandé de réduire les animations, et dans cet éditeur.</p>
       </details>
       <details className="pe-sub">
+        <summary>Éléments du bloc</summary>
+        <p className="meta small">Réglez les titres, textes, boutons et images à l’intérieur du bloc. Vide : réglage d’origine.</p>
+        <ColorStyle label="Titres : couleur" value={st.elTitleColor} onChange={(v) => set('elTitleColor', v)} />
+        <div className="pe-row">{num('elTitleSize', 'Titres : taille (px)', 120)}
+          <label className="pe-f"><span className="pe-lab">Titres : graisse</span>
+            <select value={st.elTitleWeight ?? ''} onChange={(e) => set('elTitleWeight', e.target.value === '' ? undefined : Number(e.target.value))}>
+              <option value="">Selon le thème</option>{[[400, 'Normale'], [500, 'Moyenne'], [600, 'Semi-grasse'], [700, 'Grasse'], [800, 'Très grasse']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label></div>
+        <ColorStyle label="Textes : couleur" value={st.elTextColor} onChange={(v) => set('elTextColor', v)} />
+        {num('elTextSize', 'Textes : taille (px)', 40)}
+        <ColorStyle label="Boutons : fond" value={st.elBtnBg} onChange={(v) => set('elBtnBg', v)} />
+        <ColorStyle label="Boutons : texte" value={st.elBtnColor} onChange={(v) => set('elBtnColor', v)} />
+        <div className="pe-row">{num('elBtnRadius', 'Boutons : arrondi (px)', 999)}{num('elImgRadius', 'Images : arrondi (px)', 200)}</div>
+      </details>
+      <details className="pe-sub">
         <summary>Tablette et téléphone</summary>
         <p className="meta small">Laissez vide pour garder les valeurs de l’ordinateur. Tablette : écrans jusqu’à 1024 px ; téléphone : jusqu’à 700 px.</p>
         <div className="pe-row">{num('padTopT', 'Tablette : espace au-dessus', 240)}{num('padBottomT', 'Tablette : espace en dessous', 240)}</div>

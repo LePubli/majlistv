@@ -4229,3 +4229,14 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
   .pb.al-m-start { text-align: start !important; } .pb.al-m-center { text-align: center !important; } .pb.al-m-end { text-align: end !important; }
 }
 .pe-sub { border: 1px solid var(--line-soft); border-radius: 10px; padding: 8px 12px; display: grid; gap: 10px; } .pe-sub summary { cursor: pointer; font-weight: 600; min-height: 30px; }
+
+/* Étape 6a : réglages par élément du bloc (titres, textes, boutons, images). !important : ils priment sur le thème, comme les autres réglages de style. */
+.pb.el-tc :is(h1, h2, h3, h4) { color: var(--el-tc) !important; }
+.pb.el-ts :is(h1, h2, h3, h4) { font-size: var(--el-ts) !important; line-height: 1.15 !important; }
+.pb.el-tw :is(h1, h2, h3, h4) { font-weight: var(--el-tw) !important; }
+.pb.el-xc :is(p, li) { color: var(--el-xc) !important; }
+.pb.el-xs :is(p, li) { font-size: var(--el-xs) !important; }
+.pb.el-bb :is(.btn, button.btn, a.btn) { background: var(--el-bb) !important; border-color: var(--el-bb) !important; }
+.pb.el-bc :is(.btn, button.btn, a.btn) { color: var(--el-bc) !important; }
+.pb.el-br :is(.btn, button.btn, a.btn) { border-radius: var(--el-br) !important; }
+.pb.el-ir img { border-radius: var(--el-ir) !important; }

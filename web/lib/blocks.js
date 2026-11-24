@@ -27,7 +27,7 @@ export const COLOR_REF_LABELS = {
   text: 'Texte', muted: 'Texte atténué', line: 'Bordure', onAccent: 'Texte sur l’or',
 };
 export const MAX_BLOCKS_PER_ZONE = 60;
-export const MAX_BLOCKS_PER_COLUMN = 20; // blocs dans une colonne (les colonnes ne s'imbriquent pas)
+export const MAX_BLOCKS_PER_COLUMN = 20; // blocs dans une colonne (les colonnes s'imbriquent sur deux niveaux)
 export const MAX_COLS = 4;
 export const MAX_CONTENT_BYTES = 250_000;
 
@@ -210,6 +210,13 @@ export const STYLE_FONTS = ['DM Sans Variable', 'Montserrat Variable', 'Fredoka 
   'Inter Variable', 'Poppins', 'Amiri', 'Marcellus', 'Playfair Display Variable', 'Lora Variable', 'Nunito Variable', 'Open Sans Variable', 'Cairo Variable', 'Tajawal', 'Système', 'Serif'];
 export const STYLE_HOVER = [['', 'Aucun'], ['lift', 'Soulèvement'], ['zoom', 'Léger zoom'], ['glow', 'Halo lumineux'], ['bright', 'Éclaircissement']];
 export const STYLE_ANIM = [['', 'Aucune'], ['fade', 'Fondu'], ['up', 'Montée'], ['down', 'Descente'], ['left', 'Depuis la gauche'], ['right', 'Depuis la droite'], ['zoom', 'Zoom']];
+// Étape 6a : réglages par élément du bloc (titres, textes, boutons, images). Clé → [type, min, max] (nombres) ou 'color' / liste de valeurs.
+export const STYLE_ELEMENTS = {
+  elTitleColor: 'color', elTitleSize: ['int', 12, 120], elTitleWeight: ['list', [400, 500, 600, 700, 800]],
+  elTextColor: 'color', elTextSize: ['int', 10, 40],
+  elBtnBg: 'color', elBtnColor: 'color', elBtnRadius: ['int', 0, 999],
+  elImgRadius: ['int', 0, 200],
+};
 export const PAD_DEVICE_KEYS = ['padTopT', 'padBottomT', 'padTopM', 'padBottomM'];
 /** CSS de la police d'un bloc (null = celle du thème). */
 export function fontCss(name) {
@@ -331,7 +338,7 @@ export function cleanContent(content, kind, strict = true) {
   const cleanBlock = (b, at, depth) => {
     if (!b || typeof b !== 'object' || Array.isArray(b)) { err(at, 'Bloc invalide'); return null; }
     const def = BLOCK_TYPES[b.type];
-    if (def?.container && depth > 0) { err(`${at}.type`, 'Les colonnes ne peuvent pas contenir d’autres colonnes'); return null; }
+    if (def?.container && depth > 1) { err(`${at}.type`, 'Les colonnes ne s’imbriquent que sur deux niveaux'); return null; }
     if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return null; }
     if (typeof b.id !== 'string' || !/^[A-Za-z0-9_-]{4,24}$/.test(b.id)) err(`${at}.id`, 'Identifiant de bloc invalide');
     else if (seen.has(b.id)) err(`${at}.id`, 'Identifiant de bloc en double');
@@ -376,6 +383,12 @@ export function cleanContent(content, kind, strict = true) {
       else if (PAD_DEVICE_KEYS.includes(k)) { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 240) err(`${at}.style.${k}`, 'Entier entre 0 et 240'); else style[k] = n; }
       else if (k === 'minHeightM') { const n = Number(v); if (!Number.isInteger(n) || n < 0 || n > 1200) err(`${at}.style.${k}`, 'Entier entre 0 et 1200'); else style[k] = n; }
       else if (k === 'alignM') { if (!['start', 'center', 'end'].includes(v)) err(`${at}.style.${k}`, 'Alignement inconnu'); else style[k] = v; }
+      else if (STYLE_ELEMENTS[k]) {
+        const def2 = STYLE_ELEMENTS[k];
+        if (def2 === 'color') { if (!validColor(v)) err(`${at}.style.${k}`, 'Couleur non valide (code #RRGGBB ou couleur du thème)'); else style[k] = v; }
+        else if (def2[0] === 'int') { const n = Number(v); if (!Number.isInteger(n) || n < def2[1] || n > def2[2]) err(`${at}.style.${k}`, `Entier entre ${def2[1]} et ${def2[2]}`); else style[k] = n; }
+        else { const n = Number(v); if (!def2[1].includes(n)) err(`${at}.style.${k}`, 'Graisse inconnue'); else style[k] = n; }
+      }
       else err(`${at}.style.${k}`, 'Réglage de style inconnu');
     }
     const res = { id: b.id, type: b.type, props, show: { devices: DEVICES.filter((d) => devices.includes(d)), audience: AUDIENCES.some(([a]) => a === audience) ? audience : 'all' }, style };

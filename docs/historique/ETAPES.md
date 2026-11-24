@@ -10345,3 +10345,18 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Bloc Titre → Style → Police « Amiri » → Survol « Soulèvement » → Animation « Montée », délai 150 → Tablette et téléphone : espace au-dessus 10 → Publier. Modérateur : Admin règle « draft » ; le modérateur ouvre /editeur, modifie le brouillon de l'accueil ; l'administrateur ouvre l'éditeur, relit et clique Publier.
 
 **Testé / non testé / limites.** Voir ligne 355 du registre. Plan de l'éditeur visuel terminé (étapes 1 à 5).
+
+
+## Éditeur visuel — étape 6a : style par élément et colonnes imbriquées (24/11)
+
+**Description.** Deux limites de l'éditeur levées. (1) Dans Style → « Éléments du bloc » : couleur, taille et graisse des titres, couleur et taille des textes, fond / texte / arrondi des boutons, arrondi des images, à l'intérieur d'un même bloc (clés `elTitleColor`… dans `style`, validées par `STYLE_ELEMENTS`, appliquées par variables CSS `--el-*` et classes `el-*`, règles dans `globals.css`). (2) Un bloc Colonnes peut se placer dans une colonne : deux niveaux au plus (`MAX_COLUMN_DEPTH`, `canPlace` dans `web/lib/editorOps.js`), refus clair au troisième.
+
+**Prérequis.** Aucun. Pas de migration.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Réglage sans effet : vérifier qu'il n'est pas masqué par le thème (les règles utilisent `!important`). Refus à l'enregistrement « Les colonnes ne s'imbriquent que sur deux niveaux » : sortir le bloc d'un niveau.
+
+**Exemples.** Bloc Titre → Style → Éléments du bloc → Titres : taille 48, graisse très grasse. Bloc Colonnes → glisser un second bloc Colonnes dans sa colonne 1.
+
+**Testé / non testé / limites.** Voir ligne 356 du registre.

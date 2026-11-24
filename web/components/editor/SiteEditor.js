@@ -17,7 +17,7 @@ import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
-import { clone, isColZone, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
+import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
 const DEVICES = [{ id: 390, label: 'Téléphone', glyph: '▯' }, { id: 768, label: 'Tablette', glyph: '▭' }, { id: 1024, label: 'Petit écran', glyph: '▬' }, { id: 1440, label: 'Ordinateur', glyph: '▬▬' }];
 const KNOWN_PATHS = [
@@ -127,12 +127,19 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
   );
 }
 
+// Bloc en cours de glissement (un bloc neuf de la palette ou un bloc existant) : sert à vérifier la profondeur des colonnes.
+function dragBlock(content, d) {
+  if (!d) return null;
+  if (d.kind === 'new') return { type: d.type, id: null, cols: d.type === 'columns' ? [] : undefined };
+  return findBlock(content, d.id)?.block || null;
+}
+
 /* ------------------------------------------------------------------ Panneau « Plan » : blocs par zone, à réordonner */
 function Layers({ content, zones, selected, onSelect, lang, drag, onDragStart, onDragEnd, onDrop, onNudge, onDup, onDel, errorsByBlock }) {
   const [over, setOver] = useState(null); // { zone, index }
   const hover = (e, zone, i0) => {
     if (!drag.current) return;
-    if (isColZone(zone) && (drag.current.kind === 'new' ? drag.current.type === 'columns' : findBlock(content, drag.current.id)?.block.type === 'columns')) return;
+    if (isColZone(zone) && !canPlace(content, dragBlock(content, drag.current), zone)) return;
     e.preventDefault(); e.stopPropagation();
     const r = e.currentTarget.getBoundingClientRect();
     setOver({ zone, index: e.clientY > r.top + r.height / 2 ? i0 + 1 : i0 });
@@ -343,8 +350,8 @@ function Canvas({ doc, zones, lang, device, selected, onSelect, drag, onDropAt, 
     const yScreen = e.clientY - r.top;
     const yDoc = yScreen / scale + metrics.scrollY;
     const xDoc = (e.clientX - r.left) / scale;
-    const dragsColumns = drag.current.kind === 'new' ? drag.current.type === 'columns' : findBlock(doc.content, drag.current.id)?.block.type === 'columns';
-    const t = dropTarget(metrics.rects.filter((x) => !(drag.current.kind === 'move' && x.id === drag.current.id)), metrics.zones.filter((z) => z.zone && !(drag.current.kind === 'move' && z.zone.startsWith(`${drag.current.id}:`))), yDoc, xDoc, !dragsColumns);
+    const dragged = dragBlock(doc.content, drag.current);
+    const t = dropTarget(metrics.rects.filter((x) => !(drag.current.kind === 'move' && x.id === drag.current.id)), metrics.zones.filter((z) => z.zone && !(drag.current.kind === 'move' && z.zone.startsWith(`${drag.current.id}:`))), yDoc, xDoc, (zone) => canPlace(doc.content, dragged, zone));
     setDropAt(t);
     // Défilement automatique près des bords.
     const edge = 70;
@@ -443,7 +450,7 @@ export default function SiteEditor() {
     const sel = selected ? findBlock(content, selected) : null;
     let z = zone || sel?.zone || zones[0];
     let at = index ?? (sel ? sel.index + 1 : getList(content, z).length);
-    if (type === 'columns' && isColZone(z)) { // les colonnes ne s'imbriquent pas : on les pose juste après le bloc Colonnes qui contient la cible
+    while (isColZone(z) && !canPlace(content, b, z)) { // trop d'imbrication : on le pose juste après le bloc Colonnes qui contient la cible
       const parent = findBlock(content, z.split(':')[0]);
       if (!parent) return;
       z = parent.zone; at = parent.index + 1;
@@ -475,7 +482,7 @@ export default function SiteEditor() {
     if (!d || !content) return;
     if (d.kind === 'new') { addBlock(d.type, zone, index); return; }
     const next = moveBlock(content, d.id, zone, index, MAX_BLOCKS_PER_ZONE);
-    if (!next) { say(isColZone(zone) ? 'Les colonnes ne se mettent pas dans une colonne, et une colonne accepte 20 blocs au plus.' : `Cette zone contient déjà ${MAX_BLOCKS_PER_ZONE} blocs.`); return; }
+    if (!next) { say(isColZone(zone) ? 'Les colonnes ne s’imbriquent que sur deux niveaux, et une colonne accepte 20 blocs au plus.' : `Cette zone contient déjà ${MAX_BLOCKS_PER_ZONE} blocs.`); return; }
     commit(next);
   }, [content, addBlock, commit, say]);
   const startDrag = useCallback((d) => { setTimeout(() => { drag.current = d; force((n) => n + 1); }, 0); drag.current = d; }, []);
