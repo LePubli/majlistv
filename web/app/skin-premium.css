@@ -857,4 +857,4 @@ html[data-skin="premium"] .pm-col-tile small { font-size: 12px; color: var(--tex
   html[data-skin="premium"] .pm-col-play, html[data-skin="premium"] .pm-col-share { flex: 1 1 auto; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { html[data-skin="premium"] .pm-col-bg { transition: none; transform: none; } }
-[dir="rtl"] html[data-skin="premium"] .pm-col-shade, html[dir="rtl"][data-skin="premium"] .pm-col-shade { transform: scaleX(-1); }
+html[data-skin="premium"][dir="rtl"] .pm-col-shade { transform: scaleX(-1); }
