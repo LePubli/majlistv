@@ -10552,3 +10552,24 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Ouvrir une vidéo analysée : le Résumé s'affiche en premier ; cliquer « Chapitres » dans le panneau de droite pour sauter à un passage.
 
 **Testé / non testé / limites.** Voir ligne 365 du registre.
+
+## Étape — Page d'une collection immersive (24/11/2026)
+
+**Description.** En thème Premium, la page d'une collection (ex. « Les Libérateurs ») devient une page de plateforme : en-tête plein écran dont le fond est l'affiche de la vidéo (elle change en fondu quand on survole une vidéo de la grille), titre géant, description, repères (nombre de vidéos, durée totale, intervenants), boutons **Commencer** (ouvre la première vidéo) et **Partager** ; puis grille « Dans cette collection » (numérotée 01, 02… pour les cycles et séries d'intervenant) et rangée **Autres collections**. Les autres thèmes gardent l'ancienne page. Les sections de l'éditeur visuel (`f_collection_head`, `f_collection_talks`) sont conservées.
+
+**Prérequis.** Aucun changement d'API ni de base. Site (web) seulement.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web`, puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Fond uni : aucune vidéo de la collection n'a d'affiche. Bouton Partager : ouvre le partage du téléphone, sinon copie le lien.
+
+**Exemples.** Ouvrir `/collections/<id>` en thème Premium, desktop, mobile et arabe.
+
+**Testé / non testé / limites.** Voir ligne 366 du registre.
