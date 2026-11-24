@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "hideOriginal": false
+  },
+  "zones": {
+    "before": [
+      {
+        "id": "aur-cgv-t",
+        "type": "text",
+        "props": {
+          "body": {
+            "fr": "Ces conditions sont rédigées en langage clair. En cas de doute, écrivez-nous.",
+            "en": "These terms are written in plain language. If in doubt, write to us.",
+            "ar": "كُتبت هذه الشروط بلغة واضحة. عند الشك راسلنا."
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center",
+          "padBottom": 12
+        }
+      }
+    ],
+    "after": []
+  }
+}

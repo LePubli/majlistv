@@ -1,0 +1,53 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-cat-h",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "Le catalogue",
+            "en": "The catalogue",
+            "ar": "الفهرس"
+          },
+          "subtitle": {
+            "fr": "Toutes les conférences, par thème",
+            "en": "All talks, by theme",
+            "ar": "كل المحاضرات حسب الموضوع"
+          },
+          "level": "h2"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-cat-talks",
+        "type": "talks",
+        "props": {
+          "title": {
+            "fr": "À découvrir"
+          },
+          "source": "latest",
+          "limit": 8
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      }
+    ]
+  }
+}

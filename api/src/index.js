@@ -55,6 +55,7 @@ import studioContentRoutes from './routes/studio_content.js';
 import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
+import themePackRoutes from './routes/themePacks.js'; // lot T : thèmes uploadables Mejliss (.zip)
 import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
 import activityRoutes from './routes/activity.js'; // étape S3 : Studio → Activité (pause, priorité, plage horaire)
@@ -216,6 +217,7 @@ await app.register(themesRoutes);
 await app.register(appearanceRoutes);
 await app.register(textsRoutes);
 await app.register(pagesRoutes);
+await app.register(themePackRoutes);
 await app.register(moderationRoutes);
 await app.register(activityRoutes);
 await app.register(overviewRoutes);

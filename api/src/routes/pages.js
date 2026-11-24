@@ -25,7 +25,8 @@ import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, GLOBAL_PREFIX, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
-import { cleanNav } from '../navcfg.js';
+import { emptyContent, norm, validate } from '../pageContent.js';
+import { imageFormat } from '../fileSniff.js';
 import { getSetting } from '../settings.js';
 
 const KEEP_VERSIONS = 20;
@@ -35,33 +36,8 @@ const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', we
 export { WILDCARD_SLOTS };
 const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_global|_layout|pb-preview|p)(\/|$)/;
 
-// Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
-export function imageFormat(buf) {
-  if (buf.length > 12 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
-  if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
-  if (buf.length > 6 && buf.subarray(0, 4).toString('latin1') === 'GIF8') return 'gif';
-  if (buf.length > 12 && buf.subarray(0, 4).toString('latin1') === 'RIFF' && buf.subarray(8, 12).toString('latin1') === 'WEBP') return 'webp';
-  return null;
-}
+export { imageFormat };
 
-const emptyContent = (kind) => ({ meta: {}, zones: Object.fromEntries(ZONES[kind].map((z) => [z, []])) });
-// Contenu normalisé (toutes les zones présentes, même vides).
-const norm = (kind, c) => {
-  const base = emptyContent(kind);
-  if (!c || typeof c !== 'object') return base;
-  return { meta: c.meta || {}, zones: { ...base.zones, ...(c.zones || {}) }, ...(kind === 'layout' && c.nav ? { nav: c.nav } : {}) };
-};
-// Blocs (cleanContent) + réglages de navigation (cleanNav) pour une page « layout » → { value, errors }.
-const validate = (kind, content, strict, path = '') => {
-  const r = cleanContent(content, kind, strict);
-  Object.assign(r.errors, kidsErrors(path, r.value)); // espace Kids : blocs simples seulement
-  if (kind === 'layout' && content && typeof content === 'object') {
-    const n = cleanNav(content.nav, strict);
-    if (n.value) r.value.nav = n.value;
-    Object.assign(r.errors, n.errors);
-  }
-  return r;
-};
 const slugify = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

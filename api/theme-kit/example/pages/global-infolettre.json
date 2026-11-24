@@ -1,0 +1,75 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-nl-h",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "Restez informé",
+            "en": "Stay informed",
+            "ar": "ابقَ على اطلاع"
+          },
+          "level": "h3"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      },
+      {
+        "id": "aur-nl-t",
+        "type": "text",
+        "props": {
+          "body": {
+            "fr": "Une conférence choisie pour vous, chaque semaine.",
+            "en": "One hand-picked talk each week.",
+            "ar": "محاضرة مختارة لك كل أسبوع."
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      },
+      {
+        "id": "aur-nl-b",
+        "type": "button",
+        "props": {
+          "label": {
+            "fr": "Créer mon compte",
+            "en": "Create my account",
+            "ar": "أنشئ حسابي"
+          },
+          "url": "/register"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+/* Aurore : feuille de style du thème. Elle est ajoutée APRÈS les réglages de couleurs, donc elle a le dernier mot.
+   Règles : pas de @import, pas d'adresse externe ; url() seulement vers assets/… ou fonts/… de ce thème.
+   Toujours préfixer par html[data-skin="…"] n'est pas nécessaire : le thème est actif pour tout le site.
+   Pensez à l'arabe (html[dir="rtl"]) et aux largeurs 390 → 1440 px. */
+
+/* Titres : la police (jeton fontTitle = « Aurore Serif ») vient du thème ; ici on resserre un peu les lettres */
+.pb-h, .pb-hero h1, .pb-card-body h3, .pb-quote blockquote { letter-spacing: -0.01em; }
+
+/* Bannière : lueur douce sous le texte */
+.pb-hero { border-radius: var(--radius); overflow: hidden; box-shadow: 0 24px 60px -30px rgba(255, 138, 91, .45); }
+.pb-hero h1 { text-wrap: balance; }
+
+/* Cartes : liseré lumineux au survol */
+.pb-card { border-radius: var(--radius); border: 1px solid var(--line); transition: border-color .2s ease, transform .2s ease; }
+.pb-card:hover { border-color: var(--accent); }
+
+/* Citation */
+.pb-quote blockquote { font-size: clamp(1.25rem, 2.4vw, 1.75rem); line-height: 1.4; }
+
+/* Boutons : légère lueur */
+.btn:not(.ghost) { box-shadow: 0 8px 24px -12px rgba(255, 138, 91, .7); }
+
+/* Arabe : pas d'espacement entre lettres (casse la liaison des lettres) */
+html[dir="rtl"] .pb-h, html[dir="rtl"] .pb-hero h1 { letter-spacing: 0; }
+
+/* Petits écrans */
+@media (max-width: 700px) {
+  .pb-hero { border-radius: calc(var(--radius) - 6px); }
+}

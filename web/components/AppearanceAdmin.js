@@ -7,6 +7,7 @@
 // « Publier » rend le brouillon visible ; chaque publication est gardée dans l'historique et peut être restaurée.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
+import ThemePacksPanel from './ThemePacksPanel';
 import { Page, Metrics, Panel, Cols, Btn, Badge } from './backoffice/Kit';
 import { TOKENS, TOKEN_MAP, GROUPS, BUILTIN_FONTS, buildCss, checkValue, contrastIssues, resolveColor } from '../lib/themeCss';
 
@@ -564,6 +565,7 @@ export default function AppearanceAdmin() {
         <div className="ap" lang="fr" dir="ltr">
           <div className="bm-form" style={{ marginBottom: 14 }}>
       <SiteSkin />
+      <ThemePacksPanel onChange={() => loadThemes().then((l) => { const a = l.find((x) => x.isActive) || l[0]; if (a) openTheme(a.id); })} />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>
@@ -658,6 +660,7 @@ export default function AppearanceAdmin() {
       <p className="meta">Réglez les couleurs, polices, arrondis et espacements du site. Vos changements partent dans un <b>brouillon</b> et s’affichent dans l’aperçu ; les visiteurs ne voient rien avant que vous cliquiez sur <b>Publier</b>. Chaque publication est gardée dans l’historique.</p>
 
       <SiteSkin />
+      <ThemePacksPanel onChange={() => loadThemes().then((l) => { const a = l.find((x) => x.isActive) || l[0]; if (a) openTheme(a.id); })} />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>

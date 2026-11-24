@@ -21,21 +21,14 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
-import { TOKENS, GROUPS, BUILTIN_FONTS, cleanValues, buildCss, contrastIssues, validFontName } from '../themeCss.js';
+import { fontFormat } from '../fileSniff.js';
+import { TOKENS, TOKEN_MAP, GROUPS, BUILTIN_FONTS, cleanValues, buildCss, contrastIssues, validFontName } from '../themeCss.js';
 
 const KEEP_VERSIONS = 50;
 const FONT_MAX = 2 * 1024 * 1024; // 2 Mo par fichier
 const FONT_TYPES = { woff2: 'font/woff2', woff: 'font/woff', truetype: 'font/ttf', opentype: 'font/otf' };
 
-// Reconnaît le format d'une police à ses premiers octets (on ne se fie jamais à l'extension).
-export function fontFormat(buf) {
-  const sig = buf.subarray(0, 4);
-  if (sig.toString('latin1') === 'wOF2') return 'woff2';
-  if (sig.toString('latin1') === 'wOFF') return 'woff';
-  if (sig.toString('latin1') === 'OTTO') return 'opentype';
-  if (sig.equals(Buffer.from([0, 1, 0, 0])) || sig.toString('latin1') === 'true') return 'truetype';
-  return null;
-}
+export { fontFormat };
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const nameSchema = z.string().trim().min(1).max(60);
@@ -46,13 +39,36 @@ async function fontList() {
 }
 
 // Feuille de style du thème actif, gardée en mémoire jusqu'à la prochaine modification.
+
+// Thème Mejliss actif : les habillages (nuit, bleu, premium) définissent leurs couleurs avec des sélecteurs plus forts que « :root » :
+// sans précaution, les réglages du thème seraient sans effet. On republie donc SEULEMENT les réglages que le thème a choisis,
+// avec un sélecteur plus fort que celui des habillages ; tout ce que le thème ne règle pas garde l'aspect de l'habillage de base.
+export function boostedTokens(values, fonts) {
+  const keys = Object.keys(values || {});
+  if (!keys.length) return '';
+  const want = new Set(keys.map((k) => TOKEN_MAP[k]?.var).filter(Boolean));
+  if (keys.some((k) => ['fontTitle', 'fontTitleAr'].includes(k))) want.add('--font-title');
+  if (keys.some((k) => ['fontBody', 'fontBodyAr'].includes(k))) want.add('--font-body');
+  if (keys.some((k) => ['fontKids', 'fontTitleAr'].includes(k))) want.add('--font-kids');
+  if (keys.some((k) => ['fontKids', 'fontBodyAr'].includes(k))) want.add('--font-kids-ar');
+  const css = buildCss(values, fonts);
+  const pick = (re) => {
+    const m = css.match(re);
+    return m ? m[1].split(';').filter((d) => want.has(d.slice(0, d.indexOf(':'))) || /^--(c-|pm-)/.test(d)).join(';') : '';
+  };
+  const SEL = 'html[data-skin][lang][dir]';
+  const root = pick(/^:root\{(.*)\}$/m); const ar = pick(/^:root:lang\(ar\)\{(.*)\}$/m); const body = pick(/^body\{(.*)\}$/m);
+  return [root && `${SEL}{${root}}`, ar && `${SEL}:lang(ar){${ar}}`, body && `${SEL} body{${body}}`].filter(Boolean).join('\n');
+}
 let cache = null;
 export const resetThemeCache = () => { cache = null; };
 export async function activeThemeCss() {
   if (cache) return cache;
   const t = (await pool.query('SELECT id, published, published_at FROM themes WHERE is_active LIMIT 1')).rows[0];
   const fonts = await fontList();
-  const css = buildCss(t?.published || {}, fonts);
+  const pack = (await pool.query('SELECT css FROM theme_packs WHERE active LIMIT 1')).rows[0];
+  // Feuille d'un thème Mejliss actif (lot T) : déjà filtrée à l'installation, placée après les jetons pour les compléter.
+  const css = buildCss(t?.published || {}, fonts) + (pack ? `\n/* Thème Mejliss */\n${boostedTokens(t?.published || {}, fonts)}\n${pack.css || ''}` : '');
   cache = { version: crypto.createHash('sha1').update(css).digest('hex').slice(0, 12), css, themeId: t?.id || null };
   return cache;
 }

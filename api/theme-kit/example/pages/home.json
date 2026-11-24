@@ -1,0 +1,205 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-home-hero",
+        "type": "hero",
+        "props": {
+          "eyebrow": {
+            "fr": "Thème Aurore",
+            "en": "Aurora theme",
+            "ar": "سمة الفجر"
+          },
+          "title": {
+            "fr": "Des conférences qui éclairent",
+            "en": "Talks that enlighten",
+            "ar": "محاضرات تُنير"
+          },
+          "text": {
+            "fr": "Regardez, comprenez, retenez : une lumière douce pour apprendre chaque jour.",
+            "en": "Watch, understand, remember: a soft light to learn every day.",
+            "ar": "شاهد وافهم وتذكّر: ضوء هادئ للتعلّم كل يوم."
+          },
+          "btn1Label": {
+            "fr": "Découvrir le catalogue",
+            "en": "Browse the catalogue",
+            "ar": "تصفّح الفهرس"
+          },
+          "btn1Url": "/catalogue",
+          "btn2Label": {
+            "fr": "Voir les tarifs",
+            "en": "See pricing",
+            "ar": "الأسعار"
+          },
+          "btn2Url": "/pricing",
+          "image": "pack:assets/hero.webp",
+          "overlay": 35,
+          "height": "l"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "anim": "fade"
+        }
+      },
+      {
+        "id": "aur-home-h1",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "Nouveautés",
+            "en": "New",
+            "ar": "جديد"
+          },
+          "subtitle": {
+            "fr": "Les dernières conférences publiées",
+            "en": "Latest talks",
+            "ar": "أحدث المحاضرات"
+          },
+          "level": "h2"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-home-talks",
+        "type": "talks",
+        "props": {
+          "title": {
+            "fr": "Nouveautés"
+          },
+          "source": "latest",
+          "limit": 4
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-home-cards",
+        "type": "cards",
+        "props": {
+          "columns": "3",
+          "items": [
+            {
+              "image": "pack:assets/card-1.webp",
+              "title": {
+                "fr": "Regarder",
+                "en": "Watch",
+                "ar": "شاهد"
+              },
+              "text": {
+                "fr": "Des conférences à la demande, en haute qualité.",
+                "en": "On-demand talks in high quality.",
+                "ar": "محاضرات عند الطلب بجودة عالية."
+              },
+              "link": "/learning"
+            },
+            {
+              "image": "pack:assets/card-2.webp",
+              "title": {
+                "fr": "Comprendre",
+                "en": "Understand",
+                "ar": "افهم"
+              },
+              "text": {
+                "fr": "Un quiz après chaque vidéo.",
+                "en": "A quiz after every video.",
+                "ar": "اختبار بعد كل فيديو."
+              },
+              "link": "/learning"
+            },
+            {
+              "image": "pack:assets/card-3.webp",
+              "title": {
+                "fr": "Retenir",
+                "en": "Remember",
+                "ar": "تذكّر"
+              },
+              "text": {
+                "fr": "Une révision espacée pour ne rien oublier.",
+                "en": "Spaced review so nothing is forgotten.",
+                "ar": "مراجعة متباعدة كي لا يُنسى شيء."
+              },
+              "link": "/learning"
+            }
+          ]
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "hover": "lift"
+        }
+      },
+      {
+        "id": "aur-home-quote",
+        "type": "quote",
+        "props": {
+          "text": {
+            "fr": "Chercher le savoir est une obligation pour chaque musulman.",
+            "en": "Seeking knowledge is an obligation upon every Muslim.",
+            "ar": "طلب العلم فريضة على كل مسلم."
+          },
+          "author": {
+            "fr": "Hadith"
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center",
+          "padTop": 40,
+          "padBottom": 40
+        }
+      },
+      {
+        "id": "aur-home-global",
+        "type": "global",
+        "props": {
+          "ref": "aurore-infolettre"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      }
+    ]
+  }
+}

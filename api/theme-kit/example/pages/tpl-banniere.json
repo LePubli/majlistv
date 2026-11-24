@@ -1,0 +1,54 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-tpl-hero",
+        "type": "hero",
+        "props": {
+          "eyebrow": {
+            "fr": "Thème Aurore",
+            "en": "Aurora theme",
+            "ar": "سمة الفجر"
+          },
+          "title": {
+            "fr": "Des conférences qui éclairent",
+            "en": "Talks that enlighten",
+            "ar": "محاضرات تُنير"
+          },
+          "text": {
+            "fr": "Regardez, comprenez, retenez : une lumière douce pour apprendre chaque jour.",
+            "en": "Watch, understand, remember: a soft light to learn every day.",
+            "ar": "شاهد وافهم وتذكّر: ضوء هادئ للتعلّم كل يوم."
+          },
+          "btn1Label": {
+            "fr": "Découvrir le catalogue",
+            "en": "Browse the catalogue",
+            "ar": "تصفّح الفهرس"
+          },
+          "btn1Url": "/catalogue",
+          "btn2Label": {
+            "fr": "Voir les tarifs",
+            "en": "See pricing",
+            "ar": "الأسعار"
+          },
+          "btn2Url": "/pricing",
+          "image": "pack:assets/hero.webp",
+          "overlay": 35,
+          "height": "l"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "anim": "fade"
+        }
+      }
+    ]
+  }
+}

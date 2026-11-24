@@ -1,0 +1,77 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-watch-0",
+        "type": "w_stage",
+        "props": {},
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-watch-1",
+        "type": "w_notices",
+        "props": {},
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-watch-2",
+        "type": "w_grid",
+        "props": {},
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-watch-3",
+        "type": "w_next",
+        "props": {},
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-watch-4",
+        "type": "w_books",
+        "props": {},
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      }
+    ]
+  }
+}

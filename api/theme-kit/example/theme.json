@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "id": "aurore",
+  "name": "Aurore",
+  "version": "1.0.0",
+  "author": "Mejliss TV",
+  "description": "Thème d'exemple : nuit bleutée et lueur corail, titres en serif. Sert de modèle pour créer vos propres thèmes.",
+  "base": "nuit",
+  "preview": "assets/preview.png",
+  "tokens": {
+    "bg": "#0A0C18",
+    "surface": "#121628",
+    "surface2": "#1A1F36",
+    "line": "#2B3250",
+    "lineSoft": "#1F2540",
+    "lineStrong": "#3F4A74",
+    "accent": "#FF8A5B",
+    "accentHover": "#FFA37F",
+    "accentLight": "#FFB896",
+    "onAccent": "#1A0B05",
+    "text": "#FFFFFF",
+    "muted": "#AEB6D6",
+    "radius": "18px",
+    "btnRadius": "14px",
+    "fontTitle": "Aurore Serif",
+    "fontSize": "17px"
+  },
+  "fonts": [
+    { "family": "Aurore Serif", "weight": "400 700", "style": "normal", "file": "fonts/aurore-serif.woff2" }
+  ],
+  "css": "theme.css",
+  "pages": {
+    "home": "pages/home.json",
+    "catalogue": "pages/catalogue.json",
+    "watch": "pages/watch.json",
+    "layout": "pages/layout.json",
+    "slots": {
+      "/pricing": "pages/pricing.json",
+      "/legal/cgv": "pages/legal-cgv.json"
+    },
+    "custom": [
+      { "slug": "a-propos", "title": "À propos", "file": "pages/a-propos.json" }
+    ]
+  },
+  "globals": [
+    { "slug": "aurore-infolettre", "title": "Aurore : invitation à s'inscrire", "file": "pages/global-infolettre.json" }
+  ],
+  "templates": [
+    { "kind": "section", "name": "Aurore : bannière", "description": "Grande bannière avec image de fond.", "file": "pages/tpl-banniere.json" },
+    { "kind": "page", "pageKind": "custom", "name": "Aurore : page d'atterrissage", "description": "Bannière, trois cartes et questions fréquentes.", "file": "pages/tpl-atterrissage.json" }
+  ]
+}

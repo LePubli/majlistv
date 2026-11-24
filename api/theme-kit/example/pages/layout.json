@@ -1,0 +1,81 @@
+{
+  "meta": {},
+  "zones": {
+    "topbar": [
+      {
+        "id": "aur-top-text",
+        "type": "text",
+        "props": {
+          "body": {
+            "fr": "Essai gratuit 7 jours : [découvrir l’offre](/pricing)",
+            "en": "Free 7-day trial: [see the offer](/pricing)",
+            "ar": "تجربة مجانية لمدة 7 أيام: [اكتشف العرض](/pricing)"
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center",
+          "bgColor": "@surface2",
+          "padTop": 6,
+          "padBottom": 6
+        }
+      }
+    ],
+    "footerTop": [
+      {
+        "id": "aur-foot-h",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "Une question ?",
+            "en": "A question?",
+            "ar": "سؤال؟"
+          },
+          "level": "h3"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      },
+      {
+        "id": "aur-foot-b",
+        "type": "button",
+        "props": {
+          "label": {
+            "fr": "Nous écrire",
+            "en": "Contact us",
+            "ar": "راسلنا"
+          },
+          "url": "mailto:contact@example.com",
+          "kind": "ghost"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      }
+    ]
+  }
+}

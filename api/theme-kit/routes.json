@@ -1,0 +1,770 @@
+[
+ {
+  "path": "/",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/",
+  "name": "Accueil (visiteurs)"
+ },
+ {
+  "path": "/account",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/account",
+  "name": "Mon compte"
+ },
+ {
+  "path": "/adhkar",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/adhkar",
+  "name": "Adhkar"
+ },
+ {
+  "path": "/admin",
+  "dynamic": [],
+  "area": "admin",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/apercu-theme",
+  "dynamic": [],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/application",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/application",
+  "name": "Application mobile"
+ },
+ {
+  "path": "/attestation/[code]",
+  "dynamic": [
+   "code"
+  ],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/audyn",
+  "dynamic": [],
+  "area": "technique",
+  "slot": "/audyn",
+  "name": "Écoute (Audyn)"
+ },
+ {
+  "path": "/audyn/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "technique",
+  "slot": "/audyn/*",
+  "name": "Chaque écoute"
+ },
+ {
+  "path": "/books",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/books",
+  "name": "Ouvrages"
+ },
+ {
+  "path": "/books/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/books/*",
+  "name": "Chaque ouvrage"
+ },
+ {
+  "path": "/catalogue",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/catalogue",
+  "name": "Catalogue (page d’origine)"
+ },
+ {
+  "path": "/catalogue/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": "/catalogue/*",
+  "name": "Chaque catégorie"
+ },
+ {
+  "path": "/chaines",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/chaines",
+  "name": "Chaînes"
+ },
+ {
+  "path": "/chaines/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": "/chaines/*",
+  "name": "Chaque chaîne"
+ },
+ {
+  "path": "/collections",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/collections",
+  "name": "Collections"
+ },
+ {
+  "path": "/collections/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/collections/*",
+  "name": "Chaque collection"
+ },
+ {
+  "path": "/conferences/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": "/conferences/*",
+  "name": "Chaque vidéo"
+ },
+ {
+  "path": "/coran",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/coran",
+  "name": "Coran"
+ },
+ {
+  "path": "/coran/[n]",
+  "dynamic": [
+   "n"
+  ],
+  "area": "public",
+  "slot": "/coran/*",
+  "name": "Chaque sourate"
+ },
+ {
+  "path": "/editeur",
+  "dynamic": [],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/events",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/events",
+  "name": "Événements"
+ },
+ {
+  "path": "/events/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/events/*",
+  "name": "Chaque événement"
+ },
+ {
+  "path": "/fiche/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/forgot",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/forgot",
+  "name": "Mot de passe oublié"
+ },
+ {
+  "path": "/gift",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/gift",
+  "name": "Offrir un abonnement"
+ },
+ {
+  "path": "/intervenants",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/intervenants",
+  "name": "Intervenants"
+ },
+ {
+  "path": "/intervenants/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": "/intervenants/*",
+  "name": "Chaque intervenant"
+ },
+ {
+  "path": "/kids",
+  "dynamic": [],
+  "area": "kids",
+  "slot": "/kids",
+  "name": "Accueil Kids"
+ },
+ {
+  "path": "/kids/histoires",
+  "dynamic": [],
+  "area": "kids",
+  "slot": "/kids/histoires",
+  "name": "Histoires"
+ },
+ {
+  "path": "/kids/histoires/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "kids",
+  "slot": "/kids/histoires/*",
+  "name": "Chaque histoire"
+ },
+ {
+  "path": "/kids/serie/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "kids",
+  "slot": "/kids/serie/*",
+  "name": "Chaque série Kids"
+ },
+ {
+  "path": "/kids/shorts",
+  "dynamic": [],
+  "area": "kids",
+  "slot": "/kids/shorts",
+  "name": "Shorts Kids"
+ },
+ {
+  "path": "/kids/shorts/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "kids",
+  "slot": "/kids/shorts/*",
+  "name": "Chaque short Kids"
+ },
+ {
+  "path": "/kids/univers/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "kids",
+  "slot": "/kids/univers/*",
+  "name": "Chaque univers Kids"
+ },
+ {
+  "path": "/kids/watch/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "kids",
+  "slot": "/kids/watch/*",
+  "name": "Chaque vidéo Kids"
+ },
+ {
+  "path": "/l/[token]",
+  "dynamic": [
+   "token"
+  ],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/learning",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/learning",
+  "name": "Apprentissage"
+ },
+ {
+  "path": "/legal/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": "/legal/*",
+  "name": "Chaque page légale"
+ },
+ {
+  "path": "/library",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/library",
+  "name": "Ma bibliothèque"
+ },
+ {
+  "path": "/licences",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/licences",
+  "name": "Licences"
+ },
+ {
+  "path": "/lists",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/lists",
+  "name": "Mes listes"
+ },
+ {
+  "path": "/live",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/live",
+  "name": "En direct"
+ },
+ {
+  "path": "/login",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/login",
+  "name": "Connexion"
+ },
+ {
+  "path": "/organizer",
+  "dynamic": [],
+  "area": "organisateur",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/p/[slug]",
+  "dynamic": [
+   "slug"
+  ],
+  "area": "public",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/pb-preview",
+  "dynamic": [],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/pratique",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/pratique",
+  "name": "Pratique"
+ },
+ {
+  "path": "/pricing",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/pricing",
+  "name": "Tarifs"
+ },
+ {
+  "path": "/priere",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/priere",
+  "name": "Prière"
+ },
+ {
+  "path": "/ramadan",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/ramadan",
+  "name": "Ramadan"
+ },
+ {
+  "path": "/rapport-annonceur/[token]",
+  "dynamic": [
+   "token"
+  ],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/redeem",
+  "dynamic": [],
+  "area": "technique",
+  "slot": "/redeem",
+  "name": "Activer une carte cadeau"
+ },
+ {
+  "path": "/register",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/register",
+  "name": "Inscription"
+ },
+ {
+  "path": "/reset",
+  "dynamic": [],
+  "area": "public",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/series",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/series",
+  "name": "Séries"
+ },
+ {
+  "path": "/series/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/series/*",
+  "name": "Chaque série"
+ },
+ {
+  "path": "/shorts",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/shorts",
+  "name": "Shorts"
+ },
+ {
+  "path": "/shorts/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/shorts/*",
+  "name": "Chaque short"
+ },
+ {
+  "path": "/studio",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/[id]/content",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/activity",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/audyn",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/audyn/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/books",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/books/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/channel",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/collections",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/contents",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/corrections",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/dubbing",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/dubbing/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/editor",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/editor/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/editor/[id]/replace",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/editor/[id]/shorts",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/events",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/live",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/moderation",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/new",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/practice",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/quiz",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/references",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/reminders",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/revenue",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/series",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/series/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/settings",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/settings/storage",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/shorts",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/stats",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/subtitles",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/studio/subtitles/quality",
+  "dynamic": [],
+  "area": "studio",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/talks/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/conferences/*",
+  "name": "Chaque vidéo"
+ },
+ {
+  "path": "/themes",
+  "dynamic": [],
+  "area": "public",
+  "slot": "/themes",
+  "name": "Thèmes"
+ },
+ {
+  "path": "/themes/[id]",
+  "dynamic": [
+   "id"
+  ],
+  "area": "public",
+  "slot": "/themes/*",
+  "name": "Chaque thème"
+ },
+ {
+  "path": "/tv",
+  "dynamic": [],
+  "area": "public",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/unsubscribe/[token]",
+  "dynamic": [
+   "token"
+  ],
+  "area": "technique",
+  "slot": null,
+  "name": ""
+ },
+ {
+  "path": "/welcome",
+  "dynamic": [],
+  "area": "technique",
+  "slot": "/welcome",
+  "name": "Bienvenue"
+ }
+]

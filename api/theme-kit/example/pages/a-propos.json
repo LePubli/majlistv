@@ -1,0 +1,113 @@
+{
+  "meta": {},
+  "zones": {
+    "main": [
+      {
+        "id": "aur-ap-h",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "À propos",
+            "en": "About",
+            "ar": "من نحن"
+          },
+          "level": "h2"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-ap-t",
+        "type": "text",
+        "props": {
+          "body": {
+            "fr": "Cette page a été installée par le thème **Aurore**. Modifiez-la depuis l’éditeur visuel.\n\n- Elle est en brouillon : relisez puis publiez.\n- Elle existe en français, anglais et arabe.",
+            "en": "This page was installed by the **Aurora** theme. Edit it from the visual editor.",
+            "ar": "ثُبّتت هذه الصفحة بواسطة سمة **الفجر**. عدّلها من المحرّر المرئي."
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      },
+      {
+        "id": "aur-ap-cols",
+        "type": "columns",
+        "props": {
+          "count": "2",
+          "ratio": "",
+          "gap": "m"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {},
+        "cols": [
+          [
+            {
+              "id": "aur-ap-c1",
+              "type": "text",
+              "props": {
+                "body": {
+                  "fr": "Colonne de gauche.",
+                  "en": "Left column.",
+                  "ar": "العمود الأيسر"
+                }
+              },
+              "show": {
+                "devices": [
+                  "m",
+                  "t",
+                  "d"
+                ],
+                "audience": "all"
+              },
+              "style": {}
+            }
+          ],
+          [
+            {
+              "id": "aur-ap-c2",
+              "type": "button",
+              "props": {
+                "label": {
+                  "fr": "Retour à l’accueil",
+                  "en": "Back home",
+                  "ar": "العودة للرئيسية"
+                },
+                "url": "/"
+              },
+              "show": {
+                "devices": [
+                  "m",
+                  "t",
+                  "d"
+                ],
+                "audience": "all"
+              },
+              "style": {}
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

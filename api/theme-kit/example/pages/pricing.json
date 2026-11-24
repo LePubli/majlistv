@@ -1,0 +1,100 @@
+{
+  "meta": {},
+  "zones": {
+    "before": [
+      {
+        "id": "aur-pr-h",
+        "type": "heading",
+        "props": {
+          "title": {
+            "fr": "Un abonnement, toute la lumière",
+            "en": "One plan, all the light",
+            "ar": "اشتراك واحد وكل النور"
+          },
+          "level": "h2"
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      },
+      {
+        "id": "aur-pr-t",
+        "type": "text",
+        "props": {
+          "body": {
+            "fr": "Sans engagement. Résiliable en un clic depuis votre compte.",
+            "en": "No commitment. Cancel in one click from your account.",
+            "ar": "دون التزام. يمكن الإلغاء بنقرة من حسابك."
+          }
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {
+          "align": "center"
+        }
+      }
+    ],
+    "after": [
+      {
+        "id": "aur-pr-faq",
+        "type": "faq",
+        "props": {
+          "title": {
+            "fr": "Questions fréquentes",
+            "en": "FAQ",
+            "ar": "أسئلة شائعة"
+          },
+          "items": [
+            {
+              "q": {
+                "fr": "Puis-je annuler à tout moment ?",
+                "en": "Can I cancel any time?",
+                "ar": "هل يمكنني الإلغاء في أي وقت؟"
+              },
+              "a": {
+                "fr": "Oui, depuis **Mon compte**, sans frais.",
+                "en": "Yes, from **My account**, free of charge.",
+                "ar": "نعم، من **حسابي** دون رسوم."
+              }
+            },
+            {
+              "q": {
+                "fr": "L’essai est-il vraiment gratuit ?",
+                "en": "Is the trial really free?",
+                "ar": "هل التجربة مجانية فعلاً؟"
+              },
+              "a": {
+                "fr": "Oui : 7 jours, sans prélèvement pendant l’essai.",
+                "en": "Yes: 7 days, no charge during the trial.",
+                "ar": "نعم: 7 أيام دون أي خصم أثناء التجربة."
+              }
+            }
+          ]
+        },
+        "show": {
+          "devices": [
+            "m",
+            "t",
+            "d"
+          ],
+          "audience": "all"
+        },
+        "style": {}
+      }
+    ]
+  }
+}

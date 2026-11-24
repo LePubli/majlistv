@@ -10407,3 +10407,25 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Bloc Bandeau choisi → Modèles → « Rendre le bloc choisi global » → nom « Bandeau Ramadan » → poser la section sur d'autres pages depuis Modèles → Sections globales → changer le texte une fois, publier : il change partout.
 
 **Testé / non testé / limites.** Voir ligne 359 du registre.
+
+
+## Éditeur visuel — lot T : thèmes uploadables Mejliss (24/11)
+
+**Description.** Administration → Apparence → « Thèmes Mejliss (.zip) » : on envoie un thème (fichier .zip), le site le **contrôle** (liste précise des erreurs sinon), on l'**installe**, on l'**active**, on peut **revenir en arrière** (« Désactiver ») ou le supprimer. Un thème = `theme.json` (manifeste) + `theme.css` + polices + images + pages en blocs (accueil, catalogue, fiche vidéo, en-tête/pied, zones avant/après de n'importe quelle page, pages libres) + sections globales + modèles. **Aucun code exécutable** : le CSS est filtré (ni `@import`, ni adresse externe, ni `expression()`, ni `javascript:`), les images et polices sont vérifiées sur leur contenu, les pages passent par les mêmes contrôles que l'éditeur. À l'activation : polices ajoutées, jetons appliqués par-dessus l'habillage de base (sélecteur renforcé, uniquement pour les réglages que le thème choisit), CSS ajouté, pages en **brouillon** (jamais publiées d'office), sections globales créées et publiées si le nom est libre, modèles ajoutés. Kit fourni : **thème d'exemple « Aurore »** téléchargeable et **guide pour IA** (`GUIDE-IA.md`) généré à partir du code : toutes les routes (100), pages à blocs, types de blocs, réglages de style, fonctions, classes CSS, règles RTL/responsive et checklist « rien d'oublié ».
+
+**Prérequis.** Migration 134 (table `theme_packs`, automatique au démarrage de l'API). Aucune variable `.env` nouvelle.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migrations 131 à 134), puis `majlistv-web`. Puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** « Ce thème est refusé » : chaque message nomme le fichier et la clé. Contrôle en ligne de commande avec les mêmes règles : `node api/theme-kit/validate.mjs mon-theme/`. Le CSS actif est dans `/theme` (rafraîchi sous 10 à 15 s). Envoi qui échoue sans message : limite Nginx de taille d'envoi du domaine du site (`grep -n client_max_body_size /etc/nginx/sites-enabled/*majlisstv*`). Guide ou annuaire périmé après l'ajout d'une page ou d'un bloc : `node api/theme-kit/scan.mjs` (le test `api/tests/test_theme_kit.mjs` le signale).
+
+**Exemples.** Apparence → Thèmes Mejliss → « Télécharger le thème d'exemple » → « Envoyer un thème » (le même .zip) → « Installer » → « Activer » → éditeur visuel : relire et publier les brouillons. Créer un thème : voir `api/theme-kit/README.md` (copier `example/`, `validate.mjs`, `build.mjs`).
+
+**Testé / non testé / limites.** Voir ligne 360 du registre.
