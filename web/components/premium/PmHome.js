@@ -15,6 +15,7 @@ import Glyph, { glyphOfCategory } from './Glyph';
 import { BrandWord } from './PmBrand';
 import { OttCard, OttRail } from './PmOtt';
 import { ShortsRail } from '../ShortsRail';
+import { KidsBand } from '../KidsBanner';
 
 const HERO_FALLBACK = '/premium/andalousie-large.webp';
 const cssUrl = (u) => `url("${String(u).replace(/"/g, '%22')}")`;
@@ -120,6 +121,7 @@ export default function PmHome() {
   const [learn, setLearn] = useState(null);
   const [cols, setCols] = useState([]);
   const [shorts, setShorts] = useState([]);
+  const [kids, setKids] = useState(null); // encart Kids : { enabled, talks } ; null tant que non chargé
   useEffect(() => { if (ready) call('/home').then((r) => setHome(r.ok ? r.data : { hero: { mode: 'text' }, rows: [] })); }, [call, ready]);
   useEffect(() => { if (user) call('/me/continue').then((r) => setCont(r.ok && Array.isArray(r.data) ? r.data : [])); else setCont([]); }, [user, call]);
   // Progression du bandeau « Apprendre » : seulement avec la formule Apprentissage (sinon l'API répond « formule requise »).
@@ -127,6 +129,8 @@ export default function PmHome() {
   // Collections publiées « sur l'accueil » (phase 6) et shorts publiés (module Shorts) : rien d'affiché s'il n'y en a pas.
   useEffect(() => { if (ready) call('/collections/home', {}, null).then((r) => setCols(r.ok && Array.isArray(r.data?.collections) ? r.data.collections : [])); }, [call, ready, user?.id]);
   useEffect(() => { if (ready && feat('shorts')) call('/shorts?limit=10', {}, null).then((r) => setShorts(r.ok && Array.isArray(r.data) ? r.data : [])); else setShorts([]); }, [call, ready, feat]);
+
+  useEffect(() => { if (ready && feat('kids')) call('/home/kids', {}, null).then((r) => setKids(r.ok && r.data?.enabled ? r.data : { enabled: false, talks: [] })); else setKids(null); }, [call, ready, feat]);
 
   const latest = useMemo(() => (home?.rows || []).find((r) => r.talks)?.talks || [], [home]);
   const heroItems = useMemo(() => {
@@ -193,7 +197,9 @@ export default function PmHome() {
               <ShortsRail list={shorts} />
             </section>
           )}
-          {feat('kids') && (
+          {/* Encart Kids : l'ancien encart avec les dernières vidéos Kids ; sans vidéo Kids publiée, la bannière illustrée sert de repli. */}
+          {feat('kids') && kids?.talks?.length > 0 && <KidsBand data={kids} />}
+          {feat('kids') && kids && !kids.talks?.length && (
             <Link href="/kids" className="pm-kids-promo" style={{ backgroundImage: "linear-gradient(90deg,#030a16ee,#030a1600),url('/premium/kids-hero-day-v7.webp')" }}>
               <span className="pm-kids-title">{brandFirst} <em>Kids</em></span>
               <small>{t('kdTagline')}</small>

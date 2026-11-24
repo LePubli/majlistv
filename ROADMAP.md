@@ -759,3 +759,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Thème Premium : progression réelle sur les cartes du Catalogue et des Séries ; correctif du jeton sur /me/learning (accueil, page série) : fait 23/11. Fin de l'ordre convenu pour les points back-office / Premium (hors points mis de côté).
 - Studio → Activité : relance en lot des tâches en échec (cases à cocher, « Relancer la sélection ») : fait 23/11.
 - Stockage des vidéos sur N0C Storage (PlanetHoster) : étape 0 (diagnostic `ops/n0c`) livrée 23/11 ; basculement et copie après le résultat.
+- Accueil Premium : ancien encart Kids avec vidéos rétabli (bannière illustrée en repli) : fait 24/11.
