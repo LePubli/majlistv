@@ -714,7 +714,7 @@ html[data-skin="premium"] .pm-blocks-cat .pm-blk.v20-app { overflow: visible; }
 /* ===== Page vidéo : mise en page de la maquette V22 (24/11) =====
    Barre du haut (retour · fil · mode cinéma), titre en empreinte serif, étiquettes, « Ma liste » en pastille, panneau d'épisodes numérotés,
    carte « Votre parcours », « À découvrir ensuite » en cartes. Police du titre : Playfair Display si elle est choisie dans Apparence, sinon la serif du système. */
-html[data-skin="premium"] { --pm-serif: 'Playfair Display', 'Noto Serif', Georgia, 'Times New Roman', serif; }
+html[data-skin="premium"] { --pm-serif: var(--pm-font-title,'Montserrat', system-ui, sans-serif); }
 html[data-skin="premium"] .pm-wtop { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin: 6px 0 18px; }
 html[data-skin="premium"] main.page.watch-b > .pm-wtop { grid-row: 1; }
 html[data-skin="premium"] .pm-wtop .wb-back { grid-column: 1; grid-row: 1; justify-self: start; margin: 0; font-weight: 700; }
@@ -751,7 +751,7 @@ html[data-skin="premium"] .wb-side .side-item { position: relative; align-items:
 html[data-skin="premium"] .wb-side .side-item:hover { background: color-mix(in srgb,var(--c-ffffff,#fff) 5%,transparent); border-color: var(--c-2a4d73,#2a4d73); }
 html[data-skin="premium"] .wb-side .side-item.on { border-color: var(--c-149cff,#149cff); background: color-mix(in srgb,var(--c-149cff,#149cff) 14%,transparent); }
 html[data-skin="premium"] .wb-side .side-thumb { flex: 0 0 104px; border-radius: 10px; overflow: hidden; }
-html[data-skin="premium"] .pm-side-num { position: absolute; inset: 0; display: grid; place-items: center; font: 800 20px var(--pm-font-body, system-ui, sans-serif); color: var(--c-ffffff,#fff); text-shadow: 0 1px 8px rgba(0,0,0,.8); background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(0,0,0,.05)); }
+html[data-skin="premium"] .pm-side-num { position: absolute; inset: 0; display: grid; place-items: center; font: 800 20px var(--pm-font-body, system-ui, sans-serif); color: var(--c-ffffff,#fff); text-shadow: 0 1px 8px color-mix(in srgb,var(--c-000000,#000000) 80%,transparent); background: linear-gradient(0deg, color-mix(in srgb,var(--c-000000,#000000) 25%,transparent), color-mix(in srgb,var(--c-000000,#000000) 5%,transparent)); }
 html[data-skin="premium"] .side-item.on .pm-side-num { font-size: 0; }
 html[data-skin="premium"] .side-item.on .pm-side-num::before { content: '▶'; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--c-149cff,#149cff); color: var(--c-ffffff,#fff); font-size: 12px; }
 html[data-skin="premium"] .pm-side-ep { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: var(--c-35b9ff,#35b9ff); }
@@ -787,3 +787,21 @@ html[data-skin="premium"] .wb-next .wb-card:hover { border-color: var(--c-35b9ff
   html[data-skin="premium"] .watch-b .wb-info .wb-bar { display: flex; flex-wrap: wrap; gap: 10px; width: auto; }
   html[data-skin="premium"] .watch-b .wb-bar .wb-act { white-space: nowrap; }
 }
+/* Onglets du panneau latéral (Épisodes · Chapitres · Réglages) */
+html[data-skin="premium"] .pm-ptabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin: -6px -6px 14px; border-bottom: 1px solid var(--c-2a4d73,#2a4d73); }
+html[data-skin="premium"] .pm-ptabs button { padding: 13px 6px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--c-8fb0d3,#8fb0d3); font: 800 13px var(--pm-font-body, system-ui, sans-serif); cursor: pointer; }
+html[data-skin="premium"] .pm-ptabs button.on { color: var(--c-ffffff,#fff); border-bottom-color: var(--c-149cff,#149cff); background: color-mix(in srgb,var(--c-149cff,#149cff) 12%,transparent); }
+html[data-skin="premium"] .pm-ptabs button:focus-visible { outline: 2px solid var(--c-35b9ff,#35b9ff); outline-offset: -2px; }
+html[data-skin="premium"] .pm-pchap h3 { margin: 0 0 8px; font-family: var(--pm-serif); font-size: 1.4rem; }
+html[data-skin="premium"] .pm-pchap .chapters { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+html[data-skin="premium"] .pm-pchap .seg { width: 100%; text-align: start; padding: 10px 12px; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--c-ffffff,#fff); font-size: 14px; cursor: pointer; }
+html[data-skin="premium"] .pm-pchap .seg:hover { border-color: var(--c-2a4d73,#2a4d73); }
+html[data-skin="premium"] .pm-pchap .seg.on { border-color: var(--c-149cff,#149cff); background: color-mix(in srgb,var(--c-149cff,#149cff) 14%,transparent); }
+html[data-skin="premium"] .pm-pchap .ts { margin-inline-end: 8px; font-weight: 800; color: var(--c-35b9ff,#35b9ff); }
+html[data-skin="premium"] .pm-pset { display: grid; gap: 16px; padding: 4px 2px 8px; }
+html[data-skin="premium"] .pm-pset .wb-speeds { display: grid; gap: 8px; }
+html[data-skin="premium"] .pm-pset .wb-speeds > div { display: flex; flex-wrap: wrap; gap: 8px; }
+html[data-skin="premium"] .pm-pset .wb-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--c-2a4d73,#2a4d73); background: transparent; color: var(--c-ffffff,#fff); font: 700 14px var(--pm-font-body, system-ui, sans-serif); cursor: pointer; }
+html[data-skin="premium"] .pm-pset .wb-item.on { border-color: var(--c-149cff,#149cff); }
+/* Extrait lisible par les moteurs de recherche : tout en bas de la page (il ne doit pas se glisser en haut de la grille) */
+html[data-skin="premium"] main.page.watch-b > .seo-extra { grid-row: 9; grid-column: 1 / -1; }

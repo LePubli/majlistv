@@ -10531,3 +10531,24 @@ Résultat attendu du contrôle : 0 échec.
 
 **Testé / non testé / limites.** Voir ligne 364 du registre.
 
+
+## Étape — Page vidéo : onglets rangés et panneau à onglets (24/11/2026)
+
+**Description.** Sur la fiche vidéo, tout le texte n'est plus entassé dans « À propos ». Les onglets sont maintenant, dans cet ordre : **Résumé** (s'il existe) · **Descriptif** · **Notes** · **Questions** · **Transcription** · **À propos** (toujours le dernier, réduit à la fiche technique). En thème Premium, le panneau de droite a lui aussi 3 onglets : **Épisodes** (si la vidéo est dans une série) · **Chapitres** (si l'IA en a généré) · **Réglages** (vitesse de lecture). Le bloc « Chapitres et extrait » (référencement) est placé tout en bas de la page. Les titres du panneau suivent la police de titres du thème (Montserrat), conformément au choix de 19/11.
+
+**Prérequis.** Aucun changement d'API ni de base. Seul le site (web) est concerné.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web`, puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Pas d'onglet Résumé : la vidéo n'a pas encore d'analyse IA. Pas d'onglet Chapitres : l'analyse n'a pas produit de chapitres. Le lien `?t=` d'une recherche ouvre l'onglet Transcription.
+
+**Exemples.** Ouvrir une vidéo analysée : le Résumé s'affiche en premier ; cliquer « Chapitres » dans le panneau de droite pour sauter à un passage.
+
+**Testé / non testé / limites.** Voir ligne 365 du registre.

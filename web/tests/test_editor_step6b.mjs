@@ -21,7 +21,7 @@ const tc = fs.readFileSync(new URL('../app/talks/[id]/TalkClient.js', import.met
 for (const k of ['w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books', "/pages/view?path=%2F_watch", 'WatchCtx.Provider', "side !== 'hidden'", 'watch-blocks']) assert.ok(tc.includes(k), k);
 // la fiche d'origine garde les mêmes sections, dans le même ordre
 const i = (k) => tc.lastIndexOf(k);
-assert.ok(i('{stageSec}') < i('{noticesSec}') && i('{noticesSec}') < i('{gridSec()}') && i('{gridSec()}') < i('{extra}') && i('{extra}') < i('{nextSec()}') && i('{nextSec()}') < i('{booksSec}'), 'ordre d’origine conservé');
+assert.ok(i('{stageSec}') < i('{noticesSec}') && i('{noticesSec}') < i('{gridSec()}') && i('{gridSec()}') < i('{extra}') && i('{extra}') < i('{nextSec(pm ? 3 : 8)}') && i('{nextSec(pm ? 3 : 8)}') < i('{booksSec}'), 'ordre d’origine conservé');
 const css = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 for (const c of ['.wb-side-left', '.wb-side-below', '.wb-side-hidden', '.pb-placeholder']) assert.ok(css.includes(c), c);
 const ed = fs.readFileSync(new URL('../components/editor/SiteEditor.js', import.meta.url), 'utf8');

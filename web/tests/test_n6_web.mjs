@@ -7,17 +7,16 @@ const tc = read('app/talks/[id]/TalkClient.js');
 
 // Onglets
 const tabsBlock = tc.slice(tc.indexOf('  const tabs = ['), tc.indexOf('];', tc.indexOf('  const tabs = [')));
-assert.deepEqual([...tabsBlock.matchAll(/key: '([a-z]+)'/g)].map((x) => x[1]), ['about', 'notes', 'ask'], 'À propos · Mes notes · Questions');
-assert.doesNotMatch(tc, /key: 'summary'|key: 'chapters'|key: 'transcript'/, 'plus d’onglets Résumé, Chapitres, Transcription');
-assert.match(tc, /useState\('about'\)/, 'on arrive sur À propos');
+assert.deepEqual([...tabsBlock.matchAll(/key: '([a-z]+)'/g)].map((x) => x[1]), ['summary', 'desc', 'notes', 'ask', 'transcript', 'about'], 'Résumé · Descriptif · Notes · Questions · Transcription · À propos (dernier)');
+assert.match(tc, /useState\(''\)/, 'on arrive sur le premier onglet disponible');
 assert.match(tc, /\{tabs\.length > 1 && <div className="tablist"/, 'pas de barre pour un seul onglet');
-// « À propos » : résumé et chapitres (Insights complet), description, détails, transcription repliée
-const about = tc.slice(tc.indexOf('<div id="panel-about"'), tc.indexOf('{current === \'ask\''));
-const order = ['<Insights', 'about-text', 'className="details"', '<details className="tp-transcript"'].map((k) => about.indexOf(k));
-assert.ok(order.every((x) => x > 0), 'les quatre parties sont dans À propos');
-assert.deepEqual([...order].sort((a, b) => a - b), order, 'dans cet ordre');
-assert.match(about, /tab="all"/);
-assert.match(tc, /if \(jumpMs && hasTracks\) \{ setTab\('about'\); setTrOpen\(true\); \}/, '?t= ouvre la transcription');
+// Résumé (Insights), descriptif, transcription à la demande, À propos = fiche technique seulement
+assert.match(tc, /<div id="panel-summary"[\s\S]*?<Insights/, 'Résumé = Insights');
+assert.match(tc, /<div id="panel-desc"[\s\S]*?about-text/, 'Descriptif = texte de la vidéo');
+const about = tc.slice(tc.indexOf('<div id="panel-about"'), tc.indexOf("{current === 'ask'"));
+assert.match(about, /className="details"/, 'À propos : fiche détaillée');
+assert.doesNotMatch(about, /about-text|<Insights/, 'À propos ne contient plus tout le texte');
+assert.match(tc, /if \(jumpMs && hasTracks\) setTab\('transcript'\)/, '?t= ouvre la transcription');
 
 // Un seul bouton « Ma liste »
 assert.match(tc, /act="mylist"/);

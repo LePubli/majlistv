@@ -75,10 +75,10 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const [notes, setNotes] = useState([]);           // marque-pages et notes de l'utilisateur sur cette vidéo
   const [bmFlash, setBmFlash] = useState(false);
   // Étape N6 (16/11) : 3 onglets sous le lecteur — À propos (résumé, chapitres, description, transcription) · Mes notes · Questions.
-  const [tab, setTab] = useState('about');
-  const [trOpen, setTrOpen] = useState(false);      // transcription dépliée dans « À propos »
+  const [tab, setTab] = useState(''); // '' = premier onglet disponible
   const [cinema, setCinema] = useState(false); // mode cinéma : lecteur pleine largeur, menus masqués (Échap pour sortir)
-  const [, setIns] = useState({ summary: false, chapters: false, list: [] }); // ce que contient l’analyse (résumé, chapitres) ; plus utilisé pour les onglets depuis N6
+  const [ins, setIns] = useState({ summary: false, chapters: false, list: [] });
+  const [ptab, setPtab] = useState(''); // onglet du panneau latéral (Épisodes · Chapitres · Réglages) ; '' = le premier // ce que contient l’analyse (résumé, chapitres) ; plus utilisé pour les onglets depuis N6
   const [ctx, setCtx] = useState(null);            // contexte de série (saison, numéro, précédent / suivant, épisodes)
   const [upNext, setUpNext] = useState(null);      // compte à rebours avant l'épisode suivant (secondes), null = pas affiché
   const [quizOpen, setQuizOpen] = useState(false);   // panneau du quiz ouvert sous le lecteur
@@ -130,7 +130,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
   // Arrivée avec ?t= (clic sur un résultat de recherche) : on ouvre la transcription, là où se trouve le passage.
   const hasTracks = Boolean(talk && talk.tracks && talk.tracks.length);
-  useEffect(() => { setTab('about'); setTrOpen(false); }, [id]);
+  useEffect(() => { setTab(''); setPtab(''); }, [id]);
   useEffect(() => {
     setNotes([]);
     if (user) call(`/talks/${id}/notes`).then((r) => r.ok && setNotes(r.data));
@@ -148,7 +148,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     if (r.ok) setNotes((l) => l.map((x) => (x.id === nid ? r.data : x)));
   };
   const dropNote = async (nid) => { setNotes((l) => l.filter((x) => x.id !== nid)); await call(`/me/notes/${nid}`, { method: 'DELETE' }); };
-  useEffect(() => { if (jumpMs && hasTracks) { setTab('about'); setTrOpen(true); } }, [jumpMs, hasTracks, id]);
+  useEffect(() => { if (jumpMs && hasTracks) setTab('transcript'); }, [jumpMs, hasTracks, id]);
 
   // Étape N6 (16/11) : un seul bouton « Ma liste » (favoris et « plus tard » réunis, voir Providers.toggleMyList).
   const mine = Boolean(inMyList(id));
@@ -387,15 +387,26 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   };
   const clockS = (sec) => clock(sec * 1000);
 
-  // Étape N6 (16/11) : 3 onglets au plus — À propos (toujours là : résumé et chapitres de l'IA, description, détails, transcription
-  // repliée) · Mes notes · Questions (assistant). Les anciens onglets Résumé, Chapitres et Transcription sont des parties d'« À propos ».
+  // Onglets sous la vidéo (demande d'Epok 24/11) : Résumé (s'il existe) · Descriptif · Mes notes · Questions · Transcription · À propos (toujours le dernier).
+  // Hors thème Premium, les chapitres restent sous le résumé ; en Premium ils ont leur onglet dans le panneau à droite.
   const notesTab = feat('notes') && user && hasPlayer && !talk.locked;
   const askTab = feat('ask') && user && hasPlayer && !talk.locked && talk.tracks?.length > 0;
+  const summaryTab = hasPlayer && Boolean(talk.playbackToken) && (ins.summary || (!pm && ins.chapters));
   const tabs = [
-    { key: 'about', label: t('tabAbout') },
+    ...(summaryTab ? [{ key: 'summary', label: t('summary') }] : []),
+    ...(talk.description ? [{ key: 'desc', label: t('tabDesc') }] : []),
     ...(notesTab ? [{ key: 'notes', label: `${t('ntTab')}${notes.length ? ` (${notes.length})` : ''}` }] : []),
     ...(askTab ? [{ key: 'ask', label: t('tpQuestions') }] : []),
+    ...(showTranscript ? [{ key: 'transcript', label: t('transcript') }] : []),
+    { key: 'about', label: t('tabAbout') },
   ];
+  // Onglets du panneau à droite (Premium) : Épisodes (vidéo d'une série) · Chapitres (si l'analyse en a) · Réglages (vitesse, audio).
+  const panelTabs = pm ? [
+    ctx && { key: 'eps', label: t('pmTabEpisodes') },
+    hasInsights && ins.chapters && { key: 'chap', label: t('chapters') },
+    hasPlayer && !talk.locked && (talk.hlsPath || talk.fileUrl || embed) && { key: 'set', label: t('pmTabSettings') },
+  ].filter(Boolean) : [];
+  const pcur = panelTabs.some((x) => x.key === ptab) ? ptab : panelTabs[0]?.key;
   const current = tabs.some((x) => x.key === tab) ? tab : tabs[0].key;
   const onTabKey = (e) => {
     const i = tabs.findIndex((x) => x.key === current);
@@ -428,6 +439,20 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const stepNo = (k) => String(stepOrder.indexOf(k) + 1);
   const openNotes = () => { setTab('notes'); setTimeout(() => document.getElementById('tab-notes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 40); };
 
+  // Réglages du lecteur : vitesse, mode audio, rappel sur les sous-titres (dans la roue du lecteur et, en Premium, dans l'onglet « Réglages » du panneau).
+  const settingsBody = (
+    <>
+      <div className="wb-speeds" role="group" aria-label={t('spdLabel')}>
+                  <span className="meta small">{t('spdLabel')}</span>
+                  <div>{SPEEDS.map((r) => <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>)}</div>
+                </div>
+                {(talk.audioPath || dubAudio) && (
+                  <button type="button" className={`wb-item${audioMode ? ' on' : ''}`} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')} data-act="audio">{ICONS.headphones}<span>{audioMode ? t('audBackVideo') : t('audMode')}</span></button>
+                )}
+                <p className="meta small wb-pset-note">{t('wbSubsHint')}</p>
+    </>
+  );
+
   const stageSec = (
     <>
       {pm ? (
@@ -449,14 +474,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             {player}
             {(talk.hlsPath || talk.fileUrl || embed) && !quizOpen && !practiceOpen && (
               <PlayerSettings label={t('wbPlayerSettings')} rateLabel={`${String(rate).replace('.', locale === 'fr' ? ',' : '.')}×`}>
-                <div className="wb-speeds" role="group" aria-label={t('spdLabel')}>
-                  <span className="meta small">{t('spdLabel')}</span>
-                  <div>{SPEEDS.map((r) => <button key={r} type="button" className={'speed-pill' + (rate === r ? ' on' : '')} aria-pressed={rate === r} onClick={() => pickRate(r)}>{r}×</button>)}</div>
-                </div>
-                {(talk.audioPath || dubAudio) && (
-                  <button type="button" className={`wb-item${audioMode ? ' on' : ''}`} aria-pressed={audioMode} onClick={() => pickAudio(!audioMode)} title={t('audHelp')} data-act="audio">{ICONS.headphones}<span>{audioMode ? t('audBackVideo') : t('audMode')}</span></button>
-                )}
-                <p className="meta small wb-pset-note">{t('wbSubsHint')}</p>
+                {settingsBody}
               </PlayerSettings>
             )}
             {castableTalk(talk) && !quizOpen && !practiceOpen && (
@@ -612,19 +630,24 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                   aria-controls={`panel-${x.key}`} tabIndex={x.key === current ? 0 : -1} onClick={() => setTab(x.key)}>{x.label}</button>
               ))}
             </div>}
-            <div id="panel-about" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-labelledby={tabs.length > 1 ? 'tab-about' : undefined} hidden={current !== 'about'} className="tpanel">
-              {hasInsights && (
+            {hasInsights && (
+              <div id="panel-summary" role={summaryTab && tabs.length > 1 ? 'tabpanel' : undefined} aria-labelledby={summaryTab ? 'tab-summary' : undefined} hidden={current !== 'summary'} className="tpanel">
                 <Insights key={`${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t}
-                  tab="all" onData={setIns} />
-              )}
-              {talk.description && <p className="about-text">{talk.description}</p>}
+                  tab={pm ? 'summary' : 'all'} onData={setIns} />
+              </div>
+            )}
+            {talk.description && (
+              <div id="panel-desc" role="tabpanel" aria-labelledby="tab-desc" hidden={current !== 'desc'} className="tpanel">
+                <p className="about-text">{talk.description}</p>
+              </div>
+            )}
+            {current === 'transcript' && showTranscript && (
+              <div id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript" className="tpanel tp-transcript" data-id="tp-transcript">
+                <Transcript key={talk.tracks.join()} canSuggest={!talk.locked} shareInfo={talk.locked ? null : { title: talk.title, speaker: initial?.speaker || talk.speaker }} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
+              </div>
+            )}
+            <div id="panel-about" role={tabs.length > 1 ? 'tabpanel' : undefined} aria-labelledby={tabs.length > 1 ? 'tab-about' : undefined} hidden={current !== 'about'} className="tpanel">
               {details.length > 0 && <dl className="details">{details.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
-              {showTranscript && (
-                <details className="tp-transcript" id="tp-transcript" open={trOpen} onToggle={(e) => setTrOpen(e.currentTarget.open)}>
-                  <summary>{trOpen ? t('transcript') : t('tpTranscriptShow')}</summary>
-                  <Transcript key={talk.tracks.join()} canSuggest={!talk.locked} shareInfo={talk.locked ? null : { title: talk.title, speaker: initial?.speaker || talk.speaker }} talkId={id} token={talk.playbackToken} langs={talk.tracks} defaultLang={talk.tracks.includes(locale) ? locale : (talk.tracks.includes(audioLang) ? audioLang : talk.tracks[0])} videoRef={videoRef} locale={locale} t={t} />
-                </details>
-              )}
             </div>
             {current === 'ask' && (
               <div id="panel-ask" role="tabpanel" aria-labelledby="tab-ask" className="tpanel">
@@ -641,7 +664,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
           {practiceOn && !practiceOpen && !hasPlayer && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
-        {side !== 'hidden' && (learnOn || notesOn || ctx) && (
+        {side !== 'hidden' && (learnOn || notesOn || ctx || panelTabs.length > 0) && (
           <aside className="wb-side" aria-label={t('wbSide')} ref={sideRef}>
             {(learnOn || notesOn) && (
               <section className="wb-learn" aria-labelledby="wb-learn-title" ref={quizRef}>
@@ -684,8 +707,15 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                 {notesOn && <button type="button" className="link wb-notes" onClick={openNotes} data-act="notes">{t('wbNotes').replace('{n}', notes.length)} →</button>}
               </section>
             )}
-            {ctx && (
+            {(ctx || panelTabs.length > 0) && (
               <section className="side-series">
+                {pm && panelTabs.length > 1 && (
+                  <div className="pm-ptabs" role="tablist" aria-label={t('wbSide')}>
+                    {panelTabs.map((x) => <button key={x.key} type="button" role="tab" id={`ptab-${x.key}`} className={x.key === pcur ? 'on' : ''} aria-selected={x.key === pcur} aria-controls={`ppanel-${x.key}`} onClick={() => setPtab(x.key)}>{x.label}</button>)}
+                  </div>
+                )}
+                {ctx && (!pm || pcur === 'eps') && (
+                  <div id="ppanel-eps" role={pm && panelTabs.length > 1 ? 'tabpanel' : undefined}>
                 {pm ? (
                   <div className="side-head pm-side-head">
                     <h2 id="side-title"><Link href={`/series/${ctx.id}`}>{ctx.season ? t('seasonN').replace('{n}', ctx.season.number) : ctx.title}</Link></h2>
@@ -720,6 +750,14 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                     );
                   })}
                 </ul>
+                  </div>
+                )}
+                {pm && pcur === 'chap' && hasInsights && (
+                  <div id="ppanel-chap" role="tabpanel" className="pm-pchap">
+                    <Insights key={`c-${(talk.tracks || []).join()}-${talk.insightsPending}`} talkId={id} token={talk.playbackToken} preferredLang={locale} videoRef={videoRef} locale={locale} t={t} tab="chapters" />
+                  </div>
+                )}
+                {pm && pcur === 'set' && <div id="ppanel-set" role="tabpanel" className="pm-pset">{settingsBody}</div>}
               </section>
             )}
             {pm && feat('learning') && !learnOn && (
