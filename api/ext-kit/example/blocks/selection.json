@@ -1,0 +1,15 @@
+[
+  {
+    "type": "heading",
+    "props": {
+      "title": "$title"
+    }
+  },
+  {
+    "type": "talks",
+    "props": {
+      "limit": "$limit",
+      "level": "$level"
+    }
+  }
+]

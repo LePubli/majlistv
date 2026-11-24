@@ -2,6 +2,7 @@
 // Contexte global : textes (i18n), session utilisateur (token en localStorage) et appels API.
 import { QuranPlayerProvider } from './QuranPlayer';
 import { AudynPlayerProvider } from './AudynPlayer';
+import { registerExtBlocks } from '../lib/blocks';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrayerState } from '../lib/usePrayer';
@@ -10,6 +11,7 @@ import { captureAdRef } from '../lib/adref';
 import { localizeCatNames } from '../lib/catNames';
 
 const Ctx = createContext(null);
+const NO_EXT = { blocks: {}, texts: {}, settings: {}, features: {}, css: '' }; // lot X1 : aucune extension active
 // Un jeton « espace enfant » (Mejliss Kids) porte l'identifiant du profil ; le serveur le refuse hors de l'espace enfant.
 const kidIdOf = (tk) => { try { return JSON.parse(atob(tk.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).kid || null; } catch { return null; } };
 export const useApp = () => useContext(Ctx);
@@ -18,7 +20,8 @@ export const useApp = () => useContext(Ctx);
 const DEFAULT_CARDS = { hover: true, preview: true, previewDelay: 1500, previewSeconds: 20,
   show: { access: true, duration: true, speaker: true, category: true, language: true, description: true, favorite: true, progress: true } };
 
-export default function Providers({ skin = 'classique', skinChoice = false, locale, dict, appName, trialDays = 0, prayerCfg = null, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, children }) {
+export default function Providers({ skin = 'classique', skinChoice = false, locale, dict, appName, trialDays = 0, prayerCfg = null, cards = null, hasSeries = false, hasBooks = false, statsOn = true, features = {}, modules = {}, layout = null, ext = null, children }) {
+  if (ext?.blocks) registerExtBlocks(ext.blocks); // lot X1 : blocs des extensions actives (même registre que l'API : éditeur, validation, rendu)
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -131,7 +134,7 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
   // Entrée dans l'espace enfant (jeton enfant) ; la sortie passe par le code parental (POST /kids/exit) puis login().
   const enterKid = (tk, profile) => { localStorage.setItem('token', tk); setToken(tk); setUser(null); setKid(profile); };
 
-  return <Ctx.Provider value={{ formats, formatName, cats, allCats, features, feat: (id) => features[id] !== false,
+  return <Ctx.Provider value={{ formats, formatName, cats, allCats, features, ext: ext || NO_EXT, feat: (id) => features[id] !== false,
     // Registre, point 4 (étape E2) : un module SANS fonction associée (doublage, stockage, éditeur) désactivé dans Admin → Modules
     // disparaît des menus et des liens pour les organisateurs ; l'administrateur garde l'entrée (la page l'invite à l'activer).
     modUsable: (id) => features[id] !== false && (modules[id] !== false || user?.role === 'admin'),

@@ -101,3 +101,5 @@ test_catalogue_facets.py
 test_search_filters.py
 test_catalogue_translations.py
 test_category_names_tr.py
+test_ext_packs.py
+test_ext_kit.mjs

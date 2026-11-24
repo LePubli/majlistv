@@ -1,0 +1,10 @@
+/* Une extension ne style que ses propres classes : chaque sélecteur contient « .x-<id> » (ici .x-exemple). */
+.x-exemple-bandeau { border-radius: 16px; overflow: hidden; }
+.x-exemple-bandeau-in { padding: 28px 24px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; }
+.x-exemple-bandeau .x-exemple-look-bold { background: var(--accent); color: var(--on-accent); }
+.x-exemple-bandeau .x-exemple-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .8rem; margin-bottom: 8px; }
+.x-exemple-bandeau .x-exemple-btn { display: inline-block; margin-top: 12px; padding: 10px 18px; border-radius: 999px; background: var(--accent); color: var(--on-accent); text-decoration: none; }
+.x-exemple-bandeau .x-exemple-look-bold .x-exemple-btn { background: var(--bg); color: var(--text); }
+.x-exemple-avis .x-exemple-avis-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.x-exemple-avis .x-exemple-avis-item { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+@media (max-width: 600px) { .x-exemple-bandeau .x-exemple-bandeau-in { padding: 20px 16px; } }

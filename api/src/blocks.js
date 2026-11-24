@@ -333,6 +333,19 @@ export const FUNC_PAGES = {
     ['f_library_notes', 'mes notes', 'Notes et repères pris pendant les vidéos (si la fonction est active).'],
   ] },
 };
+// ---- Lot X1 : blocs d'extension (installés par l'administrateur, enregistrés au démarrage et à chaque activation).
+// EXT_META[type] garde la définition complète (gabarit HTML ou assemblage) ; BLOCK_TYPES[type] reçoit les champs : l'éditeur et la validation les traitent comme tous les blocs.
+export const EXT_TYPES = new Set();
+export const EXT_META = {};
+export function registerExtBlocks(defs) {
+  for (const t of [...EXT_TYPES]) { delete BLOCK_TYPES[t]; delete EXT_META[t]; }
+  EXT_TYPES.clear();
+  for (const [t, d] of Object.entries(defs || {})) {
+    if (BLOCK_TYPES[t] && !EXT_TYPES.has(t)) continue; // jamais écraser un bloc du site
+    BLOCK_TYPES[t] = { label: d.label, hint: d.hint || '', fields: d.fields || [], sample: d.sample || {}, ext: d.ext };
+    EXT_META[t] = d; EXT_TYPES.add(t);
+  }
+}
 export const FUNC_TYPES = Object.values(FUNC_PAGES).flatMap((p) => p.sections.map((x) => x[0]));
 export const funcOwner = (type) => Object.keys(FUNC_PAGES).find((id) => FUNC_PAGES[id].sections.some((x) => x[0] === type)) || null;
 export const funcPath = (id) => `${FUNC_PATH}${id}`;

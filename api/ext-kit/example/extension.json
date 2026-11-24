@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "id": "exemple",
+  "name": "Exemple",
+  "version": "1.0.0",
+  "author": "Votre nom",
+  "description": "Extension d’exemple : un bandeau, des avis, une sélection de vidéos, deux réglages et une fonction.",
+  "css": "extension.css",
+  "texts": {
+    "badge": {
+      "fr": "Nouveau",
+      "en": "New",
+      "ar": "جديد"
+    },
+    "callUs": {
+      "fr": "Appelez-nous :",
+      "en": "Call us:",
+      "ar": "اتصل بنا:"
+    }
+  },
+  "settings": [
+    {
+      "key": "phone",
+      "type": "text",
+      "label": {
+        "fr": "Numéro affiché dans le bandeau",
+        "en": "Phone shown in the banner"
+      },
+      "default": ""
+    },
+    {
+      "key": "accent",
+      "type": "color",
+      "label": {
+        "fr": "Couleur du bandeau"
+      },
+      "default": "#C9A24B"
+    }
+  ],
+  "features": [
+    {
+      "key": "badge",
+      "label": {
+        "fr": "Afficher la pastille « Nouveau »",
+        "en": "Show the “New” badge"
+      },
+      "description": {
+        "fr": "Ajoute une pastille au-dessus du titre du bandeau."
+      },
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "name": "bandeau",
+      "label": "Bandeau",
+      "hint": "Un bandeau avec titre, texte, bouton et numéro de téléphone.",
+      "fields": [
+        {
+          "k": "title",
+          "kind": "t",
+          "label": "Titre",
+          "max": 120
+        },
+        {
+          "k": "text",
+          "kind": "tl",
+          "label": "Texte"
+        },
+        {
+          "k": "btnLabel",
+          "kind": "t",
+          "label": "Bouton : texte"
+        },
+        {
+          "k": "btnUrl",
+          "kind": "url",
+          "label": "Bouton : adresse"
+        },
+        {
+          "k": "look",
+          "kind": "sel",
+          "label": "Aspect",
+          "options": [
+            [
+              "plain",
+              "Sobre"
+            ],
+            [
+              "bold",
+              "Marqué"
+            ]
+          ],
+          "def": "plain"
+        }
+      ],
+      "template": "blocks/bandeau.html"
+    },
+    {
+      "name": "avis",
+      "label": "Avis",
+      "hint": "Une liste de citations (texte et auteur).",
+      "fields": [
+        {
+          "k": "items",
+          "kind": "list",
+          "label": "Avis",
+          "max": 8,
+          "item": "Avis",
+          "fields": [
+            {
+              "k": "quote",
+              "kind": "tl",
+              "label": "Citation",
+              "max": 400
+            },
+            {
+              "k": "author",
+              "kind": "t",
+              "label": "Auteur"
+            }
+          ]
+        }
+      ],
+      "template": "blocks/avis.html"
+    }
+  ],
+  "composed": [
+    {
+      "name": "selection",
+      "label": "Sélection de vidéos",
+      "hint": "Un titre suivi d’une rangée de vidéos du catalogue.",
+      "fields": [
+        {
+          "k": "title",
+          "kind": "t",
+          "label": "Titre"
+        },
+        {
+          "k": "limit",
+          "kind": "num",
+          "label": "Nombre de vidéos",
+          "min": 1,
+          "max": 12,
+          "def": 4
+        },
+        {
+          "k": "level",
+          "kind": "sel",
+          "label": "Niveau",
+          "options": [
+            [
+              "",
+              "Tous"
+            ],
+            [
+              "beginner",
+              "Débutant"
+            ],
+            [
+              "intermediate",
+              "Intermédiaire"
+            ],
+            [
+              "advanced",
+              "Avancé"
+            ]
+          ],
+          "def": ""
+        }
+      ],
+      "tree": "blocks/selection.json"
+    }
+  ]
+}

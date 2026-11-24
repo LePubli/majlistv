@@ -56,6 +56,8 @@ import themesRoutes from './routes/themes.js';
 import appearanceRoutes from './routes/appearance.js'; // étape I1 : Admin → Apparence (thème du site)
 import textsRoutes from './routes/texts.js'; // étape I2 : Admin → Textes (textes modifiables)
 import themePackRoutes from './routes/themePacks.js'; // lot T : thèmes uploadables Mejliss (.zip)
+import extPackRoutes from './routes/extPacks.js'; // lot X1 : extensions déclaratives Mejliss (.zip)
+import { reloadExtensions } from './extensions.js';
 import pagesRoutes from './routes/pages.js'; // étape I3 : Admin → Pages (pages en blocs)
 import moderationRoutes from './routes/moderation.js';
 import activityRoutes from './routes/activity.js'; // étape S3 : Studio → Activité (pause, priorité, plage horaire)
@@ -218,6 +220,7 @@ await app.register(appearanceRoutes);
 await app.register(textsRoutes);
 await app.register(pagesRoutes);
 await app.register(themePackRoutes);
+await app.register(extPackRoutes);
 await app.register(moderationRoutes);
 await app.register(activityRoutes);
 await app.register(overviewRoutes);
@@ -232,6 +235,7 @@ await registerModules(app); // routes de chaque module (cartes cadeaux : api/src
 
 await migrate();
 await migrateModules(app.log); // migrations propres aux modules + version installée
+await reloadExtensions(); // lot X1 : blocs, textes et réglages des extensions actives
 await ensureAdmin();
 await ensureCors();
 await app.listen({ port: config.port, host: '0.0.0.0' });

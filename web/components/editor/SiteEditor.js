@@ -15,7 +15,7 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES, GlobalsContext } from '
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, FUNC_PAGES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { EXT_TYPES, ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, FUNC_PAGES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, reidBlocks, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
@@ -100,6 +100,7 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind, pagePath }
   const pm = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
   const pmc = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_CAT_TYPES.includes(t)) : []; // sections du Catalogue Premium
   const watch = pageKind === 'watch' ? TYPE_ORDER.filter((t) => WATCH_TYPES.includes(t)) : []; // sections de la fiche vidéo : seulement sur la page « Fiche vidéo »
+  const exts = kids ? [] : [...EXT_TYPES]; // lot X1 : blocs des extensions actives
   const funcId = pageKind === 'func' ? String(pagePath || '').replace('/_func/', '') : '';
   const func = funcId && FUNC_PAGES[funcId] ? FUNC_PAGES[funcId].sections.map((x) => x[0]) : []; // sections d'une page fonction : seulement sur cette page
   const item = (t) => (
@@ -122,6 +123,7 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind, pagePath }
       {pm.length > 0 && <><h3>Accueil Premium <span className="meta small">(sections de l’accueil du thème)</span></h3><ul className="ed-pal-grid">{pm.map(item)}</ul></>}
       {watch.length > 0 && <><h3>Fiche vidéo <span className="meta small">(sections de la fiche d’origine)</span></h3><ul className="ed-pal-grid">{watch.map(item)}</ul></>}
       {func.length > 0 && <><h3>{FUNC_PAGES[funcId].label} <span className="meta small">(sections de la page d’origine)</span></h3><ul className="ed-pal-grid">{func.map(item)}</ul></>}
+      {exts.length > 0 && <><h3>Extensions <span className="meta small">(blocs ajoutés par vos extensions)</span></h3><ul className="ed-pal-grid">{exts.map(item)}</ul></>}
       {pmc.length > 0 && <><h3>Catalogue Premium <span className="meta small">(sections du Catalogue du thème)</span></h3><ul className="ed-pal-grid">{pmc.map(item)}</ul></>}
     </div>
   );

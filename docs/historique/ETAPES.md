@@ -10451,3 +10451,25 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Éditeur → Pages avec fonctions → Tarifs → Créer → glisser « Tarifs : formules » avant « Tarifs : pays » → ajouter un bloc Texte → Publier → ouvrir /pricing.
 
 **Testé / non testé / limites.** Voir ligne 361 du registre.
+
+
+## Éditeur visuel — lot X1 : extensions déclaratives (24/11)
+
+**Description.** Administration → Apparence → « Extensions (.zip) » : on envoie une extension (fichier .zip), le site la **contrôle** (liste précise des erreurs sinon), on l'**installe**, on l'**active**. Une extension ajoute : des **blocs gabarit** (HTML sûr + champs modifiables dans l'éditeur), des **blocs composés** (assemblage de blocs du site, dont les listes du catalogue), des **réglages**, des **fonctions activables** et des **textes** FR/EN/AR, avec une feuille de style limitée à ses classes `.x-<id>`. Ses blocs apparaissent dans l'éditeur visuel (groupe « Extensions »). Aucun code exécutable ; elle n'ajoute pas de logique serveur et ne modifie pas le code du site. Le kit (extension d'exemple + guide pour IA, générés depuis le code) se télécharge dans le même écran et se trouve dans `api/ext-kit/`.
+
+**Prérequis.** Migration 136 (tables `ext_packs` et `ext_values`, automatique au démarrage de l'API). Aucune variable `.env` nouvelle.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migrations 135 et 136), puis `majlistv-web`. Puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** « Cette extension est refusée » : chaque message nomme le fichier et la règle ; contrôle en ligne de commande avec les mêmes règles : `node api/ext-kit/validate.mjs mon-extension/`. Désactivation ou suppression refusée : la liste des pages qui utilisent encore un bloc est affichée, les retirer d'abord. Un bloc n'apparaît pas : l'extension doit être « Active » ; le site met jusqu'à 15 secondes à prendre un changement. Régénérer le kit après un changement de code : `node api/ext-kit/generate.mjs`. Tests : `python3 api/tests/test_ext_packs.py`, `node api/tests/test_ext_kit.mjs`.
+
+**Exemples.** Apparence → Extensions → « Télécharger l'extension d'exemple » → « Envoyer une extension » (le même .zip) → « Installer » → « Activer » → régler le numéro de téléphone → éditeur visuel → Blocs → « Extensions » → poser « Exemple : Bandeau » → publier. Avec une IA : lui donner `GUIDE-EXTENSIONS-IA.md` et le dossier `example/`, décrire le bloc voulu, lui renvoyer les erreurs du validateur jusqu'à « ✓ ».
+
+**Testé / non testé / limites.** Voir ligne 362 du registre.

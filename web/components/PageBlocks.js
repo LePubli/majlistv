@@ -14,7 +14,8 @@ import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import TalkCard from './TalkCard';
 import { DataBlock } from './HomeBlocks';
-import { tx, validUrl, validMedia, colorCss, fontCss, videoEmbed, wildcardFor, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
+import ExtBlock from './ExtBlock';
+import { EXT_TYPES, tx, validUrl, validMedia, colorCss, fontCss, videoEmbed, wildcardFor, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
 import { DIR } from '../lib/locales';
 
 const media = (id) => (validMedia(id) ? `/api/pages/media/${id}` : null);
@@ -190,7 +191,7 @@ function Block({ b, lang, ctx = {} }) {
     case 'spacer': return <div className="pb-spacer" style={{ height: Math.max(8, Math.min(240, Number(p.size) || 40)) }} aria-hidden="true" />;
     case 'divider': return <hr className="pb-divider" />;
     case 'global': return <GlobalBlock b={b} lang={lang} ctx={ctx} />;
-    default: return <DataBlock b={b} lang={lang} preview={ctx.preview} />; // blocs « données du site » (étape H) ; null pour un type inconnu
+    default: return EXT_TYPES.has(b.type) ? <ExtBlock b={b} lang={lang} preview={ctx.preview} BlocksView={BlocksView} /> : <DataBlock b={b} lang={lang} preview={ctx.preview} />; // blocs « données du site » (étape H) ; null pour un type inconnu
   }
 }
 

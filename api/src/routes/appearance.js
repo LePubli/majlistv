@@ -28,6 +28,7 @@ const KEEP_VERSIONS = 50;
 const FONT_MAX = 2 * 1024 * 1024; // 2 Mo par fichier
 const FONT_TYPES = { woff2: 'font/woff2', woff: 'font/woff', truetype: 'font/ttf', opentype: 'font/otf' };
 
+import { extRuntime } from '../extensions.js';
 export { fontFormat };
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -87,7 +88,7 @@ export default async function appearanceRoutes(app) {
   app.get('/theme', async (req, reply) => {
     reply.header('cache-control', 'public, max-age=15');
     const { version, css } = await activeThemeCss();
-    return { version, css };
+    return { version, css, ext: extRuntime() }; // lot X1 : extensions actives (blocs, CSS, textes, réglages)
   });
 
   app.get('/theme/fonts/:id', async (req, reply) => {
