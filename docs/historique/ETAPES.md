@@ -10502,3 +10502,32 @@ Résultat attendu du contrôle : 0 échec.
 
 **Testé / non testé / limites.** Voir ligne 363 du registre.
 
+## Thème Premium — page vidéo d'après la maquette V22 (24/11/2026)
+
+**Demande d'Epok.** « D'abord la page vidéo » : reproduire la maquette V22 (capture fournie) pour la page `/talks/<id>`.
+
+**Description.** Thème Premium seulement (les autres thèmes ne changent pas) :
+- **Barre du haut** : « ← Retour à la série / au catalogue » à gauche, fil d'Ariane centré en petites capitales « MEJLISS TV / FORMAT / LECTEUR », bouton **Cinéma** à droite (le mode cinéma existant, déplacé de la barre d'actions ; la maquette l'appelle « Mode TV »).
+- **Bloc titre** : ligne bleue « FORMAT · ÉPISODE 1 / 6 », titre en serif, sous-titre (début de la description), étiquettes arrondies (durée, langue, niveau, sous-titres, quiz, accès), « Ma liste » en pastille à droite du titre. Intervenant, « Suivre » et tableau de détails restent.
+- **Panneau d'épisodes** : titre serif (« Saison N » ou nom de la série) et « 6 épisodes », lignes à vignette **numérotée** (02, 03… ; ▶ pour l'épisode en cours), « ÉPISODE 02 » en bleu, titre, durée, ✓ vert si terminé, ligne active encadrée en bleu.
+- **Carte « Votre parcours — Continuez à apprendre »** sous le panneau, bouton « Ouvrir Apprendre ↗ » (visible si la fonction Apprendre est active et que la carte « Apprendre avec cette vidéo » n'est pas déjà affichée).
+- **« À découvrir ensuite »** : 3 cartes (image au-dessus, titre et « catégorie · durée » dans la carte).
+- Textes FR / EN / AR : `pmPlayerCrumb`, `pmNextTitle`, `pmJourneyKicker`, `pmJourneyTitle`, `pmJourneySub`, `pmJourneyCta`. Police des titres : variable `--pm-serif` (Playfair Display si disponible, sinon la serif du système).
+
+**Prérequis.** Aucune migration, aucune variable `.env`.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web` seulement. Puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Le panneau d'épisodes n'apparaît que pour une vidéo qui fait partie d'une série. Un thème autre que Premium garde l'ancienne mise en page. Une fiche recomposée dans l'éditeur (blocs « Fiche : … ») garde sa composition mais profite du nouveau dessin de chaque section. Test : `node web/tests/test_pm_watch.mjs`.
+
+**Exemples.** Ouvrir une vidéo d'une série en thème Premium ; passer le site en arabe pour voir la version de droite à gauche.
+
+**Testé / non testé / limites.** Voir ligne 364 du registre.
+

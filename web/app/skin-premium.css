@@ -710,3 +710,80 @@ html[data-skin="premium"] .pm-blocks-cat .pm-blk.v20-app { overflow: visible; }
   html[data-skin="premium"] .watch-blocks .player-wrap, html[data-skin="premium"] .watch-blocks .wb-info, html[data-skin="premium"] .watch-blocks .wb-main, html[data-skin="premium"] .watch-blocks .wb-side, html[data-skin="premium"] .watch-blocks .wb-next, html[data-skin="premium"] .watch-blocks .meta { grid-column: auto; grid-row: auto; }
   html[data-skin="premium"] .watch-blocks .wb-side { position: static; }
 }
+
+/* ===== Page vidéo : mise en page de la maquette V22 (24/11) =====
+   Barre du haut (retour · fil · mode cinéma), titre en empreinte serif, étiquettes, « Ma liste » en pastille, panneau d'épisodes numérotés,
+   carte « Votre parcours », « À découvrir ensuite » en cartes. Police du titre : Playfair Display si elle est choisie dans Apparence, sinon la serif du système. */
+html[data-skin="premium"] { --pm-serif: 'Playfair Display', 'Noto Serif', Georgia, 'Times New Roman', serif; }
+html[data-skin="premium"] .pm-wtop { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin: 6px 0 18px; }
+html[data-skin="premium"] main.page.watch-b > .pm-wtop { grid-row: 1; }
+html[data-skin="premium"] .pm-wtop .wb-back { grid-column: 1; grid-row: 1; justify-self: start; margin: 0; font-weight: 700; }
+html[data-skin="premium"] .pm-wtop .crumbs { grid-column: 2; grid-row: 1; justify-self: center; margin: 0; }
+html[data-skin="premium"] .pm-wtop .crumbs ol { justify-content: center; }
+html[data-skin="premium"] .pm-wtop .crumbs li { font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--c-8fb0d3,#8fb0d3); }
+html[data-skin="premium"] .pm-wtop .crumbs li span[aria-current] { color: var(--c-dbe8f7,#dbe8f7); }
+html[data-skin="premium"] .pm-wtop .crumbs a { color: inherit; text-decoration: none; }
+html[data-skin="premium"] .pm-wtop .crumbs li + li::before { content: '/'; margin-inline: 14px; color: var(--c-35b9ff,#35b9ff); opacity: 1; }
+html[data-skin="premium"] .pm-wmode { grid-column: 3; grid-row: 1; justify-self: end; display: inline-flex; align-items: center; gap: 8px; padding: 7px 4px; border: 0; background: transparent; color: var(--c-ffffff,#ffffff); font: 700 14px var(--pm-font-body, system-ui, sans-serif); cursor: pointer; }
+html[data-skin="premium"] .pm-wmode svg { width: 20px; height: 20px; }
+html[data-skin="premium"] .pm-wmode[aria-pressed="true"] { color: var(--c-35b9ff,#35b9ff); }
+html[data-skin="premium"] .pm-wmode:focus-visible { outline: 2px solid var(--c-35b9ff,#35b9ff); outline-offset: 3px; border-radius: 8px; }
+html[data-skin="premium"] .wb-info .talk-head .pm-weyebrow { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .2em; }
+html[data-skin="premium"] .watch-b .wb-info .talk-head h1 { font-family: var(--pm-serif); font-weight: 700; letter-spacing: -.01em; font-size: clamp(2rem, 3.6vw, 3rem); line-height: 1.08; }
+html[data-skin="premium"] .pm-wsub { margin: 4px 0 14px; max-width: 62ch; font-size: 16px; color: var(--c-c5d4e6,#c5d4e6); }
+html[data-skin="premium"] .watch-b .wb-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
+html[data-skin="premium"] .watch-b .wb-chips li, html[data-skin="premium"] .watch-b .wb-chips li.plain { display: inline-flex; align-items: center; min-height: 30px; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb,var(--c-0b1829,#0b1829) 70%,transparent); border: 1px solid var(--c-2a4d73,#2a4d73); color: var(--c-dbe8f7,#dbe8f7); font-size: 12.5px; font-weight: 600; }
+html[data-skin="premium"] .watch-b .wb-chips li.prem { background: var(--c-1677e8,#1677e8); border-color: var(--c-1677e8,#1677e8); color: var(--c-ffffff,#ffffff); }
+html[data-skin="premium"] .watch-b .wb-info .talk-head > p.meta { display: none; }
+/* « Ma liste » en pastille, à droite du titre */
+@media (min-width: 900px) {
+  html[data-skin="premium"] .watch-b .wb-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; align-items: start; }
+  html[data-skin="premium"] .watch-b .wb-info .wb-bar { justify-self: end; margin-top: 4px; }
+}
+html[data-skin="premium"] .watch-b .wb-bar .wb-act { flex-direction: row; gap: 8px; min-width: 0; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--c-345572,#345572); background: color-mix(in srgb,var(--c-0b1829,#0b1829) 70%,transparent); font-size: 14px; font-weight: 700; }
+html[data-skin="premium"] .watch-b .wb-bar .wb-act .wb-ico { width: 18px; height: 18px; border: 0; background: transparent; }
+html[data-skin="premium"] .watch-b .wb-bar .wb-act:hover, html[data-skin="premium"] .watch-b .wb-bar .wb-act.on { border-color: var(--c-35b9ff,#35b9ff); }
+/* Panneau d'épisodes */
+html[data-skin="premium"] .pm-side-head { align-items: center; margin-bottom: 4px; }
+html[data-skin="premium"] .pm-side-head h2 { margin: 0; font-family: var(--pm-serif); font-weight: 700; font-size: 1.5rem; letter-spacing: 0; }
+html[data-skin="premium"] .wb-side .side-list { gap: 12px; }
+html[data-skin="premium"] .wb-side .side-item { position: relative; align-items: center; gap: 14px; padding: 8px; border-radius: 14px; border: 1px solid transparent; background: transparent; }
+html[data-skin="premium"] .wb-side .side-item:hover { background: color-mix(in srgb,var(--c-ffffff,#fff) 5%,transparent); border-color: var(--c-2a4d73,#2a4d73); }
+html[data-skin="premium"] .wb-side .side-item.on { border-color: var(--c-149cff,#149cff); background: color-mix(in srgb,var(--c-149cff,#149cff) 14%,transparent); }
+html[data-skin="premium"] .wb-side .side-thumb { flex: 0 0 104px; border-radius: 10px; overflow: hidden; }
+html[data-skin="premium"] .pm-side-num { position: absolute; inset: 0; display: grid; place-items: center; font: 800 20px var(--pm-font-body, system-ui, sans-serif); color: var(--c-ffffff,#fff); text-shadow: 0 1px 8px rgba(0,0,0,.8); background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(0,0,0,.05)); }
+html[data-skin="premium"] .side-item.on .pm-side-num { font-size: 0; }
+html[data-skin="premium"] .side-item.on .pm-side-num::before { content: '▶'; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--c-149cff,#149cff); color: var(--c-ffffff,#fff); font-size: 12px; }
+html[data-skin="premium"] .pm-side-ep { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: var(--c-35b9ff,#35b9ff); }
+html[data-skin="premium"] .wb-side .side-info strong { font-size: 14px; font-weight: 700; color: var(--c-ffffff,#fff); }
+html[data-skin="premium"] .pm-side-ok { position: absolute; top: 10px; inset-inline-end: 12px; color: var(--c-39d98a,#39d98a); font-size: 13px; font-weight: 800; }
+/* Carte « Votre parcours » */
+html[data-skin="premium"] .pm-journey { display: grid; gap: 8px; margin-top: 16px; padding: 20px 22px; border: 1px solid var(--c-345572,#345572); border-radius: 18px; background: linear-gradient(155deg, var(--c-102c4c,#102c4c), var(--c-081a31,#081a31)); }
+html[data-skin="premium"] .pm-journey-k { font-size: 10.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--c-35b9ff,#35b9ff); }
+html[data-skin="premium"] .pm-journey-h { margin: 0; font-family: var(--pm-serif); font-weight: 700; font-size: 1.45rem; letter-spacing: 0; }
+html[data-skin="premium"] .pm-journey p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; color: var(--c-c5d4e6,#c5d4e6); }
+html[data-skin="premium"] .pm-journey-cta { justify-self: start; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--c-dbe8f7,#dbe8f7); color: var(--c-ffffff,#fff); font-size: 13px; font-weight: 700; text-decoration: none; }
+html[data-skin="premium"] .pm-journey-cta:hover { background: color-mix(in srgb,var(--c-ffffff,#fff) 10%,transparent); }
+/* Carte « Une histoire à regarder… » : titre serif */
+html[data-skin="premium"] .wb-banner b { font-family: var(--pm-serif); font-weight: 700; font-size: 1.3rem; letter-spacing: 0; }
+/* À découvrir ensuite : trois cartes, image au-dessus et texte dans la carte */
+html[data-skin="premium"] .wb-next h2 { font-size: 1.15rem; font-weight: 800; }
+html[data-skin="premium"] .wb-next .wb-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+html[data-skin="premium"] .wb-next .wb-card { gap: 4px; border: 1px solid var(--c-2a4d73,#2a4d73); border-radius: 16px; overflow: hidden; background: var(--c-0b1829,#0b1829); padding-bottom: 14px; }
+html[data-skin="premium"] .wb-next .wb-card .wb-thumb { border: 0; border-radius: 0; }
+html[data-skin="premium"] .wb-next .wb-card strong, html[data-skin="premium"] .wb-next .wb-card .meta { padding-inline: 14px; }
+html[data-skin="premium"] .wb-next .wb-card strong { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--c-ffffff,#fff); }
+html[data-skin="premium"] .wb-next .wb-card:hover { border-color: var(--c-35b9ff,#35b9ff); }
+@media (max-width: 899px) {
+  html[data-skin="premium"] .pm-wtop { grid-template-columns: 1fr auto; row-gap: 8px; }
+  html[data-skin="premium"] .pm-wtop .pm-wmode { grid-column: 2; }
+  html[data-skin="premium"] .pm-wtop .crumbs { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  html[data-skin="premium"] .pm-wtop .crumbs ol { justify-content: flex-start; flex-wrap: wrap; }
+}
+@media (max-width: 700px) { html[data-skin="premium"] .wb-next .wb-row { grid-template-columns: minmax(0, 1fr); } }
+/* Avec un panneau d'épisodes, « À découvrir ensuite » reste sous le lecteur (3 cartes dans la colonne de gauche) */
+@media (min-width: 1100px) { html[data-skin="premium"] main.page.watch-b:has(.wb-side) .wb-next { grid-column: 1; } }
+@media (max-width: 899px) {
+  html[data-skin="premium"] .watch-b .wb-info .wb-bar { display: flex; flex-wrap: wrap; gap: 10px; width: auto; }
+  html[data-skin="premium"] .watch-b .wb-bar .wb-act { white-space: nowrap; }
+}

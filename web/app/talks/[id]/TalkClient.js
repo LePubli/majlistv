@@ -39,7 +39,8 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 export default function TalkPage({ initial = null, talkId = null, extra = null }) {
   const params = useParams();
   const id = talkId || params.id; // /conferences/<slug> fournit l'identifiant ; /talks/<identifiant> le lit dans l'adresse
-  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName, inMyList, toggleMyList } = useApp();
+  const { call, t, locale, user, trialDays, prefs, statsOn, feat, formatName, inMyList, toggleMyList, skin, appName } = useApp();
+  const pm = skin === 'premium'; // thème Premium : mise en page de la maquette V22 (barre du haut, titre, panneau d'épisodes)
   const [laterMsg, setLaterMsg] = useState('');
   useEffect(() => { if (!laterMsg) return undefined; const k = setTimeout(() => setLaterMsg(''), 3500); return () => clearTimeout(k); }, [laterMsg]);
   const router = useRouter();
@@ -429,8 +430,18 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
   const stageSec = (
     <>
-      <Link className="wb-back" href={ctx ? `/series/${ctx.id}` : '/catalogue'}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {ctx ? t('wbBackSeries') : t('wbBack')}</Link>
-      <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
+      {pm ? (
+        <div className="pm-wtop">
+          <Link className="wb-back" href={ctx ? `/series/${ctx.id}` : '/catalogue'}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {ctx ? t('wbBackSeries') : t('wbBack')}</Link>
+          <Crumbs items={[['/', appName], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : [['/catalogue', t('navCatalogue')]]), [null, t('pmPlayerCrumb')]]} />
+          {hasPlayer ? <button type="button" className="pm-wmode" aria-pressed={cinema} onClick={() => setCinema((v) => !v)} title={cinema ? t('cnOff') : t('cnOn')} data-act="cinema">{ICONS.cinema}<span>{t('wbCinema')}</span></button> : <span />}
+        </div>
+      ) : (
+        <>
+          <Link className="wb-back" href={ctx ? `/series/${ctx.id}` : '/catalogue'}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {ctx ? t('wbBackSeries') : t('wbBack')}</Link>
+          <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
+        </>
+      )}
 
       <section className="wb-hero" aria-label={t('wbStage')} style={thumbOf(talk) ? { '--amb': `url(${thumbOf(talk)})` } : undefined}>
         <div className="player-wrap" ref={stageRef}>
@@ -503,7 +514,10 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
 
         <div className="wb-info">
           <header className="talk-head">
-            {(talk.format || ctx || talk.category) && (
+            {pm && (talk.format || ctx || talk.category) && (
+              <p className="eyebrow pm-weyebrow">{[talk.format ? formatName(talk.format) : '', ctx ? `${t('epN').replace('{n}', ctx.number || '')}${ctx.total ? ` / ${ctx.total}` : ''}` : talk.category].filter(Boolean).join(' · ')}</p>
+            )}
+            {!pm && (talk.format || ctx || talk.category) && (
               <p className="eyebrow">
                 {talk.format && <span className="fmt-chip">{formatName(talk.format)}</span>}
                 {ctx ? (
@@ -515,6 +529,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               </p>
             )}
             <h1>{talk.title}</h1>
+            {pm && talk.description && <p className="pm-wsub">{String(talk.description).replace(/\s+/g, ' ').trim().slice(0, 140)}{String(talk.description).length > 140 ? '…' : ''}</p>}
             {talk.sale?.owned && <p className="sale-owned-line"><SaleOwned sale={talk.sale} /></p>}
             {/* Étape D3 (17/11) : les mêmes informations en étiquettes (thème « Mejliss bleu ») : thème, durée, langue, sous-titres, quiz, accès. */}
             <ul className="wb-chips" aria-label={t('wbInfos')}>
@@ -522,6 +537,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
               {minutes && <li className="plain">{minutes}</li>}
               {audioLang && <li className="plain">{langName(audioLang, locale)}</li>}
               {(talk.tracks || []).length > 0 && <li className="plain">{t('wbSubs')} {(talk.tracks || []).map((l) => String(l).split('-')[0].toUpperCase()).join(' · ')}</li>}
+              {pm && talk.level && <li className="plain">{levelLabel(talk.level, t)}</li>}
               {quizOn && <li>{t('wbQuizChip').replace('{n}', talk.quiz.count)}</li>}
               <li className={talk.access === 'premium' ? 'prem' : 'plain'}>{t(talk.access)}</li>
             </ul>
@@ -538,7 +554,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             {(feat('favorites') || feat('watchlater')) && <ActionTile icon={mine ? ICONS.check : ICONS.plus} label={t('lbMyList')} pressed={mine} onClick={onMine} title={mine ? t('mlRemove') : t('mlAdd')} act="mylist" />}
             {feat('lists') && user && <ListButton talkId={id} t={t} call={call} user={user} tile={({ open, toggle }) => <ActionTile icon={ICONS.lists} label={t('wbList')} expanded={open} onClick={toggle} act="list" />} />}
             {laterMsg && <span className="wl-msg" role="status">{laterMsg}</span>}
-            {hasPlayer && <ActionTile icon={ICONS.cinema} label={t('wbCinema')} pressed={cinema} onClick={() => setCinema((v) => !v)} title={cinema ? t('cnOff') : t('cnOn')} act="cinema" />}
+            {hasPlayer && !pm && <ActionTile icon={ICONS.cinema} label={t('wbCinema')} pressed={cinema} onClick={() => setCinema((v) => !v)} title={cinema ? t('cnOff') : t('cnOn')} act="cinema" />}
             <MoreMenu label={t('wbMore')}>
               <button type="button" className="wb-item" onClick={share} data-act="share" data-close>{ICONS.share}<span>{t('wbShare')}</span></button>
               {user && hasPlayer && !talk.locked && <button type="button" className="wb-item" onClick={() => addNote('')} title={t('ntBookmarkHelp')} data-act="bookmark" data-close>{ICONS.bookmark}<span>{bmFlash ? t('ntBookmarked') : t('wbBookmark')}</span></button>}
@@ -670,10 +686,17 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
             )}
             {ctx && (
               <section className="side-series">
-                <div className="side-head">
-                  <h2 id="side-title"><Link href={`/series/${ctx.id}`}>{ctx.title}</Link></h2>
-                  <span className="meta small">{t('epOf').replace('{n}', ctx.number || '').replace('{total}', ctx.total)}</span>
-                </div>
+                {pm ? (
+                  <div className="side-head pm-side-head">
+                    <h2 id="side-title"><Link href={`/series/${ctx.id}`}>{ctx.season ? t('seasonN').replace('{n}', ctx.season.number) : ctx.title}</Link></h2>
+                    <span className="meta small">{t('episodeCount').replace('{n}', ctx.total)}</span>
+                  </div>
+                ) : (
+                  <div className="side-head">
+                    <h2 id="side-title"><Link href={`/series/${ctx.id}`}>{ctx.title}</Link></h2>
+                    <span className="meta small">{t('epOf').replace('{n}', ctx.number || '').replace('{total}', ctx.total)}</span>
+                  </div>
+                )}
                 <ul className="side-list">
                   {ctx.episodes.map((x, i) => {
                     const pct = x.durationSeconds && x.positionMs ? Math.min(100, Math.round((x.positionMs / 1000 / x.durationSeconds) * 100)) : 0;
@@ -683,17 +706,28 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                         {startsSeason && <p className="side-season">{t('seasonN').replace('{n}', x.seasonNumber)}</p>}
                         <Link href={`/talks/${x.id}`} className={`side-item${x.current ? ' on' : ''}`} aria-current={x.current ? 'true' : undefined}>
                           <span className="side-thumb" style={x.posterUrl ? { backgroundImage: `url(${x.posterUrl})` } : undefined}>
+                            {pm && <span className="pm-side-num" aria-hidden="true">{x.current ? '▶' : String(x.number || i + 1).padStart(2, '0')}</span>}
                             {(pct > 0 || x.completed) && <span className="progress"><span style={{ width: `${x.completed ? 100 : pct}%` }} /></span>}
                           </span>
                           <span className="side-info">
-                            <strong>{x.number}. {x.title}</strong>
+                            {pm && <small className="pm-side-ep">{t('epN').replace('{n}', String(x.number || i + 1).padStart(2, '0')).toUpperCase()}</small>}
+                            <strong>{pm ? '' : `${x.number}. `}{x.title}</strong>
                             <span className="meta">{[x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : '', x.current ? t('nowPlaying') : x.completed ? `✓ ${t('watched')}` : '', x.access === 'premium' ? t('premium') : ''].filter(Boolean).join(' · ')}</span>
                           </span>
+                          {pm && x.completed && <span className="pm-side-ok" aria-hidden="true">✓</span>}
                         </Link>
                       </li>
                     );
                   })}
                 </ul>
+              </section>
+            )}
+            {pm && feat('learning') && !learnOn && (
+              <section className="pm-journey" aria-labelledby="pm-journey-t">
+                <span className="pm-journey-k">✦ {t('pmJourneyKicker')}</span>
+                <h2 id="pm-journey-t" className="pm-journey-h">{t('pmJourneyTitle')}</h2>
+                <p>{t('pmJourneySub')}</p>
+                <Link href="/learning" className="pm-journey-cta">{t('pmJourneyCta')} <span aria-hidden="true">{locale === 'ar' ? '↖' : '↗'}</span></Link>
               </section>
             )}
           </aside>
@@ -706,7 +740,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     <>
       {similar.length > 0 && (
         <section className="wb-next" aria-labelledby="wb-next-title">
-          <h2 id="wb-next-title">{ctx ? t('sameVein') : t('nextTitle')}</h2>
+          <h2 id="wb-next-title">{pm ? t('pmNextTitle') : ctx ? t('sameVein') : t('nextTitle')}</h2>
           <ul className="wb-row">
             {similar.slice(0, max).map((x) => {
               const th = thumbOf(x);
@@ -717,7 +751,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
                       {x.durationSeconds > 0 && <span className="side-dur">{Math.max(1, Math.round(x.durationSeconds / 60))} {t('minutes')}</span>}
                     </span>
                     <strong>{x.title}</strong>
-                    <span className="meta small">{[x.speaker, t(x.access)].filter(Boolean).join(' · ')}</span>
+                    <span className="meta small">{(pm ? [x.category, x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : ''] : [x.speaker, t(x.access)]).filter(Boolean).join(' · ')}</span>
                   </Link>
                 </li>
               );
@@ -746,7 +780,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
       {noticesSec}
       {gridSec()}
       {extra}
-      {nextSec()}
+      {nextSec(pm ? 3 : 8)}
       {booksSec}
     </main>
   );
