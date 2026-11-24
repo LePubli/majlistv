@@ -1,7 +1,7 @@
 'use client';
 // Étape I3 — Champs d'édition d'un bloc (Admin → Pages) : texte par langue, adresse, image, choix, nombre, liste, style.
 import { useState } from 'react';
-import { LANGS, COLOR_REFS, COLOR_REF_LABELS, STYLE_ALIGN, STYLE_WIDTH, DEVICES, DEVICE_LABELS, AUDIENCES, BLOCK_TYPES, tx } from '../lib/blocks';
+import { LANGS, COLOR_REFS, COLOR_REF_LABELS, STYLE_ALIGN, STYLE_WIDTH, STYLE_FONTS, STYLE_HOVER, STYLE_ANIM, DEVICES, DEVICE_LABELS, AUDIENCES, BLOCK_TYPES, tx } from '../lib/blocks';
 
 export const LANG_NAMES = { fr: 'Français', en: 'English', ar: 'العربية' };
 const DIRS = { fr: 'ltr', en: 'ltr', ar: 'rtl' };
@@ -212,6 +212,33 @@ export function StyleFields({ style, onChange, onPickMedia }) {
           <select value={st.shadow || ''} onChange={(e) => set('shadow', e.target.value)}><option value="">Aucune</option><option value="soft">Légère</option><option value="strong">Marquée</option></select></label>
         <label className="pe-f"><span className="pe-lab">Bordure</span>
           <select value={st.border ? '1' : ''} onChange={(e) => set('border', e.target.value ? true : undefined)}><option value="">Aucune</option><option value="1">Fine</option></select></label></div>
+      <label className="pe-f"><span className="pe-lab">Police de ce bloc</span>
+        <select value={st.font || ''} onChange={(e) => set('font', e.target.value)}><option value="">Celle du thème</option>{STYLE_FONTS.map((f) => <option key={f} value={f}>{f.replace(' Variable', '')}</option>)}</select></label>
+      <details className="pe-sub">
+        <summary>Survol (souris)</summary>
+        <label className="pe-f"><span className="pe-lab">Effet au survol</span>
+          <select value={st.hover || ''} onChange={(e) => set('hover', e.target.value)}>{STYLE_HOVER.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <ColorStyle label="Fond au survol" value={st.hoverBg} onChange={(v) => set('hoverBg', v)} />
+        <ColorStyle label="Texte au survol" value={st.hoverText} onChange={(v) => set('hoverText', v)} />
+      </details>
+      <details className="pe-sub">
+        <summary>Animation d’apparition</summary>
+        <div className="pe-row">
+          <label className="pe-f"><span className="pe-lab">Animation</span>
+            <select value={st.anim || ''} onChange={(e) => set('anim', e.target.value)}>{STYLE_ANIM.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          {num('animDelay', 'Délai (ms)', 2000)}
+        </div>
+        <p className="meta small">Jouée quand le bloc entre dans l’écran. Désactivée pour les personnes qui ont demandé de réduire les animations, et dans cet éditeur.</p>
+      </details>
+      <details className="pe-sub">
+        <summary>Tablette et téléphone</summary>
+        <p className="meta small">Laissez vide pour garder les valeurs de l’ordinateur. Tablette : écrans jusqu’à 1024 px ; téléphone : jusqu’à 700 px.</p>
+        <div className="pe-row">{num('padTopT', 'Tablette : espace au-dessus', 240)}{num('padBottomT', 'Tablette : espace en dessous', 240)}</div>
+        <div className="pe-row">{num('padTopM', 'Téléphone : espace au-dessus', 240)}{num('padBottomM', 'Téléphone : espace en dessous', 240)}</div>
+        <div className="pe-row">{num('minHeightM', 'Téléphone : hauteur minimale', 1200)}
+          <label className="pe-f"><span className="pe-lab">Téléphone : alignement</span>
+            <select value={st.alignM || ''} onChange={(e) => set('alignM', e.target.value)}>{STYLE_ALIGN.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label></div>
+      </details>
       {onPickMedia && <MediaField f={{ label: 'Image de fond de la section' }} value={st.bgImage} onPick={() => onPickMedia((id) => set('bgImage', id))} onClear={() => set('bgImage', undefined)} />}
       <p className="meta small">Les couleurs « du thème » suivent Admin → Apparence. Laissez « Selon le thème » ou vide pour garder le réglage d’origine.</p>
       {Object.keys(st).length > 0 && <button type="button" className="btn ghost pe-mini" onClick={() => onChange({})}>Réinitialiser le style de ce bloc</button>}

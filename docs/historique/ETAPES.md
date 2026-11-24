@@ -10324,3 +10324,24 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Éditeur → Pages → « + Recomposer le Catalogue (thème Premium) » → glisser « Catalogue : résultats » avant « Catalogue : rangées » → ajouter un bloc Texte sous la bannière → Publier → ouvrir /catalogue. Bandeau sur toutes les vidéos : Pages → nouvel emplacement « Toutes les pages vidéo » → zone « avant » → bloc Bannière → Publier.
 
 **Testé / non testé / limites.** Voir ligne 354 du registre. Suite : étape 5 (finitions) sur « go ».
+
+## Éditeur visuel, étape 5 — finitions : survol, animations, police par bloc, réglages par appareil, droits (24/11/2026)
+
+**Description.** Dans l'éditeur plein écran (Admin → Éditeur du site), l'onglet Style de chaque bloc gagne : « Police de ce bloc » (les polices livrées avec le site) ; « Survol (souris) » (effet : soulèvement, léger zoom, halo, éclaircissement ; couleur de fond et de texte au survol) ; « Animation d'apparition » (fondu, montée, descente, depuis la gauche ou la droite, zoom ; délai en millisecondes) ; « Tablette et téléphone » (espace au-dessus et en dessous pour la tablette jusqu'à 1024 px et pour le téléphone jusqu'à 700 px, hauteur minimale et alignement du téléphone). Tout est facultatif : un bloc sans ces réglages s'affiche comme avant. L'animation se joue quand le bloc entre dans l'écran ; elle est coupée pour les visiteurs qui ont demandé de réduire les animations, et n'est jamais jouée dans l'éditeur. **Droits** : réglage Admin → Paramètres → Général « Éditeur du site : droits des modérateurs » — « off » (d'origine) : administrateur seul ; « draft » : un modérateur ouvre l'éditeur, modifie les brouillons et envoie des images ; seul l'administrateur publie, crée, renomme, met hors ligne, supprime une page, restaure une version et règle le thème.
+
+**Prérequis.** Aucune migration. Thème quelconque (les réglages de style marchent sur tous les thèmes).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (validation des nouveaux réglages et des droits), PUIS `majlistv-web`. Rien d'autre. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Résultat attendu du contrôle : 0 échec.
+
+**Debug.** Réglage refusé à la publication (« Police inconnue », « Entier entre 0 et 240 »…) : le bloc fautif est en rouge dans le Plan. Animation absente : normal si le visiteur a activé « réduire les animations », ou si le bloc est déjà à l'écran au chargement (il s'anime alors sans être caché d'abord). Effet de survol invisible sur téléphone : pas de survol sur écran tactile. Un modérateur voit « Un administrateur doit d'abord vous autoriser… » : passer le réglage sur « draft ». Si l'API n'est pas redéployée avant le web, l'enregistrement d'un bloc stylé échoue (« Réglage de style inconnu »).
+
+**Exemples.** Bloc Titre → Style → Police « Amiri » → Survol « Soulèvement » → Animation « Montée », délai 150 → Tablette et téléphone : espace au-dessus 10 → Publier. Modérateur : Admin règle « draft » ; le modérateur ouvre /editeur, modifie le brouillon de l'accueil ; l'administrateur ouvre l'éditeur, relit et clique Publier.
+
+**Testé / non testé / limites.** Voir ligne 355 du registre. Plan de l'éditeur visuel terminé (étapes 1 à 5).

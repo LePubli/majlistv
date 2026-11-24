@@ -14,7 +14,7 @@ import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import TalkCard from './TalkCard';
 import { DataBlock } from './HomeBlocks';
-import { tx, validUrl, validMedia, colorCss, videoEmbed, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
+import { tx, validUrl, validMedia, colorCss, fontCss, videoEmbed, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
 import { DIR } from '../lib/locales';
 
 const media = (id) => (validMedia(id) ? `/api/pages/media/${id}` : null);
@@ -192,6 +192,18 @@ function sectionProps(b, preview) {
   if (st.border) cls.push('has-border');
   if (st.align) cls.push(`al-${st.align}`);
   if (st.maxWidth) cls.push(`mw-${st.maxWidth}`);
+  // Étape 5 : police, survol, animation et réglages par appareil (tablette T, téléphone M ; les valeurs passent par des variables CSS)
+  const fam = fontCss(st.font);
+  if (fam) style.fontFamily = fam;
+  if (st.hover) cls.push(`pbh-${st.hover}`);
+  if (st.hoverBg) { style['--pb-hbg'] = colorCss(st.hoverBg); cls.push('pbh-bg'); }
+  if (st.hoverText) { style['--pb-htx'] = colorCss(st.hoverText); cls.push('pbh-tx'); }
+  if (st.anim && !preview) { cls.push('pb-anim', `pb-an-${st.anim}`); if (st.animDelay) style['--pb-ad'] = `${st.animDelay}ms`; }
+  for (const [k, v, c] of [['padTopT', '--pt-t', 'pt-t'], ['padBottomT', '--pb-t', 'pb-bt'], ['padTopM', '--pt-m', 'pt-m'], ['padBottomM', '--pb-m', 'pb-bm']]) {
+    if (Number.isInteger(st[k])) { style[v] = `${st[k]}px`; cls.push(c); }
+  }
+  if (Number.isInteger(st.minHeightM) && st.minHeightM > 0) { style['--mh-m'] = `${st.minHeightM}px`; cls.push('mh-m'); }
+  if (st.alignM) cls.push(`al-m-${st.alignM}`);
   if (!d.includes('m')) cls.push('pb-hide-m');
   if (!d.includes('t')) cls.push('pb-hide-t');
   if (!d.includes('d')) cls.push('pb-hide-d');
@@ -202,6 +214,21 @@ function sectionProps(b, preview) {
 export function BlocksView({ blocks, locale, preview = false, onPick, pickedId, editor = false, nested = false }) {
   const lang = locale || 'fr';
   const { blockEdits } = useApp(); // mode édition sur la page (étape I5) : le bloc en cours de modification s'affiche tout de suite
+  // Étape 5 : animations d'apparition. Sans JavaScript, ou pour les blocs déjà visibles au chargement, rien n'est caché ;
+  // les blocs plus bas sont « armés » (cachés) puis révélés quand ils entrent dans l'écran. Respect de « réduire les animations ».
+  useEffect(() => {
+    if (preview || typeof document === 'undefined') return undefined;
+    const els = [...document.querySelectorAll('.pb-anim:not(.pb-armed):not(.pb-seen)')];
+    if (!els.length) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('pb-seen')); return undefined; }
+    const io = new IntersectionObserver((list) => list.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('pb-seen'); io.unobserve(en.target); } }), { threshold: 0.12 });
+    for (const e of els) {
+      const r = e.getBoundingClientRect();
+      if (r.top < window.innerHeight * 0.9 && r.bottom > 0) e.classList.add('pb-seen'); // déjà à l'écran : on joue l'animation sans cacher d'abord
+      else { e.classList.add('pb-armed'); io.observe(e); }
+    }
+    return () => io.disconnect();
+  }, [blocks, preview]);
   return (
     <>
       {(blocks || []).map((b0) => {

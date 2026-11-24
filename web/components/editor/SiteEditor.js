@@ -215,7 +215,7 @@ function Templates({ onUse, disabled }) {
 }
 
 /* ------------------------------------------------------------------ Panneau « Pages » */
-function PagesList({ pages, pageId, onOpen, reload, call }) {
+function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
   const { skin } = useApp();
   const [title, setTitle] = useState('');
   const [slotPath, setSlotPath] = useState('/pricing');
@@ -246,21 +246,22 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
   return (
     <div className="ed-pages">
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
+      {!isAdmin && <p className="meta small">Vous pouvez modifier les brouillons ; seul un administrateur crée, publie ou supprime une page.</p>}
       <h3>Pages du site</h3>
       <ul>
-        {home ? row(home, 'Accueil des membres') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>+ Créer l’accueil à partir du modèle</button></li>}
-        {catPage ? row(catPage, 'Catalogue') : skin === 'premium' ? <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'catalogue' })}>+ Recomposer le Catalogue (thème Premium)</button></li> : null}
-        {layoutPage ? row(layoutPage, 'En-tête et pied de page') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'layout' })}>+ Personnaliser l’en-tête et le pied de page</button></li>}
+        {home ? row(home, 'Accueil des membres') : !isAdmin ? null : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>+ Créer l’accueil à partir du modèle</button></li>}
+        {catPage ? row(catPage, 'Catalogue') : !isAdmin ? null : skin === 'premium' ? <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'catalogue' })}>+ Recomposer le Catalogue (thème Premium)</button></li> : null}
+        {layoutPage ? row(layoutPage, 'En-tête et pied de page') : !isAdmin ? null : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'layout' })}>+ Personnaliser l’en-tête et le pied de page</button></li>}
       </ul>
       <h3>Pages créées ({custom.length})</h3>
       <ul>{custom.map((p) => row(p))}</ul>
-      <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'custom', title }); }}>
+      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'custom', title }); }}>
         <label>Nouvelle page<input type="text" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Ramadan 2027" /></label>
         <button type="submit" className="btn">Créer</button>
-      </form>
+      </form>}
       <h3>Blocs sur une page existante ({slots.length})</h3>
       <ul>{slots.map((p) => row(p))}</ul>
-      <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'slot', path: sp === '*' ? slotOther.trim() : sp }); }}>
+      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'slot', path: sp === '*' ? slotOther.trim() : sp }); }}>
         <label>Ajouter des blocs sur
           <select value={sp} onChange={(e) => setSlotPath(e.target.value)}>
             {free.map(([p, l]) => <option key={p} value={p}>{l} ({p})</option>)}
@@ -269,8 +270,8 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
         </label>
         {sp === '*' && <input type="text" required value={slotOther} onChange={(e) => setSlotOther(e.target.value)} placeholder="/series/ma-serie" maxLength={200} aria-label="Adresse exacte" />}
         <button type="submit" className="btn">Ajouter</button>
-      </form>
-      <p className="meta small">Menus : <a href="/admin?tab=menus">Admin → Menus</a> · Textes : <a href="/admin?tab=texts">Admin → Textes</a>.</p>
+      </form>}
+      {isAdmin && <p className="meta small">Menus : <a href="/admin?tab=menus">Admin → Menus</a> · Textes : <a href="/admin?tab=texts">Admin → Textes</a>.</p>}
     </div>
   );
 }
@@ -388,6 +389,9 @@ function Canvas({ doc, zones, lang, device, selected, onSelect, drag, onDropAt, 
 /* ------------------------------------------------------------------ Éditeur */
 export default function SiteEditor() {
   const { call, user, ready } = useApp();
+  const isAdmin = user?.role === 'admin';
+  const canEdit = isAdmin || user?.role === 'moderator'; // modérateur : seulement si l'administrateur l'a autorisé (réglage « Éditeur du site : droits des modérateurs »)
+  const [denied, setDenied] = useState(false);
   const [pages, setPages] = useState(null);
   const [pageId, setPageId] = useState(null);
   const doc = usePageDoc(pageId, call);
@@ -407,17 +411,17 @@ export default function SiteEditor() {
   const toastTimer = useRef(null);
 
   const say = useCallback((text, action) => { setToast({ text, action }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 5000); }, []);
-  const loadPages = useCallback(async () => { const r = await call('/admin/pages'); if (r.ok) { setPages(r.data); return r.data; } return []; }, [call]);
+  const loadPages = useCallback(async () => { const r = await call('/admin/pages'); if (r.ok) { setPages(r.data); return r.data; } if (r.status === 403) setDenied(true); return []; }, [call]);
 
   // Au démarrage : liste des pages, puis la page demandée (?page=12), sinon l'accueil, sinon la première.
   useEffect(() => {
-    if (!ready || user?.role !== 'admin') return;
+    if (!ready || !canEdit) return;
     loadPages().then((list) => {
       const want = Number(new URLSearchParams(window.location.search).get('page'));
       const first = list.find((p) => p.id === want) || list.find((p) => p.kind === 'home') || list[0];
       if (first) setPageId(first.id); else setLeftTab('pages');
     });
-  }, [ready, user, loadPages]);
+  }, [ready, user, canEdit, loadPages]);
   const openPage = useCallback(async (id) => {
     if (id === pageId) return;
     await doc.flush();
@@ -553,7 +557,7 @@ export default function SiteEditor() {
   }, [errors, content]);
 
   if (!ready) return <div className="ed-root"><p className="ed-center" role="status">Chargement…</p></div>;
-  if (user?.role !== 'admin') return <div className="ed-root"><p className="ed-center">L’éditeur du site est réservé aux administrateurs. <a href="/login">Se connecter</a></p></div>;
+  if (!canEdit || denied) return <div className="ed-root"><p className="ed-center">{user?.role === 'moderator' ? 'Un administrateur doit d’abord vous autoriser à modifier les brouillons (Admin → Paramètres → Général → « Éditeur du site : droits des modérateurs »).' : 'L’éditeur du site est réservé aux administrateurs.'} <a href="/login">Se connecter</a></p></div>;
 
   const saveLabel = { pending: 'Modifications en attente…', saving: 'Enregistrement…', saved: 'Brouillon enregistré', error: 'Non enregistré' }[save];
   const selBlock = selected && content ? findBlock(content, selected) : null;
@@ -562,7 +566,7 @@ export default function SiteEditor() {
   return (
     <div className="ed-root" lang="fr" dir="ltr" data-editor>
       <header className="ed-top">
-        <a className="ed-back" href="/admin?tab=pages" title="Quitter l’éditeur">← Admin</a>
+        <a className="ed-back" href={isAdmin ? '/admin?tab=pages' : '/'} title="Quitter l’éditeur">{isAdmin ? '← Admin' : '← Site'}</a>
         <button type="button" className="ed-page-btn" onClick={() => { setLeftOpen(true); setLeftTab('pages'); }} aria-label="Changer de page">
           <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
         </button>
@@ -583,8 +587,10 @@ export default function SiteEditor() {
           <button type="button" className={leftOpen ? 'on' : ''} aria-pressed={leftOpen} onClick={() => setLeftOpen((v) => !v)} title="Panneau de gauche">◧</button>
           <button type="button" className={rightOpen ? 'on' : ''} aria-pressed={rightOpen} onClick={() => setRightOpen((v) => !v)} title="Panneau de droite">◨</button>
         </div>
-        <button type="button" className="btn ghost ed-mini" onClick={showVersions} disabled={!page} aria-expanded={Boolean(versions)}>Historique</button>
-        <button type="button" className="btn ed-publish" onClick={publish} disabled={!page || (!page.hasDraft && save !== 'pending')}>Publier</button>
+        {isAdmin && <button type="button" className="btn ghost ed-mini" onClick={showVersions} disabled={!page} aria-expanded={Boolean(versions)}>Historique</button>}
+        {isAdmin
+          ? <button type="button" className="btn ed-publish" onClick={publish} disabled={!page || (!page.hasDraft && save !== 'pending')}>Publier</button>
+          : <span className="ap-tag" title="Seul un administrateur publie">Brouillon : un administrateur publie</span>}
       </header>
 
       {(msg || errorsByBlock.rest.length > 0 || Object.keys(errorsByBlock.out).length > 0) && (
@@ -600,7 +606,7 @@ export default function SiteEditor() {
         {leftOpen && (
           <aside className="ed-left" aria-label="Blocs, plan, pages et style">
             <div className="ed-tabs" role="tablist">
-              {[['blocks', 'Blocs'], ['tpl', 'Modèles'], ['layers', 'Plan'], ['pages', 'Pages'], ['style', 'Style']].map(([id, l]) => (
+              {[['blocks', 'Blocs'], ['tpl', 'Modèles'], ['layers', 'Plan'], ['pages', 'Pages'], ...(isAdmin ? [['style', 'Style']] : [])].map(([id, l]) => (
                 <button key={id} type="button" role="tab" aria-selected={leftTab === id} className={leftTab === id ? 'on' : ''} onClick={() => setLeftTab(id)}>{l}</button>
               ))}
             </div>
@@ -609,7 +615,7 @@ export default function SiteEditor() {
               {leftTab === 'tpl' && <Templates disabled={!content} onUse={addTemplate} />}
               {leftTab === 'layers' && content && <Layers content={content} zones={zones} selected={selected} onSelect={(id) => { setSelected(id); setRightOpen(true); }} lang={lang} drag={drag} onDragStart={startDrag} onDragEnd={endDrag} onDrop={dropAt} onNudge={nudge} onDup={dup} onDel={del} errorsByBlock={errorsByBlock.out} />}
               {leftTab === 'layers' && !content && <p className="meta">Choisissez une page.</p>}
-              {leftTab === 'pages' && pages && <PagesList pages={pages} pageId={pageId} onOpen={openPage} reload={loadPages} call={call} />}
+              {leftTab === 'pages' && pages && <PagesList pages={pages} pageId={pageId} onOpen={openPage} reload={loadPages} call={call} isAdmin={isAdmin} />}
               {leftTab === 'style' && <ThemePanel onCss={setThemeCss} />}
             </div>
           </aside>
@@ -639,7 +645,7 @@ export default function SiteEditor() {
               )}
               {content && !selBlock && (
                 <PageSettings page={page} content={content} lang={lang} errors={errors} setMeta={setMeta} setNav={setNav} setMediaCb={setMediaCb}
-                  onRename={rename} onLive={setLive} onDiscard={discard} onRemove={removePage} />
+                  onRename={rename} onLive={setLive} onDiscard={discard} onRemove={removePage} isAdmin={isAdmin} />
               )}
             </div>
           </aside>
@@ -666,7 +672,7 @@ export default function SiteEditor() {
 }
 
 /* ------------------------------------------------------------------ Réglages de la page (aucun bloc choisi) */
-function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb, onRename, onLive, onDiscard, onRemove }) {
+function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb, onRename, onLive, onDiscard, onRemove, isAdmin = true }) {
   return (
     <div className="ed-pageset">
       <div className="ed-right-head"><h2>Page</h2></div>
@@ -685,11 +691,11 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
         </details>
       )}
       <div className="ed-pageset-actions">
-        <button type="button" className="btn ghost" onClick={onRename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>
-        {page.publishedAt && <button type="button" className="btn ghost" onClick={() => onLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
+        {isAdmin && <button type="button" className="btn ghost" onClick={onRename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>}
+        {isAdmin && page.publishedAt && <button type="button" className="btn ghost" onClick={() => onLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
         {page.live && <a className="btn ghost" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.kind === 'catalogue' ? '/catalogue' : page.path} target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a>}
         <button type="button" className="btn ghost" onClick={onDiscard} disabled={!page.hasDraft}>Abandonner le brouillon</button>
-        <button type="button" className="btn ghost ed-danger" onClick={onRemove}>Supprimer la page</button>
+        {isAdmin && <button type="button" className="btn ghost ed-danger" onClick={onRemove}>Supprimer la page</button>}
       </div>
     </div>
   );

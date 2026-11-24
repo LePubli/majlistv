@@ -62,4 +62,4 @@ Demande d'Epok : Admin → Apparence doit devenir **un seul endroit** pour modif
 
 ## Avancement
 
-- Étape 4a faite 24/11 (accueil Premium en blocs, menus Premium) — registre 353. Étape 4b faite 24/11 (Catalogue Premium en blocs, zones avant/après sur toutes les pages vidéo, série et catégorie) — registre 354. Étape 5 (finitions) : sur « go ».
+- Étape 4a faite 24/11 (accueil Premium en blocs, menus Premium) — registre 353. Étape 4b faite 24/11 (Catalogue Premium en blocs, zones avant/après sur toutes les pages vidéo, série et catégorie) — registre 354. Étape 5 faite 24/11 (survol, animations, police par bloc, réglages par appareil, droits des modérateurs) — registre 355. Plan terminé.

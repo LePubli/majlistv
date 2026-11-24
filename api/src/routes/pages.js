@@ -13,7 +13,7 @@
 //   GET /pages/view?path=…[&ssr=1]      blocs d'une page pour le visiteur qui demande (selon sa connexion et son abonnement)
 //   GET /pages/public-list              pages personnalisées en ligne (plan du site)
 //   GET /pages/media/:id                image envoyée
-// Administrateur :
+// Administrateur (lecture, brouillons et images : aussi les modérateurs si le réglage `editor_moderators` vaut « draft ») :
 //   GET/POST /admin/pages · GET/PATCH/DELETE /admin/pages/:id
 //   PUT/DELETE /admin/pages/:id/draft · POST /admin/pages/:id/publish · PUT /admin/pages/:id/live
 //   GET /admin/pages/:id/versions · POST /admin/pages/:id/versions/:vid/restore
@@ -25,6 +25,7 @@ import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
 import { ZONES, HOME_PATH, CATALOGUE_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
+import { getSetting } from '../settings.js';
 
 const KEEP_VERSIONS = 20;
 const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
@@ -121,6 +122,15 @@ export function describeChanges(before, after) {
 
 export default async function pagesRoutes(app) {
   const admin = { preHandler: app.requireRole('admin') };
+  // Étape 5 — droits : l'administrateur fait tout ; un modérateur peut seulement lire, modifier les brouillons et envoyer des images
+  // quand le réglage `editor_moderators` vaut « draft » (jamais publier, créer, renommer, mettre hors ligne, supprimer).
+  const edit = { preHandler: async (req, reply) => {
+    await app.authenticate(req, reply);
+    if (reply.sent) return reply;
+    if (req.user.role === 'admin') return undefined;
+    if (req.user.role === 'moderator' && (await getSetting('editor_moderators')) === 'draft') return undefined;
+    return reply.code(403).send({ error: 'Accès refusé' });
+  } };
 
   // ------------------------------------------------------------------ Public
   app.get('/pages/slots', async (req, reply) => {
@@ -160,7 +170,7 @@ export default async function pagesRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Administration : pages
-  app.get('/admin/pages', admin, async () => (await pool.query(
+  app.get('/admin/pages', edit, async () => (await pool.query(
     'SELECT id, kind, path, title, live, draft, published_at, updated_at FROM site_pages ORDER BY kind, path')).rows.map(row));
 
   app.post('/admin/pages', admin, async (req, reply) => {
@@ -200,7 +210,7 @@ export default async function pagesRoutes(app) {
     return reply.code(201).send(full(r));
   });
 
-  app.get('/admin/pages/:id', admin, async (req, reply) => {
+  app.get('/admin/pages/:id', edit, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const r = (await pool.query('SELECT * FROM site_pages WHERE id = $1', [id])).rows[0];
     return r ? full(r) : reply.code(404).send({ error: 'Page introuvable' });
@@ -236,7 +246,7 @@ export default async function pagesRoutes(app) {
   });
 
   // ---- Brouillon, publication, mise hors ligne, historique
-  app.put('/admin/pages/:id/draft', { ...admin, bodyLimit: 600 * 1024 }, async (req, reply) => {
+  app.put('/admin/pages/:id/draft', { ...edit, bodyLimit: 600 * 1024 }, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const cur = (await pool.query('SELECT kind FROM site_pages WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Page introuvable' });
@@ -246,7 +256,7 @@ export default async function pagesRoutes(app) {
     return full(r);
   });
 
-  app.delete('/admin/pages/:id/draft', admin, async (req, reply) => {
+  app.delete('/admin/pages/:id/draft', edit, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const r = (await pool.query('UPDATE site_pages SET draft = NULL, updated_at = now(), updated_by = $2 WHERE id = $1 RETURNING *', [id, req.user.sub])).rows[0];
     if (!r) return reply.code(404).send({ error: 'Page introuvable' });
@@ -289,7 +299,7 @@ export default async function pagesRoutes(app) {
     return full(r);
   });
 
-  app.get('/admin/pages/:id/versions', admin, async (req) => {
+  app.get('/admin/pages/:id/versions', edit, async (req) => {
     const { id } = idParam.parse(req.params);
     const rows = (await pool.query(
       `SELECT v.id, v.created_at, u.name AS by, v.content FROM site_page_versions v LEFT JOIN users u ON u.id = v.created_by
@@ -312,12 +322,12 @@ export default async function pagesRoutes(app) {
   });
 
   // ------------------------------------------------------------------ Administration : images
-  app.get('/admin/page-media', admin, async () => (await pool.query(
+  app.get('/admin/page-media', edit, async () => (await pool.query(
     'SELECT id, name, content_type, size_bytes, created_at FROM site_page_media ORDER BY created_at DESC')).rows.map((m) => ({
     id: m.id, name: m.name, contentType: m.content_type, size: m.size_bytes, createdAt: m.created_at, url: `/api/pages/media/${m.id}`,
   })));
 
-  app.post('/admin/page-media', { ...admin, bodyLimit: 5 * 1024 * 1024 }, async (req, reply) => {
+  app.post('/admin/page-media', { ...edit, bodyLimit: 5 * 1024 * 1024 }, async (req, reply) => {
     const body = z.object({ name: z.string().trim().min(1).max(120).default('image'), file: z.string().max(4_500_000) }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: 'Requête invalide' });
     const m = body.data.file.match(/^data:[\w/.+-]*;base64,([A-Za-z0-9+/=]+)$/);
