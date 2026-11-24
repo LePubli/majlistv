@@ -10235,3 +10235,19 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 
 **Testé / non testé / limites.** Voir ligne 347 du registre.
 
+
+## Éditeur visuel, étape 1 — thème Premium réglable et choix du thème dans Apparence (24/11/2026)
+
+**Description.** Admin → Apparence a deux groupes de plus, en tête : **Thème Premium : couleurs** (dix couleurs « par rôle » : fond, panneaux, bordures, couleur principale, accent clair, texte, texte atténué, doré, succès, erreur) et **Thème Premium : polices** (texte, titres, back-office ; liste vide = police d'origine). Un sélecteur de couleur change toutes les nuances du rôle sur tout le site Premium et son administration. Le choix du thème du site (Classique, Nuit, Bleu, Premium) et « Laisser chaque visiteur choisir » sont maintenant dans le panneau « Thème du site » d'Apparence ; Paramètres → Général renvoie vers lui. Nouvelles polices auto-hébergées : Playfair Display, Lora, Nunito, Open Sans, Cairo, Tajawal.
+
+**Comment ça marche.** `web/scripts/themeify-premium-css.py` a remplacé chaque couleur des feuilles Premium par `var(--c-RRGGBB, couleur d'origine)` ; `premiumColors.js` classe chaque couleur dans un rôle d'après sa teinte, sa saturation et sa clarté, et recalcule les nuances quand la couleur du rôle change. L'API publie le résultat avec le thème (variables `--c-…`, `--pm-font-…`) ; sans changement, rien n'est publié et l'affichage reste identique.
+
+**Prérequis.** Aucune migration. Administrateur.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web` (le build installe les 6 nouveaux paquets de polices). Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh`.
+
+**Debug.** Une couleur ne change rien : vérifier que le thème modifié est ACTIF et publié (Apparence → « Actif sur le site »), puis `curl -s https://api-majlisstv.le-publicitaire.fr/theme | grep -o -- '--c-087cff:[^;]*'`. Après une régénération des feuilles Premium : `python3 web/scripts/themeify-premium-css.py` puis `node web/tests/test_premium_colors.mjs` (signale toute couleur restée en dur). Les deux copies `themeCss.js` / `premiumColors.js` / `premiumBases.js` (api/src et web/lib) doivent rester identiques (`python3 api/tests/test_theme.py`).
+
+**Exemples.** Apparence → « Thème Premium : couleurs » → Couleur principale : choisir un vert → le bleu des boutons, liens actifs et dégradés devient vert partout ; Publier. « Police des titres » : Playfair Display Variable.
+
+**Testé / non testé / limites.** Voir ligne 350 du registre.

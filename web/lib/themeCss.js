@@ -10,9 +10,18 @@
 //              éventuellement avec NN % d'opacité : « @bg/92 » = le fond à 92 %).
 //   longueur : 12px, 1.5rem (dans les limites du réglage), ou « @jeton » (reprend une longueur de base).
 //   police   : le nom d'une police intégrée ou d'une police importée dans Admin → Apparence.
+//
+// Thème Premium (étape 1 de l'éditeur visuel) : groupes « premium » (10 couleurs par rôle) et « premiumType » (polices).
+// Ces réglages (marqués pm: true) ne sont jamais publiés tant qu'ils sont à leur valeur d'origine : l'affichage de
+// Premium reste identique. Une couleur modifiée publie, pour toutes les couleurs de son rôle, une variable --c-RRGGBB
+// (voir premiumColors.js) ; une police modifiée publie --pm-font-body / --pm-font-title / --pm-font-bo.
+
+import { PM_ROLES, premiumOverrides } from './premiumColors.js';
 
 // Groupes, dans l'ordre d'affichage de l'administration.
 export const GROUPS = [
+  { id: 'premium', label: 'Thème Premium : couleurs', hint: 'Dix couleurs « par rôle » : chaque changement s’applique à toutes les nuances du même rôle, sur tout le site Premium et son administration (la couleur d’origine est celle de la maquette). Laissez une couleur à sa valeur d’origine pour ne rien changer.', skin: 'premium' },
+  { id: 'premiumType', label: 'Thème Premium : polices', hint: 'Vide = police d’origine du thème Premium. Le choix s’applique à tous les écrans Premium ; la police du back-office a son propre réglage.', skin: 'premium' },
   { id: 'base', label: 'Couleurs de base', hint: 'Les couleurs principales du site. Les autres réglages en dépendent par défaut.' },
   { id: 'type', label: 'Polices et taille du texte' },
   { id: 'shape', label: 'Arrondis' },
@@ -37,8 +46,17 @@ export const GROUPS = [
 const c = (id, cssVar, group, label, def, scope = 'root') => ({ id, var: cssVar, group, label, type: 'color', def, scope });
 const l = (id, cssVar, group, label, def, min, max, scope = 'root') => ({ id, var: cssVar, group, label, type: 'length', def, min, max, scope });
 const f = (id, cssVar, group, label, def, role) => ({ id, var: cssVar, group, label, type: 'font', def, role, scope: 'root' });
+// Réglages Premium : jamais publiés à leur valeur d'origine (pm: true).
+const pmColor = (r) => ({ id: r.id, var: `--${r.id}`, group: 'premium', label: r.label, type: 'color', def: r.anchor, scope: 'root', pm: true });
+const pmFont = (id, label, role) => ({ id, var: `--${id}`, group: 'premiumType', label, type: 'font', def: '', role, scope: 'root', pm: true });
 
 export const TOKENS = [
+  // ---- Thème Premium
+  ...PM_ROLES.map(pmColor),
+  pmFont('pmFontBody', 'Police du texte et des menus', 'body'),
+  pmFont('pmFontTitle', 'Police des titres et des boutons', 'title'),
+  pmFont('pmFontBo', 'Police du back-office (administration et Studio)', 'body'),
+
   // ---- Couleurs de base
   c('bg', '--bg', 'base', 'Fond général', '#0B0906'),
   c('surface', '--surface', 'base', 'Surface (panneaux, champs)', '#17120B'),
@@ -174,7 +192,8 @@ export const TOKEN_MAP = Object.fromEntries(TOKENS.map((t) => [t.id, t]));
 
 // Polices livrées avec le site (fichiers auto-hébergés, aucun appel à Google : conforme RGPD).
 // « Système » = la police de l'appareil ; « Serif » = Georgia ou équivalent.
-export const BUILTIN_FONTS = ['DM Sans Variable', 'Montserrat Variable', 'Fredoka Variable', 'Noto Sans Arabic Variable', 'Noto Kufi Arabic Variable', 'Système', 'Serif'];
+export const BUILTIN_FONTS = ['DM Sans Variable', 'Montserrat Variable', 'Fredoka Variable', 'Noto Sans Arabic Variable', 'Noto Kufi Arabic Variable',
+  'Inter Variable', 'Poppins', 'Amiri', 'Marcellus', 'Playfair Display Variable', 'Lora Variable', 'Nunito Variable', 'Open Sans Variable', 'Cairo Variable', 'Tajawal', 'Système', 'Serif'];
 
 const FONT_NAME = /^[A-Za-z0-9À-ÿ][A-Za-z0-9À-ÿ \-]{1,39}$/;
 export const validFontName = (s) => typeof s === 'string' && FONT_NAME.test(s) && !/\s{2}/.test(s);
@@ -196,6 +215,7 @@ export function checkValue(id, value, fontNames = []) {
     if (ref[2] !== undefined && (t.type !== 'color' || Number(ref[2]) > 100)) return 'opacité invalide (0 à 100)';
     return '';
   }
+  if (t.pm && t.type === 'color') return /^#[0-9a-f]{6}$/i.test(value) ? '' : 'couleur attendue (#RRGGBB)';
   if (t.type === 'color') return HEX.test(value) || value === 'transparent' ? '' : 'couleur attendue (#RRGGBB)';
   if (t.type === 'length') {
     const m = value.match(LEN);
@@ -203,7 +223,7 @@ export function checkValue(id, value, fontNames = []) {
     const px = Number(m[1]) * (m[2] === 'rem' ? 16 : 1);
     return px >= t.min && px <= t.max ? '' : `entre ${t.min} et ${t.max} px`;
   }
-  if (t.type === 'font') return BUILTIN_FONTS.includes(value) || fontNames.includes(value) ? '' : 'police inconnue';
+  if (t.type === 'font') return (value === '' && t.def === '') || BUILTIN_FONTS.includes(value) || fontNames.includes(value) ? '' : 'police inconnue';
   return 'valeur invalide';
 }
 
@@ -243,14 +263,24 @@ export function buildCss(values = {}, fonts = [], fontUrl = (id) => `/api/theme/
     return v !== undefined && !checkValue(id, v, names) ? v : TOKEN_MAP[id].def;
   };
   const root = []; const body = [];
-  for (const t of TOKENS) (t.scope === 'body' ? body : root).push(`${t.var}:${cssValue(t, get(t.id))}`);
+  for (const t of TOKENS) if (!t.pm) (t.scope === 'body' ? body : root).push(`${t.var}:${cssValue(t, get(t.id))}`);
   const q = (id) => fontStack(get(id));
   // Piles de polices complètes : la police choisie, puis la police de l'autre écriture, puis celle de l'appareil.
   root.push(`--font-body:${q('fontBody')},${q('fontBodyAr')},system-ui,'Segoe UI',sans-serif`);
   root.push(`--font-title:${q('fontTitle')},${q('fontTitleAr')},system-ui,sans-serif`);
   root.push(`--font-kids:${q('fontKids')},${q('fontTitleAr')},system-ui,sans-serif`);
   root.push(`--font-kids-ar:${q('fontBodyAr')},${q('fontKids')},system-ui,sans-serif`);
-  const ar = [`--font-body:${q('fontBodyAr')},${q('fontBody')},system-ui,sans-serif`, `--font-title:${q('fontTitleAr')},${q('fontTitle')},system-ui,sans-serif`];
+  // Thème Premium : couleurs par rôle (variables --c-RRGGBB) et polices, seulement si elles ont été modifiées.
+  const valid = (id) => values[id] !== undefined && !checkValue(id, values[id], names);
+  for (const [k, v] of Object.entries(premiumOverrides(Object.fromEntries(PM_ROLES.filter((r) => valid(r.id)).map((r) => [r.id, values[r.id]]))))) root.push(`${k}:${v}`);
+  const pmFonts = { pmFontBody: ['--pm-font-body', 'fontBodyAr'], pmFontTitle: ['--pm-font-title', 'fontTitleAr'], pmFontBo: ['--pm-font-bo', 'fontBodyAr'] };
+  const pmAr = [];
+  for (const [id, [cssVar, arId]] of Object.entries(pmFonts)) {
+    if (!valid(id) || values[id] === '') continue;
+    root.push(`${cssVar}:${fontStack(values[id])},${q(arId)},system-ui,'Segoe UI',sans-serif`);
+    pmAr.push(`${cssVar}:${q(arId)},${fontStack(values[id])},system-ui,'Segoe UI',sans-serif`);
+  }
+  const ar = [...pmAr, `--font-body:${q('fontBodyAr')},${q('fontBody')},system-ui,sans-serif`, `--font-title:${q('fontTitleAr')},${q('fontTitle')},system-ui,sans-serif`];
   const faces = fonts.map((x) => `@font-face{font-family:'${x.family}';src:url(${fontUrl(x.id)}) format('${x.format}');font-weight:${x.weight};font-style:${x.style};font-display:swap}`);
   // « < » n'apparaît jamais (valeurs filtrées) ; on le neutralise quand même : le CSS est placé dans une balise <style>.
   // Couleur des titres : appliquée seulement si elle a été choisie (sinon chaque titre garde la couleur de son bloc).
@@ -286,6 +316,12 @@ export function contrast(a, b) {
 
 // Paires texte / fond vérifiées : [texte, fond, fond sous le fond (si transparent), libellé].
 const PAIRS = [
+  ['pmText', 'pmBg', null, 'Premium : texte principal sur le fond'],
+  ['pmText', 'pmSurface', null, 'Premium : texte principal sur un panneau'],
+  ['pmMuted', 'pmBg', null, 'Premium : texte atténué sur le fond'],
+  ['pmMuted', 'pmSurface', null, 'Premium : texte atténué sur un panneau'],
+  ['pmText', 'pmPrimary', null, 'Premium : texte des boutons principaux', 3],
+  ['pmAccent', 'pmBg', null, 'Premium : accent clair sur le fond'],
   ['text', 'bg', null, 'Texte principal sur le fond'],
   ['text', 'surface', 'bg', 'Texte principal sur une surface'],
   ['text2', 'bg', null, 'Texte secondaire sur le fond'],

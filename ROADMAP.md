@@ -760,3 +760,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - Studio → Activité : relance en lot des tâches en échec (cases à cocher, « Relancer la sélection ») : fait 23/11.
 - Stockage des vidéos sur N0C Storage (PlanetHoster) : étape 0 (diagnostic `ops/n0c`) livrée 23/11 ; basculement et copie après le résultat.
 - Accueil Premium : ancien encart Kids avec vidéos rétabli (bannière illustrée en repli) : fait 24/11.
+- Éditeur visuel no-code (audit `docs/AUDIT-EDITEUR-VISUEL-2026-11.md`) : étape 1 faite 24/11 — thème Premium réglable (10 couleurs par rôle + polices, catalogue de polices) et choix du thème déplacé dans Apparence. À venir : étape 2 éditeur plein écran avec glisser-déposer, étape 3 sections/colonnes/modèles, étape 4 écrans Premium en blocs, étape 5 finitions.

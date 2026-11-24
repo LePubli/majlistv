@@ -119,8 +119,8 @@ assert.match(css, /main\.page\.pricing[\s\S]*main\.page\.acct/, 'pages Formules 
 assert.match(css, /:is\(\.plan, \.card, \.card-lite, \.waiver\)/, 'panneaux dégradés V20');
 assert.doesNotMatch(read('app/pricing/page.js').replace(/\/\/.*$/gm, ''), /6[,.]99|69[,.]99|9[,.]99|99[,.]99/, 'aucun prix écrit dans le code (ils viennent de Stripe)');
 // 11. Lot 6 : lecteur et page vidéo (mise en page V20 « lecteur » pv12 appliquée à la vraie page, vrai lecteur conservé).
-assert.match(css, /\.wb-hero \{ background: linear-gradient\(155deg, #0f2a49, #061325\)/, 'cadre du lecteur V20');
-assert.match(css, /\.wb-learn \{ background: linear-gradient\(135deg, #0c3a6e, #0a2548\)/, 'carte Apprendre bleue');
+assert.match(css, /\.wb-hero \{ background: linear-gradient\(155deg, var\(--c-0f2a49,#0f2a49\), var\(--c-061325,#061325\)\)/, 'cadre du lecteur V20');
+assert.match(css, /\.wb-learn \{ background: linear-gradient\(135deg, var\(--c-0c3a6e,#0c3a6e\), var\(--c-0a2548,#0a2548\)\)/, 'carte Apprendre bleue');
 assert.match(read('app/talks/[id]/TalkClient.js'), /<VideoPlayer|ExternalPlayer/, 'vrai lecteur conservé');
 void execFileSync;
 // 5. Back-office Premium (Admin + Studio, Lot 1) : feuille limitée au thème, chargée par les deux layouts, textes ×3 langues.

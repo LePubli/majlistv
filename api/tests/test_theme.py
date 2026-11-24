@@ -26,7 +26,8 @@ U = login(umail, "Passw0rd-test")
 cur.execute("select id from themes where is_active"); ORIGIN = cur.fetchone()[0]
 
 # --- Les deux copies du module de thème sont identiques (API et site)
-ok(filecmp.cmp(os.path.join(ROOT, "api/src/themeCss.js"), os.path.join(ROOT, "web/lib/themeCss.js"), shallow=False), "api/src/themeCss.js et web/lib/themeCss.js identiques")
+for n in ("themeCss", "premiumColors", "premiumBases"):
+    ok(filecmp.cmp(os.path.join(ROOT, f"api/src/{n}.js"), os.path.join(ROOT, f"web/lib/{n}.js"), shallow=False), f"api/src/{n}.js et web/lib/{n}.js identiques")
 
 # --- Lecture publique
 t0 = requests.get(B + "/theme")
@@ -130,6 +131,27 @@ ok("publié" in (cur.fetchone() or [""])[0], "publication inscrite au journal de
 requests.put(B + "/admin/features", json={"values": {"maintenance": True}}, headers=A); time.sleep(5.3)
 ok(requests.get(B + "/theme").status_code == 200, "GET /theme ouvert pendant la maintenance")
 requests.put(B + "/admin/features", json={"values": {"maintenance": False}}, headers=A); time.sleep(5.3)
+
+# --- Thème Premium (étape 1 de l'éditeur visuel) : couleurs par rôle et polices
+base_css = requests.get(B + "/theme").json()["css"]
+ok("--c-" not in base_css and "--pm-" not in base_css, "Premium : rien n'est publié tant que les réglages sont d'origine")
+r = requests.put(B + f"/admin/themes/{T}/draft", headers=A, json={"values": {"pmPrimary": "#087cff", "pmFontBody": ""}})
+ok(r.status_code == 200 and r.json()["draft"] == {}, "Premium : couleur et police d'origine = rien à enregistrer")
+r = requests.put(B + f"/admin/themes/{T}/draft", headers=A, json={"values": {"pmBg": "#001", "pmPrimary": "@accent", "pmFontTitle": "Comic Sans Inventée"}})
+ok(r.status_code == 400 and set(r.json()["errors"]) == {"pmBg", "pmPrimary", "pmFontTitle"}, "Premium : couleur non #RRGGBB, référence et police inconnue refusées")
+r = requests.put(B + f"/admin/themes/{T}/draft", headers=A, json={"values": {"pmPrimary": "#16a34a", "pmBg": "#1a0b2e", "pmFontTitle": "Poppins", "pmFontBo": "Inter Variable"}})
+ok(r.status_code == 200 and not r.json()["issues"], "Premium : palette verte et violet foncé acceptée, sans alerte de contraste")
+requests.post(B + f"/admin/themes/{T}/publish", headers=A)
+requests.post(B + f"/admin/themes/{T}/activate", headers=A)
+pm_css = requests.get(B + "/theme").json()["css"]
+ok("--c-087cff:#16a34a" in pm_css, "Premium : le bleu principal d'origine devient le vert choisi")
+ok("--c-061325:" in pm_css and "--c-061325:#061325" not in pm_css, "Premium : le fond d'origine est remplacé")
+ok("--c-f5f9ff" not in pm_css and "--c-34c1ff" not in pm_css, "Premium : les rôles non modifiés ne publient rien")
+ok("--pm-font-title:'Poppins'" in pm_css and "--pm-font-bo:'Inter Variable'" in pm_css and "--pm-font-body" not in pm_css, "Premium : polices publiées (seulement celles choisies)")
+ok(":root:lang(ar){--pm-font-title:" in pm_css, "Premium : pile de polices arabe")
+r = requests.put(B + f"/admin/themes/{T}/draft", headers=A, json={"values": {"pmText": "#334455"}})
+ok(r.status_code == 200 and any("Premium" in i["label"] for i in r.json()["issues"]), "Premium : texte illisible sur le fond signalé")
+requests.delete(B + f"/admin/themes/{T}/draft", headers=A)
 
 # --- Remise en état : thème d'origine actif
 ok(requests.post(B + f"/admin/themes/{ORIGIN}/activate", headers=A).status_code == 200, "retour au thème d'origine")

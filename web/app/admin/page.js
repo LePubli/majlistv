@@ -372,6 +372,11 @@ function HeroImage() {
   );
 }
 
+// Le choix du thème du site (Classique, Nuit, Bleu, Premium) est passé dans Admin → Apparence le 24/11/2026.
+function SkinMoved() {
+  return <p className="meta set-help"><b>Thème du site :</b> son choix se fait maintenant dans <a href="/admin?tab=appearance">Admin → Apparence</a>, avec ses couleurs et ses polices.</p>;
+}
+
 function Settings() {
   const { call, skin } = useApp();
   const router = useRouter();
@@ -447,6 +452,7 @@ function Settings() {
       <BmPage title="Paramètres généraux" sub="Configuration du site, des services, des e-mails et de la sécurité. Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier."
         actions={<BmBtn disabled={!dirty || busy} onClick={() => save()}>{busy ? 'Enregistrement…' : 'Enregistrer'}</BmBtn>}>
         {encryptionWarning}
+        {cur === 'general' && <SkinMoved />}
         <BmTabs names={themes.map((t) => [t.id, t.label])} value={curTheme?.id} onChange={(id) => goto(themes.find((t) => t.id === id)?.items[0]?.id)} />
         <BmMetrics cols="three" items={[
           { icon: 'settings', label: 'Sections de réglages', value: data.groups.length },
@@ -506,6 +512,7 @@ function Settings() {
   return (
     <section className="set-wrap">
       {encryptionWarning}
+      {section === 'general' && <SkinMoved />}
       <SectionHeader section={section} groups={data.groups} onOpen={goto} onBack={() => goto(null)} changedIn={changedIn} />
       <p className="meta set-help">{SECTION_HELP[section]} Une valeur laissée vide revient à la variable d'environnement, puis à la valeur par défaut. Les clés ne sont jamais réaffichées en entier.</p>
       {stateLabel && state !== 'ok' && <p className={`set-state hs-${state}`} role="status"><span aria-hidden="true">{HEALTH_ICON[state]}</span> {stateLabel}</p>}

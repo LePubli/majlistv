@@ -12,6 +12,15 @@ import '@fontsource/poppins/800.css';
 import '@fontsource-variable/noto-kufi-arabic';
 import '@fontsource-variable/noto-sans-arabic';
 import '@fontsource/marcellus';
+// Catalogue de polices du thème Premium réglable (24/11/2026) : disponibles dans Admin → Apparence, sans appel à Google.
+import '@fontsource-variable/playfair-display';
+import '@fontsource-variable/lora';
+import '@fontsource-variable/nunito';
+import '@fontsource-variable/open-sans';
+import '@fontsource-variable/cairo';
+import '@fontsource/tajawal/400.css';
+import '@fontsource/tajawal/500.css';
+import '@fontsource/tajawal/700.css';
 import '@fontsource/amiri/400.css';
 import '@fontsource/amiri/700.css';
 import './globals.css';

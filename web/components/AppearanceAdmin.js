@@ -23,8 +23,8 @@ const PAGES = [
 // Onglets de l'écran : quels groupes de réglages montrer, et quelle page d'essai afficher dans l'aperçu.
 const VIEWS = [
   { id: 'all', label: 'Tout', groups: null, start: null },
-  { id: 'colors', label: 'Couleurs', groups: ['base', 'quote', 'kids'], start: '/' },
-  { id: 'type', label: 'Typographies', groups: ['type'], start: '/apercu-theme?s=typo' },
+  { id: 'colors', label: 'Couleurs', groups: ['premium', 'base', 'quote', 'kids'], start: '/' },
+  { id: 'type', label: 'Typographies', groups: ['premiumType', 'type'], start: '/apercu-theme?s=typo' },
   { id: 'compo', label: 'Composants', groups: ['shape', 'buttons', 'cards', 'badges', 'forms', 'tabs'], start: '/apercu-theme?s=compo' },
   { id: 'layout', label: 'Mise en page', groups: ['space', 'header', 'sidebar', 'bottom', 'studio', 'footer'], start: '/' },
 ];
@@ -96,15 +96,22 @@ function LengthField({ t, value, onChange }) {
 
 function FontField({ t, value, fonts, onChange }) {
   const families = [...BUILTIN_FONTS, ...[...new Set(fonts.map((f) => f.family))]];
-  const stack = value === 'Système' ? 'system-ui' : value === 'Serif' ? 'Georgia, serif' : `'${value}'`;
+  const stack = value === '' ? 'inherit' : value === 'Système' ? 'system-ui' : value === 'Serif' ? 'Georgia, serif' : `'${value}'`;
   return (
     <div className="ap-ctl">
       <select aria-label={t.label} value={value} onChange={(e) => onChange(e.target.value)}>
+        {t.def === '' && <option value="">Police d’origine du thème</option>}
         {families.map((x) => <option key={x} value={x}>{x}</option>)}
       </select>
       <span className="ap-font-sample" style={{ fontFamily: stack }} dir={t.id.endsWith('Ar') ? 'rtl' : 'ltr'}>{t.id.endsWith('Ar') ? 'مجلس — أبجد هوز' : 'Des vidéos qui éclairent'}</span>
     </div>
   );
+}
+
+// Rappel affiché au-dessus des groupes : quels réglages concernent quel thème du site.
+const SKIN_NOTE = 'Les groupes « Thème Premium » pilotent tout le site Premium et son administration. Les autres groupes concernent surtout les thèmes Classique, Nuit et Bleu ; sur Premium, seuls certains s’appliquent (taille du texte, largeur, espacements).';
+function SkinNote({ skin }) {
+  return skin === 'premium' ? <p className="meta small" style={{ margin: '0 0 12px' }}>{SKIN_NOTE}</p> : null;
 }
 
 function TokenRow({ t, values, fonts, onSet, onReset, error, flagged }) {
@@ -258,6 +265,53 @@ function Preview({ css, start }) {
   );
 }
 
+/* ------------------------------------------------------------------ Thème du site (Classique / Nuit / Bleu / Premium) */
+// Avant le 24/11 ce choix se faisait dans Paramètres → Général ; il est maintenant ici, avec les couleurs et les polices.
+const SKIN_CHOICES = [
+  ['classique', 'Classique', 'Noir et or'],
+  ['nuit', 'Nuit et or', 'Bleu de nuit et arabesques'],
+  ['bleu', 'Mejliss bleu', 'Streaming bleu nuit'],
+  ['premium', 'Premium', 'Bleu électrique, grandes illustrations (modifiable ci-dessous)'],
+];
+function SiteSkin() {
+  const { call } = useApp();
+  const [st, setSt] = useState(null); // { def, choice }
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    call('/admin/settings').then((r) => {
+      if (!r.ok) return;
+      const f = (k) => r.data.fields.find((x) => x.key === k);
+      setSt({ def: f('skin_default')?.value || 'classique', choice: f('skin_choice')?.value === 'true' });
+    });
+  }, [call]);
+  if (!st) return null;
+  const save = async (next) => {
+    setMsg('');
+    const r = await call('/admin/settings', { method: 'PUT', body: JSON.stringify({ values: { skin_default: next.def, skin_choice: next.choice ? 'true' : 'false' } }) });
+    if (r.ok) { setSt(next); setMsg('Enregistré : le site change de thème sous quelques secondes (rechargez la page).'); } else setMsg(r.data?.error || 'Enregistrement impossible.');
+  };
+  return (
+    <section className="ap-group" style={{ marginBottom: 14 }} aria-labelledby="ap-skin-h">
+      <h2 id="ap-skin-h" style={{ padding: '12px 14px' }}>Thème du site</h2>
+      <div className="ap-group-body">
+        <p className="meta small">Le thème affiché aux visiteurs. Chaque thème a ses propres couleurs et polices à régler plus bas.</p>
+        <div role="radiogroup" aria-label="Thème du site" style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
+          {SKIN_CHOICES.map(([id, name, hint]) => (
+            <label key={id} className={`ap-row${st.def === id ? ' changed' : ''}`} style={{ cursor: 'pointer', display: 'block' }}>
+              <input type="radio" name="site-skin" checked={st.def === id} onChange={() => save({ ...st, def: id })} /> <b>{name}</b>
+              <span className="meta small" style={{ display: 'block' }}>{hint}</span>
+            </label>
+          ))}
+        </div>
+        <label style={{ display: 'block', marginTop: 10 }}>
+          <input type="checkbox" checked={st.choice} onChange={(e) => save({ ...st, choice: e.target.checked })} /> Laisser chaque visiteur choisir son thème
+        </label>
+        {msg && <p className="meta small" role="status">{msg}</p>}
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ Page */
 export default function AppearanceAdmin() {
   const { call, skin } = useApp();
@@ -269,7 +323,7 @@ export default function AppearanceAdmin() {
   const [save, setSave] = useState('idle'); // idle | pending | saving | saved | error
   const [msg, setMsg] = useState('');
   const [q, setQ] = useState('');
-  const [open, setOpen] = useState(() => new Set(['base']));
+  const [open, setOpen] = useState(() => new Set(skin === 'premium' ? ['premium', 'premiumType'] : ['base']));
   const [versions, setVersions] = useState(null);
   const [view, setView] = useState('all'); // onglet : all | colors | type | compo | layout
   const timer = useRef(null);
@@ -409,6 +463,7 @@ export default function AppearanceAdmin() {
         ]} />
         <div className="ap" lang="fr" dir="ltr">
           <div className="bm-form" style={{ marginBottom: 14 }}>
+      <SiteSkin />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>
@@ -465,6 +520,7 @@ export default function AppearanceAdmin() {
             </div>
           )}
 
+          <SkinNote skin={skin} />
           {GROUPS.map((g) => {
             if (!needle && viewGroups && !viewGroups.includes(g.id)) return null;
             const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
@@ -501,6 +557,7 @@ export default function AppearanceAdmin() {
     <section className="ap" lang="fr" dir="ltr">
       <p className="meta">Réglez les couleurs, polices, arrondis et espacements du site. Vos changements partent dans un <b>brouillon</b> et s’affichent dans l’aperçu ; les visiteurs ne voient rien avant que vous cliquiez sur <b>Publier</b>. Chaque publication est gardée dans l’historique.</p>
 
+      <SiteSkin />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>
@@ -561,6 +618,7 @@ export default function AppearanceAdmin() {
             </div>
           )}
 
+          <SkinNote skin={skin} />
           {GROUPS.map((g) => {
             if (!needle && viewGroups && !viewGroups.includes(g.id)) return null;
             const list = TOKENS.filter((t) => t.group === g.id && (!needle || t.label.toLowerCase().includes(needle) || g.label.toLowerCase().includes(needle)));
