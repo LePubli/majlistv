@@ -41,16 +41,19 @@ assert.match(read('app/page.js'), /if \(skin === 'premium'\) return <PmHome \/>/
 const hd = read('components/premium/PmHeader.js');
 for (const c of ['v20-topbar v20-exact-header', 'v20-is-overlay', 'v20-brand v20-exact-brand', 'v20-nav v20-exact-nav', 'v20-exact-bell', 'v20-menu-toggle']) assert.ok(hd.includes(c), c);
 assert.match(hd, /\/brand\/emblem-bleu-s\.png/, 'vrai logo Mejliss');
-for (const k of ["t('home')", "t('navCatalogue')", "t('seriesNav')", "t('navLearn')", "t('kdNav')"]) assert.ok(hd.includes(k), `menu de la maquette : ${k}`);
+// Depuis l'étape 4 de l'éditeur, les liens d'origine viennent de navDefaults.js et l'en-tête suit Admin → Menus.
+const nd = read('lib/navDefaults.js');
+for (const k of ["t('home')", "t('navCatalogue')", "t('seriesNav')", "t('navLearn')", "t('kdNav')"]) assert.ok(nd.includes(k), `menu de la maquette : ${k}`);
+assert.ok(hd.includes('menus?.web_top'), 'en-tête piloté par Admin → Menus');
 for (const k of ['"/pratique"', '"/library"', '"/account"', 'logoutNow']) assert.ok(hd.includes(k), `menu de l'avatar : ${k}`);
 assert.doesNotMatch(hd, /notification-dot/, 'pas de pastille de notification inventée');
-const home = read('components/premium/PmHome.js');
+const home = read('components/premium/PmHomeSections.js'); // sections de l'accueil (étape 4)
 for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'OttRail', 'OttCard', 'pm-spot', 'pm-kids-promo', 'v20-big-learn-banner']) assert.ok(home.includes(c), c);
-for (const api of ["call('/home')", "call('/me/continue')", "call('/me/learning'"]) assert.ok(home.includes(api), `vraies données : ${api}`);
+for (const api of ["usePmData('/home')", "usePmData('/me/continue'", "usePmData('/me/learning'"]) assert.ok(home.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(home, /75%|12:34|45:20|Salahuddin|Les Héritiers|avatar-reference/, 'aucun contenu de démonstration de la maquette');
 assert.match(home, /course && \(/, 'progression du parcours seulement si elle existe');
 assert.match(read('components/premium/PmMobileNav.js'), /v20-mobile-nav/);
-assert.match(read('components/premium/PmFooter.js'), /legal\/mentions-legales/, 'liens légaux obligatoires');
+assert.match(read('lib/navDefaults.js'), /legal\/mentions-legales/, 'liens légaux obligatoires (valeurs d’origine)'); assert.match(read('components/premium/PmFooter.js'), /required/, 'liens légaux imposés');
 assert.match(read('components/premium/PmFooter.js'), /<SkinPicker \/>/, 'un visiteur peut quitter le thème');
 assert.match(read('components/SkinPicker.js'), /v === 'premium' \|\| cur === 'premium'\)\) \{ window\.location\.reload\(\)/);
 

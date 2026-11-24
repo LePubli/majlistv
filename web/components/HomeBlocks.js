@@ -27,6 +27,9 @@ import { KidsBand } from './KidsBanner';
 import { useReducedMotion } from './HomeHero';
 import { authPath } from '../lib/nav';
 import { tx } from '../lib/blocks';
+import {
+  PmHeroSection, PmUniversesSection, PmContinueSection, PmRowsSection, PmCollectionsSection, PmShortsSection, PmKidsSection, PmLearnSection,
+} from './premium/PmHomeSections';
 
 // Titre d'un bloc : celui saisi dans l'éditeur, à défaut le texte du dictionnaire.
 const useTitle = (p, lang, key) => {
@@ -302,9 +305,36 @@ function KidsBlock() {
   return <KidsBand data={kids} />;
 }
 
+// Sections de l'accueil Premium (étape 4) : le même cadre que l'accueil Premium d'origine, pour que les styles du thème s'appliquent.
+// Sur un autre thème que Premium, ces blocs restent vides.
+function PmFrame({ type, p, lang }) {
+  const { skin } = useApp();
+  if (skin !== 'premium') return null;
+  const title = tx(p.title, lang) || undefined;
+  const hero = type === 'pm_hero' || type === 'pm_universes';
+  let inner = null;
+  switch (type) {
+    case 'pm_hero': inner = <PmHeroSection count={p.count} />; break;
+    case 'pm_universes': inner = <PmUniversesSection />; break;
+    case 'pm_continue': inner = <PmContinueSection title={title} limit={p.limit} />; break;
+    case 'pm_rows': inner = <PmRowsSection max={p.max} />; break;
+    case 'pm_collections': inner = <PmCollectionsSection limit={p.limit} />; break;
+    case 'pm_shorts': inner = <PmShortsSection title={title} limit={p.limit} />; break;
+    case 'pm_kids': inner = <PmKidsSection />; break;
+    case 'pm_learn': inner = <PmLearnSection />; break;
+    default: return null;
+  }
+  return (
+    <div className="v20-app pm-home pm-ott pm-blk">
+      <div className="v20-signature-home v20-faithful-home">{hero ? inner : <div className="pm-ott-body pm-ott-blk">{inner}</div>}</div>
+    </div>
+  );
+}
+
 // Dessine un bloc « données du site » ; null si le type n'en fait pas partie.
 export function DataBlock({ b, lang }) {
   const p = b.props || {};
+  if (b.type.startsWith('pm_')) return <PmFrame type={b.type} p={p} lang={lang} />;
   switch (b.type) {
     case 'featured': return <FeaturedBlock p={p} />;
     case 'mine': return <MineBlock p={p} />;

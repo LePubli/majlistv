@@ -59,3 +59,7 @@ Demande d'Epok : Admin → Apparence doit devenir **un seul endroit** pour modif
 - Les couleurs de Premium viennent d'un fichier généré (`web/scripts/build-premium-css.py`) : la conversion en variables doit passer par ce script, sinon elle serait perdue à la prochaine régénération.
 - Les réglages publiés sont lus par le site à chaque page : toute nouvelle variable doit avoir une valeur par défaut dans `themeCss.js` (copie identique dans `api` et `web`, vérifiée par `api/tests/test_theme.py`).
 - Accessibilité : le glisser-déposer doit rester utilisable au clavier (les boutons ↑ ↓ sont conservés).
+
+## Avancement
+
+- Étape 4a faite 24/11 (accueil Premium en blocs, menus Premium) — registre 353. 4b (catalogue et fiche en zones) : sur « go ».

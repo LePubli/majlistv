@@ -643,3 +643,33 @@ html[data-skin="premium"] .pm-ott .v20-hero-home .v20-hero-arrow { top: auto; bo
 .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg, transparent 0, var(--c-000000,#000000) 38%); mask-image: linear-gradient(90deg, transparent 0, var(--c-000000,#000000) 38%); }
 [dir="rtl"] .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { -webkit-mask-image: linear-gradient(270deg, transparent 0, var(--c-000000,#000000) 38%); mask-image: linear-gradient(270deg, transparent 0, var(--c-000000,#000000) 38%); }
 @media (max-width: 850px) { .v20-app.pm-kids .v20-kids-v8 .v20-kids-hero-visual.pm-hero-video { -webkit-mask-image: linear-gradient(180deg, transparent 0, var(--c-000000,#000000) 45%); mask-image: linear-gradient(180deg, transparent 0, var(--c-000000,#000000) 45%); } }
+
+/* ───────── Éditeur visuel, étape 4 — accueil Premium recomposé en blocs (sections « Premium : … ») ───────── */
+html[data-skin="premium"] .page-shell:has(> .pm-blocks-home), html[data-skin="premium"] .pm-blocks-home { padding: 0; max-width: none; }
+html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_hero, html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_universes, html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_continue,
+html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_rows, html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_collections, html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_shorts,
+html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_kids, html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_learn { padding-block: 0; }
+html[data-skin="premium"] .pb-in:has(> .pm-blk) { max-width: none; margin: 0; }
+html[data-skin="premium"] .pm-blk .pm-ott-blk { margin-top: 0; padding-bottom: 0; }
+html[data-skin="premium"] .pm-blocks-home > .pb:last-child .pm-ott-blk { padding-bottom: 44px; }
+html[data-skin="premium"] .pm-blocks-home.pm-nohero { padding-top: 84px; }
+@media (max-width: 890px) { html[data-skin="premium"] .pm-blocks-home.pm-nohero { padding-top: 64px; } }
+
+/* Éditeur visuel, étape 4 — menus du thème Premium pilotés par Admin → Menus : sous-menus déroulants de l'en-tête */
+html[data-skin="premium"] .v20-exact-nav .mn-dd { position: relative; display: inline-flex; align-items: center; }
+html[data-skin="premium"] .v20-exact-nav .mn-dd-btn { background: none; border: 0; border-radius: 0; color: inherit; font: inherit; font-size: 12.5px; padding: 10px 5px; gap: 5px; cursor: pointer; }
+html[data-skin="premium"] .v20-exact-nav .mn-dd-btn:hover, html[data-skin="premium"] .v20-exact-nav .mn-dd-btn.on { background: none; color: var(--c-ffffff, #ffffff); }
+html[data-skin="premium"] .v20-exact-nav .mn-dd-list { background: var(--c-051a30, #051a30); border: 1px solid var(--c-294566, #294566); border-radius: 14px; padding: 8px; min-width: 220px; z-index: 60; }
+html[data-skin="premium"] .v20-exact-nav .mn-dd-list a { display: block; width: auto; padding: 10px 14px; border-radius: 10px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 890px) {
+  html[data-skin="premium"] .v20-exact-nav .mn-dd { display: block; width: 100%; }
+  html[data-skin="premium"] .v20-exact-nav .mn-dd-btn { width: 100%; justify-content: space-between; font-size: 14px; padding: 13px 18px; }
+  html[data-skin="premium"] .v20-exact-nav .mn-dd-list { position: static; margin: 0; border: 0; background: transparent; padding: 0 0 0 14px; min-width: 0; }
+  html[data-skin="premium"] .v20-exact-nav .mn-dd-list a { white-space: normal; }
+}
+/* Comme l'accueil d'origine : les rangées remontent de 22 px sur le bas de la une (14 px d'écart sur téléphone). */
+html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_hero + .pb[class*="pbt-pm_"] { margin-top: -22px; position: relative; z-index: 2; }
+@media (max-width: 700px) { html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_hero + .pb[class*="pbt-pm_"] { margin-top: 14px; } }
+/* Écarts d'origine : dans la composition d'origine, les marges se confondent ; ici chaque bloc a son enveloppe. */
+html[data-skin="premium"] .pm-blocks-home .pb:has(+ .pbt-pm_kids) .pm-rail:last-child, html[data-skin="premium"] .pm-blocks-home .pb:has(+ .pbt-pm_learn) .pm-rail:last-child { margin-bottom: 0; }
+html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_kids + .pb.pbt-pm_learn .v20-big-learn-banner { margin-top: 0; }

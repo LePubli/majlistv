@@ -9,7 +9,7 @@ import { useApp } from './Providers';
 import { Page as BmPage, Metrics, Panel, Cols, SelectList, Badge, Btn, Meta } from './backoffice/Kit';
 import { BlockEditor, TextField, MediaField, LANG_NAMES } from './PageFields';
 import NavEditor from './NavAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
 
 const DEVICE_SIZES = [{ id: 390, label: 'Téléphone' }, { id: 768, label: 'Tablette' }, { id: 1024, label: 'Petit écran' }, { id: 1440, label: 'Grand écran' }];
 const KNOWN_PATHS = [
@@ -163,7 +163,7 @@ function Preview({ zones, lang, pickedId, onPick, nav, viewAs, layout = false })
 
 /* ------------------------------------------------------------------ Éditeur d'une page */
 function Editor({ pageId, onBack, pages }) {
-  const { call } = useApp();
+  const { call, skin } = useApp();
   const [page, setPage] = useState(null);
   const [content, setContent] = useState(null);
   const [lang, setLang] = useState('fr');
@@ -377,9 +377,11 @@ function Editor({ pageId, onBack, pages }) {
                 {adding === zone ? (
                   <div className="pe-types" role="group" aria-label="Choisir un type de bloc">
                     <p className="pe-types-title">Contenu écrit par vous</p>
-                    {TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
+                    {TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
                     <p className="pe-types-title">Données du site (mises à jour automatiquement)</p>
                     {TYPE_ORDER.filter((t) => DATA_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
+                    {skin === 'premium' && <p className="pe-types-title">Accueil Premium (sections de l’accueil du thème)</p>}
+                    {skin === 'premium' && TYPE_ORDER.filter((t) => PM_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
                     <button type="button" className="link u" onClick={() => setAdding(null)}>Annuler</button>
                   </div>
                 ) : (
@@ -437,7 +439,7 @@ export default function PagesAdmin() {
     const pill = (p) => <Badge tone={p.live ? 'green' : 'amber'}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</Badge>;
     return (
       <BmPage title="Pages & contenus" sub="Composez des pages avec des blocs, ou ajoutez des blocs avant ou après une page existante du site."
-        actions={!home ? <Btn onClick={() => create({ kind: 'home' })}>Créer l’accueil à partir du modèle</Btn> : null}>
+        actions={!home ? <Btn onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>Créer l’accueil à partir du modèle</Btn> : null}>
         <Metrics cols="three" items={[
           { icon: 'file', label: 'Pages et zones', value: all.length },
           { icon: 'check', tone: 'green', label: 'En ligne', value: all.filter((x) => x.live).length },
@@ -504,7 +506,7 @@ export default function PagesAdmin() {
               </span>
             </li>
           </ul>
-        ) : <button type="button" className="btn" onClick={() => create({ kind: 'home' })}>Créer l’accueil à partir du modèle</button>}
+        ) : <button type="button" className="btn" onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>Créer l’accueil à partir du modèle</button>}
       </div>
 
       <div className="panel">

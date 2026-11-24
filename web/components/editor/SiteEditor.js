@@ -15,7 +15,7 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES } from '../PageFields';
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
@@ -26,7 +26,7 @@ const KNOWN_PATHS = [
   ['/lists', 'Mes listes'], ['/themes', 'Thèmes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'],
   ['/legal/mentions-legales', 'Mentions légales'], ['/legal/cgv', 'Conditions générales de vente'], ['/legal/confidentialite', 'Confidentialité'],
 ];
-const GLYPH = { hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', columns: '▥', spacer: '↕', divider: '―' };
+const GLYPH = { hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', pm_hero: '▣', pm_universes: '◉', pm_continue: '◔', pm_rows: '≣', pm_collections: '❖', pm_shorts: '▮', pm_kids: '☺', pm_learn: '✎', columns: '▥', spacer: '↕', divider: '―' };
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const typing = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 
@@ -99,8 +99,10 @@ function usePageDoc(pageId, call) {
 
 /* ------------------------------------------------------------------ Panneau « Blocs » */
 function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
-  const own = TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t));
+  const { skin } = useApp();
+  const own = TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t));
   const data = TYPE_ORDER.filter((t) => DATA_TYPES.includes(t));
+  const pm = skin === 'premium' ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
   const item = (t) => (
     <li key={t}>
       <button type="button" className="ed-pal-item" draggable={!disabled} disabled={disabled}
@@ -118,6 +120,7 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
       <ul className="ed-pal-grid">{own.map(item)}</ul>
       <h3>Données du site <span className="meta small">(se mettent à jour seules)</span></h3>
       <ul className="ed-pal-grid">{data.map(item)}</ul>
+      {pm.length > 0 && <><h3>Accueil Premium <span className="meta small">(sections de l’accueil du thème)</span></h3><ul className="ed-pal-grid">{pm.map(item)}</ul></>}
     </div>
   );
 }
@@ -211,6 +214,7 @@ function Templates({ onUse, disabled }) {
 
 /* ------------------------------------------------------------------ Panneau « Pages » */
 function PagesList({ pages, pageId, onOpen, reload, call }) {
+  const { skin } = useApp();
   const [title, setTitle] = useState('');
   const [slotPath, setSlotPath] = useState('/pricing');
   const [slotOther, setSlotOther] = useState('');
@@ -229,7 +233,7 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
     <li key={p.id}>
       <button type="button" className={`ed-page-row${p.id === pageId ? ' on' : ''}`} onClick={() => onOpen(p.id)}>
         <strong>{label || p.title}</strong>
-        <small>{p.path || ''}</small>
+        <small>{p.kind === 'home' || p.kind === 'layout' ? '' : (p.path || '')}</small>
         <span className={`ap-pill${p.live ? ' on' : ''}`}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</span>
         {p.hasDraft && <span className="ap-tag">brouillon</span>}
       </button>
@@ -241,7 +245,7 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
       <h3>Pages du site</h3>
       <ul>
-        {home ? row(home, 'Accueil des membres') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'home' })}>+ Créer l’accueil à partir du modèle</button></li>}
+        {home ? row(home, 'Accueil des membres') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>+ Créer l’accueil à partir du modèle</button></li>}
         {layoutPage ? row(layoutPage, 'En-tête et pied de page') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'layout' })}>+ Personnaliser l’en-tête et le pied de page</button></li>}
       </ul>
       <h3>Pages créées ({custom.length})</h3>
@@ -663,7 +667,7 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
     <div className="ed-pageset">
       <div className="ed-right-head"><h2>Page</h2></div>
       <p className="meta small">Cliquez un bloc dans la page ou dans le Plan pour le modifier.</p>
-      {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine pour les membres connectés (et pour tous si la vitrine visiteurs est coupée). Tant qu’elle n’est pas publiée, l’accueil d’origine reste en place. <b>Sur le thème Premium, l’accueil d’origine reste affiché</b> : la recomposition de l’accueil Premium en blocs arrive à l’étape 4.</p>}
+      {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site. Tant qu’elle n’est pas publiée, l’accueil d’origine reste en place. Sur le thème Premium, ses sections « Premium : … » reproduisent l’accueil d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les blocs « données du site » se mettent à jour tout seuls.</p>}
       {page.kind === 'layout' && <NavEditor nav={content.nav} onChange={setNav} lang={lang} errors={errors} viewAs={null} onViewAs={() => {}} />}
       {page.kind === 'custom' && (
         <details className="pe-meta" open>

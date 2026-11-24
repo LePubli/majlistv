@@ -10,7 +10,7 @@ for (const c of ['.pm-card', '.pm-rail-track', '.pm-cat-hero', '.pm-sh-grid', '.
 assert.match(css, /grid-auto-columns: calc\(\(100% - 4 \* 12px\) \/ 5\)/, '5 cartes par rangée');
 assert.match(css, /pm-card:hover[^}]*scale/, 'survol');
 assert.match(css, /inset-inline/, 'logique RTL');
-const home = read('components/premium/PmHome.js');
+const home = read('components/premium/PmHomeSections.js'); // depuis l'étape 4 de l'éditeur, les sections de l'accueil vivent ici
 assert.match(home, /\/collections\/home/); assert.match(home, /\/shorts\?limit=/); assert.match(home, /feat\('shorts'\)/);
 assert.ok(!/v20-preview-cards/.test(home), 'tuiles de démonstration retirées');
 const cat = read('components/premium/PmCatalogue.js');

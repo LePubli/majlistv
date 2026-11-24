@@ -11,21 +11,25 @@ import SearchPanel from '../SearchPanel';
 import SkinPicker from '../SkinPicker';
 import { LOCALES } from '../../lib/locales';
 import { BrandWord } from './PmBrand';
+import { MenuDropdown, MenuLink } from '../MenuDropdown';
+import { resolveMenu } from '../../lib/menus';
+import { pmMainDefaults, PM_TOP_ORIGIN } from '../../lib/navDefaults';
 
 const SearchIco = () => <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="6.7" /><path d="m15.8 15.8 5 5" /></svg>;
 const BellIco = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.5a6 6 0 0 0-12 0c0 7-2.4 8.3-2.4 9h16.8c0-.7-2.4-2-2.4-9ZM10 21h4" /></svg>;
 
-/** Liens du menu principal (même liste pour l'en-tête et le menu ☰ du téléphone). */
+/** Liens du menu principal (même liste pour l'en-tête et le menu ☰ du téléphone). Un menu affecté à « Site — menu du haut »
+ *  (Admin → Menus) remplace la liste d'origine de la maquette ; ses sous-menus s'ouvrent en liste déroulante. */
 export function usePmNav() {
-  const { t, feat, hasSeries } = useApp();
-  return [
-    { href: '/', label: t('home'), on: true },
-    { href: '/catalogue', label: t('navCatalogue'), on: true },
-    { href: '/series', label: t('seriesNav'), on: hasSeries },
-    { href: '/learning', label: t('navLearn'), on: feat('learning') },
-    { href: '/kids', label: t('kdNav'), on: feat('kids') },
-  ].filter((x) => x.on);
+  const { t, feat, hasSeries, hasBooks, user, layout, locale } = useApp();
+  const D = pmMainDefaults({ t, feat, hasSeries, hasBooks });
+  const custom = layout?.menus?.web_top;
+  if (custom) return resolveMenu(custom, Object.values(D), { user, lang: locale });
+  return PM_TOP_ORIGIN.map((k) => ({ ...D[k], cls: '' })).filter((x) => x.on);
 }
+
+// Un lien qui porte un sous-menu garde sa propre adresse : elle devient le premier choix de sa liste.
+const withSelf = (it) => (it.href ? { ...it, children: [{ ...it, key: `${it.key}-self`, children: undefined, cls: '' }, ...it.children] } : it);
 
 export function isPmActive(path, href) {
   if (href === '/') return path === '/';
@@ -71,8 +75,9 @@ export default function PmHeader() {
           </Link>
           <nav className={`v20-nav v20-exact-nav${open ? ' v20-open' : ''}`} id="pm-nav" aria-label={t('mainNav')}>
             {nav.map((it) => {
+              if (it.children?.length) return <MenuDropdown key={it.key} item={withSelf(it)} isCurrent={(h) => Boolean(h) && isPmActive(path, h)} onNavigate={() => setOpen(false)} />;
               const on = isPmActive(path, it.href);
-              return <Link key={it.href} href={it.href} className={on ? 'v20-active' : undefined} aria-current={on ? 'page' : undefined}>{it.label}</Link>;
+              return <MenuLink key={it.key} it={it} current={on} className={[on && 'v20-active', it.cls].filter(Boolean).join(' ') || undefined} onNavigate={() => setOpen(false)}>{it.label}</MenuLink>;
             })}
           </nav>
           <div className="v20-header-actions v20-exact-actions">

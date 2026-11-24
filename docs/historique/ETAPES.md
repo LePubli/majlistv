@@ -10281,3 +10281,25 @@ Décisions d'Epok (23 h 35) : découpage en 3 lots ; chiffres réels seulement ;
 **Exemples.** Éditeur → Modèles → « Deux colonnes : texte et image » → cliquer le bloc Image, choisir une image → glisser « Citation » (onglet Blocs) dans la colonne de gauche → Style du bloc Colonnes : fond, ombre, bordure → bouton Téléphone : les colonnes s'empilent → Publier.
 
 **Testé / non testé / limites.** Voir ligne 352 du registre.
+
+## Éditeur visuel, étape 4a — accueil Premium en blocs et menus Premium (24/11/2026)
+
+**Description.** Sur le thème Premium, l'accueil devient recomposable dans l'éditeur plein écran (Admin → Éditeur du site) : onglet Blocs → groupe « Accueil Premium » (la une, univers, reprendre, rangées, collections, shorts, Kids, apprendre). Tant qu'on ne crée pas et ne publie pas l'accueil, rien ne change. L'en-tête, la barre du bas (téléphone) et le pied de page Premium suivent désormais Admin → Menus (emplacements « Site — en-tête », « Site — barre du bas », « Site — pied de page »).
+
+**Prérequis.** Aucune migration. Compte administrateur. Thème Premium actif (Apparence).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (validation des nouveaux blocs et modèle), PUIS `majlistv-web`. Rien d'autre. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Résultat attendu du contrôle : 0 échec.
+
+**Debug.** Accueil inchangé après publication : vérifier que le thème est Premium et que la page « Accueil des membres » est publiée (pas seulement en brouillon). Section vide : normal sur un autre thème, ou « Reprendre » pour un visiteur non connecté. Menu non pris en compte : Admin → Menus → Affectation ; le pied de page garde toujours mentions légales, CGV et confidentialité. Retour à l'accueil d'origine : éditeur → Pages → Accueil → Supprimer la page. Les copies `web/lib/blocks.js` et `api/src/blocks.js` doivent rester identiques (`diff web/lib/blocks.js api/src/blocks.js`).
+
+**Exemples.** Éditeur → Pages → « + Créer l'accueil à partir du modèle » → glisser « Premium : Shorts » avant « Premium : Rangées » → ajouter un bloc Bannière sous la une → Publier → ouvrir le site. Menus : Admin → Menus → nouveau menu avec un titre « Découvrir » et deux liens dessous → l'affecter à « Site — en-tête » → le titre devient une liste déroulante dans l'en-tête Premium.
+
+**Testé / non testé / limites.** Voir ligne 353 du registre. Suite : 4b (catalogue et fiche) sur « go ».
+

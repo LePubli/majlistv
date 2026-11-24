@@ -144,12 +144,45 @@ export const BLOCK_TYPES = {
       S('stack', 'Empiler sur', [['m', 'Téléphone'], ['t', 'Téléphone et tablette']], 'm')],
     sample: { count: '2' },
   },
+  // ---- Sections de l'accueil du thème Premium (étape 4) : mêmes données et même dessin que l'accueil Premium d'origine.
+  // Elles ne s'affichent que sur le thème Premium (sur un autre thème, le bloc reste vide).
+  pm_hero: {
+    label: 'Premium : la une', hint: 'Grande image de la une (vidéos choisies dans Admin → Vidéos → « À la une », à défaut les plus récentes), avec flèches et points.',
+    fields: [S('count', 'Nombre de vidéos qui défilent', [['1', '1 (fixe)'], ['3', '3'], ['5', '5']], '5')], sample: { count: '5' },
+  },
+  pm_universes: {
+    label: 'Premium : univers (téléphone)', hint: 'Les quatre premières catégories en icônes. N’apparaît que sur téléphone.', fields: [], sample: {},
+  },
+  pm_continue: {
+    label: 'Premium : continuer à regarder', hint: 'Vidéos commencées par la personne connectée. Invisible si elle n’en a pas.',
+    fields: [T('title', 'Titre (à défaut : « Continuer à regarder »)'), N('limit', 'Nombre de vidéos', 1, 10, 10)], sample: { limit: 10 },
+  },
+  pm_rows: {
+    label: 'Premium : rangées du catalogue', hint: 'Les rangées de l’accueil d’origine : nouveautés, « Pour vous », débutant, séries, rangées par catégorie.',
+    fields: [N('max', 'Nombre de rangées', 1, 12, 12)], sample: { max: 12 },
+  },
+  pm_collections: {
+    label: 'Premium : collections', hint: 'Cycles, séries d’un intervenant et thèmes du moment (Studio → Collections), la première en grand cadre.',
+    fields: [N('limit', 'Nombre de collections', 1, 12, 12)], sample: { limit: 12 },
+  },
+  pm_shorts: {
+    label: 'Premium : shorts', hint: 'Rangée des derniers extraits verticaux. Invisible s’il n’y en a aucun.',
+    fields: [T('title', 'Titre (à défaut : « Shorts »)'), N('limit', 'Nombre de shorts', 2, 20, 10)], sample: { limit: 10 },
+  },
+  pm_kids: {
+    label: 'Premium : encart Kids', hint: 'Dernières vidéos Kids (ou bannière illustrée s’il n’y en a pas). Invisible si l’Espace Kids est coupé.', fields: [], sample: {},
+  },
+  pm_learn: {
+    label: 'Premium : bandeau Apprendre', hint: 'Bandeau « Mon espace Apprendre » avec la progression du parcours (formule Apprentissage). Invisible si Apprendre est coupé.', fields: [], sample: {},
+  },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'columns', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'columns', 'spacer', 'divider'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
+// Sections de l'accueil Premium : proposées seulement quand le thème du site est Premium (l'éditeur les range à part).
+export const PM_TYPES = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn'];
 
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
@@ -355,6 +388,12 @@ export function blockSummary(b, lang = 'fr') {
   if (b.type === 'video') return p.url || '';
   if (b.type === 'spacer') return `${p.size || 40} px`;
   return '';
+}
+
+// ---- Modèle de l'accueil du thème Premium : les sections de l'accueil d'origine, dans le même ordre (accueil identique tant qu'on n'y touche pas).
+export function premiumHomeTemplate() {
+  const mk = (type) => newBlock(type);
+  return { meta: {}, zones: { main: PM_TYPES.map(mk) } };
 }
 
 // ---- Modèle de l'accueil des membres (maquette « Main » ; puis séries, rangées par catégorie et bande Kids, qui existaient déjà)

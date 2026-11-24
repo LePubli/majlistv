@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, HOME_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate } from '../blocks.js';
+import { ZONES, HOME_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
 
 const KEEP_VERSIONS = 20;
@@ -167,6 +167,7 @@ export default async function pagesRoutes(app) {
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
       path: z.string().trim().max(100).optional(),
+      template: z.enum(['classic', 'premium']).optional(), // modèle de l'accueil : « premium » = sections de l'accueil Premium
     }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: 'Requête invalide' });
     const b = body.data;
@@ -189,7 +190,7 @@ export default async function pagesRoutes(app) {
     if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [b.kind, path, title, b.kind === 'home' ? homeTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
+      [b.kind, path, title, b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : emptyContent(b.kind), req.user.sub])).rows[0];
     req.auditSummary = `Page « ${title} » (${path}) créée`;
     return reply.code(201).send(full(r));
   });

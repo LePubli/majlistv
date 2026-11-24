@@ -2,30 +2,25 @@
 // Pied de page du thème Premium : reproduction du pied de page de la maquette V20 (rangée de liens, puis marque,
 // texte et ©). Les liens de la maquette sont remplacés par les vraies pages du site ; les liens légaux restent
 // obligatoires. Langue et thème se choisissent ici (un visiteur doit pouvoir quitter le thème sans compte).
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '../Providers';
 import SkinPicker from '../SkinPicker';
 import { LOCALES } from '../../lib/locales';
 import { BrandWord } from './PmBrand';
+import { MenuLink } from '../MenuDropdown';
+import { defaultList, resolveMenu } from '../../lib/menus';
+import { MENUS } from '../../lib/navcfg';
+import { pmFooterDefaults } from '../../lib/navDefaults';
 
 export default function PmFooter() {
-  const { t, appName, kid, feat, user, locale } = useApp();
+  const { t, appName, kid, feat, user, locale, layout } = useApp();
   const path = usePathname() || '/';
   const router = useRouter();
   if (kid || path.startsWith('/studio') || path.startsWith('/admin')) return null;
-  const links = [
-    { href: user ? '/account' : '/login', label: user ? t('account') : t('login'), on: true },
-    { href: '/pricing', label: t('pricing'), on: true },
-    { href: '/catalogue', label: t('hmSearch'), on: true },
-    { href: '/learning', label: t('navLearn'), on: feat('learning') },
-    { href: '/application', label: t('pwaNav'), on: feat('app_install') },
-    { href: '/chaines', label: t('spTitle'), on: feat('channels') },
-    { href: '/legal/mentions-legales', label: t('legalNotice'), on: true },
-    { href: '/legal/cgv', label: t('legalTerms'), on: true },
-    { href: '/legal/confidentialite', label: t('legalPrivacy'), on: true },
-    { href: '/licences', label: t('licNav'), on: true },
-  ].filter((x) => x.on);
+  // Liens d'origine de la maquette ; un menu affecté à « Site — pied de page » (Admin → Menus) les remplace, les trois liens légaux restent obligatoires.
+  const D = pmFooterDefaults({ t, feat, user });
+  const custom = layout?.menus?.web_footer;
+  const links = custom ? resolveMenu(custom, D, { user, lang: locale, required: MENUS.footer.required }) : defaultList(D);
   const setLocale = (e) => {
     document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`;
     router.refresh();
@@ -34,7 +29,7 @@ export default function PmFooter() {
     <div className="v20-app v20-part">
       <footer className="v20-footer">
         <nav className="v20-shell v20-mv20-footer-links" aria-label={t('legalNav')}>
-          {links.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
+          {links.map((l) => <MenuLink key={l.key} it={l} className={l.cls || undefined}>{l.label}</MenuLink>)}
         </nav>
         <div className="v20-shell v20-footer-inner">
           <div className="v20-brand"><img src="/brand/emblem-bleu-s.png" alt="" width="26" height="28" /><BrandWord name={appName} /></div>
