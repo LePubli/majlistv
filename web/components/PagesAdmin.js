@@ -9,7 +9,7 @@ import { useApp } from './Providers';
 import { Page as BmPage, Metrics, Panel, Cols, SelectList, Badge, Btn, Meta } from './backoffice/Kit';
 import { BlockEditor, TextField, MediaField, LANG_NAMES } from './PageFields';
 import NavEditor from './NavAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../lib/blocks';
 
 const DEVICE_SIZES = [{ id: 390, label: 'Téléphone' }, { id: 768, label: 'Tablette' }, { id: 1024, label: 'Petit écran' }, { id: 1440, label: 'Grand écran' }];
 const KNOWN_PATHS = [
@@ -377,7 +377,7 @@ function Editor({ pageId, onBack, pages }) {
                 {adding === zone ? (
                   <div className="pe-types" role="group" aria-label="Choisir un type de bloc">
                     <p className="pe-types-title">Contenu écrit par vous</p>
-                    {TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t) && !PM_CAT_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
+                    {TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t) && !PM_CAT_TYPES.includes(t) && !WATCH_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
                     <p className="pe-types-title">Données du site (mises à jour automatiquement)</p>
                     {TYPE_ORDER.filter((t) => DATA_TYPES.includes(t)).map((t) => <button key={t} type="button" onClick={() => add(zone, t)}><strong>{BLOCK_TYPES[t].label}</strong><span>{BLOCK_TYPES[t].hint}</span></button>)}
                     {skin === 'premium' && <p className="pe-types-title">Accueil Premium (sections de l’accueil du thème)</p>}

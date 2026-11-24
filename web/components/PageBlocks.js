@@ -169,7 +169,7 @@ function Block({ b, lang, ctx = {} }) {
     }
     case 'spacer': return <div className="pb-spacer" style={{ height: Math.max(8, Math.min(240, Number(p.size) || 40)) }} aria-hidden="true" />;
     case 'divider': return <hr className="pb-divider" />;
-    default: return <DataBlock b={b} lang={lang} />; // blocs « données du site » (étape H) ; null pour un type inconnu
+    default: return <DataBlock b={b} lang={lang} preview={ctx.preview} />; // blocs « données du site » (étape H) ; null pour un type inconnu
   }
 }
 

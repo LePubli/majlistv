@@ -4,6 +4,7 @@
 //   custom : page créée dans l'administration, adresse /p/<nom> (zone « main »).
 //   slot   : blocs ajoutés avant / après une page EXISTANTE du site (adresse exacte, ex. /pricing).
 //   layout : « En-tête et pied de page » : barre d'annonce et blocs au-dessus du pied de page (zones topbar / footerTop) + réglages de navigation (content.nav). Une seule (/_layout).
+//   watch : la fiche vidéo recomposée en blocs (adresse interne /_watch, zone « main », sections « Fiche : … »). Une seule. Non publiée : la fiche d'origine reste.
 //   catalogue : le Catalogue du thème Premium recomposé en blocs (adresse interne /_catalogue, zone « main »). Une seule. Non publiée : le Catalogue d'origine reste.
 //   home   : l'accueil des membres entièrement composé en blocs (adresse interne /_home, zone « main »). Une seule. Non publiée : l'accueil d'origine reste.
 // Chaque page a une version publiée et un brouillon (comme les thèmes de l'étape I1).
@@ -23,7 +24,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, HOME_PATH, CATALOGUE_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate } from '../blocks.js';
+import { ZONES, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
 import { getSetting } from '../settings.js';
 
@@ -32,7 +33,7 @@ const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
 export const WILDCARD_SLOTS = ['/conferences/*', '/series/*', '/catalogue/*'];
-const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|_catalogue|_layout|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|_catalogue|_watch|_layout|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
 export function imageFormat(buf) {
@@ -175,7 +176,7 @@ export default async function pagesRoutes(app) {
 
   app.post('/admin/pages', admin, async (req, reply) => {
     const body = z.object({
-      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'layout']),
+      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch', 'layout']),
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
       path: z.string().trim().max(100).optional(),
@@ -191,6 +192,8 @@ export default async function pagesRoutes(app) {
       path = `/p/${slug}`; title = b.title;
     } else if (b.kind === 'home') {
       path = HOME_PATH; title = 'Accueil des membres';
+    } else if (b.kind === 'watch') {
+      path = WATCH_PATH; title = 'Fiche vidéo';
     } else if (b.kind === 'catalogue') {
       path = CATALOGUE_PATH; title = 'Catalogue';
     } else if (b.kind === 'layout') {
@@ -202,10 +205,10 @@ export default async function pagesRoutes(app) {
       if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration, le Studio ni l’espace Kids' });
       title = b.title || (path === '/' ? 'Accueil' : path);
     }
-    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'catalogue' ? 'Le Catalogue en blocs existe déjà : modifiez-le dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
+    if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'catalogue' ? 'Le Catalogue en blocs existe déjà : modifiez-le dans la liste' : b.kind === 'watch' ? 'La fiche vidéo en blocs existe déjà : modifiez-la dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [b.kind, path, title, b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
+      [b.kind, path, title, b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : b.kind === 'watch' ? watchTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
     req.auditSummary = `Page « ${title} » (${path}) créée`;
     return reply.code(201).send(full(r));
   });

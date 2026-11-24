@@ -28,6 +28,8 @@ import { ActionTile, MoreMenu, PlayerSettings, ICONS } from '../../../components
 import { useTalkStats } from '../../../lib/stats';
 import { getResult, saveResult, addPending, removePending, getPending } from '../../../lib/quizLocal';
 import InviteCard from '../../../components/InviteCard';
+import { BlocksView } from '../../../components/PageBlocks';
+import { WatchCtx } from '../../../components/WatchCtx';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
@@ -41,6 +43,15 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const [laterMsg, setLaterMsg] = useState('');
   useEffect(() => { if (!laterMsg) return undefined; const k = setTimeout(() => setLaterMsg(''), 3500); return () => clearTimeout(k); }, [laterMsg]);
   const router = useRouter();
+  // Étape 6b : fiche vidéo recomposée dans l'éditeur (adresse interne /_watch). undefined = on vérifie, null = pas de fiche en blocs : la fiche d'origine s'affiche.
+  const { ready } = useApp();
+  const [watchPage, setWatchPage] = useState(undefined);
+  useEffect(() => {
+    if (!ready) return undefined;
+    let dead = false;
+    call('/pages/view?path=%2F_watch').then((r) => { if (!dead) setWatchPage(r.ok && r.data?.zones?.main ? r.data : null); }).catch(() => { if (!dead) setWatchPage(null); });
+    return () => { dead = true; };
+  }, [call, ready, user?.id]);
   const [talk, setTalk] = useState(undefined);
   const [resumeMs, setResumeMs] = useState(0);
   const [previewEnded, setPreviewEnded] = useState(false);
@@ -416,8 +427,8 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
   const stepNo = (k) => String(stepOrder.indexOf(k) + 1);
   const openNotes = () => { setTab('notes'); setTimeout(() => document.getElementById('tab-notes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 40); };
 
-  return (
-    <main className="page watch watch-b">
+  const stageSec = (
+    <>
       <Link className="wb-back" href={ctx ? `/series/${ctx.id}` : '/catalogue'}><span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span> {ctx ? t('wbBackSeries') : t('wbBack')}</Link>
       <Crumbs items={[['/catalogue', t('navCatalogue')], ...(talk.format ? [[`/catalogue?format=${talk.format}`, formatName(talk.format)]] : []), [null, talk.title]]} />
 
@@ -541,6 +552,10 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
         </div>
       </section>
 
+    </>
+  );
+  const noticesSec = (
+    <>
       {!previewEnded && lock}
       {talk.visible === false && (
         <p className="notice" role="status">
@@ -559,7 +574,11 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
       {transcribing && <p className="meta">{t('transcribing')}{talk.transcriptStatus === 'processing' ? ` ${talk.transcriptProgress} %` : ''}</p>}
       {hasPlayer && talk.insightsPending && <p className="meta">{t('insightsWaiting')}</p>}
 
-      <div className="wb-grid">
+    </>
+  );
+  const gridSec = (side = 'right') => (
+    <>
+      <div className={`wb-grid wb-side-${side}`}>
         <div className="wb-main">
           {quizOn && (
             <aside className="wb-banner" aria-label={t('wbBannerTitle')}>
@@ -606,7 +625,7 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
           {practiceOn && !practiceOpen && !hasPlayer && <PracticeBlock ref={practiceRef} talkId={id} t={t} call={call} user={user} highlight={practiceHl} onSeek={hasPlayer ? seekTo : undefined} />}
         </div>
 
-        {(learnOn || notesOn || ctx) && (
+        {side !== 'hidden' && (learnOn || notesOn || ctx) && (
           <aside className="wb-side" aria-label={t('wbSide')} ref={sideRef}>
             {(learnOn || notesOn) && (
               <section className="wb-learn" aria-labelledby="wb-learn-title" ref={quizRef}>
@@ -681,12 +700,15 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
         )}
       </div>
 
-      {extra}
+    </>
+  );
+  const nextSec = (max = 8) => (
+    <>
       {similar.length > 0 && (
         <section className="wb-next" aria-labelledby="wb-next-title">
           <h2 id="wb-next-title">{ctx ? t('sameVein') : t('nextTitle')}</h2>
           <ul className="wb-row">
-            {similar.slice(0, 8).map((x) => {
+            {similar.slice(0, max).map((x) => {
               const th = thumbOf(x);
               return (
                 <li key={x.id}>
@@ -703,7 +725,29 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
           </ul>
         </section>
       )}
-      <BooksBlock kind="talks" id={id} />
+    </>
+  );
+  const booksSec = <BooksBlock kind="talks" id={id} />;
+  // Fiche en blocs publiée : chaque bloc « Fiche : … » dessine la section correspondante (même code que la fiche d'origine), entre les blocs libres.
+  if (watchPage) {
+    const sections = { w_stage: () => stageSec, w_notices: () => noticesSec, w_grid: (p) => gridSec(p.side || 'right'), w_next: (p) => nextSec(Math.min(8, Math.max(2, Number(p.max) || 8))), w_books: () => booksSec };
+    return (
+      <main className="page watch watch-b watch-blocks">
+        <WatchCtx.Provider value={{ sections }}>
+          <BlocksView blocks={watchPage.zones.main} locale={locale} />
+        </WatchCtx.Provider>
+        {extra}
+      </main>
+    );
+  }
+  return (
+    <main className="page watch watch-b">
+      {stageSec}
+      {noticesSec}
+      {gridSec()}
+      {extra}
+      {nextSec()}
+      {booksSec}
     </main>
   );
 }

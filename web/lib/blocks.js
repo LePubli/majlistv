@@ -12,8 +12,9 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], layout: ['topbar', 'footerTop'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
+export const WATCH_PATH = '/_watch'; // adresse interne de la fiche vidéo en blocs (page « watch »)
 export const CATALOGUE_PATH = '/_catalogue'; // adresse interne du Catalogue en blocs (page « catalogue », thème Premium)
 export const LAYOUT_PATH = '/_layout'; // adresse interne de « En-tête, menus et pied de page » (page « layout »)
 export const ZONE_LABELS = { main: 'Contenu de la page', before: 'Avant le contenu de la page', after: 'Après le contenu de la page', topbar: 'Barre d’annonce (tout en haut du site, au-dessus de l’en-tête)', footerTop: 'Au-dessus du pied de page (sur toutes les pages)' };
@@ -191,16 +192,28 @@ export const BLOCK_TYPES = {
   pm_cat_cross: {
     label: 'Catalogue : liens Apprendre et Kids', hint: 'Les deux grandes cartes du bas du Catalogue (si ces rubriques sont actives).', fields: [], sample: {},
   },
+  // ---- Sections de la fiche vidéo (étape 6b, page « Fiche vidéo ») : le contenu vient de la vidéo affichée ; seules la place, le style et l'affichage se règlent.
+  w_stage: { label: 'Fiche : lecteur et titre', hint: 'Lien de retour, fil d’Ariane, lecteur vidéo, titre, actions (liste, partage, vitesse…). Ne le retirez pas : sans lui, plus de lecteur.', fields: [], sample: {} },
+  w_notices: { label: 'Fiche : messages', hint: 'Invitation à s’abonner, bandeaux de brouillon, quiz à reprendre, transcription en cours.', fields: [], sample: {} },
+  w_grid: {
+    label: 'Fiche : contenu et Apprendre', hint: 'À gauche : modules, onglets (À propos, Questions, Notes), transcription. À côté : parcours Apprendre (quiz, révision, pratique) et épisodes de la série.',
+    fields: [S('side', 'Place du parcours Apprendre', [['right', 'À droite'], ['left', 'À gauche'], ['below', 'Sous le contenu'], ['hidden', 'Masqué']], 'right')], sample: {},
+  },
+  w_next: { label: 'Fiche : à suivre', hint: 'Rangée de vidéos « À suivre » / « Dans la même veine ».', fields: [N('max', 'Nombre de vidéos', 2, 8, 8)], sample: {} },
+  w_books: { label: 'Fiche : livres cités', hint: 'Les livres liés à la vidéo, quand il y en a.', fields: [], sample: {} },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider', 'w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 // Sections de l'accueil Premium : proposées seulement quand le thème du site est Premium (l'éditeur les range à part).
 export const PM_TYPES = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn'];
 // Sections du Catalogue Premium (page « catalogue ») : même principe, rangées dans l'éditeur sous « Catalogue Premium ».
 export const PM_CAT_TYPES = ['pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross'];
+
+// Sections de la fiche vidéo : réservées à la page « Fiche vidéo » (kind watch).
+export const WATCH_TYPES = ['w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books'];
 
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
@@ -338,6 +351,7 @@ export function cleanContent(content, kind, strict = true) {
   const cleanBlock = (b, at, depth) => {
     if (!b || typeof b !== 'object' || Array.isArray(b)) { err(at, 'Bloc invalide'); return null; }
     const def = BLOCK_TYPES[b.type];
+    if (def && WATCH_TYPES.includes(b.type) && kind !== 'watch') { err(at, 'Cette section n’existe que sur la page « Fiche vidéo »'); return null; }
     if (def?.container && depth > 1) { err(`${at}.type`, 'Les colonnes ne s’imbriquent que sur deux niveaux'); return null; }
     if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return null; }
     if (typeof b.id !== 'string' || !/^[A-Za-z0-9_-]{4,24}$/.test(b.id)) err(`${at}.id`, 'Identifiant de bloc invalide');
@@ -447,6 +461,11 @@ export function blockSummary(b, lang = 'fr') {
 export function premiumHomeTemplate() {
   const mk = (type) => newBlock(type);
   return { meta: {}, zones: { main: PM_TYPES.map(mk) } };
+}
+
+// ---- Modèle de la fiche vidéo : les cinq sections de la fiche d'origine, dans le même ordre.
+export function watchTemplate() {
+  return { meta: {}, zones: { main: WATCH_TYPES.map((t) => newBlock(t)) } };
 }
 
 // ---- Modèle du Catalogue Premium : les cinq sections du Catalogue d'origine, dans le même ordre.

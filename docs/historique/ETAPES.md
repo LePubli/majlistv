@@ -10360,3 +10360,18 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Bloc Titre → Style → Éléments du bloc → Titres : taille 48, graisse très grasse. Bloc Colonnes → glisser un second bloc Colonnes dans sa colonne 1.
 
 **Testé / non testé / limites.** Voir ligne 356 du registre.
+
+
+## Éditeur visuel — étape 6b : fiche vidéo composable (24/11)
+
+**Description.** Nouvelle page dans Admin → Éditeur du site → Pages : « + Recomposer la fiche vidéo ». Elle remplace la fiche de toutes les vidéos par cinq sections que l'on déplace, masque ou style : *Fiche : lecteur et titre*, *messages*, *contenu et Apprendre* (réglage : parcours à droite / gauche / sous le contenu / masqué), *à suivre* (réglage : 2 à 8 vidéos), *livres cités*. Entre elles, on glisse n'importe quel bloc (texte, image, colonnes, bouton…). Le lecteur, le quiz, les notes, le paiement et la transcription ne sont pas réécrits : `web/app/talks/[id]/TalkClient.js` découpe sa fiche en cinq morceaux (`stageSec`, `noticesSec`, `gridSec`, `nextSec`, `booksSec`) affichés soit dans l'ordre d'origine, soit par les blocs via `web/components/WatchCtx.js`. Les sections n'existent que sur cette page (refusées ailleurs).
+
+**Prérequis.** Migration 130 (automatique au démarrage de l'API).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** La fiche d'origine revient toujours en supprimant la page « Fiche vidéo » (ou en ne la publiant pas). Plus de lecteur : la section « lecteur et titre » a été retirée de la page. Mise en page cassée : `/pages/view?path=%2F_watch` doit renvoyer les blocs publiés.
+
+**Exemples.** Éditeur → Pages → « + Recomposer la fiche vidéo » → glisser un bloc Texte entre « lecteur » et « contenu » → réglage de « contenu et Apprendre » : parcours à gauche → Publier → ouvrir une vidéo.
+
+**Testé / non testé / limites.** Voir ligne 357 du registre.

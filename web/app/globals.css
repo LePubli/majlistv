@@ -4240,3 +4240,11 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .pb.el-bc :is(.btn, button.btn, a.btn) { color: var(--el-bc) !important; }
 .pb.el-br :is(.btn, button.btn, a.btn) { border-radius: var(--el-br) !important; }
 .pb.el-ir img { border-radius: var(--el-ir) !important; }
+
+/* Étape 6b : fiche vidéo recomposée en blocs (page « Fiche vidéo »). Place du parcours Apprendre (réglage du bloc « Fiche : contenu et Apprendre »). */
+.watch-blocks > .pb { min-width: 0; }
+.wb-grid.wb-side-left { grid-template-columns: 360px minmax(0, 1fr); }
+.wb-grid.wb-side-left .wb-side { order: -1; }
+.wb-grid.wb-side-below, .wb-grid.wb-side-hidden { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 960px) { .wb-grid.wb-side-left { grid-template-columns: minmax(0, 1fr); } .wb-grid.wb-side-below .wb-side { order: 0; } }
+.pb-placeholder { padding: 14px 16px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
