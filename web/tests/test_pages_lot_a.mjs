@@ -1,11 +1,21 @@
 // Lot A : annuaire des pages et zones « toutes les pages de ce genre »
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { SITE_PAGES, WILDCARD_SLOTS, REPLACEABLE_PATHS, wildcardFor } from '../lib/blocks.js';
+import { KIDS_SAFE_TYPES, kidsErrors, isKidsPath, SITE_PAGES, WILDCARD_SLOTS, REPLACEABLE_PATHS, wildcardFor } from '../lib/blocks.js';
 const all = SITE_PAGES.flatMap(([, i]) => i.map(([p]) => p));
 assert.equal(new Set(all).size, all.length, 'aucune adresse en double');
 assert.ok(all.length >= 45, 'annuaire complet');
-assert.ok(all.every((p) => !/^\/(admin|studio|kids|api)/.test(p)), 'ni administration, ni Studio, ni Kids');
+assert.ok(all.every((p) => !/^\/(admin|studio|api)/.test(p)), 'ni administration, ni Studio');
+assert.ok(all.includes('/kids') && all.includes('/kids/watch/*'), 'Kids dans l’annuaire');
+assert.equal(wildcardFor('/kids/histoires/12'), '/kids/histoires/*');
+assert.equal(wildcardFor('/kids/watch/5'), '/kids/watch/*');
+assert.ok(isKidsPath('/kids') && isKidsPath('/kids/x') && !isKidsPath('/kidsx'));
+const mk = (t, cols) => ({ type: t, ...(cols ? { cols } : {}) });
+assert.deepEqual(kidsErrors('/kids', { zones: { before: [mk('text')] } }), {});
+assert.equal(Object.keys(kidsErrors('/kids', { zones: { before: [mk('talks')] } })).length, 1);
+assert.equal(Object.keys(kidsErrors('/kids', { zones: { before: [mk('columns', [[mk('talks')], []])] } })).length, 1, 'colonnes comprises');
+assert.deepEqual(kidsErrors('/pricing', { zones: { before: [mk('talks')] } }), {}, 'seulement sur Kids');
+assert.ok(!KIDS_SAFE_TYPES.includes('video') && !KIDS_SAFE_TYPES.includes('talks'));
 for (const p of ['/', '/pricing', '/login', '/account', '/chaines', '/legal/cgv', '/conferences/*']) assert.ok(all.includes(p), p);
 assert.equal(wildcardFor('/conferences/abc'), '/conferences/*');
 assert.equal(wildcardFor('/talks/xyz'), '/conferences/*', 'fiche par identifiant = même zone');

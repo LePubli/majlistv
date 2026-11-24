@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
+import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
 import { getSetting } from '../settings.js';
 
@@ -33,7 +33,7 @@ const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
 export { WILDCARD_SLOTS };
-const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|_catalogue|_watch|_layout|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_layout|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
 export function imageFormat(buf) {
@@ -52,8 +52,9 @@ const norm = (kind, c) => {
   return { meta: c.meta || {}, zones: { ...base.zones, ...(c.zones || {}) }, ...(kind === 'layout' && c.nav ? { nav: c.nav } : {}) };
 };
 // Blocs (cleanContent) + réglages de navigation (cleanNav) pour une page « layout » → { value, errors }.
-const validate = (kind, content, strict) => {
+const validate = (kind, content, strict, path = '') => {
   const r = cleanContent(content, kind, strict);
+  Object.assign(r.errors, kidsErrors(path, r.value)); // espace Kids : blocs simples seulement
   if (kind === 'layout' && content && typeof content === 'object') {
     const n = cleanNav(content.nav, strict);
     if (n.value) r.value.nav = n.value;
@@ -202,7 +203,7 @@ export default async function pagesRoutes(app) {
       path = (b.path || '').replace(/\/+$/, '') || '/';
       // Adresses « toutes les pages de ce genre » (/conferences/*, /series/*, /chaines/*… : liste SITE_PAGES de blocks.js).
       if (!WILDCARD_SLOTS.includes(path) && (!/^\/[a-z0-9_/-]{0,98}$/.test(path) || path.includes('//'))) return reply.code(400).send({ error: 'Adresse invalide (ex. /pricing)' });
-      if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration, le Studio ni l’espace Kids' });
+      if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration ni sur le Studio' });
       title = b.title || (path === '/' ? 'Accueil' : path);
     }
     if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'catalogue' ? 'Le Catalogue en blocs existe déjà : modifiez-le dans la liste' : b.kind === 'watch' ? 'La fiche vidéo en blocs existe déjà : modifiez-la dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
@@ -251,9 +252,9 @@ export default async function pagesRoutes(app) {
   // ---- Brouillon, publication, mise hors ligne, historique
   app.put('/admin/pages/:id/draft', { ...edit, bodyLimit: 600 * 1024 }, async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const cur = (await pool.query('SELECT kind FROM site_pages WHERE id = $1', [id])).rows[0];
+    const cur = (await pool.query('SELECT kind, path FROM site_pages WHERE id = $1', [id])).rows[0];
     if (!cur) return reply.code(404).send({ error: 'Page introuvable' });
-    const { value, errors } = validate(cur.kind, req.body?.content, false);
+    const { value, errors } = validate(cur.kind, req.body?.content, false, cur.path);
     if (Object.keys(errors).length) return reply.code(400).send({ error: 'Certains réglages sont refusés', errors });
     const r = (await pool.query('UPDATE site_pages SET draft = $2, updated_at = now(), updated_by = $3 WHERE id = $1 RETURNING *', [id, value, req.user.sub])).rows[0];
     return full(r);
@@ -275,7 +276,7 @@ export default async function pagesRoutes(app) {
       const cur = (await client.query('SELECT * FROM site_pages WHERE id = $1 FOR UPDATE', [id])).rows[0];
       if (!cur) { await client.query('ROLLBACK'); return reply.code(404).send({ error: 'Page introuvable' }); }
       if (cur.draft === null) { await client.query('ROLLBACK'); return reply.code(409).send({ error: 'Rien à publier : aucun brouillon' }); }
-      const { value, errors } = validate(cur.kind, cur.draft, true);
+      const { value, errors } = validate(cur.kind, cur.draft, true, cur.path);
       if (Object.keys(errors).length) { await client.query('ROLLBACK'); return reply.code(400).send({ error: 'Certains blocs sont incomplets', errors }); }
       const r = (await client.query(
         'UPDATE site_pages SET published = $2, draft = NULL, live = true, published_at = now(), updated_at = now(), updated_by = $3 WHERE id = $1 RETURNING *', [id, value, req.user.sub])).rows[0];

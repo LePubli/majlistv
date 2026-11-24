@@ -10390,3 +10390,5 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Éditeur → Pages → « Tarifs » → glisser un bloc Texte avant le contenu → Publier. Mentions légales → cocher « Masquer le contenu d'origine » → écrire ses propres mentions en blocs.
 
 **Testé / non testé / limites.** Voir ligne 358 du registre.
+
+**Lot A, suite — espace Kids ouvert (24/11).** Sur demande d'Epok, l'espace Kids entre dans l'éditeur (migration 132 : zones à deux niveaux comme `/kids/histoires/*`). Garde-fou : `KIDS_SAFE_TYPES` (titre, texte, image, bouton, cartes, citation, FAQ, colonnes, espace, séparateur) ; l'API refuse tout autre bloc, colonnes comprises, et la palette de l'éditeur ne propose que ceux-là. Déploiement : mêmes étapes que le lot A.

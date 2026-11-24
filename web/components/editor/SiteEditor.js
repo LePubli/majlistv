@@ -15,7 +15,7 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES } from '../PageFields';
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
@@ -92,12 +92,13 @@ function usePageDoc(pageId, call) {
 }
 
 /* ------------------------------------------------------------------ Panneau « Blocs » */
-function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind }) {
+function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind, pagePath }) {
   const { skin } = useApp();
-  const own = TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t) && !PM_CAT_TYPES.includes(t) && !WATCH_TYPES.includes(t));
-  const data = TYPE_ORDER.filter((t) => DATA_TYPES.includes(t));
-  const pm = skin === 'premium' ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
-  const pmc = skin === 'premium' ? TYPE_ORDER.filter((t) => PM_CAT_TYPES.includes(t)) : []; // sections du Catalogue Premium
+  const own = TYPE_ORDER.filter((t) => (!isKidsPath(pagePath) || KIDS_SAFE_TYPES.includes(t)) && !DATA_TYPES.includes(t) && !PM_TYPES.includes(t) && !PM_CAT_TYPES.includes(t) && !WATCH_TYPES.includes(t));
+  const kids = isKidsPath(pagePath); // espace Kids : blocs simples seulement
+  const data = kids ? [] : TYPE_ORDER.filter((t) => DATA_TYPES.includes(t));
+  const pm = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
+  const pmc = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_CAT_TYPES.includes(t)) : []; // sections du Catalogue Premium
   const watch = pageKind === 'watch' ? TYPE_ORDER.filter((t) => WATCH_TYPES.includes(t)) : []; // sections de la fiche vidéo : seulement sur la page « Fiche vidéo »
   const item = (t) => (
     <li key={t}>
@@ -114,8 +115,8 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind }) {
       <p className="meta small">Glissez un bloc sur la page, ou cliquez pour l’ajouter après le bloc choisi.</p>
       <h3>Contenu écrit par vous</h3>
       <ul className="ed-pal-grid">{own.map(item)}</ul>
-      <h3>Données du site <span className="meta small">(se mettent à jour seules)</span></h3>
-      <ul className="ed-pal-grid">{data.map(item)}</ul>
+      {data.length > 0 && <><h3>Données du site <span className="meta small">(se mettent à jour seules)</span></h3><ul className="ed-pal-grid">{data.map(item)}</ul></>}
+      {kids && <p className="meta small">Espace Kids : seuls les blocs simples sont proposés (pas de vidéos ni de données du catalogue).</p>}
       {pm.length > 0 && <><h3>Accueil Premium <span className="meta small">(sections de l’accueil du thème)</span></h3><ul className="ed-pal-grid">{pm.map(item)}</ul></>}
       {watch.length > 0 && <><h3>Fiche vidéo <span className="meta small">(sections de la fiche d’origine)</span></h3><ul className="ed-pal-grid">{watch.map(item)}</ul></>}
       {pmc.length > 0 && <><h3>Catalogue Premium <span className="meta small">(sections du Catalogue du thème)</span></h3><ul className="ed-pal-grid">{pmc.map(item)}</ul></>}
@@ -633,7 +634,7 @@ export default function SiteEditor() {
               ))}
             </div>
             <div className="ed-panel">
-              {leftTab === 'blocks' && <Palette pageKind={page?.kind} disabled={!content} onAdd={(t) => addBlock(t)} onDragStart={startDrag} onDragEnd={endDrag} />}
+              {leftTab === 'blocks' && <Palette pageKind={page?.kind} pagePath={page?.path} disabled={!content} onAdd={(t) => addBlock(t)} onDragStart={startDrag} onDragEnd={endDrag} />}
               {leftTab === 'tpl' && <Templates disabled={!content} onUse={addTemplate} />}
               {leftTab === 'layers' && content && <Layers content={content} zones={zones} selected={selected} onSelect={(id) => { setSelected(id); setRightOpen(true); }} lang={lang} drag={drag} onDragStart={startDrag} onDragEnd={endDrag} onDrop={dropAt} onNudge={nudge} onDup={dup} onDel={del} errorsByBlock={errorsByBlock.out} />}
               {leftTab === 'layers' && !content && <p className="meta">Choisissez une page.</p>}

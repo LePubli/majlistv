@@ -9,7 +9,7 @@ def ok(c, m):
     print(("OK   " if c else "FAIL ") + m, flush=True)
     if not c: fails += 1
 A = {"authorization": "Bearer " + requests.post(B + "/auth/login", json={"email": "admin@test.local", "password": "AdminPassw0rd-test"}).json()["token"]}
-TESTED = ["/chaines/*", "/books/*", "/legal/*", "/intervenants/*", "/themes/*", "/events/*", "/collections/*", "/shorts/*", "/audyn/*", "/coran/*", "/pricing", "/legal/cgv", "/licences"]
+TESTED = ["/kids", "/kids/histoires/*", "/kids/watch/*", "/chaines/*", "/books/*", "/legal/*", "/intervenants/*", "/themes/*", "/events/*", "/collections/*", "/shorts/*", "/audyn/*", "/coran/*", "/pricing", "/legal/cgv", "/licences"]
 for p in requests.get(B + "/admin/pages", headers=A).json():
     if p["path"] in TESTED: requests.delete(B + f"/admin/pages/{p['id']}", headers=A)
 blk = {"id": "la0000001", "type": "text", "props": {"body": {"fr": "Bloc lot A"}}, "show": {"devices": ["m", "t", "d"], "audience": "all"}, "style": {}}
@@ -25,7 +25,6 @@ for path in ["/chaines/*", "/books/*", "/legal/*", "/intervenants/*", "/themes/*
     ok(path in s and len(s[path]["before"]) == 1, f"{path} : servie par /pages/slots")
     requests.delete(B + f"/admin/pages/{pid}", headers=A)
 ok(requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": "/inconnu/*"}).status_code == 400, "famille inconnue refusée")
-ok(requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": "/kids/*"}).status_code == 400, "Kids : toujours exclu")
 ok(requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": "/admin"}).status_code == 400, "administration : toujours exclue")
 
 # Contenu d'origine masqué : seulement sur les pages d'information
@@ -37,5 +36,24 @@ r = requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": "
 put(pid, {"meta": {"hideOriginal": True}, "zones": {"before": [blk], "after": []}}); requests.post(B + f"/admin/pages/{pid}/publish", headers=A)
 ok("replace" not in requests.get(B + "/pages/slots").json()["slots"]["/pricing"], "page fonctionnelle (tarifs) : contenu d'origine toujours gardé")
 requests.delete(B + f"/admin/pages/{pid}", headers=A)
+# Espace Kids : ouvert, mais blocs simples seulement
+r = requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": "/kids"})
+ok(r.status_code == 201, "Kids : page ouverte à l'éditeur")
+pid = r.json()["id"]
+ok(put(pid, {"meta": {}, "zones": {"before": [blk], "after": []}}).status_code == 200, "Kids : bloc texte accepté")
+talks = {"id": "la0000002", "type": "talks", "props": {}, "show": {"devices": ["m", "t", "d"], "audience": "all"}, "style": {}}
+r = put(pid, {"meta": {}, "zones": {"before": [talks], "after": []}})
+ok(r.status_code == 400 and "Kids" in str(r.json()), "Kids : rangée de vidéos du catalogue refusée")
+video = {**talks, "id": "la0000003", "type": "video", "props": {"url": "https://www.youtube.com/watch?v=abcdefghijk"}}
+ok(put(pid, {"meta": {}, "zones": {"before": [video], "after": []}}).status_code == 400, "Kids : vidéo externe refusée")
+cols = {"id": "la0000004", "type": "columns", "props": {"count": "2"}, "show": {"devices": ["m", "t", "d"], "audience": "all"}, "style": {}, "cols": [[talks], []]}
+ok(put(pid, {"meta": {}, "zones": {"before": [cols], "after": []}}).status_code == 400, "Kids : bloc interdit caché dans une colonne refusé")
+put(pid, {"meta": {}, "zones": {"before": [blk], "after": []}}); requests.post(B + f"/admin/pages/{pid}/publish", headers=A)
+ok(len(requests.get(B + "/pages/slots").json()["slots"].get("/kids", {}).get("before", [])) == 1, "Kids : bloc publié servi")
+requests.delete(B + f"/admin/pages/{pid}", headers=A)
+for path in ["/kids/histoires/*", "/kids/watch/*"]:
+    r = requests.post(B + "/admin/pages", headers=A, json={"kind": "slot", "path": path})
+    ok(r.status_code == 201, f"Kids : zone « toutes les pages » {path}")
+    if r.status_code == 201: requests.delete(B + f"/admin/pages/{r.json()['id']}", headers=A)
 print("TOUT OK" if not fails else f"{fails} ÉCHEC(S)")
 raise SystemExit(1 if fails else 0)

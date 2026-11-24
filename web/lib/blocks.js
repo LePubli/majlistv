@@ -22,17 +22,35 @@ export const SITE_PAGES = [
   ['Pages « toutes les pages de ce genre »', [['/conferences/*', 'Chaque vidéo'], ['/series/*', 'Chaque série'], ['/catalogue/*', 'Chaque catégorie'], ['/chaines/*', 'Chaque chaîne'], ['/collections/*', 'Chaque collection'], ['/shorts/*', 'Chaque short'], ['/intervenants/*', 'Chaque intervenant'], ['/themes/*', 'Chaque thème'], ['/books/*', 'Chaque ouvrage'], ['/events/*', 'Chaque événement'], ['/audyn/*', 'Chaque écoute'], ['/coran/*', 'Chaque sourate'], ['/legal/*', 'Chaque page légale']]],
   ['Apprendre et pratiquer', [['/learning', 'Apprentissage'], ['/pratique', 'Pratique'], ['/priere', 'Prière'], ['/adhkar', 'Adhkar'], ['/coran', 'Coran'], ['/ramadan', 'Ramadan']]],
   ['Compte et abonnement', [['/pricing', 'Tarifs'], ['/login', 'Connexion'], ['/register', 'Inscription'], ['/forgot', 'Mot de passe oublié'], ['/account', 'Mon compte'], ['/library', 'Ma bibliothèque'], ['/lists', 'Mes listes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'], ['/welcome', 'Bienvenue', true]]],
+  ['Espace enfants (Kids)', [['/kids', 'Accueil Kids'], ['/kids/histoires', 'Histoires'], ['/kids/shorts', 'Shorts Kids'], ['/kids/histoires/*', 'Chaque histoire'], ['/kids/serie/*', 'Chaque série Kids'], ['/kids/univers/*', 'Chaque univers Kids'], ['/kids/watch/*', 'Chaque vidéo Kids'], ['/kids/shorts/*', 'Chaque short Kids']]],
   ['Informations', [['/legal/mentions-legales', 'Mentions légales', true], ['/legal/cgv', 'Conditions générales de vente', true], ['/legal/confidentialite', 'Confidentialité', true], ['/licences', 'Licences', true], ['/application', 'Application mobile', true]]],
 ];
 export const WILDCARD_SLOTS = SITE_PAGES.flatMap(([, items]) => items.map(([p]) => p)).filter((p) => p.endsWith('/*'));
 export const REPLACEABLE_PATHS = SITE_PAGES.flatMap(([, items]) => items.filter((i) => i[2]).map(([p]) => p)).concat(['/legal/*']);
 // Zone « toutes les pages de ce genre » qui s'applique à une adresse (null si aucune). /talks/<id> et /conferences/<nom> sont la même fiche.
 export function wildcardFor(path) {
-  const seg = String(path).split('/')[1];
+  const parts = String(path).split('/');
+  const seg = parts[1];
   if (!seg || !String(path).includes('/', 1)) return null;
+  if (seg === 'kids' && parts[2] && WILDCARD_SLOTS.includes(`/kids/${parts[2]}/*`)) return `/kids/${parts[2]}/*`; // espace Kids : familles à deux niveaux
   if (seg === 'talks') return '/conferences/*';
   const w = `/${seg}/*`;
   return WILDCARD_SLOTS.includes(w) ? w : null;
+}
+
+// Espace Kids : seuls des blocs simples (aucune donnée du catalogue adulte, aucune vidéo externe) y sont permis.
+export const KIDS_SAFE_TYPES = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'quote', 'faq', 'columns', 'spacer', 'divider'];
+export const isKidsPath = (path) => /^\/kids(\/|$)/.test(String(path || ''));
+// Erreurs { chemin: message } si un bloc interdit sur Kids se trouve dans ce contenu (colonnes comprises).
+export function kidsErrors(path, content) {
+  const errors = {};
+  if (!isKidsPath(path)) return errors;
+  const walk = (list, at) => (list || []).forEach((b, i) => {
+    if (!KIDS_SAFE_TYPES.includes(b?.type)) errors[`${at}.${i}`] = 'Sur l’espace Kids, seuls les blocs simples sont permis (titre, texte, image, bouton, cartes, colonnes…) : pas de vidéos ni de données du catalogue';
+    (b?.cols || []).forEach((col, c) => walk(col, `${at}.${i}.cols.${c}`));
+  });
+  for (const [z, list] of Object.entries(content?.zones || {})) walk(list, `zones.${z}`);
+  return errors;
 }
 
 export const WATCH_PATH = '/_watch'; // adresse interne de la fiche vidéo en blocs (page « watch »)
