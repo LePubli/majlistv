@@ -11,13 +11,13 @@
 // avant « Publier ». Annuler / rétablir : jusqu'à 100 étapes (Ctrl+Z, Ctrl+Maj+Z). Les opérations sur les blocs sont dans lib/editorOps.js.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../Providers';
-import { BlockEditor, TextField, MediaField, LANG_NAMES } from '../PageFields';
+import { BlockEditor, TextField, MediaField, LANG_NAMES, GlobalsContext } from '../PageFields';
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
 import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
-import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
+import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, reidBlocks, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
 const DEVICES = [{ id: 390, label: 'Téléphone', glyph: '▯' }, { id: 768, label: 'Tablette', glyph: '▭' }, { id: 1024, label: 'Petit écran', glyph: '▬' }, { id: 1440, label: 'Ordinateur', glyph: '▬▬' }];
 const GLYPH = { w_stage: '▶', w_notices: '!', w_grid: '▥', w_next: '↠', w_books: '▤', pm_cat_hero: '▣', pm_cat_chips: '◖', pm_cat_rails: '≣', pm_cat_results: '▦', pm_cat_cross: '↗', hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', pm_hero: '▣', pm_universes: '◉', pm_continue: '◔', pm_rows: '≣', pm_collections: '❖', pm_shorts: '▮', pm_kids: '☺', pm_learn: '✎', columns: '▥', spacer: '↕', divider: '―' };
@@ -204,11 +204,39 @@ function Layers({ content, zones, selected, onSelect, lang, drag, onDragStart, o
   );
 }
 
-/* ------------------------------------------------------------------ Panneau « Modèles » */
-function Templates({ onUse, disabled }) {
+/* ------------------------------------------------------------------ Panneau « Modèles » (lot B : prêts à l'emploi, enregistrés, sections globales) */
+function Templates({ onUse, disabled, saved = [], globals = [], canSaveBlock, canSavePage, isAdmin, onUseSaved, onDeleteSaved, onSaveBlock, onMakeGlobal, onSavePage, onUseGlobal, onOpenGlobal }) {
+  const sections = saved.filter((t) => t.kind === 'section');
   return (
     <div className="ed-tpl">
-      <p className="meta small">Des sections toutes prêtes : cliquez pour les ajouter après le bloc choisi, puis modifiez les textes, les images et les couleurs.</p>
+      {isAdmin && (
+        <div className="ed-tpl-save">
+          <button type="button" className="btn ghost ed-wide" disabled={disabled || !canSaveBlock} onClick={onSaveBlock} title="Garde le bloc choisi pour le réutiliser sur d’autres pages">+ Enregistrer le bloc choisi comme modèle</button>
+          <button type="button" className="btn ghost ed-wide" disabled={disabled || !canSaveBlock} onClick={onMakeGlobal} title="Le bloc devient une section globale : modifiée une fois, elle change partout">⟳ Rendre le bloc choisi global</button>
+          <button type="button" className="btn ghost ed-wide" disabled={disabled || !canSavePage} onClick={onSavePage}>+ Enregistrer cette page comme modèle de page</button>
+          {!canSaveBlock && <p className="meta small">Choisissez d’abord un bloc dans la page pour l’enregistrer ou le rendre global.</p>}
+        </div>
+      )}
+      <h3>Mes modèles de sections ({sections.length})</h3>
+      {sections.length === 0 ? <p className="meta small">Aucun pour l’instant.</p> : (
+        <ul>{sections.map((t) => (
+          <li key={t.id} className="ed-tpl-row">
+            <button type="button" className="ed-tpl-item" disabled={disabled} onClick={() => onUseSaved(t)}><strong>{t.name}</strong><small>{t.description || `${(t.content?.zones?.main || []).length} bloc(s)`}</small></button>
+            {isAdmin && <button type="button" className="ed-tpl-del" aria-label={`Supprimer le modèle ${t.name}`} onClick={() => onDeleteSaved(t)}>✕</button>}
+          </li>
+        ))}</ul>
+      )}
+      <h3>Sections globales ({globals.length})</h3>
+      {globals.length === 0 ? <p className="meta small">Aucune. Choisissez un bloc puis « Rendre le bloc choisi global ».</p> : (
+        <ul>{globals.map((g) => (
+          <li key={g.id} className="ed-tpl-row">
+            <button type="button" className="ed-tpl-item" disabled={disabled} onClick={() => onUseGlobal(g)} title="La poser sur cette page"><strong>{g.title}</strong><small>Poser sur la page</small></button>
+            <button type="button" className="ed-tpl-del" aria-label={`Modifier la section globale ${g.title}`} onClick={() => onOpenGlobal(g.id)}>✎</button>
+          </li>
+        ))}</ul>
+      )}
+      <h3>Modèles prêts à l’emploi</h3>
+      <p className="meta small">Cliquez pour ajouter après le bloc choisi, puis modifiez les textes, les images et les couleurs.</p>
       <ul>
         {TEMPLATES.map((t) => (
           <li key={t.id}><button type="button" className="ed-tpl-item" disabled={disabled} onClick={() => onUse(t)}><strong>{t.label}</strong><small>{t.hint}</small></button></li>
@@ -219,10 +247,13 @@ function Templates({ onUse, disabled }) {
 }
 
 /* ------------------------------------------------------------------ Panneau « Pages » */
-function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
+function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true, saved = [] }) {
   const { skin } = useApp();
   const [title, setTitle] = useState('');
   const [slotOther, setSlotOther] = useState('');
+  const [tplId, setTplId] = useState('');
+  const [globTitle, setGlobTitle] = useState('');
+  const pageTpls = saved.filter((t) => t.kind === 'page' && t.pageKind === 'custom');
   const [msg, setMsg] = useState('');
   const create = async (body) => {
     setMsg('');
@@ -241,7 +272,7 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
     <li key={p.id}>
       <button type="button" className={`ed-page-row${p.id === pageId ? ' on' : ''}`} onClick={() => onOpen(p.id)}>
         <strong>{label || p.title}</strong>
-        <small>{p.kind === 'home' || p.kind === 'layout' || p.kind === 'catalogue' || p.kind === 'watch' ? '' : (p.path || '')}</small>
+        <small>{p.kind === 'home' || p.kind === 'layout' || p.kind === 'catalogue' || p.kind === 'watch' || p.kind === 'global' ? '' : (p.path || '')}</small>
         <span className={`ap-pill${p.live ? ' on' : ''}`}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</span>
         {p.hasDraft && <span className="ap-tag">brouillon</span>}
       </button>
@@ -260,8 +291,15 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
       </ul>
       <h3>Pages créées ({custom.length})</h3>
       <ul>{custom.map((p) => row(p))}</ul>
-      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'custom', title }); }}>
+      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'custom', title, ...(tplId ? { templateId: Number(tplId) } : {}) }); }}>
         <label>Nouvelle page<input type="text" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Ramadan 2027" /></label>
+        {pageTpls.length > 0 && <label>À partir de<select value={tplId} onChange={(e) => setTplId(e.target.value)}><option value="">Une page vide</option>{pageTpls.map((t) => <option key={t.id} value={t.id}>Modèle : {t.name}</option>)}</select></label>}
+        <button type="submit" className="btn">Créer</button>
+      </form>}
+      <h3>Sections globales ({pages.filter((p) => p.kind === 'global').length})</h3>
+      <ul>{pages.filter((p) => p.kind === 'global').map((p) => row(p))}</ul>
+      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'global', title: globTitle }); setGlobTitle(''); }}>
+        <label>Nouvelle section globale<input type="text" required maxLength={120} value={globTitle} onChange={(e) => setGlobTitle(e.target.value)} placeholder="Ex. Bandeau Ramadan" /></label>
         <button type="submit" className="btn">Créer</button>
       </form>}
       <h3>Toutes les pages du site</h3>
@@ -416,6 +454,7 @@ export default function SiteEditor() {
   const canEdit = isAdmin || user?.role === 'moderator'; // modérateur : seulement si l'administrateur l'a autorisé (réglage « Éditeur du site : droits des modérateurs »)
   const [denied, setDenied] = useState(false);
   const [pages, setPages] = useState(null);
+  const [saved, setSaved] = useState([]); // modèles enregistrés (lot B)
   const [pageId, setPageId] = useState(null);
   const doc = usePageDoc(pageId, call);
   const { page, content, commit, undo, redo, errors, save, msg, setMsg } = doc;
@@ -434,17 +473,19 @@ export default function SiteEditor() {
   const toastTimer = useRef(null);
 
   const say = useCallback((text, action) => { setToast({ text, action }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 5000); }, []);
+  const loadSaved = useCallback(async () => { const r = await call('/admin/page-templates'); if (r.ok) setSaved(r.data); }, [call]);
   const loadPages = useCallback(async () => { const r = await call('/admin/pages'); if (r.ok) { setPages(r.data); return r.data; } if (r.status === 403) setDenied(true); return []; }, [call]);
 
   // Au démarrage : liste des pages, puis la page demandée (?page=12), sinon l'accueil, sinon la première.
   useEffect(() => {
     if (!ready || !canEdit) return;
+    loadSaved();
     loadPages().then((list) => {
       const want = Number(new URLSearchParams(window.location.search).get('page'));
       const first = list.find((p) => p.id === want) || list.find((p) => p.kind === 'home') || list[0];
       if (first) setPageId(first.id); else setLeftTab('pages');
     });
-  }, [ready, user, canEdit, loadPages]);
+  }, [ready, user, canEdit, loadPages, loadSaved]);
   const openPage = useCallback(async (id) => {
     if (id === pageId) return;
     await doc.flush();
@@ -486,6 +527,49 @@ export default function SiteEditor() {
     for (let k = 0; k < blocks.length; k++) { next = insertBlock(next, z, at + k, blocks[k], MAX_BLOCKS_PER_ZONE); if (!next) { say('Cette zone est trop pleine pour ce modèle.'); return; } }
     commit(next); setSelected(blocks[0].id); setRightOpen(true); say(`Modèle « ${t.label} » ajouté.`, { label: 'Annuler', run: undo });
   }, [content, selected, zones, commit, undo, say]);
+
+  // ---- Lot B : modèles enregistrés et sections globales
+  const globals = useMemo(() => (pages || []).filter((p) => p.kind === 'global').map((p) => ({ id: p.id, title: p.title, slug: String(p.path || '').replace('/_global/', '') })), [pages]);
+  const topBlock = selected && content ? findBlock(content, selected) : null;
+  const saveBlockTemplate = useCallback(async () => {
+    if (!topBlock) return;
+    const name = (window.prompt('Nom du modèle de section :', '') || '').trim();
+    if (!name) return;
+    const r = await call('/admin/page-templates', { method: 'POST', body: JSON.stringify({ kind: 'section', name, content: { meta: {}, zones: { main: [topBlock.block] } } }) });
+    if (r.ok) { await loadSaved(); say(`Modèle « ${name} » enregistré.`); } else say(r.data?.error || 'Enregistrement impossible.');
+  }, [topBlock, call, loadSaved, say]);
+  const savePageTemplate = useCallback(async () => {
+    if (!content || !page) return;
+    const name = (window.prompt('Nom du modèle de page :', page.title || '') || '').trim();
+    if (!name) return;
+    const r = await call('/admin/page-templates', { method: 'POST', body: JSON.stringify({ kind: 'page', pageKind: page.kind, name, content: { meta: content.meta || {}, zones: content.zones } }) });
+    if (r.ok) { await loadSaved(); say(`Modèle de page « ${name} » enregistré.`); } else say(r.data?.error || 'Enregistrement impossible.');
+  }, [content, page, call, loadSaved, say]);
+  const useSaved = useCallback((t) => addTemplate({ label: t.name, make: () => reidBlocks(t.content?.zones?.main || [], newId) }), [addTemplate]);
+  const deleteSaved = useCallback(async (t) => {
+    if (!window.confirm(`Supprimer le modèle « ${t.name} » ? Les pages déjà créées avec lui ne changent pas.`)) return;
+    const r = await call(`/admin/page-templates/${t.id}`, { method: 'DELETE' });
+    if (r.ok) { await loadSaved(); say('Modèle supprimé.'); } else say(r.data?.error || 'Suppression impossible.');
+  }, [call, loadSaved, say]);
+  const makeGlobal = useCallback(async () => {
+    if (!topBlock || page?.kind === 'global') return;
+    if (topBlock.block.type === 'global') { say('Ce bloc est déjà une section globale.'); return; }
+    const title = (window.prompt('Nom de la section globale :', '') || '').trim();
+    if (!title) return;
+    const c = await call('/admin/pages', { method: 'POST', body: JSON.stringify({ kind: 'global', title }) });
+    if (!c.ok) { say(c.data?.error || 'Création impossible.'); return; }
+    const gid = c.data.id; const slug = String(c.data.path).replace('/_global/', '');
+    const put = await call(`/admin/pages/${gid}/draft`, { method: 'PUT', body: JSON.stringify({ content: { meta: {}, zones: { main: [topBlock.block] } } }) });
+    const pub = put.ok ? await call(`/admin/pages/${gid}/publish`, { method: 'POST' }) : put;
+    if (!pub.ok) { say(pub.data?.error || 'La section globale n’a pas pu être publiée (blocs incomplets ?).'); await call(`/admin/pages/${gid}`, { method: 'DELETE' }); await loadPages(); return; }
+    // Le bloc d'origine est remplacé, à la même place, par un renvoi vers la section globale.
+    const ref = { id: newId(), type: 'global', props: { ref: slug }, show: topBlock.block.show, style: {} };
+    const next = insertBlock(content, topBlock.zone, topBlock.index + 1, ref, MAX_BLOCKS_PER_ZONE);
+    if (next) { commit(removeBlock(next, topBlock.block.id)); setSelected(ref.id); }
+    await loadPages();
+    say(`« ${title} » est maintenant une section globale.`);
+  }, [topBlock, page, content, call, commit, loadPages, say]);
+  const useGlobal = useCallback((g) => addTemplate({ label: g.title, make: () => [{ id: newId(), type: 'global', props: { ref: g.slug }, show: { devices: ['m', 't', 'd'], audience: 'all' }, style: {} }] }), [addTemplate]);
   const nudge = useCallback((id, d) => commit(nudgeBlock(content, id, d)), [content, commit]);
   const dup = useCallback((id) => {
     const r = duplicateBlock(content, id, newId(), MAX_BLOCKS_PER_ZONE);
@@ -587,11 +671,12 @@ export default function SiteEditor() {
   const tools = { start: startDrag, end: endDrag, nudge, dup, del };
 
   return (
+    <GlobalsContext.Provider value={{ list: globals, open: openPage }}>
     <div className="ed-root" lang="fr" dir="ltr" data-editor>
       <header className="ed-top">
         <a className="ed-back" href={isAdmin ? '/admin?tab=pages' : '/'} title="Quitter l’éditeur">{isAdmin ? '← Admin' : '← Site'}</a>
         <button type="button" className="ed-page-btn" onClick={() => { setLeftOpen(true); setLeftTab('pages'); }} aria-label="Changer de page">
-          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && page.kind !== 'watch' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
+          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && page.kind !== 'watch' && page.kind !== 'global' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
         </button>
         <div className="ed-group" role="group" aria-label="Historique des modifications">
           <button type="button" onClick={undo} disabled={!doc.canUndo} aria-label="Annuler (Ctrl+Z)" title="Annuler (Ctrl+Z)">↶</button>
@@ -635,10 +720,10 @@ export default function SiteEditor() {
             </div>
             <div className="ed-panel">
               {leftTab === 'blocks' && <Palette pageKind={page?.kind} pagePath={page?.path} disabled={!content} onAdd={(t) => addBlock(t)} onDragStart={startDrag} onDragEnd={endDrag} />}
-              {leftTab === 'tpl' && <Templates disabled={!content} onUse={addTemplate} />}
+              {leftTab === 'tpl' && <Templates disabled={!content} onUse={addTemplate} saved={saved} globals={globals} isAdmin={isAdmin} canSaveBlock={Boolean(topBlock) && page?.kind !== 'global'} canSavePage={Boolean(content) && ['custom', 'slot', 'home', 'catalogue', 'watch'].includes(page?.kind)} onUseSaved={useSaved} onDeleteSaved={deleteSaved} onSaveBlock={saveBlockTemplate} onMakeGlobal={makeGlobal} onSavePage={savePageTemplate} onUseGlobal={useGlobal} onOpenGlobal={openPage} />}
               {leftTab === 'layers' && content && <Layers content={content} zones={zones} selected={selected} onSelect={(id) => { setSelected(id); setRightOpen(true); }} lang={lang} drag={drag} onDragStart={startDrag} onDragEnd={endDrag} onDrop={dropAt} onNudge={nudge} onDup={dup} onDel={del} errorsByBlock={errorsByBlock.out} />}
               {leftTab === 'layers' && !content && <p className="meta">Choisissez une page.</p>}
-              {leftTab === 'pages' && pages && <PagesList pages={pages} pageId={pageId} onOpen={openPage} reload={loadPages} call={call} isAdmin={isAdmin} />}
+              {leftTab === 'pages' && pages && <PagesList pages={pages} pageId={pageId} onOpen={openPage} reload={loadPages} call={call} isAdmin={isAdmin} saved={saved} />}
               {leftTab === 'style' && <ThemePanel onCss={setThemeCss} />}
             </div>
           </aside>
@@ -691,6 +776,7 @@ export default function SiteEditor() {
       {toast && <div className="ed-toast" role="status">{toast.text}{toast.action && <button type="button" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}</div>}
       {mediaCb && <MediaPicker call={call} onClose={() => setMediaCb(null)} onPick={(id) => { mediaCb(id); setMediaCb(null); }} />}
     </div>
+    </GlobalsContext.Provider>
   );
 }
 

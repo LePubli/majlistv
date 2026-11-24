@@ -87,6 +87,26 @@ function TalksBlock({ p, lang }) {
   );
 }
 
+// Section globale (lot B) : le contenu publié de la page « /_global/<nom> », le même partout où elle est posée. Une section introuvable ou hors ligne ne montre rien.
+function GlobalBlock({ b, lang, ctx }) {
+  const { call, ready, user } = useApp();
+  const ref = b.props?.ref;
+  const [page, setPage] = useState(undefined);
+  useEffect(() => {
+    if (!ref) { setPage(null); return undefined; }
+    if (!ready) return undefined;
+    let dead = false;
+    call(`/pages/view?path=${encodeURIComponent(`/_global/${ref}`)}`).then((r) => { if (!dead) setPage(r.ok && r.data?.zones?.main ? r.data : null); }).catch(() => { if (!dead) setPage(null); });
+    return () => { dead = true; };
+  }, [call, ready, ref, user?.id]);
+  if (!page) return ctx.preview ? <p className="meta small pb-placeholder" role="note">{ref ? (page === undefined ? 'Section globale en chargement…' : `Section globale « ${ref} » : introuvable ou hors ligne.`) : 'Section globale : choisissez laquelle dans les réglages.'}</p> : null;
+  return (
+    <div className="pb-global" data-global={ref}>
+      <BlocksView blocks={page.zones.main} locale={lang} preview={ctx.preview} nested />
+    </div>
+  );
+}
+
 function Block({ b, lang, ctx = {} }) {
   const p = b.props || {};
   const T = (k) => tx(p[k], lang);
@@ -169,6 +189,7 @@ function Block({ b, lang, ctx = {} }) {
     }
     case 'spacer': return <div className="pb-spacer" style={{ height: Math.max(8, Math.min(240, Number(p.size) || 40)) }} aria-hidden="true" />;
     case 'divider': return <hr className="pb-divider" />;
+    case 'global': return <GlobalBlock b={b} lang={lang} ctx={ctx} />;
     default: return <DataBlock b={b} lang={lang} preview={ctx.preview} />; // blocs « données du site » (étape H) ; null pour un type inconnu
   }
 }

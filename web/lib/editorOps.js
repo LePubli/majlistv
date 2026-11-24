@@ -185,3 +185,8 @@ export function redoHistory(h, current) {
   if (!h.future.length) return null;
   return { state: h.future[0], history: { ...h, past: [...h.past, current], future: h.future.slice(1), key: null } };
 }
+
+// Copie de blocs avec de nouveaux identifiants, colonnes comprises (modèles enregistrés, sections globales : chaque pose fabrique des blocs neufs).
+export function reidBlocks(blocks, makeId) {
+  return (blocks || []).map((b) => ({ ...clone(b), id: makeId(), ...(b.cols ? { cols: b.cols.map((col) => reidBlocks(col, makeId)) } : {}) }));
+}

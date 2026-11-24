@@ -10392,3 +10392,18 @@ Résultat attendu du contrôle : 0 échec.
 **Testé / non testé / limites.** Voir ligne 358 du registre.
 
 **Lot A, suite — espace Kids ouvert (24/11).** Sur demande d'Epok, l'espace Kids entre dans l'éditeur (migration 132 : zones à deux niveaux comme `/kids/histoires/*`). Garde-fou : `KIDS_SAFE_TYPES` (titre, texte, image, bouton, cartes, citation, FAQ, colonnes, espace, séparateur) ; l'API refuse tout autre bloc, colonnes comprises, et la palette de l'éditeur ne propose que ceux-là. Déploiement : mêmes étapes que le lot A.
+
+
+## Éditeur visuel — lot B : modèles et sections globales (24/11)
+
+**Description.** Éditeur → onglet « Modèles ». (1) « Enregistrer le bloc choisi comme modèle » garde un bloc (colonnes comprises) ; un clic dans « Mes modèles de sections » le repose avec de nouveaux identifiants. (2) « Enregistrer cette page comme modèle de page » ; Pages → « Nouvelle page » propose « À partir de : Modèle… » (pages libres). (3) « Rendre le bloc choisi global » crée une section globale (page de type `global`, adresse `/_global/<nom>`) et remplace le bloc par un renvoi ; pour la modifier : réglages du bloc → « Modifier cette section globale », ou Pages → Sections globales. Le site affiche son contenu publié (`GlobalBlock` dans `PageBlocks.js`). Tables et routes : `site_templates`, `GET/POST /admin/page-templates`, `DELETE /admin/page-templates/:id` ; création de page avec `templateId`.
+
+**Prérequis.** Migration 133 (automatique au démarrage de l'API).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migrations 131 à 133), puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Section globale vide sur le site : elle doit être publiée (page `/_global/<nom>` « En ligne »). « Rendre global » échoue : un bloc incomplet empêche la publication, compléter puis recommencer. Modèle refusé : un de ses blocs n'est plus valide.
+
+**Exemples.** Bloc Bandeau choisi → Modèles → « Rendre le bloc choisi global » → nom « Bandeau Ramadan » → poser la section sur d'autres pages depuis Modèles → Sections globales → changer le texte une fois, publier : il change partout.
+
+**Testé / non testé / limites.** Voir ligne 359 du registre.

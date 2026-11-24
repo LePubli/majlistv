@@ -149,3 +149,9 @@ body.ed-open { overflow: hidden; }
 .ed-pgroup ul { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .ed-page-row:disabled { opacity: .6; cursor: default; }
 .ed-search { width: 100%; margin: 6px 0 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ed-line); background: var(--ed-panel2); color: inherit; font: inherit; }
+/* Lot B : modèles enregistrés et sections globales */
+.ed-tpl-save { display: grid; gap: 6px; margin-bottom: 10px; }
+.ed-tpl-row { display: flex; gap: 6px; align-items: stretch; }
+.ed-tpl-row .ed-tpl-item { flex: 1; min-width: 0; }
+.ed-tpl-del { flex: none; width: 34px; border-radius: 8px; border: 1px solid var(--ed-line); background: var(--ed-panel2); color: inherit; cursor: pointer; }
+.ed-tpl h3 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ed-muted); }

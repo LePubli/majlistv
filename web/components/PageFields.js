@@ -1,6 +1,6 @@
 'use client';
 // Étape I3 — Champs d'édition d'un bloc (Admin → Pages) : texte par langue, adresse, image, choix, nombre, liste, style.
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { LANGS, COLOR_REFS, COLOR_REF_LABELS, STYLE_ALIGN, STYLE_WIDTH, STYLE_FONTS, STYLE_HOVER, STYLE_ANIM, DEVICES, DEVICE_LABELS, AUDIENCES, BLOCK_TYPES, tx } from '../lib/blocks';
 
 export const LANG_NAMES = { fr: 'Français', en: 'English', ar: 'العربية' };
@@ -90,12 +90,33 @@ export function MediaField({ f, value, onPick, onClear, error }) {
   );
 }
 
+// Sections globales connues de l'éditeur (lot B) : { list: [{ slug, title, id }], open(id) }.
+export const GlobalsContext = createContext({ list: [], open: null });
+function GlobalRefField({ f, value, onChange, error }) {
+  const g = useContext(GlobalsContext);
+  const cur = g.list.find((x) => x.slug === value);
+  return (
+    <div className="pe-f">
+      <label><span className="pe-lab">{f.label}</span>
+        <select value={value || ''} onChange={(e) => onChange(e.target.value || undefined)}>
+          <option value="">Choisir…</option>
+          {g.list.map((x) => <option key={x.slug} value={x.slug}>{x.title}</option>)}
+          {value && !cur && <option value={value}>{value} (introuvable)</option>}
+        </select></label>
+      {cur && g.open && <button type="button" className="btn ghost pe-mini" onClick={() => g.open(cur.id)}>Modifier cette section globale</button>}
+      <p className="meta small">Une section globale se modifie à un seul endroit : le changement vaut partout où elle est posée.</p>
+      {error && <p className="pe-err" role="alert">{error}</p>}
+    </div>
+  );
+}
+
 // Un champ, selon son type. errors : messages de ce bloc, par nom de champ.
 export function Field({ f, value, lang, onChange, onPickMedia, error }) {
   switch (f.kind) {
     case 't': case 'tl': return <TextField f={f} value={value} lang={lang} onChange={onChange} error={error} />;
     case 'url': return <UrlField f={f} value={value} onChange={onChange} error={error} />;
     case 'video': return <VideoField f={f} value={value} onChange={onChange} error={error} />;
+    case 'slug': return <GlobalRefField f={f} value={value} onChange={onChange} error={error} />;
     case 'sel': return <SelectField f={f} value={value} onChange={onChange} />;
     case 'num': return <NumField f={f} value={value} onChange={onChange} error={error} />;
     case 'media': return <MediaField f={f} value={value} onPick={() => onPickMedia((id) => onChange(id))} onClear={() => onChange(undefined)} error={error} />;

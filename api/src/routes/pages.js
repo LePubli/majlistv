@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
+import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, GLOBAL_PREFIX, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
 import { getSetting } from '../settings.js';
 
@@ -33,7 +33,7 @@ const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
 export { WILDCARD_SLOTS };
-const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_layout|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_global|_layout|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
 export function imageFormat(buf) {
@@ -171,13 +171,46 @@ export default async function pagesRoutes(app) {
     return reply.type(m.content_type).send(buf);
   });
 
+  // ------------------------------------------------------------------ Administration : modèles enregistrés (lot B)
+  const tplRow = (r) => ({ id: r.id, kind: r.kind, pageKind: r.page_kind, name: r.name, description: r.description, content: r.content, createdAt: r.created_at });
+  app.get('/admin/page-templates', edit, async () => (await pool.query('SELECT * FROM site_templates ORDER BY created_at DESC, id DESC LIMIT 200')).rows.map(tplRow));
+  app.post('/admin/page-templates', { ...admin, bodyLimit: 600 * 1024 }, async (req, reply) => {
+    const body = z.object({
+      kind: z.enum(['section', 'page']),
+      pageKind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch']).optional(),
+      name: z.string().trim().min(1).max(80),
+      description: z.string().trim().max(200).optional(),
+      content: z.any(),
+    }).safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: 'Requête invalide' });
+    const b = body.data;
+    if (b.kind === 'page' && !b.pageKind) return reply.code(400).send({ error: 'Indiquez le type de la page' });
+    if ((await pool.query('SELECT count(*)::int AS n FROM site_templates')).rows[0].n >= 200) return reply.code(409).send({ error: 'Trop de modèles (200 au maximum) : supprimez-en' });
+    // Une section = des blocs dans la zone « main » (page libre) ; une page = son contenu complet.
+    const kind = b.kind === 'section' ? 'custom' : b.pageKind;
+    const v = validate(kind, b.content, false, '');
+    if (Object.keys(v.errors).length) return reply.code(400).send({ error: 'Certains réglages sont refusés', errors: v.errors });
+    const r = (await pool.query('INSERT INTO site_templates (kind, page_kind, name, description, content, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [b.kind, b.kind === 'page' ? b.pageKind : null, b.name, b.description || '', v.value, req.user.sub])).rows[0];
+    req.auditSummary = `Modèle « ${b.name} » (${b.kind}) enregistré`;
+    return reply.code(201).send(tplRow(r));
+  });
+  app.delete('/admin/page-templates/:id', admin, async (req, reply) => {
+    const { id } = z.object({ id: z.coerce.number().int().positive() }).parse(req.params);
+    const r = (await pool.query('DELETE FROM site_templates WHERE id = $1 RETURNING name', [id])).rows[0];
+    if (!r) return reply.code(404).send({ error: 'Modèle introuvable' });
+    req.auditSummary = `Modèle « ${r.name} » supprimé`;
+    return { ok: true };
+  });
+
   // ------------------------------------------------------------------ Administration : pages
   app.get('/admin/pages', edit, async () => (await pool.query(
     'SELECT id, kind, path, title, live, draft, published_at, updated_at FROM site_pages ORDER BY kind, path')).rows.map(row));
 
   app.post('/admin/pages', admin, async (req, reply) => {
     const body = z.object({
-      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch', 'layout']),
+      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch', 'global', 'layout']),
+      templateId: z.number().int().positive().optional(), // créer à partir d'un modèle de page enregistré (lot B)
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
       path: z.string().trim().max(100).optional(),
@@ -193,6 +226,11 @@ export default async function pagesRoutes(app) {
       path = `/p/${slug}`; title = b.title;
     } else if (b.kind === 'home') {
       path = HOME_PATH; title = 'Accueil des membres';
+    } else if (b.kind === 'global') {
+      if (!b.title) return reply.code(400).send({ error: 'Donnez un nom à la section globale' });
+      const slug = b.slug ? b.slug : slugify(b.title);
+      if (!SLUG.test(slug)) return reply.code(400).send({ error: 'Nom invalide : lettres minuscules, chiffres et tirets' });
+      path = `${GLOBAL_PREFIX}${slug}`; title = b.title;
     } else if (b.kind === 'watch') {
       path = WATCH_PATH; title = 'Fiche vidéo';
     } else if (b.kind === 'catalogue') {
@@ -207,9 +245,19 @@ export default async function pagesRoutes(app) {
       title = b.title || (path === '/' ? 'Accueil' : path);
     }
     if ((await pool.query('SELECT 1 FROM site_pages WHERE path = $1', [path])).rowCount) return reply.code(409).send({ error: b.kind === 'custom' ? 'Une page porte déjà cette adresse' : b.kind === 'home' ? 'L’accueil des membres existe déjà : modifiez-le dans la liste' : b.kind === 'catalogue' ? 'Le Catalogue en blocs existe déjà : modifiez-le dans la liste' : b.kind === 'watch' ? 'La fiche vidéo en blocs existe déjà : modifiez-la dans la liste' : b.kind === 'layout' ? 'Les réglages de l’en-tête et du pied de page existent déjà : modifiez-les dans la liste' : 'Cette page a déjà des blocs : modifiez-la dans la liste' });
+    // Création à partir d'un modèle de page enregistré : même type de page seulement, contenu validé de nouveau.
+    let tplContent = null;
+    if (b.templateId) {
+      const t = (await pool.query("SELECT page_kind, content FROM site_templates WHERE id = $1 AND kind = 'page'", [b.templateId])).rows[0];
+      if (!t) return reply.code(404).send({ error: 'Modèle introuvable' });
+      if (t.page_kind !== b.kind) return reply.code(400).send({ error: 'Ce modèle vient d’un autre type de page' });
+      const v = validate(b.kind, t.content, false, path);
+      if (Object.keys(v.errors).length) return reply.code(400).send({ error: 'Ce modèle n’est plus valide pour cette page', errors: v.errors });
+      tplContent = v.value;
+    }
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [b.kind, path, title, b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : b.kind === 'watch' ? watchTemplate() : emptyContent(b.kind), req.user.sub])).rows[0];
+      [b.kind, path, title, tplContent ?? (b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : b.kind === 'watch' ? watchTemplate() : emptyContent(b.kind)), req.user.sub])).rows[0];
     req.auditSummary = `Page « ${title} » (${path}) créée`;
     return reply.code(201).send(full(r));
   });

@@ -4248,3 +4248,6 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .wb-grid.wb-side-below, .wb-grid.wb-side-hidden { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 960px) { .wb-grid.wb-side-left { grid-template-columns: minmax(0, 1fr); } .wb-grid.wb-side-below .wb-side { order: 0; } }
 .pb-placeholder { padding: 14px 16px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
+
+/* Lot B : section globale posée sur une page (le contenu vient de la page /_global/<nom>) */
+.pb-global { display: contents; }

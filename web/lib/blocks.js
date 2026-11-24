@@ -12,7 +12,7 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], layout: ['topbar', 'footerTop'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], global: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
 // ---- Annuaire des pages du site (lot A de l'éditeur) : toute page publique peut recevoir des blocs avant / après son contenu.
 // [adresse, nom, remplaçable] : « remplaçable » = page d'information dont on peut masquer le contenu d'origine pour le remplacer par ses blocs.
@@ -53,6 +53,7 @@ export function kidsErrors(path, content) {
   return errors;
 }
 
+export const GLOBAL_PREFIX = '/_global/'; // sections globales : une page par section, adresse interne /_global/<nom>
 export const WATCH_PATH = '/_watch'; // adresse interne de la fiche vidéo en blocs (page « watch »)
 export const CATALOGUE_PATH = '/_catalogue'; // adresse interne du Catalogue en blocs (page « catalogue », thème Premium)
 export const LAYOUT_PATH = '/_layout'; // adresse interne de « En-tête, menus et pied de page » (page « layout »)
@@ -240,10 +241,14 @@ export const BLOCK_TYPES = {
   },
   w_next: { label: 'Fiche : à suivre', hint: 'Rangée de vidéos « À suivre » / « Dans la même veine ».', fields: [N('max', 'Nombre de vidéos', 2, 8, 8)], sample: {} },
   w_books: { label: 'Fiche : livres cités', hint: 'Les livres liés à la vidéo, quand il y en a.', fields: [], sample: {} },
+  global: {
+    label: 'Section globale', hint: 'Une section réutilisable : modifiée une fois, elle change partout où elle est posée. Se crée avec « Rendre globale » sur un bloc.',
+    fields: [{ k: 'ref', label: 'Section globale', kind: 'slug' }], sample: {},
+  },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider', 'w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider', 'w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books', 'global'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 // Sections de l'accueil Premium : proposées seulement quand le thème du site est Premium (l'éditeur les range à part).
@@ -338,6 +343,11 @@ function cleanField(f, v) {
       if (v == null || v === '') return undefined;
       if (!videoEmbed(v)) throw new Error('Adresse YouTube, Vimeo ou Dailymotion attendue (https://www.youtube.com/watch?v=…, https://vimeo.com/… ou https://www.dailymotion.com/video/…)');
       return v;
+    case 'slug': { // nom technique (lettres minuscules, chiffres, tirets) : référence d'une section globale
+      if (v == null || v === '') return undefined;
+      if (typeof v !== 'string' || v.length > 60 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v)) throw new Error('Nom invalide');
+      return v;
+    }
     case 'sel': {
       if (v == null) return undefined;
       if (!f.options.some(([o]) => o === String(v))) throw new Error('Choix inconnu');
@@ -391,6 +401,10 @@ export function cleanContent(content, kind, strict = true) {
   const cleanBlock = (b, at, depth) => {
     if (!b || typeof b !== 'object' || Array.isArray(b)) { err(at, 'Bloc invalide'); return null; }
     const def = BLOCK_TYPES[b.type];
+    if (def && b.type === 'global') {
+      if (kind === 'global') { err(at, 'Une section globale ne peut pas en contenir une autre'); return null; }
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(b.props?.ref || '')) || String(b.props.ref).length > 60) { if (strict || b.props?.ref) err(`${at}.props.ref`, 'Choisissez une section globale'); }
+    }
     if (def && WATCH_TYPES.includes(b.type) && kind !== 'watch') { err(at, 'Cette section n’existe que sur la page « Fiche vidéo »'); return null; }
     if (def?.container && depth > 1) { err(`${at}.type`, 'Les colonnes ne s’imbriquent que sur deux niveaux'); return null; }
     if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return null; }
