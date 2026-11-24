@@ -104,6 +104,7 @@ html[data-skin="premium"] .st-univ a:hover, html[data-skin="premium"] .st-univ a
 html[data-skin="premium"] .st-univ span { background: #087CFF; }
 
 /* ---------- Bandeaux de l'accueil ---------- */
+html[data-skin="premium"] .pm-ott-body .kd-band { margin: 30px 0; border-radius: 12px; } /* même largeur et mêmes marges que les rangées et le bandeau Apprendre (la marge latérale --gutter du thème classique les rétrécissait) */
 html[data-skin="premium"] .kd-band { background: linear-gradient(90deg, rgba(23, 12, 74, .95) 0%, rgba(60, 35, 140, .7) 40%, rgba(129, 85, 230, 0) 75%), url('/premium/kids-hero-scene.webp') right center / cover no-repeat, #2A1A7A; border: 1px solid rgba(190, 160, 255, .35); }
 html[data-skin="premium"] .st-learn .today { background: linear-gradient(100deg, rgba(3, 17, 39, .96) 0%, rgba(6, 27, 53, .86) 45%, rgba(6, 27, 53, .35) 100%), url('/premium/coran-large.webp') right center / cover no-repeat, #061B35; box-shadow: inset 0 0 0 1px var(--pm-line); }
 html[data-skin="premium"] .st-home > .ob, html[data-skin="premium"] .evn-card { box-shadow: inset 0 0 0 1px var(--pm-line); }
