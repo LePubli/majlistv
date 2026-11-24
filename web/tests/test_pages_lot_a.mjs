@@ -1,0 +1,22 @@
+// Lot A : annuaire des pages et zones « toutes les pages de ce genre »
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { SITE_PAGES, WILDCARD_SLOTS, REPLACEABLE_PATHS, wildcardFor } from '../lib/blocks.js';
+const all = SITE_PAGES.flatMap(([, i]) => i.map(([p]) => p));
+assert.equal(new Set(all).size, all.length, 'aucune adresse en double');
+assert.ok(all.length >= 45, 'annuaire complet');
+assert.ok(all.every((p) => !/^\/(admin|studio|kids|api)/.test(p)), 'ni administration, ni Studio, ni Kids');
+for (const p of ['/', '/pricing', '/login', '/account', '/chaines', '/legal/cgv', '/conferences/*']) assert.ok(all.includes(p), p);
+assert.equal(wildcardFor('/conferences/abc'), '/conferences/*');
+assert.equal(wildcardFor('/talks/xyz'), '/conferences/*', 'fiche par identifiant = même zone');
+assert.equal(wildcardFor('/chaines/ma-chaine'), '/chaines/*');
+assert.equal(wildcardFor('/legal/cgv'), '/legal/*');
+assert.equal(wildcardFor('/pricing'), null);
+assert.equal(wildcardFor('/inconnu/x'), null);
+assert.ok(WILDCARD_SLOTS.length >= 12);
+assert.ok(REPLACEABLE_PATHS.includes('/legal/cgv') && !REPLACEABLE_PATHS.includes('/login') && !REPLACEABLE_PATHS.includes('/pricing') && !REPLACEABLE_PATHS.includes('/account'), 'seules les pages d’information sont remplaçables');
+const pb = fs.readFileSync(new URL('../components/PageBlocks.js', import.meta.url), 'utf8');
+assert.ok(pb.includes('wildcardFor(path)') && pb.includes('entry.replace ? null : children'), 'PageSlots : zones génériques et remplacement');
+const ed = fs.readFileSync(new URL('../components/editor/SiteEditor.js', import.meta.url), 'utf8');
+assert.ok(ed.includes('SITE_PAGES.map') && ed.includes('hideOriginal'), 'éditeur : annuaire et masquage du contenu d’origine');
+console.log('OK lot A : toutes les pages');

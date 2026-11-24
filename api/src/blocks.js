@@ -14,6 +14,27 @@ export const AUDIENCES = [
 ];
 export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
+// ---- Annuaire des pages du site (lot A de l'éditeur) : toute page publique peut recevoir des blocs avant / après son contenu.
+// [adresse, nom, remplaçable] : « remplaçable » = page d'information dont on peut masquer le contenu d'origine pour le remplacer par ses blocs.
+// Les pages fonctionnelles (connexion, paiement, compte…) gardent toujours leur contenu : on ajoute des blocs autour, on ne les remplace pas.
+export const SITE_PAGES = [
+  ['Pages principales', [['/', 'Accueil (visiteurs)'], ['/catalogue', 'Catalogue (page d’origine)'], ['/series', 'Séries'], ['/themes', 'Thèmes'], ['/chaines', 'Chaînes'], ['/collections', 'Collections'], ['/shorts', 'Shorts'], ['/intervenants', 'Intervenants'], ['/books', 'Ouvrages'], ['/events', 'Événements'], ['/live', 'En direct'], ['/audyn', 'Écoute (Audyn)']]],
+  ['Pages « toutes les pages de ce genre »', [['/conferences/*', 'Chaque vidéo'], ['/series/*', 'Chaque série'], ['/catalogue/*', 'Chaque catégorie'], ['/chaines/*', 'Chaque chaîne'], ['/collections/*', 'Chaque collection'], ['/shorts/*', 'Chaque short'], ['/intervenants/*', 'Chaque intervenant'], ['/themes/*', 'Chaque thème'], ['/books/*', 'Chaque ouvrage'], ['/events/*', 'Chaque événement'], ['/audyn/*', 'Chaque écoute'], ['/coran/*', 'Chaque sourate'], ['/legal/*', 'Chaque page légale']]],
+  ['Apprendre et pratiquer', [['/learning', 'Apprentissage'], ['/pratique', 'Pratique'], ['/priere', 'Prière'], ['/adhkar', 'Adhkar'], ['/coran', 'Coran'], ['/ramadan', 'Ramadan']]],
+  ['Compte et abonnement', [['/pricing', 'Tarifs'], ['/login', 'Connexion'], ['/register', 'Inscription'], ['/forgot', 'Mot de passe oublié'], ['/account', 'Mon compte'], ['/library', 'Ma bibliothèque'], ['/lists', 'Mes listes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'], ['/welcome', 'Bienvenue', true]]],
+  ['Informations', [['/legal/mentions-legales', 'Mentions légales', true], ['/legal/cgv', 'Conditions générales de vente', true], ['/legal/confidentialite', 'Confidentialité', true], ['/licences', 'Licences', true], ['/application', 'Application mobile', true]]],
+];
+export const WILDCARD_SLOTS = SITE_PAGES.flatMap(([, items]) => items.map(([p]) => p)).filter((p) => p.endsWith('/*'));
+export const REPLACEABLE_PATHS = SITE_PAGES.flatMap(([, items]) => items.filter((i) => i[2]).map(([p]) => p)).concat(['/legal/*']);
+// Zone « toutes les pages de ce genre » qui s'applique à une adresse (null si aucune). /talks/<id> et /conferences/<nom> sont la même fiche.
+export function wildcardFor(path) {
+  const seg = String(path).split('/')[1];
+  if (!seg || !String(path).includes('/', 1)) return null;
+  if (seg === 'talks') return '/conferences/*';
+  const w = `/${seg}/*`;
+  return WILDCARD_SLOTS.includes(w) ? w : null;
+}
+
 export const WATCH_PATH = '/_watch'; // adresse interne de la fiche vidéo en blocs (page « watch »)
 export const CATALOGUE_PATH = '/_catalogue'; // adresse interne du Catalogue en blocs (page « catalogue », thème Premium)
 export const LAYOUT_PATH = '/_layout'; // adresse interne de « En-tête, menus et pied de page » (page « layout »)
@@ -345,6 +366,7 @@ export function cleanContent(content, kind, strict = true) {
   // Référencement : image de partage (image envoyée dans les pages) et « ne pas référencer » (hors plan du site, balise noindex).
   try { const c = cleanField({ k: 'image', label: 'Image', kind: 'media' }, meta.image); if (c !== undefined) out.meta.image = c; } catch (e) { err('meta.image', e.message); }
   if (meta.noindex === true) out.meta.noindex = true;
+  if (meta.hideOriginal === true) out.meta.hideOriginal = true; // lot A : masque le contenu d'origine d'une page d'information (seulement honoré sur REPLACEABLE_PATHS)
   const zones = content.zones && typeof content.zones === 'object' ? content.zones : {};
   for (const z of Object.keys(zones)) if (!ZONES[kind].includes(z)) err(`zones.${z}`, 'Zone inconnue');
   const seen = new Set();

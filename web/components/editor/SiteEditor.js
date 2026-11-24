@@ -15,17 +15,11 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES } from '../PageFields';
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
 const DEVICES = [{ id: 390, label: 'Téléphone', glyph: '▯' }, { id: 768, label: 'Tablette', glyph: '▭' }, { id: 1024, label: 'Petit écran', glyph: '▬' }, { id: 1440, label: 'Ordinateur', glyph: '▬▬' }];
-const KNOWN_PATHS = [
-  ['/', 'Accueil'], ['/catalogue', 'Catalogue (page d’origine)'], ['/conferences/*', 'Toutes les pages vidéo'], ['/series/*', 'Toutes les pages série'], ['/catalogue/*', 'Toutes les pages de catégorie'], ['/library', 'Ma bibliothèque'], ['/learning', 'Apprentissage'], ['/account', 'Mon compte'], ['/chaines', 'Chaînes'],
-  ['/collections', 'Collections'], ['/pricing', 'Tarifs'], ['/series', 'Séries'], ['/books', 'Ouvrages'], ['/login', 'Connexion'], ['/register', 'Inscription'],
-  ['/lists', 'Mes listes'], ['/themes', 'Thèmes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'],
-  ['/legal/mentions-legales', 'Mentions légales'], ['/legal/cgv', 'Conditions générales de vente'], ['/legal/confidentialite', 'Confidentialité'],
-];
 const GLYPH = { w_stage: '▶', w_notices: '!', w_grid: '▥', w_next: '↠', w_books: '▤', pm_cat_hero: '▣', pm_cat_chips: '◖', pm_cat_rails: '≣', pm_cat_results: '▦', pm_cat_cross: '↗', hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', pm_hero: '▣', pm_universes: '◉', pm_continue: '◔', pm_rows: '≣', pm_collections: '❖', pm_shorts: '▮', pm_kids: '☺', pm_learn: '✎', columns: '▥', spacer: '↕', divider: '―' };
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const typing = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
@@ -227,7 +221,6 @@ function Templates({ onUse, disabled }) {
 function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
   const { skin } = useApp();
   const [title, setTitle] = useState('');
-  const [slotPath, setSlotPath] = useState('/pricing');
   const [slotOther, setSlotOther] = useState('');
   const [msg, setMsg] = useState('');
   const create = async (body) => {
@@ -241,7 +234,8 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
   const layoutPage = pages.find((p) => p.kind === 'layout');
   const custom = pages.filter((p) => p.kind === 'custom');
   const slots = pages.filter((p) => p.kind === 'slot');
-  const free = KNOWN_PATHS.filter(([p]) => !slots.some((s) => s.path === p));
+  const slotByPath = Object.fromEntries(slots.map((p) => [p.path, p]));
+  const [q, setQ] = useState('');
   const row = (p, label) => (
     <li key={p.id}>
       <button type="button" className={`ed-page-row${p.id === pageId ? ' on' : ''}`} onClick={() => onOpen(p.id)}>
@@ -252,7 +246,6 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
       </button>
     </li>
   );
-  const sp = slotPath === '*' || free.some(([p]) => p === slotPath) ? slotPath : (free[0]?.[0] ?? '*');
   return (
     <div className="ed-pages">
       {msg && <p className="ap-msg" role="alert">{msg}</p>}
@@ -270,16 +263,34 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true }) {
         <label>Nouvelle page<input type="text" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Ramadan 2027" /></label>
         <button type="submit" className="btn">Créer</button>
       </form>}
-      <h3>Blocs sur une page existante ({slots.length})</h3>
-      <ul>{slots.map((p) => row(p))}</ul>
-      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'slot', path: sp === '*' ? slotOther.trim() : sp }); }}>
-        <label>Ajouter des blocs sur
-          <select value={sp} onChange={(e) => setSlotPath(e.target.value)}>
-            {free.map(([p, l]) => <option key={p} value={p}>{l} ({p})</option>)}
-            <option value="*">Autre adresse…</option>
-          </select>
-        </label>
-        {sp === '*' && <input type="text" required value={slotOther} onChange={(e) => setSlotOther(e.target.value)} placeholder="/series/ma-serie" maxLength={200} aria-label="Adresse exacte" />}
+      <h3>Toutes les pages du site</h3>
+      <p className="meta small">Cliquez une page pour la modifier : vous ajoutez vos blocs avant et après son contenu habituel. Une pastille indique celles que vous avez déjà modifiées.</p>
+      <input type="search" className="ed-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher une page…" aria-label="Chercher une page" />
+      {SITE_PAGES.map(([group, items]) => {
+        const list = items.filter(([path, label]) => !q.trim() || `${label} ${path}`.toLowerCase().includes(q.trim().toLowerCase()));
+        if (!list.length) return null;
+        return (
+          <div key={group} className="ed-pgroup">
+            <h4>{group}</h4>
+            <ul>
+              {list.map(([path, label]) => {
+                const ex = slotByPath[path];
+                if (ex) return row(ex, label);
+                return (
+                  <li key={path}>
+                    <button type="button" className="ed-page-row" disabled={!isAdmin} onClick={() => create({ kind: 'slot', path, title: label })} title={isAdmin ? 'Ajouter des blocs sur cette page' : 'Seul un administrateur ajoute une page'}>
+                      <strong>{label}</strong><small>{path}</small><span className="ap-tag">non modifiée</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+      {isAdmin && <form className="ed-new" onSubmit={(e) => { e.preventDefault(); create({ kind: 'slot', path: slotOther.trim() }); }}>
+        <label>Autre adresse
+          <input type="text" required value={slotOther} onChange={(e) => setSlotOther(e.target.value)} placeholder="/series/ma-serie" maxLength={200} aria-label="Adresse exacte" /></label>
         <button type="submit" className="btn">Ajouter</button>
       </form>}
       {isAdmin && <p className="meta small">Menus : <a href="/admin?tab=menus">Admin → Menus</a> · Textes : <a href="/admin?tab=texts">Admin → Textes</a>.</p>}
@@ -691,6 +702,9 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
       {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site. Tant qu’elle n’est pas publiée, l’accueil d’origine reste en place. Sur le thème Premium, ses sections « Premium : … » reproduisent l’accueil d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les blocs « données du site » se mettent à jour tout seuls.</p>}
       {page.kind === 'catalogue' && <p className="meta small">Cette page remplace le Catalogue d’origine (thème Premium). Tant qu’elle n’est pas publiée, le Catalogue d’origine reste en place. Ses cinq sections « Catalogue : … » reproduisent le Catalogue d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les filtres et les résultats suivent les choix de la personne.</p>}
       {page.kind === 'watch' && <p className="meta small">Cette page remplace la fiche d’origine de toutes les vidéos. Tant qu’elle n’est pas publiée, la fiche d’origine reste en place. Ses cinq sections « Fiche : … » reproduisent la fiche d’origine : réordonnez-les, masquez-les, stylez-les, et ajoutez vos propres blocs autour. Gardez « lecteur et titre » : sans lui, plus de lecteur.</p>}
+      {page.kind === 'slot' && REPLACEABLE_PATHS.includes(page.path) && (
+        <label className="pe-check"><input type="checkbox" checked={Boolean(content.meta?.hideOriginal)} onChange={(e) => setMeta('hideOriginal', e.target.checked ? true : undefined)} /> Masquer le contenu d’origine de cette page (n’afficher que mes blocs)</label>
+      )}
       {page.kind === 'layout' && <NavEditor nav={content.nav} onChange={setNav} lang={lang} errors={errors} viewAs={null} onViewAs={() => {}} />}
       {page.kind === 'custom' && (
         <details className="pe-meta" open>

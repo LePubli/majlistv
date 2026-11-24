@@ -10375,3 +10375,18 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Éditeur → Pages → « + Recomposer la fiche vidéo » → glisser un bloc Texte entre « lecteur » et « contenu » → réglage de « contenu et Apprendre » : parcours à gauche → Publier → ouvrir une vidéo.
 
 **Testé / non testé / limites.** Voir ligne 357 du registre.
+
+
+## Éditeur visuel — lot A : toutes les pages du site (24/11)
+
+**Description.** Éditeur → Pages liste maintenant toutes les pages publiques (annuaire `SITE_PAGES` dans `web/lib/blocks.js`, copie `api/src/blocks.js`), groupées et cherchables. Un clic sur une page non modifiée crée ses blocs « avant / après » et l'ouvre. Zones « toutes les pages de ce genre » : `/conferences/*`, `/series/*`, `/catalogue/*`, `/chaines/*`, `/collections/*`, `/shorts/*`, `/intervenants/*`, `/themes/*`, `/books/*`, `/events/*`, `/audyn/*`, `/coran/*`, `/legal/*` (`/talks/<id>` utilise celle des vidéos). Sur les pages d'information (`REPLACEABLE_PATHS`), la case « Masquer le contenu d'origine » ne laisse que les blocs (`meta.hideOriginal`).
+
+**Prérequis.** Migration 131 (automatique au démarrage de l'API).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Puis sur le VPS : `/root/apply-limits.sh`, `grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*`, `nginx -t && systemctl reload nginx`, `bash /root/verify-deploy.sh` (0 échec).
+
+**Debug.** Un bloc n'apparaît pas : la page doit être « En ligne » ; l'API met 30 s à rafraîchir `/pages/slots`. Page d'information vide : décocher « Masquer le contenu d'origine ». Ajouter une page à l'annuaire : `SITE_PAGES` (copier `blocks.js` vers l'API).
+
+**Exemples.** Éditeur → Pages → « Tarifs » → glisser un bloc Texte avant le contenu → Publier. Mentions légales → cocher « Masquer le contenu d'origine » → écrire ses propres mentions en blocs.
+
+**Testé / non testé / limites.** Voir ligne 358 du registre.

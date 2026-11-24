@@ -14,7 +14,7 @@ import { usePathname } from 'next/navigation';
 import { useApp } from './Providers';
 import TalkCard from './TalkCard';
 import { DataBlock } from './HomeBlocks';
-import { tx, validUrl, validMedia, colorCss, fontCss, videoEmbed, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
+import { tx, validUrl, validMedia, colorCss, fontCss, videoEmbed, wildcardFor, DEVICE_LABELS, AUDIENCES } from '../lib/blocks';
 import { DIR } from '../lib/locales';
 
 const media = (id) => (validMedia(id) ? `/api/pages/media/${id}` : null);
@@ -281,15 +281,15 @@ export function PageZone({ path, zone, initial, targeted, className = '' }) {
 export function PageSlots({ slots, children }) {
   const raw = usePathname() || '/';
   const path = raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
-  // Adresse exacte d'abord ; sinon la zone « toutes les pages de ce genre » (/conferences/*, /series/*, /catalogue/*).
-  const wild = path.startsWith('/conferences/') ? '/conferences/*' : path.startsWith('/series/') ? '/series/*' : path.startsWith('/catalogue/') ? '/catalogue/*' : null;
+  // Adresse exacte d'abord ; sinon la zone « toutes les pages de ce genre » (/conferences/*, /series/*, /chaines/*… : voir SITE_PAGES).
+  const wild = wildcardFor(path);
   const key = slots?.[path] ? path : (wild && slots?.[wild] ? wild : null);
   const entry = key ? slots[key] : null;
   if (!entry) return children;
   return (
     <>
       <PageZone path={key} zone="before" initial={entry.before} targeted={entry.targeted} className="pb-before" />
-      {children}
+      {entry.replace ? null : children}
       <PageZone path={key} zone="after" initial={entry.after} targeted={entry.targeted} className="pb-after" />
     </>
   );

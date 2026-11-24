@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
+import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
 import { cleanNav } from '../navcfg.js';
 import { getSetting } from '../settings.js';
 
@@ -32,7 +32,7 @@ const KEEP_VERSIONS = 20;
 const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
-export const WILDCARD_SLOTS = ['/conferences/*', '/series/*', '/catalogue/*'];
+export { WILDCARD_SLOTS };
 const FORBIDDEN_SLOT = /^\/(admin|studio|kids|api|_next|_home|_catalogue|_watch|_layout|pb-preview|p)(\/|$)/;
 
 // Reconnaît le format d'une image à ses premiers octets (on ne se fie jamais à l'extension).
@@ -84,7 +84,7 @@ export async function pageSlots() {
   const slots = {};
   for (const r of rows) {
     const z = norm('slot', r.published).zones;
-    slots[r.path] = { before: onlyPublic(z).before, after: onlyPublic(z).after, targeted: hasTargeted(z) };
+    slots[r.path] = { before: onlyPublic(z).before, after: onlyPublic(z).after, targeted: hasTargeted(z), ...(norm('slot', r.published).meta?.hideOriginal === true && REPLACEABLE_PATHS.includes(r.path) ? { replace: true } : {}) };
   }
   slotCache = { version: crypto.createHash('sha1').update(JSON.stringify(slots)).digest('hex').slice(0, 12), slots };
   slotCacheAt = Date.now();
@@ -200,7 +200,7 @@ export default async function pagesRoutes(app) {
       path = LAYOUT_PATH; title = 'En-tête et pied de page';
     } else {
       path = (b.path || '').replace(/\/+$/, '') || '/';
-      // Adresses « toutes les pages de ce genre » : /conferences/*, /series/*, /catalogue/* (vidéos, séries, catégories).
+      // Adresses « toutes les pages de ce genre » (/conferences/*, /series/*, /chaines/*… : liste SITE_PAGES de blocks.js).
       if (!WILDCARD_SLOTS.includes(path) && (!/^\/[a-z0-9_/-]{0,98}$/.test(path) || path.includes('//'))) return reply.code(400).send({ error: 'Adresse invalide (ex. /pricing)' });
       if (FORBIDDEN_SLOT.test(path)) return reply.code(400).send({ error: 'On ne peut pas ajouter de blocs sur l’administration, le Studio ni l’espace Kids' });
       title = b.title || (path === '/' ? 'Accueil' : path);
