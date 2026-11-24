@@ -13,7 +13,7 @@ assert.match(css, /inset-inline/, 'logique RTL');
 const home = read('components/premium/PmHomeSections.js'); // depuis l'étape 4 de l'éditeur, les sections de l'accueil vivent ici
 assert.match(home, /\/collections\/home/); assert.match(home, /\/shorts\?limit=/); assert.match(home, /feat\('shorts'\)/);
 assert.ok(!/v20-preview-cards/.test(home), 'tuiles de démonstration retirées');
-const cat = read('components/premium/PmCatalogue.js');
+const cat = read('components/premium/PmCatalogue.js') + read('components/premium/PmCatalogueSections.js'); // étape 4b : sections dans un second fichier
 assert.match(cat, /pm-cat-hero/); assert.match(cat, /railMode/);
 assert.match(read('app/(module-shorts)/shorts/page.js'), /ShortsEntry/);
 assert.match(read('components/ShortsEntry.js'), /dataset\.skin === 'premium'/);

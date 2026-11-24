@@ -248,13 +248,16 @@ export function PageZone({ path, zone, initial, targeted, className = '' }) {
 export function PageSlots({ slots, children }) {
   const raw = usePathname() || '/';
   const path = raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
-  const entry = slots?.[path];
+  // Adresse exacte d'abord ; sinon la zone « toutes les pages de ce genre » (/conferences/*, /series/*, /catalogue/*).
+  const wild = path.startsWith('/conferences/') ? '/conferences/*' : path.startsWith('/series/') ? '/series/*' : path.startsWith('/catalogue/') ? '/catalogue/*' : null;
+  const key = slots?.[path] ? path : (wild && slots?.[wild] ? wild : null);
+  const entry = key ? slots[key] : null;
   if (!entry) return children;
   return (
     <>
-      <PageZone path={path} zone="before" initial={entry.before} targeted={entry.targeted} className="pb-before" />
+      <PageZone path={key} zone="before" initial={entry.before} targeted={entry.targeted} className="pb-before" />
       {children}
-      <PageZone path={path} zone="after" initial={entry.after} targeted={entry.targeted} className="pb-after" />
+      <PageZone path={key} zone="after" initial={entry.after} targeted={entry.targeted} className="pb-after" />
     </>
   );
 }

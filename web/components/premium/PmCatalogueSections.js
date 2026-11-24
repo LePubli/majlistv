@@ -1,0 +1,285 @@
+'use client';
+// Catalogue du thème Premium, découpé en sections (étape 4b de l'éditeur visuel).
+// Reproduit le catalogue de la maquette V20 (classes « v20-cv11-… », « pm-cat-… ») avec les vraies données :
+//   1. bannière : « Explorer … », titre, phrase, champ de recherche (/catalogue?q=…) · 2. puces des thèmes (nombre réel de vidéos, GET /talks/facets)
+//   3. rangées par thème (sans filtre) · 4. résultats : formats (GET /formats?used=1), tri, filtres, grille, « Afficher plus » · 5. liens Apprendre et Kids.
+// Mode « séries » (page /series) : mêmes écrans, avec la liste des séries publiées (GET /series).
+// Les filtres sont dans l'adresse (?q=, ?cat=, ?format=, ?sort=…) : le bouton « retour » du navigateur fonctionne.
+import Link from 'next/link';
+import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useApp } from '../Providers';
+import { thumbOf } from '../../lib/thumb';
+import { catalogueTabs } from '../SectionTabs';
+import Glyph from './Glyph';
+import { OttCard, OttRail, useTalkProgress } from './PmOtt';
+import TalkFilters, { FILTER_KEYS, filtersFrom } from '../TalkFilters';
+
+const PAGE = 24;
+const SORTS = ['recent', 'alpha', 'duration'];
+
+/** Adresse du Catalogue (ou de /series) avec les filtres donnés ; les valeurs vides sont retirées. */
+function hrefOf(base, cur, patch) {
+  const q = new URLSearchParams();
+  const v = { ...cur, ...patch };
+  for (const k of ['q', 'cat', 'format', 'sort']) if (v[k] && !(k === 'sort' && v[k] === 'recent')) q.set(k, String(v[k]));
+  for (const k of FILTER_KEYS) if (v[k]) q.set(k, String(v[k])); // phase 5 : langue, audio, sous-titres, durée, niveau, progression, ressources
+  const s = q.toString();
+  return s ? `${base}?${s}` : base;
+}
+
+/** Tout l'état du Catalogue : filtres lus dans l'adresse, données chargées, cartes. */
+export function useCatalogueState(series = false) {
+  const { t, call, ready, user, feat, allCats, formatName, inMyList, toggleMyList, appName, hasSeries, hasBooks } = useApp();
+  const sp = useSearchParams();
+  const router = useRouter();
+  const base = series ? '/series' : '/catalogue';
+  const cur = {
+    q: (sp.get('q') || '').trim().slice(0, 80),
+    cat: /^\d{1,9}$/.test(sp.get('cat') || '') ? sp.get('cat') : '',
+    format: /^[a-z0-9-]{2,40}$/.test(sp.get('format') || '') ? sp.get('format') : '',
+    sort: SORTS.includes(sp.get('sort')) ? sp.get('sort') : 'recent',
+    ...(series ? {} : filtersFrom(sp)), // les filtres de la phase 5 ne concernent que les vidéos
+  };
+  const hasExtras = FILTER_KEYS.some((k) => cur[k]);
+  const [q, setQ] = useState(cur.q);
+  useEffect(() => { setQ(cur.q); }, [cur.q]);
+  const [view, setView] = useState('grid');
+  const roots = useMemo(() => (allCats || []).filter((c) => c.parentId == null), [allCats]);
+  const rootOf = useCallback((id) => { const c = (allCats || []).find((x) => String(x.id) === String(id)); return c ? (c.parentId ?? c.id) : null; }, [allCats]);
+  const curRoot = cur.cat ? rootOf(cur.cat) : null;
+  const catName = cur.cat ? ((allCats || []).find((c) => String(c.id) === cur.cat)?.name || '') : '';
+
+  // Formats qui ont des vidéos (barre du haut).
+  const [formats, setFormats] = useState([]);
+  useEffect(() => { if (!series) call('/formats?used=1', {}, null).then((r) => setFormats(r.ok && Array.isArray(r.data) ? r.data : [])); }, [call, series]);
+
+  // Vidéos (ou séries) affichées, et chiffres.
+  const [items, setItems] = useState(null);
+  const [facets, setFacets] = useState(null);
+  const [allSeries, setAllSeries] = useState(null);
+  const [mySeries, setMySeries] = useState({}); // { idSérie: épisodes terminés } du membre (GET /me/series), vide pour un visiteur
+  const key = JSON.stringify(cur);
+  const params = useCallback((offset) => {
+    const p = new URLSearchParams();
+    if (cur.q) p.set('q', cur.q);
+    if (cur.cat) p.set('category', cur.cat);
+    if (cur.format) p.set('format', cur.format);
+    if (cur.sort !== 'recent') p.set('sort', cur.sort);
+    for (const k of FILTER_KEYS) if (cur[k]) p.set(k, cur[k]);
+    p.set('limit', PAGE); p.set('offset', offset);
+    return p;
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ready || series) return undefined;
+    let dead = false;
+    setItems(null);
+    call('/talks?' + params(0), {}, null).then((r) => { if (!dead) setItems(r.ok ? r.data : []); });
+    const f = params(0); f.delete('limit'); f.delete('offset'); f.delete('sort');
+    call('/talks/facets?' + f, {}, null).then((r) => { if (!dead) setFacets(r.ok ? r.data : null); });
+    return () => { dead = true; };
+  }, [ready, series, call, params]);
+  useEffect(() => { if (series && ready) call('/series?limit=100', {}, null).then((r) => setAllSeries(r.ok && Array.isArray(r.data) ? r.data : [])); }, [series, ready, call]);
+
+  useEffect(() => {
+    if (!series || !user) { setMySeries({}); return undefined; }
+    let dead = false;
+    call('/me/series').then((r) => { if (!dead && r.ok && Array.isArray(r.data)) setMySeries(Object.fromEntries(r.data.map((s) => [s.id, s.watched || 0]))); });
+    return () => { dead = true; };
+  }, [series, user, call]);
+
+  // Mode séries : filtres et tri faits ici (la liste complète tient en une page).
+  const seriesShown = useMemo(() => {
+    if (!series || !allSeries) return null;
+    const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    let list = allSeries.filter((s) => (!cur.cat || String(rootOf(s.categoryId)) === String(curRoot) && (String(cur.cat) === String(curRoot) || String(s.categoryId) === cur.cat))
+      && (!cur.q || norm([s.title, s.speaker, s.summary, s.category].join(' ')).includes(norm(cur.q))));
+    if (cur.sort === 'alpha') list = [...list].sort((a, b) => a.title.localeCompare(b.title));
+    if (cur.sort === 'duration') list = [...list].sort((a, b) => a.episodeCount - b.episodeCount);
+    return list;
+  }, [series, allSeries, key, rootOf, curRoot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const counts = useMemo(() => {
+    const m = {};
+    if (series) { for (const s of allSeries || []) { const r = rootOf(s.categoryId); if (r != null) m[r] = (m[r] || 0) + 1; } return m; }
+    for (const c of facets?.categories || []) m[c.id] = c.n;
+    return m;
+  }, [series, allSeries, facets, rootOf]);
+  const total = series ? (seriesShown ? seriesShown.length : null) : (facets ? facets.total : null);
+  const allTotal = series ? (allSeries?.length ?? null) : null;
+  const shown = series ? seriesShown : items;
+  const [more, setMore] = useState(false);
+  const loadMore = async () => {
+    setMore(true);
+    const r = await call('/talks?' + params(items.length), {}, null);
+    setItems([...items, ...(r.ok ? r.data : [])]);
+    setMore(false);
+  };
+
+  const go = (patch) => router.push(hrefOf(base, cur, patch), { scroll: false });
+  const submit = (e) => { e.preventDefault(); go({ q: q.trim() }); };
+  const listOn = feat('favorites') || feat('watchlater');
+  const tabs = catalogueTabs({ t, feat, hasSeries, hasBooks }).filter(([href]) => href !== '/catalogue' && href !== '/series');
+  const heading = series ? t('pmSeriesTitle') : t('cgTitle');
+  const title = cur.q ? t('cgResults').replace('{q}', cur.q)
+    : [cur.format ? (formatName(cur.format) || cur.format) : '', catName].filter(Boolean).join(' · ') || (series ? t('pmAllSeries') : hasExtras ? t('fltTitle') : t('pmAllContents'));
+
+  // Mode « rangées » (accueil du Catalogue sans filtre) : une rangée par grand thème qui a des vidéos (6 au plus).
+  const [rails, setRails] = useState([]);
+  const railMode = !series && !cur.q && !cur.cat && !cur.format && !hasExtras && cur.sort === 'recent';
+  useEffect(() => {
+    if (!ready || !railMode || !facets) { setRails([]); return undefined; }
+    let dead = false;
+    const withVideos = roots.filter((c) => (counts[c.id] || 0) > 0).slice(0, 6);
+    Promise.all(withVideos.map((c) => call(`/talks?category=${c.id}&limit=10`, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] }))))
+      .then((all) => { if (!dead) setRails(all.filter((x) => x.list.length)); });
+    return () => { dead = true; };
+  }, [ready, railMode, facets, roots, counts, call]);
+  // Avancement réel du membre sur les cartes vidéo affichées (grille et rangées) ; rien pour un visiteur.
+  const prog = useTalkProgress(series ? [] : [...(shown || []).map((x) => x.id), ...(railMode ? rails.flatMap((r) => r.list.map((x) => x.id)) : [])]);
+  const talkCard = (x) => <OttCard key={x.id} x={x} pct={prog[x.id]?.pct} done={prog[x.id]?.done} />;
+  const seriesCard = (x) => {
+    const w = mySeries[x.id] || 0;
+    const full = x.episodeCount > 0 && w >= x.episodeCount;
+    return <OttCard key={x.id} x={x} kind="series" href={`/series/${x.slug || x.id}`} pct={x.episodeCount ? Math.round((Math.min(w, x.episodeCount) / x.episodeCount) * 100) : 0} done={full} />;
+  };
+
+  // Image du bandeau : celle de la première vidéo (ou série) affichée, à défaut le visuel du thème.
+  const heroImg = (shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp';
+  return { series, t, base, cur, hasExtras, q, setQ, roots, curRoot, catName, heading, title, heroImg, tabs, counts, facets, total, allTotal, shown, items, more, loadMore, go, submit, formats, railMode, rails, talkCard, seriesCard, feat, appName, hrefOf, listOn };
+}
+
+// ---------------------------------------------------------------------------------------------------------------- sections
+// Le Catalogue Premium est fait de cinq sections. Dans l'ordre d'origine : bannière, thèmes, rangées, résultats, liens Apprendre / Kids.
+// Chaque section lit l'état partagé (filtres de l'adresse, données chargées) : on peut donc les réordonner ou les mélanger à d'autres blocs.
+const CatCtx = createContext(null);
+export const useCat = () => useContext(CatCtx);
+
+/** Fournit l'état du Catalogue (filtres dans l'adresse, données) à ses sections. */
+export function CatProvider({ series = false, children }) {
+  const c = useCatalogueState(series);
+  return <CatCtx.Provider value={c}>{children}</CatCtx.Provider>;
+}
+
+export function CatHeroSection() {
+  const { series, t, appName, heading, q, setQ, submit, heroImg } = useCat();
+  return (
+    <header className="pm-cat-hero" style={{ '--hero': `url("${String(heroImg).replace(/"/g, '%22')}")` }}>
+      <div className="pm-cat-intro">
+        <span className="pm-cat-eyebrow">{t('pmExploreBrand').replace('{name}', appName)}</span>
+        <h1>{heading}</h1>
+        <p>{series ? t('pmSeriesIntro') : t('pmCatIntro')}</p>
+        <form className="pm-cat-search" role="search" onSubmit={submit}>
+          <span aria-hidden="true"><Glyph name="search" /></span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('pmSearchPh')} aria-label={t('pmSearchPh')} maxLength={80} enterKeyHint="search" autoComplete="off" />
+        </form>
+      </div>
+    </header>
+  );
+}
+
+export function CatChipsSection() {
+  const { series, t, base, cur, roots, curRoot, facets, counts, tabs, hrefOf } = useCat();
+  return (
+    <nav className="pm-cat-chips" aria-label={t('pmCategories')}>
+      <Link href={hrefOf(base, cur, { cat: '' })} className={cur.cat ? undefined : 'pm-on'} aria-current={cur.cat ? undefined : 'page'}>{series ? t('pmAllSeries') : t('cgAll')}</Link>
+      {roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id)).map((c) => {
+        const on = String(curRoot) === String(c.id);
+        return <Link key={c.id} href={hrefOf(base, cur, { cat: String(c.id) })} className={on ? 'pm-on' : undefined} aria-current={on ? 'page' : undefined}>{c.name}</Link>;
+      })}
+      {tabs.map(([href, label]) => <Link key={href} href={href} className="pm-chip-more">{label}</Link>)}
+    </nav>
+  );
+}
+
+export function CatRailsSection() {
+  const { railMode, rails, base, cur, talkCard, hrefOf } = useCat();
+  if (!railMode || !rails.length) return null;
+  return rails.map(({ c, list }) => (
+    <OttRail key={c.id} title={c.name} href={hrefOf(base, cur, { cat: String(c.id) })}>
+      {list.map(talkCard)}
+    </OttRail>
+  ));
+}
+
+export function CatResultsSection() {
+  const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf } = useCat();
+  return (
+    <section className="pm-cat-all" aria-busy={shown === null}>
+      <div className="pm-cat-bar">
+        <div>
+          <h2>{railMode ? t('pmAllContents') : title}</h2>
+          {total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}
+        </div>
+        <div className="pm-cat-tools">
+          {!series && formats.length >= 1 && (
+            <div className="pm-cat-formats" role="group" aria-label={t('cgByFormat')}>
+              <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'pm-on'} aria-current={cur.format ? undefined : 'true'}>{t('pmAll')}</Link>
+              {formats.map((f) => <Link key={f.slug} href={hrefOf(base, cur, { format: f.slug })} className={cur.format === f.slug ? 'pm-on' : undefined} aria-current={cur.format === f.slug ? 'true' : undefined}>{f.name}</Link>)}
+            </div>
+          )}
+          <label className="pm-cat-sort">{t('pmSortBy')} <select value={cur.sort} onChange={(e) => go({ sort: e.target.value })} aria-label={t('pmSortBy')}>
+            <option value="recent">{t('pmSortRecent')}</option>
+            <option value="alpha">{t('pmSortAlpha')}</option>
+            <option value="duration">{series ? t('pmSortEpisodes') : t('pmSortDuration')}</option>
+          </select></label>
+        </div>
+      </div>
+      {!series && <div className="pm-cat-filters"><TalkFilters /></div>}
+      {shown && shown.length === 0 ? (
+        <div className="v20-cv11-empty">
+          <Glyph name="search" />
+          <h3>{t('pmEmptyTitle')}</h3>
+          <p>{t('pmEmptyText')}</p>
+          <Link href={base}>{t('pmShowAll')}</Link>
+        </div>
+      ) : (
+        <div className="pm-cat-grid">
+          {(shown || []).map((x) => (series ? seriesCard(x) : talkCard(x)))}
+        </div>
+      )}
+      {!series && items && total != null && total > items.length && (
+        <div className="v20-cv11-more">
+          <button type="button" onClick={loadMore} disabled={more}>{t('pmShowMore')} <span>{t('pmRemaining').replace('{n}', total - items.length)}</span> ↓</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function CatCrossSection() {
+  const { t, feat, appName } = useCat();
+  if (!(feat('learning') || feat('kids'))) return null;
+  return (
+    <section className="v20-cv11-cross">
+      {feat('learning') && (
+        <Link href="/learning" className="v20-cv11-cross-learn">
+          <span aria-hidden="true"><Glyph name="cap" /></span>
+          <div><b>{t('pmCrossLearn')}</b><small>{t('pmCrossLearnSub')}</small></div>
+          <i aria-hidden="true">↗</i>
+        </Link>
+      )}
+      {feat('kids') && (
+        <Link href="/kids" className="v20-cv11-cross-kids">
+          <span aria-hidden="true"><Glyph name="game" /></span>
+          <div><b>{t('pmCrossKids').replace('{name}', appName.replace(/\s*TV$/i, ''))}</b><small>{t('pmCrossKidsSub')}</small></div>
+          <i aria-hidden="true">↗</i>
+        </Link>
+      )}
+    </section>
+  );
+}
+
+/** Une section du Catalogue posée dans un bloc de l'éditeur (thème Premium seulement, sinon rien). */
+export function PmCatFrame({ type }) {
+  const { skin } = useApp();
+  const inside = useCat();
+  if (skin !== 'premium') return null;
+  const head = type === 'pm_cat_hero' || type === 'pm_cat_chips';
+  const map = { pm_cat_hero: <CatHeroSection />, pm_cat_chips: <CatChipsSection />, pm_cat_rails: <CatRailsSection />, pm_cat_results: <CatResultsSection />, pm_cat_cross: <CatCrossSection /> };
+  const inner = map[type];
+  if (!inner) return null;
+  const frame = <div className="v20-app pm-page pm-ott pm-ott-cat pm-blk">{head ? inner : <div className="pm-ott-body pm-ott-blk">{inner}</div>}</div>;
+  // Hors du Catalogue (page libre, aperçu de l'éditeur) : la section prépare elle-même son état.
+  return inside ? frame : <Suspense fallback={null}><CatProvider>{frame}</CatProvider></Suspense>;
+}

@@ -30,6 +30,7 @@ import { tx } from '../lib/blocks';
 import {
   PmHeroSection, PmUniversesSection, PmContinueSection, PmRowsSection, PmCollectionsSection, PmShortsSection, PmKidsSection, PmLearnSection,
 } from './premium/PmHomeSections';
+import { PmCatFrame } from './premium/PmCatalogueSections';
 
 // Titre d'un bloc : celui saisi dans l'éditeur, à défaut le texte du dictionnaire.
 const useTitle = (p, lang, key) => {
@@ -334,6 +335,7 @@ function PmFrame({ type, p, lang }) {
 // Dessine un bloc « données du site » ; null si le type n'en fait pas partie.
 export function DataBlock({ b, lang }) {
   const p = b.props || {};
+  if (b.type.startsWith('pm_cat_')) return <PmCatFrame type={b.type} />;
   if (b.type.startsWith('pm_')) return <PmFrame type={b.type} p={p} lang={lang} />;
   switch (b.type) {
     case 'featured': return <FeaturedBlock p={p} />;

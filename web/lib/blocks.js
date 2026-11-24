@@ -12,8 +12,9 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], layout: ['topbar', 'footerTop'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
+export const CATALOGUE_PATH = '/_catalogue'; // adresse interne du Catalogue en blocs (page « catalogue », thème Premium)
 export const LAYOUT_PATH = '/_layout'; // adresse interne de « En-tête, menus et pied de page » (page « layout »)
 export const ZONE_LABELS = { main: 'Contenu de la page', before: 'Avant le contenu de la page', after: 'Après le contenu de la page', topbar: 'Barre d’annonce (tout en haut du site, au-dessus de l’en-tête)', footerTop: 'Au-dessus du pied de page (sur toutes les pages)' };
 // Couleurs du thème utilisables dans un bloc (suivent Admin → Apparence) : « @accent » devient var(--accent).
@@ -175,14 +176,31 @@ export const BLOCK_TYPES = {
   pm_learn: {
     label: 'Premium : bandeau Apprendre', hint: 'Bandeau « Mon espace Apprendre » avec la progression du parcours (formule Apprentissage). Invisible si Apprendre est coupé.', fields: [], sample: {},
   },
+  pm_cat_hero: {
+    label: 'Catalogue : bannière et recherche', hint: 'Bannière du Catalogue avec son titre, sa phrase et le champ de recherche.', fields: [], sample: {},
+  },
+  pm_cat_chips: {
+    label: 'Catalogue : thèmes', hint: 'Les puces des grands thèmes (avec leurs liens vers Shorts, Collections, Chaînes…).', fields: [], sample: {},
+  },
+  pm_cat_rails: {
+    label: 'Catalogue : rangées par thème', hint: 'Une rangée par grand thème tant qu’aucun filtre n’est choisi.', fields: [], sample: {},
+  },
+  pm_cat_results: {
+    label: 'Catalogue : résultats et filtres', hint: 'Formats, tri, filtres et grille des vidéos. C’est le cœur du Catalogue : il suit les choix de la personne.', fields: [], sample: {},
+  },
+  pm_cat_cross: {
+    label: 'Catalogue : liens Apprendre et Kids', hint: 'Les deux grandes cartes du bas du Catalogue (si ces rubriques sont actives).', fields: [], sample: {},
+  },
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'columns', 'spacer', 'divider'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 // Sections de l'accueil Premium : proposées seulement quand le thème du site est Premium (l'éditeur les range à part).
 export const PM_TYPES = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn'];
+// Sections du Catalogue Premium (page « catalogue ») : même principe, rangées dans l'éditeur sous « Catalogue Premium ».
+export const PM_CAT_TYPES = ['pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross'];
 
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
@@ -394,6 +412,11 @@ export function blockSummary(b, lang = 'fr') {
 export function premiumHomeTemplate() {
   const mk = (type) => newBlock(type);
   return { meta: {}, zones: { main: PM_TYPES.map(mk) } };
+}
+
+// ---- Modèle du Catalogue Premium : les cinq sections du Catalogue d'origine, dans le même ordre.
+export function premiumCatalogueTemplate() {
+  return { meta: {}, zones: { main: PM_CAT_TYPES.map((t) => newBlock(t)) } };
 }
 
 // ---- Modèle de l'accueil des membres (maquette « Main » ; puis séries, rangées par catégorie et bande Kids, qui existaient déjà)

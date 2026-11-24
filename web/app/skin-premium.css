@@ -673,3 +673,20 @@ html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_hero + .pb[class*="pbt-pm_"
 /* Écarts d'origine : dans la composition d'origine, les marges se confondent ; ici chaque bloc a son enveloppe. */
 html[data-skin="premium"] .pm-blocks-home .pb:has(+ .pbt-pm_kids) .pm-rail:last-child, html[data-skin="premium"] .pm-blocks-home .pb:has(+ .pbt-pm_learn) .pm-rail:last-child { margin-bottom: 0; }
 html[data-skin="premium"] .pm-blocks-home .pb.pbt-pm_kids + .pb.pbt-pm_learn .v20-big-learn-banner { margin-top: 0; }
+
+/* ---- Étape 4b : Catalogue Premium recomposé en blocs. Chaque section est enveloppée par son bloc : on retire ce que l'enveloppe ajoute,
+   pour que le Catalogue en blocs soit identique à celui d'origine tant qu'on n'y touche pas. */
+html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_hero, html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_chips, html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_rails,
+html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_results, html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_cross { padding-block: 0; }
+html[data-skin="premium"] .pm-blocks-cat .pb-in:has(> .pm-blk) { max-width: none; margin: 0; }
+html[data-skin="premium"] .pm-blocks-cat .pm-blk .pm-ott-blk { padding-bottom: 0; }
+html[data-skin="premium"] .pm-blocks-cat > .pb:last-child .pm-ott-blk { padding-bottom: 44px; }
+html[data-skin="premium"] .pm-blocks-cat.pm-nohero { padding-top: 84px; }
+@media (max-width: 890px) { html[data-skin="premium"] .pm-blocks-cat.pm-nohero { padding-top: 64px; } }
+html[data-skin="premium"] .pm-blocks-cat .pm-blk .pm-ott-blk { padding-top: 0; }
+html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_hero + .pb .pm-ott-blk, html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_chips + .pb .pm-ott-blk { padding-top: 22px; }
+html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_rails:has(.pm-rail) + .pb.pbt-pm_cat_results .pm-cat-all { margin-top: 0; } /* l'écart sous la dernière rangée se confond, comme dans l'original, avec la marge de la section résultats */
+/* Étape 4b : la rangée de puces chevauche la bannière (marge négative) ; son bloc passe au-dessus pour ne pas être masqué. */
+html[data-skin="premium"] .pm-blocks-cat .pb.pbt-pm_cat_chips { position: relative; z-index: 3; }
+/* Le cadre de chaque bloc rogne ce qui dépasse (overflow-x caché) : on le libère pour que les puces gardent leur chevauchement sur la bannière. */
+html[data-skin="premium"] .pm-blocks-cat .pm-blk.v20-app { overflow: visible; }

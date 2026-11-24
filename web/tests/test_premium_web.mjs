@@ -78,7 +78,7 @@ for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSu
 assert.match(read('app/catalogue/CatalogueClient.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
 assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
 assert.match(read('app/(module-series)/series/[id]/SeriesClient.js'), /if \(skin === 'premium'\) return <PmSeries id=/);
-const cat = read('components/premium/PmCatalogue.js');
+const cat = read('components/premium/PmCatalogue.js') + read('components/premium/PmCatalogueSections.js'); // étape 4b : sections dans un second fichier
 for (const c of ['pm-cat-hero', 'pm-cat-search', 'pm-cat-chips', 'pm-cat-formats', 'pm-cat-grid', 'OttCard', 'OttRail', 'v20-cv11-more', 'v20-cv11-cross-learn', 'v20-cv11-cross-kids', 'v20-cv11-empty']) assert.ok(cat.includes(c), c);
 for (const api of ["'/talks?'", "'/talks/facets?'", "'/formats?used=1'", "'/series?limit=100'"]) assert.ok(cat.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(cat, /HD<|cv11-quality|Les Héritiers|Yacine/, 'ni « HD » ni contenu de démonstration');

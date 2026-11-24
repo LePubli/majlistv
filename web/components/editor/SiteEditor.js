@@ -15,18 +15,18 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES } from '../PageFields';
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
 const DEVICES = [{ id: 390, label: 'Téléphone', glyph: '▯' }, { id: 768, label: 'Tablette', glyph: '▭' }, { id: 1024, label: 'Petit écran', glyph: '▬' }, { id: 1440, label: 'Ordinateur', glyph: '▬▬' }];
 const KNOWN_PATHS = [
-  ['/', 'Accueil'], ['/library', 'Ma bibliothèque'], ['/learning', 'Apprentissage'], ['/account', 'Mon compte'], ['/chaines', 'Chaînes'],
+  ['/', 'Accueil'], ['/catalogue', 'Catalogue (page d’origine)'], ['/conferences/*', 'Toutes les pages vidéo'], ['/series/*', 'Toutes les pages série'], ['/catalogue/*', 'Toutes les pages de catégorie'], ['/library', 'Ma bibliothèque'], ['/learning', 'Apprentissage'], ['/account', 'Mon compte'], ['/chaines', 'Chaînes'],
   ['/collections', 'Collections'], ['/pricing', 'Tarifs'], ['/series', 'Séries'], ['/books', 'Ouvrages'], ['/login', 'Connexion'], ['/register', 'Inscription'],
   ['/lists', 'Mes listes'], ['/themes', 'Thèmes'], ['/gift', 'Offrir un abonnement'], ['/redeem', 'Activer une carte cadeau'],
   ['/legal/mentions-legales', 'Mentions légales'], ['/legal/cgv', 'Conditions générales de vente'], ['/legal/confidentialite', 'Confidentialité'],
 ];
-const GLYPH = { hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', pm_hero: '▣', pm_universes: '◉', pm_continue: '◔', pm_rows: '≣', pm_collections: '❖', pm_shorts: '▮', pm_kids: '☺', pm_learn: '✎', columns: '▥', spacer: '↕', divider: '―' };
+const GLYPH = { pm_cat_hero: '▣', pm_cat_chips: '◖', pm_cat_rails: '≣', pm_cat_results: '▦', pm_cat_cross: '↗', hero: '▣', heading: 'H', text: '¶', image: '▨', button: '▭', cards: '▦', talks: '▶', quote: '❝', faq: '?', video: '▷', featured: '★', mine: '◔', channels: '☰', shorts: '▮', collections: '❖', dayquote: '❞', series: '☷', catrows: '≣', kids: '☺', pm_hero: '▣', pm_universes: '◉', pm_continue: '◔', pm_rows: '≣', pm_collections: '❖', pm_shorts: '▮', pm_kids: '☺', pm_learn: '✎', columns: '▥', spacer: '↕', divider: '―' };
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const typing = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 
@@ -100,9 +100,10 @@ function usePageDoc(pageId, call) {
 /* ------------------------------------------------------------------ Panneau « Blocs » */
 function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
   const { skin } = useApp();
-  const own = TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t));
+  const own = TYPE_ORDER.filter((t) => !DATA_TYPES.includes(t) && !PM_TYPES.includes(t) && !PM_CAT_TYPES.includes(t));
   const data = TYPE_ORDER.filter((t) => DATA_TYPES.includes(t));
   const pm = skin === 'premium' ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
+  const pmc = skin === 'premium' ? TYPE_ORDER.filter((t) => PM_CAT_TYPES.includes(t)) : []; // sections du Catalogue Premium
   const item = (t) => (
     <li key={t}>
       <button type="button" className="ed-pal-item" draggable={!disabled} disabled={disabled}
@@ -121,6 +122,7 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled }) {
       <h3>Données du site <span className="meta small">(se mettent à jour seules)</span></h3>
       <ul className="ed-pal-grid">{data.map(item)}</ul>
       {pm.length > 0 && <><h3>Accueil Premium <span className="meta small">(sections de l’accueil du thème)</span></h3><ul className="ed-pal-grid">{pm.map(item)}</ul></>}
+      {pmc.length > 0 && <><h3>Catalogue Premium <span className="meta small">(sections du Catalogue du thème)</span></h3><ul className="ed-pal-grid">{pmc.map(item)}</ul></>}
     </div>
   );
 }
@@ -225,6 +227,7 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
     if (r.ok) { setTitle(''); await reload(); onOpen(r.data.id); } else setMsg(r.data?.error || 'Création impossible.');
   };
   const home = pages.find((p) => p.kind === 'home');
+  const catPage = pages.find((p) => p.kind === 'catalogue');
   const layoutPage = pages.find((p) => p.kind === 'layout');
   const custom = pages.filter((p) => p.kind === 'custom');
   const slots = pages.filter((p) => p.kind === 'slot');
@@ -233,7 +236,7 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
     <li key={p.id}>
       <button type="button" className={`ed-page-row${p.id === pageId ? ' on' : ''}`} onClick={() => onOpen(p.id)}>
         <strong>{label || p.title}</strong>
-        <small>{p.kind === 'home' || p.kind === 'layout' ? '' : (p.path || '')}</small>
+        <small>{p.kind === 'home' || p.kind === 'layout' || p.kind === 'catalogue' ? '' : (p.path || '')}</small>
         <span className={`ap-pill${p.live ? ' on' : ''}`}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</span>
         {p.hasDraft && <span className="ap-tag">brouillon</span>}
       </button>
@@ -246,6 +249,7 @@ function PagesList({ pages, pageId, onOpen, reload, call }) {
       <h3>Pages du site</h3>
       <ul>
         {home ? row(home, 'Accueil des membres') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'home', ...(skin === 'premium' ? { template: 'premium' } : {}) })}>+ Créer l’accueil à partir du modèle</button></li>}
+        {catPage ? row(catPage, 'Catalogue') : skin === 'premium' ? <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'catalogue' })}>+ Recomposer le Catalogue (thème Premium)</button></li> : null}
         {layoutPage ? row(layoutPage, 'En-tête et pied de page') : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'layout' })}>+ Personnaliser l’en-tête et le pied de page</button></li>}
       </ul>
       <h3>Pages créées ({custom.length})</h3>
@@ -524,7 +528,7 @@ export default function SiteEditor() {
     if (r.ok) { doc.setPage((p) => ({ ...p, title: r.data.title, path: r.data.path })); loadPages(); } else setMsg(r.data?.error || 'Échec.');
   };
   const removePage = async () => {
-    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : 'Supprimer cette page et son historique ?')) return;
+    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : page.kind === 'catalogue' ? 'Supprimer le Catalogue en blocs ? Le Catalogue d’origine reviendra immédiatement.' : 'Supprimer cette page et son historique ?')) return;
     const r = await call(`/admin/pages/${pageId}`, { method: 'DELETE' });
     if (r.ok) { const list = await loadPages(); setSelected(null); setPageId(list[0]?.id ?? null); } else setMsg(r.data?.error || 'Échec.');
   };
@@ -560,7 +564,7 @@ export default function SiteEditor() {
       <header className="ed-top">
         <a className="ed-back" href="/admin?tab=pages" title="Quitter l’éditeur">← Admin</a>
         <button type="button" className="ed-page-btn" onClick={() => { setLeftOpen(true); setLeftTab('pages'); }} aria-label="Changer de page">
-          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
+          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
         </button>
         <div className="ed-group" role="group" aria-label="Historique des modifications">
           <button type="button" onClick={undo} disabled={!doc.canUndo} aria-label="Annuler (Ctrl+Z)" title="Annuler (Ctrl+Z)">↶</button>
@@ -668,6 +672,7 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
       <div className="ed-right-head"><h2>Page</h2></div>
       <p className="meta small">Cliquez un bloc dans la page ou dans le Plan pour le modifier.</p>
       {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site. Tant qu’elle n’est pas publiée, l’accueil d’origine reste en place. Sur le thème Premium, ses sections « Premium : … » reproduisent l’accueil d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les blocs « données du site » se mettent à jour tout seuls.</p>}
+      {page.kind === 'catalogue' && <p className="meta small">Cette page remplace le Catalogue d’origine (thème Premium). Tant qu’elle n’est pas publiée, le Catalogue d’origine reste en place. Ses cinq sections « Catalogue : … » reproduisent le Catalogue d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les filtres et les résultats suivent les choix de la personne.</p>}
       {page.kind === 'layout' && <NavEditor nav={content.nav} onChange={setNav} lang={lang} errors={errors} viewAs={null} onViewAs={() => {}} />}
       {page.kind === 'custom' && (
         <details className="pe-meta" open>
@@ -682,7 +687,7 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
       <div className="ed-pageset-actions">
         <button type="button" className="btn ghost" onClick={onRename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>
         {page.publishedAt && <button type="button" className="btn ghost" onClick={() => onLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
-        {page.live && <a className="btn ghost" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.path} target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a>}
+        {page.live && <a className="btn ghost" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.kind === 'catalogue' ? '/catalogue' : page.path} target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a>}
         <button type="button" className="btn ghost" onClick={onDiscard} disabled={!page.hasDraft}>Abandonner le brouillon</button>
         <button type="button" className="btn ghost ed-danger" onClick={onRemove}>Supprimer la page</button>
       </div>

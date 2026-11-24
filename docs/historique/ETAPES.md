@@ -10303,3 +10303,24 @@ Résultat attendu du contrôle : 0 échec.
 
 **Testé / non testé / limites.** Voir ligne 353 du registre. Suite : 4b (catalogue et fiche) sur « go ».
 
+
+## Éditeur visuel, étape 4b — Catalogue Premium en blocs et zones avant/après sur toutes les pages vidéo, série et catégorie (24/11/2026)
+
+**Description.** Sur le thème Premium, le Catalogue (`/catalogue`) devient recomposable dans l'éditeur plein écran (Admin → Éditeur du site → Pages). Onglet Blocs → groupe « Catalogue Premium » : « Catalogue : bannière et recherche », « Catalogue : thèmes », « Catalogue : rangées », « Catalogue : résultats », « Catalogue : liens Apprendre / Kids ». « + Recomposer le Catalogue (thème Premium) » pose les 5 sections dans l'ordre d'origine ; on peut les réordonner, en retirer, ou en mélanger avec les autres blocs (texte, image, colonnes…). Tant qu'aucun Catalogue en blocs n'est publié, la composition d'origine s'affiche, identique. Nouveaux emplacements génériques « Toutes les pages vidéo » (`/conferences/*`), « Toutes les pages série » (`/series/*`) et « Toutes les pages de catégorie » (`/catalogue/*`) : un bandeau posé là apparaît avant ou après le contenu de chaque page concernée ; un emplacement propre à une page précise reste prioritaire. L'intérieur de la page vidéo (lecteur, onglets, quiz, paiement) n'est pas déplaçable.
+
+**Prérequis.** **Migration 129** (appliquée automatiquement au démarrage de l'API). Compte administrateur. Thème Premium actif (Apparence).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 129), PUIS `majlistv-web`. Rien d'autre. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+Résultat attendu du contrôle : 0 échec.
+
+**Debug.** Catalogue inchangé après publication : vérifier le thème Premium et que la page « Catalogue » est publiée (pas seulement en brouillon). Bloc vide : normal sur un autre thème. Erreur 500 à la création d'un emplacement générique : la migration 129 n'est pas appliquée (redéployer l'API puis consulter ses journaux). Bandeau absent sur les pages vidéo : l'emplacement doit s'appeler exactement `/conferences/*` et être publié ; le cache des emplacements dure 30 secondes. Sans la bannière, l'espace de l'en-tête est gardé automatiquement.
+
+**Exemples.** Éditeur → Pages → « + Recomposer le Catalogue (thème Premium) » → glisser « Catalogue : résultats » avant « Catalogue : rangées » → ajouter un bloc Texte sous la bannière → Publier → ouvrir /catalogue. Bandeau sur toutes les vidéos : Pages → nouvel emplacement « Toutes les pages vidéo » → zone « avant » → bloc Bannière → Publier.
+
+**Testé / non testé / limites.** Voir ligne 354 du registre. Suite : étape 5 (finitions) sur « go ».

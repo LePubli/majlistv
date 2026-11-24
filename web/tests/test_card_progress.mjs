@@ -17,7 +17,7 @@ assert.match(ott, /export function useTalkProgress/, 'hook d\'avancement');
 assert.match(ott, /\/me\/progress\?ids=/, 'appelle GET /me/progress');
 assert.match(ott, /pm-card-done/, 'pastille « Terminé »');
 assert.match(ott, /pct > 0 && !done/, 'pas de barre sur une carte terminée');
-const cat = fs.readFileSync('web/components/premium/PmCatalogue.js', 'utf8');
+const cat = fs.readFileSync('web/components/premium/PmCatalogue.js', 'utf8') + fs.readFileSync('web/components/premium/PmCatalogueSections.js', 'utf8'); // depuis l'étape 4b, le Catalogue est découpé en sections
 assert.match(cat, /\/me\/series/, 'séries : épisodes terminés du membre');
 assert.match(cat, /pct=\{prog\[x\.id\]\?\.pct\}/, 'cartes vidéo : pourcentage réel');
 assert.match(cat, /done=\{full\}/, 'cartes série : terminée quand tous les épisodes sont vus');
