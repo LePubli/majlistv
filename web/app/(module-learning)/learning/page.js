@@ -21,6 +21,7 @@ import EmptyState from '../../../components/EmptyState';
 import InviteCard from '../../../components/InviteCard';
 import StreakCard from '../../../components/StreakCard';
 import PlanningClient from '../../../components/PlanningClient';
+import FuncPage, { useFuncPage } from '../../../components/FuncPage';
 import PmLearning, { PmLearnFlow } from '../../../components/premium/PmLearning';
 
 // Anciens onglets (avant N2) → [nouvel onglet, section].
@@ -75,6 +76,7 @@ export default function Learning() {
   const [todo, setTodo] = useState([]); // quiz à passer
   const [cardsN, setCardsN] = useState(0); // cartes mémoire à faire aujourd'hui (à échéance + nouvelles)
   const [pz, setPz] = useState(null); // mes engagements : { items, counts } (synthèse du tableau de bord)
+  const fp = useFuncPage('learning'); // lot C : « Apprendre » recomposée dans l'éditeur (undefined = on vérifie, null = page d'origine)
   const [next, setNext] = useState([]); // « Pour continuer à apprendre » (ou ce qu'on peut faire dès maintenant)
 
   // Étape B4 : un visiteur voit une invitation à créer un compte (au lieu d'être renvoyé vers la connexion).
@@ -127,7 +129,7 @@ export default function Learning() {
       </main>
     );
   }
-  if (!user || d === undefined) return null;
+  if (!user || d === undefined || fp === undefined) return null;
 
   // Palier requis : écran « verrouillé » (maquette) : bannière, les temps avec cadenas, invitation, puis ce qu'on peut faire dès maintenant.
   if (d === null) {
@@ -230,18 +232,15 @@ export default function Learning() {
   );
   const nextRow = nextList.length > 0 ? <Row id="row-lg-next" title={t('lrNext')} talks={nextList} t={t} /> : null;
 
-  if (pm && tab === 'today') {
-    return (
-      <PmLearning d={d} cont={cont} todo={todo} quizN={quizN} rv={rv} cardsN={cardsN} pz={pz} hasRev={hasRev} toReview={toReview}
-        nextExtra={<>{weekBlock}{nextRow}</>} />
-    );
-  }
-
-  const groupEl = (
-      <div className="lg-group">
-      {!pm && <GroupIntro id={`n2-${tab}`} text={t(tabNow.intro)} t={t} />}
-
-      <TabPanel id="today" current={tab}>
+  // Lot C : chaque partie de la page est une section que l'éditeur peut déplacer, masquer et styler (blocs « Apprendre : … »).
+  const secHead = () => (
+    <header className="lg-head">
+      <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
+      <p>{t('lgSub')}</p>
+    </header>
+  );
+  const secToday = () => (
+    <>
       <TodayBlock compact />
       <div className={`lg-top${sideN ? '' : ' solo'}`}>
         {first ? (
@@ -308,13 +307,12 @@ export default function Learning() {
           </div>
         )}
       </div>
-
-      {weekBlock}
-
-      {nextRow}
-      </TabPanel>
-
-      <TabPanel id="rev" current={tab}>
+    </>
+  );
+  const secWeek = () => (<>{weekBlock}</>);
+  const secNext = () => (<>{nextRow}</>);
+  const secQuiz = () => (
+    <>
       {quizN > 0 && (
         <section className="lr-block lg-anchor" id="lg-quiz" aria-labelledby="lg-quiz-h">
           <h2 id="lg-quiz-h">{t('lgQuizTodo')}</h2>
@@ -328,6 +326,10 @@ export default function Learning() {
           </ul>
         </section>
       )}
+    </>
+  );
+  const secRevision = () => (
+    <>
       {feat('revision') && rv && (
         <section className="lr-block rv-block lg-anchor" id="lg-revision" aria-labelledby="rv-title">
           <h2 id="rv-title">{t('revTitle')}</h2>
@@ -361,24 +363,35 @@ export default function Learning() {
           )}
         </section>
       )}
+    </>
+  );
+  const secCards = () => (
+    <>
       {feat('memorycards') && <div className="lg-anchor" id="lg-cards"><MemoryCards onCount={setCardsN} /></div>}
-      </TabPanel>
-
-      <TabPanel id="progress" current={tab}>
-      <nav className="lg-jump" aria-label={t('lgJump')}>
-        <a href="#lg-series">{t('lgSeriesAtt')}</a>
-        {feat('practice') && <a href="#lg-commit">{t('tbCommit')}</a>}
-        {feat('selfcheck') && <a href="#lg-bilan">{t('msBilan')}</a>}
-        <a href="#lg-stats">{t('lgStats')}</a>
-      </nav>
+    </>
+  );
+  const secSeries = () => (
+    <>
       <div className="lg-anchor" id="lg-series">{seriesBlock()}</div>
+    </>
+  );
+  const secCommit = () => (
+    <>
       {feat('practice') && <div className="lg-anchor" id="lg-commit"><PracticeList t={t} call={call} locale={locale} /></div>}
+    </>
+  );
+  const secBilan = () => (
+    <>
       {feat('selfcheck') && (
         <div className="lg-anchor" id="lg-bilan">
           <SelfCheck t={t} call={call} locale={locale} />
           <Evolution t={t} call={call} locale={locale} />
         </div>
       )}
+    </>
+  );
+  const secStats = () => (
+    <>
       <section className="lg-anchor" id="lg-stats" aria-labelledby="lg-stats-h">
         <h2 id="lg-stats-h" className="lg-h2">{t('lgStats')}</h2>
         <StreakCard />
@@ -407,6 +420,53 @@ export default function Learning() {
           </div>
         )}
       </section>
+    </>
+  );
+  const sections = {
+    f_learning_head: secHead, f_learning_today: secToday, f_learning_week: secWeek, f_learning_next: secNext, f_learning_quiz: secQuiz,
+    f_learning_revision: secRevision, f_learning_cards: secCards, f_learning_series: secSeries, f_learning_commit: secCommit,
+    f_learning_bilan: secBilan, f_learning_stats: secStats,
+  };
+  // Page recomposée dans l'éditeur : les blocs remplacent les onglets (le thème Premium et les onglets ne s'appliquent qu'à la page d'origine).
+  if (fp) return <FuncPage id="learning" page={fp} className="page learning" sections={sections} />;
+
+  if (pm && tab === 'today') {
+    return (
+      <PmLearning d={d} cont={cont} todo={todo} quizN={quizN} rv={rv} cardsN={cardsN} pz={pz} hasRev={hasRev} toReview={toReview}
+        nextExtra={<>{weekBlock}{nextRow}</>} />
+    );
+  }
+
+  const groupEl = (
+      <div className="lg-group">
+      {!pm && <GroupIntro id={`n2-${tab}`} text={t(tabNow.intro)} t={t} />}
+
+      <TabPanel id="today" current={tab}>
+      {secToday()}
+
+      {secWeek()}
+
+      {secNext()}
+      </TabPanel>
+
+      <TabPanel id="rev" current={tab}>
+      {secQuiz()}
+      {secRevision()}
+      {secCards()}
+      </TabPanel>
+
+      <TabPanel id="progress" current={tab}>
+      <nav className="lg-jump" aria-label={t('lgJump')}>
+        <a href="#lg-series">{t('lgSeriesAtt')}</a>
+        {feat('practice') && <a href="#lg-commit">{t('tbCommit')}</a>}
+        {feat('selfcheck') && <a href="#lg-bilan">{t('msBilan')}</a>}
+        <a href="#lg-stats">{t('lgStats')}</a>
+      </nav>
+      <div className="lg-anchor" id="lg-series">{seriesBlock()}</div>
+      {secSeries()}
+      {secCommit()}
+      {secBilan()}
+      {secStats()}
       </TabPanel>
       </div>
   );
@@ -421,10 +481,7 @@ export default function Learning() {
   return (
     <main className="page learning">
       <Crumbs items={[[null, t('navLearn')], ['/learning', t('lrTitle')], ...(tab !== 'today' ? [[null, tabNow.plain || tabNow.label]] : [])]} />
-      <header className="lg-head">
-        <h1>{t('lgHello').replace('{n}', (user.name || '').trim().split(/\s+/)[0] ? ` ${(user.name || '').trim().split(/\s+/)[0]}` : '')}</h1>
-        <p>{t('lgSub')}</p>
-      </header>
+      {secHead()}
       <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
       {groupEl}
     </main>

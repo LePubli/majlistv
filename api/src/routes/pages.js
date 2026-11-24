@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { putObject, deleteObject, getObjectBuffer } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, GLOBAL_PREFIX, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate } from '../blocks.js';
+import { ZONES, WILDCARD_SLOTS, REPLACEABLE_PATHS, kidsErrors, HOME_PATH, CATALOGUE_PATH, WATCH_PATH, GLOBAL_PREFIX, LAYOUT_PATH, cleanContent, audienceMatches, homeTemplate, premiumHomeTemplate, premiumCatalogueTemplate, watchTemplate, funcTemplate, FUNC_PAGES, funcPath } from '../blocks.js';
 import { emptyContent, norm, validate } from '../pageContent.js';
 import { imageFormat } from '../fileSniff.js';
 import { getSetting } from '../settings.js';
@@ -34,7 +34,7 @@ const MEDIA_MAX = 3 * 1024 * 1024; // 3 Mo par image
 const MEDIA_TYPES = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
 // Adresses où l'on ne peut PAS ajouter de blocs (administration, studio, espace enfant, technique).
 export { WILDCARD_SLOTS };
-const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_global|_layout|pb-preview|p)(\/|$)/;
+const FORBIDDEN_SLOT = /^\/(admin|studio|api|_next|_home|_catalogue|_watch|_func|_global|_layout|pb-preview|p)(\/|$)/;
 
 export { imageFormat };
 
@@ -156,9 +156,9 @@ export default async function pagesRoutes(app) {
       pageKind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch']).optional(),
       name: z.string().trim().min(1).max(80),
       description: z.string().trim().max(200).optional(),
-      content: z.any(),
+      content: z.any().optional(),
     }).safeParse(req.body ?? {});
-    if (!body.success) return reply.code(400).send({ error: 'Requête invalide' });
+    if (!body.success || body.data.content == null) return reply.code(400).send({ error: 'Requête invalide' });
     const b = body.data;
     if (b.kind === 'page' && !b.pageKind) return reply.code(400).send({ error: 'Indiquez le type de la page' });
     if ((await pool.query('SELECT count(*)::int AS n FROM site_templates')).rows[0].n >= 200) return reply.code(409).send({ error: 'Trop de modèles (200 au maximum) : supprimez-en' });
@@ -185,7 +185,8 @@ export default async function pagesRoutes(app) {
 
   app.post('/admin/pages', admin, async (req, reply) => {
     const body = z.object({
-      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch', 'global', 'layout']),
+      kind: z.enum(['custom', 'slot', 'home', 'catalogue', 'watch', 'global', 'layout', 'func']),
+      func: z.string().trim().max(40).optional(), // page fonction : identifiant (pricing, account…)
       templateId: z.number().int().positive().optional(), // créer à partir d'un modèle de page enregistré (lot B)
       title: z.string().trim().min(1).max(120).optional(),
       slug: z.string().trim().max(60).optional(),
@@ -209,6 +210,9 @@ export default async function pagesRoutes(app) {
       path = `${GLOBAL_PREFIX}${slug}`; title = b.title;
     } else if (b.kind === 'watch') {
       path = WATCH_PATH; title = 'Fiche vidéo';
+    } else if (b.kind === 'func') {
+      if (!b.func || !FUNC_PAGES[b.func]) return reply.code(400).send({ error: 'Page fonction inconnue' });
+      path = funcPath(b.func); title = FUNC_PAGES[b.func].label;
     } else if (b.kind === 'catalogue') {
       path = CATALOGUE_PATH; title = 'Catalogue';
     } else if (b.kind === 'layout') {
@@ -233,7 +237,7 @@ export default async function pagesRoutes(app) {
     }
     const r = (await pool.query(
       'INSERT INTO site_pages (kind, path, title, draft, updated_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [b.kind, path, title, tplContent ?? (b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : b.kind === 'watch' ? watchTemplate() : emptyContent(b.kind)), req.user.sub])).rows[0];
+      [b.kind, path, title, tplContent ?? (b.kind === 'home' ? (b.template === 'premium' ? premiumHomeTemplate() : homeTemplate()) : b.kind === 'catalogue' ? premiumCatalogueTemplate() : b.kind === 'watch' ? watchTemplate() : b.kind === 'func' ? funcTemplate(b.func) : emptyContent(b.kind)), req.user.sub])).rows[0];
     req.auditSummary = `Page « ${title} » (${path}) créée`;
     return reply.code(201).send(full(r));
   });

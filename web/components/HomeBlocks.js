@@ -32,6 +32,7 @@ import {
 } from './premium/PmHomeSections';
 import { PmCatFrame } from './premium/PmCatalogueSections';
 import { WatchBlock } from './WatchCtx';
+import { FuncBlock } from './FuncCtx';
 
 // Titre d'un bloc : celui saisi dans l'éditeur, à défaut le texte du dictionnaire.
 const useTitle = (p, lang, key) => {
@@ -337,6 +338,7 @@ function PmFrame({ type, p, lang }) {
 export function DataBlock({ b, lang, preview = false }) {
   const p = b.props || {};
   if (b.type.startsWith('w_')) return <WatchBlock b={b} preview={preview} />;
+  if (b.type.startsWith('f_')) return <FuncBlock b={b} preview={preview} />;
   if (b.type.startsWith('pm_cat_')) return <PmCatFrame type={b.type} />;
   if (b.type.startsWith('pm_')) return <PmFrame type={b.type} p={p} lang={lang} />;
   switch (b.type) {

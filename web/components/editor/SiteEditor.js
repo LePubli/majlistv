@@ -15,7 +15,7 @@ import { BlockEditor, TextField, MediaField, LANG_NAMES, GlobalsContext } from '
 import NavEditor from '../NavAdmin';
 import { MediaPicker, SeoCheck } from '../PagesAdmin';
 import { ThemePanel } from '../AppearanceAdmin';
-import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
+import { ZONES, ZONE_LABELS, BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, FUNC_PAGES, KIDS_SAFE_TYPES, isKidsPath, SITE_PAGES, REPLACEABLE_PATHS, DEVICE_LABELS, AUDIENCES, LANGS, newBlock, newId, blockSummary, MAX_BLOCKS_PER_ZONE } from '../../lib/blocks';
 import { TEMPLATES } from '../../lib/blockTemplates';
 import { clone, isColZone, canPlace, getList, setList, findBlock, insertBlock, removeBlock, moveBlock, nudgeBlock, duplicateBlock, reidBlocks, dropTarget, newHistory, pushHistory, undoHistory, redoHistory } from '../../lib/editorOps';
 
@@ -100,6 +100,8 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind, pagePath }
   const pm = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_TYPES.includes(t)) : []; // sections de l'accueil Premium : seulement sur le thème Premium
   const pmc = skin === 'premium' && !kids ? TYPE_ORDER.filter((t) => PM_CAT_TYPES.includes(t)) : []; // sections du Catalogue Premium
   const watch = pageKind === 'watch' ? TYPE_ORDER.filter((t) => WATCH_TYPES.includes(t)) : []; // sections de la fiche vidéo : seulement sur la page « Fiche vidéo »
+  const funcId = pageKind === 'func' ? String(pagePath || '').replace('/_func/', '') : '';
+  const func = funcId && FUNC_PAGES[funcId] ? FUNC_PAGES[funcId].sections.map((x) => x[0]) : []; // sections d'une page fonction : seulement sur cette page
   const item = (t) => (
     <li key={t}>
       <button type="button" className="ed-pal-item" draggable={!disabled} disabled={disabled}
@@ -119,6 +121,7 @@ function Palette({ onAdd, onDragStart, onDragEnd, disabled, pageKind, pagePath }
       {kids && <p className="meta small">Espace Kids : seuls les blocs simples sont proposés (pas de vidéos ni de données du catalogue).</p>}
       {pm.length > 0 && <><h3>Accueil Premium <span className="meta small">(sections de l’accueil du thème)</span></h3><ul className="ed-pal-grid">{pm.map(item)}</ul></>}
       {watch.length > 0 && <><h3>Fiche vidéo <span className="meta small">(sections de la fiche d’origine)</span></h3><ul className="ed-pal-grid">{watch.map(item)}</ul></>}
+      {func.length > 0 && <><h3>{FUNC_PAGES[funcId].label} <span className="meta small">(sections de la page d’origine)</span></h3><ul className="ed-pal-grid">{func.map(item)}</ul></>}
       {pmc.length > 0 && <><h3>Catalogue Premium <span className="meta small">(sections du Catalogue du thème)</span></h3><ul className="ed-pal-grid">{pmc.map(item)}</ul></>}
     </div>
   );
@@ -264,6 +267,7 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true, saved 
   const catPage = pages.find((p) => p.kind === 'catalogue');
   const watchPage = pages.find((p) => p.kind === 'watch');
   const layoutPage = pages.find((p) => p.kind === 'layout');
+  const funcByPath = Object.fromEntries(pages.filter((p) => p.kind === 'func').map((p) => [p.path, p]));
   const custom = pages.filter((p) => p.kind === 'custom');
   const slots = pages.filter((p) => p.kind === 'slot');
   const slotByPath = Object.fromEntries(slots.map((p) => [p.path, p]));
@@ -272,7 +276,7 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true, saved 
     <li key={p.id}>
       <button type="button" className={`ed-page-row${p.id === pageId ? ' on' : ''}`} onClick={() => onOpen(p.id)}>
         <strong>{label || p.title}</strong>
-        <small>{p.kind === 'home' || p.kind === 'layout' || p.kind === 'catalogue' || p.kind === 'watch' || p.kind === 'global' ? '' : (p.path || '')}</small>
+        <small>{p.kind === 'home' || p.kind === 'layout' || p.kind === 'catalogue' || p.kind === 'watch' || p.kind === 'func' || p.kind === 'global' ? '' : (p.path || '')}</small>
         <span className={`ap-pill${p.live ? ' on' : ''}`}>{p.live ? 'En ligne' : p.publishedAt ? 'Hors ligne' : 'Jamais publiée'}</span>
         {p.hasDraft && <span className="ap-tag">brouillon</span>}
       </button>
@@ -288,6 +292,10 @@ function PagesList({ pages, pageId, onOpen, reload, call, isAdmin = true, saved 
         {catPage ? row(catPage, 'Catalogue') : !isAdmin ? null : skin === 'premium' ? <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'catalogue' })}>+ Recomposer le Catalogue (thème Premium)</button></li> : null}
         {watchPage ? row(watchPage, 'Fiche vidéo') : !isAdmin ? null : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'watch' })}>+ Recomposer la fiche vidéo</button></li>}
         {layoutPage ? row(layoutPage, 'En-tête et pied de page') : !isAdmin ? null : <li><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'layout' })}>+ Personnaliser l’en-tête et le pied de page</button></li>}
+      </ul>
+      <h3>Pages avec fonctions <span className="meta small">(sections déplaçables)</span></h3>
+      <ul>
+        {Object.entries(FUNC_PAGES).map(([id, f]) => (funcByPath[`/_func/${id}`] ? row(funcByPath[`/_func/${id}`], f.label) : !isAdmin ? null : <li key={id}><button type="button" className="btn ghost ed-wide" onClick={() => create({ kind: 'func', func: id })}>+ Recomposer « {f.label} »</button></li>))}
       </ul>
       <h3>Pages créées ({custom.length})</h3>
       <ul>{custom.map((p) => row(p))}</ul>
@@ -639,7 +647,7 @@ export default function SiteEditor() {
     if (r.ok) { doc.setPage((p) => ({ ...p, title: r.data.title, path: r.data.path })); loadPages(); } else setMsg(r.data?.error || 'Échec.');
   };
   const removePage = async () => {
-    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : page.kind === 'catalogue' ? 'Supprimer le Catalogue en blocs ? Le Catalogue d’origine reviendra immédiatement.' : page.kind === 'watch' ? 'Supprimer la fiche vidéo en blocs ? La fiche d’origine reviendra immédiatement.' : 'Supprimer cette page et son historique ?')) return;
+    if (!window.confirm(page.kind === 'home' ? 'Supprimer l’accueil en blocs ? L’accueil d’origine du site reviendra immédiatement.' : page.kind === 'catalogue' ? 'Supprimer le Catalogue en blocs ? Le Catalogue d’origine reviendra immédiatement.' : page.kind === 'watch' ? 'Supprimer la fiche vidéo en blocs ? La fiche d’origine reviendra immédiatement.' : page.kind === 'func' ? `Supprimer « ${page.title} » en blocs ? La page d’origine reviendra immédiatement.` : 'Supprimer cette page et son historique ?')) return;
     const r = await call(`/admin/pages/${pageId}`, { method: 'DELETE' });
     if (r.ok) { const list = await loadPages(); setSelected(null); setPageId(list[0]?.id ?? null); } else setMsg(r.data?.error || 'Échec.');
   };
@@ -676,7 +684,7 @@ export default function SiteEditor() {
       <header className="ed-top">
         <a className="ed-back" href={isAdmin ? '/admin?tab=pages' : '/'} title="Quitter l’éditeur">{isAdmin ? '← Admin' : '← Site'}</a>
         <button type="button" className="ed-page-btn" onClick={() => { setLeftOpen(true); setLeftTab('pages'); }} aria-label="Changer de page">
-          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && page.kind !== 'watch' && page.kind !== 'global' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
+          <strong>{page?.title || 'Choisir une page'}</strong>{page && page.kind !== 'home' && page.kind !== 'layout' && page.kind !== 'catalogue' && page.kind !== 'watch' && page.kind !== 'func' && page.kind !== 'global' && <code>{page.path}</code>}<span aria-hidden="true">▾</span>
         </button>
         <div className="ed-group" role="group" aria-label="Historique des modifications">
           <button type="button" onClick={undo} disabled={!doc.canUndo} aria-label="Annuler (Ctrl+Z)" title="Annuler (Ctrl+Z)">↶</button>
@@ -788,6 +796,7 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
       <p className="meta small">Cliquez un bloc dans la page ou dans le Plan pour le modifier.</p>
       {page.kind === 'home' && <p className="meta small">Cette page remplace l’accueil d’origine du site. Tant qu’elle n’est pas publiée, l’accueil d’origine reste en place. Sur le thème Premium, ses sections « Premium : … » reproduisent l’accueil d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les blocs « données du site » se mettent à jour tout seuls.</p>}
       {page.kind === 'catalogue' && <p className="meta small">Cette page remplace le Catalogue d’origine (thème Premium). Tant qu’elle n’est pas publiée, le Catalogue d’origine reste en place. Ses cinq sections « Catalogue : … » reproduisent le Catalogue d’origine : réordonnez-les, retirez-en ou ajoutez-y d’autres blocs. Les filtres et les résultats suivent les choix de la personne.</p>}
+      {page.kind === 'func' && FUNC_PAGES[page.path.replace('/_func/', '')] && <p className="meta small">Cette page remplace la page « {page.title} » du site. Tant qu’elle n’est pas publiée, la page d’origine reste en place. Ses sections reproduisent la page d’origine, avec les vraies données : réordonnez-les, masquez-les, stylez-les et ajoutez vos blocs autour. Les sections marquées « ne le retirez pas » portent la fonction elle-même (paiement, connexion…) : sans elles, la fonction disparaît.</p>}
       {page.kind === 'watch' && <p className="meta small">Cette page remplace la fiche d’origine de toutes les vidéos. Tant qu’elle n’est pas publiée, la fiche d’origine reste en place. Ses cinq sections « Fiche : … » reproduisent la fiche d’origine : réordonnez-les, masquez-les, stylez-les, et ajoutez vos propres blocs autour. Gardez « lecteur et titre » : sans lui, plus de lecteur.</p>}
       {page.kind === 'slot' && REPLACEABLE_PATHS.includes(page.path) && (
         <label className="pe-check"><input type="checkbox" checked={Boolean(content.meta?.hideOriginal)} onChange={(e) => setMeta('hideOriginal', e.target.checked ? true : undefined)} /> Masquer le contenu d’origine de cette page (n’afficher que mes blocs)</label>
@@ -806,7 +815,7 @@ function PageSettings({ page, content, lang, errors, setMeta, setNav, setMediaCb
       <div className="ed-pageset-actions">
         {isAdmin && <button type="button" className="btn ghost" onClick={onRename}>Renommer{page.kind === 'custom' ? ' / changer l’adresse' : ''}</button>}
         {isAdmin && page.publishedAt && <button type="button" className="btn ghost" onClick={() => onLive(!page.live)}>{page.live ? 'Mettre hors ligne' : 'Remettre en ligne'}</button>}
-        {page.live && <a className="btn ghost" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.kind === 'catalogue' ? '/catalogue' : page.kind === 'watch' ? '/catalogue' : page.path} target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a>}
+        {page.live && <a className="btn ghost" href={page.kind === 'home' || page.kind === 'layout' ? '/' : page.kind === 'catalogue' ? '/catalogue' : page.kind === 'watch' ? '/catalogue' : page.kind === 'func' ? (FUNC_PAGES[page.path.replace('/_func/', '')]?.route || '/') : page.path} target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a>}
         <button type="button" className="btn ghost" onClick={onDiscard} disabled={!page.hasDraft}>Abandonner le brouillon</button>
         {isAdmin && <button type="button" className="btn ghost ed-danger" onClick={onRemove}>Supprimer la page</button>}
       </div>

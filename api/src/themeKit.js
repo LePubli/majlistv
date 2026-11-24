@@ -10,7 +10,7 @@ import { TOKENS, GROUPS, BUILTIN_FONTS } from './themeCss.js';
 import {
   BLOCK_TYPES, TYPE_ORDER, DATA_TYPES, PM_TYPES, PM_CAT_TYPES, WATCH_TYPES, KIDS_SAFE_TYPES, ZONES, ZONE_LABELS, SITE_PAGES, WILDCARD_SLOTS, REPLACEABLE_PATHS,
   HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, GLOBAL_PREFIX, AUDIENCES, DEVICE_LABELS, COLOR_REFS, COLOR_REF_LABELS, STYLE_ALIGN, STYLE_FONTS, STYLE_HOVER, STYLE_ANIM,
-  STYLE_ELEMENTS, STYLE_WIDTH, MAX_BLOCKS_PER_ZONE, MAX_BLOCKS_PER_COLUMN, MAX_COLS, MAX_CONTENT_BYTES,
+  STYLE_ELEMENTS, STYLE_WIDTH, FUNC_PAGES, FUNC_TYPES, funcOwner, funcPath, MAX_BLOCKS_PER_ZONE, MAX_BLOCKS_PER_COLUMN, MAX_COLS, MAX_CONTENT_BYTES,
 } from './blocks.js';
 import { FEATURES, FEATURE_GROUPS } from './featuresList.js';
 
@@ -58,7 +58,7 @@ function fieldKind(f) {
 }
 function blocksSection() {
   const order = [...TYPE_ORDER, ...Object.keys(BLOCK_TYPES).filter((t) => !TYPE_ORDER.includes(t))];
-  const group = (t) => (DATA_TYPES.includes(t) ? 'données du site' : PM_TYPES.includes(t) ? 'accueil Premium' : PM_CAT_TYPES.includes(t) ? 'catalogue Premium' : WATCH_TYPES.includes(t) ? 'fiche vidéo' : 'simple');
+  const group = (t) => (DATA_TYPES.includes(t) ? 'données du site' : PM_TYPES.includes(t) ? 'accueil Premium' : PM_CAT_TYPES.includes(t) ? 'catalogue Premium' : WATCH_TYPES.includes(t) ? 'fiche vidéo' : FUNC_TYPES.includes(t) ? `page fonction « ${FUNC_PAGES[funcOwner(t)].label} »` : 'simple');
   const out = [];
   out.push(table(['Type', 'Nom', 'Catégorie', 'Dans Kids ?', 'Rôle'], order.map((t) => [`\`${t}\``, BLOCK_TYPES[t].label, group(t), KIDS_SAFE_TYPES.includes(t) ? 'oui' : 'non', BLOCK_TYPES[t].hint])));
   for (const t of order) {
@@ -158,6 +158,7 @@ ${code(`{
   "pages": {
     "home": "pages/home.json", "catalogue": "pages/catalogue.json", "watch": "pages/watch.json", "layout": "pages/layout.json",
     "slots": { "/pricing": "pages/pricing.json" },
+    "func": { "pricing": "pages/func-pricing.json" },
     "custom": [ { "slug": "a-propos", "title": "À propos", "file": "pages/a-propos.json" } ]
   },
   "globals": [ { "slug": "aurore-infolettre", "title": "Invitation à s'inscrire", "file": "pages/global-infolettre.json" } ],
@@ -228,10 +229,15 @@ ${table(['Clé dans theme.json', 'Genre de page', 'Zones', 'Adresse interne'], [
   ['`pages.catalogue`', 'Catalogue (habillage Premium)', ZONES.catalogue.map((z) => `\`${z}\``).join(', '), `\`${CATALOGUE_PATH}\``],
   ['`pages.watch`', 'Fiche vidéo', ZONES.watch.map((z) => `\`${z}\``).join(', '), `\`${WATCH_PATH}\``],
   ['`pages.layout`', 'En-tête, menus et pied de page', ZONES.layout.map((z) => `\`${z}\` (${ZONE_LABELS[z]})`).join(', '), `\`${LAYOUT_PATH}\``],
+  ['`pages.func`', 'Pages à fonctions recomposées en sections (tarifs, compte, apprendre, série, chaîne…)', ZONES.func.map((z) => `\`${z}\``).join(', '), '`/_func/<page>`'],
   ['`pages.slots`', 'Toute autre page du site : blocs avant / après son contenu', ZONES.slot.map((z) => `\`${z}\``).join(', '), 'l’adresse de la page (ex. `/pricing`)'],
   ['`pages.custom`', 'Pages libres (`/p/<slug>`)', ZONES.custom.map((z) => `\`${z}\``).join(', '), '`/p/<slug>`'],
   ['`globals`', 'Sections globales (réutilisables)', ZONES.global.map((z) => `\`${z}\``).join(', '), `\`${GLOBAL_PREFIX}<slug>\``],
 ])}
+
+Une page « fonction » (\`pages.func\`) découpe une page à fonctions en **sections** que l'on déplace, masque et style : le code (paiement, quiz, lecteur, connexion) reste en place et chaque section est un bloc \`f_<page>_<section>\`. Tant qu'elle n'est pas publiée, la page d'origine s'affiche. Clés permises : ${Object.keys(FUNC_PAGES).map((k) => `\`${k}\``).join(', ')}.
+
+${table(['Clé (`pages.func`)', 'Page', 'Sections (types de blocs)'], Object.entries(FUNC_PAGES).map(([id, p]) => [`\`${id}\``, `${p.label} (\`${p.route}\`, adresse interne \`${funcPath(id)}\`)`, p.sections.map((x) => `\`${x[0]}\``).join(', ')]))}
 
 Une page « slot » (\`pages.slots\`) a les zones \`before\` et \`after\`. Le **contenu fonctionnel** (formulaire de connexion, paiement, lecteur…) reste toujours en place : les blocs sont posés autour.
 Les adresses \`/chose/*\` s'appliquent à TOUTES les pages de ce genre (ex. \`/conferences/*\` = chaque vidéo). Liste des zones « toutes les pages de ce genre » : ${WILDCARD_SLOTS.map((p) => `\`${p}\``).join(', ')}.
@@ -306,6 +312,7 @@ Pour CHAQUE ligne, contrôlez : visiteur et connecté, FR / EN / AR, 390 / 768 /
 - [ ] aperçu \`assets/preview.png\` fourni
 - [ ] jetons : contrastes, arrondis, polices (FR et AR)
 - [ ] \`pages.home\`, \`pages.catalogue\`, \`pages.watch\`, \`pages.layout\` (ou volontairement absentes)
+- [ ] \`pages.func\` : ${Object.keys(FUNC_PAGES).map((k) => `\`${k}\``).join(', ')} (ou volontairement absentes)
 ${checklist(routes)}
 
 Fonctions à contrôler (activées ET coupées) :

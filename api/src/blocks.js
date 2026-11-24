@@ -12,7 +12,7 @@ export const AUDIENCES = [
   ['all', 'Tout le monde'], ['visitor', 'Visiteurs non connectés'], ['member', 'Membres connectés'],
   ['subscriber', 'Abonnés (essai ou abonnement actif)'], ['free', 'Membres sans abonnement'],
 ];
-export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], global: ['main'], layout: ['topbar', 'footerTop'] };
+export const ZONES = { custom: ['main'], slot: ['before', 'after'], home: ['main'], catalogue: ['main'], watch: ['main'], func: ['main'], global: ['main'], layout: ['topbar', 'footerTop'] };
 export const HOME_PATH = '/_home'; // adresse interne de l'accueil des membres (page « home »)
 // ---- Annuaire des pages du site (lot A de l'éditeur) : toute page publique peut recevoir des blocs avant / après son contenu.
 // [adresse, nom, remplaçable] : « remplaçable » = page d'information dont on peut masquer le contenu d'origine pour le remplacer par ses blocs.
@@ -53,6 +53,19 @@ export function kidsErrors(path, content) {
   return errors;
 }
 
+// Page « fonction » (/_func/<page>) : seules les sections de CETTE page sont permises, plus les blocs libres.
+export function funcErrors(path, content) {
+  const m = String(path || '').match(/^\/_func\/([a-z0-9-]+)$/);
+  if (!m) return {};
+  const out = {};
+  if (!FUNC_PAGES[m[1]]) { out[''] = 'Page inconnue'; return out; }
+  const walk = (list, at) => (list || []).forEach((b, i) => {
+    if (FUNC_TYPES.includes(b.type) && funcOwner(b.type) !== m[1]) out[`${at}.${i}.type`] = `Cette section appartient à la page « ${FUNC_PAGES[funcOwner(b.type)].label} »`;
+    (b.cols || []).forEach((c, ci) => walk(c, `${at}.${i}.cols.${ci}`));
+  });
+  for (const [z, list] of Object.entries(content?.zones || {})) walk(list, `zones.${z}`);
+  return out;
+}
 export const GLOBAL_PREFIX = '/_global/'; // sections globales : une page par section, adresse interne /_global/<nom>
 export const WATCH_PATH = '/_watch'; // adresse interne de la fiche vidéo en blocs (page « watch »)
 export const CATALOGUE_PATH = '/_catalogue'; // adresse interne du Catalogue en blocs (page « catalogue », thème Premium)
@@ -259,6 +272,78 @@ export const PM_CAT_TYPES = ['pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_
 // Sections de la fiche vidéo : réservées à la page « Fiche vidéo » (kind watch).
 export const WATCH_TYPES = ['w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books'];
 
+// ---- Pages « fonction » découpées en sections (lot C) : tarifs, compte, bibliothèque… Chaque page garde son code (paiement, lecteur, quiz…) ;
+// l'éditeur peut seulement déplacer, masquer et styler ses sections, et poser des blocs libres entre elles. Une page en blocs
+// (adresse interne /_func/<page>) n'existe pas tant qu'elle n'est pas publiée : la page d'origine reste en place.
+// Section = [type, nom, aide, champs facultatifs : options de la fonction, écrits avec S / N / T comme les autres blocs]. Les types s'écrivent f_<page>_<section> ; l'ordre est celui de la page d'origine.
+export const FUNC_PATH = '/_func/';
+export const FUNC_PAGES = {
+  pricing: { label: 'Tarifs', route: '/pricing', sections: [
+    ['f_pricing_head', 'titre et messages', 'Lien de retour, étapes, titre, essai gratuit, messages d’annulation ou de paiement indisponible.'],
+    ['f_pricing_country', 'pays', 'Choix du pays pour le tarif (seulement quand des tarifs par pays existent : Admin → Tarifs par pays).'],
+    ['f_pricing_plans', 'formules et abonnement', 'Les formules (mensuelle, annuelle) avec le bouton d’abonnement ou de gestion. Ne le retirez pas : sans lui, personne ne peut s’abonner.',
+      [S('tiers', 'Formules affichées', [['all', 'Toutes'], ['standard', 'Seulement Mejliss'], ['learning', 'Seulement Apprentissage']], 'all')]],
+    ['f_pricing_methods', 'moyens de paiement', 'Carte, Apple Pay, Google Pay, PayPal… selon ce qui est activé.'],
+    ['f_pricing_waiver', 'renoncement et connexion', 'Case « renoncement au droit de rétractation » (obligatoire avant de s’abonner) et lien « j’ai déjà un compte ». Ne le retirez pas.'],
+    ['f_pricing_extras', 'cadeau et mentions', 'Bouton « Offrir un abonnement » et note de bas de page.'],
+  ] },
+  account: { label: 'Mon compte', route: '/account', sections: [
+    ['f_account_head', 'titre', 'Fil d’Ariane et « Bonjour … ».'],
+    ['f_account_profile', 'profil', 'Adresse e-mail, rôle, préférences, langue de l’interface, lien vers les réglages de prière.'],
+    ['f_account_security', 'sécurité', 'Mot de passe et double authentification.'],
+    ['f_account_data', 'mes données', 'Export et suppression des données personnelles (RGPD). Ne le retirez pas : c’est une obligation légale.'],
+    ['f_account_billing', 'abonnement', 'État de l’abonnement et bouton de gestion.'],
+    ['f_account_purchases', 'achats', 'Achats de la boutique (si la fonction est active).'],
+    ['f_account_gifts', 'cartes cadeaux', 'Cartes cadeaux achetées et reçues (si la fonction est active).'],
+    ['f_account_referral', 'parrainage', 'Lien et récompenses de parrainage (si la fonction est active).'],
+    ['f_account_notifs', 'notifications', 'Choix des e-mails reçus.'],
+  ] },
+  learning: { label: 'Apprendre', route: '/learning', sections: [
+    ['f_learning_head', 'titre', 'Salutation et phrase d’introduction.'],
+    ['f_learning_today', 'aujourd’hui', 'Bloc « Aujourd’hui », reprise de la dernière vidéo, quiz / engagement / série du moment.'],
+    ['f_learning_week', 'ma semaine', 'Planning de la semaine (à déplier).'],
+    ['f_learning_next', 'pour continuer', 'Rangée de vidéos « Pour continuer à apprendre ».'],
+    ['f_learning_quiz', 'quiz à passer', 'Liste des quiz en attente (si la fonction est active).'],
+    ['f_learning_revision', 'révisions du jour', 'Révision espacée, rappel et e-mail quotidien (si la fonction est active).'],
+    ['f_learning_cards', 'cartes mémoire', 'Cartes mémoire du jour (si la fonction est active).'],
+    ['f_learning_series', 'séries et attestations', 'Séries suivies et attestations.'],
+    ['f_learning_commit', 'engagements', 'Mes engagements (si la fonction est active).'],
+    ['f_learning_bilan', 'bilan', 'Bilan personnel et évolution (si la fonction est active).'],
+    ['f_learning_stats', 'statistiques', 'Série de jours, score, courbe et résultats récents.'],
+  ] },
+  series: { label: 'Fiche série', route: '/series', sections: [
+    ['f_series_hero', 'bannière', 'Titre, informations, description, prérequis et bouton « Regarder / Reprendre ».'],
+    ['f_series_episodes', 'saisons et épisodes', 'Choix de saison et liste des épisodes avec avancement.'],
+    ['f_series_books', 'livres liés', 'Livres associés à la série (si la fonction est active).'],
+  ] },
+  channel: { label: 'Page chaîne', route: '/chaines', sections: [
+    ['f_channel_head', 'en-tête', 'Fil d’Ariane, bannière, nom, abonnés, bouton Suivre, présentation et liens.'],
+    ['f_channel_featured', 'vidéo à la une', 'Vidéo mise en avant par la chaîne (si elle en a une).'],
+    ['f_channel_content', 'vidéos et séries', 'Onglets Vidéos, Shorts et Séries de la chaîne.'],
+  ] },
+  collection: { label: 'Page collection', route: '/collections', sections: [
+    ['f_collection_head', 'titre', 'Retour, type, titre et présentation de la collection.'],
+    ['f_collection_talks', 'vidéos', 'Les vidéos de la collection dans l’ordre choisi.'],
+  ] },
+  library: { label: 'Ma bibliothèque', route: '/library', sections: [
+    ['f_library_head', 'titre', 'Fil d’Ariane et titre de la page.'],
+    ['f_library_resume', 'reprendre', 'Quiz à rattraper, vidéos en cours (« Reprendre ») et séries suivies.'],
+    ['f_library_list', 'ma liste', 'Favoris et « à regarder plus tard » réunis (si la fonction est active).'],
+    ['f_library_lists', 'mes listes', 'Listes personnelles et partagées (si la fonction est active).'],
+    ['f_library_notes', 'mes notes', 'Notes et repères pris pendant les vidéos (si la fonction est active).'],
+  ] },
+};
+export const FUNC_TYPES = Object.values(FUNC_PAGES).flatMap((p) => p.sections.map((x) => x[0]));
+export const funcOwner = (type) => Object.keys(FUNC_PAGES).find((id) => FUNC_PAGES[id].sections.some((x) => x[0] === type)) || null;
+export const funcPath = (id) => `${FUNC_PATH}${id}`;
+// Sections des pages « fonction » : des blocs sans réglage propre (sauf options), le contenu vient de la page.
+for (const p of Object.values(FUNC_PAGES)) {
+  for (const [type, name, hint, opts] of p.sections) {
+    const fields = opts || [];
+    BLOCK_TYPES[type] = { label: `${p.label} : ${name}`, hint, fields, sample: {} };
+  }
+}
+
 // ---- Style d'un bloc (tout est facultatif : une valeur absente = réglage du thème)
 export const STYLE_ALIGN = [['', 'Selon le bloc'], ['start', 'Début'], ['center', 'Centré'], ['end', 'Fin']];
 // Étape 5 : police propre à un bloc (liste = polices livrées avec le site, voir BUILTIN_FONTS de themeCss.js), survol, animation
@@ -406,6 +491,7 @@ export function cleanContent(content, kind, strict = true) {
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(b.props?.ref || '')) || String(b.props.ref).length > 60) { if (strict || b.props?.ref) err(`${at}.props.ref`, 'Choisissez une section globale'); }
     }
     if (def && WATCH_TYPES.includes(b.type) && kind !== 'watch') { err(at, 'Cette section n’existe que sur la page « Fiche vidéo »'); return null; }
+    if (def && FUNC_TYPES.includes(b.type) && kind !== 'func') { err(at, `Cette section n’existe que sur la page « ${FUNC_PAGES[funcOwner(b.type)].label} »`); return null; }
     if (def?.container && depth > 1) { err(`${at}.type`, 'Les colonnes ne s’imbriquent que sur deux niveaux'); return null; }
     if (!def) { err(`${at}.type`, 'Type de bloc inconnu'); return null; }
     if (typeof b.id !== 'string' || !/^[A-Za-z0-9_-]{4,24}$/.test(b.id)) err(`${at}.id`, 'Identifiant de bloc invalide');
@@ -515,6 +601,11 @@ export function blockSummary(b, lang = 'fr') {
 export function premiumHomeTemplate() {
   const mk = (type) => newBlock(type);
   return { meta: {}, zones: { main: PM_TYPES.map(mk) } };
+}
+
+// ---- Modèle d'une page « fonction » : toutes ses sections, dans l'ordre de la page d'origine.
+export function funcTemplate(id) {
+  return { meta: {}, zones: { main: (FUNC_PAGES[id]?.sections || []).map(([t]) => newBlock(t)) } };
 }
 
 // ---- Modèle de la fiche vidéo : les cinq sections de la fiche d'origine, dans le même ordre.

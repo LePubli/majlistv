@@ -7,7 +7,7 @@ import { readZip } from './zip.js';
 import { imageFormat, fontFormat } from './fileSniff.js';
 import { cleanValues, TOKEN_MAP, validFontName, BUILTIN_FONTS } from './themeCss.js';
 import { validate, emptyContent } from './pageContent.js';
-import { SITE_PAGES, WILDCARD_SLOTS, GLOBAL_PREFIX } from './blocks.js';
+import { SITE_PAGES, WILDCARD_SLOTS, GLOBAL_PREFIX, FUNC_PAGES, funcPath } from './blocks.js';
 
 export const PACK_SCHEMA = 1;
 export const SKIN_BASES = ['classique', 'nuit', 'bleu', 'premium'];
@@ -157,7 +157,7 @@ export function parsePack(buf) {
     else { const s = sanitizeCss(files.get(m.css).toString('utf8'), slug, files); errors.push(...s.errors.map((e) => `${m.css} : ${e}`)); warnings.push(...s.warnings); css = s.css; }
   }
   // -- pages
-  const pages = { slots: {}, custom: [] }; const used = new Set();
+  const pages = { slots: {}, custom: [], func: {} }; const used = new Set();
   const loadPage = (file, kind, path, label) => {
     const raw = readJson(file); if (!raw) return null;
     used.add(file);
@@ -173,7 +173,7 @@ export function parsePack(buf) {
   if (m.pages != null) {
     if (typeof m.pages !== 'object' || Array.isArray(m.pages)) fail('theme.json : "pages" doit être un objet');
     else {
-      for (const k of Object.keys(m.pages)) if (![...PAGE_KEYS, 'slots', 'custom'].includes(k)) fail(`pages.${k} : clé inconnue (permises : ${[...PAGE_KEYS, 'slots', 'custom'].join(', ')})`);
+      for (const k of Object.keys(m.pages)) if (![...PAGE_KEYS, 'slots', 'custom', 'func'].includes(k)) fail(`pages.${k} : clé inconnue (permises : ${[...PAGE_KEYS, 'slots', 'custom', 'func'].join(', ')})`);
       for (const k of PAGE_KEYS) if (m.pages[k] != null) { const c = typeof m.pages[k] === 'string' ? loadPage(m.pages[k], k, '', k) : (fail(`pages.${k} : chemin de fichier attendu`), null); if (c) pages[k] = c; }
       if (m.pages.slots != null) {
         if (typeof m.pages.slots !== 'object' || Array.isArray(m.pages.slots)) fail('pages.slots : objet { adresse: fichier } attendu');
@@ -181,6 +181,14 @@ export function parsePack(buf) {
           if (!THEME_SLOT_PATHS.includes(path)) { fail(`pages.slots : adresse inconnue « ${path} » (voir GUIDE-IA.md, section « Pages »)`); continue; }
           if (typeof file !== 'string') { fail(`pages.slots.${path} : chemin de fichier attendu`); continue; }
           const c = loadPage(file, 'slot', path, path); if (c) pages.slots[path] = c;
+        }
+      }
+      if (m.pages.func != null) {
+        if (typeof m.pages.func !== 'object' || Array.isArray(m.pages.func)) fail('pages.func : objet { page: fichier } attendu');
+        else for (const [id, file] of Object.entries(m.pages.func)) {
+          if (!FUNC_PAGES[id]) { fail(`pages.func : page inconnue « ${id} » (permises : ${Object.keys(FUNC_PAGES).join(', ')})`); continue; }
+          if (typeof file !== 'string') { fail(`pages.func.${id} : chemin de fichier attendu`); continue; }
+          const c = loadPage(file, 'func', funcPath(id), id); if (c) pages.func[id] = c;
         }
       }
       if (m.pages.custom != null) {
@@ -212,7 +220,7 @@ export function parsePack(buf) {
   const summary = {
     id: m.id, name: m.name, version: m.version, author: m.author || '', description: m.description || '', base: m.base,
     tokens: Object.keys(tokens).length, fonts: fonts.length, cssBytes: css.length, assets: [...files.keys()].filter((n) => IMG_EXT[ext(n)]).length,
-    pages: PAGE_KEYS.filter((k) => pages[k]).length + Object.keys(pages.slots).length + pages.custom.length, globals: globals.length, templates: templates.length,
+    pages: PAGE_KEYS.filter((k) => pages[k]).length + Object.keys(pages.slots).length + Object.keys(pages.func).length + pages.custom.length, globals: globals.length, templates: templates.length,
   };
   if (!summary.tokens && !css && !summary.pages) warnings.push('Ce thème ne change rien : ni jetons, ni CSS, ni pages.');
   return { ok: errors.length === 0, errors, warnings, manifest: m, tokens, css, files, fonts, pages, globals, templates, summary };

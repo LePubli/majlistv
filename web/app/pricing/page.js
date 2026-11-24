@@ -7,6 +7,7 @@ import Steps from '../../components/Steps';
 import { safePath, pricingPath, authPath } from '../../lib/nav';
 import { COUNTRY_CODES, countryName, guessCountry } from '../../lib/countries';
 import { useExperiment, visitorId } from '../../lib/experiments';
+import FuncPage, { useFuncPage } from '../../components/FuncPage';
 
 const fill = (text, n) => text.replace('{n}', n);
 
@@ -23,6 +24,7 @@ export default function Pricing() {
   const qs = useSearchParams();
   const xp = useExperiment('pricing'); // test A/B de la page Tarifs (7.2) : sans test en cours, xp.tx(clé) = t(clé) et xp.options = {}
   const tx = xp.tx;
+  const fp = useFuncPage('pricing'); // lot C : page « Tarifs » recomposée dans l'éditeur (undefined = on vérifie, null = page d'origine)
   useEffect(() => { if (xp.ready && xp.variant && ready && !user && info) xp.expose(); }, [xp.ready, xp.variant, xp.expose, ready, user, info]); // eslint-disable-line react-hooks/exhaustive-deps
   const canceled = qs.get('canceled');
   const from = safePath(qs.get('from')); // page d'origine (ex. la vidéo verrouillée)
@@ -55,7 +57,7 @@ export default function Pricing() {
     setErr(r.data.error || t('errGeneric')); setBusy('');
   };
 
-  if (!info || !ready) return null;
+  if (!info || !ready || fp === undefined) return null;
   const active = status?.active;
   // Deux paliers : « Mejliss » (visionnage) et « Mejliss Apprentissage » (score, courbe, série de jours, attestations).
   const learnPlans = info.learning?.plans || [];
@@ -66,14 +68,18 @@ export default function Pricing() {
   const anyPlans = tiers.some((x) => x.plans.length > 0);
   const layout = { highlight: 'year', order: 'month_first', ...(info.layout || {}), ...xp.options }; // réglages Admin → Paramètres, puis variante du test
 
-  return (
-    <main className="page pricing">
+  const secHead = () => (
+    <>
       {from && <Link className="link small back" href={from}>← {t('backTo')}</Link>}
       {!active && <Steps current={user ? 2 : 1} t={t} />}
       <h1>{tx('pricingTitle')}</h1>
       {canceled && <p className="meta">{t('billingCanceled')}</p>}
       {!info.enabled && <p className="soon">{anyPlans ? t('pricingSoon') : t('billingUnavailable')}</p>}
       {info.enabled && info.trialDays > 0 && !active && <p className="meta">{fill(tx(info.trialNoCard ? 'trialNoCardNote' : 'trialNote'), info.trialDays)}</p>}
+    </>
+  );
+  const secCountry = () => (
+    <>
       {info.regionalPricing && (
         <p className="pay-country">
           <label>{t('payCountry')}{' '}
@@ -85,8 +91,12 @@ export default function Pricing() {
           {info.region && <span className="meta small"> {fill(t('payRegionNote'), info.region.name)}</span>}
         </p>
       )}
+    </>
+  );
+  const secPlans = (p) => (
+    <>
       {err && <p className="error">{err}</p>}
-      {tiers.map((tier) => {
+      {tiers.filter((x) => (p.tiers || 'all') === 'all' || p.tiers === x.key).map((tier) => {
         const month = tier.plans.find((p) => p.interval === 'month');
         const year = tier.plans.find((p) => p.interval === 'year');
         const saving = month && year ? Math.round(100 - (year.amount / (month.amount * 12)) * 100) : 0;
@@ -126,6 +136,10 @@ export default function Pricing() {
           </section>
         );
       })}
+    </>
+  );
+  const secMethods = () => (
+    <>
       {anyPlans && (
         <p className="pay-methods" aria-label={t('payMethods')}>
           <span>{t('payMethods')}</span>
@@ -139,6 +153,10 @@ export default function Pricing() {
           {(info.methods || []).includes('link') && <span className="pay-chip">Link</span>}
         </p>
       )}
+    </>
+  );
+  const secWaiver = () => (
+    <>
       {info.enabled && user && !active && (
         <label className="waiver">
           <input type="checkbox" checked={waiver} onChange={(e) => setWaiver(e.target.checked)} />
@@ -146,8 +164,14 @@ export default function Pricing() {
         </label>
       )}
       {info.enabled && !user && <p className="meta small"><Link className="link u" href={authPath('login', pricingPath(from))}>{t('haveAccount')}</Link></p>}
+    </>
+  );
+  const secExtras = () => (
+    <>
       {gifts && <p className="gf-offer"><Link className="btn ghost" href="/gift">🎁 {t('gfOffer')}</Link></p>}
       {anyPlans && <p className="meta small">{t('pricingFooter')}</p>}
-    </main>
+    </>
   );
+  const sections = { f_pricing_head: secHead, f_pricing_country: secCountry, f_pricing_plans: secPlans, f_pricing_methods: secMethods, f_pricing_waiver: secWaiver, f_pricing_extras: secExtras };
+  return <FuncPage id="pricing" page={fp} className="page pricing" sections={sections} order={['f_pricing_head', 'f_pricing_country', 'f_pricing_plans', 'f_pricing_methods', 'f_pricing_waiver', 'f_pricing_extras']} />;
 }

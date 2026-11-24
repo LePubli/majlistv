@@ -13,6 +13,7 @@ import TwoFactor from '../../components/TwoFactor';
 import { safePath } from '../../lib/nav';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab, useScrollToSec } from '../../components/Tabs';
+import FuncPage, { useFuncPage } from '../../components/FuncPage';
 
 // Étape N5 (16/11) : 3 onglets — Profil (avec sécurité et mes données) · Abonnement et achats · Notifications.
 // Les réglages de la prière sont sur la page Prière. Anciens onglets → [nouvel onglet, section].
@@ -82,48 +83,59 @@ export default function Account() {
     { id: 'billing', label: t('acTabBilling') },
     { id: 'notifs', label: t('msNotif') },
   ];
+  const fp = useFuncPage('account'); // lot C : page « Mon compte » recomposée dans l'éditeur (undefined = on vérifie, null = page d'origine)
   const qs = useSearchParams();
   const [tab, go, sec] = useTab(tabs, qs.get('billing') ? 'billing' : undefined, LEGACY_TABS); // retour du paiement : on arrive sur Abonnement
   useScrollToSec(sec, Boolean(user));
   const wantPrayer = qs.get('tab') === 'prayer';
   useEffect(() => { if (wantPrayer) router.replace('/priere?tab=settings'); }, [wantPrayer, router]);
-  if (!user) return null;
+  if (!user || fp === undefined) return null;
   const setLocale = (e) => { document.cookie = `locale=${e.target.value};path=/;max-age=31536000;samesite=lax`; router.refresh(); };
-  return (
-    <main className="page acct">
+  // Sections : chacune est dessinée ici une seule fois ; la page d'origine (onglets) et la page en blocs les réutilisent.
+  const secHead = () => (
+    <>
       <Crumbs items={[[null, t('msAccount')], [null, t('acSpace')]]} />
       <h1>{t('hello')} {user.name}</h1>
+    </>
+  );
+  const secProfile = () => (
+    <section className="card-lite acct-sec" id="sec-profile">
+      <p>{user.email}</p>
+      <p>{t('role')} : <strong>{user.role}</strong></p>
+      <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
+      <label className="fld"><span>{t('acLang')}</span>
+        <select value={locale} onChange={setLocale}>{Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+      </label>
+      <p className="meta small">{t('acLangHelp')}</p>
+      {feat('prayer') && <p className="acct-prayer-link"><Link className="link u" href="/priere?tab=settings">{t('acPrayerLink')}</Link></p>}
+    </section>
+  );
+  const secSecurity = () => <div className="acct-sec" id="sec-security"><TwoFactor /></div>;
+  const secData = () => <div className="acct-sec" id="sec-data"><MyData /></div>;
+  const secBilling = () => <div className="acct-sec" id="sec-sub"><Suspense fallback={null}><Billing /></Suspense></div>;
+  const secPurchases = () => (feat('sales') ? <section className="acct-sec" id="sec-purchases"><h2>{t('mpTitle')}</h2><MyPurchases /></section> : null);
+  const secGifts = () => (feat('gifts') ? (
+    <div className="acct-sec" id="sec-gifts">
+      <MyGifts />
+      <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
+    </div>
+  ) : null);
+  const secReferral = () => (feat('referral') ? <div className="acct-sec" id="sec-referral"><MyReferral /></div> : null);
+  const secNotifs = () => <EmailPrefs />;
+  const sections = { f_account_head: secHead, f_account_profile: secProfile, f_account_security: secSecurity, f_account_data: secData, f_account_billing: secBilling, f_account_purchases: secPurchases, f_account_gifts: secGifts, f_account_referral: secReferral, f_account_notifs: secNotifs };
+  // Page d'origine : trois onglets.
+  const original = (
+    <>
+      {secHead()}
       <div className="tabs-layout">
         <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} vertical />
         <div className="tabs-body">
-          <TabPanel id="profile" current={tab}>
-            <section className="card-lite acct-sec" id="sec-profile">
-              <p>{user.email}</p>
-              <p>{t('role')} : <strong>{user.role}</strong></p>
-              <p><Link href="/welcome?edit=1">{t('myPrefs')}</Link></p>
-              <label className="fld"><span>{t('acLang')}</span>
-                <select value={locale} onChange={setLocale}>{Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-              </label>
-              <p className="meta small">{t('acLangHelp')}</p>
-              {feat('prayer') && <p className="acct-prayer-link"><Link className="link u" href="/priere?tab=settings">{t('acPrayerLink')}</Link></p>}
-            </section>
-            <div className="acct-sec" id="sec-security"><TwoFactor /></div>
-            <div className="acct-sec" id="sec-data"><MyData /></div>
-          </TabPanel>
-          <TabPanel id="billing" current={tab}>
-            <div className="acct-sec" id="sec-sub"><Suspense fallback={null}><Billing /></Suspense></div>
-            {feat('sales') && <section className="acct-sec" id="sec-purchases"><h2>{t('mpTitle')}</h2><MyPurchases /></section>}
-            {feat('gifts') && (
-              <div className="acct-sec" id="sec-gifts">
-                <MyGifts />
-                <p className="gf-links"><Link className="link u" href="/gift">{t('gfOffer')}</Link> · <Link className="link u" href="/redeem">{t('gfRedeemLink')}</Link></p>
-              </div>
-            )}
-            {feat('referral') && <div className="acct-sec" id="sec-referral"><MyReferral /></div>}
-          </TabPanel>
-          <TabPanel id="notifs" current={tab}><EmailPrefs /></TabPanel>
+          <TabPanel id="profile" current={tab}>{secProfile()}{secSecurity()}{secData()}</TabPanel>
+          <TabPanel id="billing" current={tab}>{secBilling()}{secPurchases()}{secGifts()}{secReferral()}</TabPanel>
+          <TabPanel id="notifs" current={tab}>{secNotifs()}</TabPanel>
         </div>
       </div>
-    </main>
+    </>
   );
+  return <FuncPage id="account" page={fp} className="page acct" sections={sections} original={original} />;
 }

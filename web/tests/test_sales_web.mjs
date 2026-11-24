@@ -21,7 +21,7 @@ assert.match(read('app/studio/[id]/page.js'), /<SaleEditor kind="talk" id=\{x\.i
 assert.match(read('app/studio/(module-audyn)/audyn/[id]/page.js'), /<SaleEditor kind="audyn" id=\{it\.id\} \/>/);
 assert.match(read('components/MyPurchases.js'), /call\('\/me\/purchases'\)/);
 // Étape N5 : « Mes achats » est une section de l'onglet « Abonnement et achats »
-assert.match(read('app/account/page.js'), /\{feat\('sales'\) && <section className="acct-sec" id="sec-purchases"><h2>\{t\('mpTitle'\)\}<\/h2><MyPurchases \/><\/section>\}/);
+assert.match(read('app/account/page.js'), /\(feat\('sales'\) \? <section className="acct-sec" id="sec-purchases"><h2>\{t\('mpTitle'\)\}<\/h2><MyPurchases \/><\/section> : null\)/);
 const adm = read('components/SalesAdmin.js');
 assert.ok(adm.includes('/admin/sales/${p.id}/refund') && adm.includes('/admin/sales?status=${status}'));
 assert.match(read('components/AdminShell.js'), /sales: 'sales' \}/);

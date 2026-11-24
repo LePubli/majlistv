@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import { levelLabel } from '../../../../lib/levels';
 import BooksBlock from '../../../../components/BooksBlock';
+import FuncPage, { useFuncPage } from '../../../../components/FuncPage';
 import PmSeries from '../../../../components/premium/PmSeries';
 
 const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes')}` : '');
@@ -13,7 +14,9 @@ const mins = (s, t) => (s > 0 ? `${Math.max(1, Math.round(s / 60))} ${t('minutes
 export default function SeriesPage(props) {
   const { skin } = useApp();
   const params = useParams();
-  if (skin === 'premium') return <PmSeries id={props.seriesId || params.id} />; // thème Premium : fiche série de la maquette V20
+  const fp = useFuncPage('series');
+  // Thème Premium : fiche série de la maquette V20, sauf si l'éditeur a publié une fiche en blocs (elle prend alors la place, quel que soit l'habillage).
+  if (skin === 'premium' && !fp) return <PmSeries id={props.seriesId || params.id} />;
   return <SeriesClassic {...props} />;
 }
 
@@ -23,6 +26,7 @@ function SeriesClassic({ initial = null, seriesId = null }) {
   const { t, call, ready, user } = useApp();
   const [s, setS] = useState(undefined);
   const [season, setSeason] = useState(0); // index de la saison affichée
+  const fp = useFuncPage('series'); // lot C : fiche série recomposée dans l'éditeur
 
   useEffect(() => {
     if (!ready) return;
@@ -37,7 +41,7 @@ function SeriesClassic({ initial = null, seriesId = null }) {
   }, [id, call, ready, user]);
 
   const flat = useMemo(() => (s ? (s.seasons ? s.seasons.flatMap((z) => z.episodes) : s.episodes) : []), [s]);
-  if (s === undefined) {
+  if (s === undefined || fp === undefined) {
     if (!initial) return null;
     return (
       <main className="series-page">
@@ -62,8 +66,8 @@ function SeriesClassic({ initial = null, seriesId = null }) {
   const meta = [s.speaker, s.category, levelLabel(s.level, t), s.seasons && s.seasons.length > 1 ? t('seasonCount').replace('{n}', s.seasons.length) : '', t('episodeCount').replace('{n}', s.episodeCount), access].filter(Boolean).join(' · ');
 
   const prereq = s.prerequisites || [];
-  return (
-    <main className="series-page">
+  const secHero = () => (
+    <>
       <section className="series-hero" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined}>
         <div className="series-hero-in">
           <p className="eyebrow">{t('seriesTag')}</p>
@@ -81,7 +85,10 @@ function SeriesClassic({ initial = null, seriesId = null }) {
           {resume && <div className="series-cta"><Link className="btn btn-lg" href={`/talks/${resume.talkId}`}>▶ {label}</Link></div>}
         </div>
       </section>
-
+    </>
+  );
+  const secEpisodes = () => (
+    <>
       <div className="series-body">
         {s.seasons && s.seasons.length > 1 && (
           <div className="pills series-seasons" role="tablist" aria-label={t('seasonPick')}>
@@ -119,7 +126,9 @@ function SeriesClassic({ initial = null, seriesId = null }) {
           })}
         </ol>
       </div>
-      <BooksBlock kind="series" id={id} />
-    </main>
+    </>
   );
+  const secBooks = () => <BooksBlock kind="series" id={id} />;
+  const sections = { f_series_hero: secHero, f_series_episodes: secEpisodes, f_series_books: secBooks };
+  return <FuncPage id="series" page={fp} className="series-page" sections={sections} order={['f_series_hero', 'f_series_episodes', 'f_series_books']} />;
 }

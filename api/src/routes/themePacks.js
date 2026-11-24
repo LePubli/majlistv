@@ -20,7 +20,7 @@ import { resetThemeCache } from './appearance.js';
 import { resetPagesCache } from './pages.js';
 import { parsePack, mapPackImages, packImageRefs, IMG_TYPES, FONT_TYPES } from '../themePack.js';
 import { fontFormat } from '../fileSniff.js';
-import { HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, GLOBAL_PREFIX } from '../blocks.js';
+import { HOME_PATH, CATALOGUE_PATH, WATCH_PATH, LAYOUT_PATH, GLOBAL_PREFIX, FUNC_PAGES, funcPath } from '../blocks.js';
 import { validate, emptyContent } from '../pageContent.js';
 import { buildExampleZip, buildGuide } from '../themeKit.js';
 
@@ -29,7 +29,7 @@ const row = (r) => ({
   slug: r.slug, name: r.name, version: r.version, author: r.author, description: r.description, base: r.base, active: r.active,
   installedAt: r.installed_at, activatedAt: r.activated_at, hasCss: Boolean(r.css), tokens: Object.keys(r.tokens || {}).length, fonts: (r.fonts || []).length,
   assets: Object.keys(r.files || {}).filter((n) => /\.(png|jpe?g|webp|gif)$/i.test(n)).length,
-  pages: Object.keys(r.payload?.pages?.slots || {}).length + ['home', 'catalogue', 'watch', 'layout'].filter((k) => r.payload?.pages?.[k]).length + (r.payload?.pages?.custom || []).length,
+  pages: Object.keys(r.payload?.pages?.slots || {}).length + ['home', 'catalogue', 'watch', 'layout'].filter((k) => r.payload?.pages?.[k]).length + Object.keys(r.payload?.pages?.func || {}).length + (r.payload?.pages?.custom || []).length,
   globals: (r.payload?.globals || []).length, templates: (r.payload?.templates || []).length,
   preview: r.manifest?.preview ? `/api/theme-pack/${r.slug}/${r.manifest.preview}` : null,
 });
@@ -198,6 +198,11 @@ export default async function themePackRoutes(app) {
     for (const [path, content] of Object.entries(pg.slots || {})) {
       const c = await resolveImages(t, content, cache, userId);
       if (await putDraft('slot', path, path === '/' ? 'Accueil' : path, c, userId, report, path)) report.applied.push(`Page ${path} : brouillon du thème`);
+    }
+    for (const [id, content] of Object.entries(pg.func || {})) {
+      if (!FUNC_PAGES[id]) continue;
+      const c = await resolveImages(t, content, cache, userId);
+      if (await putDraft('func', funcPath(id), FUNC_PAGES[id].label, c, userId, report, funcPath(id))) report.applied.push(`Page « ${FUNC_PAGES[id].label} » : brouillon du thème (à publier depuis l’éditeur)`);
     }
     for (const p of pg.custom || []) {
       const path = `/p/${p.slug}`;

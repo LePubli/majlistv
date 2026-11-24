@@ -1,5 +1,5 @@
 // Contenu des pages en blocs : forme normalisée et validation (partagé par les routes de pages et par les thèmes uploadables).
-import { ZONES, cleanContent, kidsErrors } from './blocks.js';
+import { ZONES, cleanContent, kidsErrors, funcErrors } from './blocks.js';
 import { cleanNav } from './navcfg.js';
 
 export const emptyContent = (kind) => ({ meta: {}, zones: Object.fromEntries(ZONES[kind].map((z) => [z, []])) });
@@ -13,6 +13,7 @@ export const norm = (kind, c) => {
 export const validate = (kind, content, strict, path = '') => {
   const r = cleanContent(content, kind, strict);
   Object.assign(r.errors, kidsErrors(path, r.value)); // espace Kids : blocs simples seulement
+  if (kind === 'func') Object.assign(r.errors, funcErrors(path, r.value)); // page fonction : seulement les sections de CETTE page
   if (kind === 'layout' && content && typeof content === 'object') {
     const n = cleanNav(content.nav, strict);
     if (n.value) r.value.nav = n.value;

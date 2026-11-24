@@ -12,6 +12,7 @@ import { clock } from '../../lib/clock';
 import ListsPanel from '../../components/ListsPanel';
 import Crumbs from '../../components/Crumbs';
 import { TabBar, TabPanel, useTab } from '../../components/Tabs';
+import FuncPage, { useFuncPage } from '../../components/FuncPage';
 import { mergeMyList } from '../../lib/mylist';
 
 // Anciens onglets (avant N5) → nouvel onglet.
@@ -28,6 +29,7 @@ export default function Library() {
   const [todo, setTodo] = useState([]);
   const [notes, setNotes] = useState([]);
 
+  const fp = useFuncPage('library'); // lot C : « Ma bibliothèque » recomposée dans l'éditeur (undefined = on vérifie, null = page d'origine)
   const myList = feat('watchlater') || feat('favorites');
   const tabs = [
     { id: 'resume', label: t('tbResume') },
@@ -49,7 +51,7 @@ export default function Library() {
     call('/me/notes').then((r) => setNotes(r.ok ? r.data : []));
   }, [call, feat]);
   useEffect(() => { if (user) load(); }, [user, load]);
-  if (!user) return null;
+  if (!user || fp === undefined) return null;
 
   const dropProgress = async (id) => { setCont((l) => l.filter((x) => x.id !== id)); await call(`/me/progress/${id}`, { method: 'DELETE' }); };
   const dropLater = async (id) => { setLat((l) => l.filter((x) => x.id !== id)); if (later?.has(id)) await toggleLater(id); else await call(`/me/watchlater/${id}`, { method: 'DELETE' }); };
@@ -68,13 +70,14 @@ export default function Library() {
   };
   const noteHref = (g, n) => `${g.slug ? `/conferences/${g.slug}` : `/talks/${g.talkId}`}?t=${Math.floor(n.positionMs / 1000)}`;
 
-  return (
-    <main className="page">
-      <Crumbs items={[[null, t('msSpace')], ['/library', t('library')], ...(tab !== 'resume' ? [[null, tabs.find((x) => x.id === tab).label]] : [])]} />
+  const secHead = () => (
+    <>
+      <Crumbs items={[[null, t('msSpace')], ['/library', t('library')], ...(tab !== 'resume' && tabs.find((x) => x.id === tab) ? [[null, tabs.find((x) => x.id === tab).label]] : [])]} />
       <h1>{t('library')}</h1>
-      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
-
-      <TabPanel id="resume" current={tab}>
+    </>
+  );
+  const secResume = () => (
+    <>
         {todo.length > 0 && (
           <>
             <h2>{t('qpTodoRow')}</h2>
@@ -94,19 +97,20 @@ export default function Library() {
             <div className="grid">{mine.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
           </>
         )}
-      </TabPanel>
-
-      <TabPanel id="list" current={tab}>
+    </>
+  );
+  const secList = () => (!myList ? null : (
+    <>
         <p className="meta">{t('lbMyListIntro')}</p>
         {listReady && mine2.length === 0 && <EmptyState text={t('lbMyListEmpty')} actions={[{ href: '/catalogue', label: t('esFindTalk') }]} />}
         <div className="grid">
           {mine2.map((x) => <TalkCard key={x.id} talk={x} t={t} progress={x.positionMs && x.durationSeconds ? x.positionMs / (x.durationSeconds * 1000) : 0} onRemove={() => dropMine(x)} removeLabel={t('lbMyListRemove')} />)}
         </div>
-      </TabPanel>
-
-      <TabPanel id="lists" current={tab}><ListsPanel /></TabPanel>
-
-      <TabPanel id="notes" current={tab}>
+    </>
+  ));
+  const secLists = () => (feat('lists') ? <ListsPanel /> : null);
+  const secNotes = () => (!feat('notes') ? null : (
+    <>
         {notes.length === 0 && <p className="meta">{t('ntLibEmpty')}</p>}
         <div className="lib-notes">
           {notes.map((g) => (
@@ -126,7 +130,19 @@ export default function Library() {
             </section>
           ))}
         </div>
-      </TabPanel>
-    </main>
+    </>
+  ));
+  const sections = { f_library_head: secHead, f_library_resume: secResume, f_library_list: secList, f_library_lists: secLists, f_library_notes: secNotes };
+  // Page d'origine : un onglet à la fois.
+  const original = (
+    <>
+      {secHead()}
+      <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />
+      <TabPanel id="resume" current={tab}>{secResume()}</TabPanel>
+      <TabPanel id="list" current={tab}>{secList()}</TabPanel>
+      <TabPanel id="lists" current={tab}>{secLists()}</TabPanel>
+      <TabPanel id="notes" current={tab}>{secNotes()}</TabPanel>
+    </>
   );
+  return <FuncPage id="library" page={fp} className="page" sections={sections} original={original} />;
 }

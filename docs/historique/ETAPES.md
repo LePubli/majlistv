@@ -10429,3 +10429,25 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Apparence → Thèmes Mejliss → « Télécharger le thème d'exemple » → « Envoyer un thème » (le même .zip) → « Installer » → « Activer » → éditeur visuel : relire et publier les brouillons. Créer un thème : voir `api/theme-kit/README.md` (copier `example/`, `validate.mjs`, `build.mjs`).
 
 **Testé / non testé / limites.** Voir ligne 360 du registre.
+
+
+## Éditeur visuel — lot C : pages à fonctions découpées en sections (24/11)
+
+**Description.** Éditeur → « Pages avec fonctions » : Tarifs, Mon compte, Ma bibliothèque, Apprendre, Fiche série, Page chaîne, Page collection. « Créer » ouvre la page découpée en sections (blocs « Tarifs : formules et abonnement », « Apprendre : révisions du jour »…) : on les déplace, masque, stylise, et on insère des blocs libres entre elles. Le code des fonctions (paiement, quiz, lecteur, connexion) ne bouge pas. Tant qu'on ne publie pas, le site affiche la page d'origine ; supprimer la page en blocs la rétablit. Une page série / chaîne / collection s'applique à toutes les séries / chaînes / collections. Option de section : Tarifs → « Formules affichées ». Thèmes .zip : clé `pages.func`.
+
+**Prérequis.** Migration 135 (automatique au démarrage de l'API).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (migration 135), puis `majlistv-web`. Puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Page en blocs sans effet : elle doit être publiée (« En ligne »). Une section « absente » : sa fonction est coupée (Admin → Fonctions) ou n'a rien à montrer pour ce membre. Retour à l'origine : supprimer la page « fonction » dans l'éditeur. Test API : `python3 api/tests/test_func_pages.py`.
+
+**Exemples.** Éditeur → Pages avec fonctions → Tarifs → Créer → glisser « Tarifs : formules » avant « Tarifs : pays » → ajouter un bloc Texte → Publier → ouvrir /pricing.
+
+**Testé / non testé / limites.** Voir ligne 361 du registre.

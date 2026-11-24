@@ -9,6 +9,7 @@ import FollowButton from './FollowButton';
 import Crumbs from './Crumbs';
 import ChannelAvatar from './ChannelAvatar';
 import { TabBar, TabPanel, useTab } from './Tabs';
+import FuncPage, { useFuncPage } from './FuncPage';
 import { ShortsGrid } from './ShortsRail';
 
 const SOCIAL_LABELS = [['youtube', 'YouTube'], ['instagram', 'Instagram'], ['x', 'X'], ['facebook', 'Facebook'], ['tiktok', 'TikTok']];
@@ -20,6 +21,7 @@ export default function ChannelClient({ slug, initial }) {
   const [info, setInfo] = useState(null); // { series, followers }
   const [shorts, setShorts] = useState([]);
   const shortsOn = feat('shorts');
+  const fp = useFuncPage('channel'); // lot C : page chaîne recomposée dans l'éditeur (la page d'origine reste affichée tant qu'on vérifie : le HTML serveur reste complet)
   useEffect(() => {
     if (!ready) return;
     call(`/talks?speaker=${slug}&limit=100`).then((r) => setTalks(r.ok ? r.data : []));
@@ -32,8 +34,8 @@ export default function ChannelClient({ slug, initial }) {
   const followers = info?.followers || 0;
   const socialLinks = SOCIAL_LABELS.filter(([k]) => initial.socials?.[k]).map(([k, label]) => [k, label, initial.socials[k]]);
   const featuredCard = initial.featured && talks ? talks.find((x) => x.id === initial.featured.id) : null;
-  return (
-    <main className="spk-page ch-page">
+  const secHead = () => (
+    <>
       <Crumbs items={[['/chaines', t('spTitle')], [null, initial.name]]} />
       {initial.bannerUrl && <div className="ch-banner"><img src={initial.bannerUrl} alt="" /></div>}
       <header className={`ch-head${initial.bannerUrl ? ' has-banner' : ''}`}>
@@ -56,12 +58,20 @@ export default function ChannelClient({ slug, initial }) {
           {initial.contactEmail && <a className="ch-chip" href={`mailto:${initial.contactEmail}`}>{t('chPubContact')}</a>}
         </nav>
       )}
+    </>
+  );
+  const secFeatured = () => (
+    <>
       {initial.featured && (
         <section className="ch-featured" aria-labelledby="ch-feat">
           <h2 id="ch-feat">{t('chPubFeatured')}</h2>
           {featuredCard ? <div className="grid"><TalkCard talk={featuredCard} t={t} /></div> : <a className="link u" href={`/conferences/${initial.featured.slug}`}>{initial.featured.title}</a>}
         </section>
       )}
+    </>
+  );
+  const secContent = () => (
+    <>
       {tabs.length > 1 && <TabBar tabs={tabs} current={tab} onChange={go} label={t('tbLabel')} />}
       <TabPanel id="talks" current={tab}>
         {tabs.length === 1 && <h2>{t('spTalks')}</h2>}
@@ -77,6 +87,8 @@ export default function ChannelClient({ slug, initial }) {
       <TabPanel id="series" current={tab}>
         <div className="grid">{series.map((x) => <SeriesCard key={x.id} series={x} t={t} />)}</div>
       </TabPanel>
-    </main>
+    </>
   );
+  const sections = { f_channel_head: secHead, f_channel_featured: secFeatured, f_channel_content: secContent };
+  return <FuncPage id="channel" page={fp ?? null} className="spk-page ch-page" sections={sections} order={['f_channel_head', 'f_channel_featured', 'f_channel_content']} />;
 }

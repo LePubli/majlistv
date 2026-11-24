@@ -54,6 +54,7 @@ Extensions permises : png, jpg, jpeg, webp, gif, woff2, woff, ttf, otf, json, cs
   "pages": {
     "home": "pages/home.json", "catalogue": "pages/catalogue.json", "watch": "pages/watch.json", "layout": "pages/layout.json",
     "slots": { "/pricing": "pages/pricing.json" },
+    "func": { "pricing": "pages/func-pricing.json" },
     "custom": [ { "slug": "a-propos", "title": "À propos", "file": "pages/a-propos.json" } ]
   },
   "globals": [ { "slug": "aurore-infolettre", "title": "Invitation à s'inscrire", "file": "pages/global-infolettre.json" } ],
@@ -336,9 +337,22 @@ Un fichier de page a la forme :
 | `pages.catalogue` | Catalogue (habillage Premium) | `main` | `/_catalogue` |
 | `pages.watch` | Fiche vidéo | `main` | `/_watch` |
 | `pages.layout` | En-tête, menus et pied de page | `topbar` (Barre d’annonce (tout en haut du site, au-dessus de l’en-tête)), `footerTop` (Au-dessus du pied de page (sur toutes les pages)) | `/_layout` |
+| `pages.func` | Pages à fonctions recomposées en sections (tarifs, compte, apprendre, série, chaîne…) | `main` | `/_func/<page>` |
 | `pages.slots` | Toute autre page du site : blocs avant / après son contenu | `before`, `after` | l’adresse de la page (ex. `/pricing`) |
 | `pages.custom` | Pages libres (`/p/<slug>`) | `main` | `/p/<slug>` |
 | `globals` | Sections globales (réutilisables) | `main` | `/_global/<slug>` |
+
+Une page « fonction » (`pages.func`) découpe une page à fonctions en **sections** que l'on déplace, masque et style : le code (paiement, quiz, lecteur, connexion) reste en place et chaque section est un bloc `f_<page>_<section>`. Tant qu'elle n'est pas publiée, la page d'origine s'affiche. Clés permises : `pricing`, `account`, `learning`, `series`, `channel`, `collection`, `library`.
+
+| Clé (`pages.func`) | Page | Sections (types de blocs) |
+|---|---|---|
+| `pricing` | Tarifs (`/pricing`, adresse interne `/_func/pricing`) | `f_pricing_head`, `f_pricing_country`, `f_pricing_plans`, `f_pricing_methods`, `f_pricing_waiver`, `f_pricing_extras` |
+| `account` | Mon compte (`/account`, adresse interne `/_func/account`) | `f_account_head`, `f_account_profile`, `f_account_security`, `f_account_data`, `f_account_billing`, `f_account_purchases`, `f_account_gifts`, `f_account_referral`, `f_account_notifs` |
+| `learning` | Apprendre (`/learning`, adresse interne `/_func/learning`) | `f_learning_head`, `f_learning_today`, `f_learning_week`, `f_learning_next`, `f_learning_quiz`, `f_learning_revision`, `f_learning_cards`, `f_learning_series`, `f_learning_commit`, `f_learning_bilan`, `f_learning_stats` |
+| `series` | Fiche série (`/series`, adresse interne `/_func/series`) | `f_series_hero`, `f_series_episodes`, `f_series_books` |
+| `channel` | Page chaîne (`/chaines`, adresse interne `/_func/channel`) | `f_channel_head`, `f_channel_featured`, `f_channel_content` |
+| `collection` | Page collection (`/collections`, adresse interne `/_func/collection`) | `f_collection_head`, `f_collection_talks` |
+| `library` | Ma bibliothèque (`/library`, adresse interne `/_func/library`) | `f_library_head`, `f_library_resume`, `f_library_list`, `f_library_lists`, `f_library_notes` |
 
 Une page « slot » (`pages.slots`) a les zones `before` et `after`. Le **contenu fonctionnel** (formulaire de connexion, paiement, lecteur…) reste toujours en place : les blocs sont posés autour.
 Les adresses `/chose/*` s'appliquent à TOUTES les pages de ce genre (ex. `/conferences/*` = chaque vidéo). Liste des zones « toutes les pages de ce genre » : `/conferences/*`, `/series/*`, `/catalogue/*`, `/chaines/*`, `/collections/*`, `/shorts/*`, `/intervenants/*`, `/themes/*`, `/books/*`, `/events/*`, `/audyn/*`, `/coran/*`, `/legal/*`, `/kids/histoires/*`, `/kids/serie/*`, `/kids/univers/*`, `/kids/watch/*`, `/kids/shorts/*`.
@@ -459,6 +473,45 @@ Règles : `global` ne peut pas contenir de `global` ; les types `w_*` n'existent
 | `w_next` | Fiche : à suivre | fiche vidéo | non | Rangée de vidéos « À suivre » / « Dans la même veine ». |
 | `w_books` | Fiche : livres cités | fiche vidéo | non | Les livres liés à la vidéo, quand il y en a. |
 | `global` | Section globale | simple | non | Une section réutilisable : modifiée une fois, elle change partout où elle est posée. Se crée avec « Rendre globale » sur un bloc. |
+| `f_pricing_head` | Tarifs : titre et messages | page fonction « Tarifs » | non | Lien de retour, étapes, titre, essai gratuit, messages d’annulation ou de paiement indisponible. |
+| `f_pricing_country` | Tarifs : pays | page fonction « Tarifs » | non | Choix du pays pour le tarif (seulement quand des tarifs par pays existent : Admin → Tarifs par pays). |
+| `f_pricing_plans` | Tarifs : formules et abonnement | page fonction « Tarifs » | non | Les formules (mensuelle, annuelle) avec le bouton d’abonnement ou de gestion. Ne le retirez pas : sans lui, personne ne peut s’abonner. |
+| `f_pricing_methods` | Tarifs : moyens de paiement | page fonction « Tarifs » | non | Carte, Apple Pay, Google Pay, PayPal… selon ce qui est activé. |
+| `f_pricing_waiver` | Tarifs : renoncement et connexion | page fonction « Tarifs » | non | Case « renoncement au droit de rétractation » (obligatoire avant de s’abonner) et lien « j’ai déjà un compte ». Ne le retirez pas. |
+| `f_pricing_extras` | Tarifs : cadeau et mentions | page fonction « Tarifs » | non | Bouton « Offrir un abonnement » et note de bas de page. |
+| `f_account_head` | Mon compte : titre | page fonction « Mon compte » | non | Fil d’Ariane et « Bonjour … ». |
+| `f_account_profile` | Mon compte : profil | page fonction « Mon compte » | non | Adresse e-mail, rôle, préférences, langue de l’interface, lien vers les réglages de prière. |
+| `f_account_security` | Mon compte : sécurité | page fonction « Mon compte » | non | Mot de passe et double authentification. |
+| `f_account_data` | Mon compte : mes données | page fonction « Mon compte » | non | Export et suppression des données personnelles (RGPD). Ne le retirez pas : c’est une obligation légale. |
+| `f_account_billing` | Mon compte : abonnement | page fonction « Mon compte » | non | État de l’abonnement et bouton de gestion. |
+| `f_account_purchases` | Mon compte : achats | page fonction « Mon compte » | non | Achats de la boutique (si la fonction est active). |
+| `f_account_gifts` | Mon compte : cartes cadeaux | page fonction « Mon compte » | non | Cartes cadeaux achetées et reçues (si la fonction est active). |
+| `f_account_referral` | Mon compte : parrainage | page fonction « Mon compte » | non | Lien et récompenses de parrainage (si la fonction est active). |
+| `f_account_notifs` | Mon compte : notifications | page fonction « Mon compte » | non | Choix des e-mails reçus. |
+| `f_learning_head` | Apprendre : titre | page fonction « Apprendre » | non | Salutation et phrase d’introduction. |
+| `f_learning_today` | Apprendre : aujourd’hui | page fonction « Apprendre » | non | Bloc « Aujourd’hui », reprise de la dernière vidéo, quiz / engagement / série du moment. |
+| `f_learning_week` | Apprendre : ma semaine | page fonction « Apprendre » | non | Planning de la semaine (à déplier). |
+| `f_learning_next` | Apprendre : pour continuer | page fonction « Apprendre » | non | Rangée de vidéos « Pour continuer à apprendre ». |
+| `f_learning_quiz` | Apprendre : quiz à passer | page fonction « Apprendre » | non | Liste des quiz en attente (si la fonction est active). |
+| `f_learning_revision` | Apprendre : révisions du jour | page fonction « Apprendre » | non | Révision espacée, rappel et e-mail quotidien (si la fonction est active). |
+| `f_learning_cards` | Apprendre : cartes mémoire | page fonction « Apprendre » | non | Cartes mémoire du jour (si la fonction est active). |
+| `f_learning_series` | Apprendre : séries et attestations | page fonction « Apprendre » | non | Séries suivies et attestations. |
+| `f_learning_commit` | Apprendre : engagements | page fonction « Apprendre » | non | Mes engagements (si la fonction est active). |
+| `f_learning_bilan` | Apprendre : bilan | page fonction « Apprendre » | non | Bilan personnel et évolution (si la fonction est active). |
+| `f_learning_stats` | Apprendre : statistiques | page fonction « Apprendre » | non | Série de jours, score, courbe et résultats récents. |
+| `f_series_hero` | Fiche série : bannière | page fonction « Fiche série » | non | Titre, informations, description, prérequis et bouton « Regarder / Reprendre ». |
+| `f_series_episodes` | Fiche série : saisons et épisodes | page fonction « Fiche série » | non | Choix de saison et liste des épisodes avec avancement. |
+| `f_series_books` | Fiche série : livres liés | page fonction « Fiche série » | non | Livres associés à la série (si la fonction est active). |
+| `f_channel_head` | Page chaîne : en-tête | page fonction « Page chaîne » | non | Fil d’Ariane, bannière, nom, abonnés, bouton Suivre, présentation et liens. |
+| `f_channel_featured` | Page chaîne : vidéo à la une | page fonction « Page chaîne » | non | Vidéo mise en avant par la chaîne (si elle en a une). |
+| `f_channel_content` | Page chaîne : vidéos et séries | page fonction « Page chaîne » | non | Onglets Vidéos, Shorts et Séries de la chaîne. |
+| `f_collection_head` | Page collection : titre | page fonction « Page collection » | non | Retour, type, titre et présentation de la collection. |
+| `f_collection_talks` | Page collection : vidéos | page fonction « Page collection » | non | Les vidéos de la collection dans l’ordre choisi. |
+| `f_library_head` | Ma bibliothèque : titre | page fonction « Ma bibliothèque » | non | Fil d’Ariane et titre de la page. |
+| `f_library_resume` | Ma bibliothèque : reprendre | page fonction « Ma bibliothèque » | non | Quiz à rattraper, vidéos en cours (« Reprendre ») et séries suivies. |
+| `f_library_list` | Ma bibliothèque : ma liste | page fonction « Ma bibliothèque » | non | Favoris et « à regarder plus tard » réunis (si la fonction est active). |
+| `f_library_lists` | Ma bibliothèque : mes listes | page fonction « Ma bibliothèque » | non | Listes personnelles et partagées (si la fonction est active). |
+| `f_library_notes` | Ma bibliothèque : mes notes | page fonction « Ma bibliothèque » | non | Notes et repères pris pendant les vidéos (si la fonction est active). |
 
 #### `hero` : Bannière
 
@@ -878,6 +931,242 @@ Une section réutilisable : modifiée une fois, elle change partout où elle est
 |---|---|
 | `ref` (Section globale) | nom d’une section globale (`aurore-infolettre`) |
 
+#### `f_pricing_head` : Tarifs : titre et messages
+
+Lien de retour, étapes, titre, essai gratuit, messages d’annulation ou de paiement indisponible.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_pricing_country` : Tarifs : pays
+
+Choix du pays pour le tarif (seulement quand des tarifs par pays existent : Admin → Tarifs par pays).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_pricing_plans` : Tarifs : formules et abonnement
+
+Les formules (mensuelle, annuelle) avec le bouton d’abonnement ou de gestion. Ne le retirez pas : sans lui, personne ne peut s’abonner.
+
+| Champ (`props`) | Valeur |
+|---|---|
+| `tiers` (Formules affichées) | choix : `all` (Toutes), `standard` (Seulement Mejliss), `learning` (Seulement Apprentissage) ; défaut `all` |
+
+#### `f_pricing_methods` : Tarifs : moyens de paiement
+
+Carte, Apple Pay, Google Pay, PayPal… selon ce qui est activé.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_pricing_waiver` : Tarifs : renoncement et connexion
+
+Case « renoncement au droit de rétractation » (obligatoire avant de s’abonner) et lien « j’ai déjà un compte ». Ne le retirez pas.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_pricing_extras` : Tarifs : cadeau et mentions
+
+Bouton « Offrir un abonnement » et note de bas de page.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_head` : Mon compte : titre
+
+Fil d’Ariane et « Bonjour … ».
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_profile` : Mon compte : profil
+
+Adresse e-mail, rôle, préférences, langue de l’interface, lien vers les réglages de prière.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_security` : Mon compte : sécurité
+
+Mot de passe et double authentification.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_data` : Mon compte : mes données
+
+Export et suppression des données personnelles (RGPD). Ne le retirez pas : c’est une obligation légale.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_billing` : Mon compte : abonnement
+
+État de l’abonnement et bouton de gestion.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_purchases` : Mon compte : achats
+
+Achats de la boutique (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_gifts` : Mon compte : cartes cadeaux
+
+Cartes cadeaux achetées et reçues (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_referral` : Mon compte : parrainage
+
+Lien et récompenses de parrainage (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_account_notifs` : Mon compte : notifications
+
+Choix des e-mails reçus.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_head` : Apprendre : titre
+
+Salutation et phrase d’introduction.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_today` : Apprendre : aujourd’hui
+
+Bloc « Aujourd’hui », reprise de la dernière vidéo, quiz / engagement / série du moment.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_week` : Apprendre : ma semaine
+
+Planning de la semaine (à déplier).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_next` : Apprendre : pour continuer
+
+Rangée de vidéos « Pour continuer à apprendre ».
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_quiz` : Apprendre : quiz à passer
+
+Liste des quiz en attente (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_revision` : Apprendre : révisions du jour
+
+Révision espacée, rappel et e-mail quotidien (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_cards` : Apprendre : cartes mémoire
+
+Cartes mémoire du jour (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_series` : Apprendre : séries et attestations
+
+Séries suivies et attestations.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_commit` : Apprendre : engagements
+
+Mes engagements (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_bilan` : Apprendre : bilan
+
+Bilan personnel et évolution (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_learning_stats` : Apprendre : statistiques
+
+Série de jours, score, courbe et résultats récents.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_series_hero` : Fiche série : bannière
+
+Titre, informations, description, prérequis et bouton « Regarder / Reprendre ».
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_series_episodes` : Fiche série : saisons et épisodes
+
+Choix de saison et liste des épisodes avec avancement.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_series_books` : Fiche série : livres liés
+
+Livres associés à la série (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_channel_head` : Page chaîne : en-tête
+
+Fil d’Ariane, bannière, nom, abonnés, bouton Suivre, présentation et liens.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_channel_featured` : Page chaîne : vidéo à la une
+
+Vidéo mise en avant par la chaîne (si elle en a une).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_channel_content` : Page chaîne : vidéos et séries
+
+Onglets Vidéos, Shorts et Séries de la chaîne.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_collection_head` : Page collection : titre
+
+Retour, type, titre et présentation de la collection.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_collection_talks` : Page collection : vidéos
+
+Les vidéos de la collection dans l’ordre choisi.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_library_head` : Ma bibliothèque : titre
+
+Fil d’Ariane et titre de la page.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_library_resume` : Ma bibliothèque : reprendre
+
+Quiz à rattraper, vidéos en cours (« Reprendre ») et séries suivies.
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_library_list` : Ma bibliothèque : ma liste
+
+Favoris et « à regarder plus tard » réunis (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_library_lists` : Ma bibliothèque : mes listes
+
+Listes personnelles et partagées (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
+#### `f_library_notes` : Ma bibliothèque : mes notes
+
+Notes et repères pris pendant les vidéos (si la fonction est active).
+
+Aucun champ : le bloc se règle uniquement par `style` et `show`.
+
 ### 6.1 Réglages de style communs (`style`)
 
 Tous facultatifs ; une valeur absente = réglage du thème.
@@ -1127,6 +1416,7 @@ Pour CHAQUE ligne, contrôlez : visiteur et connecté, FR / EN / AR, 390 / 768 /
 - [ ] aperçu `assets/preview.png` fourni
 - [ ] jetons : contrastes, arrondis, polices (FR et AR)
 - [ ] `pages.home`, `pages.catalogue`, `pages.watch`, `pages.layout` (ou volontairement absentes)
+- [ ] `pages.func` : `pricing`, `account`, `learning`, `series`, `channel`, `collection`, `library` (ou volontairement absentes)
 - [ ] `/` (zone `/`) : visiteur et connecté · FR, EN, AR (RTL) · 390, 768, 1440 px · clair/foncé selon base
 - [ ] `/account` (zone `/account`) : visiteur et connecté · FR, EN, AR (RTL) · 390, 768, 1440 px · clair/foncé selon base
 - [ ] `/adhkar` (zone `/adhkar`) : visiteur et connecté · FR, EN, AR (RTL) · 390, 768, 1440 px · clair/foncé selon base
