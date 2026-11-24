@@ -10,7 +10,7 @@ import { useReducedMotion } from '../HomeHero';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { OttCard, OttRail } from './PmOtt';
-import { ShortsRail } from '../ShortsRail';
+import PmShortTile from './PmShortTile';
 import { KidsBand } from '../KidsBanner';
 
 const HERO_FALLBACK = '/premium/andalousie-large.webp';
@@ -166,48 +166,68 @@ export function PmContinueSection({ title, limit = 10 }) {
   );
 }
 
-/** Rangées de l'accueil (nouveautés, « Pour vous », débutant, séries, une par catégorie). */
-export function PmRowsSection({ max = 12 }) {
+/** Rangées de l'accueil (nouveautés, « Pour vous », débutant, séries, une par catégorie).
+ *  inserts : éléments posés entre les rangées, comme dans la maquette (après la 4e, la 7e, la 10e…) ; ceux qui n'ont pas de place sont ajoutés à la fin. */
+export function PmRowsSection({ max = 12, inserts = [] }) {
   const { t } = useApp();
   const home = useHome();
   const rowTitle = (r) => (r.key === 'new' ? t('rowNew') : r.key === 'foryou' ? t('forYou') : r.key === 'beginner' ? t('rowBeginner') : r.key === 'series' ? t('rowSeries') : r.title);
   const rowHref = (r) => (r.key === 'series' ? '/series' : r.categoryId ? `/catalogue?cat=${r.categoryId}` : r.key === 'foryou' ? undefined : '/catalogue');
+  const rows = (home?.rows || []).slice(0, Math.max(1, Number(max) || 12));
+  const extra = inserts.filter(Boolean);
+  const GAP = 3; // une rangée sur 3 après la 4e : rangées 4, 7, 10…
+  const out = [];
+  let used = 0;
+  rows.forEach((r, i) => {
+    const list = r.series || r.talks || [];
+    out.push(
+      <OttRail key={r.key} title={rowTitle(r)} href={rowHref(r)}>
+        {list.slice(0, 10).map((x) => <OttCard key={x.id} x={x} kind={r.series ? 'series' : undefined} />)}
+      </OttRail>,
+    );
+    if (i >= 3 && (i - 3) % GAP === 0 && used < extra.length) { out.push(<div key={`ins${used}`} className="pm-ins">{extra[used]}</div>); used += 1; }
+  });
+  while (used < extra.length) { out.push(<div key={`ins${used}`} className="pm-ins">{extra[used]}</div>); used += 1; }
+  return <>{out}</>;
+}
+
+// Collections publiées « sur l'accueil » (GET /collections/home). Les deux premières qui ont au moins 2 vidéos deviennent des
+// « sélections » en grand cadre (maquette V22) ; les autres restent des rangées.
+function useHomeCollections() {
+  const d = usePmData('/collections/home', { auth: false });
+  const cols = Array.isArray(d?.collections) ? d.collections : [];
+  const spots = cols.filter((c) => (c.talks || []).length >= 2).slice(0, 2);
+  return { cols, spots, rest: cols.filter((c) => !spots.includes(c)) };
+}
+
+/** Grand cadre « Sélection » : texte à gauche, deux affiches à droite, image de la collection en fond. */
+export function PmSpot({ c }) {
+  const { t, appName } = useApp();
+  if (!c) return null;
   return (
-    <>
-      {(home?.rows || []).slice(0, Math.max(1, Number(max) || 12)).map((r) => {
-        const list = r.series || r.talks || [];
-        return (
-          <OttRail key={r.key} title={rowTitle(r)} href={rowHref(r)}>
-            {list.slice(0, 10).map((x) => <OttCard key={x.id} x={x} kind={r.series ? 'series' : undefined} />)}
-          </OttRail>
-        );
-      })}
-    </>
+    <section className="pm-spot" style={{ '--cover': coverOf(c.talks[0]) }} aria-label={c.title}>
+      <div className="pm-spot-copy">
+        <span className="pm-spot-kicker">{t('pmSelection').replace('{name}', appName)}</span>
+        <h2>{c.title}</h2>
+        {c.description && <p>{c.description}</p>}
+        {c.mode !== 'personal' && <Link href={`/collections/${c.id}`} className="pm-spot-cta">{t('pmExploreCollection')} <span aria-hidden="true">↗</span></Link>}
+      </div>
+      <div className="pm-spot-cards">
+        {c.talks.slice(0, 2).map((x) => <OttCard key={x.id} x={x} />)}
+      </div>
+    </section>
   );
 }
 
-/** Collections publiées « sur l'accueil » : la première (3 vidéos ou plus) en grand cadre, les autres en rangées. */
-export function PmCollectionsSection({ limit = 12 }) {
-  const { t, appName } = useApp();
-  const d = usePmData('/collections/home', { auth: false });
-  const cols = (Array.isArray(d?.collections) ? d.collections : []).slice(0, Math.max(1, Number(limit) || 12));
-  const spot = cols.find((c) => (c.talks || []).length >= 3);
+/** Collections de l'accueil : sélections en grand cadre (spots) puis rangées. spots = faux : seulement les rangées (les sélections sont posées ailleurs). */
+export function PmCollectionsSection({ limit = 12, spots = true }) {
+  const { spots: sp, rest, cols } = useHomeCollections();
+  const lim = Math.max(1, Number(limit) || 12);
+  const shown = (spots ? cols : rest).slice(0, lim);
   return (
     <>
-      {spot && (
-        <section className="pm-spot" style={{ '--cover': coverOf(spot.talks[0]) }} aria-label={spot.title}>
-          <div className="pm-spot-copy">
-            <span className="pm-spot-kicker">{t('pmSelection').replace('{name}', appName)}</span>
-            <h2>{spot.title}</h2>
-            {spot.description && <p>{spot.description}</p>}
-            {spot.mode !== 'personal' && <Link href={`/collections/${spot.id}`} className="pm-spot-cta">{t('pmExploreCollection')} <span aria-hidden="true">↗</span></Link>}
-          </div>
-          <div className="pm-spot-cards">
-            {spot.talks.slice(0, 3).map((x) => <OttCard key={x.id} x={x} badge="" />)}
-          </div>
-        </section>
-      )}
-      {cols.filter((c) => c !== spot).map((c) => (
+      {spots && sp.filter((c) => shown.includes(c)).map((c) => <PmSpot key={c.id} c={c} />)}
+      {shown.filter((c) => !sp.includes(c)).map((c) => (
         <OttRail key={c.id} title={c.title} href={c.mode === 'personal' ? undefined : `/collections/${c.id}`}>
           {(c.talks || []).slice(0, 10).map((x) => <OttCard key={x.id} x={x} />)}
         </OttRail>
@@ -216,18 +236,42 @@ export function PmCollectionsSection({ limit = 12 }) {
   );
 }
 
-/** Rangée des derniers shorts publiés. */
+/** Une seule « sélection » en grand cadre : n = 1 pour la première, 2 pour la deuxième. Invisible s'il n'y en a pas. */
+export function PmSpotSection({ n = 1 }) {
+  const { spots } = useHomeCollections();
+  return <PmSpot c={spots[Math.max(1, Math.min(2, Number(n) || 1)) - 1]} />;
+}
+
+/** Composition d'origine du corps de l'accueil, comme la maquette V22 : rangées du catalogue avec, entre elles, la 1re sélection, les Shorts
+ *  puis la 2e sélection ; les autres collections suivent en rangées. */
+export function PmFeedSection() {
+  const { spots } = useHomeCollections();
+  return (
+    <>
+      <PmRowsSection inserts={[spots[0] && <PmSpot key="s1" c={spots[0]} />, <PmShortsSection key="sh" />, spots[1] && <PmSpot key="s2" c={spots[1]} />]} />
+      <PmCollectionsSection spots={false} />
+    </>
+  );
+}
+
+/** Rangée des derniers shorts publiés (maquette V22 : tuiles verticales « SHORT », durée, bouton lecture, titre, thème). */
 export function PmShortsSection({ title, limit = 10 }) {
-  const { t, feat } = useApp();
+  const { t, feat, appName } = useApp();
   const n = Math.max(2, Math.min(20, Number(limit) || 10));
   const d = usePmData(`/shorts?limit=${n}`, { on: feat('shorts'), auth: false });
   const shorts = feat('shorts') && Array.isArray(d) ? d : [];
   if (!shorts.length) return null;
-  const head = title || t('shrTitle');
+  const brand = (appName || 'Mejliss TV').replace(/\s*TV$/i, '');
+  const head = title || `${brand} ${t('shrTitle')} · ${t('pmShortsSub')}`;
   return (
     <section className="pm-rail pm-shorts-rail" aria-label={head}>
-      <div className="pm-rail-head"><h2>{head}</h2><Link href="/shorts">{t('rowSeeAll')} <span className="pm-chev" aria-hidden="true">›</span></Link></div>
-      <ShortsRail list={shorts} />
+      <div className="pm-rail-head">
+        <h2>{title ? title : <>{brand} <em>{t('shrTitle')}</em> · {t('pmShortsSub')}</>}</h2>
+        <Link href="/shorts">{t('pmShortsAll')} <span className="pm-chev" aria-hidden="true">›</span></Link>
+      </div>
+      <ul className="pm-sh-track">
+        {shorts.map((s) => <li key={s.id}><PmShortTile s={s} /></li>)}
+      </ul>
     </section>
   );
 }
@@ -271,5 +315,17 @@ export function PmLearnSection() {
         </>
       )}
     </Link>
+  );
+}
+
+/** Bandeau de fin de l'accueil : « La découverte continue. » et bouton vers tout le catalogue (maquette V22). */
+export function PmDiscoverSection() {
+  const { t } = useApp();
+  return (
+    <section className="pm-discover" aria-label={t('pmDiscoverTitle')}>
+      <h2 className="v20-serif">{t('pmDiscoverTitle')}</h2>
+      <p>{t('pmDiscoverSub')}</p>
+      <Link href="/catalogue" className="v20-btn v20-btn-outline">{t('pmDiscoverCta')} <span aria-hidden="true">→</span></Link>
+    </section>
   );
 }

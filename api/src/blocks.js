@@ -217,8 +217,12 @@ export const BLOCK_TYPES = {
     fields: [N('max', 'Nombre de rangées', 1, 12, 12)], sample: { max: 12 },
   },
   pm_collections: {
-    label: 'Premium : collections', hint: 'Cycles, séries d’un intervenant et thèmes du moment (Studio → Collections), la première en grand cadre.',
-    fields: [N('limit', 'Nombre de collections', 1, 12, 12)], sample: { limit: 12 },
+    label: 'Premium : collections', hint: 'Cycles, séries d’un intervenant et thèmes du moment (Studio → Collections) : les deux premières en grand cadre « Sélection », les autres en rangées.',
+    fields: [N('limit', 'Nombre de collections', 1, 12, 12), S('spots', 'Sélections en grand cadre', [['1', 'Oui (les deux premières)'], ['0', 'Non : rangées seulement']], '1')], sample: { limit: 12, spots: '1' },
+  },
+  pm_spot: {
+    label: 'Premium : sélection', hint: 'Une sélection en grand cadre (texte, deux affiches, image de fond), prise parmi les collections publiées sur l’accueil qui ont au moins 2 vidéos. À poser entre deux rangées. Invisible s’il n’y en a pas.',
+    fields: [S('n', 'Quelle sélection', [['1', 'La première'], ['2', 'La deuxième']], '1')], sample: { n: '1' },
   },
   pm_shorts: {
     label: 'Premium : shorts', hint: 'Rangée des derniers extraits verticaux. Invisible s’il n’y en a aucun.',
@@ -229,6 +233,9 @@ export const BLOCK_TYPES = {
   },
   pm_learn: {
     label: 'Premium : bandeau Apprendre', hint: 'Bandeau « Mon espace Apprendre » avec la progression du parcours (formule Apprentissage). Invisible si Apprendre est coupé.', fields: [], sample: {},
+  },
+  pm_discover: {
+    label: 'Premium : « La découverte continue »', hint: 'Bandeau de fin de page : une phrase d’invitation et le bouton « Voir tout le catalogue ».', fields: [], sample: {},
   },
   pm_cat_hero: {
     label: 'Catalogue : bannière et recherche', hint: 'Bannière du Catalogue avec son titre, sa phrase et le champ de recherche.', fields: [], sample: {},
@@ -261,11 +268,11 @@ export const BLOCK_TYPES = {
   spacer: { label: 'Espace', hint: 'Un espace vide entre deux blocs.', fields: [N('size', 'Hauteur (px)', 8, 240, 40)], sample: {} },
   divider: { label: 'Séparateur', hint: 'Un trait fin.', fields: [], sample: {} },
 };
-export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider', 'w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books', 'global'];
+export const TYPE_ORDER = ['hero', 'heading', 'text', 'image', 'button', 'cards', 'talks', 'quote', 'faq', 'video', 'featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids', 'pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_spot', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_discover', 'pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross', 'columns', 'spacer', 'divider', 'w_stage', 'w_notices', 'w_grid', 'w_next', 'w_books', 'global'];
 // Types qui lisent les données du site (l'éditeur les range à part).
 export const DATA_TYPES = ['featured', 'mine', 'channels', 'shorts', 'collections', 'dayquote', 'series', 'catrows', 'kids'];
 // Sections de l'accueil Premium : proposées seulement quand le thème du site est Premium (l'éditeur les range à part).
-export const PM_TYPES = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn'];
+export const PM_TYPES = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_spot', 'pm_shorts', 'pm_kids', 'pm_learn', 'pm_discover'];
 // Sections du Catalogue Premium (page « catalogue ») : même principe, rangées dans l'éditeur sous « Catalogue Premium ».
 export const PM_CAT_TYPES = ['pm_cat_hero', 'pm_cat_chips', 'pm_cat_rails', 'pm_cat_results', 'pm_cat_cross'];
 
@@ -612,8 +619,9 @@ export function blockSummary(b, lang = 'fr') {
 
 // ---- Modèle de l'accueil du thème Premium : les sections de l'accueil d'origine, dans le même ordre (accueil identique tant qu'on n'y touche pas).
 export function premiumHomeTemplate() {
-  const mk = (type) => newBlock(type);
-  return { meta: {}, zones: { main: PM_TYPES.map(mk) } };
+  const mk = (type, props) => { const b = newBlock(type); if (props) b.props = { ...b.props, ...props }; return b; };
+  // Comme la maquette V22 : rangées, 1re sélection, Shorts, 2e sélection, autres collections en rangées, Kids, Apprendre, « La découverte continue ».
+  return { meta: {}, zones: { main: [mk('pm_hero'), mk('pm_universes'), mk('pm_continue'), mk('pm_rows'), mk('pm_spot', { n: '1' }), mk('pm_shorts'), mk('pm_spot', { n: '2' }), mk('pm_collections', { spots: '0' }), mk('pm_kids'), mk('pm_learn'), mk('pm_discover')] } };
 }
 
 // ---- Modèle d'une page « fonction » : toutes ses sections, dans l'ordre de la page d'origine.

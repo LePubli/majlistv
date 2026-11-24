@@ -496,14 +496,22 @@ html[data-skin="premium"] .pm-spot h2 { margin: 12px 0 8px; font: 900 clamp(2rem
 html[data-skin="premium"] .pm-spot p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--c-e2e6ed,#e2e6ed); max-width: 420px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 html[data-skin="premium"] .pm-spot-cta { font-size: 12px; font-weight: 800; color: var(--c-eaf3fe,#eaf3fe); text-decoration: none; }
 html[data-skin="premium"] .pm-spot-cta:hover { text-decoration: underline; }
-html[data-skin="premium"] .pm-spot-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 52%; min-width: 0; }
+html[data-skin="premium"] .pm-spot-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 46%; min-width: 0; }
 html[data-skin="premium"] .pm-spot-cards .pm-card { aspect-ratio: 3 / 4; }
 html[data-skin="premium"] .pm-spot-cards .pm-card-title { font-size: clamp(13px, 1.5vw, 22px); }
 @media (max-width: 900px) { html[data-skin="premium"] .pm-spot { flex-direction: column; align-items: stretch; margin-inline: -16px; padding: 32px 16px; } html[data-skin="premium"] .pm-spot-copy, html[data-skin="premium"] .pm-spot-cards { max-width: none; width: 100%; } }
 
 /* Shorts sur l'accueil et Kids */
-html[data-skin="premium"] .pm-shorts-rail .sh-rail { gap: 12px; }
-html[data-skin="premium"] .pm-shorts-rail .sh-rail > li { width: clamp(130px, 13vw, 200px); }
+/* Rangée Shorts de l'accueil (maquette V22) : tuiles 9:16, titre « Mejliss Shorts · … » avec « Shorts » en bleu */
+html[data-skin="premium"] .pm-shorts-rail .pm-rail-head h2 em { font-style: normal; color: var(--c-4cb8ff,#4cb8ff); }
+html[data-skin="premium"] .pm-sh-track { list-style: none; margin: 0; padding: 0 0 8px; display: flex; gap: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: thin; }
+html[data-skin="premium"] .pm-sh-track > li { flex: 0 0 auto; width: clamp(138px, 14.2vw, 200px); scroll-snap-align: start; min-width: 0; }
+/* Encart posé entre deux rangées (sélection, Shorts) : pas d'espace en plus quand il est vide */
+html[data-skin="premium"] .pm-ins:empty { display: none; }
+/* Bandeau de fin « La découverte continue. » */
+html[data-skin="premium"] .pm-discover { display: grid; justify-items: center; gap: 12px; padding: 64px 16px 72px; text-align: center; }
+html[data-skin="premium"] .pm-discover h2 { margin: 0; font-size: clamp(1.8rem, 3.4vw, 2.6rem); line-height: 1.1; color: var(--c-ffffff,#ffffff); }
+html[data-skin="premium"] .pm-discover p { margin: 0 0 8px; max-width: 520px; font-size: 14px; color: var(--c-c5d4e6,#c5d4e6); }
 html[data-skin="premium"] .pm-kids-promo { display: grid; align-content: center; gap: 6px; min-height: 230px; margin: 30px 0; padding: 36px 4%; border-radius: 12px; background-size: cover; background-position: center; color: var(--c-ffffff,#ffffff); text-decoration: none; }
 html[data-skin="premium"] .pm-kids-title { font: 900 clamp(2rem, 4vw, 3.6rem)/1 'Montserrat', system-ui, sans-serif; letter-spacing: -.02em; }
 html[data-skin="premium"] .pm-kids-title em { font-style: normal; color: var(--c-ffc94d,#ffc94d); }

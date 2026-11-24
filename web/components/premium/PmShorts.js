@@ -2,11 +2,10 @@
 // Hub « Shorts & découvertes » du thème Premium (maquette V22) : vignettes verticales (durée, titre, chaîne) des vrais shorts publiés
 // par le module « Shorts publics ». Un clic ouvre le short dans une carte (lecteur en carte, PmShortCard) sans quitter la page ; un clic du milieu
 // ou Ctrl + clic ouvre le fil vertical (/shorts/<id>). Pastilles de thèmes (catégories principales de la vidéo du short). Aucun short inventé.
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../Providers';
-import { mmss } from '../ShortsRail';
 import PmShortCard from './PmShortCard';
+import PmShortTile from './PmShortTile';
 
 const PAGE = 24;
 
@@ -55,12 +54,7 @@ export default function PmShorts() {
       <ul className="pm-sh-grid" aria-busy={list === null}>
         {(list || []).map((s, i) => (
           <li key={s.id}>
-            <Link href={`/shorts/${s.id}`} className="pm-sh-card" onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); opener.current = e.currentTarget; setOpen(i); } }} style={s.posterUrl ? { '--poster': `url("${String(s.posterUrl).replace(/"/g, '%22')}")` } : undefined} aria-label={s.title}>
-              <span className="pm-sh-tag">{t('pmShortTag')}</span>
-              {s.duration != null && <span className="pm-sh-dur">{mmss(s.duration)}</span>}
-              <span className="pm-sh-play" aria-hidden="true">▶</span>
-              <span className="pm-sh-copy"><b>{s.title}</b>{s.channel?.name && <small>{s.channel.name}</small>}</span>
-            </Link>
+            <PmShortTile s={s} onOpen={(el) => { opener.current = el; setOpen(i); }} />
           </li>
         ))}
       </ul>

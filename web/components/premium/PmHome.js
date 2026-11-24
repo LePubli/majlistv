@@ -3,13 +3,13 @@
 // 5 par ligne), remplies avec les vraies données du site. Depuis l'étape 4 de l'éditeur visuel, chaque partie est une section
 // (PmHomeSections.js) et l'accueil peut être recomposé en blocs : Admin → Éditeur du site → Accueil. Tant qu'aucun accueil en
 // blocs n'est publié, la composition d'origine ci-dessous s'affiche (même ordre, mêmes sections).
-//   1. La une · 2. Univers (téléphone) · 3. Continuer à regarder · 4. Rangées · 5. Collections · 6. Shorts · 7. Kids · 8. Apprendre
+//   1. La une · 2. Univers (téléphone) · 3. Continuer à regarder · 4. Rangées avec, entre elles, sélections et Shorts · 5. Kids · 6. Apprendre · 7. « La découverte continue »
 import { useEffect, useState } from 'react';
 import { useApp } from '../Providers';
 import { BlocksView } from '../PageBlocks';
 import { DIR } from '../../lib/locales';
 import {
-  PmHeroSection, PmUniversesSection, PmContinueSection, PmRowsSection, PmCollectionsSection, PmShortsSection, PmKidsSection, PmLearnSection,
+  PmHeroSection, PmUniversesSection, PmContinueSection, PmFeedSection, PmKidsSection, PmLearnSection, PmDiscoverSection,
 } from './PmHomeSections';
 
 // Accueil publié dans l'éditeur (adresse interne /_home), adapté à la personne par le serveur. undefined = on vérifie, null = pas d'accueil en blocs.
@@ -34,11 +34,10 @@ function DefaultHome() {
         <PmUniversesSection />
         <main className="pm-ott-body">
           <PmContinueSection />
-          <PmRowsSection />
-          <PmCollectionsSection />
-          <PmShortsSection />
+          <PmFeedSection />
           <PmKidsSection />
           <PmLearnSection />
+          <PmDiscoverSection />
         </main>
       </div>
     </div>

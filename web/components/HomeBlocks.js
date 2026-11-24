@@ -28,7 +28,7 @@ import { useReducedMotion } from './HomeHero';
 import { authPath } from '../lib/nav';
 import { tx } from '../lib/blocks';
 import {
-  PmHeroSection, PmUniversesSection, PmContinueSection, PmRowsSection, PmCollectionsSection, PmShortsSection, PmKidsSection, PmLearnSection,
+  PmHeroSection, PmUniversesSection, PmContinueSection, PmRowsSection, PmCollectionsSection, PmSpotSection, PmShortsSection, PmKidsSection, PmLearnSection, PmDiscoverSection,
 } from './premium/PmHomeSections';
 import { PmCatFrame } from './premium/PmCatalogueSections';
 import { WatchBlock } from './WatchCtx';
@@ -321,10 +321,12 @@ function PmFrame({ type, p, lang }) {
     case 'pm_universes': inner = <PmUniversesSection />; break;
     case 'pm_continue': inner = <PmContinueSection title={title} limit={p.limit} />; break;
     case 'pm_rows': inner = <PmRowsSection max={p.max} />; break;
-    case 'pm_collections': inner = <PmCollectionsSection limit={p.limit} />; break;
+    case 'pm_collections': inner = <PmCollectionsSection limit={p.limit} spots={p.spots !== '0'} />; break;
+    case 'pm_spot': inner = <PmSpotSection n={p.n} />; break;
     case 'pm_shorts': inner = <PmShortsSection title={title} limit={p.limit} />; break;
     case 'pm_kids': inner = <PmKidsSection />; break;
     case 'pm_learn': inner = <PmLearnSection />; break;
+    case 'pm_discover': inner = <PmDiscoverSection />; break;
     default: return null;
   }
   return (

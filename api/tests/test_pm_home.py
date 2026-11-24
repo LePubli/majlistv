@@ -9,7 +9,7 @@ def ok(c, m):
     print(("OK   " if c else "FAIL ") + m, flush=True)
     if not c: fails += 1
 A = {"authorization": "Bearer " + requests.post(B + "/auth/login", json={"email": "admin@test.local", "password": "AdminPassw0rd-test"}).json()["token"]}
-PM = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_collections', 'pm_shorts', 'pm_kids', 'pm_learn']
+PM = ['pm_hero', 'pm_universes', 'pm_continue', 'pm_rows', 'pm_spot', 'pm_shorts', 'pm_spot', 'pm_collections', 'pm_kids', 'pm_learn', 'pm_discover']
 
 # Repartir sans accueil en blocs
 for p in requests.get(B + "/admin/pages", headers=A).json():
@@ -22,12 +22,12 @@ types = [b["type"] for b in r.json()["draft"]["zones"]["main"]]
 ok(types[0] == "featured" and not any(t.startswith("pm_") for t in types), "modèle classique : aucune section Premium")
 requests.delete(B + f"/admin/pages/{r.json()['id']}", headers=A)
 
-# Modèle Premium : les 8 sections dans l'ordre de l'accueil d'origine
+# Modèle Premium : les 11 sections dans l'ordre de l'accueil d'origine
 r = requests.post(B + "/admin/pages", headers=A, json={"kind": "home", "template": "premium"})
 ok(r.status_code == 201, "accueil créé (modèle premium)")
 H = r.json()["id"]
 types = [b["type"] for b in r.json()["draft"]["zones"]["main"]]
-ok(types == PM, "modèle premium : 8 sections dans l'ordre d'origine")
+ok(types == PM, "modèle premium : 11 sections dans l'ordre d'origine")
 r = requests.post(B + "/admin/pages", headers=A, json={"kind": "home", "template": "nimporte"})
 ok(r.status_code == 400, "modèle inconnu refusé")
 
@@ -35,7 +35,7 @@ ok(r.status_code == 400, "modèle inconnu refusé")
 r = requests.post(B + f"/admin/pages/{H}/publish", headers=A)
 ok(r.status_code == 200, "publication de l'accueil Premium")
 v = requests.get(B + "/pages/view", params={"path": "/_home"})
-ok(v.status_code == 200 and [b["type"] for b in v.json()["zones"]["main"]] == PM, "page publique : les 8 sections")
+ok(v.status_code == 200 and [b["type"] for b in v.json()["zones"]["main"]] == PM, "page publique : les 11 sections")
 vA = requests.get(B + "/pages/view", params={"path": "/_home"}, headers=A)
 ok(vA.status_code == 200, "page publique lue avec un compte")
 

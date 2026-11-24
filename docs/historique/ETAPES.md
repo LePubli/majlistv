@@ -10473,3 +10473,32 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Apparence → Extensions → « Télécharger l'extension d'exemple » → « Envoyer une extension » (le même .zip) → « Installer » → « Activer » → régler le numéro de téléphone → éditeur visuel → Blocs → « Extensions » → poser « Exemple : Bandeau » → publier. Avec une IA : lui donner `GUIDE-EXTENSIONS-IA.md` et le dossier `example/`, décrire le bloc voulu, lui renvoyer les erreurs du validateur jusqu'à « ✓ ».
 
 **Testé / non testé / limites.** Voir ligne 362 du registre.
+
+## Thème Premium — accueil : sélections, Shorts et bandeau final d'après la maquette V22 (24/11/2026)
+
+**Demande d'Epok.** Sur l'accueil et le Catalogue il manquait des blocs de la maquette V22 (notamment les « sélections »), et les Shorts n'avaient pas le design de la maquette.
+
+**Description.** Accueil Premium :
+- **Shorts** : tuiles verticales 9:16 de la maquette (étiquette « SHORT », durée, bouton lecture, titre et **thème** du short en dessous), titre « Mejliss **Shorts** · À découvrir en 60 secondes » et lien « Tous les Shorts ›». La même tuile sert dans le hub `/shorts` (`PmShortTile.js`).
+- **Sélections** : grand cadre « SÉLECTION MEJLISS TV » (titre géant, description, « Explorer la collection ↗ », **deux affiches**, image de la collection en fond). Les deux premières collections publiées sur l'accueil qui ont au moins 2 vidéos deviennent des sélections ; les autres restent des rangées.
+- **Intercalage** comme la maquette : rangées 1 à 4, 1re sélection, rangées 5 à 7, Shorts, rangées 8 à 10, 2e sélection, puis le reste ; ensuite Kids, Apprendre et le nouveau bandeau **« La découverte continue. »** avec le bouton « Voir tout le catalogue → ».
+- **Éditeur** : deux nouveaux blocs, « Premium : sélection » (1re ou 2e) et « Premium : La découverte continue » ; le bloc « Premium : collections » a un réglage « Sélections en grand cadre » (Oui / Non). Le modèle d'accueil Premium compte 11 sections (au lieu de 8) dans l'ordre de la maquette.
+- Textes FR / EN / AR : `pmShortsSub`, `pmShortsAll`, `pmDiscoverTitle`, `pmDiscoverSub`, `pmDiscoverCta`.
+
+**Prérequis.** Aucune migration, aucune variable `.env`. Pour voir les sélections : publier au moins une collection « sur l'accueil » avec 2 vidéos ou plus (Studio → Collections).
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api` (liste des blocs), puis `majlistv-web`. Puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Pas de sélection : vérifier qu'une collection est publiée, cochée « sur l'accueil » et contient 2 vidéos visibles. Pas de Shorts : la fonction Shorts doit être active et au moins un short publié. Un accueil déjà recomposé dans l'éditeur ne change pas tout seul : poser les nouveaux blocs ou recréer la page depuis le modèle « Premium ». Tests : `python3 api/tests/test_pm_home.py`, `node web/tests/test_shorts_card.mjs`.
+
+**Exemples.** Éditeur du site → Accueil → Blocs → « Premium : sélection » entre deux rangées, réglage « La deuxième » pour la seconde ; mettre « Sélections en grand cadre : Non » sur le bloc collections pour éviter les doublons.
+
+**Testé / non testé / limites.** Voir ligne 363 du registre.
+
