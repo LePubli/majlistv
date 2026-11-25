@@ -2,6 +2,7 @@
 import dns from 'node:dns/promises';
 import { pool } from '../../db.js';
 import { isPrivateHost } from '../../mediaImport.js';
+import { safeGet } from '../../safeFetch.js'; // relecture 25/11 : adresse contrôlée à la connexion (DNS rebinding)
 import { SURA_VERSES } from './juz.js';
 
 export const KINDS = ['text', 'translation', 'transliteration', 'tafsir', 'words', 'tajweed'];
@@ -82,7 +83,7 @@ export async function fetchText(raw) {
   const signal = AbortSignal.timeout(120000);
   for (let hop = 0; hop < 4; hop++) {
     await assertPublic(u);
-    const res = await fetch(u, { redirect: 'manual', signal, headers: { 'user-agent': 'MejlissTV-quran-import', accept: 'text/plain,application/json,*/*' } });
+    const res = await safeGet(u, { signal, allowPrivate: process.env.QURAN_ALLOW_PRIVATE_URLS === '1', headers: { 'user-agent': 'MejlissTV-quran-import', accept: 'text/plain,application/json,*/*' } });
     if (res.status >= 300 && res.status < 400 && res.headers.get('location')) { u = new URL(res.headers.get('location'), u); continue; }
     if (!res.ok) throw new Error(`Le site a répondu ${res.status}.`);
     const len = Number(res.headers.get('content-length') || 0);

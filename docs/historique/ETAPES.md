@@ -10669,3 +10669,11 @@ Résultat attendu du contrôle : 0 échec.
 - Transcripteur : `-protocol_whitelist` sur tous les appels ffmpeg/ffprobe (tests d'import et de visages OK ; l'envoi S3 simulé n'a pas pu être testé).
 - Appli mobile : WebView des vidéos externes limitée aux plateformes de lecture (https).
 - Non fait, à décider : voir registre lignes 370 à 372.
+
+### Relecture 25/11 — addendum : les six derniers points API (tous traités)
+- **Litiges Stripe** (`charge.dispute.created`) : le compte est retrouvé par la charge, ses abonnements actifs sont terminés chez Stripe (l'accès se ferme par l'événement habituel), une ligne « Stripe / système » est écrite dans Admin → Journal. **À faire par Epok : ajouter l'événement `charge.dispute.created` au webhook Stripe.** Test : `api/tests/test_dispute.py` (faux Stripe étendu : charges, liste et fin d'abonnements).
+- **Jeton de lecture** : 4 h au lieu de 6 h pour les contenus réservés (les vidéos libres gardent 6 h).
+- **Livres** : lien à usage unique (`n` = instant de délivrance ; un téléchargement postérieur le rend inutilisable : 410 `used`), limite quotidienne revérifiée, ligne réservée avant la fabrication du PDF et retirée si elle échoue. Test : `test_books.py`.
+- **Compteurs publics** : `/ads/:id/impression|click|skip|watch` plafonnés par visiteur (adresse + navigateur) et par jour (30 / 5 / 30 / 30) ; `/xp/expose|click` : 500 par jour et par adresse + navigateur. Au-delà, réponse « ok » sans rien compter. Test : `test_counter_guard.mjs`.
+- **DNS rebinding** : `safeFetch.js` (API) contrôle chaque adresse au moment de la connexion ; transcripteur : `importer.public_only` filtre `getaddrinfo` pour le fil qui télécharge. Tests : `test_safe_fetch.mjs`, `test_rebinding.py`.
+- **Essai gratuit une fois par personne** : clé = adresse e-mail simplifiée (minuscules, sans `+étiquette`, sans points Gmail), table `trial_claims` (migration 137, rattrapage des abonnés existants). Tests : `test_trial_key.mjs`, `test_trial_once.py`.

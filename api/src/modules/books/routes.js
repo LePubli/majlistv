@@ -104,7 +104,7 @@ export default async function bookRoutes(app) {
     const n = (await pool.query("SELECT count(*)::int AS n FROM book_downloads WHERE user_id = $1 AND created_at > now() - interval '24 hours'", [req.user.sub])).rows[0].n;
     if (n >= max) return reply.code(429).send({ error: `Limite de ${max} téléchargements par jour atteinte`, code: 'daily_limit' });
     const minutes = await getNumber('book_link_minutes');
-    return { url: `/books/download?t=${signDownload({ b: id, l: lang, u: req.user.sub }, minutes)}`, expiresInMinutes: minutes };
+    return { url: `/books/download?t=${signDownload({ b: id, l: lang, u: req.user.sub, n: Date.now() }, minutes)}`, expiresInMinutes: minutes };
   });
 
   // Le PDF filigrané (adresse e-mail + date) est fabriqué à la demande ; rien n'est stocké.
@@ -118,9 +118,23 @@ export default async function bookRoutes(app) {
         WHERE f.book_id = $1 AND f.lang = $2 AND f.rights_confirmed AND b.published AND u.id = $3 AND u.disabled_at IS NULL`, [d.b, d.l, d.u]);
     const r = rows[0];
     if (!r) return reply.code(404).send({ error: "Ce PDF n'est plus disponible" });
-    const date = new Date().toISOString().slice(0, 10);
-    const out = await watermarkPdf(await getObjectBuffer(r.file_key), r.email, date);
-    await pool.query('INSERT INTO book_downloads(user_id, book_id, lang) VALUES ($1, $2, $3)', [d.u, d.b, d.l]);
+    // Lien à usage unique (relecture 25/11) : le téléchargement est réservé (ligne ajoutée) avant la fabrication du PDF, et un lien
+    // dont le téléchargement a déjà eu lieu est refusé ; la limite quotidienne est aussi revérifiée ici.
+    const max = await getNumber('book_download_daily_max');
+    const used = (await pool.query("SELECT count(*)::int AS n FROM book_downloads WHERE user_id = $1 AND created_at > now() - interval '24 hours'", [d.u])).rows[0].n;
+    if (used >= max) return reply.code(429).send({ error: `Limite de ${max} téléchargements par jour atteinte`, code: 'daily_limit' });
+    const claim = (await pool.query(
+      `INSERT INTO book_downloads(user_id, book_id, lang) SELECT $1, $2, $3
+        WHERE NOT EXISTS (SELECT 1 FROM book_downloads WHERE user_id = $1 AND book_id = $2 AND lang = $3 AND created_at >= to_timestamp($4::double precision / 1000))
+        RETURNING id`, [d.u, d.b, d.l, d.n || 0])).rows[0];
+    if (!claim) return reply.code(410).send({ error: 'Ce lien a déjà servi : demandez-en un nouveau depuis la page de l’ouvrage', code: 'used' });
+    let out;
+    try {
+      out = await watermarkPdf(await getObjectBuffer(r.file_key), r.email, new Date().toISOString().slice(0, 10));
+    } catch (err) {
+      await pool.query('DELETE FROM book_downloads WHERE id = $1', [claim.id]).catch(() => {}); // échec de fabrication : le lien reste utilisable
+      throw err;
+    }
     const name = `${r.title}-${d.l}`.normalize('NFKD').replace(/[^\w.-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'ouvrage';
     reply.header('content-type', 'application/pdf').header('content-disposition', `attachment; filename="${name}.pdf"`).header('cache-control', 'private, no-store');
     return reply.send(out);

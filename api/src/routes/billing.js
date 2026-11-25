@@ -1,5 +1,6 @@
 // Abonnements Stripe : formules, paiement (Checkout), gestion (portail client) et webhook.
 // Clés, prix et durée d'essai sont lus dans les paramètres du back-office (pas besoin de redéployer pour les changer).
+import { trialAvailable, claimTrial } from '../trialClaims.js'; // relecture 25/11 : essai gratuit une fois par personne
 import Stripe from 'stripe';
 import { z } from 'zod';
 import { config } from '../config.js';
@@ -232,7 +233,10 @@ export default async function billingRoutes(app) {
     const trialDays = await getNumber('trial_days');
     const webUrl = await getSetting('web_url');
     const subscription_data = { metadata: { user_id: req.user.sub, ...(region ? { pricing_region: region.name.slice(0, 80) } : {}), ...(xp ? { xp_exp: xp.id, xp_vh: xp.hash } : {}) } };
-    const trialApplies = trialDays > 0 && !before.rowCount;
+    // Une fois par personne : une autre adresse de la même boîte (points Gmail, « +étiquette ») ne rouvre pas l'essai.
+    const mailRow = (await pool.query('SELECT email FROM users WHERE id = $1', [req.user.sub])).rows[0];
+    const trialApplies = trialDays > 0 && !before.rowCount && await trialAvailable(pool, req.user.sub, mailRow?.email);
+    if (trialApplies) await claimTrial(pool, req.user.sub, mailRow?.email);
     if (trialApplies) subscription_data.trial_period_days = trialDays;
     // Essai sans carte : Stripe ne demande aucun moyen de paiement pendant l'essai ; à son terme, sans carte ajoutée, l'abonnement est annulé.
     const noCard = trialApplies && isOn(await getSetting('trial_no_card'));
@@ -376,6 +380,33 @@ export default async function billingRoutes(app) {
       }
     }
 
+    // Litige ouvert par le titulaire de la carte (« contestation » auprès de sa banque, relecture 25/11) : on retrouve le compte,
+    // on met fin tout de suite à ses abonnements chez Stripe (l'accès se ferme par l'événement « abonnement terminé » qui suit)
+    // et on laisse une trace dans le journal d'audit (Admin → Journal). Les réponses à la banque se font dans le tableau de bord Stripe.
+    // Rien ici ne doit faire échouer le webhook : une erreur est écrite dans le journal du serveur.
+    async function onDispute(client, ctx, d, log) {
+      let user = null; let ended = 0; let note = '';
+      try {
+        const chargeId = typeof d.charge === 'string' ? d.charge : d.charge?.id;
+        const charge = chargeId ? await ctx.stripe.charges.retrieve(chargeId) : null;
+        user = charge ? await userFor(client, charge) : null;
+        const customerId = charge && (typeof charge.customer === 'string' ? charge.customer : charge.customer?.id);
+        if (user && customerId) {
+          const subs = await ctx.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+          for (const sub of subs.data) {
+            if (!['active', 'trialing', 'past_due'].includes(sub.status)) continue;
+            await ctx.stripe.subscriptions.cancel(sub.id);
+            ended += 1;
+          }
+        }
+      } catch (err) { note = ` (erreur : ${String(err.message).slice(0, 120)})`; log.error(err); }
+      const amount = d.amount != null ? `${(d.amount / 100).toFixed(2)} ${String(d.currency || '').toUpperCase()}` : '';
+      await client.query(
+        `INSERT INTO audit_log(actor_id, actor_name, actor_role, method, route, target, fields, summary, status)
+         VALUES (NULL, 'Stripe', 'system', 'POST', '/billing/webhook charge.dispute.created', $1, '{}', $2, 200)`,
+        [user ? `user=${user.id}` : '', `Litige ${d.id || ''} ${amount} (${d.reason || 'motif inconnu'}) : ${user ? `abonnement(s) terminé(s) : ${ended}` : 'compte non retrouvé'}${note}. À traiter dans le tableau de bord Stripe.`.slice(0, 500)]);
+    }
+
     hook.post('/billing/webhook', { config: { rateLimit: { max: 300, timeWindow: '1 minute' } } }, async (req, reply) => {
       const ctx = await stripeContext();
       const whSecret = await getSetting('stripe_webhook_secret');
@@ -411,6 +442,8 @@ export default async function billingRoutes(app) {
             await ext.emit('stripe.checkout.payment', client, obj); // paiement unique : carte cadeau (module gifts)
           } else if (event.type === 'charge.refunded') {
             await ext.emit('stripe.charge.refunded', client, obj); // modules gifts puis revenue
+          } else if (event.type === 'charge.dispute.created') {
+            await onDispute(client, ctx, obj, req.log);
           } else if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) {
             // Filet de sécurité si l'événement d'abonnement arrive plus tard : on récupère l'état actuel chez Stripe.
             const sub = await ctx.stripe.subscriptions.retrieve(obj.subscription);

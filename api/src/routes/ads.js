@@ -16,6 +16,7 @@
 //   GET  /ad-report/:token          public (sans compte, jeton secret) : rapport de l'annonceur en JSON
 //   GET  /ad-report/:token/pdf      public (jeton secret) : rapport en PDF
 // Fonction « Publicité » (Admin → Fonctions) : coupée, toutes ces routes répondent 404 et l'application n'affiche rien.
+import { allowCount, visitorKey, AD_LIMITS } from '../counterGuard.js'; // relecture 25/11 : quotas par visiteur
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { isoDateTime } from '../zpatch.js';
@@ -82,6 +83,7 @@ export default async function adsRoutes(app) {
   const count = (column) => async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     if (await app.kidContext(req)) return { ok: true };
+    if (!allowCount(`${column}:${id}:${visitorKey(req)}`, AD_LIMITS[column] ?? 30)) return { ok: true }; // quota du jour : rien n'est compté
     const lang = normLang(req.body?.lang ?? req.query?.lang);
     const r = await pool.query(
       `INSERT INTO ad_stats(ad_id, day, ${column}) SELECT id, current_date, 1 FROM ads WHERE id = $1
@@ -107,6 +109,7 @@ export default async function adsRoutes(app) {
     const { id } = idSchema.parse(req.params);
     if (await app.kidContext(req)) return { ok: true };
     const b = watchBody.parse(req.body ?? {});
+    if (!allowCount(`watch:${id}:${visitorKey(req)}`, AD_LIMITS.watch)) return { ok: true };
     const r = await pool.query(
       `INSERT INTO ad_stats(ad_id, day, watch_ms, watch_n, completed) SELECT id, current_date, $2, 1, $3 FROM ads WHERE id = $1
        ON CONFLICT (ad_id, day) DO UPDATE SET watch_ms = ad_stats.watch_ms + $2, watch_n = ad_stats.watch_n + 1, completed = ad_stats.completed + $3`,

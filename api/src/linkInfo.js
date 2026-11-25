@@ -7,6 +7,7 @@
 // Tout est « au mieux » : une erreur ne bloque jamais l'ajout, les champs restent à saisir. Adresses publiques seulement.
 import dns from 'node:dns/promises';
 import { isPrivateHost, classifyUrl } from './mediaImport.js';
+import { safeGet } from './safeFetch.js'; // relecture 25/11 : adresse contrôlée à la connexion (DNS rebinding)
 
 const MAX_PAGE = 600 * 1024;
 const UA = 'Mozilla/5.0 (compatible; MejlissTV-linkinfo)';
@@ -96,7 +97,7 @@ async function getText(raw, { accept = '*/*', headers = {} } = {}) {
   const signal = AbortSignal.timeout(6000);
   for (let hop = 0; hop < 4; hop++) {
     await assertPublic(u);
-    const res = await fetch(u, { redirect: 'manual', signal, headers: { 'user-agent': UA, accept, 'accept-language': 'fr,en;q=0.8', ...headers } });
+    const res = await safeGet(u, { signal, allowPrivate: process.env.LINKINFO_ALLOW_PRIVATE === '1', headers: { 'user-agent': UA, accept, 'accept-language': 'fr,en;q=0.8', ...headers } });
     if (res.status >= 300 && res.status < 400 && res.headers.get('location')) { u = new URL(res.headers.get('location'), u); continue; }
     if (!res.ok) throw new Error(`réponse ${res.status}`);
     const chunks = []; let size = 0;

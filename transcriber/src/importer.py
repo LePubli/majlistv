@@ -7,6 +7,8 @@ Ce module contient la logique « pure » (testable sans base ni stockage) :
   - upload : envoie le fichier dans Garage (envoi par morceaux), avec progression et annulation.
 La boucle qui prend les demandes dans la base est dans main.py (media_import_loop). La conversion HLS est faite ensuite par le worker.
 """
+import functools
+import inspect
 import ipaddress
 import json
 import mimetypes
@@ -14,6 +16,7 @@ import os
 import re
 import socket
 import subprocess
+import threading
 from urllib.parse import urljoin, urlsplit
 
 import external
@@ -62,6 +65,54 @@ def assert_public_url(url, resolver=socket.getaddrinfo):
     return str(url).strip()
 
 
+# --- Contrôle à la connexion (anti « DNS rebinding », relecture 25/11) ---------------------------------------------------------------
+# assert_public_url contrôle l'adresse AVANT le téléchargement ; la bibliothèque la résout ensuite une seconde fois, et un site
+# malveillant peut répondre autre chose (127.0.0.1, métadonnées du cloud). Pendant un téléchargement, toute résolution de nom faite
+# par CE fil est donc filtrée : une adresse non publique la fait échouer, au moment même où la connexion se prépare.
+# Les autres fils (base de données, stockage Garage, API) ne sont pas touchés.
+_guard = threading.local()
+_real_getaddrinfo = socket.getaddrinfo
+
+
+def _is_public_ip(raw):
+    ip = ipaddress.ip_address(str(raw).split("%")[0])
+    if getattr(ip, "ipv4_mapped", None):
+        ip = ip.ipv4_mapped
+    return ip.is_global
+
+
+def _guarded_getaddrinfo(host, port, *args, **kwargs):
+    found = _real_getaddrinfo(host, port, *args, **kwargs)
+    if getattr(_guard, "on", False):
+        for item in found:
+            if not _is_public_ip(item[4][0]):
+                raise socket.gaierror(socket.EAI_NONAME, "adresse non publique")
+    return found
+
+
+socket.getaddrinfo = _guarded_getaddrinfo
+
+
+def public_only(fn):
+    """Décorateur : pendant l'appel, les connexions de ce fil ne peuvent viser que des adresses publiques (sauf si l'appelant fournit
+    son propre contrôle `check`, ce que font les tests avec un serveur local)."""
+    sig = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        bound = sig.bind(*args, **kwargs)
+        bound.apply_defaults()
+        active = bound.arguments.get("check") is assert_public_url
+        before = getattr(_guard, "on", False)
+        _guard.on = before or active
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _guard.on = before
+
+    return wrapper
+
+
 def looks_direct(url):
     """Le chemin de l'adresse se termine par une extension de fichier vidéo : lien direct vers un fichier."""
     return bool(DIRECT_EXT.search(urlsplit(url).path))
@@ -105,6 +156,7 @@ def audio_languages(info):
     return seen
 
 
+@public_only
 def download_direct(url, work, max_bytes, on_progress, check=assert_public_url, session=None):
     """Fichier servi tel quel (archive.org, lien .mp4…). Les redirections sont suivies à la main : chaque étape doit rester publique."""
     import requests
@@ -151,6 +203,7 @@ def download_direct(url, work, max_bytes, on_progress, check=assert_public_url, 
     return path
 
 
+@public_only
 def download_ytdlp(url, work, opts, max_bytes, max_height, on_progress, check=assert_public_url, audio_lang=None, require_audio=False, report=None, fmt=None):
     """YouTube, Vimeo et tout site connu de yt-dlp (page contenant une vidéo, lien direct, flux HLS…).
     audio_lang : piste audio voulue ('fr') ; require_audio : échec si la plateforme ne l'a pas (vidéo déjà importée : on ne la

@@ -10,6 +10,7 @@
 //   DELETE /admin/experiments/:id       supprimer (brouillon ou terminé)
 // Aucune donnée personnelle : l'identifiant du visiteur est aléatoire, gardé dans son navigateur, et seule son empreinte est enregistrée.
 // Un visiteur qui demande de ne pas être suivi (Do Not Track / Global Privacy Control) ne reçoit pas de variante et n'est pas compté (le site n'appelle alors pas ces routes).
+import { allowCount, visitorKey } from '../counterGuard.js'; // relecture 25/11
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { ZONES, LANGS, VARIANT_KEYS, VISITOR_RE, hashVisitor, assign, cleanConfig, computeStats } from '../experiments.js';
@@ -46,6 +47,7 @@ export default async function experimentsRoutes(app) {
     const { visitor: raw, experiment } = z.object({ visitor: z.string().max(64), experiment: z.guid() }).parse(req.body ?? {});
     const visitor = visitorOf(raw);
     if (!visitor || BOT.test(req.headers['user-agent'] || '')) return { ok: true };
+    if (!allowCount(`xp:${column}:${visitorKey(req)}`, 500)) return { ok: true }; // une même adresse + navigateur n’invente pas des milliers de visiteurs (bureau derrière une seule adresse : large marge)
     const e = (await running()).find((x) => x.id === experiment);
     if (!e || ZONES[e.zone]?.priceTest) return { ok: true }; // test de prix : l'exposition est enregistrée par /billing/plans (prix réellement montré), jamais sur demande du navigateur
     const h = hashVisitor(visitor);

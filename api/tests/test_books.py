@@ -133,6 +133,7 @@ import datetime; ok(datetime.date.today().isoformat() in text, "filigrane : date
 ok(lrn_email in (reader.metadata.subject or ""), "e-mail aussi dans les métadonnées du PDF")
 cur.execute("select count(*) from book_downloads where user_id=%s and book_id=%s", (ulrn, bid)); ok(cur.fetchone()[0] == 1, "téléchargement journalisé")
 ok(requests.get(url[:-3] + "xxx").status_code == 410, "jeton falsifié refusé")
+rr2 = requests.get(url); ok(rr2.status_code == 410 and rr2.json().get("code") == "used", "lien à usage unique : second téléchargement refusé")
 ok(requests.get(f"{B}/books/download?t=abc.def").status_code == 410, "jeton invalide refusé")
 requests.put(B + "/admin/settings", headers=ADM, json={"values": {"book_link_minutes": "1"}})
 # expiration : on fabrique un jeton échu avec la même clé (jeton du service) en modifiant l'échéance → signature invalide

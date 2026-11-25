@@ -170,7 +170,7 @@ gunzip -c /tmp/restore/var/backups/vps-dumps/<fichier mejliss>_<date>.sql.gz | d
 ## 4. Après la reconstruction : réglages dans le site (Admin → Paramètres)
 1. Se connecter avec `ADMIN_EMAIL` / `ADMIN_PASSWORD` (ou le compte restauré).
 2. Si `SETTINGS_KEY` a été conservée et la base restaurée : tout est déjà là. Sinon ressaisir : Stripe (clés, prix mensuel `6,99 €` / annuel `69,99 €`, secret du webhook), moteurs de traduction et IA, SMTP, Recherche (adresse IP du conteneur + clé), cookies YouTube si besoin.
-3. Stripe → Webhooks : l'adresse de l'API + les événements `invoice.paid`, `charge.refunded`, `checkout.session.async_payment_succeeded` (+ ceux déjà listés dans Admin → Paramètres → Paiement).
+3. Stripe → Webhooks : l'adresse de l'API + les événements `invoice.paid`, `charge.refunded`, `charge.dispute.created`, `checkout.session.async_payment_succeeded` (+ ceux déjà listés dans Admin → Paramètres → Paiement).
 4. Admin → Fonctions : vérifier les fonctions activées (réglage `feat_<id>` : restauré avec la base).
 5. Admin → Recherche → « Réindexer tout ».
 

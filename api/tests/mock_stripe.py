@@ -30,6 +30,10 @@ class H(BaseHTTPRequestHandler):
             return self._send({"id": path.rsplit("/", 1)[1], "object": "customer"})
         if path.startswith("/v1/prices/"):
             p = PRICES.get(path.rsplit("/", 1)[1]); return self._send(p) if p else self._send({"error": {"message": "no such price"}}, 404)
+        if path.startswith("/v1/charges/"):
+            return self._send({"id": path.rsplit("/", 1)[1], "object": "charge", "customer": __import__("os").environ.get("MOCK_DISPUTE_CUSTOMER", "cus_dispute")})
+        if path == "/v1/subscriptions":
+            return self._send({"object": "list", "data": [{"id": "sub_d1", "object": "subscription", "status": "active"}, {"id": "sub_d2", "object": "subscription", "status": "canceled"}]})
         if path.startswith("/v1/subscriptions/"):
             return self._send({"id": path.rsplit("/", 1)[1], "object": "subscription", "customer": "cus_1", "status": "active", "metadata": {},
                                "items": {"data": [{"price": PRICES["price_m"], "current_period_end": 4102444800}]}})
@@ -47,6 +51,11 @@ class H(BaseHTTPRequestHandler):
             return self._send({"id": f"cs_{n}", "object": "checkout.session", "url": f"https://checkout.stripe.test/cs_{n}"})
         if path == "/v1/refunds": return self._send({"id": "re_" + str(len(LOG)), "object": "refund", "status": "succeeded"})
         if path == "/v1/billing_portal/sessions": return self._send({"id": "bps_1", "object": "billing_portal.session", "url": "https://billing.stripe.test/p/1"})
+        self._send({"error": {"message": "not found"}}, 404)
+    def do_DELETE(self):
+        path = urlsplit(self.path).path
+        LOG.append({"path": path, "body": {}, "auth": self.headers.get("authorization"), "method": "DELETE"})
+        if path.startswith("/v1/subscriptions/"): return self._send({"id": path.rsplit("/", 1)[1], "object": "subscription", "status": "canceled"})
         self._send({"error": {"message": "not found"}}, 404)
     def log_message(self, *a): pass
 HTTPServer(("127.0.0.1", 12111), H).serve_forever()

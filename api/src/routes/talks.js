@@ -342,7 +342,8 @@ export default async function talksRoutes(app) {
       }
     } else {
       // Jeton de lecture : flux HLS (vidéo envoyée), transcription et sous-titres (toutes les sources).
-      talk.playbackToken = makePlaybackToken(id);
+      // Contenu réservé : jeton plus court (4 h, assez pour une longue conférence) afin qu'un abonnement résilié ou remboursé ne garde pas la vidéo ouverte 6 h.
+      talk.playbackToken = makePlaybackToken(id, talk.access === 'free' && !sa ? undefined : 4 * 3600);
       const langs = await pool.query('SELECT DISTINCT lang FROM transcript_segments WHERE talk_id = $1 ORDER BY lang', [id]);
       talk.tracks = langs.rows.map((r) => r.lang);
       talk.translating = (await pool.query(

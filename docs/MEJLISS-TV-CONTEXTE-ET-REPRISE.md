@@ -55,7 +55,7 @@ STACK TECHNIQUE
   résumés/chapitres par IA (résumé toujours en français), recherche Meilisearch.
 - Stockage vidéo : Garage (compatible S3), liens présignés.
 - Paiement : Stripe (abonnements 6,99 €/mois et 69,99 €/an, essai 7 jours, aperçu 2 min, Stripe Tax,
-  codes promo, PayPal via Stripe, cartes cadeaux). Webhooks utiles : invoice.paid, charge.refunded,
+  codes promo, PayPal via Stripe, cartes cadeaux). Webhooks utiles : invoice.paid, charge.refunded, charge.dispute.created,
   checkout.session.async_payment_succeeded.
 - Sources vidéo : upload, YouTube, Vimeo, archive.org (les vidéos externes ne sont pas hébergées).
 - Rôles : user, organizer, moderator, admin. Formules : standard et « Apprentissage ».
