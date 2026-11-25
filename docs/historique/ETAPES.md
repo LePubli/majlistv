@@ -10651,3 +10651,9 @@ Résultat attendu du contrôle : 0 échec.
 - Renommage (`PUT /studio/channels/:slug` avec `name`) : désormais refusé de la même façon (409 « Une chaîne porte déjà ce nom »). Changer la casse de son propre nom reste permis.
 - Test : `api/tests/test_channel_unique.py`.
 - Reprise de nom : un organisateur ne peut plus créer une chaîne portant le nom d'un intervenant déjà utilisé par les vidéos ou séries d'un autre organisateur (409, « Contactez un modérateur »). Modérateurs et administrateurs peuvent toujours la créer.
+
+### Relecture 25/11 — addendum : verrouillage de compte non abusable
+- Avant : 10 échecs sur une adresse e-mail bloquaient la connexion à ce compte pour tous, donc n'importe qui pouvait empêcher le vrai titulaire de se connecter.
+- Maintenant (`api/src/loginGuard.js`) : le blocage (10 échecs en 15 min) vise le couple adresse e-mail + adresse du visiteur ; le titulaire, depuis une autre adresse, se connecte normalement. Un plafond de 50 échecs sur le compte, toutes adresses confondues, protège contre une attaque répartie. Une réussite remet les compteurs à zéro ; « Mot de passe oublié » reste possible.
+- Dépend de l'adresse réelle du visiteur : le site la transmet et `TRUST_PROXY` doit rester réglé sur `majlistv-api` (voir docs/RECONSTRUIRE-DE-ZERO.md). Sans cela, tous les visiteurs ont la même adresse et on retrouve l'ancien comportement.
+- Tests : `api/tests/test_login_guard_ip.mjs` (nouveau), `api/tests/test_login_guard.py` (lancé avec `AUTH_RATE_MAX=5000`).
