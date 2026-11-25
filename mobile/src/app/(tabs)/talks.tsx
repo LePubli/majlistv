@@ -72,6 +72,14 @@ export default function CatalogueScreen() {
           <Feather name={dirStyle.direction === 'rtl' ? 'chevron-left' : 'chevron-right'} size={18} color={colors.muted} />
         </Pressable>
       ) : null}
+      {feat('collections') ? (
+        <Pressable accessibilityRole="link" accessibilityLabel={t('colNav')} onPress={() => router.push('/collections')}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 16, borderRadius: radius.card, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 })}>
+          <Feather name="folder" size={16} color={colors.goldLight} />
+          <Txt weight="bold" style={{ flex: 1 }}>{t('colNav')}</Txt>
+          <Feather name={dirStyle.direction === 'rtl' ? 'chevron-left' : 'chevron-right'} size={18} color={colors.muted} />
+        </Pressable>
+      ) : null}
       {row(<>
         <Chip label={t('talks.all')} active={category === null} onPress={() => setCategory(null)} />
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={category === c.id} onPress={() => setCategory(category === c.id ? null : c.id)} />)}

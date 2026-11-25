@@ -10594,3 +10594,23 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Ouvrir `/collections` en thème Premium (desktop, mobile, arabe).
 
 **Testé / non testé / limites.** Voir ligne 367 du registre.
+
+## Étape — Collections sur l'application mobile et l'application TV (25/11/2026)
+
+**Description.** Les collections existaient dans l'application, mais cachées (menu ≡ seulement, ancien look) et absentes de la télé.
+- **Téléphone** : une rangée **Collections** sur l'accueil (sous « Ma liste »), un accès dans l'onglet Catalogue, un écran **liste** immersif (une plein écran, pastilles pour changer de une, rangées par type) et un écran **détail** immersif (image de la première vidéo en en-tête, titre, durée totale, bouton **Commencer**, vidéos numérotées pour les cycles et séries d'un intervenant, rangée « Autres collections »).
+- **Télé (Android TV / Google TV)** : entrée **Collections** dans le menu de gauche, rangée sur l'accueil TV, écran liste (image de fond qui suit la carte choisie, une rangée par type) et écran détail (bouton Commencer + rangée des vidéos), le tout à la télécommande.
+- Tout est visible seulement si la fonction « Collections » est activée (Admin → Fonctions). Les textes sont ceux du site (FR / EN / AR, droite à gauche).
+
+**Prérequis.** Aucun changement d'API, de base ni de bibliothèque native : aucun redéploiement DockPanel. Fichiers : `mobile/src/app/collections/*`, `mobile/src/app/tv/collections/*`, `mobile/src/components/{CollectionCard,ImmersiveHero}.tsx`, `mobile/src/components/tv/TvCollectionCard.tsx`.
+
+**Déploiement.** Le push sur `main` (dossier `mobile/`) lance seul le workflow GitHub Actions « Application Android (APK) » :
+1. GitHub → LePubli/majlistv → Actions → vérifier que l'exécution la plus récente est verte.
+2. Téléphone et télé : à l'ouverture, bandeau « Nouvelle version disponible » (APK) ou bandeau de mise à jour du contenu (sans réinstaller, car le code natif n'a pas changé).
+3. Vérifier : Collections activé dans Admin → Fonctions, puis ouvrir l'accueil (rangée), Catalogue (accès), et sur la télé le menu de gauche.
+
+**Debug.** Rien n'apparaît : la fonction « Collections » est désactivée, ou aucune collection n'est publiée (Admin → Collections). Pas d'image : la collection n'a pas d'affiche (la première vidéo sans miniature donne un fond uni).
+
+**Exemples.** Accueil mobile → rangée Collections → carte → écran immersif → « Commencer » ouvre la première vidéo.
+
+**Testé / non testé / limites.** Voir ligne 368 du registre.

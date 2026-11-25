@@ -34,6 +34,7 @@ export function TvShell({ children, overlay }: { children: React.ReactNode; over
     { href: '/tv/search', icon: 'search', label: t('tv.search'), on: true },
     { href: '/tv', icon: 'home', label: t('tv.home'), on: true },
     { href: '/tv/catalog', icon: 'grid', label: t('tv.catalog'), on: true },
+    { href: '/tv/collections', icon: 'layers', label: t('colNav'), on: feat('collections') },
     { href: '/tv/live', icon: 'radio', label: t('tv.live'), on: feat('livetv') },
     { href: '/tv/audyn', icon: 'headphones', label: 'Audyn', on: feat('audyn') },
     { href: '/tv/kids', icon: 'star', label: 'Kids', on: feat('kids'), color: tvc.kids },

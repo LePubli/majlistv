@@ -159,8 +159,8 @@ export type SeriesDetail = SeriesItem & {
   seasons?: { id: string | null; number: number | null; title: string; episodes: SeriesEpisode[] }[] | null;
   resume?: { talkId: string; positionMs: number; number: number; started: boolean } | null;
 };
-export type CollectionItem = { id: string; title: string; description: string; kind?: string; talks: number; posterUrl?: string | null };
-export type CollectionDetail = { id: string; title: string; description: string; talks: Card[] };
+export type CollectionItem = { id: string; title: string; description: string; kind?: string; pinned?: boolean; talks: number; posterUrl?: string | null };
+export type CollectionDetail = { id: string; title: string; description: string; kind?: string; talks: Card[] };
 export type ThemeDetail = { id: string; title: string; translit?: string; ar?: string; desc?: string; steps?: { size: number; text: string }[]; talks: { id: string; title: string; speaker?: string; durationSeconds?: number; language?: string }[] };
 export type SpeakerDetail = { slug: string; name: string; bio?: string; talks: number; seriesCount: number; series: SeriesItem[]; followers?: number };
 export type SearchHit = Card & { snippet?: string | null; moments?: { ms: number; text: string }[] };

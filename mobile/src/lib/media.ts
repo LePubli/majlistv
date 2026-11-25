@@ -34,3 +34,10 @@ export function progressOf(x: Pick<Card, 'positionMs' | 'durationMs' | 'duration
   const dur = x.durationMs || (x.durationSeconds ?? 0) * 1000;
   return x.positionMs && dur > 0 ? Math.min(1, x.positionMs / dur) : 0;
 }
+
+/** Durée totale : « 2 h 15 » ou « 48 min » (vide si inconnue). */
+export function totalTime(talks: { durationSeconds?: number | null }[], minutes: string): string {
+  const min = Math.round(talks.reduce((n, x) => n + (x.durationSeconds || 0), 0) / 60);
+  if (!min) return '';
+  return min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} ${minutes}`;
+}

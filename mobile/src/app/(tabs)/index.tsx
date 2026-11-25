@@ -13,12 +13,13 @@ import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { useDownloads } from '@/lib/downloadStore';
 import { progressOf } from '@/lib/media';
-import type { Card, Citation, Home, KidsHome } from '@/lib/types';
+import type { Card, Citation, CollectionItem, Home, KidsHome } from '@/lib/types';
 import { mergeMyList } from '@/lib/mylist';
 import { colors } from '@/lib/theme';
 import { Button, ErrorBox, Loading, Panel, Txt, screenStyle } from '@/components/ui';
 import { Hero } from '@/components/Hero';
 import { Rail } from '@/components/Rail';
+import { CollectionCard } from '@/components/CollectionCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
@@ -37,6 +38,8 @@ export default function HomeScreen() {
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   const listOn = feat('watchlater') || feat('favorites');
+  // Collections éditoriales (rangée de l'accueil, comme sur le site) : seulement si la fonction est activée.
+  const cols = useAsync(() => (feat('collections') ? api.get<CollectionItem[]>('/collections').catch(() => [] as CollectionItem[]) : Promise.resolve([] as CollectionItem[])), [user?.id]);
   const myList = useAsync(async () => {
     if (!user || !listOn) return [];
     const [l, f] = await Promise.all([
@@ -69,7 +72,7 @@ export default function HomeScreen() {
     <View style={[screenStyle, dirStyle]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40, gap: 22 }}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), myList.reload()]); setRefreshing(false); }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.gold} onRefresh={async () => { setRefreshing(true); await Promise.all([home.reload(), cont.reload(), myList.reload(), cols.reload()]); setRefreshing(false); }} />}
       >
         <Hero hero={home.data.hero} />
 
@@ -80,6 +83,8 @@ export default function HomeScreen() {
         {(cont.data ?? []).length > 0 ? <Rail title={t('continueWatching')} items={cont.data ?? []} onSeeAll={() => router.navigate('/library')} seeAllLabel={t('library')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
         {(myList.data ?? []).length > 0 ? <Rail title={t('lbMyList')} items={myList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'list' } })} seeAllLabel={t('rowSeeAll')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
+
+        {(cols.data ?? []).length > 0 ? <Rail title={t('colNav')} items={cols.data ?? []} onSeeAll={() => router.navigate('/collections')} seeAllLabel={t('rowSeeAll')} render={(c, w) => <CollectionCard c={c} width={Math.round(w * 1.05)} />} /> : null}
 
         <EventsBand />
 

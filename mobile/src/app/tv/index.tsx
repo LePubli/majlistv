@@ -9,10 +9,11 @@ import { useAsync } from '@/lib/useAsync';
 import { tvCardWidth, tvRows } from '@/lib/tv';
 import { tvc, useTv } from '@/lib/tvTheme';
 import { minutesLabel } from '@/lib/media';
-import type { Card, Home } from '@/lib/types';
+import type { Card, CollectionItem, Home } from '@/lib/types';
 import { Loading, Txt } from '@/components/ui';
 import { TvShell } from '@/components/tv/TvShell';
 import { TvRow } from '@/components/tv/TvCard';
+import { TvCollectionRow } from '@/components/tv/TvCollectionCard';
 import { TvBackdrop } from '@/components/tv/TvBackdrop';
 import { TvButton } from '@/components/tv/TvButton';
 
@@ -21,6 +22,8 @@ export default function TvHome() {
   const { u, W } = useTv();
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
+  // Collections éditoriales (rangée sous « Continuer »), seulement si la fonction est activée.
+  const cols = useAsync(async () => (feat('collections') ? await api.get<CollectionItem[]>('/collections').catch(() => [] as CollectionItem[]) : []), []);
   const rows = tvRows(home.data?.rows ?? []);
   const featured = home.data?.hero && home.data.hero.mode === 'featured' ? home.data.hero.items[0] : null;
   // Sans vidéo à la une choisie dans l'admin : la première vidéo de la première rangée.
@@ -58,6 +61,7 @@ export default function TvHome() {
             ) : <View style={{ height: u(140) }} />}
             <View style={{ gap: u(36), marginTop: hero ? u(30) : 0 }}>
               {hasCont ? <TvRow title={t('tv.continue')} talks={cont.data!} cardW={cardW} padStart={pad} first onFocusTalk={setBg} /> : null}
+              {(cols.data ?? []).length > 0 ? <TvCollectionRow title={t('colNav')} items={cols.data ?? []} cardW={cardW} padStart={pad} /> : null}
               {rows.map((r, i) => (
                 <TvRow key={r.key} title={r.title || t('tv.featured')} talks={(r.talks ?? []) as Card[]} cardW={cardW} padStart={pad}
                   first={!hero && !hasCont && i === 0} onFocusTalk={setBg} />
