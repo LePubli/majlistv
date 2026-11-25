@@ -15,4 +15,9 @@ for (const m of ['pm-col-bg', 'pm-col-play', 'pm-col-share', "c.kind === 'cycle'
 assert.match(comp, /pmColVideos' : 'pmColVideo'/, 'singulier géré');
 const css = read('app/skin-premium.css');
 for (const m of ['.pm-col-hero', '.pm-col-shade', '.pm-col-grid', '.pm-col-tile', 'prefers-reduced-motion']) assert.ok(css.includes(m), m);
+const hub = read('components/premium/PmCollectionsHub.js');
+for (const k of ['pmColsAll', 'pmColsOpen', 'pmColsPl_cycle', 'pmColsPl_speaker', 'pmColsPl_theme']) assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
+for (const m of ['pm-cl-hero', 'pm-cl-strip', 'pm-cl-chips', 'pm-cl-rail', 'pm-cl-card', 'aria-pressed']) assert.ok(hub.includes(m), m);
+assert.match(read('app/(module-collections)/collections/page.js'), /skin === 'premium' && list && list\.length > 0/, 'liste immersive réservée au thème Premium');
+assert.match(css, /\.pm-cl-hero/, 'CSS de la liste');
 console.log('test_pm_collection : OK');

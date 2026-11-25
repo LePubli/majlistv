@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../../../components/Providers';
+import PmCollectionsHub from '../../../components/premium/PmCollectionsHub';
 
 export default function CollectionsPage() {
-  const { t, call } = useApp();
+  const { t, call, skin } = useApp();
   const [list, setList] = useState(null);
   useEffect(() => { call('/collections', {}, null).then((r) => setList(r.ok ? r.data : [])); }, [call]);
+  if (skin === 'premium' && list && list.length > 0) return <main className="page pm-col-page"><PmCollectionsHub list={list} /></main>; // thème Premium : page immersive
   return (
     <main className="page">
       <section className="series-listhead"><h1>{t('colTitle')}</h1><p className="meta">{t('colIntro')}</p></section>

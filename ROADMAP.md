@@ -765,3 +765,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Thème Premium — page vidéo d'après la maquette V22** (24/11) : barre du haut, bloc titre, panneau d'épisodes numérotés, carte « Votre parcours », « À découvrir ensuite » en cartes ; à valider par Epok. Reste : onglets Chapitres / Réglages du panneau, puis Catalogue (capture à fournir).
 - **Page vidéo — onglets rangés** (24/11) : Résumé · Descriptif · Notes · Questions · Transcription · À propos (dernier) ; panneau Premium à onglets Épisodes · Chapitres · Réglages ; extrait SEO en bas de page. Voir ligne 365 du registre.
 - **Page d'une collection immersive** (24/11) : en-tête plein écran à fond d'affiche, boutons Commencer/Partager, grille numérotée, autres collections (thème Premium). Voir ligne 366 du registre.
+- **Liste des collections immersive** (25/11) : une plein écran, pastilles, filtres par type, rangées de grandes cartes (thème Premium). Voir ligne 367 du registre.

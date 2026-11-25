@@ -10573,3 +10573,24 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Ouvrir `/collections/<id>` en thème Premium, desktop, mobile et arabe.
 
 **Testé / non testé / limites.** Voir ligne 366 du registre.
+
+## Étape — Liste des collections immersive (25/11/2026)
+
+**Description.** En thème Premium, la page `/collections` n'est plus une simple grille : en-tête plein écran sur la collection à la une (épinglée en priorité) avec bouton **Découvrir**, pastilles pour changer de une, filtres par type (Toutes · Cycles · Séries d'un intervenant · Thèmes du moment), puis une rangée de grandes cartes verticales par type. Les autres thèmes gardent l'ancienne page.
+
+**Prérequis.** Aucun changement d'API ni de base. Site (web) seulement.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-web`, puis sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec).
+
+**Debug.** Cartes sans image : la collection n'a pas d'affiche (mettre une vidéo avec miniature en première position). Aucune collection : l'ancien message « Aucune collection » reste affiché.
+
+**Exemples.** Ouvrir `/collections` en thème Premium (desktop, mobile, arabe).
+
+**Testé / non testé / limites.** Voir ligne 367 du registre.
