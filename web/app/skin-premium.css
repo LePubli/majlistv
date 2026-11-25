@@ -861,10 +861,7 @@ html[data-skin="premium"][dir="rtl"] .pm-col-shade { transform: scaleX(-1); }
 
 /* ---------- Liste des collections (25/11) : une immersive + pastilles + rangées de grandes cartes ---------- */
 html[data-skin="premium"] .pm-cl-hero { position: relative; min-height: min(82vh, 720px); display: flex; align-items: flex-end; overflow: hidden; isolation: isolate; }
-html[data-skin="premium"] .pm-cl-bg { position: absolute; inset: 0; z-index: -3; background: center 25% / cover no-repeat linear-gradient(135deg, var(--surface-2), var(--surface)); animation: pmClIn .9s ease both; }
-@keyframes pmClIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: none; } }
-html[data-skin="premium"] .pm-cl-hero h1 { animation: pmClUp .6s ease both; }
-@keyframes pmClUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+html[data-skin="premium"] .pm-cl-bg { position: absolute; inset: 0; z-index: -3; background: center 25% / cover no-repeat linear-gradient(135deg, var(--surface-2), var(--surface)); }
 html[data-skin="premium"] .pm-cl-strip { list-style: none; display: flex; gap: 12px; margin: 34px 0 0; padding: 0; overflow-x: auto; }
 html[data-skin="premium"] .pm-cl-strip button { position: relative; display: block; width: 150px; aspect-ratio: 16 / 9; padding: 0; border: 2px solid transparent; border-radius: 12px; overflow: hidden; cursor: pointer; background: linear-gradient(135deg, var(--surface-2), var(--surface)) center / cover; opacity: .7; transition: opacity .2s, border-color .2s, transform .2s; }
 html[data-skin="premium"] .pm-cl-strip button::before { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb,var(--c-031127,#031127) 90%,transparent), color-mix(in srgb,var(--c-031127,#031127) 10%,transparent) 70%); }
@@ -891,4 +888,3 @@ html[data-skin="premium"] .pm-cl-pin { position: absolute; z-index: 1; top: 14px
   html[data-skin="premium"] .pm-cl-strip button { width: 118px; }
   html[data-skin="premium"] .pm-cl-rail { grid-auto-columns: 78%; }
 }
-@media (prefers-reduced-motion: reduce) { html[data-skin="premium"] .pm-cl-bg, html[data-skin="premium"] .pm-cl-hero h1 { animation: none; } }
