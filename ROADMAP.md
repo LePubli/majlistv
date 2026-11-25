@@ -767,3 +767,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Page d'une collection immersive** (24/11) : en-tête plein écran à fond d'affiche, boutons Commencer/Partager, grille numérotée, autres collections (thème Premium). Voir ligne 366 du registre.
 - **Liste des collections immersive** (25/11) : une plein écran, pastilles, filtres par type, rangées de grandes cartes (thème Premium). Voir ligne 367 du registre.
 - **Collections sur l'application mobile et TV** (25/11) : rangée d'accueil, accès Catalogue, écrans immersifs (liste + détail) sur téléphone ; menu, accueil, liste et détail sur la télé. Voir ligne 368 du registre.
+- **Relecture complète de la plateforme** (25/11) : 3 relectures indépendantes ; corrections page vidéo, SSRF IPv6, jeton conservé, workflows. Points restants au registre (369 à 372).

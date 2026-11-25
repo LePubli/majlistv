@@ -10614,3 +10614,28 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** Accueil mobile → rangée Collections → carte → écran immersif → « Commencer » ouvre la première vidéo.
 
 **Testé / non testé / limites.** Voir ligne 368 du registre.
+
+## Étape — Relecture complète de la plateforme et corrections (25/11/2026)
+
+**Description.** Trois relectures indépendantes en lecture seule (API, site, application + infra) et correction des points sûrs.
+- **Page vidéo** : l'onglet par défaut ne bascule plus du Descriptif au Résumé ; les chapitres du panneau de droite viennent de la même analyse IA que le résumé (une seule requête, même langue) ; la transcription reste montée (langue et recherche conservées) ; flèches clavier et liens d'accessibilité dans le panneau ; boutons de 44 px ; trait des numéros inversé en arabe ; description coupée sans casser les emojis.
+- **Sécurité API** : l'adresse d'un lien à importer ou à analyser est maintenant décodée en IPv6 complet (`::ffff:7f00:1`, NAT64, 6to4, privées, lien local, multicast refusés) ; avant, ces écritures passaient pour publiques et permettaient d'atteindre le réseau interne.
+- **Site** : le jeton n'est plus effacé quand l'API est momentanément indisponible (502, 429) ; stockage navigateur bloqué sans plantage ; chemins du proxy encodés ; image de l'éditeur libérée.
+- **Infra** : droits minimaux (`contents: read`) sur les workflows GitHub ; `ops/apply-limits.sh` cible `majlistv-storage`.
+
+**Prérequis.** Aucune migration. À redéployer : `majlistv-api` (correctif SSRF) puis `majlistv-web`.
+
+**Déploiement.** DockPanel → Git Deploy → Redeploy `majlistv-api`, puis `majlistv-web`. Sur le VPS :
+
+    /root/apply-limits.sh
+    grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+    nginx -t && systemctl reload nginx
+    bash /root/verify-deploy.sh
+
+(résultat attendu : 0 échec). Copier aussi `ops/apply-limits.sh` du dépôt vers `/root/apply-limits.sh` du VPS (la copie du VPS n'est pas mise à jour par un push).
+
+**Debug.** Un lien légitime refusé à l'import : vérifier qu'il ne vise pas une adresse privée (`isPrivateHost`, `api/src/mediaImport.js`).
+
+**Exemples.** `node api/tests/test_ssrf_ipv6.mjs`.
+
+**Testé / non testé / limites.** Voir lignes 369 à 372 du registre.

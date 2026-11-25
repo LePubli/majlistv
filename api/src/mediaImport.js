@@ -22,18 +22,39 @@ export const AUDIO_ORIGINS = ['youtube', 'vimeo', 'dailymotion', 'web'];
 
 // --- Adresses ------------------------------------------------------------------------------------------------------------------
 // Contrôle de forme : le transcripteur refait le vrai contrôle (résolution DNS) avant tout téléchargement.
+const privateV4 = (a, b) => a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+  || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+
+/** IPv6 -> 8 groupes de 16 bits (accepte « :: » et la fin en notation IPv4) ; null si l'adresse est invalide. */
+function ipv6Groups(h) {
+  let s = h.replace(/%.*$/, '');
+  const tail = s.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (tail) { const [, a, b, c, d] = tail.map(Number); s = s.slice(0, tail.index) + ((a << 8) | b).toString(16) + ':' + ((c << 8) | d).toString(16); }
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  if (fill < 0 || (halves.length === 1 && head.length !== 8)) return null;
+  const g = [...head, ...Array(fill).fill('0'), ...rest].map((x) => parseInt(x, 16));
+  return g.length === 8 && g.every((x) => Number.isInteger(x) && x >= 0 && x <= 0xffff) ? g : null;
+}
+
 export function isPrivateHost(hostname) {
-  let h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
   if (!h) return true;
-  const mapped = h.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) h = mapped[1];
   const kind = net.isIP(h);
-  if (kind === 4) {
-    const [a, b] = h.split('.').map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
-      || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  if (kind === 4) { const [a, b] = h.split('.').map(Number); return privateV4(a, b); }
+  if (kind === 6) {
+    const g = ipv6Groups(h);
+    if (!g) return true;
+    const v4 = (hi) => privateV4(hi >> 8, hi & 255);
+    if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff) return v4(g[6]); // IPv4 mappée (::ffff:7f00:1 = 127.0.0.1)
+    if (g.slice(0, 6).every((x) => x === 0)) return true; // ::, ::1 et IPv4 « compatibles »
+    if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return v4(g[6]); // NAT64
+    if (g[0] === 0x2002) return v4(g[1]); // 6to4 : l'IPv4 est dans les bits 16 à 47
+    return (g[0] & 0xfe00) === 0xfc00 || (g[0] & 0xffc0) === 0xfe80 || (g[0] & 0xff00) === 0xff00; // privée (fc00::/7), lien local, multicast
   }
-  if (kind === 6) return h === '::' || h === '::1' || /^f[cd]/.test(h) || /^fe[89ab]/.test(h);
   // Nom sans point (« api », « garage »…) ou suffixe local : réseau interne.
   return !h.includes('.') || /\.(localhost|local|internal|lan|home\.arpa|intranet)$/.test(h);
 }
