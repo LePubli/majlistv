@@ -10645,3 +10645,9 @@ Résultat attendu du contrôle : 0 échec.
 - **Envois de fichiers** : plafond de stockage appliqué au départ (507), taille réelle vérifiée à la fin (413, fichier supprimé), 5 envois en cours au maximum par organisateur, envois abandonnés depuis plus de 24 h nettoyés.
 - **Déploiement** : Redeploy `majlistv-api` (puis `majlistv-web` si pas encore fait) + les 4 commandes VPS habituelles. Aucune migration.
 - **Debug** : un membre légitime refusé avec « Trop de tentatives » : attendre une heure ou supprimer ses lignes de `quiz_attempts` de la dernière heure. « Trop d'envois en cours » : annuler les envois bloqués (`DELETE /uploads/:id`) ou attendre 24 h.
+
+### Relecture 25/11 — addendum : nom de chaîne unique
+- Création : déjà refusée (409) quand le nom, sans tenir compte des majuscules, accents et espaces, existe.
+- Renommage (`PUT /studio/channels/:slug` avec `name`) : désormais refusé de la même façon (409 « Une chaîne porte déjà ce nom »). Changer la casse de son propre nom reste permis.
+- Test : `api/tests/test_channel_unique.py`.
+- Reste ouvert : un organisateur peut encore créer une chaîne portant le nom d'un intervenant déjà utilisé dans les vidéos d'autres organisateurs (à décider).

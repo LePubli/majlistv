@@ -105,6 +105,12 @@ export default async function channelRoutes(app) {
       const t = (await pool.query('SELECT speaker FROM talks WHERE id = $1', [b.featuredTalkId])).rows[0];
       if (!t || speakerSlug(t.speaker) !== slug) return reply.code(400).send({ error: 'Cette vidéo n\'appartient pas à la chaîne' });
     }
+    if (b.name !== undefined) { // renommer ne doit jamais reprendre le nom d'une autre chaîne
+      const ns = speakerSlug(b.name);
+      if (!ns) return reply.code(400).send({ error: 'Nom invalide' });
+      const dup = (await pool.query('SELECT 1 FROM speakers WHERE slug <> $1 AND (slug = $2 OR lower(name) = lower($3))', [slug, ns, b.name.trim()])).rows[0];
+      if (dup) return reply.code(409).send({ error: 'Une chaîne porte déjà ce nom' });
+    }
     const sets = []; const vals = [slug];
     const set = (col, v, cast = '') => { vals.push(v); sets.push(`${col} = $${vals.length}${cast}`); };
     if (b.name !== undefined) set('name', b.name);
