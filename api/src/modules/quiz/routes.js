@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 import { getSetting, getNumber, isOn } from '../../settings.js';
 import { visibleSql } from '../../visibility.js';
+import { saleAccess } from '../../sales.js';
+import { hasActiveSubscription } from '../../access.js';
 import { hasLearningTier } from '../../access.js';
 import { viaChannel } from '../../channelAccess.js'; // droits par chaîne (propriétaire et éditeurs)
 import { learningBrief } from '../../learning.js';
@@ -260,11 +262,24 @@ export default async function quizRoutes(app) {
     return rows[0] || null;
   };
 
+  // Le quiz d'une vidéo premium (ou en vente) n'est ouvert qu'à ceux qui peuvent la regarder : même règle que la page de la vidéo.
+  async function maySee(talkId, viewer) {
+    const { rows } = await pool.query('SELECT access, organizer_id FROM talks WHERE id = $1', [talkId]);
+    const talk = rows[0];
+    if (!talk) return false;
+    const staff = Boolean(viewer && (viewer.role === 'admin' || viewer.role === 'moderator' || viewer.sub === talk.organizer_id));
+    const sa = await saleAccess('talk', talkId, viewer?.sub ?? null, staff);
+    if (sa) return sa.allowed;
+    return talk.access === 'free' || staff || Boolean(viewer && await hasActiveSubscription(viewer.sub));
+  }
+  const MAX_ATTEMPTS_PER_HOUR = 10; // par membre et par vidéo
+
   app.get('/talks/:id/quiz', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const qs = await publicQuiz(id);
     if (!qs) return reply.code(404).send({ error: "Cette vidéo n'a pas de quiz" });
     const viewer = await app.optionalUser(req);
+    if (!(await maySee(id, viewer))) return reply.code(403).send({ error: 'Quiz réservé aux abonnés', code: 'premium' });
     return {
       passPercent: await getNumber('quiz_pass_percent'),
       questions: qs.map((q) => ({ id: q.id, question: q.question, options: q.options, chapterMs: q.chapter_ms, chapterTitle: q.chapter_title })),
@@ -278,7 +293,15 @@ export default async function quizRoutes(app) {
     const b = submitBody.parse(req.body ?? {});
     const qs = await publicQuiz(id);
     if (!qs) return reply.code(404).send({ error: "Cette vidéo n'a pas de quiz" });
+    const viewer = await app.optionalUser(req);
+    if (!(await maySee(id, viewer))) return reply.code(403).send({ error: 'Quiz réservé aux abonnés', code: 'premium' });
+    // Les bonnes réponses ne sont révélées qu'à une tentative complète (sinon un envoi vide les donnerait toutes).
     const chosen = new Map(b.answers.map((a) => [a.questionId, a.index]));
+    if (!qs.every((q) => chosen.has(q.id))) return reply.code(400).send({ error: 'Répondez à toutes les questions', code: 'incomplete' });
+    if (viewer) {
+      const n = (await pool.query(`SELECT count(*)::int AS n FROM quiz_attempts WHERE user_id = $1 AND talk_id = $2 AND created_at > now() - interval '1 hour'`, [viewer.sub, id])).rows[0].n;
+      if (n >= MAX_ATTEMPTS_PER_HOUR) return reply.code(429).send({ error: 'Trop de tentatives : réessayez dans une heure', code: 'too_many' });
+    }
     const results = qs.map((q) => {
       const index = chosen.has(q.id) ? chosen.get(q.id) : null;
       return { questionId: q.id, chosen: index, correct: index === q.correct_index, correctIndex: q.correct_index, explanation: q.explanation, evidenceMs: q.evidence_ms, chapterTitle: q.chapter_title };
@@ -288,7 +311,6 @@ export default async function quizRoutes(app) {
     const percent = Math.round((100 * score) / total);
     const passPercent = await getNumber('quiz_pass_percent');
     const passed = percent >= passPercent;
-    const viewer = await app.optionalUser(req);
     let best = null;
     let learning = null; // palier Apprentissage : score global avant / après cette tentative
     if (viewer) {

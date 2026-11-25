@@ -62,10 +62,11 @@ ok(r["score"] == 5 and r["percent"] == 100 and r["passed"] is True and r["saved"
 ok(all(x["explanation"] and x["evidenceMs"] is not None for x in r["results"]) and r["results"][0]["correctIndex"] == 0, "correction : explication, minute et bonne réponse renvoyées")
 r = requests.post(Q + "/submit", json=ans([0, 0, 0, 1, 1])).json()
 ok(r["score"] == 3 and r["percent"] == 60 and r["passed"] is False, "3/5 = 60 % : sous le seuil, non réussi")
-r = requests.post(Q + "/submit", json={"answers": [{"questionId": q, "index": 0} for q in ids[:3]]}).json()
-ok(r["score"] == 3 and r["total"] == 5 and r["results"][4]["chosen"] is None, "question sans réponse : comptée fausse")
-r = requests.post(Q + "/submit", json={"answers": [{"questionId": draft, "index": 0}, {"questionId": str(uuid.uuid4()), "index": 0}]}).json()
-ok(r["score"] == 0, "réponses à des questions étrangères : ignorées")
+r = requests.post(Q + "/submit", json={"answers": [{"questionId": q, "index": 0} for q in ids[:3]]})
+ok(r.status_code == 400 and r.json().get("code") == "incomplete" and "correctIndex" not in r.text, "tentative incomplète refusée : aucune bonne réponse révélée")
+ok(requests.post(Q + "/submit", json={"answers": []}).status_code == 400, "envoi vide refusé (plus de sondage des réponses)")
+r = requests.post(Q + "/submit", json={"answers": [{"questionId": draft, "index": 0}, {"questionId": str(uuid.uuid4()), "index": 0}]})
+ok(r.status_code == 400, "réponses à des questions étrangères : tentative incomplète refusée")
 ok(requests.post(Q + "/submit", json={"answers": [{"questionId": ids[0], "index": 9}]}).status_code == 400, "indice de réponse invalide refusé")
 ok(requests.post(f"{B}/talks/{uuid.uuid4()}/quiz/submit", json={"answers": []}).status_code == 404, "conférence inconnue : 404")
 cur.execute("select count(*) from quiz_attempts where talk_id=%s", (tid,)); ok(cur.fetchone()[0] == 0, "aucune tentative enregistrée pour un visiteur")
@@ -108,6 +109,20 @@ ok(ids[1] not in [q["id"] for q in requests.get(f"{B}/studio/quiz/review", heade
 requests.post(f"{Q}/questions/{ids[2]}/report", json={"reason": "Ambiguë"})
 r = requests.patch(f"{B}/studio/quiz/questions/{ids[2]}", headers=ADM, json={"question": "Question 3 reformulée ?"}); ok(r.status_code == 200, "question corrigée")
 ok(ids[2] not in [q["id"] for q in requests.get(f"{B}/studio/quiz/review", headers=ADM).json()["questions"]], "corriger la question clôt ses signalements")
+
+# --- vidéo premium : quiz réservé à ceux qui peuvent la regarder
+cur.execute("update talks set access='premium' where id=%s", (tid,))
+ok(requests.get(Q).status_code == 403 and requests.get(Q).json().get("code") == "premium", "vidéo premium : quiz fermé au visiteur")
+ok(requests.post(Q + "/submit", json=ans([0, 0, 0, 0, 2])).status_code == 403, "vidéo premium : correction fermée au visiteur")
+ok(requests.get(Q, headers=U1).status_code == 403, "vidéo premium : quiz fermé à un membre sans abonnement")
+ok(requests.get(Q, headers=ADM).status_code == 200, "vidéo premium : quiz ouvert à l'équipe")
+cur.execute("update users set premium_until = now() + interval '1 day' where id=%s", (u1,))
+ok(requests.get(Q, headers=U1).status_code == 200, "vidéo premium : quiz ouvert à un abonné")
+cur.execute("update talks set access='free' where id=%s", (tid,))
+
+# --- tentatives bornées : 10 par heure et par vidéo
+codes = [requests.post(Q + "/submit", headers=U2, json=ans([0, 0, 0, 0, 2])).status_code for _ in range(12)]
+ok(codes[:10].count(200) >= 8 and codes[-1] == 429, "au-delà de 10 tentatives par heure : refusé (429)")
 
 # --- désactivation
 requests.put(f"{B}/talks/{tid}/studio/quiz/settings", headers=ADM, json={"enabled": False})

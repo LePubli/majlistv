@@ -10639,3 +10639,9 @@ Résultat attendu du contrôle : 0 échec.
 **Exemples.** `node api/tests/test_ssrf_ipv6.mjs`.
 
 **Testé / non testé / limites.** Voir lignes 369 à 372 du registre.
+
+### Addendum du 25/11 (même étape) — quiz et envois de fichiers
+- **Quiz** : une tentative doit répondre à toutes les questions pour recevoir la correction (un envoi vide ne livre plus les bonnes réponses) ; le quiz d'une vidéo premium ou en vente est réservé à ceux qui peuvent la regarder (403, code `premium`) ; 10 tentatives par heure, par membre et par vidéo (429).
+- **Envois de fichiers** : plafond de stockage appliqué au départ (507), taille réelle vérifiée à la fin (413, fichier supprimé), 5 envois en cours au maximum par organisateur, envois abandonnés depuis plus de 24 h nettoyés.
+- **Déploiement** : Redeploy `majlistv-api` (puis `majlistv-web` si pas encore fait) + les 4 commandes VPS habituelles. Aucune migration.
+- **Debug** : un membre légitime refusé avec « Trop de tentatives » : attendre une heure ou supprimer ses lignes de `quiz_attempts` de la dernière heure. « Trop d'envois en cours » : annuler les envois bloqués (`DELETE /uploads/:id`) ou attendre 24 h.
