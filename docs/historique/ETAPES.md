@@ -10650,4 +10650,4 @@ Résultat attendu du contrôle : 0 échec.
 - Création : déjà refusée (409) quand le nom, sans tenir compte des majuscules, accents et espaces, existe.
 - Renommage (`PUT /studio/channels/:slug` avec `name`) : désormais refusé de la même façon (409 « Une chaîne porte déjà ce nom »). Changer la casse de son propre nom reste permis.
 - Test : `api/tests/test_channel_unique.py`.
-- Reste ouvert : un organisateur peut encore créer une chaîne portant le nom d'un intervenant déjà utilisé dans les vidéos d'autres organisateurs (à décider).
+- Reprise de nom : un organisateur ne peut plus créer une chaîne portant le nom d'un intervenant déjà utilisé par les vidéos ou séries d'un autre organisateur (409, « Contactez un modérateur »). Modérateurs et administrateurs peuvent toujours la créer.

@@ -24,5 +24,20 @@ ok(requests.put(f"{B}/studio/channels/{sb}", headers=H, json={"name": a}).status
 ok(requests.put(f"{B}/studio/channels/{sb}", headers=H, json={"name": a.upper()}).status_code == 409, "… même en majuscules : refusé")
 ok(requests.put(f"{B}/studio/channels/{sb}", headers=H, json={"name": b.upper()}).status_code == 200, "changer la casse de son propre nom : permis")
 ok(requests.put(f"{B}/studio/channels/{sa}", headers=H, json={"bio": "Présentation"}).status_code == 200, "modifier autre chose que le nom : permis")
-cur.execute("delete from speakers where slug in (%s,%s)", (sa, sb))
+
+# Nom d'un intervenant déjà utilisé par un autre organisateur : refusé aux organisateurs, permis au staff
+def mk(label):
+    email = f"cu-{label}-{n}@test.local"
+    requests.post(B + "/auth/register", json={"email": email, "password": "Passw0rd-test", "name": label})
+    cur.execute("update users set role='organizer' where email=%s returning id", (email,)); uid = cur.fetchone()[0]
+    return uid, {"authorization": "Bearer " + requests.post(B + "/auth/login", json={"email": email, "password": "Passw0rd-test"}).json()["token"]}
+u1, H1 = mk("un"); u2, H2 = mk("deux")
+spk = f"Intervenant Libre {n}"
+cur.execute("insert into talks(title,description,speaker,source,video_ref,organizer_id,publication,video_status,access,duration_seconds,language) values ('t','d',%s,'youtube',%s,%s,'draft','ready','free',600,'fr') returning id", (spk, "v" + n * 2, u1)); tid = cur.fetchone()[0]
+ok(requests.post(B + "/studio/channels", headers=H2, json={"name": spk.upper()}).status_code == 409, "organisateur : ne peut pas créer la chaîne d'un intervenant d'un autre")
+r = requests.post(B + "/studio/channels", headers=H1, json={"name": spk}); ok(r.status_code == 201, "l'organisateur dont c'est la vidéo peut la créer")
+sc = r.json()["slug"]; cur.execute("delete from speakers where slug=%s", (sc,))
+r = requests.post(B + "/studio/channels", headers=H, json={"name": spk}); ok(r.status_code == 201, "le staff peut la créer")
+sd = r.json()["slug"]
+cur.execute("delete from talks where id=%s", (tid,)); cur.execute("delete from speakers where slug in (%s,%s,%s)", (sa, sb, sd)); cur.execute("delete from users where id in (%s,%s)", (u1, u2))
 print("TOUT OK")

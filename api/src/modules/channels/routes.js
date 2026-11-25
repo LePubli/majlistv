@@ -137,6 +137,12 @@ export default async function channelRoutes(app) {
     if (!isStaff && (await pool.query('SELECT count(*)::int AS n FROM speakers WHERE owner_id = $1', [req.user.sub])).rows[0].n >= MAX_OWN) {
       return reply.code(409).send({ error: `Vous pouvez posséder ${MAX_OWN} chaînes au plus` });
     }
+    if (!isStaff) { // ne pas s'approprier le nom d'un intervenant déjà utilisé par les vidéos ou séries d'un autre organisateur
+      const other = (await pool.query(
+        `SELECT trim(speaker) AS s FROM talks WHERE trim(speaker) <> '' AND organizer_id <> $1
+         UNION SELECT trim(speaker) FROM series WHERE trim(speaker) <> '' AND owner_id <> $1`, [req.user.sub])).rows;
+      if (other.some((o) => speakerSlug(o.s) === slug)) return reply.code(409).send({ error: 'Ce nom est déjà utilisé par les vidéos d\'un autre organisateur. Contactez un modérateur.' });
+    }
     const r = await pool.query(
       `INSERT INTO speakers(slug, name, key_name, owner_id, owner_locked, created_by) VALUES ($1, $2, $2, $3, true, $3) ON CONFLICT (slug) DO NOTHING RETURNING slug, name`,
       [slug, name, req.user.sub]);
