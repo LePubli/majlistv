@@ -3,7 +3,7 @@ import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import { WebView as RNWebView } from 'react-native-webview';
 import { SITE_URL } from '@/lib/config';
-import { EmbedCommand, EmbedKind, EmbedMessage, buildEmbedHtml, commandScript, parseEmbedMessage } from '@/lib/embed';
+import { EmbedCommand, EmbedKind, EmbedMessage, allowEmbedNavigation, buildEmbedHtml, commandScript, parseEmbedMessage } from '@/lib/embed';
 
 // Les types de react-native-webview ne s'accordent pas avec ceux de React 19 : on type la frontière à la main.
 const WebView = RNWebView as unknown as React.ComponentType<Record<string, unknown>>;
@@ -33,7 +33,8 @@ export const ExternalVideo = forwardRef<PlayerHandle, Props>(function ExternalVi
       <WebView
         ref={web}
         source={{ html, baseUrl: SITE_URL }}
-        originWhitelist={['*']}
+        originWhitelist={['https://*', 'about:*']}
+        onShouldStartLoadWithRequest={(r: { url: string }) => allowEmbedNavigation(r.url, SITE_URL)}
         javaScriptEnabled
         domStorageEnabled
         allowsInlineMediaPlayback

@@ -10662,3 +10662,10 @@ Résultat attendu du contrôle : 0 échec.
 - Recherche (`/talks?q=`, `/talks/facets`, `/search`) : une vidéo réservée n'est plus trouvée à cause d'un mot de sa transcription (on pouvait deviner son contenu mot par mot). Pour qui n'a pas accès, il faut une correspondance dans le titre, l'intervenant ou la description. Les abonnés et administrateurs gardent la recherche par transcription via `/search`. Vidéos en vente à l'unité : traitées comme réservées.
 - Test : `api/tests/test_search_transcript_guard.py` ; tests du catalogue, des filtres et des facettes relancés : OK.
 - Aperçu de 2 minutes des vidéos YouTube / Vimeo / archive.org : limite NON corrigeable côté serveur. Ces vidéos sont publiques chez leur plateforme et leur identifiant doit être donné au lecteur ; seul le lecteur du site coupe l'aperçu. Pour un contenu réellement réservé : envoi direct ou « Importer chez nous » (flux protégé par jeton, aperçu imposé par le serveur).
+
+### Relecture 25/11 — addendum : points mineurs
+- API : verrou PostgreSQL autour des migrations (`withMigrationLock`, test `test_migration_lock.mjs`) ; journal du serveur sans jetons (`src/logRedact.js`, test `test_log_redact.mjs`).
+- Site : `/legal/<page>` et `/series` ont maintenant titre, description et adresse canonique côté serveur.
+- Transcripteur : `-protocol_whitelist` sur tous les appels ffmpeg/ffprobe (tests d'import et de visages OK ; l'envoi S3 simulé n'a pas pu être testé).
+- Appli mobile : WebView des vidéos externes limitée aux plateformes de lecture (https).
+- Non fait, à décider : voir registre lignes 370 à 372.

@@ -94,3 +94,15 @@ pl.on('ended',function(){playing=false;post({t:'ended'})});pl.on('error',functio
 window.cmd=function(m){if(m.c==='seek')pl.setCurrentTime(m.v);else if(m.c==='play')pl.play();else if(m.c==='pause')pl.pause();else if(m.c==='rate')pl.setPlaybackRate(m.v)};
 </script></body></html>`;
 }
+
+// Navigation autorisée dans la WebView du lecteur (relecture 25/11) : la page du lecteur, l'adresse du site et les plateformes
+// de lecture, en https seulement. Tout le reste (liens vers un autre site, intent:, market:, http:) est refusé.
+const EMBED_HOSTS = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be|vimeo\.com|vimeocdn\.com|dailymotion\.com|dmcdn\.net)$/i;
+export function allowEmbedNavigation(url: string, siteUrl: string): boolean {
+  if (url === 'about:blank' || url.startsWith('about:srcdoc')) return true;
+  let u: URL;
+  try { u = new URL(url); } catch { return false; }
+  if (u.protocol !== 'https:') return false;
+  try { if (u.host === new URL(siteUrl).host) return true; } catch { /* adresse du site invalide : seules les plateformes passent */ }
+  return EMBED_HOSTS.test(u.hostname);
+}

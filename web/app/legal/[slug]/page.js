@@ -1,46 +1,15 @@
-'use client';
-// Pages légales (étape D : en français, anglais ou arabe selon la langue du visiteur ; la version française fait foi) :
-// modèle rempli avec Admin → Paramètres → Informations légales, ou texte saisi dans le back-office (« ## » = titre, « - » = élément de liste, ligne vide = paragraphe).
-// Rendu sans HTML brut : rien de ce qui est saisi n'est interprété comme du code.
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useApp } from '../../../components/Providers';
+// Pages légales (serveur : titre et adresse canonique pour Google), puis le texte affiché par LegalClient.
+import { cookies } from 'next/headers';
+import { getLocale } from '../../../lib/i18n';
+import { seoSite, apiGet } from '../../../lib/seo';
+import LegalClient from './LegalClient';
 
-const linkify = (line) => line.split(/(https?:\/\/[^\s)]+)/g).map((part, i) => (/^https?:\/\//.test(part)
-  ? <a key={i} href={part} rel="noopener noreferrer" target="_blank">{part}</a> : part));
-
-function blocks(body) {
-  const out = [];
-  let list = null;
-  let para = [];
-  const flushPara = () => { if (para.length) { out.push({ type: 'p', text: para.join(' ') }); para = []; } };
-  const flushList = () => { if (list) { out.push({ type: 'ul', items: list }); list = null; } };
-  for (const raw of body.split('\n')) {
-    const line = raw.trim();
-    if (!line) { flushPara(); flushList(); continue; }
-    if (line.startsWith('## ')) { flushPara(); flushList(); out.push({ type: 'h2', text: line.slice(3) }); continue; }
-    if (line.startsWith('- ')) { flushPara(); (list = list || []).push(line.slice(2)); continue; }
-    flushList(); para.push(line);
-  }
-  flushPara(); flushList();
-  return out;
+export async function generateMetadata({ params }) {
+  const locale = getLocale(cookies().get('locale')?.value);
+  const site = await seoSite();
+  const p = await apiGet(`/legal/${encodeURIComponent(params.slug)}?lang=${locale}`);
+  if (!p) return { title: site.appName, robots: { index: false, follow: false } };
+  const url = `${site.baseUrl}/legal/${params.slug}`;
+  return { title: p.title, alternates: { canonical: url }, openGraph: { title: p.title, url, siteName: site.appName } };
 }
-
-export default function LegalPage() {
-  const { slug } = useParams();
-  const { call, t, locale } = useApp();
-  const [page, setPage] = useState(undefined);
-  useEffect(() => { call(`/legal/${slug}?lang=${locale}`, {}, null).then((r) => setPage(r.ok ? r.data : null)); }, [slug, call, locale]);
-  if (page === undefined) return null;
-  if (page === null) return <main className="page"><p>{t('errGeneric')}</p></main>;
-  return (
-    <main className="page legal" lang={page.lang} dir={page.lang === 'ar' ? 'rtl' : undefined}>
-      <h1>{page.title}</h1>
-      {page.lang !== locale && <p className="meta small">{t('legalFrOnly')}</p>}
-      {blocks(page.body).map((b, i) => (b.type === 'h2' ? <h2 key={i}>{b.text}</h2>
-        : b.type === 'ul' ? <ul key={i}>{b.items.map((it, j) => <li key={j}>{linkify(it)}</li>)}</ul>
-        : <p key={i}>{linkify(b.text)}</p>))}
-      <p className="meta small">{t('lastUpdate')} {new Date(page.updatedAt).toLocaleDateString(locale)}</p>
-    </main>
-  );
-}
+export default function Page() { return <LegalClient />; }

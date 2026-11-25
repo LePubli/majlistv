@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const web = fileURLToPath(new URL('..', import.meta.url));
 const read = (p) => fs.readFileSync(join(web, p), 'utf8');
-const page = read('app/legal/[slug]/page.js');
+const page = read('app/legal/[slug]/LegalClient.js');
 assert.ok(page.includes('call(`/legal/${slug}?lang=${locale}`'), 'page dans la langue du visiteur');
 assert.match(page, /page\.lang !== locale && <p className="meta small">\{t\('legalFrOnly'\)\}<\/p>/);
 assert.match(page, /dir=\{page\.lang === 'ar' \? 'rtl' : undefined\}/);

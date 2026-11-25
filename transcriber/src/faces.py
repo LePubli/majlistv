@@ -18,7 +18,7 @@ def extract_frames(src, start, duration, outdir, fps=track.SAMPLE_FPS):
     """Écrit une image JPEG tous les 1/fps seconde du passage [start, start + duration] (src : fichier ou adresse https)."""
     os.makedirs(outdir, exist_ok=True)
     subprocess.run(
-        ["nice", "-n", "10", "ffmpeg", "-y", "-nostdin", "-v", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}", "-i", src,
+        ["nice", "-n", "10", "ffmpeg", "-y", "-nostdin", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}", "-i", src,
          "-an", "-vf", f"fps={fps},scale={FRAME_W}:-2", "-q:v", "4", os.path.join(outdir, "%05d.jpg")],
         check=True, capture_output=True, text=True,
     )

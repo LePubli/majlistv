@@ -6,7 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import { z } from 'zod';
 import { config } from './config.js';
-import { pool, migrate, ensureAdmin } from './db.js';
+import { pool, migrate, ensureAdmin, withMigrationLock } from './db.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import talksRoutes from './routes/talks.js';
@@ -69,12 +69,13 @@ import speakersRoutes from './routes/speakers.js';
 import formatRoutes from './routes/formats.js'; // étape B : formats de contenu et page Catalogue
 import * as ext from './ext.js'; // étape M3a : le menu « Séries » n'apparaît que s'il y a une série (fournie par le module series)
 import { startMailer } from './mailer.js';
+import { reqSerializer } from './logRedact.js'; // relecture 25/11 : jetons masqués dans le journal
 import { startSearchSync } from './search.js';
 
 // trustProxy : liste des proxys de confiance ('loopback' = le nginx local), et surtout pas « true »,
 // qui ferait confiance à l'en-tête X-Forwarded-For envoyé par le visiteur lui-même — de quoi
 // contourner les limites de débit et tenter une force brute sur /auth/login. Voir config.js.
-const app = Fastify({ logger: true, trustProxy: config.trustProxy });
+const app = Fastify({ logger: { serializers: { req: reqSerializer } }, trustProxy: config.trustProxy });
 
 await app.register(helmet);
 await app.register(cors, { origin: config.corsOrigin.split(','), credentials: true });
@@ -233,8 +234,10 @@ await app.register(homeRoutes);
 await app.register(cardsRoutes);
 await registerModules(app); // routes de chaque module (cartes cadeaux : api/src/modules/gifts)
 
+await withMigrationLock(async () => {
 await migrate();
 await migrateModules(app.log); // migrations propres aux modules + version installée
+});
 await reloadExtensions(); // lot X1 : blocs, textes et réglages des extensions actives
 await ensureAdmin();
 await ensureCors();

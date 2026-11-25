@@ -1,7 +1,7 @@
 // Lecteur YouTube / Vimeo intégré : identifiants, page générée, messages.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEmbedHtml, commandScript, parseEmbedMessage, validDailymotionPlayer, validEmbedId } from '../src/lib/embed';
+import { allowEmbedNavigation, buildEmbedHtml, commandScript, parseEmbedMessage, validDailymotionPlayer, validEmbedId } from '../src/lib/embed';
 
 test('identifiants : YouTube 11 caractères, Vimeo chiffres ; le reste est refusé (pas d’injection)', () => {
   assert.equal(validEmbedId('youtube', 'dQw4w9WgXcQ'), true);
@@ -65,4 +65,10 @@ test('Dailymotion : identifiant et Player ID validés, page pilotée par le lect
   assert.match(h, /autoplay:true/);
   assert.match(h, /LIMIT=120/);
   assert.match(h, /VIDEO_TIMECHANGE/);
+});
+
+test('navigation de la WebView : seulement le site et les plateformes de lecture, en https', () => {
+  const site = 'https://majlisstv.le-publicitaire.fr';
+  for (const ok of ['about:blank', 'https://www.youtube.com/embed/abc', 'https://www.youtube-nocookie.com/embed/abc', 'https://player.vimeo.com/video/1', 'https://geo.dailymotion.com/player.html', `${site}/x`]) assert.equal(allowEmbedNavigation(ok, site), true, ok);
+  for (const no of ['http://www.youtube.com/', 'https://evil.example/', 'https://youtube.com.evil.example/', 'intent://x#Intent;end', 'market://details?id=a', 'javascript:alert(1)', 'file:///etc/passwd', 'pas une adresse']) assert.equal(allowEmbedNavigation(no, site), false, no);
 });

@@ -181,7 +181,7 @@ def probe(path):
     """{ audio: bool, duration: secondes } d'un fichier (ffprobe)."""
     import json
 
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type:format=duration", "-of", "json", path],
+    out = subprocess.run(["ffprobe", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-show_entries", "stream=codec_type:format=duration", "-of", "json", path],
                          capture_output=True, text=True, timeout=120)
     if out.returncode != 0:
         raise external.Blocked("Fichier illisible : ce n'est ni un son ni une vidéo.")
@@ -199,7 +199,7 @@ def to_mp3(src, dst, start=None, end=None, checked=False):
     if not checked and not probe(src)["audio"]:
         raise external.Blocked("Cette vidéo ne contient pas de son.")
     cut = (["-ss", f"{float(start):.3f}"] if start else []) + (["-to", f"{float(end):.3f}"] if end else [])
-    cmd = ["ffmpeg", "-nostdin", "-y", "-v", "error", *cut, "-i", src, "-map", "0:a:0", "-vn", "-sn", "-dn", "-map_metadata", "-1",
+    cmd = ["ffmpeg", "-nostdin", "-y", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", *cut, "-i", src, "-map", "0:a:0", "-vn", "-sn", "-dn", "-map_metadata", "-1",
            "-c:a", "libmp3lame", "-b:a", BITRATE, "-ar", "44100", "-ac", "2", "-id3v2_version", "3", dst]
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=4 * 3600)
     if out.returncode != 0 or not os.path.exists(dst) or os.path.getsize(dst) == 0:
@@ -213,7 +213,7 @@ def square_cover(src, dst, size=COVER_SIZE):
     graph = (f"[0:v]scale={s}:{s}:force_original_aspect_ratio=increase,crop={s}:{s},boxblur=luma_radius=40:luma_power=2,"
              f"eq=brightness=-0.06[bg];[0:v]scale={s}:{s}:force_original_aspect_ratio=decrease:force_divisible_by=2[fg];"
              f"[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuvj420p")
-    out = subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", src, "-filter_complex", graph, "-frames:v", "1", "-q:v", "3", dst],
+    out = subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-i", src, "-filter_complex", graph, "-frames:v", "1", "-q:v", "3", dst],
                          capture_output=True, text=True, timeout=120)
     if out.returncode != 0 or not os.path.exists(dst):
         raise RuntimeError("Image de la vidéo illisible : " + (out.stderr or "").strip()[-300:])

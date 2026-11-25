@@ -249,7 +249,7 @@ s3 = boto3.client(
 # --- Audio et modèle ---------------------------------------------------------------------------
 def has_audio(path):
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", path],
+        ["ffprobe", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", path],
         capture_output=True, text=True, check=True,
     ).stdout
     return bool(out.strip())
@@ -257,7 +257,7 @@ def has_audio(path):
 
 def extract_audio(src, wav):
     subprocess.run(
-        ["nice", "-n", "10", "ffmpeg", "-y", "-nostdin", "-v", "error", "-i", src, "-vn", "-ac", "1", "-ar", "16000",
+        ["nice", "-n", "10", "ffmpeg", "-y", "-nostdin", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-i", src, "-vn", "-ac", "1", "-ar", "16000",
          "-c:a", "pcm_s16le", wav],
         check=True, capture_output=True, text=True,
     )
@@ -265,7 +265,7 @@ def extract_audio(src, wav):
 
 def audio_duration(wav):
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", wav],
+        ["ffprobe", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-show_entries", "format=duration", "-of", "csv=p=0", wav],
         capture_output=True, text=True, check=True,
     ).stdout
     return float(out.strip() or 0)

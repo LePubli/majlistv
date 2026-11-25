@@ -11,6 +11,20 @@ export const pool = new pg.Pool({ connectionString: config.databaseUrl });
 const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
 // Applique dans l'ordre les fichiers .sql pas encore exécutés.
+// Deux démarrages simultanés (redéploiement, redémarrage automatique) ne doivent pas appliquer les migrations en même temps :
+// un verrou consultatif PostgreSQL fait attendre le second jusqu'à la fin du premier, puis il constate que tout est fait.
+const MIGRATION_LOCK = 7_240_001;
+export async function withMigrationLock(fn) {
+  const c = await pool.connect();
+  try {
+    await c.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK]);
+    return await fn();
+  } finally {
+    await c.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK]).catch(() => {});
+    c.release();
+  }
+}
+
 export async function migrate() {
   await pool.query(
     'CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())'

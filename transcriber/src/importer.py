@@ -246,7 +246,7 @@ def fetch(job, work, opts, max_bytes, max_height, on_progress, check=assert_publ
 def check_video(path):
     """Renvoie { duration, height } ou lève Blocked si le fichier n'est pas une vidéo lisible."""
     try:
-        out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height:format=duration",
+        out = subprocess.run(["ffprobe", "-v", "error", "-protocol_whitelist", "file,http,https,tcp,tls,crypto", "-select_streams", "v:0", "-show_entries", "stream=height:format=duration",
                               "-of", "json", path], capture_output=True, text=True, timeout=120)
         data = json.loads(out.stdout or "{}")
     except (OSError, ValueError, subprocess.TimeoutExpired) as err:

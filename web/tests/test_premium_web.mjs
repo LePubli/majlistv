@@ -76,7 +76,7 @@ const i18nSrc = read('lib/i18n.js');
 for (const k of ['skPremium', 'pmWatchNow', 'pmLeft', 'pmLearnTitle', 'pmLearnSub', 'pmLearnCur', 'pmProfile', 'pmUniverses', 'pmNewTag']) assert.equal((i18nSrc.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} en fr/en/ar`);
 // 7. Lot 2 : catalogue, liste des séries, fiche série (maquette V20 : catalogue-v11, heritage-v9), vraies données.
 assert.match(read('app/catalogue/CatalogueClient.js'), /if \(skin === 'premium'\) return <PmCatalogue \/>/);
-assert.match(read('app/(module-series)/series/page.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
+assert.match(read('app/(module-series)/series/SeriesListClient.js'), /skin === 'premium' \? <PmCatalogue series \/> : <SeriesList \/>/);
 assert.match(read('app/(module-series)/series/[id]/SeriesClient.js'), /if \(skin === 'premium' && !fp\) return <PmSeries id=/);
 const cat = read('components/premium/PmCatalogue.js') + read('components/premium/PmCatalogueSections.js'); // étape 4b : sections dans un second fichier
 for (const c of ['pm-cat-hero', 'pm-cat-search', 'pm-cat-chips', 'pm-cat-formats', 'pm-cat-grid', 'OttCard', 'OttRail', 'v20-cv11-more', 'v20-cv11-cross-learn', 'v20-cv11-cross-kids', 'v20-cv11-empty']) assert.ok(cat.includes(c), c);
