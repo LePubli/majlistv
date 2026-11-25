@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { langName } from './Transcript';
 
 const clock = (ms) => {
@@ -12,11 +13,12 @@ const clock = (ms) => {
 // Résumé, points clés et chapitres cliquables (générés par IA). N'affiche rien tant que rien n'est prêt.
 // `tab` ('summary' | 'chapters') choisit le bloc visible (les deux restent montés : une seule requête, chapitre en cours suivi).
 // `onData` informe la page de ce qui existe (résumé, chapitres) pour n'afficher que les onglets utiles.
-export default function Insights({ talkId, token, preferredLang, videoRef, locale, t, tab = 'all', onData }) {
+export default function Insights({ talkId, token, preferredLang, videoRef, locale, t, tab = 'all', onData, chaptersHost = null }) {
   const [lang, setLang] = useState(preferredLang);
   const [data, setData] = useState(null);
   const [active, setActive] = useState(-1);
   const [tick, setTick] = useState(0);
+  const [done, setDone] = useState(false); // première réponse reçue (ou échec) : la page sait alors quels onglets existent
 
   // La langue suit celle du site (changement de langue dans le menu).
   useEffect(() => { setLang(preferredLang); }, [preferredLang]);
@@ -25,8 +27,8 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
     let off = false;
     fetch(`/api/talks/${talkId}/insights?lang=${encodeURIComponent(lang)}&t=${encodeURIComponent(token)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!off) setData(d); })
-      .catch(() => {});
+      .then((d) => { if (!off) { setData(d); setDone(true); } })
+      .catch(() => { if (!off) setDone(true); });
     return () => { off = true; };
   }, [talkId, token, lang, tick]);
 
@@ -54,7 +56,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
 
   const hasSummary = Boolean(data && data.lang && (data.summary || data.keyPoints.length));
   const hasChapters = Boolean(data && data.lang && data.chapters.length);
-  useEffect(() => { if (onData) onData({ summary: hasSummary, chapters: hasChapters, list: hasChapters ? data.chapters : [] }); }, [hasSummary, hasChapters]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (onData) onData({ summary: hasSummary, chapters: hasChapters, list: hasChapters ? data.chapters : [], loaded: done }); }, [hasSummary, hasChapters, done]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!data || !data.lang) return null;
   const jump = (ms) => {
     const video = videoRef.current;
@@ -62,6 +64,20 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
     video.currentTime = ms / 1000;
     video.play().catch(() => {});
   };
+  const chaptersEl = data.chapters.length > 0 && (
+    <div hidden={!chaptersHost && tab !== 'all' && tab !== 'chapters'}>
+        <h3>{t('chapters')}</h3>
+        <ol className="chapters">
+          {data.chapters.map((c, i) => (
+            <li key={c.s}>
+              <button className={i === active ? 'seg on' : 'seg'} onClick={() => jump(c.s)}>
+                <span className="ts">{clock(c.s)}</span> {c.t}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+  );
   const rtl = ['ar', 'he', 'fa', 'ur'].includes(data.lang);
   return (
     <section className="insights" dir={rtl ? 'rtl' : 'ltr'}>
@@ -83,20 +99,7 @@ export default function Insights({ talkId, token, preferredLang, videoRef, local
         </>
       )}
       </div>
-      {data.chapters.length > 0 && (
-        <div hidden={tab !== 'all' && tab !== 'chapters'}>
-          <h3>{t('chapters')}</h3>
-          <ol className="chapters">
-            {data.chapters.map((c, i) => (
-              <li key={c.s}>
-                <button className={i === active ? 'seg on' : 'seg'} onClick={() => jump(c.s)}>
-                  <span className="ts">{clock(c.s)}</span> {c.t}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {chaptersEl && (chaptersHost ? createPortal(chaptersEl, chaptersHost) : chaptersEl)}
       <p className="meta">{t('aiNote')}</p>
     </section>
   );

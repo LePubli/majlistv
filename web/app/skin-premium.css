@@ -789,7 +789,7 @@ html[data-skin="premium"] .wb-next .wb-card:hover { border-color: var(--c-35b9ff
 }
 /* Onglets du panneau latéral (Épisodes · Chapitres · Réglages) */
 html[data-skin="premium"] .pm-ptabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin: -6px -6px 14px; border-bottom: 1px solid var(--c-2a4d73,#2a4d73); }
-html[data-skin="premium"] .pm-ptabs button { padding: 13px 6px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--c-8fb0d3,#8fb0d3); font: 800 13px var(--pm-font-body, system-ui, sans-serif); cursor: pointer; }
+html[data-skin="premium"] .pm-ptabs button { min-height: 44px; padding: 13px 6px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--c-8fb0d3,#8fb0d3); font: 800 13px var(--pm-font-body, system-ui, sans-serif); cursor: pointer; }
 html[data-skin="premium"] .pm-ptabs button.on { color: var(--c-ffffff,#fff); border-bottom-color: var(--c-149cff,#149cff); background: color-mix(in srgb,var(--c-149cff,#149cff) 12%,transparent); }
 html[data-skin="premium"] .pm-ptabs button:focus-visible { outline: 2px solid var(--c-35b9ff,#35b9ff); outline-offset: -2px; }
 html[data-skin="premium"] .pm-pchap h3 { margin: 0 0 8px; font-family: var(--pm-serif); font-size: 1.4rem; }
@@ -888,3 +888,4 @@ html[data-skin="premium"] .pm-cl-pin { position: absolute; z-index: 1; top: 14px
   html[data-skin="premium"] .pm-cl-strip button { width: 118px; }
   html[data-skin="premium"] .pm-cl-rail { grid-auto-columns: 78%; }
 }
+html[data-skin="premium"][dir="rtl"] .pm-col-n::after { background: linear-gradient(270deg, var(--line), transparent); }

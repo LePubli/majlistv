@@ -22,8 +22,10 @@ export default function FrameView({ projectId, getTimeline, at, onClose }) {
           body: JSON.stringify({ timeline: getTimeline(), at }),
         });
         if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || t('dbError')); }
-        made = URL.createObjectURL(await r.blob());
-        if (alive) setUrl(made);
+        const blob = await r.blob();
+        if (!alive) return; // fenêtre fermée pendant le chargement : rien à libérer
+        made = URL.createObjectURL(blob);
+        setUrl(made);
       } catch (e) { if (alive) setErr(e.message); }
     })();
     return () => { alive = false; if (made) URL.revokeObjectURL(made); };

@@ -22,4 +22,12 @@ for (const c of ['.pm-wtop', '.pm-wmode', '.pm-side-num', '.pm-journey', '.wb-ne
 assert.match(talk, /ptab/, 'onglets du panneau latéral');
 for (const c of ['pm-ptabs', 'pm-pchap', 'pm-pset']) assert.ok(css.includes(c) , `CSS ${c}`);
 assert.match(css, /main\.page\.watch-b > \.seo-extra/, 'extrait SEO placé en bas de la grille');
+// Relecture du 25/11 : onglet par défaut stable, une seule analyse IA, transcription conservée, clavier du panneau
+assert.match(talk, /const waitIns = hasInsights && !ins\.loaded && tab === ''/, 'pas de bascule Descriptif -> Résumé');
+assert.match(talk, /chaptersHost=\{pm \? chapHost : null\}/, 'chapitres du panneau = même instance Insights');
+assert.doesNotMatch(talk, /tab="chapters"/, 'plus de 2e instance Insights');
+assert.match(talk, /trSeen\.current \|\| current === 'transcript'/, 'transcription gardée montée');
+assert.match(talk, /onKeyDown=\{onPtabKey\}/, 'flèches dans les onglets du panneau');
+assert.match(read('components/Insights.js'), /createPortal\(chaptersEl, chaptersHost\)/);
+assert.match(read('components/Providers.js'), /r\.status === 401 \|\| r\.status === 403\) localStorage\.removeItem\('token'\)\; return null; \}\) \/\/ erreur passagère \(API/, 'jeton gardé si l\'API est indisponible');
 console.log('test_pm_watch : OK');

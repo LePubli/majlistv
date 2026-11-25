@@ -72,9 +72,9 @@ export function PmColGrid({ c, onHover }) {
   const numbered = c.kind === 'cycle' || c.kind === 'speaker';
   return (
     <section className="pm-col-body">
-      <h2 className="pm-col-h">{t('pmColIn')} <small>{c.talks.length}</small></h2>
+      <h2 className="pm-col-h">{t('pmColIn')} <small>{(c.talks || []).length}</small></h2>
       <ul className="pm-col-grid">
-        {c.talks.map((x, i) => (
+        {(c.talks || []).map((x, i) => (
           <li key={x.id} className="pm-col-item" onMouseEnter={() => onHover?.(x.id)} onFocus={() => onHover?.(x.id)}>
             {numbered && <span className="pm-col-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>}
             <TalkCard talk={x} t={t} />

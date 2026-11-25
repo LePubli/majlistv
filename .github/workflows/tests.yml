@@ -23,6 +23,10 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+# Droits minimaux du jeton GitHub : lecture du code seulement (les secrets de publication sont passés à part).
+permissions:
+  contents: read
+
 jobs:
   api:
     name: API (tests unitaires et tests de l'API)

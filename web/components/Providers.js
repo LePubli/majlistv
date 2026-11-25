@@ -52,7 +52,8 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
 
   // Au chargement : restaure la session si un token valide est stocké.
   useEffect(() => {
-    const tk = localStorage.getItem('token');
+    let tk = null;
+    try { tk = localStorage.getItem('token'); } catch { tk = null; } // stockage bloqué : on reste déconnecté, sans planter
     if (!tk) { setReady(true); return; }
     if (kidIdOf(tk)) { // session enfant : on ne charge que le profil
       fetch('/api/kids/me', { headers: { Authorization: 'Bearer ' + tk } })
@@ -62,8 +63,8 @@ export default function Providers({ skin = 'classique', skinChoice = false, loca
       return;
     }
     fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + tk } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((u) => { if (u) { setToken(tk); setUser(u); } else localStorage.removeItem('token'); })
+      .then((r) => { if (r.ok) return r.json(); if (r.status === 401 || r.status === 403) localStorage.removeItem('token'); return null; }) // erreur passagère (API en cours de redéploiement : 502, 429…) : on garde le jeton
+      .then((u) => { if (u) { setToken(tk); setUser(u); } })
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);

@@ -5,7 +5,7 @@ import { forwardedFor } from '../../../lib/visitorIp';
 const API = process.env.API_URL || 'http://localhost:3000';
 
 async function handler(req, { params }) {
-  const url = `${API}/${params.path.join('/')}${new URL(req.url).search}`;
+  const url = `${API}/${params.path.map(encodeURIComponent).join("/")}${new URL(req.url).search}`;
   const headers = {};
   for (const h of ['content-type', 'authorization']) {
     const v = req.headers.get(h);
