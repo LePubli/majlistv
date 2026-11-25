@@ -1,5 +1,5 @@
 'use client';
-// Lot X1 — Administration → Apparence → « Extensions » : envoyer une extension (.zip), la contrôler, l'installer, l'activer, régler ses options.
+// Lot X1 — Administration → Fonctions → « Extensions » : envoyer une extension (.zip), la contrôler, l'installer, l'activer, régler ses options.
 // Une extension ajoute des blocs, réglages, fonctions et textes. Elle ne contient aucun code exécutable.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from './Providers';

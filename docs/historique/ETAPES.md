@@ -10455,7 +10455,7 @@ Résultat attendu du contrôle : 0 échec.
 
 ## Éditeur visuel — lot X1 : extensions déclaratives (24/11)
 
-**Description.** Administration → Apparence → « Extensions (.zip) » : on envoie une extension (fichier .zip), le site la **contrôle** (liste précise des erreurs sinon), on l'**installe**, on l'**active**. Une extension ajoute : des **blocs gabarit** (HTML sûr + champs modifiables dans l'éditeur), des **blocs composés** (assemblage de blocs du site, dont les listes du catalogue), des **réglages**, des **fonctions activables** et des **textes** FR/EN/AR, avec une feuille de style limitée à ses classes `.x-<id>`. Ses blocs apparaissent dans l'éditeur visuel (groupe « Extensions »). Aucun code exécutable ; elle n'ajoute pas de logique serveur et ne modifie pas le code du site. Le kit (extension d'exemple + guide pour IA, générés depuis le code) se télécharge dans le même écran et se trouve dans `api/ext-kit/`.
+**Description.** Administration → Fonctions → « Extensions (.zip) » (déplacé le 25/11, voir plus bas) : on envoie une extension (fichier .zip), le site la **contrôle** (liste précise des erreurs sinon), on l'**installe**, on l'**active**. Une extension ajoute : des **blocs gabarit** (HTML sûr + champs modifiables dans l'éditeur), des **blocs composés** (assemblage de blocs du site, dont les listes du catalogue), des **réglages**, des **fonctions activables** et des **textes** FR/EN/AR, avec une feuille de style limitée à ses classes `.x-<id>`. Ses blocs apparaissent dans l'éditeur visuel (groupe « Extensions »). Aucun code exécutable ; elle n'ajoute pas de logique serveur et ne modifie pas le code du site. Le kit (extension d'exemple + guide pour IA, générés depuis le code) se télécharge dans le même écran et se trouve dans `api/ext-kit/`.
 
 **Prérequis.** Migration 136 (tables `ext_packs` et `ext_values`, automatique au démarrage de l'API). Aucune variable `.env` nouvelle.
 
@@ -10677,3 +10677,8 @@ Résultat attendu du contrôle : 0 échec.
 - **Compteurs publics** : `/ads/:id/impression|click|skip|watch` plafonnés par visiteur (adresse + navigateur) et par jour (30 / 5 / 30 / 30) ; `/xp/expose|click` : 500 par jour et par adresse + navigateur. Au-delà, réponse « ok » sans rien compter. Test : `test_counter_guard.mjs`.
 - **DNS rebinding** : `safeFetch.js` (API) contrôle chaque adresse au moment de la connexion ; transcripteur : `importer.public_only` filtre `getaddrinfo` pour le fil qui télécharge. Tests : `test_safe_fetch.mjs`, `test_rebinding.py`.
 - **Essai gratuit une fois par personne** : clé = adresse e-mail simplifiée (minuscules, sans `+étiquette`, sans points Gmail), table `trial_claims` (migration 137, rattrapage des abonnés existants). Tests : `test_trial_key.mjs`, `test_trial_once.py`.
+
+### Extensions (.zip) : déplacées d'Apparence vers Fonctions (25/11)
+- Le panneau « Extensions » (envoi, contrôle, installation, activation, réglages) n'est plus dans Administration → Apparence : il est dans **Administration → Fonctions → onglet « Extensions »** (version classique : sous la liste des fonctions). Une extension ajoute aussi des réglages et des fonctions, qui n'ont rien à voir avec l'apparence.
+- Les blocs d'une extension restent dans l'éditeur visuel (groupe « Extensions »). Aucun changement côté API.
+- Textes mis à jour : guide pour IA, dossier d'exemple, `README` du kit (« Admin → Fonctions → Extensions »). Vérifié au navigateur (Chromium, 1400 px) : panneau absent d'Apparence, présent dans Fonctions. `next build` et `test_ext_kit.mjs` : OK.

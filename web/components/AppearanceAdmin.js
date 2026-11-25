@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './Providers';
 import ThemePacksPanel from './ThemePacksPanel';
-import ExtPacksPanel from './ExtPacksPanel';
 import { Page, Metrics, Panel, Cols, Btn, Badge } from './backoffice/Kit';
 import { TOKENS, TOKEN_MAP, GROUPS, BUILTIN_FONTS, buildCss, checkValue, contrastIssues, resolveColor } from '../lib/themeCss';
 
@@ -567,7 +566,6 @@ export default function AppearanceAdmin() {
           <div className="bm-form" style={{ marginBottom: 14 }}>
       <SiteSkin />
       <ThemePacksPanel onChange={() => loadThemes().then((l) => { const a = l.find((x) => x.isActive) || l[0]; if (a) openTheme(a.id); })} />
-      <ExtPacksPanel />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>
@@ -663,7 +661,6 @@ export default function AppearanceAdmin() {
 
       <SiteSkin />
       <ThemePacksPanel onChange={() => loadThemes().then((l) => { const a = l.find((x) => x.isActive) || l[0]; if (a) openTheme(a.id); })} />
-      <ExtPacksPanel />
       <div className="ap-top">
         <label className="ap-theme">Thème
           <select value={cur.id} onChange={(e) => openTheme(Number(e.target.value))}>

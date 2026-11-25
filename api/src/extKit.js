@@ -73,7 +73,7 @@ const EX = {
 `,
   'README.md': `# Extension d'exemple
 
-Dossier de départ pour créer une extension Mejliss. Modifiez-le puis envoyez-le (en .zip) dans Admin → Apparence → Extensions.
+Dossier de départ pour créer une extension Mejliss. Modifiez-le puis envoyez-le (en .zip) dans Admin → Fonctions → Extensions.
 Le guide complet (toutes les règles, tous les champs) est le fichier GUIDE-EXTENSIONS-IA.md : donnez-le à votre IA avec ce dossier.
 `,
 };
@@ -98,7 +98,7 @@ Une extension = un fichier .zip qui **ajoute des briques** au site, **sans aucun
 
 1. **Blocs « gabarit »** : du HTML restreint avec des champs modifiables dans l'éditeur (section 4).
 2. **Blocs « composés »** : un assemblage de blocs existants du site (y compris les blocs de données : vidéos, séries, chaînes…) dont certains réglages sont liés à des champs (section 5).
-3. **Réglages** (Admin → Apparence → Extensions) lus par les gabarits : \`{{s:cle}}\`.
+3. **Réglages** (Admin → Fonctions → Extensions) lus par les gabarits : \`{{s:cle}}\`.
 4. **Fonctions activables** (interrupteurs) lues par les gabarits : \`{{#if feat:cle}}\`.
 5. **Textes** FR / EN / AR : \`{{t:cle}}\`.
 6. **Une feuille de style** limitée à ses propres classes \`.x-<id>\`.
@@ -192,7 +192,7 @@ ${composable}
 
 ## 6. Cycle de vie
 
-1. Admin → Apparence → Extensions → « Envoyer une extension » : contrôle complet (liste précise des erreurs sinon), puis « Installer » (inactive).
+1. Admin → Fonctions → Extensions → « Envoyer une extension » : contrôle complet (liste précise des erreurs sinon), puis « Installer » (inactive).
 2. « Activer » : les blocs apparaissent dans l'éditeur visuel (groupe « Extensions »), le CSS et les textes sont chargés.
 3. Réglages et fonctions : même écran.
 4. « Désactiver » / « Supprimer » : **refusé tant qu'une page ou un modèle utilise un bloc de l'extension** (la liste est affichée). Une mise à jour qui retire un bloc encore utilisé est refusée.

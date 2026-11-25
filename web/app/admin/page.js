@@ -6,6 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../../components/Providers';
+import ExtPacksPanel from '../../components/ExtPacksPanel'; // lot X1 : extensions (.zip), rangées dans Fonctions depuis le 25/11
 import SalesAdmin from '../../components/SalesAdmin'; // étape C-2 : ventes à l'unité
 import KidsAdmin from '../../components/KidsAdmin'; // Kids & familles : vue d'ensemble agrégée de l'espace enfant
 import FinanceAdmin from '../../components/FinanceAdmin'; // revenus et abonnements : vue d'ensemble de l'argent encaissé
@@ -1408,7 +1409,8 @@ function FeaturesAdmin() {
           { icon: 'clock', tone: 'amber', label: 'Désactivées', value: d.features.length - on },
         ]} />
         {msg && <p className="ft-msg" role="status" aria-live="polite">{msg}</p>}
-        <BmTabs names={[['catalog', 'Catalogue'], ['deps', 'Dépendances'], ['history', 'Historique']]} value={sub} onChange={setSub} />
+        <BmTabs names={[['catalog', 'Catalogue'], ['ext', 'Extensions'], ['deps', 'Dépendances'], ['history', 'Historique']]} value={sub} onChange={setSub} />
+        {sub === 'ext' && <ExtPacksPanel />}
         {sub === 'deps' && (
           <BmPanel title="Dépendances entre fonctions" extra={`${d.features.filter((x) => x.needs.length).length}`}>
             <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
@@ -1486,6 +1488,7 @@ function FeaturesAdmin() {
           );
         })}
       </div>
+      <ExtPacksPanel />
     </section>
   );
 }

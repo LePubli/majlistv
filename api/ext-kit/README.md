@@ -16,7 +16,7 @@ des **réglages**, des **fonctions activables** et des **textes** FR / EN / AR. 
 1. Copier `example/` vers `mon-extension/`, changer `id`, `name`, les blocs.
 2. Contrôler : `node api/ext-kit/validate.mjs mon-extension/`
 3. Fabriquer : `node api/ext-kit/build.mjs mon-extension/mon-extension.zip`
-4. Envoyer le .zip dans Admin → Apparence → Extensions → « Envoyer une extension » → Installer → Activer.
+4. Envoyer le .zip dans Admin → Fonctions → Extensions → « Envoyer une extension » → Installer → Activer.
 5. Éditeur visuel → panneau Blocs → groupe « Extensions » : poser les blocs.
 
 Avec une IA : lui donner `GUIDE-EXTENSIONS-IA.md` et `example/`, décrire le bloc voulu, puis lui renvoyer les erreurs du validateur jusqu'à « ✓ ».
