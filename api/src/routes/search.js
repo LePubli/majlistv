@@ -7,7 +7,7 @@ import { visibleSql } from '../visibility.js';
 import { pool } from '../db.js';
 import { presignGet } from '../storage.js';
 import { hasActiveSubscription } from '../access.js';
-import { saleMap } from '../sales.js';
+import { saleMap, notOnSaleSql } from '../sales.js';
 import { INDEX, meili, meiliConf, queryWords } from '../search.js';
 import { filterShape, filterSql, hasFilters } from '../talkFilters.js';
 import * as ext from '../ext.js'; // étape M3a : séries fournies par le module series
@@ -62,7 +62,7 @@ export default async function searchRoutes(app) {
           filter: p.category ? ['showAdults != false', `categoryIds = ${p.category}`] : ['showAdults != false'],
           attributesToRetrieve: ['id'],
           attributesToCrop: ['transcript', 'transcriptOther', 'description'], cropLength: 24, cropMarker: '…',
-          attributesToHighlight: ['transcript', 'transcriptOther', 'description'], highlightPreTag: PRE, highlightPostTag: POST,
+          attributesToHighlight: ['title', 'speaker', 'transcript', 'transcriptOther', 'description'], highlightPreTag: PRE, highlightPostTag: POST,
         }, 5000);
         ids = r.hits.map((h) => h.id);
         total = r.estimatedTotalHits ?? ids.length;
@@ -90,7 +90,7 @@ export default async function searchRoutes(app) {
       const extra = await filterSql(p, vals, viewer?.sub ?? null);
       const where = `t.video_status = 'ready' AND ${visibleSql('t')}
         AND (t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%' OR t.description ILIKE '%' || $1 || '%'
-             OR t.transcript_text ILIKE '%' || $1 || '%')
+             OR (${viewer?.role === 'admin' ? 'TRUE' : subscriber ? notOnSaleSql('talk', 't.id') : `t.access = 'free' AND ${notOnSaleSql('talk', 't.id')}`} AND t.transcript_text ILIKE '%' || $1 || '%'))
         AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
         AND ${adultSql('t')}
         AND (${p.level ? `t.level = '${p.level}'` : 'TRUE'}) ${extra}`;
@@ -101,6 +101,9 @@ export default async function searchRoutes(app) {
     }
 
     onSale = await saleMap('talk', rows.map((r) => r.id), viewer?.sub ?? null);
+    // Une vidéo réservée n'apparaît pas parce qu'un mot figure dans sa transcription (on pourrait la deviner mot par mot) :
+    // pour qui n'y a pas accès, il faut une correspondance dans le titre, l'intervenant ou la description.
+    if (engine === 'meilisearch') rows = rows.filter((r) => canSee(r) || ['title', 'speaker', 'description'].some((k) => formatted.get(r.id)?.[k]?.includes(PRE)));
 
     // Passages horodatés (vidéos envoyées accessibles) : jusqu'à 3 par vidéo, dans l'ordre de la vidéo.
     // Mots de la requête + mots réellement trouvés par Meilisearch (corrige les fautes de frappe : « relativitée » → « relativité »).

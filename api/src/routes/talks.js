@@ -11,7 +11,7 @@ import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js
 import { visibleSql } from '../visibility.js';
 import { makePlaybackToken, makePreviewToken } from '../playback.js';
 import { hasActiveSubscription } from '../access.js';
-import { saleAccess } from '../sales.js'; // étape C-1 : contenu payant à l'unité
+import { saleAccess, notOnSaleSql } from '../sales.js'; // étape C-1 : contenu payant à l'unité
 import { getNumber } from '../settings.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
 import { parseArchiveUrl, resolveArchive, archiveFileUrl, ArchiveError } from '../archive.js';
@@ -228,7 +228,7 @@ export default async function talksRoutes(app) {
          AND ($6::text[] IS NULL OR lower(trim(t.speaker)) = ANY($6::text[]))
          AND ($1::text IS NULL OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%'
               OR t.description ILIKE '%' || $1 || '%'
-              OR t.transcript_text ILIKE '%' || $1 || '%')
+              OR (t.access = 'free' AND ${notOnSaleSql('talk', 't.id')} AND t.transcript_text ILIKE '%' || $1 || '%'))
          AND ($2::int IS NULL OR ${inCategorySql('t', 2)})
          AND ($5::text IS NULL OR t.level = $5)
          AND ($7::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $7))
@@ -249,7 +249,7 @@ export default async function talksRoutes(app) {
     const base = `t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')}
          AND ($3::text[] IS NULL OR lower(trim(t.speaker)) = ANY($3::text[]))
          AND ($1::text IS NULL OR t.title ILIKE '%' || $1 || '%' OR t.speaker ILIKE '%' || $1 || '%'
-              OR t.description ILIKE '%' || $1 || '%' OR t.transcript_text ILIKE '%' || $1 || '%')
+              OR t.description ILIKE '%' || $1 || '%' OR (t.access = 'free' AND ${notOnSaleSql('talk', 't.id')} AND t.transcript_text ILIKE '%' || $1 || '%'))
          AND ($2::text IS NULL OR t.level = $2)
          AND ($4::text IS NULL OR t.format_id = (SELECT id FROM formats WHERE slug = $4))`;
     const vals = [p.q ?? null, p.level ?? null, names, p.format ?? null];
