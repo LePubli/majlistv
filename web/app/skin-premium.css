@@ -893,12 +893,15 @@ html[data-skin="premium"][dir="rtl"] .pm-col-n::after { background: linear-gradi
 
 /* ===== 26/11 — vignettes alternées (horizontales plus grandes / verticales), survol qui grossit + extrait, extraits vidéo des « une » et sélections ===== */
 /* Rangées 16:9 : 4 par ligne (plus grandes) ; rangées d'affiches verticales 2:3 : 6 par ligne. Elles alternent sur l'accueil. */
-html[data-skin="premium"] .pm-rail-track { grid-auto-columns: calc((100% - 3 * 14px) / 4); gap: 14px; padding: 14px 0 26px; margin: -10px 0 -14px; }
+html[data-skin="premium"] .pm-rail-track { grid-auto-columns: calc((100% - 3 * 14px) / 4); gap: 14px; padding: 34px 0 44px; margin: -26px 0 -34px; }
 html[data-skin="premium"] .pm-rail-tall .pm-rail-track { grid-auto-columns: calc((100% - 5 * 12px) / 6); gap: 12px; }
 html[data-skin="premium"] .pm-rail-tall .pm-card { aspect-ratio: 2 / 3; }
 html[data-skin="premium"] .pm-rail-tall .pm-card-art { background: linear-gradient(0deg, color-mix(in srgb,var(--c-02040b,#02040b) 81.57%,transparent) 0%, transparent 58%), var(--cover) 58% center / cover; }
 html[data-skin="premium"] .pm-rail-tall .pm-card-title { -webkit-line-clamp: 3; font-size: 12px; }
-html[data-skin="premium"] .pm-card:hover, html[data-skin="premium"] .pm-card:focus-visible { transform: scale(1.08); }
+html[data-skin="premium"] .pm-card:hover, html[data-skin="premium"] .pm-card:focus-visible { transform: scale(1.24); }
+html[data-skin="premium"] .pm-rail-tall .pm-card:hover, html[data-skin="premium"] .pm-rail-tall .pm-card:focus-visible { transform: scale(1.16); }
+html[data-skin="premium"] .pm-rail-track > .pm-card:last-child { transform-origin: 100% 50%; }
+html[data-skin="premium"][dir="rtl"] .pm-rail-track > .pm-card:last-child { transform-origin: 0 50%; }
 html[data-skin="premium"] .pm-rail-track > .pm-card:first-child { transform-origin: 0 50%; }
 html[data-skin="premium"][dir="rtl"] .pm-rail-track > .pm-card:first-child { transform-origin: 100% 50%; }
 @media (max-width: 1050px) {
@@ -918,9 +921,13 @@ html[data-skin="premium"] .pm-card-vid, html[data-skin="premium"] .pm-hero-vid, 
   position: absolute; inset: 0; display: block; overflow: hidden; background: var(--c-000000,#000000); opacity: 0; transition: opacity .7s ease; pointer-events: none; container-type: size; }
 html[data-skin="premium"] .pm-card-vid.on, html[data-skin="premium"] .pm-hero-vid.on, html[data-skin="premium"] .pm-spot-vid.on { opacity: 1; }
 html[data-skin="premium"] .pm-card-vid .hc-video, html[data-skin="premium"] .pm-hero-vid .hc-video, html[data-skin="premium"] .pm-spot-vid .hc-video {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); max-width: none; border: 0; object-fit: cover; pointer-events: none; }
+  position: absolute; inset: 50% auto auto 50%; margin: 0; transform: translate(-50%, -50%); width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); max-width: none; border: 0; object-fit: cover; pointer-events: none; }
 html[data-skin="premium"] .pm-card-vid:after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, color-mix(in srgb,var(--c-02040b,#02040b) 81.57%,transparent) 0%, transparent 58%); }
 html[data-skin="premium"] .pm-hero-vid:after { content: ''; position: absolute; inset: 0; --hero: linear-gradient(transparent, transparent); }
 html[data-skin="premium"] .pm-spot-vid:after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb,var(--c-0b0710,#0b0710) 96.86%,transparent) 0%, color-mix(in srgb,var(--c-190714,#190714) 87.84%,transparent) 30%, color-mix(in srgb,var(--c-190714,#190714) 60%,transparent) 55%, color-mix(in srgb,var(--c-100815,#100815) 27.06%,transparent) 100%), linear-gradient(0deg, var(--c-05070d,#05070d), transparent 25%); }
 html[data-skin="premium"] .pm-spot > .pm-spot-copy, html[data-skin="premium"] .pm-spot > .pm-spot-cards { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) { html[data-skin="premium"] .pm-card-vid, html[data-skin="premium"] .pm-hero-vid, html[data-skin="premium"] .pm-spot-vid { display: none; } }
+
+/* Lecteurs intégrés (YouTube / Vimeo) : agrandis de 40 % et centrés, pour que leurs bandeaux (titre, pause, logo) sortent du cadre */
+html[data-skin="premium"] .pm-card-vid iframe.hc-video, html[data-skin="premium"] .pm-hero-vid iframe.hc-video, html[data-skin="premium"] .pm-spot-vid iframe.hc-video {
+  width: calc(max(100cqw, 177.78cqh) * 1.4); height: calc(max(100cqh, 56.25cqw) * 1.4); }

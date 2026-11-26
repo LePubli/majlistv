@@ -38,3 +38,16 @@ export function ClipLayer({ clip, className, children }) {
     </span>
   );
 }
+
+/** [réf, visible] : `visible` est vrai tant que l'élément porteur de la réf est à l'écran (au moins 25 %). Réf « callback » : fonctionne même si l'élément apparaît plus tard. */
+export function useInView() {
+  const [el, setEl] = useState(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [el]);
+  return [setEl, seen];
+}

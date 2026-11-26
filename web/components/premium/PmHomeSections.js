@@ -10,7 +10,7 @@ import { useReducedMotion } from '../HomeHero';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { OttCard, OttRail } from './PmOtt';
-import { useClip, ClipLayer } from './PmClip';
+import { useClip, ClipLayer, useInView } from './PmClip';
 import PmShortTile from './PmShortTile';
 import { KidsBand } from '../KidsBanner';
 
@@ -207,10 +207,12 @@ function useHomeCollections() {
 /** Grand cadre « Sélection » : texte à gauche, deux affiches à droite, image de la collection en fond. */
 export function PmSpot({ c }) {
   const { t, appName } = useApp();
-  const clip = useClip(c?.talks?.[0]?.id, COVER_MS, Boolean(c));
+  // Sélection en grand cadre : l'extrait démarre dès que le bloc apparaît à l'écran (pas d'attente) et s'arrête quand on ne le voit plus.
+  const [ref, seen] = useInView();
+  const clip = useClip(c?.talks?.[0]?.id, 0, Boolean(c) && seen);
   if (!c) return null;
   return (
-    <section className="pm-spot" style={{ '--cover': coverOf(c.talks[0]) }} aria-label={c.title}>
+    <section ref={ref} className="pm-spot" style={{ '--cover': coverOf(c.talks[0]) }} aria-label={c.title}>
       <ClipLayer clip={clip} className="pm-spot-vid" />
       <div className="pm-spot-copy">
         <span className="pm-spot-kicker">{t('pmSelection').replace('{name}', appName)}</span>
