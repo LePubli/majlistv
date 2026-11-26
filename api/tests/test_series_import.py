@@ -10,6 +10,7 @@ tag = uuid.uuid4().hex[:6]; users, jobs, series = [], [], []
 
 
 def cleanup():
+    cur.execute("delete from talks where id in (select talk_id from series_episodes where series_id = any(%s::uuid[]))", (series,))
     cur.execute("delete from talks where video_ref like %s", (f"s{tag}%",))
     for s in series: cur.execute("delete from series where id=%s", (s,))
     for j in jobs: cur.execute("delete from import_jobs where id=%s", (j,))
@@ -39,7 +40,7 @@ def member(role, label):
 
 org, other = member("organizer", "org"), member("organizer", "other")
 URL = "https://www.youtube.com/show/VLPLDoK5CcjJZA6JIO4oRpfJwz1-4DAOKisZ?sbp=Kgt4bXhPR0VFZEk3VUAB"
-r = requests.post(B + "/studio/series/import", json={"url": "https://vimeo.com/channels/x"}, headers=org); ok(r.status_code == 400, "adresse hors YouTube refusée")
+r = requests.post(B + "/studio/series/import", json={"url": "https://example.org/x"}, headers=org); ok(r.status_code == 400, "adresse d'un site non géré par la lecture de listes refusée")
 r = requests.post(B + "/studio/series/import", json={"url": URL}, headers=org); ok(r.status_code == 202 and r.json()["status"] == "listing", "analyse de la page série lancée")
 job = r.json(); jobs.append(job["id"])
 r = requests.post(B + f"/studio/series/import/{job['id']}/start", json={"title": "X", "ids": [f"s{tag}0000"], "rights": True}, headers=org); ok(r.status_code == 409, "démarrage refusé tant que la liste n'est pas prête")
@@ -104,4 +105,29 @@ ok(r.status_code == 201 and r.json()["reused"] == 1 and r.json()["created"] == 1
 series.append(r.json()["seriesId"])
 cur.execute("select has_seasons, published from series where id=%s", (r.json()["seriesId"],)); ok(cur.fetchone() == (False, True), "série publiée, sans saisons")
 cur.execute("select t.publication, t.transcript_status from talks t where t.video_ref=%s", (ent2[1]["id"],)); ok(cur.fetchone() == ("published", "pending"), "nouvel épisode publié, transcription demandée")
+
+# --- Étape C : autres plateformes et liste d'adresses ---
+for u in ("https://vimeo.com/showcase/123456", "https://www.dailymotion.com/playlist/x7abcd", "https://archive.org/details/ma-collection"):
+    r = requests.post(B + "/studio/series/import", json={"url": u}, headers=org); ok(r.status_code == 202, "adresse acceptée : " + u.split("/")[2]); jobs.append(r.json()["id"])
+r = requests.post(B + "/studio/series/import", json={"url": "https://example.org/liste"}, headers=org); ok(r.status_code == 400, "autre site : orienté vers « Liste d'adresses »")
+r = requests.post(B + "/studio/series/import-urls", json={"urls": ["not a url", "ftp://x.org/a.mp4", "http://127.0.0.1/a.mp4"]}, headers=org); ok(r.status_code == 400 and len(r.json()["rejected"]) == 3, "adresses invalides / privées refusées")
+vid = f"{int(tag, 16) % 900000000 + 100000000}"
+lines = [f"https://example.org/cours/{tag}-un.mp4 | Cours un", f"https://example.org/cours/{tag}-deux.mp4", f"https://vimeo.com/{vid} | Vidéo Vimeo", f"https://vimeo.com/{vid}", "pas une adresse"]
+r = requests.post(B + "/studio/series/import-urls", json={"urls": lines}, headers=org); ok(r.status_code == 201, "liste d'adresses créée : " + r.text[:160])
+lj = r.json(); jobs.append(lj["id"])
+ok(lj["status"] == "listed" and lj["count"] == 3 and len(lj["rejected"]) == 2, "3 vidéos retenues, 2 lignes refusées (doublon, texte)")
+src = {e["source"] for e in lj["entries"]}; ok(src == {"web", "vimeo"}, "sources reconnues : autre site + Vimeo")
+web = [e for e in lj["entries"] if e["source"] == "web"]; ok(web[0]["title"] == "Cours un" and web[1]["title"].lower().startswith(tag), "titre donné après |, sinon tiré du nom du fichier")
+vm = [e for e in lj["entries"] if e["source"] == "vimeo"][0]
+eids = [e["id"] for e in lj["entries"]]
+r = requests.post(B + f"/studio/series/import/{lj['id']}/start", json={"title": "Série mixte", "ids": eids, "rights": True}, headers=org); ok(r.status_code == 201, "série mixte importée : " + r.text[:200])
+res = r.json(); series.append(res["seriesId"])
+ok(res["episodes"] == 3 and res["copyQueued"] == 2 and not res["copyErrors"], "les 2 vidéos d'un autre site sont copiées d'office, Vimeo reste lue depuis Vimeo")
+cur.execute("select t.source, t.video_status, t.title from talks t join series_episodes e on e.talk_id=t.id where e.series_id=%s order by e.position", (res["seriesId"],)); rows = cur.fetchall()
+ok([r[0] for r in rows] == ["upload", "upload", "vimeo"] or sorted(r[0] for r in rows) == ["upload", "upload", "vimeo"], "épisodes : 2 hébergés chez nous, 1 Vimeo")
+ok(all(r[1] == "importing" for r in rows if r[0] == "upload") and all(r[1] == "ready" for r in rows if r[0] == "vimeo"), "copies « en cours », Vimeo prêt")
+cur.execute("select count(*) from media_imports where source_url like %s and origin='web' and new_talk and rights_text <> ''", (f"https://example.org/cours/{tag}%",)); ok(cur.fetchone()[0] == 2, "2 demandes de copie (autre site) avec journal des droits")
+cur.execute("update import_jobs set status='listed' where id=%s", (lj["id"],))
+r = requests.post(B + f"/studio/series/import/{lj['id']}/start", json={"title": "Encore", "ids": [e["id"] for e in web], "rights": True}, headers=org); ok(r.status_code == 409, "même adresses : déjà importées, rien de créé")
+cur.execute("delete from talks where video_ref like %s or (source='upload' and title in ('Cours un'))", (f"s{tag}%",))
 cleanup(); print("TOUT OK")

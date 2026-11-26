@@ -152,6 +152,26 @@ bash /root/verify-deploy.sh
 
 **Tests.** `python3 api/tests/test_series_import.py`, `node api/tests/test_series_seasons.mjs`, `python3 transcriber/tests/test_external.py`, `node web/tests/test_series_import.mjs`.
 
+## Étape C — Import de séries depuis d'autres sites (26/11)
+
+**Description.** Même écran que l'étape B (Studio → Séries → « Importer une série »), ouvert à Vimeo (showcases, albums), Dailymotion (playlists) et archive.org (collections, recherches). Onglet « Liste d'adresses (autre site) » : une adresse par ligne (`adresse | titre facultatif`), liens directs ou pages de sites publics ; ces vidéos sont copiées chez nous d'office. Saisons, droits obligatoires, brouillon par défaut : comme à l'étape B.
+
+**Prérequis.** Fonction « Import de vidéos externes » activée (Admin → Fonctions) et de la place dans Garage pour les copies.
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy : `majlistv-api`, puis `majlistv-web` (le transcripteur n'a pas changé depuis l'étape B). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Liste en échec : message + « Relancer ». Copie d'un autre site en échec : la vidéo passe en « échec » et se relance depuis sa fiche (Studio → Contenus). Adresses ignorées : numéros de lignes affichés.
+
+**Exemple.** Onglet « Liste d'adresses » → coller `https://exemple.org/cours-1.mp4 | Cours 1` (une par ligne) → Préparer la liste → titre de la série → case des droits → Importer.
+
+**Tests.** `python3 api/tests/test_series_import.py`, `node web/tests/test_series_import.mjs`.
+
 ## Règles de code à connaître
 
 - Textes du site : `web/lib/i18n.js` (un texte par ligne, trois langues). Un composant « use client » ne l'importe jamais : `web/lib/locales.js` pour la liste des langues, `useApp().t` pour les textes.

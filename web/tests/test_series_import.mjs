@@ -15,7 +15,10 @@ assert.match(imp, /\/studio\/series\/import\/\$\{job\.id\}\/start/, 'import dém
 assert.match(imp, /rights: true/, 'droits envoyés');
 assert.match(imp, /canStart = job\?\.status === 'listed' && sel\.length > 0 && rights && o\.title\.trim\(\) && seasonsOk/, 'bouton bloqué sans droits, sans titre, sans épisode ou avec des saisons incorrectes');
 assert.match(imp, /copyIds: sel\.filter\(\(x\) => x\.copy\)/, 'copie chez nous épisode par épisode (rien par défaut)');
-assert.match(imp, /copy: false \}\)\)/, 'copie décochée par défaut');
+assert.match(imp, /copy: e\.source === 'web' \}\)\)/, 'copie décochée par défaut, sauf autre site (copie obligatoire)');
+assert.match(imp, /disabled=\{!x\.on \|\| x\.source === 'web'\}/, 'copie non modifiable pour un autre site');
+assert.match(imp, /\/studio\/series\/import-urls/, 'liste d\'adresses (autres sites)');
+assert.match(imp, /byTitle/, 'tri par titre (archive.org ne donne pas d\'ordre)');
 assert.match(imp, /plan\?\.hasSeasons/, 'saisons proposées à partir des titres');
 assert.match(imp, /sriStartsAt/, 'saisons indiquées à la main : « commence à l\'épisode n° »');
 assert.match(imp, /reverse\(\)/, 'ordre inversable');

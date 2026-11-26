@@ -1,6 +1,6 @@
 'use client';
-// Studio → Séries → Importer une série depuis YouTube.
-//   1. coller l'adresse d'une liste de lecture ou d'une page « série » YouTube : le serveur lit la liste ;
+// Studio → Séries → Importer une série (YouTube, Vimeo, Dailymotion, archive.org, ou une liste d'adresses pour tout autre site).
+//   1. coller l'adresse d'une liste de lecture / page « série » / album / collection (le serveur lit la liste), ou coller des adresses une par ligne ;
 //   2. cocher / ordonner les épisodes, placer les saisons (détectées dans les titres, sinon « la saison N commence à l'épisode X »),
 //      choisir les épisodes à COPIER chez nous (les autres restent lus depuis YouTube) ;
 //   3. titre, catégorie, accès, brouillon / publié, transcription facultative, case des droits (obligatoire) → créer la série.
@@ -17,6 +17,9 @@ export default function ImportSeries() {
   const { t, call, locale } = useApp();
   const [cats, setCats] = useState([]);
   const [url, setUrl] = useState('');
+  const [mode, setMode] = useState('list');        // 'list' : adresse d'une liste ; 'urls' : adresses collées (une par ligne)
+  const [lines, setLines] = useState('');
+  const [rejected, setRejected] = useState([]);
   const [job, setJob] = useState(null);
   const [items, setItems] = useState([]);          // épisodes dans l'ordre affiché : { ...entrée, on, copy }
   const [useSeasons, setUseSeasons] = useState(false);
@@ -45,7 +48,7 @@ export default function ImportSeries() {
       if (r.data.status === 'listing') return;
       clearInterval(poll.current);
       if (r.data.status !== 'listed') return;
-      const its = r.data.entries.map((e) => ({ ...e, on: !e.inSeries, copy: false }));
+      const its = r.data.entries.map((e) => ({ ...e, on: !e.inSeries, copy: e.source === 'web' }));
       setItems(its);
       setO((x) => ({ ...x, title: x.title || String(r.data.title || '').replace(/^(Albums? - |Playlist - )/i, '') }));
       // Plan proposé : les départs de saison sont des rangs dans la liste complète ; on les convertit en rangs parmi les épisodes cochés.
@@ -66,13 +69,21 @@ export default function ImportSeries() {
     if (!r.ok) { setMsg({ err: true, text: r.data?.error || t('dbError') }); return; }
     setJob(r.data); setItems([]); watch(r.data.id);
   };
+  const analyseLines = async (e) => {
+    e.preventDefault(); setMsg(null); setDone(null); setBusy(true); setRejected([]);
+    const r = await call('/studio/series/import-urls', { method: 'POST', body: JSON.stringify({ urls: lines.split('\n').map((x) => x.trim()).filter(Boolean) }) });
+    setBusy(false);
+    if (!r.ok) { setMsg({ err: true, text: r.data?.error || t('dbError') }); setRejected(r.data?.rejected || []); return; }
+    setRejected(r.data.rejected || []); setJob(r.data); setItems([]); watch(r.data.id);
+  };
   const retry = async () => { const r = await call(`/studio/series/import/${job.id}/retry`, { method: 'POST' }); if (r.ok) { setJob({ ...job, status: 'listing', error: null }); watch(job.id); } };
 
-  const upd = (id, p) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
+  const upd = (id, p) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p, ...(x.source === 'web' ? { copy: x.on || p.on === true } : {}) } : x)));
   const move = (i, d) => setItems((xs) => { const a = [...xs]; const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; });
   const reverse = () => setItems((xs) => [...xs].reverse());
+  const byTitle = () => setItems((xs) => [...xs].sort((a, b) => String(a.title).localeCompare(String(b.title), locale, { numeric: true })));
   const byNumber = () => setItems((xs) => [...xs].sort((a, b) => ((a.season ?? 0) - (b.season ?? 0)) || ((a.episode ?? 1e6) - (b.episode ?? 1e6))));
-  const setAll = (k, v) => setItems((xs) => xs.map((x) => (k === 'on' ? { ...x, on: x.inSeries ? false : v } : { ...x, copy: x.on ? v : false })));
+  const setAll = (k, v) => setItems((xs) => xs.map((x) => (k === 'on' ? { ...x, on: x.inSeries ? false : v } : { ...x, copy: x.source === 'web' ? x.on : x.on ? v : false })));
   const copyCount = sel.filter((x) => x.copy).length;
   const totalSecs = sel.reduce((n, x) => n + (x.duration || 0), 0);
 
@@ -114,10 +125,23 @@ export default function ImportSeries() {
 
       <section className="sd-card" aria-labelledby="sri-s1">
         <h2 id="sri-s1">{t('sriStep1')}</h2>
-        <form onSubmit={analyse} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input type="url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" aria-label={t('sriUrl')} style={{ flex: '1 1 320px', minWidth: 0 }} />
-          <button className="btn" disabled={busy || job?.status === 'listing'}>{t('sriAnalyse')}</button>
-        </form>
+        <div className="pills" role="group" aria-label={t('sriStep1')} style={{ marginBottom: 10 }}>
+          <button type="button" aria-pressed={mode === 'list'} className={mode === 'list' ? 'pill on' : 'pill'} onClick={() => setMode('list')}>{t('sriModeList')}</button>
+          <button type="button" aria-pressed={mode === 'urls'} className={mode === 'urls' ? 'pill on' : 'pill'} onClick={() => setMode('urls')}>{t('sriModeUrls')}</button>
+        </div>
+        {mode === 'list' ? (
+          <form onSubmit={analyse} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input type="url" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/playlist?list=… · vimeo.com/showcase/… · archive.org/details/…" aria-label={t('sriUrl')} style={{ flex: '1 1 320px', minWidth: 0 }} />
+            <button className="btn" disabled={busy || job?.status === 'listing'}>{t('sriAnalyse')}</button>
+          </form>
+        ) : (
+          <form onSubmit={analyseLines} style={{ display: 'grid', gap: 8 }}>
+            <textarea required rows={6} value={lines} onChange={(e) => setLines(e.target.value)} placeholder={'https://exemple.org/cours-1.mp4 | Cours 1\nhttps://exemple.org/cours-2.mp4 | Cours 2'} aria-label={t('sriModeUrls')} dir="ltr" style={{ fontFamily: 'monospace' }} />
+            <p className="meta small">{t('sriUrlsHint')}</p>
+            <div><button className="btn" disabled={busy || !lines.trim()}>{t('sriUrlsGo')}</button></div>
+          </form>
+        )}
+        {rejected.length > 0 && <p className="error small" role="status">{t('sriRejected').replace('{n}', rejected.length)} {rejected.map((x) => `#${x.line}`).join(', ')}</p>}
         {job?.status === 'listing' && <p className="meta" role="status">{t('sriReading')}</p>}
         {job?.status === 'failed' && <p className="error" role="alert">{job.error || t('dbError')} <button type="button" className="btn ghost" onClick={retry}>{t('sriRetry')}</button></p>}
       </section>
@@ -131,6 +155,7 @@ export default function ImportSeries() {
               <button type="button" className="btn ghost" onClick={() => setAll('on', false)}>{t('sriNone')}</button>
               <button type="button" className="btn ghost" onClick={reverse}>{t('sriReverse')}</button>
               <button type="button" className="btn ghost" onClick={byNumber}>{t('sriByNumber')}</button>
+              <button type="button" className="btn ghost" onClick={byTitle}>{t('sriByTitle')}</button>
               <span className="meta">{t('sriSelected').replace('{n}', sel.length)}{totalSecs ? ` · ${dur(totalSecs)}` : ''}</span>
             </p>
             <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
@@ -143,9 +168,9 @@ export default function ImportSeries() {
                     <span className="meta" style={{ minWidth: 28, textAlign: 'end' }}>{rank || '–'}</span>
                     {x.thumb ? <img src={x.thumb} alt="" width="64" height="36" style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
                     <span dir="auto" style={{ flex: '1 1 220px', minWidth: 0 }}>{x.title}
-                      <br /><small className="meta">{dur(x.duration)}{(x.season || x.episode) ? ` · ${x.season ? `S${x.season}` : ''}${x.episode ? ` É${x.episode}` : ''}` : ''}{x.inSeries ? ` · ${t('sriInSeries')}` : x.already ? ` · ${t('sriAlready')}` : ''}</small></span>
+                      <br /><small className="meta">{dur(x.duration)}{(x.season || x.episode) ? ` · ${x.season ? `S${x.season}` : ''}${x.episode ? ` É${x.episode}` : ''}` : ''}{x.source !== 'youtube' ? ` · ${x.source === 'web' ? t('sriWeb') : x.source}` : ''}{x.inSeries ? ` · ${t('sriInSeries')}` : x.already ? ` · ${t('sriAlready')}` : ''}</small></span>
                     {useSeasons && si >= 0 && <span className="pill" aria-label={t('sriSeasonN').replace('{n}', si + 1)}>{t('sriSeasonN').replace('{n}', si + 1)}</span>}
-                    <label className="check" style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={x.copy} disabled={!x.on} onChange={(e) => upd(x.id, { copy: e.target.checked })} /> {t('sriCopy')}</label>
+                    <label className="check" style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={x.copy} disabled={!x.on || x.source === 'web'} onChange={(e) => upd(x.id, { copy: e.target.checked })} /> {t('sriCopy')}</label>
                     <span style={{ display: 'flex', gap: 2 }}>
                       <button type="button" className="btn ghost" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t('sriUp')}>↑</button>
                       <button type="button" className="btn ghost" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label={t('sriDown')}>↓</button>
@@ -218,6 +243,7 @@ export default function ImportSeries() {
             </label>
             <button type="button" className="btn" disabled={!canStart} onClick={start}>{t('sriImport').replace('{n}', sel.length)}</button>
             {!rights && sel.length > 0 && <p className="meta">{t('sriNeedRights')}</p>}
+            {sel.length > 0 && !o.title.trim() && <p className="meta">{t('sriNeedTitle')}</p>}
           </section>
         </>
       )}
