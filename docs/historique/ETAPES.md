@@ -10756,3 +10756,9 @@ Résultat attendu du contrôle : 0 échec.
 - Une adresse `archive.org/details/<identifiant>` collée dans « Liste d'adresses » est un épisode « archive » : lu directement depuis archive.org par le lecteur Mejliss TV, aucune copie (la copie n'est imposée qu'aux sites non reconnus). L'affiche archive.org est prévue dès l'import ; le fichier vidéo et la durée sont résolus à la première lecture (comme pour une vidéo archive.org isolée).
 - Les pages de profil archive.org (`/details/@compte`) ne sont pas lisibles sans compte (vérifié sur le VPS : le service de page refuse les visiteurs anonymes, la recherche `uploader:` ne donne rien) : message clair avec les alternatives (collection, recherche, liste d'adresses).
 - Testé : `api/tests/test_series_import.py` (+5 contrôles : 3 épisodes archive.org, aucune copie créée).
+
+
+## Séries : affiche de la série utilisée par les épisodes (2026-11-27)
+- Un épisode sans image propre (ou archive.org, miniature générique) prend l'affiche de sa série (talkCards.js `SERIES_POSTER`/`posterOfRow`), dans les cartes d'accueil, collections, favoris, bloc « Sélection » et fiches.
+- CSP des images : archive.org autorisé.
+- Non testé : rendu réel sur le VPS ; les collections n'ont pas de champ « image » propre (le héros reprend la première vidéo).

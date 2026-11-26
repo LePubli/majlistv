@@ -1,5 +1,6 @@
 // Favoris (cœur sur les vignettes) — sortis de routes/library.js à l'étape M2 pour devenir le module « favorites ».
 //   GET /me/favorites, PUT /me/favorites/:id, DELETE /me/favorites/:id
+import { SERIES_POSTER, posterOfRow } from '../../talkCards.js';
 import { z } from 'zod';
 import { visibleSql } from '../../visibility.js';
 import { pool } from '../../db.js';
@@ -7,11 +8,12 @@ import { presignGet } from '../../storage.js';
 
 const idSchema = z.object({ id: z.guid() });
 const CARD = `t.id, t.title, t.speaker, t.language, t.access, t.source, t.video_ref, c.name AS category, c.tr AS "categoryTr",
-  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
+  t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, ${SERIES_POSTER} AS series_poster_key, left(regexp_replace(t.description, '\\s+', ' ', 'g'), 170) AS summary`;
 
 async function cards(rows) {
   for (const r of rows) {
-    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
+    r.posterUrl = await posterOfRow(r);
+    delete r.series_poster_key;
     delete r.poster_key;
     delete r.external_thumb;
     if (r.source === 'upload') delete r.video_ref; // clé de stockage interne

@@ -135,6 +135,15 @@ r = requests.post(B + f"/studio/series/import/{ij['id']}/start", json={"title": 
 series.append(r.json()["seriesId"])
 cur.execute("select t.source, t.video_status, t.video_ref from talks t join series_episodes e on e.talk_id=t.id where e.series_id=%s order by e.position", (r.json()["seriesId"],)); rows = cur.fetchall()
 ok(all(x[0] == "archive" and x[1] == "ready" for x in rows) and rows[0][2] == f"{tag}UmarFaruqHd01", "épisodes lus depuis archive.org (source « archive », prêts, aucune copie)")
+# Affiche de la série (image de présentation chargée) = image des épisodes qui n'ont pas la leur
+cur.execute("update series set poster_key=%s where id=%s", (f"series/{tag}/poster.jpg", r.json()["seriesId"]))
+cur.execute("select t.id from talks t where t.video_ref=%s", (f"{tag}UmarFaruqHd01",)); tid = cur.fetchone()[0]
+cur.execute("update talks set external_thumb='https://archive.org/services/img/x' where id=%s", (tid,))
+tv = requests.get(B + f"/talks/{tid}", headers=org).json()
+ok(f"series/{tag}/poster.jpg" in (tv.get("posterUrl") or ""), "épisode archive.org : l'affiche de la série passe avant l'image générique d'archive.org")
+cur.execute("update talks set poster_key=%s where id=%s", (f"talks/{tag}/own.jpg", tid))
+tv = requests.get(B + f"/talks/{tid}", headers=org).json(); ok(f"talks/{tag}/own.jpg" in (tv.get("posterUrl") or ""), "l'image propre de l'épisode reste prioritaire")
+ok("series_poster_key" not in tv and "poster_key" not in tv, "aucune clé de stockage dans la réponse")
 cur.execute("select count(*) from media_imports m join talks t on t.id=m.talk_id where t.video_ref like %s", (f"{tag}UmarFaruqHd%",)); ok(cur.fetchone()[0] == 0, "aucune demande de copie créée")
 cur.execute("update import_jobs set status='listed' where id=%s", (lj["id"],))
 r = requests.post(B + f"/studio/series/import/{lj['id']}/start", json={"title": "Encore", "ids": [e["id"] for e in web], "rights": True}, headers=org); ok(r.status_code == 409, "même adresses : déjà importées, rien de créé")

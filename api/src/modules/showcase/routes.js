@@ -1,6 +1,7 @@
 // Vitrine visiteur (étape E1) : une vraie vidéo, tirée au hasard parmi les plus vues, avec une vraie question de son quiz.
 // GET /showcase est public. Il ne renvoie jamais la bonne réponse : le visiteur répond via POST /talks/:id/quiz/submit
 // (ouvert aux visiteurs, rien n'est enregistré sans compte).
+import { SERIES_POSTER, posterOfRow } from '../../talkCards.js';
 import { pool } from '../../db.js';
 import { presignGet } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
@@ -18,7 +19,7 @@ export default async function showcaseRoutes(app) {
     const min = await getNumber('quiz_min_questions');
     // Vidéos prêtes, publiques, adultes, avec assez de questions validées ; classées par audience récente.
     const { rows } = await pool.query(
-      `SELECT t.id, t.title, t.speaker, t.source, t.video_ref, t.access, t.level, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, t.description,
+      `SELECT t.id, t.title, t.speaker, t.source, t.video_ref, t.access, t.level, t.duration_seconds AS "durationSeconds", t.poster_key, t.external_thumb, ${SERIES_POSTER} AS series_poster_key, t.description,
               COALESCE(p.score, 0) AS score
          FROM talks t
          LEFT JOIN (SELECT talk_id, sum(plays * 3 + views)::int AS score FROM stat_talk_daily
@@ -44,7 +45,7 @@ export default async function showcaseRoutes(app) {
       available: true,
       talk: {
         id: talk.id, title: talk.title, speaker: talk.speaker, source: talk.source, video_ref: talk.source === 'upload' ? undefined : talk.video_ref, access: talk.access, level: talk.level, durationSeconds: talk.durationSeconds,
-        posterUrl: talk.poster_key ? await presignGet(talk.poster_key) : (talk.external_thumb || null),
+        posterUrl: await posterOfRow(talk),
         summary: clip(row?.summary || talk.description, 220),
       },
       // Les chapitres d'une vidéo réservée aux abonnés restent cachés (comme l'aperçu gratuit) : on n'annonce que leur nombre.

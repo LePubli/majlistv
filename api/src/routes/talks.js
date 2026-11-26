@@ -7,6 +7,7 @@ import { timeState } from '../kidsControl.js';
 import { z } from 'zod';
 import { isoDateTime } from '../zpatch.js';
 import { pool } from '../db.js';
+import { SERIES_POSTER, posterOfRow } from '../talkCards.js';
 import { presignGet, putObject, deleteObject, deletePrefix } from '../storage.js';
 import { visibleSql } from '../visibility.js';
 import { makePlaybackToken, makePreviewToken } from '../playback.js';
@@ -131,7 +132,7 @@ const COLS = `t.id, t.title, t.description, t.speaker, t.language, t.access, t.s
   COALESCE((SELECT array_agg(tc.category_id ORDER BY tc.category_id) FROM talk_categories tc WHERE tc.talk_id = t.id), '{}') AS "extraCategoryIds",
   t.audio_status, t.video_status AS status, t.video_progress AS progress, t.duration_seconds AS "durationSeconds", t.poster_key,
   t.transcript_status AS "transcriptStatus", t.transcript_progress AS "transcriptProgress",
-  t.external_thumb, t.rights_confirmed AS "rightsConfirmed", t.external_file,
+  t.external_thumb, ${SERIES_POSTER} AS series_poster_key, t.rights_confirmed AS "rightsConfirmed", t.external_file,
   t.publication, t.publish_at AS "publishAt", t.featured, t.review_status AS "reviewStatus", t.review_note AS "reviewNote", ${visibleSql('t')} AS visible`;
 const FROM = 'FROM talks t LEFT JOIN category_names c ON c.id = t.category_id';
 const SELECT = `SELECT ${COLS} ${FROM}`;
@@ -139,9 +140,10 @@ const SELECT = `SELECT ${COLS} ${FROM}`;
 // Remplace poster_key par un lien de miniature temporaire.
 async function withPosters(rows) {
   for (const r of rows) {
-    r.posterUrl = r.poster_key ? await presignGet(r.poster_key) : (r.external_thumb || null);
+    r.posterUrl = await posterOfRow(r);
     delete r.poster_key;
     delete r.external_thumb;
+    delete r.series_poster_key;
     delete r.external_file;
     if (r.source === 'upload') delete r.video_ref; // clé de stockage interne
   }
