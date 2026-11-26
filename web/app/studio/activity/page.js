@@ -196,10 +196,10 @@ export default function StudioActivity() {
     const taskRows = (list, st) => list.map((x, i) => {
       const link = x.link || (x.talkId ? `/studio/${x.talkId}` : null);
       return [
-        ...(st === 'failed' ? [RETRYABLE.includes(x.queue) ? <input key="c" type="checkbox" checked={sel.has(taskKey(x))} onChange={() => toggle(x)} aria-label={`${t('acSelect')} : ${x.title}`} /> : <span key="c" />] : []),
+        ...(st === 'failed' && retryable.length > 0 ? [RETRYABLE.includes(x.queue) ? <input key="c" type="checkbox" checked={sel.has(taskKey(x))} onChange={() => toggle(x)} aria-label={`${t('acSelect')} : ${x.title}`} /> : <span key="c" />] : []),
         <b key="n">{st === 'waiting' ? `${i + 1}. ` : ''}{taskName(x, t)}{x.priority > 0 ? ` · ${t('acPrio')}` : ''}</b>,
-        link ? <Link key="l" href={link} dir="auto">{x.title}</Link> : <span key="l" dir="auto">{x.title}</span>,
-        <span key="d">{date(x.createdAt)}{x.status === 'blocked' ? ` · ${t(`taskBlocked_${x.blockedBy || 'other'}`)}` : ''}{x.status === 'failed' && x.error ? <small className="error" dir="auto" style={{ display: 'block', whiteSpace: 'normal', minWidth: 240, maxWidth: 480 }}>{x.error}</small> : null}</span>,
+        <span key="l" dir="auto" title={x.title} style={{ display: 'block', whiteSpace: 'normal', overflowWrap: 'anywhere', minWidth: 140, maxWidth: 320 }}>{link ? <Link href={link} dir="auto">{x.title}</Link> : x.title}</span>,
+        <span key="d">{date(x.createdAt)}{x.status === 'blocked' ? ` · ${t(`taskBlocked_${x.blockedBy || 'other'}`)}` : ''}{x.status === 'failed' && x.error ? <small className="error" dir="auto" title={x.error} style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden', whiteSpace: 'normal', overflowWrap: 'anywhere', minWidth: 200, maxWidth: 380 }}>{x.error}</small> : null}</span>,
         x.status === 'running'
           ? <div key="s" style={{ minWidth: 120 }}><BmProgress value={x.progress ?? 0} /><small>{x.progress != null ? `${x.progress} %` : t('acSt_running')}</small></div>
           : <BmBadge key="s" tone={tone[x.status] || 'blue'}>{t(`acSt_${x.status}`)}</BmBadge>,
@@ -235,7 +235,7 @@ export default function StudioActivity() {
             return (
               <BmPanel key={st} title={t(key)} extra={<span>{list.length}</span>}>
                 {st === 'failed' && retryable.length > 0 && retryBar}
-                <BmTable headers={[...(st === 'failed' ? [''] : []), t('acColTask'), t('colTalk'), t('acColSince'), t('colState'), '']} rows={taskRows(list, st)} empty={t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')} />
+                <BmTable headers={[...(st === 'failed' && retryable.length > 0 ? [''] : []), t('acColTask'), t('colTalk'), t('acColSince'), t('colState'), '']} rows={taskRows(list, st)} empty={t(st === 'running' ? 'acNoneRunning' : 'acNoneWaiting')} />
                 {st === 'waiting' && list.length > 1 && <p className="meta small" style={{ padding: '0 18px 14px' }}>{t('acOrderNote')}</p>}
               </BmPanel>
             );

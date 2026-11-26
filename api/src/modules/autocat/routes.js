@@ -26,8 +26,8 @@ export default async function autocatRoutes(app) {
     return t;
   }
 
-  const SUGG = `SELECT s.id, s.talk_id AS "talkId", s.category_id AS "categoryId", n.name AS category, s.confidence, s.reason, s.status, s.auto
-                  FROM talk_category_suggestions s JOIN category_names n ON n.id = s.category_id`;
+  const SUGG = `SELECT s.id, s.talk_id AS "talkId", s.category_id AS "categoryId", n.name AS category, s.confidence, s.reason, s.status, s.auto, c.catalogue_type AS catalogue
+                  FROM talk_category_suggestions s JOIN category_names n ON n.id = s.category_id JOIN categories c ON c.id = s.category_id`;
 
   // État d'une vidéo : analyse en cours, propositions, catégories actuelles.
   app.get('/talks/:id/studio/categories-suggest', organizer, async (req, reply) => {
@@ -62,21 +62,26 @@ export default async function autocatRoutes(app) {
     return reply.code(202).send({ ok: true });
   });
 
-  // Valider : la catégorie est ajoutée à la vidéo.
-  app.post('/studio/categories-suggest/:sid/accept', organizer, async (req, reply) => {
-    const { sid } = sidSchema.parse(req.params);
+  // --- Actions sur une proposition (partagées par les routes à l'unité et par le traitement par lot) -----------------------
+  // Chacune renvoie { status, body } : 200 si fait, sinon un code d'erreur lisible (404 introuvable, 409 impossible).
+  const canEdit = async (req, talkId) => {
+    const { rows } = await pool.query('SELECT id, organizer_id FROM talks WHERE id = $1', [talkId]);
+    const t = rows[0];
+    return Boolean(t && (STAFF.has(req.user.role) || t.organizer_id === req.user.sub || (await viaChannel(req.user, talkId))));
+  };
+  const NOT_FOUND = { status: 404, body: { error: 'Proposition introuvable' } };
+
+  async function acceptOne(req, sid) {
     const c = await pool.connect();
     try {
       await c.query('BEGIN');
       const s = (await c.query('SELECT * FROM talk_category_suggestions WHERE id = $1 FOR UPDATE', [sid])).rows[0];
-      if (!s) { await c.query('ROLLBACK'); return reply.code(404).send({ error: 'Proposition introuvable' }); }
-      const t = await ownedTalk(req, reply, s.talk_id);
-      if (!t) { await c.query('ROLLBACK'); return; }
-      if (s.status === 'approved') { await c.query('ROLLBACK'); return { ok: true, already: true }; }
+      if (!s || !(await canEdit(req, s.talk_id))) { await c.query('ROLLBACK'); return NOT_FOUND; }
+      if (s.status === 'approved') { await c.query('ROLLBACK'); return { status: 200, body: { ok: true, already: true } }; }
       // La catégorie doit exister, être active et appartenir à un catalogue où la vidéo est présente (adultes et/ou Kids).
       const cat = (await c.query('SELECT catalogue_type FROM categories WHERE id = $1 AND is_active', [s.category_id])).rows[0];
       const talk = (await c.query('SELECT category_id, show_adults, cardinality(kids_bands) > 0 OR NOT show_adults AS kids FROM talks WHERE id = $1 FOR UPDATE', [s.talk_id])).rows[0];
-      if (!cat || (cat.catalogue_type === 'adult' ? !talk.show_adults : !talk.kids)) { await c.query('ROLLBACK'); return reply.code(409).send({ error: "Cette catégorie n'existe plus, n'est plus active ou ne correspond plus au public de la vidéo", code: 'gone' }); }
+      if (!cat || (cat.catalogue_type === 'adult' ? !talk.show_adults : !talk.kids)) { await c.query('ROLLBACK'); return { status: 409, body: { error: "Cette catégorie n'existe plus, n'est plus active ou ne correspond plus au public de la vidéo", code: 'gone' } }; }
       let placed;
       // Kids : toujours en catégorie supplémentaire (comme le classement Kids de l'administration), jamais en catégorie principale.
       if (cat.catalogue_type === 'kids' && talk.category_id !== s.category_id) { await c.query('INSERT INTO talk_categories(talk_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [s.talk_id, s.category_id]); placed = 'extra'; }
@@ -85,35 +90,53 @@ export default async function autocatRoutes(app) {
       else { await c.query('INSERT INTO talk_categories(talk_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [s.talk_id, s.category_id]); placed = 'extra'; }
       await c.query(`UPDATE talk_category_suggestions SET status = 'approved', reviewed_by = $2, reviewed_at = now() WHERE id = $1`, [sid, req.user.sub]);
       await c.query('COMMIT');
-      return { ok: true, placed };
+      return { status: 200, body: { ok: true, placed } };
     } catch (err) { await c.query('ROLLBACK').catch(() => {}); throw err; } finally { c.release(); }
-  });
+  }
 
-  // Annuler une catégorie ajoutée (validée à la main ou appliquée automatiquement) : elle est retirée de la vidéo et ne sera plus reproposée.
-  app.post('/studio/categories-suggest/:sid/undo', organizer, async (req, reply) => {
-    const { sid } = sidSchema.parse(req.params);
+  async function rejectOne(req, sid) {
+    const s = (await pool.query('SELECT talk_id, status FROM talk_category_suggestions WHERE id = $1', [sid])).rows[0];
+    if (!s || !(await canEdit(req, s.talk_id))) return NOT_FOUND;
+    if (s.status !== 'draft') return { status: 409, body: { error: 'Cette proposition a déjà été traitée', code: 'handled' } };
+    await pool.query(`UPDATE talk_category_suggestions SET status = 'rejected', reviewed_by = $2, reviewed_at = now() WHERE id = $1`, [sid, req.user.sub]);
+    return { status: 200, body: { ok: true } };
+  }
+
+  // Annuler une catégorie ajoutée (validée à la main ou appliquée automatiquement) : retirée de la vidéo, plus jamais reproposée.
+  async function undoOne(req, sid) {
     const c = await pool.connect();
     try {
       await c.query('BEGIN');
       const s = (await c.query('SELECT talk_id, category_id, status FROM talk_category_suggestions WHERE id = $1 FOR UPDATE', [sid])).rows[0];
-      if (!s) { await c.query('ROLLBACK'); return reply.code(404).send({ error: 'Proposition introuvable' }); }
-      if (!(await ownedTalk(req, reply, s.talk_id))) { await c.query('ROLLBACK'); return; }
-      if (s.status !== 'approved') { await c.query('ROLLBACK'); return reply.code(409).send({ error: "Cette catégorie n'a pas été ajoutée", code: 'notapplied' }); }
+      if (!s || !(await canEdit(req, s.talk_id))) { await c.query('ROLLBACK'); return NOT_FOUND; }
+      if (s.status !== 'approved') { await c.query('ROLLBACK'); return { status: 409, body: { error: "Cette catégorie n'a pas été ajoutée", code: 'notapplied' } }; }
       await c.query('UPDATE talks SET category_id = NULL WHERE id = $1 AND category_id = $2', [s.talk_id, s.category_id]);
       await c.query('DELETE FROM talk_categories WHERE talk_id = $1 AND category_id = $2', [s.talk_id, s.category_id]);
       await c.query(`UPDATE talk_category_suggestions SET status = 'rejected', auto = false, reviewed_by = $2, reviewed_at = now() WHERE id = $1`, [sid, req.user.sub]);
       await c.query('COMMIT');
-      return { ok: true };
+      return { status: 200, body: { ok: true } };
     } catch (err) { await c.query('ROLLBACK').catch(() => {}); throw err; } finally { c.release(); }
-  });
+  }
 
-  app.post('/studio/categories-suggest/:sid/reject', organizer, async (req, reply) => {
-    const { sid } = sidSchema.parse(req.params);
-    const s = (await pool.query('SELECT talk_id FROM talk_category_suggestions WHERE id = $1', [sid])).rows[0];
-    if (!s) return reply.code(404).send({ error: 'Proposition introuvable' });
-    if (!(await ownedTalk(req, reply, s.talk_id))) return;
-    await pool.query(`UPDATE talk_category_suggestions SET status = 'rejected', reviewed_by = $2, reviewed_at = now() WHERE id = $1`, [sid, req.user.sub]);
-    return { ok: true };
+  const ACTIONS = { accept: acceptOne, reject: rejectOne, undo: undoOne };
+  for (const [name, fn] of Object.entries(ACTIONS)) {
+    app.post(`/studio/categories-suggest/:sid/${name}`, organizer, async (req, reply) => {
+      const { sid } = sidSchema.parse(req.params);
+      const r = await fn(req, sid);
+      return reply.code(r.status).send(r.body);
+    });
+  }
+
+  // Traitement par lot : valider, refuser ou annuler jusqu'à 300 propositions d'un coup. Chaque proposition est traitée séparément
+  // (mêmes droits et mêmes contrôles qu'à l'unité) ; celles qui ne peuvent pas l'être sont listées avec la raison.
+  app.post('/studio/categories-suggest/bulk', organizer, async (req) => {
+    const { ids, action } = z.object({ ids: z.array(z.guid()).min(1).max(300), action: z.enum(['accept', 'reject', 'undo']) }).parse(req.body);
+    let done = 0; const skipped = [];
+    for (const id of new Set(ids)) {
+      const r = await ACTIONS[action](req, id);
+      if (r.status === 200) done += 1; else skipped.push({ id, reason: r.body.code || 'notfound' });
+    }
+    return { done, skipped };
   });
 
   // File de relecture : toutes les propositions à valider (celles de l'organisateur ; toutes pour un modérateur ou un administrateur).

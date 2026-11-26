@@ -4251,3 +4251,7 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 
 /* Lot B : section globale posée sur une page (le contenu vient de la page /_global/<nom>) */
 .pb-global { display: contents; }
+
+/* Activité : les textes longs (erreurs, adresses, titres) passent à la ligne au lieu d'élargir la page */
+.ac-main, .ac-task .error, .ac-title, .ac-task .meta { min-width: 0; overflow-wrap: anywhere; }
+.ac-task .error { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }

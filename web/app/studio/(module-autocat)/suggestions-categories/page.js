@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Page as BmPage, Metrics as BmMetrics, Panel as BmPanel } from '../../../../components/backoffice/Kit';
 import { useApp } from '../../../../components/Providers';
-import { SuggestionRow } from '../../../../components/AutoCatSuggest';
+import AutoCatReview from '../../../../components/AutoCatReview';
 
 function Backfill({ t, call, onQueued }) {
   const [stats, setStats] = useState(null);
@@ -22,13 +22,12 @@ function Backfill({ t, call, onQueued }) {
   };
   const pending = (stats.jobs.pending || 0) + (stats.jobs.processing || 0);
   return (
-    <section className="panel">
-      <h2 className="panel-title">{t('acBackfillTitle')}</h2>
+    <details className="panel" style={{ padding: '10px 14px' }}>
+      <summary><b>{t('acBackfillTitle')}</b> <span className="meta small">— {t('acBackfillStats').replace('{n}', stats.withoutCategory).replace('{p}', pending).replace('{d}', stats.drafts)}</span></summary>
       <p className="meta small">{t('acBackfillHelp').replace('{b}', stats.batch)}</p>
-      <p className="meta" role="status">{t('acBackfillStats').replace('{n}', stats.withoutCategory).replace('{p}', pending).replace('{d}', stats.drafts)}</p>
       <div className="qz-gen"><button className="btn" disabled={busy || stats.withoutCategory === 0} onClick={run}>{t('acBackfillBtn')}</button></div>
       {msg && <p className="ok-msg" role="status">{msg}</p>}
-    </section>
+    </details>
   );
 }
 
@@ -38,50 +37,22 @@ export default function SuggestionsReview() {
   const [applied, setApplied] = useState([]);
   const load = useCallback(() => call('/studio/categories-suggest/review').then((r) => { if (r.ok) { setItems(r.data.suggestions); setApplied(r.data.applied || []); } }), [call]);
   useEffect(() => { load(); }, [load]);
-  // Validée ou refusée : elle quitte la file.
-  const done = (s) => setItems((list) => list.filter((x) => x.id !== s.id));
-  const undone = () => load();
-  const appliedBlock = applied.length > 0 && (
-    <section className="qz-list">
-      <div className="qz-list-head"><h2 className="panel-title">{t('acAppliedTitle')} <span className="meta">({applied.length})</span></h2></div>
-      <p className="meta small">{t('acAppliedIntro')}</p>
-      {applied.map((x) => <div key={x.id}><p className="meta small"><Link className="link u" href={`/studio/${x.talkId}/content?tab=categories`}>{x.talkTitle}</Link></p><SuggestionRow s={x} t={t} call={call} onDone={undone} /></div>)}
-    </section>
-  );
-  const groups = [];
-  for (const x of items || []) {
-    const g = groups.find((y) => y.talkId === x.talkId);
-    if (g) g.items.push(x); else groups.push({ talkId: x.talkId, title: x.talkTitle, items: [x] });
-  }
-  const body = groups.map((g) => (
-    <section key={g.talkId} className="qz-list">
-      <div className="qz-list-head">
-        <h2 className="panel-title">{g.title} <span className="meta">({g.items.length})</span></h2>
-        <Link className="link u" href={`/studio/${g.talkId}/content?tab=categories`}>{t('acOpenTab')}</Link>
-      </div>
-      {g.items.map((x) => <SuggestionRow key={x.id} s={x} t={t} call={call} onDone={done} />)}
-    </section>
-  ));
   const admin = user?.role === 'admin';
+  const talks = new Set((items || []).map((x) => x.talkId)).size;
+  const list = items === null ? <p className="meta">…</p> : items.length === 0 && applied.length === 0
+    ? <p className="soon">{t('acReviewEmpty')}</p>
+    : <AutoCatReview items={items} applied={applied} t={t} call={call} reload={load} />;
   if (skin === 'premium') {
     return (
       <main className="studio-page">
         <BmPage title={t('acReviewTitle')} sub={t('acReviewIntro')}>
           {items !== null && <BmMetrics cols="three" items={[
             { icon: 'clipboard', tone: 'amber', label: t('acReviewTitle'), value: items.length },
-            { icon: 'video', label: t('colTalk'), value: groups.length },
+            { icon: 'video', label: t('colTalk'), value: talks },
+            { icon: 'check', tone: 'green', label: t('acAppliedTitle'), value: applied.length },
           ]} />}
-          {admin && <BmPanel title={t('acBackfillTitle')}><div style={{ padding: '0 18px 18px' }}><Backfill t={t} call={call} onQueued={load} /></div></BmPanel>}
-          {items === null && <p className="meta">…</p>}
-          {items && items.length === 0 && <BmPanel title={t('acReviewTitle')}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('acReviewEmpty')}</p></BmPanel>}
-          {appliedBlock && <BmPanel title={t('acAppliedTitle')}><div style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>{appliedBlock}</div></BmPanel>}
-          {groups.map((g) => (
-            <BmPanel key={g.talkId} title={g.title} extra={<Link href={`/studio/${g.talkId}/content?tab=categories`}>{t('acOpenTab')}</Link>}>
-              <div className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>
-                {g.items.map((x) => <SuggestionRow key={x.id} s={x} t={t} call={call} onDone={done} />)}
-              </div>
-            </BmPanel>
-          ))}
+          {admin && <Backfill t={t} call={call} onQueued={load} />}
+          {list}
         </BmPage>
       </main>
     );
@@ -91,10 +62,7 @@ export default function SuggestionsReview() {
       <h1 className="studio-title">{t('acReviewTitle')}</h1>
       <p className="meta">{t('acReviewIntro')}</p>
       {admin && <Backfill t={t} call={call} onQueued={load} />}
-      {items === null && <p className="meta">…</p>}
-      {items && items.length === 0 && <p className="soon">{t('acReviewEmpty')}</p>}
-      {body}
-      {appliedBlock}
+      {list}
     </main>
   );
 }
