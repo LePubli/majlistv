@@ -18,8 +18,14 @@ const previewCache = new Map(); // id -> promesse de { kind, src|ref } : un seul
 export { thumbOf, posterHue };
 const minutesOf = (talk, t) => (talk.durationSeconds > 0 ? `${Math.max(1, Math.round(talk.durationSeconds / 60))} ${t('minutes')}` : '');
 
+// Infos de l'extrait d'une vidéo ({ kind: hls | youtube | vimeo | none, … }) : un seul appel par vidéo, partagé par toutes les vignettes.
+export function fetchHover(id) {
+  if (!previewCache.has(id)) previewCache.set(id, fetch(`/api/talks/${id}/hover`).then((r) => (r.ok ? r.json() : { kind: 'none' })).catch(() => ({ kind: 'none' })));
+  return previewCache.get(id);
+}
+
 // Extrait vidéo muet en boucle (vidéo envoyée : HLS ; YouTube / Vimeo gratuits : lecteur intégré).
-function Preview({ info, seconds, muted, onReady }) {
+export function Preview({ info, seconds, muted, onReady }) {
   const ref = useRef(null);
   useEffect(() => {
     if (info?.kind !== 'hls') return undefined;

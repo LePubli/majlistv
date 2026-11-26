@@ -769,3 +769,4 @@ Décision d'Epok : après le plan 45 (fonctions livrées sans contenu), on encha
 - **Collections sur l'application mobile et TV** (25/11) : rangée d'accueil, accès Catalogue, écrans immersifs (liste + détail) sur téléphone ; menu, accueil, liste et détail sur la télé. Voir ligne 368 du registre.
 - **Relecture complète de la plateforme** (25/11) : 3 relectures indépendantes ; corrections page vidéo, SSRF IPv6, jeton conservé, workflows. Points restants au registre (369 à 372).
 - Catégories automatiques (l'IA propose ; application automatique au-dessus d'un seuil, annulable ; adultes et Kids ; module `autocat`) : livré 26/11 (ETAPES.md), réglages désactivés par défaut, à essayer sur de vraies vidéos.
+- Accueil Premium : vignettes alternées (horizontales plus grandes / verticales), survol avec extrait, une et sélections en extrait vidéo après 2 s, intitulés de rangées gris clair : livré 26/11 (ETAPES.md).

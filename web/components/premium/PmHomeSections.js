@@ -10,10 +10,12 @@ import { useReducedMotion } from '../HomeHero';
 import { thumbOf, posterArt } from '../../lib/thumb';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { OttCard, OttRail } from './PmOtt';
+import { useClip, ClipLayer } from './PmClip';
 import PmShortTile from './PmShortTile';
 import { KidsBand } from '../KidsBanner';
 
 const HERO_FALLBACK = '/premium/andalousie-large.webp';
+const COVER_MS = 2000; // l'image de couverture reste seule 2 secondes, puis l'extrait vidéo prend le relais
 const cssUrl = (u) => `url("${String(u).replace(/"/g, '%22')}")`;
 const coverOf = (x) => { const u = x && thumbOf(x); return u ? cssUrl(u) : posterArt(x?.id); };
 const long = (s, n) => (String(s || '').length > n ? 'pm-long' : undefined);
@@ -66,10 +68,11 @@ function Hero({ items, t }) {
   const n = items.length;
   useEffect(() => {
     if (reduced || paused || n < 2) return undefined;
-    timer.current = setInterval(() => setI((v) => (v + 1) % n), 8000);
+    timer.current = setInterval(() => setI((v) => (v + 1) % n), 14000); // 2 s d'image + un extrait
     return () => clearInterval(timer.current);
   }, [reduced, paused, n, i]);
   const x = n ? items[Math.min(i, n - 1)] : null;
+  const clip = useClip(x?.id, COVER_MS, Boolean(x));
   const img = useHeroImage(x);
   const mins = x && x.durationSeconds > 0 ? `${Math.max(1, Math.round(x.durationSeconds / 60))} ${t('minutes')}` : '';
   const listOn = feat('favorites') || feat('watchlater');
@@ -80,6 +83,7 @@ function Hero({ items, t }) {
     <section className="v20-hero v20-faithful-hero v20-hero-home" style={{ '--hero': cssUrl(img || HERO_FALLBACK) }}
       aria-roledescription="carousel" aria-label={t('heroEyebrow')}
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+      <ClipLayer clip={clip} className="pm-hero-vid" />
       <div className="v20-shell v20-hero-inner">
         {x ? (
           <div className="v20-hero-copy" key={x.id} aria-live={paused ? 'polite' : 'off'}>
@@ -181,7 +185,7 @@ export function PmRowsSection({ max = 12, inserts = [] }) {
   rows.forEach((r, i) => {
     const list = r.series || r.talks || [];
     out.push(
-      <OttRail key={r.key} title={rowTitle(r)} href={rowHref(r)}>
+      <OttRail key={r.key} title={rowTitle(r)} href={rowHref(r)} tall={i % 2 === 1}>
         {list.slice(0, 10).map((x) => <OttCard key={x.id} x={x} kind={r.series ? 'series' : undefined} />)}
       </OttRail>,
     );
@@ -203,9 +207,11 @@ function useHomeCollections() {
 /** Grand cadre « Sélection » : texte à gauche, deux affiches à droite, image de la collection en fond. */
 export function PmSpot({ c }) {
   const { t, appName } = useApp();
+  const clip = useClip(c?.talks?.[0]?.id, COVER_MS, Boolean(c));
   if (!c) return null;
   return (
     <section className="pm-spot" style={{ '--cover': coverOf(c.talks[0]) }} aria-label={c.title}>
+      <ClipLayer clip={clip} className="pm-spot-vid" />
       <div className="pm-spot-copy">
         <span className="pm-spot-kicker">{t('pmSelection').replace('{name}', appName)}</span>
         <h2>{c.title}</h2>
@@ -227,8 +233,8 @@ export function PmCollectionsSection({ limit = 12, spots = true }) {
   return (
     <>
       {spots && sp.filter((c) => shown.includes(c)).map((c) => <PmSpot key={c.id} c={c} />)}
-      {shown.filter((c) => !sp.includes(c)).map((c) => (
-        <OttRail key={c.id} title={c.title} href={c.mode === 'personal' ? undefined : `/collections/${c.id}`}>
+      {shown.filter((c) => !sp.includes(c)).map((c, i) => (
+        <OttRail key={c.id} title={c.title} href={c.mode === 'personal' ? undefined : `/collections/${c.id}`} tall={i % 2 === 1}>
           {(c.talks || []).slice(0, 10).map((x) => <OttCard key={x.id} x={x} />)}
         </OttRail>
       ))}
