@@ -132,6 +132,26 @@ bash /root/verify-deploy.sh
 
 **Tests.** `python3 api/tests/test_shorts_import.py` (API + PG + S3 de test), `python3 transcriber/tests/test_shorts_copy.py`, `node web/tests/test_shorts_import.mjs`.
 
+## Étape B — Import d'une série complète depuis YouTube (26/11)
+
+**Description.** Studio → Séries → « Importer une série depuis YouTube » : on colle l'adresse d'une liste de lecture ou d'une page « série » (ex. `https://www.youtube.com/show/VLPL…`), on coche et ordonne les épisodes, on place les saisons (détectées dans les titres « Saison 2 », « S02E05 »… sinon « la saison N commence à l'épisode X »), on choisit les épisodes à copier chez nous (les autres restent lus depuis YouTube), puis on coche la case des droits (obligatoire, journalisée) et on crée la série.
+
+**Prérequis.** Aucun nouveau réglage. La liste est lue par le transcripteur (limite : réglage `import_max_videos`, 200 par défaut). La copie chez nous demande la fonction « Import de vidéos externes » (Admin → Fonctions) et de la place dans Garage (plafond 30 Go : une vidéo de 2 h pèse plusieurs Go).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy dans l'ordre : `majlistv-api` (migration `001_import.sql` du module séries au démarrage), `majlistv-web`, `majlistv-transcriber`. Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Liste en échec : message affiché + bouton « Relancer » (cookies YouTube si blocage). Copies : état visible sur la fiche de chaque vidéo (Studio → Contenus). Journal : `docker logs --tail 100 dockpanel-git-majlistv-transcriber`.
+
+**Exemple.** Coller `https://www.youtube.com/show/VLPLDoK5CcjJZA6JIO4oRpfJwz1-4DAOKisZ` → Analyser → vérifier les saisons → ne rien copier → case des droits → « Importer la série ». Les épisodes sont créés en brouillon (choix « Publier tout de suite » possible).
+
+**Tests.** `python3 api/tests/test_series_import.py`, `node api/tests/test_series_seasons.mjs`, `python3 transcriber/tests/test_external.py`, `node web/tests/test_series_import.mjs`.
+
 ## Règles de code à connaître
 
 - Textes du site : `web/lib/i18n.js` (un texte par ligne, trois langues). Un composant « use client » ne l'importe jamais : `web/lib/locales.js` pour la liste des langues, `useApp().t` pour les textes.

@@ -405,9 +405,16 @@ DAILYMOTION_ID = re.compile(r"^[A-Za-z0-9]{5,16}$")
 CHANNEL_ROOT = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(@[\w.-]+|channel/[\w-]+|c/[\w.-]+|user/[\w.-]+)/?$", re.I)
 
 
+YOUTUBE_SHOW = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(?:show|browse)/VL([\w-]{10,})(?:[/?#].*)?$", re.I)
+
+
 def normalize_list_url(url):
     """Une chaîne YouTube sans onglet -> son onglet « Vidéos » (sinon yt-dlp renvoie les onglets, pas les vidéos)."""
     url = url.strip()
+    # Page « série » de YouTube (/show/VL<liste> ou /browse/VL<liste>) : c'est une liste de lecture, yt-dlp ne lit pas cette adresse.
+    m = YOUTUBE_SHOW.match(url)
+    if m:
+        return "https://www.youtube.com/playlist?list=" + m.group(2)
     if CHANNEL_ROOT.match(url.split("?")[0]):
         return url.split("?")[0].rstrip("/") + "/videos"
     return url

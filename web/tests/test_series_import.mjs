@@ -1,0 +1,26 @@
+// Import d'une série YouTube (étape B, 26/11) : écran Studio, textes dans les 3 langues, saisons, copie au choix, droits. node web/tests/test_series_import.mjs
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const web = fileURLToPath(new URL('..', import.meta.url));
+const read = (p) => fs.readFileSync(join(web, p), 'utf8');
+const i18n = read('lib/i18n.js');
+const imp = read('modules/series/ImportSeries.js');
+const keys = [...new Set([...imp.matchAll(/\bt\('(\w+)'\)/g)].map((m) => m[1]))];
+assert.ok(keys.length > 40, 'l\'écran utilise bien des textes traduits');
+for (const k of [...keys, 'sriImportBtn']) assert.equal((i18n.match(new RegExp(`^    ${k}: `, 'gm')) || []).length, 3, `texte ${k} dans les 3 langues`);
+assert.match(imp, /call\('\/studio\/series\/import', \{ method: 'POST'/, 'analyse lancée côté serveur');
+assert.match(imp, /\/studio\/series\/import\/\$\{job\.id\}\/start/, 'import démarré');
+assert.match(imp, /rights: true/, 'droits envoyés');
+assert.match(imp, /canStart = job\?\.status === 'listed' && sel\.length > 0 && rights && o\.title\.trim\(\) && seasonsOk/, 'bouton bloqué sans droits, sans titre, sans épisode ou avec des saisons incorrectes');
+assert.match(imp, /copyIds: sel\.filter\(\(x\) => x\.copy\)/, 'copie chez nous épisode par épisode (rien par défaut)');
+assert.match(imp, /copy: false \}\)\)/, 'copie décochée par défaut');
+assert.match(imp, /plan\?\.hasSeasons/, 'saisons proposées à partir des titres');
+assert.match(imp, /sriStartsAt/, 'saisons indiquées à la main : « commence à l\'épisode n° »');
+assert.match(imp, /reverse\(\)/, 'ordre inversable');
+assert.match(imp, /dir="auto"/, 'titres en arabe lus dans le bon sens');
+assert.doesNotMatch(imp, /\b(left|right):\s*\d/, 'pas de left/right physiques (RTL)');
+assert.ok(fs.existsSync(join(web, 'app/studio/(module-series)/series/import/page.js')), 'page /studio/series/import');
+assert.equal((read('app/studio/(module-series)/series/page.js').match(/\/studio\/series\/import/g) || []).length, 2, 'lien depuis la liste des séries (2 présentations)');
+console.log('OK : test_series_import');

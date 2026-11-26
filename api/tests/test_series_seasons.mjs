@@ -1,0 +1,20 @@
+// Détection des saisons / épisodes dans les titres d'une série importée (étape B). node api/tests/test_series_seasons.mjs
+import assert from 'node:assert/strict';
+import { parseTitle, planSeasons, assignSeasons } from '../src/modules/series/seasonDetect.js';
+const p = (t) => parseTitle(t);
+assert.deepEqual(p('Saison 2 – Épisode 5'), { season: 2, episode: 5 });
+assert.deepEqual(p('Season 3 Episode 12'), { season: 3, episode: 12 });
+assert.deepEqual(p('S02E05 La suite'), { season: 2, episode: 5 });
+assert.deepEqual(p('S4 | partie'), { season: 4, episode: null });
+assert.deepEqual(p('Épisode 9'), { season: null, episode: 9 });
+assert.deepEqual(p('Sans rien'), { season: null, episode: null });
+assert.deepEqual(p('Les saisons de la vie'), { season: null, episode: null }, 'le mot « saisons » seul n\'est pas un numéro');
+assert.deepEqual(p('الموسم الثاني - الحلقة 7'), { season: 2, episode: 7 }, 'arabe : ordinal');
+assert.deepEqual(p('الحلقة ٣ الموسم ٢'), { season: 2, episode: 3 }, 'arabe : chiffres indo-arabes');
+const e = (a) => a.map((title, i) => ({ id: `x${i}`, title }));
+assert.deepEqual(planSeasons(e(['Saison 1 ép 1', 'Saison 1 ép 2', 'Saison 2 ép 1', 'suite', 'Saison 3 ép 1'])).seasons.map((s) => s.from), [1, 3, 5], 'départs de saison suivis ; un titre sans numéro reste dans la saison précédente');
+assert.equal(planSeasons(e(['Ép 1', 'Ép 2', 'Ép 3'])).hasSeasons, false, 'aucune saison dans les titres : rien proposé');
+assert.equal(planSeasons(e(['S1E1', 'S2E1', 'S1E2'])).hasSeasons, false, 'saisons mélangées : pas de découpage automatique');
+assert.equal(planSeasons(e(['Saison 1 a', 'b', 'c', 'd', 'e'])).hasSeasons, false, 'trop peu de titres numérotés : rien proposé');
+assert.deepEqual(assignSeasons(7, [{ from: 1 }, { from: 4 }, { from: 6 }]), [0, 0, 0, 1, 1, 2, 2]);
+console.log('OK : test_series_seasons');

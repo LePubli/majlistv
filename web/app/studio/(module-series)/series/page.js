@@ -32,7 +32,7 @@ export default function StudioSeries() {
   if (skin === 'premium') {
     return (
       <main className="studio-page">
-        <BmPage title={t('srTitle')} sub={t('srEmpty')} actions={<BmBtn onClick={() => setOpen((v) => !v)}>+ {t('srNew')}</BmBtn>}>
+        <BmPage title={t('srTitle')} sub={t('srEmpty')} actions={<><BmBtn primary={false} href="/studio/series/import">{t('sriImportBtn')}</BmBtn><BmBtn onClick={() => setOpen((v) => !v)}>+ {t('srNew')}</BmBtn></>}>
           <BmMetrics cols="three" items={rows ? [
             { icon: 'film', label: t('srColSeries'), value: rows.length },
             { icon: 'check', tone: 'green', label: t('srPub'), value: rows.filter((r) => r.published).length },
@@ -74,7 +74,8 @@ export default function StudioSeries() {
     <main className="studio-page">
       <div className="studio-head">
         <h1 className="studio-title">{t('srTitle')}</h1>
-        <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>+ {t('srNew')}</button>
+        <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Link href="/studio/series/import" className="btn ghost">{t('sriImportBtn')}</Link>
+        <button type="button" className="btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>+ {t('srNew')}</button></span>
       </div>
       <StudioTabs group="contents" />
 

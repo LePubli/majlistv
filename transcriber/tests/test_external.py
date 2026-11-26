@@ -67,6 +67,8 @@ ok(external.pick_subtitles({"subtitles": {}}, "de", True) is None, "aucune piste
 # --- Adresses ----------------------------------------------------------------------------------
 ok(external.normalize_list_url("https://www.youtube.com/@MaChaine") == "https://www.youtube.com/@MaChaine/videos", "chaîne -> onglet Vidéos")
 ok(external.normalize_list_url("https://www.youtube.com/playlist?list=PL123") == "https://www.youtube.com/playlist?list=PL123", "playlist inchangée")
+ok(external.normalize_list_url("https://www.youtube.com/show/VLPLDoK5CcjJZA6JIO4oRpfJwz1-4DAOKisZ?sbp=Kgt4bXhPR0VFZEk3VUAB") == "https://www.youtube.com/playlist?list=PLDoK5CcjJZA6JIO4oRpfJwz1-4DAOKisZ", "page série YouTube (/show/VL…) -> liste de lecture")
+ok(external.normalize_list_url("https://www.youtube.com/browse/VLPLabcdefghij") == "https://www.youtube.com/playlist?list=PLabcdefghij", "/browse/VL… -> liste de lecture")
 ok(external.normalize_list_url("https://youtube.com/channel/UCabc/") == "https://youtube.com/channel/UCabc/videos", "chaîne par identifiant")
 ok(external.video_url("vimeo", "123") == "https://vimeo.com/123", "adresse Vimeo")
 ok(external.video_url("dailymotion", "x8abc12") == "https://www.dailymotion.com/video/x8abc12", "adresse Dailymotion (23a)")

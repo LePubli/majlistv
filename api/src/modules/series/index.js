@@ -1,5 +1,6 @@
 // Module « Séries et épisodes » (étape M2) : code d'origine déplacé dans ce dossier, lié à la fonction « series » (Admin → Fonctions).
 import routes from './routes.js';
+import seriesImport from './import.js';
 import { listSeries, episodeLabels, seriesNextUp } from './routes.js';
 
 export default async function register(app, ctx) {
@@ -8,4 +9,5 @@ export default async function register(app, ctx) {
   ctx.provide('series.episodeLabels', episodeLabels);
   ctx.provide('series.nextUp', seriesNextUp);
   await app.register(routes);
+  await app.register(seriesImport);
 }
