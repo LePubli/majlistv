@@ -300,29 +300,89 @@ export function PmKidsSection() {
   );
 }
 
-/** Bandeau « Mon espace Apprendre » (progression du parcours avec la formule Apprentissage). */
+/** Fonds du bandeau « Mon espace Apprendre » : 5 images qui se succèdent en fondu (6 s chacune). « flip » = image retournée pour garder le sujet côté droit. */
+const LEARN_BG = [
+  { src: '/premium/learn-bg-1.webp', flip: false },
+  { src: '/premium/learn-bg-2.webp', flip: true },
+  { src: '/premium/learn-bg-3.webp', flip: true },
+  { src: '/premium/learn-bg-4.webp', flip: true },
+  { src: '/premium/learn-bg-5.webp', flip: false },
+];
+
+/** Bandeau « Mon espace Apprendre » : grande carte immersive (fonds qui changent), progression du parcours et chiffres réels (formule Apprentissage). */
 export function PmLearnSection() {
   const { t, feat, user } = useApp();
-  // Progression : seulement avec la formule Apprentissage (sinon l'API répond « formule requise »).
-  const learn = usePmData('/me/learning', { on: Boolean(user) && feat('learning') });
+  const on = Boolean(user) && feat('learning');
+  const learn = usePmData('/me/learning', { on });
+  const streak = usePmData('/me/learning/streak', { on });
+  const cont = usePmData('/me/continue', { on });
   const course = useMemo(() => {
     const list = (learn?.series || []).filter((s) => s.total > 0 && !s.complete);
     const s = list.find((x) => x.passed > 0) || list[0];
     return s ? { title: s.title, pct: Math.round((s.passed / s.total) * 100) } : null;
   }, [learn]);
+  // Fonds : un changement toutes les 6 s (fixe si le visiteur a demandé moins d'animations).
+  const calm = useReducedMotion();
+  const [bg, setBg] = useState(0);
+  useEffect(() => {
+    if (calm || !on) return undefined;
+    const id = setInterval(() => setBg((i) => (i + 1) % LEARN_BG.length), 6000);
+    return () => clearInterval(id);
+  }, [calm, on]);
   if (!feat('learning')) return null;
+  const next = Array.isArray(cont) && cont[0] ? cont[0] : null;
+  const stats = learn ? [
+    { k: 'days', n: streak && streak.show !== false ? streak.current || 0 : null, label: t('pmLearnDays'), d: 'M5 6h16v15H5zM5 11h16M9 3v5M17 3v5' },
+    { k: 'quiz', n: learn.quizzesPassed ?? 0, label: t('pmLearnQuizzes'), d: 'M7 4h12v19H7zM10 4V2h6v2M10 14l2.5 2.5L17 11' },
+    { k: 'paths', n: (learn.series || []).filter((s) => s.complete).length, label: t('pmLearnPaths'), d: 'M13 3 3 8l10 5 10-5-10-5ZM3 13l10 5 10-5M3 18l10 5 10-5' },
+  ].filter((x) => x.n !== null) : [];
   return (
-    <Link href="/learning" className="v20-big-learn-banner">
-      <span className="v20-learn-cap" aria-hidden="true"><Glyph name="cap" /></span>
-      <span className="v20-banner-label"><strong>{t('pmLearnTitle')}</strong><small>{t('pmLearnSub')}</small></span>
-      <span className="v20-banner-landscape" />
-      {course && (
-        <>
-          <span className="v20-banner-progress" style={{ '--pm-pct': `${course.pct}%` }}>{course.pct}%</span>
-          <span className="v20-banner-label v20-progress-label"><small>{t('pmLearnCur')}</small><span>{course.title}</span></span>
-        </>
+    <section className="pm-ln2" aria-label={t('pmLearnTitle')}>
+      <div className="pm-ln2-bg" aria-hidden="true">
+        {LEARN_BG.map((b, i) => (
+          <div key={b.src} className={`pm-ln2-slide${i === bg ? ' pm-on' : ''}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={b.src} alt="" className={b.flip ? 'pm-flip' : undefined} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
+          </div>
+        ))}
+      </div>
+      <div className="pm-ln2-copy">
+        <div className="pm-ln2-kick"><Glyph name="cap" /><i /><span>{t('pmLearnKick')}</span></div>
+        <h2 className="v20-serif">{t('pmLearnTitle')}</h2>
+        <p>{t('pmLearnLead')}</p>
+        <div className="pm-ln2-btns">
+          <Link href={next ? `/talks/${next.id}` : '/learning'} className="pm-ln2-cta"><span aria-hidden="true">▶</span> {t('pmLearnResume')}</Link>
+          <Link href="/learning" className="pm-ln2-link">{t('pmLearnSee')} <span className="pm-arr" aria-hidden="true">→</span></Link>
+        </div>
+        {course && (
+          <div className="pm-ln2-prog">
+            <span>{t('pmLearnYour')}</span>
+            <span className="pm-ln2-bar" role="img" aria-label={`${course.pct} %`}><b style={{ width: `${course.pct}%` }} /></span>
+            <strong>{course.pct} %</strong>
+          </div>
+        )}
+      </div>
+      {(stats.length > 0 || next) && (
+        <div className="pm-ln2-glass">
+          {stats.length > 0 && (
+            <div className="pm-ln2-stats">
+              {stats.map((x) => (
+                <div key={x.k}>
+                  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={x.d} /></svg>
+                  <strong>{x.n}</strong>
+                  <span>{x.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {next && (
+            <Link href={`/talks/${next.id}`} className="pm-ln2-next">
+              <span aria-hidden="true">▶</span><span className="pm-ln2-nt"><small>{t('pmLearnNext')}</small> {next.title}</span>
+            </Link>
+          )}
+        </div>
       )}
-    </Link>
+    </section>
   );
 }
 

@@ -48,7 +48,7 @@ assert.ok(hd.includes('menus?.web_top'), 'en-tête piloté par Admin → Menus')
 for (const k of ['"/pratique"', '"/library"', '"/account"', 'logoutNow']) assert.ok(hd.includes(k), `menu de l'avatar : ${k}`);
 assert.doesNotMatch(hd, /notification-dot/, 'pas de pastille de notification inventée');
 const home = read('components/premium/PmHomeSections.js'); // sections de l'accueil (étape 4)
-for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'OttRail', 'OttCard', 'pm-spot', 'pm-kids-promo', 'v20-big-learn-banner']) assert.ok(home.includes(c), c);
+for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'OttRail', 'OttCard', 'pm-spot', 'pm-kids-promo', 'pm-ln2']) assert.ok(home.includes(c), c);
 for (const api of ["usePmData('/home')", "usePmData('/me/continue'", "usePmData('/me/learning'"]) assert.ok(home.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(home, /75%|12:34|45:20|Salahuddin|Les Héritiers|avatar-reference/, 'aucun contenu de démonstration de la maquette');
 assert.match(home, /course && \(/, 'progression du parcours seulement si elle existe');

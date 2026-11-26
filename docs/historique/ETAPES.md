@@ -10714,3 +10714,9 @@ Résultat attendu du contrôle : 0 échec.
 **Déploiement (DockPanel).** Redeploy `majlistv-web` seulement, puis les commandes VPS habituelles.
 **Debug.** Un extrait qui ne démarre pas : tester `https://api-majlisstv.le-publicitaire.fr/talks/<id>/hover` (doit répondre `kind: hls`, `youtube` ou `vimeo` ; `none` = pas d'extrait pour cette vidéo, p. ex. premium sur YouTube).
 **Testé :** build, tests premium (couleurs, V22, N6), Chromium 1440 et 390 px avec un vrai flux HLS (une qui passe de l'image à l'extrait, survol qui grossit et lance l'extrait, aucun débordement horizontal). **Non testé :** YouTube/Vimeo réels (bac à sable sans accès), arabe (RTL) à l'œil, tests thème API (`test_theme`, `test_theme_packs` échouaient déjà avant).
+
+## 26/11 — « Mon espace Apprendre » immersif (accueil Premium)
+- Le bandeau fin devient une grande carte sans liseré : 5 fonds (`web/public/premium/learn-bg-1…5.webp`, 1672 px) qui se succèdent en fondu toutes les 6 s (fixe si « réduire les animations »), titre, bouton « Reprendre mon parcours », progression du parcours et panneau de chiffres réels (jours de régularité, quiz réussis, parcours terminés, « À suivre » = dernière vidéo en cours).
+- Barre de progression et panneau séparés (colonnes + espace), version téléphone en une colonne, arabe en miroir.
+- Les fonds sont agrandis à partir des images 418 px d'origine : un peu moins nets que de vraies images haute définition. Pour les remplacer : mêmes noms de fichiers dans `web/public/premium/`.
+- Testé : tests Premium, couleurs, compilation, rendu navigateur 1440 px et 390 px (compte admin). Non testé : arabe, mode « animations réduites ».
