@@ -368,6 +368,9 @@ def list_archive(url, limit):
     query = parse_qs(parts.query)
     m = re.match(r"^/details/([^/]+)/?", parts.path)
     title = ""
+    if m and m.group(1).startswith("@"):
+        # Page de profil d'un compte archive.org : ce n'est ni une collection ni un élément, et la liste de ses envois n'est pas dans l'API publique de recherche.
+        raise Blocked("Page de profil archive.org (" + m.group(1) + ") : non prise en charge. Utilisez l'adresse d'une collection (archive.org/details/nom-de-collection), d'une recherche (archive.org/search?query=…), ou collez les adresses des vidéos dans « Liste d'adresses ».")
     if m and ARCHIVE_ID.match(m.group(1)):
         ident = m.group(1)
         md = (_archive_get(f"/metadata/{ident}").get("metadata") or {})

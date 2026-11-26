@@ -76,6 +76,11 @@ ok(external.video_url("dailymotion", "x8abc12") == "https://www.dailymotion.com/
 # --- Erreurs lisibles --------------------------------------------------------------------------
 e = external.readable_error(Exception("ERROR: [youtube] x: Sign in to confirm you're not a bot"))
 ok(isinstance(e, external.Blocked) and "cookies" in str(e), "blocage anti-robot -> message cookies")
+try:
+    external.list_archive("https://archive.org/details/@fer3865", 10)
+    ok(False, "profil archive.org refusé")
+except external.Blocked as e:
+    ok("profil" in str(e) and "Liste d'adresses" in str(e), "page de profil archive.org (@compte) -> message clair avec les alternatives")
 ok(isinstance(external.readable_error(Exception("Private video")), external.Blocked), "vidéo privée -> message clair")
 ok(not isinstance(external.readable_error(Exception("timeout")), external.Blocked), "autre erreur -> réessai possible")
 
