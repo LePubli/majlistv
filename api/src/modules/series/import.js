@@ -95,7 +95,7 @@ export default async function seriesImport(app) {
       const host = new URL(c.url).hostname.replace(/^www\./, '');
       const last = decodeURIComponent(new URL(c.url).pathname.split('/').filter(Boolean).pop() || '').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[-_]+/g, ' ').trim();
       entries.push(known
-        ? { id: known.ref, source: known.source, title: title || `${host} ${known.ref}`, duration: null, thumb: null }
+        ? { id: known.ref, source: known.source, title: title || `${host} ${known.ref}`, duration: null, thumb: known.source === 'archive' ? `https://archive.org/services/img/${known.ref}` : null }
         : { id: `w${entries.length + 1}`, source: 'web', url: c.url, title: title || last || host, duration: null, thumb: null });
     }
     if (!entries.length) return reply.code(400).send({ error: 'Aucune adresse utilisable.', code: 'no_urls', rejected });

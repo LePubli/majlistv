@@ -127,6 +127,15 @@ cur.execute("select t.source, t.video_status, t.title from talks t join series_e
 ok([r[0] for r in rows] == ["upload", "upload", "vimeo"] or sorted(r[0] for r in rows) == ["upload", "upload", "vimeo"], "épisodes : 2 hébergés chez nous, 1 Vimeo")
 ok(all(r[1] == "importing" for r in rows if r[0] == "upload") and all(r[1] == "ready" for r in rows if r[0] == "vimeo"), "copies « en cours », Vimeo prêt")
 cur.execute("select count(*) from media_imports where source_url like %s and origin='web' and new_talk and rights_text <> ''", (f"https://example.org/cours/{tag}%",)); ok(cur.fetchone()[0] == 2, "2 demandes de copie (autre site) avec journal des droits")
+# Épisodes archive.org collés dans la liste : lus depuis archive.org par notre lecteur, jamais copiés sauf case cochée
+ia = [f"https://archive.org/details/{tag}UmarFaruqHd{n:02d} | Omar – Épisode {n}" for n in (1, 2, 3)]
+r = requests.post(B + "/studio/series/import-urls", json={"urls": ia}, headers=org); ok(r.status_code == 201 and {e["source"] for e in r.json()["entries"]} == {"archive"}, "adresses archive.org reconnues comme telles (pas « autre site »)")
+ij = r.json(); jobs.append(ij["id"]); ok(all(e["thumb"] and e["thumb"].startswith("https://archive.org/services/img/") for e in ij["entries"]), "affiche archive.org prévue pour chaque épisode")
+r = requests.post(B + f"/studio/series/import/{ij['id']}/start", json={"title": "Omar test", "ids": [e["id"] for e in ij["entries"]], "rights": True}, headers=org); ok(r.status_code == 201 and r.json()["copyQueued"] == 0, "série archive.org importée sans aucune copie")
+series.append(r.json()["seriesId"])
+cur.execute("select t.source, t.video_status, t.video_ref from talks t join series_episodes e on e.talk_id=t.id where e.series_id=%s order by e.position", (r.json()["seriesId"],)); rows = cur.fetchall()
+ok(all(x[0] == "archive" and x[1] == "ready" for x in rows) and rows[0][2] == f"{tag}UmarFaruqHd01", "épisodes lus depuis archive.org (source « archive », prêts, aucune copie)")
+cur.execute("select count(*) from media_imports m join talks t on t.id=m.talk_id where t.video_ref like %s", (f"{tag}UmarFaruqHd%",)); ok(cur.fetchone()[0] == 0, "aucune demande de copie créée")
 cur.execute("update import_jobs set status='listed' where id=%s", (lj["id"],))
 r = requests.post(B + f"/studio/series/import/{lj['id']}/start", json={"title": "Encore", "ids": [e["id"] for e in web], "rights": True}, headers=org); ok(r.status_code == 409, "même adresses : déjà importées, rien de créé")
 cur.execute("delete from talks where video_ref like %s or (source='upload' and title in ('Cours un'))", (f"s{tag}%",))

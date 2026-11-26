@@ -10751,3 +10751,8 @@ Résultat attendu du contrôle : 0 échec.
 - Fichiers : API `modules/series/import.js` (route `POST /studio/series/import-urls`, sources `youtube|vimeo|dailymotion|archive|web`), web `modules/series/ImportSeries.js`, clés `sri*` (fr/en/ar).
 - Testé : `api/tests/test_series_import.py` (45 contrôles dont liste d'adresses mixte, copie d'office, doublons, droits), web (test statique, compilation, rendu navigateur 390 px avec liste d'adresses). NON testé : vraie lecture d'un showcase Vimeo / d'une playlist Dailymotion / d'une collection archive.org (pas de réseau vers ces sites), vraie copie d'un lien direct ou d'une page tierce (yt-dlp, conversion HLS), blocages anti-robot, Vimeo privé (adresse avec clé).
 - Non fait (à décider) : shorts depuis Vimeo / autres sites (le lecteur intégré des shorts ne gère que YouTube ; un short copié depuis un autre site demanderait un autre flux).
+
+## 26/11 — Liste d'adresses : archive.org lu par notre lecteur (sans copie), page de profil non gérée
+- Une adresse `archive.org/details/<identifiant>` collée dans « Liste d'adresses » est un épisode « archive » : lu directement depuis archive.org par le lecteur Mejliss TV, aucune copie (la copie n'est imposée qu'aux sites non reconnus). L'affiche archive.org est prévue dès l'import ; le fichier vidéo et la durée sont résolus à la première lecture (comme pour une vidéo archive.org isolée).
+- Les pages de profil archive.org (`/details/@compte`) ne sont pas lisibles sans compte (vérifié sur le VPS : le service de page refuse les visiteurs anonymes, la recherche `uploader:` ne donne rien) : message clair avec les alternatives (collection, recherche, liste d'adresses).
+- Testé : `api/tests/test_series_import.py` (+5 contrôles : 3 épisodes archive.org, aucune copie créée).
