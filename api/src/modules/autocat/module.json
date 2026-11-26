@@ -1,0 +1,14 @@
+{
+  "id": "autocat",
+  "name": "Catégories automatiques",
+  "version": "1.0.0",
+  "description": "Propose les catégories d'une vidéo à partir de sa transcription (IA) ; un humain valide en un clic. L'IA ne choisit que parmi les catégories existantes.",
+  "feature": "autocat",
+  "requires": [],
+  "settings": [
+    { "key": "auto", "type": "bool", "label": "Analyser automatiquement les nouvelles vidéos", "def": "false",
+      "help": "Désactivé par défaut : chaque analyse utilise le moteur d'IA des résumés (coût faible, une requête courte par vidéo). Sans cela, l'analyse se lance à la main (Studio → Catégories proposées, ou le bouton de rattrapage de l'administration)." },
+    { "key": "min_confidence", "type": "number", "label": "Confiance minimale d'une proposition (%)", "def": "50", "min": 10, "max": 95,
+      "help": "Les propositions dont la confiance est inférieure à ce seuil sont écartées." }
+  ]
+}

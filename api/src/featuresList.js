@@ -50,6 +50,8 @@ export const FEATURES = [
   { id: 'quiz', group: 'learning', label: 'Quiz', hint: 'Questions après chaque vidéo, avec explication',
     rules: [{ re: '^/(talks/[^/]+/(studio/)?quiz|studio/quiz|me/quiz)(/|$)' }] },
   { id: 'practice', group: 'learning', label: 'Mise en pratique', hint: 'Écran « Et maintenant, que faire ? »', setting: 'practice_enabled' },
+  { id: 'autocat', group: 'catalog', label: 'Catégories automatiques', hint: "Propose les catégories d'une vidéo d'après sa transcription (IA) ; un humain valide",
+    rules: [{ re: '^/(talks/[^/]+/studio/categories-suggest|studio/categories-suggest|admin/categories-suggest)(/|$)' }] },
   { id: 'references', group: 'learning', label: 'Références citées', hint: 'Versets et hadiths cités dans la vidéo, avec lien vers le passage',
     rules: [{ re: '^/(talks/[^/]+/(studio/)?references|studio/references)(/|$)' }] },
   { id: 'corrections', group: 'learning', label: 'Corrections des sous-titres', hint: 'Les membres proposent une correction d\'une phrase ; l\'organisateur ou un modérateur la valide',
@@ -129,7 +131,7 @@ export const FEATURES = [
 // Étape M3a : module qui porte chaque fonction (dossier api/src/modules/<module>). Si ce dossier est absent, la fonction est
 // considérée comme coupée et disparaît de Admin → Fonctions ; les fonctions sans module (inscription, maintenance) restent au socle.
 const MODULE_OF = { weekly: 'follow', announce: 'follow' }; // livetv : indépendante des événements depuis le 14/11
-const MODULE_FEATURES = ['series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'audyn', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists', 'events',
+const MODULE_FEATURES = ['autocat', 'series', 'collections', 'books', 'quiz', 'practice', 'references', 'corrections', 'audyn', 'revision', 'selfcheck', 'learning', 'notes', 'favorites', 'lists', 'events',
   'channels', 'shorts', 'follow', 'citations', 'prayer', 'appupdates', 'offline', 'kids', 'showcase', 'stats', 'gifts', 'revenue'];
 for (const f of FEATURES) { const m = MODULE_OF[f.id] || (MODULE_FEATURES.includes(f.id) ? f.id : null); if (m) f.module = m; }
 

@@ -23,6 +23,7 @@ import psycopg2.extras
 import requests
 
 from insights import Insights
+from autocat import AutoCat
 from quiz import Quiz
 from practice import Practice
 from citations import Citations
@@ -128,6 +129,7 @@ stopping = False
 current = None  # (talk_id, lang) en cours
 last_ok = None
 insights = None
+autocat = None
 quiz = None
 practice = None
 references = None
@@ -594,11 +596,12 @@ def main():
     global current
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
-    global insights, quiz, citations, practice, references
+    global insights, quiz, citations, practice, references, autocat
     insights = Insights(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     quiz = Quiz(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     practice = Practice(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     references = References(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
+    autocat = AutoCat(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     citations = Citations(log=log, conn_params=lambda: conn_params(DATABASE_URL), fatal_error=FatalError, lang_names=LANG_NAMES)
     server = HTTPServer(("0.0.0.0", int(env("PORT", "3000"))), Health)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -619,6 +622,7 @@ def main():
     practice.start()
     citations.start()
     references.start()
+    autocat.start()
     while not stopping:
         job = None
         try:
