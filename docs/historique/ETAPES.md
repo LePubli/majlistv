@@ -10720,3 +10720,9 @@ Résultat attendu du contrôle : 0 échec.
 - Barre de progression et panneau séparés (colonnes + espace), version téléphone en une colonne, arabe en miroir.
 - Les fonds sont agrandis à partir des images 418 px d'origine : un peu moins nets que de vraies images haute définition. Pour les remplacer : mêmes noms de fichiers dans `web/public/premium/`.
 - Testé : tests Premium, couleurs, compilation, rendu navigateur 1440 px et 390 px (compte admin). Non testé : arabe, mode « animations réduites ».
+
+## 26/11 — Shorts de l'accueil Premium
+- Ordinateur/tablette : grandes cartes verticales 9:16 (5 par ligne) au même style que les autres cartes (coins arrondis, étiquette, titre en majuscules, grossit au survol) ; au survol/sélection, le short démarre en muet dans la carte (mêmes réglages « aperçu vidéo » que les vignettes).
+- Smartphone (écran étroit et tactile) : le bloc occupe tout l'écran (moins la barre du bas), un short par écran, balayage = short suivant, lecture auto en muet du short visible, bouton son, « Voir la vidéo », flèche ⌄ qui reprend le défilement de la page après le bloc ; le balayage sort vers la page depuis le premier/dernier short. Accrochage doux de la page sur le bloc (`scroll-snap proximity`).
+- Fichiers : `PmShortRailCard.js`, `PmShortsPhone.js`, `PmHomeSections.js` (`PmShortsSection`), `skin-premium.css`, clé `pmShortsContinue` (fr/en/ar). Le hub /shorts garde ses tuiles.
+- Testé : tests Premium/couleurs/Shorts, compilation, rendu 1440 px (survol + vidéo) et 390 px tactile (fil, flèche) avec de faux shorts. Non testé : vrais shorts, iPhone/Android réels, arabe.

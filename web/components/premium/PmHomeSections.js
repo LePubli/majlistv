@@ -11,7 +11,8 @@ import { thumbOf, posterArt } from '../../lib/thumb';
 import Glyph, { glyphOfCategory } from './Glyph';
 import { OttCard, OttRail } from './PmOtt';
 import { useClip, ClipLayer, useInView } from './PmClip';
-import PmShortTile from './PmShortTile';
+import PmShortRailCard from './PmShortRailCard';
+import PmShortsPhone from './PmShortsPhone';
 import { KidsBand } from '../KidsBanner';
 
 const HERO_FALLBACK = '/premium/andalousie-large.webp';
@@ -262,24 +263,39 @@ export function PmFeedSection() {
   );
 }
 
-/** Rangée des derniers shorts publiés (maquette V22 : tuiles verticales « SHORT », durée, bouton lecture, titre, thème). */
+/** Smartphone : vrai si l'écran est étroit ET tactile (le fil plein écran n'a pas de sens à la souris). */
+function usePhone() {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 700px) and (pointer: coarse)');
+    const on = () => setPhone(mq.matches);
+    on(); mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return phone;
+}
+
+/** Derniers shorts publiés. Ordinateur et tablette : rangée de grandes cartes verticales (au survol, le short démarre).
+ *  Smartphone : un short par écran, avec une flèche pour reprendre le défilement de la page. */
 export function PmShortsSection({ title, limit = 10 }) {
   const { t, feat, appName } = useApp();
+  const phone = usePhone();
   const n = Math.max(2, Math.min(20, Number(limit) || 10));
   const d = usePmData(`/shorts?limit=${n}`, { on: feat('shorts'), auth: false });
   const shorts = feat('shorts') && Array.isArray(d) ? d : [];
   if (!shorts.length) return null;
   const brand = (appName || 'Mejliss TV').replace(/\s*TV$/i, '');
   const head = title || `${brand} ${t('shrTitle')} · ${t('pmShortsSub')}`;
+  if (phone) return <PmShortsPhone shorts={shorts} head={head} />;
   return (
-    <section className="pm-rail pm-shorts-rail" aria-label={head}>
+    <section className="pm-rail pm-rail-tall pm-rail-short pm-shorts-rail" aria-label={head}>
       <div className="pm-rail-head">
         <h2>{title ? title : <>{brand} <em>{t('shrTitle')}</em> · {t('pmShortsSub')}</>}</h2>
         <Link href="/shorts">{t('pmShortsAll')} <span className="pm-chev" aria-hidden="true">›</span></Link>
       </div>
-      <ul className="pm-sh-track">
-        {shorts.map((s) => <li key={s.id}><PmShortTile s={s} /></li>)}
-      </ul>
+      <div className="pm-rail-track">
+        {shorts.map((s) => <PmShortRailCard key={s.id} s={s} />)}
+      </div>
     </section>
   );
 }
