@@ -27,7 +27,12 @@ export function SuggestionRow({ s, t, call, onDone }) {
           <button type="button" className="btn" disabled={busy} onClick={() => act('accept')}>{t('acAccept')}</button>
           <button type="button" className="btn ghost" disabled={busy} onClick={() => act('reject')}>{t('acReject')}</button>
         </div>
-      ) : <p className="meta small">{s.status === 'approved' ? t('acApproved') : t('acRejected')}</p>}
+      ) : s.status === 'approved' ? (
+        <div className="qz-gen">
+          <span className="meta small">{s.auto ? t('acAutoApplied') : t('acApproved')}</span>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => act('undo')}>{t('acUndo')}</button>
+        </div>
+      ) : <p className="meta small">{t('acRejected')}</p>}
     </article>
   );
 }

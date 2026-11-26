@@ -26,7 +26,7 @@ export default async function autocatRoutes(app) {
     return t;
   }
 
-  const SUGG = `SELECT s.id, s.talk_id AS "talkId", s.category_id AS "categoryId", n.name AS category, s.confidence, s.reason, s.status
+  const SUGG = `SELECT s.id, s.talk_id AS "talkId", s.category_id AS "categoryId", n.name AS category, s.confidence, s.reason, s.status, s.auto
                   FROM talk_category_suggestions s JOIN category_names n ON n.id = s.category_id`;
 
   // État d'une vidéo : analyse en cours, propositions, catégories actuelles.
@@ -89,6 +89,24 @@ export default async function autocatRoutes(app) {
     } catch (err) { await c.query('ROLLBACK').catch(() => {}); throw err; } finally { c.release(); }
   });
 
+  // Annuler une catégorie ajoutée (validée à la main ou appliquée automatiquement) : elle est retirée de la vidéo et ne sera plus reproposée.
+  app.post('/studio/categories-suggest/:sid/undo', organizer, async (req, reply) => {
+    const { sid } = sidSchema.parse(req.params);
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      const s = (await c.query('SELECT talk_id, category_id, status FROM talk_category_suggestions WHERE id = $1 FOR UPDATE', [sid])).rows[0];
+      if (!s) { await c.query('ROLLBACK'); return reply.code(404).send({ error: 'Proposition introuvable' }); }
+      if (!(await ownedTalk(req, reply, s.talk_id))) { await c.query('ROLLBACK'); return; }
+      if (s.status !== 'approved') { await c.query('ROLLBACK'); return reply.code(409).send({ error: "Cette catégorie n'a pas été ajoutée", code: 'notapplied' }); }
+      await c.query('UPDATE talks SET category_id = NULL WHERE id = $1 AND category_id = $2', [s.talk_id, s.category_id]);
+      await c.query('DELETE FROM talk_categories WHERE talk_id = $1 AND category_id = $2', [s.talk_id, s.category_id]);
+      await c.query(`UPDATE talk_category_suggestions SET status = 'rejected', auto = false, reviewed_by = $2, reviewed_at = now() WHERE id = $1`, [sid, req.user.sub]);
+      await c.query('COMMIT');
+      return { ok: true };
+    } catch (err) { await c.query('ROLLBACK').catch(() => {}); throw err; } finally { c.release(); }
+  });
+
   app.post('/studio/categories-suggest/:sid/reject', organizer, async (req, reply) => {
     const { sid } = sidSchema.parse(req.params);
     const s = (await pool.query('SELECT talk_id FROM talk_category_suggestions WHERE id = $1', [sid])).rows[0];
@@ -104,7 +122,12 @@ export default async function autocatRoutes(app) {
       `${SUGG.replace('s.talk_id AS "talkId"', 's.talk_id AS "talkId", t.title AS "talkTitle"')} JOIN talks t ON t.id = s.talk_id
         WHERE s.status = 'draft' AND ($1::boolean OR t.organizer_id = $2)
         ORDER BY t.title, s.talk_id, s.confidence DESC LIMIT 400`, [STAFF.has(req.user.role), req.user.sub]);
-    return { suggestions: rows };
+    // Appliquées automatiquement ces 14 derniers jours (annulables en un clic).
+    const applied = await pool.query(
+      `${SUGG.replace('s.talk_id AS "talkId"', 's.talk_id AS "talkId", t.title AS "talkTitle"')} JOIN talks t ON t.id = s.talk_id
+        WHERE s.status = 'approved' AND s.auto AND s.reviewed_at > now() - interval '14 days' AND ($1::boolean OR t.organizer_id = $2)
+        ORDER BY s.reviewed_at DESC LIMIT 200`, [STAFF.has(req.user.role), req.user.sub]);
+    return { suggestions: rows, applied: applied.rows };
   });
 
   // Administration : état et rattrapage.

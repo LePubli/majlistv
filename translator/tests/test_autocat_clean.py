@@ -44,9 +44,9 @@ class Fake(AutoCat):
     def __init__(self, ai):
         super().__init__(log=lambda *a: None, conn_params=lambda: {}, fatal_error=RuntimeError, lang_names={"fr": "French"})
         self.ai, self.sql, self.provider = ai, [], "claude"
-        self.show_adults, self.kids = True, False
+        self.show_adults, self.kids, self.settings = True, False, {}
         class S:  # réglages simulés
-            def get(_, key, env, default=""): return {"mod_autocat_min_confidence": "50"}.get(key, default)
+            def get(_, key, env, default=""): return {**{"mod_autocat_min_confidence": "50"}, **self.settings}.get(key, default)
         self.S = S()
     def query(self, q, params=(), fetch=False):
         self.sql.append((" ".join(q.split())[:60], params))
@@ -64,10 +64,11 @@ class Fake(AutoCat):
         self.asked = (system, user)
         return self.ai
     class _Cur:
-        def __init__(s, o): s.o, s.rowcount = o, 1
+        def __init__(s, o): s.o, s.rowcount = o, 1; s.last = ""
+        def fetchone(s): return (1,) if s.last.startswith("INSERT INTO talk_category_suggestions") else None
         def __enter__(s): return s
         def __exit__(s, *a): return False
-        def execute(s, q, p=()): s.o.sql.append((" ".join(q.split())[:60], p))
+        def execute(s, q, p=()): s.last = " ".join(q.split()); s.o.sql.append((s.last[:60], p))
     class _Db:
         autocommit = True
         def __init__(s, o): s.o = o
@@ -96,4 +97,20 @@ ok([p[1] for q, p in k.sql if q.startswith("INSERT INTO talk_category_suggestion
 m = Fake({"categories": []}); m.show_adults, m.kids = True, True
 m.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
 ok(m.allowed_params == (["adult", "kids"],), "vidéo mixte : catalogues adultes et Kids")
+
+# Application automatique : désactivée par défaut, puis activée avec un seuil
+ids = lambda f: [p for q, p in f.sql if q.startswith("UPDATE talk_category_suggestions SET status = 'approved'")]
+ok(ids(f) == [] and ids(k) == [], "application automatique désactivée par défaut : rien n'est appliqué")
+a = Fake({"categories": [{"category_id": 11, "confidence": 92, "reason": "Prière."}, {"category_id": 12, "confidence": 70, "reason": "Fiqh."}]})
+a.settings = {"mod_autocat_apply": "true"}
+a.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
+ok(len(ids(a)) == 1, "application automatique : seule la proposition au-dessus du seuil (85 %) est appliquée")
+ok(any(q.startswith("UPDATE talks SET category_id") and p == (11, "11111111-2222-3333-4444-555555555555") for q, p in a.sql), "catégorie principale posée seulement si la vidéo n'en a pas")
+b = Fake({"categories": [{"category_id": 900, "confidence": 95, "reason": "Histoire d'un prophète."}]}); b.show_adults, b.kids = False, True
+b.settings = {"mod_autocat_apply": "true"}
+b.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
+ok(len(ids(b)) == 1 and not any(q.startswith("UPDATE talks SET category_id") for q, p in b.sql) and any(q.startswith("INSERT INTO talk_categories") for q, p in b.sql), "Kids : appliquée en catégorie supplémentaire, jamais en principale")
+c = Fake({"categories": [{"category_id": 11, "confidence": 70, "reason": "Prière."}]}); c.settings = {"mod_autocat_apply": "true", "mod_autocat_apply_min_confidence": "60"}
+c.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
+ok(len(ids(c)) == 1, "seuil réglable")
 print("TOUT OK")

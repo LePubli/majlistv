@@ -35,10 +35,19 @@ function Backfill({ t, call, onQueued }) {
 export default function SuggestionsReview() {
   const { t, call, skin, user } = useApp();
   const [items, setItems] = useState(null);
-  const load = useCallback(() => call('/studio/categories-suggest/review').then((r) => r.ok && setItems(r.data.suggestions)), [call]);
+  const [applied, setApplied] = useState([]);
+  const load = useCallback(() => call('/studio/categories-suggest/review').then((r) => { if (r.ok) { setItems(r.data.suggestions); setApplied(r.data.applied || []); } }), [call]);
   useEffect(() => { load(); }, [load]);
   // Validée ou refusée : elle quitte la file.
   const done = (s) => setItems((list) => list.filter((x) => x.id !== s.id));
+  const undone = () => load();
+  const appliedBlock = applied.length > 0 && (
+    <section className="qz-list">
+      <div className="qz-list-head"><h2 className="panel-title">{t('acAppliedTitle')} <span className="meta">({applied.length})</span></h2></div>
+      <p className="meta small">{t('acAppliedIntro')}</p>
+      {applied.map((x) => <div key={x.id}><p className="meta small"><Link className="link u" href={`/studio/${x.talkId}/content?tab=categories`}>{x.talkTitle}</Link></p><SuggestionRow s={x} t={t} call={call} onDone={undone} /></div>)}
+    </section>
+  );
   const groups = [];
   for (const x of items || []) {
     const g = groups.find((y) => y.talkId === x.talkId);
@@ -65,6 +74,7 @@ export default function SuggestionsReview() {
           {admin && <BmPanel title={t('acBackfillTitle')}><div style={{ padding: '0 18px 18px' }}><Backfill t={t} call={call} onQueued={load} /></div></BmPanel>}
           {items === null && <p className="meta">…</p>}
           {items && items.length === 0 && <BmPanel title={t('acReviewTitle')}><p className="meta" style={{ padding: '0 18px 18px' }}>{t('acReviewEmpty')}</p></BmPanel>}
+          {appliedBlock && <BmPanel title={t('acAppliedTitle')}><div style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>{appliedBlock}</div></BmPanel>}
           {groups.map((g) => (
             <BmPanel key={g.talkId} title={g.title} extra={<Link href={`/studio/${g.talkId}/content?tab=categories`}>{t('acOpenTab')}</Link>}>
               <div className="bm-form" style={{ padding: '0 18px 18px', display: 'grid', gap: 12 }}>
@@ -84,6 +94,7 @@ export default function SuggestionsReview() {
       {items === null && <p className="meta">…</p>}
       {items && items.length === 0 && <p className="soon">{t('acReviewEmpty')}</p>}
       {body}
+      {appliedBlock}
     </main>
   );
 }

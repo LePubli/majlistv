@@ -1,14 +1,42 @@
 {
   "id": "autocat",
   "name": "Catégories automatiques",
-  "version": "1.0.0",
-  "description": "Propose les catégories d'une vidéo à partir de sa transcription (IA) ; un humain valide en un clic. L'IA ne choisit que parmi les catégories existantes.",
+  "version": "1.1.0",
+  "description": "Propose les catégories d'une vidéo (adultes et Kids) à partir de sa transcription (IA). Un humain valide en un clic, ou, si l'administrateur l'active, les propositions très sûres sont appliquées automatiquement (annulables). L'IA ne choisit que parmi les catégories existantes.",
   "feature": "autocat",
   "requires": [],
   "settings": [
-    { "key": "auto", "type": "bool", "label": "Analyser automatiquement les nouvelles vidéos", "def": "false",
-      "help": "Désactivé par défaut : chaque analyse utilise le moteur d'IA des résumés (coût faible, une requête courte par vidéo). Sans cela, l'analyse se lance à la main (Studio → Catégories proposées, ou le bouton de rattrapage de l'administration)." },
-    { "key": "min_confidence", "type": "number", "label": "Confiance minimale d'une proposition (%)", "def": "50", "min": 10, "max": 95,
-      "help": "Les propositions dont la confiance est inférieure à ce seuil sont écartées." }
+    {
+      "key": "auto",
+      "type": "bool",
+      "label": "Analyser automatiquement les nouvelles vidéos",
+      "def": "false",
+      "help": "Désactivé par défaut : chaque analyse utilise le moteur d'IA des résumés (coût faible, une requête courte par vidéo). Sans cela, l'analyse se lance à la main (Studio → Catégories proposées, ou le bouton de rattrapage de l'administration)."
+    },
+    {
+      "key": "min_confidence",
+      "type": "number",
+      "label": "Confiance minimale d'une proposition (%)",
+      "def": "50",
+      "min": 10,
+      "max": 95,
+      "help": "Les propositions dont la confiance est inférieure à ce seuil sont écartées."
+    },
+    {
+      "key": "apply",
+      "type": "bool",
+      "label": "Appliquer automatiquement les propositions très sûres",
+      "def": "false",
+      "help": "Désactivé par défaut. Activé : une proposition dont la confiance atteint le seuil ci-dessous est appliquée sans validation (ajout seulement : catégorie principale si la vidéo n'en a pas, sinon supplémentaire ; Kids toujours en supplémentaire ; jamais de remplacement). Chaque application reste visible dans Studio → Catégories proposées et s'annule en un clic."
+    },
+    {
+      "key": "apply_min_confidence",
+      "type": "number",
+      "label": "Confiance minimale pour l'application automatique (%)",
+      "def": "85",
+      "min": 60,
+      "max": 99,
+      "help": "Seuil au-dessus duquel une proposition est appliquée toute seule. Les autres restent à valider à la main."
+    }
   ]
 }

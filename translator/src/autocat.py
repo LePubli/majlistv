@@ -5,7 +5,10 @@ L'IA lit la transcription (ou, à défaut, le résumé, ou à défaut le titre e
   l'identifiant n'est pas dans cette liste est écartée ; elle n'invente jamais de catégorie ;
 - les catégories déjà données à la vidéo, validées ou refusées par un humain ne sont pas reproposées ;
 - chaque proposition porte une confiance (0-100) et une justification ; en dessous du seuil réglé (« mod_autocat_min_confidence ») elle est écartée ;
-- tout arrive en « brouillon » : un humain valide en un clic dans le Studio. Rien n'est jamais remplacé, seulement ajouté.
+- tout arrive en « brouillon » : un humain valide en un clic dans le Studio. Rien n'est jamais remplacé, seulement ajouté ;
+- application automatique (réglage « mod_autocat_apply », désactivé par défaut) : une proposition dont la confiance atteint « mod_autocat_apply_min_confidence »
+  (85 par défaut) est appliquée sans clic, en ajout seulement (principale si la vidéo n'en a pas, sinon supplémentaire ; Kids toujours supplémentaire) ;
+  elle est marquée `auto` et reste annulable dans le Studio.
 Catalogue adultes si la vidéo est visible des adultes, catalogue Kids (univers et thèmes) si elle a des tranches d'âge Kids : une vidéo mixte reçoit des
 propositions des deux. Le moteur est celui des résumés.
 """
@@ -112,6 +115,30 @@ class AutoCat(Insights):
         out.sort(key=lambda x: -x["confidence"])
         return out[:MAX_SUGGESTIONS], dropped
 
+    # --- application automatique -------------------------------------------------------------
+    def apply_threshold(self):
+        """Seuil d'application automatique, ou None si le réglage est désactivé (par défaut)."""
+        if str(self.S.get("mod_autocat_apply", "MOD_AUTOCAT_APPLY", "false")).strip().lower() in ("false", "off", "0", "no", ""):
+            return None
+        try:
+            return max(60, min(99, int(float(self.S.get("mod_autocat_apply_min_confidence", "MOD_AUTOCAT_APPLY_MIN_CONFIDENCE", "85")))))
+        except (TypeError, ValueError):
+            return 85
+
+    @staticmethod
+    def apply_one(cur, talk_id, category_id, kids_ids):
+        """Ajoute la catégorie à la vidéo, sans jamais rien remplacer. Catégorie principale seulement si la vidéo n'en a pas (test atomique) et si la
+        catégorie est adultes ; sinon catégorie supplémentaire. Renvoie True si la catégorie est bien sur la vidéo."""
+        if category_id not in kids_ids:
+            cur.execute("UPDATE talks SET category_id = %s WHERE id = %s AND category_id IS NULL", (category_id, talk_id))
+            if cur.rowcount:
+                return True
+        cur.execute("SELECT 1 FROM talks WHERE id = %s AND category_id = %s", (talk_id, category_id))
+        if cur.fetchone():
+            return True
+        cur.execute("INSERT INTO talk_categories(talk_id, category_id) VALUES (%s, %s) ON CONFLICT DO NOTHING", (talk_id, category_id))
+        return True
+
     # --- traitement d'une demande ------------------------------------------------------------
     def process(self, job):
         talk_id, lang = str(job["talk_id"]), job["lang"]
@@ -121,6 +148,7 @@ class AutoCat(Insights):
             started = time.time()
             talk = self.query("SELECT title, description, show_adults, category_id, (cardinality(kids_bands) > 0 OR NOT show_adults) AS kids FROM talks WHERE id = %s", (talk_id,), fetch=True)[0]
             allowed = self.allowed(adult=bool(talk["show_adults"]), kids=bool(talk["kids"]))
+            kids_ids = {cid for cid, name in allowed.items() if name.startswith("[Kids] ")}
             if not allowed:
                 raise self.FatalError("Aucune catégorie active dans le(s) catalogue(s) de cette vidéo")
             excluded = {r["category_id"] for r in self.query("SELECT category_id FROM talk_categories WHERE talk_id = %s", (talk_id,), fetch=True)}
@@ -140,15 +168,22 @@ class AutoCat(Insights):
                                        excluded=", ".join(str(i) for i in sorted(excluded)) or "none")
             data = self.ask(system, f"ALLOWED CATEGORIES:\n{menu}\n\nCONFERENCE:\n{content}", tool=CAT_TOOL, max_tokens=1200)
             items, dropped = self.clean(data, allowed, excluded, min_conf)
+            apply_min = self.apply_threshold()
             with self.db().cursor() as cur:  # une seule transaction : on remplace les anciennes propositions non traitées ; validées et refusées restent
                 self.db().autocommit = False
                 try:
                     cur.execute("DELETE FROM talk_category_suggestions WHERE talk_id = %s AND status = 'draft'", (talk_id,))
                     produced = 0
+                    applied = 0
                     for x in items:
-                        cur.execute("INSERT INTO talk_category_suggestions(talk_id, category_id, confidence, reason) VALUES (%s,%s,%s,%s) ON CONFLICT (talk_id, category_id) DO NOTHING",
+                        cur.execute("INSERT INTO talk_category_suggestions(talk_id, category_id, confidence, reason) VALUES (%s,%s,%s,%s) ON CONFLICT (talk_id, category_id) DO NOTHING RETURNING id",
                                     (talk_id, x["category_id"], x["confidence"], x["reason"]))
-                        produced += cur.rowcount
+                        row = cur.fetchone()
+                        if row:
+                            produced += 1
+                            if apply_min is not None and x["confidence"] >= apply_min and self.apply_one(cur, talk_id, x["category_id"], kids_ids):
+                                cur.execute("UPDATE talk_category_suggestions SET status = 'approved', auto = true, reviewed_at = now() WHERE id = %s", (row[0],))
+                                applied += 1
                     cur.execute("UPDATE category_jobs SET status = 'ready', produced = %s, basis = %s, error = NULL, updated_at = now() WHERE talk_id = %s AND status = 'processing'",
                                 (produced, basis, talk_id))
                     self.db().commit()
@@ -158,7 +193,7 @@ class AutoCat(Insights):
                 finally:
                     self.db().autocommit = True
             self.last_ok = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            self.log(f"{tag} terminé : {produced} propositions ({dropped} écartées, base : {basis}) en {time.time() - started:.0f} s")
+            self.log(f"{tag} terminé : {produced} propositions dont {applied} appliquées automatiquement ({dropped} écartées, base : {basis}) en {time.time() - started:.0f} s")
         except (psycopg2.errors.ForeignKeyViolation, IndexError):
             self.log(f"{tag} conférence supprimée, abandon")
         except Exception as err:  # noqa: BLE001
