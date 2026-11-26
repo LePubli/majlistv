@@ -60,10 +60,10 @@ export default function AutoCatSuggest({ id, t, call }) {
         <h2 className="panel-title">{t('acTabTitle')}</h2>
         <p className="meta small">{t('acHelp')}</p>
         <p className="meta" role="status">{t('acCurrent')} {d.current.length ? d.current.join(' · ') : t('acNoneYet')}</p>
-        {!d.adult && <p className="notice" role="status">{t('acKids')}</p>}
-        {d.adult && !d.transcriptReady && <p className="notice" role="status">{t('acNoTranscript')}</p>}
+        {d.kids && <p className="notice" role="status">{t(d.adult ? 'acKidsMixed' : 'acKids')}</p>}
+        {!d.transcriptReady && <p className="notice" role="status">{t('acNoTranscript')}</p>}
         <div className="qz-gen">
-          <button className="btn" disabled={!d.adult || running} onClick={run}>{running ? t('acRunning') : job ? t('acRunAgain') : t('acRun')}</button>
+          <button className="btn" disabled={running} onClick={run}>{running ? t('acRunning') : job ? t('acRunAgain') : t('acRun')}</button>
         </div>
         {job?.status === 'ready' && <p className="meta small" role="status">{t(job.produced ? 'acDone' : 'acDoneNone').replace('{p}', job.produced).replace('{b}', t(`acBasis_${job.basis || 'metadata'}`))}</p>}
         {job?.status === 'failed' && <p className="error" role="alert">{t('acFail').replace('{e}', job.error || '')}</p>}

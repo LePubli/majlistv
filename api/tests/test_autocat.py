@@ -48,7 +48,18 @@ try:
     cur.execute("select status from category_jobs where talk_id=%s", (t1,)); ok(cur.fetchone()[0] == "pending", "demande en file pour le service d'IA")
     cur.execute("update category_jobs set status='ready' where talk_id=%s", (t1,))
     tk = talk(uorg, adults=False)
-    r = requests.post(f"{B}/talks/{tk}/studio/categories-suggest/run", headers=ORG); ok(r.status_code == 409 and r.json().get("code") == "kids", "vidéo de l'espace enfants : refusée")
+    r = requests.post(f"{B}/talks/{tk}/studio/categories-suggest/run", headers=ORG); ok(r.status_code == 202, "vidéo de l'espace enfants : l'analyse est acceptée")
+    cur.execute("update category_jobs set status='ready' where talk_id=%s", (tk,))
+    cur.execute("select id from categories where is_active and catalogue_type='kids' and not exists (select 1 from categories k where k.parent_id=categories.id) order by id limit 2"); KC = [r[0] for r in cur.fetchall()]
+    ok(len(KC) == 2, "2 catégories Kids de test")
+    sk = suggest(tk, KC[0], 88)
+    st = requests.get(f"{B}/talks/{tk}/studio/categories-suggest", headers=ORG).json(); ok(st["kids"] and not st["adult"], "état : vidéo Kids reconnue")
+    r = requests.post(f"{B}/studio/categories-suggest/{suggest(tk, CATS[0], 80)}/accept", headers=ORG); ok(r.status_code == 409 and r.json().get("code") == "gone", "vidéo Kids : une catégorie adultes est refusée")
+    r = requests.post(f"{B}/studio/categories-suggest/{sk}/accept", headers=ORG); ok(r.status_code == 200 and r.json().get("placed") == "extra", "catégorie Kids validée : ajoutée en catégorie supplémentaire")
+    cur.execute("select (select category_id from talks where id=%s), (select count(*) from talk_categories where talk_id=%s and category_id=%s)", (tk, tk, KC[0])); v = cur.fetchone(); ok(v[0] is None and v[1] == 1, "catégorie Kids jamais en catégorie principale")
+    tm = talk(uorg); cur.execute("update talks set kids_bands=%s where id=%s", (["6-8"], tm))
+    r = requests.post(f"{B}/studio/categories-suggest/{suggest(tm, KC[1], 70)}/accept", headers=ORG); ok(r.status_code == 200, "vidéo mixte : catégorie Kids acceptée")
+    r = requests.post(f"{B}/studio/categories-suggest/{suggest(tm, CATS[1], 70)}/accept", headers=ORG); ok(r.status_code == 200 and r.json().get("placed") == "main", "vidéo mixte : catégorie adultes en principale")
 
     s1, s2, s3 = suggest(t1, CATS[0], 90), suggest(t1, CATS[1], 70), suggest(t1, CATS[2], 60)
     st = requests.get(f"{B}/talks/{t1}/studio/categories-suggest", headers=ORG).json()
@@ -88,7 +99,7 @@ try:
     stats = requests.get(B + "/admin/categories-suggest/stats", headers=ADM).json(); ok(stats["withoutCategory"] >= 1 and stats["batch"] == 100, "statistiques : vidéos sans catégorie comptées")
     q = requests.post(B + "/admin/categories-suggest/backfill", headers=ADM).json()["queued"]
     cur.execute("select count(*) from category_jobs where talk_id=%s and status='pending'", (t4,)); ok(q >= 1 and cur.fetchone()[0] == 1, "rattrapage : la vidéo sans catégorie est mise en file")
-    cur.execute("select count(*) from category_jobs where talk_id = any(%s::uuid[])", ([tk, t1],)); ok(cur.fetchone()[0] == 1, "rattrapage : ni la vidéo Kids ni une vidéo déjà analysée")
+    cur.execute("select count(*) from category_jobs where talk_id = any(%s::uuid[])", ([tk, t1],)); ok(cur.fetchone()[0] == 2, "rattrapage : les vidéos déjà analysées ne sont pas reprises")
     q2 = requests.post(B + "/admin/categories-suggest/backfill", headers=ADM).json()["queued"]
     cur.execute("select count(*) from category_jobs where talk_id=%s", (t4,)); ok(cur.fetchone()[0] == 1, "rattrapage répété : pas de doublon")
 

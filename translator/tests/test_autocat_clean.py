@@ -44,15 +44,18 @@ class Fake(AutoCat):
     def __init__(self, ai):
         super().__init__(log=lambda *a: None, conn_params=lambda: {}, fatal_error=RuntimeError, lang_names={"fr": "French"})
         self.ai, self.sql, self.provider = ai, [], "claude"
+        self.show_adults, self.kids = True, False
         class S:  # réglages simulés
             def get(_, key, env, default=""): return {"mod_autocat_min_confidence": "50"}.get(key, default)
         self.S = S()
     def query(self, q, params=(), fetch=False):
         self.sql.append((" ".join(q.split())[:60], params))
         if "FROM talks WHERE id" in q:
-            return [{"title": "La prière du vendredi", "description": "", "show_adults": True, "category_id": None}]
+            return [{"title": "La prière du vendredi", "description": "", "show_adults": self.show_adults, "category_id": None, "kids": self.kids}]
         if "FROM categories c JOIN category_names" in q:
-            return [{"id": k, "name": v} for k, v in ALLOWED.items()]
+            self.allowed_params = params
+            rows = [{"id": k, "name": v, "catalogue_type": "adult"} for k, v in ALLOWED.items()]
+            return rows + [{"id": 900, "name": "Prophètes", "catalogue_type": "kids"}]
         if "transcript_segments" in q:
             return [{"idx": 0, "start_ms": 0, "end_ms": 1000, "text": "Aujourd'hui on parle de la prière."}]
         return []
@@ -81,4 +84,16 @@ ok(any(q.startswith("DELETE FROM talk_category_suggestions") for q, _ in f.sql),
 ok("11: Pratiques et adorations › Prière" in f.asked[1] and "Aujourd'hui on parle de la prière." in f.asked[1], "l'IA reçoit la liste des catégories et la transcription")
 ok("ignore" in f.asked[0].lower() or "untrusted" in f.asked[0].lower(), "consigne contre les instructions cachées dans le texte")
 ok(any(q.startswith("UPDATE category_jobs SET status = 'ready'") and p[1] == "transcript" for q, p in f.sql), "analyse terminée, base : transcription")
+
+# Vidéo Kids (réservée aux enfants) : seul le catalogue Kids est interrogé, le menu porte le préfixe [Kids]
+k = Fake({"categories": [{"category_id": 900, "confidence": 85, "reason": "Histoire d'un prophète racontée aux enfants."}]})
+k.show_adults, k.kids = False, True
+k.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
+ok(k.allowed_params == (["kids"],), "vidéo Kids : seul le catalogue Kids est demandé")
+ok("900: [Kids] Prophètes" in k.asked[1], "le menu marque les catégories Kids")
+ok([p[1] for q, p in k.sql if q.startswith("INSERT INTO talk_category_suggestions")] == [900], "proposition Kids enregistrée")
+# Vidéo mixte : les deux catalogues
+m = Fake({"categories": []}); m.show_adults, m.kids = True, True
+m.process({"talk_id": "11111111-2222-3333-4444-555555555555", "lang": "fr", "attempts": 1})
+ok(m.allowed_params == (["adult", "kids"],), "vidéo mixte : catalogues adultes et Kids")
 print("TOUT OK")
