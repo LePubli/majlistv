@@ -331,6 +331,9 @@ export function PmLearnSection() {
   }, [calm, on]);
   if (!feat('learning')) return null;
   const next = Array.isArray(cont) && cont[0] ? cont[0] : null;
+  // Barre : avancement du parcours en cours ; à défaut, avancement de la vidéo à reprendre (données réelles).
+  const nextDur = next ? durMs(next) : 0;
+  const prog = course ? course.pct : nextDur ? Math.min(100, Math.round(((next.positionMs || 0) / nextDur) * 100)) : null;
   const stats = learn ? [
     { k: 'days', n: streak && streak.show !== false ? streak.current || 0 : null, label: t('pmLearnDays'), d: 'M5 6h16v15H5zM5 11h16M9 3v5M17 3v5' },
     { k: 'quiz', n: learn.quizzesPassed ?? 0, label: t('pmLearnQuizzes'), d: 'M7 4h12v19H7zM10 4V2h6v2M10 14l2.5 2.5L17 11' },
@@ -354,11 +357,11 @@ export function PmLearnSection() {
           <Link href={next ? `/talks/${next.id}` : '/learning'} className="pm-ln2-cta"><span aria-hidden="true">▶</span> {t('pmLearnResume')}</Link>
           <Link href="/learning" className="pm-ln2-link">{t('pmLearnSee')} <span className="pm-arr" aria-hidden="true">→</span></Link>
         </div>
-        {course && (
+        {prog !== null && (
           <div className="pm-ln2-prog">
             <span>{t('pmLearnYour')}</span>
-            <span className="pm-ln2-bar" role="img" aria-label={`${course.pct} %`}><b style={{ width: `${course.pct}%` }} /></span>
-            <strong>{course.pct} %</strong>
+            <span className="pm-ln2-bar" role="img" aria-label={`${prog} %`}><b style={{ width: `${prog}%` }} /></span>
+            <strong>{prog} %</strong>
           </div>
         )}
       </div>

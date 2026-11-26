@@ -51,7 +51,7 @@ const home = read('components/premium/PmHomeSections.js'); // sections de l'accu
 for (const c of ['v20-hero v20-faithful-hero v20-hero-home', 'v20-mobile-universes', 'OttRail', 'OttCard', 'pm-spot', 'pm-kids-promo', 'pm-ln2']) assert.ok(home.includes(c), c);
 for (const api of ["usePmData('/home')", "usePmData('/me/continue'", "usePmData('/me/learning'"]) assert.ok(home.includes(api), `vraies données : ${api}`);
 assert.doesNotMatch(home, /75%|12:34|45:20|Salahuddin|Les Héritiers|avatar-reference/, 'aucun contenu de démonstration de la maquette');
-assert.match(home, /course && \(/, 'progression du parcours seulement si elle existe');
+assert.match(home, /prog !== null && \(/, 'barre de progression seulement si elle existe');
 assert.match(read('components/premium/PmMobileNav.js'), /v20-mobile-nav/);
 assert.match(read('lib/navDefaults.js'), /legal\/mentions-legales/, 'liens légaux obligatoires (valeurs d’origine)'); assert.match(read('components/premium/PmFooter.js'), /required/, 'liens légaux imposés');
 assert.match(read('components/premium/PmFooter.js'), /<SkinPicker \/>/, 'un visiteur peut quitter le thème');

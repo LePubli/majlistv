@@ -934,7 +934,7 @@ html[data-skin="premium"] .pm-card-vid iframe.hc-video, html[data-skin="premium"
 
 /* ---------- « Mon espace Apprendre » immersif (26/11) : fonds qui se succèdent, sans liseré ---------- */
 html[data-skin="premium"] .pm-ln2 { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 440px); align-items: end; gap: clamp(28px, 5vw, 72px);
-  min-height: 340px; margin: 28px clamp(17px, 4.6vw, 88px); padding: 40px clamp(22px, 3.6vw, 52px); border-radius: 22px; background: var(--c-04122a,#04122a); box-shadow: 0 22px 50px color-mix(in srgb,var(--c-000000,#000000) 50%,transparent); color: var(--c-ffffff,#ffffff); }
+  min-height: 340px; margin: 28px 0; padding: 40px clamp(22px, 3.6vw, 52px); border-radius: 22px; background: var(--c-04122a,#04122a); box-shadow: 0 22px 50px color-mix(in srgb,var(--c-000000,#000000) 50%,transparent); color: var(--c-ffffff,#ffffff); }
 html[data-skin="premium"] .pm-ln2:before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(90deg, color-mix(in srgb,var(--c-030c1e,#030c1e) 92%,transparent) 0%, color-mix(in srgb,var(--c-030c1e,#030c1e) 70%,transparent) 34%, color-mix(in srgb,var(--c-030c1e,#030c1e) 15%,transparent) 70%), linear-gradient(0deg, color-mix(in srgb,var(--c-030c1e,#030c1e) 55%,transparent), transparent 40%); }
 html[data-skin="premium"][dir="rtl"] .pm-ln2:before { background: linear-gradient(270deg, color-mix(in srgb,var(--c-030c1e,#030c1e) 92%,transparent) 0%, color-mix(in srgb,var(--c-030c1e,#030c1e) 70%,transparent) 34%, color-mix(in srgb,var(--c-030c1e,#030c1e) 15%,transparent) 70%), linear-gradient(0deg, color-mix(in srgb,var(--c-030c1e,#030c1e) 55%,transparent), transparent 40%); }
