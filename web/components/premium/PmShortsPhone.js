@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../Providers';
 import { mmss } from '../ShortsRail';
 import { shortSub } from './PmShortTile';
+import YtShort from '../YtShort';
 
 export default function PmShortsPhone({ shorts, head }) {
   const { t } = useApp();
@@ -62,7 +63,9 @@ export default function PmShortsPhone({ shorts, head }) {
       <div className="pm-shm-feed" ref={feed} role="feed" aria-label={head}>
         {shorts.map((s, i) => (
           <article key={s.id} className="pm-shm-item" data-i={i} aria-posinset={i + 1} aria-setsize={shorts.length} aria-label={s.title}>
-            {Math.abs(i - active) <= 1 && s.videoUrl ? (
+            {s.youtubeId ? (
+              i === active && visible ? <YtShort id={s.youtubeId} muted={muted} title={s.title} className="pm-shm-video" /> : <div className="pm-shm-video pm-shm-poster" style={s.posterUrl ? { backgroundImage: `url("${String(s.posterUrl).replace(/"/g, '%22')}")` } : undefined} />
+            ) : Math.abs(i - active) <= 1 && s.videoUrl ? (
               <video ref={(el) => { videos.current[i] = el; }} className="pm-shm-video" src={s.videoUrl} poster={s.posterUrl || undefined}
                 loop playsInline muted={muted} preload={i === active ? 'auto' : 'metadata'} onClick={() => togglePlay(i)} aria-label={s.title} />
             ) : <div className="pm-shm-video pm-shm-poster" style={s.posterUrl ? { backgroundImage: `url("${String(s.posterUrl).replace(/"/g, '%22')}")` } : undefined} />}

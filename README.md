@@ -112,6 +112,26 @@ Ces trois contrôles tournent sur GitHub à chaque envoi (Actions → « Tests a
 | `docs/AUDIT-2026-11.md` | Audit de novembre 2026 (nettoyage, optimisations, sécurité, parcours) |
 | `docs/IDEES-AMELIORATIONS.md` | Idées d'améliorations |
 
+## Étape A — Shorts autonomes importés depuis YouTube (26/11)
+
+**Description.** Studio → Shorts → « Importer depuis YouTube » : on colle l'adresse de la page « Shorts » d'une chaîne (ex. `https://www.youtube.com/@chaine/shorts`) ou d'une liste de lecture ; on coche les shorts, on choisit le mode (copie chez nous, ou lecture depuis YouTube sans copie), les catégories, le public (adultes / Kids + tranches d'âge) et on coche la case des droits (obligatoire, journalisée). Ces shorts n'ont pas de conférence liée.
+
+**Prérequis.** Aucun nouveau réglage ni variable. La copie utilise yt-dlp, ffmpeg et Garage (déjà en place pour le transcripteur).
+
+**Déploiement (DockPanel).** Git Deploy → Redeploy dans l'ordre : `majlistv-api` (migration `004_standalone.sql` au démarrage), `majlistv-web`, `majlistv-transcriber` (file de copie). Puis sur le VPS :
+```
+/root/apply-limits.sh
+grep -n proxy_pass /etc/nginx/sites-enabled/*majlisstv*
+nginx -t && systemctl reload nginx
+bash /root/verify-deploy.sh
+```
+
+**Debug.** Une copie échouée affiche son motif dans la liste (bouton « Réessayer la copie »). Journal : `docker logs --tail 100 dockpanel-git-majlistv-transcriber | grep short`. Un blocage « confirmez que vous n'êtes pas un robot » de YouTube met la file en pause (voir `docs/PROBLEMES-A-REGLER.md`, point 374). Disque : Garage doit rester sous le plafond de 30 Go.
+
+**Exemple.** Coller `https://www.youtube.com/@LUMI%C3%88REDELACr%C3%A9ation/shorts` → Analyser → tout cocher → « Lire depuis YouTube » → catégorie → case des droits → Importer.
+
+**Tests.** `python3 api/tests/test_shorts_import.py` (API + PG + S3 de test), `python3 transcriber/tests/test_shorts_copy.py`, `node web/tests/test_shorts_import.mjs`.
+
 ## Règles de code à connaître
 
 - Textes du site : `web/lib/i18n.js` (un texte par ligne, trois langues). Un composant « use client » ne l'importe jamais : `web/lib/locales.js` pour la liste des langues, `useApp().t` pour les textes.

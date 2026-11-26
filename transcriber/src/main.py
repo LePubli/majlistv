@@ -1160,6 +1160,55 @@ def audyn_import_loop():
             time.sleep(10)
 
 
+def shorts_copy_loop():
+    """Shorts autonomes importés depuis YouTube : copie chez nous (fil séparé, sa propre connexion ; voir shorts_copy.py)."""
+    import shorts_copy
+    conn = None
+    requeued = False
+    conf = None
+    while not stopping:
+        try:
+            if conn is None or conn.closed:
+                conn = psycopg2.connect(**conn_params(DATABASE_URL))
+                conn.autocommit = True
+
+                def local_query(sql, params=None, fetch=False):
+                    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                        cur.execute(sql, params)
+                        return cur.fetchall() if fetch else cur.rowcount
+
+                conf = Settings(local_query, lambda *a: log(*a))
+            if not requeued:
+                shorts_copy.requeue_interrupted(conn)
+                requeued = True
+            conf.refresh()
+            job = shorts_copy.claim(conn)
+            if not job:
+                time.sleep(5)
+                continue
+
+            class Ctx:  # noqa: D106
+                pass
+            ctx = Ctx()
+            ctx.conn, ctx.s3, ctx.bucket, ctx.log, ctx.work_dir = conn, s3, BUCKET, log, WORK_DIR
+            ctx.stopping = lambda: stopping
+            ctx.options = lambda work: external_options(work, conf)
+            if shorts_copy.run(job, ctx) == "blocked":
+                key = (conf.get("ytdlp_cookies", "YTDLP_COOKIES", ""), conf.get("ytdlp_proxy", "YTDLP_PROXY", ""))
+                until = time.time() + 600
+                while time.time() < until and not stopping:
+                    time.sleep(10)
+                    conf.refresh()
+                    if (conf.get("ytdlp_cookies", "YTDLP_COOKIES", ""), conf.get("ytdlp_proxy", "YTDLP_PROXY", "")) != key:
+                        break
+        except (psycopg2.errors.UndefinedTable, psycopg2.errors.UndefinedColumn):
+            time.sleep(60)  # migration 004 du module Shorts pas encore passée
+        except Exception as err:  # noqa: BLE001
+            log("Shorts, copie depuis YouTube : erreur base :", err)
+            conn = None
+            time.sleep(10)
+
+
 def update_ytdlp():
     """yt-dlp doit suivre les changements de YouTube : mise à jour au démarrage (désactivable : YTDLP_AUTO_UPDATE=0)."""
     if env("YTDLP_AUTO_UPDATE", "1") != "1":
@@ -1244,6 +1293,7 @@ def main():
     threading.Thread(target=import_loop, daemon=True).start()
     threading.Thread(target=media_import_loop, daemon=True).start()
     threading.Thread(target=audyn_import_loop, daemon=True).start()
+    threading.Thread(target=shorts_copy_loop, daemon=True).start()
     threading.Thread(target=description_loop, daemon=True).start()
     threading.Thread(target=live_loop, daemon=True).start()
     threading.Thread(target=watch_loop, daemon=True).start()

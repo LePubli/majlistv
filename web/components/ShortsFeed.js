@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from './Providers';
 import ChannelAvatar from './ChannelAvatar';
+import YtShort from './YtShort';
 
 const PAGE = 12;
 const MUTE_KEY = 'mejliss-shorts-muted';
@@ -146,7 +147,9 @@ export default function ShortsFeed({ firstId, channel }) {
             return (
               <article key={s.id} className="sh-item" data-i={i} aria-label={s.title} aria-posinset={i + 1} aria-setsize={done ? items.length : -1}>
                 <div className="sh-frame">
-                  {near && s.videoUrl ? (
+                  {s.youtubeId ? (
+                    i === active ? <YtShort id={s.youtubeId} muted={muted} title={s.title} className="sh-video" /> : <div className="sh-video sh-poster" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined} />
+                  ) : near && s.videoUrl ? (
                     <video
                       ref={(el) => { videos.current[i] = el; }} className="sh-video" src={s.videoUrl} poster={s.posterUrl || undefined} loop playsInline muted={muted}
                       preload={i === active ? 'auto' : 'metadata'} onClick={() => togglePlay(i)} aria-label={s.title}
@@ -156,12 +159,12 @@ export default function ShortsFeed({ firstId, channel }) {
                   {i === active && paused && <span className="sh-paused" aria-hidden="true">▶</span>}
                   <button type="button" className="sh-mute" onClick={toggleMute} aria-pressed={!muted} aria-label={muted ? t('shrSoundOn') : t('shrSoundOff')}>{muted ? '🔇' : '🔊'}</button>
                   <div className="sh-info">
-                    {s.channel && (
+                    {s.channel && (s.channel.slug ? (
                       <Link href={`/chaines/${s.channel.slug}`} className="sh-chan"><ChannelAvatar name={s.channel.name} url={s.channel.avatarUrl} /><b>{s.channel.name}</b></Link>
-                    )}
+                    ) : <span className="sh-chan"><ChannelAvatar name={s.channel.name} url={s.channel.avatarUrl} /><b>{s.channel.name}</b></span>)}
                     <h2 className="sh-title">{s.title}</h2>
-                    <p className="sh-meta">{t('shrViews').replace('{n}', Number(s.views || 0).toLocaleString(locale))}{s.talk.premium && <span className="sh-badge">{t('shrPremium')}</span>}</p>
-                    <Link href={kid ? `/kids/watch/${s.talk.id}` : `/talks/${s.talk.id}`} className="btn sh-full">{t('shrFull')}</Link>
+                    <p className="sh-meta">{t('shrViews').replace('{n}', Number(s.views || 0).toLocaleString(locale))}{s.talk?.premium && <span className="sh-badge">{t('shrPremium')}</span>}</p>
+                    {s.talk && <Link href={kid ? `/kids/watch/${s.talk.id}` : `/talks/${s.talk.id}`} className="btn sh-full">{t('shrFull')}</Link>}
                   </div>
                   {i === active && <span className="sh-bar" aria-hidden="true"><i style={{ width: `${Math.round(progress * 100)}%` }} /></span>}
                 </div>

@@ -46,6 +46,7 @@ test_me_progress.py
 test_activity_retry.py
 test_shorts_themes.py
 test_shorts_review.py
+test_shorts_import.py
 test_studio_vtt.py
 test_taxonomy.py
 test_catalogue_taxonomy.py

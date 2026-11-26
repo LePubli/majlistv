@@ -25,7 +25,7 @@ export default function PmShortRailCard({ s }) {
   }, [active, fine, s.videoUrl, cards]);
   const sub = [shortSub(s), s.duration != null ? mmss(s.duration) : ''].filter(Boolean).join(' · ');
   return (
-    <Link className="pm-card pm-shc" href={`/shorts/${s.id}`} aria-label={s.title}
+    <Link className="pm-card pm-shr" href={`/shorts/${s.id}`} aria-label={s.title}
       style={s.posterUrl ? { '--cover': `url("${String(s.posterUrl).replace(/"/g, '%22')}")` } : undefined}
       onMouseEnter={() => setActive(true)} onMouseLeave={() => setActive(false)} onFocus={() => setActive(true)} onBlur={() => setActive(false)}>
       <span className="pm-card-art" aria-hidden="true" />

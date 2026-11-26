@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../Providers';
+import YtShort from '../YtShort';
 import ChannelAvatar from '../ChannelAvatar';
 
 const MUTE_KEY = 'mejliss-shorts-muted'; // même réglage que le fil vertical
@@ -59,7 +60,9 @@ export default function PmShortCard({ items, index, onIndex, onClose, onNearEnd 
     <div className="pm-shc-back" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="pm-shc" role="dialog" aria-modal="true" aria-label={s.title}>
         <div className="pm-shc-stage">
-          {s.videoUrl && !failed ? (
+          {s.youtubeId ? (
+            <YtShort id={s.youtubeId} muted={muted} title={s.title} />
+          ) : s.videoUrl && !failed ? (
             <video ref={video} key={s.id} src={s.videoUrl} poster={s.posterUrl || undefined} autoPlay playsInline muted={muted} preload="auto"
               onTimeUpdate={(e) => setProgress(e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0)}
               onEnded={() => (index + 1 < items.length ? go(index + 1) : toggle())} onError={() => setFailed(true)} onClick={toggle} />
@@ -74,14 +77,14 @@ export default function PmShortCard({ items, index, onIndex, onClose, onNearEnd 
         <div className="pm-shc-side">
           {theme && <span className="pm-shc-theme">{theme}</span>}
           <h2>{s.title}</h2>
-          {s.channel && <Link href={`/chaines/${s.channel.slug}`} className="pm-shc-chan"><ChannelAvatar name={s.channel.name} url={s.channel.avatarUrl} /> <span>{s.channel.name}</span></Link>}
+          {s.channel && (s.channel.slug ? <Link href={`/chaines/${s.channel.slug}`} className="pm-shc-chan"><ChannelAvatar name={s.channel.name} url={s.channel.avatarUrl} /> <span>{s.channel.name}</span></Link> : <span className="pm-shc-chan"><ChannelAvatar name={s.channel.name} url={s.channel.avatarUrl} /> <span>{s.channel.name}</span></span>)}
           <p className="pm-shc-meta">{t('shrViews').replace('{n}', s.views)}{s.talk?.premium ? ` · ${t('shrPremium')}` : ''}</p>
           <div className="pm-shc-nav">
             <button type="button" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t('shrPrev')}>{rtl ? '→' : '←'}</button>
             <bdi dir="ltr" aria-live="polite">{t('pmShPos').replace('{i}', index + 1).replace('{n}', items.length)}</bdi>
             <button type="button" onClick={() => go(index + 1)} disabled={index >= items.length - 1} aria-label={t('shrNext')}>{rtl ? '←' : '→'}</button>
           </div>
-          <Link href={`/talks/${s.talk.id}`} className="pm-shc-link">{t('shrFull')} {rtl ? '←' : '→'}</Link>
+          {s.talk?.id && <Link href={`/talks/${s.talk.id}`} className="pm-shc-link">{t('shrFull')} {rtl ? '←' : '→'}</Link>}
           <Link href={`/shorts/${s.id}`} className="pm-shc-link ghost">{t('pmShOpenFeed')}</Link>
         </div>
       </div>

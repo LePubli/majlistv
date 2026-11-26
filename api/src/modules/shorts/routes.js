@@ -29,6 +29,7 @@ import { speakerNames, speakerSlug } from '../../speakers.js';
 import { channelImages } from '../../channels.js';
 import { viaChannel, managedSpeakers } from '../../channelAccess.js';
 import { makePoster } from './poster.js';
+import shortsImport from './import.js';
 
 const idSchema = z.object({ id: z.guid() });
 const listSchema = z.object({
@@ -41,17 +42,22 @@ const TITLE_MAX = 90;
 const OWN = z.enum(['draft', 'published']);
 
 // Conditions d'un short visible : publié, vidéo prête et publiée ; adultes : catalogue adulte ; enfant : sa tranche, son catalogue (paramètres $1 à $4).
-const BASE_WHERE = `s.status = 'published' AND t.video_status = 'ready' AND ${visibleSql('t')}`;
-const ADULT_WHERE = `${BASE_WHERE} AND ${adultSql('t')}`;
-const KID_WHERE = `${BASE_WHERE} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id)`;
+// Un short autonome (sans conférence) est visible quand il est publié et lisible : lu depuis YouTube, ou copié chez nous (copy_status « done »).
+const READY = `(s.play = 'youtube' OR s.copy_status IS NULL OR s.copy_status = 'done')`;
+const TALK_OK = `(s.talk_id IS NOT NULL AND t.video_status = 'ready' AND ${visibleSql('t')})`;
+const ADULT_WHERE = `s.status = 'published' AND ${READY} AND ((${TALK_OK} AND ${adultSql('t')}) OR (s.talk_id IS NULL AND s.catalogue = 'adult'))`;
+const KID_WHERE = `s.status = 'published' AND ${READY} AND ((${TALK_OK} AND ${bandOkSql('t', 2)} AND ${catalogSql('t', 1, 4)} AND ($3::boolean OR t.access = 'free') AND NOT EXISTS (SELECT 1 FROM sale_offers so_ WHERE so_.kind = 'talk' AND so_.item_id = t.id))
+  OR (s.talk_id IS NULL AND s.catalogue = 'kids' AND (cardinality(s.kids_bands) = 0 OR $2::text = ANY(s.kids_bands))))`;
 // Thèmes d'un short = les catégories PRINCIPALES de sa vidéo : la catégorie de la vidéo et ses catégories en plus, ramenées à leur catégorie
-// parente quand ce sont des sous-catégories (aucune donnée propre aux shorts : c'est le classement de la vidéo qui fait foi).
+// parente quand ce sont des sous-catégories (le classement de la vidéo fait foi ; un short autonome a ses propres catégories).
 const THEME_IDS = `SELECT DISTINCT COALESCE(c_.parent_id, c_.id) AS id FROM categories c_
-   WHERE c_.is_active AND c_.id IN (SELECT t.category_id UNION SELECT tc_.category_id FROM talk_categories tc_ WHERE tc_.talk_id = t.id)`;
+   WHERE c_.is_active AND c_.id IN (SELECT t.category_id UNION SELECT tc_.category_id FROM talk_categories tc_ WHERE tc_.talk_id = t.id
+     UNION SELECT s.category_id UNION SELECT sc_.category_id FROM public_short_categories sc_ WHERE sc_.short_id = s.id)`;
 const PUBLIC_SELECT = `
   SELECT s.id, s.title, s.duration_s, s.views, s.published_at, s.video_key, s.poster_key AS short_poster,
-         t.id AS talk_id, t.title AS talk_title, t.speaker, t.access, t.poster_key, t.external_thumb
-    FROM public_shorts s JOIN talks t ON t.id = s.talk_id`;
+         s.play, s.video_ref, s.thumb_url, s.author, s.description, s.talk_id AS own_talk,
+         t.id AS talk_id, t.title AS talk_title, COALESCE(t.speaker, s.author) AS speaker, t.access, t.poster_key, t.external_thumb
+    FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id`;
 
 // Noms traduits d'une catégorie ({ en: '…', ar: '…' }) : le champ `translations` garde { en: { name }, ar: { name } } ; on n'en sort que les noms non vides.
 function nameTr(tr) {
@@ -69,7 +75,7 @@ async function publicView(rows, { kid = false } = {}) {
   if (rows.length) {
     const th = await pool.query(
       `SELECT s.id AS short_id, top.slug, top.name, top.translations AS tr, top.display_order
-         FROM public_shorts s JOIN talks t ON t.id = s.talk_id
+         FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id
          JOIN LATERAL (${THEME_IDS}) ids ON true JOIN categories top ON top.id = ids.id AND top.slug IS NOT NULL
         WHERE s.id = ANY($1::uuid[]) ORDER BY top.display_order, top.name`, [rows.map((r) => r.id)]);
     for (const r of th.rows) {
@@ -85,13 +91,15 @@ async function publicView(rows, { kid = false } = {}) {
   for (const r of rows) {
     const slug = speakerSlug(r.speaker);
     out.push({
-      id: r.id, title: r.title || r.talk_title, duration: r.duration_s != null ? Number(r.duration_s) : null, views: r.views, publishedAt: r.published_at,
-      videoUrl: await presignGet(r.video_key).catch(() => null),
+      id: r.id, title: r.title || r.talk_title || '', duration: r.duration_s != null ? Number(r.duration_s) : null, views: r.views, publishedAt: r.published_at,
+      play: r.play, youtubeId: r.play === 'youtube' ? r.video_ref : null, description: r.description || '',
+      videoUrl: r.play === 'youtube' || !r.video_key ? null : await presignGet(r.video_key).catch(() => null),
       posterUrl: r.short_poster ? await presignGet(r.short_poster).catch(() => null)
-        : r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.external_thumb || null),
-      talk: { id: r.talk_id, title: r.talk_title, premium: r.access === 'premium' },
+        : r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.thumb_url || r.external_thumb || null),
+      talk: r.talk_id ? { id: r.talk_id, title: r.talk_title, premium: r.access === 'premium' } : null,
       themes: themeOf.get(r.id) || [],
-      channel: slug && !kid ? { slug, name: named.get(slug) || String(r.speaker).trim(), avatarUrl: imgs.get(slug)?.avatarUrl || null } : null,
+      // Chaîne : liée seulement si elle existe sur le site (un short importé peut venir d'un auteur qui n'a pas de chaîne ici : son nom est alors affiché sans lien).
+      channel: slug && !kid ? { slug: named.has(slug) || r.talk_id ? slug : null, name: named.get(slug) || String(r.speaker).trim(), avatarUrl: imgs.get(slug)?.avatarUrl || null } : null,
     });
   }
   return out;
@@ -123,7 +131,7 @@ export default async function shortsRoutes(app) {
     if (p.channel) { names = await speakerNames(p.channel); if (!names.length) return []; }
     const n = sc.args.length;
     const { rows } = await pool.query(
-      `${PUBLIC_SELECT} WHERE ${sc.where} AND ($${n + 1}::text[] IS NULL OR lower(trim(t.speaker)) = ANY($${n + 1}::text[]))
+      `${PUBLIC_SELECT} WHERE ${sc.where} AND ($${n + 1}::text[] IS NULL OR lower(trim(COALESCE(t.speaker, s.author))) = ANY($${n + 1}::text[]))
           AND ($${n + 4}::text IS NULL OR EXISTS (SELECT 1 FROM (${THEME_IDS}) th_ JOIN categories top_ ON top_.id = th_.id WHERE top_.slug = $${n + 4}))
         ORDER BY s.published_at DESC, s.id LIMIT $${n + 2} OFFSET $${n + 3}`, [...sc.args, names, p.limit, p.offset, p.theme || null]);
     return publicView(rows, { kid: Boolean(sc.kid) });
@@ -136,7 +144,7 @@ export default async function shortsRoutes(app) {
     if (!sc) return [];
     const { rows } = await pool.query(
       `SELECT top.slug, top.name, top.translations AS tr, count(DISTINCT s.id)::int AS count, min(top.display_order) AS ord
-         FROM public_shorts s JOIN talks t ON t.id = s.talk_id
+         FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id
          JOIN LATERAL (${THEME_IDS}) ids ON true JOIN categories top ON top.id = ids.id AND top.slug IS NOT NULL
         WHERE ${sc.where} GROUP BY top.slug, top.name, top.translations ORDER BY min(top.display_order), top.name`, sc.args);
     return rows.map((r) => ({ slug: r.slug, name: r.name, nameTr: nameTr(r.tr), count: r.count }));
@@ -155,7 +163,7 @@ export default async function shortsRoutes(app) {
   app.post('/shorts/:id/view', async (req, reply) => {
     const { id } = idSchema.parse(req.params);
     const sc = await scope(req);
-    const ok = sc ? (await pool.query(`SELECT 1 FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = $${sc.args.length + 1} AND ${sc.where}`, [...sc.args, id])).rowCount : 0;
+    const ok = sc ? (await pool.query(`SELECT 1 FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id WHERE s.id = $${sc.args.length + 1} AND ${sc.where}`, [...sc.args, id])).rowCount : 0;
     if (!ok) return reply.code(404).send({ error: 'Short introuvable' });
     const user = sc.kid ? null : await app.optionalUser(req);
     const viewer = sc.kid ? `k:${sc.kid.id}` : user ? `u:${req.user.sub}` : `a:${createHash('sha256').update(`${req.ip}|${req.headers['user-agent'] || ''}|${process.env.JWT_SECRET || ''}`).digest('hex').slice(0, 24)}`;
@@ -166,12 +174,13 @@ export default async function shortsRoutes(app) {
 
   // ------------------------------------------------------------------ Studio
   // Peut-on gérer les shorts de cette vidéo ? (ligne avec organizer_id et speaker)
-  const canManage = async (user, talk) => isStaff(user) || talk.organizer_id === user.sub || viaChannel(user, talk);
+  // Short sans conférence : son créateur ou le personnel.
+  const canManage = async (user, talk) => isStaff(user) || (talk.talk_id === null ? talk.created_by === user.sub : talk.organizer_id === user.sub || viaChannel(user, talk));
 
   async function loadOwn(req, reply) {
     const { id } = idSchema.parse(req.params);
     const row = (await pool.query(
-      `SELECT s.*, t.title AS talk_title, t.organizer_id, t.speaker, t.publication FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = $1`, [id])).rows[0];
+      `SELECT s.*, t.title AS talk_title, t.organizer_id, COALESCE(t.speaker, s.author) AS speaker, t.publication FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id WHERE s.id = $1`, [id])).rows[0];
     if (!row || !(await canManage(req.user, row))) { reply.code(404).send({ error: 'Short introuvable' }); return null; }
     return row;
   }
@@ -179,14 +188,18 @@ export default async function shortsRoutes(app) {
   // Validation avant publication : réglage `shorts_review` ; ne concerne que les organisateurs et éditeurs de chaîne (le personnel publie directement).
   const reviewOn = async () => isOn(await getSetting('shorts_review'));
   const reviewer = { preHandler: app.requireRole('moderator', 'admin') };
+  await shortsImport(app, { manager, isStaff, reviewOn });
 
   const studioView = async (r) => ({
     id: r.id, title: r.title, status: r.status, views: r.views,
     submittedAt: r.submitted_at || null, reviewNote: r.review_note || null, author: r.author_name || null, duration: r.duration_s != null ? Number(r.duration_s) : null, bytes: r.bytes != null ? Number(r.bytes) : null,
     publishedAt: r.published_at, createdAt: r.created_at, updatedAt: r.updated_at, projectId: r.project_id,
-    talk: { id: r.talk_id, title: r.talk_title, visible: r.visible }, channel: speakerSlug(r.speaker),
-    videoUrl: await presignGet(r.video_key).catch(() => null),
-    posterUrl: r.poster_key ? await presignGet(r.poster_key).catch(() => null) : null,
+    talk: r.talk_id ? { id: r.talk_id, title: r.talk_title, visible: r.visible } : { id: null, title: r.title, visible: true }, standalone: !r.talk_id, channel: speakerSlug(r.speaker),
+    play: r.play, youtubeId: r.play === 'youtube' ? r.video_ref : null, sourceUrl: r.source_url || null, thumbUrl: r.thumb_url || null,
+    credit: r.author || '', description: r.description || '', categoryId: r.category_id ?? null, categoryIds: r.extra_categories || [], catalogue: r.catalogue, kidsBands: r.kids_bands || [],
+    copy: r.copy_status ? { status: r.copy_status, error: r.copy_error || null } : null, rightsAt: r.rights_confirmed_at || null, importedBy: r.imported_by_name || null,
+    videoUrl: r.play === 'youtube' || !r.video_key ? null : await presignGet(r.video_key).catch(() => null),
+    posterUrl: r.poster_key ? await presignGet(r.poster_key).catch(() => null) : (r.thumb_url || null),
   });
 
   // Mes shorts + extraits de l'éditeur dont un rendu vertical est prêt (avec le short déjà publié à partir d'eux, s'il y en a un).
@@ -194,11 +207,13 @@ export default async function shortsRoutes(app) {
     const staff = isStaff(req.user);
     const mine = staff ? null : await managedSpeakers(req.user.sub);
     const scope = '($1::boolean OR t.organizer_id = $2 OR lower(trim(t.speaker)) = ANY($3::text[]))';
+    const scopeS = `((s.talk_id IS NULL AND ($1::boolean OR s.created_by = $2)) OR (s.talk_id IS NOT NULL AND ${scope}))`;
     const args = [staff, req.user.sub, mine || []];
     const shorts = (await pool.query(
-      `SELECT s.*, t.title AS talk_title, t.speaker, ${visibleSql('t')} AS visible, u.name AS author_name
-         FROM public_shorts s JOIN talks t ON t.id = s.talk_id LEFT JOIN users u ON u.id = s.created_by
-        WHERE ${scope} ORDER BY (s.status = 'pending') DESC, s.created_at DESC LIMIT 200`, args)).rows;
+      `SELECT s.*, t.title AS talk_title, COALESCE(t.speaker, s.author) AS speaker, COALESCE(${visibleSql('t')}, true) AS visible, u.name AS author_name,
+              COALESCE((SELECT array_agg(sc_.category_id) FROM public_short_categories sc_ WHERE sc_.short_id = s.id), '{}') AS extra_categories
+         FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id LEFT JOIN users u ON u.id = s.created_by
+        WHERE ${scopeS} ORDER BY (s.status = 'pending') DESC, s.created_at DESC LIMIT 200`, args)).rows;
     let candidates = [];
     try {
       candidates = (await pool.query(
@@ -249,7 +264,23 @@ export default async function shortsRoutes(app) {
 
   app.put('/studio/shorts/:id', manager, async (req, reply) => {
     const row = await loadOwn(req, reply); if (!row) return reply;
-    const b = z.object({ title: z.string().trim().min(1).max(TITLE_MAX).optional(), status: OWN.optional() }).parse(req.body ?? {});
+    const b = z.object({
+      title: z.string().trim().min(1).max(TITLE_MAX).optional(), status: OWN.optional(),
+      // Réglages d'un short autonome (sans conférence) : classement, public, auteur.
+      categoryId: z.number().int().nullable().optional(), categoryIds: z.array(z.number().int()).max(12).optional(),
+      catalogue: z.enum(['adult', 'kids']).optional(), kidsBands: z.array(z.enum(['3-5', '6-8', '9-12', '13-15'])).max(4).optional(),
+      author: z.string().trim().max(120).optional(), description: z.string().trim().max(2000).optional(),
+    }).parse(req.body ?? {});
+    if (row.talk_id && (b.categoryId !== undefined || b.categoryIds || b.catalogue || b.kidsBands || b.author !== undefined || b.description !== undefined)) {
+      return reply.code(400).send({ error: 'Ce short suit le classement de sa vidéo : modifiez la vidéo.', code: 'has_talk' });
+    }
+    if (!row.talk_id) {
+      const ids = [...new Set([...(b.categoryId ? [b.categoryId] : []), ...(b.categoryIds || [])])];
+      if (ids.length) {
+        const ok = (await pool.query('SELECT id FROM categories WHERE id = ANY($1::int[]) AND is_active', [ids])).rows.length;
+        if (ok !== ids.length) return reply.code(400).send({ error: 'Catégorie inconnue.', code: 'bad_category' });
+      }
+    }
     // Validation activée : pour un non-relecteur, publier (ou retoucher le titre d'un short publié) = nouvelle demande de validation.
     let status = b.status ?? row.status;
     const titleChanged = b.title !== undefined && b.title !== row.title;
@@ -261,8 +292,19 @@ export default async function shortsRoutes(app) {
               submitted_at = CASE WHEN $4 THEN now() ELSE submitted_at END,
               review_note = CASE WHEN $4 THEN NULL ELSE review_note END, updated_at = now() WHERE id = $1`,
       [row.id, b.title ?? null, status, submit]);
-    if (status !== row.status) req.auditSummary = `Shorts : ${status === 'published' ? 'publié' : status === 'pending' ? 'envoyé pour validation' : row.status === 'pending' ? 'demande de validation retirée' : 'repassé en brouillon'} (« ${row.talk_title} »)`;
-    const r = (await pool.query(`SELECT s.*, t.title AS talk_title, t.speaker, ${visibleSql('t')} AS visible FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = $1`, [row.id])).rows[0];
+    if (!row.talk_id) {
+      await pool.query(
+        `UPDATE public_shorts SET category_id = CASE WHEN $2 THEN $3 ELSE category_id END, catalogue = COALESCE($4, catalogue), kids_bands = COALESCE($5::text[], kids_bands),
+                author = COALESCE($6, author), description = COALESCE($7, description) WHERE id = $1`,
+        [row.id, b.categoryId !== undefined, b.categoryId ?? null, b.catalogue ?? null, b.kidsBands ?? null, b.author ?? null, b.description ?? null]);
+      if (b.categoryIds) {
+        await pool.query('DELETE FROM public_short_categories WHERE short_id = $1', [row.id]);
+        if (b.categoryIds.length) await pool.query('INSERT INTO public_short_categories(short_id, category_id) SELECT $1, unnest($2::int[]) ON CONFLICT DO NOTHING', [row.id, b.categoryIds]);
+      }
+    }
+    if (status !== row.status) req.auditSummary = `Shorts : ${status === 'published' ? 'publié' : status === 'pending' ? 'envoyé pour validation' : row.status === 'pending' ? 'demande de validation retirée' : 'repassé en brouillon'} (« ${row.talk_title || row.title} »)`;
+    const r = (await pool.query(`SELECT s.*, t.title AS talk_title, COALESCE(t.speaker, s.author) AS speaker, COALESCE(${visibleSql('t')}, true) AS visible,
+      COALESCE((SELECT array_agg(sc_.category_id) FROM public_short_categories sc_ WHERE sc_.short_id = s.id), '{}') AS extra_categories FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id WHERE s.id = $1`, [row.id])).rows[0];
     return studioView(r);
   });
 
@@ -272,7 +314,7 @@ export default async function shortsRoutes(app) {
     if (!row.created_by || row.created_by === reviewerId) return;
     try {
       const kind = approve ? 'shorts_approved' : 'shorts_rejected';
-      const title = row.title || row.talk_title;
+      const title = row.title || row.talk_title || '';
       await pushToUser(row.created_by, kind, { title, note: note || '' }, '/studio/shorts', app.log);
       if (await smtpConf()) await enqueueForUser(pool, row.created_by, kind, { title, note: note || '', path: '/studio/shorts' }, `short-review:${row.id}:${Date.now()}`);
     } catch (err) { app.log.warn(`Shorts : notification de l'auteur impossible (${err.message})`); }
@@ -294,7 +336,7 @@ export default async function shortsRoutes(app) {
     if (b.decision === 'reject' && !b.note) return reply.code(400).send(NOTE_REQUIRED);
     const approve = b.decision === 'approve';
     await applyReview(row, approve, b.note, req.user.sub);
-    req.auditSummary = `Shorts : ${approve ? 'validé et publié' : `refusé (${b.note})`} (« ${row.talk_title} »)`;
+    req.auditSummary = `Shorts : ${approve ? 'validé et publié' : `refusé (${b.note})`} (« ${row.talk_title || row.title} »)`;
     return { status: approve ? 'published' : 'draft' };
   });
 
@@ -305,7 +347,7 @@ export default async function shortsRoutes(app) {
     const approve = b.decision === 'approve';
     const ids = [...new Set(b.ids)];
     const rows = (await pool.query(
-      `SELECT s.*, t.title AS talk_title FROM public_shorts s JOIN talks t ON t.id = s.talk_id WHERE s.id = ANY($1::uuid[])`, [ids])).rows;
+      `SELECT s.*, t.title AS talk_title FROM public_shorts s LEFT JOIN talks t ON t.id = s.talk_id WHERE s.id = ANY($1::uuid[])`, [ids])).rows;
     const byId = new Map(rows.map((r) => [r.id, r]));
     let done = 0; const skipped = [];
     for (const id of ids) {
@@ -339,9 +381,9 @@ export default async function shortsRoutes(app) {
   app.delete('/studio/shorts/:id', manager, async (req, reply) => {
     const row = await loadOwn(req, reply); if (!row) return reply;
     await pool.query('DELETE FROM public_shorts WHERE id = $1', [row.id]);
-    await deleteObject(row.video_key).catch((e) => app.log.warn(`Shorts : fichier non effacé (${e.message})`));
+    if (row.video_key) await deleteObject(row.video_key).catch((e) => app.log.warn(`Shorts : fichier non effacé (${e.message})`));
     if (row.poster_key) await deleteObject(row.poster_key).catch(() => {});
-    req.auditSummary = `Shorts : supprimé (« ${row.talk_title} »)`;
+    req.auditSummary = `Shorts : supprimé (« ${row.talk_title || row.title} »)`;
     return { deleted: true };
   });
 }

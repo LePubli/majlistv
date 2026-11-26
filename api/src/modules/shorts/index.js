@@ -8,7 +8,7 @@ export default async function register(app, ctx) {
   ctx.on('talk.deleting', async ({ talkId }) => {
     const { rows } = await pool.query('SELECT video_key, poster_key FROM public_shorts WHERE talk_id = $1', [talkId]);
     for (const r of rows) {
-      await deleteObject(r.video_key).catch((e) => app.log.warn(`Shorts : fichier non effacé (${e.message})`));
+      if (r.video_key) await deleteObject(r.video_key).catch((e) => app.log.warn(`Shorts : fichier non effacé (${e.message})`));
       if (r.poster_key) await deleteObject(r.poster_key).catch(() => {});
     }
   });

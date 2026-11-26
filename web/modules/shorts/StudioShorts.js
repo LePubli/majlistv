@@ -71,7 +71,7 @@ export default function StudioShorts() {
     const msgEl = msg && <p className={msg.err ? 'error small' : 'sd-note'} role={msg.err ? 'alert' : 'status'}>{msg.text}</p>;
     return (
       <main className="studio-page sh-studio">
-        <BmPage title={t('shrSdNav')} sub={t('shrStudioIntro')} actions={<BmBtn primary={false} href="/studio/editor">{t('shrOpenEditor')}</BmBtn>}>
+        <BmPage title={t('shrSdNav')} sub={t('shrStudioIntro')} actions={<><BmBtn primary={false} href="/studio/shorts/import">{t('shiTitle')}</BmBtn><BmBtn primary={false} href="/studio/editor">{t('shrOpenEditor')}</BmBtn></>}>
           <BmMetrics cols={d?.review ? 'four' : 'three'} items={d ? [
             { icon: 'smartphone', label: t('shrMine'), value: shorts.length },
             ...(d.review ? [{ icon: 'clock', tone: pending.length ? 'amber' : 'green', label: t('shrToReview'), value: pending.length }] : []),
@@ -150,6 +150,7 @@ export default function StudioShorts() {
       <nav className="db-crumbs meta" aria-label={t('dbCrumbs')}><Link href="/studio">{t('dbStudio')}</Link> / <span>{t('shrSdNav')}</span></nav>
       <div className="studio-head"><h1 className="studio-title">{t('shrSdNav')}</h1></div>
       <p className="meta">{t('shrStudioIntro')}</p>
+      <p><Link href="/studio/shorts/import" className="btn">{t('shiTitle')}</Link></p>
       {msg && <p className={msg.err ? 'error small' : 'sd-note'} role={msg.err ? 'alert' : 'status'}>{msg.text}</p>}
       {!d && !msg && <p className="meta">{t('shrLoading')}</p>}
 
