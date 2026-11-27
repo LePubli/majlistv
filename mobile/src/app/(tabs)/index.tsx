@@ -18,7 +18,7 @@ import { mergeMyList } from '@/lib/mylist';
 import { colors } from '@/lib/theme';
 import { Button, ErrorBox, Loading, Panel, Txt, screenStyle } from '@/components/ui';
 import { Hero } from '@/components/Hero';
-import { Rail } from '@/components/Rail';
+import { Rail, railSizeAt } from '@/components/Rail';
 import { CollectionCard } from '@/components/CollectionCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
@@ -99,7 +99,8 @@ export default function HomeScreen() {
                 badge={r.forYou ? `★ ${t('forYou')}` : null}
                 items={r.talks ?? []}
                 onSeeAll={r.categoryId && (r.total ?? 0) > (r.talks?.length ?? 0) ? () => router.navigate({ pathname: '/talks', params: { cat: String(r.categoryId) } }) : undefined}
-                render={(x, w) => <TalkCard talk={x} width={w} />}
+                size={railSizeAt(i)}
+                render={(x, w, sz) => <TalkCard talk={x} width={w} variant={sz} />}
               />
             )}
             {i === 0 ? <KidsBand data={kids.data} /> : null}

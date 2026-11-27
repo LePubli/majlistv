@@ -9,13 +9,14 @@ import type { Card } from '@/lib/types';
 import { colors, gradientFor, radius } from '@/lib/theme';
 import { LEVEL_COLOR, levelLabel, minutesLabel, progressOf, subLine, thumbOf } from '@/lib/media';
 import { useSession } from '@/lib/session';
+import { useFormatName } from '@/lib/formats';
 import { Txt } from './ui';
 
-export function Poster({ talk, radiusPx = radius.thumb, children }: { talk: Pick<Card, 'id' | 'posterUrl' | 'source' | 'video_ref'>; radiusPx?: number; children?: React.ReactNode }) {
+export function Poster({ talk, radiusPx = radius.thumb, ratio = 16 / 9, children }: { talk: Pick<Card, 'id' | 'posterUrl' | 'source' | 'video_ref'>; radiusPx?: number; ratio?: number; children?: React.ReactNode }) {
   const g = gradientFor(talk.id);
   const uri = thumbOf(talk);
   return (
-    <View style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: radiusPx, overflow: 'hidden', backgroundColor: colors.panel, borderWidth: radiusPx ? 1 : 0, borderColor: colors.borderSoft }}>
+    <View style={{ width: '100%', aspectRatio: ratio, borderRadius: radiusPx, overflow: 'hidden', backgroundColor: colors.panel, borderWidth: radiusPx ? 1 : 0, borderColor: colors.borderSoft }}>
       <LinearGradient colors={g} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', inset: 0 }} />
       {uri ? <Image source={{ uri }} style={{ position: 'absolute', inset: 0 }} contentFit="cover" transition={150} /> : null}
       {children}
@@ -27,21 +28,43 @@ export function openTalk(id: string, quiz = false) {
   router.push({ pathname: '/talk/[id]', params: quiz ? { id, quiz: '1' } : { id } });
 }
 
-export function Badge({ label, premium, accent }: { label: string; premium?: boolean; accent?: boolean }) {
+export function Badge({ label, premium, accent, top = 8 }: { label: string; premium?: boolean; accent?: boolean; top?: number }) {
   const gold = premium || accent;
   return (
-    <View style={{ position: 'absolute', start: 8, top: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: gold ? colors.gold : 'rgba(0,0,0,0.67)' }}>
+    <View style={{ position: 'absolute', start: 8, top, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: gold ? colors.gold : 'rgba(0,0,0,0.67)' }}>
       <Txt weight={gold ? 'bold' : 'medium'} size={11} color={gold ? colors.onGold : colors.text}>{label}</Txt>
     </View>
   );
 }
 
-export function TalkCard({ talk, width, progress }: { talk: Card; width?: number; progress?: number }) {
+/** Pastille ronde du format (Conférence, Cours…), en haut à gauche de la vignette. */
+export function FormatPill({ label }: { label: string }) {
+  if (!label) return null;
+  return (
+    <View style={{ position: 'absolute', start: 8, top: 8, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.62)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+      <Txt weight="bold" size={11}>{label}</Txt>
+    </View>
+  );
+}
+
+/** Durée « mm:ss » ou « h:mm:ss » pour la pastille en haut à droite. */
+export function clock(seconds: number | null | undefined): string {
+  const s = Math.max(0, Math.round(seconds ?? 0));
+  if (!s) return '';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${two(m)}:${two(r)}` : `${m}:${two(r)}`;
+}
+
+/** variant : 'wide' (16/9, défaut), 'big' (16/9 plus grande) ou 'tall' (affiche 2/3) — comme les rangées du site. */
+export function TalkCard({ talk, width, progress, variant = 'wide' }: { talk: Card; width?: number; progress?: number; variant?: 'wide' | 'tall' | 'big' }) {
   const { t, config } = useSession();
+  const fmtName = useFormatName();
+  const fmt = on_(config, 'format') ? fmtName(talk.format) : '';
   const show = config?.cards?.show ?? {};
   const on = (k: string) => show[k] !== false;
   const pct = progress ?? progressOf(talk);
-  const mins = minutesLabel(talk.durationSeconds, t);
+  const mins = clock(talk.durationSeconds);
   const sub = subLine(talk, t, { speaker: on('speaker'), category: on('category') });
   const lvl = levelLabel(talk.level, t);
   const badge = talk.quizState
@@ -54,10 +77,11 @@ export function TalkCard({ talk, width, progress }: { talk: Card; width?: number
       onPress={() => openTalk(talk.id, !!talk.quizState && talk.quizState !== 'review')}
       style={({ pressed }) => ({ width: width ?? '100%', gap: 6, opacity: pressed ? 0.85 : 1 })}
     >
-      <Poster talk={talk}>
-        {badge ? <Badge label={badge} premium={!talk.quizState && !talk.nextUp && talk.access === 'premium'} accent={!!talk.quizState || !!talk.nextUp} /> : null}
+      <Poster talk={talk} ratio={variant === 'tall' ? 2 / 3 : 16 / 9} radiusPx={radius.card}>
+        <FormatPill label={fmt} />
+        {badge ? <Badge top={fmt ? 34 : 8} label={badge} premium={!talk.quizState && !talk.nextUp && talk.access === 'premium'} accent={!!talk.quizState || !!talk.nextUp} /> : null}
         {on('duration') && mins ? (
-          <View style={{ position: 'absolute', end: 8, bottom: pct ? 10 : 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.75)' }}>
+          <View style={{ position: 'absolute', end: 8, top: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.7)' }}>
             <Txt weight="medium" size={11}>{mins}</Txt>
           </View>
         ) : null}
@@ -67,7 +91,7 @@ export function TalkCard({ talk, width, progress }: { talk: Card; width?: number
           </View>
         ) : null}
       </Poster>
-      <Txt weight="bold" size={14} numberOfLines={2} style={{ marginTop: 2 }}>{talk.title}</Txt>
+      <Txt weight="extrabold" size={variant === 'big' ? 16 : 14} color="#fff" numberOfLines={2} style={{ marginTop: 2 }}>{talk.title}</Txt>
       {(lvl || sub) ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
           {lvl && talk.level ? (
@@ -81,3 +105,5 @@ export function TalkCard({ talk, width, progress }: { talk: Card; width?: number
     </Pressable>
   );
 }
+
+function on_(config: { cards?: { show?: Record<string, boolean> } } | null | undefined, k: string) { return (config?.cards?.show ?? {})[k] !== false; }
