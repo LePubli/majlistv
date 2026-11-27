@@ -155,6 +155,7 @@ export default function ImportPanel({ cats, onImported, presetUrl = '' }) {
                         {e.already && <span className="imp-done">{t('importAlready')}</span>}
                       </span>
                       <span className="imp-title">{e.title}</span>
+                      {e.playlist ? <span className="imp-pl">{e.playlist}</span> : null}
                     </label>
                     {o.categoryMode === 'each' && !e.already && (
                       <div className="imp-cat">

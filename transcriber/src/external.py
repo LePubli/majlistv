@@ -491,7 +491,7 @@ def list_videos(url, opts, limit, lang="fr"):
         if info.get("_type") not in ("playlist", "multi_video"):
             one = _entry(info)
             return (info.get("title") or "", [one] if one else [])
-        entries, raw, skipped = [], 0, {}
+        entries, raw, skipped, subs = [], 0, {}, []
         for e in info.get("entries") or []:
             if not e:
                 skipped["vide"] = skipped.get("vide", 0) + 1
@@ -499,6 +499,12 @@ def list_videos(url, opts, limit, lang="fr"):
             raw += 1
             if e.get("_type") == "playlist" or (e.get("ie_key") == "YoutubeTab" and not YOUTUBE_ID.match(str(e.get("id") or ""))):
                 skipped["sous-liste"] = skipped.get("sous-liste", 0) + 1
+                sid = str(e.get("id") or "")
+                su = e.get("url") or e.get("webpage_url") or ""
+                if not re.match(r"^https?://(www\.|m\.)?youtube\.com/playlist\?list=", su) and re.match(r"^(PL|UU|OL|FL)[\w-]{10,}$", sid):
+                    su = "https://www.youtube.com/playlist?list=" + sid
+                if su and "playlist?list=" in su:
+                    subs.append(((e.get("title") or "").strip()[:120], su))
                 continue  # sous-onglet (Shorts, Directs…) : ignoré
             item = _entry(e)
             if not item:
@@ -508,6 +514,25 @@ def list_videos(url, opts, limit, lang="fr"):
                 entries.append(item)
             if len(entries) >= limit:
                 break
+        if not entries and subs:
+            # Page « Playlists » d'une chaîne : on ouvre chaque playlist (30 au plus) et on regroupe leurs vidéos, chacune notée avec sa playlist.
+            for sub_title, sub_url in subs[:30]:
+                try:
+                    sub = fetch_info(sub_url, o)
+                except Blocked:
+                    raise
+                except Exception:  # noqa: BLE001
+                    continue  # une playlist privée ou supprimée n'empêche pas les autres
+                for e in sub.get("entries") or []:
+                    item = _entry(e) if e else None
+                    if item and all(x["id"] != item["id"] for x in entries):
+                        if sub_title:
+                            item["playlist"] = sub_title
+                        entries.append(item)
+                        if len(entries) >= limit:
+                            break
+                if len(entries) >= limit:
+                    break
         if entries:
             title = info.get("title") or info.get("channel") or info.get("uploader") or ""
             return (re.sub(r"\s+-\s+Videos$", "", title), entries)

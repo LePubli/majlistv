@@ -4311,6 +4311,7 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .imp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .imp-dur { position: absolute; inset-inline-end: 6px; bottom: 6px; padding: 1px 6px; border-radius: 6px; font-size: .75rem; background: rgba(0, 0, 0, .75); color: #fff; }
 .imp-done { position: absolute; inset-inline-start: 6px; bottom: 6px; padding: 1px 6px; border-radius: 6px; font-size: .75rem; background: rgba(0, 0, 0, .75); color: #fff; }
+.imp-card .imp-pl { font-size: .75rem; color: var(--accent, #d4a537); overflow-wrap: anywhere; }
 .imp-card .imp-title { white-space: normal; text-overflow: clip; font-size: .9rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .imp-cat { border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .imp-more { text-align: center; }

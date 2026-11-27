@@ -164,5 +164,20 @@ try:
 except external.EmptyList as err:
     ok("aucune vidéo utilisable" in str(err) and "sous-liste" in str(err), "liste vide : message clair avec le détail")
 external.fetch_info = _orig
+
+def _fake2(url, o):
+    if "playlists" in url:
+        return {"_type": "playlist", "title": "Chaîne - Playlists", "entries": [
+            {"id": "PLaaaaaaaaaaaa", "_type": "url", "ie_key": "YoutubeTab", "title": "Série A", "url": "https://www.youtube.com/playlist?list=PLaaaaaaaaaaaa"},
+            {"id": "PLbbbbbbbbbbbb", "_type": "url", "ie_key": "YoutubeTab", "title": "Série B", "url": "https://www.youtube.com/playlist?list=PLbbbbbbbbbbbb"}]}
+    if "PLaaaa" in url:
+        return {"_type": "playlist", "entries": [{"id": "aaaaaaaaaa1", "ie_key": "Youtube", "title": "A1"}, {"id": "aaaaaaaaaa2", "ie_key": "Youtube", "title": "A2"}]}
+    if "PLbbbb" in url:
+        raise RuntimeError("playlist privée")
+    return {"_type": "playlist", "entries": []}
+external.fetch_info = _fake2
+t, ents = external.list_videos("https://www.youtube.com/@x/playlists", {}, 10)
+ok([e["id"] for e in ents] == ["aaaaaaaaaa1", "aaaaaaaaaa2"] and ents[0]["playlist"] == "Série A", "onglet Playlists d'une chaîne : vidéos regroupées, playlist privée ignorée")
+external.fetch_info = _orig
 print("TOUT OK" if not fails else f"{fails} ÉCHEC(S)")
 sys.exit(1 if fails else 0)
