@@ -3,7 +3,7 @@
 // Chaque choix vit dans l'adresse (/catalogue?lang=fr&duration=short) : on peut copier le lien, revenir en arrière, recharger.
 // Les langues proposées viennent de GET /talks/filters (seulement celles qui existent vraiment). « Ma progression » n'est
 // proposé qu'aux personnes connectées. Un bouton efface tous les filtres de cette phase (le format, le thème et la recherche restent).
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from './Providers';
 import { LEVELS, levelLabel } from '../lib/levels';
@@ -18,7 +18,7 @@ const DURATIONS = [['short', 'fltShort'], ['medium', 'fltMedium'], ['long', 'flt
 const PROGRESS = [['todo', 'fltTodo'], ['started', 'fltStarted'], ['done', 'fltDone']];
 const RESOURCES = [['quiz', 'fltResQuiz'], ['book', 'fltResBook'], ['any', 'fltResAny']];
 
-export default function TalkFilters() {
+export default function TalkFilters({ floating = false }) {
   const { t, call, user, locale } = useApp();
   const sp = useSearchParams();
   const router = useRouter();
@@ -29,8 +29,17 @@ export default function TalkFilters() {
   const n = Object.keys(active).length;
   // Le bloc reste ouvert quand la page se reconstruit (ex. « effacer » ramène au Catalogue d'accueil) : mémorisé le temps de la visite.
   const [open, setOpen] = useState(n > 0);
-  useEffect(() => { try { if (sessionStorage.getItem('tf-open') === '1') setOpen(true); } catch { /* navigation privée : pas grave */ } }, []);
-  const toggle = () => { const v = !open; setOpen(v); try { sessionStorage.setItem('tf-open', v ? '1' : '0'); } catch { /* idem */ } };
+  useEffect(() => { if (floating) return; try { if (sessionStorage.getItem('tf-open') === '1') setOpen(true); } catch { /* navigation privée : pas grave */ } }, []);
+  const rootRef = useRef(null);
+  // Panneau flottant (Catalogue Premium) : se ferme d'un clic à côté ou avec Échap.
+  useEffect(() => {
+    if (!floating || !open) return undefined;
+    const out = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', out); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', out); document.removeEventListener('keydown', esc); };
+  }, [floating, open]);
+  const toggle = () => { const v = !open; setOpen(v); if (floating) return; try { sessionStorage.setItem('tf-open', v ? '1' : '0'); } catch { /* idem */ } };
   const names = useMemo(() => {
     try { return new Intl.DisplayNames([locale || 'fr'], { type: 'language' }); } catch { return null; }
   }, [locale]);
@@ -58,7 +67,7 @@ export default function TalkFilters() {
     </label>
   );
   return (
-    <div className="tf">
+    <div className="tf" ref={rootRef}>
       <button type="button" className={n ? 'tf-toggle on' : 'tf-toggle'} aria-expanded={open} onClick={toggle}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
         {t('fltTitle')}{n > 0 && <span className="tf-count">{t('fltCount').replace('{n}', n)}</span>}

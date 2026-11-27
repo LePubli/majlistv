@@ -143,7 +143,13 @@ export function useCatalogueState(series = false, toolbar = false) {
   const [railsDone, setRailsDone] = useState(false);
   const busy = useRef(false);
   const railMode = !series && !cur.q && !cur.cat && !hasExtras && cur.sort === 'recent'; // un format choisi reste en rangées (une par thème)
-  const themeRoots = useMemo(() => roots.filter((c) => (counts[c.id] || 0) > 0), [roots, counts]);
+  // Tout le contenu est rangé par thème : d'abord les grands thèmes qui ont des vidéos, puis les « autres thèmes » (sous-thèmes), 40 au plus.
+  const themeRoots = useMemo(() => {
+    const main = roots.filter((c) => (counts[c.id] || 0) > 0);
+    const ids = new Set(main.map((c) => c.id));
+    const sub = (allCats || []).filter((c) => c.parentId != null && ids.has(c.parentId)).slice(0, 40).map((c) => ({ ...c, other: true }));
+    return [...main, ...sub];
+  }, [roots, counts, allCats]);
   const imgs = useShuffledImages();
   useEffect(() => { setRails([]); setRailIdx(0); setRailsDone(false); busy.current = false; }, [railMode, cur.format, facets === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const loadRails = useCallback(async () => {
@@ -247,7 +253,7 @@ export function CatToolbarSection() {
         )}
         <span className="pm-cat-sep" aria-hidden="true" />
         <div className="pm-cat-tools">
-          {!series && <div className="pm-cat-filters"><TalkFilters /></div>}
+          {!series && <div className="pm-cat-filters"><TalkFilters floating={toolbar} /></div>}
           <label className="pm-cat-sort"><span>{t('ctSortShort')}</span> <select value={cur.sort} onChange={(e) => go({ sort: e.target.value })} aria-label={t('pmSortBy')}>
             <option value="recent">{t('pmSortRecent')}</option>
             <option value="alpha">{t('pmSortAlpha')}</option>
@@ -264,21 +270,33 @@ export function CatToolbarSection() {
   );
 }
 
+/** Apparition douce : le bloc se fond et glisse légèrement quand il entre à l'écran. */
+function Reveal({ children }) {
+  const ref = useRef(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setOn(true); return undefined; }
+    const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) { setOn(true); io.disconnect(); } }, { rootMargin: '0px 0px -8% 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return <div ref={ref} className={on ? 'pm-reveal pm-in' : 'pm-reveal'}>{children}</div>;
+}
+
+const SIZES = ['', 'tall', 'big']; // vignettes 16:9 · affiches 2:3 · grandes vignettes 16:9 — en alternance, comme l'accueil
 export function CatRailsSection() {
-  const { railMode, rails, base, cur, talkCard, hrefOf, t, imgs } = useCat();
+  const { railMode, rails, base, cur, talkCard, hrefOf, t } = useCat();
   if (!railMode || !rails.length) return null;
-  // Comme l'accueil : une rangée en vignettes 16:9, la suivante en affiches 2:3, et ainsi de suite ; une « sélection » (collection) après la 3e et la 6e.
-  // Chaque thème a son bloc, avec sa propre image d'ambiance (tirée au hasard à chaque visite).
   const out = [];
   rails.forEach(({ c, list }, i) => {
-    const rail = (
-      <OttRail key={c ? c.id : 'discover'} title={c ? c.name : t('ctDiscover')} href={c ? hrefOf(base, cur, { cat: String(c.id) }) : undefined} tall={i % 2 === 1}>
-        {list.map(talkCard)}
-      </OttRail>
-    );
-    out.push(c
-      ? <div key={c.id} className="pm-catblock" style={{ '--blk': `url("${imgs[(i + 1) % imgs.length]}")` }}><span className="pm-catblock-ico" aria-hidden="true"><Glyph name={chipGlyph(c.name)} /></span>{rail}</div>
-      : rail);
+    out.push(
+      <Reveal key={c ? c.id : 'discover'}>
+        <OttRail title={c ? c.name : t('ctDiscover')} href={c ? hrefOf(base, cur, { cat: String(c.id) }) : undefined} size={SIZES[i % 3]}>
+          {list.map(talkCard)}
+        </OttRail>
+      </Reveal>);
+    // Une « sélection » (collection) après la 3e et la 6e rangée, avec le même style que l'accueil.
     if (i === 2) out.push(<div key="spot1" className="pm-ins"><PmSpotSection n={1} /></div>);
     if (i === 5) out.push(<div key="spot2" className="pm-ins"><PmSpotSection n={2} /></div>);
   });
@@ -302,7 +320,7 @@ function InfiniteSentinel({ onMore, busy }) {
 export function CatResultsSection() {
   const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf, toolbar, view, railsDone, loadRails } = useCat();
   // Catalogue en rangées : les rangées se chargent au défilement ; la grille complète suit quand elles sont toutes affichées.
-  if (toolbar && railMode && !railsDone) return <InfiniteSentinel onMore={loadRails} busy />;
+  if (toolbar && railMode) return railsDone ? null : <InfiniteSentinel onMore={loadRails} busy />;
   const hasMore = !series && items && total != null && total > items.length;
   return (
     <section className="pm-cat-all" aria-busy={shown === null}>

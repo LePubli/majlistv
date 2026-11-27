@@ -59,11 +59,11 @@ export function OttCard({ x, href, badge, pct, kind, done, time = false }) {
 }
 
 /** Rangée : titre, lien « Tout voir ›» et ligne de cartes (défilement horizontal sur téléphone). tall : affiches verticales (2:3) au lieu des vignettes 16:9. */
-export function OttRail({ title, href, children, id, tall = false }) {
+export function OttRail({ title, href, children, id, tall = false, size = '' }) {
   const { t } = useApp();
   if (!children || (Array.isArray(children) && children.length === 0)) return null;
   return (
-    <section className={tall ? 'pm-rail pm-rail-tall' : 'pm-rail'} aria-label={title}>
+    <section className={tall || size === 'tall' ? 'pm-rail pm-rail-tall' : size === 'big' ? 'pm-rail pm-rail-big' : 'pm-rail'} aria-label={title}>
       <div className="pm-rail-head">
         <h2 id={id}>{title}</h2>
         {href && <Link href={href}>{t('rowSeeAll')} <span className="pm-chev" aria-hidden="true">›</span></Link>}
