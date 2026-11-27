@@ -4343,7 +4343,7 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 
 /* 27/11 : fiche vidéo immersive — l'image de présentation de la vidéo, en grand, derrière le lecteur */
 .wb-backdrop { position: fixed; inset: 0 0 auto 0; height: min(100vh, 980px); z-index: -1; pointer-events: none; overflow: hidden; }
-.wb-backdrop::before { content: ""; position: absolute; inset: -40px; background: inherit; background-size: cover; background-position: center 25%; filter: blur(14px) saturate(1.25); transform: scale(1.06); opacity: .75; }
+.wb-backdrop::before { content: ""; position: absolute; inset: -40px; background-image: var(--wb-img); background-repeat: no-repeat; background-size: cover; background-position: center 25%; filter: blur(14px) saturate(1.25); transform: scale(1.06); opacity: .75; }
 .wb-backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, color-mix(in srgb, var(--bg, #0b0f1a) 38%, transparent) 0%, color-mix(in srgb, var(--bg, #0b0f1a) 70%, transparent) 55%, var(--bg, #0b0f1a) 100%); }
 .immersive .wb-hero { background: color-mix(in srgb, #050403 58%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: color-mix(in srgb, var(--accent, #d4a537) 35%, transparent); box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
 .immersive h1 { text-shadow: 0 2px 24px rgba(0, 0, 0, .55); }
