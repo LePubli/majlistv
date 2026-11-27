@@ -93,7 +93,7 @@ export default function ImportShorts() {
       ids: sel, mode, rights, categoryId: opt.categoryId ? Number(opt.categoryId) : null, categoryIds: opt.extra, catalogue: opt.catalogue,
       kidsBands: opt.catalogue === 'kids' ? opt.bands : [], author: opt.author, status: opt.status }) });
     setBusy('');
-    if (!r.ok) { setMsg({ err: true, text: r.data?.error || t('dbError') }); return; }
+    if (!r.ok) { setMsg({ err: true, text: (r.data?.error || t('dbError')) + (r.data?.details?.length ? ` (${r.data.details.slice(0, 2).map((d) => `${(d.path || []).join('.')} : ${d.message}`).join(' ; ')})` : '') }); return; }
     setMsg({ text: t('shiStarted').replace('{n}', r.data.created) + (r.data.skipped?.length ? ` ${t('shiSkipped').replace('{n}', r.data.skipped.length)}` : '') });
     setJob(null); setSel([]); setRights(false); setUrl(''); loadMine();
   };

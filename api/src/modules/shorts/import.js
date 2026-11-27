@@ -12,7 +12,7 @@ import { getSetting, isOn } from '../../settings.js';
 
 export const RIGHTS_COPY = 'Je certifie détenir les droits sur ces vidéos, ou disposer d\'une licence ou d\'une autorisation m\'autorisant à les copier et à les présenter sur cette plateforme. Je comprends que je suis responsable de ce contenu.';
 export const RIGHTS_PLAY = 'Je certifie disposer de l\'autorisation de présenter ces vidéos sur cette plateforme (lecture depuis YouTube, sans copie). Je comprends que je suis responsable de ce contenu.';
-const MAX_PER_START = 100;
+const MAX_PER_START = 500; // au moins import_max_videos (200 par défaut) : « Tout cocher » ne doit jamais dépasser
 
 const urlSchema = z.string().trim().url().max(500).refine((u) => {
   try { const x = new URL(u); return x.protocol === 'https:' && /(^|\.)(youtube\.com|youtu\.be)$/i.test(x.hostname); } catch { return false; }
