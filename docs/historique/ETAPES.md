@@ -10772,3 +10772,9 @@ Résultat attendu du contrôle : 0 échec.
 - Modules : series 1.2.0 (migration 002), collections 1.1.0 (migration 001).
 - Testé : `api/tests/test_series_collection.py` (nouveau), `test_series.py`, `test_collections.py`, `web/tests/test_sortable.mjs`, essais navigateur 1440 / 390 px (glisser-déposer à la souris, Tout ajouter, tri, position, envoi de couverture, case cochée, Tout sélectionner).
 - Non testé : glisser-déposer au doigt sur un vrai téléphone ; rendu réel sur le VPS. `test_showcase.py` échoue sur ce poste (quiz « Répondez à toutes les questions », données de test résiduelles) sans lien avec ces changements.
+
+
+## Studio : « Nouvelle vidéo » et imports alignés sur la fiche vidéo (2026-11-27)
+- « Nouvelle vidéo » (`/studio/new`, tous les liens et fichiers) utilisait encore le mur de pastilles de catégories : elle reprend maintenant `CategoryPicker` (catégorie principale + « Autres catégories »), les tranches Mejliss Kids (+ « visible aussi chez les adultes ») et une **image de couverture** facultative (envoyée juste après la création, modifiable dans la fiche).
+- `ImportPanel` (import d'une chaîne / playlist) et `BulkEdit` (modification en lot) : liste déroulante de ~280 catégories remplacée par `CategoryPicker`.
+- Testé : `web/tests/test_new_video_form.mjs`, essai navigateur 1440 / 390 px (création d'une vidéo avec couverture : image bien enregistrée). Non fait : catégories supplémentaires dans l'import de chaîne (l'API n'en accepte qu'une).

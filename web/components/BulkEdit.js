@@ -1,6 +1,7 @@
 'use client';
 // Studio → modification en lot (étape 27.1) : on coche des vidéos, on choisit les champs à changer, on applique.
 // Seuls les champs cochés « modifier » sont envoyés ; tout est appliqué en une seule fois (tout ou rien).
+import CategoryPicker from './CategoryPicker';
 import { useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import { BANDS, bandLabel } from '../lib/kids';
@@ -56,10 +57,7 @@ export default function BulkEdit({ ids, onDone, onCancel }) {
         <select value={v.access} onChange={(e) => set('access', e.target.value)}><option value="free">{t('free')}</option><option value="premium">{t('premium')}</option></select>
       ))}
       {row('categoryId', t('bkCategory'), (
-        <select value={v.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-          <option value="">{t('bkNoCategory')}</option>
-          {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
-        </select>
+        <CategoryPicker cats={cats} mode="single" value={v.categoryId} onChange={(x) => set('categoryId', x)} t={t} label={t('bkCategory')} />
       ))}
       {row('formatId', t('fmtLabel'), (
         <select value={v.formatId} onChange={(e) => set('formatId', e.target.value)}>

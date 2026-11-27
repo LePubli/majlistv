@@ -11,6 +11,9 @@ import ChannelPicker from '../../../components/ChannelPicker';
 import { uploadFile } from '../../../lib/upload';
 import { langName } from '../../../components/Transcript';
 import ImportPanel from '../../../components/ImportPanel';
+import CategoryPicker from '../../../components/CategoryPicker';
+import { resizeTo } from '../../../components/ImageSlot';
+import { BANDS, bandLabel } from '../../../lib/kids';
 import { LEVELS, levelLabel } from '../../../lib/levels';
 import { Page as BmPage, Btn as BmBtn, Panel as BmPanel, Cols as BmCols, Hint as BmHint, I as BmI, c as bmc } from '../../../components/backoffice/Kit';
 
@@ -79,7 +82,10 @@ export default function NewTalk() {
   const [cats, setCats] = useState([]);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', formatId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
+  const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', extraCategoryIds: [], kidsBands: [], showAdults: true, formatId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
+  const [cover, setCover] = useState(null); // image de couverture choisie ici (data-URL), envoyée juste après la création
+  const [coverMsg, setCoverMsg] = useState('');
+  const coverInput = useRef(null);
   const token = useRef(0);
   const infoToken = useRef(0);
   const fileInput = useRef(null);
@@ -140,17 +146,66 @@ export default function NewTalk() {
     setErr('');
     if (wantImport && !f.rightsConfirmed) { setErr(t('impRightsNeeded')); return; }
     setSaving(true);
-    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, formatId: f.formatId ? Number(f.formatId) : undefined, level: f.level || undefined };
+    const body = { ...f, publication, categoryId: f.categoryId ? Number(f.categoryId) : undefined, formatId: f.formatId ? Number(f.formatId) : undefined, level: f.level || undefined, extraCategoryIds: f.extraCategoryIds.filter((id) => String(id) !== String(f.categoryId)), kidsBands: f.kidsBands, showAdults: f.showAdults };
     body.translateTo = canTranslate ? f.translateTo.filter((c) => c !== base(f.language)) : [];
     if (mode === 'file') { body.uploadId = up.id; delete body.rightsConfirmed; } else { body.videoUrl = link.trim(); if (wantImport) { body.importVideo = true; body.importAudio = frAudio ? 'fr' : 'original'; } }
     const r = await call('/talks', { method: 'POST', body: JSON.stringify(body) });
-    if (r.ok) { router.push(`/studio/${r.data.id}`); return; }
+    if (r.ok) {
+      if (cover) await call(`/talks/${r.data.id}/poster`, { method: 'POST', body: JSON.stringify({ image: cover }) }); // un échec ici n'empêche pas la création : l'image se rechoisit dans la fiche
+      router.push(`/studio/${r.data.id}`); return;
+    }
     setSaving(false);
     setErr(r.data?.code === 'duplicate' || (r.status === 409 && !r.data?.code) ? t('errDuplicate') : ['archive', 'private_url', 'bad_url', 'storage_full', 'feature_off', 'rights_required'].includes(r.data?.code) ? r.data.error : t('errVideo'));
   };
 
+  const pickCover = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setCoverMsg(t('thumbBad')); return; }
+    try { setCover(await resizeTo(file, 'poster')); setCoverMsg(''); } catch { setCoverMsg(t('thumbBad')); }
+  };
+  // Catégorie principale + catégories supplémentaires + tranches Kids + image de couverture : mêmes sélecteurs que la fiche d'une vidéo.
+  const catFields = (
+    <>
+      <div className="fld" role="group" aria-label={t('category')}>
+        <span>{t('category')}</span>
+        <CategoryPicker cats={cats} mode="single" value={f.categoryId} onChange={(v) => patch({ categoryId: v })} t={t} label={t('category')} />
+        <span className="meta small">{t('txMainHelp')}</span>
+      </div>
+      <div className="fld" role="group" aria-label={t('txExtra')}>
+        <span>{t('txExtra')}</span>
+        <CategoryPicker cats={cats} mode="multi" max={20} value={f.extraCategoryIds} exclude={f.categoryId} onChange={(v) => patch({ extraCategoryIds: v })} t={t} label={t('txExtra')} />
+        <span className="meta small">{t('txExtraHelp')}</span>
+      </div>
+      <div className="fld" role="group" aria-label={t('kdStudioBand')}>
+        <span>{t('kdStudioBand')}</span>
+        <div className="pills">
+          <button type="button" aria-pressed={f.kidsBands.length === 0} className={f.kidsBands.length === 0 ? 'pill on' : 'pill'} onClick={() => patch({ kidsBands: [], showAdults: true })}>{t('kdStudioNone')}</button>
+          {BANDS.map((b) => {
+            const on = f.kidsBands.includes(b);
+            return <button key={b} type="button" className={on ? 'pill on' : 'pill'} aria-pressed={on}
+              onClick={() => patch({ kidsBands: BANDS.filter((x) => (x === b ? !on : f.kidsBands.includes(x))), ...(f.kidsBands.length === 0 && !on ? { showAdults: false } : {}) })}>{on ? '✓ ' : ''}{bandLabel(b, t)}</button>;
+          })}
+        </div>
+        <span className="meta small">{t('kdStudioHelp')}</span>
+        {f.kidsBands.length > 0 && <label className="kd-check"><input type="checkbox" role="switch" checked={f.showAdults} onChange={(e) => patch({ showAdults: e.target.checked })} /> <span>{t('txShowAdults')}</span></label>}
+      </div>
+      <div className="fld" role="group" aria-label={t('nwCover')}>
+        <span>{t('nwCover')}</span>
+        <span className="meta small">{t('nwCoverHelp')}</span>
+        {cover && <div className="img-slot"><div className="img-prev poster" style={{ backgroundImage: `url(${cover})` }} role="img" aria-label={t('nwCover')} /></div>}
+        <div className="img-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn ghost" onClick={() => coverInput.current?.click()}>{cover ? t('srImageChange') : t('thumbUpload')}</button>
+          {cover && <button type="button" className="btn ghost" onClick={() => setCover(null)}>{t('srImageRemove')}</button>}
+          <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pickCover} />
+        </div>
+        {coverMsg && <p className="error" role="alert">{coverMsg}</p>}
+      </div>
+    </>
+  );
+
   // Aperçu de la carte (même rendu que le catalogue).
-  const thumb = mode === 'file' ? frame : parsed?.source === 'youtube' ? `https://i.ytimg.com/vi/${parsed.ref}/hqdefault.jpg` : null;
+  const thumb = cover || (mode === 'file' ? frame : parsed?.source === 'youtube' ? `https://i.ytimg.com/vi/${parsed.ref}/hqdefault.jpg` : null);
   const catName = cats.find((c) => String(c.id) === String(f.categoryId))?.fullName;
   const sendingLabel = t('nwSending').replace('{n}', Math.round(up.pct * 100));
 
@@ -244,15 +299,7 @@ export default function NewTalk() {
               </div>
             </div>
 
-            <div className="fld" role="group" aria-label={t('category')}>
-              <span>{t('category')}</span>
-              <div className="pills">
-                <button type="button" aria-pressed={!f.categoryId} className={!f.categoryId ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: '' })}>{t('nwNoCat')}</button>
-                {cats.map((c) => (
-                  <button key={c.id} type="button" aria-pressed={String(f.categoryId) === String(c.id)} className={String(f.categoryId) === String(c.id) ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: String(c.id) })}>{c.fullName || c.name}</button>
-                ))}
-              </div>
-            </div>
+            {catFields}
 
             <div className="fld" role="group" aria-label={t('nwAccessQ')}>
               <span>{t('nwAccessQ')}</span>
@@ -419,15 +466,7 @@ export default function NewTalk() {
               </div>
             </div>
 
-            <div className="fld" role="group" aria-label={t('category')}>
-              <span>{t('category')}</span>
-              <div className="pills">
-                <button type="button" aria-pressed={!f.categoryId} className={!f.categoryId ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: '' })}>{t('nwNoCat')}</button>
-                {cats.map((c) => (
-                  <button key={c.id} type="button" aria-pressed={String(f.categoryId) === String(c.id)} className={String(f.categoryId) === String(c.id) ? 'pill on' : 'pill'} onClick={() => patch({ categoryId: String(c.id) })}>{c.fullName || c.name}</button>
-                ))}
-              </div>
-            </div>
+            {catFields}
 
             <div className="fld" role="group" aria-label={t('nwAccessQ')}>
               <span>{t('nwAccessQ')}</span>

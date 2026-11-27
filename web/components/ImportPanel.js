@@ -1,6 +1,7 @@
 'use client';
 // Import d'une playlist, d'une chaîne ou d'un album YouTube / Vimeo :
 // 1) analyse de l'adresse (le serveur liste les vidéos), 2) choix des vidéos et des réglages communs, 3) création.
+import CategoryPicker from './CategoryPicker';
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from './Providers';
 import ChannelPicker from './ChannelPicker';
@@ -94,12 +95,10 @@ export default function ImportPanel({ cats, onImported }) {
             <label>{t('language')}<input required pattern="[a-z]{2}(-[A-Z]{2})?" value={o.language} onChange={(e) => setO({ ...o, language: e.target.value })} /></label>
             <ChannelPicker value={o.speaker} onChange={(v) => setO({ ...o, speaker: v })} t={t} call={call} />
             <label>{t('speaker')}<input value={o.speaker} onChange={(e) => setO({ ...o, speaker: e.target.value })} /></label>
-            <label>{t('category')}
-              <select value={o.categoryId} onChange={(e) => setO({ ...o, categoryId: e.target.value })}>
-                <option value="">—</option>
-                {cats.map((c) => <option key={c.id} value={c.id}>{c.fullName || c.name}</option>)}
-              </select>
-            </label>
+            <div className="fld" role="group" aria-label={t('category')}>
+              <span>{t('category')}</span>
+              <CategoryPicker cats={cats} mode="single" value={o.categoryId} onChange={(v) => setO({ ...o, categoryId: v })} t={t} label={t('category')} />
+            </div>
             <label>{t('access')}
               <select value={o.access} onChange={(e) => setO({ ...o, access: e.target.value })}>
                 <option value="free">{t('free')}</option>
