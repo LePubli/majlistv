@@ -18,7 +18,9 @@ import { registerMedia } from '@/lib/mediaRegistry';
 import { currentChapter, nextChapterMs, nextSpeed, pickSource, prevChapterMs } from '@/lib/playback';
 import { canCast, type CastState } from '@/lib/cast';
 import { CastBridge } from '@/components/CastBridge';
-import { levelLabel, LEVEL_COLOR } from '@/lib/media';
+import { levelLabel, LEVEL_COLOR, thumbOf } from '@/lib/media';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { EmbedMessage } from '@/lib/embed';
 import type { Card, Insights, SeriesCtx, Talk } from '@/lib/types';
 import { colors, radius, veil } from '@/lib/theme';
@@ -252,6 +254,13 @@ function TalkView({ talk, atMs, onRefresh }: { talk: Talk; atMs?: number; onRefr
   return (
     <SafeAreaView style={[screenStyle, dirStyle, landscape ? { backgroundColor: '#000' } : null]} edges={landscape ? ['left', 'right'] : ['top', 'bottom']}>
       {landscape ? <StatusBar hidden /> : null}
+      {/* Fond immersif, comme le site : l'image de la vidéo, floutée, qui se fond dans le noir sous le lecteur */}
+      {!landscape && thumbOf(talk) ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, overflow: 'hidden' }}>
+          <Image source={{ uri: thumbOf(talk) as string }} blurRadius={40} contentFit="cover" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, opacity: 0.42 }} />
+          <LinearGradient colors={[veil(0.25), veil(0.82), colors.bg]} locations={[0, 0.45, 0.9]} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }} />
+        </View>
+      ) : null}
       {/* Lecteur épinglé en haut (plein écran en paysage) */}
       <View style={landscape ? { flex: 1, backgroundColor: '#000' } : { backgroundColor: '#000' }}>
         <View style={landscape ? { flex: 1, width: '100%', backgroundColor: '#000', justifyContent: 'center' } : { aspectRatio: 16 / 9, width: '100%', backgroundColor: '#000', justifyContent: 'center' }}>
