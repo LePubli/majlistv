@@ -68,7 +68,7 @@ function SeriesClassic({ initial = null, seriesId = null }) {
   const prereq = s.prerequisites || [];
   const secHero = () => (
     <>
-      <section className="series-hero" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined}>
+      <section className="series-hero" style={s.coverUrl || s.posterUrl ? { backgroundImage: `url(${s.coverUrl || s.posterUrl})` } : undefined}>
         <div className="series-hero-in">
           <p className="eyebrow">{t('seriesTag')}</p>
           <h1>{s.title}</h1>

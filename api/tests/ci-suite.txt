@@ -48,6 +48,7 @@ test_shorts_themes.py
 test_shorts_review.py
 test_shorts_import.py
 test_series_import.py
+test_series_collection.py
 test_series_seasons.mjs
 test_studio_vtt.py
 test_taxonomy.py

@@ -10762,3 +10762,13 @@ Résultat attendu du contrôle : 0 échec.
 - Un épisode sans image propre (ou archive.org, miniature générique) prend l'affiche de sa série (talkCards.js `SERIES_POSTER`/`posterOfRow`), dans les cartes d'accueil, collections, favoris, bloc « Sélection » et fiches.
 - CSP des images : archive.org autorisé.
 - Non testé : rendu réel sur le VPS ; les collections n'ont pas de champ « image » propre (le héros reprend la première vidéo).
+
+
+## Studio : recherche complète, glisser-déposer, images, série → collection (2026-11-27)
+- **Recherche** : nouvelle route `GET /studio/collections-search` (toutes les vidéos, même pas encore publiées, titre ou intervenant, 200 par page + total) ; boutons « Tout ajouter » et « Voir la suite » dans l'éditeur de collection ; `GET /studio/series-candidates` renvoie `{ items, total }` (jusqu'à 300) avec « Tout sélectionner ». Limite d'une collection relevée de 100 à 500 vidéos. Tri « naturel » (Épisode 2 avant Épisode 10).
+- **Glisser-déposer** dans l'éditeur de collection (`web/components/SortableList.js`, poignée ⠿, souris / doigt / stylo, défilement automatique), saisie d'une position, bouton « Trier par titre ». Les flèches restent. (L'éditeur de série avait déjà un glisser-déposer HTML5, inchangé.)
+- **Images** : séries et collections ont une image de présentation (16:9) et une image de couverture (21:9) ; `web/components/ImageSlot.js`, `api/src/imageUpload.js`, colonnes `series.cover_key`, `collections.poster_key/cover_key`. La couverture sert d'en-tête de la page série (sinon la présentation) et de la page collection.
+- **Série → collection** : case « Aussi une collection » (`series.as_collection`), `series/collectionSync.js` crée / met à jour la collection liée (`collections.series_id`) à chaque changement (infos, images, épisodes, saisons, publication) ; décochée ou série supprimée → collection supprimée ; supprimer la collection liée décoche la case. La collection liée est verrouillée dans Collections (titre, vidéos, images, publication) sauf accueil / place / épinglage.
+- Modules : series 1.2.0 (migration 002), collections 1.1.0 (migration 001).
+- Testé : `api/tests/test_series_collection.py` (nouveau), `test_series.py`, `test_collections.py`, `web/tests/test_sortable.mjs`, essais navigateur 1440 / 390 px (glisser-déposer à la souris, Tout ajouter, tri, position, envoi de couverture, case cochée, Tout sélectionner).
+- Non testé : glisser-déposer au doigt sur un vrai téléphone ; rendu réel sur le VPS. `test_showcase.py` échoue sur ce poste (quiz « Répondez à toutes les questions », données de test résiduelles) sans lien avec ces changements.

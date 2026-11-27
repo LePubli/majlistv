@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { pool } from '../../db.js';
 import { presignGet, putObject, deleteObject } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
+import { storeImage } from '../../imageUpload.js';
+import { syncSeriesCollection } from './collectionSync.js';
 
 const uuid = z.guid();
 const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -18,6 +20,7 @@ const seriesBody = z.object({
   categoryId: z.number().int().positive().nullable(),
   access: z.enum(['free', 'premium']),
   published: z.boolean(),
+  asCollection: z.boolean(),
   hasSeasons: z.boolean(),
   // Étape 24.1 : niveau de difficulté (null = tous niveaux) et séries conseillées avant celle-ci.
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
@@ -203,6 +206,9 @@ export default async function seriesRoutes(app) {
   const loadSeasons = async (seriesId) => (await pool.query('SELECT id, title, position FROM seasons WHERE series_id = $1 ORDER BY position, id', [seriesId])).rows;
   const facts = (s) => ({ id: s.id, title: s.title, description: s.description, speaker: s.speaker, categoryId: s.category_id, hasSeasons: s.has_seasons, access: s.access, published: s.published, level: s.level });
 
+  // Tient la collection liée à jour (case « Aussi une collection ») ; une erreur ici ne doit pas faire échouer l'enregistrement de la série.
+  const syncCol = async (id) => { try { await syncSeriesCollection(id); } catch (e) { app.log.warn({ err: e, seriesId: id }, 'synchronisation de la collection de la série'); } };
+
   // Séries conseillées avant celle-ci. `publicOnly` : on ne montre au visiteur que les séries publiées.
   async function prerequisitesOf(seriesId, { publicOnly }) {
     const { rows } = await pool.query(
@@ -237,7 +243,7 @@ export default async function seriesRoutes(app) {
     const next = started || flat.find((e) => !e.completed) || flat[0] || null;
     const poster = s.poster_key ? await presignGet(s.poster_key) : (flat.find((e) => e.posterUrl)?.posterUrl || null);
     return {
-      ...facts(s), category: s.category, posterUrl: poster, episodeCount: shaped.total,
+      ...facts(s), category: s.category, posterUrl: poster, coverUrl: s.cover_key ? await presignGet(s.cover_key) : null, episodeCount: shaped.total,
       prerequisites: await prerequisitesOf(id, { publicOnly: true }),
       seasons: shaped.seasons, episodes: shaped.episodes,
       resume: next ? { talkId: next.id, positionMs: started ? started.positionMs : 0, number: next.number, started: Boolean(started) } : null,
@@ -287,16 +293,20 @@ export default async function seriesRoutes(app) {
   });
 
   // Vidéos que l'on peut ajouter : les miennes (toutes pour un admin) qui ne sont dans aucune série.
+  // Vidéos que l'on peut ajouter à une série (pas déjà dans une série). Recherche par titre / intervenant ; jusqu'à 300 résultats
+  // (`total` indique s'il y en a davantage), `offset` pour la suite.
   app.get('/studio/series-candidates', organizer, async (req) => {
-    const q = z.object({ q: z.string().max(100).optional() }).parse(req.query);
+    const q = z.object({ q: z.string().max(100).optional(), offset: z.coerce.number().int().min(0).max(100000).default(0) }).parse(req.query);
     const vals = [];
     const where = ['NOT EXISTS (SELECT 1 FROM series_episodes e WHERE e.talk_id = t.id)'];
     if (!isAdmin(req)) { vals.push(req.user.sub); where.push(`t.organizer_id = $${vals.length}`); }
-    if (q.q) { vals.push(`%${q.q.replace(/[%_]/g, '')}%`); where.push(`(t.title ILIKE $${vals.length} OR t.speaker ILIKE $${vals.length})`); }
+    if (q.q) { vals.push(`%${q.q.replace(/[%_\\]/g, '')}%`); where.push(`(t.title ILIKE $${vals.length} OR t.speaker ILIKE $${vals.length})`); }
+    const total = (await pool.query(`SELECT count(*)::int AS n FROM talks t WHERE ${where.join(' AND ')}`, vals)).rows[0].n;
+    vals.push(q.offset);
     const { rows } = await pool.query(
       `SELECT t.id, t.title, t.speaker, t.access, t.duration_seconds AS "durationSeconds", t.video_status AS status, t.publication
-         FROM talks t WHERE ${where.join(' AND ')} ORDER BY t.created_at DESC LIMIT 100`, vals);
-    return rows;
+         FROM talks t WHERE ${where.join(' AND ')} ORDER BY t.title COLLATE "C" ASC, t.created_at DESC LIMIT 300 OFFSET $${vals.length}`, vals);
+    return { items: rows, total };
   });
 
   app.post('/series', organizer, async (req, reply) => {
@@ -325,7 +335,8 @@ export default async function seriesRoutes(app) {
     if (!s) return;
     const episodes = await loadEpisodes(id, { all: true, viewerId: null });
     const seasons = s.has_seasons ? (await loadSeasons(id)).map((z, i) => ({ id: z.id, number: i + 1, title: z.title })) : [];
-    return { ...facts(s), posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, seasons, episodes, prerequisites: await prerequisitesOf(id, { publicOnly: false }) };
+    const col = (await pool.query('SELECT id, published FROM collections WHERE series_id = $1', [id])).rows[0];
+    return { ...facts(s), asCollection: s.as_collection, collectionId: col?.id || null, posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, coverUrl: s.cover_key ? await presignGet(s.cover_key) : null, seasons, episodes, prerequisites: await prerequisitesOf(id, { publicOnly: false }) };
   });
 
   app.patch('/series/:id', organizer, async (req, reply) => {
@@ -344,6 +355,7 @@ export default async function seriesRoutes(app) {
     if (b.published !== undefined) set('published', b.published);
     if (b.hasSeasons !== undefined) set('has_seasons', b.hasSeasons);
     if (b.level !== undefined) set('level', b.level);
+    if (b.asCollection !== undefined) set('as_collection', b.asCollection);
     if (sets.length === 1 && b.prerequisites === undefined) return reply.code(400).send({ error: 'Rien à modifier' });
     if (b.prerequisites !== undefined) {
       const want = [...new Set(b.prerequisites)];
@@ -383,6 +395,7 @@ export default async function seriesRoutes(app) {
       if (err.code === '23503') return reply.code(400).send({ error: 'Catégorie inconnue' });
       throw err;
     } finally { client.release(); }
+    if (s.as_collection || b.asCollection !== undefined) await syncCol(id);
     return { ok: true };
   });
 
@@ -394,6 +407,7 @@ export default async function seriesRoutes(app) {
     await pool.query('DELETE FROM series_episodes WHERE series_id = $1', [id]);
     await pool.query('DELETE FROM series WHERE id = $1', [id]);
     if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
+    if (s.cover_key?.startsWith('series/')) await deleteObject(s.cover_key).catch(() => {});
     return reply.code(204).send();
   });
 
@@ -424,6 +438,7 @@ export default async function seriesRoutes(app) {
     const have = (await pool.query('SELECT id FROM seasons WHERE series_id = $1', [id])).rows.map((r) => r.id).sort();
     if (JSON.stringify(have) !== JSON.stringify([...ids].sort())) return reply.code(400).send({ error: 'La liste doit contenir toutes les saisons, une seule fois' });
     await pool.query('UPDATE seasons s SET position = o.n FROM (SELECT x::uuid AS id, ord::int AS n FROM unnest($2::text[]) WITH ORDINALITY AS u(x, ord)) o WHERE s.id = o.id AND s.series_id = $1', [id, ids]);
+    await syncCol(id);
     return { ok: true };
   });
 
@@ -475,36 +490,35 @@ export default async function seriesRoutes(app) {
       await client.query('UPDATE series SET updated_at = now() WHERE id = $1', [id]);
       await client.query('COMMIT');
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
+    if (s.as_collection) await syncCol(id);
     return { ok: true, count: episodes.length };
   });
 
   // ---------- Image de la série (JPEG / PNG / WebP en data-URL, 2,5 Mo max) ----------
   // Sans image, la page et les vignettes utilisent la miniature du premier épisode.
-  app.post('/series/:id/poster', { ...organizer, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
-    const { id } = idParam.parse(req.params);
-    const { image } = z.object({ image: z.string().max(3_500_000) }).strict().parse(req.body ?? {});
-    const s = await owned(req, reply, id);
-    if (!s) return;
-    const m = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
-    if (!m) return reply.code(400).send({ error: 'Image JPEG, PNG ou WebP attendue' });
-    const buf = Buffer.from(m[2], 'base64');
-    const magic = (m[1] === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8)
-      || (m[1] === 'image/png' && buf.subarray(1, 4).toString() === 'PNG')
-      || (m[1] === 'image/webp' && buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP');
-    if (!magic || buf.length > 2.5 * 1024 * 1024) return reply.code(400).send({ error: 'Image invalide ou trop lourde (2,5 Mo maximum)' });
-    const key = `series/${id}-${Date.now()}.${IMG_TYPES[m[1]]}`;
-    await putObject(key, buf, m[1]);
-    await pool.query('UPDATE series SET poster_key = $2, updated_at = now() WHERE id = $1', [id, key]);
-    if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
-    return reply.code(201).send({ posterUrl: await presignGet(key) });
-  });
+  // Deux images : l'affiche (colonne poster_key : vignettes, cartes) et la couverture (cover_key : grand bandeau de la page).
+  for (const [route, col, label] of [['poster', 'poster_key', 'posterUrl'], ['cover', 'cover_key', 'coverUrl']]) {
+    app.post(`/series/:id/${route}`, { ...organizer, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
+      const { id } = idParam.parse(req.params);
+      const { image } = z.object({ image: z.string().max(3_500_000) }).strict().parse(req.body ?? {});
+      const s = await owned(req, reply, id);
+      if (!s) return;
+      const st = await storeImage('series', id, image);
+      if (st.error) return reply.code(400).send({ error: st.error });
+      await pool.query(`UPDATE series SET ${col} = $2, updated_at = now() WHERE id = $1`, [id, st.key]);
+      if (s[col]?.startsWith('series/')) await deleteObject(s[col]).catch(() => {});
+      await syncCol(id);
+      return reply.code(201).send({ [label]: await presignGet(st.key) });
+    });
 
-  app.delete('/series/:id/poster', organizer, async (req, reply) => {
-    const { id } = idParam.parse(req.params);
-    const s = await owned(req, reply, id);
-    if (!s) return;
-    await pool.query('UPDATE series SET poster_key = NULL, updated_at = now() WHERE id = $1', [id]);
-    if (s.poster_key?.startsWith('series/')) await deleteObject(s.poster_key).catch(() => {});
-    return reply.code(204).send();
-  });
+    app.delete(`/series/:id/${route}`, organizer, async (req, reply) => {
+      const { id } = idParam.parse(req.params);
+      const s = await owned(req, reply, id);
+      if (!s) return;
+      await pool.query(`UPDATE series SET ${col} = NULL, updated_at = now() WHERE id = $1`, [id]);
+      if (s[col]?.startsWith('series/')) await deleteObject(s[col]).catch(() => {});
+      await syncCol(id);
+      return reply.code(204).send();
+    });
+  }
 }

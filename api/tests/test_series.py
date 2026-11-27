@@ -124,7 +124,7 @@ ok(requests.get(f"{B}/series/{mine}/manage", headers=org2).status_code == 404, "
 ok(requests.patch(f"{B}/series/{mine}", headers=org2, json={"title": "x"}).status_code == 404, "ni ne la modifie")
 ok(requests.put(f"{B}/series/{mine}/episodes", headers=org, json={"episodes": [{"talkId": t3}]}).status_code in (403, 409), "ajouter la conférence d'un autre : refusé")
 own = mk("Perso", owner=org_id)
-cand = [x["id"] for x in requests.get(f"{B}/studio/series-candidates", headers=org).json()]
+cand = [x["id"] for x in requests.get(f"{B}/studio/series-candidates", headers=org).json()["items"]]
 ok(own in cand and t1 not in cand, "candidats : mes conférences hors série seulement")
 ok(requests.put(f"{B}/series/{mine}/episodes", headers=org, json={"episodes": [{"talkId": own}]}).status_code == 200, "ajout de sa propre conférence")
 ok(len(requests.get(f"{B}/studio/series", headers=org).json()) == 1 and len(requests.get(f"{B}/studio/series", headers=adm).json()) >= 3, "liste Studio : les miennes / toutes pour un admin")

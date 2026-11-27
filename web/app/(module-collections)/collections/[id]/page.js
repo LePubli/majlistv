@@ -22,6 +22,7 @@ export default function CollectionPage() {
   const secHead = () => pm ? <PmColHero c={c} bg={bg} /> : (
     <>
       <Link href="/collections" className="back">← {t('colTitle')}</Link>
+      {c.coverUrl && <div className="col-cover" style={{ backgroundImage: `url("${String(c.coverUrl).replace(/"/g, '%22')}")` }} role="img" aria-label={c.title} />}
       <p className="eyebrow">{t(`colKind_${c.kind}`)}</p>
       <h1>{c.title}</h1>
       {c.description && <p className="th-lead">{c.description}</p>}

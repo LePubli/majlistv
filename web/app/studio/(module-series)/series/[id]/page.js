@@ -7,6 +7,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../../../../components/Providers';
 import { Page as BmPage, Btn as BmBtn, Metrics as BmMetrics, Panel as BmPanel, Cols as BmCols, Meta as BmMeta, Badge as BmBadge, HeroArt as BmHeroArt } from '../../../../../components/backoffice/Kit';
 import ChannelPicker from '../../../../../components/ChannelPicker';
+import ImageSlot from '../../../../../components/ImageSlot';
+import { byTitle } from '../../../../../components/SortableList';
 import { LEVELS, levelLabel } from '../../../../../lib/levels';
 
 const clock = (s) => {
@@ -14,25 +16,6 @@ const clock = (s) => {
   const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60);
   return h ? `${h} h ${String(m).padStart(2, '0')}` : `${Math.max(1, m)} min`;
 };
-
-// Réduit l'image choisie à 1280×720 (recadrage centré) et la renvoie en data-URL JPEG.
-function resizeImage(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const W = 1280; const H = 720;
-      const c = document.createElement('canvas'); c.width = W; c.height = H;
-      const k = Math.max(W / img.width, H / img.height);
-      const w = img.width * k; const h = img.height * k;
-      c.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad')); };
-    img.src = url;
-  });
-}
 
 // Ce qui part au serveur : ordre, saison et accès de chaque épisode.
 const layoutOf = (eps, hasSeasons) => eps.map((e) => ({ talkId: e.id, seasonId: hasSeasons ? e.seasonId : null, access: e.access }));
@@ -50,16 +33,15 @@ export default function SeriesEditor() {
   const [others, setOthers] = useState([]);   // autres séries, pour choisir les prérequis
   const [msg, setMsg] = useState(null);
   const [lmsg, setLmsg] = useState(null);
-  const [imgMsg, setImgMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [drag, setDrag] = useState(null);
   const [over, setOver] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [cand, setCand] = useState([]);
+  const [candTotal, setCandTotal] = useState(0);
   const [q, setQ] = useState('');
   const [pick, setPick] = useState([]);
   const [target, setTarget] = useState('');
-  const fileInput = useRef(null);
 
   const load = useCallback(async () => {
     const r = await call(`/series/${id}/manage`);
@@ -68,7 +50,7 @@ export default function SeriesEditor() {
     setS(d);
     setF({
       title: d.title, speaker: d.speaker, description: d.description, categoryId: d.categoryId ? String(d.categoryId) : '', access: d.access,
-      hasSeasons: d.hasSeasons, level: d.level || '', prerequisites: (d.prerequisites || []).map((x) => x.id),
+      hasSeasons: d.hasSeasons, asCollection: Boolean(d.asCollection), level: d.level || '', prerequisites: (d.prerequisites || []).map((x) => x.id),
     });
     setSeasons(d.seasons.map((z) => ({ id: z.id, title: z.title })));
     const list = d.episodes.map((e) => ({ ...e, access: e.accessOverride || 'inherit' }));
@@ -85,7 +67,7 @@ export default function SeriesEditor() {
   const savedPrereq = (s?.prerequisites || []).map((x) => x.id).join();
   const infoDirty = s && f && (f.title !== s.title || f.speaker !== s.speaker || f.description !== s.description || f.access !== s.access
     || (f.categoryId || '') !== (s.categoryId ? String(s.categoryId) : '') || f.hasSeasons !== s.hasSeasons
-    || (f.level || '') !== (s.level || '') || f.prerequisites.join() !== savedPrereq);
+    || Boolean(f.asCollection) !== Boolean(s.asCollection) || (f.level || '') !== (s.level || '') || f.prerequisites.join() !== savedPrereq);
   useEffect(() => {
     if (!dirty) return undefined;
     const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
@@ -96,7 +78,7 @@ export default function SeriesEditor() {
   // Vidéos que l'on peut encore ajouter (celles déjà ajoutées ici, même non enregistrées, sont masquées).
   useEffect(() => {
     if (!addOpen) return undefined;
-    const timer = setTimeout(() => call(`/studio/series-candidates?q=${encodeURIComponent(q)}`).then((r) => r.ok && setCand(r.data)), 250);
+    const timer = setTimeout(() => call(`/studio/series-candidates?q=${encodeURIComponent(q)}`).then((r) => { if (r.ok) { setCand([...r.data.items].sort(byTitle)); setCandTotal(r.data.total); } }), 250);
     return () => clearTimeout(timer);
   }, [addOpen, q, call, s]);
   const inSeries = useMemo(() => new Set(eps.map((e) => e.id)), [eps]);
@@ -117,13 +99,14 @@ export default function SeriesEditor() {
     setSaving(true); setMsg(null);
     const body = {
       title: f.title, speaker: f.speaker, description: f.description, access: f.access, categoryId: f.categoryId ? Number(f.categoryId) : null,
-      hasSeasons: f.hasSeasons, level: f.level || null, prerequisites: f.prerequisites,
+      hasSeasons: f.hasSeasons, asCollection: Boolean(f.asCollection), level: f.level || null, prerequisites: f.prerequisites,
     };
     const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
     setSaving(false);
     if (!r.ok) { setMsg({ ok: false, text: r.data?.error || t('errGeneric') }); return; }
     setMsg({ ok: true, text: t('saved') });
     if (f.hasSeasons !== s.hasSeasons) await load();
+    else if (Boolean(f.asCollection) !== Boolean(s.asCollection)) { setS({ ...s, ...body, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) }); call(`/series/${id}/manage`).then((r) => r.ok && setS((x) => ({ ...x, collectionId: r.data.collectionId }))); }
     else setS({ ...s, ...body, categoryId: body.categoryId, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) });
   };
   const togglePublish = async () => {
@@ -135,17 +118,34 @@ export default function SeriesEditor() {
     const r = await call(`/series/${id}`, { method: 'DELETE' });
     if (r.ok) router.push('/studio/series'); else setMsg({ ok: false, text: r.data?.error || t('errGeneric') });
   };
-  const pickImage = async (e) => {
-    const file = e.target.files?.[0]; e.target.value = '';
-    if (!file) return;
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setImgMsg({ ok: false, text: t('thumbBad') }); return; }
-    try {
-      const image = await resizeImage(file);
-      const r = await call(`/series/${id}/poster`, { method: 'POST', body: JSON.stringify({ image }) });
-      if (r.ok) { setS({ ...s, posterUrl: r.data.posterUrl }); setImgMsg({ ok: true, text: t('thumbDone') }); } else setImgMsg({ ok: false, text: r.data?.error || t('errGeneric') });
-    } catch { setImgMsg({ ok: false, text: t('thumbBad') }); }
+  // Deux images : présentation (affiche, vignettes) et couverture (bandeau de la page). Chaque envoi renvoie l'adresse de l'image.
+  const upImage = (kind) => async (image) => {
+    const r = await call(`/series/${id}/${kind}`, { method: 'POST', body: JSON.stringify({ image }) });
+    if (!r.ok) return { ok: false, error: r.data?.error || t('errGeneric') };
+    setS((x) => ({ ...x, [kind === 'poster' ? 'posterUrl' : 'coverUrl']: r.data[kind === 'poster' ? 'posterUrl' : 'coverUrl'] }));
+    return { ok: true };
   };
-  const dropImage = async () => { const r = await call(`/series/${id}/poster`, { method: 'DELETE' }); if (r.ok) { setS({ ...s, posterUrl: null }); setImgMsg(null); } };
+  const delImage = (kind) => async () => {
+    const r = await call(`/series/${id}/${kind}`, { method: 'DELETE' });
+    if (!r.ok) return { ok: false, error: r.data?.error || t('errGeneric') };
+    setS((x) => ({ ...x, [kind === 'poster' ? 'posterUrl' : 'coverUrl']: null }));
+    return { ok: true };
+  };
+  const imgLabels = { choose: t('srImageChoose'), change: t('srImageChange'), remove: t('srImageRemove'), bad: t('thumbBad'), done: t('thumbDone'), none: t('srImageNone') };
+  const images = (
+    <>
+      <ImageSlot kind="poster" title={t('srImgPoster')} help={t('srImgPosterHelp')} url={s.posterUrl} onUpload={upImage('poster')} onRemove={delImage('poster')} labels={imgLabels} />
+      <ImageSlot kind="cover" title={t('srImgCover')} help={t('srImgCoverHelp')} url={s.coverUrl} onUpload={upImage('cover')} onRemove={delImage('cover')} labels={imgLabels} />
+    </>
+  );
+  // Case « Aussi une collection » (enregistrée avec les informations).
+  const asColl = (
+    <label className="check sr-ascoll">
+      <input type="checkbox" checked={Boolean(f.asCollection)} onChange={(e) => setF({ ...f, asCollection: e.target.checked })} />
+      <span><b>{t('srAsCollection')}</b> <small className="meta">{t('srAsCollectionHelp')}</small>
+        {s.collectionId && !infoDirty && <> <Link href="/studio/collections" className="link u">{t('srOpenCollections')}</Link></>}</span>
+    </label>
+  );
 
   // ----- saisons (enregistrées tout de suite) -----
   const addSeason = async () => {
@@ -285,6 +285,12 @@ export default function SeriesEditor() {
                   <>
                     <input type="search" placeholder={t('srSearchTalks')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('srSearchTalks')} />
                     {candidates.length === 0 && <p className="meta small">{t('srNoCandidates')}</p>}
+                    {candidates.length > 0 && (
+                      <div className="co-bar">
+                        <span className="meta small">{t('srCandCount').replace('{n}', candTotal)}</span>
+                        <button type="button" className="btn ghost" onClick={() => setPick(pick.length === candidates.length ? [] : candidates.map((c) => c.id))}>{pick.length === candidates.length ? t('srSelNone') : t('srSelAll').replace('{n}', candidates.length)}</button>
+                      </div>
+                    )}
                     <ul className="sr-cands">
                       {candidates.map((c) => (
                         <li key={c.id}>
@@ -318,19 +324,7 @@ export default function SeriesEditor() {
                     [t('srEpisodes'), eps.length],
                     [t('srAccess'), t(s.access)],
                   ]} />
-                  <h3>{t('srImage')}</h3>
-                          <div className="sr-image">
-                            <div className="thumb-opts">
-                              <span className="meta small">{t('srImageHelp')}</span>
-                              <div className="thumb-actions">
-                                <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()}>{t('srImageChoose')}</button>
-                                {s.posterUrl && <button type="button" className="btn ghost" onClick={dropImage}>{t('srImageRemove')}</button>}
-                                <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pickImage} />
-                              </div>
-                              {imgMsg && <p className={imgMsg.ok ? 'ok-msg' : 'error'} role="status">{imgMsg.text}</p>}
-                            </div>
-                          </div>
-      
+                  {images}
                   <form onSubmit={saveInfo}>
                             <label className="fld"><span>{t('srName')}</span><input required maxLength={200} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
                             <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
@@ -372,6 +366,7 @@ export default function SeriesEditor() {
                               <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
                               <span className="meta small">{t('srStructureHelp')}</span>
                             </div>
+{asColl}
                             {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
                             <div className="panel-actions"><button className="btn" disabled={!infoDirty || saving}>{infoDirty ? t('save') : t('nothingToSave')}</button></div>
       
@@ -454,24 +449,14 @@ export default function SeriesEditor() {
           <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
           <span className="meta small">{t('srStructureHelp')}</span>
         </div>
+{asColl}
         {msg && <p className={msg.ok ? 'ok-msg' : 'error'} role="status">{msg.text}</p>}
         <div className="panel-actions"><button className="btn" disabled={!infoDirty || saving}>{infoDirty ? t('save') : t('nothingToSave')}</button></div>
       </form>
 
       <section className="panel">
         <h2 className="panel-title">{t('srImage')}</h2>
-        <div className="sr-image">
-          <span className="sr-poster" style={s.posterUrl ? { backgroundImage: `url(${s.posterUrl})` } : undefined} />
-          <div className="thumb-opts">
-            <span className="meta small">{t('srImageHelp')}</span>
-            <div className="thumb-actions">
-              <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()}>{t('srImageChoose')}</button>
-              {s.posterUrl && <button type="button" className="btn ghost" onClick={dropImage}>{t('srImageRemove')}</button>}
-              <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pickImage} />
-            </div>
-            {imgMsg && <p className={imgMsg.ok ? 'ok-msg' : 'error'} role="status">{imgMsg.text}</p>}
-          </div>
-        </div>
+        {images}
       </section>
 
       <h2 className="panel-title outside">{t('srEpisodes')}</h2>
@@ -532,6 +517,12 @@ export default function SeriesEditor() {
           <>
             <input type="search" placeholder={t('srSearchTalks')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('srSearchTalks')} />
             {candidates.length === 0 && <p className="meta small">{t('srNoCandidates')}</p>}
+                    {candidates.length > 0 && (
+                      <div className="co-bar">
+                        <span className="meta small">{t('srCandCount').replace('{n}', candTotal)}</span>
+                        <button type="button" className="btn ghost" onClick={() => setPick(pick.length === candidates.length ? [] : candidates.map((c) => c.id))}>{pick.length === candidates.length ? t('srSelNone') : t('srSelAll').replace('{n}', candidates.length)}</button>
+                      </div>
+                    )}
             <ul className="sr-cands">
               {candidates.map((c) => (
                 <li key={c.id}>

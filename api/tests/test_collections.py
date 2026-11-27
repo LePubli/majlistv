@@ -42,7 +42,7 @@ ok(requests.put(f"{C}/{cid}/items", headers=MOD, json={"talkIds": [t1, str(uuid.
 ok(requests.put(f"{C}/{cid}/items", headers=U, json={"talkIds": [t1]}).status_code == 403, "un membre ne peut pas modifier")
 ok(requests.put(f"{C}/{cid}/items", headers=MOD, json={"talkIds": [t2, t1, t3, t1]}).json()["count"] == 3, "ordre enregistré (doublon ignoré)")
 ed = requests.get(f"{C}/{cid}", headers=MOD).json()
-ok([x["id"] for x in ed["talks"]] == [t2, t1, t3] and ed["talks"][2]["visible"] is False and ed["max"] == 100, "éditeur : ordre conservé, conférence invisible signalée")
+ok([x["id"] for x in ed["talks"]] == [t2, t1, t3] and ed["talks"][2]["visible"] is False and ed["max"] == 500, "éditeur : ordre conservé, conférence invisible signalée")
 
 # --- publique
 ok(requests.get(f"{B}/collections/{cid}").status_code == 404, "collection non publiée : introuvable")

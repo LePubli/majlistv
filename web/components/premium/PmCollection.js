@@ -19,17 +19,18 @@ export function PmColHero({ c, bg, children }) {
   const talks = c.talks || [];
   const posters = talks.filter((x) => x.posterUrl);
   const cur = posters.find((x) => x.id === bg) || posters[0];
-  const [layers, setLayers] = useState(() => [cur?.posterUrl || null, null]);
+  const cover = c.coverUrl || null; // couverture choisie dans le Studio : elle remplace l'affiche des vidéos
+  const [layers, setLayers] = useState(() => [cover || cur?.posterUrl || null, null]);
   const [front, setFront] = useState(0);
   useEffect(() => {
-    const url = cur?.posterUrl || null;
+    const url = cover || cur?.posterUrl || null;
     setLayers((l) => {
       if (l[front] === url) return l;
       const next = [...l]; next[1 - front] = url; return next;
     });
     setFront((f) => (layers[f] === url ? f : 1 - f));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cur?.posterUrl]);
+  }, [cur?.posterUrl, cover]);
   const speakers = new Set(talks.map((x) => x.speaker).filter(Boolean)).size;
   const time = totalTime(talks, t);
   const first = talks[0];
