@@ -10,6 +10,7 @@ for (const k of ['extraCategoryIds', 'kidsBands', 'showAdults', '/poster']) asse
 for (const f of ['components/ImportPanel.js', 'components/BulkEdit.js']) {
   const s = read(f);
   assert.ok(s.includes('<CategoryPicker'), `${f} : CategoryPicker`);
+  if (f.includes('ImportPanel')) assert.ok(s.includes('extraCategoryIds'), `${f} : catégories supplémentaires`);
   assert.ok(!/cats\.map\(\(c\) => <option/.test(s), `${f} : plus de liste déroulante de catégories`);
 }
 console.log('OK : test_new_video_form');

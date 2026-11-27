@@ -16,7 +16,7 @@ export default function ImportPanel({ cats, onImported }) {
   const [job, setJob] = useState(null);
   const [history, setHistory] = useState([]);
   const [picked, setPicked] = useState(new Set());
-  const [o, setO] = useState({ language: 'fr', categoryId: '', access: 'free', speaker: '', translateTo: [], rightsConfirmed: false });
+  const [o, setO] = useState({ language: 'fr', categoryId: '', extraCategoryIds: [], access: 'free', speaker: '', translateTo: [], rightsConfirmed: false });
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -51,7 +51,7 @@ export default function ImportPanel({ cats, onImported }) {
 
   const confirm = async () => {
     setBusy(true); setMsg(null);
-    const body = { ...o, ids: [...picked], categoryId: o.categoryId ? Number(o.categoryId) : null, translateTo: o.rightsConfirmed ? o.translateTo : [] };
+    const body = { ...o, ids: [...picked], categoryId: o.categoryId ? Number(o.categoryId) : null, extraCategoryIds: o.extraCategoryIds.filter((id) => String(id) !== String(o.categoryId)), translateTo: o.rightsConfirmed ? o.translateTo : [] };
     const r = await call(`/imports/${job.id}/confirm`, { method: 'POST', body: JSON.stringify(body) });
     setBusy(false);
     if (r.ok) {
@@ -98,6 +98,11 @@ export default function ImportPanel({ cats, onImported }) {
             <div className="fld" role="group" aria-label={t('category')}>
               <span>{t('category')}</span>
               <CategoryPicker cats={cats} mode="single" value={o.categoryId} onChange={(v) => setO({ ...o, categoryId: v })} t={t} label={t('category')} />
+            </div>
+            <div className="fld" role="group" aria-label={t('txExtra')}>
+              <span>{t('txExtra')}</span>
+              <CategoryPicker cats={cats} mode="multi" max={20} value={o.extraCategoryIds} exclude={o.categoryId} onChange={(v) => setO({ ...o, extraCategoryIds: v })} t={t} label={t('txExtra')} />
+              <span className="meta small">{t('txExtraHelp')}</span>
             </div>
             <label>{t('access')}
               <select value={o.access} onChange={(e) => setO({ ...o, access: e.target.value })}>
