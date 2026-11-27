@@ -265,7 +265,7 @@ export function CatToolbarSection() {
           </div>
         </div>
       </div>
-      {railMode && <div className="pm-cat-headline"><h2>{cur.format ? (formatName(cur.format) || title) : t('pmAllContents')}</h2>{total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}</div>}
+      {railMode && cur.format && <div className="pm-cat-headline"><h2>{cur.format ? (formatName(cur.format) || title) : t('pmAllContents')}</h2>{total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}</div>}
     </section>
   );
 }
