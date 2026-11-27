@@ -1027,3 +1027,13 @@
 .co-preview { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 10px 12px; }
 .co-preview ol { margin: 6px 0 0; padding-inline-start: 20px; display: grid; gap: 4px; }
 .ac-sel { align-self: center; flex: none; width: 20px; height: 20px; accent-color: var(--accent, #1677e8); }
+
+/* Pagination commune (components/Pager.js, TableGuard.js) — Studio et Admin, tous thèmes */
+.pg-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 4px 4px; font-size: 13px; color: var(--muted, #9fb4cc); }
+.pg-ctrl { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pg-btn { min-height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border2, #274e69); background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.pg-btn:hover:not(:disabled) { border-color: var(--accent, #35b9ff); color: #fff; }
+.pg-btn:disabled { opacity: .4; cursor: default; }
+.pg-num { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+.pg-size select { min-height: 34px; border-radius: 8px; border: 1px solid var(--border2, #274e69); background: transparent; color: inherit; padding: 0 8px; }
+tr[hidden] { display: none !important; }

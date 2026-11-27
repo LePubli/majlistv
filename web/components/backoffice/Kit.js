@@ -3,6 +3,7 @@
 // (préfixées bm-, feuille public/premium/bo-mock.css fabriquée par web/scripts/build-bo-css.py), mais branchés sur les
 // vraies données et les vraies actions du site. Utilisés seulement avec le thème Premium.
 import { ICON_PATHS } from './boIconPaths';
+import Pager, { usePaged, PAGE_SIZE } from '../Pager';
 
 // « a b » → « bm-a bm-b » (les classes de la maquette portent le préfixe bm-)
 export const c = (s) => String(s || '').split(/\s+/).filter(Boolean).map((x) => `bm-${x}`).join(' ');
@@ -94,21 +95,30 @@ export function Userpic({ name, i = 0 }) {
 }
 
 // Tableau : headers = ['Titre', …], rows = [[cell, cell], …] ; onRow(i) rend la ligne cliquable.
-export function Table({ headers, rows, className = '', onRow, empty }) {
+// Tableau du back-office. Paginé d'office (25 lignes) : une liste interminable ne doit plus jamais apparaître.
+// pageSize = 0 : pas de pagination (l'écran pagine lui-même, ex. Studio → Contenus). onRow reçoit toujours l'indice dans la liste complète.
+export function Table({ headers, rows, className = '', onRow, empty, pageSize = PAGE_SIZE }) {
+  const pg = usePaged(rows, pageSize || PAGE_SIZE, rows.length);
   if (!rows.length && empty) return <p className={c('empty-note')} style={{ padding: '18px 4px', color: 'var(--muted)' }}>{empty}</p>;
+  const paged = pageSize > 0;
+  const base = paged ? pg.page * pg.size : 0;
+  const view = paged ? pg.slice : rows;
   return (
-    <div className={c('table-scroll')}>
-      <table className={`${c('data-table')} ${className}`}>
-        <thead><tr>{headers.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri} onClick={onRow ? () => onRow(ri) : undefined} style={onRow ? { cursor: 'pointer' } : undefined}>
-              {row.map((cell, ci) => <td key={ci}>{cell}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className={c('table-scroll')} data-paged="1">
+        <table className={`${c('data-table')} ${className}`}>
+          <thead><tr>{headers.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+          <tbody>
+            {view.map((row, ri) => (
+              <tr key={base + ri} onClick={onRow ? () => onRow(base + ri) : undefined} style={onRow ? { cursor: 'pointer' } : undefined}>
+                {row.map((cell, ci) => <td key={ci}>{cell}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {paged && <Pager p={pg} />}
+    </>
   );
 }
 

@@ -477,3 +477,16 @@ html[data-skin="premium"] .bm-embed .sr-ep .studio-thumb{flex:0 0 96px;width:96p
 html[data-skin="premium"] .bm-embed .sr-ep select{flex:0 1 150px;min-width:0;width:auto}
 
 html[data-skin="premium"] .bm-embed .bm-cols.bm-dubbing-layout,html[data-skin="premium"] .bm-embed .bm-cols.bm-detail-layout,html[data-skin="premium"] .bm-embed .bm-cols.bm-audio-layout{align-items:start}
+
+/* ===== Listes : jamais interminables, jamais plus larges que leur cadre (règle du projet, voir components/Pager.js) ===== */
+/* Tableaux du back-office : ils tiennent dans le cadre (le défilement latéral reste le dernier recours), la colonne des cases à cocher est étroite */
+html[data-skin="premium"] .bm-embed .bm-table-scroll { max-width: 100%; overflow-x: auto; }
+html[data-skin="premium"] .bm-embed .bm-data-table { width: 100%; table-layout: auto; }
+html[data-skin="premium"] .bm-embed .bm-data-table th, html[data-skin="premium"] .bm-embed .bm-data-table td { padding-inline: 10px; vertical-align: middle; }
+html[data-skin="premium"] .bm-embed .bm-data-table td:first-child { min-width: 0; }
+html[data-skin="premium"] .bm-embed .bm-data-table td:first-child:not(:has(input[type="checkbox"])) { min-width: 150px; }
+html[data-skin="premium"] .bm-embed .bm-data-table th:first-child:has(input[type="checkbox"]), html[data-skin="premium"] .bm-embed .bm-data-table td:first-child:has(input[type="checkbox"]) { width: 40px; padding-inline: 8px; }
+html[data-skin="premium"] .bm-embed .bm-data-table td:nth-child(2) { min-width: 200px; white-space: normal; overflow-wrap: anywhere; }
+html[data-skin="premium"] .pd-stages { flex-wrap: nowrap; gap: 3px; }
+html[data-skin="premium"] .pd-dash { width: 10px; }
+html[data-skin="premium"] .studio-table-wrap, html[data-skin="premium"] .studio-page table { max-width: 100%; }

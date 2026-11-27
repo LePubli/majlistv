@@ -9,6 +9,7 @@ import { useApp } from '../../../components/Providers';
 import StudioTabs from '../../../components/StudioTabs';
 import { langName } from '../../../components/Transcript';
 import BulkEdit from '../../../components/BulkEdit';
+import Pager, { usePaged } from '../../../components/Pager';
 import { talkSteps, talkKind, sourceLabel } from '../../../lib/talkState';
 import { production, STAGES } from '../../../lib/production';
 import { hasWebModule } from '../../../lib/modules';
@@ -79,8 +80,11 @@ export default function StudioTalks() {
   const needle = q.trim().toLowerCase();
 
   const shown = rows.filter((r) => match(r, filter) && (!needle || text(r).includes(needle)));
-  const allShown = shown.length > 0 && shown.every((r) => sel.has(r.id));
-  const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) shown.forEach((r) => n.delete(r.id)); else shown.forEach((r) => n.add(r.id)); return n; });
+  // 25 lignes par page ; « tout cocher » ne touche que la page affichée (jamais des lignes qu'on ne voit pas).
+  const pg = usePaged(shown, 25, `${filter}|${needle}`);
+  const pageRows = pg.slice;
+  const allShown = pageRows.length > 0 && pageRows.every((r) => sel.has(r.id));
+  const toggleAll = () => setSel((s0) => { const n = new Set(s0); if (allShown) pageRows.forEach((r) => n.delete(r.id)); else pageRows.forEach((r) => n.add(r.id)); return n; });
   // Suppression en lot (6.9) : confirmation, puis /talks/bulk-delete ; le résultat dit combien ont été supprimées ou refusées.
   const removeSelected = async () => {
     if (!window.confirm(t('bkDeleteConfirm').replace('{n}', sel.size))) return;
@@ -108,9 +112,9 @@ export default function StudioTalks() {
     const qr = quick ? rows.find((x) => x.id === quick) : null;
     const tone = (k) => ({ ok: 'green', warn: 'amber', err: 'red', run: 'blue' }[k] || 'blue');
     const table = (
-      <BmTable empty={mine && rows.length === 0 ? t('studioEmpty') : t('noResults')} onRow={(i) => setQuick(quick === shown[i].id ? null : shown[i].id)}
+      <BmTable pageSize={0} empty={mine && rows.length === 0 ? t('studioEmpty') : t('noResults')} onRow={(i) => setQuick(quick === pageRows[i].id ? null : pageRows[i].id)}
         headers={[<input key="all" type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('bkAll')} />, t('pdColTalk'), t('pdColLang'), t('pdColProd'), t('pdColVis'), t('pdColViews')]}
-        rows={shown.map((r) => {
+        rows={pageRows.map((r) => {
           const [vis] = visibility(r);
           return [
             <span key="c" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={r.title} /></span>,
@@ -119,7 +123,7 @@ export default function StudioTalks() {
               <span><b dir="auto">{r.title}</b><br /><small>{[mins(r.durationSeconds), r.source === 'upload' ? t('pdSentOn').replace('{d}', date(r.created_at)) : `${sourceLabel(r.source)} (${t('pdNotEditable')})`].filter(Boolean).join(' · ')}</small></span>
             </span>,
             langPair(r),
-            <span key="p"><Stages p={r.p} t={t} /> <BmBadge tone={tone(r.p.tone)}>{label(r)}</BmBadge></span>,
+            <span key="p" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 10px' }}><Stages p={r.p} t={t} /> <BmBadge tone={tone(r.p.tone)}>{label(r)}</BmBadge></span>,
             vis,
             r.p.views == null || (r.p.views === 0 && r.kind !== 'live') ? '—' : nf.format(r.p.views),
           ];
@@ -157,6 +161,7 @@ export default function StudioTalks() {
               </select>
             </div>
             {table}
+            <Pager p={pg} />
           </BmPanel>
           {qr && (
             <BmDrawer title={t('bqTitle')} onClose={() => setQuick(null)}>
@@ -237,7 +242,7 @@ export default function StudioTalks() {
       )}
       {shown.length > 0 && (
         <div className="bo-split">
-        <div className="studio-table-wrap">
+        <div className="studio-table-wrap" data-paged="1">
           <table className="studio-table pd-table">
             <thead>
               <tr>
@@ -247,7 +252,7 @@ export default function StudioTalks() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((r) => {
+              {pageRows.map((r) => {
                 const [vis, visTone] = visibility(r);
                 return (
                   <tr key={r.id} className={[sel.has(r.id) ? 'bk-sel' : '', pm ? 'bo-row' : '', pm && quick === r.id ? 'bo-open' : ''].filter(Boolean).join(' ') || undefined}
@@ -284,6 +289,7 @@ export default function StudioTalks() {
               })}
             </tbody>
           </table>
+        <Pager p={pg} />
         </div>
         {pm && quick && rows.find((x) => x.id === quick) && (() => {
           const q = rows.find((x) => x.id === quick);

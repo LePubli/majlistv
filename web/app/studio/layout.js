@@ -2,11 +2,12 @@ import { Suspense } from 'react';
 import '../back.css'; // styles du Studio et de l'administration, chargés ici seulement (audit 11/2026)
 import '../skin-premium-admin.css'; // habillage Premium du back-office (limité à html[data-skin="premium"])
 import StudioShell from '../../components/StudioShell';
+import TableGuardMount from '../../components/TableGuardMount';
 
 // Espace privé : jamais indexé par les moteurs de recherche.
 export const metadata = { robots: { index: false, follow: false } };
 
 // Espace de gestion : menu latéral Studio / Administration (voir components/StudioShell.js).
 export default function Layout({ children }) {
-  return <Suspense fallback={null}><StudioShell>{children}</StudioShell></Suspense>;
+  return <Suspense fallback={null}><StudioShell>{children}</StudioShell><TableGuardMount /></Suspense>;
 }
