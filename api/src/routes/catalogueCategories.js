@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { visibleSql } from '../visibility.js';
 import { inCategorySql, adultSql } from '../taxonomy.js';
+import { presignGet } from '../storage.js';
 
 const langQ = z.object({ lang: z.enum(['fr', 'en', 'ar']).default('fr') });
 const COUNT = `(SELECT count(*)::int FROM talks t WHERE t.video_status = 'ready' AND ${visibleSql('t')} AND ${adultSql('t')} AND ${inCategorySql('t', 'c.id')})`;
@@ -27,6 +28,16 @@ export function localize(row, lang) {
 }
 
 export default async function catalogueCategoriesRoutes(app) {
+  // Image d'une catégorie envoyée depuis l'admin : renvoie vers un lien temporaire du stockage (adresse stable pour le site).
+  app.get('/catalogue/category-image/:id/:kind', async (req, reply) => {
+    const { id, kind } = z.object({ id: z.coerce.number().int().positive(), kind: z.enum(['image', 'hero']) }).parse(req.params);
+    const col = kind === 'hero' ? 'hero_image_key' : 'image_key';
+    const k = (await pool.query(`SELECT ${col} AS k FROM categories WHERE id = $1`, [id])).rows[0]?.k;
+    if (!k) return reply.code(404).send({ error: 'Image introuvable' });
+    reply.header('cache-control', 'public, max-age=600');
+    return reply.redirect(await presignGet(k), 302);
+  });
+
   app.get('/catalogue/categories', async (req, reply) => {
     const { lang } = langQ.parse(req.query);
     const rows = (await pool.query(

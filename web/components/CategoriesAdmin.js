@@ -2,6 +2,7 @@
 // Admin → Catégories (nouveau catalogue, phase 2 — cahier des charges du 20/11/2026).
 // Un seul écran pour le catalogue adultes ET les univers Kids : arbre à deux niveaux, ordre, activation, mise en avant,
 // icône / couleur / images, textes FR-EN-AR, SEO, aperçu du rendu, vidéos classées, suppression protégée (jamais de vidéo supprimée).
+import ImageSlot from './ImageSlot';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from './Providers';
 import { Page, Metrics, Panel, Cols, Tabs, Btn, I, Badge, c } from './backoffice/Kit';
@@ -63,12 +64,25 @@ export default function CategoriesAdmin({ formatsSlot = null }) {
   const body = (f, creating) => {
     const b = {
       name: f.name.trim(), description: f.description, shortDescription: f.shortDescription, isActive: f.isActive, isFeatured: f.isFeatured,
-      icon: f.icon.trim() || null, image: f.image.trim() || null, heroImage: f.heroImage.trim() || null, color: f.color || null,
+      icon: f.icon.trim() || null, color: f.color || null, // les images se gèrent par leurs propres boutons (envoi), pas par ce formulaire
       seoTitle: f.seoTitle, seoDescription: f.seoDescription, translations: f.translations,
     };
     if (f.slug.trim()) b.slug = f.slug.trim();
     if (creating) { b.parentId = f.parentId; b.catalogueType = f.catalogueType; } else { b.parentId = f.parentId; if (!f.parentId) b.catalogueType = f.catalogueType; }
     return b;
+  };
+  // Images de la catégorie : envoi et retrait immédiats (sans attendre « Enregistrer »), la liste se met à jour.
+  const saveImage = async (kind, image) => {
+    const r = await call(`/categories/${form.id}/image/${kind}`, { method: 'POST', body: JSON.stringify({ image }) });
+    if (!r.ok) return { ok: false, error: r.data?.error };
+    setForm((f) => ({ ...f, [kind === 'hero' ? 'heroImage' : 'image']: r.data[kind === 'hero' ? 'heroImage' : 'image'] }));
+    load();
+    return { ok: true };
+  };
+  const removeImage = async (kind) => {
+    const r = await call(`/categories/${form.id}/image/${kind}`, { method: 'DELETE' });
+    if (r.ok) { setForm((f) => ({ ...f, [kind === 'hero' ? 'heroImage' : 'image']: '' })); load(); }
+    return { ok: r.ok };
   };
   const save = async (e) => {
     e.preventDefault(); setBusy(true); setMsg(null);
@@ -193,8 +207,14 @@ export default function CategoriesAdmin({ formatsSlot = null }) {
                     <label>Couleur<span className="cadm-color"><input type="color" value={form.color || '#c9a24b'} onChange={(e) => set('color', e.target.value)} aria-label="Couleur" />
                       <button type="button" className="btn ghost cadm-sm" onClick={() => set('color', '')}>Aucune</button></span></label>
                   </div>
-                  <label>Image (adresse https://… ou /chemin)<input inputMode="url" maxLength={500} value={form.image} onChange={(e) => set('image', e.target.value)} /></label>
-                  <label>Image d’en-tête (hero)<input inputMode="url" maxLength={500} value={form.heroImage} onChange={(e) => set('heroImage', e.target.value)} /></label>
+                  {form.id ? (
+                    <>
+                      <ImageSlot kind="poster" title="Image de la tuile" help="Affichée dans Explorer, sur l'accueil et partout où la catégorie est présentée (format 16:9, recadrée au centre). JPEG, PNG ou WebP, 2,5 Mo max."
+                        url={form.image} onUpload={(img) => saveImage('image', img)} onRemove={() => removeImage('image')} />
+                      <ImageSlot kind="cover" title="Image d'en-tête (grand bandeau)" help="Grand bandeau en haut de la page de la catégorie (format 21:9, recadrée au centre). Sans elle, l'image de la tuile sert de fond."
+                        url={form.heroImage} onUpload={(img) => saveImage('hero', img)} onRemove={() => removeImage('hero')} />
+                    </>
+                  ) : <p className="meta">Enregistrez d'abord la catégorie : vous pourrez ensuite lui ajouter ses images.</p>}
                   <div className="cadm-row">
                     <label className="chk"><input type="checkbox" checked={form.isActive} onChange={(e) => set('isActive', e.target.checked)} /> Active (visible sur le site)</label>
                     <label className="chk"><input type="checkbox" checked={form.isFeatured} onChange={(e) => set('isFeatured', e.target.checked)} /> Mise en avant</label>

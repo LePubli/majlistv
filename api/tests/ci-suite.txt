@@ -112,3 +112,4 @@ test_import_audience_modes.py
 test_shorts_import_many.py
 test_series_audience.py
 test_default_images.py
+test_category_images.py

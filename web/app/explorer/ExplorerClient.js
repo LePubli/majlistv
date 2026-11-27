@@ -16,6 +16,9 @@ export default function ExplorerClient() {
   const router = useRouter();
   const [cats, setCats] = useState(null);
   const [q, setQ] = useState('');
+  // Fond immersif du haut de page : une image au hasard à chaque visite (ordre fixe au premier affichage, tirage une fois la page affichée).
+  const [bg, setBg] = useState(FALLBACK[0]);
+  useEffect(() => { setBg(FALLBACK[Math.floor(Math.random() * FALLBACK.length)]); }, []);
   useEffect(() => { let dead = false; call(`/catalogue/categories?lang=${locale}`, {}, null).then((r) => { if (!dead) setCats(r.ok ? (r.data.categories || []).filter((c) => c.parentId == null) : []); }); return () => { dead = true; }; }, [call, locale]);
   const submit = (e) => { e.preventDefault(); const v = q.trim(); router.push(v ? `/catalogue?q=${encodeURIComponent(v)}` : '/explorer'); };
   const form = (
@@ -36,6 +39,7 @@ export default function ExplorerClient() {
   }
   return (
     <div className="v20-app pm-page pm-ott pm-explorer">
+      <div className="pm-ex-bg" style={{ '--ex-bg': `url("${bg}")` }} aria-hidden="true" />
       <header className="pm-ex-head">
         <span className="pm-cat-eyebrow">{t('ctEyebrow')}</span>
         <h1>{t('exTitle')}</h1>

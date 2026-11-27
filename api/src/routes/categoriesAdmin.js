@@ -15,11 +15,13 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { slugify } from '../slugs.js';
 import { patchOf } from '../zpatch.js';
+import { storeImage } from '../imageUpload.js';
+import { deleteObject } from '../storage.js';
 
 const FULL = `c.id, c.name, c.slug, c.parent_id AS "parentId", c.catalogue_type AS "catalogueType", c.description,
   c.short_description AS "shortDescription", c.display_order AS "displayOrder", c.is_active AS "isActive", c.is_featured AS "isFeatured",
   c.icon, c.image, c.hero_image AS "heroImage", c.color, c.seo_title AS "seoTitle", c.seo_description AS "seoDescription",
-  c.translations, c.updated_at AS "updatedAt"`;
+  c.translations, c.updated_at AS "updatedAt", c.image_key AS "imageKey", c.hero_image_key AS "heroImageKey"`;
 const COUNTS = `(SELECT count(*)::int FROM talks t WHERE t.category_id = c.id) AS "mainCount",
   (SELECT count(*)::int FROM talk_categories tc WHERE tc.category_id = c.id) AS "extraCount",
   (SELECT count(*)::int FROM series s WHERE s.category_id = c.id) AS "seriesCount",
@@ -190,6 +192,34 @@ export default async function categoriesAdminRoutes(app) {
 
   // ───────────────────────── Ordre ─────────────────────────
   // { ids: [3, 1, 2] } : les frères (même parent, même catalogue) sont renumérotés 10, 20, 30… dans l'ordre donné.
+  // Images de la catégorie ou sous-catégorie : « image » (tuile : Explorer, accueil, Kids…) et « hero » (grand bandeau de sa page).
+  // L'image est enregistrée dans le stockage ; le site l'affiche par /api/catalogue/category-image/<id>/<image|hero>.
+  const KIND = { image: ['image', 'image_key'], hero: ['hero_image', 'hero_image_key'] };
+  const kindParam = z.object({ id: z.coerce.number().int().positive(), kind: z.enum(['image', 'hero']) });
+  app.post('/categories/:id/image/:kind', { ...admin, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
+    const { id, kind } = kindParam.parse(req.params);
+    const { image } = z.object({ image: z.string().max(3_500_000) }).strict().parse(req.body ?? {});
+    const [col, keyCol] = KIND[kind];
+    const cur = (await pool.query(`SELECT ${keyCol} AS k FROM categories WHERE id = $1`, [id])).rows[0];
+    if (!cur) return reply.code(404).send({ error: 'Catégorie introuvable' });
+    const st = await storeImage('categories', `${id}-${kind}`, image);
+    if (st.error) return reply.code(400).send({ error: st.error });
+    const url = `/api/catalogue/category-image/${id}/${kind}?v=${Date.now()}`;
+    await pool.query(`UPDATE categories SET ${col} = $2, ${keyCol} = $3, updated_at = now() WHERE id = $1`, [id, url, st.key]);
+    if (cur.k?.startsWith('categories/')) await deleteObject(cur.k).catch(() => {});
+    req.auditSummary = `Image de catégorie (${kind}) modifiée`;
+    return reply.code(201).send({ [kind === 'hero' ? 'heroImage' : 'image']: url });
+  });
+  app.delete('/categories/:id/image/:kind', admin, async (req, reply) => {
+    const { id, kind } = kindParam.parse(req.params);
+    const [col, keyCol] = KIND[kind];
+    const cur = (await pool.query(`SELECT ${keyCol} AS k FROM categories WHERE id = $1`, [id])).rows[0];
+    if (!cur) return reply.code(404).send({ error: 'Catégorie introuvable' });
+    await pool.query(`UPDATE categories SET ${col} = NULL, ${keyCol} = NULL, updated_at = now() WHERE id = $1`, [id]);
+    if (cur.k?.startsWith('categories/')) await deleteObject(cur.k).catch(() => {});
+    return reply.code(204).send();
+  });
+
   app.post('/categories/reorder', admin, async (req, reply) => {
     const { ids } = z.object({ ids: z.array(z.number().int().positive()).min(1).max(500) }).strict().parse(req.body);
     if (new Set(ids).size !== ids.length) return reply.code(400).send({ error: 'Identifiants en double' });
@@ -245,6 +275,7 @@ export default async function categoriesAdminRoutes(app) {
       await client.query('ROLLBACK');
       throw err;
     } finally { client.release(); }
+    for (const k of [cat.imageKey, cat.heroImageKey]) if (k?.startsWith('categories/')) await deleteObject(k).catch(() => {});
     return { deleted: id, moved: q.moveTo ? relations : null, detached: q.moveTo ? null : relations };
   });
 

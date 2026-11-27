@@ -21,7 +21,7 @@ export default function CategoryView({ cat, talks, page, pages }) {
           ? <span key={b.slug} aria-current="page">{b.name}</span>
           : <Link key={b.slug} href={`/catalogue/${b.slug}`}>{b.name}</Link>))}
       </nav>
-      <header className="ctg-head" style={cat.heroImage ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.25)), url(${cat.heroImage})` } : undefined}>
+      <header className="ctg-head" style={(cat.heroImage || cat.image) ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.25)), url(${cat.heroImage || cat.image})` } : undefined}>
         <span className="ctg-ico" aria-hidden="true">{cat.icon || '•'}</span>
         <div>
           <h1>{cat.name}</h1>
