@@ -10,3 +10,12 @@ test('nom du format selon la langue', () => {
   assert.equal(pickFormatName(list, 'inconnu', 'fr'), '');
   assert.equal(pickFormatName(list, null, 'fr'), '');
 });
+
+import { menuLabel } from '../src/lib/menus';
+test('menu : l\'ancien nom « Catalogue » devient Explorer', () => {
+  const it = { id: 'a', kind: 'appscreen', screen: 'talks', label: { fr: 'Catalogue', en: 'Catalogue' } };
+  assert.equal(menuLabel(it, 'fr'), 'Explorer');
+  assert.equal(menuLabel(it, 'en'), 'Explore');
+  assert.equal(menuLabel({ ...it, label: { fr: 'Mes conférences' } }, 'fr'), 'Mes conférences');
+  assert.equal(menuLabel({ ...it, screen: 'learn' }, 'fr'), 'Catalogue');
+});

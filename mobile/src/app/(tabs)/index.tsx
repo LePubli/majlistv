@@ -13,13 +13,14 @@ import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { useDownloads } from '@/lib/downloadStore';
 import { progressOf } from '@/lib/media';
-import type { Card, Citation, CollectionItem, Home, KidsHome } from '@/lib/types';
+import type { Card, Citation, Home, KidsHome } from '@/lib/types';
 import { mergeMyList } from '@/lib/mylist';
 import { colors } from '@/lib/theme';
 import { Button, ErrorBox, Loading, Panel, Txt, screenStyle } from '@/components/ui';
 import { Hero } from '@/components/Hero';
-import { Rail, railSizeAt } from '@/components/Rail';
-import { CollectionCard } from '@/components/CollectionCard';
+import { Rail } from '@/components/Rail';
+import { HomeSpot, splitHomeCollections, type HomeCollection } from '@/components/HomeSpot';
+import { openCollection } from '@/components/CollectionCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { TalkCard } from '@/components/TalkCard';
 import { CitationCard } from '@/components/CitationCard';
@@ -39,7 +40,7 @@ export default function HomeScreen() {
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   const listOn = feat('watchlater') || feat('favorites');
   // Collections éditoriales (rangée de l'accueil, comme sur le site) : seulement si la fonction est activée.
-  const cols = useAsync(() => (feat('collections') ? api.get<CollectionItem[]>('/collections').catch(() => [] as CollectionItem[]) : Promise.resolve([] as CollectionItem[])), [user?.id]);
+  const cols = useAsync(async () => { if (!feat('collections')) return [] as HomeCollection[]; const r = await api.get<{ collections: HomeCollection[] }>('/collections/home').catch(() => null); return Array.isArray(r?.collections) ? r!.collections : []; }, [user?.id]);
   const myList = useAsync(async () => {
     if (!user || !listOn) return [];
     const [l, f] = await Promise.all([
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   }
   const rows = home.data.rows ?? [];
   const trial = config?.trialDays ?? 0;
+  const { spots, rest } = splitHomeCollections(cols.data ?? []);
 
   return (
     <View style={[screenStyle, dirStyle]}>
@@ -84,7 +86,6 @@ export default function HomeScreen() {
 
         {(myList.data ?? []).length > 0 ? <Rail title={t('lbMyList')} items={myList.data ?? []} onSeeAll={() => router.navigate({ pathname: '/library', params: { tab: 'list' } })} seeAllLabel={t('rowSeeAll')} render={(x, w) => <TalkCard talk={x} width={w} progress={progressOf(x)} />} /> : null}
 
-        {(cols.data ?? []).length > 0 ? <Rail title={t('colNav')} items={cols.data ?? []} onSeeAll={() => router.navigate('/collections')} seeAllLabel={t('rowSeeAll')} render={(c, w) => <CollectionCard c={c} width={Math.round(w * 1.05)} />} /> : null}
 
         <EventsBand />
 
@@ -99,14 +100,22 @@ export default function HomeScreen() {
                 badge={r.forYou ? `★ ${t('forYou')}` : null}
                 items={r.talks ?? []}
                 onSeeAll={r.categoryId && (r.total ?? 0) > (r.talks?.length ?? 0) ? () => router.navigate({ pathname: '/talks', params: { cat: String(r.categoryId) } }) : undefined}
-                size={railSizeAt(i)}
+                size={i % 2 === 1 ? 'tall' : 'wide'}
                 render={(x, w, sz) => <TalkCard talk={x} width={w} variant={sz} />}
               />
             )}
+            {i >= 3 && (i - 3) % 3 === 0 && spots[Math.floor((i - 3) / 3)] ? <HomeSpot c={spots[Math.floor((i - 3) / 3)]} /> : null}
             {i === 0 ? <KidsBand data={kids.data} /> : null}
           </React.Fragment>
         ))}
         {rows.length === 0 ? <KidsBand data={kids.data} /> : null}
+        {/* Sélections non encore posées (moins de 4 rangées), puis les autres collections en rangées, comme le site */}
+        {spots.slice(Math.max(0, Math.floor((rows.length - 1 - 3) / 3) + 1)).map((c) => <HomeSpot key={c.id} c={c} />)}
+        {rest.map((c, k) => (
+          <Rail key={c.id} title={c.title} items={c.talks ?? []} size={k % 2 === 1 ? 'tall' : 'wide'}
+            onSeeAll={c.mode === 'personal' ? undefined : () => openCollection(c.id)} seeAllLabel={t('rowSeeAll')}
+            render={(x, w, sz) => <TalkCard talk={x} width={w} variant={sz} />} />
+        ))}
 
         <CitationCard c={cit.data} />
 

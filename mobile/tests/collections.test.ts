@@ -26,7 +26,8 @@ test('durée totale : minutes ou heures', () => {
 test('téléphone : rangée d\'accueil, accès Catalogue, écrans immersifs', () => {
   const home = read('src/app/(tabs)/index.tsx');
   assert.match(home, /feat\('collections'\)/, 'rangée seulement si la fonction est activée');
-  assert.match(home, /<CollectionCard c=\{c\}/);
+  assert.match(home, /<HomeSpot c=/, 'sélections en grand cadre comme le site');
+  assert.match(home, /\/collections\/home/, 'mêmes collections que le site');
   assert.match(read('src/app/(tabs)/talks.tsx'), /router\.push\('\/collections'\)/, 'accès depuis le Catalogue');
   const list = read('src/app/collections/index.tsx');
   assert.match(list, /ImmersiveHero/); assert.match(list, /kindPlural/); assert.match(list, /featured/);

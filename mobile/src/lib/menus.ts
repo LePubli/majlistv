@@ -103,9 +103,18 @@ export function targetOf(it: MenuItem, c: Ctx): Target | null {
   }
 }
 
+const EXPLORER: Record<string, string> = { fr: 'Explorer', en: 'Explore', ar: 'استكشف' };
+
+/** L'écran « talks » s'appelle désormais Explorer : un menu enregistré avec l'ancien nom « Catalogue » affiche le nouveau. */
+export function menuLabel(it: MenuItem, locale: string): string {
+  const l = labelOf(it.label, locale);
+  if (it.kind === 'appscreen' && it.screen === 'talks' && /^(catalogue?|catalog|الكتالوج|الفهرس)$/i.test(l.trim())) return EXPLORER[locale] || EXPLORER.fr;
+  return l;
+}
+
 function one(it: MenuItem, c: Ctx): AppItem | null {
   if (!audienceOk(it.audience, c) || !onPhone(it.devices)) return null;
-  const label = labelOf(it.label, c.locale);
+  const label = menuLabel(it, c.locale);
   const kids = (it.children || []).map((k) => one(k, c)).filter((x): x is AppItem => !!x);
   if (it.kind === 'heading') return label && kids.length ? { key: it.id, label, icon: ICONS[it.icon || ''] || 'chevron-right', target: null, children: kids } : null;
   const target = targetOf(it, c);

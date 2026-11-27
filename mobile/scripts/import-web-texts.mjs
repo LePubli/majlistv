@@ -18,7 +18,7 @@ const PREFIXES = ['pn', 'lic', 'hero', 'row', 'cit', 'fm', 'kdBand', 'rev', 'qp'
   // Étape M6 : premiers pas, visite guidée, parrainage, cartes cadeaux.
   'ob', 'tour', 'ref', 'gf', 'rd'];
 // Clés isolées.
-const EXACT = ['home', 'library', 'navCatalogue', 'navExplorer', 'exTitle', 'exSub', 'navLearn', 'seriesNav', 'colNav', 'minutes', 'login', 'register', 'email', 'password', 'submit', 'free', 'premium', 'mixed',
+const EXACT = ['home', 'library', 'navCatalogue', 'navExplorer', 'pmSelection', 'pmExploreCollection', 'exTitle', 'exSub', 'navLearn', 'seriesNav', 'colNav', 'minutes', 'login', 'register', 'email', 'password', 'submit', 'free', 'premium', 'mixed',
   'noTalks', 'summary', 'chapters', 'transcript', 'dSpeaker', 'dCategory', 'dLang', 'dDuration', 'dAccess', 'dSubs', 'lvLabel', 'pricing', 'subscribe', 'logout', 'account',
   'forgotLink', 'haveAccount', 'registerLegal', 'legalTerms', 'legalPrivacy', 'languageMenu', 'mainNav', 'removeFav', 'addFav', 'playerUnavailable', 'premiumOnly', 'convFailed',
   'processingMsg', 'previewMsg', 'transcribing', 'insightsWaiting', 'epN', 'seasonN', 'sShort', 'eShort', 'seasonCount', 'episodeCount', 'watchedOf', 'seriesTag', 'nextEp', 'prevEp',

@@ -1,5 +1,5 @@
 {
-  "fr": "Page vidéo immersive : l'image de la vidéo en fond flouté sous le lecteur. Vignettes et rangées comme sur le site (format, durée, tailles alternées).",
-  "en": "Immersive video page: the video image as a blurred background under the player. Cards and rows like on the website (format, duration, alternating sizes).",
-  "ar": "صفحة فيديو غامرة: صورة الفيديو كخلفية ضبابية تحت المشغّل. البطاقات والصفوف مثل الموقع (الصيغة، المدة، أحجام متناوبة)."
+  "fr": "Accueil comme le site : sélections de collections en grand cadre, rangées alternant largeur et affiches, onglet « Explorer ». Le fond de la page vidéo défile avec la page.",
+  "en": "Home like the website: featured collections in large frames, rows alternating wide and poster cards, \"Explore\" tab. The video page background now scrolls with the page.",
+  "ar": "الرئيسية مثل الموقع: مجموعات مختارة في إطار كبير، وصفوف بأحجام متناوبة، وتبويب «استكشف». خلفية صفحة الفيديو تتحرك مع الصفحة."
 }

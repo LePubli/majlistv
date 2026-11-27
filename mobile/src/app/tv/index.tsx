@@ -23,6 +23,8 @@ export default function TvHome() {
   const home = useAsync(() => api.get<Home>('/home'), [user?.id]);
   const cont = useAsync(async () => (user ? await api.get<Card[]>('/me/continue').catch(() => []) : []), [user?.id]);
   // Collections éditoriales (rangée sous « Continuer »), seulement si la fonction est activée.
+  // Collections de l'accueil (mêmes que le site) : une rangée de vidéos par collection, après les rangées du catalogue.
+  const colRows = useAsync(async () => { if (!feat('collections')) return [] as { id: string; title: string; talks: Card[] }[]; const r = await api.get<{ collections: { id: string; title: string; talks: Card[] }[] }>('/collections/home').catch(() => null); return Array.isArray(r?.collections) ? r!.collections.filter((c) => (c.talks || []).length > 0) : []; }, []);
   const cols = useAsync(async () => (feat('collections') ? await api.get<CollectionItem[]>('/collections').catch(() => [] as CollectionItem[]) : []), []);
   const rows = tvRows(home.data?.rows ?? []);
   const featured = home.data?.hero && home.data.hero.mode === 'featured' ? home.data.hero.items[0] : null;
@@ -66,6 +68,7 @@ export default function TvHome() {
                 <TvRow key={r.key} title={r.title || t('tv.featured')} talks={(r.talks ?? []) as Card[]} cardW={cardW} padStart={pad}
                   first={!hero && !hasCont && i === 0} onFocusTalk={setBg} />
               ))}
+              {(colRows.data ?? []).map((c) => <TvRow key={`col-${c.id}`} title={c.title} talks={c.talks} cardW={cardW} padStart={pad} onFocusTalk={setBg} />)}
             </View>
             {!hero && rows.length === 0 ? <Txt size={u(26)} color={tvc.muted} style={{ paddingHorizontal: pad }}>{t('tv.empty')}</Txt> : null}
           </ScrollView>
