@@ -33,7 +33,7 @@ const withSelf = (it) => (it.href ? { ...it, children: [{ ...it, key: `${it.key}
 
 export function isPmActive(path, href) {
   if (href === '/') return path === '/';
-  if (href === '/catalogue') return path.startsWith('/catalogue') || path.startsWith('/talks');
+  if (href === '/explorer' || href === '/catalogue') return path.startsWith('/explorer') || path.startsWith('/catalogue') || path.startsWith('/talks');
   return path === href || path.startsWith(`${href}/`);
 }
 
@@ -55,7 +55,7 @@ export default function PmHeader() {
     return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); };
   }, [menu]);
   if (path.startsWith('/studio') || path.startsWith('/admin')) return null; // ils ont leur propre menu
-  const overlay = path === '/' || path === '/learning' || path === '/catalogue' || path === '/series' || /^\/series\/[^/]+$/.test(path); // comme la maquette : posé sur l'image (accueil, Apprendre, catalogue, séries, fiche série)
+  const overlay = path === '/' || path === '/learning' || path === '/catalogue' || path === '/explorer' || path === '/series' || /^\/series\/[^/]+$/.test(path); // comme la maquette : posé sur l'image (accueil, Apprendre, catalogue, séries, fiche série)
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
   const initial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();

@@ -108,7 +108,7 @@ function Hero({ items, t }) {
             <span className="v20-eyebrow">{t('heroEyebrow')}</span>
             <h1 className="v20-serif">{appName}</h1>
             <h2>{t('tagline')}</h2>
-            <div className="v20-actions"><Link href="/catalogue" className="v20-btn v20-btn-primary">▶ &nbsp; {t('navCatalogue')}</Link></div>
+            <div className="v20-actions"><Link href="/explorer" className="v20-btn v20-btn-primary">▶ &nbsp; {t('navExplorer')}</Link></div>
           </div>
         )}
       </div>
@@ -151,7 +151,7 @@ export function PmUniversesSection() {
   return (
     <nav className="v20-mobile-universes v20-shell" aria-label={t('pmUniverses')}>
       {univ.map((c) => <Link key={c.id} href={`/catalogue?cat=${c.id}`} className="v20-mobile-universe"><Glyph name={glyphOfCategory(c.name)} /><span>{c.name}</span></Link>)}
-      <Link href="/catalogue" className="v20-mobile-universe"><Glyph name="grid" /><span>{t('pmMore')}</span></Link>
+      <Link href="/explorer" className="v20-mobile-universe"><Glyph name="grid" /><span>{t('pmMore')}</span></Link>
     </nav>
   );
 }
@@ -412,7 +412,7 @@ export function PmDiscoverSection() {
     <section className="pm-discover" aria-label={t('pmDiscoverTitle')}>
       <h2 className="v20-serif">{t('pmDiscoverTitle')}</h2>
       <p>{t('pmDiscoverSub')}</p>
-      <Link href="/catalogue" className="v20-btn v20-btn-outline">{t('pmDiscoverCta')} <span aria-hidden="true">→</span></Link>
+      <Link href="/explorer" className="v20-btn v20-btn-outline">{t('pmDiscoverCta')} <span aria-hidden="true">→</span></Link>
     </section>
   );
 }

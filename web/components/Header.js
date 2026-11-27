@@ -137,7 +137,7 @@ function MainHeader() {
   // Studio et administration ont leur propre menu (components/StudioShell.js).
   if (path.startsWith('/studio') || path.startsWith('/admin')) return null;
   // Une destination reste allumée sur toutes les pages de sa rubrique (ex. « Catalogue » sur /series, « Pratique » sur /coran).
-  const SECTION_HOME = { '/catalogue': 'catalogue', '/pratique': 'pratique' };
+  const SECTION_HOME = { '/explorer': 'catalogue', '/catalogue': 'catalogue', '/pratique': 'pratique' };
   const cur = (href) => (path === href || (href !== '/' && path.startsWith(href)) || (SECTION_HOME[href] && sectionOf(path) === SECTION_HOME[href]) ? 'page' : undefined);
   const manager = user && ['organizer', 'moderator', 'admin'].includes(user.role);
   const modOnly = user && user.role === 'moderator';
@@ -145,7 +145,7 @@ function MainHeader() {
   const nav = layout?.nav;
   const mainD = {
     home: { key: 'home', href: '/', label: t('home'), icon: ICONS.home, on: true },
-    catalogue: { key: 'catalogue', href: '/catalogue', label: t('navCatalogue'), icon: ICONS.series, on: true },
+    catalogue: { key: 'catalogue', href: '/explorer', label: t('navExplorer'), icon: ICONS.series, on: true },
     livetv: { key: 'livetv', href: '/live', label: t('lvNav'), icon: ICONS.tv, on: feat('livetv') }, // TV en direct (14/11)
     shorts: { key: 'shorts', href: '/shorts', label: t('shrTitle'), icon: ICONS.shorts, on: feat('shorts') },
     prayer: { key: 'prayer', href: '/priere', label: t('pqNav'), icon: ICONS.prayer, on: feat('prayer') },

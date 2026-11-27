@@ -43,7 +43,7 @@ for (const c of ['v20-topbar v20-exact-header', 'v20-is-overlay', 'v20-brand v20
 assert.match(hd, /\/brand\/emblem-bleu-s\.png/, 'vrai logo Mejliss');
 // Depuis l'étape 4 de l'éditeur, les liens d'origine viennent de navDefaults.js et l'en-tête suit Admin → Menus.
 const nd = read('lib/navDefaults.js');
-for (const k of ["t('home')", "t('navCatalogue')", "t('seriesNav')", "t('navLearn')", "t('kdNav')"]) assert.ok(nd.includes(k), `menu de la maquette : ${k}`);
+for (const k of ["t('home')", "t('navExplorer')", "t('seriesNav')", "t('navLearn')", "t('kdNav')"]) assert.ok(nd.includes(k), `menu de la maquette : ${k}`);
 assert.ok(hd.includes('menus?.web_top'), 'en-tête piloté par Admin → Menus');
 for (const k of ['"/pratique"', '"/library"', '"/account"', 'logoutNow']) assert.ok(hd.includes(k), `menu de l'avatar : ${k}`);
 assert.doesNotMatch(hd, /notification-dot/, 'pas de pastille de notification inventée');

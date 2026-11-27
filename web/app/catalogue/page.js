@@ -1,6 +1,7 @@
 // /catalogue — enveloppe serveur de l'écran du Catalogue (CatalogueClient) : titre, description, adresse canonique et
 // consignes aux moteurs de recherche. Une page filtrée (langue, durée, thème, recherche…) est un doublon de /catalogue :
 // elle est marquée « noindex, follow » et sa canonique pointe vers /catalogue (phase 7, SEO).
+import { redirect } from 'next/navigation';
 import { seoSite } from '../../lib/seo';
 import CatalogueClient from './CatalogueClient';
 
@@ -19,6 +20,8 @@ export async function generateMetadata({ searchParams }) {
   };
 }
 
-export default function Page() {
+// /catalogue sans recherche ni filtre = l'ancienne page Catalogue : elle est remplacée par Explorer. Avec ?q=, ?format=, ?cat=… c'est une page de résultats, conservée.
+export default function Page({ searchParams }) {
+  if (!Object.keys(searchParams || {}).length) redirect('/explorer');
   return <CatalogueClient />;
 }

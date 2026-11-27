@@ -38,7 +38,7 @@ export default async function manifest() {
       { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
-      { name: 'Catalogue', url: '/catalogue', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+      { name: 'Explorer', url: '/explorer', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
       { name: 'Ma bibliothèque', url: '/library', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
     ],
   };

@@ -5,7 +5,7 @@
 export function pmMainDefaults({ t, feat, hasSeries, hasBooks }) {
   return {
     home: { key: 'home', href: '/', label: t('home'), on: true },
-    catalogue: { key: 'catalogue', href: '/catalogue', label: t('navCatalogue'), on: true },
+    catalogue: { key: 'catalogue', href: '/explorer', label: t('navExplorer'), on: true },
     series: { key: 'series', href: '/series', label: t('seriesNav'), on: hasSeries },
     learning: { key: 'learning', href: '/learning', label: t('navLearn'), on: feat('learning') },
     pratique: { key: 'pratique', href: '/pratique', label: t('pqHub'), on: feat('prayer') || feat('quran') || feat('athkar') || feat('ramadan') },
