@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useApp } from '../Providers';
 import { BlocksView } from '../PageBlocks';
 import { DIR } from '../../lib/locales';
-import { CatProvider, CatHeroSection, CatChipsSection, CatRailsSection, CatResultsSection, CatCrossSection } from './PmCatalogueSections';
+import { CatProvider, CatHeroSection, CatChipsSection, CatToolbarSection, CatRailsSection, CatResultsSection, CatCrossSection } from './PmCatalogueSections';
 
 export default function PmCatalogue(props) {
   return <Suspense fallback={<div className="v20-app pm-page" aria-busy="true" />}><Inner {...props} /></Suspense>;
@@ -33,6 +33,7 @@ function DefaultCatalogue() {
     <div className="v20-app pm-page pm-ott pm-ott-cat">
       <CatHeroSection />
       <CatChipsSection />
+      <CatToolbarSection />
       <main className="pm-ott-body">
         <CatRailsSection />
         <CatResultsSection />
@@ -58,7 +59,7 @@ function BlocksCatalogue({ page }) {
 function Inner({ series = false }) {
   const page = usePublishedCatalogue(!series);
   return (
-    <CatProvider series={series}>
+    <CatProvider series={series} toolbar={!series && page === null}>
       {page === undefined ? <div className="v20-app pm-page pm-ott pm-ott-cat" aria-busy="true" /> : page ? <BlocksCatalogue page={page} /> : <DefaultCatalogue />}
     </CatProvider>
   );

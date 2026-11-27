@@ -13,6 +13,7 @@ import { thumbOf } from '../../lib/thumb';
 import { catalogueTabs } from '../SectionTabs';
 import Glyph from './Glyph';
 import { OttCard, OttRail, useTalkProgress } from './PmOtt';
+import { PmSpotSection } from './PmHomeSections';
 import TalkFilters, { FILTER_KEYS, filtersFrom } from '../TalkFilters';
 
 const PAGE = 24;
@@ -29,7 +30,7 @@ function hrefOf(base, cur, patch) {
 }
 
 /** Tout l'état du Catalogue : filtres lus dans l'adresse, données chargées, cartes. */
-export function useCatalogueState(series = false) {
+export function useCatalogueState(series = false, toolbar = false) {
   const { t, call, ready, user, feat, allCats, formatName, inMyList, toggleMyList, appName, hasSeries, hasBooks } = useApp();
   const sp = useSearchParams();
   const router = useRouter();
@@ -44,7 +45,8 @@ export function useCatalogueState(series = false) {
   const hasExtras = FILTER_KEYS.some((k) => cur[k]);
   const [q, setQ] = useState(cur.q);
   useEffect(() => { setQ(cur.q); }, [cur.q]);
-  const [view, setView] = useState('grid');
+  const [view, setView] = useState('grid');          // grille ou liste (résultats)
+  const [showAll, setShowAll] = useState(false);      // « Afficher plus de contenus » : ouvre la grille complète sous les rangées
   const roots = useMemo(() => (allCats || []).filter((c) => c.parentId == null), [allCats]);
   const rootOf = useCallback((id) => { const c = (allCats || []).find((x) => String(x.id) === String(id)); return c ? (c.parentId ?? c.id) : null; }, [allCats]);
   const curRoot = cur.cat ? rootOf(cur.cat) : null;
@@ -126,15 +128,18 @@ export function useCatalogueState(series = false) {
 
   // Mode « rangées » (accueil du Catalogue sans filtre) : une rangée par grand thème qui a des vidéos (6 au plus).
   const [rails, setRails] = useState([]);
-  const railMode = !series && !cur.q && !cur.cat && !cur.format && !hasExtras && cur.sort === 'recent';
+  const railMode = !series && !cur.q && !cur.cat && !hasExtras && cur.sort === 'recent'; // un format choisi reste en rangées (une par thème)
   useEffect(() => {
     if (!ready || !railMode || !facets) { setRails([]); return undefined; }
     let dead = false;
     const withVideos = roots.filter((c) => (counts[c.id] || 0) > 0).slice(0, 6);
-    Promise.all(withVideos.map((c) => call(`/talks?category=${c.id}&limit=10`, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] }))))
+    const fmt = cur.format ? `&format=${encodeURIComponent(cur.format)}` : '';
+    // 1re rangée « À découvrir » (les plus récentes), puis une rangée par grand thème.
+    const discover = call(`/talks?limit=10${fmt}`, {}, null).then((r) => ({ c: null, list: r.ok && Array.isArray(r.data) ? r.data : [] }));
+    Promise.all([discover, ...withVideos.map((c) => call(`/talks?category=${c.id}&limit=10${fmt}`, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] })))])
       .then((all) => { if (!dead) setRails(all.filter((x) => x.list.length)); });
     return () => { dead = true; };
-  }, [ready, railMode, facets, roots, counts, call]);
+  }, [ready, railMode, facets, roots, counts, call, cur.format]); // eslint-disable-line react-hooks/exhaustive-deps
   // Avancement réel du membre sur les cartes vidéo affichées (grille et rangées) ; rien pour un visiteur.
   const prog = useTalkProgress(series ? [] : [...(shown || []).map((x) => x.id), ...(railMode ? rails.flatMap((r) => r.list.map((x) => x.id)) : [])]);
   const talkCard = (x) => <OttCard key={x.id} x={x} pct={prog[x.id]?.pct} done={prog[x.id]?.done} />;
@@ -146,7 +151,7 @@ export function useCatalogueState(series = false) {
 
   // Image du bandeau : celle de la première vidéo (ou série) affichée, à défaut le visuel du thème.
   const heroImg = (shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp';
-  return { series, t, base, cur, hasExtras, q, setQ, roots, curRoot, catName, heading, title, heroImg, tabs, counts, facets, total, allTotal, shown, items, more, loadMore, go, submit, formats, railMode, rails, talkCard, seriesCard, feat, appName, hrefOf, listOn };
+  return { toolbar, view, setView, showAll, setShowAll, series, t, base, cur, hasExtras, q, setQ, roots, curRoot, catName, heading, title, heroImg, tabs, counts, facets, total, allTotal, shown, items, more, loadMore, go, submit, formats, railMode, rails, talkCard, seriesCard, feat, appName, hrefOf, listOn };
 }
 
 // ---------------------------------------------------------------------------------------------------------------- sections
@@ -156,8 +161,8 @@ const CatCtx = createContext(null);
 export const useCat = () => useContext(CatCtx);
 
 /** Fournit l'état du Catalogue (filtres dans l'adresse, données) à ses sections. */
-export function CatProvider({ series = false, children }) {
-  const c = useCatalogueState(series);
+export function CatProvider({ series = false, toolbar = false, children }) {
+  const c = useCatalogueState(series, toolbar);
   return <CatCtx.Provider value={c}>{children}</CatCtx.Provider>;
 }
 
@@ -180,30 +185,90 @@ export function CatHeroSection() {
 
 export function CatChipsSection() {
   const { series, t, base, cur, roots, curRoot, facets, counts, tabs, hrefOf } = useCat();
+  // Six thèmes en puces ; les autres dans « Plus de thèmes » (le thème choisi reste toujours visible).
+  const all = roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id));
+  const head = all.slice(0, 6);
+  const cut = all.slice(6);
+  const visible = cut.some((c) => String(curRoot) === String(c.id)) ? [...head, cut.find((c) => String(curRoot) === String(c.id))] : head;
+  const rest = cut.filter((c) => !visible.includes(c));
   return (
     <nav className="pm-cat-chips" aria-label={t('pmCategories')}>
       <Link href={hrefOf(base, cur, { cat: '' })} className={cur.cat ? undefined : 'pm-on'} aria-current={cur.cat ? undefined : 'page'}>{series ? t('pmAllSeries') : t('cgAll')}</Link>
-      {roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id)).map((c) => {
+      {visible.map((c) => {
         const on = String(curRoot) === String(c.id);
         return <Link key={c.id} href={hrefOf(base, cur, { cat: String(c.id) })} className={on ? 'pm-on' : undefined} aria-current={on ? 'page' : undefined}>{c.name}</Link>;
       })}
+      {rest.length > 0 && (
+        <details className="pm-cat-more">
+          <summary>{t('ctMoreThemes')} <span aria-hidden="true">⌄</span></summary>
+          <div className="pm-cat-more-menu">
+            {rest.map((c) => <Link key={c.id} href={hrefOf(base, cur, { cat: String(c.id) })} className={String(curRoot) === String(c.id) ? 'pm-on' : undefined}>{c.name}</Link>)}
+          </div>
+        </details>
+      )}
       {tabs.map(([href, label]) => <Link key={href} href={href} className="pm-chip-more">{label}</Link>)}
     </nav>
   );
 }
 
+/** Barre d'outils sous les thèmes : formats (onglets), filtres avancés, tri, grille / liste ; puis le titre et le nombre de contenus. */
+export function CatToolbarSection() {
+  const { series, t, base, cur, formats, go, title, total, view, setView, hrefOf, railMode, toolbar } = useCat();
+  if (!toolbar) return null;
+  return (
+    <section className="pm-cat-toolbar" aria-label={t('cgByFormat')}>
+      <div className="pm-cat-trow">
+        {!series && formats.length >= 1 && (
+          <div className="pm-cat-ftabs" role="group" aria-label={t('cgByFormat')}>
+            <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'pm-on'} aria-current={cur.format ? undefined : 'true'}>{t('pmAll')}</Link>
+            {formats.map((f) => <Link key={f.slug} href={hrefOf(base, cur, { format: f.slug })} className={cur.format === f.slug ? 'pm-on' : undefined} aria-current={cur.format === f.slug ? 'true' : undefined}>{f.name}</Link>)}
+          </div>
+        )}
+        <div className="pm-cat-tools">
+          {!series && <div className="pm-cat-filters"><TalkFilters /></div>}
+          <label className="pm-cat-sort">{t('pmSortBy')} <select value={cur.sort} onChange={(e) => go({ sort: e.target.value })} aria-label={t('pmSortBy')}>
+            <option value="recent">{t('pmSortRecent')}</option>
+            <option value="alpha">{t('pmSortAlpha')}</option>
+            <option value="duration">{series ? t('pmSortEpisodes') : t('pmSortDuration')}</option>
+          </select></label>
+          <div className="pm-cat-view" role="group" aria-label={t('ctView')}>
+            <button type="button" aria-pressed={view === 'grid'} className={view === 'grid' ? 'pm-on' : undefined} onClick={() => setView('grid')} aria-label={t('ctViewGrid')} title={t('ctViewGrid')}>▦</button>
+            <button type="button" aria-pressed={view === 'list'} className={view === 'list' ? 'pm-on' : undefined} onClick={() => setView('list')} aria-label={t('ctViewList')} title={t('ctViewList')}>☰</button>
+          </div>
+        </div>
+      </div>
+      {railMode && <div className="pm-cat-headline"><h2>{cur.format ? title : t('pmAllContents')}</h2>{total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}</div>}
+    </section>
+  );
+}
+
 export function CatRailsSection() {
-  const { railMode, rails, base, cur, talkCard, hrefOf } = useCat();
+  const { railMode, rails, base, cur, talkCard, hrefOf, t } = useCat();
   if (!railMode || !rails.length) return null;
-  return rails.map(({ c, list }) => (
-    <OttRail key={c.id} title={c.name} href={hrefOf(base, cur, { cat: String(c.id) })}>
-      {list.map(talkCard)}
-    </OttRail>
-  ));
+  // Comme l'accueil : une rangée en vignettes 16:9, la suivante en affiches 2:3, et ainsi de suite ; une « sélection » (collection) après la 3e.
+  const out = [];
+  rails.forEach(({ c, list }, i) => {
+    out.push(
+      <OttRail key={c ? c.id : 'discover'} title={c ? c.name : t('ctDiscover')} href={c ? hrefOf(base, cur, { cat: String(c.id) }) : undefined} tall={i % 2 === 1}>
+        {list.map(talkCard)}
+      </OttRail>,
+    );
+    if (i === 2) out.push(<div key="spot" className="pm-ins"><PmSpotSection n={1} /></div>);
+  });
+  if (rails.length < 3) out.push(<div key="spot" className="pm-ins"><PmSpotSection n={1} /></div>);
+  return out;
 }
 
 export function CatResultsSection() {
-  const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf } = useCat();
+  const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf, toolbar, view, showAll, setShowAll } = useCat();
+  // Catalogue en rangées : la grille complète n'apparaît qu'après « Afficher plus de contenus ».
+  if (toolbar && railMode && !showAll) {
+    return (
+      <div className="v20-cv11-more">
+        <button type="button" onClick={() => setShowAll(true)}>{t('pmShowMore')}{total != null && total > 0 ? <span>{t('pmResultN').replace('{n}', total)}</span> : null} ›</button>
+      </div>
+    );
+  }
   return (
     <section className="pm-cat-all" aria-busy={shown === null}>
       <div className="pm-cat-bar">
@@ -211,7 +276,7 @@ export function CatResultsSection() {
           <h2>{railMode ? t('pmAllContents') : title}</h2>
           {total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}
         </div>
-        <div className="pm-cat-tools">
+        {!toolbar && <div className="pm-cat-tools">
           {!series && formats.length >= 1 && (
             <div className="pm-cat-formats" role="group" aria-label={t('cgByFormat')}>
               <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'pm-on'} aria-current={cur.format ? undefined : 'true'}>{t('pmAll')}</Link>
@@ -223,9 +288,9 @@ export function CatResultsSection() {
             <option value="alpha">{t('pmSortAlpha')}</option>
             <option value="duration">{series ? t('pmSortEpisodes') : t('pmSortDuration')}</option>
           </select></label>
-        </div>
+        </div>}
       </div>
-      {!series && <div className="pm-cat-filters"><TalkFilters /></div>}
+      {!series && !toolbar && <div className="pm-cat-filters"><TalkFilters /></div>}
       {shown && shown.length === 0 ? (
         <div className="v20-cv11-empty">
           <Glyph name="search" />
@@ -234,7 +299,7 @@ export function CatResultsSection() {
           <Link href={base}>{t('pmShowAll')}</Link>
         </div>
       ) : (
-        <div className="pm-cat-grid">
+        <div className={view === 'list' ? 'pm-cat-grid pm-list' : 'pm-cat-grid'}>
           {(shown || []).map((x) => (series ? seriesCard(x) : talkCard(x)))}
         </div>
       )}
