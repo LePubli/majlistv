@@ -6,7 +6,7 @@
 // Mode « séries » (page /series) : mêmes écrans, avec la liste des séries publiées (GET /series).
 // Les filtres sont dans l'adresse (?q=, ?cat=, ?format=, ?sort=…) : le bouton « retour » du navigateur fonctionne.
 import Link from 'next/link';
-import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../Providers';
 import { thumbOf } from '../../lib/thumb';
@@ -30,6 +30,16 @@ function hrefOf(base, cur, patch) {
 }
 
 /** Tout l'état du Catalogue : filtres lus dans l'adresse, données chargées, cartes. */
+
+/** Images immersives du Catalogue (plein écran, sans personnage) : une au hasard pour le bandeau, une par thème pour son bloc. */
+const IMMERSIVE = ['learn-bg-1', 'learn-bg-2', 'learn-bg-3', 'learn-bg-4', 'learn-bg-5', 'hero-salahuddin', 'andalousie-large', 'coran-large', 'caravane-large', 'salahuddin-large', 'al-khwarizmi-large'].map((n) => `/premium/${n}.webp`);
+/** Tirage au hasard (à chaque visite) : identique côté serveur (ordre fixe), mélangé une fois la page affichée pour éviter tout décalage. */
+function useShuffledImages() {
+  const [list, setList] = useState(IMMERSIVE);
+  useEffect(() => { setList([...IMMERSIVE].sort(() => Math.random() - 0.5)); }, []);
+  return list;
+}
+
 export function useCatalogueState(series = false, toolbar = false) {
   const { t, call, ready, user, feat, allCats, formatName, inMyList, toggleMyList, appName, hasSeries, hasBooks } = useApp();
   const sp = useSearchParams();
@@ -127,20 +137,27 @@ export function useCatalogueState(series = false, toolbar = false) {
   const title = cur.q ? t('cgResults').replace('{q}', cur.q)
     : [cur.format ? (formatName(cur.format) || cur.format) : '', catName].filter(Boolean).join(' · ') || (series ? t('pmAllSeries') : hasExtras ? t('fltTitle') : t('pmAllContents'));
 
-  // Mode « rangées » (accueil du Catalogue sans filtre) : une rangée par grand thème qui a des vidéos (6 au plus).
+  // Mode « rangées » (accueil du Catalogue sans filtre) : « À découvrir » puis une rangée par grand thème, chargées au fil du défilement (3 par 3).
   const [rails, setRails] = useState([]);
+  const [railIdx, setRailIdx] = useState(0);
+  const [railsDone, setRailsDone] = useState(false);
+  const busy = useRef(false);
   const railMode = !series && !cur.q && !cur.cat && !hasExtras && cur.sort === 'recent'; // un format choisi reste en rangées (une par thème)
-  useEffect(() => {
-    if (!ready || !railMode || !facets) { setRails([]); return undefined; }
-    let dead = false;
-    const withVideos = roots.filter((c) => (counts[c.id] || 0) > 0).slice(0, 6);
+  const themeRoots = useMemo(() => roots.filter((c) => (counts[c.id] || 0) > 0), [roots, counts]);
+  const imgs = useShuffledImages();
+  useEffect(() => { setRails([]); setRailIdx(0); setRailsDone(false); busy.current = false; }, [railMode, cur.format, facets === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadRails = useCallback(async () => {
+    if (!ready || !railMode || !facets || busy.current || railsDone) return;
+    busy.current = true;
     const fmt = cur.format ? `&format=${encodeURIComponent(cur.format)}` : '';
-    // 1re rangée « À découvrir » (les plus récentes), puis une rangée par grand thème.
-    const discover = call(`/talks?limit=10${fmt}`, {}, null).then((r) => ({ c: null, list: r.ok && Array.isArray(r.data) ? r.data : [] }));
-    Promise.all([discover, ...withVideos.map((c) => call(`/talks?category=${c.id}&limit=10${fmt}`, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] })))])
-      .then((all) => { if (!dead) setRails(all.filter((x) => x.list.length)); });
-    return () => { dead = true; };
-  }, [ready, railMode, facets, roots, counts, call, cur.format]); // eslint-disable-line react-hooks/exhaustive-deps
+    const batch = themeRoots.slice(railIdx, railIdx + 3);
+    const get = (url, c) => call(url, {}, null).then((r) => ({ c, list: r.ok && Array.isArray(r.data) ? r.data : [] }));
+    const got = await Promise.all([...(railIdx === 0 ? [get(`/talks?limit=10${fmt}`, null)] : []), ...batch.map((c) => get(`/talks?category=${c.id}&limit=10${fmt}`, c))]);
+    setRails((old) => [...old, ...got.filter((x) => x.list.length)]);
+    setRailIdx(railIdx + batch.length);
+    if (railIdx + batch.length >= themeRoots.length) setRailsDone(true);
+    busy.current = false;
+  }, [ready, railMode, facets, railsDone, railIdx, themeRoots, cur.format, call]);
   // Avancement réel du membre sur les cartes vidéo affichées (grille et rangées) ; rien pour un visiteur.
   const prog = useTalkProgress(series ? [] : [...(shown || []).map((x) => x.id), ...(railMode ? rails.flatMap((r) => r.list.map((x) => x.id)) : [])]);
   const talkCard = (x) => <OttCard key={x.id} x={x} time={toolbar} pct={prog[x.id]?.pct} done={prog[x.id]?.done} />;
@@ -151,8 +168,8 @@ export function useCatalogueState(series = false, toolbar = false) {
   };
 
   // Image du bandeau : celle de la première vidéo (ou série) affichée, à défaut le visuel du thème.
-  const heroImg = series ? ((shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp') : '/premium/catalogue-hero.webp';
-  return { heroTitle, toolbar, view, setView, showAll, setShowAll, series, t, base, cur, hasExtras, q, setQ, roots, curRoot, catName, heading, title, heroImg, tabs, counts, facets, total, allTotal, shown, items, more, loadMore, go, submit, formats, railMode, rails, talkCard, seriesCard, feat, appName, hrefOf, listOn };
+  const heroImg = series ? ((shown && shown[0] && thumbOf(shown[0])) || '/premium/andalousie-large.webp') : imgs[0];
+  return { imgs, railsDone, loadRails, heroTitle, toolbar, view, setView, showAll, setShowAll, series, t, base, cur, hasExtras, q, setQ, roots, curRoot, catName, heading, title, heroImg, tabs, counts, facets, total, allTotal, shown, items, more, loadMore, go, submit, formats, railMode, rails, talkCard, seriesCard, feat, appName, hrefOf, listOn };
 }
 
 // ---------------------------------------------------------------------------------------------------------------- sections
@@ -185,7 +202,7 @@ export function CatHeroSection() {
 }
 
 export function CatChipsSection() {
-  const { series, t, base, cur, roots, curRoot, facets, counts, tabs, hrefOf } = useCat();
+  const { series, t, base, cur, roots, curRoot, facets, counts, tabs, hrefOf, toolbar } = useCat();
   // Six thèmes en puces ; les autres dans « Plus de thèmes » (le thème choisi reste toujours visible).
   const all = roots.filter((c) => !facets && !series ? true : (counts[c.id] || 0) > 0 || String(curRoot) === String(c.id));
   const head = all.slice(0, 6);
@@ -207,7 +224,7 @@ export function CatChipsSection() {
           </div>
         </details>
       )}
-      {tabs.map(([href, label]) => <Link key={href} href={href} className="pm-chip-more">{label}</Link>)}
+      {!toolbar && tabs.map(([href, label]) => <Link key={href} href={href} className="pm-chip-more">{label}</Link>)}
     </nav>
   );
 }
@@ -215,14 +232,17 @@ export function CatChipsSection() {
 /** Barre d'outils sous les thèmes : formats (onglets), filtres avancés, tri, grille / liste ; puis le titre et le nombre de contenus. */
 export function CatToolbarSection() {
   const { series, t, base, cur, formats, go, title, total, view, setView, hrefOf, railMode, toolbar } = useCat();
+  const { formatName } = useApp();
   if (!toolbar) return null;
   return (
     <section className="pm-cat-toolbar" aria-label={t('cgByFormat')}>
       <div className="pm-cat-trow">
         {!series && formats.length >= 1 && (
           <div className="pm-cat-ftabs" role="group" aria-label={t('cgByFormat')}>
-            <Link href={hrefOf(base, cur, { format: '' })} className={cur.format ? undefined : 'pm-on'} aria-current={cur.format ? undefined : 'true'}><Glyph name="gridview" />{t('pmAll')}</Link>
-            {formats.map((f) => <Link key={f.slug} href={hrefOf(base, cur, { format: f.slug })} className={cur.format === f.slug ? 'pm-on' : undefined} aria-current={cur.format === f.slug ? 'true' : undefined}><Glyph name={formatGlyph(f.slug)} />{f.name}</Link>)}
+            {formats.map((f) => {
+              const on = cur.format === f.slug;
+              return <Link key={f.slug} href={hrefOf(base, cur, { format: on ? '' : f.slug })} className={on ? 'pm-on' : undefined} aria-current={on ? 'true' : undefined}><Glyph name={formatGlyph(f.slug)} />{formatName(f.slug) || f.nameFr}</Link>;
+            })}
           </div>
         )}
         <span className="pm-cat-sep" aria-hidden="true" />
@@ -239,38 +259,51 @@ export function CatToolbarSection() {
           </div>
         </div>
       </div>
-      {railMode && <div className="pm-cat-headline"><h2>{cur.format ? title : t('pmAllContents')}</h2>{total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}</div>}
+      {railMode && <div className="pm-cat-headline"><h2>{cur.format ? (formatName(cur.format) || title) : t('pmAllContents')}</h2>{total != null && <p>{t(total === 1 ? 'pmResult1' : 'pmResultN').replace('{n}', total)}</p>}</div>}
     </section>
   );
 }
 
 export function CatRailsSection() {
-  const { railMode, rails, base, cur, talkCard, hrefOf, t } = useCat();
+  const { railMode, rails, base, cur, talkCard, hrefOf, t, imgs } = useCat();
   if (!railMode || !rails.length) return null;
-  // Comme l'accueil : une rangée en vignettes 16:9, la suivante en affiches 2:3, et ainsi de suite ; une « sélection » (collection) après la 3e.
+  // Comme l'accueil : une rangée en vignettes 16:9, la suivante en affiches 2:3, et ainsi de suite ; une « sélection » (collection) après la 3e et la 6e.
+  // Chaque thème a son bloc, avec sa propre image d'ambiance (tirée au hasard à chaque visite).
   const out = [];
   rails.forEach(({ c, list }, i) => {
-    out.push(
+    const rail = (
       <OttRail key={c ? c.id : 'discover'} title={c ? c.name : t('ctDiscover')} href={c ? hrefOf(base, cur, { cat: String(c.id) }) : undefined} tall={i % 2 === 1}>
         {list.map(talkCard)}
-      </OttRail>,
+      </OttRail>
     );
-    if (i === 2) out.push(<div key="spot" className="pm-ins"><PmSpotSection n={1} /></div>);
+    out.push(c
+      ? <div key={c.id} className="pm-catblock" style={{ '--blk': `url("${imgs[(i + 1) % imgs.length]}")` }}><span className="pm-catblock-ico" aria-hidden="true"><Glyph name={chipGlyph(c.name)} /></span>{rail}</div>
+      : rail);
+    if (i === 2) out.push(<div key="spot1" className="pm-ins"><PmSpotSection n={1} /></div>);
+    if (i === 5) out.push(<div key="spot2" className="pm-ins"><PmSpotSection n={2} /></div>);
   });
-  if (rails.length < 3) out.push(<div key="spot" className="pm-ins"><PmSpotSection n={1} /></div>);
+  if (rails.length < 3) out.push(<div key="spot1" className="pm-ins"><PmSpotSection n={1} /></div>);
   return out;
 }
 
+/** Défilement infini : quand ce repère approche de l'écran, on charge la suite (d'abord les rangées de thèmes, puis les vidéos une page à la fois). */
+function InfiniteSentinel({ onMore, busy }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) onMore(); }, { rootMargin: '700px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [onMore, busy]);
+  return <div ref={ref} className="pm-cat-sentinel" aria-hidden="true">{busy ? <i /> : null}</div>;
+}
+
 export function CatResultsSection() {
-  const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf, toolbar, view, showAll, setShowAll } = useCat();
-  // Catalogue en rangées : la grille complète n'apparaît qu'après « Afficher plus de contenus ».
-  if (toolbar && railMode && !showAll) {
-    return (
-      <div className="v20-cv11-more">
-        <button type="button" onClick={() => setShowAll(true)}>{t('pmShowMore')}{total != null && total > 0 ? <span>{t('pmResultN').replace('{n}', total)}</span> : null} ›</button>
-      </div>
-    );
-  }
+  const { series, t, base, cur, railMode, title, total, formats, go, shown, items, more, loadMore, talkCard, seriesCard, hrefOf, toolbar, view, railsDone, loadRails } = useCat();
+  // Catalogue en rangées : les rangées se chargent au défilement ; la grille complète suit quand elles sont toutes affichées.
+  if (toolbar && railMode && !railsDone) return <InfiniteSentinel onMore={loadRails} busy />;
+  const hasMore = !series && items && total != null && total > items.length;
   return (
     <section className="pm-cat-all" aria-busy={shown === null}>
       <div className="pm-cat-bar">
@@ -305,7 +338,8 @@ export function CatResultsSection() {
           {(shown || []).map((x) => (series ? seriesCard(x) : talkCard(x)))}
         </div>
       )}
-      {!series && items && total != null && total > items.length && (
+      {toolbar && hasMore && <InfiniteSentinel onMore={() => { if (!more) loadMore(); }} busy={more} />}
+      {!toolbar && hasMore && (
         <div className="v20-cv11-more">
           <button type="button" onClick={loadMore} disabled={more}>{t('pmShowMore')} <span>{t('pmRemaining').replace('{n}', total - items.length)}</span> ↓</button>
         </div>

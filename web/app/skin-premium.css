@@ -1046,7 +1046,7 @@ html[data-skin="premium"] .v20-cv11-more button span { margin-inline-start: 8px;
 
 /* ===== Catalogue Premium — fidèle à la maquette (bandeau, puces à icônes, onglets, barre d'outils, rangées, promos) ===== */
 html[data-skin="premium"] .pm-ott-cat .pm-cat-hero { min-height: 520px; align-items: flex-start; isolation: isolate;
-  background: linear-gradient(90deg, #05070d 0%, #05070df2 30%, #05070d99 52%, #05070d1a 78%, transparent 100%), linear-gradient(0deg, #05070d 0%, transparent 30%), var(--hero) right center / auto 100% no-repeat, #05070d; }
+  background: linear-gradient(90deg, #05070dfa 0%, #05070dd9 28%, #05070d80 55%, #05070d26 80%, transparent 100%), linear-gradient(0deg, #05070d 0%, #05070d99 22%, transparent 50%), var(--hero) center / cover no-repeat, #05070d; }
 html[data-skin="premium"] .pm-ott-cat .pm-cat-intro { max-width: 640px; padding: 108px 3% 96px; }
 html[data-skin="premium"] .pm-ott-cat .pm-cat-eyebrow { color: var(--c-35b9ff,#35b9ff); letter-spacing: .26em; }
 html[data-skin="premium"] .pm-ott-cat .pm-cat-intro h1 { font-size: clamp(2.4rem, 5vw, 4.4rem); line-height: 1.02; text-wrap: balance; }
@@ -1087,12 +1087,13 @@ html[data-skin="premium"] .pm-ott-cat .pm-rail-head a:hover { color: #7fd3ff; }
 html[data-skin="premium"] .pm-ott-cat .pm-card-badge { top: 8px; inset-inline-start: 8px; padding: 3px 9px; border-radius: 999px; background: #0b1220d9; border: 1px solid #ffffff2e; font-size: 9px; }
 html[data-skin="premium"] .pm-card-time { position: absolute; top: 8px; inset-inline-end: 8px; z-index: 3; padding: 3px 8px; border-radius: 999px; background: #05070dcc; font-size: 11px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 html[data-skin="premium"] .pm-card-done ~ .pm-card-time { top: 34px; }
-/* Sélection (collection) : cadre arrondi, titre souligné d'un trait bleu */
-html[data-skin="premium"] .pm-ott-cat .pm-spot { margin-inline: 0; border-radius: 14px; border: 1px solid #2f8de055; min-height: 280px; padding: 30px 3.5%; box-shadow: 0 0 0 1px #00000066 inset; }
-html[data-skin="premium"] .pm-ott-cat .pm-spot h2 { font-size: clamp(1.8rem, 3.6vw, 3.2rem); letter-spacing: .02em; padding-bottom: 14px; position: relative; }
-html[data-skin="premium"] .pm-ott-cat .pm-spot h2::after { content: ''; position: absolute; inset-inline-start: 0; bottom: 0; width: 34%; max-width: 160px; height: 4px; border-radius: 4px; background: linear-gradient(90deg, #1a73e8, #35b9ff); }
-html[data-skin="premium"] .pm-ott-cat .pm-spot-cards .pm-card { aspect-ratio: 16 / 10; }
-@media (max-width: 900px) { html[data-skin="premium"] .pm-ott-cat .pm-spot { margin-inline: 0; } }
+/* Blocs de thèmes : image d'ambiance propre à chaque thème, derrière sa rangée */
+html[data-skin="premium"] .pm-catblock { position: relative; isolation: isolate; margin: 22px -2.9vw; padding: 22px 2.9vw 14px; overflow: hidden; }
+html[data-skin="premium"] .pm-catblock::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--blk) center / cover no-repeat; opacity: .55; filter: saturate(1.1); }
+html[data-skin="premium"] .pm-catblock::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, #05070d 0%, #05070d8c 22%, #05070d99 70%, #05070d 100%), linear-gradient(90deg, #05070dd9 0%, #05070d33 60%, #05070d80 100%); }
+html[data-skin="premium"] .pm-catblock-ico { position: absolute; top: 20px; inset-inline-start: calc(2.9vw - 0px); display: none; }
+html[data-skin="premium"] .pm-cat-sentinel { min-height: 60px; display: grid; place-items: center; }
+html[data-skin="premium"] .pm-cat-sentinel i { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #ffffff2e; border-top-color: #35b9ff; }
 /* « Afficher plus de contenus » : pilule centrée à contour bleu */
 html[data-skin="premium"] .pm-ott-cat .v20-cv11-more { display: flex; justify-content: center; margin: 18px 0 8px; }
 html[data-skin="premium"] .pm-ott-cat .v20-cv11-more button { padding: 12px 30px; border-radius: 999px; border: 1.5px solid #2f8de0; background: #0b1220; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
@@ -1119,3 +1120,4 @@ html[data-skin="premium"] .pm-cat-promo-kids { background-image: linear-gradient
   html[data-skin="premium"] .pm-cat-promos { grid-template-columns: 1fr; padding-inline: 16px; }
   html[data-skin="premium"] .pm-cat-promo > div { max-width: 70%; }
 }
+html[data-skin="premium"] .pm-ott-cat .pm-cat-toolbar { position: relative; z-index: 3; }
