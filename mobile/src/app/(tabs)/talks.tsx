@@ -1,4 +1,5 @@
-// Catalogue : titre, accès à la recherche, entrée « En direct » (TV 24 h/24 et événements, étape N1 du 15/11), filtres
+// Explorer (ex-Catalogue, 27/11) : sans filtre, les grandes tuiles des thèmes comme sur le site ; un thème choisi ouvre sa liste (filtres format/niveau).
+// Avant : titre, accès à la recherche, entrée « En direct » (TV 24 h/24 et événements, étape N1 du 15/11), filtres
 // (catégorie, format, niveau), liste en grille qui se charge au fil du défilement.
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View, useWindowDimensions } from 'react-native';
@@ -11,6 +12,7 @@ import type { Card, Category, FormatItem } from '@/lib/types';
 import { colors, radius } from '@/lib/theme';
 import { Chip, ErrorBox, Loading, Title, Txt, screenStyle } from '@/components/ui';
 import { TalkCard } from '@/components/TalkCard';
+import { ExploreTiles } from '@/components/ExploreTiles';
 
 const PAGE = 24;
 const LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
@@ -49,16 +51,18 @@ export default function CatalogueScreen() {
     } catch { if (id === run.current) setFailed(true); }
     finally { if (id === run.current) setBusy(false); }
   }
-  useEffect(() => { void load(true); }, [category, format, level]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (category !== null || format !== null || level !== null) void load(true); }, [category, format, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fname = (f: FormatItem) => (locale === 'ar' ? f.nameAr : locale === 'en' ? f.nameEn : f.nameFr) || f.nameFr;
   // « En direct » : la page qui réunit TV et événements ; sans la TV, directement les événements.
   const liveHref = feat('livetv') ? '/live' : feat('events') ? '/events' : null;
   const row = (children: React.ReactNode) => <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{children}</View>;
 
+  // Sans aucun filtre : page Explorer (tuiles des thèmes). Dès qu'un thème, un format ou un niveau est choisi : liste des vidéos.
+  const exploring = category === null && format === null && level === null;
   const header = (
     <View style={{ gap: 12, paddingBottom: 8 }}>
-      <Title>{t('navCatalogue')}</Title>
+      <Title>{t('navExplorer')}</Title>
       <Pressable accessibilityRole="search" accessibilityLabel={t('hmSearch')} onPress={() => router.push('/search')}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border }}>
         <Feather name="search" size={18} color={colors.muted} />
@@ -80,12 +84,13 @@ export default function CatalogueScreen() {
           <Feather name={dirStyle.direction === 'rtl' ? 'chevron-left' : 'chevron-right'} size={18} color={colors.muted} />
         </Pressable>
       ) : null}
-      {row(<>
-        <Chip label={t('talks.all')} active={category === null} onPress={() => setCategory(null)} />
+      {exploring ? <ExploreTiles onPick={(id) => setCategory(id)} /> : null}
+      {exploring ? null : row(<>
+        <Chip label={t('ex.back')} active={false} onPress={() => { setCategory(null); setFormat(null); setLevel(null); }} />
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={category === c.id} onPress={() => setCategory(category === c.id ? null : c.id)} />)}
       </>)}
-      {formats.data?.length ? row(formats.data.map((f) => <Chip key={f.slug} label={fname(f)} active={format === f.slug} onPress={() => setFormat(format === f.slug ? null : f.slug)} />)) : null}
-      {row(LEVELS.map((l) => <Chip key={l} label={t(LEVEL_KEY[l])} active={level === l} onPress={() => setLevel(level === l ? null : l)} />))}
+      {exploring ? null : formats.data?.length ? row(formats.data.map((f) => <Chip key={f.slug} label={fname(f)} active={format === f.slug} onPress={() => setFormat(format === f.slug ? null : f.slug)} />)) : null}
+      {exploring ? null : row(LEVELS.map((l) => <Chip key={l} label={t(LEVEL_KEY[l])} active={level === l} onPress={() => setLevel(level === l ? null : l)} />))}
     </View>
   );
 
@@ -94,7 +99,7 @@ export default function CatalogueScreen() {
       {items.length === 0 && failed ? <ErrorBox onRetry={() => load(true)} /> : (
         <FlatList
           key={cols}
-          data={items}
+          data={exploring ? [] : items}
           numColumns={cols}
           keyExtractor={(x) => x.id}
           columnWrapperStyle={cols > 1 ? { gap: 12 } : undefined}
@@ -102,8 +107,8 @@ export default function CatalogueScreen() {
           ListHeaderComponent={header}
           renderItem={({ item }) => <TalkCard talk={item} width={cardW} />}
           onEndReachedThreshold={0.6}
-          onEndReached={() => { if (more && !busy && items.length) void load(false); }}
-          ListEmptyComponent={busy ? <Loading /> : <Txt color={colors.muted}>{t('talks.empty')}</Txt>}
+          onEndReached={() => { if (!exploring && more && !busy && items.length) void load(false); }}
+          ListEmptyComponent={exploring ? undefined : busy ? <Loading /> : <Txt color={colors.muted}>{t('talks.empty')}</Txt>}
           ListFooterComponent={busy && items.length ? <ActivityIndicator color={colors.gold} style={{ marginVertical: 12 }} /> : undefined}
           keyboardShouldPersistTaps="handled"
         />

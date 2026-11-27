@@ -35,7 +35,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color as string} /> }} />
-      <Tabs.Screen name="talks" options={{ title: t('navCatalogue'), tabBarIcon: ({ color }) => <Feather name="film" size={22} color={color as string} /> }} />
+      <Tabs.Screen name="talks" options={{ title: t('navExplorer'), tabBarIcon: ({ color }) => <Feather name="compass" size={22} color={color as string} /> }} />
       <Tabs.Screen name="learn" options={{ title: t('tabs.learn'), tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color as string} /> }} />
       <Tabs.Screen name="practice" options={{ title: t('pqHub'), href: practiceOn(feat) ? undefined : null, tabBarIcon: ({ color }) => <Feather name="moon" size={22} color={color as string} /> }} />
       {/* 13/11 : « Mon compte » remplace « Bibliothèque » dans la barre ; la bibliothèque reste dans le menu ☰ (Mon espace).

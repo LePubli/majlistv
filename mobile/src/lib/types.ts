@@ -37,6 +37,9 @@ export type Home = {
   rows: HomeRow[];
 };
 
+/** Tuile d'un grand thème (Explorer) : GET /catalogue/categories. `image` : tuile choisie dans l'admin (adresse relative au site) ou vide. */
+export type CatTile = { id: number; slug: string; name: string; shortDescription?: string | null; image?: string | null; heroImage?: string | null; count: number; parentId: number | null };
+
 export type Category = { id: number; name: string; parentId: number | null; fullName: string; depth: number };
 
 export type Talk = Card & {
