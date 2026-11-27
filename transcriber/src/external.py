@@ -17,6 +17,10 @@ class Blocked(Exception):
     """La plateforme refuse l'accès depuis le serveur (anti-robot, vidéo privée…) : message lisible pour l'organisateur."""
 
 
+class EmptyList(Blocked):
+    """Liste lue sans aucune vidéo utilisable : définitif, inutile de réessayer trois fois."""
+
+
 def video_url(source, ref):
     if source == "archive":
         return f"{ARCHIVE_BASE}/details/{ref}"
@@ -470,22 +474,47 @@ def list_videos(url, opts, limit, lang="fr"):
     même pour une chaîne francophone) ; sans version française, YouTube renvoie le titre d'origine."""
     if is_archive_url(url):
         return list_archive(url, limit)
-    o = dict(opts, extract_flat="in_playlist", noplaylist=False, playlistend=limit, lazy_playlist=False)
-    o.update(metadata_language_options(lang))
-    info = fetch_info(normalize_list_url(url), o)
-    if info.get("_type") not in ("playlist", "multi_video"):
-        one = _entry(info)
-        return (info.get("title") or "", [one] if one else [])
-    entries = []
-    for e in info.get("entries") or []:
-        if not e:
+    target = normalize_list_url(url)
+    # Premier essai avec les titres en français ; si YouTube renvoie une liste vide ou échoue à cause de cette option, second essai sans elle.
+    tries = [metadata_language_options(lang), {}]
+    last_err, raw, skipped = None, 0, {}
+    for extra in tries:
+        o = dict(opts, extract_flat="in_playlist", noplaylist=False, playlistend=limit, lazy_playlist=False)
+        o.update(extra)
+        try:
+            info = fetch_info(target, o)
+        except Blocked:
+            raise
+        except Exception as err:  # noqa: BLE001
+            last_err = err
             continue
-        if e.get("_type") == "playlist" or (e.get("ie_key") == "YoutubeTab" and not YOUTUBE_ID.match(str(e.get("id") or ""))):
-            continue  # sous-onglet (Shorts, Directs…) : ignoré
-        item = _entry(e)
-        if item and all(x["id"] != item["id"] for x in entries):
-            entries.append(item)
-        if len(entries) >= limit:
-            break
-    title = info.get("title") or info.get("channel") or info.get("uploader") or ""
-    return (re.sub(r"\s+-\s+Videos$", "", title), entries)
+        if info.get("_type") not in ("playlist", "multi_video"):
+            one = _entry(info)
+            return (info.get("title") or "", [one] if one else [])
+        entries, raw, skipped = [], 0, {}
+        for e in info.get("entries") or []:
+            if not e:
+                skipped["vide"] = skipped.get("vide", 0) + 1
+                continue
+            raw += 1
+            if e.get("_type") == "playlist" or (e.get("ie_key") == "YoutubeTab" and not YOUTUBE_ID.match(str(e.get("id") or ""))):
+                skipped["sous-liste"] = skipped.get("sous-liste", 0) + 1
+                continue  # sous-onglet (Shorts, Directs…) : ignoré
+            item = _entry(e)
+            if not item:
+                skipped["adresse non reconnue"] = skipped.get("adresse non reconnue", 0) + 1
+                continue
+            if all(x["id"] != item["id"] for x in entries):
+                entries.append(item)
+            if len(entries) >= limit:
+                break
+        if entries:
+            title = info.get("title") or info.get("channel") or info.get("uploader") or ""
+            return (re.sub(r"\s+-\s+Videos$", "", title), entries)
+        last_err = None
+    if last_err is not None:
+        raise last_err
+    detail = ", ".join(f"{n} {k}" for k, n in skipped.items()) or "aucune entrée reçue"
+    raise EmptyList(f"YouTube n'a renvoyé aucune vidéo utilisable pour cette liste ({detail}). Liste privée ou vide, vidéos supprimées, "
+                    "adresse d'une page qui n'est pas une liste de lecture, ou accès bloqué : essayez avec les cookies "
+                    "(Admin → Paramètres → Vidéos YouTube, Vimeo et Dailymotion).")

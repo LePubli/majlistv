@@ -147,5 +147,22 @@ ok(external.is_bot_block("Sign in to confirm you're not a bot") and external.is_
 ok(not external.is_bot_block("Video unavailable"), "vidéo indisponible : pas un blocage")
 ok(str(external.readable_error("Connectez-vous pour confirmer que vous n'êtes pas un robot")).startswith("YouTube bloque"), "message lisible")
 
+
+# --- liste vide : second essai sans langue, puis message clair (27/11) ---
+_calls = []
+def _fake(url, o):
+    _calls.append(bool(o.get("extractor_args")))
+    if o.get("extractor_args"):
+        return {"_type": "playlist", "title": "L", "entries": []}
+    return {"_type": "playlist", "title": "L", "entries": [{"id": "abcdefghijk", "ie_key": "Youtube", "title": "T", "duration": 5}]}
+_orig = external.fetch_info; external.fetch_info = _fake
+t, ents = external.list_videos("https://www.youtube.com/playlist?list=PLabcdefghijkl", {}, 10)
+ok(len(ents) == 1 and _calls == [True, False], "liste vide avec la langue : second essai sans option, 1 vidéo trouvée")
+external.fetch_info = lambda u, o: {"_type": "playlist", "title": "L", "entries": [None, {"id": "x", "ie_key": "YoutubeTab", "_type": "playlist"}]}
+try:
+    external.list_videos("https://www.youtube.com/playlist?list=PLabcdefghijkl", {}, 10); ok(False, "liste vide : erreur attendue")
+except external.EmptyList as err:
+    ok("aucune vidéo utilisable" in str(err) and "sous-liste" in str(err), "liste vide : message clair avec le détail")
+external.fetch_info = _orig
 print("TOUT OK" if not fails else f"{fails} ÉCHEC(S)")
 sys.exit(1 if fails else 0)
