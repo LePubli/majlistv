@@ -4340,3 +4340,13 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .sa-block .imp-mode input[type=radio] { flex: 0 0 auto !important; width: 18px !important; height: 18px !important; min-width: 0 !important; margin: 3px 0 0 !important; padding: 0 !important; }
 .imp-mode { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 10px !important; }
 .imp-mode > span { display: block; }
+
+/* 27/11 : fiche vidéo immersive — l'image de présentation de la vidéo, en grand, derrière le lecteur */
+.wb-backdrop { position: fixed; inset: 0 0 auto 0; height: min(100vh, 980px); z-index: -1; pointer-events: none; overflow: hidden; }
+.wb-backdrop::before { content: ""; position: absolute; inset: -40px; background: inherit; background-size: cover; background-position: center 25%; filter: blur(14px) saturate(1.25); transform: scale(1.06); opacity: .75; }
+.wb-backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, color-mix(in srgb, var(--bg, #0b0f1a) 38%, transparent) 0%, color-mix(in srgb, var(--bg, #0b0f1a) 70%, transparent) 55%, var(--bg, #0b0f1a) 100%); }
+.immersive .wb-hero { background: color-mix(in srgb, #050403 58%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: color-mix(in srgb, var(--accent, #d4a537) 35%, transparent); box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
+.immersive h1 { text-shadow: 0 2px 24px rgba(0, 0, 0, .55); }
+body.cinema-on .wb-backdrop { opacity: .35; }
+@media (prefers-reduced-motion: no-preference) { .wb-backdrop { animation: wb-fade .8s ease both; } @keyframes wb-fade { from { opacity: 0; } to { opacity: 1; } } }
+@media (max-width: 600px) { .wb-backdrop { height: 60vh; } }

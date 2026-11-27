@@ -158,11 +158,12 @@ export default function SeriesEditor() {
     setS((x) => ({ ...x, [kind === 'poster' ? 'posterUrl' : 'coverUrl']: null }));
     return { ok: true };
   };
-  const imgLabels = { choose: t('srImageChoose'), change: t('srImageChange'), remove: t('srImageRemove'), bad: t('thumbBad'), done: t('thumbDone'), none: t('srImageNone') };
+  const imgLabels = { fallback: t('imgDefault'), choose: t('srImageChoose'), change: t('srImageChange'), remove: t('srImageRemove'), bad: t('thumbBad'), done: t('thumbDone'), none: t('srImageNone') };
+  const firstThumb = (eps.find((e) => e.posterUrl) || {}).posterUrl || null; // image par défaut : celle de la première vidéo
   const images = (
     <>
-      <ImageSlot kind="poster" title={t('srImgPoster')} help={t('srImgPosterHelp')} url={s.posterUrl} onUpload={upImage('poster')} onRemove={delImage('poster')} labels={imgLabels} />
-      <ImageSlot kind="cover" title={t('srImgCover')} help={t('srImgCoverHelp')} url={s.coverUrl} onUpload={upImage('cover')} onRemove={delImage('cover')} labels={imgLabels} />
+      <ImageSlot kind="poster" title={t('srImgPoster')} help={t('srImgPosterHelp')} url={s.posterUrl} fallbackUrl={firstThumb} onUpload={upImage('poster')} onRemove={delImage('poster')} labels={imgLabels} />
+      <ImageSlot kind="cover" title={t('srImgCover')} help={t('srImgCoverHelp')} url={s.coverUrl} fallbackUrl={s.posterUrl || firstThumb} onUpload={upImage('cover')} onRemove={delImage('cover')} labels={imgLabels} />
     </>
   );
   // Case « Aussi une collection » (enregistrée avec les informations).

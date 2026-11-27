@@ -50,7 +50,9 @@ export default async function collectionsRoutes(app) {
     reply.header('cache-control', c.mode === 'personal' ? 'private, no-store' : 'public, max-age=30');
     const r = await resolveCollection(c, u ? { sub: u.sub } : null, { size: 50 });
     if (!r.open) return reply.code(404).send({ error: 'Collection introuvable' });
-    return { id: c.id, title: c.title, description: c.description, kind: c.kind, mode: c.mode, posterUrl: c.poster_key ? await presignGet(c.poster_key) : null, coverUrl: c.cover_key ? await presignGet(c.cover_key) : null, talks: r.talks };
+    const firstPoster = r.talks.find((x) => x.posterUrl)?.posterUrl || null; // images par défaut : celle de la première vidéo
+    const posterUrl = c.poster_key ? await presignGet(c.poster_key) : firstPoster;
+    return { id: c.id, title: c.title, description: c.description, kind: c.kind, mode: c.mode, posterUrl, coverUrl: c.cover_key ? await presignGet(c.cover_key) : posterUrl, talks: r.talks };
   });
 
   // ------------------------------------------------------------------ Équipe

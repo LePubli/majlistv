@@ -251,7 +251,7 @@ export default async function seriesRoutes(app) {
     const next = started || flat.find((e) => !e.completed) || flat[0] || null;
     const poster = s.poster_key ? await presignGet(s.poster_key) : (flat.find((e) => e.posterUrl)?.posterUrl || null);
     return {
-      ...facts(s), category: s.category, posterUrl: poster, coverUrl: s.cover_key ? await presignGet(s.cover_key) : null, episodeCount: shaped.total,
+      ...facts(s), category: s.category, posterUrl: poster, coverUrl: s.cover_key ? await presignGet(s.cover_key) : poster, episodeCount: shaped.total,
       prerequisites: await prerequisitesOf(id, { publicOnly: true }),
       seasons: shaped.seasons, episodes: shaped.episodes,
       resume: next ? { talkId: next.id, positionMs: started ? started.positionMs : 0, number: next.number, started: Boolean(started) } : null,

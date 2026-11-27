@@ -803,11 +803,15 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     </>
   );
   const booksSec = <BooksBlock kind="talks" id={id} />;
+  // Ambiance immersive : l'image de présentation de la vidéo, en grand et floutée, derrière toute la page (chaque vidéo a son univers).
+  const bgUrl = thumbOf(talk);
+  const backdrop = bgUrl ? <div className="wb-backdrop" aria-hidden="true" style={{ backgroundImage: `url("${String(bgUrl).replace(/"/g, '%22')}")` }} /> : null;
   // Fiche en blocs publiée : chaque bloc « Fiche : … » dessine la section correspondante (même code que la fiche d'origine), entre les blocs libres.
   if (watchPage) {
     const sections = { w_stage: () => stageSec, w_notices: () => noticesSec, w_grid: (p) => gridSec(p.side || 'right'), w_next: (p) => nextSec(Math.min(8, Math.max(2, Number(p.max) || 8))), w_books: () => booksSec };
     return (
-      <main className="page watch watch-b watch-blocks">
+      <main className={`page watch watch-b watch-blocks${bgUrl ? ' immersive' : ''}`}>
+        {backdrop}
         <WatchCtx.Provider value={{ sections }}>
           <BlocksView blocks={watchPage.zones.main} locale={locale} />
         </WatchCtx.Provider>
@@ -816,7 +820,8 @@ export default function TalkPage({ initial = null, talkId = null, extra = null }
     );
   }
   return (
-    <main className="page watch watch-b">
+    <main className={`page watch watch-b${bgUrl ? ' immersive' : ''}`}>
+      {backdrop}
       {stageSec}
       {noticesSec}
       {gridSec()}

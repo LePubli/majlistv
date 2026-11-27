@@ -25,11 +25,11 @@ export function resizeTo(file, kind) {
 }
 
 // kind : 'poster' (16:9, vignettes et cartes) ou 'cover' (grand bandeau 21:9). onUpload(dataUrl) → { ok, error? } ; onRemove() → { ok }.
-export default function ImageSlot({ kind = 'poster', title, help, url, onUpload, onRemove, disabled = false, labels = {} }) {
+export default function ImageSlot({ kind = 'poster', title, help, url, fallbackUrl = null, onUpload, onRemove, disabled = false, labels = {} }) {
   const input = useRef(null);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
-  const L = { choose: 'Choisir une image', change: 'Changer', remove: 'Retirer', bad: 'Image JPEG, PNG ou WebP attendue', done: 'Image enregistrée', none: 'Aucune image', ...labels };
+  const L = { choose: 'Choisir une image', change: 'Changer', remove: 'Retirer', bad: 'Image JPEG, PNG ou WebP attendue', done: 'Image enregistrée', none: 'Aucune image', fallback: 'Image par défaut (celle de la première vidéo). Choisissez la vôtre pour la remplacer.', ...labels };
   const pick = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
@@ -46,7 +46,8 @@ export default function ImageSlot({ kind = 'poster', title, help, url, onUpload,
     <div className="img-slot">
       <b>{title}</b>
       {help && <span className="meta small">{help}</span>}
-      <div className={`img-prev ${kind}`} style={url ? { backgroundImage: `url("${String(url).replace(/"/g, '%22')}")` } : undefined} role="img" aria-label={url ? title : L.none} />
+      <div className={`img-prev ${kind}`} style={(url || fallbackUrl) ? { backgroundImage: `url("${String(url || fallbackUrl).replace(/"/g, '%22')}")` } : undefined} role="img" aria-label={url || fallbackUrl ? title : L.none} />
+      {!url && fallbackUrl && <span className="meta small img-default">{L.fallback}</span>}
       {!disabled && (
         <div className="img-actions">
           <button type="button" className="btn ghost" disabled={busy} onClick={() => input.current?.click()}>{url ? L.change : L.choose}</button>

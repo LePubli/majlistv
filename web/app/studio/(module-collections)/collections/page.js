@@ -129,9 +129,9 @@ function Editor({ id, call, onChanged, onClose, pm }) {
       )}
       <label className="fld"><span>Titre</span><input value={c.title} maxLength={120} onChange={set('title')} disabled={linked} /></label>
       <label className="fld"><span>Présentation</span><textarea rows={3} maxLength={1000} value={c.description} onChange={set('description')} disabled={linked} /></label>
-      <ImageSlot kind="poster" title="Image de présentation" help="Vignette de la collection dans les listes (format 16:9, recadrée au centre). JPEG, PNG ou WebP, 2,5 Mo max." url={c.posterUrl}
+      <ImageSlot kind="poster" title="Image de présentation" help="Vignette de la collection dans les listes (format 16:9, recadrée au centre). JPEG, PNG ou WebP, 2,5 Mo max." url={c.posterUrl} fallbackUrl={(c.talks || []).find((x) => x.posterUrl)?.posterUrl || null}
         onUpload={upload('poster')} onRemove={unload('poster')} disabled={linked} />
-      <ImageSlot kind="cover" title="Image de couverture" help="Grand bandeau en haut de la page de la collection (format 21:9, recadrée au centre). Sans couverture, l'affiche d'une vidéo sert de fond." url={c.coverUrl}
+      <ImageSlot kind="cover" title="Image de couverture" help="Grand bandeau en haut de la page de la collection (format 21:9, recadrée au centre). Sans couverture, l'affiche d'une vidéo sert de fond." url={c.coverUrl} fallbackUrl={c.posterUrl || (c.talks || []).find((x) => x.posterUrl)?.posterUrl || null}
         onUpload={upload('cover')} onRemove={unload('cover')} disabled={linked} />
       <label className="fld"><span>Type</span><select value={c.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       <label className="fld"><span>Fonctionnement</span><select value={c.mode} disabled={linked} onChange={(e) => { setC({ ...c, mode: e.target.value, rule: {}, season: null }); setPv(null); }}>{Object.entries(MODES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
