@@ -29,7 +29,7 @@ export function useTalkProgress(ids) {
 }
 
 /** Carte vidéo ou série. `href` : lien ; `badge` : petite étiquette en haut à gauche ; `pct` : progression 0–100 (reprise) ; `done` : terminé. */
-export function OttCard({ x, href, badge, pct, kind, done }) {
+export function OttCard({ x, href, badge, pct, kind, done, time = false }) {
   const { t, formatName } = useApp();
   const isSeries = kind === 'series';
   // Survol (souris) ou sélection (clavier) : la vignette grossit (CSS) et, après un court instant, l'extrait muet démarre. Pas pour les séries.
@@ -39,12 +39,16 @@ export function OttCard({ x, href, badge, pct, kind, done }) {
   const clip = useClip(x.id, 450, active && fine && !isSeries);
   const dur = isSeries ? (x.episodeCount ? t('episodeCount').replace('{n}', x.episodeCount) : '') : minutes(x.durationSeconds || Math.round((x.durationMs || 0) / 1000), t);
   const label = badge === undefined ? (isSeries ? t('seriesNav') : (x.format && formatName ? formatName(x.format) : '')) : badge;
+  // Pastille de durée « 52:18 » (Catalogue) : minutes:secondes, ou h:mm:ss au-delà d'une heure.
+  const secs = isSeries ? 0 : (x.durationSeconds || Math.round((x.durationMs || 0) / 1000));
+  const clock = time && secs > 0 ? (secs >= 3600 ? `${Math.floor(secs / 3600)}:${String(Math.floor((secs % 3600) / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}` : `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`) : '';
   return (
     <Link className="pm-card" href={href || (isSeries ? `/series/${x.slug || x.id}` : `/talks/${x.id}`)} style={{ '--cover': coverOf(x) }}
       onMouseEnter={() => setActive(true)} onMouseLeave={() => setActive(false)} onFocus={() => setActive(true)} onBlur={() => setActive(false)}>
       <span className="pm-card-art" aria-hidden="true" />
       <ClipLayer clip={clip} className="pm-card-vid" />
       {label && <span className="pm-card-badge">{label}</span>}
+      {clock && <span className="pm-card-time" dir="ltr">{clock}</span>}
       {done && <span className="pm-card-done"><span aria-hidden="true">✓ </span>{t('pmLnTagDone')}</span>}
       <span className="pm-card-play" aria-hidden="true">▶</span>
       <b className="pm-card-title">{x.title}</b>
