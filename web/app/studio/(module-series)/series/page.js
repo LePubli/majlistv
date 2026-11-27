@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../../../components/Providers';
 import ChannelPicker from '../../../../components/ChannelPicker';
+import AudienceCats, { AUDIENCE_DEFAULT, audienceBody, bandsMissing } from '../../../../components/AudienceCats';
 import StudioTabs from '../../../../components/StudioTabs';
 import { Page as BmPage, Btn as BmBtn, Badge as BmBadge, Metrics as BmMetrics, Panel as BmPanel, Table as BmTable, c as bmc } from '../../../../components/backoffice/Kit';
 
@@ -16,12 +17,15 @@ export default function StudioSeries() {
   const [f, setF] = useState({ title: '', speaker: '', hasSeasons: true });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [a, setA] = useState(AUDIENCE_DEFAULT);   // public et catégories de la nouvelle série
+  const [cats, setCats] = useState([]);
   useEffect(() => { call('/studio/series').then((r) => setRows(r.ok ? r.data : [])); }, [call]);
+  useEffect(() => { if (open && !cats.length) call('/categories?catalogue=all', {}, null).then((r) => r.ok && setCats(r.data)); }, [open, cats.length, call]);
 
   const create = async (e) => {
     e.preventDefault();
     setBusy(true); setErr('');
-    const r = await call('/series', { method: 'POST', body: JSON.stringify({ title: f.title, speaker: f.speaker, hasSeasons: f.hasSeasons }) });
+    const r = await call('/series', { method: 'POST', body: JSON.stringify({ title: f.title, speaker: f.speaker, hasSeasons: f.hasSeasons, ...audienceBody(a) }) });
     setBusy(false);
     if (!r.ok) { setErr(r.data?.error || t('errGeneric')); return; }
     router.push(`/studio/series/${r.data.id}`);
@@ -50,8 +54,10 @@ export default function StudioSeries() {
                   <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
                   <span className="meta small">{f.hasSeasons ? t('srWithHelp') : t('srNoHelp')}</span>
                 </div>
+                <AudienceCats value={a} onChange={setA} cats={cats} t={t} />
+                <p className="meta small">{t('saCreateNote')}</p>
                 {err && <p className="error" role="alert">{err}</p>}
-                <div className={bmc('btn-row')}><button className="btn" disabled={busy || !f.title.trim()}>{t('srCreate')}</button></div>
+                <div className={bmc('btn-row')}><button className="btn" disabled={busy || !f.title.trim() || bandsMissing(a)}>{t('srCreate')}</button></div>
               </form>
             </BmPanel>
           )}
@@ -90,8 +96,10 @@ export default function StudioSeries() {
             <div className="pills">{pill(f.hasSeasons, t('srWithSeasons'), () => setF({ ...f, hasSeasons: true }))}{pill(!f.hasSeasons, t('srNoSeasons'), () => setF({ ...f, hasSeasons: false }))}</div>
             <span className="meta small">{f.hasSeasons ? t('srWithHelp') : t('srNoHelp')}</span>
           </div>
+          <AudienceCats value={a} onChange={setA} cats={cats} t={t} />
+          <p className="meta small">{t('saCreateNote')}</p>
           {err && <p className="error" role="alert">{err}</p>}
-          <div className="panel-actions"><button className="btn" disabled={busy || !f.title.trim()}>{t('srCreate')}</button></div>
+          <div className="panel-actions"><button className="btn" disabled={busy || !f.title.trim() || bandsMissing(a)}>{t('srCreate')}</button></div>
         </form>
       )}
 

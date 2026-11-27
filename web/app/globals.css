@@ -4332,3 +4332,11 @@ a.kc-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration
 .ch-new { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .ch-new input { flex: 1 1 200px; min-width: 0; }
 @media (max-width: 480px) { .imp-opts { grid-template-columns: 1fr; } .imp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .imp-actions .btn { max-width: none; } }
+
+/* 27/11 : public et catégories d'une série (création et fiche) */
+.sa-block { display: grid; gap: 14px; margin: 14px 0; }
+.panel-sub { display: grid; gap: 10px; margin: 14px 0; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.panel-subtitle { margin: 0; font-size: 1rem; }
+.sa-block .imp-mode input[type=radio] { flex: 0 0 auto !important; width: 18px !important; height: 18px !important; min-width: 0 !important; margin: 3px 0 0 !important; padding: 0 !important; }
+.imp-mode { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 10px !important; }
+.imp-mode > span { display: block; }

@@ -9,6 +9,8 @@ import { presignGet, putObject, deleteObject } from '../../storage.js';
 import { visibleSql } from '../../visibility.js';
 import { storeImage } from '../../imageUpload.js';
 import { syncSeriesCollection } from './collectionSync.js';
+import { applySeriesSettings } from './audience.js';
+import { BANDS } from '../../taxonomy.js';
 
 const uuid = z.guid();
 const IMG_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -25,6 +27,12 @@ const seriesBody = z.object({
   // Étape 24.1 : niveau de difficulté (null = tous niveaux) et séries conseillées avant celle-ci.
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable(),
   prerequisites: z.array(uuid).max(5),
+  // 27/11 : public et catégories (appliqués aux épisodes ; `applyToEpisodes: false` = enregistrer sans toucher aux vidéos).
+  audience: z.enum(['adult', 'kids', 'both']),
+  kidsBands: z.array(z.enum(BANDS)).max(9),
+  categoryMode: z.enum(['manual', 'auto']),
+  extraCategoryIds: z.array(z.number().int().positive()).max(20),
+  applyToEpisodes: z.boolean(),
 }).partial().strict();
 const createBody = seriesBody.extend({ title: z.string().trim().min(1).max(200) }).strict();
 const layoutBody = z.object({
@@ -204,7 +212,7 @@ export default async function seriesRoutes(app) {
   }
 
   const loadSeasons = async (seriesId) => (await pool.query('SELECT id, title, position FROM seasons WHERE series_id = $1 ORDER BY position, id', [seriesId])).rows;
-  const facts = (s) => ({ id: s.id, title: s.title, description: s.description, speaker: s.speaker, categoryId: s.category_id, hasSeasons: s.has_seasons, access: s.access, published: s.published, level: s.level });
+  const facts = (s) => ({ id: s.id, title: s.title, description: s.description, speaker: s.speaker, categoryId: s.category_id, hasSeasons: s.has_seasons, access: s.access, published: s.published, level: s.level, audience: s.audience, kidsBands: s.kids_bands || [], categoryMode: s.category_mode });
 
   // Tient la collection liée à jour (case « Aussi une collection ») ; une erreur ici ne doit pas faire échouer l'enregistrement de la série.
   const syncCol = async (id) => { try { await syncSeriesCollection(id); } catch (e) { app.log.warn({ err: e, seriesId: id }, 'synchronisation de la collection de la série'); } };
@@ -311,15 +319,21 @@ export default async function seriesRoutes(app) {
 
   app.post('/series', organizer, async (req, reply) => {
     const b = createBody.parse(req.body ?? {});
+    if (b.audience && b.audience !== 'adult' && !b.kidsBands?.length) return reply.code(400).send({ error: 'Choisissez au moins une tranche d\'âge pour l\'espace enfants', code: 'bands_needed' });
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `INSERT INTO series(owner_id, title, description, speaker, category_id, has_seasons, access, published, level)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-        [req.user.sub, b.title, b.description ?? '', b.speaker ?? '', b.categoryId ?? null, b.hasSeasons ?? false, b.access ?? 'free', b.published ?? false, b.level ?? null]);
+        `INSERT INTO series(owner_id, title, description, speaker, category_id, has_seasons, access, published, level, audience, kids_bands, category_mode, settings_applied)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+        [req.user.sub, b.title, b.description ?? '', b.speaker ?? '', b.categoryId ?? null, b.hasSeasons ?? false, b.access ?? 'free', b.published ?? false, b.level ?? null,
+         b.audience ?? 'adult', b.audience && b.audience !== 'adult' ? (b.kidsBands ?? []) : [], b.categoryMode ?? 'manual',
+         b.audience !== undefined || b.categoryMode !== undefined || b.extraCategoryIds !== undefined || b.categoryId != null]);
+      if (b.extraCategoryIds?.length) await client.query('INSERT INTO series_categories(series_id, category_id) SELECT $1, unnest($2::int[]) ON CONFLICT DO NOTHING', [rows[0].id, [...new Set(b.extraCategoryIds)]]);
       if (b.hasSeasons) await client.query("INSERT INTO seasons(series_id, position, title) VALUES ($1, 1, '')", [rows[0].id]);
+      if (b.asCollection) await client.query('UPDATE series SET as_collection = true WHERE id = $1', [rows[0].id]);
       await client.query('COMMIT');
+      if (b.asCollection) await syncCol(rows[0].id);
       return reply.code(201).send({ id: rows[0].id });
     } catch (err) {
       await client.query('ROLLBACK');
@@ -336,7 +350,8 @@ export default async function seriesRoutes(app) {
     const episodes = await loadEpisodes(id, { all: true, viewerId: null });
     const seasons = s.has_seasons ? (await loadSeasons(id)).map((z, i) => ({ id: z.id, number: i + 1, title: z.title })) : [];
     const col = (await pool.query('SELECT id, published FROM collections WHERE series_id = $1', [id])).rows[0];
-    return { ...facts(s), asCollection: s.as_collection, collectionId: col?.id || null, posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, coverUrl: s.cover_key ? await presignGet(s.cover_key) : null, seasons, episodes, prerequisites: await prerequisitesOf(id, { publicOnly: false }) };
+    const extraCategoryIds = (await pool.query('SELECT category_id FROM series_categories WHERE series_id = $1 ORDER BY category_id', [id])).rows.map((r) => r.category_id);
+    return { ...facts(s), extraCategoryIds, asCollection: s.as_collection, collectionId: col?.id || null, posterUrl: s.poster_key ? await presignGet(s.poster_key) : null, coverUrl: s.cover_key ? await presignGet(s.cover_key) : null, seasons, episodes, prerequisites: await prerequisitesOf(id, { publicOnly: false }) };
   });
 
   app.patch('/series/:id', organizer, async (req, reply) => {
@@ -356,7 +371,16 @@ export default async function seriesRoutes(app) {
     if (b.hasSeasons !== undefined) set('has_seasons', b.hasSeasons);
     if (b.level !== undefined) set('level', b.level);
     if (b.asCollection !== undefined) set('as_collection', b.asCollection);
-    if (sets.length === 1 && b.prerequisites === undefined) return reply.code(400).send({ error: 'Rien à modifier' });
+    const audPart = b.audience !== undefined || b.kidsBands !== undefined;
+    const catPart = b.categoryMode !== undefined || b.extraCategoryIds !== undefined || b.categoryId !== undefined;
+    const audienceTouched = audPart || catPart;
+    if (b.audience !== undefined) set('audience', b.audience);
+    const audienceNow = b.audience ?? s.audience;
+    if (audienceNow !== 'adult' && !(b.kidsBands ?? s.kids_bands)?.length) return reply.code(400).send({ error: 'Choisissez au moins une tranche d\'âge pour l\'espace enfants', code: 'bands_needed' });
+    if (b.kidsBands !== undefined || b.audience !== undefined) set('kids_bands', audienceNow === 'adult' ? [] : (b.kidsBands ?? s.kids_bands));
+    if (b.categoryMode !== undefined) set('category_mode', b.categoryMode);
+    if (audienceTouched && b.applyToEpisodes !== false) sets.push('settings_applied = true');
+    if (sets.length === 1 && b.prerequisites === undefined && b.extraCategoryIds === undefined) return reply.code(400).send({ error: 'Rien à modifier' });
     if (b.prerequisites !== undefined) {
       const want = [...new Set(b.prerequisites)];
       if (want.includes(id)) return reply.code(400).send({ error: 'Une série ne peut pas être son propre prérequis' });
@@ -370,6 +394,7 @@ export default async function seriesRoutes(app) {
       b._prereq = want;
     }
     const client = await pool.connect();
+    let applied = null;
     try {
       await client.query('BEGIN');
       if (sets.length > 1) await client.query(`UPDATE series SET ${sets.join(', ')} WHERE id = $1`, vals);
@@ -388,7 +413,12 @@ export default async function seriesRoutes(app) {
         await client.query('UPDATE series_episodes SET season_id = NULL WHERE series_id = $1', [id]);
         await client.query('DELETE FROM seasons WHERE series_id = $1', [id]);
       }
+      if (b.extraCategoryIds !== undefined) {
+        await client.query('DELETE FROM series_categories WHERE series_id = $1', [id]);
+        if (b.extraCategoryIds.length) await client.query('INSERT INTO series_categories(series_id, category_id) SELECT $1, unnest($2::int[]) ON CONFLICT DO NOTHING', [id, [...new Set(b.extraCategoryIds)]]);
+      }
       if (b.access !== undefined) await syncAccess(client, id);
+      if (audienceTouched && b.applyToEpisodes !== false) applied = await applySeriesSettings(id, { db: client, audience: audPart, categories: catPart });
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');
@@ -396,7 +426,7 @@ export default async function seriesRoutes(app) {
       throw err;
     } finally { client.release(); }
     if (s.as_collection || b.asCollection !== undefined) await syncCol(id);
-    return { ok: true };
+    return { ok: true, ...(applied ? { applied } : {}) };
   });
 
   // Supprime la série : les vidéos restent, redevenues isolées (leur accès actuel est conservé).
@@ -475,6 +505,7 @@ export default async function seriesRoutes(app) {
         if (t.series_id && t.series_id !== id) return reply.code(409).send({ error: 'Une de ces vidéos fait déjà partie d\'une autre série' });
       }
     }
+    const before = new Set((await pool.query('SELECT talk_id FROM series_episodes WHERE series_id = $1', [id])).rows.map((r) => r.talk_id));
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -488,6 +519,8 @@ export default async function seriesRoutes(app) {
       }
       await syncAccess(client, id);
       await client.query('UPDATE series SET updated_at = now() WHERE id = $1', [id]);
+      // Les vidéos ajoutées prennent le public et les catégories de la série (si elle en a défini) ; les autres ne sont pas touchées.
+      if (s.settings_applied || s.audience !== 'adult') await applySeriesSettings(id, { onlyTalkIds: ids.filter((x) => !before.has(x)), db: client, audience: s.audience !== 'adult', categories: s.settings_applied });
       await client.query('COMMIT');
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
     if (s.as_collection) await syncCol(id);

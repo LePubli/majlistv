@@ -110,3 +110,4 @@ test_ext_kit.mjs
 test_import_extra_cats.py
 test_import_audience_modes.py
 test_shorts_import_many.py
+test_series_audience.py

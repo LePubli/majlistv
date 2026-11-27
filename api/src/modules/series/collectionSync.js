@@ -3,7 +3,7 @@
 import { pool } from '../../db.js';
 
 export async function syncSeriesCollection(seriesId, db = pool) {
-  const s = (await db.query('SELECT id, title, description, published, as_collection, poster_key, cover_key, owner_id FROM series WHERE id = $1', [seriesId])).rows[0];
+  const s = (await db.query('SELECT id, title, description, published, as_collection, poster_key, cover_key, owner_id, audience FROM series WHERE id = $1', [seriesId])).rows[0];
   if (!s) return { state: 'none' };
   if (!s.as_collection) {
     const d = await db.query('DELETE FROM collections WHERE series_id = $1', [seriesId]);
@@ -21,8 +21,8 @@ export async function syncSeriesCollection(seriesId, db = pool) {
   } else {
     const r = await db.query(
       `INSERT INTO collections(title, description, kind, published, mode, catalogue, on_home, series_id, poster_key, cover_key, created_by)
-       VALUES ($1, $2, 'cycle', $3, 'manual', 'adult', false, $4, $5, $6, $7) RETURNING id`,
-      [s.title.slice(0, 120), String(s.description || '').slice(0, 1000), s.published, seriesId, s.poster_key, s.cover_key, s.owner_id]);
+       VALUES ($1, $2, 'cycle', $3, 'manual', $8, false, $4, $5, $6, $7) RETURNING id`,
+      [s.title.slice(0, 120), String(s.description || '').slice(0, 1000), s.published, seriesId, s.poster_key, s.cover_key, s.owner_id, s.audience === 'kids' ? 'kids' : 'adult']);
     cid = r.rows[0].id;
   }
   await db.query('DELETE FROM collection_items WHERE collection_id = $1', [cid]);

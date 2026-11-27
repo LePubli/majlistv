@@ -1,6 +1,6 @@
 'use client';
 // Studio → fiche d'une série : informations, image, accès, saisons, épisodes (glisser-déposer ou boutons), ajout de vidéos.
-import CategoryPicker from '../../../../../components/CategoryPicker';
+import AudienceCats, { audienceBody, bandsMissing } from '../../../../../components/AudienceCats';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -30,6 +30,9 @@ export default function SeriesEditor() {
   const [eps, setEps] = useState([]);
   const [snap, setSnap] = useState('[]');    // dernière disposition enregistrée
   const [cats, setCats] = useState([]);
+  const [a, setA] = useState(null);         // public et catégories (appliqués aux épisodes, enregistrés à part)
+  const [amsg, setAmsg] = useState(null);
+  const [asaving, setAsaving] = useState(false);
   const [others, setOthers] = useState([]);   // autres séries, pour choisir les prérequis
   const [msg, setMsg] = useState(null);
   const [lmsg, setLmsg] = useState(null);
@@ -49,9 +52,10 @@ export default function SeriesEditor() {
     const d = r.data;
     setS(d);
     setF({
-      title: d.title, speaker: d.speaker, description: d.description, categoryId: d.categoryId ? String(d.categoryId) : '', access: d.access,
+      title: d.title, speaker: d.speaker, description: d.description, access: d.access,
       hasSeasons: d.hasSeasons, asCollection: Boolean(d.asCollection), level: d.level || '', prerequisites: (d.prerequisites || []).map((x) => x.id),
     });
+    setA({ audience: d.audience || 'adult', bands: d.kidsBands || [], categoryMode: d.categoryMode || 'manual', categoryId: d.categoryId ? String(d.categoryId) : '', extra: (d.extraCategoryIds || []).map(String) });
     setSeasons(d.seasons.map((z) => ({ id: z.id, title: z.title })));
     const list = d.episodes.map((e) => ({ ...e, access: e.accessOverride || 'inherit' }));
     setEps(list);
@@ -59,14 +63,14 @@ export default function SeriesEditor() {
   }, [call, id]);
   useEffect(() => {
     load();
-    call('/categories', {}, null).then((r) => r.ok && setCats(r.data));
+    call('/categories?catalogue=all', {}, null).then((r) => r.ok && setCats(r.data));
     call('/studio/series').then((r) => r.ok && setOthers(r.data));
   }, [load, call]);
 
   const dirty = s && JSON.stringify(layoutOf(eps, s.hasSeasons)) !== snap;
   const savedPrereq = (s?.prerequisites || []).map((x) => x.id).join();
   const infoDirty = s && f && (f.title !== s.title || f.speaker !== s.speaker || f.description !== s.description || f.access !== s.access
-    || (f.categoryId || '') !== (s.categoryId ? String(s.categoryId) : '') || f.hasSeasons !== s.hasSeasons
+    || f.hasSeasons !== s.hasSeasons
     || Boolean(f.asCollection) !== Boolean(s.asCollection) || (f.level || '') !== (s.level || '') || f.prerequisites.join() !== savedPrereq);
   useEffect(() => {
     if (!dirty) return undefined;
@@ -98,7 +102,7 @@ export default function SeriesEditor() {
     if (f.hasSeasons !== s.hasSeasons && dirty) { setMsg({ ok: false, text: t('srSaveFirst') }); return; }
     setSaving(true); setMsg(null);
     const body = {
-      title: f.title, speaker: f.speaker, description: f.description, access: f.access, categoryId: f.categoryId ? Number(f.categoryId) : null,
+      title: f.title, speaker: f.speaker, description: f.description, access: f.access,
       hasSeasons: f.hasSeasons, asCollection: Boolean(f.asCollection), level: f.level || null, prerequisites: f.prerequisites,
     };
     const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -107,8 +111,31 @@ export default function SeriesEditor() {
     setMsg({ ok: true, text: t('saved') });
     if (f.hasSeasons !== s.hasSeasons) await load();
     else if (Boolean(f.asCollection) !== Boolean(s.asCollection)) { setS({ ...s, ...body, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) }); call(`/series/${id}/manage`).then((r) => r.ok && setS((x) => ({ ...x, collectionId: r.data.collectionId }))); }
-    else setS({ ...s, ...body, categoryId: body.categoryId, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) });
+    else setS({ ...s, ...body, prerequisites: f.prerequisites.map((x) => others.find((o) => o.id === x) || { id: x, title: '' }) });
   };
+  const saveAudience = async (apply) => {
+    if (!a || asaving || bandsMissing(a)) return;
+    if (apply && eps.length && !window.confirm?.(t('saNoteApply'))) return;
+    setAsaving(true); setAmsg(null);
+    const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify({ ...audienceBody(a), applyToEpisodes: apply }) });
+    setAsaving(false);
+    if (!r.ok) { setAmsg({ ok: false, text: r.data?.error || t('errGeneric') }); return; }
+    const ap = r.data?.applied;
+    setAmsg({ ok: true, text: apply ? t('saDone').replace('{n}', ap?.episodes ?? 0) + (ap?.autoQueued ? t('saDoneAuto').replace('{n}', ap.autoQueued) : '') : t('saSavedOnly') });
+    setS((x) => ({ ...x, audience: a.audience, kidsBands: a.bands, categoryMode: a.categoryMode, categoryId: a.categoryId ? Number(a.categoryId) : null, extraCategoryIds: a.extra.map(Number) }));
+  };
+  const audienceBlock = a && (
+    <div className="panel-sub" aria-label={t('saTitle')}>
+      <h3 className="panel-subtitle">{t('saTitle')}</h3>
+      <AudienceCats value={a} onChange={setA} cats={cats} t={t} />
+      <p className="meta small">{t('saNoteApply')}</p>
+      <div className="panel-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className="btn" disabled={asaving || bandsMissing(a)} onClick={() => saveAudience(true)}>{t('saApply').replace('{n}', eps.length)}</button>
+        <button type="button" className="btn ghost" disabled={asaving || bandsMissing(a)} onClick={() => saveAudience(false)}>{t('saSaveOnly')}</button>
+      </div>
+      {amsg && <p className={amsg.ok ? 'meta' : 'error'} role="status">{amsg.text}</p>}
+    </div>
+  );
   const togglePublish = async () => {
     const r = await call(`/series/${id}`, { method: 'PATCH', body: JSON.stringify({ published: !s.published }) });
     if (r.ok) setS({ ...s, published: !s.published }); else setMsg({ ok: false, text: r.data?.error || t('errGeneric') });
@@ -330,10 +357,7 @@ export default function SeriesEditor() {
                             <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
                             <label className="fld"><span>{t('speaker')}</span><input maxLength={200} value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} /></label>
                             <label className="fld"><span>{t('srDesc')}</span><textarea rows={4} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
-                            <div className="fld" role="group" aria-label={t('category')}>
-                              <span>{t('category')}</span>
-                              <CategoryPicker cats={cats} mode="single" value={f.categoryId} onChange={(v) => setF({ ...f, categoryId: v })} t={t} label={t('category')} />
-                            </div>
+                            {audienceBlock}
                             <div className="fld" role="group" aria-label={t('srAccess')}>
                               <span>{t('srAccess')}</span>
                               <div className="pills">{pill(f.access === 'free', t('free'), () => setF({ ...f, access: 'free' }))}{pill(f.access === 'premium', t('premium'), () => setF({ ...f, access: 'premium' }))}</div>
@@ -413,10 +437,7 @@ export default function SeriesEditor() {
         <ChannelPicker value={f.speaker} onChange={(v) => setF({ ...f, speaker: v })} t={t} call={call} />
         <label className="fld"><span>{t('speaker')}</span><input maxLength={200} value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} /></label>
         <label className="fld"><span>{t('srDesc')}</span><textarea rows={4} maxLength={5000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
-        <div className="fld" role="group" aria-label={t('category')}>
-          <span>{t('category')}</span>
-          <CategoryPicker cats={cats} mode="single" value={f.categoryId} onChange={(v) => setF({ ...f, categoryId: v })} t={t} label={t('category')} />
-        </div>
+        {audienceBlock}
         <div className="fld" role="group" aria-label={t('srAccess')}>
           <span>{t('srAccess')}</span>
           <div className="pills">{pill(f.access === 'free', t('free'), () => setF({ ...f, access: 'free' }))}{pill(f.access === 'premium', t('premium'), () => setF({ ...f, access: 'premium' }))}</div>
