@@ -8,7 +8,7 @@ Jamais d'écrasement (seulement si la description est toujours vide). 3 essais a
 minute pour ne pas solliciter les plateformes. La recherche se met à jour seule (signature du contenu)."""
 import external
 
-BATCH = 3
+BATCH = 5
 SOURCES = ("youtube", "vimeo", "dailymotion", "archive")
 
 

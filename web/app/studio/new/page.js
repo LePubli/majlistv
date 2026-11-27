@@ -12,6 +12,7 @@ import { uploadFile } from '../../../lib/upload';
 import { langName } from '../../../components/Transcript';
 import ImportPanel from '../../../components/ImportPanel';
 import CategoryPicker from '../../../components/CategoryPicker';
+import { isListUrl } from '../../../lib/listUrl';
 import { resizeTo } from '../../../components/ImageSlot';
 import { BANDS, bandLabel } from '../../../lib/kids';
 import { LEVELS, levelLabel } from '../../../lib/levels';
@@ -83,6 +84,7 @@ export default function NewTalk() {
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({ title: '', description: '', speaker: '', language: 'fr', categoryId: '', extraCategoryIds: [], kidsBands: [], showAdults: true, formatId: '', access: 'free', level: '', translateTo: [], rightsConfirmed: false });
+  const [listUrl, setListUrl] = useState(''); // liste collée dans « Coller un lien » : reprise par le panneau d'import
   const [cover, setCover] = useState(null); // image de couverture choisie ici (data-URL), envoyée juste après la création
   const [coverMsg, setCoverMsg] = useState('');
   const coverInput = useRef(null);
@@ -120,6 +122,8 @@ export default function NewTalk() {
   const useLink = (e) => {
     e.preventDefault();
     if (!parsed && !isWebUrl(link)) { setLinkErr(t('impBadUrl')); return; }
+    // Playlist, chaîne ou compte collé ici : on bascule vers l'import de liste (analyse lancée) au lieu d'échouer plus loin.
+    if (!parsed && isListUrl(link)) { setLinkErr(t('nwIsList')); setListUrl(link.trim()); return; }
     setLinkErr(''); setFile(null); setUp({ state: 'idle', pct: 0, id: null }); setImportIt(false); setStep(2);
     readInfo(link.trim());
   };
@@ -242,7 +246,7 @@ export default function NewTalk() {
               </BmPanel>
             </>
             <BmPanel title={t('impNewLabel')}>
-              <div className={bmc('form')} style={{ padding: '0 18px 18px' }}><ImportPanel cats={cats} onImported={() => router.push('/studio/contents')} /></div>
+              <div className={bmc('form')} style={{ padding: '0 18px 18px' }}><ImportPanel cats={cats} presetUrl={listUrl} /></div>
             </BmPanel>
           </>
         )}
@@ -411,7 +415,7 @@ export default function NewTalk() {
           </form>
           {linkErr && <p className="error">{linkErr}</p>}
           <p className="meta small">{t('impAnyLink')}</p>
-          <ImportPanel cats={cats} onImported={() => router.push('/studio/contents')} />
+          <ImportPanel cats={cats} presetUrl={listUrl} />
         </>
       )}
 

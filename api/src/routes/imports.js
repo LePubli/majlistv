@@ -2,7 +2,7 @@
 // 1) l'organisateur colle l'adresse -> le transcripteur liste les vidéos (sans rien télécharger) ;
 // 2) il coche celles à importer -> les vidéos sont créées (transcription si l'accord de l'auteur est confirmé).
 // Seulement les listes « videos » : celles d'Audyn (purpose = 'audyn', son de chaque vidéo) ont leurs propres routes (module Audyn).
-import { MAX_EXTRA_CATEGORIES } from '../taxonomy.js';
+import { MAX_EXTRA_CATEGORIES, BANDS } from '../taxonomy.js';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { TRANSLATION_LANGS, baseLang } from '../langs.js';
@@ -19,6 +19,13 @@ const confirmSchema = z.object({
   language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).default('fr'),
   categoryId: z.number().int().positive().nullable().optional(),
   extraCategoryIds: z.array(z.number().int().positive()).max(MAX_EXTRA_CATEGORIES).default([]), // catégories supplémentaires, appliquées à toutes les vidéos importées
+  // Public : adultes, enfants (Mejliss Kids, tranches d'âge) ou les deux.
+  audience: z.enum(['adult', 'kids', 'both']).default('adult'),
+  kidsBands: z.array(z.enum(BANDS)).max(9).default([]),
+  // Catégories : « same » = les mêmes pour toutes les vidéos (categoryId + extraCategoryIds), « auto » = l'IA les propose / les applique
+  // (module Catégories automatiques), « each » = choisies vidéo par vidéo (perVideo : { identifiant de la vidéo: catégorie }).
+  categoryMode: z.enum(['same', 'auto', 'each']).default('same'),
+  perVideo: z.record(z.string().max(100), z.number().int().positive().nullable()).default({}),
   access: z.enum(['free', 'premium']).default('free'),
   speaker: z.string().trim().max(200).default(''),
   translateTo: z.array(z.enum(TRANSLATION_LANGS)).max(TRANSLATION_LANGS.length).default([]),
@@ -74,13 +81,18 @@ export default async function importRoutes(app) {
     const job = await mine(req, id);
     if (!job) return reply.code(404).send({ error: 'Import introuvable' });
     if (!['listed', 'imported'].includes(job.status)) return reply.code(409).send({ error: "La liste n'est pas encore prête" });
+    if (b.audience !== 'adult' && b.kidsBands.length === 0) return reply.code(400).send({ error: "Choisissez au moins une tranche d'âge pour les vidéos Kids" });
+    const bands = b.audience === 'adult' ? [] : [...new Set(b.kidsBands)];
+    const showAdults = b.audience !== 'kids';
     const wanted = new Set(b.ids);
     const picked = job.entries.filter((e) => wanted.has(e.id));
-    const extras = [...new Set(b.extraCategoryIds)].filter((x) => x !== (b.categoryId ?? null));
+    const same = b.categoryMode === 'same';
+    const extras = same ? [...new Set(b.extraCategoryIds)].filter((x) => x !== (b.categoryId ?? null)) : [];
     const langs = [...new Set(b.translateTo)].filter((l) => l !== baseLang(b.language));
     const client = await pool.connect();
     let created = 0;
     let skipped = 0;
+    let autoSkipped = false;
     try {
       await client.query('BEGIN');
       for (const e of picked) {
@@ -88,11 +100,20 @@ export default async function importRoutes(app) {
         if (dup.rowCount) { skipped += 1; continue; }
         const { rows } = await client.query(
           `INSERT INTO talks(organizer_id, title, speaker, language, category_id, access, source, video_ref, video_status,
-                             transcript_status, rights_confirmed, duration_seconds, external_thumb)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ready', $9, $10, $11, $12) RETURNING id`,
-          [job.organizer_id, e.title || e.id, b.speaker, b.language, b.categoryId ?? null, b.access, e.source, e.id,
-            b.rightsConfirmed ? 'pending' : 'unavailable', b.rightsConfirmed, e.duration ?? null, e.thumb ?? null]
+                             transcript_status, rights_confirmed, duration_seconds, external_thumb, description, kids_bands, show_adults)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ready', $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+          [job.organizer_id, e.title || e.id, b.speaker, b.language, same ? (b.categoryId ?? null) : b.categoryMode === 'each' ? (b.perVideo[e.id] ?? null) : null, b.access, e.source, e.id,
+            b.rightsConfirmed ? 'pending' : 'unavailable', b.rightsConfirmed, e.duration ?? null, e.thumb ?? null,
+            String(e.description || '').slice(0, 5000), bands, showAdults]
         );
+        // Description : reprise de la vidéo d'origine par le transcripteur (quelques minutes) si la liste ne la donnait pas.
+        // Catégories automatiques : analyse mise en file, lancée dans 20 minutes (le temps que la description et les sous-titres arrivent).
+        if (b.categoryMode === 'auto') {
+          await client.query('SAVEPOINT autocat');
+          try {
+            await client.query(`INSERT INTO category_jobs(talk_id, lang, status, apply_now, created_at) VALUES ($1, $2, 'pending', true, now() + interval '20 minutes') ON CONFLICT (talk_id) DO NOTHING`, [rows[0].id, b.language]);
+          } catch { await client.query('ROLLBACK TO SAVEPOINT autocat'); autoSkipped = true; } // module Catégories automatiques absent
+        }
         if (extras.length) await client.query('INSERT INTO talk_categories(talk_id, category_id) SELECT $1, unnest($2::int[])', [rows[0].id, extras]);
         if (b.rightsConfirmed && langs.length) {
           await client.query('INSERT INTO transcript_translations(talk_id, lang) SELECT $1, unnest($2::text[])', [rows[0].id, langs]);
@@ -108,7 +129,7 @@ export default async function importRoutes(app) {
     } finally {
       client.release();
     }
-    return { created, skipped };
+    return { created, skipped, ...(autoSkipped ? { autoSkipped: true } : {}) };
   });
 
   app.delete('/imports/:id', organizer, async (req, reply) => {

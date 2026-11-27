@@ -54,9 +54,9 @@ class AutoCat(Insights):
     # --- file d'attente ----------------------------------------------------------------------
     def claim(self):
         rows = self.query(
-            """WITH next AS (SELECT talk_id FROM category_jobs WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
+            """WITH next AS (SELECT talk_id FROM category_jobs WHERE status = 'pending' AND created_at <= now() ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED)
                UPDATE category_jobs j SET status = 'processing', error = NULL, attempts = j.attempts + 1, updated_at = now()
-                 FROM next WHERE j.talk_id = next.talk_id RETURNING j.talk_id, j.lang, j.attempts""", fetch=True)
+                 FROM next WHERE j.talk_id = next.talk_id RETURNING j.talk_id, j.lang, j.attempts, j.apply_now""", fetch=True)
         return rows[0] if rows else None
 
     # --- catégories autorisées ---------------------------------------------------------------
@@ -116,8 +116,11 @@ class AutoCat(Insights):
         return out[:MAX_SUGGESTIONS], dropped
 
     # --- application automatique -------------------------------------------------------------
-    def apply_threshold(self):
-        """Seuil d'application automatique, ou None si le réglage est désactivé (par défaut)."""
+    def apply_threshold(self, apply_now=False):
+        """Seuil d'application automatique, ou None si le réglage est désactivé (par défaut). Une analyse demandée par un import
+        (« catégories automatiques ») s'applique dès 70 % de confiance, réglage général ou non."""
+        if apply_now:
+            return 70
         if str(self.S.get("mod_autocat_apply", "MOD_AUTOCAT_APPLY", "false")).strip().lower() in ("false", "off", "0", "no", ""):
             return None
         try:
@@ -168,7 +171,7 @@ class AutoCat(Insights):
                                        excluded=", ".join(str(i) for i in sorted(excluded)) or "none")
             data = self.ask(system, f"ALLOWED CATEGORIES:\n{menu}\n\nCONFERENCE:\n{content}", tool=CAT_TOOL, max_tokens=1200)
             items, dropped = self.clean(data, allowed, excluded, min_conf)
-            apply_min = self.apply_threshold()
+            apply_min = self.apply_threshold(bool(job.get('apply_now')))
             with self.db().cursor() as cur:  # une seule transaction : on remplace les anciennes propositions non traitées ; validées et refusées restent
                 self.db().autocommit = False
                 try:

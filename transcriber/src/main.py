@@ -1108,7 +1108,7 @@ def description_loop():
             os.makedirs(work, exist_ok=True)
             opts = dict(external_options(work), skip_download=True)
             done = description_fill.run_once(local_query, opts, log)
-            time.sleep(20 if done else 120)
+            time.sleep(8 if done else 120)
         except psycopg2.errors.UndefinedColumn:
             time.sleep(300)  # migration 115 de l'API pas encore passée
         except Exception as err:  # noqa: BLE001

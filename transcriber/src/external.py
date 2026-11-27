@@ -411,6 +411,10 @@ CHANNEL_ROOT = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(@[\w.-]+|channel
 YOUTUBE_SHOW = re.compile(r"^https?://(www\.|m\.)?youtube\.com/(?:show|browse)/VL([\w-]{10,})(?:[/?#].*)?$", re.I)
 
 
+# https://www.youtube.com/watch?v=ID&list=PLxxxx , https://youtu.be/ID?list=PLxxxx (les listes « mix » RD… ne sont pas des listes importables)
+YOUTUBE_IN_LIST = re.compile(r"^https?://(?:www\.|m\.|music\.)?(?:youtube\.com/watch\?(?:.*&)?|youtu\.be/[\w-]{11}\?(?:.*&)?)list=((?:PL|UU|OL|FL)[\w-]{10,})", re.I)
+
+
 def normalize_list_url(url):
     """Une chaîne YouTube sans onglet -> son onglet « Vidéos » (sinon yt-dlp renvoie les onglets, pas les vidéos)."""
     url = url.strip()
@@ -418,6 +422,10 @@ def normalize_list_url(url):
     m = YOUTUBE_SHOW.match(url)
     if m:
         return "https://www.youtube.com/playlist?list=" + m.group(2)
+    # Vidéo ouverte DANS une liste de lecture (watch?v=…&list=PL… ou youtu.be/…?list=PL…) : c'est la liste que l'on veut importer.
+    m = YOUTUBE_IN_LIST.match(url)
+    if m:
+        return "https://www.youtube.com/playlist?list=" + m.group(1)
     if CHANNEL_ROOT.match(url.split("?")[0]):
         return url.split("?")[0].rstrip("/") + "/videos"
     return url
@@ -447,8 +455,10 @@ def _entry(e):
                     return None
                 source, vid = "dailymotion", m.group(1)
     duration = e.get("duration")
+    desc = clean_description(e.get("description") or "")[:5000]
     return {
         "id": vid, "source": source, "title": (e.get("title") or "").strip()[:200] or vid,
+        **({"description": desc} if desc else {}),
         "duration": int(duration) if isinstance(duration, (int, float)) else None,
         "thumb": best_thumbnail(e) if e.get("thumbnails") or e.get("thumbnail") else None,
     }
